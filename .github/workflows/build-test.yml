@@ -74,7 +74,7 @@ jobs:
                               libarrow-python-dev
 
           # install python packages for codegen
-          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe
+          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr
 
           # install clang-format
           if [ ! -f /usr/bin/clang-format ]; then
@@ -219,8 +219,15 @@ jobs:
           git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
           git push -f origin gh-pages
 
+      - name: Generate Coverage Report
+        if: runner.os == 'Linux'
+        run: |
+          cd build
+          gcovr -s -r ./ -f ../src --xml -o coverage.xml
+
       - name: Upload Coverage
         if: runner.os == 'Linux'
         uses: codecov/codecov-action@v1
         with:
           verbose: true
+          file: ./build/coverage.xml
