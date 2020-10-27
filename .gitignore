@@ -1,0 +1,30 @@
+/build/
+/install/
+/build-*/
+/install-*/
+*.code-workspace
+.vscode
+.idea
+.DS_store
+cmake-build-debug
+
+# for python packaging
+/dist/
+*.egg-info/
+*.so
+*.dylib
+*.a
+*.pyc
+*.bin
+
+# generated files
+*.vineyard.h
+
+# etcd data directory during testing
+default.etcd/
+
+# tmp data directory during building image
+/docker/dist/
+
+# docs
+/docs/_build/

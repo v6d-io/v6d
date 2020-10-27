@@ -1,0 +1,188 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef SRC_CLIENT_RPC_CLIENT_H_
+#define SRC_CLIENT_RPC_CLIENT_H_
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "client/client_base.h"
+#include "client/ds/i_object.h"
+#include "client/ds/object_meta.h"
+#include "common/util/status.h"
+#include "common/util/uuid.h"
+
+namespace vineyard {
+
+class BlobWriter;
+
+class RPCClient : public ClientBase {
+ public:
+  ~RPCClient() override;
+
+  /**
+   * @brief Connect to vineyardd using the given TCP endpoint `rpc_endpoint`.
+   *
+   * @param rpc_endpoint The TPC endpoint of vineyard server, in the format of
+   * `host:port`.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& rpc_endpoint);
+
+  /**
+   * @brief Connect to vineyardd using the given TCP `host` and `port`.
+   *
+   * @param host The host of vineyard server.
+   * @param port The TCP port of vineayrd server's RPC service.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& host, uint32_t port);
+
+  /**
+   * @brief Obtain metadata from vineyard server. Note that unlike IPC client,
+   * RPC client doesn't map shared memorys to the client's process.
+   *
+   * @param id The object id to get.
+   * @param meta_data The result metadata will be store in `meta_data` as return
+   * value.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific metadata. Default is false.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetMetaData(const ObjectID id, ObjectMeta& meta_data,
+                     const bool sync_remote = false) override;
+
+  /**
+   * @brief Obtain multiple metadatas from vineyard server.
+   *
+   * @param ids The object ids to get.
+   * @param meta_data The result metadata will be store in `meta_data` as return
+   * value.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific metadata. Default is false.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetMetaData(const std::vector<ObjectID>& id,
+                     std::vector<ObjectMeta>& meta_data,
+                     const bool sync_remote = false);
+
+  /**
+   * @brief Get an object from vineyard. The ObjectFactory will be used to
+   * resolve the constructor of the object.
+   *
+   * In RPCClient, all blob fields in the result object is unaccessible, access
+   * those fields will trigger an `std::runtime_error`.
+   *
+   * @param id The object id to get.
+   *
+   * @return A std::shared_ptr<Object> that can be safely cast to the underlying
+   * concrete object type. When the object doesn't exists an std::runtime_error
+   * exception will be raised.
+   */
+  std::shared_ptr<Object> GetObject(const ObjectID id);
+
+  /**
+   * @brief Get an object from vineyard. The ObjectFactory will be used to
+   * resolve the constructor of the object.
+   *
+   * @param id The object id to get.
+   * @param object The result object will be set in parameter `object`.
+   *
+   * @return When errors occur during the request, this method won't throw
+   * exceptions, rather, it results a status to represents the error.
+   */
+  Status GetObject(const ObjectID id, std::shared_ptr<Object>& object);
+
+  /**
+   * @brief Get multiple objects from vineayrd.
+   *
+   * @param ids The object IDs to get.
+   *
+   * @return A list of objects.
+   */
+  std::vector<std::shared_ptr<Object>> GetObjects(
+      const std::vector<ObjectID>& ids);
+
+  /**
+   * @brief Get an object from vineyard. The type parameter `T` will be used to
+   * resolve the constructor of the object.
+   *
+   * @param id The object id to get.
+   *
+   * @return A std::shared_ptr<Object> that can be safely cast to the underlying
+   * concrete object type. When the object doesn't exists an std::runtime_error
+   * exception will be raised.
+   */
+  template <typename T>
+  std::shared_ptr<T> GetObject(const ObjectID id) {
+    return std::dynamic_pointer_cast<T>(GetObject(id));
+  }
+
+  /**
+   * @brief Get an object from vineyard. The type parameter `T` will be used to
+   * resolve the constructor of the object.
+   *
+   * This method can be used to get concrete object from vineyard without
+   * explicitly `dynamic_cast`, and the template type parameter can be deduced
+   * in many situations:
+   *
+   * \code{.cpp}
+   *    std::shared_ptr<Array<int>> int_array;
+   *    client.GetObject(id, int_array);
+   * \endcode
+   *
+   * @param id The object id to get.
+   * @param object The result object will be set in parameter `object`.
+   *
+   * @return When errors occur during the request, this method won't throw
+   * exceptions, rather, it results a status to represents the error.
+   */
+  template <typename T>
+  Status GetObject(const ObjectID id, std::shared_ptr<T>& object) {
+    object = std::dynamic_pointer_cast<T>(GetObject(id));
+    if (object == nullptr) {
+      return Status::ObjectNotExists();
+    } else {
+      return Status::OK();
+    }
+  }
+
+  /**
+   * @brief List objects in vineyard, using the given typename patterns.
+   *
+   * @param pattern The pattern string that will be used to matched against
+   * objects' `typename`.
+   * @param regex Whether the pattern is a regular expression pattern. Default
+   * is false. When `regex` is false, the pattern will be treated as a glob
+   * pattern.
+   * @param limit The number limit for how many objects will be returned at
+   * most.
+   *
+   * @return A vector of objects that listed from vineyard server.
+   */
+  std::vector<std::shared_ptr<Object>> ListObjects(std::string const& pattern,
+                                                   const bool regex = false,
+                                                   size_t const limit = 5);
+};
+
+}  // namespace vineyard
+
+#endif  // SRC_CLIENT_RPC_CLIENT_H_

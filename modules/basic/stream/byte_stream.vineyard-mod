@@ -1,0 +1,184 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_STREAM_BYTE_STREAM_MOD_H_
+#define MODULES_BASIC_STREAM_BYTE_STREAM_MOD_H_
+
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "arrow/builder.h"
+#include "arrow/status.h"
+
+#include "basic/ds/arrow_utils.h"
+#include "client/client.h"
+#include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "common/util/uuid.h"
+
+namespace vineyard {
+
+class Client;
+
+class __attribute__((annotate("no-vineyard"))) ByteStreamWriter {
+ public:
+  const size_t MaximumChunkSize() const { return -1; }
+
+  Status GetNext(size_t const size,
+                 std::unique_ptr<arrow::MutableBuffer>& buffer) {
+    return client_.GetNextStreamChunk(id_, size, buffer);
+  }
+
+  Status Abort() {
+    if (stoped_) {
+      return Status::OK();
+    }
+    stoped_ = true;
+    return client_.StopStream(id_, true);
+  }
+
+  Status Finish() {
+    if (stoped_) {
+      return Status::OK();
+    }
+    RETURN_ON_ERROR(flushBuffer());
+    stoped_ = true;
+    return client_.StopStream(id_, false);
+  }
+
+  Status WriteBytes(const char* ptr, size_t len) {
+    if (builder_.length() + len > buffer_size_limit_) {
+      RETURN_ON_ERROR(flushBuffer());
+    }
+    RETURN_ON_ARROW_ERROR(builder_.Append(ptr, len));
+    return Status::OK();
+  }
+
+  Status WriteLine(const std::string& line) {
+    if (builder_.length() + line.length() > buffer_size_limit_) {
+      RETURN_ON_ERROR(flushBuffer());
+    }
+    RETURN_ON_ARROW_ERROR(builder_.Append(line.c_str(), line.size()));
+    return Status::OK();
+  }
+
+  void SetBufferSizeLimit(size_t limit) { buffer_size_limit_ = limit; }
+
+  ByteStreamWriter(Client& client, ObjectID const& id, ObjectMeta const& meta)
+      : client_(client), id_(id), meta_(meta), stoped_(false) {}
+
+ private:
+  Status flushBuffer() {
+    std::shared_ptr<arrow::Buffer> buf;
+    RETURN_ON_ARROW_ERROR(builder_.Finish(&buf));
+    std::unique_ptr<arrow::MutableBuffer> mb;
+    if (buf->size() > 0) {
+      RETURN_ON_ERROR(GetNext(buf->size(), mb));
+      memcpy(mb->mutable_data(), buf->data(), buf->size());
+    }
+    return Status::OK();
+  }
+
+  Client& client_;
+  ObjectID id_;
+  ObjectMeta meta_;
+  bool stoped_;  // an optimization: avoid repeated idempotent requests.
+
+  arrow::BufferBuilder builder_;
+  size_t buffer_size_limit_;
+
+  friend class Client;
+};
+
+class __attribute__((annotate("no-vineyard"))) ByteStreamReader {
+ public:
+  Status GetNext(std::unique_ptr<arrow::Buffer>& buffer) {
+    return client_.PullNextStreamChunk(id_, buffer);
+  }
+
+  Status ReadLine(std::string& line) {
+    if (std::getline(ss_, line)) {
+      return Status::OK();
+    }
+
+    std::unique_ptr<arrow::Buffer> buffer;
+    if (!GetNext(buffer).ok()) {
+      return Status::EndOfFile();
+    }
+    std::string buf_str = std::string((char*) buffer->data(), buffer->size());
+    ss_.str(buf_str);
+    std::getline(ss_, line);
+
+    return Status::OK();
+  }
+
+  ByteStreamReader(Client& client, ObjectID const& id, ObjectMeta const& meta)
+      : client_(client), id_(id), meta_(meta){};
+
+ private:
+  Client& client_;
+  ObjectID id_;
+  ObjectMeta meta_;
+  std::stringstream ss_;
+
+  friend class Client;
+};
+
+class ByteStreamBaseBuilder;
+
+/**
+ * @brief The basic stream with each chunk representing a segment of bytes
+ *
+ */
+class ByteStream : public Registered<ByteStream> {
+ public:
+  /**
+   * @brief Open a reader to consume data from the byte stream
+   *
+   * @param client The client connected to the vineyard server
+   * @return The unique pointer to the reader
+   */
+  std::unique_ptr<ByteStreamReader> OpenReader(Client& client) {
+    return std::unique_ptr<ByteStreamReader>(
+        new ByteStreamReader(client, id_, meta_));
+  }
+
+  /**
+   * @brief Open a writer to produce data to the byte stream
+   *
+   * @param client The client connected to the vineyard server
+   * @return The unique pointer to the writer
+   */
+  std::unique_ptr<ByteStreamWriter> OpenWriter(Client& client) {
+    return std::unique_ptr<ByteStreamWriter>(
+        new ByteStreamWriter(client, id_, meta_));
+  }
+
+  std::unordered_map<std::string, std::string> GetParams() { return params_; }
+
+ private:
+  __attribute__((annotate("codegen")))
+  std::unordered_map<std::string, std::string>
+      params_;
+  friend class Client;
+  friend class ByteStreamBaseBuilder;
+  friend class ByteStreamBuilder;
+};
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_STREAM_BYTE_STREAM_MOD_H_

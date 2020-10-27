@@ -1,0 +1,175 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_DS_TENSOR_MOD_H_
+#define MODULES_BASIC_DS_TENSOR_MOD_H_
+
+#include <algorithm>
+#include <functional>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include "arrow/record_batch.h"
+#include "arrow/table.h"
+#include "arrow/tensor.h"
+
+#include "basic/ds/array.vineyard.h"
+#include "basic/ds/object_set.h"
+#include "basic/ds/types.h"
+#include "client/client.h"
+#include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "common/util/ptree.h"
+
+namespace vineyard {
+
+template <typename T>
+class TensorBaseBuilder;
+
+class __attribute__((annotate("no-vineyard"))) ITensor : public Object {
+ public:
+  virtual std::vector<int64_t> const& shape() const = 0;
+  virtual std::vector<int64_t> const& partition_index() const = 0;
+
+  virtual AnyType value_type() const = 0;
+  virtual const std::shared_ptr<arrow::Buffer> buffer() const = 0;
+};
+
+template <typename T>
+class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
+  using ArrowTensorT =
+      arrow::NumericTensor<typename arrow::CTypeTraits<T>::ArrowType>;
+
+ public:
+  /**
+   * @brief Get the strides of the tensor.
+   *
+   * @return The strides of the tensor. The definition of the tensor's strides
+   * can be found in https://pytorch.org/docs/stable/tensor_attributes.html
+   */
+  std::vector<int64_t> strides() const {
+    std::vector<int64_t> vec(shape_.size());
+    vec[shape_.size() - 1] = sizeof(T);
+    for (size_t i = shape_.size() - 1; i > 0; --i) {
+      vec[i - 1] = vec[i] * shape_[i];
+    }
+    return vec;
+  }
+
+  /**
+   * @brief Get the shape of the tensor.
+   *
+   * @return The shape vector where the ith element represents
+   * the size of the ith axis.
+   */
+  std::vector<int64_t> const& shape() const override { return shape_; }
+
+  /**
+   * @brief Get the index of this partition in the global tensor.
+   *
+   * @return The index vector where the ith element represents the index
+   * in the ith axis.
+   */
+  std::vector<int64_t> const& partition_index() const override {
+    return partition_index_;
+  }
+
+  /**
+   * @brief Get the type of tensor's elements.
+   *
+   * @return The type of the tensor's elements.
+   */
+  AnyType value_type() const override { return this->value_type_; }
+
+  /**
+   * @brief Get the data pointer to the tensor's data buffer.
+   *
+   * @return The data pointer.
+   */
+  const T* data() const { return reinterpret_cast<const T*>(buffer_->data()); }
+
+  /**
+   * @brief Get the buffer of the tensor.
+   *
+   * @return The shared pointer to an arrow buffer which
+   * holds the data buffer of the tensor.
+   */
+  const std::shared_ptr<arrow::Buffer> buffer() const override {
+    return this->buffer_->Buffer();
+  }
+
+  /**
+   * @brief Return a view of the original tensor so that it can be used as
+   * arrow's Tensor.
+   *
+   */
+  const std::shared_ptr<ArrowTensorT> ArrowTensor() {
+    return std::make_shared<ArrowTensorT>(buffer_->Buffer(), shape());
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) AnyType value_type_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_;
+  __attribute__((annotate("codegen"))) std::vector<int64_t> shape_;
+  __attribute__((annotate("codegen"))) std::vector<int64_t> partition_index_;
+
+  friend class Client;
+  friend class TensorBaseBuilder<T>;
+};
+
+class GlobalTensorBaseBuilder;
+
+class GlobalTensor : public Registered<GlobalTensor> {
+ public:
+  std::vector<int64_t> const& shape() const;
+  std::vector<int64_t> const& partition_shape() const;
+
+  /**
+   * @brief Get the local partitions of the vineyard instance that is
+   * connected from the client.
+   *
+   * @param client The client connected to a vineyard instance.
+   * @return The vector of pointers to the local partitions.
+   */
+  const std::vector<std::shared_ptr<Object>>& LocalPartitions(
+      Client& client) const;
+
+  /**
+   * @brief Get the local partitions stored in the given vineyard instance.
+   *
+   * @param instance_id The given ID of the vineyard instance.
+   * @return The vector of pointers to the local partitions.
+   */
+  const std::vector<std::shared_ptr<Object>>& LocalPartitions(
+      const InstanceID instance_id) const;
+
+ private:
+  __attribute__((annotate("codegen"))) std::vector<int64_t> shape_;
+  __attribute__((annotate("codegen"))) std::vector<int64_t> partition_shape_;
+
+  __attribute__((annotate("codegen:ObjectSet"))) ObjectSet partitions_;
+
+  friend class Client;
+  friend class GlobalTensorBaseBuilder;
+};
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_DS_TENSOR_MOD_H_

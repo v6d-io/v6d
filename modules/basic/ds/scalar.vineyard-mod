@@ -1,0 +1,75 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_DS_SCALAR_MOD_H_
+#define MODULES_BASIC_DS_SCALAR_MOD_H_
+
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "boost/lexical_cast.hpp"
+
+#include "basic/ds/types.h"
+#include "client/client.h"
+#include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "common/util/uuid.h"
+
+namespace vineyard {
+
+// NB: the scalar value is write to meta ptree as a `string` directly,
+// without touching shared memory and create a blob.
+
+template <typename T>
+class ScalarBaseBuilder;
+
+/**
+ * @brief The scalar type in vineyard.
+ * Note that the value of the scalar is writing into the
+ * meta tree as a `string` directly, instead of storing
+ * the value in the shared memory with a blob.
+ *
+ * @tparam T The type for the value.
+ */
+template <typename T>
+class Scalar : public Registered<Scalar<T>> {
+ public:
+  /**
+   * @brief Get the value of the scalar.
+   *
+   * @return The value of the scalar.
+   */
+  T const Value() const { return value_; }
+
+  /**
+   * @brief Get the type of the scalar.
+   *
+   * @return The type of the scalar.
+   */
+  AnyType Type() const { return type_; }
+
+ private:
+  __attribute__((annotate("codegen"))) T value_;
+  __attribute__((annotate("codegen"))) AnyType type_ = AnyTypeEnum<T>::value;
+
+  friend class Client;
+  friend class ScalarBaseBuilder<T>;
+};
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_DS_SCALAR_MOD_H_

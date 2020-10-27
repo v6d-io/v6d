@@ -1,0 +1,74 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_DS_ARRAY_MOD_H_
+#define MODULES_BASIC_DS_ARRAY_MOD_H_
+
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "client/client.h"
+#include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "common/util/uuid.h"
+
+namespace vineyard {
+
+template <typename T>
+class ArrayBaseBuilder;
+
+/**
+ * @brief The array type in vineyard.
+ *
+ * @tparam T The type for the elements.
+ */
+template <typename T>
+class Array : public Registered<Array<T>> {
+ public:
+  /**
+   * @brief Get the element at the given location.
+   *
+   * @param loc The given location to get the element.
+   */
+  const T& operator[](size_t loc) const { return data()[loc]; }
+
+  /**
+   * @brief Get the size of the array.
+   *
+   * @return The size.
+   */
+  size_t size() const { return size_; }
+
+  /**
+   * @brief Get the pointer to the beginning of the data buffer
+   *
+   * @param The pointer to the data buffer
+   */
+  const T* data() const { return reinterpret_cast<const T*>(buffer_->data()); }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t size_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_;
+
+  friend class Client;
+  friend class ArrayBaseBuilder<T>;
+};
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_DS_ARRAY_MOD_H_

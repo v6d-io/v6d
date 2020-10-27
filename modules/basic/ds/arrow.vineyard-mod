@@ -1,0 +1,320 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_DS_ARROW_MOD_H_
+#define MODULES_BASIC_DS_ARROW_MOD_H_
+
+#include <iostream>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "arrow/io/memory.h"
+#include "arrow/ipc/reader.h"
+#include "arrow/ipc/writer.h"
+#include "arrow/util/config.h"
+
+#include "basic/ds/arrow_utils.h"
+#include "client/client.h"
+#include "client/ds/blob.h"
+
+namespace vineyard {
+
+/// The arrays in vineyard is a wrapper of arrow arrays, in order to
+/// Simplify the Build and Construct process.
+
+/// Base class for numeric arrays for type factory.
+class __attribute__((annotate("no-vineyard"))) PrimitiveArray {
+ public:
+  virtual std::shared_ptr<arrow::Array> ToArray() const = 0;
+};
+
+template <typename T>
+class NumericArrayBaseBuilder;
+
+template <typename T>
+class NumericArray : public PrimitiveArray, public Registered<NumericArray<T>> {
+ public:
+  using ArrayType = typename ConvertToArrowType<T>::ArrayType;
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<ArrayType>(
+        ConvertToArrowType<T>::TypeValue(), this->length_,
+        this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
+        this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<ArrayType> GetArray() const { return array_; }
+
+  std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
+
+  const uint8_t* GetBase() const { return array_->values()->data(); }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
+      null_bitmap_;
+
+  std::shared_ptr<ArrayType> array_;
+
+  friend class Client;
+  friend class NumericArrayBaseBuilder<T>;
+};
+
+class FixedSizeBinaryArrayBaseBuilder;
+
+class FixedSizeBinaryArray : public Registered<FixedSizeBinaryArray> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
+        arrow::fixed_size_binary(this->byte_width_), this->length_,
+        this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
+        this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<arrow::FixedSizeBinaryArray> GetArray() { return array_; }
+
+ private:
+  __attribute__((annotate("codegen"))) int32_t byte_width_;
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
+      null_bitmap_;
+
+  std::shared_ptr<arrow::FixedSizeBinaryArray> array_;
+
+  friend class Client;
+  friend class FixedSizeBinaryArrayBaseBuilder;
+};
+
+class NullArrayBaseBuilder;
+
+class NullArray : public Registered<NullArray> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<arrow::NullArray>(this->length_);
+  }
+
+  std::shared_ptr<arrow::NullArray> GetArray() { return array_; }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+
+  std::shared_ptr<arrow::NullArray> array_;
+
+  friend class Client;
+  friend class NullArrayBaseBuilder;
+};
+
+class StringArrayBaseBuilder;
+
+class StringArray : public Registered<StringArray> {
+ public:
+  using ArrayType = typename ConvertToArrowType<std::string>::ArrayType;
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<ArrayType>(
+        this->length_, this->buffer_offsets_->Buffer(),
+        this->buffer_data_->Buffer(), this->null_bitmap_->Buffer(),
+        this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<ArrayType> GetArray() { return array_; }
+
+  const uint8_t* GetBase() const { return array_->value_data()->data(); }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_data_,
+      buffer_offsets_, null_bitmap_;
+
+  std::shared_ptr<ArrayType> array_;
+
+  friend class Client;
+  friend class StringArrayBaseBuilder;
+};
+
+class BooleanArrayBaseBuilder;
+
+class BooleanArray : public Registered<BooleanArray> {
+ public:
+  using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<ArrayType>(
+        this->length_, this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
+        this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<ArrayType> GetArray() { return array_; }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
+      null_bitmap_;
+
+  std::shared_ptr<ArrayType> array_;
+
+  friend class Client;
+  friend class BooleanArrayBaseBuilder;
+};
+
+namespace detail {
+
+inline std::shared_ptr<arrow::Array> ConstructArray(
+    std::shared_ptr<Object> obj) {
+  if (auto arr = std::dynamic_pointer_cast<PrimitiveArray>(obj)) {
+    return arr->ToArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(obj)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<StringArray>(obj)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<NullArray>(obj)) {
+    return arr->GetArray();
+  }
+  VINEYARD_ASSERT(nullptr != nullptr,
+                  "Unsupported array type: " + obj->meta().GetTypeName());
+  return nullptr;
+}
+
+}  // namespace detail
+
+class SchemaProxyBaseBuilder;
+
+class SchemaProxy : public Registered<SchemaProxy> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    arrow::io::BufferReader reader(this->buffer_->Buffer());
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &this->schema_));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(this->schema_,
+                                 arrow::ipc::ReadSchema(&reader, nullptr));
+#endif
+  }
+
+  std::shared_ptr<arrow::Schema> const& GetSchema() const { return schema_; }
+
+ private:
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_;
+
+  std::shared_ptr<arrow::Schema> schema_;
+
+  friend class Client;
+  friend class SchemaProxyBaseBuilder;
+};
+
+class RecordBatchBaseBuilder;
+
+class RecordBatch : public Registered<RecordBatch> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    std::vector<std::shared_ptr<arrow::Array>> arrow_columns;
+    for (size_t idx = 0; idx < columns_.size(); ++idx) {
+      arrow_columns.emplace_back(detail::ConstructArray(columns_[idx]));
+    }
+    this->batch_ = arrow::RecordBatch::Make(this->schema_.GetSchema(),
+                                            this->row_num_, arrow_columns);
+  }
+
+  std::shared_ptr<arrow::RecordBatch> GetRecordBatch() { return this->batch_; }
+
+  std::shared_ptr<arrow::Schema> schema() const { return schema_.GetSchema(); }
+
+  size_t num_columns() const { return column_num_; }
+
+  size_t num_rows() const { return row_num_; }
+
+  std::vector<std::shared_ptr<Object>> const& columns() const {
+    return columns_;
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t column_num_ = 0;
+  __attribute__((annotate("codegen"))) size_t row_num_ = 0;
+  __attribute__((annotate("codegen:SchemaProxy"))) SchemaProxy schema_;
+  __attribute__((annotate("codegen:[Object*]")))
+  std::vector<std::shared_ptr<Object>>
+      columns_;
+
+  std::shared_ptr<arrow::RecordBatch> batch_;
+
+  friend class Client;
+  friend class RecordBatchBaseBuilder;
+};
+
+class TableBaseBuilder;
+
+class Table : public Registered<Table> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    if (batch_num_ > 0) {
+      std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches(
+          batch_num_);
+      for (size_t i = 0; i < batch_num_; ++i) {
+        arrow_batches[i] = batches_[i]->GetRecordBatch();
+      }
+      VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches, &this->table_));
+    } else {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      CHECK_ARROW_ERROR(arrow::Table::FromRecordBatches(
+          this->schema_->GetSchema(), {}, &this->table_));
+#else
+      CHECK_ARROW_ERROR_AND_ASSIGN(
+          this->table_,
+          arrow::Table::FromRecordBatches(this->schema_->GetSchema(), {}));
+#endif
+    }
+  }
+
+  std::shared_ptr<arrow::Table> GetTable() { return this->table_; }
+
+  std::shared_ptr<arrow::Schema> schema() const { return schema_->GetSchema(); }
+
+  size_t batch_num() const { return batch_num_; }
+
+  size_t num_rows() const { return num_rows_; }
+
+  size_t num_columns() const { return num_columns_; }
+
+  std::vector<std::shared_ptr<RecordBatch>> const& batches() const {
+    return batches_;
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t batch_num_, num_rows_,
+      num_columns_;
+  __attribute__((annotate("codegen:[RecordBatch*]")))
+  std::vector<std::shared_ptr<RecordBatch>>
+      batches_;
+  __attribute__((annotate("codegen:SchemaProxy*"))) std::shared_ptr<SchemaProxy>
+      schema_;
+
+  std::shared_ptr<arrow::Table> table_;
+
+  friend class Client;
+  friend class TableBaseBuilder;
+};
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_DS_ARROW_MOD_H_

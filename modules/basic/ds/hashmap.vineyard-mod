@@ -1,0 +1,231 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_DS_HASHMAP_MOD_H_
+#define MODULES_BASIC_DS_HASHMAP_MOD_H_
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "flat_hash_map/flat_hash_map.hpp"
+
+#include "basic/ds/array.vineyard.h"
+#include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "common/util/uuid.h"
+
+namespace vineyard {
+
+struct __attribute__((annotate("no-vineyard"))) prime_hash_policy {
+  prime_hash_policy() : current_prime_(1) {}
+  prime_hash_policy(const prime_hash_policy& rhs)
+      : current_prime_(rhs.current_prime_) {}
+  prime_hash_policy& operator=(const prime_hash_policy& rhs) {
+    current_prime_ = rhs.current_prime_;
+    return *this;
+  }
+
+  size_t index_for_hash(size_t hash) const { return hash % current_prime_; }
+
+  void set_prime(size_t prime) { current_prime_ = prime; }
+
+ private:
+  size_t current_prime_;
+};
+
+template <typename K, typename V, typename H, typename E>
+class HashmapBaseBuilder;
+
+/**
+ * @brief The hash map in vineyard.
+ *
+ * @tparam K The type for the key.
+ * @tparam V The type for the value.
+ * @tparam std::hash<K> The hash function for the key.
+ * @tparam std::equal_to<K> The compare function for the key.
+ */
+template <typename K, typename V, typename H = std::hash<K>,
+          typename E = std::equal_to<K>>
+class Hashmap : public Registered<Hashmap<K, V, H, E>>, public H, public E {
+ public:
+  using T = std::pair<K, V>;
+
+  using Entry = ska::detailv3::sherwood_v3_entry<T>;
+  using EntryPointer = const Entry*;
+
+  using Hasher = ska::detailv3::KeyOrValueHasher<K, std::pair<K, V>, H>;
+  using Equal = ska::detailv3::KeyOrValueEquality<K, std::pair<K, V>, E>;
+
+  /**
+   * @brief Set the hash policy after the construction of the HashMap.
+   *
+   */
+  void PostConstruct(const ObjectMeta& meta) override {
+    hash_policy_.set_prime(num_slots_minus_one_ + 1);
+  }
+
+  using value_type = T;
+  using size_type = size_t;
+  using difference_type = std::ptrdiff_t;
+  using hasher = H;
+  using key_equal = E;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using pointer = value_type*;
+  using const_pointer = value_type*;
+
+  using flat_hash_table_type = ska::detailv3::sherwood_v3_table<
+      T, K, H, Hasher, E, Equal, std::allocator<T>,
+      typename std::allocator_traits<std::allocator<T>>::template rebind_alloc<
+          ska::detailv3::sherwood_v3_entry<T>>>;
+
+  /**
+   * @brief The iterator to iterate key-value mappings in the HashMap.
+   *
+   */
+  struct iterator {
+    iterator() = default;
+    explicit iterator(EntryPointer current) : current(current) {}
+    EntryPointer current = EntryPointer();
+
+    friend bool operator==(const iterator& lhs, const iterator& rhs) {
+      return lhs.current == rhs.current;
+    }
+
+    friend bool operator!=(const iterator& lhs, const iterator& rhs) {
+      return lhs.current != rhs.current;
+    }
+
+    iterator& operator++() {
+      do {
+        ++current;
+      } while (current->is_empty());
+      return *this;
+    }
+
+    iterator operator++(int) {
+      iterator copy(*this);
+      ++*this;
+      return copy;
+    }
+
+    const value_type& operator*() const { return current->value; }
+
+    const value_type* operator->() const {
+      return std::addressof(current->value);
+    }
+  };
+
+  /**
+   * @brief The beginning iterator.
+   *
+   */
+  iterator begin() const {
+    for (EntryPointer it = entries_.data();; ++it) {
+      if (it->has_value()) {
+        return iterator(it);
+      }
+    }
+  }
+
+  /**
+   * @brief The ending iterator.
+   *
+   */
+  iterator end() const {
+    return iterator(entries_.data() + static_cast<ptrdiff_t>(
+                                          num_slots_minus_one_ + max_lookups_));
+  }
+
+  /**
+   * @brief Find the iterator by key.
+   *
+   */
+  iterator find(const K& key) {
+    size_t index = hash_policy_.index_for_hash(hash_object(key));
+    EntryPointer it = entries_.data() + static_cast<ptrdiff_t>(index);
+    for (int8_t distance = 0; it->distance_from_desired >= distance;
+         ++distance, ++it) {
+      if (compares_equal(key, it->value.first)) {
+        return iterator(it);
+      }
+    }
+    return end();
+  }
+
+  /**
+   * @brief Return the const iterator by key.
+   *
+   */
+  const iterator find(const K& key) const {
+    return const_cast<Hashmap<K, V, H, E>*>(this)->find(key);
+  }
+
+  /**
+   * @brief Return the number of occurancies of the key.
+   *
+   */
+  size_t count(const K& key) const { return find(key) == end() ? 0 : 1; }
+
+  /**
+   * @brief Return the size of the HashMap, i.e., the number of elements stored
+   * in the HashMap.
+   *
+   */
+  size_t size() const { return num_elements_; }
+
+  /**
+   * @brief Check whether the HashMap is empty.
+   *
+   */
+  bool empty() const { return num_elements_ == 0; }
+
+  /**
+   * @brief Get the value by key.
+   * Here the existance of the key is checked.
+   */
+  const V& at(const K& key) const {
+    auto found = this->find(key);
+    if (found == this->end()) {
+      throw std::out_of_range("Argument passed to at() was not in the map.");
+    }
+    return found->second;
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t num_slots_minus_one_;
+  prime_hash_policy hash_policy_;
+  __attribute__((annotate("codegen"))) int8_t max_lookups_;
+  __attribute__((annotate("codegen"))) size_t num_elements_;
+  __attribute__((annotate("codegen:Array<Entry>"))) Array<Entry> entries_;
+
+  friend class Client;
+  friend class HashmapBaseBuilder<K, V, H, E>;
+
+  size_t hash_object(const K& key) const {
+    return static_cast<const H&>(*this)(key);
+  }
+
+  bool compares_equal(const K& lhs, const K& rhs) const {
+    return static_cast<const E&>(*this)(lhs, rhs);
+  }
+};
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_DS_HASHMAP_MOD_H_

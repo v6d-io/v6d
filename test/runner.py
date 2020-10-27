@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import contextlib
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import time
+
+VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.%s.sock' % time.time()
+
+
+def find_executable(name):
+    ''' Use executable in local build directory first.
+    '''
+    default_builder_dir = os.path.join(os.path.dirname(
+        os.path.abspath(__file__)), '..', 'build', 'bin')
+    binary_dir = os.environ.get('VINEYARD_EXECUTABLE_DIR', default_builder_dir)
+    exe = os.path.join(binary_dir, name)
+    if os.path.isfile(exe) and os.access(exe, os.R_OK):
+        return exe
+    exe = shutil.which(name)
+    if exe is not None:
+        return exe
+    raise RuntimeError('Unable to find program %s' % name)
+
+
+def find_port_probe(start=2048, end=20480):
+    ''' Find an available port in range [start, end)
+    '''
+    for port in range(start, end, 2):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', port)) != 0:
+                yield port
+
+
+ipc_port_finder = find_port_probe()
+
+
+def find_port():
+    return next(ipc_port_finder)
+
+
+@contextlib.contextmanager
+def start_program(name, *args, verbose=False, nowait=False, **kwargs):
+    env, cmdargs = os.environ.copy(), list(args)
+    for k, v in kwargs.items():
+        if k[0].isupper():
+            env[k] = str(v)
+        else:
+            cmdargs.append('--%s' % k)
+            cmdargs.append(str(v))
+
+    try:
+        prog = find_executable(name)
+        print('Starting %s...' % prog, flush=True)
+        if verbose:
+            out, err = sys.stdout, sys.stderr
+        else:
+            out, err = subprocess.PIPE, subprocess.PIPE
+        proc = subprocess.Popen([prog] + cmdargs,
+                                env=env, stdout=out, stderr=err)
+        if not nowait:
+            time.sleep(1)
+        rc = proc.poll()
+        if rc is not None:
+            raise RuntimeError('Failed to launch program %s' % name)
+        yield proc
+    finally:
+        print('Terminating %s' % prog, flush=True)
+        if proc.poll() is None:
+            proc.terminate()
+            proc.wait()
+
+
+@contextlib.contextmanager
+def start_etcd():
+    with contextlib.ExitStack() as stack:
+        client_port = find_port()
+        peer_port = find_port()
+        proc = start_program('etcd',
+                             '--max-txn-ops=102400',
+                             '--listen-peer-urls', 'http://0.0.0.0:%d' % peer_port,
+                             '--listen-client-urls', 'http://0.0.0.0:%d' % client_port,
+                             '--advertise-client-urls', 'http://127.0.0.1:%d' % client_port,
+                             '--initial-cluster', 'default=http://127.0.0.1:%d' % peer_port,
+                             '--initial-advertise-peer-urls', 'http://127.0.0.1:%d' % peer_port)
+        yield stack.enter_context(proc), 'http://127.0.0.1:%d' % client_port
+
+
+@contextlib.contextmanager
+def start_vineyardd(etcd_endpoints, etcd_prefix, size=4 * 1024 * 1024 * 1024,
+                    default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+                    idx=None, **kw):
+    rpc_socket_port = find_port()
+    if idx is not None:
+        socket = '%s.%d' % (default_ipc_socket, idx)
+    else:
+        socket = default_ipc_socket
+    with contextlib.ExitStack() as stack:
+        proc = start_program('vineyardd',
+                             '--size', str(size),
+                             '--socket', socket,
+                             '--rpc_socket_port', str(rpc_socket_port),
+                             '--etcd_endpoint', etcd_endpoints,
+                             '--etcd_prefix', etcd_prefix,
+                             verbose=True, **kw)
+        yield stack.enter_context(proc), rpc_socket_port
+
+
+@contextlib.contextmanager
+def start_multiple_vineyardd(etcd_endpoints, etcd_prefix, size=1 * 1024 * 1024 * 1024,
+                             default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+                             instance_size=1, **kw):
+    with contextlib.ExitStack() as stack:
+        jobs = []
+        for idx in range(instance_size):
+            job = start_vineyardd(etcd_endpoints, etcd_prefix, size=size,
+                                  default_ipc_socket=default_ipc_socket, idx=idx, **kw)
+            jobs.append(job)
+        yield [stack.enter_context(job) for job in jobs]
+
+
+@contextlib.contextmanager
+def start_zookeeper():
+    kafka_dir = os.environ.get('KAFKA_HOME', ".")
+    with contextlib.ExitStack() as stack:
+        proc = start_program(kafka_dir + '/bin/zookeeper-server-start.sh',
+                             kafka_dir + 'config/zookeeper.properties')
+        yield stack.enter_context(proc)
+
+
+@contextlib.contextmanager
+def start_kafka_server():
+    kafka_dir = os.environ.get('KAFKA_HOME', ".")
+    with contextlib.ExitStack() as stack:
+        proc = start_program(kafka_dir + '/bin/kafka-server-start.sh',
+                             kafka_dir + 'config/zookeeper.properties')
+        yield stack.enter_context(proc)
+
+
+def wait_etcd_ready():
+    etcdctl = find_executable('etcdctl')
+    probe_cmd = [etcdctl, 'get', '""', '--prefix', '--limit', '1']
+    while subprocess.call(probe_cmd) != 0:
+        time.sleep(1)
+
+
+def resolve_mpiexec_cmdargs():
+    if 'open' in subprocess.getoutput('mpiexec -V').lower():
+        return ['mpiexec', '--allow-run-as-root',
+                '-mca', 'orte_allowed_exit_without_sync', '1',
+                '-mca', 'btl_vader_single_copy_mechanism', 'none']
+    else:
+        return ['mpiexec']
+
+
+mpiexec_cmdargs = resolve_mpiexec_cmdargs()
+
+
+def run_test(test_name, *args, nproc=1, capture=False, vineyard_ipc_socket=VINEYARD_CI_IPC_SOCKET):
+    arg_reps = []
+    for arg in args:
+        if isinstance(arg, str):
+            arg_reps.append(arg)
+        else:
+            arg_reps.append(repr(arg))
+    cmdargs = mpiexec_cmdargs + ['-n', str(nproc),
+                                 '--host', 'localhost:%d' % nproc,
+                                 find_executable(test_name), vineyard_ipc_socket] + arg_reps
+    if capture:
+        return subprocess.check_output(cmdargs)
+    else:
+        subprocess.check_call(cmdargs)
+    time.sleep(1)
+
+
+def get_data_path(name):
+    default_data_dir = os.path.join(os.path.dirname(
+        os.path.abspath(__file__)), '..', '..', 'gstest')
+    binary_dir = os.environ.get('VINEYARD_DATA_DIR', default_data_dir)
+    return os.path.join(binary_dir, name)
+
+
+def run_single_vineyardd_tests(etcd_endpoints):
+    with start_vineyardd(etcd_endpoints,
+                         'vineyard_test_%s' % time.time(),
+                         default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
+        run_test('array_test')
+        run_test('arrow_data_structure_test')
+        run_test('dataframe_test')
+        run_test('delete_test')
+        run_test('get_wait_test')
+        run_test('get_object_test')
+        run_test('hashmap_test')
+        run_test('id_test')
+        run_test('list_object_test')
+        run_test('name_test')
+        run_test('pair_test')
+        run_test('ptree_utils_test')
+        run_test('rpc_delete_test', '127.0.0.1:%d' % rpc_socket_port)
+        run_test('rpc_get_object_test', '127.0.0.1:%d' % rpc_socket_port)
+        run_test('rpc_test', '127.0.0.1:%d' % rpc_socket_port)
+        run_test('scalar_test')
+        run_test('server_status_test')
+        run_test('shallow_copy_test')
+        run_test('stream_test')
+        run_test('tensor_test')
+        run_test('tuple_test')
+
+
+def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
+    etcd_prefix = 'vineyard_test_%s' % time.time()
+    with start_multiple_vineyardd(etcd_endpoints,
+                                  etcd_prefix,
+                                  default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+                                  instance_size=instance_size) as instances:
+        time.sleep(5)
+        with start_vineyardd(etcd_endpoints,
+                             etcd_prefix,
+                             default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+                             idx=instance_size):
+            time.sleep(5)
+            instances[0][0].terminate()
+            time.sleep(5)
+
+    # run with serious contention on etcd.
+    with start_multiple_vineyardd(etcd_endpoints,
+                                  etcd_prefix,
+                                  default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+                                  instance_size=instance_size, nowait=True) as instances:
+        time.sleep(5)
+
+
+def main():
+    run_single_vineyardd_tests('http://localhost:%d' % find_port())
+    with start_etcd() as (_, etcd_endpoints):
+        run_scale_in_out_tests(etcd_endpoints, instance_size=2)
+
+
+if __name__ == '__main__':
+    main()

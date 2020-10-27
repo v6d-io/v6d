@@ -1,0 +1,229 @@
+# Copyright 2020 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build and Test
+
+on:
+  # Trigger the workflow on push or pull request, but only for the main branch
+  push:
+    branches:
+      - main
+      - dev-*
+  pull_request:
+    branches:
+      - main
+      - dev-*
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Cache for cccahe
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache
+          restore-keys: |
+            ${{ runner.os }}-ccache
+
+      - name: Install Dependencies for Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update -y
+          sudo apt install -y ca-certificates \
+                              ccache \
+                              cmake \
+                              doxygen \
+                              libboost-all-dev \
+                              libcurl4-openssl-dev \
+                              libgflags-dev \
+                              libgoogle-glog-dev \
+                              libgrpc-dev \
+                              libgrpc++-dev \
+                              libmpich-dev \
+                              libprotobuf-dev \
+                              librdkafka-dev \
+                              libssl-dev \
+                              libunwind-dev \
+                              libz-dev \
+                              lsb-release \
+                              protobuf-compiler-grpc \
+                              python3-pip \
+                              wget
+
+          # install etcd
+          wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz
+          tar zxvf etcd-v3.4.13-linux-amd64.tar.gz
+          sudo mv etcd-v3.4.13-linux-amd64/etcd /usr/local/bin/
+          sudo mv etcd-v3.4.13-linux-amd64/etcdctl /usr/local/bin/
+
+          # install apache-arrow
+          wget https://bintray.com/apache/arrow/download_file?file_path=ubuntu%2Fapache-arrow-archive-keyring-latest-disco.deb -O /tmp/apache-arrow-archive-keyring-latest-disco.deb
+          sudo apt install -y /tmp/apache-arrow-archive-keyring-latest-disco.deb
+          sudo apt update -y
+          sudo apt install -y libarrow-dev \
+                              libarrow-python-dev
+
+          # install python packages for codegen
+          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe
+
+          # install clang-format
+          if [ ! -f /usr/bin/clang-format ]; then
+              sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
+              sudo chmod +x /usr/bin/clang-format
+          fi
+
+      - name: Install libgrape-lite
+        if: runner.os == 'Linux'
+        run: |
+          git clone https://github.com/yecol/libgrape-lite.git
+          cd libgrape-lite
+          mkdir build
+          cd build
+          cmake ..
+          make -j2
+          sudo make install
+
+      - name: CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug \
+                   -DBUILD_SHARED_LIBS=ON \
+                   -DBUILD_VINEYARD_COVERAGE=ON \
+                   -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+                   -DBUILD_VINEYARD_BASIC=ON \
+                   -DBUILD_VINEYARD_IO=ON \
+                   -DBUILD_VINEYARD_MIGRATION=ON \
+                   -DBUILD_VINEYARD_TESTS=ON
+
+      - name: Cpp format and lint
+        run: |
+          cd build
+
+          function prepend() { while read line; do echo "${1}${line}\n"; done; }
+
+          make vineyard_clformat
+          GIT_DIFF=$(git diff)
+          if [[ -n $GIT_DIFF ]]; then
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              echo "| clang-format failures found!"
+              echo "|"
+              echo "$GIT_DIFF" | prepend "| "
+              echo "|"
+              echo "| Run: "
+              echo "|"
+              echo "|    make vineyard_clformat"
+              echo "|"
+              echo "| to fix this error."
+              echo "|"
+              echo "| Ensure you are working with clang-format-8, which can be obtained from"
+              echo "|"
+              echo "|    https://github.com/muttleyxd/clang-tools-static-binaries/releases"
+              echo "|"
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              exit -1
+          fi
+
+          function ec() { [[ "$1" == "-h" ]] && { shift && eval $* > /dev/null 2>&1; ec=$?; echo $ec; } || eval $*; ec=$?; }
+
+          ec make vineyard_cpplint
+          if [[ "$ec" != "0" ]]; then
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              echo "| cpplint failures found! Run: "
+              echo "|"
+              echo "|    make vineyard_cpplint"
+              echo "|"
+              echo "| to fix this error."
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              exit -1
+          fi
+
+      - name: Python format and lint
+        run: |
+          function prepend() { while read line; do echo "${1}${line}"; done; }
+
+          yapf --in-place --recursive python/
+          GIT_DIFF=$(git diff)
+          if [[ -n $GIT_DIFF ]]; then
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              echo "| yapf (python format) failures found!"
+              echo "|"
+              echo "$GIT_DIFF" | prepend "| "
+              echo "|"
+              echo "|Run: "
+              echo "|"
+              echo "|    yapf --in-place --recursive python/"
+              echo "|"
+              echo "| to fix this error."
+              echo "|"
+              echo "| The tool yapf can be installed by"
+              echo "|"
+              echo "|    pip3 install yapf"
+              echo "|"
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              exit -1
+          fi
+
+      - name: Build
+        run: |
+          cd build
+          make -j2
+          make vineyard_tests -j2
+          make vineyard_client_python -j2
+          make ccache-stats
+          sudo make install
+          cd ..
+          python3 setup.py bdist_wheel
+          sudo pip3 install dist/*.whl
+
+      - name: Get Test Data
+        run: |
+          git clone https://github.com/7br/gstest.git --depth=1
+
+      - name: Run Tests
+        run: |
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export VINEYARD_HOME=`pwd`/build/bin
+          rm -rf default.etcd
+          python3 test/runner.py
+
+      - name: Generate Doc
+        run: |
+          cd build
+          make vineyard_doc
+
+      - name: Commit Doc
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          git config user.email github-actions@github.com
+          git config user.name github-actions
+          git branch -D gh-pages || true
+          git checkout --orphan gh-pages
+          shopt -s extglob
+          rm -rf !(docs)
+          rm -rf .github .clang-format .gitattributes .gitmodules .gitignore
+          mv docs/_build/html/* ./
+          mv docs/_build/html/.nojekyll ./
+          rm -rf docs
+          git add -A
+          git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
+          git push -f origin gh-pages
