@@ -4,7 +4,7 @@
         <img src="https://v6d.io/_static/vineyard_logo.png" width="397" alt="libvineyard">
     </h1>
     <p align="center">
-        an open-source data orchestration engine
+        an in-memory immutable data manager
     </p>
 
 |Build and Test| |Coverage| |Docs|
