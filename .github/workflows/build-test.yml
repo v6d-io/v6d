@@ -222,8 +222,7 @@ jobs:
       - name: Generate Coverage Report
         if: runner.os == 'Linux'
         run: |
-          cd build
-          gcovr -s -r ./ -f ../src --xml -o coverage.xml
+          gcovr -s -r ./ -f ./src --xml -o coverage.xml
 
       - name: Upload Coverage
         if: runner.os == 'Linux'
