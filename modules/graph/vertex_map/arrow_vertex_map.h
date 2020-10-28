@@ -314,7 +314,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   friend class ArrowVertexMapBuilder;
 
   template <typename _OID_T, typename _VID_T>
-  friend class ArrowProjectedVertexMap;
+  friend class gs::ArrowProjectedVertexMap;
 };
 
 template <typename OID_T, typename VID_T>
