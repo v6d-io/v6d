@@ -202,6 +202,9 @@ jobs:
         run: |
           cd build
           gcovr -s -r ./ -f ../src --xml -o coverage.xml
+          # clean up all gcov files to disable codecov's adjustment
+          find ./ -name "*.gcov" | xargs rm || true
+          find ./ -name "*.gcno" | xargs rm || true
 
       - name: Upload Coverage
         if: runner.os == 'Linux'
