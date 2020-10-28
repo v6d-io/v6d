@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
       std::ofstream fout;
       fout.open(path);
 
-      uint64_t vnum = vm_ptr->vertices_num(i, j);
+      uint64_t vnum = vm_ptr->GetInnerVertexSize(i, j);
       for (uint64_t k = 0; k < vnum; ++k) {
         uint64_t gid = id_parser.GenerateId(i, j, k);
         arrow::util::string_view oid;

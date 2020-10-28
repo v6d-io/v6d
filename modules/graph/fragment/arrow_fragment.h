@@ -1525,7 +1525,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
           vertex_tables_[i],
           vertex_tables[i]->CombineChunks(arrow::default_memory_pool()));
 #endif
-      ivnums_[i] = vm_ptr_->vertices_num(fid_, i);
+      ivnums_[i] = vm_ptr_->GetInnerVertexSize(fid_, i);
     }
     return boost::leaf::result<void>();
   }
