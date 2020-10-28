@@ -45,6 +45,13 @@ limitations under the License.
 #include "graph/utils/transform_utils.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
+namespace gs {
+
+template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T>
+class ArrowProjectedFragment;
+
+}  // namespace gs
+
 namespace vineyard {
 
 template <typename OID_T, typename VID_T>
@@ -60,9 +67,6 @@ inline std::string generate_name_with_suffix(
     property_graph_types::LABEL_ID_TYPE e_label) {
   return prefix + "_" + std::to_string(v_label) + "_" + std::to_string(e_label);
 }
-
-template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T>
-class ArrowProjectedFragment;
 
 inline std::string arrow_type_to_string(std::shared_ptr<arrow::DataType> type) {
   if (type->Equals(arrow::int32())) {
@@ -676,7 +680,7 @@ class ArrowFragment
             "vertex_property_name_" + std::to_string(i) + "_";
         std::string type_prefix =
             "vertex_property_type_" + std::to_string(i) + "_";
-        auto& entry = schema_.GetEntry(label, "VERTEX");
+        auto& entry = schema_.GetMutableEntry(label, "VERTEX");
         for (prop_id_t j = 0; j < prop_num; ++j) {
           new_meta.AddKeyValue(name_prefix + std::to_string(j),
                                arrow_table->field(j)->name());
@@ -1063,7 +1067,7 @@ class ArrowFragment
 
   template <typename _OID_T, typename _VID_T, typename VDATA_T,
             typename EDATA_T>
-  friend class ArrowProjectedFragment;
+  friend class gs::ArrowProjectedFragment;
 };
 
 template <typename OID_T, typename VID_T>
@@ -1521,7 +1525,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
           vertex_tables_[i],
           vertex_tables[i]->CombineChunks(arrow::default_memory_pool()));
 #endif
-      ivnums_[i] = vm_ptr_->vertices_num(fid_, i);
+      ivnums_[i] = vm_ptr_->GetInnerVertexSize(fid_, i);
     }
     return boost::leaf::result<void>();
   }

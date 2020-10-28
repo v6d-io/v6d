@@ -23,8 +23,8 @@ After that, we define the model, and train the model on the processed dataframe
 in PyTorch.
 Finally, the performance of the model is evaluated.
 
-On a single machine, although pandas and PyTorch are two different systems targeting different tasks.
-Data can be shared between them efficiently with little extra-cost, with everything happening end-to-end in a single python script.
+On a single machine, although pandas and PyTorch are two different systems targeting different tasks,
+data can be shared between them efficiently with little extra-cost, with everything happening end-to-end in a single python script.
 
 .. image:: https://v6d.io/_static/vineyard_compare.png
    :alt: Comparing the workflow with and without vineyard
@@ -66,7 +66,7 @@ just like the single machine solution do, and save the preprocessed dataframe in
 |             | .. code-block:: python                                                      |
 |             |                                                                             |
 |             |     import mars.dataframe as md                                             |
-| distributed |     data_csv = md.read_csv('hdfs://server/data_full', usecols=[1])          |
+| distributed |     dataset = md.read_csv('hdfs://server/data_full', usecols=[1])          |
 |             |     # after preprocessing, save the dataset to vineyard                     |
 |             |     vineyard_distributed_tensor_id = dataset.to_vineyard()                  |
 +-------------+-----------------------------------------------------------------------------+
@@ -114,7 +114,7 @@ for example tensor could be `torch.tensor`, `tf.Tensor`, `mxnet.ndarray` etc., n
 mention that every graph processing engine has its own graph structure representations.
 
 The variety of data abstractions makes the sharing hard. Vineyard provides out-of-box
-high-level data abstractions over in-memory blobs, by describe objects using hierarchical
+high-level data abstractions over in-memory blobs, by describing objects using hierarchical
 metadatas. Various computation systems can utilize the built-in high level data abstractions
 to exchange data with other systems in computation pipeline in a concise manner.
 
@@ -123,9 +123,9 @@ Stream pipelining
 
 A computation doens't need to wait all precedent's result arrive before starting to work.
 Vineyard provides stream as a special kind of immmutable data for such pipeling scenarios.
-The precedent job can wirte the immutable data chunk by chunk to vineyard, while maintaining
+The precedent job can write the immutable data chunk by chunk to vineyard, while maintaining
 the data structure semantic, and the successor job reads shared-memory chunks from vineyard's
-stream without extra copy cost, then triggers it's own work. The overlapping helpes for
+stream without extra copy cost, then triggers it's own work. The overlapping helps for
 reducing the overall processing time and memory consumption.
 
 Drivers

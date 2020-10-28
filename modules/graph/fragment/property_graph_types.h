@@ -19,10 +19,11 @@ limitations under the License.
 #include <string>
 
 #include "basic/ds/arrow.h"
+#include "grape/config.h"
 
 namespace vineyard {
 
-using fid_t = int32_t;
+using fid_t = grape::fid_t;
 
 template <typename T>
 struct InternalType {

@@ -29,13 +29,17 @@ limitations under the License.
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
 
+namespace gs {
+
+template <typename OID_T, typename VID_T>
+class ArrowProjectedVertexMap;
+
+}  // namespace gs
+
 namespace vineyard {
 
 template <typename OID_T, typename VID_T>
 class ArrowVertexMapBuilder;
-
-template <typename OID_T, typename VID_T>
-class ArrowProjectedVertexMap;
 
 template <typename OID_T, typename VID_T>
 class ArrowVertexMap
@@ -141,11 +145,11 @@ class ArrowVertexMap
 
   label_id_t label_num() const { return label_num_; }
 
-  vid_t vertices_num(fid_t fid) const {
+  vid_t GetInnerVertexSize(fid_t fid) const {
     return static_cast<vid_t>(o2g_[fid].size());
   }
 
-  vid_t vertices_num(fid_t fid, label_id_t label_id) const {
+  vid_t GetInnerVertexSize(fid_t fid, label_id_t label_id) const {
     return static_cast<vid_t>(oid_arrays_[fid][label_id]->length());
   }
 
@@ -163,7 +167,7 @@ class ArrowVertexMap
   friend class ArrowVertexMapBuilder;
 
   template <typename _OID_T, typename _VID_T>
-  friend class ArrowProjectedVertexMap;
+  friend class gs::ArrowProjectedVertexMap;
 };
 
 template <typename VID_T>
@@ -271,11 +275,11 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
 
   label_id_t label_num() const { return label_num_; }
 
-  vid_t vertices_num(fid_t fid) const {
+  vid_t GetInnerVertexSize(fid_t fid) const {
     return static_cast<vid_t>(o2g_[fid].size());
   }
 
-  vid_t vertices_num(fid_t fid, label_id_t label_id) const {
+  vid_t GetInnerVertexSize(fid_t fid, label_id_t label_id) const {
     return static_cast<vid_t>(oid_arrays_[fid][label_id]->length());
   }
 
@@ -310,7 +314,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   friend class ArrowVertexMapBuilder;
 
   template <typename _OID_T, typename _VID_T>
-  friend class ArrowProjectedVertexMap;
+  friend class gs::ArrowProjectedVertexMap;
 };
 
 template <typename OID_T, typename VID_T>

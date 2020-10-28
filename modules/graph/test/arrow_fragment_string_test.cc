@@ -31,7 +31,7 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 using FragmentType = ArrowFragment<std::string, uint64_t>;
 using ProjectedFragmentType =
-    ArrowProjectedFragment<std::string, uint64_t, double, int64_t>;
+    gs::ArrowProjectedFragment<std::string, uint64_t, double, int64_t>;
 
 std::string generate_path(const std::string& prefix, int part_num) {
   if (part_num == 1) {
