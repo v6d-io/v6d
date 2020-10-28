@@ -114,7 +114,7 @@ for example tensor could be `torch.tensor`, `tf.Tensor`, `mxnet.ndarray` etc., n
 mention that every graph processing engine has its own graph structure representations.
 
 The variety of data abstractions makes the sharing hard. Vineyard provides out-of-box
-high-level data abstractions over in-memory blobs, by describe objects using hierarchical
+high-level data abstractions over in-memory blobs, by describing objects using hierarchical
 metadatas. Various computation systems can utilize the built-in high level data abstractions
 to exchange data with other systems in computation pipeline in a concise manner.
 
@@ -123,9 +123,9 @@ Stream pipelining
 
 A computation doens't need to wait all precedent's result arrive before starting to work.
 Vineyard provides stream as a special kind of immmutable data for such pipeling scenarios.
-The precedent job can wirte the immutable data chunk by chunk to vineyard, while maintaining
+The precedent job can write the immutable data chunk by chunk to vineyard, while maintaining
 the data structure semantic, and the successor job reads shared-memory chunks from vineyard's
-stream without extra copy cost, then triggers it's own work. The overlapping helpes for
+stream without extra copy cost, then triggers it's own work. The overlapping helps for
 reducing the overall processing time and memory consumption.
 
 Drivers
