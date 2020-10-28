@@ -29,13 +29,17 @@ limitations under the License.
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
 
+namespace gs {
+
+template <typename OID_T, typename VID_T>
+class ArrowProjectedVertexMap;
+
+}  // namespace gs
+
 namespace vineyard {
 
 template <typename OID_T, typename VID_T>
 class ArrowVertexMapBuilder;
-
-template <typename OID_T, typename VID_T>
-class ArrowProjectedVertexMap;
 
 template <typename OID_T, typename VID_T>
 class ArrowVertexMap
@@ -163,7 +167,7 @@ class ArrowVertexMap
   friend class ArrowVertexMapBuilder;
 
   template <typename _OID_T, typename _VID_T>
-  friend class ArrowProjectedVertexMap;
+  friend class gs::ArrowProjectedVertexMap;
 };
 
 template <typename VID_T>

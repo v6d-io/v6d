@@ -224,13 +224,13 @@ const bool BareRegistered<T>::registered = ObjectFactory::Register<T>();
  * @brief Throws an exception if the builder has already been sealed.
  */
 #ifndef ENSURE_NOT_SEALED
-#define ENSURE_NOT_SEALED(builder)                                      \
-  do {                                                                  \
-    if (builder->sealed()) {                                            \
-      LOG(ERROR) << "The builder has already been sealed";              \
-      VINEYARD_CHECK_OK(                                                \
-          Status::ObjectSealed("The builder has already been sealed")); \
-    }                                                                   \
+#define ENSURE_NOT_SEALED(builder)                         \
+  do {                                                     \
+    if (builder->sealed()) {                               \
+      LOG(ERROR) << "The builder has already been sealed"; \
+      VINEYARD_CHECK_OK(vineyard::Status::ObjectSealed(    \
+          "The builder has already been sealed"));         \
+    }                                                      \
   } while (0)
 #endif  // ENSURE_NOT_SEALED
 

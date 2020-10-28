@@ -98,16 +98,18 @@ class PropertyGraphSchema {
     }
   }
 
-  Entry& GetEntry(const std::string& label, const std::string& type) {
+  Entry& GetMutableEntry(const std::string& label, const std::string& type) {
     if (type == "VERTEX") {
-      for (auto& e : vertex_entries_) {
-        if (e.label == label)
-          return e;
+      for (auto& entry : vertex_entries_) {
+        if (entry.label == label) {
+          return entry;
+        }
       }
     } else {
-      for (auto& e : edge_entries_) {
-        if (e.label == label)
-          return e;
+      for (auto& entry : edge_entries_) {
+        if (entry.label == label) {
+          return entry;
+        }
       }
     }
     throw std::runtime_error("Not found the entry of label " + type + " " +

@@ -16,6 +16,3 @@
 [submodule "thirdparty/boost-leaf"]
 	path = modules/graph/thirdparty/boost-leaf
 	url = https://github.com/boostorg/leaf.git
-[submodule "modules/graph/thirdparty/boost-leaf"]
-	path = modules/graph/thirdparty/boost-leaf
-	url = https://github.com/boostorg/leaf.git
