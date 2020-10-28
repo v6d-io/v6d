@@ -23,8 +23,8 @@ After that, we define the model, and train the model on the processed dataframe
 in PyTorch.
 Finally, the performance of the model is evaluated.
 
-On a single machine, although pandas and PyTorch are two different systems targeting different tasks.
-Data can be shared between them efficiently with little extra-cost, with everything happening end-to-end in a single python script.
+On a single machine, although pandas and PyTorch are two different systems targeting different tasks,
+data can be shared between them efficiently with little extra-cost, with everything happening end-to-end in a single python script.
 
 .. image:: https://v6d.io/_static/vineyard_compare.png
    :alt: Comparing the workflow with and without vineyard
@@ -66,7 +66,7 @@ just like the single machine solution do, and save the preprocessed dataframe in
 |             | .. code-block:: python                                                      |
 |             |                                                                             |
 |             |     import mars.dataframe as md                                             |
-| distributed |     data_csv = md.read_csv('hdfs://server/data_full', usecols=[1])          |
+| distributed |     dataset = md.read_csv('hdfs://server/data_full', usecols=[1])          |
 |             |     # after preprocessing, save the dataset to vineyard                     |
 |             |     vineyard_distributed_tensor_id = dataset.to_vineyard()                  |
 +-------------+-----------------------------------------------------------------------------+

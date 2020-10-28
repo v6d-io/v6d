@@ -197,6 +197,18 @@ jobs:
           rm -rf default.etcd
           python3 test/runner.py
 
+      - name: Generate Coverage Report
+        if: runner.os == 'Linux'
+        run: |
+          gcovr -s -r ./ -f ./src --xml -o coverage.xml
+
+      - name: Upload Coverage
+        if: runner.os == 'Linux'
+        uses: codecov/codecov-action@v1
+        with:
+          verbose: true
+          file: ./build/coverage.xml
+
       - name: Generate Doc
         run: |
           cd build
@@ -218,15 +230,3 @@ jobs:
           git add -A
           git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
           git push -f origin gh-pages
-
-      - name: Generate Coverage Report
-        if: runner.os == 'Linux'
-        run: |
-          gcovr -s -r ./ -f ./src --xml -o coverage.xml
-
-      - name: Upload Coverage
-        if: runner.os == 'Linux'
-        uses: codecov/codecov-action@v1
-        with:
-          verbose: true
-          file: ./build/coverage.xml
