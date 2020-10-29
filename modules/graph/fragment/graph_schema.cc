@@ -215,37 +215,37 @@ void Entry::FromJSON(const ptree& root) {
 }
 
 PropertyGraphSchema::PropertyId PropertyGraphSchema::GetVertexPropertyId(
-    LabelId label_id, const std::string& name) {
+    LabelId label_id, const std::string& name) const {
   return vertex_entries_[label_id].GetPropertyId(name);
 }
 
-PropertyType PropertyGraphSchema::GetVertexPropertyType(LabelId label_id,
-                                                        PropertyId prop_id) {
+PropertyType PropertyGraphSchema::GetVertexPropertyType(
+    LabelId label_id, PropertyId prop_id) const {
   return vertex_entries_[label_id].props[prop_id].type;
 }
 
-std::string PropertyGraphSchema::GetVertexPropertyName(LabelId label_id,
-                                                       PropertyId prop_id) {
+std::string PropertyGraphSchema::GetVertexPropertyName(
+    LabelId label_id, PropertyId prop_id) const {
   return vertex_entries_[label_id].props[prop_id].name;
 }
 
 PropertyGraphSchema::PropertyId PropertyGraphSchema::GetEdgePropertyId(
-    LabelId label_id, const std::string& name) {
+    LabelId label_id, const std::string& name) const {
   return edge_entries_[label_id].GetPropertyId(name);
 }
 
-PropertyType PropertyGraphSchema::GetEdgePropertyType(LabelId label_id,
-                                                      PropertyId prop_id) {
+PropertyType PropertyGraphSchema::GetEdgePropertyType(
+    LabelId label_id, PropertyId prop_id) const {
   return edge_entries_[label_id].props[prop_id].type;
 }
 
 std::string PropertyGraphSchema::GetEdgePropertyName(LabelId label_id,
-                                                     PropertyId prop_id) {
+                                                     PropertyId prop_id) const {
   return edge_entries_[label_id].props[prop_id].name;
 }
 
 PropertyGraphSchema::LabelId PropertyGraphSchema::GetVertexLabelId(
-    const std::string& name) {
+    const std::string& name) const {
   for (const auto& entry : vertex_entries_) {
     if (entry.label == name) {
       return entry.id;
@@ -254,12 +254,12 @@ PropertyGraphSchema::LabelId PropertyGraphSchema::GetVertexLabelId(
   return -1;
 }
 
-std::string PropertyGraphSchema::GetVertexLabelName(LabelId label_id) {
+std::string PropertyGraphSchema::GetVertexLabelName(LabelId label_id) const {
   return vertex_entries_[label_id].label;
 }
 
 PropertyGraphSchema::LabelId PropertyGraphSchema::GetEdgeLabelId(
-    const std::string& name) {
+    const std::string& name) const {
   for (const auto& entry : edge_entries_) {
     if (entry.label == name) {
       return entry.id;
@@ -268,7 +268,7 @@ PropertyGraphSchema::LabelId PropertyGraphSchema::GetEdgeLabelId(
   return -1;
 }
 
-std::string PropertyGraphSchema::GetEdgeLabelName(LabelId label_id) {
+std::string PropertyGraphSchema::GetEdgeLabelName(LabelId label_id) const {
   return vertex_entries_[label_id].label;
 }
 
@@ -287,6 +287,54 @@ Entry* PropertyGraphSchema::CreateEntry(const std::string& name,
               .type = type});
     return &*edge_entries_.rbegin();
   }
+}
+
+std::vector<std::string> PropertyGraphSchema::GetVextexLabels() const {
+  std::vector<std::string> labels;
+  for (auto& entry : vertex_entries_) {
+    labels.emplace_back(entry.label);
+  }
+  return labels;
+}
+
+std::vector<std::string> PropertyGraphSchema::GetEdgeLabels() const {
+  std::vector<std::string> labels;
+  for (auto& entry : edge_entries_) {
+    labels.emplace_back(entry.label);
+  }
+  return labels;
+}
+
+std::vector<std::pair<std::string, std::string>>
+PropertyGraphSchema::GetVertexPropertyListByLabel(
+    const std::string& label) const {
+  LabelId label_id = GetVertexLabelId(label);
+  return GetVertexPropertyListByLabel(label_id);
+}
+
+std::vector<std::pair<std::string, std::string>>
+PropertyGraphSchema::GetVertexPropertyListByLabel(LabelId label_id) const {
+  std::vector<std::pair<std::string, std::string>> properties;
+  for (auto& prop : vertex_entries_[label_id].props) {
+    properties.emplace_back(prop.name, detail::PropertyTypeToString(prop.type));
+  }
+  return properties;
+}
+
+std::vector<std::pair<std::string, std::string>>
+PropertyGraphSchema::GetEdgePropertyListByLabel(
+    const std::string& label) const {
+  LabelId label_id = GetEdgeLabelId(label);
+  return GetEdgePropertyListByLabel(label_id);
+}
+
+std::vector<std::pair<std::string, std::string>>
+PropertyGraphSchema::GetEdgePropertyListByLabel(LabelId label_id) const {
+  std::vector<std::pair<std::string, std::string>> properties;
+  for (auto& prop : edge_entries_[label_id].props) {
+    properties.emplace_back(prop.name, detail::PropertyTypeToString(prop.type));
+  }
+  return properties;
 }
 
 void PropertyGraphSchema::ToJSON(ptree& root) const {
