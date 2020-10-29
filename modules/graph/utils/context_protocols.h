@@ -29,28 +29,43 @@ struct TypeToInt {
 };
 
 template <>
-struct TypeToInt<int> {
+struct TypeToInt<bool> {
   static constexpr int value = 1;
 };
 
 template <>
-struct TypeToInt<double> {
+struct TypeToInt<int32_t> {
   static constexpr int value = 2;
 };
 
 template <>
-struct TypeToInt<int64_t> {
+struct TypeToInt<uint32_t> {
   static constexpr int value = 3;
 };
 
 template <>
-struct TypeToInt<uint64_t> {
+struct TypeToInt<int64_t> {
   static constexpr int value = 4;
 };
 
 template <>
-struct TypeToInt<std::string> {
+struct TypeToInt<uint64_t> {
   static constexpr int value = 5;
+};
+
+template <>
+struct TypeToInt<float> {
+  static constexpr int value = 6;
+};
+
+template <>
+struct TypeToInt<double> {
+  static constexpr int value = 7;
+};
+
+template <>
+struct TypeToInt<std::string> {
+  static constexpr int value = 8;
 };
 
 inline int ArrowDataTypeToInt(std::shared_ptr<arrow::DataType> type) {
