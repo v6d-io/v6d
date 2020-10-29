@@ -522,14 +522,6 @@ class ArrowFragment
     }
   }
 
-  inline label_id_t GetLabelId(const vertex_t& v) const {
-    return vid_parser_.GetLabelId(v.GetValue());
-  }
-
-  inline label_id_t GetLabelId(const vid_t& gid) const {
-    return vid_parser_.GetLabelId(gid);
-  }
-
   inline vid_t GetOuterVertexGid(const vertex_t& v) const {
     label_id_t v_label = vid_parser_.GetLabelId(v.GetValue());
     return ovgid_lists_ptr_[v_label][vid_parser_.GetOffset(v.GetValue()) -
