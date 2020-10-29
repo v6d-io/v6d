@@ -105,7 +105,7 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
 #define RETURN_GS_ERROR(code, msg)                                             \
   return ::boost::leaf::new_error(                                             \
       GSError((code), std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
-                          ": " + std::string(__FUNCTION__) + " -> " + (msg)));
+                          ": " + std::string(__FUNCTION__) + " -> " + (msg)))
 
 inline GSError AllGatherError(GSError& e, grape::CommSpec& comm_spec) {
   std::stringstream ss;
