@@ -141,18 +141,20 @@ inline GSError AllGatherError(grape::CommSpec& comm_spec) {
   return {ErrorCode::kOk, ""};
 }
 
-#define VY_OK_OR_RAISE(status)                                         \
-  do {                                                                 \
-    if (!(status).ok()) {                                              \
-      RETURN_GS_ERROR(ErrorCode::kVineyardError, (status).ToString()); \
-    }                                                                  \
+#define VY_OK_OR_RAISE(expr)                                                \
+  do {                                                                      \
+    auto status_name = (expr);                                              \
+    if (!(status_name).ok()) {                                              \
+      RETURN_GS_ERROR(ErrorCode::kVineyardError, (status_name).ToString()); \
+    }                                                                       \
   } while (0)
 
-#define ARROW_OK_OR_RAISE(status)                                   \
-  do {                                                              \
-    if (!(status).ok()) {                                           \
-      RETURN_GS_ERROR(ErrorCode::kArrowError, (status).ToString()); \
-    }                                                               \
+#define ARROW_OK_OR_RAISE(expr)                                          \
+  do {                                                                   \
+    auto status_name = (expr);                                           \
+    if (!(status_name).ok()) {                                           \
+      RETURN_GS_ERROR(ErrorCode::kArrowError, (status_name).ToString()); \
+    }                                                                    \
   } while (0)
 
 #define ARROW_OK_ASSIGN_OR_RAISE(lhs, expr)               \
