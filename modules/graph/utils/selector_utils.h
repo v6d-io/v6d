@@ -201,9 +201,12 @@ inline SchemaType parse_property_selectors(
       schema_for_context = true;
       property_graph_types::LABEL_ID_TYPE label_id;
       property_graph_types::PROP_ID_TYPE prop_id;
-      if (parse_label_id(token[1], label_id) &&
-          parse_property_id(token[2], prop_id)) {
-        v_labels.insert(label_id);
+      if (parse_label_id(token[1], label_id)) {
+        if (token[2] == "data" || parse_property_id(token[2], prop_id)) {
+          v_labels.insert(label_id);
+        } else {
+          return SchemaType::kInvalidSchema;
+        }
       } else {
         return SchemaType::kInvalidSchema;
       }
