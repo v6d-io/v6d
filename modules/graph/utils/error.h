@@ -141,11 +141,12 @@ inline GSError AllGatherError(grape::CommSpec& comm_spec) {
   return {ErrorCode::kOk, ""};
 }
 
-#define CHECK_OR_RAISE(condition)                                      \
-  do {                                                                 \
-    if (!(condition)) {                                                \
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Check failed."); \
-    }                                                                  \
+#define CHECK_OR_RAISE(condition)                    \
+  do {                                               \
+    if (!(condition)) {                              \
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, \
+                      "Check failed: " #condition);  \
+    }                                                \
   } while (0)
 
 #define VY_OK_OR_RAISE(status)                                         \
