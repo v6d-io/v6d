@@ -74,19 +74,21 @@ class PropertyGraphSchema {
   using LabelId = int;
   using PropertyId = int;
 
-  PropertyId GetVertexPropertyId(LabelId label_id, const std::string& name);
-  PropertyType GetVertexPropertyType(LabelId label_id, PropertyId prop_id);
-  std::string GetVertexPropertyName(LabelId label_id, PropertyId prop_id);
+  PropertyId GetVertexPropertyId(LabelId label_id,
+                                 const std::string& name) const;
+  PropertyType GetVertexPropertyType(LabelId label_id,
+                                     PropertyId prop_id) const;
+  std::string GetVertexPropertyName(LabelId label_id, PropertyId prop_id) const;
 
-  PropertyId GetEdgePropertyId(LabelId label_id, const std::string& name);
-  PropertyType GetEdgePropertyType(LabelId label_id, PropertyId prop_id);
-  std::string GetEdgePropertyName(LabelId label_id, PropertyId prop_id);
+  PropertyId GetEdgePropertyId(LabelId label_id, const std::string& name) const;
+  PropertyType GetEdgePropertyType(LabelId label_id, PropertyId prop_id) const;
+  std::string GetEdgePropertyName(LabelId label_id, PropertyId prop_id) const;
 
-  LabelId GetVertexLabelId(const std::string& name);
-  std::string GetVertexLabelName(LabelId label_id);
+  LabelId GetVertexLabelId(const std::string& name) const;
+  std::string GetVertexLabelName(LabelId label_id) const;
 
-  LabelId GetEdgeLabelId(const std::string& name);
-  std::string GetEdgeLabelName(LabelId label_id);
+  LabelId GetEdgeLabelId(const std::string& name) const;
+  std::string GetEdgeLabelName(LabelId label_id) const;
 
   Entry* CreateEntry(const std::string& name, const std::string& type);
 
@@ -128,6 +130,20 @@ class PropertyGraphSchema {
   const std::vector<Entry>& vertex_entries() const { return vertex_entries_; }
 
   const std::vector<Entry>& edge_entries() const { return edge_entries_; }
+
+  std::vector<std::string> GetVextexLabels() const;
+
+  std::vector<std::string> GetEdgeLabels() const;
+
+  std::vector<std::pair<std::string, std::string>> GetVertexPropertyListByLabel(
+      const std::string& label) const;
+  std::vector<std::pair<std::string, std::string>> GetVertexPropertyListByLabel(
+      LabelId label_id) const;
+
+  std::vector<std::pair<std::string, std::string>> GetEdgePropertyListByLabel(
+      const std::string& label) const;
+  std::vector<std::pair<std::string, std::string>> GetEdgePropertyListByLabel(
+      LabelId label_id) const;
 
   void DumpToFile(std::string const& path);
 
