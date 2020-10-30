@@ -108,7 +108,7 @@ class ArrowFragmentLoader {
     return group_id;
   }
 
- private:
+ protected:
   boost::leaf::result<void> initPartitioner() {
 #ifdef HASH_PARTITION
     partitioner_.Init(comm_spec_.fnum());
