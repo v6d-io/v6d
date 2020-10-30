@@ -620,6 +620,10 @@ class IMetaService {
         // the revision value 0 means local update ops.
         continue;
       }
+      if (boost::algorithm::trim_copy(op.kv.key).empty()) {
+        // skip empty keys
+        continue;
+      }
       if (boost::algorithm::starts_with(op.kv.key, "instances.")) {
         instanceUpdate(op);
       }
