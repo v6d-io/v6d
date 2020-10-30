@@ -77,7 +77,7 @@ class BasicArrowFragmentLoader {
             auto& vertex_table = vertex_tables_[v_label];
             auto metadata = vertex_table->schema()->metadata();
             auto meta_idx = metadata->FindKey(ID_COLUMN);
-            CHECK_NE(meta_idx, -1);
+            CHECK_OR_RAISE(meta_idx != -1);
             auto id_column_idx = std::stoi(metadata->value(meta_idx));
             // TODO(guanyi.gl): Failure occurred before MPI calling will make
             // processes hanging. We have to resolve this kind of issue.
@@ -91,9 +91,9 @@ class BasicArrowFragmentLoader {
             ARROW_OK_ASSIGN_OR_RAISE(local_v_tables[v_label],
                                      tmp_table->RemoveColumn(id_column_idx));
 #endif
-            CHECK_EQ(tmp_table->field(id_column_idx)->type(),
-                     vineyard::ConvertToArrowType<oid_t>::TypeValue());
-            CHECK_LE(tmp_table->column(id_column_idx)->num_chunks(), 1);
+            CHECK_OR_RAISE(tmp_table->field(id_column_idx)->type() ==
+                           vineyard::ConvertToArrowType<oid_t>::TypeValue());
+            CHECK_OR_RAISE(tmp_table->column(id_column_idx)->num_chunks() <= 1);
             auto local_oid_array = std::dynamic_pointer_cast<oid_array_t>(
                 tmp_table->column(id_column_idx)->chunk(0));
             BOOST_LEAF_AUTO(
@@ -136,8 +136,8 @@ class BasicArrowFragmentLoader {
             auto metadata = edge_table->schema()->metadata();
             auto meta_idx_src = metadata->FindKey(SRC_COLUMN);
             auto meta_idx_dst = metadata->FindKey(DST_COLUMN);
-            CHECK_NE(meta_idx_src, -1);
-            CHECK_NE(meta_idx_dst, -1);
+            CHECK_OR_RAISE(meta_idx_src != -1);
+            CHECK_OR_RAISE(meta_idx_dst != -1);
             auto src_column_idx = std::stoi(metadata->value(meta_idx_src));
             auto dst_column_idx = std::stoi(metadata->value(meta_idx_dst));
             BOOST_LEAF_AUTO(src_gid_array,
@@ -200,7 +200,7 @@ class BasicArrowFragmentLoader {
       for (size_t i = 0; i != size; ++i) {
         internal_oid_t oid = oid_array->GetView(i);
         fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
-        CHECK(oid2gid_mapper(fid, oid, builder[i]));
+        CHECK_OR_RAISE(oid2gid_mapper(fid, oid, builder[i]));
       }
       ARROW_OK_OR_RAISE(builder.Advance(size));
       ARROW_OK_OR_RAISE(builder.Finish(&chunks_out[chunk_i]));
