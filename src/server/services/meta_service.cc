@@ -101,7 +101,6 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
         for (p = suprange.first; p != suprange.second; ++p) {
           if (p->second == object_id) {
             supobjects_.erase(p);
-            break;
           }
         }
         if (deep) {
@@ -119,7 +118,6 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
         for (p = subrange.first; p != subrange.second; ++p) {
           if (p->second == object_id) {
             subobjects_.erase(p);
-            break;
           }
         }
         traverseToDelete(initial_delete_set, delete_set, it->second, true,
