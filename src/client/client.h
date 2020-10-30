@@ -126,7 +126,7 @@ class Client : public ClientBase {
   ~Client() override;
 
   /**
-   * @brief Connect to vineyard using the UNIX domain socket file pointed by
+   * @brief Connect to vineyard using the UNIX domain socket file specified by
    *        the environment variable `VINEYARD_IPC_SOCKET`.
    *
    * @return Status that indicates whether the connect has succeeded.
@@ -145,7 +145,7 @@ class Client : public ClientBase {
 
   /**
    * @brief Get a default client reference, using the UNIX domain socket file
-   *        pointed by the environment variable `VINEYARD_IPC_SOCKET`.
+   *        specified by the environment variable `VINEYARD_IPC_SOCKET`.
    *
    * @return A reference of the default Client instance.
    */

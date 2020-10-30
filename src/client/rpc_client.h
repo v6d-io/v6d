@@ -35,6 +35,14 @@ class RPCClient : public ClientBase {
   ~RPCClient() override;
 
   /**
+   * @brief Connect to vineyard using the TCP endpoint specified by
+   *        the environment variable `VINEYARD_RPC_ENDPOINT`.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect();
+
+  /**
    * @brief Connect to vineyardd using the given TCP endpoint `rpc_endpoint`.
    *
    * @param rpc_endpoint The TPC endpoint of vineyard server, in the format of

@@ -42,6 +42,38 @@ add_doc(
 
     Returns:
         RPCClient: The connected RPC client.
+
+.. function:: connect(endpoint: (str, int or str)) -> RPCClient
+    :noindex:
+
+    Connect to vineyard via TCP socket.
+
+    Parameters:
+        endpoint: tuple(str, int or str)
+            Endpoint to connect to. The parameter is a tuple, in which the first element
+            is the host, and the second parameter, can be int a str, is the port.
+
+    Returns:
+        RPCClient: The connected RPC client.
+
+.. function:: connect() -> IPCClient or RPCClient
+    :noindex:
+
+    Connect to vineyard via UNIX domain socket or TCP endpoint. This method normally
+    usually no arguments, and will first tries to resolve IPC socket from the
+    environment variable `VINEYARD_IPC_SOCKET` and connect to it. If it fails to
+    establish a connection with vineyard server, the method will tries to resolve
+    RPC endpoint from the environment variable `VINEYARD_RPC_ENDPOINT`.
+
+    If both tries are failed, this method will raise a :class:`ConnectionFailed`
+    exception.
+
+    In rare cases, user may be not sure about if the IPC socket or RPC endpoint
+    is avaiable, i.e., the varaible might be :code:`None`. In such cases this method
+    can accept a `None` as arguments, and do resolution as described above.
+
+    Raises:
+        ConnectionFailed
 ''')
 
 add_doc(
