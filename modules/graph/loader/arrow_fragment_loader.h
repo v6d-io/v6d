@@ -767,10 +767,8 @@ class ArrowFragmentLoader {
                             "Unexpected type: " + to_type->ToString() +
                                 "; Origin type: " + from_type->ToString());
           }
-          LOG(INFO) << "Origin array: " << array->ToString();
           LOG(INFO) << "Cast " << from_type->ToString() << " To "
                     << to_type->ToString();
-          LOG(INFO) << "Casted array: " << new_array->ToString();
         }
         auto chunk_array =
             std::make_shared<arrow::ChunkedArray>(chunks, to_type);
