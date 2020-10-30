@@ -98,9 +98,11 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
         // remove dependency edge
         auto suprange = supobjects_.equal_range(it->second);
         decltype(suprange.first) p;
-        for (p = suprange.first; p != suprange.second; ++p) {
+        for (p = suprange.first; p != suprange.second; /* no self-inc */) {
           if (p->second == object_id) {
-            supobjects_.erase(p);
+            supobjects_.erase(p++);
+          } else {
+            ++p;
           }
         }
         if (deep) {
@@ -115,9 +117,11 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
         // remove dependency edge
         auto subrange = subobjects_.equal_range(it->second);
         decltype(subrange.first) p;
-        for (p = subrange.first; p != subrange.second; ++p) {
+        for (p = subrange.first; p != subrange.second; /* no self-inc */) {
           if (p->second == object_id) {
-            subobjects_.erase(p);
+            subobjects_.erase(p++);
+          } else {
+            ++p;
           }
         }
         traverseToDelete(initial_delete_set, delete_set, it->second, true,
