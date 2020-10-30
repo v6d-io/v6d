@@ -60,7 +60,7 @@ class ClientManager {
     return manager;
   }
 
-  std::shared_ptr<ClientType> Connect(std::string const& endpoint) {
+  std::shared_ptr<ClientType> Connect(std::string const& endpoint = "") {
     std::lock_guard<std::mutex> guard{mtx_};
     auto iter = client_set_.find(endpoint);
     if (iter != client_set_.end()) {
@@ -69,7 +69,8 @@ class ClientManager {
       }
     }
     std::shared_ptr<ClientType> client = std::make_shared<ClientType>();
-    auto connect_status = client->Connect(endpoint);
+    auto connect_status =
+        endpoint.empty() ? client->Connect() : client->Connect(endpoint);
     if (PyErr_CheckSignals() != 0) {
       // The method `Connect` will keep retrying, we need to propogate
       // the Ctrl-C when during the C++ code run retries.
@@ -231,9 +232,7 @@ void bind_client(py::module& mod) {
       .def_property_readonly(
           "rpc_connections",
           [](InstanceStatus* status) { return status->rpc_connections; })
-      .def("__repr__", [](InstanceStatus* status) {
-        return "InstanceStatus";
-      })
+      .def("__repr__", [](InstanceStatus* status) { return "InstanceStatus"; })
       .def("__str__", [](InstanceStatus* status) {
         std::stringstream ss;
         ss << "InstanceStatus:" << std::endl;
@@ -241,7 +240,8 @@ void bind_client(py::module& mod) {
         ss << "    deployment: " << status->deployment << std::endl;
         ss << "    memory_usage: " << status->memory_usage << std::endl;
         ss << "    memory_limit: " << status->memory_limit << std::endl;
-        ss << "    deferred_requests: " << status->deferred_requests << std::endl;
+        ss << "    deferred_requests: " << status->deferred_requests
+           << std::endl;
         ss << "    ipc_connections: " << status->ipc_connections << std::endl;
         ss << "    rpc_connections: " << status->rpc_connections;
         return ss.str();
@@ -370,10 +370,25 @@ void bind_client(py::module& mod) {
 
   mod.def(
          "connect",
-         [](std::string const& ipc_socket) {
-           return ClientManager<Client>::GetManager()->Connect(ipc_socket);
+         [](nullptr_t) -> py::object {
+           try {
+             return py::cast(ClientManager<Client>::GetManager()->Connect());
+           } catch (...) {}
+           try {
+             return py::cast(ClientManager<RPCClient>::GetManager()->Connect());
+           } catch (...) {}
+           throw_on_error(Status::ConnectionFailed(
+               "Failed to resolve IPC socket or RPC endpoint of vineyard "
+               "server from environment variables."));
+           return py::none();
          },
-         "ipc_socket"_a)
+         py::arg("target") = py::none())
+      .def(
+          "connect",
+          [](std::string const& ipc_socket) {
+            return ClientManager<Client>::GetManager()->Connect(ipc_socket);
+          },
+          "ipc_socket"_a)
       .def(
           "connect",
           [](std::string const& host, const uint32_t port) {
@@ -389,7 +404,24 @@ void bind_client(py::module& mod) {
             return ClientManager<RPCClient>::GetManager()->Connect(
                 rpc_endpoint);
           },
-          "host"_a, "port"_a);
+          "host"_a, "port"_a)
+      .def(
+          "connect",
+          [](std::pair<std::string, uint32_t> const& endpoint) {
+            std::string rpc_endpoint =
+                endpoint.first + ":" + std::to_string(endpoint.second);
+            return ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint);
+          },
+          "(host, port)"_a)
+      .def(
+          "connect",
+          [](std::pair<std::string, std::string> const& endpoint) {
+            std::string rpc_endpoint = endpoint.first + ":" + endpoint.second;
+            return ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint);
+          },
+          "(host, port)"_a);
 }
 
 }  // namespace vineyard

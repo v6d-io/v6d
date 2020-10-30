@@ -335,9 +335,9 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
 
   /// Return an error when client failed to connect to vineyard server.
-  static Status ConnectionFailed() {
+  static Status ConnectionFailed(std::string const& message = "") {
     return Status(StatusCode::kConnectionFailed,
-                  "Failed to connect to vineyardd.");
+                  "Failed to connect to vineyardd: " + message);
   }
 
   /// Return an error when client losts connection to vineyard server.
