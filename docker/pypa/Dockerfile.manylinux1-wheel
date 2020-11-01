@@ -14,6 +14,8 @@
 
 FROM docker.pkg.github.com/alibaba/libvineyard/vineyard-manylinux1:20201028
 
+# target: docker.pkg.github.com/alibaba/libvineyard/vineyard-wheel
+
 # specify python version:
 #   - cp35-cp35m
 #   - cp36-cp36m
@@ -50,6 +52,6 @@ RUN cd /work/libvineyard && \
     export LD_LIBRARY_PATH=/work/libvineyard/lib:$LD_LIBRARY_PATH && \
     for wheel in `ls dist/*`; do auditwheel repair -w fixed_wheels $wheel; done && \
     cd /work && \
-    mkdir -p dist/ && \
-    mv /work/libvineyard/wheelhouse/* /work/dist/ && \
+    mkdir -p fixed_wheels/ && \
+    mv /work/libvineyard/fixed_wheels/* /work/fixed_wheels/ && \
     rm -rf /work/libvineyard

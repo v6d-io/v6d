@@ -14,6 +14,8 @@
 
 FROM quay.io/pypa/manylinux2010_x86_64:2020-10-18-c6d2d92
 
+# target: docker.pkg.github.com/alibaba/libvineyard/vineyard-manylinux1:20201028
+
 RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     mkdir /deps && \
     cd /deps && \

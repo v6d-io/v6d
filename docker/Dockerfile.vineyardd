@@ -14,6 +14,8 @@
 
 FROM docker.pkg.github.com/alibaba/libvineyard/vineyardd-alpine-builder:20201028 as builder
 
+# target: docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-latest
+
 ADD . /work/libvineyard
 
 # FIXME It is still not clear why the first run of cmake will fail.
