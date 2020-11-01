@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/alibaba/libvineyard/vineyard-static-builder:0.3 as builder
+FROM docker.pkg.github.com/alibaba/libvineyard/vineyardd-alpine-builder:20201028 as builder
 
 ADD . /work/libvineyard
+
+# FIXME It is still not clear why the first run of cmake will fail.
 
 RUN cd /tmp && \
     curl -LJO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 && \
@@ -36,8 +38,21 @@ RUN cd /tmp && \
          -DBUILD_VINEYARD_MIGRATION=OFF \
          -DBUILD_VINEYARD_TESTS=OFF \
          -DBUILD_VINEYARD_TESTS_ALL=OFF \
+         -DBUILD_VINEYARD_PROFILING=OFF || true && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release \
+         -DBUILD_SHARED_LIBS=OFF \
+         -DBUILD_VINEYARD_SERVER=ON \
+         -DBUILD_VINEYARD_CLIENT=OFF \
+         -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
+         -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
+         -DBUILD_VINEYARD_BASIC=OFF \
+         -DBUILD_VINEYARD_GRAPH=OFF \
+         -DBUILD_VINEYARD_IO=OFF \
+         -DBUILD_VINEYARD_MIGRATION=OFF \
+         -DBUILD_VINEYARD_TESTS=OFF \
+         -DBUILD_VINEYARD_TESTS_ALL=OFF \
          -DBUILD_VINEYARD_PROFILING=OFF && \
-    make -j && \
+    make -j2 && \
     strip ./bin/vineyardd
 
 FROM frolvlad/alpine-glibc:alpine-3.12
@@ -48,4 +63,3 @@ COPY --from=builder /work/libvineyard/build/bin/vineyardd /usr/bin/vineyardd
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/usr/bin/vineyardd"]
-

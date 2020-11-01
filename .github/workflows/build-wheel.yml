@@ -1,0 +1,206 @@
+# Copyright 2020 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build Wheel
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-10.15]
+        python: [cp35-cp35m, cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Cache for cccahe
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache
+          restore-keys: |
+            ${{ runner.os }}-ccache
+
+      - name: Login docker registry
+        if: runner.os == 'Linux'
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://docker.pkg.github.com -u $GITHUB_ACTOR --password-stdin
+
+      - name: Build wheel package on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo docker build . -f docker/pypa/Dockerfile.manylinux1-wheel \
+                              -t docker.pkg.github.com/alibaba/libvineyard/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
+                              --build-arg python=${{ matrix.python }}
+          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/alibaba/libvineyard/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
+          ls -la ./fixed_wheels/
+
+      - name: Install python for MacOS
+        if: runner.os == 'macOS'
+        run: |
+          # setup python
+          case "${{ matrix.python }}" in
+            ("cp35-cp35m") sudo conda create --quiet --yes -n buildwheel python=3.5 ;;
+            ("cp36-cp36m") sudo conda create --quiet --yes -n buildwheel python=3.6 ;;
+            ("cp37-cp37m") sudo conda create --quiet --yes -n buildwheel python=3.7 ;;
+            ("cp38-cp38")  sudo conda create --quiet --yes -n buildwheel python=3.8 ;;
+            ("cp39-cp39")  sudo conda create --quiet --yes -n buildwheel -c conda-forge python=3.9 ;;
+          esac
+          conda init bash
+
+          # validate python
+          source ~/.bash_profile
+          conda activate buildwheel
+          python -c "import sys; print(sys.version)"
+
+          # install dependencies
+          curl https://bootstrap.pypa.io/get-pip.py | python
+          pip3 install delocate
+
+      - name: Install dependencies for MacOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install ccache boost coreutils
+
+          export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH
+          export MACOSX_DEPLOYMENT_TARGET=10.6
+
+          ccache --show-stats
+
+          export CC=gcc-8
+          export CXX=g++-8
+
+          echo "Installing gflags ..."
+          cd /tmp
+          curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
+          tar zxf gflags-v2.2.2.tar.gz
+          cd gflags-2.2.2
+          mkdir -p build-dir
+          cd build-dir
+          cmake .. -DBUILD_SHARED_LIBS=OFF
+          make install -j2
+
+          echo "Installing glog ..."
+          cd /tmp
+          curl -L https://github.com/google/glog/archive/v0.4.0.tar.gz --output glog-v0.4.0.tar.gz
+          tar zxf glog-v0.4.0.tar.gz
+          cd glog-0.4.0
+          mkdir -p build-dir
+          cd build-dir
+          cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF
+          make install -j2
+
+          echo "Installing apache-arrow ..."
+          cd /tmp
+          curl -L https://github.com/apache/arrow/archive/apache-arrow-1.0.1.tar.gz --output apache-arrow-1.0.1.tar.gz
+          tar zxf apache-arrow-1.0.1.tar.gz
+          cd arrow-apache-arrow-1.0.1
+          mkdir -p build-dir
+          cd build-dir
+          cmake ../cpp \
+              -DARROW_COMPUTE=ON \
+              -DARROW_WITH_UTF8PROC=OFF \
+              -DARROW_CSV=ON \
+              -DARROW_CUDA=OFF \
+              -DARROW_DATASET=OFF \
+              -DARROW_FILESYSTEM=ON \
+              -DARROW_FLIGHT=OFF \
+              -DARROW_GANDIVA=OFF \
+              -DARROW_GANDIVA_JAVA=OFF \
+              -DARROW_HDFS=OFF \
+              -DARROW_HIVESERVER2=OFF \
+              -DARROW_JSON=OFF \
+              -DARROW_ORC=OFF \
+              -DARROW_PARQUET=OFF \
+              -DARROW_PLASMA=OFF \
+              -DARROW_PLASMA_JAVA_CLIENT=OFF \
+              -DARROW_PYTHON=OFF \
+              -DARROW_S3=OFF \
+              -DARROW_WITH_BZ2=OFF \
+              -DARROW_WITH_ZLIB=OFF \
+              -DARROW_WITH_LZ4=OFF \
+              -DARROW_WITH_SNAPPY=OFF \
+              -DARROW_WITH_ZSTD=OFF \
+              -DARROW_WITH_BROTLI=OFF \
+              -DARROW_IPC=ON \
+              -DARROW_BUILD_BENCHMARKS=OFF \
+              -DARROW_BUILD_EXAMPLES=OFF \
+              -DARROW_BUILD_INTEGRATION=OFF \
+              -DARROW_BUILD_UTILITIES=OFF \
+              -DARROW_BUILD_TESTS=OFF \
+              -DARROW_ENABLE_TIMING_TESTS=OFF \
+              -DARROW_FUZZING=OFF \
+              -DARROW_USE_ASAN=OFF \
+              -DARROW_USE_TSAN=OFF \
+              -DARROW_USE_UBSAN=OFF \
+              -DARROW_JEMALLOC=OFF \
+              -DARROW_BUILD_SHARED=OFF \
+              -DARROW_BUILD_STATIC=ON
+          make install -j2
+
+          ccache --show-stats
+
+      - name: Build wheel package on MacOS
+        if: runner.os == 'macOS'
+        run: |
+          export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$HOME/.local/bin:$PATH
+          export MACOSX_DEPLOYMENT_TARGET=10.6
+
+          export CC=gcc-8
+          export CXX=g++-8
+
+          source ~/.bash_profile
+          conda activate buildwheel
+
+          # run build
+          mkdir -p build
+          cd build
+          cmake .. -DBUILD_SHARED_LIBS=ON \
+                   -DBUILD_VINEYARD_SERVER=OFF \
+                   -DBUILD_VINEYARD_CLIENT=ON \
+                   -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+                   -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
+                   -DBUILD_VINEYARD_BASIC=OFF \
+                   -DBUILD_VINEYARD_IO=OFF \
+                   -DBUILD_VINEYARD_GRAPH=OFF \
+                   -DBUILD_VINEYARD_MIGRATION=OFF \
+                   -DBUILD_VINEYARD_TESTS=OFF \
+                   -DBUILD_VINEYARD_TESTS_ALL=OFF \
+                   -DBUILD_VINEYARD_COVERAGE=OFF \
+                   -DBUILD_VINEYARD_PROFILING=OFF \
+                   -DCMAKE_BUILD_TYPE=Release \
+                   -DPYTHON_EXECUTABLE=`which python`
+          make vineyard_client_python -j2
+          cd ..
+          python setup.py bdist_wheel
+          export LD_LIBRARY_PATH=`pwd`/build/lib:$LD_LIBRARY_PATH
+          for wheel in `ls dist/*`; do delocate-wheel -w fixed_wheels -v $wheel; done
+          ls -la ./fixed_wheels
+
+      - name: Prepare checksum and artifacts
+        run: |
+          sha512sum ./fixed_wheels/* > vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
+          echo "Checksum is: "
+          cat ./vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
+          tar zcvfh vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz ./fixed_wheels vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz
+          path: vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz

@@ -74,7 +74,7 @@ jobs:
                               libarrow-python-dev
 
           # install python packages for codegen
-          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe
+          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr
 
           # install clang-format
           if [ ! -f /usr/bin/clang-format ]; then
@@ -209,7 +209,7 @@ jobs:
           make vineyard_doc
 
       - name: Commit Doc
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
         run: |
           git config user.email github-actions@github.com
           git config user.name github-actions
