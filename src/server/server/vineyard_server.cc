@@ -95,7 +95,7 @@ void VineyardServer::BackendReady() {
     ipc_server_ptr_->Start();
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard IPC server: " << ex.what()
-               << ", please try to cleanup existing "
+               << ", or please try to cleanup existing "
                << spec_.get_child("ipc_spec").get<std::string>("socket");
     serve_status_ = Status::IOError();
     context_.stop();

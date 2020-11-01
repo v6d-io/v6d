@@ -29,6 +29,14 @@ limitations under the License.
 
 namespace vineyard {
 
+Status RPCClient::Connect() {
+  if (const char* env_p = std::getenv("VINEYARD_RPC_ENDPOINT")) {
+    return Connect(std::string(env_p));
+  }
+  return Status::ConnectionError(
+      "Environment variable VINEYARD_RPC_ENDPOINT does't exists");
+}
+
 Status RPCClient::Connect(const std::string& rpc_endpoint) {
   size_t pos = rpc_endpoint.find(":");
   std::string host, port;

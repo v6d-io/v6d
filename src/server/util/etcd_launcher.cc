@@ -57,6 +57,7 @@ Status EtcdLauncher::LaunchEtcdServer(
   // resolve etcd binary
   std::string etcd_cmd = etcd_spec_.get<std::string>("etcd_cmd");
   if (etcd_cmd.empty()) {
+    setenv("LC_ALL", "C", 1);  // makes boost's path works as expected.
     etcd_cmd = boost::process::search_path("etcd").string();
   }
   LOG(INFO) << "Found etcd at: " << etcd_cmd;

@@ -184,7 +184,6 @@ void bind_core(py::module& mod) {
       .def(py::init<>())
       .def(py::init<ObjectID>(), "id"_a)
       .def(py::init<std::string const&>(), "id"_a)
-      .def(py::init<const char*>(), "id"_a)
       .def("__int__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
       .def("__repr__",
            [](const ObjectIDWrapper& id) { return VYObjectIDToString(id); })

@@ -197,6 +197,12 @@ jobs:
           rm -rf default.etcd
           python3 test/runner.py
 
+      - name: Upload Coverage
+        if: runner.os == 'Linux'
+        uses: codecov/codecov-action@v1
+        with:
+          verbose: true
+
       - name: Generate Doc
         run: |
           cd build
@@ -219,8 +225,3 @@ jobs:
           git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
           git push -f origin gh-pages
 
-      - name: Upload Coverage
-        if: runner.os == 'Linux'
-        uses: codecov/codecov-action@v1
-        with:
-          verbose: true
