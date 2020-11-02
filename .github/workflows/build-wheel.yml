@@ -14,7 +14,14 @@
 
 name: Build Wheel
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+    paths:
+    - 'CMakeLists.txt'
+    - 'cmake/**'
+    - 'python/**'
+    - 'src/**'
 
 jobs:
   build:
