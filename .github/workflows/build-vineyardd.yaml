@@ -40,10 +40,13 @@ jobs:
           sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/bin/vineyardd /target/"
           ldd ./vineyardd
 
+      - name: Package vineyardd artifact on Linux
+        if: runner.os == 'Linux'
+        run: |
           sha512sum ./vineyardd > vineyardd.${{ github.sha }}.sha512sum
           echo "Checksum is: "
           cat ./*.sha512sum
-          tar zcvfh vineyardd.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ github.sha }}.sha512sum
+          tar zcvfh vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ github.sha }}.sha512sum
 
       - name: Upload docker image
         if: ${{ github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
