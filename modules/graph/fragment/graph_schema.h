@@ -56,6 +56,9 @@ class Entry {
   std::vector<std::string> primary_keys;
   std::vector<std::pair<std::string, std::string>> relations;
 
+  std::vector<int> mapping;          // old prop id -> new prop id
+  std::vector<int> reverse_mapping;  // new prop id -> old prop id
+
   void AddProperty(const std::string& name, PropertyType type);
   void AddPrimaryKeys(size_t key_count,
                       const std::vector<std::string>& key_name_list);
@@ -172,9 +175,6 @@ class MaxGraphSchema {
   std::string GetLabelName(LabelId label_id);
 
   void set_fnum(size_t fnum) { fnum_ = fnum; }
-
-  Entry* CreateEntry(const std::string& type, LabelId label_id,
-                     const std::string& name);
 
   void AddEntry(const Entry& entry) { entries_.push_back(entry); }
 

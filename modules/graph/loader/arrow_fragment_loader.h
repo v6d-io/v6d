@@ -490,59 +490,6 @@ class ArrowFragmentLoader {
 #endif
   }
 
-  std::shared_ptr<arrow::Schema> FindMostCommonSchema(
-      const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
-    size_t field_num = 0;
-    for (size_t i = 0; i < schemas.size(); ++i) {
-      if (schemas[i] != nullptr) {
-        field_num = schemas[i]->num_fields();
-        break;
-      }
-    }
-    // Find most common fields.
-    std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
-    for (size_t i = 0; i < field_num; ++i) {
-      for (size_t j = 0; j < schemas.size(); ++j) {
-        if (schemas[j] == nullptr) {
-          continue;
-        }
-        fields[i].push_back(schemas[j]->field(i));
-      }
-    }
-    std::vector<std::shared_ptr<arrow::Field>> most_common_fields(field_num);
-    for (size_t i = 0; i < field_num; ++i) {
-      std::sort(fields[i].begin(), fields[i].end(),
-                [](const std::shared_ptr<arrow::Field>& lhs,
-                   const std::shared_ptr<arrow::Field>& rhs) {
-                  return lhs->type()->ToString() < rhs->type()->ToString();
-                });
-
-      // find the max frequency using linear traversal
-      int max_count = 1, curr_count = 1;
-      auto res = fields[i][0];
-      for (size_t j = 1; j < fields[i].size(); j++) {
-        if (fields[i][j]->type()->Equals(fields[i][j - 1]->type())) {
-          curr_count++;
-        } else {
-          if (curr_count > max_count) {
-            max_count = curr_count;
-            res = fields[i][j - 1];
-          }
-          curr_count = 1;
-        }
-      }
-
-      // If last element is most frequent
-      if (curr_count > max_count) {
-        max_count = curr_count;
-        res = fields[i].back();
-      }
-      most_common_fields[i] = res;
-    }
-    auto final_schema = std::make_shared<arrow::Schema>(most_common_fields);
-    return final_schema;
-  }
-
   std::shared_ptr<arrow::Schema> TypeLoosen(
       const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
     size_t field_num = 0;
@@ -601,9 +548,6 @@ class ArrowFragmentLoader {
   // type loosen, int64 -> double. timestamp -> int64.
   boost::leaf::result<void> SyncSchema(std::shared_ptr<arrow::Table>& table,
                                        grape::CommSpec comm_spec) {
-    if (comm_spec.worker_num() == 1) {
-      return boost::leaf::result<void>();
-    }
     std::shared_ptr<arrow::Schema> final_schema;
     int final_serialized_schema_size;
     std::shared_ptr<arrow::Buffer> schema_buffer;

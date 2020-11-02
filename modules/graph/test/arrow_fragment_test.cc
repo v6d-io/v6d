@@ -23,6 +23,7 @@ limitations under the License.
 #include "client/client.h"
 
 #include "graph/fragment/arrow_fragment.h"
+#include "graph/fragment/graph_schema.h"
 #include "graph/loader/arrow_fragment_loader.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
@@ -67,14 +68,14 @@ int main(int argc, char** argv) {
   grape::CommSpec comm_spec;
   comm_spec.Init(MPI_COMM_WORLD);
 
-  vineyard::ObjectID fragment_id = InvalidObjectID();
+  vineyard::ObjectID fragment_group_id = InvalidObjectID();
   {
     auto loader =
         std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                              property_graph_types::VID_TYPE>>(
             client, comm_spec, efiles, vfiles, directed != 0);
-    fragment_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragment(); },
+    fragment_group_id = boost::leaf::try_handle_all(
+        [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
         [](const GSError& e) {
           LOG(FATAL) << e.error_msg;
           return 0;
@@ -84,11 +85,29 @@ int main(int argc, char** argv) {
           return 0;
         });
   }
+  LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
+  std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
+      std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
+          client.GetObject(fragment_group_id));
+
+  for (const auto& pair : fg->Fragments()) {
+    LOG(INFO) << "[frag-" << pair.first << "]: " << pair.second;
+  }
+
+  auto frag_id = fg->Fragments().at(0);
+
+  auto frag = std::dynamic_pointer_cast<GraphType>(client.GetObject(frag_id));
+
+  auto schema = frag->schema();
+
+  auto mg_schema = vineyard::MaxGraphSchema(schema);
+
+  mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
 
   grape::FinalizeMPIComm();
 
   LOG(INFO) << "[worker-" << comm_spec.worker_id()
-            << "] loaded graph to vineyard: " << VYObjectIDToString(fragment_id)
+            << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
             << " ...";
 
   LOG(INFO) << "Passed arrow fragment test...";
