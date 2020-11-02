@@ -17,43 +17,49 @@ limitations under the License.
 #include <string>
 
 #include "basic/stream/dataframe_stream.h"
+#include "basic/stream/parallel_stream.h"
 #include "client/client.h"
-#include "io/io/local_io_adaptor.h"
+#include "io/io/io_factory.h"
+#include "io/io/kafka_io_adaptor.h"
+#include "io/io/utils.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
-int main(int argc, const char** argv) {
-  if (argc < 4) {
+int main(int argc, char** argv) {
+  // kafka address format: kafka://brokers/topics/group_id/partition_num
+  if (argc < 5) {
     printf(
-        "usage ./single_dataframe_single_local_consumer <ipc_socket> "
-        "<stream_id> <ofile>");
+        "usage ./write_kafka_dataframe <ipc_socket> "
+        "<stream_id> <kafka_address> <proc_index>");
     return 1;
   }
 
   std::string ipc_socket = std::string(argv[1]);
   ObjectID stream_id = VYObjectIDFromString(argv[2]);
-  std::string ofile = std::string(argv[3]);
+  std::string kafka_address = std::string(argv[3]);
+  int proc_index = std::stoi(argv[4]);
+
+  std::unique_ptr<IIOAdaptor> kafka_io_adaptor =
+      IOFactory::CreateIOAdaptor(kafka_address);
+  VINEYARD_CHECK_OK(kafka_io_adaptor->Open("w"));
 
   Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   auto s =
-      std::dynamic_pointer_cast<DataframeStream>(client.GetObject(stream_id));
-  LOG(INFO) << "Got dataframe stream: " << s->id();
-  auto reader = s->OpenReader(client);
+      std::dynamic_pointer_cast<ParallelStream>(client.GetObject(stream_id));
+  LOG(INFO) << "Got parallel stream " << s->id();
 
-  std::unique_ptr<LocalIOAdaptor> local_io_adaptor(
-      new LocalIOAdaptor(ofile.c_str()));
-  VINEYARD_CHECK_OK(local_io_adaptor->Open("w"));
+  auto ls = s->GetStream<DataframeStream>(proc_index);
+  LOG(INFO) << "Got dataframe stream " << ls->id() << " at " << proc_index;
+
+  auto reader = ls->OpenReader(client);
 
   std::string line;
   while (reader->ReadLine(line).ok()) {
-    VINEYARD_CHECK_OK(local_io_adaptor->WriteLine(line));
+    VINEYARD_CHECK_OK(kafka_io_adaptor->WriteLine(line));
   }
-
-  VINEYARD_CHECK_OK(local_io_adaptor->Close());
-  local_io_adaptor->Finalize();
 
   return 0;
 }

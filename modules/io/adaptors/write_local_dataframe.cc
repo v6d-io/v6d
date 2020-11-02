@@ -24,40 +24,38 @@ limitations under the License.
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, const char** argv) {
-  if (argc < 3) {
+  if (argc < 5) {
     printf(
-        "usage ./parallel_batch_single_local_consumer <ipc_socket> <stream_id> "
-        "<ofile>");
+        "usage ./write_local_dataframe <ipc_socket> "
+        "<stream_id> <ofile> <proc_index>");
     return 1;
   }
 
   std::string ipc_socket = std::string(argv[1]);
   ObjectID stream_id = VYObjectIDFromString(argv[2]);
   std::string ofile = std::string(argv[3]);
+  int proc_index = std::stoi(argv[4]);
 
   Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  auto s = std::dynamic_pointer_cast<ParallelStream<DataframeStream>>(
-      client.GetObject(stream_id));
+  auto s =
+      std::dynamic_pointer_cast<ParallelStream>(client.GetObject(stream_id));
   LOG(INFO) << "Got parallel stream " << s->id();
+
+  auto ls = s->GetStream<DataframeStream>(proc_index);
+  LOG(INFO) << "Got dataframe stream " << ls->id() << " at " << proc_index;
+
+  auto reader = ls->OpenReader(client);
 
   std::unique_ptr<LocalIOAdaptor> local_io_adaptor(
       new LocalIOAdaptor(ofile.c_str()));
   VINEYARD_CHECK_OK(local_io_adaptor->Open("w"));
 
-  for (size_t i = 0; i < s->GetStreamSize(); ++i) {
-    auto ls = s->GetStream(i);
-    if (!ls->IsLocal()) {
-      continue;
-    }
-    LOG(INFO) << "Got dataframe stream " << ls->id() << " " << i;
-    auto reader = ls->OpenReader(client);
-    std::string line;
-    while (reader->ReadLine(line).ok()) {
-      VINEYARD_CHECK_OK(local_io_adaptor->WriteLine(line));
-    }
+  std::string line;
+  while (reader->ReadLine(line).ok()) {
+    VINEYARD_CHECK_OK(local_io_adaptor->WriteLine(line));
   }
 
   VINEYARD_CHECK_OK(local_io_adaptor->Close());

@@ -132,7 +132,8 @@ Status LocalIOAdaptor::Open(const char* mode) {
 
   if ((using_std_getline_ && !fs_) ||
       (!using_std_getline_ && file_ == nullptr)) {
-    return Status::IOError();
+    return Status::IOError("Failed to open the " + location_ +
+                           " because: " + std::strerror(errno));
   }
 
   // check the partial read flag
