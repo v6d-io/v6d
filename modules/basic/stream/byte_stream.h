@@ -33,6 +33,10 @@ class ByteStreamBuilder : public ByteStreamBaseBuilder {
  public:
   explicit ByteStreamBuilder(Client& client) : ByteStreamBaseBuilder(client) {}
 
+  void SetParam(std::string const& key, std::string const& value) {
+    this->params_.emplace(key, value);
+  }
+
   void SetParams(
       const std::unordered_multimap<std::string, std::string>& params) {
     for (auto const& kv : params) {
@@ -41,7 +45,9 @@ class ByteStreamBuilder : public ByteStreamBaseBuilder {
   }
 
   void SetParams(const std::unordered_map<std::string, std::string>& params) {
-    this->params_ = params;
+    for (auto const& kv : params) {
+      this->params_.emplace(kv.first, kv.second);
+    }
   }
 
   std::shared_ptr<Object> Seal(Client& client) {

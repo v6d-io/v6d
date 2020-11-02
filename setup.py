@@ -63,7 +63,9 @@ setup(
             '*/**/*.bin',
         ],
     },
-    ext_modules=[CopyCMakeExtension('vineyard._C')],
+    ext_modules=[
+        CopyCMakeExtension('vineyard._C'),
+    ],
     cmdclass={
         'build_ext': CopyCMakeBin,
         'bdist_wheel': bdist_wheel_injected,
