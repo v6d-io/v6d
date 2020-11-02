@@ -23,69 +23,56 @@ from ..core.driver import registerize
 
 
 @registerize
-def read(path, *args, method=None, **kwargs):
+def read(path, *args, **kwargs):
     ''' Open a path and read it as a single stream.
 
         Parameter
         ---------
         path: str
-            Path to read, the last reader registered for the scheme of the path will be used
-        method: str
-            single or parallel, will produce single or parallel stream respectively
+            Path to read, the last reader registered for the scheme of the path will be used.
+        vineyard_ipc_socket: str
+            The local or remote vineyard's IPC socket location that the remote readers will
+            use to establish connections with the vineyard server.
     '''
-    client = vineyard.connect(kwargs.pop('ipc_socket'))
+    parsed = urlparse(path)
 
-    scheme = urlparse(path).scheme
+    for reader in read.__factory[parsed.scheme][::-1]:
+        try:
+            r = reader(path[len(parsed.scheme) + 3:], kwargs.pop('vineyard_ipc_socket'), *args, **kwargs)
+            if r is not None:
+                return r
+            else:
+                continue
+        except:
+            continue
 
-    if method is None:
-        if kwargs.get('num_workers', 1) > 1:
-            method = 'parallel'
-        else:
-            method = 'single'
-
-    for reader in read.__factory[method][scheme][::-1]:
-        r = reader(client, path, *args, **kwargs)
-        if r is not None:
-            client.close()
-            return r
-
-    client.close()
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
 
 @registerize
-def write(path, stream, *args, method=None, **kwargs):
+def write(path, stream, *args, **kwargs):
     ''' Write the stream to a given path.
 
         Parameters
         ----------
         path: str
-            Path to write, the last writer registered for the scheme of the path will be used
+            Path to write, the last writer registered for the scheme of the path will be used.
         stream: vineyard stream
-            Stream that produces the data to write
-        method: str
-            single or parallel, if parallel the stream must be a parallel stream
+            Stream that produces the data to write.
+        vineyard_ipc_socket: str
+            The local or remote vineyard's IPC socket location that the remote readers will
+            use to establish connections with the vineyard server.
     '''
-    scheme = urlparse(path).scheme
+    parsed = urlparse(path)
 
-    client = vineyard.connect(kwargs.pop('ipc_socket'))
-
-    if method is None:
-        if int(kwargs.get('WORKER_NUM', 1)) > 1:
-            method = 'parallel'
-        else:
-            method = 'single'
-
-    for writer in write.__factory[method][scheme][::-1]:
+    for writer in write.__factory[parsed.scheme][::-1]:
         try:
-            writer(client, path, stream, *args, **kwargs)
-        except RuntimeError:
+            writer(path[len(parsed.scheme) + 3:], stream, kwargs.pop('vineyard_ipc_socket'), *args, **kwargs)
+        except:
             continue
         else:
-            client.close()
             return
 
-    client.close()
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
 

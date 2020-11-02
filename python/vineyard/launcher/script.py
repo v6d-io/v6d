@@ -65,7 +65,21 @@ class ScriptLauncher(Launcher):
         self._status = LauncherStatus.RUNNING
 
         self._listen_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, ))
+        self._listen_thrd.daemon = True
         self._listen_thrd.start()
+
+    def wait(self, timeout=None):
+        elapsed, period = 0, 1
+        while self._proc.poll() is None:
+            if timeout is not None and elapsed > timeout:
+                raise TimeoutError('Unable to wait for status of job after %r seconds' % timeout)
+            r = super(ScriptLauncher, self).wait(timeout=period)
+            elapsed += period
+            if r is None:
+                continue
+            else:
+                return r
+        raise RuntimeError('Failed to launch job, exited with %r' % self._proc.poll())
 
     def read_output(self, stream):
         while self._proc.poll() is None:
