@@ -85,15 +85,7 @@ foreach(fname ${TEST_FILES})
                           ${ARROW_SHARED_LIB}
                           ${CPPNETLIB_LIBRARIES}
                           ${MPI_CXX_LIBRARIES})
-    set_target_properties(${IO_BINARY_TOOL} PROPERTIES OUTPUT_NAME "vineyard_${IO_BINARY_TOOL}.bin")
-
-    if(BUILD_VINEYARD_PYPI_PACKAGES)
-        add_custom_target("copy_${IO_BINARY_TOOL}"
-            # remove rpath first then force set, work around for patchelf#94.
-            COMMAND cp "$<TARGET_FILE:${IO_BINARY_TOOL}>" "${PROJECT_SOURCE_DIR}/python/vineyard/io/binaries"
-            DEPENDS _C
-            COMMENT "Copying io adaptor ${IO_BINARY_TOOL}."
-            VERBATIM)
-        add_dependencies(vineyard_io_adaptors "copy_${IO_BINARY_TOOL}")
-    endif()
+    set_target_properties(${IO_BINARY_TOOL} PROPERTIES OUTPUT_NAME "vineyard_${IO_BINARY_TOOL}")
+    install_vineyard_target(${IO_BINARY_TOOL})
+    add_dependencies(vineyard_io_adaptors ${IO_BINARY_TOOL})
 endforeach()

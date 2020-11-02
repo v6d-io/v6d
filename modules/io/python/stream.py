@@ -17,7 +17,6 @@
 #
 
 import os
-import pkg_resources
 from urllib.parse import urlparse
 
 import vineyard
@@ -25,146 +24,165 @@ from vineyard import ObjectID
 from vineyard.launcher.script import ScriptLauncher
 
 
+base_path = os.path.abspath(os.path.dirname(__file__))
+
+
+def _resolve_ssh_script(ssh=True):
+    if ssh:
+        stream_bash = os.path.join(base_path, 'ssh.sh')
+    else:
+        stream_bash = os.path.join(base_path, 'kube_ssh.sh')
+    return stream_bash
+
+
 class StreamLauncher(ScriptLauncher):
     ''' Launch the job by executing a script.
     '''
-    def __init__(self):
-        stream_bash = pkg_resources.resource_filename('vineyard.io', 'scripts/stream_bash.sh')
-        super(StreamLauncher, self).__init__(stream_bash)
+    def __init__(self, vineyard_endpoint=None, ssh=True):
+        ''' Launch a job to read as a vineyard stream.
+
+            Parameters
+            ----------
+            vineyard_endpoint: str
+                IPC or RPC endpoint to connect to vineyard. If not specified, vineyard
+                will try to discovery vineyardd from the environment variable named
+                :code:`VINEYARD_IPC_SOCKET`.
+        '''
+        self.vineyard_endpoint = vineyard_endpoint
+        super(StreamLauncher, self).__init__(_resolve_ssh_script(ssh=ssh))
+
+    def wait(self, timeout=None):
+        return vineyard.ObjectID(super(StreamLauncher, self).wait(timeout=timeout))
 
 
 class ParallelStreamLauncher(ScriptLauncher):
-    ''' Launch the job by executing a script, in which `mpirun` will be used.
+    ''' Launch the job by executing a script, in which `ssh` or `kubectl exec` will
+        be used under the hood.
     '''
-    def __init__(self, num_workers):
-        stream_mpi = pkg_resources.resource_filename('vineyard.io', 'scripts/stream_mpi.sh')
-        super(ParallelStreamLauncher, self).__init__(stream_mpi)
+    def __init__(self, ssh=True):
+        self.vineyard_endpoint = None
+        super(ParallelStreamLauncher, self).__init__(_resolve_ssh_script(ssh=ssh))
 
-        self._num_workers = num_workers
         self._streams = []
+        self._procs = []
 
     def run(self, *args, **kwargs):
-        num_workers = kwargs.pop('num_workers', self._num_workers)
-        hosts = kwargs.pop('hosts', ['localhost'])
-        if num_workers >= len(hosts):
-            nh = len(hosts)
-            slots = [1 if i < num_workers % nh else 0 for i in range(nh)]
-            slots = [num_workers // nh + i for i in slots]
-            hosts = ['%s:%s' % (h, slot) for h, slot in zip(hosts, slots)]
-        else:
-            hosts = hosts[:num_workers]
-        kwargs['WORKER_NUM'] = str(num_workers)
-        kwargs['HOSTS'] = ','.join(hosts)
-        return super(ParallelStreamLauncher, self).run(*args, **kwargs)
+        ''' Execute a job to read as a vineyard stream or write a vineyard stream to
+            external data sink.
 
-    @property
-    def streams(self):
-        return self._streams
-
-    def wait_many(self):
-        ''' Wait util we collect enough partial stream object ids.
+            Parameters
+            ----------
+            vineyard_endpoint: str
+                The local IPC or RPC endpoint to connect to vineyard. If not specified,
+                vineyard will try to discovery vineyardd from the environment variable
+                named :code:`VINEYARD_IPC_SOCKET` and :code:`VINEYARD_RPC_ENDPOINT`.
         '''
-        while len(self._streams) < self._num_workers:
-            self._streams.append(super(ParallelStreamLauncher, self).wait())
-        return self._streams
+        self.vineyard_endpoint = kwargs.pop('vineyard_endpoint', None)
+        if ':' in self.vineyard_endpoint:
+            self.vineyard_endpoint = tuple(self.vineyard_endpoint.split(':'))
+
+        num_workers = kwargs.pop('num_workers', 1)
+        hosts = kwargs.pop('hosts', ['localhost'])
+
+        nh = len(hosts)
+        slots = [num_workers // nh + int(i < num_workers % nh) for i in range(nh)]
+        proc_idx = 0
+        for host, nproc in zip(hosts, slots):
+            for _iproc in range(nproc):
+                launcher = StreamLauncher()
+                if not args:
+                    args = (num_workers, proc_idx)
+                else:
+                    args = args + (num_workers, proc_idx)
+                launcher.run(host, *args, **kwargs)
+                proc_idx += 1
+                self._procs.append(launcher)
+
+    def join(self):
+        for proc in self._procs:
+            proc.join()
+
+    def dispose(self, desired=True):
+        for proc in self._procs:
+            proc.dispose()
+
+    def wait(self, timeout=None):
+        partial_ids = []
+        for proc in self._procs:
+            r = proc.wait(timeout=timeout)
+            partial_ids.append(r)
+        meta = vineyard.ObjectMeta()
+        meta['typename'] = 'vineyard::ParallelStream'
+        meta['size_'] = len(partial_ids)
+        for idx, partition_id in enumerate(partial_ids):
+            meta.add_member('stream_%d' % idx, partition_id)
+        return vineyard.connect(self.vineyard_endpoint).create_metadata(meta)
 
 
 def get_executable(name):
-    return pkg_resources.resource_filename('vineyard.io.binaries', f'vineyard_{name}.bin')
+    return f'vineyard_{name}'
 
 
-def single_run(client, path, executable, *args, **kwargs):
-    launcher = StreamLauncher()
-    launcher.run(get_executable(executable), client.ipc_socket, path, *args, **kwargs)
-    r = launcher.wait()
-    return client.get_object(ObjectID(r))
-
-
-def single_dataframe_parser(client, byte_stream, **kwargs):
-    launcher = StreamLauncher()
-    launcher.run(get_executable('single_dataframe_parser'), client.ipc_socket, byte_stream.id, **kwargs)
-    r = launcher.wait()
-    return client.get_object(ObjectID(r))
-
-
-def single_local_byte(client, path, **kwargs):
-    ''' Read a bytes stream from local files.
+def read_local_bytes(path, vineyard_socket, *args, **kwargs):
+    ''' Read a byte stream from local files.
     '''
-    return single_run(client, path, "single_local_byte", **kwargs)
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('read_local_bytes'),
+                 *((vineyard_socket, path) + args), **kwargs)
+    return launcher.wait()
 
 
-def single_kafka_byte(client, path, **kwargs):
+def read_kafka_bytes(path, vineyard_socket, *args, **kwargs):
     ''' Read a bytes stream from a kafka topic.
     '''
-    return single_run(client, path, 'single_kafka_byte', **kwargs)
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('read_kafka_bytes'),
+                 *((vineyard_socket, path) + args), **kwargs)
+    return launcher.wait()
 
 
-def single_oss_dataframe(client, path, **kwargs):
-    ''' Read a bytes stream from OSS object storage.
-    '''
-    return single_run(client, path, 'single_oss_dataframe', **kwargs)
+def parse_bytes_to_dataframe(byte_stream, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('parse_bytes_to_dataframe'),
+                 *((vineyard_socket, str(byte_stream)) + args), **kwargs)
+    return launcher.wait()
 
 
-def single_local_dataframe(client, path, **kwargs):
-    return single_dataframe_parser(client, single_local_byte(client, path, **kwargs), **kwargs)
+def read_local_dataframe(path, vineyard_socket, *args, **kwargs):
+    return parse_bytes_to_dataframe(read_local_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
-def single_kafka_dataframe(client, path, **kwargs):
-    return single_dataframe_parser(client, single_kafka_byte(client, path), **kwargs)
+def read_kafka_dataframe(path, vineyard_socket, **kwargs):
+    return parse_bytes_to_dataframe(read_kafka_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
-def parallel_local_byte(client, path, num_workers=4, **kwargs):
-    launcher = ParallelStreamLauncher(num_workers)
-    launcher.run(get_executable('parallel_local_byte'), client.ipc_socket, path, **kwargs)
-    r = launcher.wait()
-    return client.get_object(ObjectID(r))
+vineyard.read.register('file', read_local_bytes)
+vineyard.read.register('file', read_local_dataframe)
+vineyard.read.register('kafka', read_kafka_bytes)
+vineyard.read.register('kafka', read_kafka_dataframe)
 
 
-def parallel_dataframe_parser(client, byte_stream, num_workers=4, **kwargs):
-    launcher = ParallelStreamLauncher(num_workers)
-    launcher.run(get_executable('parallel_dataframe_parser'), client.ipc_socket, byte_stream.id, **kwargs)
-    r = launcher.wait()
-    return client.get_object(ObjectID(r))
+def write_local_dataframe(dataframe_stream, path, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('write_local_dataframe'),
+                 path,
+                 *((vineyard_socket, str(dataframe_stream)) + args), **kwargs)
+    launcher.wait()
 
+def write_kafka_bytes(dataframe_stream, path, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('write_kafka_bytes'),
+                 path,
+                 *((vineyard_socket, str(dataframe_stream)) + args), **kwargs)
+    launcher.wait()
 
-def parallel_local_dataframe(client, path, **kwargs):
-    return parallel_dataframe_parser(client, parallel_local_byte(client, path, **kwargs), **kwargs)
+def write_kafka_dataframe(dataframe_stream, path, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('write_kafka_dataframe'),
+                 path,
+                 *((vineyard_socket, str(dataframe_stream)) + args), **kwargs)
+    launcher.wait()
 
-
-def single_dataframe_dataframe(client, path, **kwargs):
-    object_id = ObjectID(urlparse(path).netloc)
-    launcher = StreamLauncher()
-    launcher.run(get_executable('single_dataframe_dataframe'), client.ipc_socket, object_id, **kwargs)
-    r = launcher.wait()
-    return client.get_object(ObjectID(r))
-
-
-vineyard.read.register('single', 'vineyard', single_dataframe_dataframe)
-vineyard.read.register('parallel', 'file', parallel_local_dataframe)
-vineyard.read.register('single', 'file', single_local_byte)
-vineyard.read.register('single', 'file', single_local_dataframe)
-vineyard.read.register('single', 'oss', single_oss_dataframe)
-vineyard.read.register('single', 'kafka', single_kafka_byte)
-
-
-def write_file(client, executable, ofile, stream):
-    launcher = StreamLauncher()
-    launcher.run(get_executable(executable), client.ipc_socket, stream.id, ofile)
-    launcher.join()
-
-
-def parallel_write_file(client, ofile, stream):
-    write_file(client, 'parallel_dataframe_single_local_consumer', ofile, stream)
-
-
-def single_write_file(client, ofile, stream):
-    write_file(client, 'single_dataframe_single_local_consumer', ofile, stream)
-
-
-def single_write_kafka(client, path, stream):
-    write_file(client, 'single_byte_single_kafka_consumer', path, stream)
-
-
-vineyard.write.register('parallel', 'file', parallel_write_file)
-vineyard.write.register('single', 'file', single_write_file)
-vineyard.write.register('single', 'kafka', single_write_kafka)
+vineyard.write.register('file', write_local_dataframe)
+vineyard.write.register('kafka', write_kafka_bytes)
+vineyard.write.register('kafka', write_kafka_dataframe)

@@ -57,7 +57,7 @@ class Launcher(object):
     def run(self, *args, **kwargs):
         raise NotImplementedError
 
-    def wait(self):
+    def wait(self, timeout=None):
         ''' Will block until obtain an result, a :code:`Launcher` can be "wait" for
             multiple since the job might yields many results.
 
@@ -72,7 +72,8 @@ class Launcher(object):
 
         with self._result_cv:
             if not self._result:
-                self._result_cv.wait()
+                if not self._result_cv.wait(timeout=timeout):
+                    return None
             if not self._result:  # if still no available result object, raise to users.
                 raise RuntimeError('The job failed unexpectedly')
             return self._result.pop(0)
