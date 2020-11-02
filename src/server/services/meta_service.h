@@ -511,10 +511,8 @@ class IMetaService {
                      }
                      this->metaUpdate(ops);
                      rev_ = rev;
-                     return callback(status, meta_, rev_);
-                   } else {
-                     return status;
                    }
+                   return callback(status, meta_, rev_);
                  });
     } else {
       requestUpdates(
@@ -524,10 +522,8 @@ class IMetaService {
             if (status.ok()) {
               this->metaUpdate(ops);
               rev_ = rev;
-              return callback(status, meta_, rev_);
-            } else {
-              return status;
             }
+            return callback(status, meta_, rev_);
           });
     }
   }
