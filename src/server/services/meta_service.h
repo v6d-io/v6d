@@ -503,6 +503,10 @@ class IMetaService {
                      // call metaUpdate to make sure the instance list correct.
                      std::vector<op_t> ops;
                      for (auto const& kv : kvs) {
+                       if (boost::algorithm::trim_copy(kv.key).empty()) {
+                         // skip unprintable keys
+                         continue;
+                       }
                        ops.emplace_back(op_t::Put(kv.key, kv.value, kv.rev));
                      }
                      this->metaUpdate(ops);
@@ -621,7 +625,7 @@ class IMetaService {
         continue;
       }
       if (boost::algorithm::trim_copy(op.kv.key).empty()) {
-        // skip empty keys
+        // skip unprintable keys
         continue;
       }
       if (boost::algorithm::starts_with(op.kv.key, "instances.")) {
