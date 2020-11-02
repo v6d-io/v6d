@@ -99,7 +99,7 @@ struct TypeName<folly::dynamic> {
 
 template <>
 struct TypeName<grape::EmptyType> {
-static const char* Get() { return "grape::EmptyType"; }
+  static const char* Get() { return "grape::EmptyType"; }
 };
 
 }  // namespace vineyard
