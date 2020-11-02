@@ -41,6 +41,10 @@ if(BUILD_VINEYARD_GRAPH)
     set(BUILD_VINEYARD_IO ON)
 endif()
 
+if(BUILD_VINEYARD_IO)
+    set(BUILD_VINEYARD_BASIC ON)
+endif()
+
 if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUILD_VINEYARD_PYTHON_BINDINGS)
     set(BUILD_VINEYARD_CLIENT ON)
 endif()
@@ -92,24 +96,33 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 endif()
 
-if(APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations \
-                                            -Wno-defaulted-function-deleted \
-                                            -Wno-error=c++11-narrowing"
-    )
-    set(CMAKE_MACOSX_RPATH ON)
-else()
-    check_cxx_compiler_flag(-Wno-class-memaccess W_NO_CLASS_MEMACCESS)
-    if(W_NO_CLASS_MEMACCESS)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-class-memaccess")
-    endif()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,$ORIGIN:$ORIGIN/../lib")
+check_cxx_compiler_flag(-Wno-class-memaccess W_NO_CLASS_MEMACCESS)
+check_cxx_compiler_flag(-Wno-deprecated-declarations W_NO_DEPRECATED_DECLARATIONS)
+check_cxx_compiler_flag(-Wno-defaulted-function-deleted W_NO_DEFAULTED_FUNCTION_DELETED)
+check_cxx_compiler_flag(-Wno-error=c++11-narrowing W_NO_ERROR_CXX11_NARROWING)
+if(W_NO_CLASS_MEMACCESS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-class-memaccess")
+endif()
+if(W_NO_DEPRECATED_DECLARATIONS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+endif()
+if(W_NO_DEFAULTED_FUNCTION_DELETED)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-defaulted-function-deleted")
+endif()
+if(W_NO_ERROR_CXX11_NARROWING)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=c++11-narrowing")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 if(BUILD_VINEYARD_COVERAGE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage")
 endif()
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g -Werror")
+
+if(APPLE)
+    set(CMAKE_MACOSX_RPATH ON)
+else()
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,$ORIGIN:$ORIGIN/../lib")
+endif()
 
 macro(find_common_libraries)
     include("cmake/FindArrow.cmake")
@@ -224,9 +237,9 @@ add_custom_target(vineyard_tests)
 if(BUILD_VINEYARD_SERVER)
     find_openssl_libraries()
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
-                                    "src/common/backtrace/*.cc"
-                                    "src/common/memory/*.cc"
-                                    "src/common/util/*.cc"
+                                       "src/common/backtrace/*.cc"
+                                       "src/common/memory/*.cc"
+                                       "src/common/util/*.cc"
     )
     add_executable(vineyardd ${SERVER_SRC_FILES})
     include("cmake/BuildEtcdCpp.cmake")
@@ -267,12 +280,25 @@ if(BUILD_VINEYARD_CLIENT)
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
     add_library(vineyard_client SHARED ${CLIENT_SRC_FILES})
-    target_link_libraries(vineyard_client PUBLIC ${ARROW_SHARED_LIB}
-                                                 ${GLOG_LIBRARIES}
-    )
+    target_link_libraries(vineyard_client PUBLIC ${GLOG_LIBRARIES})
+    if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES AND APPLE)
+        # required on mac, but cause problem on linux.
+        target_link_libraries(vineyard_client PUBLIC ${GFLAGS_LIBRARIES})
+    endif()
+    if(ARROW_SHARED_LIB)
+        target_link_libraries(vineyard_client PUBLIC ${ARROW_SHARED_LIB})
+    else()
+        target_link_libraries(vineyard_client PUBLIC ${ARROW_STATIC_LIB})
+    endif()
+
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
-        target_compile_options(vineyard_client PRIVATE -static-libgcc -static-libstdc++ -Os)
-        add_target_link_options(vineyard_client PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            target_compile_options(vineyard_client PRIVATE -static)
+            add_target_link_options(vineyard_client PRIVATE OPTIONS -static)
+        else()
+            target_compile_options(vineyard_client PRIVATE -static-libgcc -static-libstdc++ -Os)
+            add_target_link_options(vineyard_client PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
+        endif()
     endif()
     install_vineyard_target(vineyard_client)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/client")
@@ -351,8 +377,12 @@ if(BUILD_VINEYARD_TESTS)
         endif()
         target_link_libraries(${T_NAME}
                               ${VINEYARD_INSTALL_LIBS}
-                              ${ARROW_SHARED_LIB}
                               ${CPPNETLIB_LIBRARIES})
+        if(ARROW_SHARED_LIB)
+            target_link_libraries(${T_NAME} ${ARROW_SHARED_LIB})
+        else()
+            target_link_libraries(${T_NAME} ${ARROW_STATIC_LIB})
+        endif()
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
 
