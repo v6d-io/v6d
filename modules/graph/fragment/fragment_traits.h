@@ -97,6 +97,11 @@ struct TypeName<folly::dynamic> {
 };
 #endif
 
+template <>
+struct TypeName<grape::EmptyType> {
+static const char* Get() { return "grape::EmptyType"; }
+};
+
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_FRAGMENT_TRAITS_H_

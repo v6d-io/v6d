@@ -81,6 +81,14 @@ class BasicArrowFragmentLoader {
             auto id_column_idx = std::stoi(metadata->value(meta_idx));
             // TODO(guanyi.gl): Failure occurred before MPI calling will make
             // processes hanging. We have to resolve this kind of issue.
+            auto id_column_type = vertex_table->column(id_column_idx)->type();
+
+            if (vineyard::ConvertToArrowType<oid_t>::TypeValue() !=
+                id_column_type) {
+              RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                              "OID_T is not same with arrow::Column(" +
+                                  id_column_type->ToString() + ")");
+            }
             BOOST_LEAF_AUTO(tmp_table,
                             ShufflePropertyVertexTable<partitioner_t>(
                                 comm_spec_, partitioner_, vertex_table));
@@ -140,6 +148,17 @@ class BasicArrowFragmentLoader {
             CHECK_OR_RAISE(meta_idx_dst != -1);
             auto src_column_idx = std::stoi(metadata->value(meta_idx_src));
             auto dst_column_idx = std::stoi(metadata->value(meta_idx_dst));
+            auto src_column_type = edge_table->column(src_column_idx)->type();
+            auto dst_column_type = edge_table->column(dst_column_idx)->type();
+
+            if (src_column_type != dst_column_type ||
+                vineyard::ConvertToArrowType<oid_t>::TypeValue() !=
+                    src_column_type) {
+              RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                              "OID_T is not same with arrow::Column(" +
+                                  src_column_type->ToString() + ")");
+            }
+
             BOOST_LEAF_AUTO(src_gid_array,
                             parseOidChunkedArray(
                                 edge_table->column(src_column_idx), mapper));
