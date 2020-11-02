@@ -27,7 +27,7 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 int main(int argc, char** argv) {
   // kafka address format: kafka://brokers/topics/group_id/partition_num
   if (argc < 3) {
-    printf("usage ./single_kafka_byte <ipc_socket> <kafka_address>");
+    printf("usage ./read_kafka_byte <ipc_socket> <kafka_address>");
     return 1;
   }
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
   ByteStreamBuilder builder(client);
   auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
   VINEYARD_CHECK_OK(client.Persist(bstream->id()));
-  ReportStatus(true, VYObjectIDToString(bstream->id()));
+  ReportStatus("return", VYObjectIDToString(bstream->id()));
 
   auto writer = bstream->OpenWriter(client);
   writer->SetBufferSizeLimit(2 * 1024 * 1024);
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
   while (kafka_io_adaptor->ReadLine(line).ok()) {
     auto st = writer->WriteLine(line + "\n");
     if (!st.ok()) {
-      ReportStatus(false, st.ToString());
+      ReportStatus("error", st.ToString());
       VINEYARD_CHECK_OK(st);
     }
   }

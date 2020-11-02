@@ -26,17 +26,8 @@ limitations under the License.
 namespace vineyard {
 
 template <typename T>
-void ReportStatus(bool const success, T const& value) {
-  ptree result;
-  if (success) {
-    ReportStatus("return", value);
-  } else {
-    ReportStatus("error", value);
-  }
-}
-
-template <typename T>
-void ReportStatus(const std::string kind, T const& value) {
+void ReportStatus(const std::string& kind, T const& value) {
+  LOG(INFO) << "kind: " << kind;
   ptree result;
   result.put("type", kind);
   result.put("content", value);

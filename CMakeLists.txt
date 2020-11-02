@@ -13,7 +13,7 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
-option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" OFF)
+option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
 option(BUILD_VINEYARD_PYPI_PACKAGES "Build vineyard's python bindings" OFF)
 
 option(BUILD_VINEYARD_BASIC "Build vineyard's basic data structures" ON)
