@@ -176,9 +176,6 @@ class MaxGraphSchema {
 
   void set_fnum(size_t fnum) { fnum_ = fnum; }
 
-  Entry* CreateEntry(const std::string& type, LabelId label_id,
-                     const std::string& name);
-
   void AddEntry(const Entry& entry) { entries_.push_back(entry); }
 
   void ToJSON(boost::property_tree::ptree& root) const;

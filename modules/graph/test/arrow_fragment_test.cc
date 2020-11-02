@@ -85,6 +85,7 @@ int main(int argc, char** argv) {
           return 0;
         });
   }
+  LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
   std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
       std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
           client.GetObject(fragment_group_id));
@@ -95,7 +96,7 @@ int main(int argc, char** argv) {
 
   auto frag_id = fg->Fragments().at(0);
 
-  auto frag = std::dynamic_pointer_cast<GraphType>(client->GetObject(frag_id));
+  auto frag = std::dynamic_pointer_cast<GraphType>(client.GetObject(frag_id));
 
   auto schema = frag->schema();
 
@@ -106,7 +107,7 @@ int main(int argc, char** argv) {
   grape::FinalizeMPIComm();
 
   LOG(INFO) << "[worker-" << comm_spec.worker_id()
-            << "] loaded graph to vineyard: " << VYObjectIDToString(fragment_id)
+            << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
             << " ...";
 
   LOG(INFO) << "Passed arrow fragment test...";
