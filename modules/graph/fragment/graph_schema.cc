@@ -423,6 +423,8 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   // Assign generated id to property by name.
   for (const auto& entry : v_entries) {
     Entry new_entry = entry;
+    new_entry.mapping.resize(prop_names.size());
+    new_entry.reverse_mapping.resize(prop_names.size());
     for (auto& prop : new_entry.props) {
       new_entry.mapping[prop.id] = name_to_idx[prop.name];
       new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
@@ -434,6 +436,8 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   for (const auto& entry : e_entries) {
     Entry new_entry = entry;
     new_entry.id += vertex_label_num;
+    new_entry.mapping.resize(prop_names.size());
+    new_entry.reverse_mapping.resize(prop_names.size());
     for (auto& prop : new_entry.props) {
       new_entry.mapping[prop.id] = name_to_idx[prop.name];
       new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
