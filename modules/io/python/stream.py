@@ -19,12 +19,26 @@
 import os
 from urllib.parse import urlparse
 
-import vineyard
-from vineyard import ObjectID
+import vineyard.io
+from vineyard._C import ObjectID
 from vineyard.launcher.script import ScriptLauncher
 
 
 base_path = os.path.abspath(os.path.dirname(__file__))
+
+from vineyard.core.resolver import default_resolver_context
+
+
+def parallel_stream_resolver(obj):
+    ''' Return a list of *local* partial streams.
+    '''
+    meta = obj.meta
+    partition_size = int(meta['size_'])
+    streams = [meta.get_member('stream_%d' % i) for i in range(partition_size)]
+    return [stream for stream in streams if stream.islocal]
+
+
+default_resolver_context.register('vineyard::ParallelStream', parallel_stream_resolver)
 
 
 def _resolve_ssh_script(ssh=True):
@@ -147,8 +161,16 @@ def parse_bytes_to_dataframe(byte_stream, vineyard_socket, *args, **kwargs):
                  *((vineyard_socket, str(byte_stream)) + args), **kwargs)
     return launcher.wait()
 
+def read_local_orc(path, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run('read_local_orc.py',
+                *((path, vineyard_socket) + args), **kwargs)
+    return launcher.wait()
 
 def read_local_dataframe(path, vineyard_socket, *args, **kwargs):
+    if '.orc' in path:
+        return read_local_orc(path, vineyard_socket, *args, **kwargs)
+
     return parse_bytes_to_dataframe(read_local_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
@@ -156,13 +178,21 @@ def read_kafka_dataframe(path, vineyard_socket, **kwargs):
     return parse_bytes_to_dataframe(read_kafka_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
-vineyard.read.register('file', read_local_bytes)
-vineyard.read.register('file', read_local_dataframe)
-vineyard.read.register('kafka', read_kafka_bytes)
-vineyard.read.register('kafka', read_kafka_dataframe)
+vineyard.io.read.register('file', read_local_bytes)
+vineyard.io.read.register('file', read_local_dataframe)
+vineyard.io.read.register('kafka', read_kafka_bytes)
+vineyard.io.read.register('kafka', read_kafka_dataframe)
 
+def write_local_orc(path, stream, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run('write_local_orc.py',
+                *((stream, path, vineyard_socket) + args), **kwargs)
+    launcher.join()
 
-def write_local_dataframe(dataframe_stream, path, vineyard_socket, *args, **kwargs):
+def write_local_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
+    if path.endswith('.orc'):
+        write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs)
+        return
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('write_local_dataframe'),
                  path,
@@ -183,6 +213,6 @@ def write_kafka_dataframe(dataframe_stream, path, vineyard_socket, *args, **kwar
                  *((vineyard_socket, str(dataframe_stream)) + args), **kwargs)
     launcher.wait()
 
-vineyard.write.register('file', write_local_dataframe)
-vineyard.write.register('kafka', write_kafka_bytes)
-vineyard.write.register('kafka', write_kafka_dataframe)
+vineyard.io.write.register('file', write_local_dataframe)
+vineyard.io.write.register('kafka', write_kafka_bytes)
+vineyard.io.write.register('kafka', write_kafka_dataframe)
