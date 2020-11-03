@@ -15,10 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 ''' This module exposes support for ByteStream, that use can used like:
 
-.. code::python
+.. code:: python
 
     # create a builder, then seal it as stream
     >>> builder = ByteStreamBuilder(client)
