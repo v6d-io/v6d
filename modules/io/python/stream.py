@@ -20,11 +20,25 @@ import os
 from urllib.parse import urlparse
 
 import vineyard.io
-from vineyard import ObjectID
+from vineyard._C import ObjectID
 from vineyard.launcher.script import ScriptLauncher
 
 
 base_path = os.path.abspath(os.path.dirname(__file__))
+
+from vineyard.core.resolver import default_resolver_context
+
+
+def parallel_stream_resolver(obj):
+    ''' Return a list of *local* partial streams.
+    '''
+    meta = obj.meta
+    partition_size = int(meta['size_'])
+    streams = [meta.get_member('stream_%d' % i) for i in range(partition_size)]
+    return [stream for stream in streams if stream.islocal]
+
+
+default_resolver_context.register('vineyard::ParallelStream', parallel_stream_resolver)
 
 
 def _resolve_ssh_script(ssh=True):
