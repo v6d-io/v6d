@@ -66,7 +66,7 @@ void bind_stream(py::module& mod) {
       });
 
   // ByteStream
-  py::class_<ByteStream, std::shared_ptr<ByteStream>>(mod, "ByteStream")
+  py::class_<ByteStream, std::shared_ptr<ByteStream>, Object>(mod, "ByteStream")
       .def(
           "open_reader",
           [](ByteStream* self,
@@ -126,7 +126,7 @@ void bind_stream(py::module& mod) {
           "size"_a);
 
   // DataFrameStream
-  py::class_<DataframeStream, std::shared_ptr<DataframeStream>>(
+  py::class_<DataframeStream, std::shared_ptr<DataframeStream>, Object>(
       mod, "DataframeStream")
       .def(
           "open_reader",
