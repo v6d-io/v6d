@@ -83,27 +83,6 @@ class BasicArrowFragmentLoader {
             CHECK_OR_RAISE(meta_idx != -1);
             auto id_column_idx = std::stoi(metadata->value(meta_idx));
 
-            /** Move the id_column to the last column first, to avoid effecting
-             * the original analytical apps (the Project API).
-             */
-            auto id_field = vertex_table->schema()->field(id_column_idx);
-            auto id_column = vertex_table->column(id_column_idx);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-            CHECK_ARROW_ERROR(
-                vertex_table->RemoveColumn(id_column_idx, &vertex_table));
-            CHECK_ARROW_ERROR(
-                vertex_table->AddColumn(vertex_table->num_columns(), id_field,
-                                        id_column, &vertex_table));
-#else
-            CHECK_ARROW_ERROR_AND_ASSIGN(
-                vertex_table, vertex_table->RemoveColumn(id_column_idx));
-            CHECK_ARROW_ERROR_AND_ASSIGN(
-                vertex_table,
-                vertex_table->AddColumn(vertex_table->num_columns(), id_field,
-                                        id_column));
-#endif
-            id_column_idx = vertex_table->num_columns() - 1;
-
             // TODO(guanyi.gl): Failure occurred before MPI calling will make
             // processes hanging. We have to resolve this kind of issue.
             auto id_column_type = vertex_table->column(id_column_idx)->type();
@@ -129,6 +108,29 @@ class BasicArrowFragmentLoader {
                                      tmp_table->RemoveColumn(id_column_idx));
 #endif
             */
+
+            /**
+             * Move the id_column to the last column first, to avoid effecting
+             * the original analytical apps (the Project API).
+             *
+             * Note that this operation happens on table after shuffle.
+             */
+            auto id_field = tmp_table->schema()->field(id_column_idx);
+            auto id_column = tmp_table->column(id_column_idx);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+            CHECK_ARROW_ERROR(
+                tmp_table->RemoveColumn(id_column_idx, &tmp_table));
+            CHECK_ARROW_ERROR(tmp_table->AddColumn(
+                tmp_table->num_columns(), id_field, id_column, &tmp_table));
+#else
+            CHECK_ARROW_ERROR_AND_ASSIGN(
+                tmp_table, tmp_table->RemoveColumn(id_column_idx));
+            CHECK_ARROW_ERROR_AND_ASSIGN(
+                tmp_table, tmp_table->AddColumn(tmp_table->num_columns(),
+                                                id_field, id_column));
+#endif
+            id_column_idx = tmp_table->num_columns() - 1;
+
             local_v_tables[v_label] = tmp_table;
             metadata->Append("primary_key", local_v_tables[v_label]
                                                 ->schema()
