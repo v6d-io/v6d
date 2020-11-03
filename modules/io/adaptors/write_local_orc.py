@@ -33,7 +33,7 @@ def orc_type(field):
 
 def write_local_orc(stream_id, path, vineyard_socket):
     client = vineyard.connect(vineyard_socket)
-    stream = client.get(stream_id)
+    stream = client.get(stream_id)[0]
     reader = stream.open_reader(client)
 
     writer = None
