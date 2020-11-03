@@ -129,7 +129,7 @@ std::shared_ptr<Object> ObjectMeta::GetMember(const std::string& name) const {
 ObjectMeta ObjectMeta::GetMemberMeta(const std::string& name) const {
   ObjectMeta ret;
   auto const& child_meta = meta_.get_child_optional(name);
-  VINEYARD_ASSERT(child_meta);
+  VINEYARD_ASSERT(child_meta, "Failed to get member " + name);
   ret.SetClient(client_);
 
 #if !defined(NDEBUG)  // slow path, but accurate

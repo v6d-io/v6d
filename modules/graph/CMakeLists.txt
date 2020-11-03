@@ -43,7 +43,6 @@ target_link_libraries(vineyard_graph vineyard_client
                                      vineyard_basic
                                      vineyard_io
                                      ${ARROW_SHARED_LIB}
-                                     ${LIBGRAPELITE_LIBRARIES}
                                      ${MPI_CXX_LIBRARIES}
 )
 if(APPLE)
