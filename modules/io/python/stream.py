@@ -19,10 +19,13 @@
 import os
 from urllib.parse import urlparse
 
-import vineyard
+import vineyard.io
 from vineyard import ObjectID
 from vineyard.launcher.script import ScriptLauncher
 
+from vineyard.io.dataframe import DataframeStreamBuilder
+import pyorc
+import pyarrow as pa
 
 base_path = os.path.abspath(os.path.dirname(__file__))
 
@@ -147,8 +150,72 @@ def parse_bytes_to_dataframe(byte_stream, vineyard_socket, *args, **kwargs):
                  *((vineyard_socket, str(byte_stream)) + args), **kwargs)
     return launcher.wait()
 
+def arrow_type(field):
+    if field.name == 'decimal':
+        return pa.decimal128(field.precision)
+    elif field.name == 'uniontype':
+        return pa.union(field.cont_types)
+    elif field.name == 'array':
+        return pa.list_(field.type)
+    elif field.name == 'map':
+        return pa.map_(field.key, field.value)
+    elif field.name == 'struct':
+        return pa.struct(field.fields)
+    else:
+        types = {
+            'boolean': pa.bool_(),
+            'tinyint': pa.int8(),
+            'smallint': pa.int16(),
+            'int': pa.int32(),
+            'bigint': pa.int64(),
+            'float': pa.float32(),
+            'double': pa.float64(),
+            'string': pa.string(),
+            'char': pa.string(),
+            'varchar': pa.string(),
+            'binary': pa.binary(),
+            'timestamp': pa.timestamp('ms'),
+            'date': pa.date32(),
+        }
+        if field.name not in types:
+            raise ValueError('Cannot convert to arrow type: ' + field.name)
+        return types[field.name]
+
+def read_local_orc(path, vineyard_socket, *args, **kwargs):
+    client = vineyard.connect(vineyard_socket)
+    builder = DataframeStreamBuilder(client)
+    stream = builder.seal(client)
+    writer = stream.open_writer(client)
+
+    with open(path, 'rb') as f:
+        reader = pyorc.Reader(f)
+        fields = reader.schema.fields
+        schema = []
+        for c in fields:
+            schema.append((c, arrow_type(fields[c])))
+        pa_struct = pa.struct(schema)
+        while rows := reader.read(num=1024):
+            rb = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
+            sink = pa.BufferOutputStream()
+            rb_writer = pa.ipc.new_stream(sink, rb.schema)
+            rb_writer.write_batch(rb)
+            rb_writer.close()
+            buf = sink.getvalue()
+            chunk = writer.next(buf.size)
+            buf_writer = pa.FixedSizeBufferWriter(chunk)
+            buf_writer.write(buf)
+            buf_writer.close()
+
+    writer.finish()
+    return stream
+
+def write_local_orc(stream, vineyard_socket, *args, **kwargs):
+    pass
 
 def read_local_dataframe(path, vineyard_socket, *args, **kwargs):
+    if '.orc' in path:
+        return read_local_orc(path, vineyard_socket, *args, **kwargs)
+
     return parse_bytes_to_dataframe(read_local_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
@@ -156,13 +223,14 @@ def read_kafka_dataframe(path, vineyard_socket, **kwargs):
     return parse_bytes_to_dataframe(read_kafka_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
-vineyard.read.register('file', read_local_bytes)
-vineyard.read.register('file', read_local_dataframe)
-vineyard.read.register('kafka', read_kafka_bytes)
-vineyard.read.register('kafka', read_kafka_dataframe)
-
+vineyard.io.read.register('file', read_local_bytes)
+vineyard.io.read.register('file', read_local_dataframe)
+vineyard.io.read.register('kafka', read_kafka_bytes)
+vineyard.io.read.register('kafka', read_kafka_dataframe)
 
 def write_local_dataframe(dataframe_stream, path, vineyard_socket, *args, **kwargs):
+    if path.endswith('.orc'):
+        write_local_orc(dataframe_stream, path, vineyard_socket, *args, **kwargs)
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('write_local_dataframe'),
                  path,
@@ -183,6 +251,6 @@ def write_kafka_dataframe(dataframe_stream, path, vineyard_socket, *args, **kwar
                  *((vineyard_socket, str(dataframe_stream)) + args), **kwargs)
     launcher.wait()
 
-vineyard.write.register('file', write_local_dataframe)
-vineyard.write.register('kafka', write_kafka_bytes)
-vineyard.write.register('kafka', write_kafka_dataframe)
+vineyard.io.write.register('file', write_local_dataframe)
+vineyard.io.write.register('kafka', write_kafka_bytes)
+vineyard.io.write.register('kafka', write_kafka_dataframe)
