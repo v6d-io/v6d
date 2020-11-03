@@ -82,6 +82,28 @@ class BasicArrowFragmentLoader {
             auto meta_idx = metadata->FindKey(ID_COLUMN);
             CHECK_OR_RAISE(meta_idx != -1);
             auto id_column_idx = std::stoi(metadata->value(meta_idx));
+
+            /** Move the id_column to the last column first, to avoid effecting
+             * the original analytical apps (the Project API).
+             */
+            auto id_field = vertex_table->schema()->field(id_column_idx);
+            auto id_column = vertex_table->column(id_column_idx);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+            CHECK_ARROW_ERROR(
+                vertex_table->RemoveColumn(id_column_idx, &vertex_table));
+            CHECK_ARROW_ERROR(
+                vertex_table->AddColumn(vertex_table->num_columns(), id_field,
+                                        id_column, &vertex_table));
+#else
+            CHECK_ARROW_ERROR_AND_ASSIGN(
+                vertex_table, vertex_table->RemoveColumn(id_column_idx));
+            CHECK_ARROW_ERROR_AND_ASSIGN(
+                vertex_table,
+                vertex_table->AddColumn(vertex_table->num_columns(), id_field,
+                                        id_column));
+#endif
+            id_column_idx = vertex_table->num_columns() - 1;
+
             // TODO(guanyi.gl): Failure occurred before MPI calling will make
             // processes hanging. We have to resolve this kind of issue.
             auto id_column_type = vertex_table->column(id_column_idx)->type();
@@ -97,8 +119,7 @@ class BasicArrowFragmentLoader {
                                 comm_spec_, partitioner_, vertex_table));
             /**
              * Keep the oid column in vertex data table for HTAP, rather, we
-record
-             * the id column name (primary key) in schema's metadata.
+             * record the id column name (primary key) in schema's metadata.
              *
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
             ARROW_OK_OR_RAISE(tmp_table->RemoveColumn(
