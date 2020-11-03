@@ -151,7 +151,7 @@ def parse_bytes_to_dataframe(byte_stream, vineyard_socket, *args, **kwargs):
 def read_local_orc(path, vineyard_socket, *args, **kwargs):
     try:
         launcher = ParallelStreamLauncher()
-        launcher.run('python3', '/Users/andy/alibaba/libvineyard/modules/io/adaptors/read_local_orc.py',
+        launcher.run('read_local_orc.py',
                  *((path, vineyard_socket) + args), **kwargs)
     except Exception as e:
         print(e)
