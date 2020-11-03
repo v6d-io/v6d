@@ -174,6 +174,13 @@ ptree Entry::ToJSON() const {
     }
     root.add_child("rawRelationShips", relation_array);
   }
+  // mappings
+  if (!mapping.empty()) {
+    vineyard::put_container(root, "mapping", mapping);
+  }
+  if (!reverse_mapping.empty()) {
+    vineyard::put_container(root, "reverse_mapping", reverse_mapping);
+  }
   return root;
 }
 
@@ -211,6 +218,13 @@ void Entry::FromJSON(const ptree& root) {
         relations.emplace_back(src.get(), dst.get());
       }
     }
+  }
+  // mapping
+  if (root.get_optional<std::string>("mapping")) {
+    vineyard::get_container(root, "mapping", mapping);
+  }
+  if (root.get_optional<std::string>("reverse_mapping")) {
+    vineyard::get_container(root, "reverse_mapping", reverse_mapping);
   }
 }
 
@@ -409,7 +423,11 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   // Assign generated id to property by name.
   for (const auto& entry : v_entries) {
     Entry new_entry = entry;
+    new_entry.mapping.resize(prop_names.size());
+    new_entry.reverse_mapping.resize(prop_names.size());
     for (auto& prop : new_entry.props) {
+      new_entry.mapping[prop.id] = name_to_idx[prop.name];
+      new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
       prop.id = name_to_idx[prop.name];
     }
     entries_.push_back(new_entry);
@@ -418,7 +436,11 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   for (const auto& entry : e_entries) {
     Entry new_entry = entry;
     new_entry.id += vertex_label_num;
+    new_entry.mapping.resize(prop_names.size());
+    new_entry.reverse_mapping.resize(prop_names.size());
     for (auto& prop : new_entry.props) {
+      new_entry.mapping[prop.id] = name_to_idx[prop.name];
+      new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
       prop.id = name_to_idx[prop.name];
     }
     entries_.push_back(new_entry);

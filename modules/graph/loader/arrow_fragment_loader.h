@@ -17,6 +17,7 @@ limitations under the License.
 #define MODULES_GRAPH_LOADER_ARROW_FRAGMENT_LOADER_H_
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -79,7 +80,8 @@ class ArrowFragmentLoader {
       vineyard::Client& client, const grape::CommSpec& comm_spec,
       label_id_t vertex_label_num, label_id_t edge_label_num,
       std::vector<std::shared_ptr<arrow::Table>> const& partial_v_tables,
-      std::vector<std::shared_ptr<arrow::Table>> const& partial_e_tables,
+      std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
+          partial_e_tables,
       bool directed = true)
       : client_(client),
         comm_spec_(comm_spec),
@@ -95,7 +97,6 @@ class ArrowFragmentLoader {
   boost::leaf::result<vineyard::ObjectID> LoadFragment() {
     BOOST_LEAF_CHECK(initPartitioner());
     BOOST_LEAF_CHECK(initBasicLoader());
-
     BOOST_LEAF_AUTO(frag_id, shuffleAndBuild());
     return frag_id;
   }
@@ -143,7 +144,7 @@ class ArrowFragmentLoader {
 
   boost::leaf::result<void> initBasicLoader() {
     std::vector<std::shared_ptr<arrow::Table>> partial_v_tables;
-    std::vector<std::shared_ptr<arrow::Table>> partial_e_tables;
+    std::vector<std::vector<std::shared_ptr<arrow::Table>>> partial_e_tables;
     if (!partial_v_tables_.empty() && !partial_e_tables_.empty()) {
       partial_v_tables = partial_v_tables_;
       partial_e_tables = partial_e_tables_;
@@ -171,40 +172,14 @@ class ArrowFragmentLoader {
     auto vm = vm_builder.Seal(client_);
     auto vm_ptr =
         std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm->id()));
-    auto mapper = [&vm_ptr](fid_t fid, internal_oid_t oid, vid_t& gid) {
-      return vm_ptr->GetGid(fid, oid, gid);
+    auto mapper = [&vm_ptr](fid_t fid, label_id_t label, internal_oid_t oid,
+                            vid_t& gid) {
+      CHECK(vm_ptr->GetGid(fid, label, oid, gid));
+      return true;
     };
     BOOST_LEAF_AUTO(local_e_tables,
                     basic_arrow_fragment_loader_.ShuffleEdgeTables(mapper));
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr);
-
-    {
-      // Make sure the sequence of tables in local_v_tables and local_e_tables
-      // are correspond to their label_index.
-      std::vector<std::shared_ptr<arrow::Table>> rearranged_v_tables;
-      rearranged_v_tables.resize(local_v_tables.size());
-      for (auto table : local_v_tables) {
-        auto meta = table->schema()->metadata();
-        auto label_index_field = meta->FindKey("label_index");
-        CHECK_NE(label_index_field, -1);
-        auto label_index = std::stoi(meta->value(label_index_field));
-        CHECK_LT(label_index, rearranged_v_tables.size());
-        rearranged_v_tables[label_index] = table;
-      }
-      local_v_tables = rearranged_v_tables;
-
-      std::vector<std::shared_ptr<arrow::Table>> rearranged_e_tables;
-      rearranged_e_tables.resize(local_e_tables.size());
-      for (auto table : local_e_tables) {
-        auto meta = table->schema()->metadata();
-        auto label_index_field = meta->FindKey("label_index");
-        CHECK_NE(label_index_field, -1);
-        auto label_index = std::stoi(meta->value(label_index_field));
-        CHECK_LT(label_index, rearranged_e_tables.size());
-        rearranged_e_tables[label_index] = table;
-      }
-      local_e_tables = rearranged_e_tables;
-    }
 
     PropertyGraphSchema schema;
     schema.set_fnum(comm_spec_.fnum());
@@ -216,9 +191,9 @@ class ArrowFragmentLoader {
       std::string label = kvs["label"];
 
       auto entry = schema.CreateEntry(label, type);
-      // entry->add_primary_keys(1, table->schema()->field_names());
+      entry->AddPrimaryKeys(1, std::vector<std::string>{kvs["primary_key"]});
 
-      // N.B. ID column is already been removed.
+      // N.B. ID column is not removed, and we need that
       for (int64_t i = 0; i < table->num_columns(); ++i) {
         entry->AddProperty(table->schema()->field(i)->name(),
                            table->schema()->field(i)->type());
@@ -343,9 +318,14 @@ class ArrowFragmentLoader {
         }
         // If label name is not in meta, we assign a default label '_'
         if (adaptor_meta.count("label") == 0) {
-          meta->Append("label", "_");
+          return boost::leaf::new_error(
+              ErrorCode::kIOError,
+              "Metadata of input vertex files should contain label name");
         }
+        meta->Append("label", adaptor_meta.find("label")->second);
         tables[label_id] = table->ReplaceSchemaMetadata(meta);
+
+        vertex_label_to_index_[adaptor_meta.find("label")->second] = label_id;
       }
     } catch (std::exception& e) {
       return boost::leaf::new_error(ErrorCode::kIOError, std::string(e.what()));
@@ -353,12 +333,12 @@ class ArrowFragmentLoader {
     return tables;
   }
 
-  boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>>
+  boost::leaf::result<std::vector<std::vector<std::shared_ptr<arrow::Table>>>>
   loadEdgeTables(const std::vector<std::string>& files, int index,
                  int total_parts) {
     label_id_t label_num = static_cast<label_id_t>(files.size());
 
-    std::vector<std::shared_ptr<arrow::Table>> tables(label_num);
+    std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables(label_num);
 
     auto io_deleter = [](vineyard::LocalIOAdaptor* adaptor) {
       VINEYARD_CHECK_OK(adaptor->Close());
@@ -370,16 +350,6 @@ class ArrowFragmentLoader {
         std::vector<std::string> sub_label_files;
         boost::split(sub_label_files, files[label_id], boost::is_any_of(";"));
 
-        std::vector<std::shared_ptr<arrow::Table>> sub_tables(
-            sub_label_files.size());
-
-        std::shared_ptr<arrow::KeyValueMetadata> meta(
-            new arrow::KeyValueMetadata());
-        meta->Append("type", "EDGE");
-        meta->Append("label_index", std::to_string(label_id));
-        meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
-        meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
-        meta->Append("sub_label_num", std::to_string(sub_label_files.size()));
         for (size_t j = 0; j < sub_label_files.size(); ++j) {
           std::unique_ptr<vineyard::LocalIOAdaptor,
                           std::function<void(vineyard::LocalIOAdaptor*)>>
@@ -391,31 +361,46 @@ class ArrowFragmentLoader {
           std::shared_ptr<arrow::Table> table;
           VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
           BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
-          sub_tables[j] = table;
+
+          std::shared_ptr<arrow::KeyValueMetadata> meta(
+              new arrow::KeyValueMetadata());
+          meta->Append("type", "EDGE");
+          meta->Append("label_index", std::to_string(label_id));
+          meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
+          meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
+          meta->Append("sub_label_num", std::to_string(sub_label_files.size()));
 
           auto adaptor_meta = io_adaptor->GetMeta();
           auto search = adaptor_meta.find("label");
-          if (search != adaptor_meta.end()) {
-            meta->Append("label", search->second);
+          if (search == adaptor_meta.end()) {
+            return boost::leaf::new_error(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain label name");
           }
+          meta->Append("label", search->second);
+
           search = adaptor_meta.find("src_label");
-          if (search != adaptor_meta.end()) {
-            meta->Append("src_label_" + std::to_string(j), search->second);
-          } else {
-            meta->Append("src_label_" + std::to_string(j), "_");
+          if (search == adaptor_meta.end()) {
+            return boost::leaf::new_error(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain src label name");
           }
+          meta->Append(
+              basic_loader_t::SRC_LABEL_INDEX,
+              std::to_string(vertex_label_to_index_.at(search->second)));
+
           search = adaptor_meta.find("dst_label");
-          if (search != adaptor_meta.end()) {
-            meta->Append("dst_label_" + std::to_string(j), search->second);
-          } else {
-            meta->Append("dst_label_" + std::to_string(j), "_");
+          if (search == adaptor_meta.end()) {
+            return boost::leaf::new_error(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain dst label name");
           }
+          meta->Append(
+              basic_loader_t::DST_LABEL_INDEX,
+              std::to_string(vertex_label_to_index_.at(search->second)));
+
+          tables[label_id].emplace_back(table->ReplaceSchemaMetadata(meta));
         }
-        if (meta->FindKey("label") == -1) {
-          meta->Append("label", "_");
-        }
-        auto table = ConcatenateTables(sub_tables);
-        tables[label_id] = table->ReplaceSchemaMetadata(meta);
       }
     } catch (std::exception& e) {
       return boost::leaf::new_error(ErrorCode::kIOError, std::string(e.what()));
@@ -444,25 +429,6 @@ class ArrowFragmentLoader {
     return arrow::Status::OK();
   }
 
-  std::shared_ptr<arrow::Table> ConcatenateTables(
-      std::vector<std::shared_ptr<arrow::Table>>& tables) {
-    if (tables.size() == 1) {
-      return tables[0];
-    }
-    auto col_names = tables[0]->ColumnNames();
-    for (size_t i = 1; i < tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      CHECK_ARROW_ERROR(tables[i]->RenameColumns(col_names, &tables[i]));
-#else
-      CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
-                                   tables[i]->RenameColumns(col_names));
-#endif
-    }
-    std::shared_ptr<arrow::Table> table;
-    CHECK_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(tables));
-    return table;
-  }
-
   void SerializeSchema(const std::shared_ptr<arrow::Schema>& schema,
                        std::shared_ptr<arrow::Buffer>* out) {
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
@@ -488,59 +454,6 @@ class ArrowFragmentLoader {
     CHECK_ARROW_ERROR_AND_ASSIGN(*out,
                                  arrow::ipc::ReadSchema(&reader, nullptr));
 #endif
-  }
-
-  std::shared_ptr<arrow::Schema> FindMostCommonSchema(
-      const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
-    size_t field_num = 0;
-    for (size_t i = 0; i < schemas.size(); ++i) {
-      if (schemas[i] != nullptr) {
-        field_num = schemas[i]->num_fields();
-        break;
-      }
-    }
-    // Find most common fields.
-    std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
-    for (size_t i = 0; i < field_num; ++i) {
-      for (size_t j = 0; j < schemas.size(); ++j) {
-        if (schemas[j] == nullptr) {
-          continue;
-        }
-        fields[i].push_back(schemas[j]->field(i));
-      }
-    }
-    std::vector<std::shared_ptr<arrow::Field>> most_common_fields(field_num);
-    for (size_t i = 0; i < field_num; ++i) {
-      std::sort(fields[i].begin(), fields[i].end(),
-                [](const std::shared_ptr<arrow::Field>& lhs,
-                   const std::shared_ptr<arrow::Field>& rhs) {
-                  return lhs->type()->ToString() < rhs->type()->ToString();
-                });
-
-      // find the max frequency using linear traversal
-      int max_count = 1, curr_count = 1;
-      auto res = fields[i][0];
-      for (size_t j = 1; j < fields[i].size(); j++) {
-        if (fields[i][j]->type()->Equals(fields[i][j - 1]->type())) {
-          curr_count++;
-        } else {
-          if (curr_count > max_count) {
-            max_count = curr_count;
-            res = fields[i][j - 1];
-          }
-          curr_count = 1;
-        }
-      }
-
-      // If last element is most frequent
-      if (curr_count > max_count) {
-        max_count = curr_count;
-        res = fields[i].back();
-      }
-      most_common_fields[i] = res;
-    }
-    auto final_schema = std::make_shared<arrow::Schema>(most_common_fields);
-    return final_schema;
   }
 
   std::shared_ptr<arrow::Schema> TypeLoosen(
@@ -601,9 +514,6 @@ class ArrowFragmentLoader {
   // type loosen, int64 -> double. timestamp -> int64.
   boost::leaf::result<void> SyncSchema(std::shared_ptr<arrow::Table>& table,
                                        grape::CommSpec comm_spec) {
-    if (comm_spec.worker_num() == 1) {
-      return boost::leaf::result<void>();
-    }
     std::shared_ptr<arrow::Schema> final_schema;
     int final_serialized_schema_size;
     std::shared_ptr<arrow::Buffer> schema_buffer;
@@ -780,13 +690,15 @@ class ArrowFragmentLoader {
     return arrow::Table::Make(schema, new_columns);
   }
 
+  std::map<std::string, label_id_t> vertex_label_to_index_;
+
   vineyard::Client& client_;
   grape::CommSpec comm_spec_;
   std::vector<std::string> efiles_, vfiles_;
 
   label_id_t vertex_label_num_, edge_label_num_;
-  std::vector<std::shared_ptr<arrow::Table>> partial_v_tables_,
-      partial_e_tables_;
+  std::vector<std::shared_ptr<arrow::Table>> partial_v_tables_;
+  std::vector<std::vector<std::shared_ptr<arrow::Table>>> partial_e_tables_;
   partitioner_t partitioner_;
 
   bool directed_;

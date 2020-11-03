@@ -124,7 +124,7 @@ void EtcdMetaService::requestAll(
       .then([this, callback](pplx::task<etcd::Response> resp_task) {
         auto resp = resp_task.get();
         VLOG(10) << "etcd ls use " << resp.duration().count()
-                 << " microseconds";
+                 << " microseconds for " << resp.keys().size() << " keys";
         std::vector<IMetaService::kv_t> kvs(resp.keys().size());
         for (size_t i = 0; i < resp.keys().size(); ++i) {
           IMetaService::kv_t kv;

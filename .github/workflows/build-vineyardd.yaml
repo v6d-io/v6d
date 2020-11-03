@@ -14,7 +14,13 @@
 
 name: Build Vineyardd Binary
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+    paths:
+    - 'CMakeLists.txt'
+    - 'cmake/**'
+    - 'src/**'
 
 jobs:
   build:

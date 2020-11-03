@@ -402,13 +402,13 @@ file(GLOB_RECURSE FILES_NEED_LINT "src/*.cc" "src/*.h"
 )
 
 foreach (file_path ${FILES_NEED_FORMAT})
-    if (${file_path} MATCHES ".*vineyard.h")
+    if (${file_path} MATCHES ".*vineyard.h" OR ${file_path} MATCHES ".*thirdparty.*")
         list(REMOVE_ITEM FILES_NEED_FORMAT ${file_path})
     endif ()
 endforeach ()
 
 foreach (file_path ${FILES_NEED_LINT})
-    if (${file_path} MATCHES ".*vineyard.h")
+    if (${file_path} MATCHES ".*vineyard.h" OR ${file_path} MATCHES ".*thirdparty.*")
         list(REMOVE_ITEM FILES_NEED_LINT ${file_path})
     endif ()
 endforeach ()
