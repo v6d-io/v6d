@@ -80,7 +80,8 @@ class ArrowFragmentLoader {
       vineyard::Client& client, const grape::CommSpec& comm_spec,
       label_id_t vertex_label_num, label_id_t edge_label_num,
       std::vector<std::shared_ptr<arrow::Table>> const& partial_v_tables,
-      std::vector<std::shared_ptr<arrow::Table>> const& partial_e_tables,
+      std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
+          partial_e_tables,
       bool directed = true)
       : client_(client),
         comm_spec_(comm_spec),
@@ -190,9 +191,9 @@ class ArrowFragmentLoader {
       std::string label = kvs["label"];
 
       auto entry = schema.CreateEntry(label, type);
-      // entry->add_primary_keys(1, table->schema()->field_names());
+      entry->AddPrimaryKeys(1, std::vector<std::string>{kvs["primary_key"]});
 
-      // N.B. ID column is already been removed.
+      // N.B. ID column is not removed, and we need that
       for (int64_t i = 0; i < table->num_columns(); ++i) {
         entry->AddProperty(table->schema()->field(i)->name(),
                            table->schema()->field(i)->type());

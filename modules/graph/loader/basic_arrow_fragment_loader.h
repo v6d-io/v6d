@@ -78,7 +78,7 @@ class BasicArrowFragmentLoader {
       auto e = boost::leaf::try_handle_all(
           [&, this]() -> boost::leaf::result<GSError> {
             auto& vertex_table = vertex_tables_[v_label];
-            auto metadata = vertex_table->schema()->metadata();
+            auto metadata = vertex_table->schema()->metadata()->Copy();
             auto meta_idx = metadata->FindKey(ID_COLUMN);
             CHECK_OR_RAISE(meta_idx != -1);
             auto id_column_idx = std::stoi(metadata->value(meta_idx));
@@ -95,6 +95,11 @@ class BasicArrowFragmentLoader {
             BOOST_LEAF_AUTO(tmp_table,
                             ShufflePropertyVertexTable<partitioner_t>(
                                 comm_spec_, partitioner_, vertex_table));
+            /**
+             * Keep the oid column in vertex data table for HTAP, rather, we
+record
+             * the id column name (primary key) in schema's metadata.
+             *
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
             ARROW_OK_OR_RAISE(tmp_table->RemoveColumn(
                 id_column_idx, &local_v_tables[v_label]));
@@ -102,6 +107,15 @@ class BasicArrowFragmentLoader {
             ARROW_OK_ASSIGN_OR_RAISE(local_v_tables[v_label],
                                      tmp_table->RemoveColumn(id_column_idx));
 #endif
+            */
+            local_v_tables[v_label] = tmp_table;
+            metadata->Append("primary_key", local_v_tables[v_label]
+                                                ->schema()
+                                                ->field(id_column_idx)
+                                                ->name());
+            local_v_tables[v_label] =
+                local_v_tables[v_label]->ReplaceSchemaMetadata(metadata);
+
             CHECK_OR_RAISE(tmp_table->field(id_column_idx)->type() ==
                            vineyard::ConvertToArrowType<oid_t>::TypeValue());
             CHECK_OR_RAISE(tmp_table->column(id_column_idx)->num_chunks() <= 1);
