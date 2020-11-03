@@ -94,21 +94,24 @@ int main(int argc, char** argv) {
     LOG(INFO) << "[frag-" << pair.first << "]: " << pair.second;
   }
 
-  auto frag_id = fg->Fragments().at(0);
+  // NB: only retrieve local fragments.
+  auto locations = fg->FragmentLocations();
+  for (const auto& pair : fg->Fragments()) {
+    if (locations.at(pair.first) != client.instance_id()) {
+      continue;
+    }
+    auto frag_id = pair.second;
+    auto frag = std::dynamic_pointer_cast<GraphType>(client.GetObject(frag_id));
+    auto schema = frag->schema();
+    auto mg_schema = vineyard::MaxGraphSchema(schema);
+    mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
 
-  auto frag = std::dynamic_pointer_cast<GraphType>(client.GetObject(frag_id));
-
-  auto schema = frag->schema();
-
-  auto mg_schema = vineyard::MaxGraphSchema(schema);
-
-  mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
+    LOG(INFO) << "[worker-" << comm_spec.worker_id()
+              << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
+              << " ...";
+  }
 
   grape::FinalizeMPIComm();
-
-  LOG(INFO) << "[worker-" << comm_spec.worker_id()
-            << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
-            << " ...";
 
   LOG(INFO) << "Passed arrow fragment test...";
 
