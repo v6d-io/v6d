@@ -66,7 +66,7 @@ void bind_stream(py::module& mod) {
       });
 
   // ByteStream
-  py::class_<ByteStream, std::shared_ptr<ByteStream>>(mod, "ByteStream")
+  py::class_<ByteStream, std::shared_ptr<ByteStream>, Object>(mod, "ByteStream")
       .def(
           "open_reader",
           [](ByteStream* self,
@@ -115,18 +115,17 @@ void bind_stream(py::module& mod) {
       mod, "DataframeStreamReader")
       .def(
           "next",
-          [](DataframeStreamReader* self, size_t const size) -> py::object {
+          [](DataframeStreamReader* self) -> py::object {
             std::unique_ptr<arrow::Buffer> chunk = nullptr;
             throw_on_error(self->GetNext(chunk));
             auto chunk_ptr = chunk.release();
             auto pa = py::module::import("pyarrow");
             return pa.attr("py_buffer")(py::memoryview::from_memory(
                 chunk_ptr->data(), chunk_ptr->size()));
-          },
-          "size"_a);
+          });
 
   // DataFrameStream
-  py::class_<DataframeStream, std::shared_ptr<DataframeStream>>(
+  py::class_<DataframeStream, std::shared_ptr<DataframeStream>, Object>(
       mod, "DataframeStream")
       .def(
           "open_reader",
