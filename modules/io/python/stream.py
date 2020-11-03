@@ -153,9 +153,6 @@ def read_local_orc(path, vineyard_socket, *args, **kwargs):
                 *((path, vineyard_socket) + args), **kwargs)
     return launcher.wait()
 
-def write_local_orc(stream, vineyard_socket, *args, **kwargs):
-    pass
-
 def read_local_dataframe(path, vineyard_socket, *args, **kwargs):
     if '.orc' in path:
         return read_local_orc(path, vineyard_socket, *args, **kwargs)
@@ -171,6 +168,12 @@ vineyard.io.read.register('file', read_local_bytes)
 vineyard.io.read.register('file', read_local_dataframe)
 vineyard.io.read.register('kafka', read_kafka_bytes)
 vineyard.io.read.register('kafka', read_kafka_dataframe)
+
+def write_local_orc(stream, path, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run('write_local_orc.py',
+                *((stream.id, path, vineyard_socket) + args), **kwargs)
+    launcher.wait()
 
 def write_local_dataframe(dataframe_stream, path, vineyard_socket, *args, **kwargs):
     if path.endswith('.orc'):
