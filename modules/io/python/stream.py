@@ -94,7 +94,6 @@ class ParallelStreamLauncher(ScriptLauncher):
                     args = (num_workers, proc_idx)
                 else:
                     args = args + (num_workers, proc_idx)
-                print(host, *args, **kwargs)
                 launcher.run(host, *args, **kwargs)
                 proc_idx += 1
                 self._procs.append(launcher)
