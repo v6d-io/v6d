@@ -61,6 +61,7 @@ def read_local_orc(path, vineyard_socket):
     stream = builder.seal(client)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
+    print(json.dumps(ret))
 
     writer = stream.open_writer(client)
 

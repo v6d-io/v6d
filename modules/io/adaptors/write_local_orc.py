@@ -25,11 +25,34 @@ import json
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 def orc_type(field):
-    if pa.is_int(field):
-        return 'int'
-    elif pa.is_string(field):
-        return 'string'
-    raise ValueError('Cannot Convert %s' % field)
+    if pa.types.is_boolean(field):
+        return pyorc.Boolean()
+    elif pa.types.is_int8(field):
+        return pyorc.TinyInt()
+    elif pa.types.is_int16(field):
+        return pyorc.SmallInt()
+    elif pa.types.is_int32(field):
+        return pyorc.Int()
+    elif pa.types.is_int64(field):
+        return pyorc.BigInt()
+    elif pa.types.is_float32(field):
+        return pyorc.Float()
+    elif pa.types.is_float64(field):
+        return pyorc.Double()
+    elif pa.types.is_decimal(field):
+        return pyorc.Decimal(field.precision, field.scale)
+    elif pa.types.is_list(field):
+        return pyorc.Array(orc_type(field.value_type))
+    elif pa.types.is_timestamp(field):
+        return pyorc.Timestamp()
+    elif pa.types.is_date(field):
+        return pyorc.Date()
+    elif pa.types.is_binary(field):
+        return pyorc.Binary()
+    elif pa.types.is_string(field):
+        return pyorc.String()
+    else:
+        raise ValueError('Cannot Convert %s' % field)
 
 def write_local_orc(stream_id, path, vineyard_socket):
     client = vineyard.connect(vineyard_socket)
@@ -38,17 +61,22 @@ def write_local_orc(stream_id, path, vineyard_socket):
 
     writer = None
     with open(path, 'wb') as f:
-        while buf := reader.next():
+        while True:
+            try:
+                buf = reader.next()
+            except:
+                writer.close()
+                break
             buf_reader = pa.ipc.open_stream(buf)
             if writer is None:
                 #get schema
                 schema = {}
-                for field in buf_reader.schema():
+                for field in buf_reader.schema:
                     schema[field.name] = orc_type(field.type)
                 writer = pyorc.Writer(f, pyorc.Struct(**schema))
             for batch in buf_reader:
                 df = batch.to_pandas()
-                writer.writerows(df.itertuples())
+                writer.writerows(df.itertuples(False, None))
 
 
 if __name__ == '__main__':
