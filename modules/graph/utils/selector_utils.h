@@ -245,13 +245,35 @@ inline bool parse_add_column_selectors(
   for (auto& pair : tmp_list) {
     std::vector<std::string> tokens;
     boost::split(tokens, pair.second, boost::is_any_of("."));
-    if (tokens[0] == "r" && tokens.size() == 3) {
-      property_graph_types::LABEL_ID_TYPE label_id;
-      if (parse_label_id(tokens[1], label_id)) {
-        selector_map[label_id].emplace_back(pair.first, pair.second);
+    if (tokens.size() >= 2) {
+      if (tokens[0] == "v" || tokens[0] == "r") {
+        property_graph_types::LABEL_ID_TYPE label_id;
+        if (parse_label_id(tokens[1], label_id)) {
+          selector_map[label_id].emplace_back(pair.first, pair.second);
+        }
       }
     }
   }
+  return true;
+}
+
+inline bool parse_no_labeled_add_column_selectors(
+    const std::string& selectors,
+    std::vector<std::pair<std::string, std::string>>& selector_map) {
+  std::stringstream ss(selectors);
+  boost::property_tree::ptree pt;
+  std::vector<std::pair<std::string, std::string>> tmp_list;
+  try {
+    boost::property_tree::read_json(ss, pt);
+    BOOST_FOREACH  // NOLINT(whitespace/parens)
+        (boost::property_tree::ptree::value_type & v, pt) {
+      CHECK(v.second.empty());
+      const auto& col_name = v.first;
+      const auto& selector = v.second.data();
+      selector_map.emplace_back(col_name, selector);
+    }
+  } catch (boost::property_tree::ptree_error& e) { return false; }
+
   return true;
 }
 
