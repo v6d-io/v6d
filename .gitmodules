@@ -1,6 +1,6 @@
 [submodule "thirdparty/etcd-cpp-apiv3"]
 	path = thirdparty/etcd-cpp-apiv3
-	url = git@github.com:etcd-cpp-apiv3/etcd-cpp-apiv3.git
+	url = https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3.git
 [submodule "thirdparty/pybind11"]
 	path = thirdparty/pybind11
 	url = https://github.com/pybind/pybind11.git
