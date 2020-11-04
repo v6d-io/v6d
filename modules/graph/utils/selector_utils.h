@@ -236,10 +236,10 @@ inline bool parse_add_column_selectors(
   try {
     boost::property_tree::read_json(ss, pt);
     BOOST_FOREACH  // NOLINT(whitespace/parens)
-    (boost::property_tree::ptree::value_type & v, pt) {
-            CHECK(v.second.empty());
-            tmp_list.emplace_back(v.first, v.second.data());
-          }
+        (boost::property_tree::ptree::value_type & v, pt) {
+      CHECK(v.second.empty());
+      tmp_list.emplace_back(v.first, v.second.data());
+    }
   } catch (boost::property_tree::ptree_error& e) { return false; }
 
   for (auto& pair : tmp_list) {
