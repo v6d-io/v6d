@@ -245,7 +245,7 @@ inline bool parse_add_column_selectors(
   for (auto& pair : tmp_list) {
     std::vector<std::string> tokens;
     boost::split(tokens, pair.second, boost::is_any_of("."));
-    if(tokens.size() >= 2) {
+    if (tokens.size() >= 2) {
       if (tokens[0] == "v" || tokens[0] == "r") {
         property_graph_types::LABEL_ID_TYPE label_id;
         if (parse_label_id(tokens[1], label_id)) {
