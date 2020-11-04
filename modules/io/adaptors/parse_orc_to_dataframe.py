@@ -20,6 +20,7 @@ import vineyard
 import pyorc
 import pyarrow as pa
 import sys
+import io
 import json
 
 from vineyard.io.dataframe import DataframeStreamBuilder
@@ -57,8 +58,11 @@ def arrow_type(field):
         return types[field.name]
 
 
-def read_local_orc(path, vineyard_socket):
+def parse_orc(stream_id, vineyard_socket):
     client = vineyard.connect(vineyard_socket)
+    instream = client.get(stream_id)[0]
+    stream_reader = instream.open_reader(client)
+
     builder = DataframeStreamBuilder(client)
     stream = builder.seal(client)
     ret = {'type': 'return'}
@@ -67,7 +71,14 @@ def read_local_orc(path, vineyard_socket):
 
     writer = stream.open_writer(client)
 
-    with open(path, 'rb') as f:
+    while True:
+        try:
+            content = stream_reader.next()
+        except:
+            writer.finish()
+            break
+
+        f = io.BytesIO(content)
         reader = pyorc.Reader(f)
         fields = reader.schema.fields
         schema = []
@@ -86,9 +97,6 @@ def read_local_orc(path, vineyard_socket):
             buf_writer.write(buf)
             buf_writer.close()
 
-    writer.finish()
-    return stream
-
 
 if __name__ == '__main__':
-    read_local_orc(sys.argv[1], sys.argv[2])
+    parse_orc(sys.argv[1], sys.argv[2])

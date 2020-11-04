@@ -20,9 +20,10 @@ import vineyard
 import pyorc
 import pyarrow as pa
 import sys
+import io
 import json
 
-from vineyard.io.dataframe import DataframeStreamBuilder
+from vineyard.io.byte import ByteStreamBuilder
 
 
 def orc_type(field):
@@ -56,30 +57,42 @@ def orc_type(field):
         raise ValueError('Cannot Convert %s' % field)
 
 
-def write_local_orc(stream_id, path, vineyard_socket):
+def parse_dataframe(stream_id, vineyard_socket):
     client = vineyard.connect(vineyard_socket)
-    stream = client.get(stream_id)[0]
-    reader = stream.open_reader(client)
+    instream = client.get(stream_id)[0]
+    stream_reader = instream.open_reader(client)
+
+    builder = ByteStreamBuilder(client)
+    stream = builder.seal(client)
+    ret = {'type': 'return'}
+    ret['content'] = repr(stream.id)
+    print(json.dumps(ret))
+
+    stream_writer = stream.open_writer(client)
 
     writer = None
-    with open(path, 'wb') as f:
-        while True:
-            try:
-                buf = reader.next()
-            except:
-                writer.close()
-                break
-            buf_reader = pa.ipc.open_stream(buf)
-            if writer is None:
-                #get schema
-                schema = {}
-                for field in buf_reader.schema:
-                    schema[field.name] = orc_type(field.type)
-                writer = pyorc.Writer(f, pyorc.Struct(**schema))
-            for batch in buf_reader:
-                df = batch.to_pandas()
-                writer.writerows(df.itertuples(False, None))
+    while True:
+        try:
+            content = stream_reader.next()
+        except:
+            stream_writer.finish()
+            break
+        buf_reader = pa.ipc.open_stream(content)
+        b = io.BytesIO()
+        schema = {}
+        for field in buf_reader.schema:
+            schema[field.name] = orc_type(field.type)
+        writer = pyorc.Writer(b, pyorc.Struct(**schema))
+        for batch in buf_reader:
+            df = batch.to_pandas()
+            writer.writerows(df.itertuples(False, None))
+        writer.close()
+        buf = b.getvalue()
+        chunk = stream_writer.next(len(buf))
+        buf_writer = pa.FixedSizeBufferWriter(chunk)
+        buf_writer.write(buf)
+        buf_writer.close()
 
 
 if __name__ == '__main__':
-    write_local_orc(sys.argv[1], sys.argv[2], sys.argv[3])
+    parse_dataframe(sys.argv[1], sys.argv[2])
