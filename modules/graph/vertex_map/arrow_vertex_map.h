@@ -243,9 +243,9 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
     return false;
   }
 
-  bool GetGid(oid_t oid, vid_t& gid) const {
+  bool GetGid(label_id_t label_id, oid_t oid, vid_t& gid) const {
     for (fid_t i = 0; i < fnum_; ++i) {
-      if (GetGid(i, oid, gid)) {
+      if (GetGid(i, label_id, oid, gid)) {
         return true;
       }
     }
