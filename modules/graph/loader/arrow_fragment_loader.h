@@ -19,6 +19,7 @@ limitations under the License.
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -199,26 +200,17 @@ class ArrowFragmentLoader {
                            table->schema()->field(i)->type());
       }
     }
-    for (auto table : local_e_tables) {
-      std::unordered_map<std::string, std::string> kvs;
-      table->schema()->metadata()->ToUnorderedMap(&kvs);
-      std::string type = kvs["type"];
-      std::string label = kvs["label"];
-      auto entry = schema.CreateEntry(label, type);
 
-      std::string sub_label = kvs["sub_label_num"];
-      if (!sub_label.empty()) {
-        int sub_label_num = std::stoi(sub_label);
-        for (int i = 0; i < sub_label_num; ++i) {
-          std::string src_label = kvs["src_label_" + std::to_string(i)];
-          std::string dst_label = kvs["dst_label_" + std::to_string(i)];
-
-          if (!src_label.empty() && !dst_label.empty()) {
-            entry->AddRelation(src_label, dst_label);
-          }
-        }
+    for (auto& pair : edge_vertex_label_) {
+      std::string edge_label = pair.first;
+      auto entry = schema.CreateEntry(edge_label, "EDGE");
+      for (auto& vpair : pair.second) {
+        std::string src_label = vpair.first;
+        std::string dst_label = vpair.second;
+        entry->AddRelation(src_label, dst_label);
       }
-      // N.B. Skip first two ID columns.
+
+      auto table = local_e_tables.at(edge_label_to_index_.at(edge_label));
       for (int64_t i = 2; i < table->num_columns(); ++i) {
         entry->AddProperty(table->schema()->field(i)->name(),
                            table->schema()->field(i)->type());
@@ -377,7 +369,8 @@ class ArrowFragmentLoader {
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain label name");
           }
-          meta->Append("label", search->second);
+          std::string edge_label_name = search->second;
+          meta->Append("label", edge_label_name);
 
           search = adaptor_meta.find("src_label");
           if (search == adaptor_meta.end()) {
@@ -385,9 +378,10 @@ class ArrowFragmentLoader {
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain src label name");
           }
+          std::string src_label_name = search->second;
           meta->Append(
               basic_loader_t::SRC_LABEL_INDEX,
-              std::to_string(vertex_label_to_index_.at(search->second)));
+              std::to_string(vertex_label_to_index_.at(src_label_name)));
 
           search = adaptor_meta.find("dst_label");
           if (search == adaptor_meta.end()) {
@@ -395,11 +389,15 @@ class ArrowFragmentLoader {
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain dst label name");
           }
+          std::string dst_label_name = search->second;
           meta->Append(
               basic_loader_t::DST_LABEL_INDEX,
-              std::to_string(vertex_label_to_index_.at(search->second)));
+              std::to_string(vertex_label_to_index_.at(dst_label_name)));
 
           tables[label_id].emplace_back(table->ReplaceSchemaMetadata(meta));
+          edge_vertex_label_[edge_label_name].insert(
+              std::make_pair(src_label_name, dst_label_name));
+          edge_label_to_index_[edge_label_name] = label_id;
         }
       }
     } catch (std::exception& e) {
@@ -691,6 +689,9 @@ class ArrowFragmentLoader {
   }
 
   std::map<std::string, label_id_t> vertex_label_to_index_;
+  std::map<std::string, label_id_t> edge_label_to_index_;
+  std::map<std::string, std::set<std::pair<std::string, std::string>>>
+      edge_vertex_label_;
 
   vineyard::Client& client_;
   grape::CommSpec comm_spec_;
