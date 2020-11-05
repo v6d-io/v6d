@@ -162,7 +162,7 @@ class BasicArrowFragmentLoader {
     return oid_lists_;
   }
 
-  auto ShuffleVertexTables()
+  auto ShuffleVertexTables(bool deduplicate_oid)
       -> boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> {
     std::vector<std::shared_ptr<arrow::Table>> local_v_tables(v_label_num_);
 
@@ -241,11 +241,13 @@ class BasicArrowFragmentLoader {
                 FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array));
             // Deduplicate oids. this procedure is necessary when the oids are
             // inferred from efile
-            for (auto i = 0; i < oids_group_by_worker.size(); i++) {
-              OidSet<oid_t> oid_set;
-              BOOST_LEAF_CHECK(oid_set.BatchInsert(oids_group_by_worker[i]));
-              BOOST_LEAF_AUTO(deduplicated_oid_array, oid_set.ToArrowArray());
-              oids_group_by_worker[i] = deduplicated_oid_array;
+            if (deduplicate_oid) {
+              for (auto i = 0; i < oids_group_by_worker.size(); i++) {
+                OidSet<oid_t> oid_set;
+                BOOST_LEAF_CHECK(oid_set.BatchInsert(oids_group_by_worker[i]));
+                BOOST_LEAF_AUTO(deduplicated_oid_array, oid_set.ToArrowArray());
+                oids_group_by_worker[i] = deduplicated_oid_array;
+              }
             }
             oid_lists_[v_label] = oids_group_by_worker;
 
