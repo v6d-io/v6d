@@ -267,8 +267,9 @@ class ArrowFragmentLoader {
     std::vector<std::shared_ptr<arrow::Table>> vtables(vertex_label_num_);
 
     for (auto v_label_id = 0; v_label_id < vertex_label_num_; v_label_id++) {
+      auto label_name = "__id_generated_" + std::to_string(v_label_id) + "__";
       std::vector<std::shared_ptr<arrow::Field>> schema_vector{
-          arrow::field("__id_generated__",
+          arrow::field(label_name,
                        vineyard::ConvertToArrowType<oid_t>::TypeValue())};
       BOOST_LEAF_AUTO(oid_array, oids[v_label_id].ToArrowArray());
       std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
@@ -278,6 +279,8 @@ class ArrowFragmentLoader {
           new arrow::KeyValueMetadata());
 
       meta->Append("type", "VERTEX");
+      meta->Append("label_index", std::to_string(v_label_id));
+      meta->Append("label", label_name);
       meta->Append(basic_loader_t::ID_COLUMN, "0");
       vtables[v_label_id] = v_table->ReplaceSchemaMetadata(meta);
     }
