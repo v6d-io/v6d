@@ -18,6 +18,8 @@
 
 __version__ = '1.0'
 
+import logging
+
 from ._C import connect, IPCClient, RPCClient, Object, ObjectBuilder, ObjectID, ObjectMeta, \
     InstanceStatus, Blob, BlobBuilder, Buffer, MutableBuffer
 from . import _vineyard_docs
@@ -27,6 +29,8 @@ from .core import default_builder_context, default_resolver_context, default_dri
 from .data import register_builtin_types
 from .data.base import ObjectSet
 from .data.graph import Graph
+
+logger = logging.getLogger('vineyard')
 
 
 def _init_vineyard_modules():
@@ -45,13 +49,14 @@ def _init_vineyard_modules():
     import sys
 
     def _import_module_from_file(filepath):
+        filepath = os.path.expanduser(os.path.expandvars(filepath))
         if os.path.exists(filepath):
             try:
                 spec = importlib.util.spec_from_file_location("vineyard._contrib", filepath)
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-            except:
-                pass
+            except Exception as e:
+                logger.error("Failed to load %s: %s", filepath, e)
 
     _import_module_from_file('/etc/vineyard/config.py')
     _import_module_from_file(os.path.join(sys.prefix, '/etc/vineyard/config.py'))
@@ -61,6 +66,8 @@ def _init_vineyard_modules():
         _import_module_from_file(filepath)
     for filepath in glob.glob(os.path.expanduser('$HOME/.vineyard/*-*.py')):
         _import_module_from_file(filepath)
+
+    _import_module_from_file('$HOME/libvineyard/modules/io/python/stream.py')
 
 
 try:

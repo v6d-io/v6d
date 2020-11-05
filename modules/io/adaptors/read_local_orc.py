@@ -57,7 +57,7 @@ def arrow_type(field):
         return types[field.name]
 
 
-def read_local_orc(path, vineyard_socket):
+def read_local_orc(vineyard_socket, path):
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
     stream = builder.seal(client)
@@ -91,4 +91,9 @@ def read_local_orc(path, vineyard_socket):
 
 
 if __name__ == '__main__':
-    read_local_orc(sys.argv[1], sys.argv[2])
+    if len(sys.argv) < 3:
+        print('usage: ./read_local_orc <ipc_socket> <orc file path>')
+        exit(1)
+    ipc_socket = sys.argv[1]
+    orc_path = sys.argv[2]
+    read_local_orc(ipc_socket, orc_path)

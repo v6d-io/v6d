@@ -19,7 +19,7 @@
 import inspect
 from sortedcontainers import SortedDict
 
-from vineyard._C import IPCClient, RPCClient, ObjectID
+from vineyard._C import IPCClient, RPCClient, ObjectID, Object
 from vineyard.core.utils import find_most_precise_match
 from vineyard.core.driver import default_driver_context
 
@@ -74,6 +74,9 @@ def get(client, object_id, resolver=None, **kw):
         object_id = ObjectID(object_id)
     # run resolver
     obj = client.get_object(object_id)
+    # if the obj has been resolved by pybind types, it should by pass the resolvers
+    if type(obj) is not Object:
+        return obj
     if resolver is not None:
         value = resolver(obj, **kw)
     else:

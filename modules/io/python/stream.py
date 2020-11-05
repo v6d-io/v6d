@@ -15,6 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+import json
+import logging
 import os
 from urllib.parse import urlparse
 
@@ -22,6 +25,7 @@ import vineyard.io
 from vineyard._C import ObjectID
 from vineyard.launcher.script import ScriptLauncher
 
+logger = logging.getLogger('vineyard')
 base_path = os.path.abspath(os.path.dirname(__file__))
 
 from vineyard.core.resolver import default_resolver_context
@@ -123,12 +127,14 @@ class ParallelStreamLauncher(ScriptLauncher):
         for proc in self._procs:
             r = proc.wait(timeout=timeout)
             partial_ids.append(r)
+        logger.debug('partial_ids = %s', partial_ids)
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::ParallelStream'
         meta['size_'] = len(partial_ids)
         for idx, partition_id in enumerate(partial_ids):
             meta.add_member('stream_%d' % idx, partition_id)
-        return vineyard.connect(self.vineyard_endpoint).create_metadata(meta)
+        vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
+        return vineyard_rpc_client.create_metadata(meta)
 
 
 def get_executable(name):
@@ -138,6 +144,7 @@ def get_executable(name):
 def read_local_bytes(path, vineyard_socket, *args, **kwargs):
     ''' Read a byte stream from local files.
     '''
+    path = json.dumps(path)
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('read_local_bytes'), *((vineyard_socket, path) + args), **kwargs)
     return launcher.wait()
@@ -146,15 +153,18 @@ def read_local_bytes(path, vineyard_socket, *args, **kwargs):
 def read_kafka_bytes(path, vineyard_socket, *args, **kwargs):
     ''' Read a bytes stream from a kafka topic.
     '''
+    path = json.dumps(path)
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('read_kafka_bytes'), *((vineyard_socket, path) + args), **kwargs)
     return launcher.wait()
 
 
-def parse_bytes_to_dataframe(byte_stream, vineyard_socket, *args, **kwargs):
+def parse_bytes_to_dataframe(vineyard_socket, byte_stream, *args, **kwargs):
     launcher = ParallelStreamLauncher()
-    launcher.run(get_executable('parse_bytes_to_dataframe'), *((vineyard_socket, str(byte_stream)) + args), **kwargs)
-    return launcher.wait()
+    launcher.run(get_executable('parse_bytes_to_dataframe'), *((vineyard_socket, repr(byte_stream)) + args), **kwargs)
+    r = launcher.wait()
+    logger.debug('parse r = %s', r)
+    return r
 
 
 def read_local_orc(path, vineyard_socket, *args, **kwargs):
@@ -167,11 +177,11 @@ def read_local_dataframe(path, vineyard_socket, *args, **kwargs):
     if '.orc' in path:
         return read_local_orc(path, vineyard_socket, *args, **kwargs)
 
-    return parse_bytes_to_dataframe(read_local_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
+    return parse_bytes_to_dataframe(vineyard_socket, read_local_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
 def read_kafka_dataframe(path, vineyard_socket, *args, **kwargs):
-    return parse_bytes_to_dataframe(read_kafka_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
+    return parse_bytes_to_dataframe(vineyard_socket, read_kafka_bytes(path, vineyard_socket, *args, **kwargs), **kwargs)
 
 
 def read_hdfs_bytes(path, vineyard_socket, *args, **kwargs):

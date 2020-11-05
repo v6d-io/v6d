@@ -16,17 +16,18 @@
 # limitations under the License.
 #
 
-import vineyard
 import sys
 import json
-import pyarrow as pa
-
 from urllib.parse import urlparse
+
+import pyarrow as pa
 from hdfs3 import HDFileSystem
+
+import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 
-def read_hdfs_bytes(path, vineyard_socket):
+def read_hdfs_bytes(vineyard_socket, path):
     client = vineyard.connect(vineyard_socket)
     builder = ByteStreamBuilder(client)
     stream = builder.seal(client)
@@ -52,4 +53,9 @@ def read_hdfs_bytes(path, vineyard_socket):
 
 
 if __name__ == '__main__':
-    read_hdfs_bytes(sys.argv[1], sys.argv[2])
+    if len(sys.argv) < 3:
+        print('usage: ./read_hdfs_bytes <ipc_socket> <hdfs path>')
+        exit(1)
+    ipc_socket = sys.argv[1]
+    hdfs_path = sys.argv[2]
+    read_hdfs_bytes(ipc_socket, hdfs_path)

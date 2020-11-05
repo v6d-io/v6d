@@ -41,7 +41,6 @@ void ParseTable(std::shared_ptr<arrow::Table>* table,
   CHECK_ARROW_ERROR_AND_ASSIGN(copied_buffer,
                                buffer->CopySlice(0, buffer->size()));
 #endif
-  LOG(INFO) << "copied: buffer size = " << copied_buffer->size();
   auto buffer_reader = std::make_shared<arrow::io::BufferReader>(copied_buffer);
 
   std::shared_ptr<arrow::io::InputStream> input =
@@ -80,16 +79,17 @@ void ParseTable(std::shared_ptr<arrow::Table>* table,
 }
 
 int main(int argc, const char** argv) {
-  if (argc < 3) {
+  if (argc < 5) {
     printf(
-        "usage ./parallel_dataframe_parser <ipc_socket> <stream_id> "
-        "<proc_index>\n");
+        "usage ./parse_dataframe_to_bytes <ipc_socket> <stream_id> "
+        "<proc_num> <proc_index>\n");
     return 1;
   }
 
   std::string ipc_socket = std::string(argv[1]);
   ObjectID stream_id = VYObjectIDFromString(argv[2]);
-  int proc_index = std::stoi(argv[3]);
+  int proc_num = std::stoi(argv[3]);
+  int proc_index = std::stoi(argv[4]);
 
   Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
@@ -100,7 +100,8 @@ int main(int argc, const char** argv) {
   LOG(INFO) << "Got parallel stream " << s->id();
 
   auto ls = s->GetStream<ByteStream>(proc_index);
-  LOG(INFO) << "Got byte stream " << ls->id() << " at " << proc_index;
+  LOG(INFO) << "Got byte stream " << ls->id() << " at " << proc_index << " (of "
+            << proc_num << ")";
 
   auto params = ls->GetParams();
   std::string header_line = params["header_line"];
@@ -113,6 +114,7 @@ int main(int argc, const char** argv) {
   }
 
   DataframeStreamBuilder dfbuilder(client);
+  dfbuilder.SetParams(params);
   auto bs = std::dynamic_pointer_cast<DataframeStream>(dfbuilder.Seal(client));
   VINEYARD_CHECK_OK(client.Persist(bs->id()));
   LOG(INFO) << "Created dataframe stream " << bs->id() << " at " << proc_index;

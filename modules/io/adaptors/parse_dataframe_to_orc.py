@@ -57,7 +57,7 @@ def orc_type(field):
         raise ValueError('Cannot Convert %s' % field)
 
 
-def parse_dataframe(stream_id, vineyard_socket):
+def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     instream = client.get(stream_id)[0]
     stream_reader = instream.open_reader(client)
@@ -95,4 +95,11 @@ def parse_dataframe(stream_id, vineyard_socket):
 
 
 if __name__ == '__main__':
-    parse_dataframe(sys.argv[1], sys.argv[2])
+    if len(sys.argv) < 5:
+        print('usage: ./parse_orc_to_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>')
+        exit(0)
+    ipc_socket = sys.argv[1]
+    stream_id = sys.argv[2]
+    proc_num = int(sys.argv[3])
+    proc_index = int(sys.argv[4])
+    parse_dataframe(ipc_socket, stream_id, proc_num, proc_index)

@@ -26,7 +26,7 @@ from hdfs3 import HDFileSystem
 from vineyard.io.byte import ByteStreamBuilder
 
 
-def write_hdfs_bytes(stream_id, path, vineyard_socket):
+def write_hdfs_bytes(vineyard_socket, stream_id, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     stream = client.get(stream_id)[0]
     #stream = client.get_object(vineyard.ObjectID(stream_id))
@@ -47,4 +47,13 @@ def write_hdfs_bytes(stream_id, path, vineyard_socket):
 
 
 if __name__ == '__main__':
-    write_hdfs_bytes(sys.argv[1], sys.argv[2], sys.argv[3])
+    if len(sys.argv) < 6:
+        print('usage: ./write_hdfs_bytes <ipc_socket> <stream_id> <hdfs path> <proc_num> <proc_index>')
+        exit(1)
+    ipc_socket = sys.argv[1]
+    stream_id = sys.argv[2]
+    hdfs_path = sys.argv[3]
+    proc_num = int(sys.argv[4])
+    proc_index = int(sys.argv[5])
+    
+    write_hdfs_bytes(ipc_socket, stream_id, hdfs_path, proc_num, proc_index)
