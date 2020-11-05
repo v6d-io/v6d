@@ -22,6 +22,7 @@ import pyarrow as pa
 import sys
 import json
 
+from urllib.parse import urlparse
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 
@@ -57,9 +58,19 @@ def arrow_type(field):
         return types[field.name]
 
 
-def read_local_orc(vineyard_socket, path):
+def read_local_orc(vineyard_socket, path, proc_num, proc_index):
+    if proc_index:
+        return 
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
+
+    fragments = urlparse(path).fragment.split('&')
+    for frag in fragments:
+        k, v = frag.split('=')
+        if k:
+            builder[k] = v
+    stream = builder.seal(client)
+
     stream = builder.seal(client)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
@@ -91,9 +102,11 @@ def read_local_orc(vineyard_socket, path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print('usage: ./read_local_orc <ipc_socket> <orc file path>')
+    if len(sys.argv) < 5:
+        print('usage: ./read_local_orc <ipc_socket> <orc file path> <proc num> <proc index>')
         exit(1)
     ipc_socket = sys.argv[1]
     orc_path = sys.argv[2]
-    read_local_orc(ipc_socket, orc_path)
+    proc_num = int(sys.argv[3])
+    proc_index = int(sys.argv[4])
+    read_local_orc(ipc_socket, orc_path, proc_num, proc_index)

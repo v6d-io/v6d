@@ -60,10 +60,14 @@ def arrow_type(field):
 
 def parse_orc(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
-    instream = client.get(stream_id)[0]
+    streams = client.get(stream_id)
+    if len(streams) != proc_num or streams[proc_index] is None:
+        raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
+    instream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
     builder = DataframeStreamBuilder(client)
+    builder.set_params(instream.params)
     stream = builder.seal(client)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
@@ -101,7 +105,7 @@ def parse_orc(vineyard_socket, stream_id, proc_num, proc_index):
 if __name__ == '__main__':
     if len(sys.argv) < 5:
         print('usage: ./parse_orc_to_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>')
-        exit(0)
+        exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     proc_num = int(sys.argv[3])

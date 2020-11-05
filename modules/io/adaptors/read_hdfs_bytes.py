@@ -27,10 +27,19 @@ import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 
-def read_hdfs_bytes(vineyard_socket, path):
+def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):      
+    if proc_index:
+        return  
     client = vineyard.connect(vineyard_socket)
     builder = ByteStreamBuilder(client)
+    
+    fragments = urlparse(path).fragment.split('&')
+    for frag in fragments:
+        k, v = frag.split('=')
+        if k:
+            builder[k] = v
     stream = builder.seal(client)
+    
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
     print(json.dumps(ret))
@@ -53,9 +62,11 @@ def read_hdfs_bytes(vineyard_socket, path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print('usage: ./read_hdfs_bytes <ipc_socket> <hdfs path>')
+    if len(sys.argv) < 5:
+        print('usage: ./read_hdfs_bytes <ipc_socket> <hdfs path> <proc num> <proc index>')
         exit(1)
     ipc_socket = sys.argv[1]
     hdfs_path = sys.argv[2]
-    read_hdfs_bytes(ipc_socket, hdfs_path)
+    proc_num = int(sys.argv[3])
+    proc_index = int(sys.argv[4])
+    read_hdfs_bytes(ipc_socket, hdfs_path, proc_num, proc_index)

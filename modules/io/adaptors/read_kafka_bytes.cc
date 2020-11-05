@@ -26,15 +26,23 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   // kafka address format: kafka://brokers/topics/group_id/partition_num
-  if (argc < 3) {
-    printf("usage ./read_kafka_byte <ipc_socket> <kafka_address>");
+  if (argc < 5) {
+    printf(
+        "usage ./read_kafka_byte <ipc_socket> <kafka_address> "
+        "<proc_num> <proc_index>");
     return 1;
   }
 
   std::string ipc_socket = std::string(argv[1]);
   std::string kafka_address = "kafka://" + std::string(argv[2]);
+  int pnum = std::stoi(argv[3]);
+  int proc = std::stoi(argv[4]);
+
   std::unique_ptr<IIOAdaptor> kafka_io_adaptor =
       IOFactory::CreateIOAdaptor(kafka_address);
+
+  VINEYARD_CHECK_OK(kafka_io_adaptor->SetPartialRead(proc, pnum));
+
   VINEYARD_CHECK_OK(kafka_io_adaptor->Open());
 
   Client client;

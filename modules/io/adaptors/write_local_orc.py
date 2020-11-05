@@ -58,8 +58,11 @@ def orc_type(field):
 
 def write_local_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
-    stream = client.get(stream_id)[0]
-    reader = stream.open_reader(client)
+    streams = client.get(stream_id)
+    if len(streams) != proc_num or streams[proc_index] is None:
+        raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
+    instream = streams[proc_index]
+    reader = instream.open_reader(client)
 
     writer = None
     with open(path, 'wb') as f:

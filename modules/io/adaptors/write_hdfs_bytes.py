@@ -28,9 +28,11 @@ from vineyard.io.byte import ByteStreamBuilder
 
 def write_hdfs_bytes(vineyard_socket, stream_id, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
-    stream = client.get(stream_id)[0]
-    #stream = client.get_object(vineyard.ObjectID(stream_id))
-    reader = stream.open_reader(client)
+    streams = client.get(stream_id)
+    if len(streams) != proc_num or streams[proc_index] is None:
+        raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
+    instream = streams[proc_index]
+    reader = instream.open_reader(client)
 
     host, port = urlparse(path).netloc.split(':')
     hdfs = HDFileSystem(host=host, port=int(port))
@@ -55,5 +57,4 @@ if __name__ == '__main__':
     hdfs_path = sys.argv[3]
     proc_num = int(sys.argv[4])
     proc_index = int(sys.argv[5])
-    
     write_hdfs_bytes(ipc_socket, stream_id, hdfs_path, proc_num, proc_index)
