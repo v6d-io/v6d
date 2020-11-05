@@ -98,13 +98,14 @@ class ArrowFragmentLoader {
 
   ArrowFragmentLoader(vineyard::Client& client,
                       const grape::CommSpec& comm_spec,
-                      std::vector<std::string> efiles, bool directed = true)
+                      const std::vector<std::string>& efiles,
+                      bool directed = true)
       : client_(client),
         comm_spec_(comm_spec),
-        efiles_(std::move(efiles)),
+        efiles_(efiles),
         vfiles_(),
         vertex_label_num_(0),
-        edge_label_num_(efiles_.size()),
+        edge_label_num_(efiles.size()),
         directed_(directed),
         basic_arrow_fragment_loader_(comm_spec) {}
 
@@ -287,6 +288,12 @@ class ArrowFragmentLoader {
 #ifdef HASH_PARTITION
     partitioner_.Init(comm_spec_.fnum());
 #else
+    if (vfiles_.empty()) {
+      RETURN_GS_ERROR(
+          ErrorCode::kInvalidOperationError,
+          "Segmented partitioner is not supported when the v-file is "
+          "not provided");
+    }
     std::vector<std::shared_ptr<arrow::Table>> vtables;
     {
       BOOST_LEAF_AUTO(tmp, loadVertexTables(vfiles_, 0, 1));
