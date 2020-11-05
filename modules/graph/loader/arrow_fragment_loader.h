@@ -185,37 +185,74 @@ class ArrowFragmentLoader {
     PropertyGraphSchema schema;
     schema.set_fnum(comm_spec_.fnum());
 
-    for (auto table : local_v_tables) {
-      std::unordered_map<std::string, std::string> kvs;
-      table->schema()->metadata()->ToUnorderedMap(&kvs);
-      std::string type = kvs["type"];
-      std::string label = kvs["label"];
+    {
+      std::vector<std::string> vertex_label_list(vertex_label_num_);
+      std::vector<bool> vertex_label_bitset(vertex_label_num_, false);
+      for (auto& pair : vertex_label_to_index_) {
+        if (pair.second > vertex_label_num_) {
+          return boost::leaf::new_error(ErrorCode::kIOError,
+                                        "Failed to map vertex label to index");
+        }
+        if (vertex_label_bitset[pair.second]) {
+          return boost::leaf::new_error(
+              ErrorCode::kIOError,
+              "Multiple vertex labels are mapped to one index.");
+        }
+        vertex_label_bitset[pair.second] = true;
+        vertex_label_list[pair.second] = pair.first;
+      }
+      for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
+        std::string vertex_label = vertex_label_list[v_label];
+        auto entry = schema.CreateEntry(vertex_label, "VERTEX");
 
-      auto entry = schema.CreateEntry(label, type);
-      entry->AddPrimaryKeys(1, std::vector<std::string>{kvs["primary_key"]});
+        std::unordered_map<std::string, std::string> kvs;
+        auto table = local_v_tables[v_label];
+        table->schema()->metadata()->ToUnorderedMap(&kvs);
 
-      // N.B. ID column is not removed, and we need that
-      for (int64_t i = 0; i < table->num_columns(); ++i) {
-        entry->AddProperty(table->schema()->field(i)->name(),
-                           table->schema()->field(i)->type());
+        entry->AddPrimaryKeys(1, std::vector<std::string>{kvs["primary_key"]});
+
+        // N.B. ID column is not removed, and we need that
+        for (int64_t i = 0; i < table->num_columns(); ++i) {
+          entry->AddProperty(table->schema()->field(i)->name(),
+                             table->schema()->field(i)->type());
+        }
       }
     }
 
-    for (auto& pair : edge_vertex_label_) {
-      std::string edge_label = pair.first;
-      auto entry = schema.CreateEntry(edge_label, "EDGE");
-      for (auto& vpair : pair.second) {
-        std::string src_label = vpair.first;
-        std::string dst_label = vpair.second;
-        entry->AddRelation(src_label, dst_label);
+    {
+      std::vector<std::string> edge_label_list(edge_label_num_);
+      std::vector<bool> edge_label_bitset(edge_label_num_, false);
+      for (auto& pair : edge_label_to_index_) {
+        if (pair.second > edge_label_num_) {
+          return boost::leaf::new_error(ErrorCode::kIOError,
+                                        "Failed to map edge label to index");
+        }
+        if (edge_label_bitset[pair.second]) {
+          return boost::leaf::new_error(
+              ErrorCode::kIOError,
+              "Multiple edge labels are mapped to one index.");
+        }
+        edge_label_bitset[pair.second] = true;
+        edge_label_list[pair.second] = pair.first;
       }
+      for (label_id_t e_label = 0; e_label != edge_label_num_; ++e_label) {
+        std::string edge_label = edge_label_list[e_label];
+        auto entry = schema.CreateEntry(edge_label, "EDGE");
+        auto& pairs = edge_vertex_label_.at(edge_label);
+        for (auto& vpair : pairs) {
+          std::string src_label = vpair.first;
+          std::string dst_label = vpair.second;
+          entry->AddRelation(src_label, dst_label);
+        }
 
-      auto table = local_e_tables.at(edge_label_to_index_.at(edge_label));
-      for (int64_t i = 2; i < table->num_columns(); ++i) {
-        entry->AddProperty(table->schema()->field(i)->name(),
-                           table->schema()->field(i)->type());
+        auto table = local_e_tables.at(e_label);
+        for (int64_t i = 2; i < table->num_columns(); ++i) {
+          entry->AddProperty(table->schema()->field(i)->name(),
+                             table->schema()->field(i)->type());
+        }
       }
     }
+
     frag_builder.SetPropertyGraphSchema(std::move(schema));
 
     BOOST_LEAF_CHECK(frag_builder.Init(comm_spec_.fid(), comm_spec_.fnum(),
