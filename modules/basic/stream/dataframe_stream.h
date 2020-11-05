@@ -17,6 +17,8 @@ limitations under the License.
 #define MODULES_BASIC_STREAM_DATAFRAME_STREAM_H_
 
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "basic/stream/dataframe_stream.vineyard.h"
