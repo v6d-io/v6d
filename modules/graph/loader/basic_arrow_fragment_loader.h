@@ -201,18 +201,16 @@ class BasicArrowFragmentLoader {
                 src_column_idx = cur_src_column_idx;
               } else {
                 if (src_column_idx != cur_src_column_idx) {
-                  return boost::leaf::new_error(
-                      ErrorCode::kIOError,
-                      "Edge tables' schema not consistent");
+                  RETURN_GS_ERROR(ErrorCode::kIOError,
+                                  "Edge tables' schema not consistent");
                 }
               }
               if (dst_column_idx == -1) {
                 dst_column_idx = cur_dst_column_idx;
               } else {
                 if (dst_column_idx != cur_dst_column_idx) {
-                  return boost::leaf::new_error(
-                      ErrorCode::kIOError,
-                      "Edge tables' schema not consistent");
+                  RETURN_GS_ERROR(ErrorCode::kIOError,
+                                  "Edge tables' schema not consistent");
                 }
               }
 
@@ -234,18 +232,18 @@ class BasicArrowFragmentLoader {
               CHECK_OR_RAISE(meta_idx_src_label_index != -1);
               CHECK_OR_RAISE(meta_idx_dst_label_index != -1);
 
-              auto src_label_index = static_cast<label_id_t>(
+              auto src_label_id = static_cast<label_id_t>(
                   std::stoi(metadata->value(meta_idx_src_label_index)));
-              auto dst_label_index = static_cast<label_id_t>(
+              auto dst_label_id = static_cast<label_id_t>(
                   std::stoi(metadata->value(meta_idx_dst_label_index)));
 
               BOOST_LEAF_AUTO(src_gid_array,
                               parseOidChunkedArray(
-                                  src_label_index,
+                                  src_label_id,
                                   edge_table->column(src_column_idx), mapper));
               BOOST_LEAF_AUTO(dst_gid_array,
                               parseOidChunkedArray(
-                                  dst_label_index,
+                                  dst_label_id,
                                   edge_table->column(dst_column_idx), mapper));
 
           // replace oid columns with gid
@@ -308,7 +306,7 @@ class BasicArrowFragmentLoader {
 
  private:
   auto parseOidChunkedArray(
-      label_id_t label,
+      label_id_t label_id,
       const std::shared_ptr<arrow::ChunkedArray>& oid_arrays_in,
       std::function<bool(fid_t, label_id_t, internal_oid_t, vid_t&)>&
           oid2gid_mapper)
@@ -326,7 +324,7 @@ class BasicArrowFragmentLoader {
       for (size_t i = 0; i != size; ++i) {
         internal_oid_t oid = oid_array->GetView(i);
         fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
-        CHECK_OR_RAISE(oid2gid_mapper(fid, label, oid, builder[i]));
+        CHECK_OR_RAISE(oid2gid_mapper(fid, label_id, oid, builder[i]));
       }
       ARROW_OK_OR_RAISE(builder.Advance(size));
       ARROW_OK_OR_RAISE(builder.Finish(&chunks_out[chunk_i]));

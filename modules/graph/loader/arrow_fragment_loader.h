@@ -55,6 +55,8 @@ class ArrowFragmentLoader {
   const int id_column = 0;
   const int src_column = 0;
   const int dst_column = 1;
+  static constexpr const char* SRC_LABEL_TAG = "src_label";
+  static constexpr const char* DST_LABEL_TAG = "dst_label";
 #ifdef HASH_PARTITION
   using partitioner_t = HashPartitioner<oid_t>;
 #else
@@ -93,6 +95,18 @@ class ArrowFragmentLoader {
         directed_(directed),
         basic_arrow_fragment_loader_(comm_spec) {}
 
+  ArrowFragmentLoader(vineyard::Client& client,
+                      const grape::CommSpec& comm_spec,
+                      std::vector<std::string> efiles, bool directed = true)
+      : client_(client),
+        comm_spec_(comm_spec),
+        efiles_(std::move(efiles)),
+        vfiles_(),
+        vertex_label_num_(0),
+        edge_label_num_(0),
+        directed_(directed),
+        basic_arrow_fragment_loader_(comm_spec) {}
+
   ~ArrowFragmentLoader() = default;
 
   boost::leaf::result<vineyard::ObjectID> LoadFragment() {
@@ -111,6 +125,114 @@ class ArrowFragmentLoader {
   }
 
  protected:
+  boost::leaf::result<std::pair<std::vector<std::shared_ptr<arrow::Table>>,
+                                std::vector<std::shared_ptr<arrow::Table>>>>
+  loadEVTablesFromEFiles(const std::vector<std::string>& efile_paths, int index,
+                         int total_parts) {
+    std::set<std::string> vertex_label_names;
+
+    // We don't open file, just get metadata
+    for (auto& efile : efile_paths) {
+      std::vector<std::string> sub_label_files;
+      boost::split(sub_label_files, efile, boost::is_any_of(";"));
+
+      for (auto& sub_efile : sub_label_files) {
+        std::unique_ptr<vineyard::LocalIOAdaptor,
+                        std::function<void(vineyard::LocalIOAdaptor*)>>
+            io_adaptor(
+                new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
+                io_deleter_);
+        VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+        auto meta = io_adaptor->GetMeta();
+        auto src_label_name = meta.find(SRC_LABEL_TAG);
+        auto dst_label_name = meta.find(DST_LABEL_TAG);
+
+        if (src_label_name == meta.end() || dst_label_name == meta.end()) {
+          RETURN_GS_ERROR(
+              ErrorCode::kIOError,
+              "Metadata of input edge files should contain label name");
+        } else {
+          vertex_label_names.insert(src_label_name->second);
+          vertex_label_names.insert(dst_label_name->second);
+        }
+      }
+    }
+
+    // number label id
+    label_id_t v_label_id = 0;
+    for (auto& vertex_name : vertex_label_names) {
+      vertex_label_to_index_[vertex_name] = v_label_id++;
+    }
+
+    try {
+      for (auto& efile : efile_paths) {
+        std::vector<std::string> sub_label_files;
+        boost::split(sub_label_files, efile, boost::is_any_of(";"));
+
+        for (auto& sub_efile : sub_label_files) {
+          std::unique_ptr<vineyard::LocalIOAdaptor,
+                          std::function<void(vineyard::LocalIOAdaptor*)>>
+              io_adaptor(
+                  new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
+                  io_deleter_);
+          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+          VY_OK_OR_RAISE(io_adaptor->Open());
+          std::shared_ptr<arrow::Table> table;
+          VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+          BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
+
+          auto adaptor_meta = io_adaptor->GetMeta();
+          auto it = adaptor_meta.find("label");
+          if (it == adaptor_meta.end()) {
+            return boost::leaf::new_error(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain label name");
+          }
+
+          std::shared_ptr<arrow::KeyValueMetadata> meta(
+              new arrow::KeyValueMetadata());
+          meta->Append("type", "EDGE");
+          meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
+          meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
+          meta->Append("sub_label_num", std::to_string(sub_label_files.size()));
+
+
+          std::string edge_label_name = it->second;
+          meta->Append("label", edge_label_name);
+
+          it = adaptor_meta.find(SRC_LABEL_TAG);
+          if (it == adaptor_meta.end()) {
+            return boost::leaf::new_error(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain src label name");
+          }
+          std::string src_label_name = it->second;
+          meta->Append(
+              basic_loader_t::SRC_LABEL_INDEX,
+              std::to_string(vertex_label_to_index_.at(src_label_name)));
+
+          it = adaptor_meta.find(DST_LABEL_TAG);
+          if (it == adaptor_meta.end()) {
+            return boost::leaf::new_error(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain dst label name");
+          }
+          std::string dst_label_name = it->second;
+          meta->Append(
+              basic_loader_t::DST_LABEL_INDEX,
+              std::to_string(vertex_label_to_index_.at(dst_label_name)));
+
+          tables[label_id].emplace_back(table->ReplaceSchemaMetadata(meta));
+          edge_vertex_label_[edge_label_name].insert(
+              std::make_pair(src_label_name, dst_label_name));
+          edge_label_to_index_[edge_label_name] = label_id;
+        }
+      }
+    } catch (std::exception& e) {
+      return boost::leaf::new_error(ErrorCode::kIOError, std::string(e.what()));
+    }
+  }
+
   boost::leaf::result<void> initPartitioner() {
 #ifdef HASH_PARTITION
     partitioner_.Init(comm_spec_.fnum());
@@ -150,11 +272,18 @@ class ArrowFragmentLoader {
       partial_v_tables = partial_v_tables_;
       partial_e_tables = partial_e_tables_;
     } else {
-      BOOST_LEAF_AUTO(tmp_v, loadVertexTables(vfiles_, comm_spec_.worker_id(),
+      if (vfiles_.empty()) {
+        BOOST_LEAF_AUTO(
+            tmp_v, loadVertexTablesFromEFiles(vfiles_, comm_spec_.worker_id(),
                                               comm_spec_.worker_num()));
+        partial_v_tables = tmp_v;
+      } else {
+        BOOST_LEAF_AUTO(tmp_v, loadVertexTables(vfiles_, comm_spec_.worker_id(),
+                                                comm_spec_.worker_num()));
+        partial_v_tables = tmp_v;
+      }
       BOOST_LEAF_AUTO(tmp_e, loadEdgeTables(efiles_, comm_spec_.worker_id(),
                                             comm_spec_.worker_num()));
-      partial_v_tables = tmp_v;
       partial_e_tables = tmp_e;
     }
     basic_arrow_fragment_loader_.Init(partial_v_tables, partial_e_tables);
@@ -229,7 +358,7 @@ class ArrowFragmentLoader {
 
   boost::leaf::result<vineyard::ObjectID> constructFragmentGroup(
       vineyard::Client& client, vineyard::ObjectID frag_id,
-      grape::CommSpec comm_spec, label_id_t v_label_num,
+      const grape::CommSpec& comm_spec, label_id_t v_label_num,
       label_id_t e_label_num) {
     vineyard::ObjectID group_object_id;
     uint64_t instance_id = client.instance_id();
@@ -280,20 +409,16 @@ class ArrowFragmentLoader {
   boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>>
   loadVertexTables(const std::vector<std::string>& files, int index,
                    int total_parts) {
-    label_id_t label_num = static_cast<label_id_t>(files.size());
+    auto label_num = static_cast<label_id_t>(files.size());
     std::vector<std::shared_ptr<arrow::Table>> tables(label_num);
 
-    auto io_deleter = [](vineyard::LocalIOAdaptor* adaptor) {
-      VINEYARD_CHECK_OK(adaptor->Close());
-      delete adaptor;
-    };
     try {
       for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
         std::unique_ptr<vineyard::LocalIOAdaptor,
                         std::function<void(vineyard::LocalIOAdaptor*)>>
             io_adaptor(new vineyard::LocalIOAdaptor(files[label_id] +
                                                     "#header_row=true"),
-                       io_deleter);
+                       io_deleter_);
         VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
         VY_OK_OR_RAISE(io_adaptor->Open());
         std::shared_ptr<arrow::Table> table;
@@ -301,7 +426,6 @@ class ArrowFragmentLoader {
         BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
         auto meta = std::make_shared<arrow::KeyValueMetadata>();
         meta->Append("type", "VERTEX");
-        meta->Append("label_index", std::to_string(label_id));
 
         meta->Append(basic_loader_t::ID_COLUMN, "0");
         auto adaptor_meta = io_adaptor->GetMeta();
@@ -328,14 +452,8 @@ class ArrowFragmentLoader {
   boost::leaf::result<std::vector<std::vector<std::shared_ptr<arrow::Table>>>>
   loadEdgeTables(const std::vector<std::string>& files, int index,
                  int total_parts) {
-    label_id_t label_num = static_cast<label_id_t>(files.size());
-
+    auto label_num = static_cast<label_id_t>(files.size());
     std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables(label_num);
-
-    auto io_deleter = [](vineyard::LocalIOAdaptor* adaptor) {
-      VINEYARD_CHECK_OK(adaptor->Close());
-      delete adaptor;
-    };
 
     try {
       for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
@@ -347,7 +465,7 @@ class ArrowFragmentLoader {
                           std::function<void(vineyard::LocalIOAdaptor*)>>
               io_adaptor(new vineyard::LocalIOAdaptor(sub_label_files[j] +
                                                       "#header_row=true"),
-                         io_deleter);
+                         io_deleter_);
           VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
           VY_OK_OR_RAISE(io_adaptor->Open());
           std::shared_ptr<arrow::Table> table;
@@ -357,7 +475,6 @@ class ArrowFragmentLoader {
           std::shared_ptr<arrow::KeyValueMetadata> meta(
               new arrow::KeyValueMetadata());
           meta->Append("type", "EDGE");
-          meta->Append("label_index", std::to_string(label_id));
           meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
           meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
           meta->Append("sub_label_num", std::to_string(sub_label_files.size()));
@@ -372,7 +489,7 @@ class ArrowFragmentLoader {
           std::string edge_label_name = search->second;
           meta->Append("label", edge_label_name);
 
-          search = adaptor_meta.find("src_label");
+          search = adaptor_meta.find(SRC_LABEL_TAG);
           if (search == adaptor_meta.end()) {
             return boost::leaf::new_error(
                 ErrorCode::kIOError,
@@ -383,7 +500,7 @@ class ArrowFragmentLoader {
               basic_loader_t::SRC_LABEL_INDEX,
               std::to_string(vertex_label_to_index_.at(src_label_name)));
 
-          search = adaptor_meta.find("dst_label");
+          search = adaptor_meta.find(DST_LABEL_TAG);
           if (search == adaptor_meta.end()) {
             return boost::leaf::new_error(
                 ErrorCode::kIOError,
@@ -704,6 +821,11 @@ class ArrowFragmentLoader {
 
   bool directed_;
   basic_loader_t basic_arrow_fragment_loader_;
+  std::function<void(vineyard::LocalIOAdaptor*)> io_deleter_ =
+      [](vineyard::LocalIOAdaptor* adaptor) {
+        VINEYARD_CHECK_OK(adaptor->Close());
+        delete adaptor;
+      };
 };
 
 }  // namespace vineyard

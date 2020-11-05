@@ -75,7 +75,9 @@ int main(int argc, char** argv) {
                                              property_graph_types::VID_TYPE>>(
             client, comm_spec, efiles, vfiles, directed != 0);
     fragment_group_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+        [&loader]() {
+          return loader->LoadFragmentAsFragmentGroup();
+        },
         [](const GSError& e) {
           LOG(FATAL) << e.error_msg;
           return 0;
