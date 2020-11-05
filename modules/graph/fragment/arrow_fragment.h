@@ -660,7 +660,7 @@ class ArrowFragment
         std::shared_ptr<vineyard::Table> old_table =
             std::make_shared<vineyard::Table>();
         old_table->Construct(old_meta.GetMemberMeta(table_name));
-        auto old_prop_num = old_table->num_columns();
+        prop_id_t old_prop_num = old_table->num_columns();
         vineyard::TableExtender extender(client, old_table);
         auto& vec = columns.at(i);
         for (auto& pair : vec) {
