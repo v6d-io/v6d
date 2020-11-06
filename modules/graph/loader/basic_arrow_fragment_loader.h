@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -33,6 +34,52 @@ limitations under the License.
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 namespace vineyard {
+template <typename T>
+class OidSet {
+  using oid_t = T;
+  using internal_oid_t = typename InternalType<oid_t>::type;
+  using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
+
+ public:
+  boost::leaf::result<void> BatchInsert(
+      const std::shared_ptr<arrow::Array>& arr) {
+    if (vineyard::ConvertToArrowType<oid_t>::TypeValue() != arr->type()) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "OID_T is not same with arrow::Column(" +
+                          arr->type()->ToString() + ")");
+    }
+    auto oid_arr = std::dynamic_pointer_cast<oid_array_t>(arr);
+    for (int64_t i = 0; i < oid_arr->length(); i++) {
+      oids.insert(oid_arr->GetView(i));
+    }
+    return boost::leaf::result<void>();
+  }
+
+  boost::leaf::result<void> BatchInsert(
+      const std::shared_ptr<arrow::ChunkedArray>& chunked_arr) {
+    for (auto chunk_idx = 0; chunk_idx < chunked_arr->num_chunks();
+         chunk_idx++) {
+      BOOST_LEAF_CHECK(BatchInsert(chunked_arr->chunk(chunk_idx)));
+    }
+    return boost::leaf::result<void>();
+  }
+
+  boost::leaf::result<std::shared_ptr<oid_array_t>> ToArrowArray() {
+    typename vineyard::ConvertToArrowType<oid_t>::BuilderType builder;
+
+    for (auto& oid : oids) {
+      builder.Append(oid);
+    }
+
+    std::shared_ptr<oid_array_t> oid_arr;
+    ARROW_OK_OR_RAISE(builder.Finish(&oid_arr));
+    return oid_arr;
+  }
+
+ private:
+  std::unordered_set<internal_oid_t> oids;
+};
+
 template <typename OID_T, typename VID_T, typename PARTITIONER_T>
 class BasicArrowFragmentLoader {
   using oid_t = OID_T;
@@ -46,8 +93,8 @@ class BasicArrowFragmentLoader {
   constexpr static const char* ID_COLUMN = "id_column";
   constexpr static const char* SRC_COLUMN = "src_column";
   constexpr static const char* DST_COLUMN = "dst_column";
-  constexpr static const char* SRC_LABEL_INDEX = "src_label_index";
-  constexpr static const char* DST_LABEL_INDEX = "dst_label_index";
+  constexpr static const char* SRC_LABEL_ID = "src_label_id";
+  constexpr static const char* DST_LABEL_ID = "dst_label_id";
 
   explicit BasicArrowFragmentLoader(const grape::CommSpec& comm_spec)
       : comm_spec_(comm_spec) {}
@@ -70,7 +117,7 @@ class BasicArrowFragmentLoader {
     return oid_lists_;
   }
 
-  auto ShuffleVertexTables()
+  auto ShuffleVertexTables(bool deduplicate_oid)
       -> boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> {
     std::vector<std::shared_ptr<arrow::Table>> local_v_tables(v_label_num_);
 
@@ -145,8 +192,19 @@ class BasicArrowFragmentLoader {
             auto local_oid_array = std::dynamic_pointer_cast<oid_array_t>(
                 tmp_table->column(id_column_idx)->chunk(0));
             BOOST_LEAF_AUTO(
-                r, FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array));
-            oid_lists_[v_label] = r;
+                oids_group_by_worker,
+                FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array));
+            // Deduplicate oids. this procedure is necessary when the oids are
+            // inferred from efile
+            if (deduplicate_oid) {
+              for (auto i = 0; i < oids_group_by_worker.size(); i++) {
+                OidSet<oid_t> oid_set;
+                BOOST_LEAF_CHECK(oid_set.BatchInsert(oids_group_by_worker[i]));
+                BOOST_LEAF_AUTO(deduplicated_oid_array, oid_set.ToArrowArray());
+                oids_group_by_worker[i] = deduplicated_oid_array;
+              }
+            }
+            oid_lists_[v_label] = oids_group_by_worker;
 
             return AllGatherError(comm_spec_);
           },
@@ -201,18 +259,16 @@ class BasicArrowFragmentLoader {
                 src_column_idx = cur_src_column_idx;
               } else {
                 if (src_column_idx != cur_src_column_idx) {
-                  return boost::leaf::new_error(
-                      ErrorCode::kIOError,
-                      "Edge tables' schema not consistent");
+                  RETURN_GS_ERROR(ErrorCode::kIOError,
+                                  "Edge tables' schema not consistent");
                 }
               }
               if (dst_column_idx == -1) {
                 dst_column_idx = cur_dst_column_idx;
               } else {
                 if (dst_column_idx != cur_dst_column_idx) {
-                  return boost::leaf::new_error(
-                      ErrorCode::kIOError,
-                      "Edge tables' schema not consistent");
+                  RETURN_GS_ERROR(ErrorCode::kIOError,
+                                  "Edge tables' schema not consistent");
                 }
               }
 
@@ -227,25 +283,23 @@ class BasicArrowFragmentLoader {
                                     src_column_type->ToString() + ")");
               }
 
-              auto meta_idx_src_label_index =
-                  metadata->FindKey(SRC_LABEL_INDEX);
-              auto meta_idx_dst_label_index =
-                  metadata->FindKey(DST_LABEL_INDEX);
+              auto meta_idx_src_label_index = metadata->FindKey(SRC_LABEL_ID);
+              auto meta_idx_dst_label_index = metadata->FindKey(DST_LABEL_ID);
               CHECK_OR_RAISE(meta_idx_src_label_index != -1);
               CHECK_OR_RAISE(meta_idx_dst_label_index != -1);
 
-              auto src_label_index = static_cast<label_id_t>(
+              auto src_label_id = static_cast<label_id_t>(
                   std::stoi(metadata->value(meta_idx_src_label_index)));
-              auto dst_label_index = static_cast<label_id_t>(
+              auto dst_label_id = static_cast<label_id_t>(
                   std::stoi(metadata->value(meta_idx_dst_label_index)));
 
               BOOST_LEAF_AUTO(src_gid_array,
                               parseOidChunkedArray(
-                                  src_label_index,
+                                  src_label_id,
                                   edge_table->column(src_column_idx), mapper));
               BOOST_LEAF_AUTO(dst_gid_array,
                               parseOidChunkedArray(
-                                  dst_label_index,
+                                  dst_label_id,
                                   edge_table->column(dst_column_idx), mapper));
 
           // replace oid columns with gid
@@ -308,7 +362,7 @@ class BasicArrowFragmentLoader {
 
  private:
   auto parseOidChunkedArray(
-      label_id_t label,
+      label_id_t label_id,
       const std::shared_ptr<arrow::ChunkedArray>& oid_arrays_in,
       std::function<bool(fid_t, label_id_t, internal_oid_t, vid_t&)>&
           oid2gid_mapper)
@@ -326,7 +380,7 @@ class BasicArrowFragmentLoader {
       for (size_t i = 0; i != size; ++i) {
         internal_oid_t oid = oid_array->GetView(i);
         fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
-        CHECK_OR_RAISE(oid2gid_mapper(fid, label, oid, builder[i]));
+        CHECK_OR_RAISE(oid2gid_mapper(fid, label_id, oid, builder[i]));
       }
       ARROW_OK_OR_RAISE(builder.Advance(size));
       ARROW_OK_OR_RAISE(builder.Finish(&chunks_out[chunk_i]));
