@@ -56,10 +56,13 @@ def orc_type(field):
         raise ValueError('Cannot Convert %s' % field)
 
 
-def write_local_orc(stream_id, path, vineyard_socket):
+def write_local_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
-    stream = client.get(stream_id)[0]
-    reader = stream.open_reader(client)
+    streams = client.get(stream_id)
+    if len(streams) != proc_num or streams[proc_index] is None:
+        raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
+    instream = streams[proc_index]
+    reader = instream.open_reader(client)
 
     writer = None
     with open(path, 'wb') as f:
@@ -82,4 +85,12 @@ def write_local_orc(stream_id, path, vineyard_socket):
 
 
 if __name__ == '__main__':
-    write_local_orc(sys.argv[1], sys.argv[2], sys.argv[3])
+    if len(sys.argv) < 6:
+        print('usage: ./write_local_orc <ipc_socket> <stream_id> <local path> <proc_num> <proc_index>')
+        exit(1)
+    ipc_socket = sys.argv[1]
+    stream_id = sys.argv[2]
+    local_path = sys.argv[3]
+    proc_num = int(sys.argv[4])
+    proc_index = int(sys.argv[5])
+    write_local_orc(ipc_socket, stream_id, local_path, proc_num, proc_index)

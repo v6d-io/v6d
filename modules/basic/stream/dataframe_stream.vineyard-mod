@@ -237,7 +237,13 @@ class DataframeStream : public Registered<DataframeStream> {
         new DataframeStreamWriter(client, id_, meta_));
   }
 
+  std::unordered_map<std::string, std::string> GetParams() { return params_; }
+
  private:
+  __attribute__((annotate("codegen")))
+  std::unordered_map<std::string, std::string>
+      params_;
+
   friend class Client;
   friend class DataframeStreamBaseBuilder;
 };

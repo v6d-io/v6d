@@ -71,13 +71,15 @@ endif()
 install_vineyard_target(vineyard_io)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
-# build vineyard-io adaptors
-file(GLOB TEST_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/adaptors" "${CMAKE_CURRENT_SOURCE_DIR}/adaptors/*.cc")
 add_custom_target(vineyard_io_adaptors ALL)
-foreach(fname ${TEST_FILES})
+
+# build and install c++ vineyard-io adaptors
+file(GLOB CPP_IO_ADAPTORS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/adaptors"
+                                   "${CMAKE_CURRENT_SOURCE_DIR}/adaptors/*.cc")
+foreach(fname ${CPP_IO_ADAPTORS})
     string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${fname})
     set(IO_BINARY_TOOL ${CMAKE_MATCH_1})
-    message(STATUS "Found io binary tool - " ${IO_BINARY_TOOL})
+    message(STATUS "Found (cpp) io binary tool - " ${IO_BINARY_TOOL})
     add_executable(${IO_BINARY_TOOL} ${CMAKE_CURRENT_SOURCE_DIR}/adaptors/${IO_BINARY_TOOL}.cc)
     target_link_libraries(${IO_BINARY_TOOL}
                           vineyard_basic
@@ -87,5 +89,28 @@ foreach(fname ${TEST_FILES})
                           ${MPI_CXX_LIBRARIES})
     set_target_properties(${IO_BINARY_TOOL} PROPERTIES OUTPUT_NAME "vineyard_${IO_BINARY_TOOL}")
     install_vineyard_target(${IO_BINARY_TOOL})
+    add_dependencies(vineyard_io_adaptors ${IO_BINARY_TOOL})
+endforeach()
+
+# install python vineyard-io adaptors
+macro(install_python_target python_target rename)
+    get_target_property(PYTHON_TARGET_LOCATION ${python_target} IMPORTED_LOCATION)
+    install(PROGRAMS "${PYTHON_TARGET_LOCATION}"
+            DESTINATION bin
+            RENAME "${rename}"
+    )
+endmacro()
+
+file(GLOB PYTHON_IO_ADAPTORS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/adaptors"
+                                      "${CMAKE_CURRENT_SOURCE_DIR}/adaptors/*.py")
+foreach(fname ${PYTHON_IO_ADAPTORS})
+    string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${fname})
+    set(IO_BINARY_TOOL ${CMAKE_MATCH_1})
+    message(STATUS "Found (python) io binary tool - " ${IO_BINARY_TOOL})
+
+    add_executable(${IO_BINARY_TOOL} IMPORTED)
+    set_target_properties(${IO_BINARY_TOOL} PROPERTIES
+                      IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/adaptors/${IO_BINARY_TOOL}.py")
+    install_python_target(${IO_BINARY_TOOL} "vineyard_${IO_BINARY_TOOL}")
     add_dependencies(vineyard_io_adaptors ${IO_BINARY_TOOL})
 endforeach()

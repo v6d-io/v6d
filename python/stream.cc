@@ -14,7 +14,9 @@ limitations under the License.
 */
 
 #include <functional>
+#include <map>
 #include <memory>
+#include <unordered_map>
 
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
@@ -80,7 +82,13 @@ void bind_stream(py::module& mod) {
              Client& client) -> std::unique_ptr<ByteStreamWriter> {
             return self->OpenWriter(client);
           },
-          "client"_a);
+          "client"_a)
+      .def("__getitem__",
+           [](ByteStream* self, std::string const& key) {
+             return self->GetParams().at(key);
+           })
+      .def_property_readonly(
+          "params", [](ByteStream* self) { return self->GetParams(); });
 
   // ByteStreamBuilder
   py::class_<ByteStreamBuilder, std::shared_ptr<ByteStreamBuilder>,
@@ -88,7 +96,21 @@ void bind_stream(py::module& mod) {
       .def(py::init<Client&>())
       .def("__setitem__",
            [](ByteStreamBuilder* self, std::string const& key,
-              std::string const& value) { self->SetParam(key, value); });
+              std::string const& value) { self->SetParam(key, value); })
+      .def("set_params",
+           [](ByteStreamBuilder* self,
+              std::map<std::string, std::string> const& params) {
+             for (auto const& kv : params) {
+               self->SetParam(kv.first, kv.second);
+             }
+           })
+      .def("set_params",
+           [](ByteStreamBuilder* self,
+              std::unordered_map<std::string, std::string> const& params) {
+             for (auto const& kv : params) {
+               self->SetParam(kv.first, kv.second);
+             }
+           });
 
   // DataframeStreamWriter
   py::class_<DataframeStreamWriter, std::unique_ptr<DataframeStreamWriter>>(
@@ -113,16 +135,14 @@ void bind_stream(py::module& mod) {
   // DataframeStreamReader
   py::class_<DataframeStreamReader, std::unique_ptr<DataframeStreamReader>>(
       mod, "DataframeStreamReader")
-      .def(
-          "next",
-          [](DataframeStreamReader* self) -> py::object {
-            std::unique_ptr<arrow::Buffer> chunk = nullptr;
-            throw_on_error(self->GetNext(chunk));
-            auto chunk_ptr = chunk.release();
-            auto pa = py::module::import("pyarrow");
-            return pa.attr("py_buffer")(py::memoryview::from_memory(
-                chunk_ptr->data(), chunk_ptr->size()));
-          });
+      .def("next", [](DataframeStreamReader* self) -> py::object {
+        std::unique_ptr<arrow::Buffer> chunk = nullptr;
+        throw_on_error(self->GetNext(chunk));
+        auto chunk_ptr = chunk.release();
+        auto pa = py::module::import("pyarrow");
+        return pa.attr("py_buffer")(
+            py::memoryview::from_memory(chunk_ptr->data(), chunk_ptr->size()));
+      });
 
   // DataFrameStream
   py::class_<DataframeStream, std::shared_ptr<DataframeStream>, Object>(
@@ -140,12 +160,35 @@ void bind_stream(py::module& mod) {
              Client& client) -> std::unique_ptr<DataframeStreamWriter> {
             return self->OpenWriter(client);
           },
-          "client"_a);
+          "client"_a)
+      .def("__getitem__",
+           [](DataframeStream* self, std::string const& key) {
+             return self->GetParams().at(key);
+           })
+      .def_property_readonly(
+          "params", [](DataframeStream* self) { return self->GetParams(); });
 
   // DataframeStreamBuilder
   py::class_<DataframeStreamBuilder, std::shared_ptr<DataframeStreamBuilder>,
              ObjectBuilder>(mod, "DataframeStreamBuilder")
-      .def(py::init<Client&>());
+      .def(py::init<Client&>())
+      .def("__setitem__",
+           [](DataframeStreamBuilder* self, std::string const& key,
+              std::string const& value) { self->SetParam(key, value); })
+      .def("set_params",
+           [](DataframeStreamBuilder* self,
+              std::map<std::string, std::string> const& params) {
+             for (auto const& kv : params) {
+               self->SetParam(kv.first, kv.second);
+             }
+           })
+      .def("set_params",
+           [](DataframeStreamBuilder* self,
+              std::unordered_map<std::string, std::string> const& params) {
+             for (auto const& kv : params) {
+               self->SetParam(kv.first, kv.second);
+             }
+           });
 }
 
 }  // namespace vineyard

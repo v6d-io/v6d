@@ -3,7 +3,7 @@
 set -x
 POD_NAME=$1
 shift
-kubectl exec ${POD_NAME} -c engine -- "/bin/sh -c 'cat /etc/hosts || true && \
+kubectl exec ${POD_NAME} -c engine -- "/bin/sh -c 'cat /etc/hosts > /dev/null || true && \
                                                    source ~/.bashrc || true && \
-                                                   source ~/.zshrc || true && \
+                                                   shopt -s huponexit 2>/dev/null || true && \
                                                    $*'"
