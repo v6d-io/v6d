@@ -83,6 +83,7 @@ class OidSet {
 template <>
 class OidSet<std::string> {
   using oid_t = std::string;
+  using internal_oid_t = typename InternalType<oid_t>::type;
   using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
 
  public:
@@ -95,7 +96,7 @@ class OidSet<std::string> {
     }
     auto oid_arr = std::dynamic_pointer_cast<oid_array_t>(arr);
     for (int64_t i = 0; i < oid_arr->length(); i++) {
-      oids.insert(oid_arr->GetString(i));
+      oids.insert(oid_arr->GetView(i));
     }
     return boost::leaf::result<void>();
   }
@@ -122,7 +123,7 @@ class OidSet<std::string> {
   }
 
  private:
-  std::unordered_set<oid_t> oids;
+  std::unordered_set<internal_oid_t> oids;
 };
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T>
