@@ -174,6 +174,7 @@ class ByteStream : public Registered<ByteStream> {
   __attribute__((annotate("codegen")))
   std::unordered_map<std::string, std::string>
       params_;
+
   friend class Client;
   friend class ByteStreamBaseBuilder;
   friend class ByteStreamBuilder;

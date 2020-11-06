@@ -16,20 +16,30 @@
 # limitations under the License.
 #
 
-import vineyard
 import sys
 import json
-import pyarrow as pa
-
 from urllib.parse import urlparse
+
+import pyarrow as pa
 from hdfs3 import HDFileSystem
+
+import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 
-def read_hdfs_bytes(path, vineyard_socket):
+def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):      
+    if proc_index:
+        return  
     client = vineyard.connect(vineyard_socket)
     builder = ByteStreamBuilder(client)
+    
+    fragments = urlparse(path).fragment.split('&')
+    for frag in fragments:
+        k, v = frag.split('=')
+        if k:
+            builder[k] = v
     stream = builder.seal(client)
+    
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
     print(json.dumps(ret))
@@ -52,4 +62,11 @@ def read_hdfs_bytes(path, vineyard_socket):
 
 
 if __name__ == '__main__':
-    read_hdfs_bytes(sys.argv[1], sys.argv[2])
+    if len(sys.argv) < 5:
+        print('usage: ./read_hdfs_bytes <ipc_socket> <hdfs path> <proc num> <proc index>')
+        exit(1)
+    ipc_socket = sys.argv[1]
+    hdfs_path = sys.argv[2]
+    proc_num = int(sys.argv[3])
+    proc_index = int(sys.argv[4])
+    read_hdfs_bytes(ipc_socket, hdfs_path, proc_num, proc_index)

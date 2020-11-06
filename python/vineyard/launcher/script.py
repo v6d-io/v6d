@@ -16,12 +16,16 @@
 # limitations under the License.
 #
 
+import json
+import logging
 import os
 import subprocess
 import sys
 import threading
 
 from .launcher import Launcher, LauncherStatus
+
+logger = logging.getLogger('vineyard')
 
 
 class ScriptLauncher(Launcher):
@@ -56,6 +60,7 @@ class ScriptLauncher(Launcher):
                     cmd.append(repr(value))
             else:
                 env[key] = value
+        logger.debug('command = %s', cmd)
         self._proc = subprocess.Popen(cmd,
                                       env=env,
                                       universal_newlines=True,
@@ -85,10 +90,12 @@ class ScriptLauncher(Launcher):
         while self._proc.poll() is None:
             line = stream.readline()
             self.parse(line)
+            logger.info(line)
 
         # consume all extra lines if the proc exits.
         for line in stream.readlines():
             self.parse(line)
+            logger.info(line)
 
     def join(self):
         if self._proc.wait():
