@@ -160,7 +160,6 @@ class ArrowFragmentLoader {
               io_adaptor(
                   new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
                   io_deleter_);
-          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
           auto meta = io_adaptor->GetMeta();
           auto src_label_name = meta.find(SRC_LABEL_TAG);
           auto dst_label_name = meta.find(DST_LABEL_TAG);
