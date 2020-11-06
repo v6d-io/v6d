@@ -53,9 +53,12 @@ class ArrowFragmentLoader {
   using internal_oid_t = typename InternalType<oid_t>::type;
   using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
   using vertex_map_t = ArrowVertexMap<internal_oid_t, vid_t>;
+  // These consts represent which column in the arrow table represents oid.
   const int id_column = 0;
   const int src_column = 0;
   const int dst_column = 1;
+  // These consts represent the key in the path of vfile/efile
+  static constexpr const char* LABEL_TAG = "label";
   static constexpr const char* SRC_LABEL_TAG = "src_label";
   static constexpr const char* DST_LABEL_TAG = "dst_label";
 #ifdef HASH_PARTITION
@@ -66,6 +69,15 @@ class ArrowFragmentLoader {
   using basic_loader_t = BasicArrowFragmentLoader<oid_t, vid_t, partitioner_t>;
 
  public:
+  /**
+   *
+   * @param client
+   * @param comm_spec
+   * @param efiles An example of efile:
+   * /data/twitter_e_0_0_0#src_label=v0&dst_label=v0&label=e0;/data/twitter_e_0_1_0#src_label=v0&dst_label=v1&label=e0;/data/twitter_e_1_0_0#src_label=v1&dst_label=v0&label=e0;/data/twitter_e_1_1_0#src_label=v1&dst_label=v1&label=e0
+   * @param vfiles An example of vfile: /data/twitter_v_0#label=v0
+   * @param directed
+   */
   ArrowFragmentLoader(vineyard::Client& client,
                       const grape::CommSpec& comm_spec,
                       const std::vector<std::string>& efiles,
@@ -195,7 +207,7 @@ class ArrowFragmentLoader {
           BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
 
           auto adaptor_meta = io_adaptor->GetMeta();
-          auto it = adaptor_meta.find("label");
+          auto it = adaptor_meta.find(LABEL_TAG);
           if (it == adaptor_meta.end()) {
             RETURN_GS_ERROR(
                 ErrorCode::kIOError,
@@ -280,7 +292,7 @@ class ArrowFragmentLoader {
       meta->Append("type", "VERTEX");
       meta->Append("label_index", std::to_string(v_label_id));
       meta->Append("label", label_name);
-      meta->Append(basic_loader_t::ID_COLUMN, "0");
+      meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
       vtables[v_label_id] = v_table->ReplaceSchemaMetadata(meta);
     }
     return std::make_pair(vtables, etables);
@@ -490,22 +502,23 @@ class ArrowFragmentLoader {
         auto meta = std::make_shared<arrow::KeyValueMetadata>();
 
         meta->Append("type", "VERTEX");
-        meta->Append(basic_loader_t::ID_COLUMN, "0");
+        meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
 
         auto adaptor_meta = io_adaptor->GetMeta();
         for (auto const& kv : adaptor_meta) {
           meta->Append(kv.first, kv.second);
         }
         // If label name is not in meta, we assign a default label '_'
-        if (adaptor_meta.count("label") == 0) {
+        if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
           RETURN_GS_ERROR(
               ErrorCode::kIOError,
               "Metadata of input vertex files should contain label name");
         }
-        meta->Append("label", adaptor_meta.find("label")->second);
+        auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
+        meta->Append("label", v_label_name);
         tables[label_id] = table->ReplaceSchemaMetadata(meta);
 
-        vertex_label_to_index_[adaptor_meta.find("label")->second] = label_id;
+        vertex_label_to_index_[v_label_name] = label_id;
       }
     } catch (std::exception& e) {
       RETURN_GS_ERROR(ErrorCode::kIOError, std::string(e.what()));
@@ -544,33 +557,33 @@ class ArrowFragmentLoader {
           meta->Append("sub_label_num", std::to_string(sub_label_files.size()));
 
           auto adaptor_meta = io_adaptor->GetMeta();
-          auto search = adaptor_meta.find("label");
-          if (search == adaptor_meta.end()) {
+          auto it = adaptor_meta.find(LABEL_TAG);
+          if (it == adaptor_meta.end()) {
             RETURN_GS_ERROR(
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain label name");
           }
-          std::string edge_label_name = search->second;
+          std::string edge_label_name = it->second;
           meta->Append("label", edge_label_name);
 
-          search = adaptor_meta.find(SRC_LABEL_TAG);
-          if (search == adaptor_meta.end()) {
+          it = adaptor_meta.find(SRC_LABEL_TAG);
+          if (it == adaptor_meta.end()) {
             RETURN_GS_ERROR(
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain src label name");
           }
-          std::string src_label_name = search->second;
+          std::string src_label_name = it->second;
           meta->Append(
               basic_loader_t::SRC_LABEL_ID,
               std::to_string(vertex_label_to_index_.at(src_label_name)));
 
-          search = adaptor_meta.find(DST_LABEL_TAG);
-          if (search == adaptor_meta.end()) {
+          it = adaptor_meta.find(DST_LABEL_TAG);
+          if (it == adaptor_meta.end()) {
             RETURN_GS_ERROR(
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain dst label name");
           }
-          std::string dst_label_name = search->second;
+          std::string dst_label_name = it->second;
           meta->Append(
               basic_loader_t::DST_LABEL_ID,
               std::to_string(vertex_label_to_index_.at(dst_label_name)));
