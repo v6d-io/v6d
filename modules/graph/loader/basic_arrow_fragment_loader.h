@@ -18,8 +18,8 @@ limitations under the License.
 
 #include <memory>
 #include <string>
-#include <utility>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "arrow/util/config.h"
