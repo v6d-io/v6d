@@ -144,8 +144,9 @@ class ArrowFragmentLoader {
                 std::vector<std::vector<std::shared_ptr<arrow::Table>>>>>
   loadEVTablesFromEFiles(const std::vector<std::string>& efiles, int index,
                          int total_parts) {
+    std::vector<std::string> vertex_label_names;
     {
-      std::set<std::string> vertex_label_names;
+      std::set<std::string> vertex_label_name_set;
 
       // We don't open file, just get metadata from filename
       for (auto& efile : efiles) {
@@ -169,18 +170,21 @@ class ArrowFragmentLoader {
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain label name");
           } else {
-            vertex_label_names.insert(src_label_name->second);
-            vertex_label_names.insert(dst_label_name->second);
+            vertex_label_name_set.insert(src_label_name->second);
+            vertex_label_name_set.insert(dst_label_name->second);
           }
         }
       }
 
+      vertex_label_num_ = vertex_label_names.size();
+      vertex_label_names.resize(vertex_label_num_);
       // number label id
       label_id_t v_label_id = 0;
-      for (auto& vertex_name : vertex_label_names) {
-        vertex_label_to_index_[vertex_name] = v_label_id++;
+      for (auto& vertex_name : vertex_label_name_set) {
+        vertex_label_to_index_[vertex_name] = v_label_id;
+        vertex_label_names[v_label_id] = vertex_name;
+        v_label_id++;
       }
-      vertex_label_num_ = vertex_label_names.size();
     }
 
     std::vector<std::vector<std::shared_ptr<arrow::Table>>> etables(
@@ -279,7 +283,7 @@ class ArrowFragmentLoader {
     std::vector<std::shared_ptr<arrow::Table>> vtables(vertex_label_num_);
 
     for (auto v_label_id = 0; v_label_id < vertex_label_num_; v_label_id++) {
-      auto label_name = "__id_generated_" + std::to_string(v_label_id) + "__";
+      auto label_name = vertex_label_names[v_label_id];
       std::vector<std::shared_ptr<arrow::Field>> schema_vector{arrow::field(
           label_name, vineyard::ConvertToArrowType<oid_t>::TypeValue())};
       BOOST_LEAF_AUTO(oid_array, oids[v_label_id].ToArrowArray());
@@ -385,8 +389,8 @@ class ArrowFragmentLoader {
     BOOST_LEAF_AUTO(local_e_tables,
                     basic_arrow_fragment_loader_.ShuffleEdgeTables(mapper));
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr);
-
     PropertyGraphSchema schema;
+
     schema.set_fnum(comm_spec_.fnum());
 
     for (auto table : local_v_tables) {
