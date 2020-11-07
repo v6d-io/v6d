@@ -129,9 +129,6 @@ class BasicArrowFragmentLoader {
             auto meta_idx = metadata->FindKey(ID_COLUMN);
             CHECK_OR_RAISE(meta_idx != -1);
             auto id_column_idx = std::stoi(metadata->value(meta_idx));
-
-            // TODO(guanyi.gl): Failure occurred before MPI calling will make
-            // processes hanging. We have to resolve this kind of issue.
             auto id_column_type = vertex_table->column(id_column_idx)->type();
 
             if (vineyard::ConvertToArrowType<oid_t>::TypeValue() !=
@@ -140,9 +137,16 @@ class BasicArrowFragmentLoader {
                               "OID_T is not same with arrow::Column(" +
                                   id_column_type->ToString() + ")");
             }
-            BOOST_LEAF_AUTO(tmp_table,
-                            ShufflePropertyVertexTable<partitioner_t>(
-                                comm_spec_, partitioner_, vertex_table));
+            std::shared_ptr<arrow::Table> tmp_table;
+            auto st = ShufflePropertyVertexTable<partitioner_t>(
+                comm_spec_, partitioner_, vertex_table, tmp_table);
+            // If the error occurred during the shuffle procedure, the process
+            // must die
+            if (!st) {
+              LOG(FATAL) << "An error occurred during the shuffle vertex table "
+                            "procedure. "
+                         << st.message();
+            }
             /**
              * Keep the oid column in vertex data table for HTAP, rather, we
              * record the id column name (primary key) in schema's metadata.
@@ -191,9 +195,16 @@ class BasicArrowFragmentLoader {
             CHECK_OR_RAISE(tmp_table->column(id_column_idx)->num_chunks() <= 1);
             auto local_oid_array = std::dynamic_pointer_cast<oid_array_t>(
                 tmp_table->column(id_column_idx)->chunk(0));
-            BOOST_LEAF_AUTO(
-                oids_group_by_worker,
-                FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array));
+
+            std::vector<std::shared_ptr<oid_array_t>> oids_group_by_worker;
+            st = FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array,
+                                               oids_group_by_worker);
+            if (!st) {
+              LOG(FATAL) << "An error occurred during the gather oid array "
+                            "procedure. "
+                         << st.message();
+            }
+
             // Deduplicate oids. this procedure is necessary when the oids are
             // inferred from efile
             if (deduplicate_oid) {
@@ -322,10 +333,14 @@ class BasicArrowFragmentLoader {
               processed_table_list[edge_table_index] = edge_table;
             }
             auto table = ConcatenateTables(processed_table_list);
-            auto r = ShufflePropertyEdgeTable<vid_t>(
-                comm_spec_, id_parser, src_column_idx, dst_column_idx, table);
-            BOOST_LEAF_CHECK(r);
-            local_e_tables[e_label] = r.value();
+            auto st = ShufflePropertyEdgeTable<vid_t>(
+                comm_spec_, id_parser, src_column_idx, dst_column_idx, table,
+                local_e_tables[e_label]);
+            if (!st) {
+              LOG(FATAL) << "An error occurred during the shuffle edge table "
+                            "procedure. "
+                         << st.message();
+            }
             return AllGatherError(comm_spec_);
           },
           [this](GSError& e) { return AllGatherError(e, comm_spec_); },

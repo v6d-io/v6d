@@ -175,7 +175,7 @@ class ArrowFragmentLoader {
         }
       }
 
-      vertex_label_num_ = vertex_label_names.size();
+      vertex_label_num_ = vertex_label_name_set.size();
       vertex_label_names.resize(vertex_label_num_);
       // number label id
       label_id_t v_label_id = 0;
