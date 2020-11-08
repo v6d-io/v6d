@@ -20,9 +20,10 @@ import vineyard
 import pyorc
 import pyarrow as pa
 import sys
-import io
 import json
 
+from urllib.parse import urlparse
+from hdfs3 import HDFileSystem
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 
@@ -58,16 +59,19 @@ def arrow_type(field):
         return types[field.name]
 
 
-def parse_orc(vineyard_socket, stream_id, proc_num, proc_index):
+def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
+    if proc_index:
+        return 
     client = vineyard.connect(vineyard_socket)
-    streams = client.get(stream_id)
-    if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
-    instream = streams[proc_index]
-    stream_reader = instream.open_reader(client)
-
     builder = DataframeStreamBuilder(client)
-    builder.set_params(instream.params)
+
+    fragments = urlparse(path).fragment.split('&')
+    for frag in fragments:
+        k, v = frag.split('=')
+        if k:
+            builder[k] = v
+    stream = builder.seal(client)
+
     stream = builder.seal(client)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
@@ -75,21 +79,21 @@ def parse_orc(vineyard_socket, stream_id, proc_num, proc_index):
 
     writer = stream.open_writer(client)
 
-    while True:
-        try:
-            content = stream_reader.next()
-        except:
-            writer.finish()
-            break
+    host, port = urlparse(path).netloc.split(':')
+    hdfs = HDFileSystem(host=host, port=int(port))
+    path = urlparse(path).path
 
-        f = io.BytesIO(content)
+    with hdfs.open(path, 'rb') as f:
         reader = pyorc.Reader(f)
         fields = reader.schema.fields
         schema = []
         for c in fields:
             schema.append((c, arrow_type(fields[c])))
         pa_struct = pa.struct(schema)
-        while rows := reader.read(num=1024):
+        while True:
+            rows = reader.read(num=1024)
+            if not rows:
+                break
             rb = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
             sink = pa.BufferOutputStream()
             rb_writer = pa.ipc.new_stream(sink, rb.schema)
@@ -101,13 +105,16 @@ def parse_orc(vineyard_socket, stream_id, proc_num, proc_index):
             buf_writer.write(buf)
             buf_writer.close()
 
+    writer.finish()
+    return stream
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print('usage: ./parse_orc_to_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>')
+        print('usage: ./read_hdfs_orc <ipc_socket> <orc file path> <proc num> <proc index>')
         exit(1)
     ipc_socket = sys.argv[1]
-    stream_id = sys.argv[2]
+    orc_path = sys.argv[2]
     proc_num = int(sys.argv[3])
     proc_index = int(sys.argv[4])
-    parse_orc(ipc_socket, stream_id, proc_num, proc_index)
+    read_hdfs_orc(ipc_socket, orc_path, proc_num, proc_index)

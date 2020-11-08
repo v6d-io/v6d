@@ -49,11 +49,14 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
     host, port = urlparse(path).netloc.split(':')
     hdfs = HDFileSystem(host=host, port=int(port))
     path = urlparse(path).path
-    blocks = hdfs.get_block_locations(path)
 
-    for b in blocks:
-        buf = hdfs.read_block(path, b['offset'], b['length'])
-        chunk = writer.next(b['length'])
+    offset = 0
+    length = 1024 * 1024
+    while True:
+        buf = hdfs.read_block(path, offset, length, '\n')
+        size = len(buf)
+        offset += size
+        chunk = writer.next(size)
         buf_writer = pa.FixedSizeBufferWriter(chunk)
         buf_writer.write(buf)
         buf_writer.close()

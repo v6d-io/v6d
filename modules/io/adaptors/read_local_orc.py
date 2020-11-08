@@ -85,7 +85,10 @@ def read_local_orc(vineyard_socket, path, proc_num, proc_index):
         for c in fields:
             schema.append((c, arrow_type(fields[c])))
         pa_struct = pa.struct(schema)
-        while rows := reader.read(num=1024):
+        while True:
+            rows = reader.read(num=1024)
+            if not rows:
+                break
             rb = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
             sink = pa.BufferOutputStream()
             rb_writer = pa.ipc.new_stream(sink, rb.schema)

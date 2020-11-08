@@ -20,10 +20,11 @@ import vineyard
 import pyorc
 import pyarrow as pa
 import sys
-import io
 import json
 
-from vineyard.io.byte import ByteStreamBuilder
+from urllib.parse import urlparse
+from hdfs3 import HDFileSystem
+from vineyard.io.dataframe import DataframeStreamBuilder
 
 
 def orc_type(field):
@@ -57,52 +58,45 @@ def orc_type(field):
         raise ValueError('Cannot Convert %s' % field)
 
 
-def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
+def write_hdfs_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
         raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
     instream = streams[proc_index]
-    stream_reader = instream.open_reader(client)
+    reader = instream.open_reader(client)
 
-    builder = ByteStreamBuilder(client)
-    stream = builder.seal(client)
-    ret = {'type': 'return'}
-    ret['content'] = repr(stream.id)
-    print(json.dumps(ret))
-
-    stream_writer = stream.open_writer(client)
+    host, port = urlparse(path).netloc.split(':')
+    hdfs = HDFileSystem(host=host, port=int(port))
+    path = urlparse(path).path
 
     writer = None
-    while True:
-        try:
-            content = stream_reader.next()
-        except:
-            stream_writer.finish()
-            break
-        buf_reader = pa.ipc.open_stream(content)
-        b = io.BytesIO()
-        schema = {}
-        for field in buf_reader.schema:
-            schema[field.name] = orc_type(field.type)
-        writer = pyorc.Writer(b, pyorc.Struct(**schema))
-        for batch in buf_reader:
-            df = batch.to_pandas()
-            writer.writerows(df.itertuples(False, None))
-        writer.close()
-        buf = b.getvalue()
-        chunk = stream_writer.next(len(buf))
-        buf_writer = pa.FixedSizeBufferWriter(chunk)
-        buf_writer.write(buf)
-        buf_writer.close()
+    with hdfs.open(path, 'wb') as f:
+        while True:
+            try:
+                buf = reader.next()
+            except:
+                writer.close()
+                break
+            buf_reader = pa.ipc.open_stream(buf)
+            if writer is None:
+                #get schema
+                schema = {}
+                for field in buf_reader.schema:
+                    schema[field.name] = orc_type(field.type)
+                writer = pyorc.Writer(f, pyorc.Struct(**schema))
+            for batch in buf_reader:
+                df = batch.to_pandas()
+                writer.writerows(df.itertuples(False, None))
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 5:
-        print('usage: ./parse_dataframe_to_orc <ipc_socket> <stream_id> <proc_num> <proc_index>')
+    if len(sys.argv) < 6:
+        print('usage: ./write_hdfs_orc <ipc_socket> <stream_id> <local path> <proc_num> <proc_index>')
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
-    proc_num = int(sys.argv[3])
-    proc_index = int(sys.argv[4])
-    parse_dataframe(ipc_socket, stream_id, proc_num, proc_index)
+    local_path = sys.argv[3]
+    proc_num = int(sys.argv[4])
+    proc_index = int(sys.argv[5])
+    write_hdfs_orc(ipc_socket, stream_id, local_path, proc_num, proc_index)
