@@ -60,6 +60,28 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
   }
 }
 
+void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
+  LabelType e_label_num = graph->edge_label_num();
+  LabelType v_label_num = graph->edge_label_num();
+
+  std::ofstream fout(path, std::ios::binary);
+  for (LabelType v_label = 0; v_label != v_label_num; ++v_label) {
+    auto iv = graph->InnerVertices(v_label);
+    for (auto v : iv) {
+      auto src_id = graph->GetId(v);
+      for (LabelType e_label = 0; e_label != e_label_num; ++e_label) {
+        auto oe = graph->GetOutgoingAdjList(v, e_label);
+        for (auto& e : oe) {
+          fout << src_id << " " << graph->GetId(e.neighbor()) << "\n";
+        }
+      }
+    }
+  }
+
+  fout.flush();
+  fout.close();
+}
+
 int main(int argc, char** argv) {
   if (argc < 6) {
     printf(
@@ -97,6 +119,38 @@ int main(int argc, char** argv) {
   comm_spec.Init(MPI_COMM_WORLD);
 
   // Load from efiles and vfiles
+#if 0
+  vineyard::ObjectID fragment_id = InvalidObjectID();
+  MPI_Barrier(MPI_COMM_WORLD);
+  double t = -GetCurrentTime();
+  {
+    auto loader =
+        std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
+                                             property_graph_types::VID_TYPE>>(
+            client, comm_spec, efiles, vfiles, directed != 0);
+    fragment_id = boost::leaf::try_handle_all(
+        [&loader]() { return loader->LoadFragment(); },
+        [](const GSError& e) {
+          LOG(FATAL) << e.error_msg;
+          return 0;
+        },
+        [](const boost::leaf::error_info& unmatched) {
+          LOG(FATAL) << "Unmatched error " << unmatched;
+          return 0;
+        });
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  t += GetCurrentTime();
+  if (comm_spec.fid() == 0) {
+    LOG(INFO) << "loading time: " << t;
+  }
+
+  std::shared_ptr<GraphType> graph =
+      std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
+  traverse_graph(graph, "./output_graph_" + std::to_string(graph->fid()));
+
+#else
+  vineyard::ObjectID fragment_group_id = InvalidObjectID();
   {
     auto loader =
         std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
@@ -133,6 +187,8 @@ int main(int argc, char** argv) {
         });
     WriteOut(client, comm_spec, fragment_group_id);
   }
+#endif
+
   grape::FinalizeMPIComm();
 
   LOG(INFO) << "Passed arrow fragment test...";

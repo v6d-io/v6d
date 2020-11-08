@@ -462,9 +462,12 @@ class ArrowFragmentLoader {
 
     frag_builder.SetPropertyGraphSchema(std::move(schema));
 
-    BOOST_LEAF_CHECK(frag_builder.Init(comm_spec_.fid(), comm_spec_.fnum(),
-                                       std::move(local_v_tables),
-                                       std::move(local_e_tables), directed_));
+    int thread_num =
+        (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
+        comm_spec_.local_num();
+    BOOST_LEAF_CHECK(frag_builder.Init(
+        comm_spec_.fid(), comm_spec_.fnum(), std::move(local_v_tables),
+        std::move(local_e_tables), directed_, thread_num));
     auto frag = std::dynamic_pointer_cast<ArrowFragment<oid_t, vid_t>>(
         frag_builder.Seal(client_));
     VINEYARD_CHECK_OK(client_.Persist(frag->id()));

@@ -16,8 +16,10 @@ limitations under the License.
 #ifndef MODULES_GRAPH_LOADER_BASIC_ARROW_FRAGMENT_LOADER_H_
 #define MODULES_GRAPH_LOADER_BASIC_ARROW_FRAGMENT_LOADER_H_
 
+#include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -31,6 +33,7 @@ limitations under the License.
 #include "graph/fragment/property_graph_types.h"
 #include "graph/utils/partitioner.h"
 #include "graph/utils/table_shuffler.h"
+#include "graph/utils/table_shuffler_beta.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 namespace vineyard {
@@ -322,8 +325,13 @@ class BasicArrowFragmentLoader {
               processed_table_list[edge_table_index] = edge_table;
             }
             auto table = ConcatenateTables(processed_table_list);
+#if 1
             auto r = ShufflePropertyEdgeTable<vid_t>(
                 comm_spec_, id_parser, src_column_idx, dst_column_idx, table);
+#else
+            auto r = beta::ShufflePropertyEdgeTable<vid_t>(
+                comm_spec_, id_parser, src_column_idx, dst_column_idx, table);
+#endif
             BOOST_LEAF_CHECK(r);
             local_e_tables[e_label] = r.value();
             return AllGatherError(comm_spec_);
@@ -370,6 +378,7 @@ class BasicArrowFragmentLoader {
     size_t chunk_num = oid_arrays_in->num_chunks();
     std::vector<std::shared_ptr<arrow::Array>> chunks_out(chunk_num);
 
+#if 1
     for (size_t chunk_i = 0; chunk_i != chunk_num; ++chunk_i) {
       std::shared_ptr<oid_array_t> oid_array =
           std::dynamic_pointer_cast<oid_array_t>(oid_arrays_in->chunk(chunk_i));
@@ -385,6 +394,65 @@ class BasicArrowFragmentLoader {
       ARROW_OK_OR_RAISE(builder.Advance(size));
       ARROW_OK_OR_RAISE(builder.Finish(&chunks_out[chunk_i]));
     }
+#else
+    int thread_num =
+        (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
+        comm_spec_.local_num();
+    std::vector<std::thread> parse_threads(thread_num);
+
+    std::atomic<size_t> cur(0);
+    std::vector<arrow::Status> statuses(thread_num, arrow::Status::OK());
+    for (int i = 0; i < thread_num; ++i) {
+      parse_threads[i] = std::thread(
+          [&](int tid) {
+            while (true) {
+              auto got = cur.fetch_add(1);
+              if (got >= chunk_num) {
+                break;
+              }
+              std::shared_ptr<oid_array_t> oid_array =
+                  std::dynamic_pointer_cast<oid_array_t>(
+                      oid_arrays_in->chunk(got));
+              typename ConvertToArrowType<vid_t>::BuilderType builder;
+              size_t size = oid_array->length();
+
+              arrow::Status status = builder.Resize(size);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
+
+              for (size_t k = 0; k != size; ++k) {
+                internal_oid_t oid = oid_array->GetView(k);
+                fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
+                if (!oid2gid_mapper(fid, label, oid, builder[k])) {
+                  LOG(ERROR) << "Mapping vertex " << oid << " failed.";
+                }
+              }
+
+              status = builder.Advance(size);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
+              status = builder.Finish(&chunks_out[got]);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
+            }
+          },
+          i);
+    }
+    for (auto& thrd : parse_threads) {
+      thrd.join();
+    }
+    for (auto& status : statuses) {
+      if (!status.ok()) {
+        RETURN_GS_ERROR(ErrorCode::kArrowError, status.ToString());
+      }
+    }
+#endif
 
     return std::make_shared<arrow::ChunkedArray>(chunks_out);
   }
