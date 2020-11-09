@@ -47,6 +47,8 @@ RPCServer::~RPCServer() {
 
 void RPCServer::Start() {
   SocketServer::Start();
+  LOG(INFO) << "Vineyard will listen on 0.0.0.0:"
+            << rpc_spec_.get<uint32_t>("port") << " for RPC";
   vs_ptr_->RPCReady();
 }
 
