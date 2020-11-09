@@ -70,7 +70,6 @@ def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
         k, v = frag.split('=')
         if k:
             builder[k] = v
-    stream = builder.seal(client)
 
     stream = builder.seal(client)
     ret = {'type': 'return'}
