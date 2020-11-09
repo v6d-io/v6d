@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
       std::dynamic_pointer_cast<ParallelStream>(client.GetObject(stream_id));
   LOG(INFO) << "Got parallel stream " << s->id();
 
-  VINEYARD_ASSERT(proc_num == s->GetStreamSize(),
+  VINEYARD_ASSERT(static_cast<size_t>(proc_num) == s->GetStreamSize(),
                   "Different ProcNum(" + std::to_string(proc_num) +
                       ") from StreamSize(" +
                       std::to_string(s->GetStreamSize()) + ")");
