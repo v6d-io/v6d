@@ -151,7 +151,6 @@ int main(int argc, char** argv) {
   traverse_graph(graph, "./output_graph_" + std::to_string(graph->fid()));
 
 #else
-  vineyard::ObjectID fragment_group_id = InvalidObjectID();
   {
     auto loader =
         std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,

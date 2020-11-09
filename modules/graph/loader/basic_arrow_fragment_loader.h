@@ -200,7 +200,7 @@ class BasicArrowFragmentLoader {
             // Deduplicate oids. this procedure is necessary when the oids are
             // inferred from efile
             if (deduplicate_oid) {
-              for (auto i = 0; i < oids_group_by_worker.size(); i++) {
+              for (size_t i = 0; i < oids_group_by_worker.size(); i++) {
                 OidSet<oid_t> oid_set;
                 BOOST_LEAF_CHECK(oid_set.BatchInsert(oids_group_by_worker[i]));
                 BOOST_LEAF_AUTO(deduplicated_oid_array, oid_set.ToArrowArray());
