@@ -199,12 +199,18 @@ def read_hdfs_dataframe(path, vineyard_socket, *args, **kwargs):
         return read_hdfs_orc(path, vineyard_socket, *args, **kwargs)
     return parse_bytes_to_dataframe(vineyard_socket, read_hdfs_bytes(path, vineyard_socket, *args, **kwargs), *args, **kwargs)
 
+def read_hive_dataframe(path, vineyard_socket, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    # Note that vineyard currently supports hive tables stored as orc format only
+    launcher.run(get_executable('read_hive_orc'), *((vineyard_socket, path) + args), **kwargs)
+    return launcher.wait()
 
 vineyard.io.read.register('file', read_local_bytes)
 vineyard.io.read.register('file', read_local_dataframe)
 vineyard.io.read.register('kafka', read_kafka_bytes)
 vineyard.io.read.register('kafka', read_kafka_dataframe)
 vineyard.io.read.register('hdfs', read_hdfs_dataframe)
+vineyard.io.read.register('hive', read_hive_dataframe)
 
 
 def write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
