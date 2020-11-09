@@ -30,6 +30,7 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 using GraphType = ArrowFragment<property_graph_types::OID_TYPE,
                                 property_graph_types::VID_TYPE>;
+using LabelType = typename GraphType::label_id_t;
 
 void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
               vineyard::ObjectID fragment_group_id) {
