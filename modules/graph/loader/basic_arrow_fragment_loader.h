@@ -376,8 +376,8 @@ class BasicArrowFragmentLoader {
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
       CHECK_ARROW_ERROR(tables[i]->RenameColumns(col_names, &tables[i]));
 #else
-    CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
-                                 tables[i]->RenameColumns(col_names));
+      CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
+                                   tables[i]->RenameColumns(col_names));
 #endif
     }
     std::shared_ptr<arrow::Table> table;
@@ -412,63 +412,63 @@ class BasicArrowFragmentLoader {
       ARROW_OK_OR_RAISE(builder.Finish(&chunks_out[chunk_i]));
     }
 #else
-  int thread_num =
-      (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
-      comm_spec_.local_num();
-  std::vector<std::thread> parse_threads(thread_num);
+    int thread_num =
+        (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
+        comm_spec_.local_num();
+    std::vector<std::thread> parse_threads(thread_num);
 
-  std::atomic<size_t> cur(0);
-  std::vector<arrow::Status> statuses(thread_num, arrow::Status::OK());
-  for (int i = 0; i < thread_num; ++i) {
-    parse_threads[i] = std::thread(
-        [&](int tid) {
-          while (true) {
-            auto got = cur.fetch_add(1);
-            if (got >= chunk_num) {
-              break;
-            }
-            std::shared_ptr<oid_array_t> oid_array =
-                std::dynamic_pointer_cast<oid_array_t>(
-                    oid_arrays_in->chunk(got));
-            typename ConvertToArrowType<vid_t>::BuilderType builder;
-            size_t size = oid_array->length();
+    std::atomic<size_t> cur(0);
+    std::vector<arrow::Status> statuses(thread_num, arrow::Status::OK());
+    for (int i = 0; i < thread_num; ++i) {
+      parse_threads[i] = std::thread(
+          [&](int tid) {
+            while (true) {
+              auto got = cur.fetch_add(1);
+              if (got >= chunk_num) {
+                break;
+              }
+              std::shared_ptr<oid_array_t> oid_array =
+                  std::dynamic_pointer_cast<oid_array_t>(
+                      oid_arrays_in->chunk(got));
+              typename ConvertToArrowType<vid_t>::BuilderType builder;
+              size_t size = oid_array->length();
 
-            arrow::Status status = builder.Resize(size);
-            if (!status.ok()) {
-              statuses[tid] = status;
-              return;
-            }
+              arrow::Status status = builder.Resize(size);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
 
-            for (size_t k = 0; k != size; ++k) {
-              internal_oid_t oid = oid_array->GetView(k);
-              fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
-              if (!oid2gid_mapper(fid, label, oid, builder[k])) {
-                LOG(ERROR) << "Mapping vertex " << oid << " failed.";
+              for (size_t k = 0; k != size; ++k) {
+                internal_oid_t oid = oid_array->GetView(k);
+                fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
+                if (!oid2gid_mapper(fid, label, oid, builder[k])) {
+                  LOG(ERROR) << "Mapping vertex " << oid << " failed.";
+                }
+              }
+
+              status = builder.Advance(size);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
+              status = builder.Finish(&chunks_out[got]);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
               }
             }
-
-            status = builder.Advance(size);
-            if (!status.ok()) {
-              statuses[tid] = status;
-              return;
-            }
-            status = builder.Finish(&chunks_out[got]);
-            if (!status.ok()) {
-              statuses[tid] = status;
-              return;
-            }
-          }
-        },
-        i);
-  }
-  for (auto& thrd : parse_threads) {
-    thrd.join();
-  }
-  for (auto& status : statuses) {
-    if (!status.ok()) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError, status.ToString());
+          },
+          i);
     }
-  }
+    for (auto& thrd : parse_threads) {
+      thrd.join();
+    }
+    for (auto& status : statuses) {
+      if (!status.ok()) {
+        RETURN_GS_ERROR(ErrorCode::kArrowError, status.ToString());
+      }
+    }
 #endif
 
     return std::make_shared<arrow::ChunkedArray>(chunks_out);
