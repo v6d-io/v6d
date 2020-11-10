@@ -32,6 +32,57 @@ using GraphType = ArrowFragment<property_graph_types::OID_TYPE,
                                 property_graph_types::VID_TYPE>;
 using LabelType = typename GraphType::label_id_t;
 
+void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
+              vineyard::ObjectID fragment_group_id) {
+  LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
+  std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
+      std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
+          client.GetObject(fragment_group_id));
+
+  for (const auto& pair : fg->Fragments()) {
+    LOG(INFO) << "[frag-" << pair.first << "]: " << pair.second;
+  }
+
+  // NB: only retrieve local fragments.
+  auto locations = fg->FragmentLocations();
+  for (const auto& pair : fg->Fragments()) {
+    if (locations.at(pair.first) != client.instance_id()) {
+      continue;
+    }
+    auto frag_id = pair.second;
+    auto frag = std::dynamic_pointer_cast<GraphType>(client.GetObject(frag_id));
+    auto schema = frag->schema();
+    auto mg_schema = vineyard::MaxGraphSchema(schema);
+    mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
+
+    LOG(INFO) << "[worker-" << comm_spec.worker_id()
+              << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
+              << " ...";
+  }
+}
+
+void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
+  LabelType e_label_num = graph->edge_label_num();
+  LabelType v_label_num = graph->edge_label_num();
+
+  std::ofstream fout(path, std::ios::binary);
+  for (LabelType v_label = 0; v_label != v_label_num; ++v_label) {
+    auto iv = graph->InnerVertices(v_label);
+    for (auto v : iv) {
+      auto src_id = graph->GetId(v);
+      for (LabelType e_label = 0; e_label != e_label_num; ++e_label) {
+        auto oe = graph->GetOutgoingAdjList(v, e_label);
+        for (auto& e : oe) {
+          fout << src_id << " " << graph->GetId(e.neighbor()) << "\n";
+        }
+      }
+    }
+  }
+
+  fout.flush();
+  fout.close();
+}
+
 int main(int argc, char** argv) {
   if (argc < 6) {
     printf(
@@ -68,14 +119,18 @@ int main(int argc, char** argv) {
   grape::CommSpec comm_spec;
   comm_spec.Init(MPI_COMM_WORLD);
 
-  vineyard::ObjectID fragment_group_id = InvalidObjectID();
+  // Load from efiles and vfiles
+#if 0
+  vineyard::ObjectID fragment_id = InvalidObjectID();
+  MPI_Barrier(MPI_COMM_WORLD);
+  double t = -GetCurrentTime();
   {
     auto loader =
         std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                              property_graph_types::VID_TYPE>>(
             client, comm_spec, efiles, vfiles, directed != 0);
-    fragment_group_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+    fragment_id = boost::leaf::try_handle_all(
+        [&loader]() { return loader->LoadFragment(); },
         [](const GSError& e) {
           LOG(FATAL) << e.error_msg;
           return 0;
@@ -85,31 +140,54 @@ int main(int argc, char** argv) {
           return 0;
         });
   }
-  LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
-  std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
-      std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
-          client.GetObject(fragment_group_id));
-
-  for (const auto& pair : fg->Fragments()) {
-    LOG(INFO) << "[frag-" << pair.first << "]: " << pair.second;
+  MPI_Barrier(MPI_COMM_WORLD);
+  t += GetCurrentTime();
+  if (comm_spec.fid() == 0) {
+    LOG(INFO) << "loading time: " << t;
   }
 
-  // NB: only retrieve local fragments.
-  auto locations = fg->FragmentLocations();
-  for (const auto& pair : fg->Fragments()) {
-    if (locations.at(pair.first) != client.instance_id()) {
-      continue;
-    }
-    auto frag_id = pair.second;
-    auto frag = std::dynamic_pointer_cast<GraphType>(client.GetObject(frag_id));
-    auto schema = frag->schema();
-    auto mg_schema = vineyard::MaxGraphSchema(schema);
-    mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
+  std::shared_ptr<GraphType> graph =
+      std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
+  traverse_graph(graph, "./output_graph_" + std::to_string(graph->fid()));
 
-    LOG(INFO) << "[worker-" << comm_spec.worker_id()
-              << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
-              << " ...";
+#else
+  {
+    auto loader =
+        std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
+                                             property_graph_types::VID_TYPE>>(
+            client, comm_spec, efiles, vfiles, directed != 0);
+    vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
+        [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+        [](const GSError& e) {
+          LOG(FATAL) << e.error_msg;
+          return 0;
+        },
+        [](const boost::leaf::error_info& unmatched) {
+          LOG(FATAL) << "Unmatched error " << unmatched;
+          return 0;
+        });
+    WriteOut(client, comm_spec, fragment_group_id);
   }
+
+  // Load from efiles
+  {
+    auto loader =
+        std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
+                                             property_graph_types::VID_TYPE>>(
+            client, comm_spec, efiles, directed != 0);
+    vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
+        [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+        [](const GSError& e) {
+          LOG(FATAL) << e.error_msg;
+          return 0;
+        },
+        [](const boost::leaf::error_info& unmatched) {
+          LOG(FATAL) << "Unmatched error " << unmatched;
+          return 0;
+        });
+    WriteOut(client, comm_spec, fragment_group_id);
+  }
+#endif
 
   grape::FinalizeMPIComm();
 
