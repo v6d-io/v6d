@@ -39,6 +39,8 @@ IPCServer::~IPCServer() {
 
 void IPCServer::Start() {
   SocketServer::Start();
+  LOG(INFO) << "Vineyard will listen on "
+            << ipc_spec_.get<std::string>("socket") << " for IPC";
   vs_ptr_->IPCReady();
 }
 
@@ -46,14 +48,21 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     asio::io_context& context) {
   std::string ipc_socket = ipc_spec_.get<std::string>("socket");
   auto endpoint = asio::local::stream_protocol::endpoint(ipc_socket);
-  // first check if the socket file is used by another process, if not, unlink
-  // it first, otherwise raise an exception.
-  asio::local::stream_protocol::socket socket(context);
-  boost::system::error_code ec;
-  socket.connect(endpoint, ec);
-  if (!ec) {
-    throw boost::system::system_error(
-        asio::error::make_error_code(asio::error::address_in_use));
+  if (access(ipc_socket.c_str(), F_OK) == 0) {
+    // first check if the socket file is writable
+    if (access(ipc_socket.c_str(), W_OK) != 0) {
+      throw std::invalid_argument("Cannot launch vineyardd on " + ipc_socket +
+                                  ": " + strerror(errno));
+    }
+    // then check if the socket file is used by another process, if not, unlink
+    // it first, otherwise raise an exception.
+    asio::local::stream_protocol::socket socket(context);
+    boost::system::error_code ec;
+    socket.connect(endpoint, ec);
+    if (!ec) {
+      throw boost::system::system_error(
+          asio::error::make_error_code(asio::error::address_in_use));
+    }
   }
   ::unlink(ipc_socket.c_str());
   return endpoint;

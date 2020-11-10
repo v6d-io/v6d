@@ -22,8 +22,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "graph/utils/error.h"
 #include "common/util/status.h"
+#include "graph/utils/error.h"
 
 namespace vineyard {
 class ThreadGroup {

@@ -73,6 +73,7 @@ inline const char* ErrorCodeToString(ErrorCode ec) {
     return "UnimplementedMethod";
   default:
     CHECK(false);
+    return "UndefinedErrorCode";
   }
 }
 
@@ -173,6 +174,23 @@ inline GSError AllGatherError(grape::CommSpec& comm_spec) {
                       (status_name).status().ToString()); \
     }                                                     \
     (lhs) = std::move(status_name).ValueOrDie();          \
+  } while (0)
+
+#define ARROW_CHECK_OK(expr)                                     \
+  do {                                                           \
+    auto status = (expr);                                        \
+    if (!status.ok()) {                                          \
+      LOG(FATAL) << "Arrow check failed: " << status.ToString(); \
+    }                                                            \
+  } while (0)
+
+#define ARROW_CHECK_OK_AND_ASSIGN(lhs, expr)                                   \
+  do {                                                                         \
+    auto status_name = (expr);                                                 \
+    if (!status_name.ok()) {                                                   \
+      LOG(FATAL) << "Arrow check failed: " << status_name.status().ToString(); \
+    }                                                                          \
+    (lhs) = std::move(status_name).ValueOrDie();                               \
   } while (0)
 
 }  // namespace vineyard

@@ -24,6 +24,11 @@ static const int64_t kConnectTimeoutMs = 1000;
 Status connect_ipc_socket(const std::string& pathname, int& socket_fd) {
   struct sockaddr_un socket_address;
 
+  if (access(pathname.c_str(), F_OK | W_OK) != 0) {
+    return Status::IOError("Cannot connect to " + pathname + ": " +
+                           strerror(errno));
+  }
+
   socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (socket_fd < 0) {
     return Status::IOError("socket() failed for pathname " + pathname);
