@@ -16,16 +16,26 @@ limitations under the License.
 #ifndef MODULES_GRAPH_UTILS_TABLE_SHUFFLER_H_
 #define MODULES_GRAPH_UTILS_TABLE_SHUFFLER_H_
 
+#include <mpi.h>
+
 #include <future>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <boost/leaf/all.hpp>
+
+#include "arrow/buffer.h"
+#include "arrow/table.h"
 #include "arrow/util/config.h"
+
 #include "grape/communication/sync_comm.h"
 #include "grape/worker/comm_spec.h"
 
+#include "basic/ds/arrow_utils.h"
+#include "graph/fragment/property_graph_types.h"
+#include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/error.h"
 
 namespace vineyard {
@@ -100,8 +110,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
     std::shared_ptr<arrow::Table>& table_in) {
   using oid_t = typename PARTITIONER_T::oid_t;
   using internal_oid_t = typename InternalType<oid_t>::type;
-  using oid_array_type =
-      typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
+  using oid_array_type = typename ConvertToArrowType<oid_t>::ArrayType;
   auto fnum = comm_spec.fnum();
   std::vector<std::unique_ptr<arrow::RecordBatchBuilder>>
       divided_table_builders;
@@ -113,7 +122,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
         table_in->schema(), arrow::default_memory_pool(), 4096, &builder));
     divided_table_builders.emplace_back(std::move(builder));
   }
-  vineyard::TableAppender appender(table_in->schema());
+  TableAppender appender(table_in->schema());
   arrow::TableBatchReader tbreader(*table_in);
   std::shared_ptr<arrow::RecordBatch> batch;
 
@@ -156,7 +165,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
       std::shared_ptr<arrow::Buffer> buffer;
       std::vector<std::shared_ptr<arrow::RecordBatch>> batches =
           std::move(divided_records[dst_fid]);
-      VY_OK_OR_RAISE(vineyard::SerializeRecordBatches(batches, &buffer));
+      VY_OK_OR_RAISE(SerializeRecordBatches(batches, &buffer));
       SendArrowBuffer(buffer, dst_worker_id, comm_spec.comm());
       dst_worker_id = (dst_worker_id + worker_num - 1) % worker_num;
     }
@@ -169,7 +178,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
     while (src_worker_id != worker_id) {
       BOOST_LEAF_AUTO(buffer, RecvArrowBuffer(src_worker_id, comm_spec.comm()));
       std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-      VY_OK_OR_RAISE(vineyard::DeserializeRecordBatches(buffer, &batches));
+      VY_OK_OR_RAISE(DeserializeRecordBatches(buffer, &batches));
       for (const auto& batch : batches) {
         if (batch->num_rows() > 0) {
           divided_records[comm_spec.fid()].push_back(batch);
@@ -224,11 +233,10 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
 
   std::shared_ptr<arrow::Table> table_out;
   if (batches.empty()) {
-    VY_OK_OR_RAISE(
-        vineyard::EmptyTableBuilder::Build(table_in->schema(), table_out));
+    VY_OK_OR_RAISE(EmptyTableBuilder::Build(table_in->schema(), table_out));
   } else {
     std::shared_ptr<arrow::Table> tmp_table;
-    VY_OK_OR_RAISE(vineyard::RecordBatchesToTable(batches, &tmp_table));
+    VY_OK_OR_RAISE(RecordBatchesToTable(batches, &tmp_table));
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
     ARROW_OK_OR_RAISE(
         tmp_table->CombineChunks(arrow::default_memory_pool(), &table_out));
@@ -242,7 +250,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
 
 template <typename T>
 inline void send_numeric_array(
-    std::shared_ptr<typename vineyard::ConvertToArrowType<T>::ArrayType> array,
+    std::shared_ptr<typename ConvertToArrowType<T>::ArrayType> array,
     int dst_worker_id, MPI_Comm comm, int tag = 0) {
   size_t len = array->length();
   MPI_Send(&len, sizeof(size_t), MPI_CHAR, dst_worker_id, tag, comm);
@@ -268,18 +276,18 @@ inline void send_numeric_array<std::string>(
   std::shared_ptr<arrow::RecordBatch> batch;
   ArrayToRecordBatch(std::dynamic_pointer_cast<arrow::Array>(array), &batch);
   std::shared_ptr<arrow::Buffer> buffer;
-  VINEYARD_CHECK_OK(vineyard::SerializeRecordBatches({batch}, &buffer));
+  VINEYARD_CHECK_OK(SerializeRecordBatches({batch}, &buffer));
   SendArrowBuffer(buffer, dst_worker_id, comm, tag);
 }
 
 template <typename T>
 inline boost::leaf::result<void> recv_numeric_array(
-    std::shared_ptr<typename vineyard::ConvertToArrowType<T>::ArrayType>& array,
+    std::shared_ptr<typename ConvertToArrowType<T>::ArrayType>& array,
     int src_worker_id, MPI_Comm comm, int tag = 0) {
   size_t len;
   MPI_Recv(&len, sizeof(size_t), MPI_CHAR, src_worker_id, tag, comm,
            MPI_STATUS_IGNORE);
-  typename vineyard::ConvertToArrowType<T>::BuilderType builder;
+  typename ConvertToArrowType<T>::BuilderType builder;
   ARROW_OK_OR_RAISE(builder.Resize(len));
   recv_buffer<T>(&builder[0], len, src_worker_id, comm, tag);
   ARROW_OK_OR_RAISE(builder.Advance(len));
@@ -293,7 +301,7 @@ inline boost::leaf::result<void> recv_numeric_array<std::string>(
     MPI_Comm comm, int tag) {
   BOOST_LEAF_AUTO(buffer, RecvArrowBuffer(src_worker_id, comm, tag));
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-  VY_OK_OR_RAISE(vineyard::DeserializeRecordBatches(buffer, &batches));
+  VY_OK_OR_RAISE(DeserializeRecordBatches(buffer, &batches));
   CHECK_EQ(batches.size(), 1);
   CHECK_EQ(batches[0]->num_columns(), 1);
   CHECK_EQ(batches[0]->column(0)->type(), arrow::utf8());
@@ -302,16 +310,14 @@ inline boost::leaf::result<void> recv_numeric_array<std::string>(
 }
 
 template <typename T>
-boost::leaf::result<std::vector<
-    std::shared_ptr<typename vineyard::ConvertToArrowType<T>::ArrayType>>>
+boost::leaf::result<
+    std::vector<std::shared_ptr<typename ConvertToArrowType<T>::ArrayType>>>
 FragmentAllGatherArray(
     const grape::CommSpec& comm_spec,
-    std::shared_ptr<typename vineyard::ConvertToArrowType<T>::ArrayType>
-        data_in) {
+    std::shared_ptr<typename ConvertToArrowType<T>::ArrayType> data_in) {
   int worker_id = comm_spec.worker_id();
   int worker_num = comm_spec.worker_num();
-  std::vector<
-      std::shared_ptr<typename vineyard::ConvertToArrowType<T>::ArrayType>>
+  std::vector<std::shared_ptr<typename ConvertToArrowType<T>::ArrayType>>
       data_out(comm_spec.fnum());
 
   auto send_procedure = [&]() -> boost::leaf::result<void> {
@@ -379,13 +385,13 @@ FragmentAllGatherArray(
 
 template <typename VID_TYPE>
 boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
-    const grape::CommSpec& comm_spec, vineyard::IdParser<VID_TYPE>& id_parser,
+    const grape::CommSpec& comm_spec, IdParser<VID_TYPE>& id_parser,
     int src_col_id, int dst_col_id, std::shared_ptr<arrow::Table>& table_in) {
   fid_t fnum = comm_spec.fnum();
   std::vector<std::vector<std::shared_ptr<arrow::RecordBatch>>>
       divided_record_batches(fnum);
 
-  vineyard::TableAppender appender(table_in->schema());
+  TableAppender appender(table_in->schema());
   std::vector<std::unique_ptr<arrow::RecordBatchBuilder>>
       divided_table_builders;
 
@@ -399,14 +405,14 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
   std::vector<std::shared_ptr<arrow::RecordBatch>> tmp_batch_vec;
   std::vector<std::shared_ptr<arrow::RecordBatch>> record_batches;
 
-  VY_OK_OR_RAISE(vineyard::TableToRecordBatches(table_in, &record_batches));
+  VY_OK_OR_RAISE(TableToRecordBatches(table_in, &record_batches));
   for (const auto& rb : record_batches) {
     size_t row_num = rb->num_rows();
     auto src_col = std::dynamic_pointer_cast<
-        typename vineyard::ConvertToArrowType<VID_TYPE>::ArrayType>(
+        typename ConvertToArrowType<VID_TYPE>::ArrayType>(
         rb->column(src_col_id));
     auto dst_col = std::dynamic_pointer_cast<
-        typename vineyard::ConvertToArrowType<VID_TYPE>::ArrayType>(
+        typename ConvertToArrowType<VID_TYPE>::ArrayType>(
         rb->column(dst_col_id));
 
     for (size_t i = 0; i < row_num; ++i) {
@@ -464,7 +470,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
                                  arrow::io::BufferOutputStream::Create(1024));
         ARROW_OK_ASSIGN_OR_RAISE(buffer, out_stream->Finish());
       } else {
-        VY_OK_OR_RAISE(vineyard::SerializeRecordBatches(batches, &buffer));
+        VY_OK_OR_RAISE(SerializeRecordBatches(batches, &buffer));
       }
       SendArrowBuffer(buffer, dst_worker_id, comm_spec.comm());
       dst_worker_id = (dst_worker_id + worker_num - 1) % worker_num;
@@ -481,7 +487,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
 
       if (buffer->size() > 0) {
         std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-        VY_OK_OR_RAISE(vineyard::DeserializeRecordBatches(buffer, &batches));
+        VY_OK_OR_RAISE(DeserializeRecordBatches(buffer, &batches));
         for (const auto& batch : batches) {
           divided_record_batches[comm_spec.fid()].push_back(batch);
         }
@@ -534,11 +540,10 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
   // N.B.: we need an empty table for non-existing labels.
   std::shared_ptr<arrow::Table> table_out;
   if (batches.empty()) {
-    VY_OK_OR_RAISE(
-        vineyard::EmptyTableBuilder::Build(table_in->schema(), table_out));
+    VY_OK_OR_RAISE(EmptyTableBuilder::Build(table_in->schema(), table_out));
   } else {
     std::shared_ptr<arrow::Table> tmp_table;
-    VY_OK_OR_RAISE(vineyard::RecordBatchesToTable(batches, &tmp_table));
+    VY_OK_OR_RAISE(RecordBatchesToTable(batches, &tmp_table));
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
     ARROW_OK_OR_RAISE(
         tmp_table->CombineChunks(arrow::default_memory_pool(), &table_out));
