@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
   // kafka address format: kafka://brokers/topics/group_id/partition_num
   if (argc < 5) {
     printf(
-        "usage ./read_kafka_byte <ipc_socket> <kafka_address> "
+        "usage ./read_kafka_bytes <ipc_socket> <kafka_address> "
         "<proc_num> <proc_index>");
     return 1;
   }
