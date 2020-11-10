@@ -16,8 +16,12 @@ limitations under the License.
 #ifndef MODULES_GRAPH_VERTEX_MAP_ARROW_VERTEX_MAP_H_
 #define MODULES_GRAPH_VERTEX_MAP_ARROW_VERTEX_MAP_H_
 
+#include <algorithm>
+#include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "basic/ds/array.h"
@@ -526,6 +530,7 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
   vineyard::Status Build(vineyard::Client& client) override {
     this->set_fnum_label_num(fnum_, label_num_);
 
+#if 0
     for (fid_t i = 0; i < fnum_; ++i) {
       // TODO(luoxiaojian): parallel construct hashmap
       for (label_id_t j = 0; j < label_num_; ++j) {
@@ -554,6 +559,58 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
                 builder.Seal(client)));
       }
     }
+#else
+    int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
+    int thread_num = std::min(
+        static_cast<int>(std::thread::hardware_concurrency()), task_num);
+    std::mutex lock;
+    std::atomic<int> task_id(0);
+
+    std::vector<std::thread> threads(thread_num);
+    for (int i = 0; i < thread_num; ++i) {
+      threads[i] = std::thread([&]() {
+        while (true) {
+          int got_task_id = task_id.fetch_add(1);
+          if (got_task_id >= task_num) {
+            break;
+          }
+          fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
+          label_id_t cur_label =
+              static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
+
+          vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
+          auto array = oid_arrays_[cur_label][cur_fid];
+          {
+            vid_t cur_gid = id_parser_.GenerateId(cur_fid, cur_label, 0);
+            int64_t vnum = array->length();
+            for (int64_t k = 0; k < vnum; ++k) {
+              builder.emplace(array->GetView(k), cur_gid);
+              ++cur_gid;
+            }
+          }
+
+          {
+            std::lock_guard<std::mutex> guard(lock);
+            typename InternalType<oid_t>::vineyard_builder_type array_builder(
+                client, array);
+            this->set_oid_array(
+                cur_fid, cur_label,
+                *std::dynamic_pointer_cast<vineyard::NumericArray<oid_t>>(
+                    array_builder.Seal(client)));
+
+            this->set_o2g(
+                cur_fid, cur_label,
+                *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
+                    builder.Seal(client)));
+          }
+        }
+      });
+    }
+    for (auto& thrd : threads) {
+      thrd.join();
+    }
+#endif
+
     return vineyard::Status::OK();
   }
 
