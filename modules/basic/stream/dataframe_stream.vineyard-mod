@@ -200,7 +200,11 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
         ss << c->GetView(0);
       }
       if (i < s->num_columns() - 1) {
-        ss << "\t";
+        if (params_.find("delimiter") == params_.end()) {
+          ss << ",";
+        } else {
+          ss << params_["delimiter"];
+        }
       } else {
         ss << "\n";
       }
@@ -210,14 +214,36 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
     return Status::OK();
   }
 
-  DataframeStreamReader(Client& client, ObjectID const& id,
-                        ObjectMeta const& meta)
-      : client_(client), id_(id), meta_(meta), batch_(nullptr), cursor_(0){};
+  Status GetHeaderLine(bool& header_row, std::string& header_line) {
+    if (params_.find("header_row") != params_.end()) {
+      header_row = (params_["header_row"] == "1");
+      if (params_.find("header_line") != params_.end()) {
+        header_line = params_["header_line"];
+      } else {
+        header_line = "";
+      }
+    } else {
+      header_row = false;
+      header_line = "";
+    }
+    return Status::OK();
+  }
+
+  DataframeStreamReader(
+      Client& client, ObjectID const& id, ObjectMeta const& meta,
+      std::unordered_map<std::string, std::string> const& params)
+      : client_(client),
+        id_(id),
+        meta_(meta),
+        params_(params),
+        batch_(nullptr),
+        cursor_(0){};
 
  private:
   Client& client_;
   ObjectID id_;
   ObjectMeta meta_;
+  std::unordered_map<std::string, std::string> params_;
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches_;
   std::shared_ptr<arrow::RecordBatch> batch_;
   int64_t cursor_;
@@ -229,7 +255,7 @@ class DataframeStream : public Registered<DataframeStream> {
  public:
   std::unique_ptr<DataframeStreamReader> OpenReader(Client& client) {
     return std::unique_ptr<DataframeStreamReader>(
-        new DataframeStreamReader(client, id_, meta_));
+        new DataframeStreamReader(client, id_, meta_, params_));
   }
 
   std::unique_ptr<DataframeStreamWriter> OpenWriter(Client& client) {
@@ -237,7 +263,13 @@ class DataframeStream : public Registered<DataframeStream> {
         new DataframeStreamWriter(client, id_, meta_));
   }
 
+  std::unordered_map<std::string, std::string> GetParams() { return params_; }
+
  private:
+  __attribute__((annotate("codegen")))
+  std::unordered_map<std::string, std::string>
+      params_;
+
   friend class Client;
   friend class DataframeStreamBaseBuilder;
 };
