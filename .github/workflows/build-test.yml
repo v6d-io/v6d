@@ -110,7 +110,7 @@ jobs:
         run: |
           cd build
 
-          function prepend() { while read line; do echo "${1}${line}\n"; done; }
+          function prepend() { while read line; do echo "${1}${line}"; done; }
 
           make vineyard_clformat
           GIT_DIFF=$(git diff)
