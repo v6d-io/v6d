@@ -229,9 +229,15 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
     return Status::OK();
   }
 
-  DataframeStreamReader(Client& client, ObjectID const& id,
-                        ObjectMeta const& meta, std::unordered_map<std::string, std::string> const& params)
-      : client_(client), id_(id), meta_(meta), params_(params), batch_(nullptr), cursor_(0){};
+  DataframeStreamReader(
+      Client& client, ObjectID const& id, ObjectMeta const& meta,
+      std::unordered_map<std::string, std::string> const& params)
+      : client_(client),
+        id_(id),
+        meta_(meta),
+        params_(params),
+        batch_(nullptr),
+        cursor_(0){};
 
  private:
   Client& client_;

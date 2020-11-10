@@ -63,7 +63,7 @@ int main(int argc, const char** argv) {
   std::string header_line = "";
   VINEYARD_CHECK_OK(reader->GetHeaderLine(header_row, header_line));
   if (header_row) {
-    VINEYARD_CHECK_OK(local_io_adaptor->WriteLine(header_line + "\n"));    
+    VINEYARD_CHECK_OK(local_io_adaptor->WriteLine(header_line + "\n"));
   }
 
   std::string line;
