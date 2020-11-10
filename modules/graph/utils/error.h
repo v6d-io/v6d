@@ -88,9 +88,7 @@ struct GSError {
 
   explicit operator bool() const { return error_code != ErrorCode::kOk; }
 
-  bool ok() const {
-    return error_code == ErrorCode::kOk;
-  }
+  bool ok() const { return error_code == ErrorCode::kOk; }
 };
 
 inline grape::InArchive& operator<<(grape::InArchive& archive,
