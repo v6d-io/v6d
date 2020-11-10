@@ -59,29 +59,7 @@ def arrow_type(field):
         return types[field.name]
 
 
-def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
-    if proc_index:
-        return 
-    client = vineyard.connect(vineyard_socket)
-    builder = DataframeStreamBuilder(client)
-
-    fragments = urlparse(path).fragment.split('&')
-    for frag in fragments:
-        k, v = frag.split('=')
-        if k:
-            builder[k] = v
-
-    stream = builder.seal(client)
-    ret = {'type': 'return'}
-    ret['content'] = repr(stream.id)
-    print(json.dumps(ret))
-
-    writer = stream.open_writer(client)
-
-    host, port = urlparse(path).netloc.split(':')
-    hdfs = HDFileSystem(host=host, port=int(port))
-    path = urlparse(path).path
-
+def read_hdfs_orc(path, hdfs, writer):
     with hdfs.open(path, 'rb') as f:
         reader = pyorc.Reader(f)
         fields = reader.schema.fields
@@ -104,16 +82,32 @@ def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
             buf_writer.write(buf)
             buf_writer.close()
 
+def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
+    if proc_index:
+        return 
+    client = vineyard.connect(vineyard_socket)
+    builder = DataframeStreamBuilder(client)
+    stream = builder.seal(client)
+    ret = {'type': 'return'}
+    ret['content'] = repr(stream.id)
+    print(json.dumps(ret))
+
+    writer = stream.open_writer(client)
+    host, port = urlparse(path).netloc.split(':')
+    hdfs = HDFileSystem(host=host, port=int(port))
+
+    for subpath in hdfs.glob(urlparse(path).path):
+        read_hdfs_orc(subpath, hdfs, writer)
+    
     writer.finish()
-    return stream
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print('usage: ./read_hdfs_orc <ipc_socket> <orc file path> <proc num> <proc index>')
+        print('usage: ./read_hive_orc <ipc_socket> <hive file directory> <proc num> <proc index>')
         exit(1)
     ipc_socket = sys.argv[1]
-    orc_path = sys.argv[2]
+    hive_dir = sys.argv[2]
     proc_num = int(sys.argv[3])
     proc_index = int(sys.argv[4])
-    read_hdfs_orc(ipc_socket, orc_path, proc_num, proc_index)
+    read_hive_orc(ipc_socket, hive_dir, proc_num, proc_index)

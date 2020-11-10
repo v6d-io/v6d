@@ -98,10 +98,12 @@ LocalIOAdaptor::~LocalIOAdaptor() {
 Status LocalIOAdaptor::Open() { return this->Open("r"); }
 
 Status LocalIOAdaptor::Open(const char* mode) {
+  bool to_write = false;
   std::string tag = ".gz";
   size_t pos = location_.find(tag);
   if (pos != location_.size() - tag.size()) {
     if (strchr(mode, 'w') != NULL || strchr(mode, 'a') != NULL) {
+      to_write = true;
       int t = location_.find_last_of('/');
       if (t != -1) {
         std::string folder_path = location_.substr(0, t);
@@ -130,6 +132,10 @@ Status LocalIOAdaptor::Open(const char* mode) {
     return Status::NotImplemented();
   }
 
+  if (to_write) {
+    return Status::OK();
+  }
+
   if ((using_std_getline_ && !fs_) ||
       (!using_std_getline_ && file_ == nullptr)) {
     return Status::IOError("Failed to open the " + location_ +
@@ -139,7 +145,7 @@ Status LocalIOAdaptor::Open(const char* mode) {
   // check the partial read flag
   if (enable_partial_read_) {
     RETURN_ON_ERROR(setPartialReadImpl());
-  } else {
+  } else if (header_row_) {
     RETURN_ON_ERROR(ReadLine(header_line_));
     ::boost::algorithm::trim(header_line_);
     meta_.emplace("header_line", header_line_);
@@ -207,6 +213,7 @@ Status LocalIOAdaptor::setPartialReadImpl() {
     RETURN_ON_ERROR(seek(0, kFileLocationBegin));
     RETURN_ON_ERROR(ReadLine(header_line_));
     ::boost::algorithm::trim(header_line_);
+    meta_.emplace("header_line", header_line_);
     ::boost::split(original_columns_, header_line_,
                    ::boost::is_any_of(std::string(1, delimiter_)));
 

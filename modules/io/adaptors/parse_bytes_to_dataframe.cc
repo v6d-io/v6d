@@ -104,12 +104,12 @@ int main(int argc, const char** argv) {
             << proc_num << ")";
 
   auto params = ls->GetParams();
-  std::string header_line = params["header_line"];
+  bool header_row = (params["header_row"] == "1");
   std::string delimiter = params["delimiter"];
-  bool header_row = false;
   std::vector<std::string> col_names;
-  if (header_line != "") {
-    header_row = true;
+  std::string header_line = "None";
+  if (header_row) {
+    header_line = params["header_line"];
     ::boost::split(col_names, header_line, ::boost::is_any_of(delimiter));
   }
 
@@ -129,11 +129,7 @@ int main(int argc, const char** argv) {
     if (status.ok()) {
       LOG(INFO) << "consumer: buffer size = " << buffer->size();
       std::shared_ptr<arrow::Table> table;
-      if (delimiter == "\t") {
-        ParseTable(&table, buffer, '\t', header_row, col_names);
-      } else {
-        ParseTable(&table, buffer, delimiter[0], header_row, col_names);
-      }
+      ParseTable(&table, buffer, delimiter[0], header_row, col_names);
       auto st = writer->WriteTable(table);
       if (!st.ok()) {
         ReportStatus("error", st.ToString());
