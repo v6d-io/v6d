@@ -1861,7 +1861,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
       } else {
         parallel_for(
             static_cast<vid_t>(0), tvnum,
-            [this, offsets_ptr, &builder](vid_t i) {
+            [offsets_ptr, &builder](vid_t i) {
               nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
               nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
               std::sort(begin, end,
@@ -2005,7 +2005,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
       } else {
         parallel_for(
             static_cast<vid_t>(0), tvnum,
-            [this, offsets_ptr, &builder](vid_t i) {
+            [offsets_ptr, &builder](vid_t i) {
               nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
               nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
               std::sort(begin, end,
