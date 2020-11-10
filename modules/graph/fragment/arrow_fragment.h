@@ -1532,13 +1532,13 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
 
     BOOST_LEAF_CHECK(initVertices(std::move(vertex_tables)));
     BOOST_LEAF_CHECK(initEdges(std::move(edge_tables), concurrency));
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<void> SetPropertyGraphSchema(
       PropertyGraphSchema&& schema) {
     schema_ = std::move(schema);
-    return boost::leaf::result<void>();
+    return {};
   }
 
  private:
@@ -1561,7 +1561,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
 #endif
       ivnums_[i] = vm_ptr_->GetInnerVertexSize(fid_, i);
     }
-    return boost::leaf::result<void>();
+    return {};
   }
 
   void collect_outer_vertices(
@@ -1608,7 +1608,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
       tvnums_[i] = ivnums_[i] + ovnums_[i];
     }
     collected_ovgids_.clear();
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<void> generate_local_id_list(
@@ -1649,7 +1649,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
       ARROW_OK_OR_RAISE(builder.Advance(length));
     }
     ARROW_OK_OR_RAISE(builder.Finish(&lid_list));
-    return boost::leaf::result<void>();
+    return {};
   }
 
   // | src_id(generated) | dst_id(generated) | prop_0 | prop_1
@@ -1759,7 +1759,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
         oe_offsets_lists_[v_label][e_label] = sub_oe_offset_lists[v_label];
       }
     }
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<void> generate_directed_csr(
@@ -1875,7 +1875,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
           edge_builders[v_label].Advance(actual_edge_num[v_label]));
       ARROW_OK_OR_RAISE(edge_builders[v_label].Finish(&edges[v_label]));
     }
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<void> generate_undirected_csr(
@@ -2019,7 +2019,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
           edge_builders[v_label].Advance(actual_edge_num[v_label]));
       ARROW_OK_OR_RAISE(edge_builders[v_label].Finish(&edges[v_label]));
     }
-    return boost::leaf::result<void>();
+    return {};
   }
 
   fid_t fid_, fnum_;

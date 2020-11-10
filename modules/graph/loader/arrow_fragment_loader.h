@@ -336,7 +336,7 @@ class ArrowFragmentLoader {
 
     partitioner_.Init(comm_spec_.fnum(), oid_list);
 #endif
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<void> initBasicLoader() {
@@ -365,7 +365,7 @@ class ArrowFragmentLoader {
     basic_arrow_fragment_loader_.Init(partial_v_tables, partial_e_tables);
     basic_arrow_fragment_loader_.SetPartitioner(partitioner_);
 
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<vineyard::ObjectID> shuffleAndBuild() {
@@ -537,11 +537,17 @@ class ArrowFragmentLoader {
             io_adaptor(new vineyard::LocalIOAdaptor(files[label_id] +
                                                     "#header_row=true"),
                        io_deleter_);
-        VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
-        VY_OK_OR_RAISE(io_adaptor->Open());
-        std::shared_ptr<arrow::Table> table;
-        VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-        BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
+        auto read_procedure =
+            [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+          VY_OK_OR_RAISE(io_adaptor->Open());
+          std::shared_ptr<arrow::Table> table;
+          VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+          BOOST_LEAF_AUTO(table_out, SyncSchema(table, comm_spec_));
+          return table_out;
+        };
+        BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
+
         auto meta = std::make_shared<arrow::KeyValueMetadata>();
 
         meta->Append("type", "VERTEX");
@@ -586,11 +592,16 @@ class ArrowFragmentLoader {
               io_adaptor(new vineyard::LocalIOAdaptor(sub_label_files[j] +
                                                       "#header_row=true"),
                          io_deleter_);
-          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
-          VY_OK_OR_RAISE(io_adaptor->Open());
-          std::shared_ptr<arrow::Table> table;
-          VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-          BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_))
+          auto read_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+            VY_OK_OR_RAISE(io_adaptor->Open());
+            std::shared_ptr<arrow::Table> table;
+            VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+            BOOST_LEAF_AUTO(table_out, SyncSchema(table, comm_spec_));
+            return table_out;
+          };
+          BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
 
           std::shared_ptr<arrow::KeyValueMetadata> meta(
               new arrow::KeyValueMetadata());
@@ -747,8 +758,9 @@ class ArrowFragmentLoader {
   // have. We could use this method to gather their schemas, and find out most
   // common fields, construct a new schema and broadcast back. Note: We perform
   // type loosen, int64 -> double. timestamp -> int64.
-  boost::leaf::result<void> SyncSchema(std::shared_ptr<arrow::Table>& table,
-                                       const grape::CommSpec& comm_spec) {
+  boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
+      const std::shared_ptr<arrow::Table>& table,
+      const grape::CommSpec& comm_spec) {
     std::shared_ptr<arrow::Schema> final_schema;
     int final_serialized_schema_size;
     std::shared_ptr<arrow::Buffer> schema_buffer;
@@ -834,19 +846,21 @@ class ArrowFragmentLoader {
       DeserializeSchema(buffer, &final_schema);
       free(recv_buf);
     }
+
     if (table == nullptr) {
-      VY_OK_OR_RAISE(vineyard::EmptyTableBuilder::Build(final_schema, table));
+      std::shared_ptr<arrow::Table> table_out;
+      VY_OK_OR_RAISE(
+          vineyard::EmptyTableBuilder::Build(final_schema, table_out));
+      return table_out;
     } else {
-      BOOST_LEAF_AUTO(tmp_table, CastTableToSchema(table, final_schema));
-      table = tmp_table;
+      return CastTableToSchema(table, final_schema);
     }
-    return boost::leaf::result<void>();
   }
 
   // Inspired by arrow::compute::Cast
   boost::leaf::result<void> CastIntToDouble(
-      const std::shared_ptr<arrow::Array> in,
-      std::shared_ptr<arrow::DataType> to_type,
+      const std::shared_ptr<arrow::Array>& in,
+      const std::shared_ptr<arrow::DataType>& to_type,
       std::shared_ptr<arrow::Array>* out) {
     CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
     CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
@@ -861,15 +875,15 @@ class ArrowFragmentLoader {
     ARROW_OK_OR_RAISE(builder.AppendValues(out_data));
     ARROW_OK_OR_RAISE(builder.Finish(out));
     ARROW_OK_OR_RAISE((*out)->ValidateFull());
-    return boost::leaf::result<void>();
+    return {};
   }
 
   // Timestamp value are stored as as number of seconds, milliseconds,
   // microseconds or nanoseconds since UNIX epoch.
   // CSV reader can only produce timestamp in seconds.
   boost::leaf::result<void> CastDateToInt(
-      const std::shared_ptr<arrow::Array> in,
-      std::shared_ptr<arrow::DataType> to_type,
+      const std::shared_ptr<arrow::Array>& in,
+      const std::shared_ptr<arrow::DataType>& to_type,
       std::shared_ptr<arrow::Array>* out) {
     CHECK_OR_RAISE(
         in->type()->Equals(arrow::timestamp(arrow::TimeUnit::SECOND)));
@@ -878,7 +892,7 @@ class ArrowFragmentLoader {
     array_data->type = to_type;
     *out = arrow::MakeArray(array_data);
     ARROW_OK_OR_RAISE((*out)->ValidateFull());
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
