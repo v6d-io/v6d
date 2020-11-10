@@ -333,7 +333,7 @@ class BasicArrowFragmentLoader {
             GSError e(ErrorCode::kIOError, "Unmatched error");
             return AllGatherError(e, comm_spec_);
           });
-      if (e.error_code != ErrorCode::kOk) {
+      if (!e.ok()) {
         return boost::leaf::new_error(e);
       }
     }

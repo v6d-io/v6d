@@ -87,6 +87,10 @@ struct GSError {
   explicit GSError(ErrorCode code) : GSError(code, "") {}
 
   explicit operator bool() const { return error_code != ErrorCode::kOk; }
+
+  bool ok() const {
+    return error_code == ErrorCode::kOk;
+  }
 };
 
 inline grape::InArchive& operator<<(grape::InArchive& archive,
@@ -107,7 +111,7 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
       GSError((code), std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
                           ": " + std::string(__FUNCTION__) + " -> " + (msg)))
 
-inline GSError AllGatherError(GSError& e, grape::CommSpec& comm_spec) {
+inline GSError AllGatherError(GSError& e, const grape::CommSpec& comm_spec) {
   std::stringstream ss;
   ss << ErrorCodeToString(e.error_code) << " " << e.error_msg;
   ss << " occurred on Worker " << comm_spec.worker_id();
@@ -124,7 +128,7 @@ inline GSError AllGatherError(GSError& e, grape::CommSpec& comm_spec) {
   return {ErrorCode::kUnspecificError, msgs};
 }
 
-inline GSError AllGatherError(grape::CommSpec& comm_spec) {
+inline GSError AllGatherError(const grape::CommSpec& comm_spec) {
   std::vector<std::string> error_msgs(comm_spec.worker_num());
   std::string msg;
 

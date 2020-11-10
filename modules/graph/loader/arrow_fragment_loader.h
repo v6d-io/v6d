@@ -769,7 +769,10 @@ class ArrowFragmentLoader {
         displs[i] = displs[i - 1] + recvcounts[i - 1];
       }
       if (total_len == 0) {
-        RETURN_GS_ERROR(ErrorCode::kIOError, "All schema is empty");
+        GSError error(ErrorCode::kIOError, "All tables are empty");
+        return boost::leaf::new_error(AllGatherError(error, comm_spec));
+      } else {
+        AllGatherError(comm_spec);
       }
       char* total_string = static_cast<char*>(malloc(total_len * sizeof(char)));
       if (size == 0) {
@@ -811,6 +814,10 @@ class ArrowFragmentLoader {
     } else {
       MPI_Gather(&size, sizeof(int), MPI_CHAR, 0, sizeof(int), MPI_CHAR, 0,
                  comm_spec.comm());
+      auto error = AllGatherError(comm_spec);
+      if (!error.ok()) {
+        return boost::leaf::new_error(error);
+      }
       if (size == 0) {
         MPI_Gatherv(NULL, 0, MPI_CHAR, NULL, NULL, NULL, MPI_CHAR, 0,
                     comm_spec.comm());
