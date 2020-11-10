@@ -530,47 +530,51 @@ class ArrowFragmentLoader {
     auto label_num = static_cast<label_id_t>(files.size());
     std::vector<std::shared_ptr<arrow::Table>> tables(label_num);
 
-    try {
-      for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
-        std::unique_ptr<vineyard::LocalIOAdaptor,
-                        std::function<void(vineyard::LocalIOAdaptor*)>>
-            io_adaptor(new vineyard::LocalIOAdaptor(files[label_id] +
-                                                    "#header_row=true"),
-                       io_deleter_);
-        auto read_procedure =
-            [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
-          VY_OK_OR_RAISE(io_adaptor->Open());
-          std::shared_ptr<arrow::Table> table;
-          VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-          BOOST_LEAF_AUTO(table_out, SyncSchema(table, comm_spec_));
-          return table_out;
-        };
-        BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
+    for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
+      std::unique_ptr<vineyard::LocalIOAdaptor,
+                      std::function<void(vineyard::LocalIOAdaptor*)>>
+          io_adaptor(new vineyard::LocalIOAdaptor(files[label_id] +
+                                                  "#header_row=true"),
+                     io_deleter_);
+      auto read_procedure =
+          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+        VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+        VY_OK_OR_RAISE(io_adaptor->Open());
+        std::shared_ptr<arrow::Table> table;
+        VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+        return table;
+      };
 
-        auto meta = std::make_shared<arrow::KeyValueMetadata>();
+      BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
 
-        meta->Append("type", "VERTEX");
-        meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
+      auto sync_schema_procedure =
+          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+        return SyncSchema(table, comm_spec_);
+      };
 
-        auto adaptor_meta = io_adaptor->GetMeta();
-        for (auto const& kv : adaptor_meta) {
-          meta->Append(kv.first, kv.second);
-        }
-        // If label name is not in meta, we assign a default label '_'
-        if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
-          RETURN_GS_ERROR(
-              ErrorCode::kIOError,
-              "Metadata of input vertex files should contain label name");
-        }
-        auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
-        meta->Append("label", v_label_name);
-        tables[label_id] = table->ReplaceSchemaMetadata(meta);
+      BOOST_LEAF_AUTO(normalized_table,
+                      sync_gs_error(comm_spec_, sync_schema_procedure));
 
-        vertex_label_to_index_[v_label_name] = label_id;
+      auto meta = std::make_shared<arrow::KeyValueMetadata>();
+
+      meta->Append("type", "VERTEX");
+      meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
+
+      auto adaptor_meta = io_adaptor->GetMeta();
+      for (auto const& kv : adaptor_meta) {
+        meta->Append(kv.first, kv.second);
       }
-    } catch (std::exception& e) {
-      RETURN_GS_ERROR(ErrorCode::kIOError, std::string(e.what()));
+      // If label name is not in meta, we assign a default label '_'
+      if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
+        RETURN_GS_ERROR(
+            ErrorCode::kIOError,
+            "Metadata of input vertex files should contain label name");
+      }
+      auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
+      meta->Append("label", v_label_name);
+      tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
+
+      vertex_label_to_index_[v_label_name] = label_id;
     }
     return tables;
   }
@@ -598,10 +602,16 @@ class ArrowFragmentLoader {
             VY_OK_OR_RAISE(io_adaptor->Open());
             std::shared_ptr<arrow::Table> table;
             VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-            BOOST_LEAF_AUTO(table_out, SyncSchema(table, comm_spec_));
-            return table_out;
+            return table;
           };
           BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
+
+          auto sync_schema_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            return SyncSchema(table, comm_spec_);
+          };
+          BOOST_LEAF_AUTO(normalized_table,
+                          sync_gs_error(comm_spec_, sync_schema_procedure));
 
           std::shared_ptr<arrow::KeyValueMetadata> meta(
               new arrow::KeyValueMetadata());
@@ -642,7 +652,8 @@ class ArrowFragmentLoader {
               basic_loader_t::DST_LABEL_ID,
               std::to_string(vertex_label_to_index_.at(dst_label_name)));
 
-          tables[label_id].emplace_back(table->ReplaceSchemaMetadata(meta));
+          tables[label_id].emplace_back(
+              normalized_table->ReplaceSchemaMetadata(meta));
           edge_vertex_label_[edge_label_name].insert(
               std::make_pair(src_label_name, dst_label_name));
           edge_label_to_index_[edge_label_name] = label_id;
