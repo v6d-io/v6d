@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import json
 import logging
 import os
@@ -178,7 +177,6 @@ def read_local_dataframe(path, vineyard_socket, *args, **kwargs):
         return read_local_orc(path, vineyard_socket, *args, **kwargs)
     return parse_bytes_to_dataframe(vineyard_socket, read_local_bytes(path, vineyard_socket, *args, **kwargs), *args, **kwargs)
 
-
 def read_kafka_dataframe(path, vineyard_socket, *args, **kwargs):
     return parse_bytes_to_dataframe(vineyard_socket, read_kafka_bytes(path, vineyard_socket, *args, **kwargs), *args, **kwargs)
 
@@ -224,7 +222,7 @@ def write_local_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwar
         write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs)
         return
     launcher = ParallelStreamLauncher()
-    launcher.run(get_executable('write_local_dataframe'), *((vineyard_socket, path, dataframe_stream) + args),
+    launcher.run(get_executable('write_local_dataframe'), *((vineyard_socket, dataframe_stream, path) + args),
                  **kwargs)
     launcher.join()
 
