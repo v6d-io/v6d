@@ -22,6 +22,7 @@ import sys
 import io
 import json
 
+from urllib.parse import urlparse
 from vineyard.io.byte import ByteStreamBuilder
 
 def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
@@ -32,6 +33,9 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     instream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
+    header_row = (instream.params.get('header_row', None) == '1')
+    delimiter = instream.params.get('delimiter', ',')
+
     builder = ByteStreamBuilder(client)
     stream = builder.seal(client)
     ret = {'type': 'return'}
@@ -39,7 +43,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     print(json.dumps(ret))
 
     stream_writer = stream.open_writer(client)
-    first_write = True
+    first_write = header_row
     while True:
         try:
             content = stream_reader.next()
@@ -49,7 +53,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
         buf_reader = pa.ipc.open_stream(content)
         for batch in buf_reader:
             df = batch.to_pandas()
-            buf = df.to_csv(header=first_write).encode()
+            buf = df.to_csv(header=first_write, index=False, sep=delimiter).encode()
             first_write = False
             chunk = stream_writer.next(len(buf))
             buf_writer = pa.FixedSizeBufferWriter(chunk)

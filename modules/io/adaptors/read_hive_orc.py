@@ -83,6 +83,17 @@ def read_hdfs_orc(path, hdfs, writer):
             buf_writer.close()
 
 def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
+    # This method is to read the data files of a specific hive table
+    # that is stored as orc format in HDFS.
+    # In general, the data files of a hive table are stored at the hive
+    # space in the HDFS with the table name as the directory, 
+    # e.g., /user/hive/warehouse/sometable
+    # To read the entire table, simply use 'hive://user/hive/warehouse/sometable'
+    # as the path. 
+    # In case the table is partitioned, use the sub-directory of a specific partition
+    # to read only the data from that partition. For example, sometable is partitioned
+    # by column date, we can read the data in a given date by giving path as
+    # 'hive://user/hive/warehouse/sometable/date=20201112'
     if proc_index:
         return 
     client = vineyard.connect(vineyard_socket)
@@ -94,10 +105,18 @@ def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
 
     writer = stream.open_writer(client)
     host, port = urlparse(path).netloc.split(':')
-    hdfs = HDFileSystem(host=host, port=int(port))
+    hdfs = HDFileSystem(host=host, port=int(port), pars={"dfs.client.read.shortcircuit": "false"})
 
-    for subpath in hdfs.glob(urlparse(path).path):
-        read_hdfs_orc(subpath, hdfs, writer)
+    paths = hdfs.glob(urlparse(path).path)
+    files = []
+    for sub in paths:
+        if hdfs.isfile(sub):
+            files.append(sub)
+        else:
+            files += hdfs.glob(sub)
+
+    for filepath in files:
+        read_hdfs_orc(filepath, hdfs, writer)
     
     writer.finish()
 
