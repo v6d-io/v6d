@@ -69,6 +69,18 @@ class PairBuilder : public PairBaseBuilder {
   }
 
   /**
+   * @brief Set the builder for the first element.
+   * When building the pair, the builder will be invoked to build
+   * the first element.
+   *
+   * @param first The value for the first object.
+   */
+  void SetFirst(std::shared_ptr<Object> const& first) {
+    VINEYARD_ASSERT(this->first_ == nullptr);
+    this->set_first_(first);
+  }
+
+  /**
    * @brief Set the builder for the second element.
    * When building the pair, the builder will be invoked to build
    * the second element.
@@ -76,6 +88,18 @@ class PairBuilder : public PairBaseBuilder {
    * @param second The builder for the second object.
    */
   void SetSecond(std::shared_ptr<ObjectBuilder> const& second) {
+    VINEYARD_ASSERT(this->second_ == nullptr);
+    this->set_second_(second);
+  }
+
+  /**
+   * @brief Set the builder for the second element.
+   * When building the pair, the builder will be invoked to build
+   * the second element.
+   *
+   * @param second The value for the second object.
+   */
+  void SetSecond(std::shared_ptr<Object> const& second) {
     VINEYARD_ASSERT(this->second_ == nullptr);
     this->set_second_(second);
   }

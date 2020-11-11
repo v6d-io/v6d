@@ -92,9 +92,25 @@ class TupleBuilder : public TupleBaseBuilder {
    * build the value.
    *
    * @param idx The index of the value.
-   * @param value The builder for the value at the given index.
+   * @param value The builder for the value for the given index.
    */
   void SetValue(size_t idx, std::shared_ptr<ObjectBuilder> const& value) {
+    if (idx >= size_) {
+      LOG(ERROR) << "tuple::set(): out of range";
+    } else {
+      this->set_elements_(idx, value);
+    }
+  }
+
+  /**
+   * @brief Set the builder for the value at the given index.
+   * When building the tuple, the builder will be invoked to
+   * build the value.
+   *
+   * @param idx The index of the value.
+   * @param value The value for the given index.
+   */
+  void SetValue(size_t idx, std::shared_ptr<Object> const& value) {
     if (idx >= size_) {
       LOG(ERROR) << "tuple::set(): out of range";
     } else {
