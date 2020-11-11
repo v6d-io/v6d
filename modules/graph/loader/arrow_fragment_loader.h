@@ -804,10 +804,9 @@ class ArrowFragmentLoader {
   }
 
   // Inspired by arrow::compute::Cast
-  boost::leaf::result<void> CastIntToDouble(
+  boost::leaf::result<std::shared_ptr<arrow::Array>> CastIntToDouble(
       const std::shared_ptr<arrow::Array>& in,
-      const std::shared_ptr<arrow::DataType>& to_type,
-      std::shared_ptr<arrow::Array>* out) {
+      const std::shared_ptr<arrow::DataType>& to_type) {
     CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
     CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
     using in_type = int64_t;
@@ -819,9 +818,10 @@ class ArrowFragmentLoader {
     }
     arrow::DoubleBuilder builder;
     ARROW_OK_OR_RAISE(builder.AppendValues(out_data));
-    ARROW_OK_OR_RAISE(builder.Finish(out));
-    ARROW_OK_OR_RAISE((*out)->ValidateFull());
-    return {};
+    std::shared_ptr<arrow::Array> out;
+    ARROW_OK_OR_RAISE(builder.Finish(&out));
+    ARROW_OK_OR_RAISE(out->ValidateFull());
+    return out;
   }
 
   // Timestamp value are stored as as number of seconds, milliseconds,
@@ -857,15 +857,14 @@ class ArrowFragmentLoader {
         std::vector<std::shared_ptr<arrow::Array>> chunks;
         for (int64_t j = 0; j < col->num_chunks(); ++j) {
           auto array = col->chunk(j);
-          std::shared_ptr<arrow::Array> new_array;
           if (from_type->Equals(arrow::int64()) &&
               to_type->Equals(arrow::float64())) {
-            BOOST_LEAF_CHECK(CastIntToDouble(array, to_type, &new_array));
+            BOOST_LEAF_AUTO(new_array, CastIntToDouble(array, to_type));
             chunks.push_back(new_array);
           } else if (from_type->Equals(
                          arrow::timestamp(arrow::TimeUnit::SECOND)) &&
                      to_type->Equals(arrow::int64())) {
-            BOOST_LEAF_CHECK(CastDateToInt(array, to_type, &new_array));
+            BOOST_LEAF_AUTO(new_array, CastIntToDouble(array, to_type));
             chunks.push_back(new_array);
           } else {
             RETURN_GS_ERROR(ErrorCode::kDataTypeError,
