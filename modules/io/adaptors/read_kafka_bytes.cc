@@ -26,15 +26,23 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   // kafka address format: kafka://brokers/topics/group_id/partition_num
-  if (argc < 3) {
-    printf("usage ./single_kafka_byte <ipc_socket> <kafka_address>");
+  if (argc < 5) {
+    printf(
+        "usage ./read_kafka_bytes <ipc_socket> <kafka_address> "
+        "<proc_num> <proc_index>");
     return 1;
   }
 
   std::string ipc_socket = std::string(argv[1]);
   std::string kafka_address = "kafka://" + std::string(argv[2]);
+  int pnum = std::stoi(argv[3]);
+  int proc = std::stoi(argv[4]);
+
   std::unique_ptr<IIOAdaptor> kafka_io_adaptor =
       IOFactory::CreateIOAdaptor(kafka_address);
+
+  VINEYARD_CHECK_OK(kafka_io_adaptor->SetPartialRead(proc, pnum));
+
   VINEYARD_CHECK_OK(kafka_io_adaptor->Open());
 
   Client client;
@@ -44,7 +52,7 @@ int main(int argc, char** argv) {
   ByteStreamBuilder builder(client);
   auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
   VINEYARD_CHECK_OK(client.Persist(bstream->id()));
-  ReportStatus(true, VYObjectIDToString(bstream->id()));
+  ReportStatus("return", VYObjectIDToString(bstream->id()));
 
   auto writer = bstream->OpenWriter(client);
   writer->SetBufferSizeLimit(2 * 1024 * 1024);
@@ -53,7 +61,7 @@ int main(int argc, char** argv) {
   while (kafka_io_adaptor->ReadLine(line).ok()) {
     auto st = writer->WriteLine(line + "\n");
     if (!st.ok()) {
-      ReportStatus(false, st.ToString());
+      ReportStatus("error", st.ToString());
       VINEYARD_CHECK_OK(st);
     }
   }

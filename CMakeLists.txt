@@ -13,7 +13,7 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
-option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" OFF)
+option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
 option(BUILD_VINEYARD_PYPI_PACKAGES "Build vineyard's python bindings" OFF)
 
 option(BUILD_VINEYARD_BASIC "Build vineyard's basic data structures" ON)
@@ -315,8 +315,15 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
                           "python/error.cc"
                           "python/pybind11_utils.cc"
                           "python/vineyard.cc")
+    if(BUILD_VINEYARD_BASIC)
+        list(APPEND PYTHON_BIND_FILES "python/stream.cc")
+    endif()
     pybind11_add_module(_C MODULE ${PYTHON_BIND_FILES})
     target_link_libraries(_C PRIVATE vineyard_client)
+    if(BUILD_VINEYARD_BASIC)
+        target_link_libraries(_C PRIVATE vineyard_basic)
+        target_compile_options(_C PRIVATE -DBIND_STREAM)
+    endif()
     target_include_directories(_C PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                          thirdparty/pybind11/include)
     target_compile_options(_C PRIVATE -Wno-unused-value)
@@ -338,8 +345,6 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         DEPENDS _C
         COMMENT "Copying python extensions."
         VERBATIM)
-
-    list(APPEND VINEYARD_INSTALL_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src/python")
 endif()
 
 # add sub_directories
