@@ -967,6 +967,7 @@ class ArrowFragmentLoader {
   boost::leaf::result<std::shared_ptr<arrow::Array>> CastIntToDouble(
       const std::shared_ptr<arrow::Array>& in,
       const std::shared_ptr<arrow::DataType>& to_type) {
+    LOG(INFO) << in->type()->ToString();
     CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
     CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
     using in_type = int64_t;
@@ -987,18 +988,17 @@ class ArrowFragmentLoader {
   // Timestamp value are stored as as number of seconds, milliseconds,
   // microseconds or nanoseconds since UNIX epoch.
   // CSV reader can only produce timestamp in seconds.
-  boost::leaf::result<void> CastDateToInt(
+  boost::leaf::result<std::shared_ptr<arrow::Array>> CastDateToInt(
       const std::shared_ptr<arrow::Array>& in,
-      const std::shared_ptr<arrow::DataType>& to_type,
-      std::shared_ptr<arrow::Array>* out) {
+      const std::shared_ptr<arrow::DataType>& to_type) {
     CHECK_OR_RAISE(
         in->type()->Equals(arrow::timestamp(arrow::TimeUnit::SECOND)));
     CHECK_OR_RAISE(to_type->Equals(arrow::int64()));
     auto array_data = in->data()->Copy();
     array_data->type = to_type;
-    *out = arrow::MakeArray(array_data);
-    ARROW_OK_OR_RAISE((*out)->ValidateFull());
-    return {};
+    auto out = arrow::MakeArray(array_data);
+    ARROW_OK_OR_RAISE(out->ValidateFull());
+    return out;
   }
 
   boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
@@ -1024,7 +1024,7 @@ class ArrowFragmentLoader {
           } else if (from_type->Equals(
                          arrow::timestamp(arrow::TimeUnit::SECOND)) &&
                      to_type->Equals(arrow::int64())) {
-            BOOST_LEAF_AUTO(new_array, CastIntToDouble(array, to_type));
+            BOOST_LEAF_AUTO(new_array, CastDateToInt(array, to_type));
             chunks.push_back(new_array);
           } else {
             RETURN_GS_ERROR(ErrorCode::kDataTypeError,
