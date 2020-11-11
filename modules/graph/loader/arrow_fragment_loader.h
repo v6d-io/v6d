@@ -243,11 +243,25 @@ class ArrowFragmentLoader {
               io_adaptor(
                   new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
                   io_deleter_);
-          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
-          VY_OK_OR_RAISE(io_adaptor->Open());
-          std::shared_ptr<arrow::Table> table;
-          VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-          BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
+
+          auto read_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+            VY_OK_OR_RAISE(io_adaptor->Open());
+            std::shared_ptr<arrow::Table> table;
+            VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+            return table;
+          };
+
+          BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
+
+          auto sync_schema_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            return SyncSchema(table, comm_spec_);
+          };
+
+          BOOST_LEAF_AUTO(normalized_table,
+                          sync_gs_error(comm_spec_, sync_schema_procedure));
 
           auto adaptor_meta = io_adaptor->GetMeta();
           auto it = adaptor_meta.find(LABEL_TAG);
@@ -291,7 +305,7 @@ class ArrowFragmentLoader {
 
           meta->Append(basic_loader_t::DST_LABEL_ID,
                        std::to_string(dst_label_id));
-          auto e_table = table->ReplaceSchemaMetadata(meta);
+          auto e_table = normalized_table->ReplaceSchemaMetadata(meta);
 
           etables[e_label_id].emplace_back(e_table);
           edge_vertex_label_[edge_label_name].insert(
@@ -388,17 +402,25 @@ class ArrowFragmentLoader {
     } else {
       // if vfiles is empty, we infer oids from efile
       if (vfiles_.empty()) {
-        BOOST_LEAF_AUTO(ev_tables,
-                        loadEVTablesFromEFiles(efiles_, comm_spec_.worker_id(),
-                                               comm_spec_.worker_num()));
+        auto load_procedure = [&]() {
+          return loadEVTablesFromEFiles(efiles_, comm_spec_.worker_id(),
+                                        comm_spec_.worker_num());
+        };
+        BOOST_LEAF_AUTO(ev_tables, sync_gs_error(comm_spec_, load_procedure));
         partial_v_tables = ev_tables.first;
         partial_e_tables = ev_tables.second;
       } else {
-        BOOST_LEAF_AUTO(tmp_v, loadVertexTables(vfiles_, comm_spec_.worker_id(),
-                                                comm_spec_.worker_num()));
+        auto load_v_procedure = [&]() {
+          return loadVertexTables(vfiles_, comm_spec_.worker_id(),
+                                  comm_spec_.worker_num());
+        };
+        BOOST_LEAF_AUTO(tmp_v, sync_gs_error(comm_spec_, load_v_procedure));
         partial_v_tables = tmp_v;
-        BOOST_LEAF_AUTO(tmp_e, loadEdgeTables(efiles_, comm_spec_.worker_id(),
-                                              comm_spec_.worker_num()));
+        auto load_e_procedure = [&]() {
+          return loadEdgeTables(efiles_, comm_spec_.worker_id(),
+                                comm_spec_.worker_num());
+        };
+        BOOST_LEAF_AUTO(tmp_e, sync_gs_error(comm_spec_, load_e_procedure));
         partial_e_tables = tmp_e;
       }
     }
