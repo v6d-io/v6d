@@ -94,7 +94,7 @@ def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
 
     writer = stream.open_writer(client)
     host, port = urlparse(path).netloc.split(':')
-    hdfs = HDFileSystem(host=host, port=int(port))
+    hdfs = HDFileSystem(host=host, port=int(port), pars={"dfs.client.read.shortcircuit": "false"})
 
     for subpath in hdfs.glob(urlparse(path).path):
         read_hdfs_orc(subpath, hdfs, writer)

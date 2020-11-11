@@ -110,8 +110,11 @@ int main(int argc, const char** argv) {
   std::string header_line = "None";
   if (header_row) {
     header_line = params["header_line"];
+    ::boost::algorithm::trim(header_line);
     ::boost::split(col_names, header_line, ::boost::is_any_of(delimiter));
   }
+
+  LOG(INFO) << "Params: " << params["header_row"] << ", " << header_row << ", " << header_line << ", " << delimiter << ", " << delimiter[0];
 
   DataframeStreamBuilder dfbuilder(client);
   dfbuilder.SetParams(params);

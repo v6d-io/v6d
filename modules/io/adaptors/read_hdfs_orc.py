@@ -65,12 +65,6 @@ def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
 
-    fragments = urlparse(path).fragment.split('&')
-    for frag in fragments:
-        k, v = frag.split('=')
-        if k:
-            builder[k] = v
-
     stream = builder.seal(client)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
@@ -79,7 +73,7 @@ def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
     writer = stream.open_writer(client)
 
     host, port = urlparse(path).netloc.split(':')
-    hdfs = HDFileSystem(host=host, port=int(port))
+    hdfs = HDFileSystem(host=host, port=int(port), pars={"dfs.client.read.shortcircuit": "false"})
     path = urlparse(path).path
 
     with hdfs.open(path, 'rb') as f:
@@ -105,7 +99,6 @@ def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
             buf_writer.close()
 
     writer.finish()
-    return stream
 
 
 if __name__ == '__main__':

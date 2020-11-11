@@ -22,15 +22,30 @@ import sys
 import io
 import json
 
+from urllib.parse import urlparse
 from vineyard.io.byte import ByteStreamBuilder
 
-def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
+def parse_dataframe(vineyard_socket, stream_id, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
         raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
     instream = streams[proc_index]
     stream_reader = instream.open_reader(client)
+
+    header_row = False
+    delimiter = ','
+    fragments = urlparse(path).fragment.split('&')
+    for frag in fragments:
+        try:
+            k, v = frag.split('=')
+        except:
+            pass
+        else:
+            if k == 'header_row':
+                header_row = (v.upper() == 'TRUE')
+            elif k == 'delimiter':
+                delimiter = bytes(v, "utf-8").decode("unicode_escape")
 
     builder = ByteStreamBuilder(client)
     stream = builder.seal(client)
@@ -39,7 +54,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     print(json.dumps(ret))
 
     stream_writer = stream.open_writer(client)
-    first_write = True
+    first_write = header_row
     while True:
         try:
             content = stream_reader.next()
@@ -49,7 +64,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
         buf_reader = pa.ipc.open_stream(content)
         for batch in buf_reader:
             df = batch.to_pandas()
-            buf = df.to_csv(header=first_write).encode()
+            buf = df.to_csv(header=first_write, index=False, sep=delimiter).encode()
             first_write = False
             chunk = stream_writer.next(len(buf))
             buf_writer = pa.FixedSizeBufferWriter(chunk)
@@ -58,11 +73,12 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print('usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>')
+        print('usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <file_path> <proc_num> <proc_index>')
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
-    proc_num = int(sys.argv[3])
-    proc_index = int(sys.argv[4])
-    parse_dataframe(ipc_socket, stream_id, proc_num, proc_index)
+    file_path = sys.argv[3]
+    proc_num = int(sys.argv[4])
+    proc_index = int(sys.argv[5])
+    parse_dataframe(ipc_socket, stream_id, file_path, proc_num, proc_index)
 
