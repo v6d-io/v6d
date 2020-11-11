@@ -5,7 +5,7 @@ option(BUILD_VINEYARD_IO_OSS "Enable vineyard's IOAdaptor with OSS support" OFF)
 option(BUILD_VINEYARD_IO_KAFKA "Enable vineyard's IOAdaptor with KAFKA support" OFF)
 
 if(BUILD_VINEYARD_IO_OSS)
-    find_package(CURL)
+    find_package(CURL REQUIRED)
 endif()
 if(BUILD_VINEYARD_IO_KAFKA)
     include(FindRdkafka)

@@ -38,6 +38,7 @@ class ScriptLauncher(Launcher):
         self._script = script
         self._proc = None
         self._listen_thrd = None
+        self._cmd = None
 
     def run(self, *args, **kw):
         # FIXME run self._script on a set of host machines, the host is decided
@@ -61,6 +62,7 @@ class ScriptLauncher(Launcher):
             else:
                 env[key] = value
         logger.debug('command = %s', cmd)
+        self._cmd = cmd
         self._proc = subprocess.Popen(cmd,
                                       env=env,
                                       universal_newlines=True,
@@ -74,17 +76,22 @@ class ScriptLauncher(Launcher):
         self._listen_thrd.start()
 
     def wait(self, timeout=None):
+        # a fast wait: to use existing response directly, since the io adaptor may finish immediately.
+        r = super(ScriptLauncher, self).wait(timeout=0)
+        if r is not None:
+            return r
         elapsed, period = 0, 1
         while self._proc.poll() is None:
             if timeout is not None and elapsed > timeout:
-                raise TimeoutError('Unable to wait for status of job after %r seconds' % timeout)
+                raise TimeoutError('Unable to wait for status of job [%s] after %r seconds' % (self._cmd, timeout))
             r = super(ScriptLauncher, self).wait(timeout=period)
             elapsed += period
             if r is None:
                 continue
             else:
                 return r
-        raise RuntimeError('Failed to launch job, exited with %r' % self._proc.poll())
+        raise RuntimeError('Failed to launch job [%s], exited with %r: %s' %
+                           (self._cmd, self._proc.poll(), self._proc.stdout.read()))
 
     def read_output(self, stream):
         while self._proc.poll() is None:

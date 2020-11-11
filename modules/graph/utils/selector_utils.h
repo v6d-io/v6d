@@ -94,7 +94,10 @@ inline SchemaType parse_selectors(
     BOOST_FOREACH  // NOLINT(whitespace/parens)
         (boost::property_tree::ptree::value_type & v, pt) {
       CHECK(v.second.empty());
-      selector_list.emplace_back(v.first, v.second.data());
+      auto& col_name = v.first;
+      auto& selector = v.second.data();
+
+      selector_list.emplace_back(col_name, selector);
     }
   } catch (boost::property_tree::ptree_error& e) {
     return SchemaType::kInvalidSchema;
@@ -107,6 +110,9 @@ inline SchemaType parse_selectors(
   for (auto& pair : selector_list) {
     std::vector<std::string> token;
     boost::split(token, pair.second, boost::is_any_of("."));
+    if (token.empty()) {
+      return SchemaType::kInvalidSchema;
+    }
     if (token[0] == "v") {
       schema_for_vertex = true;
       if (token.size() != 2) {
@@ -125,7 +131,7 @@ inline SchemaType parse_selectors(
       }
     } else if (token[0] == "r") {
       schema_for_context = true;
-      if (token.size() != 1) {
+      if (token.size() > 2) {
         return SchemaType::kInvalidSchema;
       }
     }
@@ -252,26 +258,6 @@ inline bool parse_add_column_selectors(
   return true;
 }
 
-inline bool parse_no_labeled_add_column_selectors(
-    const std::string& selectors,
-    std::vector<std::pair<std::string, std::string>>& selector_map) {
-  std::stringstream ss(selectors);
-  boost::property_tree::ptree pt;
-  std::vector<std::pair<std::string, std::string>> tmp_list;
-  try {
-    boost::property_tree::read_json(ss, pt);
-    BOOST_FOREACH  // NOLINT(whitespace/parens)
-        (boost::property_tree::ptree::value_type & v, pt) {
-      CHECK(v.second.empty());
-      const auto& col_name = v.first;
-      const auto& selector = v.second.data();
-      selector_map.emplace_back(col_name, selector);
-    }
-  } catch (boost::property_tree::ptree_error& e) { return false; }
-
-  return true;
-}
-
 inline void gather_archives(grape::InArchive& arc,
                             const grape::CommSpec& comm_spec, size_t from = 0) {
   if (comm_spec.fid() == 0) {
@@ -293,7 +279,7 @@ inline void gather_archives(grape::InArchive& arc,
       ptr += static_cast<ptrdiff_t>(gathered_length[i]);
     }
   } else {
-    int64_t local_length = static_cast<int64_t>(arc.GetSize() - from);
+    auto local_length = static_cast<int64_t>(arc.GetSize() - from);
     MPI_Gather(&local_length, 1, MPI_INT64_T, NULL, 1, MPI_INT64_T,
                comm_spec.FragToWorker(0), comm_spec.comm());
 

@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+from vineyard.core.builder import default_builder_context
+from vineyard.core.resolver import default_resolver_context
 from vineyard.data.default import register_default_types
 from vineyard.data.base import register_base_types
 from vineyard.data.arrow import register_arrow_types
@@ -31,3 +33,8 @@ def register_builtin_types(builder_ctx, resolver_ctx):
     register_tensor_types(builder_ctx, resolver_ctx)
     register_dataframe_types(builder_ctx, resolver_ctx)
     register_graph_types(builder_ctx, resolver_ctx)
+
+
+# Those builtin builders and resolvers will be registered by default, for better
+# import-and-play experience.
+register_builtin_types(default_builder_context, default_resolver_context)

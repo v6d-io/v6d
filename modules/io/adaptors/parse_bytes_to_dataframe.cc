@@ -110,6 +110,7 @@ int main(int argc, const char** argv) {
   std::string header_line = "None";
   if (header_row) {
     header_line = params["header_line"];
+    ::boost::algorithm::trim(header_line);
     ::boost::split(col_names, header_line, ::boost::is_any_of(delimiter));
   }
 
@@ -134,7 +135,6 @@ int main(int argc, const char** argv) {
       if (!st.ok()) {
         ReportStatus("error", st.ToString());
       }
-      VINEYARD_CHECK_OK(st);
     } else {
       if (status.IsStreamDrained()) {
         LOG(INFO) << "Stream drained";
@@ -142,7 +142,11 @@ int main(int argc, const char** argv) {
       }
     }
   }
-  VINEYARD_CHECK_OK(writer->Finish());
-  ReportStatus("exit", "");
+  auto status = writer->Finish();
+  if (status.ok()) {
+    ReportStatus("exit", "");
+  } else {
+    ReportStatus("error", status.ToString());
+  }
   return 0;
 }

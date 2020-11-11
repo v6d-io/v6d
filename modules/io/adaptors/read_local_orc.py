@@ -64,13 +64,6 @@ def read_local_orc(vineyard_socket, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
 
-    fragments = urlparse(path).fragment.split('&')
-    for frag in fragments:
-        k, v = frag.split('=')
-        if k:
-            builder[k] = v
-    stream = builder.seal(client)
-
     stream = builder.seal(client)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
@@ -86,7 +79,7 @@ def read_local_orc(vineyard_socket, path, proc_num, proc_index):
             schema.append((c, arrow_type(fields[c])))
         pa_struct = pa.struct(schema)
         while True:
-            rows = reader.read(num=1024)
+            rows = reader.read(num=1024 * 1024)
             if not rows:
                 break
             rb = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
@@ -100,8 +93,8 @@ def read_local_orc(vineyard_socket, path, proc_num, proc_index):
             buf_writer.write(buf)
             buf_writer.close()
 
+
     writer.finish()
-    return stream
 
 
 if __name__ == '__main__':

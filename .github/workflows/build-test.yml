@@ -52,6 +52,7 @@ jobs:
                               libmpich-dev \
                               libprotobuf-dev \
                               librdkafka-dev \
+                              libsasl2-dev \
                               libssl-dev \
                               libunwind-dev \
                               libz-dev \
@@ -73,8 +74,9 @@ jobs:
           sudo apt install -y libarrow-dev \
                               libarrow-python-dev
 
-          # install python packages for codegen
-          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr
+          # install python packages for codegen, and io adaptors
+          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pyarrow hdfs3
+          sudo pip3 install -r modules/io/python/requirements.txt
 
           # install clang-format
           if [ ! -f /usr/bin/clang-format ]; then
@@ -85,7 +87,7 @@ jobs:
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |
-          git clone https://github.com/yecol/libgrape-lite.git
+          git clone https://github.com/alibaba/libgrape-lite.git
           cd libgrape-lite
           mkdir build
           cd build
@@ -152,7 +154,7 @@ jobs:
         run: |
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
-          yapf --in-place --recursive python/
+          yapf --in-place --recursive python/ modules/io/python
           GIT_DIFF=$(git diff)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -195,7 +197,31 @@ jobs:
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
           rm -rf default.etcd
-          python3 test/runner.py
+          python3 test/runner.py --with-cpp
+
+      - name: Run Python Tests
+        run: |
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export VINEYARD_HOME=`pwd`/build/bin
+
+          python3 test/runner.py --with-python
+
+      - name: Install libhdfs3
+        run: |
+          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
+          cd libhdfs3-downstream/libhdfs3
+          mkdir build
+          cd build
+          cmake ..
+          make -j
+          sudo make install
+
+      - name: Run IO Tests
+        run: |
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export VINEYARD_HOME=`pwd`/build/bin
+
+          python3 test/runner.py --with-io
 
       - name: Upload Coverage
         if: runner.os == 'Linux'
@@ -224,4 +250,3 @@ jobs:
           git add -A
           git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
           git push -f origin gh-pages
-

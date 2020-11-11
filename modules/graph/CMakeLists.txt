@@ -2,8 +2,8 @@
 file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                     "*.vineyard-mod")
 
-find_package(MPI)
-find_package(libgrapelite)
+find_package(MPI REQUIRED)
+find_package(libgrapelite REQUIRED)
 
 if (VINEYARD_MOD_SRCS)
     vineyard_generate(

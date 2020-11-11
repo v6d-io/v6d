@@ -41,13 +41,15 @@ def read(path, *args, **kwargs):
     parsed = urlparse(path)
 
     logger.debug('parsed.scheme = %s: %s', parsed.scheme, path)
-    for reader in read.__factory[parsed.scheme][::-1]:
-        try:
-            r = reader(path[len(parsed.scheme) + 3:], kwargs.pop('vineyard_ipc_socket'), *args, **kwargs)
-            if r is not None:
-                return r
-        except Exception as e:
-            logger.debug('failed when trying the reader: %s:\n%s', e, traceback.format_exc())
+    if read.__factory and read.__factory[parsed.scheme]:
+        for reader in read.__factory[parsed.scheme][::-1]:
+            try:
+                proc_kwargs = kwargs.copy()
+                r = reader(path[len(parsed.scheme) + 3:], proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+                if r is not None:
+                    return r
+            except Exception as e:
+                logger.debug('failed when trying the reader: %s:\n%s', e, traceback.format_exc())
 
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
@@ -68,14 +70,17 @@ def write(path, stream, *args, **kwargs):
     '''
     parsed = urlparse(path)
 
-    for writer in write.__factory[parsed.scheme][::-1]:
-        try:
-            writer(path[len(parsed.scheme) + 3:], stream, kwargs.pop('vineyard_ipc_socket'), *args, **kwargs)
-        except Exception as e:
-            logger.debug('failed when trying the writer: %s', e)
-            continue
-        else:
-            return
+    if write.__factory and read.__factory[parsed.scheme]:
+        for writer in write.__factory[parsed.scheme][::-1]:
+            try:
+                proc_kwargs = kwargs.copy()
+                writer(path[len(parsed.scheme) + 3:], stream, proc_kwargs.pop('vineyard_ipc_socket'), *args,
+                       **proc_kwargs)
+            except Exception as e:
+                logger.debug('failed when trying the writer: %s', e)
+                continue
+            else:
+                return
 
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
