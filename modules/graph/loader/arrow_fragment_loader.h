@@ -42,6 +42,46 @@ limitations under the License.
 
 #define HASH_PARTITION
 
+namespace grape {
+inline grape::InArchive& operator<<(grape::InArchive& in_archive,
+                                    std::shared_ptr<arrow::Schema>& schema) {
+  if (schema != nullptr) {
+    std::shared_ptr<arrow::Buffer> out;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
+        *schema, nullptr, arrow::default_memory_pool(), &out));
+#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out, arrow::ipc::SerializeSchema(*schema, nullptr,
+                                         arrow::default_memory_pool()));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out,
+        arrow::ipc::SerializeSchema(*schema, arrow::default_memory_pool()));
+#endif
+    in_archive.AddBytes(out->data(), out->size());
+  }
+  return in_archive;
+}
+
+inline grape::OutArchive& operator>>(grape::OutArchive& out_archive,
+                                     std::shared_ptr<arrow::Schema>& schema) {
+  if (!out_archive.Empty()) {
+    auto buffer = std::make_shared<arrow::Buffer>(
+        reinterpret_cast<const uint8_t*>(out_archive.GetBuffer()),
+        out_archive.GetSize());
+    arrow::io::BufferReader reader(buffer);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &schema));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(schema,
+                                 arrow::ipc::ReadSchema(&reader, nullptr));
+#endif
+  }
+  return out_archive;
+}
+}  // namespace grape
+
 namespace vineyard {
 
 template <typename OID_T = property_graph_types::OID_TYPE,
@@ -686,51 +726,27 @@ class ArrowFragmentLoader {
     return arrow::Status::OK();
   }
 
-  void SerializeSchema(const std::shared_ptr<arrow::Schema>& schema,
-                       std::shared_ptr<arrow::Buffer>* out) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
-        *schema, nullptr, arrow::default_memory_pool(), out));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
-    CHECK_ARROW_ERROR_AND_ASSIGN(
-        *out, arrow::ipc::SerializeSchema(*schema, nullptr,
-                                          arrow::default_memory_pool()));
-#else
-    CHECK_ARROW_ERROR_AND_ASSIGN(
-        *out,
-        arrow::ipc::SerializeSchema(*schema, arrow::default_memory_pool()));
-#endif
-  }
-
-  void DeserializeSchema(const std::shared_ptr<arrow::Buffer>& buffer,
-                         std::shared_ptr<arrow::Schema>* out) {
-    arrow::io::BufferReader reader(buffer);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, out));
-#else
-    CHECK_ARROW_ERROR_AND_ASSIGN(*out,
-                                 arrow::ipc::ReadSchema(&reader, nullptr));
-#endif
-  }
-
-  std::shared_ptr<arrow::Schema> TypeLoosen(
+  boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
       const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
     size_t field_num = 0;
-    for (size_t i = 0; i < schemas.size(); ++i) {
-      if (schemas[i] != nullptr) {
-        field_num = schemas[i]->num_fields();
+    for (const auto& schema : schemas) {
+      if (schema != nullptr) {
+        field_num = schema->num_fields();
         break;
       }
+    }
+    if (field_num == 0) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                      "Every schema is empty");
     }
     // Perform type lossen.
     // timestamp -> int64 -> double -> utf8   binary (not supported)
     std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
     for (size_t i = 0; i < field_num; ++i) {
       for (const auto& schema : schemas) {
-        if (schema == nullptr) {
-          continue;
+        if (schema != nullptr) {
+          fields[i].push_back(schema->field(i));
         }
-        fields[i].push_back(schema->field(i));
       }
     }
     std::vector<std::shared_ptr<arrow::Field>> lossen_fields(field_num);
@@ -748,7 +764,6 @@ class ArrowFragmentLoader {
           }
         }
       }
-
       if (res->Equals(arrow::float64())) {
         for (size_t j = 1; j < fields[i].size(); ++j) {
           if (fields[i][j]->type()->Equals(arrow::utf8())) {
@@ -758,8 +773,7 @@ class ArrowFragmentLoader {
       }
       lossen_fields[i] = fields[i][0]->WithType(res);
     }
-    auto final_schema = std::make_shared<arrow::Schema>(lossen_fields);
-    return final_schema;
+    return std::make_shared<arrow::Schema>(lossen_fields);
   }
 
   // This method used when several workers is loading a file in parallel, each
@@ -772,99 +786,20 @@ class ArrowFragmentLoader {
   boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
       const std::shared_ptr<arrow::Table>& table,
       const grape::CommSpec& comm_spec) {
-    std::shared_ptr<arrow::Schema> final_schema;
-    int final_serialized_schema_size;
-    std::shared_ptr<arrow::Buffer> schema_buffer;
-    int size = 0;
-    if (table != nullptr) {
-      SerializeSchema(table->schema(), &schema_buffer);
-      size = static_cast<int>(schema_buffer->size());
-    }
-    if (comm_spec.worker_id() == 0) {
-      std::vector<int> recvcounts(comm_spec.worker_num());
+    std::shared_ptr<arrow::Schema> local_schema =
+        table != nullptr ? table->schema() : nullptr;
+    std::vector<std::shared_ptr<arrow::Schema>> schemas;
 
-      MPI_Gather(&size, sizeof(int), MPI_CHAR, &recvcounts[0], sizeof(int),
-                 MPI_CHAR, 0, comm_spec.comm());
-      std::vector<int> displs(comm_spec.worker_num());
-      int total_len = 0;
-      displs[0] = 0;
-      total_len += recvcounts[0];
-
-      for (size_t i = 1; i < recvcounts.size(); i++) {
-        total_len += recvcounts[i];
-        displs[i] = displs[i - 1] + recvcounts[i - 1];
-      }
-      if (total_len == 0) {
-        RETURN_GS_ERROR(ErrorCode::kIOError, "All schema is empty");
-      }
-      char* total_string = static_cast<char*>(malloc(total_len * sizeof(char)));
-      if (size == 0) {
-        MPI_Gatherv(NULL, 0, MPI_CHAR, total_string, &recvcounts[0], &displs[0],
-                    MPI_CHAR, 0, comm_spec.comm());
-
-      } else {
-        MPI_Gatherv(schema_buffer->data(), schema_buffer->size(), MPI_CHAR,
-                    total_string, &recvcounts[0], &displs[0], MPI_CHAR, 0,
-                    comm_spec.comm());
-      }
-      std::vector<std::shared_ptr<arrow::Buffer>> buffers(
-          comm_spec.worker_num());
-      for (size_t i = 0; i < buffers.size(); ++i) {
-        buffers[i] = std::make_shared<arrow::Buffer>(
-            reinterpret_cast<unsigned char*>(total_string + displs[i]),
-            recvcounts[i]);
-      }
-      std::vector<std::shared_ptr<arrow::Schema>> schemas(
-          comm_spec.worker_num());
-      for (size_t i = 0; i < schemas.size(); ++i) {
-        if (recvcounts[i] == 0) {
-          continue;
-        }
-        DeserializeSchema(buffers[i], &schemas[i]);
-      }
-
-      final_schema = TypeLoosen(schemas);
-
-      SerializeSchema(final_schema, &schema_buffer);
-      final_serialized_schema_size = static_cast<int>(schema_buffer->size());
-
-      MPI_Bcast(&final_serialized_schema_size, sizeof(int), MPI_CHAR, 0,
-                comm_spec.comm());
-      MPI_Bcast(const_cast<char*>(
-                    reinterpret_cast<const char*>(schema_buffer->data())),
-                final_serialized_schema_size, MPI_CHAR, 0, comm_spec.comm());
-      free(total_string);
-    } else {
-      MPI_Gather(&size, sizeof(int), MPI_CHAR, 0, sizeof(int), MPI_CHAR, 0,
-                 comm_spec.comm());
-      if (size == 0) {
-        MPI_Gatherv(NULL, 0, MPI_CHAR, NULL, NULL, NULL, MPI_CHAR, 0,
-                    comm_spec.comm());
-      } else {
-        MPI_Gatherv(schema_buffer->data(), size, MPI_CHAR, NULL, NULL, NULL,
-                    MPI_CHAR, 0, comm_spec.comm());
-      }
-
-      MPI_Bcast(&final_serialized_schema_size, sizeof(int), MPI_CHAR, 0,
-                comm_spec.comm());
-      char* recv_buf = static_cast<char*>(
-          malloc(final_serialized_schema_size * sizeof(char)));
-      MPI_Bcast(recv_buf, final_serialized_schema_size, MPI_CHAR, 0,
-                comm_spec.comm());
-      auto buffer = std::make_shared<arrow::Buffer>(
-          reinterpret_cast<unsigned char*>(recv_buf),
-          final_serialized_schema_size);
-      DeserializeSchema(buffer, &final_schema);
-      free(recv_buf);
-    }
+    GlobalAllGatherv(local_schema, schemas, comm_spec);
+    BOOST_LEAF_AUTO(normalized_schema, TypeLoosen(schemas));
 
     if (table == nullptr) {
       std::shared_ptr<arrow::Table> table_out;
       VY_OK_OR_RAISE(
-          vineyard::EmptyTableBuilder::Build(final_schema, table_out));
+          vineyard::EmptyTableBuilder::Build(normalized_schema, table_out));
       return table_out;
     } else {
-      return CastTableToSchema(table, final_schema);
+      return CastTableToSchema(table, normalized_schema);
     }
   }
 
