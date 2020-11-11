@@ -389,7 +389,7 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
 
 Status VineyardServer::DeleteBlobBatch(const std::set<ObjectID>& ids) {
   for (auto object_id : ids) {
-    RETURN_ON_ERROR(this->bulk_store_->ProcessDeleteRequest(object_id));
+    VINEYARD_SUPPRESS(this->bulk_store_->ProcessDeleteRequest(object_id));
   }
   return Status::OK();
 }
