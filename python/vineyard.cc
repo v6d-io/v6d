@@ -23,6 +23,7 @@ void bind_error(py::module& mod);
 void bind_core(py::module& mod);
 void bind_client(py::module& mod);
 void bind_utils(py::module& mod);
+void bind_stream(py::module& mod);
 
 PYBIND11_MODULE(_C, mod) {
   py::options options;
@@ -33,6 +34,10 @@ PYBIND11_MODULE(_C, mod) {
   bind_core(mod);
   bind_client(mod);
   bind_utils(mod);
+
+#if defined(BIND_STREAM)
+  bind_stream(mod);
+#endif
 }
 
 }  // namespace vineyard

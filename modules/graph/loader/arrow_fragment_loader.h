@@ -25,8 +25,14 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "client/client.h"
+#include "arrow/util/config.h"
+#include "arrow/util/key_value_metadata.h"
+
 #include "grape/worker/comm_spec.h"
+
+#include "basic/stream/dataframe_stream.h"
+#include "basic/stream/parallel_stream.h"
+#include "client/client.h"
 #include "io/io/io_factory.h"
 #include "io/io/local_io_adaptor.h"
 
@@ -132,6 +138,21 @@ class ArrowFragmentLoader {
         directed_(directed),
         basic_arrow_fragment_loader_(comm_spec) {}
 
+  ArrowFragmentLoader(vineyard::Client& client,
+                      const grape::CommSpec& comm_spec,
+                      const std::vector<ObjectID>& vstreams,
+                      const std::vector<std::vector<ObjectID>>& estreams,
+                      bool directed = true)
+      : client_(client),
+        comm_spec_(comm_spec),
+        vertex_label_num_(vstreams.size()),
+        edge_label_num_(estreams.size()),
+        directed_(directed),
+        basic_arrow_fragment_loader_(comm_spec) {
+    partial_v_tables_ = gatherVTables(client, vstreams);
+    partial_e_tables_ = gatherETables(client, estreams);
+  }
+
   ArrowFragmentLoader(
       vineyard::Client& client, const grape::CommSpec& comm_spec,
       label_id_t vertex_label_num, label_id_t edge_label_num,
@@ -178,183 +199,7 @@ class ArrowFragmentLoader {
     return group_id;
   }
 
- protected:
-  boost::leaf::result<
-      std::pair<std::vector<std::shared_ptr<arrow::Table>>,
-                std::vector<std::vector<std::shared_ptr<arrow::Table>>>>>
-  loadEVTablesFromEFiles(const std::vector<std::string>& efiles, int index,
-                         int total_parts) {
-    std::vector<std::string> vertex_label_names;
-    {
-      std::set<std::string> vertex_label_name_set;
-
-      // We don't open file, just get metadata from filename
-      for (auto& efile : efiles) {
-        std::vector<std::string> sub_label_files;
-        // for each type of edge, efile is separated by ;
-        boost::split(sub_label_files, efile, boost::is_any_of(";"));
-
-        for (auto& sub_efile : sub_label_files) {
-          std::unique_ptr<vineyard::LocalIOAdaptor,
-                          std::function<void(vineyard::LocalIOAdaptor*)>>
-              io_adaptor(
-                  new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
-                  io_deleter_);
-          auto meta = io_adaptor->GetMeta();
-          auto src_label_name = meta.find(SRC_LABEL_TAG);
-          auto dst_label_name = meta.find(DST_LABEL_TAG);
-
-          if (src_label_name == meta.end() || dst_label_name == meta.end()) {
-            RETURN_GS_ERROR(
-                ErrorCode::kIOError,
-                "Metadata of input edge files should contain label name");
-          } else {
-            vertex_label_name_set.insert(src_label_name->second);
-            vertex_label_name_set.insert(dst_label_name->second);
-          }
-        }
-      }
-
-      vertex_label_num_ = vertex_label_name_set.size();
-      vertex_label_names.resize(vertex_label_num_);
-      // number label id
-      label_id_t v_label_id = 0;
-      for (auto& vertex_name : vertex_label_name_set) {
-        vertex_label_to_index_[vertex_name] = v_label_id;
-        vertex_label_names[v_label_id] = vertex_name;
-        v_label_id++;
-      }
-    }
-
-    std::vector<std::vector<std::shared_ptr<arrow::Table>>> etables(
-        edge_label_num_);
-    std::vector<OidSet<oid_t>> oids(vertex_label_num_);
-
-    try {
-      for (label_id_t e_label_id = 0; e_label_id < edge_label_num_;
-           ++e_label_id) {
-        std::vector<std::string> sub_label_files;
-        boost::split(sub_label_files, efiles[e_label_id],
-                     boost::is_any_of(";"));
-
-        for (auto& sub_efile : sub_label_files) {
-          std::unique_ptr<vineyard::LocalIOAdaptor,
-                          std::function<void(vineyard::LocalIOAdaptor*)>>
-              io_adaptor(
-                  new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
-                  io_deleter_);
-
-          auto read_procedure =
-              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-            VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
-            VY_OK_OR_RAISE(io_adaptor->Open());
-            std::shared_ptr<arrow::Table> table;
-            VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-            return table;
-          };
-
-          BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
-
-          auto sync_schema_procedure =
-              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-            return SyncSchema(table, comm_spec_);
-          };
-
-          BOOST_LEAF_AUTO(normalized_table,
-                          sync_gs_error(comm_spec_, sync_schema_procedure));
-
-          auto adaptor_meta = io_adaptor->GetMeta();
-          auto it = adaptor_meta.find(LABEL_TAG);
-          if (it == adaptor_meta.end()) {
-            RETURN_GS_ERROR(
-                ErrorCode::kIOError,
-                "Metadata of input edge files should contain label name");
-          }
-
-          std::shared_ptr<arrow::KeyValueMetadata> meta(
-              new arrow::KeyValueMetadata());
-          meta->Append("type", "EDGE");
-          meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
-          meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
-          meta->Append("sub_label_num", std::to_string(sub_label_files.size()));
-
-          std::string edge_label_name = it->second;
-          meta->Append("label", edge_label_name);
-
-          it = adaptor_meta.find(SRC_LABEL_TAG);
-          if (it == adaptor_meta.end()) {
-            RETURN_GS_ERROR(
-                ErrorCode::kIOError,
-                "Metadata of input edge files should contain src label name");
-          }
-          std::string src_label_name = it->second;
-          auto src_label_id = vertex_label_to_index_.at(src_label_name);
-
-          meta->Append(basic_loader_t::SRC_LABEL_ID,
-                       std::to_string(src_label_id));
-          it = adaptor_meta.find(DST_LABEL_TAG);
-
-          if (it == adaptor_meta.end()) {
-            RETURN_GS_ERROR(
-                ErrorCode::kIOError,
-                "Metadata of input edge files should contain dst label name");
-          }
-
-          std::string dst_label_name = it->second;
-          auto dst_label_id = vertex_label_to_index_.at(dst_label_name);
-
-          meta->Append(basic_loader_t::DST_LABEL_ID,
-                       std::to_string(dst_label_id));
-          auto e_table = normalized_table->ReplaceSchemaMetadata(meta);
-
-          etables[e_label_id].emplace_back(e_table);
-          edge_vertex_label_[edge_label_name].insert(
-              std::make_pair(src_label_name, dst_label_name));
-          if (edge_label_to_index_.find(edge_label_name) ==
-              edge_label_to_index_.end()) {
-            edge_label_to_index_[edge_label_name] = e_label_id;
-          } else if (edge_label_to_index_[edge_label_name] != e_label_id) {
-            RETURN_GS_ERROR(
-                ErrorCode::kInvalidValueError,
-                "Edge label is not consistent, " + edge_label_name + ": " +
-                    std::to_string(e_label_id) + " vs " +
-                    std::to_string(edge_label_to_index_[edge_label_name]));
-          }
-
-          // Build oid set from etable
-          BOOST_LEAF_CHECK(
-              oids[src_label_id].BatchInsert(e_table->column(src_column)));
-          BOOST_LEAF_CHECK(
-              oids[dst_label_id].BatchInsert(e_table->column(dst_column)));
-        }
-      }
-    } catch (std::exception& e) {
-      RETURN_GS_ERROR(ErrorCode::kIOError, std::string(e.what()));
-    }
-
-    // Now, oids are ready to use
-    std::vector<std::shared_ptr<arrow::Table>> vtables(vertex_label_num_);
-
-    for (auto v_label_id = 0; v_label_id < vertex_label_num_; v_label_id++) {
-      auto label_name = vertex_label_names[v_label_id];
-      std::vector<std::shared_ptr<arrow::Field>> schema_vector{arrow::field(
-          label_name, vineyard::ConvertToArrowType<oid_t>::TypeValue())};
-      BOOST_LEAF_AUTO(oid_array, oids[v_label_id].ToArrowArray());
-      std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
-      auto schema = std::make_shared<arrow::Schema>(schema_vector);
-      auto v_table = arrow::Table::Make(schema, arrays);
-      std::shared_ptr<arrow::KeyValueMetadata> meta(
-          new arrow::KeyValueMetadata());
-
-      meta->Append("type", "VERTEX");
-      meta->Append("label_index", std::to_string(v_label_id));
-      meta->Append("label", label_name);
-      meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
-      vtables[v_label_id] = v_table->ReplaceSchemaMetadata(meta);
-    }
-    return std::make_pair(vtables, etables);
-  }
-
+ protected:  // for subclasses
   boost::leaf::result<void> initPartitioner() {
 #ifdef HASH_PARTITION
     partitioner_.Init(comm_spec_.fnum());
@@ -723,6 +568,299 @@ class ArrowFragmentLoader {
       }
     } catch (std::exception& e) {
       RETURN_GS_ERROR(ErrorCode::kIOError, std::string(e.what()));
+    }
+    return tables;
+  }
+
+  boost::leaf::result<
+      std::pair<std::vector<std::shared_ptr<arrow::Table>>,
+                std::vector<std::vector<std::shared_ptr<arrow::Table>>>>>
+  loadEVTablesFromEFiles(const std::vector<std::string>& efiles, int index,
+                         int total_parts) {
+    std::vector<std::string> vertex_label_names;
+    {
+      std::set<std::string> vertex_label_name_set;
+
+      // We don't open file, just get metadata from filename
+      for (auto& efile : efiles) {
+        std::vector<std::string> sub_label_files;
+        // for each type of edge, efile is separated by ;
+        boost::split(sub_label_files, efile, boost::is_any_of(";"));
+
+        for (auto& sub_efile : sub_label_files) {
+          std::unique_ptr<vineyard::LocalIOAdaptor,
+                          std::function<void(vineyard::LocalIOAdaptor*)>>
+              io_adaptor(
+                  new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
+                  io_deleter_);
+          auto meta = io_adaptor->GetMeta();
+          auto src_label_name = meta.find(SRC_LABEL_TAG);
+          auto dst_label_name = meta.find(DST_LABEL_TAG);
+
+          if (src_label_name == meta.end() || dst_label_name == meta.end()) {
+            RETURN_GS_ERROR(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain label name");
+          } else {
+            vertex_label_name_set.insert(src_label_name->second);
+            vertex_label_name_set.insert(dst_label_name->second);
+          }
+        }
+      }
+
+      vertex_label_num_ = vertex_label_name_set.size();
+      vertex_label_names.resize(vertex_label_num_);
+      // number label id
+      label_id_t v_label_id = 0;
+      for (auto& vertex_name : vertex_label_name_set) {
+        vertex_label_to_index_[vertex_name] = v_label_id;
+        vertex_label_names[v_label_id] = vertex_name;
+        v_label_id++;
+      }
+    }
+
+    std::vector<std::vector<std::shared_ptr<arrow::Table>>> etables(
+        edge_label_num_);
+    std::vector<OidSet<oid_t>> oids(vertex_label_num_);
+
+    try {
+      for (label_id_t e_label_id = 0; e_label_id < edge_label_num_;
+           ++e_label_id) {
+        std::vector<std::string> sub_label_files;
+        boost::split(sub_label_files, efiles[e_label_id],
+                     boost::is_any_of(";"));
+
+        for (auto& sub_efile : sub_label_files) {
+          std::unique_ptr<vineyard::LocalIOAdaptor,
+                          std::function<void(vineyard::LocalIOAdaptor*)>>
+              io_adaptor(
+                  new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
+                  io_deleter_);
+
+          auto read_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+            VY_OK_OR_RAISE(io_adaptor->Open());
+            std::shared_ptr<arrow::Table> table;
+            VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+            return table;
+          };
+
+          BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
+
+          auto sync_schema_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            return SyncSchema(table, comm_spec_);
+          };
+
+          BOOST_LEAF_AUTO(normalized_table,
+                          sync_gs_error(comm_spec_, sync_schema_procedure));
+
+          auto adaptor_meta = io_adaptor->GetMeta();
+          auto it = adaptor_meta.find(LABEL_TAG);
+          if (it == adaptor_meta.end()) {
+            RETURN_GS_ERROR(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain label name");
+          }
+
+          std::shared_ptr<arrow::KeyValueMetadata> meta(
+              new arrow::KeyValueMetadata());
+          meta->Append("type", "EDGE");
+          meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
+          meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
+          meta->Append("sub_label_num", std::to_string(sub_label_files.size()));
+
+          std::string edge_label_name = it->second;
+          meta->Append("label", edge_label_name);
+
+          it = adaptor_meta.find(SRC_LABEL_TAG);
+          if (it == adaptor_meta.end()) {
+            RETURN_GS_ERROR(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain src label name");
+          }
+          std::string src_label_name = it->second;
+          auto src_label_id = vertex_label_to_index_.at(src_label_name);
+
+          meta->Append(basic_loader_t::SRC_LABEL_ID,
+                       std::to_string(src_label_id));
+          it = adaptor_meta.find(DST_LABEL_TAG);
+
+          if (it == adaptor_meta.end()) {
+            RETURN_GS_ERROR(
+                ErrorCode::kIOError,
+                "Metadata of input edge files should contain dst label name");
+          }
+
+          std::string dst_label_name = it->second;
+          auto dst_label_id = vertex_label_to_index_.at(dst_label_name);
+
+          meta->Append(basic_loader_t::DST_LABEL_ID,
+                       std::to_string(dst_label_id));
+          auto e_table = normalized_table->ReplaceSchemaMetadata(meta);
+
+          etables[e_label_id].emplace_back(e_table);
+          edge_vertex_label_[edge_label_name].insert(
+              std::make_pair(src_label_name, dst_label_name));
+          if (edge_label_to_index_.find(edge_label_name) ==
+              edge_label_to_index_.end()) {
+            edge_label_to_index_[edge_label_name] = e_label_id;
+          } else if (edge_label_to_index_[edge_label_name] != e_label_id) {
+            RETURN_GS_ERROR(
+                ErrorCode::kInvalidValueError,
+                "Edge label is not consistent, " + edge_label_name + ": " +
+                    std::to_string(e_label_id) + " vs " +
+                    std::to_string(edge_label_to_index_[edge_label_name]));
+          }
+
+          // Build oid set from etable
+          BOOST_LEAF_CHECK(
+              oids[src_label_id].BatchInsert(e_table->column(src_column)));
+          BOOST_LEAF_CHECK(
+              oids[dst_label_id].BatchInsert(e_table->column(dst_column)));
+        }
+      }
+    } catch (std::exception& e) {
+      RETURN_GS_ERROR(ErrorCode::kIOError, std::string(e.what()));
+    }
+
+    // Now, oids are ready to use
+    std::vector<std::shared_ptr<arrow::Table>> vtables(vertex_label_num_);
+
+    for (auto v_label_id = 0; v_label_id < vertex_label_num_; v_label_id++) {
+      auto label_name = vertex_label_names[v_label_id];
+      std::vector<std::shared_ptr<arrow::Field>> schema_vector{arrow::field(
+          label_name, vineyard::ConvertToArrowType<oid_t>::TypeValue())};
+      BOOST_LEAF_AUTO(oid_array, oids[v_label_id].ToArrowArray());
+      std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
+      auto schema = std::make_shared<arrow::Schema>(schema_vector);
+      auto v_table = arrow::Table::Make(schema, arrays);
+      std::shared_ptr<arrow::KeyValueMetadata> meta(
+          new arrow::KeyValueMetadata());
+
+      meta->Append("type", "VERTEX");
+      meta->Append("label_index", std::to_string(v_label_id));
+      meta->Append("label", label_name);
+      meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
+      vtables[v_label_id] = v_table->ReplaceSchemaMetadata(meta);
+    }
+    return std::make_pair(vtables, etables);
+  }
+
+  Status readTableFromVineyard(vineyard::Client& client,
+
+                               const ObjectID object_id,
+                               std::shared_ptr<arrow::Table>& table) {
+    auto pstream = client.GetObject<vineyard::ParallelStream>(object_id);
+    RETURN_ON_ASSERT(pstream != nullptr,
+                     "Object not exists: " + VYObjectIDToString(object_id));
+    int index = comm_spec_.worker_id();
+    int total_parts = comm_spec_.worker_num();
+    RETURN_ON_ASSERT(
+        total_parts == pstream->GetStreamSize() && index < total_parts,
+        "read " + std::to_string(index) + " from " +
+            std::to_string(total_parts) + ", but totally has " +
+            std::to_string(pstream->GetStreamSize()));
+    auto dataframe_stream =
+        pstream->GetStream<vineyard::DataframeStream>(index);
+    RETURN_ON_ASSERT(dataframe_stream != nullptr,
+                     "The stream must be a dataframe stream");
+    auto reader = dataframe_stream->OpenReader(client);
+    RETURN_ON_ERROR(reader->ReadTable(table));
+    VLOG(10) << "table from stream: " << table->schema()->ToString();
+    return Status::OK();
+  }
+
+  std::vector<std::shared_ptr<arrow::Table>> gatherVTables(
+      vineyard::Client& client, const std::vector<ObjectID>& vstreams) {
+    std::vector<std::shared_ptr<arrow::Table>> tables;
+    for (label_id_t label_id = 0; label_id < vstreams.size(); ++label_id) {
+      auto const& vstream = vstreams[label_id];
+      std::shared_ptr<arrow::Table> table;
+      auto status = readTableFromVineyard(client, vstream, table);
+      if (status.ok()) {
+        std::shared_ptr<arrow::KeyValueMetadata> meta;
+        if (table->schema()->metadata() != nullptr) {
+          meta = table->schema()->metadata()->Copy();
+        } else {
+          meta.reset(new arrow::KeyValueMetadata());
+        }
+        meta->Append("type", "VERTEX");
+        meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
+        tables.emplace_back(table->ReplaceSchemaMetadata(meta));
+
+        int label_meta_index = meta->FindKey(LABEL_TAG);
+        VINEYARD_ASSERT(
+            label_meta_index != -1,
+            "Metadata of input vertex files should contain label name");
+        vertex_label_to_index_[meta->value(label_meta_index)] = label_id;
+      } else {
+        LOG(ERROR) << "Failed to read vertex stream: " << status.ToString();
+      }
+    }
+    return tables;
+  }
+
+  std::vector<std::vector<std::shared_ptr<arrow::Table>>> gatherETables(
+      vineyard::Client& client,
+      const std::vector<std::vector<ObjectID>>& estreams) {
+    std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables;
+    for (label_id_t label_id = 0; label_id < estreams.size(); ++label_id) {
+      auto const& esubstreams = estreams[label_id];
+      std::vector<std::shared_ptr<arrow::Table>> subtables;
+      for (auto const& estream : esubstreams) {
+        std::shared_ptr<arrow::Table> table;
+        auto status = readTableFromVineyard(client, estream, table);
+        if (status.ok()) {
+          std::shared_ptr<arrow::KeyValueMetadata> meta;
+          if (table->schema()->metadata() != nullptr) {
+            meta = table->schema()->metadata()->Copy();
+          } else {
+            meta.reset(new arrow::KeyValueMetadata());
+          }
+          meta->Append("type", "EDGE");
+          meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
+          meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
+          meta->Append("sub_label_num", std::to_string(esubstreams.size()));
+
+          int label_meta_index = meta->FindKey(LABEL_TAG);
+          VINEYARD_ASSERT(
+              label_meta_index != -1,
+              "Metadata of input edge files should contain label name");
+          std::string edge_label_name = meta->value(label_meta_index);
+
+          int src_label_meta_index = meta->FindKey(SRC_LABEL_TAG);
+          VINEYARD_ASSERT(
+              src_label_meta_index != -1,
+              "Metadata of input edge files should contain src_label name");
+          std::string src_label_name = meta->value(src_label_meta_index);
+
+          int dst_label_meta_index = meta->FindKey(DST_LABEL_TAG);
+          VINEYARD_ASSERT(
+              dst_label_meta_index != -1,
+              "Metadata of input edge files should contain dst_label name");
+          std::string dst_label_name = meta->value(dst_label_meta_index);
+
+          meta->Append(
+              basic_loader_t::SRC_LABEL_ID,
+              std::to_string(vertex_label_to_index_.at(src_label_name)));
+          meta->Append(
+              basic_loader_t::DST_LABEL_ID,
+              std::to_string(vertex_label_to_index_.at(dst_label_name)));
+
+          edge_vertex_label_[edge_label_name].insert(
+              std::make_pair(src_label_name, dst_label_name));
+          edge_label_to_index_[edge_label_name] = label_id;
+
+          subtables.emplace_back(table->ReplaceSchemaMetadata(meta));
+        } else {
+          LOG(ERROR) << "Failed to read edge stream: " << status.ToString();
+        }
+      }
+      if (!subtables.empty()) {
+        tables.emplace_back(subtables);
+      }
     }
     return tables;
   }

@@ -16,12 +16,16 @@
 # limitations under the License.
 #
 
+import json
+import logging
 import os
 import subprocess
 import sys
 import threading
 
 from .launcher import Launcher, LauncherStatus
+
+logger = logging.getLogger('vineyard')
 
 
 class ScriptLauncher(Launcher):
@@ -56,6 +60,7 @@ class ScriptLauncher(Launcher):
                     cmd.append(repr(value))
             else:
                 env[key] = value
+        logger.debug('command = %s', cmd)
         self._proc = subprocess.Popen(cmd,
                                       env=env,
                                       universal_newlines=True,
@@ -65,16 +70,32 @@ class ScriptLauncher(Launcher):
         self._status = LauncherStatus.RUNNING
 
         self._listen_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, ))
+        self._listen_thrd.daemon = True
         self._listen_thrd.start()
+
+    def wait(self, timeout=None):
+        elapsed, period = 0, 1
+        while self._proc.poll() is None:
+            if timeout is not None and elapsed > timeout:
+                raise TimeoutError('Unable to wait for status of job after %r seconds' % timeout)
+            r = super(ScriptLauncher, self).wait(timeout=period)
+            elapsed += period
+            if r is None:
+                continue
+            else:
+                return r
+        raise RuntimeError('Failed to launch job, exited with %r' % self._proc.poll())
 
     def read_output(self, stream):
         while self._proc.poll() is None:
             line = stream.readline()
             self.parse(line)
+            logger.info(line)
 
         # consume all extra lines if the proc exits.
         for line in stream.readlines():
             self.parse(line)
+            logger.info(line)
 
     def join(self):
         if self._proc.wait():
