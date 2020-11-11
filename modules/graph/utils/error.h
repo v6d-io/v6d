@@ -105,12 +105,13 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
   return archive;
 }
 
-#define RETURN_GS_ERROR(code, msg)                                             \
-  return ::boost::leaf::new_error(                                             \
-      GSError((code), std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
-                          ": " + std::string(__FUNCTION__) + " -> " + (msg)))
+#define RETURN_GS_ERROR(code, msg)                                            \
+  return ::boost::leaf::new_error(vineyard::GSError(                          \
+      (code), std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
+                  std::string(__FUNCTION__) + " -> " + (msg)))
 
-inline GSError AllGatherError(GSError& e, const grape::CommSpec& comm_spec) {
+inline GSError all_gather_error(const GSError& e,
+                                const grape::CommSpec& comm_spec) {
   std::stringstream ss;
   ss << ErrorCodeToString(e.error_code) << " " << e.error_msg;
   ss << " occurred on Worker " << comm_spec.worker_id();
@@ -127,7 +128,7 @@ inline GSError AllGatherError(GSError& e, const grape::CommSpec& comm_spec) {
   return {ErrorCode::kUnspecificError, msgs};
 }
 
-inline GSError AllGatherError(const grape::CommSpec& comm_spec) {
+inline GSError all_gather_error(const grape::CommSpec& comm_spec) {
   std::vector<std::string> error_msgs(comm_spec.worker_num());
   std::string msg;
 
@@ -142,6 +143,42 @@ inline GSError AllGatherError(const grape::CommSpec& comm_spec) {
     return {ErrorCode::kUnspecificError, msgs};
   }
   return {ErrorCode::kOk, ""};
+}
+
+template <class F_T, class... ARGS_T>
+inline typename std::result_of<
+    typename std::decay<F_T>::type(typename std::decay<ARGS_T>::type...)>::type
+sync_gs_error(const grape::CommSpec& comm_spec, F_T&& f, ARGS_T&&... args) {
+  using return_t = typename std::result_of<typename std::decay<F_T>::type(
+      typename std::decay<ARGS_T>::type...)>::type;
+  auto f_wrapper = [](F_T&& _f, ARGS_T&&... _args) -> return_t {
+    try {
+      return _f(std::forward<ARGS_T>(_args)...);
+    } catch (std::runtime_error& e) {
+      return boost::leaf::new_error(
+          GSError(ErrorCode::kUnspecificError, e.what()));
+    }
+  };
+
+  return boost::leaf::try_handle_some(
+      [&]() -> return_t {
+        auto&& r = f_wrapper(f, args...);
+        if (!r) {
+          return r.error();
+        }
+        auto e = all_gather_error(comm_spec);
+        if (e) {
+          // throw a new error type to prevent invoking AllGatherError twice
+          return boost::leaf::new_error(e, std::string());
+        }
+        return r.value();
+      },
+      [](const GSError& e, const std::string& dummy) {
+        return boost::leaf::new_error(e);
+      },
+      [&comm_spec](const GSError& e) {
+        return boost::leaf::new_error(all_gather_error(e, comm_spec));
+      });
 }
 
 #define CHECK_OR_RAISE(condition)                    \
