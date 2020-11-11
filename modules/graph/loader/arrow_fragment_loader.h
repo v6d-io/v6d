@@ -48,6 +48,46 @@ limitations under the License.
 
 #define HASH_PARTITION
 
+namespace grape {
+inline grape::InArchive& operator<<(grape::InArchive& in_archive,
+                                    std::shared_ptr<arrow::Schema>& schema) {
+  if (schema != nullptr) {
+    std::shared_ptr<arrow::Buffer> out;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
+        *schema, nullptr, arrow::default_memory_pool(), &out));
+#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out, arrow::ipc::SerializeSchema(*schema, nullptr,
+                                         arrow::default_memory_pool()));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out,
+        arrow::ipc::SerializeSchema(*schema, arrow::default_memory_pool()));
+#endif
+    in_archive.AddBytes(out->data(), out->size());
+  }
+  return in_archive;
+}
+
+inline grape::OutArchive& operator>>(grape::OutArchive& out_archive,
+                                     std::shared_ptr<arrow::Schema>& schema) {
+  if (!out_archive.Empty()) {
+    auto buffer = std::make_shared<arrow::Buffer>(
+        reinterpret_cast<const uint8_t*>(out_archive.GetBuffer()),
+        out_archive.GetSize());
+    arrow::io::BufferReader reader(buffer);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &schema));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(schema,
+                                 arrow::ipc::ReadSchema(&reader, nullptr));
+#endif
+  }
+  return out_archive;
+}
+}  // namespace grape
+
 namespace vineyard {
 
 template <typename OID_T = property_graph_types::OID_TYPE,
@@ -195,7 +235,7 @@ class ArrowFragmentLoader {
 
     partitioner_.Init(comm_spec_.fnum(), oid_list);
 #endif
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<void> initBasicLoader() {
@@ -207,24 +247,32 @@ class ArrowFragmentLoader {
     } else {
       // if vfiles is empty, we infer oids from efile
       if (vfiles_.empty()) {
-        BOOST_LEAF_AUTO(ev_tables,
-                        loadEVTablesFromEFiles(efiles_, comm_spec_.worker_id(),
-                                               comm_spec_.worker_num()));
+        auto load_procedure = [&]() {
+          return loadEVTablesFromEFiles(efiles_, comm_spec_.worker_id(),
+                                        comm_spec_.worker_num());
+        };
+        BOOST_LEAF_AUTO(ev_tables, sync_gs_error(comm_spec_, load_procedure));
         partial_v_tables = ev_tables.first;
         partial_e_tables = ev_tables.second;
       } else {
-        BOOST_LEAF_AUTO(tmp_v, loadVertexTables(vfiles_, comm_spec_.worker_id(),
-                                                comm_spec_.worker_num()));
+        auto load_v_procedure = [&]() {
+          return loadVertexTables(vfiles_, comm_spec_.worker_id(),
+                                  comm_spec_.worker_num());
+        };
+        BOOST_LEAF_AUTO(tmp_v, sync_gs_error(comm_spec_, load_v_procedure));
         partial_v_tables = tmp_v;
-        BOOST_LEAF_AUTO(tmp_e, loadEdgeTables(efiles_, comm_spec_.worker_id(),
-                                              comm_spec_.worker_num()));
+        auto load_e_procedure = [&]() {
+          return loadEdgeTables(efiles_, comm_spec_.worker_id(),
+                                comm_spec_.worker_num());
+        };
+        BOOST_LEAF_AUTO(tmp_e, sync_gs_error(comm_spec_, load_e_procedure));
         partial_e_tables = tmp_e;
       }
     }
     basic_arrow_fragment_loader_.Init(partial_v_tables, partial_e_tables);
     basic_arrow_fragment_loader_.SetPartitioner(partitioner_);
 
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<vineyard::ObjectID> shuffleAndBuild() {
@@ -389,42 +437,51 @@ class ArrowFragmentLoader {
     auto label_num = static_cast<label_id_t>(files.size());
     std::vector<std::shared_ptr<arrow::Table>> tables(label_num);
 
-    try {
-      for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
-        std::unique_ptr<vineyard::LocalIOAdaptor,
-                        std::function<void(vineyard::LocalIOAdaptor*)>>
-            io_adaptor(new vineyard::LocalIOAdaptor(files[label_id] +
-                                                    "#header_row=true"),
-                       io_deleter_);
+    for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
+      std::unique_ptr<vineyard::LocalIOAdaptor,
+                      std::function<void(vineyard::LocalIOAdaptor*)>>
+          io_adaptor(new vineyard::LocalIOAdaptor(files[label_id] +
+                                                  "#header_row=true"),
+                     io_deleter_);
+      auto read_procedure =
+          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
         VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
         VY_OK_OR_RAISE(io_adaptor->Open());
         std::shared_ptr<arrow::Table> table;
         VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-        BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
-        auto meta = std::make_shared<arrow::KeyValueMetadata>();
+        return table;
+      };
 
-        meta->Append("type", "VERTEX");
-        meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
+      BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
 
-        auto adaptor_meta = io_adaptor->GetMeta();
-        for (auto const& kv : adaptor_meta) {
-          meta->Append(kv.first, kv.second);
-        }
-        // In C++ code a `label` (aka. the `LABEL_TAG`) must be specified for
-        // vertex tables.
-        if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
-          RETURN_GS_ERROR(
-              ErrorCode::kIOError,
-              "Metadata of input vertex files should contain label name");
-        }
-        auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
-        meta->Append("label", v_label_name);
-        tables[label_id] = table->ReplaceSchemaMetadata(meta);
+      auto sync_schema_procedure =
+          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+        return SyncSchema(table, comm_spec_);
+      };
 
-        vertex_label_to_index_[v_label_name] = label_id;
+      BOOST_LEAF_AUTO(normalized_table,
+                      sync_gs_error(comm_spec_, sync_schema_procedure));
+
+      auto meta = std::make_shared<arrow::KeyValueMetadata>();
+
+      meta->Append("type", "VERTEX");
+      meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
+
+      auto adaptor_meta = io_adaptor->GetMeta();
+      for (auto const& kv : adaptor_meta) {
+        meta->Append(kv.first, kv.second);
       }
-    } catch (std::exception& e) {
-      RETURN_GS_ERROR(ErrorCode::kIOError, std::string(e.what()));
+      // If label name is not in meta, we assign a default label '_'
+      if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
+        RETURN_GS_ERROR(
+            ErrorCode::kIOError,
+            "Metadata of input vertex files should contain label name");
+      }
+      auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
+      meta->Append("label", v_label_name);
+      tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
+
+      vertex_label_to_index_[v_label_name] = label_id;
     }
     return tables;
   }
@@ -446,11 +503,22 @@ class ArrowFragmentLoader {
               io_adaptor(new vineyard::LocalIOAdaptor(sub_label_files[j] +
                                                       "#header_row=true"),
                          io_deleter_);
-          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
-          VY_OK_OR_RAISE(io_adaptor->Open());
-          std::shared_ptr<arrow::Table> table;
-          VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-          BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_))
+          auto read_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+            VY_OK_OR_RAISE(io_adaptor->Open());
+            std::shared_ptr<arrow::Table> table;
+            VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+            return table;
+          };
+          BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
+
+          auto sync_schema_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            return SyncSchema(table, comm_spec_);
+          };
+          BOOST_LEAF_AUTO(normalized_table,
+                          sync_gs_error(comm_spec_, sync_schema_procedure));
 
           std::shared_ptr<arrow::KeyValueMetadata> meta(
               new arrow::KeyValueMetadata());
@@ -491,7 +559,8 @@ class ArrowFragmentLoader {
               basic_loader_t::DST_LABEL_ID,
               std::to_string(vertex_label_to_index_.at(dst_label_name)));
 
-          tables[label_id].emplace_back(table->ReplaceSchemaMetadata(meta));
+          tables[label_id].emplace_back(
+              normalized_table->ReplaceSchemaMetadata(meta));
           edge_vertex_label_[edge_label_name].insert(
               std::make_pair(src_label_name, dst_label_name));
           edge_label_to_index_[edge_label_name] = label_id;
@@ -539,7 +608,7 @@ class ArrowFragmentLoader {
         }
       }
 
-      vertex_label_num_ = vertex_label_names.size();
+      vertex_label_num_ = vertex_label_name_set.size();
       vertex_label_names.resize(vertex_label_num_);
       // number label id
       label_id_t v_label_id = 0;
@@ -567,11 +636,25 @@ class ArrowFragmentLoader {
               io_adaptor(
                   new vineyard::LocalIOAdaptor(sub_efile + "#header_row=true"),
                   io_deleter_);
-          VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
-          VY_OK_OR_RAISE(io_adaptor->Open());
-          std::shared_ptr<arrow::Table> table;
-          VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
-          BOOST_LEAF_CHECK(SyncSchema(table, comm_spec_));
+
+          auto read_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
+            VY_OK_OR_RAISE(io_adaptor->Open());
+            std::shared_ptr<arrow::Table> table;
+            VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
+            return table;
+          };
+
+          BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
+
+          auto sync_schema_procedure =
+              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+            return SyncSchema(table, comm_spec_);
+          };
+
+          BOOST_LEAF_AUTO(normalized_table,
+                          sync_gs_error(comm_spec_, sync_schema_procedure));
 
           auto adaptor_meta = io_adaptor->GetMeta();
           auto it = adaptor_meta.find(LABEL_TAG);
@@ -615,7 +698,7 @@ class ArrowFragmentLoader {
 
           meta->Append(basic_loader_t::DST_LABEL_ID,
                        std::to_string(dst_label_id));
-          auto e_table = table->ReplaceSchemaMetadata(meta);
+          auto e_table = normalized_table->ReplaceSchemaMetadata(meta);
 
           etables[e_label_id].emplace_back(e_table);
           edge_vertex_label_[edge_label_name].insert(
@@ -803,51 +886,27 @@ class ArrowFragmentLoader {
     return arrow::Status::OK();
   }
 
-  void SerializeSchema(const std::shared_ptr<arrow::Schema>& schema,
-                       std::shared_ptr<arrow::Buffer>* out) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
-        *schema, nullptr, arrow::default_memory_pool(), out));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
-    CHECK_ARROW_ERROR_AND_ASSIGN(
-        *out, arrow::ipc::SerializeSchema(*schema, nullptr,
-                                          arrow::default_memory_pool()));
-#else
-    CHECK_ARROW_ERROR_AND_ASSIGN(
-        *out,
-        arrow::ipc::SerializeSchema(*schema, arrow::default_memory_pool()));
-#endif
-  }
-
-  void DeserializeSchema(const std::shared_ptr<arrow::Buffer>& buffer,
-                         std::shared_ptr<arrow::Schema>* out) {
-    arrow::io::BufferReader reader(buffer);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, out));
-#else
-    CHECK_ARROW_ERROR_AND_ASSIGN(*out,
-                                 arrow::ipc::ReadSchema(&reader, nullptr));
-#endif
-  }
-
-  std::shared_ptr<arrow::Schema> TypeLoosen(
+  boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
       const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
     size_t field_num = 0;
-    for (size_t i = 0; i < schemas.size(); ++i) {
-      if (schemas[i] != nullptr) {
-        field_num = schemas[i]->num_fields();
+    for (const auto& schema : schemas) {
+      if (schema != nullptr) {
+        field_num = schema->num_fields();
         break;
       }
+    }
+    if (field_num == 0) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                      "Every schema is empty");
     }
     // Perform type lossen.
     // timestamp -> int64 -> double -> utf8   binary (not supported)
     std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
     for (size_t i = 0; i < field_num; ++i) {
       for (const auto& schema : schemas) {
-        if (schema == nullptr) {
-          continue;
+        if (schema != nullptr) {
+          fields[i].push_back(schema->field(i));
         }
-        fields[i].push_back(schema->field(i));
       }
     }
     std::vector<std::shared_ptr<arrow::Field>> lossen_fields(field_num);
@@ -865,7 +924,6 @@ class ArrowFragmentLoader {
           }
         }
       }
-
       if (res->Equals(arrow::float64())) {
         for (size_t j = 1; j < fields[i].size(); ++j) {
           if (fields[i][j]->type()->Equals(arrow::utf8())) {
@@ -875,8 +933,7 @@ class ArrowFragmentLoader {
       }
       lossen_fields[i] = fields[i][0]->WithType(res);
     }
-    auto final_schema = std::make_shared<arrow::Schema>(lossen_fields);
-    return final_schema;
+    return std::make_shared<arrow::Schema>(lossen_fields);
   }
 
   // This method used when several workers is loading a file in parallel, each
@@ -886,114 +943,30 @@ class ArrowFragmentLoader {
   // have. We could use this method to gather their schemas, and find out most
   // common fields, construct a new schema and broadcast back. Note: We perform
   // type loosen, int64 -> double. timestamp -> int64.
-  boost::leaf::result<void> SyncSchema(std::shared_ptr<arrow::Table>& table,
-                                       const grape::CommSpec& comm_spec) {
-    std::shared_ptr<arrow::Schema> final_schema;
-    int final_serialized_schema_size;
-    std::shared_ptr<arrow::Buffer> schema_buffer;
-    int size = 0;
-    if (table != nullptr) {
-      SerializeSchema(table->schema(), &schema_buffer);
-      size = static_cast<int>(schema_buffer->size());
-    }
-    if (comm_spec.worker_id() == 0) {
-      std::vector<int> recvcounts(comm_spec.worker_num());
+  boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
+      const std::shared_ptr<arrow::Table>& table,
+      const grape::CommSpec& comm_spec) {
+    std::shared_ptr<arrow::Schema> local_schema =
+        table != nullptr ? table->schema() : nullptr;
+    std::vector<std::shared_ptr<arrow::Schema>> schemas;
 
-      MPI_Gather(&size, sizeof(int), MPI_CHAR, &recvcounts[0], sizeof(int),
-                 MPI_CHAR, 0, comm_spec.comm());
-      std::vector<int> displs(comm_spec.worker_num());
-      int total_len = 0;
-      displs[0] = 0;
-      total_len += recvcounts[0];
+    GlobalAllGatherv(local_schema, schemas, comm_spec);
+    BOOST_LEAF_AUTO(normalized_schema, TypeLoosen(schemas));
 
-      for (size_t i = 1; i < recvcounts.size(); i++) {
-        total_len += recvcounts[i];
-        displs[i] = displs[i - 1] + recvcounts[i - 1];
-      }
-      if (total_len == 0) {
-        GSError error(ErrorCode::kIOError, "All tables are empty");
-        return boost::leaf::new_error(AllGatherError(error, comm_spec));
-      } else {
-        AllGatherError(comm_spec);
-      }
-      char* total_string = static_cast<char*>(malloc(total_len * sizeof(char)));
-      if (size == 0) {
-        MPI_Gatherv(NULL, 0, MPI_CHAR, total_string, &recvcounts[0], &displs[0],
-                    MPI_CHAR, 0, comm_spec.comm());
-
-      } else {
-        MPI_Gatherv(schema_buffer->data(), schema_buffer->size(), MPI_CHAR,
-                    total_string, &recvcounts[0], &displs[0], MPI_CHAR, 0,
-                    comm_spec.comm());
-      }
-      std::vector<std::shared_ptr<arrow::Buffer>> buffers(
-          comm_spec.worker_num());
-      for (size_t i = 0; i < buffers.size(); ++i) {
-        buffers[i] = std::make_shared<arrow::Buffer>(
-            reinterpret_cast<unsigned char*>(total_string + displs[i]),
-            recvcounts[i]);
-      }
-      std::vector<std::shared_ptr<arrow::Schema>> schemas(
-          comm_spec.worker_num());
-      for (size_t i = 0; i < schemas.size(); ++i) {
-        if (recvcounts[i] == 0) {
-          continue;
-        }
-        DeserializeSchema(buffers[i], &schemas[i]);
-      }
-
-      final_schema = TypeLoosen(schemas);
-
-      SerializeSchema(final_schema, &schema_buffer);
-      final_serialized_schema_size = static_cast<int>(schema_buffer->size());
-
-      MPI_Bcast(&final_serialized_schema_size, sizeof(int), MPI_CHAR, 0,
-                comm_spec.comm());
-      MPI_Bcast(const_cast<char*>(
-                    reinterpret_cast<const char*>(schema_buffer->data())),
-                final_serialized_schema_size, MPI_CHAR, 0, comm_spec.comm());
-      free(total_string);
-    } else {
-      MPI_Gather(&size, sizeof(int), MPI_CHAR, 0, sizeof(int), MPI_CHAR, 0,
-                 comm_spec.comm());
-      auto error = AllGatherError(comm_spec);
-      if (!error.ok()) {
-        return boost::leaf::new_error(error);
-      }
-      if (size == 0) {
-        MPI_Gatherv(NULL, 0, MPI_CHAR, NULL, NULL, NULL, MPI_CHAR, 0,
-                    comm_spec.comm());
-      } else {
-        MPI_Gatherv(schema_buffer->data(), size, MPI_CHAR, NULL, NULL, NULL,
-                    MPI_CHAR, 0, comm_spec.comm());
-      }
-
-      MPI_Bcast(&final_serialized_schema_size, sizeof(int), MPI_CHAR, 0,
-                comm_spec.comm());
-      char* recv_buf = static_cast<char*>(
-          malloc(final_serialized_schema_size * sizeof(char)));
-      MPI_Bcast(recv_buf, final_serialized_schema_size, MPI_CHAR, 0,
-                comm_spec.comm());
-      auto buffer = std::make_shared<arrow::Buffer>(
-          reinterpret_cast<unsigned char*>(recv_buf),
-          final_serialized_schema_size);
-      DeserializeSchema(buffer, &final_schema);
-      free(recv_buf);
-    }
     if (table == nullptr) {
-      VY_OK_OR_RAISE(vineyard::EmptyTableBuilder::Build(final_schema, table));
+      std::shared_ptr<arrow::Table> table_out;
+      VY_OK_OR_RAISE(
+          vineyard::EmptyTableBuilder::Build(normalized_schema, table_out));
+      return table_out;
     } else {
-      BOOST_LEAF_AUTO(tmp_table, CastTableToSchema(table, final_schema));
-      table = tmp_table;
+      return CastTableToSchema(table, normalized_schema);
     }
-    return boost::leaf::result<void>();
   }
 
   // Inspired by arrow::compute::Cast
-  boost::leaf::result<void> CastIntToDouble(
-      const std::shared_ptr<arrow::Array> in,
-      std::shared_ptr<arrow::DataType> to_type,
-      std::shared_ptr<arrow::Array>* out) {
+  boost::leaf::result<std::shared_ptr<arrow::Array>> CastIntToDouble(
+      const std::shared_ptr<arrow::Array>& in,
+      const std::shared_ptr<arrow::DataType>& to_type) {
     CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
     CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
     using in_type = int64_t;
@@ -1005,17 +978,18 @@ class ArrowFragmentLoader {
     }
     arrow::DoubleBuilder builder;
     ARROW_OK_OR_RAISE(builder.AppendValues(out_data));
-    ARROW_OK_OR_RAISE(builder.Finish(out));
-    ARROW_OK_OR_RAISE((*out)->ValidateFull());
-    return boost::leaf::result<void>();
+    std::shared_ptr<arrow::Array> out;
+    ARROW_OK_OR_RAISE(builder.Finish(&out));
+    ARROW_OK_OR_RAISE(out->ValidateFull());
+    return out;
   }
 
   // Timestamp value are stored as as number of seconds, milliseconds,
   // microseconds or nanoseconds since UNIX epoch.
   // CSV reader can only produce timestamp in seconds.
   boost::leaf::result<void> CastDateToInt(
-      const std::shared_ptr<arrow::Array> in,
-      std::shared_ptr<arrow::DataType> to_type,
+      const std::shared_ptr<arrow::Array>& in,
+      const std::shared_ptr<arrow::DataType>& to_type,
       std::shared_ptr<arrow::Array>* out) {
     CHECK_OR_RAISE(
         in->type()->Equals(arrow::timestamp(arrow::TimeUnit::SECOND)));
@@ -1024,7 +998,7 @@ class ArrowFragmentLoader {
     array_data->type = to_type;
     *out = arrow::MakeArray(array_data);
     ARROW_OK_OR_RAISE((*out)->ValidateFull());
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
@@ -1043,15 +1017,14 @@ class ArrowFragmentLoader {
         std::vector<std::shared_ptr<arrow::Array>> chunks;
         for (int64_t j = 0; j < col->num_chunks(); ++j) {
           auto array = col->chunk(j);
-          std::shared_ptr<arrow::Array> new_array;
           if (from_type->Equals(arrow::int64()) &&
               to_type->Equals(arrow::float64())) {
-            BOOST_LEAF_CHECK(CastIntToDouble(array, to_type, &new_array));
+            BOOST_LEAF_AUTO(new_array, CastIntToDouble(array, to_type));
             chunks.push_back(new_array);
           } else if (from_type->Equals(
                          arrow::timestamp(arrow::TimeUnit::SECOND)) &&
                      to_type->Equals(arrow::int64())) {
-            BOOST_LEAF_CHECK(CastDateToInt(array, to_type, &new_array));
+            BOOST_LEAF_AUTO(new_array, CastIntToDouble(array, to_type));
             chunks.push_back(new_array);
           } else {
             RETURN_GS_ERROR(ErrorCode::kDataTypeError,

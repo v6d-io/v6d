@@ -146,7 +146,7 @@ inline boost::leaf::result<void> SchemaConsistent(
                     "Schemas of edge tables are not consistent.");
   }
 
-  return boost::leaf::result<void>();
+  return {};
 }
 
 template <typename T>
