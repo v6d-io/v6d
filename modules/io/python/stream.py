@@ -19,10 +19,8 @@
 import json
 import logging
 import os
-from urllib.parse import urlparse
 
 import vineyard.io
-from vineyard._C import ObjectID
 from vineyard.launcher.script import ScriptLauncher
 
 logger = logging.getLogger('vineyard')

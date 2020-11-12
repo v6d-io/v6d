@@ -42,7 +42,6 @@ jobs:
           sudo apt install -y ca-certificates \
                               ccache \
                               cmake \
-                              cyrus-sasl2 \
                               doxygen \
                               libboost-all-dev \
                               libcurl4-openssl-dev \
@@ -207,6 +206,11 @@ jobs:
           export VINEYARD_HOME=`pwd`/build/bin
           rm -rf default.etcd
           python3 test/runner.py
+
+      - name: Run IO Tests
+        run: |
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export VINEYARD_HOME=`pwd`/build/bin
 
       - name: Upload Coverage
         if: runner.os == 'Linux'

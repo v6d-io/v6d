@@ -74,7 +74,7 @@ def write_local_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
                 break
             buf_reader = pa.ipc.open_stream(buf)
             if writer is None:
-                #get schema
+                # get schema
                 schema = {}
                 for field in buf_reader.schema:
                     schema[field.name] = orc_type(field.type)

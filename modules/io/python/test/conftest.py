@@ -43,7 +43,7 @@ def pytest_addoption(parser):
     parser.addoption(
         '--test-dataset',
         action='store',
-        default=os.path.expandvars('$GS_TEST_DIR'),
+        default=os.path.expandvars('$VINEYARD_DATA_DIR'),
         help='Location of dataset that will be used for running test cases',
     )
 
