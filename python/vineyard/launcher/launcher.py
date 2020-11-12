@@ -67,11 +67,11 @@ class Launcher(object):
             Note that :code:`wait` doesn't means the finish or exit of the job, it indicates
             the job has yield some results, and the job itself may or may not continue.
         '''
-        if self._status != LauncherStatus.RUNNING:
-            raise RuntimeError('Cannot wait the the launcher that with status %s' % self._status)
 
         with self._result_cv:
             if not self._result:
+                if self._status != LauncherStatus.RUNNING:
+                    raise RuntimeError('Cannot wait the the launcher that with status %s' % self._status)
                 if not self._result_cv.wait(timeout=timeout):
                     return None
             if not self._result:  # if still no available result object, raise to users.

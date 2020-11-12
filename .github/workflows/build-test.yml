@@ -85,7 +85,7 @@ jobs:
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |
-          git clone https://github.com/yecol/libgrape-lite.git
+          git clone https://github.com/alibaba/libgrape-lite.git
           cd libgrape-lite
           mkdir build
           cd build
