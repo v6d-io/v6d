@@ -63,24 +63,35 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
 
 void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
   LabelType e_label_num = graph->edge_label_num();
-  LabelType v_label_num = graph->edge_label_num();
+  LabelType v_label_num = graph->vertex_label_num();
 
-  std::ofstream fout(path, std::ios::binary);
   for (LabelType v_label = 0; v_label != v_label_num; ++v_label) {
+    std::ofstream fout(path + "_v_" + std::to_string(v_label),
+                       std::ios::binary);
     auto iv = graph->InnerVertices(v_label);
     for (auto v : iv) {
-      auto src_id = graph->GetId(v);
-      for (LabelType e_label = 0; e_label != e_label_num; ++e_label) {
+      auto id = graph->GetId(v);
+      fout << id << std::endl;
+    }
+    fout.flush();
+    fout.close();
+  }
+  for (LabelType e_label = 0; e_label != e_label_num; ++e_label) {
+    std::ofstream fout(path + "_e_" + std::to_string(e_label),
+                       std::ios::binary);
+    for (LabelType v_label = 0; v_label != v_label_num; ++v_label) {
+      auto iv = graph->InnerVertices(v_label);
+      for (auto v : iv) {
+        auto src_id = graph->GetId(v);
         auto oe = graph->GetOutgoingAdjList(v, e_label);
         for (auto& e : oe) {
           fout << src_id << " " << graph->GetId(e.neighbor()) << "\n";
         }
       }
     }
+    fout.flush();
+    fout.close();
   }
-
-  fout.flush();
-  fout.close();
 }
 
 int main(int argc, char** argv) {
@@ -120,7 +131,7 @@ int main(int argc, char** argv) {
   comm_spec.Init(MPI_COMM_WORLD);
 
   // Load from efiles and vfiles
-#if 0
+#if 1
   vineyard::ObjectID fragment_id = InvalidObjectID();
   MPI_Barrier(MPI_COMM_WORLD);
   double t = -GetCurrentTime();
@@ -146,9 +157,14 @@ int main(int argc, char** argv) {
     LOG(INFO) << "loading time: " << t;
   }
 
-  std::shared_ptr<GraphType> graph =
-      std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
-  traverse_graph(graph, "./output_graph_" + std::to_string(graph->fid()));
+  {
+    std::shared_ptr<GraphType> graph =
+        std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
+    LOG(INFO) << "[frag-" << graph->fid()
+              << "]: " << VYObjectIDToString(fragment_id);
+    traverse_graph(graph, "./xx/output_graph_" + std::to_string(graph->fid()));
+  }
+  // client.DelData(fragment_id, true, true);
 
 #else
   {

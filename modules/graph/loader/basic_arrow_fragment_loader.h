@@ -141,15 +141,26 @@ class BasicArrowFragmentLoader {
                               id_column_type->ToString() + ")");
         }
         std::shared_ptr<arrow::Table> tmp_table;
-        auto st = ShufflePropertyVertexTable<partitioner_t>(
-            comm_spec_, partitioner_, vertex_table, tmp_table);
-        // If the error occurred during the shuffle procedure, the process
-        // must die
-        if (!st) {
-          LOG(FATAL) << "An error occurred during the shuffle vertex table "
-                        "procedure. "
-                     << st.message();
+#if 0
+        {
+          auto st = ShufflePropertyVertexTable<partitioner_t>(
+              comm_spec_, partitioner_, vertex_table, tmp_table);
+          // If the error occurred during the shuffle procedure, the process
+          // must die
+          if (!st) {
+            LOG(FATAL) << "An error occurred during the shuffle vertex table "
+                          "procedure. "
+                       << st.message();
+          }
         }
+#else
+        {
+          auto r = beta::ShufflePropertyVertexTable<partitioner_t>(
+              comm_spec_, partitioner_, vertex_table);
+          BOOST_LEAF_CHECK(r);
+          tmp_table = r.value();
+        }
+#endif
         /**
          * Keep the oid column in vertex data table for HTAP, rather, we
          * record the id column name (primary key) in schema's metadata.
@@ -195,12 +206,14 @@ class BasicArrowFragmentLoader {
             tmp_table->column(id_column_idx)->chunk(0));
 
         std::vector<std::shared_ptr<oid_array_t>> oids_group_by_worker;
-        st = FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array,
-                                           oids_group_by_worker);
-        if (!st) {
-          LOG(FATAL) << "An error occurred during the gather oid array "
-                        "procedure. "
-                     << st.message();
+        {
+          auto st = FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array,
+                                                  oids_group_by_worker);
+          if (!st) {
+            LOG(FATAL) << "An error occurred during the gather oid array "
+                          "procedure. "
+                       << st.message();
+          }
         }
 
         // Deduplicate oids. this procedure is necessary when the oids are
@@ -320,14 +333,16 @@ class BasicArrowFragmentLoader {
         }
         auto table = ConcatenateTables(processed_table_list);
         std::shared_ptr<arrow::Table> table_out;
-#if 1
-        auto st = ShufflePropertyEdgeTable<vid_t>(
-            comm_spec_, id_parser, src_column_idx, dst_column_idx, table,
-            table_out);
-        if (!st) {
-          LOG(FATAL) << "An error occurred during the shuffle edge table "
-                        "procedure. "
-                     << st.message();
+#if 0
+        {
+          auto st = ShufflePropertyEdgeTable<vid_t>(
+              comm_spec_, id_parser, src_column_idx, dst_column_idx, table,
+              table_out);
+          if (!st) {
+            LOG(FATAL) << "An error occurred during the shuffle edge table "
+                          "procedure. "
+                       << st.message();
+          }
         }
 #else
         auto r = beta::ShufflePropertyEdgeTable<vid_t>(
@@ -373,7 +388,7 @@ class BasicArrowFragmentLoader {
     size_t chunk_num = oid_arrays_in->num_chunks();
     std::vector<std::shared_ptr<arrow::Array>> chunks_out(chunk_num);
 
-#if 1
+#if 0
     for (size_t chunk_i = 0; chunk_i != chunk_num; ++chunk_i) {
       std::shared_ptr<oid_array_t> oid_array =
           std::dynamic_pointer_cast<oid_array_t>(oid_arrays_in->chunk(chunk_i));
@@ -420,7 +435,7 @@ class BasicArrowFragmentLoader {
               for (size_t k = 0; k != size; ++k) {
                 internal_oid_t oid = oid_array->GetView(k);
                 fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
-                if (!oid2gid_mapper(fid, label, oid, builder[k])) {
+                if (!oid2gid_mapper(fid, label_id, oid, builder[k])) {
                   LOG(ERROR) << "Mapping vertex " << oid << " failed.";
                 }
               }
