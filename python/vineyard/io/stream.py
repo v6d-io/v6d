@@ -43,7 +43,8 @@ def read(path, *args, **kwargs):
     logger.debug('parsed.scheme = %s: %s', parsed.scheme, path)
     for reader in read.__factory[parsed.scheme][::-1]:
         try:
-            r = reader(path[len(parsed.scheme) + 3:], kwargs.pop('vineyard_ipc_socket'), *args, **kwargs)
+            proc_kwargs = kwargs.copy()
+            r = reader(path[len(parsed.scheme) + 3:], proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
             if r is not None:
                 return r
         except Exception as e:
@@ -70,7 +71,8 @@ def write(path, stream, *args, **kwargs):
 
     for writer in write.__factory[parsed.scheme][::-1]:
         try:
-            writer(path[len(parsed.scheme) + 3:], stream, kwargs.pop('vineyard_ipc_socket'), *args, **kwargs)
+            proc_kwargs = kwargs.copy()
+            writer(path[len(parsed.scheme) + 3:], stream, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
         except Exception as e:
             logger.debug('failed when trying the writer: %s', e)
             continue

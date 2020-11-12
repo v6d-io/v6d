@@ -385,10 +385,21 @@ void bind_client(py::module& mod) {
          py::arg("target") = py::none())
       .def(
           "connect",
-          [](std::string const& ipc_socket) {
-            return ClientManager<Client>::GetManager()->Connect(ipc_socket);
+          [](std::string const& endpoint) -> py::object {
+            try {
+              return py::cast(
+                  ClientManager<Client>::GetManager()->Connect(endpoint));
+            } catch (...) {}
+            try {
+              return py::cast(
+                  ClientManager<RPCClient>::GetManager()->Connect(endpoint));
+            } catch (...) {}
+            throw_on_error(Status::ConnectionFailed(
+                "Failed to resolve IPC socket or RPC endpoint of vineyard "
+                "server"));
+            return py::none();
           },
-          "ipc_socket"_a)
+          "endpoint"_a)
       .def(
           "connect",
           [](std::string const& host, const uint32_t port) {

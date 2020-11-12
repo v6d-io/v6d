@@ -134,7 +134,6 @@ int main(int argc, const char** argv) {
       if (!st.ok()) {
         ReportStatus("error", st.ToString());
       }
-      VINEYARD_CHECK_OK(st);
     } else {
       if (status.IsStreamDrained()) {
         LOG(INFO) << "Stream drained";
@@ -142,7 +141,11 @@ int main(int argc, const char** argv) {
       }
     }
   }
-  VINEYARD_CHECK_OK(writer->Finish());
-  ReportStatus("exit", "");
+  auto status = writer->Finish();
+  if (status.ok()) {
+    ReportStatus("exit", "");
+  } else {
+    ReportStatus("error", status.ToString());
+  }
   return 0;
 }

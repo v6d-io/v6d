@@ -19,6 +19,7 @@
 __version__ = '1.0'
 
 import logging
+import traceback
 
 from ._C import connect, IPCClient, RPCClient, Object, ObjectBuilder, ObjectID, ObjectMeta, \
     InstanceStatus, Blob, BlobBuilder, Buffer, MutableBuffer
@@ -55,8 +56,8 @@ def _init_vineyard_modules():
                 spec = importlib.util.spec_from_file_location("vineyard._contrib", filepath)
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-            except Exception as e:
-                logger.error("Failed to load %s: %s", filepath, e)
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("Failed to load %s: %s\n%s", filepath, e, traceback.format_exc())
 
     _import_module_from_file('/etc/vineyard/config.py')
     _import_module_from_file(os.path.join(sys.prefix, '/etc/vineyard/config.py'))
@@ -66,8 +67,6 @@ def _init_vineyard_modules():
         _import_module_from_file(filepath)
     for filepath in glob.glob(os.path.expanduser('$HOME/.vineyard/*-*.py')):
         _import_module_from_file(filepath)
-
-    _import_module_from_file('$HOME/libvineyard/modules/io/python/stream.py')
 
 
 try:
