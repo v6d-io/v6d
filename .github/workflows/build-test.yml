@@ -74,8 +74,9 @@ jobs:
           sudo apt install -y libarrow-dev \
                               libarrow-python-dev
 
-          # install python packages for codegen
+          # install python packages for codegen, and io adaptors
           sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pyarrow hdfs3
+          sudo pip3 install -r modules/io/python/requirements.txt
 
           # install clang-format
           if [ ! -f /usr/bin/clang-format ]; then
@@ -205,12 +206,21 @@ jobs:
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
           rm -rf default.etcd
-          python3 test/runner.py
+          python3 test/runner.py --with-cpp
+
+      - name: Run Python Tests
+        run: |
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export VINEYARD_HOME=`pwd`/build/bin
+
+          python3 test/runner.py --with-python
 
       - name: Run IO Tests
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
+
+          python3 test/runner.py --with-io
 
       - name: Upload Coverage
         if: runner.os == 'Linux'
