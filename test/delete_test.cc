@@ -28,6 +28,8 @@ limitations under the License.
 #include "glog/logging.h"
 
 #include "basic/ds/array.h"
+#include "basic/ds/pair.h"
+#include "basic/ds/tuple.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 
@@ -220,6 +222,55 @@ int main(int argc, char** argv) {
     auto s = client.GetBuffers({blob_id}, objects);
     CHECK(s.ok() && objects.size() == 0);
   }
+
+  // delete on complex data: and empty blob is quite special, since it cannot
+  // been truely deleted.
+  std::shared_ptr<InstanceStatus> status_before;
+  VINEYARD_CHECK_OK(client.InstanceStatus(status_before));
+
+  // prepare data
+  ObjectID nested_tuple_id;
+  {
+    // prepare data
+    std::vector<double> double_array1 = {1.0, 7.0, 3.0, 4.0, 2.0};
+    ArrayBuilder<double> builder1(client, double_array1);
+
+    std::vector<double> double_array2 = {1.0, 7.0, 3.0, 4.0, 2.0};
+    ArrayBuilder<double> builder2(client, double_array2);
+
+    std::vector<double> double_array3 = {1.0, 7.0, 3.0, 4.0, 2.0};
+    ArrayBuilder<double> builder3(client, double_array3);
+
+    std::vector<double> double_array4 = {1.0, 7.0, 3.0, 4.0, 2.0};
+    ArrayBuilder<double> builder4(client, double_array4);
+
+    PairBuilder pair_builder1(client);
+    pair_builder1.SetFirst(builder1.Seal(client));
+    pair_builder1.SetSecond(builder2.Seal(client));
+
+    PairBuilder pair_builder2(client);
+    pair_builder2.SetFirst(builder3.Seal(client));
+    pair_builder2.SetSecond(Blob::MakeEmpty(client));
+
+    PairBuilder pair_builder3(client);
+    pair_builder3.SetFirst(Blob::MakeEmpty(client));
+    pair_builder3.SetSecond(builder4.Seal(client));
+
+    TupleBuilder tuple_builder(client);
+    tuple_builder.SetSize(3);
+    tuple_builder.SetValue(0, pair_builder1.Seal(client));
+    tuple_builder.SetValue(1, pair_builder2.Seal(client));
+    tuple_builder.SetValue(2, pair_builder3.Seal(client));
+    nested_tuple_id = tuple_builder.Seal(client)->id();
+  }
+  VINEYARD_CHECK_OK(client.DelData(nested_tuple_id, true, true));
+
+  std::shared_ptr<InstanceStatus> status_after;
+  VINEYARD_CHECK_OK(client.InstanceStatus(status_after));
+
+  // validate memory usage
+  CHECK_EQ(status_before->memory_limit, status_after->memory_limit);
+  CHECK_EQ(status_before->memory_usage, status_after->memory_usage);
 
   LOG(INFO) << "Passed delete tests...";
 

@@ -85,7 +85,7 @@ jobs:
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |
-          git clone https://github.com/yecol/libgrape-lite.git
+          git clone https://github.com/alibaba/libgrape-lite.git
           cd libgrape-lite
           mkdir build
           cd build
@@ -110,7 +110,7 @@ jobs:
         run: |
           cd build
 
-          function prepend() { while read line; do echo "${1}${line}\n"; done; }
+          function prepend() { while read line; do echo "${1}${line}"; done; }
 
           make vineyard_clformat
           GIT_DIFF=$(git diff)

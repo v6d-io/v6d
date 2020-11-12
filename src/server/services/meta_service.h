@@ -585,11 +585,14 @@ class IMetaService {
     std::vector<std::string> vs;
     boost::algorithm::split(vs, parent_path,
                             [](const char c) { return c == '.'; });
-    ObjectID id_in_key = VYObjectIDFromString(vs[vs.size() - 1]);
 
-    // if object is deleteable
-    if (deleteable(id_in_key)) {
-      // delete: a delete operation might be applied multiple times
+    ObjectID id_in_key = InvalidObjectID();
+    if (vs[0] == "data" && vs.size() > 1) {
+      id_in_key = VYObjectIDFromString(vs[1]);
+    }
+
+    if (vs[0] != "data" || deleteable(id_in_key)) {
+      // delete metadata: a delete operation might be applied multiple times
       auto parent_node = meta_.get_child_optional(parent_path);
       if (!parent_node) {
         return;
@@ -600,13 +603,17 @@ class IMetaService {
         meta_.get_child(parent_path.substr(0, last_dot_in_path))
             .erase(parent_path.substr(last_dot_in_path + 1));
       }
-      if (IsBlob(id_in_key)) {
+
+      // if deletable blob: delete blob
+      if (id_in_key != InvalidObjectID() && IsBlob(id_in_key)) {
         blobs.emplace(id_in_key);
       }
     } else {
-      // mark as transient
-      if ("transient" == child_name) {
-        meta_.get_child(parent_path).put("transient", true);
+      if (vs[0] == "data" && id_in_key != InvalidObjectID()) {
+        // mark as transient
+        if ("transient" == child_name) {
+          meta_.get_child(parent_path).put("transient", true);
+        }
       }
     }
   }

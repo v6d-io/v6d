@@ -130,7 +130,7 @@ Status SerializeRecordBatches(
 }
 
 Status DeserializeRecordBatches(
-    std::shared_ptr<arrow::Buffer> buffer,
+    const std::shared_ptr<arrow::Buffer>& buffer,
     std::vector<std::shared_ptr<arrow::RecordBatch>>* batches) {
   arrow::io::BufferReader reader(buffer);
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;

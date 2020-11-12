@@ -55,7 +55,7 @@ class OidSet {
     for (int64_t i = 0; i < oid_arr->length(); i++) {
       oids.insert(oid_arr->GetView(i));
     }
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<void> BatchInsert(
@@ -64,7 +64,7 @@ class OidSet {
          chunk_idx++) {
       BOOST_LEAF_CHECK(BatchInsert(chunked_arr->chunk(chunk_idx)));
     }
-    return boost::leaf::result<void>();
+    return {};
   }
 
   boost::leaf::result<std::shared_ptr<oid_array_t>> ToArrowArray() {
@@ -125,100 +125,99 @@ class BasicArrowFragmentLoader {
     std::vector<std::shared_ptr<arrow::Table>> local_v_tables(v_label_num_);
 
     for (label_id_t v_label = 0; v_label < v_label_num_; v_label++) {
-      auto e = boost::leaf::try_handle_all(
-          [&, this]() -> boost::leaf::result<GSError> {
-            auto& vertex_table = vertex_tables_[v_label];
-            auto metadata = vertex_table->schema()->metadata()->Copy();
-            auto meta_idx = metadata->FindKey(ID_COLUMN);
-            CHECK_OR_RAISE(meta_idx != -1);
-            auto id_column_idx = std::stoi(metadata->value(meta_idx));
+      auto shuffle_procedure =
+          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+        auto& vertex_table = vertex_tables_[v_label];
+        auto metadata = vertex_table->schema()->metadata()->Copy();
+        auto meta_idx = metadata->FindKey(ID_COLUMN);
+        CHECK_OR_RAISE(meta_idx != -1);
+        auto id_column_idx = std::stoi(metadata->value(meta_idx));
+        auto id_column_type = vertex_table->column(id_column_idx)->type();
 
-            // TODO(guanyi.gl): Failure occurred before MPI calling will make
-            // processes hanging. We have to resolve this kind of issue.
-            auto id_column_type = vertex_table->column(id_column_idx)->type();
+        if (vineyard::ConvertToArrowType<oid_t>::TypeValue() !=
+            id_column_type) {
+          RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                          "OID_T is not same with arrow::Column(" +
+                              id_column_type->ToString() + ")");
+        }
+        std::shared_ptr<arrow::Table> tmp_table;
+        auto st = ShufflePropertyVertexTable<partitioner_t>(
+            comm_spec_, partitioner_, vertex_table, tmp_table);
+        // If the error occurred during the shuffle procedure, the process
+        // must die
+        if (!st) {
+          LOG(FATAL) << "An error occurred during the shuffle vertex table "
+                        "procedure. "
+                     << st.message();
+        }
+        /**
+         * Keep the oid column in vertex data table for HTAP, rather, we
+         * record the id column name (primary key) in schema's metadata.
+         *
+  #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+        ARROW_OK_OR_RAISE(tmp_table->RemoveColumn(
+            id_column_idx, &local_v_tables[v_label]));
+  #else
+        ARROW_OK_ASSIGN_OR_RAISE(local_v_tables[v_label],
+                                 tmp_table->RemoveColumn(id_column_idx));
+  #endif
+        */
 
-            if (vineyard::ConvertToArrowType<oid_t>::TypeValue() !=
-                id_column_type) {
-              RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                              "OID_T is not same with arrow::Column(" +
-                                  id_column_type->ToString() + ")");
-            }
-            BOOST_LEAF_AUTO(tmp_table,
-                            ShufflePropertyVertexTable<partitioner_t>(
-                                comm_spec_, partitioner_, vertex_table));
-            /**
-             * Keep the oid column in vertex data table for HTAP, rather, we
-             * record the id column name (primary key) in schema's metadata.
-             *
+        /**
+         * Move the id_column to the last column first, to avoid effecting
+         * the original analytical apps (the Project API).
+         *
+         * Note that this operation happens on table after shuffle.
+         */
+        auto id_field = tmp_table->schema()->field(id_column_idx);
+        auto id_column = tmp_table->column(id_column_idx);
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-            ARROW_OK_OR_RAISE(tmp_table->RemoveColumn(
-                id_column_idx, &local_v_tables[v_label]));
+        CHECK_ARROW_ERROR(tmp_table->RemoveColumn(id_column_idx, &tmp_table));
+        CHECK_ARROW_ERROR(tmp_table->AddColumn(
+            tmp_table->num_columns(), id_field, id_column, &tmp_table));
 #else
-            ARROW_OK_ASSIGN_OR_RAISE(local_v_tables[v_label],
+        CHECK_ARROW_ERROR_AND_ASSIGN(tmp_table,
                                      tmp_table->RemoveColumn(id_column_idx));
+        CHECK_ARROW_ERROR_AND_ASSIGN(
+            tmp_table, tmp_table->AddColumn(tmp_table->num_columns(), id_field,
+                                            id_column));
 #endif
-            */
+        id_column_idx = tmp_table->num_columns() - 1;
 
-            /**
-             * Move the id_column to the last column first, to avoid effecting
-             * the original analytical apps (the Project API).
-             *
-             * Note that this operation happens on table after shuffle.
-             */
-            auto id_field = tmp_table->schema()->field(id_column_idx);
-            auto id_column = tmp_table->column(id_column_idx);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-            CHECK_ARROW_ERROR(
-                tmp_table->RemoveColumn(id_column_idx, &tmp_table));
-            CHECK_ARROW_ERROR(tmp_table->AddColumn(
-                tmp_table->num_columns(), id_field, id_column, &tmp_table));
-#else
-            CHECK_ARROW_ERROR_AND_ASSIGN(
-                tmp_table, tmp_table->RemoveColumn(id_column_idx));
-            CHECK_ARROW_ERROR_AND_ASSIGN(
-                tmp_table, tmp_table->AddColumn(tmp_table->num_columns(),
-                                                id_field, id_column));
-#endif
-            id_column_idx = tmp_table->num_columns() - 1;
+        metadata->Append("primary_key",
+                         tmp_table->schema()->field(id_column_idx)->name());
+        tmp_table = tmp_table->ReplaceSchemaMetadata(metadata);
 
-            local_v_tables[v_label] = tmp_table;
-            metadata->Append("primary_key", local_v_tables[v_label]
-                                                ->schema()
-                                                ->field(id_column_idx)
-                                                ->name());
-            local_v_tables[v_label] =
-                local_v_tables[v_label]->ReplaceSchemaMetadata(metadata);
+        CHECK_OR_RAISE(tmp_table->field(id_column_idx)->type() ==
+                       vineyard::ConvertToArrowType<oid_t>::TypeValue());
+        CHECK_OR_RAISE(tmp_table->column(id_column_idx)->num_chunks() <= 1);
+        auto local_oid_array = std::dynamic_pointer_cast<oid_array_t>(
+            tmp_table->column(id_column_idx)->chunk(0));
 
-            CHECK_OR_RAISE(tmp_table->field(id_column_idx)->type() ==
-                           vineyard::ConvertToArrowType<oid_t>::TypeValue());
-            CHECK_OR_RAISE(tmp_table->column(id_column_idx)->num_chunks() <= 1);
-            auto local_oid_array = std::dynamic_pointer_cast<oid_array_t>(
-                tmp_table->column(id_column_idx)->chunk(0));
-            BOOST_LEAF_AUTO(
-                oids_group_by_worker,
-                FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array));
-            // Deduplicate oids. this procedure is necessary when the oids are
-            // inferred from efile
-            if (deduplicate_oid) {
-              for (size_t i = 0; i < oids_group_by_worker.size(); i++) {
-                OidSet<oid_t> oid_set;
-                BOOST_LEAF_CHECK(oid_set.BatchInsert(oids_group_by_worker[i]));
-                BOOST_LEAF_AUTO(deduplicated_oid_array, oid_set.ToArrowArray());
-                oids_group_by_worker[i] = deduplicated_oid_array;
-              }
-            }
-            oid_lists_[v_label] = oids_group_by_worker;
+        std::vector<std::shared_ptr<oid_array_t>> oids_group_by_worker;
+        st = FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array,
+                                           oids_group_by_worker);
+        if (!st) {
+          LOG(FATAL) << "An error occurred during the gather oid array "
+                        "procedure. "
+                     << st.message();
+        }
 
-            return AllGatherError(comm_spec_);
-          },
-          [this](GSError& e) { return AllGatherError(e, comm_spec_); },
-          [this](const boost::leaf::error_info& unmatched) {
-            GSError e(ErrorCode::kIOError, "Unmatched error");
-            return AllGatherError(e, comm_spec_);
-          });
-      if (e.error_code != ErrorCode::kOk) {
-        return boost::leaf::new_error(e);
-      }
+        // Deduplicate oids. this procedure is necessary when the oids are
+        // inferred from efile
+        if (deduplicate_oid) {
+          for (size_t i = 0; i < oids_group_by_worker.size(); i++) {
+            OidSet<oid_t> oid_set;
+            BOOST_LEAF_CHECK(oid_set.BatchInsert(oids_group_by_worker[i]));
+            BOOST_LEAF_AUTO(deduplicated_oid_array, oid_set.ToArrowArray());
+            oids_group_by_worker[i] = deduplicated_oid_array;
+          }
+        }
+        oid_lists_[v_label] = oids_group_by_worker;
+        return tmp_table;
+      };
+      BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
+      local_v_tables[v_label] = table;
     }
 
     return local_v_tables;
@@ -239,111 +238,107 @@ class BasicArrowFragmentLoader {
     id_parser.Init(comm_spec_.fnum(), v_label_num_);
 
     for (label_id_t e_label = 0; e_label < e_label_num_; e_label++) {
-      auto& edge_table_list = edge_tables_[e_label];
-      auto e = boost::leaf::try_handle_all(
-          [&, this]() -> boost::leaf::result<GSError> {
-            std::vector<std::shared_ptr<arrow::Table>> processed_table_list(
-                edge_table_list.size());
-            int src_column_idx = -1, dst_column_idx = -1;
-            for (size_t edge_table_index = 0;
-                 edge_table_index != edge_table_list.size();
-                 ++edge_table_index) {
-              auto& edge_table = edge_table_list[edge_table_index];
-              auto metadata = edge_table->schema()->metadata();
-              auto meta_idx_src = metadata->FindKey(SRC_COLUMN);
-              auto meta_idx_dst = metadata->FindKey(DST_COLUMN);
-              CHECK_OR_RAISE(meta_idx_src != -1);
-              CHECK_OR_RAISE(meta_idx_dst != -1);
-              auto cur_src_column_idx =
-                  std::stoi(metadata->value(meta_idx_src));
-              auto cur_dst_column_idx =
-                  std::stoi(metadata->value(meta_idx_dst));
-              if (src_column_idx == -1) {
-                src_column_idx = cur_src_column_idx;
-              } else {
-                if (src_column_idx != cur_src_column_idx) {
-                  RETURN_GS_ERROR(ErrorCode::kIOError,
-                                  "Edge tables' schema not consistent");
-                }
-              }
-              if (dst_column_idx == -1) {
-                dst_column_idx = cur_dst_column_idx;
-              } else {
-                if (dst_column_idx != cur_dst_column_idx) {
-                  RETURN_GS_ERROR(ErrorCode::kIOError,
-                                  "Edge tables' schema not consistent");
-                }
-              }
+      auto shuffle_procedure =
+          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+        auto& edge_table_list = edge_tables_[e_label];
+        std::vector<std::shared_ptr<arrow::Table>> processed_table_list(
+            edge_table_list.size());
+        int src_column_idx = -1, dst_column_idx = -1;
+        for (size_t edge_table_index = 0;
+             edge_table_index != edge_table_list.size(); ++edge_table_index) {
+          auto& edge_table = edge_table_list[edge_table_index];
+          auto metadata = edge_table->schema()->metadata();
+          auto meta_idx_src = metadata->FindKey(SRC_COLUMN);
+          auto meta_idx_dst = metadata->FindKey(DST_COLUMN);
+          CHECK_OR_RAISE(meta_idx_src != -1);
+          CHECK_OR_RAISE(meta_idx_dst != -1);
+          auto cur_src_column_idx = std::stoi(metadata->value(meta_idx_src));
+          auto cur_dst_column_idx = std::stoi(metadata->value(meta_idx_dst));
+          if (src_column_idx == -1) {
+            src_column_idx = cur_src_column_idx;
+          } else {
+            if (src_column_idx != cur_src_column_idx) {
+              RETURN_GS_ERROR(ErrorCode::kIOError,
+                              "Edge tables' schema not consistent");
+            }
+          }
+          if (dst_column_idx == -1) {
+            dst_column_idx = cur_dst_column_idx;
+          } else {
+            if (dst_column_idx != cur_dst_column_idx) {
+              RETURN_GS_ERROR(ErrorCode::kIOError,
+                              "Edge tables' schema not consistent");
+            }
+          }
 
-              auto src_column_type = edge_table->column(src_column_idx)->type();
-              auto dst_column_type = edge_table->column(dst_column_idx)->type();
+          auto src_column_type = edge_table->column(src_column_idx)->type();
+          auto dst_column_type = edge_table->column(dst_column_idx)->type();
 
-              if (!src_column_type->Equals(dst_column_type) ||
-                  !src_column_type->Equals(
-                      vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
-                RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                                "OID_T is not same with arrow::Column(" +
-                                    src_column_type->ToString() + ")");
-              }
+          if (!src_column_type->Equals(dst_column_type) ||
+              !src_column_type->Equals(
+                  vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
+            RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                            "OID_T is not same with arrow::Column(" +
+                                src_column_type->ToString() + ")");
+          }
 
-              auto meta_idx_src_label_index = metadata->FindKey(SRC_LABEL_ID);
-              auto meta_idx_dst_label_index = metadata->FindKey(DST_LABEL_ID);
-              CHECK_OR_RAISE(meta_idx_src_label_index != -1);
-              CHECK_OR_RAISE(meta_idx_dst_label_index != -1);
+          auto meta_idx_src_label_index = metadata->FindKey(SRC_LABEL_ID);
+          auto meta_idx_dst_label_index = metadata->FindKey(DST_LABEL_ID);
+          CHECK_OR_RAISE(meta_idx_src_label_index != -1);
+          CHECK_OR_RAISE(meta_idx_dst_label_index != -1);
 
-              auto src_label_id = static_cast<label_id_t>(
-                  std::stoi(metadata->value(meta_idx_src_label_index)));
-              auto dst_label_id = static_cast<label_id_t>(
-                  std::stoi(metadata->value(meta_idx_dst_label_index)));
+          auto src_label_id = static_cast<label_id_t>(
+              std::stoi(metadata->value(meta_idx_src_label_index)));
+          auto dst_label_id = static_cast<label_id_t>(
+              std::stoi(metadata->value(meta_idx_dst_label_index)));
 
-              BOOST_LEAF_AUTO(src_gid_array,
-                              parseOidChunkedArray(
-                                  src_label_id,
-                                  edge_table->column(src_column_idx), mapper));
-              BOOST_LEAF_AUTO(dst_gid_array,
-                              parseOidChunkedArray(
-                                  dst_label_id,
-                                  edge_table->column(dst_column_idx), mapper));
+          BOOST_LEAF_AUTO(
+              src_gid_array,
+              parseOidChunkedArray(src_label_id,
+                                   edge_table->column(src_column_idx), mapper));
+          BOOST_LEAF_AUTO(
+              dst_gid_array,
+              parseOidChunkedArray(dst_label_id,
+                                   edge_table->column(dst_column_idx), mapper));
 
           // replace oid columns with gid
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-              ARROW_OK_OR_RAISE(edge_table->SetColumn(
-                  src_column_idx, src_gid_field, src_gid_array, &edge_table));
-              ARROW_OK_OR_RAISE(edge_table->SetColumn(
-                  dst_column_idx, dst_gid_field, dst_gid_array, &edge_table));
+          ARROW_OK_OR_RAISE(edge_table->SetColumn(src_column_idx, src_gid_field,
+                                                  src_gid_array, &edge_table));
+          ARROW_OK_OR_RAISE(edge_table->SetColumn(dst_column_idx, dst_gid_field,
+                                                  dst_gid_array, &edge_table));
 #else
-              ARROW_OK_ASSIGN_OR_RAISE(
-                  edge_table,
-                  edge_table->SetColumn(src_column_idx, src_gid_field,
-                                        src_gid_array));
-              ARROW_OK_ASSIGN_OR_RAISE(
-                  edge_table,
-                  edge_table->SetColumn(dst_column_idx, dst_gid_field,
-                                        dst_gid_array));
+          ARROW_OK_ASSIGN_OR_RAISE(
+              edge_table, edge_table->SetColumn(src_column_idx, src_gid_field,
+                                                src_gid_array));
+          ARROW_OK_ASSIGN_OR_RAISE(
+              edge_table, edge_table->SetColumn(dst_column_idx, dst_gid_field,
+                                                dst_gid_array));
 #endif
 
-              processed_table_list[edge_table_index] = edge_table;
-            }
-            auto table = ConcatenateTables(processed_table_list);
+          processed_table_list[edge_table_index] = edge_table;
+        }
+        auto table = ConcatenateTables(processed_table_list);
+        std::shared_ptr<arrow::Table> table_out;
 #if 1
-            auto r = ShufflePropertyEdgeTable<vid_t>(
-                comm_spec_, id_parser, src_column_idx, dst_column_idx, table);
+        auto st = ShufflePropertyEdgeTable<vid_t>(
+            comm_spec_, id_parser, src_column_idx, dst_column_idx, table,
+            table_out);
+        if (!st) {
+          LOG(FATAL) << "An error occurred during the shuffle edge table "
+                        "procedure. "
+                     << st.message();
+        }
 #else
-            auto r = beta::ShufflePropertyEdgeTable<vid_t>(
-                comm_spec_, id_parser, src_column_idx, dst_column_idx, table);
+        auto r = beta::ShufflePropertyEdgeTable<vid_t>(
+            comm_spec_, id_parser, src_column_idx, dst_column_idx, table);
+        BOOST_LEAF_CHECK(r);
+        table_out = r.value();
 #endif
-            BOOST_LEAF_CHECK(r);
-            local_e_tables[e_label] = r.value();
-            return AllGatherError(comm_spec_);
-          },
-          [this](GSError& e) { return AllGatherError(e, comm_spec_); },
-          [this](const boost::leaf::error_info& unmatched) {
-            GSError e(ErrorCode::kIOError, "Unmatched error");
-            return AllGatherError(e, comm_spec_);
-          });
-      if (!e.ok()) {
-        return boost::leaf::new_error(e);
-      }
+        return table_out;
+      };
+      BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
+      local_e_tables[e_label] = table;
     }
 
     return local_e_tables;

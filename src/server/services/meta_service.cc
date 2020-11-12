@@ -67,7 +67,8 @@ void IMetaService::incRef(std::string const& key, std::string const& value) {
 }
 
 bool IMetaService::deleteable(ObjectID const object_id) {
-  return supobjects_.find(object_id) == supobjects_.end();
+  return object_id != InvalidObjectID() &&
+         supobjects_.find(object_id) == supobjects_.end();
 }
 
 void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,

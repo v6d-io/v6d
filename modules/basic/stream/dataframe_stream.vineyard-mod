@@ -22,6 +22,7 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/util/config.h"
+#include "arrow/util/key_value_metadata.h"
 
 #include "basic/ds/dataframe.vineyard.h"
 #include "client/client.h"
@@ -171,6 +172,16 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(table,
                                      arrow::Table::FromRecordBatches(batches));
 #endif
+    std::shared_ptr<arrow::KeyValueMetadata> metadata;
+    if (table->schema()->metadata() != nullptr) {
+      metadata = table->schema()->metadata()->Copy();
+    } else {
+      metadata.reset(new arrow::KeyValueMetadata());
+    }
+    for (auto const& kv : params_) {
+      metadata->Append(kv.first, kv.second);
+    }
+    table = table->ReplaceSchemaMetadata(metadata);
     return Status::OK();
   }
 

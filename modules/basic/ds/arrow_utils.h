@@ -243,7 +243,7 @@ Status SerializeRecordBatches(
     std::shared_ptr<arrow::Buffer>* buffer);
 
 Status DeserializeRecordBatches(
-    std::shared_ptr<arrow::Buffer> buffer,
+    const std::shared_ptr<arrow::Buffer>& buffer,
     std::vector<std::shared_ptr<arrow::RecordBatch>>* batches);
 
 Status RecordBatchesToTable(
