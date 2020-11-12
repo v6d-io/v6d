@@ -25,7 +25,7 @@ import json
 from urllib.parse import urlparse
 from vineyard.io.byte import ByteStreamBuilder
 
-def parse_dataframe(vineyard_socket, stream_id, path, proc_num, proc_index):
+def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
@@ -33,19 +33,8 @@ def parse_dataframe(vineyard_socket, stream_id, path, proc_num, proc_index):
     instream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
-    header_row = False
-    delimiter = ','
-    fragments = urlparse(path).fragment.split('&')
-    for frag in fragments:
-        try:
-            k, v = frag.split('=')
-        except:
-            pass
-        else:
-            if k == 'header_row':
-                header_row = (v.upper() == 'TRUE')
-            elif k == 'delimiter':
-                delimiter = bytes(v, "utf-8").decode("unicode_escape")
+    header_row = (instream.params.get('header_row', None) == '1')
+    delimiter = instream.params.get('delimiter', ',')
 
     builder = ByteStreamBuilder(client)
     stream = builder.seal(client)
@@ -73,12 +62,11 @@ def parse_dataframe(vineyard_socket, stream_id, path, proc_num, proc_index):
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print('usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <file_path> <proc_num> <proc_index>')
+        print('usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>')
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
-    file_path = sys.argv[3]
-    proc_num = int(sys.argv[4])
-    proc_index = int(sys.argv[5])
-    parse_dataframe(ipc_socket, stream_id, file_path, proc_num, proc_index)
+    proc_num = int(sys.argv[3])
+    proc_index = int(sys.argv[4])
+    parse_dataframe(ipc_socket, stream_id, proc_num, proc_index)
 

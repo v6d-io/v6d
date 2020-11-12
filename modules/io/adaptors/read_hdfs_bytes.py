@@ -15,15 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import vineyard
 
 import sys
 import json
-from urllib.parse import urlparse
-
+import vineyard
 import pyarrow as pa
-from hdfs3 import HDFileSystem
 
+from hdfs3 import HDFileSystem
+from urllib.parse import urlparse
 from vineyard.io.byte import ByteStreamBuilder
 
 
