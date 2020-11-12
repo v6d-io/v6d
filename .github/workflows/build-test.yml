@@ -108,15 +108,6 @@ jobs:
                    -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 
-      - name: Install libhdfs3
-        run: |
-          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
-          mkdir build
-          cd build
-          cmake ..
-          make -j
-          sudo make install
-
       - name: Cpp format and lint
         run: |
           cd build
@@ -214,6 +205,16 @@ jobs:
           export VINEYARD_HOME=`pwd`/build/bin
 
           python3 test/runner.py --with-python
+
+      - name: Install libhdfs3
+        run: |
+          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
+          cd libhdfs3-downstream/libhdfs3
+          mkdir build
+          cd build
+          cmake ..
+          make -j
+          sudo make install
 
       - name: Run IO Tests
         run: |
