@@ -42,6 +42,7 @@ jobs:
           sudo apt install -y ca-certificates \
                               ccache \
                               cmake \
+                              cyrus-sasl2 \
                               doxygen \
                               libboost-all-dev \
                               libcurl4-openssl-dev \
@@ -52,6 +53,7 @@ jobs:
                               libmpich-dev \
                               libprotobuf-dev \
                               librdkafka-dev \
+                              libsasl2-dev \
                               libssl-dev \
                               libunwind-dev \
                               libz-dev \
@@ -74,7 +76,7 @@ jobs:
                               libarrow-python-dev
 
           # install python packages for codegen
-          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr
+          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pyarrow hdfs3
 
           # install clang-format
           if [ ! -f /usr/bin/clang-format ]; then
@@ -105,6 +107,15 @@ jobs:
                    -DBUILD_VINEYARD_IO=ON \
                    -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_TESTS=ON
+
+      - name: Install libhdfs3
+        run: |
+          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
+          mkdir build
+          cd build
+          cmake ..
+          make -j
+          sudo make install
 
       - name: Cpp format and lint
         run: |
@@ -152,7 +163,7 @@ jobs:
         run: |
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
-          yapf --in-place --recursive python/
+          yapf --in-place --recursive python/ modules/io/python
           GIT_DIFF=$(git diff)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -224,4 +235,3 @@ jobs:
           git add -A
           git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
           git push -f origin gh-pages
-

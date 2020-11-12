@@ -185,7 +185,7 @@ def read_kafka_dataframe(path, vineyard_socket, *args, **kwargs):
 
 
 def read_hdfs_bytes(path, vineyard_socket, *args, **kwargs):
-    path = json.dumps('hdfs://'+path)
+    path = json.dumps('hdfs://' + path)
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('read_hdfs_bytes'), *((vineyard_socket, path) + args), **kwargs)
     return launcher.wait()
@@ -224,17 +224,21 @@ def write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     launcher.run(get_executable('write_local_orc'), *((vineyard_socket, dataframe_stream, path) + args), **kwargs)
     launcher.join()
 
+
 def write_local_bytes(path, byte_stream, vineyard_socket, *args, **kwargs):
-    path = json.dumps('file://'+path)
+    path = json.dumps('file://' + path)
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('write_local_bytes'), *((vineyard_socket, byte_stream, path) + args), **kwargs)
     launcher.join()
+
 
 def write_local_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     if '.orc' in path:
         write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs)
     else:
-        write_local_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs), vineyard_socket, *args, **kwargs)
+        write_local_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs),
+                          vineyard_socket, *args, **kwargs)
+
 
 def write_kafka_bytes(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher()
@@ -249,14 +253,16 @@ def write_kafka_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwar
 
 
 def write_hdfs_bytes(path, byte_stream, vineyard_socket, *args, **kwargs):
-    path = json.dumps('hdfs://'+path)
+    path = json.dumps('hdfs://' + path)
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('write_hdfs_bytes'), *((vineyard_socket, byte_stream, path) + args), **kwargs)
     launcher.join()
 
+
 def write_hdfs_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher()
-    launcher.run(get_executable('write_hdfs_orc'), *((vineyard_socket, dataframe_stream, 'hdfs://' + path) + args), **kwargs)
+    launcher.run(get_executable('write_hdfs_orc'), *((vineyard_socket, dataframe_stream, 'hdfs://' + path) + args),
+                 **kwargs)
     launcher.join()
 
 
@@ -270,7 +276,8 @@ def write_hdfs_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwarg
     if '.orc' in path:
         write_hdfs_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs)
     else:
-        write_hdfs_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs), vineyard_socket, *args, **kwargs)
+        write_hdfs_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs),
+                         vineyard_socket, *args, **kwargs)
 
 
 vineyard.io.write.register('file', write_local_dataframe)
