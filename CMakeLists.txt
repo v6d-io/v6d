@@ -178,7 +178,7 @@ macro(find_openssl_libraries)
         set(OPENSSL_CRYPTO_LIBRARY /usr/lib/libcrypto.so CACHE STRING
             "path of crypto library" FORCE)
     endif()
-    find_package(OpenSSL)
+    find_package(OpenSSL REQUIRED)
     include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 endmacro(find_openssl_libraries)
 
