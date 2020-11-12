@@ -34,6 +34,7 @@ def pandas_dataframe_builder(client, value, builder, **kw):
         meta['__values_-key-%d' % i] = str(name)
         meta.add_member('__values_-value-%d' % i, builder.run(client, np_value))
     meta['nbytes'] = 0  # FIXME
+    meta['__values_-size'] = len(value.columns)
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
     meta['partition_index_column_'] = kw.get('partition_index', [0, 0])[1]
     return client.create_metadata(meta)

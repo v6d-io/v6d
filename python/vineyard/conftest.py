@@ -25,7 +25,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--vineyard-ipc-socket",
         action="store",
-        default='/var/run/vineyard.sock',
+        default='/tmp/vineyard.sock',
         help='Location of vineyard IPC socket',
     )
 

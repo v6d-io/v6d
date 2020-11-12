@@ -37,7 +37,7 @@ def pytest_addoption(parser):
         '--vineyard-endpoint',
         action='store',
         default='127.0.0.1:9600',
-        help='Location of vineyard RPC endpoint',
+        help='Address of vineyard RPC endpoint',
     )
 
     parser.addoption(
