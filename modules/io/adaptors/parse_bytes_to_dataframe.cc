@@ -114,8 +114,6 @@ int main(int argc, const char** argv) {
     ::boost::split(col_names, header_line, ::boost::is_any_of(delimiter));
   }
 
-  LOG(INFO) << "Params: " << params["header_row"] << ", " << header_row << ", " << header_line << ", " << delimiter << ", " << delimiter[0];
-
   DataframeStreamBuilder dfbuilder(client);
   dfbuilder.SetParams(params);
   auto bs = std::dynamic_pointer_cast<DataframeStream>(dfbuilder.Seal(client));
