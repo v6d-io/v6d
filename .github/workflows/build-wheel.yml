@@ -100,7 +100,9 @@ jobs:
           cd gflags-2.2.2
           mkdir -p build-dir
           cd build-dir
-          cmake .. -DBUILD_SHARED_LIBS=OFF
+          cmake .. -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                   -DBUILD_SHARED_LIBS=OFF \
           make install -j2
 
           echo "Installing glog ..."
@@ -110,7 +112,10 @@ jobs:
           cd glog-0.4.0
           mkdir -p build-dir
           cd build-dir
-          cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF
+          cmake .. -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                   -DBUILD_SHARED_LIBS=OFF \
+                   -DBUILD_TESTING=OFF
           make install -j2
 
           echo "Installing apache-arrow ..."
@@ -121,6 +126,8 @@ jobs:
           mkdir -p build-dir
           cd build-dir
           cmake ../cpp \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
               -DARROW_COMPUTE=ON \
               -DARROW_WITH_UTF8PROC=OFF \
               -DARROW_CSV=ON \
@@ -179,6 +186,8 @@ jobs:
           mkdir -p build
           cd build
           cmake .. -DBUILD_SHARED_LIBS=ON \
+                   -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
                    -DBUILD_VINEYARD_SERVER=OFF \
                    -DBUILD_VINEYARD_CLIENT=ON \
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
@@ -199,6 +208,8 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/build/lib:$LD_LIBRARY_PATH
           for wheel in `ls dist/*`; do delocate-wheel -w fixed_wheels -v $wheel; done
           ls -la ./fixed_wheels
+
+          ccache --show-stats
 
       - name: Prepare checksum and artifacts
         run: |
