@@ -102,7 +102,7 @@ jobs:
           cd build-dir
           cmake .. -DCMAKE_C_COMPILER_LAUNCHER=ccache \
                    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                   -DBUILD_SHARED_LIBS=OFF \
+                   -DBUILD_SHARED_LIBS=OFF
           make install -j2
 
           echo "Installing glog ..."
