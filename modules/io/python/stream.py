@@ -140,6 +140,12 @@ def get_executable(name):
     return f'vineyard_{name}'
 
 
+def parse_bytes_to_dataframe(vineyard_socket, byte_stream, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('parse_bytes_to_dataframe'), *((vineyard_socket, byte_stream) + args), **kwargs)
+    return launcher.wait()
+
+
 def read_local_bytes(path, vineyard_socket, *args, **kwargs):
     ''' Read a byte stream from local files.
     '''
@@ -155,12 +161,6 @@ def read_kafka_bytes(path, vineyard_socket, *args, **kwargs):
     path = json.dumps(path)
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('read_kafka_bytes'), *((vineyard_socket, path) + args), **kwargs)
-    return launcher.wait()
-
-
-def parse_bytes_to_dataframe(vineyard_socket, byte_stream, *args, **kwargs):
-    launcher = ParallelStreamLauncher()
-    launcher.run(get_executable('parse_bytes_to_dataframe'), *((vineyard_socket, byte_stream) + args), **kwargs)
     return launcher.wait()
 
 
@@ -217,6 +217,12 @@ vineyard.io.read.register('hdfs', read_hdfs_dataframe)
 vineyard.io.read.register('hive', read_hive_dataframe)
 
 
+def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('parse_dataframe_to_bytes'), *((vineyard_socket, dataframe_stream) + args), **kwargs)
+    return launcher.wait()
+
+
 def write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('write_local_orc'), *((vineyard_socket, dataframe_stream, path) + args), **kwargs)
@@ -262,12 +268,6 @@ def write_hdfs_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     launcher.run(get_executable('write_hdfs_orc'), *((vineyard_socket, dataframe_stream, 'hdfs://' + path) + args),
                  **kwargs)
     launcher.join()
-
-
-def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):
-    launcher = ParallelStreamLauncher()
-    launcher.run(get_executable('parse_dataframe_to_bytes'), *((vineyard_socket, dataframe_stream) + args), **kwargs)
-    return launcher.wait()
 
 
 def write_hdfs_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):

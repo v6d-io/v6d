@@ -243,6 +243,10 @@ jobs:
         run: |
           git clone https://github.com/7br/gstest.git --depth=1
 
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
       - name: Run Tests
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
@@ -252,6 +256,10 @@ jobs:
           rm -rf default.etcd
           python3 test/runner.py --with-cpp
 
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
       - name: Run Python Tests
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
@@ -259,6 +267,10 @@ jobs:
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           python3 test/runner.py --with-python
+
+      - name: Setup tmate session
+        if: true
+        uses: mxschmitt/action-tmate@v2
 
       - name: Run IO Tests
         run: |

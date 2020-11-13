@@ -81,7 +81,7 @@ void ParseTable(std::shared_ptr<arrow::Table>* table,
 int main(int argc, const char** argv) {
   if (argc < 5) {
     printf(
-        "usage ./parse_dataframe_to_bytes <ipc_socket> <stream_id> "
+        "usage ./parse_bytes_to_dataframe <ipc_socket> <stream_id> "
         "<proc_num> <proc_index>\n");
     return 1;
   }
