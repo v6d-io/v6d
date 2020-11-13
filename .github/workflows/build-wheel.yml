@@ -100,9 +100,7 @@ jobs:
           cd gflags-2.2.2
           mkdir -p build-dir
           cd build-dir
-          cmake .. -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                   -DBUILD_SHARED_LIBS=OFF
+          cmake .. -DBUILD_SHARED_LIBS=OFF
           make install -j2
 
           echo "Installing glog ..."
@@ -112,9 +110,7 @@ jobs:
           cd glog-0.4.0
           mkdir -p build-dir
           cd build-dir
-          cmake .. -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                   -DBUILD_SHARED_LIBS=OFF \
+          cmake .. -DBUILD_SHARED_LIBS=OFF \
                    -DBUILD_TESTING=OFF
           make install -j2
 
@@ -126,8 +122,6 @@ jobs:
           mkdir -p build-dir
           cd build-dir
           cmake ../cpp \
-              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
               -DARROW_COMPUTE=ON \
               -DARROW_WITH_UTF8PROC=OFF \
               -DARROW_CSV=ON \
@@ -186,8 +180,6 @@ jobs:
           mkdir -p build
           cd build
           cmake .. -DBUILD_SHARED_LIBS=ON \
-                   -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
                    -DBUILD_VINEYARD_SERVER=OFF \
                    -DBUILD_VINEYARD_CLIENT=ON \
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
