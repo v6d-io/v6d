@@ -16,13 +16,14 @@
 # limitations under the License.
 #
 
-import vineyard
-import sys
 import json
+import sys
+from urllib.parse import urlparse
+
+from hdfs3 import HDFileSystem
 import pyarrow as pa
 
-from urllib.parse import urlparse
-from hdfs3 import HDFileSystem
+import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 
@@ -42,7 +43,7 @@ def write_hdfs_bytes(vineyard_socket, stream_id, path, proc_num, proc_index):
         while True:
             try:
                 buf = reader.next()
-            except:
+            except vineyard.StreamDrainedException:
                 f.close()
                 break
             f.write(bytes(memoryview(buf)))

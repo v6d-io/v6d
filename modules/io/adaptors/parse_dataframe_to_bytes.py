@@ -16,13 +16,14 @@
 # limitations under the License.
 #
 
-import vineyard
-import pyarrow as pa
-import sys
 import io
 import json
-
 from urllib.parse import urlparse
+import sys
+
+import pyarrow as pa
+
+import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):

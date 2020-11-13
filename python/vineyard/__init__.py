@@ -23,6 +23,36 @@ import traceback
 
 from ._C import connect, IPCClient, RPCClient, Object, ObjectBuilder, ObjectID, ObjectMeta, \
     InstanceStatus, Blob, BlobBuilder, Buffer, MutableBuffer
+from ._C import ArrowErrorException, \
+    AssertionFailedException, \
+    ConnectionErrorException, \
+    ConnectionFailedException, \
+    EndOfFileException, \
+    EtcdErrorException, \
+    IOErrorException, \
+    InvalidException, \
+    InvalidStreamStateException, \
+    KeyErrorException, \
+    MetaTreeInvalidException, \
+    MetaTreeLinkInvalidException, \
+    MetaTreeNameInvalidException, \
+    MetaTreeNameNotExistsException, \
+    MetaTreeSubtreeNotExistsException, \
+    MetaTreeTypeInvalidException, \
+    MetaTreeTypeNotExistsException, \
+    NotEnoughMemoryException, \
+    NotImplementedException, \
+    ObjectExistsException, \
+    ObjectNotExistsException, \
+    ObjectNotSealedException, \
+    ObjectSealedException, \
+    StreamDrainedException, \
+    StreamFailedException, \
+    TypeErrorException, \
+    UnknownErrorException, \
+    UserInputErrorException, \
+    VineyardServerNotReadyException
+
 from . import _vineyard_docs
 del _vineyard_docs
 

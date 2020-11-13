@@ -16,13 +16,14 @@
 # limitations under the License.
 #
 
-import vineyard
+import json
+import sys
+from urllib.parse import urlparse
+
 import pyorc
 import pyarrow as pa
-import sys
-import json
 
-from urllib.parse import urlparse
+import vineyard
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 

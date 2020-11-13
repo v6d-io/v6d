@@ -16,14 +16,16 @@
 # limitations under the License.
 #
 
-import vineyard
-import pyorc
-import pyarrow as pa
-import sys
 import json
-
+import sys
 from urllib.parse import urlparse
+
 from hdfs3 import HDFileSystem
+
+import pyarrow as pa
+import pyorc
+
+import vineyard
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 
@@ -85,15 +87,26 @@ def read_hdfs_orc(path, hdfs, writer):
 def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
     # This method is to read the data files of a specific hive table
     # that is stored as orc format in HDFS.
+    #
     # In general, the data files of a hive table are stored at the hive
     # space in the HDFS with the table name as the directory, 
-    # e.g., /user/hive/warehouse/sometable
+    # e.g.,
+    # 
+    # .. code:: python
+    # 
+    #    '/user/hive/warehouse/sometable'
+    # 
     # To read the entire table, simply use 'hive://user/hive/warehouse/sometable'
     # as the path. 
+    # 
     # In case the table is partitioned, use the sub-directory of a specific partition
     # to read only the data from that partition. For example, sometable is partitioned
     # by column date, we can read the data in a given date by giving path as
-    # 'hive://user/hive/warehouse/sometable/date=20201112'
+    # 
+    # .. code:: python
+    #
+    #    'hive://user/hive/warehouse/sometable/date=20201112'
+    #
     if proc_index:
         return 
     client = vineyard.connect(vineyard_socket)

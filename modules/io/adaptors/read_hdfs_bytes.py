@@ -16,13 +16,14 @@
 # limitations under the License.
 #
 
-import sys
 import json
-import vineyard
-import pyarrow as pa
+import sys
+from urllib.parse import urlparse
 
 from hdfs3 import HDFileSystem
-from urllib.parse import urlparse
+import pyarrow as pa
+
+import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 

@@ -39,7 +39,7 @@ class ResolverContext():
             if 'resolver' in resolver_func_sig.args or resolver_func_sig.varkw is not None:
                 kw['resolver'] = self
             return resolver(obj, **kw)
-        raise RuntimeError('No proper resolver found for typename: %s' % typename)
+        return None
 
 
 default_resolver_context = ResolverContext()
@@ -84,7 +84,8 @@ def get(client, object_id, resolver=None, **kw):
         if type(obj) is not Object:
             return obj
 
-        raise RuntimeError('Unable to construct the object')
+        raise RuntimeError('Unable to construct the object: no proper resolver found: typename is %s' %
+                           obj.meta.typename)
 
     # associate a reference to the base C++ object
     try:
