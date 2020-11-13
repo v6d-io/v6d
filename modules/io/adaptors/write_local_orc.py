@@ -19,10 +19,10 @@
 import json
 import sys
 
+import vineyard
+
 import pyarrow as pa
 import pyorc
-
-import vineyard
 
 def orc_type(field):
     if pa.types.is_boolean(field):

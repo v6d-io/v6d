@@ -20,10 +20,11 @@ import json
 import sys
 from urllib.parse import urlparse
 
+import vineyard
+
 import pyorc
 import pyarrow as pa
 
-import vineyard
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 

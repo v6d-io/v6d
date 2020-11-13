@@ -20,10 +20,11 @@ import json
 import sys
 from urllib.parse import urlparse
 
+import vineyard
+
 from hdfs3 import HDFileSystem
 import pyarrow as pa
 
-import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 
