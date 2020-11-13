@@ -162,6 +162,8 @@ inline boost::leaf::result<void> SchemaConsistent(
   send_thread.join();
   recv_thread.join();
 
+  MPI_Barrier(comm_spec.comm());
+
   if (!consistent) {
     RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
                     "Schemas of edge tables are not consistent.");
@@ -493,6 +495,8 @@ void ShuffleTableByOffsetLists(
   send_thread.join();
   recv_thread.join();
 #endif
+
+  MPI_Barrier(comm_spec.comm());
 }
 
 template <typename VID_TYPE>
