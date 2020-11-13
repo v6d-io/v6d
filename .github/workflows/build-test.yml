@@ -47,19 +47,23 @@ jobs:
                               libcurl4-openssl-dev \
                               libgflags-dev \
                               libgoogle-glog-dev \
+                              libgmock-dev \
                               libgrpc-dev \
                               libgrpc++-dev \
+                              libgtest-dev \
                               libkrb5-dev \
                               libmpich-dev \
                               libprotobuf-dev \
                               librdkafka-dev \
-                              libsasl2-dev \
+                              libgsasl7-dev \
                               libssl-dev \
                               libunwind-dev \
+                              libxml2-dev \
                               libz-dev \
                               lsb-release \
                               protobuf-compiler-grpc \
                               python3-pip \
+                              uuid-dev \
                               wget
 
           # install etcd
