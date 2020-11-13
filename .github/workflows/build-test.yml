@@ -75,7 +75,7 @@ jobs:
                               libarrow-python-dev
 
           # install python packages for codegen, and io adaptors
-          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pyarrow hdfs3
+          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pytest pyarrow hdfs3
           sudo pip3 install -r modules/io/python/requirements.txt
 
           # install clang-format

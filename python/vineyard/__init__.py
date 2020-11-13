@@ -69,6 +69,7 @@ def _init_vineyard_modules():
 
         * /etc/vineyard/config.py
         * {sys.prefix}/etc/vineyard/config.py
+        * /usr/share/vineyard/01-xxx.py
         * /usr/local/share/vineyard/01-xxx.py
         * {sys.prefix}/share/vineyard/02-xxxx.py
         * $HOME/.vineyard/03-xxxxx.py
@@ -91,6 +92,8 @@ def _init_vineyard_modules():
 
     _import_module_from_file('/etc/vineyard/config.py')
     _import_module_from_file(os.path.join(sys.prefix, '/etc/vineyard/config.py'))
+    for filepath in glob.glob('/usr/share/vineyard/*-*.py'):
+        _import_module_from_file(filepath)
     for filepath in glob.glob('/usr/local/share/vineyard/*-*.py'):
         _import_module_from_file(filepath)
     for filepath in glob.glob(os.path.join(sys.prefix, '/share/vineyard/*-*.py')):

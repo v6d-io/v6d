@@ -37,6 +37,10 @@ def read(path, *args, **kwargs):
         vineyard_ipc_socket: str
             The local or remote vineyard's IPC socket location that the remote readers will
             use to establish connections with the vineyard server.
+        vineyard_endpoint: str, optional
+            An optional address of vineyard's RPC socket, which will be used for retrieving server's
+            information on the client side. If not provided, the `vineyard_ipc_socket` will be used,
+            or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
 
@@ -67,6 +71,10 @@ def write(path, stream, *args, **kwargs):
         vineyard_ipc_socket: str
             The local or remote vineyard's IPC socket location that the remote readers will
             use to establish connections with the vineyard server.
+        vineyard_endpoint: str, optional
+            An optional address of vineyard's RPC socket, which will be used for retrieving server's
+            information on the client side. If not provided, the `vineyard_ipc_socket` will be used,
+            or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
 
@@ -86,7 +94,9 @@ def write(path, stream, *args, **kwargs):
 
 
 def open(path, *args, mode='r', **kwargs):
-    ''' Open a path as a reader or writer, depends on the parameter :code:`mod`.
+    ''' Open a path as a reader or writer, depends on the parameter :code:`mode`. If :code:`mode`
+        is :code:`r`, it will open a stream for read, and open a stream for write when :code:`mode`
+        is :code:`w`.
 
         Parameters
         ----------
@@ -94,6 +104,15 @@ def open(path, *args, mode='r', **kwargs):
             Path to open.
         mode: char
             Mode about how to open the path, :code:`r` is for read and :code:`w` for write.
+        vineyard_ipc_socket: str
+            Vineyard's IPC socket location.
+        vineyard_endpoint: str
+            Vineyard's RPC socket address.
+
+        See Also
+        --------
+        vineyard.io.read
+        vineyard.io.write
     '''
     if mode == 'r':
         return read(path, *args, **kwargs)
