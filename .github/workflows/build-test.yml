@@ -89,9 +89,6 @@ jobs:
               sudo chmod +x /usr/bin/clang-format
           fi
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v2
-
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |
@@ -112,6 +109,42 @@ jobs:
           cmake ..
           make -j
           sudo make install
+
+      - name: Setup SSH environment
+        run: |
+          # setup SSH server to allow login without password
+          cat > sshd_config <<EOF
+            SyslogFacility AUTHPRIV
+            PermitRootLogin yes
+            AuthorizedKeysFile	.ssh/authorized_keys
+            PasswordAuthentication yes
+            ChallengeResponseAuthentication no
+            UsePAM yes
+            UseDNS no
+            X11Forwarding no
+            PrintMotd no
+          EOF
+          sudo mv sshd_config /etc/ssh/sshd_config
+          sudo systemctl restart ssh
+
+          # generate proper SSH key
+          cat /dev/zero | ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa
+
+          # add key to authorized_keys file
+          cat ~/.ssh/id_rsa.pub | tee -a ~/.ssh/authorized_keys
+
+          # ensure the permissions of SSH files
+          chmod 600 ~/.ssh/authorized_keys
+          chmod 700 ~/.ssh
+          sudo chmod -c 0755 ~/
+          ls -la ~/.ssh
+
+          # test SSH login, without password
+          ssh -vvv -i ~/.ssh/id_rsa -o BatchMode=yes -o StrictHostKeyChecking=no $(whoami)@localhost
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
 
       - name: CMake
         run: |
