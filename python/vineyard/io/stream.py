@@ -30,8 +30,8 @@ logger = logging.getLogger('vineyard')
 def read(path, *args, **kwargs):
     ''' Open a path and read it as a single stream.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         path: str
             Path to read, the last reader registered for the scheme of the path will be used.
         vineyard_ipc_socket: str

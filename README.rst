@@ -66,7 +66,7 @@ just like the single machine solution do, and save the preprocessed dataframe in
 |             | .. code-block:: python                                                      |
 |             |                                                                             |
 |             |     import mars.dataframe as md                                             |
-| distributed |     dataset = md.read_csv('hdfs://server/data_full', usecols=[1])          |
+| distributed |     dataset = md.read_csv('hdfs://server/data_full', usecols=[1])           |
 |             |     # after preprocessing, save the dataset to vineyard                     |
 |             |     vineyard_distributed_tensor_id = dataset.to_vineyard()                  |
 +-------------+-----------------------------------------------------------------------------+
