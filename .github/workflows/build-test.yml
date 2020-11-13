@@ -101,6 +101,7 @@ jobs:
           sudo make install
 
       - name: Install libhdfs3
+        if: false
         run: |
           git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
           cd libhdfs3-downstream/libhdfs3

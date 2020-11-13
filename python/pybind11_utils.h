@@ -79,7 +79,25 @@ iterator make_iterator_fmap(Iterator first, Sentinel last,
 
 namespace vineyard {
 
-void throw_on_error(Status const &status);
+void throw_on_error(Status const& status);
+
+/**
+ * Construct mmeoryview from memory, the memory can be borrowed or stelon.
+ *
+ * This method is similar to :code:`pybind11::memoryview::from_memory` but it
+ * doesn't always takes the ownership of the memory block.
+ */
+pybind11::memoryview memoryview_from_memory(void* mem, ssize_t size,
+                                            bool readonly = false,
+                                            bool borrowed = false);
+
+inline pybind11::memoryview memoryview_from_memory(const void* mem,
+                                                   ssize_t size,
+                                                   bool readonly = false,
+                                                   bool borrowed = false) {
+  return memoryview_from_memory(const_cast<void*>(mem), size, readonly,
+                                borrowed);
+}
 
 }  // namespace vineyard
 

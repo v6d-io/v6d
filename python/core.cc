@@ -238,14 +238,14 @@ void bind_core(py::module& mod) {
                              [](arrow::Buffer* self) {
                                return reinterpret_cast<uintptr_t>(self->data());
                              })
-      .def_property_readonly("buffer",
-                             [](py::object self) {
-                               auto pa = py::module::import("pyarrow");
-                               auto buffer = self.cast<arrow::Buffer*>();
-                               return pa.attr("foreign_buffer")(
-                                   reinterpret_cast<uintptr_t>(buffer->data()),
-                                   buffer->size(), self);
-                             })
+      .def_property_readonly(
+          "buffer",
+          [](py::object self) {
+            auto pa = py::module::import("pyarrow");
+            auto buffer = self.cast<arrow::Buffer*>();
+            return pa.attr("py_buffer")(memoryview_from_memory(
+                buffer->data(), buffer->size(), true, true));
+          })
       .def_buffer([](arrow::Buffer* buffer) -> py::buffer_info {
         return py::buffer_info(
             const_cast<char*>(reinterpret_cast<const char*>(buffer->data())),
@@ -271,8 +271,8 @@ void bind_core(py::module& mod) {
           [](py::object self) {
             auto pa = py::module::import("pyarrow");
             auto buffer = self.cast<arrow::MutableBuffer*>();
-            return pa.attr("py_buffer")(py::memoryview::from_memory(
-                buffer->mutable_data(), buffer->size(), false));
+            return pa.attr("py_buffer")(memoryview_from_memory(
+                buffer->mutable_data(), buffer->size(), false, true));
           })
       .def_buffer([](arrow::Buffer* buffer) -> py::buffer_info {
         return py::buffer_info(reinterpret_cast<char*>(buffer->mutable_data()),
