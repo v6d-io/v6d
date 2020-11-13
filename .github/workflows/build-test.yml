@@ -247,6 +247,8 @@ jobs:
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
+
           rm -rf default.etcd
           python3 test/runner.py --with-cpp
 
@@ -254,6 +256,7 @@ jobs:
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           python3 test/runner.py --with-python
 
@@ -261,6 +264,7 @@ jobs:
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           python3 test/runner.py --with-io
 
