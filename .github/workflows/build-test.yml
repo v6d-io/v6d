@@ -49,6 +49,7 @@ jobs:
                               libgoogle-glog-dev \
                               libgrpc-dev \
                               libgrpc++-dev \
+                              libkrb5-dev \
                               libmpich-dev \
                               libprotobuf-dev \
                               librdkafka-dev \
@@ -93,6 +94,16 @@ jobs:
           cd build
           cmake ..
           make -j2
+          sudo make install
+
+      - name: Install libhdfs3
+        run: |
+          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
+          cd libhdfs3-downstream/libhdfs3
+          mkdir build
+          cd build
+          cmake ..
+          make -j
           sudo make install
 
       - name: CMake
@@ -205,16 +216,6 @@ jobs:
           export VINEYARD_HOME=`pwd`/build/bin
 
           python3 test/runner.py --with-python
-
-      - name: Install libhdfs3
-        run: |
-          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
-          cd libhdfs3-downstream/libhdfs3
-          mkdir build
-          cd build
-          cmake ..
-          make -j
-          sudo make install
 
       - name: Run IO Tests
         run: |
