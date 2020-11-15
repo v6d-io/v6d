@@ -25,21 +25,6 @@ using namespace py::literals;  // NOLINT(build/namespaces)
 
 namespace vineyard {
 
-/**
- * Variant for :code:`pybind11::memoryview::memory`, but supports borrowed
- * memory.
- */
-py::memoryview memoryview_from_memory(void* mem, ssize_t size, bool readonly,
-                                      bool borrowed) {
-  PyObject* ptr =
-      PyMemoryView_FromMemory(reinterpret_cast<char*>(mem), size,
-                              (readonly) ? PyBUF_READ : PyBUF_WRITE);
-  if (!ptr) {
-    py::pybind11_fail("Could not allocate memoryview object!");
-  }
-  return py::memoryview(py::object(ptr, borrowed));
-}
-
 static PyObject* vineyard_add_doc(PyObject* /* unused */, PyObject* args) {
   PyObject* obj;
   PyObject* doc_obj;

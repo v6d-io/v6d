@@ -46,8 +46,8 @@ void bind_stream(py::module& mod) {
             throw_on_error(self->GetNext(size, chunk));
             auto chunk_ptr = chunk.release();
             auto pa = py::module::import("pyarrow");
-            return pa.attr("py_buffer")(memoryview_from_memory(
-                chunk_ptr->mutable_data(), chunk_ptr->size(), false, true));
+            return pa.attr("py_buffer")(py::memoryview::from_memory(
+                chunk_ptr->mutable_data(), chunk_ptr->size(), false));
           },
           "size"_a)
       .def("finish",
@@ -63,8 +63,8 @@ void bind_stream(py::module& mod) {
         throw_on_error(self->GetNext(chunk));
         auto chunk_ptr = chunk.release();
         auto pa = py::module::import("pyarrow");
-        return pa.attr("py_buffer")(memoryview_from_memory(
-            chunk_ptr->data(), chunk_ptr->size(), true, true));
+        return pa.attr("py_buffer")(py::memoryview::from_memory(
+            chunk_ptr->data(), chunk_ptr->size(), true));
       });
 
   // ByteStream
@@ -123,8 +123,8 @@ void bind_stream(py::module& mod) {
             auto chunk_ptr = chunk.release();
             auto buffer = py::cast(chunk_ptr);
             auto pa = py::module::import("pyarrow");
-            return pa.attr("py_buffer")(memoryview_from_memory(
-                chunk_ptr->mutable_data(), chunk_ptr->size(), false, true));
+            return pa.attr("py_buffer")(py::memoryview::from_memory(
+                chunk_ptr->mutable_data(), chunk_ptr->size(), false));
           },
           "size"_a)
       .def("finish",
@@ -140,8 +140,8 @@ void bind_stream(py::module& mod) {
         throw_on_error(self->GetNext(chunk));
         auto chunk_ptr = chunk.release();
         auto pa = py::module::import("pyarrow");
-        return pa.attr("py_buffer")(memoryview_from_memory(
-            chunk_ptr->data(), chunk_ptr->size(), true, true));
+        return pa.attr("py_buffer")(py::memoryview::from_memory(
+            chunk_ptr->data(), chunk_ptr->size(), true));
       });
 
   // DataFrameStream

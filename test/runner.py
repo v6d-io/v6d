@@ -174,7 +174,8 @@ def run_test(test_name, *args, nproc=1, capture=False, vineyard_ipc_socket=VINEY
     if capture:
         return subprocess.check_output(cmdargs)
     else:
-        subprocess.check_call(cmdargs)
+        subprocess.check_call(cmdargs,
+                              cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
     time.sleep(1)
 
 
@@ -245,7 +246,8 @@ def run_python_tests(etcd_endpoints):
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
         subprocess.check_call(['pytest', '-s', '-vvv', 'python/vineyard',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
-                               '--vineyard-endpoint=localhost:%s' % rpc_socket_port])
+                               '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
 def run_io_adaptor_tests(etcd_endpoints):
@@ -256,7 +258,8 @@ def run_io_adaptor_tests(etcd_endpoints):
         subprocess.check_call(['pytest', '-s', '-vvv', 'modules/io/python/tests',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
-                               '--test-dataset=%s' % get_data_path(None)])
+                               '--test-dataset=%s' % get_data_path(None)],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
 def parse_sys_args():

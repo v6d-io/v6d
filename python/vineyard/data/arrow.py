@@ -33,10 +33,7 @@ def buffer_builder(client, buffer, builder):
 
 
 def as_arrow_buffer(blob):
-    buffer = blob.buffer
-    if buffer is not None:
-        buffer = buffer.buffer  # pa.foreign_buffer
-    return buffer
+    return blob.buffer
 
 
 def numeric_array_builder(client, array, builder):
