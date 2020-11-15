@@ -254,7 +254,7 @@ void bind_core(py::module& mod) {
             auto pa = py::module::import("pyarrow");
             auto buffer = blob.Buffer();
             return pa.attr("py_buffer")(py::memoryview::from_memory(
-                buffer->data(), buffer->size(), true));
+                const_cast<uint8_t *>(buffer->data()), buffer->size(), true));
           })
       .def_buffer([](Blob& blob) -> py::buffer_info {
         return py::buffer_info(const_cast<char*>(blob.data()), sizeof(int8_t),
