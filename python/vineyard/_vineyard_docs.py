@@ -5,7 +5,7 @@ import logging
 
 from ._C import _add_doc, connect, ClientBase, IPCClient, RPCClient, \
     Object, ObjectBuilder, ObjectID, ObjectMeta, InstanceStatus, \
-    Blob, BlobBuilder, Buffer, MutableBuffer
+    Blob, BlobBuilder
 
 
 def add_doc(target, doc):
