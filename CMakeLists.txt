@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 1)
-set(VINEYARD_PATCH_VERSION 5)
+set(VINEYARD_PATCH_VERSION 0)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
 if(POLICY CMP0048)
@@ -435,6 +435,9 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
         PATTERN "*.h"                       # select header files
         PATTERN "*.hpp"                     # select C++ template header files
 )
+
+# for python's setup.cfg
+configure_file(setup.cfg.in "${PROJECT_SOURCE_DIR}/setup.cfg" @ONLY)
 
 configure_file(vineyard-config.in.cmake
                "${PROJECT_BINARY_DIR}/vineyard-config.cmake" @ONLY

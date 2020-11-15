@@ -1,3 +1,14 @@
+[metadata]
+version = @VINEYARD_VERSION@
+
+[options]
+install_requires =
+    numpy
+    pandas
+    pyarrow==@ARROW_VERSION@
+    sortedcontainers
+    setuptools
+
 [pycodestyle]
 max_line_length = 120
 
