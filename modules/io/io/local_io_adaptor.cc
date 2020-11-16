@@ -57,6 +57,9 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
       if (kv_pair[0] == "schema") {
         ::boost::split(columns_, kv_pair[1], ::boost::is_any_of(","));
         meta_.emplace("schema", kv_pair[1]);
+      } else if (kv_pair[0] == "column_types") {
+        ::boost::split(column_types_, kv_pair[1], ::boost::is_any_of(","));
+        meta_.emplace(kv_pair[0], kv_pair[1]);
       } else if (kv_pair[0] == "delimiter") {
         ::boost::algorithm::trim_if(kv_pair[1],
                                     boost::algorithm::is_any_of("\"\'"));
@@ -70,7 +73,7 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
         }
         meta_.emplace("delimiter", std::string(1, delimiter_));
       } else if (kv_pair[0] == "header_row") {
-        header_row_ = (kv_pair[1] == "true");
+        header_row_ = (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
         meta_.emplace("header_row", std::to_string(header_row_));
       } else if (kv_pair.size() > 1) {
         meta_.emplace(kv_pair[0], kv_pair[1]);
@@ -283,8 +286,28 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
     read_options.column_names = original_columns_;
     if (!columns_.empty()) {
       convert_options.include_columns = columns_;
+    } else {
+      convert_options.include_columns = origin_columns_;
     }
   }
+  // Assume the order of column_types is same with include_columns.
+  // include_columns: a,b,c,d
+  // column_types   : int,double,float,string
+  if (column_types_.size() > convert_options.include_columns.size()) {
+    return Status(StatusCode::kArrowError,
+                  "Format of column type schema is incorrect.");
+  }
+  std::unordered_map<std::string, std::shared_ptr<arrow::DataType>>
+      column_types;
+
+  for (size_t i = 0; i < column_types_.size(); ++i) {
+    if (!column_types_[i].empty()) {
+      column_types[convert_options.include_columns[i]] =
+          type_name_to_arrow_type(column_types_[i]);
+    }
+  }
+  convert_options.column_types = column_types;
+
   parse_options.delimiter = delimiter_;
 
   std::shared_ptr<arrow::csv::TableReader> reader;
@@ -299,7 +322,7 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
       *table = nullptr;
       return Status::OK();
     } else {
-      return ::vineyard::Status::ArrowError(result.status());
+      return Status::ArrowError(result.status());
     }
   }
   *table = result.ValueOrDie();

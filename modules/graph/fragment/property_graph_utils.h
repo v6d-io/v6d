@@ -580,6 +580,37 @@ inline std::string arrow_type_to_type_name(
   }
 }
 
+inline std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
+    const std::string& name) {
+  if (name == "bool") {
+    return vineyard::ConvertToArrowType<bool>::TypeValue();
+  } else if (name == "int8_t") {
+    return vineyard::ConvertToArrowType<int8_t>::TypeValue();
+  } else if (name == "uint8_t") {
+    return vineyard::ConvertToArrowType<uint8_t>::TypeValue();
+  } else if (name == "int16_t") {
+    return vineyard::ConvertToArrowType<int16_t>::TypeValue();
+  } else if (name == "uint16_t") {
+    return vineyard::ConvertToArrowType<uint16_t>::TypeValue();
+  } else if (name == "int32_t") {
+    return vineyard::ConvertToArrowType<int32_t>::TypeValue();
+  } else if (name == "uint32_t") {
+    return vineyard::ConvertToArrowType<uint32_t>::TypeValue();
+  } else if (name == "int64_t") {
+    return vineyard::ConvertToArrowType<int64_t>::TypeValue();
+  } else if (name == "uint64_t") {
+    return vineyard::ConvertToArrowType<uint64_t>::TypeValue();
+  } else if (name == "float") {
+    return vineyard::ConvertToArrowType<float>::TypeValue();
+  } else if (name == "double") {
+    return vineyard::ConvertToArrowType<double>::TypeValue();
+  } else if (name == "string") {
+    return vineyard::ConvertToArrowType<std::string>::TypeValue();
+  } else {
+    return arrow::null();
+  }
+}
+
 class EmptyArray {
   using value_type = grape::EmptyType;
 
