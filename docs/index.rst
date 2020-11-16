@@ -31,6 +31,7 @@ Development
    :maxdepth: 6
 
    notes/contributing.rst
+   notes/troubleshooting.rst
 
 Indexes
 -------

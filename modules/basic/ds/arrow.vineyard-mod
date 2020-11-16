@@ -191,8 +191,10 @@ inline std::shared_ptr<arrow::Array> ConstructArray(
   if (auto arr = std::dynamic_pointer_cast<NullArray>(obj)) {
     return arr->GetArray();
   }
-  VINEYARD_ASSERT(nullptr != nullptr,
-                  "Unsupported array type: " + obj->meta().GetTypeName());
+  // Don't abort the program, the unresolvable array should be reported lazily.
+  //
+  // VINEYARD_ASSERT(nullptr != nullptr,
+  //                 "Unsupported array type: " + obj->meta().GetTypeName());
   return nullptr;
 }
 
@@ -228,15 +230,18 @@ class RecordBatchBaseBuilder;
 class RecordBatch : public Registered<RecordBatch> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
-    std::vector<std::shared_ptr<arrow::Array>> arrow_columns;
     for (size_t idx = 0; idx < columns_.size(); ++idx) {
-      arrow_columns.emplace_back(detail::ConstructArray(columns_[idx]));
+      arrow_columns_.emplace_back(detail::ConstructArray(columns_[idx]));
     }
-    this->batch_ = arrow::RecordBatch::Make(this->schema_.GetSchema(),
-                                            this->row_num_, arrow_columns);
   }
 
-  std::shared_ptr<arrow::RecordBatch> GetRecordBatch() { return this->batch_; }
+  std::shared_ptr<arrow::RecordBatch> GetRecordBatch() const {
+    if (this->batch_ == nullptr) {
+      this->batch_ = arrow::RecordBatch::Make(this->schema_.GetSchema(),
+                                              this->row_num_, arrow_columns_);
+    }
+    return this->batch_;
+  }
 
   std::shared_ptr<arrow::Schema> schema() const { return schema_.GetSchema(); }
 
@@ -256,7 +261,8 @@ class RecordBatch : public Registered<RecordBatch> {
   std::vector<std::shared_ptr<Object>>
       columns_;
 
-  std::shared_ptr<arrow::RecordBatch> batch_;
+  std::vector<std::shared_ptr<arrow::Array>> arrow_columns_;
+  mutable std::shared_ptr<arrow::RecordBatch> batch_;
 
   friend class Client;
   friend class RecordBatchBaseBuilder;
@@ -266,27 +272,29 @@ class TableBaseBuilder;
 
 class Table : public Registered<Table> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    if (batch_num_ > 0) {
-      std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches(
-          batch_num_);
-      for (size_t i = 0; i < batch_num_; ++i) {
-        arrow_batches[i] = batches_[i]->GetRecordBatch();
-      }
-      VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches, &this->table_));
-    } else {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      CHECK_ARROW_ERROR(arrow::Table::FromRecordBatches(
-          this->schema_->GetSchema(), {}, &this->table_));
-#else
-      CHECK_ARROW_ERROR_AND_ASSIGN(
-          this->table_,
-          arrow::Table::FromRecordBatches(this->schema_->GetSchema(), {}));
-#endif
-    }
-  }
+  void PostConstruct(const ObjectMeta& meta) override {}
 
-  std::shared_ptr<arrow::Table> GetTable() { return this->table_; }
+  std::shared_ptr<arrow::Table> GetTable() const {
+    if (this->table_ == nullptr) {
+      if (batch_num_ > 0) {
+        arrow_batches_.resize(batch_num_);
+        for (size_t i = 0; i < batch_num_; ++i) {
+          arrow_batches_[i] = batches_[i]->GetRecordBatch();
+        }
+        VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches_, &this->table_));
+      } else {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+        CHECK_ARROW_ERROR(arrow::Table::FromRecordBatches(
+            this->schema_->GetSchema(), {}, &this->table_));
+#else
+        CHECK_ARROW_ERROR_AND_ASSIGN(
+            this->table_,
+            arrow::Table::FromRecordBatches(this->schema_->GetSchema(), {}));
+#endif
+      }
+    }
+    return this->table_;
+  }
 
   std::shared_ptr<arrow::Schema> schema() const { return schema_->GetSchema(); }
 
@@ -309,7 +317,8 @@ class Table : public Registered<Table> {
   __attribute__((annotate("codegen:SchemaProxy*"))) std::shared_ptr<SchemaProxy>
       schema_;
 
-  std::shared_ptr<arrow::Table> table_;
+  mutable std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches_;
+  mutable std::shared_ptr<arrow::Table> table_;
 
   friend class Client;
   friend class TableBaseBuilder;

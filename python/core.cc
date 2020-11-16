@@ -225,62 +225,6 @@ void bind_core(py::module& mod) {
       .def("seal", &ObjectBuilder::Seal, "client"_a)
       .def_property_readonly("issealed", &ObjectBuilder::sealed);
 
-  // Wrap arrow::Buffer for convenient.
-  py::class_<arrow::Buffer, std::shared_ptr<arrow::Buffer>>(
-      mod, "Buffer", py::buffer_protocol())
-      .def("__len__", &arrow::Buffer::size)
-      .def("__iter__",
-           [](arrow::Buffer* buffer) {
-             return py::make_iterator(buffer->data(),
-                                      buffer->data() + buffer->size());
-           })
-      .def_property_readonly("address",
-                             [](arrow::Buffer* self) {
-                               return reinterpret_cast<uintptr_t>(self->data());
-                             })
-      .def_property_readonly("buffer",
-                             [](py::object self) {
-                               auto pa = py::module::import("pyarrow");
-                               auto buffer = self.cast<arrow::Buffer*>();
-                               return pa.attr("foreign_buffer")(
-                                   reinterpret_cast<uintptr_t>(buffer->data()),
-                                   buffer->size(), self);
-                             })
-      .def_buffer([](arrow::Buffer* buffer) -> py::buffer_info {
-        return py::buffer_info(
-            const_cast<char*>(reinterpret_cast<const char*>(buffer->data())),
-            sizeof(int8_t), py::format_descriptor<int8_t>::format(), 1,
-            {buffer->size()}, {sizeof(int8_t)}, true);
-      });
-
-  // Wrap arrow::MutableBuffer for convenient.
-  py::class_<arrow::MutableBuffer, std::shared_ptr<arrow::MutableBuffer>>(
-      mod, "MutableBuffer", py::buffer_protocol())
-      .def("__len__", &arrow::Buffer::size)
-      .def("__iter__",
-           [](arrow::Buffer* buffer) {
-             return py::make_iterator(buffer->data(),
-                                      buffer->data() + buffer->size());
-           })
-      .def_property_readonly("address",
-                             [](arrow::Buffer* self) {
-                               return reinterpret_cast<uintptr_t>(self->data());
-                             })
-      .def_property_readonly(
-          "buffer",
-          [](py::object self) {
-            auto pa = py::module::import("pyarrow");
-            auto buffer = self.cast<arrow::MutableBuffer*>();
-            return pa.attr("py_buffer")(py::memoryview::from_memory(
-                buffer->mutable_data(), buffer->size(), false));
-          })
-      .def_buffer([](arrow::Buffer* buffer) -> py::buffer_info {
-        return py::buffer_info(reinterpret_cast<char*>(buffer->mutable_data()),
-                               sizeof(int8_t),
-                               py::format_descriptor<int8_t>::format(), 1,
-                               {buffer->size()}, {sizeof(int8_t)}, false);
-      });
-
   // Blob
   py::class_<Blob, std::shared_ptr<Blob>, Object>(mod, "Blob",
                                                   py::buffer_protocol())
@@ -301,7 +245,21 @@ void bind_core(py::module& mod) {
           },
           "index"_a)
       .def("__dealloc__", [](Blob* self) {})
-      .def_property_readonly("buffer", &Blob::Buffer)
+      .def_property_readonly(
+          "address",
+          [](Blob* self) { return reinterpret_cast<uintptr_t>(self->data()); })
+      .def_property_readonly(
+          "buffer",
+          [](Blob& blob) -> py::object {
+            auto pa = py::module::import("pyarrow");
+            auto buffer = blob.Buffer();
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return pa.attr("py_buffer")(py::memoryview::from_memory(
+                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true));
+            }
+          })
       .def_buffer([](Blob& blob) -> py::buffer_info {
         return py::buffer_info(const_cast<char*>(blob.data()), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,
@@ -358,7 +316,22 @@ void bind_core(py::module& mod) {
             std::memcpy(self->data() + offset, ss.c_str(), ss.size());
           },
           "offset"_a, "bytes"_a)
-      .def_property_readonly("buffer", &BlobWriter::Buffer)
+      .def_property_readonly("address",
+                             [](BlobWriter* self) {
+                               return reinterpret_cast<uintptr_t>(self->data());
+                             })
+      .def_property_readonly(
+          "buffer",
+          [](BlobWriter& blob) -> py::object {
+            auto pa = py::module::import("pyarrow");
+            auto buffer = blob.Buffer();
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return pa.attr("py_buffer")(py::memoryview::from_memory(
+                  buffer->mutable_data(), buffer->size(), false));
+            }
+          })
       .def_buffer([](BlobWriter& blob) -> py::buffer_info {
         return py::buffer_info(blob.data(), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,

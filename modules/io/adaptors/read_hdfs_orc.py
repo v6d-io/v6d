@@ -16,14 +16,16 @@
 # limitations under the License.
 #
 
-import vineyard
-import pyorc
-import pyarrow as pa
-import sys
 import json
-
+import sys
 from urllib.parse import urlparse
+
+import vineyard
+
 from hdfs3 import HDFileSystem
+import pyarrow as pa
+import pyorc
+
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 
@@ -61,7 +63,7 @@ def arrow_type(field):
 
 def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
     if proc_index:
-        return 
+        return
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
 

@@ -16,13 +16,13 @@
 # limitations under the License.
 #
 
-import vineyard
-import pyorc
-import pyarrow as pa
-import sys
 import json
+import sys
 
-from vineyard.io.dataframe import DataframeStreamBuilder
+import vineyard
+
+import pyarrow as pa
+import pyorc
 
 
 def orc_type(field):
@@ -69,7 +69,7 @@ def write_local_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
         while True:
             try:
                 buf = reader.next()
-            except:
+            except vineyard.StreamDrainedException:
                 writer.close()
                 break
             buf_reader = pa.ipc.open_stream(buf)

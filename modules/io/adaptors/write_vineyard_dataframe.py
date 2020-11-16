@@ -16,19 +16,22 @@
 # limitations under the License.
 #
 
+import vineyard
+import pyarrow as pa
+import sys
 import io
 import json
+
 from urllib.parse import urlparse
-import sys
-
-import vineyard
-
-import pyarrow as pa
-
-from vineyard.io.byte import ByteStreamBuilder
 
 
-def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
+def print_vineyard_id(vineyard_id):
+    ret = {'type': 'return'}
+    ret['content'] = repr(vineyard_id)
+    print(json.dumps(ret))
+
+
+def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
@@ -36,44 +39,26 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     instream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
-    header_row = (instream.params.get('header_row', None) == '1')
-    delimiter = instream.params.get('delimiter', ',')
-
-    builder = ByteStreamBuilder(client)
-    stream = builder.seal(client)
-    ret = {'type': 'return'}
-    ret['content'] = repr(stream.id)
-    print(json.dumps(ret))
-
-    stream_writer = stream.open_writer(client)
-    first_write = header_row
+    idx = 0
     while True:
         try:
             content = stream_reader.next()
-        except vineyard.StreamDrainedException:
-            stream_writer.finish()
+        except:
             break
         buf_reader = pa.ipc.open_stream(content)
-        while True:
-            try:
-                batch = buf_reader.read_next_batch()
-            except StopIteration:
-                break
+        for batch in buf_reader:
             df = batch.to_pandas()
-            buf = df.to_csv(header=first_write, index=False, sep=delimiter).encode()
-            first_write = False
-            chunk = stream_writer.next(len(buf))
-            buf_writer = pa.FixedSizeBufferWriter(chunk)
-            buf_writer.write(buf)
-            buf_writer.close()
+            df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=idx)
+            idx += 1
+            print_vineyard_id(df_id)
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print('usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>')
+        print('usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>')
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     proc_num = int(sys.argv[3])
     proc_index = int(sys.argv[4])
-    parse_dataframe(ipc_socket, stream_id, proc_num, proc_index)
+    write_vineyard_dataframe(ipc_socket, stream_id, proc_num, proc_index)

@@ -70,7 +70,6 @@ def test_local_without_header(vineyard_ipc_socket, vineyard_endpoint, test_datas
     assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
 
 
-@pytest.mark.skip("FIXME: why write_local_orc doesn't not work?")
 def test_local_orc(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
     stream = vineyard.io.open('file://%s/p2p-31.e.orc' % test_dataset,
                               vineyard_ipc_socket=vineyard_ipc_socket,
@@ -131,6 +130,26 @@ def test_hdfs_bytes(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_d
                                    vineyard_endpoint=vineyard_endpoint)
     vineyard.io.open('file://%s/p2p-31.out' % test_dataset_tmp,
                      hdfs_stream,
+                     mode='w',
+                     vineyard_ipc_socket=vineyard_ipc_socket,
+                     vineyard_endpoint=vineyard_endpoint)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+
+
+def test_write_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
+    stream = vineyard.io.open('file://%s/p2p-31.e#header_row=false&delimiter= ' % test_dataset,
+                              vineyard_ipc_socket=vineyard_ipc_socket,
+                              vineyard_endpoint=vineyard_endpoint)
+    vineyard.io.open('vineyard://p2p-gdf',
+                     stream,
+                     mode='w',
+                     vineyard_ipc_socket=vineyard_ipc_socket,
+                     vineyard_endpoint=vineyard_endpoint)
+    dfstream = vineyard.io.open('vineyard://p2p-gdf#delimiter= ',
+                                vineyard_ipc_socket=vineyard_ipc_socket,
+                                vineyard_endpoint=vineyard_endpoint)
+    vineyard.io.open('file://%s/p2p-31.out' % test_dataset_tmp,
+                     dfstream,
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)

@@ -44,15 +44,16 @@ Documentation
 
 Documentation is generated using Doxygen and sphinx. Users can build vineyard's documentation in the build directory using:
 
-```bash
-cd build
-make vineyard_doc
-```
+.. code:: bash
+
+      cd build
+      make vineyard_doc
+
 The HTML documentation will be available under `docs/_build/html`:
 
-```bash
-open docs/index.html
-```
+.. code:: bash
+
+      open docs/index.html
 
 The latest version of online documentation can be found at https://v6d.io.
 

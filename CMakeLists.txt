@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 1)
-set(VINEYARD_PATCH_VERSION 5)
+set(VINEYARD_PATCH_VERSION 0)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
 if(POLICY CMP0048)
@@ -83,7 +83,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fPIC \
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC \
                                         -Wall \
                                         -Wno-attributes \
                                         -Wno-unknown-pragmas"
@@ -150,6 +150,11 @@ macro(find_common_libraries)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
     include("cmake/FindLibUnwind.cmake")
+
+    # find pthread
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+    find_package(Threads)
 endmacro(find_common_libraries)
 
 macro(find_openssl_libraries)
@@ -271,8 +276,8 @@ if(BUILD_VINEYARD_CLIENT)
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
     add_library(vineyard_client SHARED ${CLIENT_SRC_FILES})
-    target_link_libraries(vineyard_client PUBLIC ${GLOG_LIBRARIES})
-    if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES AND APPLE)
+    target_link_libraries(vineyard_client PUBLIC ${GLOG_LIBRARIES} Threads::Threads)
+    if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
         # required on mac, but cause problem on linux.
         target_link_libraries(vineyard_client PUBLIC ${GFLAGS_LIBRARIES})
     endif()
@@ -431,6 +436,10 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
         PATTERN "*.h"                       # select header files
         PATTERN "*.hpp"                     # select C++ template header files
 )
+
+# for python's setup.cfg
+configure_file(setup.cfg.in "${PROJECT_SOURCE_DIR}/setup.cfg" @ONLY)
+configure_file(python/vineyard/version.py.in "${PROJECT_SOURCE_DIR}/python/vineyard/version.py" @ONLY)
 
 configure_file(vineyard-config.in.cmake
                "${PROJECT_BINARY_DIR}/vineyard-config.cmake" @ONLY

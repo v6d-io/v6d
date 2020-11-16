@@ -64,3 +64,10 @@ Deployment
 
 .. autofunction:: vineyard.deploy.local.start_vineyardd
 .. autofunction:: vineyard.deploy.distributed.start_vineyardd
+
+IO Facilities
+-------------
+
+.. autofunction:: vineyard.io.open
+.. autofunction:: vineyard.io.read
+.. autofunction:: vineyard.io.write

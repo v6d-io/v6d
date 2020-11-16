@@ -16,13 +16,15 @@
 # limitations under the License.
 #
 
+import json
+import sys
+from urllib.parse import urlparse
+
 import vineyard
+
 import pyorc
 import pyarrow as pa
-import sys
-import json
 
-from urllib.parse import urlparse
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 
@@ -60,7 +62,7 @@ def arrow_type(field):
 
 def read_local_orc(vineyard_socket, path, proc_num, proc_index):
     if proc_index:
-        return 
+        return
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
 
@@ -92,7 +94,6 @@ def read_local_orc(vineyard_socket, path, proc_num, proc_index):
             buf_writer = pa.FixedSizeBufferWriter(chunk)
             buf_writer.write(buf)
             buf_writer.close()
-
 
     writer.finish()
 

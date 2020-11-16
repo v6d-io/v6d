@@ -47,18 +47,23 @@ jobs:
                               libcurl4-openssl-dev \
                               libgflags-dev \
                               libgoogle-glog-dev \
+                              libgmock-dev \
                               libgrpc-dev \
                               libgrpc++-dev \
+                              libgtest-dev \
+                              libkrb5-dev \
                               libmpich-dev \
                               libprotobuf-dev \
                               librdkafka-dev \
-                              libsasl2-dev \
+                              libgsasl7-dev \
                               libssl-dev \
                               libunwind-dev \
+                              libxml2-dev \
                               libz-dev \
                               lsb-release \
                               protobuf-compiler-grpc \
                               python3-pip \
+                              uuid-dev \
                               wget
 
           # install etcd
@@ -68,14 +73,16 @@ jobs:
           sudo mv etcd-v3.4.13-linux-amd64/etcdctl /usr/local/bin/
 
           # install apache-arrow
-          wget https://bintray.com/apache/arrow/download_file?file_path=ubuntu%2Fapache-arrow-archive-keyring-latest-disco.deb -O /tmp/apache-arrow-archive-keyring-latest-disco.deb
-          sudo apt install -y /tmp/apache-arrow-archive-keyring-latest-disco.deb
-          sudo apt update -y
-          sudo apt install -y libarrow-dev \
-                              libarrow-python-dev
+          wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+          sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+          sudo apt update
+          sudo apt install -y libarrow-dev=1.0.1-1 libarrow-python-dev=1.0.1-1
+
+          # install pyarrow from scratch
+          sudo pip3 install --no-binary pyarrow pyarrow==1.0.1
 
           # install python packages for codegen, and io adaptors
-          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pyarrow hdfs3
+          sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pytest hdfs3
           sudo pip3 install -r modules/io/python/requirements.txt
 
           # install clang-format
@@ -94,6 +101,53 @@ jobs:
           cmake ..
           make -j2
           sudo make install
+
+      - name: Install libhdfs3
+        if: false
+        run: |
+          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
+          cd libhdfs3-downstream/libhdfs3
+          mkdir build
+          cd build
+          cmake ..
+          make -j
+          sudo make install
+
+      - name: Setup SSH environment
+        run: |
+          # setup SSH server to allow login without password
+          cat > sshd_config <<EOF
+            SyslogFacility AUTHPRIV
+            PermitRootLogin yes
+            AuthorizedKeysFile	.ssh/authorized_keys
+            PasswordAuthentication yes
+            ChallengeResponseAuthentication no
+            UsePAM yes
+            UseDNS no
+            X11Forwarding no
+            PrintMotd no
+          EOF
+          sudo mv sshd_config /etc/ssh/sshd_config
+          sudo systemctl restart ssh
+
+          # generate proper SSH key
+          cat /dev/zero | ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa
+
+          # add key to authorized_keys file
+          cat ~/.ssh/id_rsa.pub | tee -a ~/.ssh/authorized_keys
+
+          # ensure the permissions of SSH files
+          chmod 600 ~/.ssh/authorized_keys
+          chmod 700 ~/.ssh
+          sudo chmod -c 0755 ~/
+          ls -la ~/.ssh
+
+          # test SSH login, without password
+          ssh -vvv -i ~/.ssh/id_rsa -o BatchMode=yes -o StrictHostKeyChecking=no $(whoami)@localhost
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
 
       - name: CMake
         run: |
@@ -186,40 +240,46 @@ jobs:
           sudo make install
           cd ..
           python3 setup.py bdist_wheel
-          sudo pip3 install dist/*.whl
+          sudo pip3 install dist/*.whl -U
 
       - name: Get Test Data
         run: |
           git clone https://github.com/7br/gstest.git --depth=1
 
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
       - name: Run Tests
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
+
           rm -rf default.etcd
           python3 test/runner.py --with-cpp
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
 
       - name: Run Python Tests
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           python3 test/runner.py --with-python
 
-      - name: Install libhdfs3
-        run: |
-          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
-          cd libhdfs3-downstream/libhdfs3
-          mkdir build
-          cd build
-          cmake ..
-          make -j
-          sudo make install
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
 
       - name: Run IO Tests
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           python3 test/runner.py --with-io
 

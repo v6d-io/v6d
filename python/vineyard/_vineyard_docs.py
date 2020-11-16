@@ -5,7 +5,7 @@ import logging
 
 from ._C import _add_doc, connect, ClientBase, IPCClient, RPCClient, \
     Object, ObjectBuilder, ObjectID, ObjectMeta, InstanceStatus, \
-    Blob, BlobBuilder, Buffer, MutableBuffer
+    Blob, BlobBuilder
 
 
 def add_doc(target, doc):
@@ -779,8 +779,12 @@ add_doc(Blob.__len__, r'''
 The size of this blob.
 ''')
 
+add_doc(Blob.address, r'''
+The memory address value of this blob.
+''')
+
 add_doc(Blob.buffer, r'''
-The readonly buffer hebind this blob.
+The readonly buffer hebind this blob. The result buffer has type :code:`pyarrow::Buffer`.
 ''')
 
 add_doc(
@@ -804,4 +808,14 @@ add_doc(
     :noindex:
 
 Copy the given address to the given offset.
+''')
+
+add_doc(BlobBuilder.address, r'''
+The memory address value of this blob builder.
+''')
+
+add_doc(
+    BlobBuilder.buffer, r'''
+The writeable buffer hebind this blob builder. The result buffer has type :code:`pyarrow::Buffer`,
+and it is a mutable one.
 ''')

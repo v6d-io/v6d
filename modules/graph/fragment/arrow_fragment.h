@@ -770,6 +770,9 @@ class ArrowFragment
   }
 
 #if defined(ENABLE_SELECTOR)
+  /**
+   * TODO(gl): Replace string selector with the LabeledSelector object
+   */
   void to_nd_array(grape::InArchive& arc, const grape::CommSpec& comm_spec,
                    const std::string& selector, const std::string& begin,
                    const std::string& end) const override {
@@ -820,6 +823,9 @@ class ArrowFragment
     gather_archives(arc, comm_spec, old_size);
   }
 
+  /**
+   * TODO(gl): Replace string selector with the LabeledSelector object
+   */
   void to_pandas(grape::InArchive& arc, const grape::CommSpec& comm_spec,
                  const std::string& selectors, const std::string& begin,
                  const std::string& end) const override {

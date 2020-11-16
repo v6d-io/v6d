@@ -18,29 +18,25 @@
 
 import json
 import sys
-from urllib.parse import urlparse
 
 import vineyard
 
-from hdfs3 import HDFileSystem
 import pyarrow as pa
 
-from vineyard.io.byte import ByteStreamBuilder
+from urllib.parse import urlparse
+from vineyard.io.dataframe import DataframeStreamBuilder
 
 
-def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
+def read_vineyard_dataframe(vineyard_socket, path, proc_num, proc_index):
     if proc_index:
         return
     client = vineyard.connect(vineyard_socket)
-    builder = ByteStreamBuilder(client)
-
-    host, port = urlparse(path).netloc.split(':')
-    hdfs = HDFileSystem(host=host, port=int(port), pars={"dfs.client.read.shortcircuit": "false"})
+    builder = DataframeStreamBuilder(client)
 
     header_row = False
     fragments = urlparse(path).fragment.split('&')
 
-    path = urlparse(path).path
+    name = urlparse(path).netloc
 
     for frag in fragments:
         try:
@@ -57,29 +53,24 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
             elif k == 'delimiter':
                 builder[k] = bytes(v, "utf-8").decode("unicode_escape")
 
-    offset = 0
-    length = 1024 * 1024
-
-    if header_row:
-        header_line = hdfs.read_block(path, 0, 1, b'\n')
-        builder['header_line'] = header_line.decode('unicode_escape')
-        offset = len(header_line) - 1
-
     stream = builder.seal(client)
-
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
     print(json.dumps(ret))
 
     writer = stream.open_writer(client)
 
-    while True:
-        buf = hdfs.read_block(path, offset, length, b'\n')
-        size = len(buf)
-        if not size:
-            break
-        offset += size
-        chunk = writer.next(size)
+    df_id = client.get_name(name)
+    dataframes = client.get(df_id)
+
+    for df in dataframes:
+        rb = pa.RecordBatch.from_pandas(df)
+        sink = pa.BufferOutputStream()
+        rb_writer = pa.ipc.new_stream(sink, rb.schema)
+        rb_writer.write_batch(rb)
+        rb_writer.close()
+        buf = sink.getvalue()
+        chunk = writer.next(buf.size)
         buf_writer = pa.FixedSizeBufferWriter(chunk)
         buf_writer.write(buf)
         buf_writer.close()
@@ -89,10 +80,10 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print('usage: ./read_hdfs_bytes <ipc_socket> <hdfs path> <proc num> <proc index>')
+        print('usage: ./read_vineyard_dataframe <ipc_socket> <vineyard_address> <proc num> <proc index>')
         exit(1)
     ipc_socket = sys.argv[1]
-    hdfs_path = sys.argv[2]
+    vineyard_address = sys.argv[2]
     proc_num = int(sys.argv[3])
     proc_index = int(sys.argv[4])
-    read_hdfs_bytes(ipc_socket, hdfs_path, proc_num, proc_index)
+    read_vineyard_dataframe(ipc_socket, vineyard_address, proc_num, proc_index)

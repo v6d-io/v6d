@@ -16,13 +16,75 @@
 # limitations under the License.
 #
 
-__version__ = '1.0'
+from .version import __version__
 
 import logging
 import traceback
 
+
+def _init_global_context():
+    import os as _dl_flags
+    import sys
+
+    if not hasattr(_dl_flags, 'RTLD_GLOBAL') or not hasattr(_dl_flags, 'RTLD_LAZY'):
+        try:
+            # next try if DLFCN exists
+            import DLFCN as _dl_flags
+        except ImportError:
+            _dl_flags = None
+
+    if _dl_flags is not None:
+        old_flags = sys.getdlopenflags()
+
+        # import the extension module
+        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
+        from . import _C
+
+        # See Note [Import pyarrow before _C]
+        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
+        import pyarrow
+        del pyarrow
+
+        # restore
+        sys.setdlopenflags(old_flags)
+
+
+_init_global_context()
+del _init_global_context
+
+
 from ._C import connect, IPCClient, RPCClient, Object, ObjectBuilder, ObjectID, ObjectMeta, \
-    InstanceStatus, Blob, BlobBuilder, Buffer, MutableBuffer
+    InstanceStatus, Blob, BlobBuilder
+from ._C import ArrowErrorException, \
+    AssertionFailedException, \
+    ConnectionErrorException, \
+    ConnectionFailedException, \
+    EndOfFileException, \
+    EtcdErrorException, \
+    IOErrorException, \
+    InvalidException, \
+    InvalidStreamStateException, \
+    KeyErrorException, \
+    MetaTreeInvalidException, \
+    MetaTreeLinkInvalidException, \
+    MetaTreeNameInvalidException, \
+    MetaTreeNameNotExistsException, \
+    MetaTreeSubtreeNotExistsException, \
+    MetaTreeTypeInvalidException, \
+    MetaTreeTypeNotExistsException, \
+    NotEnoughMemoryException, \
+    NotImplementedException, \
+    ObjectExistsException, \
+    ObjectNotExistsException, \
+    ObjectNotSealedException, \
+    ObjectSealedException, \
+    StreamDrainedException, \
+    StreamFailedException, \
+    TypeErrorException, \
+    UnknownErrorException, \
+    UserInputErrorException, \
+    VineyardServerNotReadyException
+
 from . import _vineyard_docs
 del _vineyard_docs
 
@@ -39,6 +101,7 @@ def _init_vineyard_modules():
 
         * /etc/vineyard/config.py
         * {sys.prefix}/etc/vineyard/config.py
+        * /usr/share/vineyard/01-xxx.py
         * /usr/local/share/vineyard/01-xxx.py
         * {sys.prefix}/share/vineyard/02-xxxx.py
         * $HOME/.vineyard/03-xxxxx.py
@@ -61,6 +124,8 @@ def _init_vineyard_modules():
 
     _import_module_from_file('/etc/vineyard/config.py')
     _import_module_from_file(os.path.join(sys.prefix, '/etc/vineyard/config.py'))
+    for filepath in glob.glob('/usr/share/vineyard/*-*.py'):
+        _import_module_from_file(filepath)
     for filepath in glob.glob('/usr/local/share/vineyard/*-*.py'):
         _import_module_from_file(filepath)
     for filepath in glob.glob(os.path.join(sys.prefix, '/share/vineyard/*-*.py')):

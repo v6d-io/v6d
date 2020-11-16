@@ -110,7 +110,8 @@ jobs:
           cd glog-0.4.0
           mkdir -p build-dir
           cd build-dir
-          cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF
+          cmake .. -DBUILD_SHARED_LIBS=OFF \
+                   -DBUILD_TESTING=OFF
           make install -j2
 
           echo "Installing apache-arrow ..."
@@ -199,6 +200,8 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/build/lib:$LD_LIBRARY_PATH
           for wheel in `ls dist/*`; do delocate-wheel -w fixed_wheels -v $wheel; done
           ls -la ./fixed_wheels
+
+          ccache --show-stats
 
       - name: Prepare checksum and artifacts
         run: |

@@ -79,7 +79,7 @@ iterator make_iterator_fmap(Iterator first, Sentinel last,
 
 namespace vineyard {
 
-void throw_on_error(Status const &status);
+void throw_on_error(Status const& status);
 
 }  // namespace vineyard
 
