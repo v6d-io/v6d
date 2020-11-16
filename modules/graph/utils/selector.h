@@ -33,18 +33,19 @@ limitations under the License.
 namespace vineyard {
 
 enum class SelectorType {
-  VERTEX_ID,
-  VERTEX_DATA,
-  EDGE_SRC,
-  EDGE_DST,
-  EDGE_DATA,
-  RESULT
+  kVertexId,
+  kVertexData,
+  kEdgeSrc,
+  kEdgeDst,
+  kEdgeData,
+  kResult
 };
 
 class Selector {
  protected:
   explicit Selector(std::string property_name)
-      : type_(SelectorType::RESULT), property_name_(std::move(property_name)) {}
+      : type_(SelectorType::kResult),
+        property_name_(std::move(property_name)) {}
 
   explicit Selector(SelectorType type) : type_(type) {}
 
@@ -57,17 +58,17 @@ class Selector {
 
   virtual std::string str() const {
     switch (type_) {
-    case SelectorType::VERTEX_ID:
+    case SelectorType::kVertexId:
       return "v.id";
-    case SelectorType::VERTEX_DATA:
+    case SelectorType::kVertexData:
       return "v.data";
-    case SelectorType::EDGE_SRC:
+    case SelectorType::kEdgeSrc:
       return "e.src";
-    case SelectorType::EDGE_DST:
+    case SelectorType::kEdgeDst:
       return "e.dst";
-    case SelectorType::EDGE_DATA:
+    case SelectorType::kEdgeData:
       return "e.data";
-    case SelectorType::RESULT: {
+    case SelectorType::kResult: {
       if (property_name_.empty())
         return "r";
       return "r." + property_name_;
@@ -97,17 +98,17 @@ class Selector {
     std::regex r_result_prop("r.(.*?)");
 
     if (std::regex_match(selector, sm, r_vid)) {
-      return Selector(SelectorType::VERTEX_ID);
+      return Selector(SelectorType::kVertexId);
     } else if (std::regex_match(selector, sm, r_vdata)) {
-      return Selector(SelectorType::VERTEX_DATA);
+      return Selector(SelectorType::kVertexData);
     } else if (std::regex_match(selector, sm, r_esrc)) {
-      return Selector(SelectorType::EDGE_SRC);
+      return Selector(SelectorType::kEdgeSrc);
     } else if (std::regex_match(selector, sm, r_edst)) {
-      return Selector(SelectorType::EDGE_DST);
+      return Selector(SelectorType::kEdgeDst);
     } else if (std::regex_match(selector, sm, r_edata)) {
-      return Selector(SelectorType::EDGE_DATA);
+      return Selector(SelectorType::kEdgeData);
     } else if (std::regex_match(selector, sm, r_result)) {
-      return Selector(SelectorType::RESULT);
+      return Selector(SelectorType::kResult);
     } else if (std::regex_match(selector, sm, r_result_prop)) {
       std::string prop_name = sm[1];
       if (prop_name.empty()) {
@@ -175,19 +176,19 @@ class LabeledSelector : public Selector {
 
   std::string str() const override {
     switch (type()) {
-    case SelectorType::VERTEX_ID:
+    case SelectorType::kVertexId:
       return "v.label" + std::to_string(label_id_) + ".id";
-    case SelectorType::VERTEX_DATA:
+    case SelectorType::kVertexData:
       return "v.label" + std::to_string(label_id_) + ".property" +
              std::to_string(property_id_);
-    case SelectorType::EDGE_SRC:
+    case SelectorType::kEdgeSrc:
       return "e.label" + std::to_string(label_id_) + ".src";
-    case SelectorType::EDGE_DST:
+    case SelectorType::kEdgeDst:
       return "e.label" + std::to_string(label_id_) + ".dst";
-    case SelectorType::EDGE_DATA:
+    case SelectorType::kEdgeData:
       return "e.label" + std::to_string(label_id_) + ".property" +
              std::to_string(property_id_);
-    case SelectorType::RESULT: {
+    case SelectorType::kResult: {
       return "r.label" + std::to_string(label_id_) + "." + property_name();
     }
     }
@@ -216,29 +217,29 @@ class LabeledSelector : public Selector {
     if (std::regex_match(selector, sm, r_vid)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
 
-      return LabeledSelector(SelectorType::VERTEX_ID, label_id);
+      return LabeledSelector(SelectorType::kVertexId, label_id);
     } else if (std::regex_match(selector, sm, r_vdata)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
       auto prop_id = boost::lexical_cast<prop_id_t>(sm[2]);
 
-      return LabeledSelector(SelectorType::VERTEX_DATA, label_id, prop_id);
+      return LabeledSelector(SelectorType::kVertexData, label_id, prop_id);
     } else if (std::regex_match(selector, sm, r_esrc_id)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
 
-      return LabeledSelector(SelectorType::EDGE_SRC, label_id);
+      return LabeledSelector(SelectorType::kEdgeSrc, label_id);
     } else if (std::regex_match(selector, sm, r_edst_id)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
 
-      return LabeledSelector(SelectorType::EDGE_DST, label_id);
+      return LabeledSelector(SelectorType::kEdgeDst, label_id);
     } else if (std::regex_match(selector, sm, r_edata)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
       auto prop_id = boost::lexical_cast<prop_id_t>(sm[2]);
 
-      return LabeledSelector(SelectorType::EDGE_DATA, label_id, prop_id);
+      return LabeledSelector(SelectorType::kEdgeData, label_id, prop_id);
     } else if (std::regex_match(selector, sm, r_result)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
 
-      return LabeledSelector(SelectorType::RESULT, label_id);
+      return LabeledSelector(SelectorType::kResult, label_id);
     } else if (std::regex_match(selector, sm, r_result_prop)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
       std::string prop_name = sm[2];
