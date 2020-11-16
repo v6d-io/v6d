@@ -25,14 +25,12 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-@pytest.mark.skip("FIXME")
 def test_list(vineyard_client):
     value = [1, 2, 3, 4, 5, 6, None, None, 9]
     object_id = vineyard_client.put(value)
     assert vineyard_client.get(object_id) == value
 
 
-@pytest.mark.skip("FIXME")
 def test_dict(vineyard_client):
     value = {1: 2, 3: 4, 5: None, None: 6}
     object_id = vineyard_client.put(value)

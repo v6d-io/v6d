@@ -250,11 +250,15 @@ void bind_core(py::module& mod) {
           [](Blob* self) { return reinterpret_cast<uintptr_t>(self->data()); })
       .def_property_readonly(
           "buffer",
-          [](Blob& blob) {
+          [](Blob& blob) -> py::object {
             auto pa = py::module::import("pyarrow");
             auto buffer = blob.Buffer();
-            return pa.attr("py_buffer")(py::memoryview::from_memory(
-                const_cast<uint8_t *>(buffer->data()), buffer->size(), true));
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return pa.attr("py_buffer")(py::memoryview::from_memory(
+                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true));
+            }
           })
       .def_buffer([](Blob& blob) -> py::buffer_info {
         return py::buffer_info(const_cast<char*>(blob.data()), sizeof(int8_t),
@@ -318,11 +322,15 @@ void bind_core(py::module& mod) {
                              })
       .def_property_readonly(
           "buffer",
-          [](BlobWriter& blob) {
+          [](BlobWriter& blob) -> py::object {
             auto pa = py::module::import("pyarrow");
             auto buffer = blob.Buffer();
-            return pa.attr("py_buffer")(py::memoryview::from_memory(
-                buffer->mutable_data(), buffer->size(), false));
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return pa.attr("py_buffer")(py::memoryview::from_memory(
+                  buffer->mutable_data(), buffer->size(), false));
+            }
           })
       .def_buffer([](BlobWriter& blob) -> py::buffer_info {
         return py::buffer_info(blob.data(), sizeof(int8_t),
