@@ -63,8 +63,8 @@ void bind_stream(py::module& mod) {
         throw_on_error(self->GetNext(chunk));
         auto chunk_ptr = chunk.release();
         auto pa = py::module::import("pyarrow");
-        return pa.attr("py_buffer")(
-            py::memoryview::from_memory(chunk_ptr->data(), chunk_ptr->size()));
+        return pa.attr("py_buffer")(py::memoryview::from_memory(
+            const_cast<uint8_t *>(chunk_ptr->data()), chunk_ptr->size(), true));
       });
 
   // ByteStream
@@ -140,8 +140,8 @@ void bind_stream(py::module& mod) {
         throw_on_error(self->GetNext(chunk));
         auto chunk_ptr = chunk.release();
         auto pa = py::module::import("pyarrow");
-        return pa.attr("py_buffer")(
-            py::memoryview::from_memory(chunk_ptr->data(), chunk_ptr->size()));
+        return pa.attr("py_buffer")(py::memoryview::from_memory(
+            const_cast<uint8_t *>(chunk_ptr->data()), chunk_ptr->size(), true));
       });
 
   // DataFrameStream

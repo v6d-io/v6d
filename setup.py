@@ -48,7 +48,6 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
 
 setup(
     name='vineyard',
-    version='0.0.1',
     author='7br',
     author_email='7br@alibaba-inc.com',
     description='An in-memory immutable data manager',
@@ -76,13 +75,6 @@ setup(
         'cli': ['vineyard-codegen=vineyard.cli:main'],
         'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
     },
-    install_requires=[
-        'numpy',
-        'pandas',
-        'pyarrow',
-        'sortedcontainers',
-        'setuptools',
-    ],
     extras_require={
         'dev': [
             'breathe',

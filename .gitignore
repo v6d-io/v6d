@@ -28,3 +28,6 @@ default.etcd/
 
 # docs
 /docs/_build/
+
+# setup.cfg will be generated
+/setup.cfg

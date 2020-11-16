@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/alibaba/libvineyard/vineyard-manylinux1:20201028
+FROM docker.pkg.github.com/alibaba/libvineyard/vineyard-manylinux1:20201115
 
 # target: docker.pkg.github.com/alibaba/libvineyard/vineyard-wheel
 
@@ -49,7 +49,7 @@ RUN cd /work/libvineyard && \
     make vineyard_client_python -j2 && \
     cd .. && \
     /opt/python/$python/bin/python setup.py bdist_wheel && \
-    export LD_LIBRARY_PATH=/work/libvineyard/lib:$LD_LIBRARY_PATH && \
+    export LD_LIBRARY_PATH=/work/libvineyard/build/lib:$LD_LIBRARY_PATH && \
     for wheel in `ls dist/*`; do auditwheel repair -w fixed_wheels $wheel; done && \
     cd /work && \
     mkdir -p fixed_wheels/ && \

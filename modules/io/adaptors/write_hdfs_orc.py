@@ -16,14 +16,16 @@
 # limitations under the License.
 #
 
-import vineyard
-import pyorc
-import pyarrow as pa
-import sys
 import json
-
+import sys
 from urllib.parse import urlparse
+
+import vineyard
+
 from hdfs3 import HDFileSystem
+import pyarrow as pa
+import pyorc
+
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 
@@ -75,7 +77,7 @@ def write_hdfs_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
         while True:
             try:
                 buf = reader.next()
-            except:
+            except vineyard.StreamDrainedException:
                 writer.close()
                 break
             buf_reader = pa.ipc.open_stream(buf)

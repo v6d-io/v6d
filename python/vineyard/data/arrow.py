@@ -18,6 +18,7 @@
 
 import re
 import pyarrow as pa
+import pytest
 
 from vineyard._C import ObjectMeta
 from .utils import normalize_dtype
@@ -32,10 +33,7 @@ def buffer_builder(client, buffer, builder):
 
 
 def as_arrow_buffer(blob):
-    buffer = blob.buffer
-    if buffer is not None:
-        buffer = buffer.buffer  # pa.foreign_buffer
-    return buffer
+    return blob.buffer
 
 
 def numeric_array_builder(client, array, builder):
@@ -139,8 +137,8 @@ def record_batch_builder(client, batch, builder):
 def table_builder(client, table, builder):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Table'
-    meta['row_num_'] = table.num_rows
-    meta['column_num_'] = table.num_columns
+    meta['num_rows_'] = table.num_rows
+    meta['num_columns_'] = table.num_columns
     batches = table.to_batches()
     meta['batch_num_'] = len(batches)
     meta['__batches_-size'] = len(batches)

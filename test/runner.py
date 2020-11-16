@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from argparse import ArgumentParser
 import contextlib
 import os
 import shutil
@@ -173,7 +174,8 @@ def run_test(test_name, *args, nproc=1, capture=False, vineyard_ipc_socket=VINEY
     if capture:
         return subprocess.check_output(cmdargs)
     else:
-        subprocess.check_call(cmdargs)
+        subprocess.check_call(cmdargs,
+                              cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
     time.sleep(1)
 
 
@@ -181,7 +183,10 @@ def get_data_path(name):
     default_data_dir = os.path.join(os.path.dirname(
         os.path.abspath(__file__)), '..', '..', 'gstest')
     binary_dir = os.environ.get('VINEYARD_DATA_DIR', default_data_dir)
-    return os.path.join(binary_dir, name)
+    if name is None:
+        return binary_dir
+    else:
+        return os.path.join(binary_dir, name)
 
 
 def run_single_vineyardd_tests(etcd_endpoints):
@@ -234,10 +239,54 @@ def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
         time.sleep(5)
 
 
+def run_python_tests(etcd_endpoints):
+    etcd_prefix = 'vineyard_test_%s' % time.time()
+    with start_vineyardd(etcd_endpoints,
+                         etcd_prefix,
+                         default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
+        subprocess.check_call(['pytest', '-s', '-vvv', 'python/vineyard',
+                               '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
+                               '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+
+def run_io_adaptor_tests(etcd_endpoints):
+    etcd_prefix = 'vineyard_test_%s' % time.time()
+    with start_vineyardd(etcd_endpoints,
+                         etcd_prefix,
+                         default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
+        subprocess.check_call(['pytest', '-s', '-vvv', 'modules/io/python/tests',
+                               '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
+                               '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
+                               '--test-dataset=%s' % get_data_path(None)],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+
+def parse_sys_args():
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument('--with-cpp', action='store_true', default=False,
+                            help='Whether to run C++ tests')
+    arg_parser.add_argument('--with-python', action='store_true', default=False,
+                            help='Whether to run python tests')
+    arg_parser.add_argument('--with-io', action='store_true', default=False,
+                            help='Whether to run IO adaptors tests')
+    return arg_parser.parse_args()
+
+
 def main():
-    run_single_vineyardd_tests('http://localhost:%d' % find_port())
-    with start_etcd() as (_, etcd_endpoints):
-        run_scale_in_out_tests(etcd_endpoints, instance_size=2)
+    args = parse_sys_args()
+    if args.with_cpp:
+        run_single_vineyardd_tests('http://localhost:%d' % find_port())
+        with start_etcd() as (_, etcd_endpoints):
+            run_scale_in_out_tests(etcd_endpoints, instance_size=4)
+
+    if args.with_python:
+        with start_etcd() as (_, etcd_endpoints):
+            run_python_tests(etcd_endpoints)
+
+    if args.with_io:
+        with start_etcd() as (_, etcd_endpoints):
+            run_io_adaptor_tests(etcd_endpoints)
 
 
 if __name__ == '__main__':

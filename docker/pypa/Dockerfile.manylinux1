@@ -14,7 +14,7 @@
 
 FROM quay.io/pypa/manylinux2010_x86_64:2020-10-18-c6d2d92
 
-# target: docker.pkg.github.com/alibaba/libvineyard/vineyard-manylinux1:20201028
+# target: docker.pkg.github.com/alibaba/libvineyard/vineyard-manylinux1:20201115
 
 RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     mkdir /deps && \
@@ -29,7 +29,7 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     cd gflags-2.2.2 && \
     mkdir build && \
     cd build && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF && \
+    cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
     make install -j && \
     echo "Installing glog ..." && \
     cd /deps && \
@@ -38,7 +38,7 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     cd glog-0.4.0 && \
     mkdir build && \
     cd build && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF && \
+    cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
     make install -j && \
     echo "Installing boost header libraries ..." && \
     cd /deps && \
@@ -90,7 +90,8 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
         -DARROW_USE_UBSAN=OFF \
         -DARROW_JEMALLOC=OFF \
         -DARROW_BUILD_SHARED=OFF \
-        -DARROW_BUILD_STATIC=ON && \
+        -DARROW_BUILD_STATIC=ON \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
     make install -j && \
     echo "Prepare python dev dependencies ..." && \
     pip3 install libclang parsec && \

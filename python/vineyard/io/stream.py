@@ -30,25 +30,30 @@ logger = logging.getLogger('vineyard')
 def read(path, *args, **kwargs):
     ''' Open a path and read it as a single stream.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         path: str
             Path to read, the last reader registered for the scheme of the path will be used.
         vineyard_ipc_socket: str
             The local or remote vineyard's IPC socket location that the remote readers will
             use to establish connections with the vineyard server.
+        vineyard_endpoint: str, optional
+            An optional address of vineyard's RPC socket, which will be used for retrieving server's
+            information on the client side. If not provided, the `vineyard_ipc_socket` will be used,
+            or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
 
     logger.debug('parsed.scheme = %s: %s', parsed.scheme, path)
-    for reader in read.__factory[parsed.scheme][::-1]:
-        try:
-            proc_kwargs = kwargs.copy()
-            r = reader(path[len(parsed.scheme) + 3:], proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
-            if r is not None:
-                return r
-        except Exception as e:
-            logger.debug('failed when trying the reader: %s:\n%s', e, traceback.format_exc())
+    if read.__factory and read.__factory[parsed.scheme]:
+        for reader in read.__factory[parsed.scheme][::-1]:
+            try:
+                proc_kwargs = kwargs.copy()
+                r = reader(path[len(parsed.scheme) + 3:], proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+                if r is not None:
+                    return r
+            except Exception as e:
+                logger.debug('failed when trying the reader: %s:\n%s', e, traceback.format_exc())
 
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
@@ -66,24 +71,32 @@ def write(path, stream, *args, **kwargs):
         vineyard_ipc_socket: str
             The local or remote vineyard's IPC socket location that the remote readers will
             use to establish connections with the vineyard server.
+        vineyard_endpoint: str, optional
+            An optional address of vineyard's RPC socket, which will be used for retrieving server's
+            information on the client side. If not provided, the `vineyard_ipc_socket` will be used,
+            or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
 
-    for writer in write.__factory[parsed.scheme][::-1]:
-        try:
-            proc_kwargs = kwargs.copy()
-            writer(path[len(parsed.scheme) + 3:], stream, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
-        except Exception as e:
-            logger.debug('failed when trying the writer: %s', e)
-            continue
-        else:
-            return
+    if write.__factory and read.__factory[parsed.scheme]:
+        for writer in write.__factory[parsed.scheme][::-1]:
+            try:
+                proc_kwargs = kwargs.copy()
+                writer(path[len(parsed.scheme) + 3:], stream, proc_kwargs.pop('vineyard_ipc_socket'), *args,
+                       **proc_kwargs)
+            except Exception as e:
+                logger.debug('failed when trying the writer: %s', e)
+                continue
+            else:
+                return
 
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
 
 def open(path, *args, mode='r', **kwargs):
-    ''' Open a path as a reader or writer, depends on the parameter :code:`mod`.
+    ''' Open a path as a reader or writer, depends on the parameter :code:`mode`. If :code:`mode`
+        is :code:`r`, it will open a stream for read, and open a stream for write when :code:`mode`
+        is :code:`w`.
 
         Parameters
         ----------
@@ -91,6 +104,15 @@ def open(path, *args, mode='r', **kwargs):
             Path to open.
         mode: char
             Mode about how to open the path, :code:`r` is for read and :code:`w` for write.
+        vineyard_ipc_socket: str
+            Vineyard's IPC socket location.
+        vineyard_endpoint: str
+            Vineyard's RPC socket address.
+
+        See Also
+        --------
+        vineyard.io.read
+        vineyard.io.write
     '''
     if mode == 'r':
         return read(path, *args, **kwargs)
