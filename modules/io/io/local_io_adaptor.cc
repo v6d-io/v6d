@@ -223,6 +223,18 @@ Status LocalIOAdaptor::setPartialReadImpl() {
     // skip header row
     int64_t dis = getDistanceToLineBreak(0);
     start_pos = dis + 1;
+  } else {
+    // Name columns as f0 ... fn
+    std::string one_line;
+    RETURN_ON_ERROR(seek(0, kFileLocationBegin));
+    RETURN_ON_ERROR(ReadLine(one_line));
+    ::boost::algorithm::trim(one_line);
+    std::vector<std::string> one_column;
+    ::boost::split(one_column, one_line,
+                   ::boost::is_any_of(std::string(1, delimiter_)));
+    for (size_t i = 0; i < one_column.size(); ++i) {
+      original_columns_.push_back("f" + std::to_string(i));
+    }
   }
   RETURN_ON_ERROR(seek(0, kFileLocationEnd));
   int64_t total_file_size = tell();
@@ -260,6 +272,18 @@ Status LocalIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
   return Status::OK();
 }
 
+/// origin_columns_ saves the column names of the CSV.
+/// If header_row == true, origin_columns will be read from the first CSV row.
+/// If header_row == false, origin_columns will be of the form "f0", "f1", ...
+/// Assume the order of column_types is same with include_columns.
+/// include_columns: a,b,c,d
+/// column_types   : int,double,float,string
+/// Additionally, include_columns may have numbers, like 0,1,c,d
+/// The number means index in origin_columns.
+/// So we should get the name from origin_columns, then associate it with column
+/// type. column_types also may have empty fields, means let arrow deduce type
+/// for that column. Example: column_types: int,,,string. Means deduce the type
+/// of the second and third column
 Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
                                         int index) {
   std::unique_ptr<arrow::fs::LocalFileSystem> arrow_lfs(
@@ -280,19 +304,27 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   auto parse_options = arrow::csv::ParseOptions::Defaults();
   auto convert_options = arrow::csv::ConvertOptions::Defaults();
 
-  if (!header_row_) {
-    read_options.autogenerate_column_names = true;
-  } else {
-    read_options.column_names = original_columns_;
-    if (!columns_.empty()) {
-      convert_options.include_columns = columns_;
-    } else {
-      convert_options.include_columns = origin_columns_;
+  read_options.column_names = original_columns_;
+
+  auto is_number = [](const std::string& s) -> bool {
+    return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) {
+                           return !std::isdigit(c);
+                         }) == s.end();
+  };
+
+  for (size_t i = 0; i < columns_.size(); ++i) {
+    if (is_number(columns_[i])) {
+      int col_idx = std::stoi(columns_[i]);
+      if (col_idx >= static_cast<int>(original_columns_.size())) {
+        return Status(StatusCode::kArrowError,
+                      "Index out of range: " + columns_[i]);
+      }
+      columns_[i] = original_columns_[col_idx];
     }
   }
-  // Assume the order of column_types is same with include_columns.
-  // include_columns: a,b,c,d
-  // column_types   : int,double,float,string
+
+  convert_options.include_columns = columns_;
+
   if (column_types_.size() > convert_options.include_columns.size()) {
     return Status(StatusCode::kArrowError,
                   "Format of column type schema is incorrect.");

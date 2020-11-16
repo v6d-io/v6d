@@ -874,14 +874,22 @@ class ArrowFragmentLoader {
     if (lhs_index > rhs_index) {
       return arrow::Status::Invalid("lhs index must smaller than rhs index.");
     }
-    auto field = in->schema()->field(rhs_index);
-    auto column = in->column(rhs_index);
+    auto lhs_field = in->schema()->field(lhs_index);
+    auto lhs_column = in->schema()->column(lhs_index);
+    auto rhs_field = in->schema()->field(rhs_index);
+    auto rhs_column = in->column(rhs_index);
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
     CHECK_ARROW_ERROR(in->RemoveColumn(rhs_index, &in));
-    CHECK_ARROW_ERROR(in->AddColumn(lhs_index, field, column, out));
+    CHECK_ARROW_ERROR(in->RemoveColumn(lhs_index, &in));
+    CHECK_ARROW_ERROR(in->AddColumn(lhs_index, rhs_field, rhs_column, out));
+    CHECK_ARROW_ERROR(in->AddColumn(rhs_index, lhs_field, lhs_column, out));
 #else
     CHECK_ARROW_ERROR_AND_ASSIGN(in, in->RemoveColumn(rhs_index));
-    CHECK_ARROW_ERROR_AND_ASSIGN(*out, in->AddColumn(lhs_index, field, column));
+    CHECK_ARROW_ERROR_AND_ASSIGN(in, in->RemoveColumn(lhs_index));
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        *out, in->AddColumn(lhs_index, rhs_field, rhs_column));
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        *out, in->AddColumn(rhs_index, lhs_field, lhs_column));
 #endif
     return arrow::Status::OK();
   }
