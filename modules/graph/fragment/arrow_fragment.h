@@ -43,8 +43,6 @@ limitations under the License.
 #include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/context_protocols.h"
 #include "graph/utils/error.h"
-#include "graph/utils/selector_utils.h"
-#include "graph/utils/transform_utils.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 namespace gs {
