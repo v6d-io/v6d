@@ -78,12 +78,12 @@ jobs:
           sudo apt update
           sudo apt install -y libarrow-dev=1.0.1-1 libarrow-python-dev=1.0.1-1
 
+          # install pyarrow from scratch
+          sudo pip3 install --no-binary pyarrow pyarrow==1.0.1
+
           # install python packages for codegen, and io adaptors
           sudo pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe gcovr pytest hdfs3
           sudo pip3 install -r modules/io/python/requirements.txt
-
-          # install pyarrow from scratch
-          sudo pip3 install --no-binary pyarrow pyarrow==1.0.1
 
           # install clang-format
           if [ ! -f /usr/bin/clang-format ]; then

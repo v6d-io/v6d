@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-__version__ = '1.0'
+from .version import __version__
 
 import logging
 import traceback
@@ -53,13 +53,14 @@ def _init_global_context():
 
     if _dl_flags is not None:
         old_flags = sys.getdlopenflags()
-        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
 
         # See Note [Import pyarrow before _C]
+        sys.setdlopenflags(_dl_flags.RTLD_LOCAL | _dl_flags.RTLD_NOW)
         import pyarrow
         del pyarrow
 
         # import the extension module
+        sys.setdlopenflags(_dl_flags.RTLD_LOCAL | _dl_flags.RTLD_NOW | _dl_flags.RTLD_DEEPBIND)
         from . import _C
 
         # restore

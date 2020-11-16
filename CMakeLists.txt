@@ -83,7 +83,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fPIC \
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC \
                                         -Wall \
                                         -Wno-attributes \
                                         -Wno-unknown-pragmas"
@@ -152,7 +152,8 @@ macro(find_common_libraries)
     include("cmake/FindLibUnwind.cmake")
 
     # find pthread
-    set(CMAKE_THREAD_PREFER_PTHREAD)
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
     find_package(Threads)
 endmacro(find_common_libraries)
 
@@ -438,6 +439,7 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
 
 # for python's setup.cfg
 configure_file(setup.cfg.in "${PROJECT_SOURCE_DIR}/setup.cfg" @ONLY)
+configure_file(python/vineyard/version.py.in "${PROJECT_SOURCE_DIR}/python/vineyard/version.py" @ONLY)
 
 configure_file(vineyard-config.in.cmake
                "${PROJECT_BINARY_DIR}/vineyard-config.cmake" @ONLY

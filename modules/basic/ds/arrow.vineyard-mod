@@ -274,10 +274,9 @@ class Table : public Registered<Table> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     if (batch_num_ > 0) {
-      std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches(
-          batch_num_);
+      arrow_batches_.resize(batch_num_);
       for (size_t i = 0; i < batch_num_; ++i) {
-        arrow_batches[i] = batches_[i]->GetRecordBatch();
+        arrow_batches_[i] = batches_[i]->GetRecordBatch();
       }
     }
   }
