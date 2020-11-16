@@ -237,16 +237,11 @@ class LabeledSelector : public Selector {
       return LabeledSelector(SelectorType::EDGE_DATA, label_id, prop_id);
     } else if (std::regex_match(selector, sm, r_result)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
-      std::string prop_name = sm[1];
 
-      if (!prop_name.empty()) {
-        RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                        "Empty property name: " + prop_name);
-      }
-      return LabeledSelector(label_id, prop_name);
+      return LabeledSelector(SelectorType::RESULT, label_id);
     } else if (std::regex_match(selector, sm, r_result_prop)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
-      std::string prop_name = sm[1];
+      std::string prop_name = sm[2];
 
       if (prop_name.empty()) {
         RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
