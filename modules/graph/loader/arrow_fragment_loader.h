@@ -875,7 +875,7 @@ class ArrowFragmentLoader {
       return arrow::Status::Invalid("lhs index must smaller than rhs index.");
     }
     auto lhs_field = in->schema()->field(lhs_index);
-    auto lhs_column = in->schema()->column(lhs_index);
+    auto lhs_column = in->column(lhs_index);
     auto rhs_field = in->schema()->field(rhs_index);
     auto rhs_column = in->column(rhs_index);
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
