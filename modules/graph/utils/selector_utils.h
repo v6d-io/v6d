@@ -36,7 +36,9 @@ limitations under the License.
 #include "graph/fragment/property_graph_types.h"
 
 namespace vineyard {
-
+/**
+ * TODO(gl): @deprecated
+ */
 enum class SchemaType {
   kVertexDataSchema,      // id/data/result of all vertices
   kVertexPropertySchema,  // id/data/result of single type(label) vertices
@@ -45,6 +47,9 @@ enum class SchemaType {
   kInvalidSchema,
 };
 
+/**
+ * TODO(gl): @deprecated
+ */
 inline bool parse_label_id(const std::string& token,
                            property_graph_types::LABEL_ID_TYPE& label_id) {
   if (token.length() <= 5) {
@@ -59,6 +64,9 @@ inline bool parse_label_id(const std::string& token,
   return false;
 }
 
+/**
+ * TODO(gl): @deprecated
+ */
 inline bool parse_property_id(const std::string& token,
                               property_graph_types::PROP_ID_TYPE& prop_id) {
   if (token.length() <= 8) {
@@ -84,6 +92,9 @@ inline std::string generate_selectors(
   return ss.str();
 }
 
+/**
+ * TODO(gl): @deprecated
+ */
 inline SchemaType parse_selectors(
     const std::string& selectors,
     std::vector<std::pair<std::string, std::string>>& selector_list) {
@@ -146,6 +157,9 @@ inline SchemaType parse_selectors(
   return SchemaType::kInvalidSchema;
 }
 
+/**
+ * TODO(gl): @deprecated
+ */
 inline SchemaType parse_property_selectors(
     const std::string& selectors,
     std::vector<std::pair<std::string, std::string>>& selector_list,
@@ -227,6 +241,9 @@ inline SchemaType parse_property_selectors(
   return SchemaType::kInvalidSchema;
 }
 
+/**
+ * TODO(gl): @deprecated
+ */
 inline bool parse_add_column_selectors(
     const std::string& selectors,
     std::map<property_graph_types::LABEL_ID_TYPE,
