@@ -211,7 +211,8 @@ class LabeledSelector : public Selector {
     std::regex r_esrc_id("e.label(\\d+).src");
     std::regex r_edst_id("e.label(\\d+).dst");
     std::regex r_edata("e.label(\\d+).property(\\d+)");
-    std::regex r_result("e.label(\\d+).(.*?)");
+    std::regex r_result("r.label(\\d+)");
+    std::regex r_result_prop("r.label(\\d+).(.*?)");
     if (std::regex_match(selector, sm, r_vid)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
 
@@ -235,6 +236,15 @@ class LabeledSelector : public Selector {
 
       return LabeledSelector(SelectorType::EDGE_DATA, label_id, prop_id);
     } else if (std::regex_match(selector, sm, r_result)) {
+      auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
+      std::string prop_name = sm[1];
+
+      if (!prop_name.empty()) {
+        RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                        "Empty property name: " + prop_name);
+      }
+      return LabeledSelector(label_id, prop_name);
+    } else if (std::regex_match(selector, sm, r_result_prop)) {
       auto label_id = boost::lexical_cast<label_id_t>(sm[1]);
       std::string prop_name = sm[1];
 
