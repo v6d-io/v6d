@@ -55,12 +55,12 @@ def _init_global_context():
         old_flags = sys.getdlopenflags()
 
         # See Note [Import pyarrow before _C]
-        sys.setdlopenflags(_dl_flags.RTLD_LOCAL | _dl_flags.RTLD_NOW)
+        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
         import pyarrow
         del pyarrow
 
         # import the extension module
-        sys.setdlopenflags(_dl_flags.RTLD_LOCAL | _dl_flags.RTLD_NOW | _dl_flags.RTLD_DEEPBIND)
+        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
         from . import _C
 
         # restore

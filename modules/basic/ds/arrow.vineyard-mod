@@ -272,18 +272,15 @@ class TableBaseBuilder;
 
 class Table : public Registered<Table> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    if (batch_num_ > 0) {
-      arrow_batches_.resize(batch_num_);
-      for (size_t i = 0; i < batch_num_; ++i) {
-        arrow_batches_[i] = batches_[i]->GetRecordBatch();
-      }
-    }
-  }
+  void PostConstruct(const ObjectMeta& meta) override {}
 
   std::shared_ptr<arrow::Table> GetTable() const {
     if (this->table_ == nullptr) {
       if (batch_num_ > 0) {
+        arrow_batches_.resize(batch_num_);
+        for (size_t i = 0; i < batch_num_; ++i) {
+          arrow_batches_[i] = batches_[i]->GetRecordBatch();
+        }
         VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches_, &this->table_));
       } else {
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
@@ -320,7 +317,7 @@ class Table : public Registered<Table> {
   __attribute__((annotate("codegen:SchemaProxy*"))) std::shared_ptr<SchemaProxy>
       schema_;
 
-  std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches_;
+  mutable std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches_;
   mutable std::shared_ptr<arrow::Table> table_;
 
   friend class Client;
