@@ -415,7 +415,11 @@ static void generate_persist_ops(const ptree& diff, const std::string& name,
         continue;
       }
       std::string encoded_value;
-      encode_value(NodeType::Value, it->second.data(), encoded_value);
+      if (it->first == "transient") {
+        encode_value(NodeType::Value, "false", encoded_value);
+      } else {
+        encode_value(NodeType::Value, it->second.data(), encoded_value);
+      }
       ops.emplace_back(
           IMetaService::op_t::Put(key_prefix + it->first, encoded_value));
     }
@@ -591,11 +595,7 @@ static void persist_meta_tree(const ptree& sub_tree, ptree& diff) {
           diff.add_child(it->first, sub_sub_tree);
         }
       } else {
-        if (it->first == "transient") {
-          diff.put("transient", false);
-        } else {
-          diff.put(it->first, it->second.data());
-        }
+        diff.put(it->first, it->second.data());
       }
     }
   }
