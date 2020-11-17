@@ -581,24 +581,24 @@ static Status diff_data_meta_tree(const ptree& meta,
   return Status::OK();
 }
 
-static void persist_meta_tree(const ptree& sub_tree, ptree& diff) {
+static bool persist_meta_tree(const ptree& sub_tree, ptree& diff) {
   // NB: we don't need to track which objects are persist since the ptree
   // cached in the server will be updated by the background watcher task.
+  if (IsBlob(VYObjectIDFromString(sub_tree.get<std::string>("id")))) {
+    // Don't persist blob into etcd.
+    return false;
+  }
   if (sub_tree.get<bool>("transient")) {
-    if (IsBlob(VYObjectIDFromString(sub_tree.get<std::string>("id")))) {
-      // Don't persist blob into etcd.
-      return;
-    }
     for (ptree::const_iterator it = sub_tree.begin(); it != sub_tree.end();
          ++it) {
       if (!it->second.empty()) {
         const ptree& sub_sub_tree = it->second;
         // recursive
         ptree sub_diff;
-        persist_meta_tree(sub_sub_tree, sub_diff);
+        bool ret = persist_meta_tree(sub_sub_tree, sub_diff);
         if (!sub_diff.empty()) {
           diff.add_child(it->first, sub_diff);
-        } else {
+        } else if (ret) {
           // will be used to generate the link.
           diff.add_child(it->first, sub_sub_tree);
         }
@@ -607,6 +607,7 @@ static void persist_meta_tree(const ptree& sub_tree, ptree& diff) {
       }
     }
   }
+  return true;
 }
 
 Status PutDataOps(const ptree& tree, const ObjectID id, const ptree& sub_tree,
