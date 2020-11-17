@@ -16,28 +16,10 @@
 # limitations under the License.
 #
 
-__version__ = '1.0'
+from .version import __version__
 
 import logging
 import traceback
-
-# Note [Import pyarrow before _C]
-#
-# Vineyard's C++ library requires arrow, aka. libarrow.so. The arrow library
-# usually be built as a shared library and dynamic-linked into libvineyard_client.so
-# and then _C.so.
-#
-# However pyarrow has its own bundled (static-linked) arrow library, thus
-# if we import vineyard's C extension first then import pyarrow there will
-# be a DLL version conflict.
-#
-# Thus we import pyarrow before import vineyard's C extension library.
-#
-# Note that this only happens on development environment where an apache-arrow's
-# shared library has already been installed and we build vineyard on such
-# environment. The vineyard's release wheels doesn't suffers such issue since
-# we use a static apache-arrow library during building wheels, both for the
-# manylinux1 platform and MacOS.
 
 
 def _init_global_context():
@@ -53,14 +35,15 @@ def _init_global_context():
 
     if _dl_flags is not None:
         old_flags = sys.getdlopenflags()
-        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
-
-        # See Note [Import pyarrow before _C]
-        import pyarrow
-        del pyarrow
 
         # import the extension module
+        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
         from . import _C
+
+        # See Note [Import pyarrow before _C]
+        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
+        import pyarrow
+        del pyarrow
 
         # restore
         sys.setdlopenflags(old_flags)

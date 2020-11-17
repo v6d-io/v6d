@@ -50,11 +50,15 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     while True:
         try:
             content = stream_reader.next()
-        except:
+        except vineyard.StreamDrainedException:
             stream_writer.finish()
             break
         buf_reader = pa.ipc.open_stream(content)
-        for batch in buf_reader:
+        while True:
+            try:
+                batch = buf_reader.read_next_batch()
+            except StopIteration:
+                break
             df = batch.to_pandas()
             buf = df.to_csv(header=first_write, index=False, sep=delimiter).encode()
             first_write = False
