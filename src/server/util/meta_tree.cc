@@ -399,7 +399,10 @@ static void generate_persist_ops(const ptree& diff, const std::string& name,
     if (!it->second.empty()) {
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
-      generate_persist_ops(it->second, sub_name, ops);
+      if (it->second.get<bool>("transient")) {
+        // otherwise, skip recursively generate ops
+        generate_persist_ops(it->second, sub_name, ops);
+      }
       std::string link;
       generate_link(sub_type, sub_name, link);
       std::string encoded_value;
@@ -583,6 +586,9 @@ static void persist_meta_tree(const ptree& sub_tree, ptree& diff) {
         persist_meta_tree(sub_sub_tree, sub_diff);
         if (!sub_diff.empty()) {
           diff.add_child(it->first, sub_diff);
+        } else {
+          // will be used to generate the link.
+          diff.add_child(it->first, sub_sub_tree);
         }
       } else {
         if (it->first == "transient") {
