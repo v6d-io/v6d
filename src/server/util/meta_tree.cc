@@ -18,6 +18,7 @@ limitations under the License.
 #include <fnmatch.h>
 
 #include <regex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -393,7 +394,8 @@ static void generate_put_ops(const ptree& meta, const ptree& diff,
 }
 
 static void generate_persist_ops(const ptree& diff, const std::string& name,
-                                 std::vector<IMetaService::op_t>& ops) {
+                                 std::vector<IMetaService::op_t>& ops,
+                                 std::set<std::string>& dedup) {
   std::string key_prefix = "data." + name + ".";
   for (ptree::const_iterator it = diff.begin(); it != diff.end(); ++it) {
     if (!it->second.empty()) {
@@ -401,14 +403,17 @@ static void generate_persist_ops(const ptree& diff, const std::string& name,
       VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
       if (it->second.get<bool>("transient")) {
         // otherwise, skip recursively generate ops
-        generate_persist_ops(it->second, sub_name, ops);
+        generate_persist_ops(it->second, sub_name, ops, dedup);
       }
       std::string link;
       generate_link(sub_type, sub_name, link);
       std::string encoded_value;
       encode_value(NodeType::Link, link, encoded_value);
-      ops.emplace_back(
-          IMetaService::op_t::Put(key_prefix + it->first, encoded_value));
+      std::string encoded_key = key_prefix + it->first;
+      if (dedup.find(encoded_key) == dedup.end()) {
+        ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
+        dedup.emplace(encoded_key);
+      }
     } else {
       // don't repeat "id" in the etcd kvs.
       if (it->first == "id") {
@@ -420,8 +425,11 @@ static void generate_persist_ops(const ptree& diff, const std::string& name,
       } else {
         encode_value(NodeType::Value, it->second.data(), encoded_value);
       }
-      ops.emplace_back(
-          IMetaService::op_t::Put(key_prefix + it->first, encoded_value));
+      std::string encoded_key = key_prefix + it->first;
+      if (dedup.find(encoded_key) == dedup.end()) {
+        ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
+        dedup.emplace(encoded_key);
+      }
     }
   }
 }
@@ -636,7 +644,8 @@ Status PersistOps(const ptree& tree, const ObjectID id,
   }
 
   std::string name = VYObjectIDToString(id);
-  generate_persist_ops(diff, name, ops);
+  std::set<std::string> dedup;
+  generate_persist_ops(diff, name, ops, dedup);
   return Status::OK();
 }
 
