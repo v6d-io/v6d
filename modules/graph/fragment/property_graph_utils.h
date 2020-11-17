@@ -604,7 +604,7 @@ inline std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
     return vineyard::ConvertToArrowType<float>::TypeValue();
   } else if (name == "double") {
     return vineyard::ConvertToArrowType<double>::TypeValue();
-  } else if (name == "string") {
+  } else if (name == "string" || name == "std::string") {
     return vineyard::ConvertToArrowType<std::string>::TypeValue();
   } else {
     return arrow::null();
