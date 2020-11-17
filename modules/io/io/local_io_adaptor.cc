@@ -327,8 +327,9 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   };
 
   bool add_all_columns = false;
-  if (std::all_of(columns_.begin(), columns_.end(),
-                  [](const std::string& s) { return is_number(s); })) {
+  if (std::all_of(
+          columns_.begin(), columns_.end(),
+          [&is_number](const std::string& s) { return is_number(s); })) {
     add_all_columns = true;
   }
   std::vector<int> indices;
