@@ -19,6 +19,7 @@ limitations under the License.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <string>
@@ -31,6 +32,7 @@ limitations under the License.
 #include "glog/logging.h"
 
 #include "basic/ds/arrow_utils.h"
+#include "graph/fragment/property_graph_utils.h"
 
 namespace vineyard {
 LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
@@ -57,6 +59,9 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
       if (kv_pair[0] == "schema") {
         ::boost::split(columns_, kv_pair[1], ::boost::is_any_of(","));
         meta_.emplace("schema", kv_pair[1]);
+      } else if (kv_pair[0] == "column_types") {
+        ::boost::split(column_types_, kv_pair[1], ::boost::is_any_of(","));
+        meta_.emplace(kv_pair[0], kv_pair[1]);
       } else if (kv_pair[0] == "delimiter") {
         ::boost::algorithm::trim_if(kv_pair[1],
                                     boost::algorithm::is_any_of("\"\'"));
@@ -70,7 +75,7 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
         }
         meta_.emplace("delimiter", std::string(1, delimiter_));
       } else if (kv_pair[0] == "header_row") {
-        header_row_ = (kv_pair[1] == "true");
+        header_row_ = (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
         meta_.emplace("header_row", std::to_string(header_row_));
       } else if (kv_pair.size() > 1) {
         meta_.emplace(kv_pair[0], kv_pair[1]);
@@ -220,6 +225,18 @@ Status LocalIOAdaptor::setPartialReadImpl() {
     // skip header row
     int64_t dis = getDistanceToLineBreak(0);
     start_pos = dis + 1;
+  } else {
+    // Name columns as f0 ... fn
+    std::string one_line;
+    RETURN_ON_ERROR(seek(0, kFileLocationBegin));
+    RETURN_ON_ERROR(ReadLine(one_line));
+    ::boost::algorithm::trim(one_line);
+    std::vector<std::string> one_column;
+    ::boost::split(one_column, one_line,
+                   ::boost::is_any_of(std::string(1, delimiter_)));
+    for (size_t i = 0; i < one_column.size(); ++i) {
+      original_columns_.push_back("f" + std::to_string(i));
+    }
   }
   RETURN_ON_ERROR(seek(0, kFileLocationEnd));
   int64_t total_file_size = tell();
@@ -257,6 +274,30 @@ Status LocalIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
   return Status::OK();
 }
 
+/// \a origin_columns_ saves the column names of the CSV.
+///
+/// If \a header_row == \a true, \a origin_columns will be read from the first
+/// CSV row. If \a header_row == \a false, \a origin_columns will be of the form
+/// "f0", "f1", ...
+///
+/// Assume the order of \a column_types is same with \a include_columns.
+/// For example:
+/// \a include_columns: a,b,c,d
+/// \a column_types   : int,double,float,string
+/// Additionally, \a include_columns may have numbers, like "0,1,c,d"
+/// The number means index in \a origin_columns.
+/// We only use numbers for vid index.
+/// So we should get the name from \a origin_columns, then associate it with
+/// column type.
+///
+/// N.B. When all include_columns is numbers, we should read all other
+/// properties, Because no property is specified.
+
+/// \a column_types also may have empty fields, means let arrow deduce type
+/// for that column.
+/// For example:
+///     column_types: int,,,string.
+/// Means we deduce the type of the second and third column.
 Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
                                         int index) {
   std::unique_ptr<arrow::fs::LocalFileSystem> arrow_lfs(
@@ -277,14 +318,59 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   auto parse_options = arrow::csv::ParseOptions::Defaults();
   auto convert_options = arrow::csv::ConvertOptions::Defaults();
 
-  if (!header_row_) {
-    read_options.autogenerate_column_names = true;
-  } else {
-    read_options.column_names = original_columns_;
-    if (!columns_.empty()) {
-      convert_options.include_columns = columns_;
+  read_options.column_names = original_columns_;
+
+  auto is_number = [](const std::string& s) -> bool {
+    return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) {
+                           return !std::isdigit(c);
+                         }) == s.end();
+  };
+
+  bool add_all_columns = false;
+  if (std::all_of(
+          columns_.begin(), columns_.end(),
+          [&is_number](const std::string& s) { return is_number(s); })) {
+    add_all_columns = true;
+  }
+  std::vector<int> indices;
+  for (size_t i = 0; i < columns_.size(); ++i) {
+    if (is_number(columns_[i])) {
+      int col_idx = std::stoi(columns_[i]);
+      if (col_idx >= static_cast<int>(original_columns_.size())) {
+        return Status(StatusCode::kArrowError,
+                      "Index out of range: " + columns_[i]);
+      }
+      indices.push_back(col_idx);
+      columns_[i] = original_columns_[col_idx];
     }
   }
+  // If all column given is number, we need to add all other columns
+  if (add_all_columns) {
+    for (size_t i = 0; i < original_columns_.size(); ++i) {
+      if (std::find(std::begin(indices), std::end(indices), i) ==
+          indices.end()) {
+        columns_.push_back(original_columns_[i]);
+      }
+    }
+  }
+
+  convert_options.include_columns = columns_;
+
+  if (column_types_.size() > convert_options.include_columns.size()) {
+    return Status(StatusCode::kArrowError,
+                  "Format of column type schema is incorrect.");
+  }
+  std::unordered_map<std::string, std::shared_ptr<arrow::DataType>>
+      column_types;
+
+  for (size_t i = 0; i < column_types_.size(); ++i) {
+    if (!column_types_[i].empty()) {
+      column_types[convert_options.include_columns[i]] =
+          type_name_to_arrow_type(column_types_[i]);
+    }
+  }
+  convert_options.column_types = column_types;
+
   parse_options.delimiter = delimiter_;
 
   std::shared_ptr<arrow::csv::TableReader> reader;
@@ -299,7 +385,7 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
       *table = nullptr;
       return Status::OK();
     } else {
-      return ::vineyard::Status::ArrowError(result.status());
+      return Status::ArrowError(result.status());
     }
   }
   *table = result.ValueOrDie();

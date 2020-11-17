@@ -119,6 +119,7 @@ class LocalIOAdaptor : public IIOAdaptor {
 
   // for arrow
   std::vector<std::string> columns_;
+  std::vector<std::string> column_types_;
   char delimiter_ = ',';
   bool header_row_;
   std::string header_line_ = "";
