@@ -273,18 +273,26 @@ Status LocalIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
   return Status::OK();
 }
 
-/// origin_columns_ saves the column names of the CSV.
-/// If header_row == true, origin_columns will be read from the first CSV row.
-/// If header_row == false, origin_columns will be of the form "f0", "f1", ...
-/// Assume the order of column_types is same with include_columns.
-/// include_columns: a,b,c,d
-/// column_types   : int,double,float,string
-/// Additionally, include_columns may have numbers, like 0,1,c,d
-/// The number means index in origin_columns.
-/// So we should get the name from origin_columns, then associate it with column
-/// type. column_types also may have empty fields, means let arrow deduce type
-/// for that column. Example: column_types: int,,,string. Means deduce the type
-/// of the second and third column
+/// \a origin_columns_ saves the column names of the CSV.
+///
+/// If \a header_row == \a true, \a origin_columns will be read from the first
+/// CSV row. If \a header_row == \a false, \a origin_columns will be of the form
+/// "f0", "f1", ...
+///
+/// Assume the order of \a column_types is same with \a include_columns.
+/// For example:
+/// \a include_columns: a,b,c,d
+/// \a column_types   : int,double,float,string
+/// Additionally, \a include_columns may have numbers, like "0,1,c,d"
+/// The number means index in \a origin_columns.
+/// So we should get the name from \a origin_columns, then associate it with
+/// column type.
+
+/// \a column_types also may have empty fields, means let arrow deduce type
+/// for that column.
+/// For example:
+///     column_types: int,,,string.
+/// Means we deduce the type of the second and third column.
 Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
                                         int index) {
   std::unique_ptr<arrow::fs::LocalFileSystem> arrow_lfs(
