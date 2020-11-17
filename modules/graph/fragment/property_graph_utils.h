@@ -610,6 +610,7 @@ inline std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
   } else if (name == "null" || name == "NULL") {
     return arrow::null();
   } else {
+    LOG(ERROR) << "Unsupported data type: " << name;
     return nullptr;
   }
 }
