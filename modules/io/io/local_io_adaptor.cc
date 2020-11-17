@@ -19,6 +19,7 @@ limitations under the License.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <string>
@@ -285,8 +286,12 @@ Status LocalIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
 /// \a column_types   : int,double,float,string
 /// Additionally, \a include_columns may have numbers, like "0,1,c,d"
 /// The number means index in \a origin_columns.
+/// We only use numbers for vid index.
 /// So we should get the name from \a origin_columns, then associate it with
 /// column type.
+///
+/// N.B. When all include_columns is numbers, we should read all other
+/// properties, Because no property is specified.
 
 /// \a column_types also may have empty fields, means let arrow deduce type
 /// for that column.
@@ -321,6 +326,12 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
                          }) == s.end();
   };
 
+  bool add_all_columns = false;
+  if (std::all_of(columns_.begin(), columns_.end(),
+                  [](const std::string& s) { return is_number(s); })) {
+    add_all_columns = true;
+  }
+  std::vector<int> indices;
   for (size_t i = 0; i < columns_.size(); ++i) {
     if (is_number(columns_[i])) {
       int col_idx = std::stoi(columns_[i]);
@@ -328,7 +339,17 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
         return Status(StatusCode::kArrowError,
                       "Index out of range: " + columns_[i]);
       }
+      indices.push_back(col_idx);
       columns_[i] = original_columns_[col_idx];
+    }
+  }
+  // If all column given is number, we need to add all other columns
+  if (add_all_columns) {
+    for (size_t i = 0; i < original_columns_.size(); ++i) {
+      if (std::find(std::begin(indices), std::end(indices), i) ==
+          indices.end()) {
+        columns_.push_back(original_columns_[i]);
+      }
     }
   }
 
