@@ -18,6 +18,7 @@ limitations under the License.
 #include <fnmatch.h>
 
 #include <regex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -393,28 +394,42 @@ static void generate_put_ops(const ptree& meta, const ptree& diff,
 }
 
 static void generate_persist_ops(const ptree& diff, const std::string& name,
-                                 std::vector<IMetaService::op_t>& ops) {
+                                 std::vector<IMetaService::op_t>& ops,
+                                 std::set<std::string>& dedup) {
   std::string key_prefix = "data." + name + ".";
   for (ptree::const_iterator it = diff.begin(); it != diff.end(); ++it) {
     if (!it->second.empty()) {
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
-      generate_persist_ops(it->second, sub_name, ops);
+      if (it->second.get<bool>("transient")) {
+        // otherwise, skip recursively generate ops
+        generate_persist_ops(it->second, sub_name, ops, dedup);
+      }
       std::string link;
       generate_link(sub_type, sub_name, link);
       std::string encoded_value;
       encode_value(NodeType::Link, link, encoded_value);
-      ops.emplace_back(
-          IMetaService::op_t::Put(key_prefix + it->first, encoded_value));
+      std::string encoded_key = key_prefix + it->first;
+      if (dedup.find(encoded_key) == dedup.end()) {
+        ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
+        dedup.emplace(encoded_key);
+      }
     } else {
       // don't repeat "id" in the etcd kvs.
       if (it->first == "id") {
         continue;
       }
       std::string encoded_value;
-      encode_value(NodeType::Value, it->second.data(), encoded_value);
-      ops.emplace_back(
-          IMetaService::op_t::Put(key_prefix + it->first, encoded_value));
+      if (it->first == "transient") {
+        encode_value(NodeType::Value, "false", encoded_value);
+      } else {
+        encode_value(NodeType::Value, it->second.data(), encoded_value);
+      }
+      std::string encoded_key = key_prefix + it->first;
+      if (dedup.find(encoded_key) == dedup.end()) {
+        ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
+        dedup.emplace(encoded_key);
+      }
     }
   }
 }
@@ -566,33 +581,33 @@ static Status diff_data_meta_tree(const ptree& meta,
   return Status::OK();
 }
 
-static void persist_meta_tree(const ptree& sub_tree, ptree& diff) {
+static bool persist_meta_tree(const ptree& sub_tree, ptree& diff) {
   // NB: we don't need to track which objects are persist since the ptree
   // cached in the server will be updated by the background watcher task.
+  if (IsBlob(VYObjectIDFromString(sub_tree.get<std::string>("id")))) {
+    // Don't persist blob into etcd.
+    return false;
+  }
   if (sub_tree.get<bool>("transient")) {
-    if (IsBlob(VYObjectIDFromString(sub_tree.get<std::string>("id")))) {
-      // Don't persist blob into etcd.
-      return;
-    }
     for (ptree::const_iterator it = sub_tree.begin(); it != sub_tree.end();
          ++it) {
       if (!it->second.empty()) {
         const ptree& sub_sub_tree = it->second;
         // recursive
         ptree sub_diff;
-        persist_meta_tree(sub_sub_tree, sub_diff);
+        bool ret = persist_meta_tree(sub_sub_tree, sub_diff);
         if (!sub_diff.empty()) {
           diff.add_child(it->first, sub_diff);
+        } else if (ret) {
+          // will be used to generate the link.
+          diff.add_child(it->first, sub_sub_tree);
         }
       } else {
-        if (it->first == "transient") {
-          diff.put("transient", false);
-        } else {
-          diff.put(it->first, it->second.data());
-        }
+        diff.put(it->first, it->second.data());
       }
     }
   }
+  return true;
 }
 
 Status PutDataOps(const ptree& tree, const ObjectID id, const ptree& sub_tree,
@@ -630,7 +645,8 @@ Status PersistOps(const ptree& tree, const ObjectID id,
   }
 
   std::string name = VYObjectIDToString(id);
-  generate_persist_ops(diff, name, ops);
+  std::set<std::string> dedup;
+  generate_persist_ops(diff, name, ops, dedup);
   return Status::OK();
 }
 
