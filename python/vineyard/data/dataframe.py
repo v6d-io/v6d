@@ -37,6 +37,7 @@ def pandas_dataframe_builder(client, value, builder, **kw):
     meta['__values_-size'] = len(value.columns)
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
     meta['partition_index_column_'] = kw.get('partition_index', [0, 0])[1]
+    meta['row_batch_index_'] = kw.get('row_batch_index', 0)
     return client.create_metadata(meta)
 
 

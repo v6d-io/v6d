@@ -101,3 +101,19 @@ Their functionality are described as follows:
     Usage: vineyard_write_hdfs_bytes <ipc_socket> <stream_id> <ofile> <proc_num> <proc_index>
 
   Write a dataframe stream to a HDFS in ORC format.
+
++ :code:`read_vineyard_dataframe`
+
+  .. code:: console
+
+    Usage: vineyard_read_vineyard_dataframe <ipc_socket> <vineyard_address> <proc_num> <proc_index>
+
+  Read a vineyard global dataframe to a dataframe stream
+
++ :code:`write_vineyard_dataframe`
+
+  .. code:: console
+
+    Usage: vineyard_write_vineyard_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>
+
+  Write a dataframe stream to a series of vineyard dataframes

@@ -78,7 +78,7 @@ def write(path, stream, *args, **kwargs):
     '''
     parsed = urlparse(path)
 
-    if write.__factory and read.__factory[parsed.scheme]:
+    if write.__factory and write.__factory[parsed.scheme]:
         for writer in write.__factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
