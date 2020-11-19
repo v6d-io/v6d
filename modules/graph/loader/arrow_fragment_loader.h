@@ -247,6 +247,7 @@ class ArrowFragmentLoader {
     } else {
       // if vfiles is empty, we infer oids from efile
       if (vfiles_.empty()) {
+        possible_duplicate_oid = true;
         auto load_procedure = [&]() {
           return loadEVTablesFromEFiles(efiles_, comm_spec_.worker_id(),
                                         comm_spec_.worker_num());
@@ -277,9 +278,9 @@ class ArrowFragmentLoader {
 
   boost::leaf::result<vineyard::ObjectID> shuffleAndBuild() {
     // When vfiles_ is empty, it means we build vertex table from efile
-    BOOST_LEAF_AUTO(
-        local_v_tables,
-        basic_arrow_fragment_loader_.ShuffleVertexTables(vfiles_.empty()));
+    BOOST_LEAF_AUTO(local_v_tables,
+                    basic_arrow_fragment_loader_.ShuffleVertexTables(
+                        possbile_duplicate_oid));
     auto oid_lists = basic_arrow_fragment_loader_.GetOidLists();
 
     BasicArrowVertexMapBuilder<typename InternalType<oid_t>::type, vid_t>
@@ -1060,6 +1061,7 @@ class ArrowFragmentLoader {
   vineyard::Client& client_;
   grape::CommSpec comm_spec_;
   std::vector<std::string> efiles_, vfiles_;
+  bool possible_duplicate_oid = false;
 
   label_id_t vertex_label_num_, edge_label_num_;
   std::vector<std::shared_ptr<arrow::Table>> partial_v_tables_;
