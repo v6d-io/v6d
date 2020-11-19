@@ -49,6 +49,17 @@ class ParallelStream : public Registered<ParallelStream> {
     return std::dynamic_pointer_cast<T>(streams_[index]);
   }
 
+  template <typename T>
+  std::vector<std::shared_ptr<T>> GetLocalStreams() {
+    std::vector<std::shared_ptr<T>> local_streams;
+    for (auto const &s: streams_) {
+      if (s->IsLocal()) {
+        local_streams.emplace_back(std::dynamic_pointer_cast<T>(s));
+      }
+    }
+    return local_streams;
+  }
+
   ObjectMeta GetStreamMeta(int index) { return streams_[index]->meta(); }
 
   size_t GetStreamSize() { return size_; }

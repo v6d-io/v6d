@@ -395,8 +395,6 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return true iff the status indicates success.
   bool ok() const { return (state_ == nullptr); }
 
-  explicit operator bool() const noexcept { return ok(); }
-
   /// Return true iff the status indicates invalid data.
   bool IsInvalid() const { return code() == StatusCode::kInvalid; }
   /// Return true iff the status indicates a key lookup error.

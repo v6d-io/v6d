@@ -147,7 +147,7 @@ class BasicArrowFragmentLoader {
               comm_spec_, partitioner_, vertex_table, tmp_table);
           // If the error occurred during the shuffle procedure, the process
           // must die
-          if (!st) {
+          if (!st.ok()) {
             LOG(FATAL) << "An error occurred during the shuffle vertex table "
                           "procedure. "
                        << st.message();
@@ -209,7 +209,7 @@ class BasicArrowFragmentLoader {
         {
           auto st = FragmentAllGatherArray<oid_t>(comm_spec_, local_oid_array,
                                                   oids_group_by_worker);
-          if (!st) {
+          if (!st.ok()) {
             LOG(FATAL) << "An error occurred during the gather oid array "
                           "procedure. "
                        << st.message();
@@ -331,14 +331,14 @@ class BasicArrowFragmentLoader {
 
           processed_table_list[edge_table_index] = edge_table;
         }
-        auto table = ConcatenateTables(processed_table_list);
+        auto table = vineyard::ConcatenateTables(processed_table_list);
         std::shared_ptr<arrow::Table> table_out;
 #if 0
         {
           auto st = ShufflePropertyEdgeTable<vid_t>(
               comm_spec_, id_parser, src_column_idx, dst_column_idx, table,
               table_out);
-          if (!st) {
+          if (!st.ok()) {
             LOG(FATAL) << "An error occurred during the shuffle edge table "
                           "procedure. "
                        << st.message();
@@ -357,25 +357,6 @@ class BasicArrowFragmentLoader {
     }
 
     return local_e_tables;
-  }
-
-  std::shared_ptr<arrow::Table> ConcatenateTables(
-      std::vector<std::shared_ptr<arrow::Table>>& tables) {
-    if (tables.size() == 1) {
-      return tables[0];
-    }
-    auto col_names = tables[0]->ColumnNames();
-    for (size_t i = 1; i < tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      CHECK_ARROW_ERROR(tables[i]->RenameColumns(col_names, &tables[i]));
-#else
-      CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
-                                   tables[i]->RenameColumns(col_names));
-#endif
-    }
-    std::shared_ptr<arrow::Table> table;
-    CHECK_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(tables));
-    return table;
   }
 
  private:
