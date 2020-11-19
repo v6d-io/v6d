@@ -52,7 +52,7 @@ class ParallelStream : public Registered<ParallelStream> {
   template <typename T>
   std::vector<std::shared_ptr<T>> GetLocalStreams() {
     std::vector<std::shared_ptr<T>> local_streams;
-    for (auto const &s: streams_) {
+    for (auto const& s : streams_) {
       if (s->IsLocal()) {
         local_streams.emplace_back(std::dynamic_pointer_cast<T>(s));
       }

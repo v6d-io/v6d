@@ -140,7 +140,8 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
     return client_.PullNextStreamChunk(id_, buffer);
   }
 
-  Status ReadRecordBatches(std::vector<std::shared_ptr<arrow::RecordBatch>>& batches) {
+  Status ReadRecordBatches(
+      std::vector<std::shared_ptr<arrow::RecordBatch>>& batches) {
     std::shared_ptr<arrow::RecordBatch> batch;
     std::unique_ptr<arrow::Buffer> buf;
 
@@ -189,6 +190,44 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
                                      arrow::Table::FromRecordBatches(batches));
 #endif
     return Status::OK();
+  }
+
+  Status ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch) {
+    std::unique_ptr<arrow::Buffer> buf;
+
+    auto status = GetNext(buf);
+    if (status.ok()) {
+      std::shared_ptr<arrow::Buffer> copied_buffer;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      RETURN_ON_ARROW_ERROR(buf->Copy(0, buf->size(), &copied_buffer));
+#else
+      RETURN_ON_ARROW_ERROR_AND_ASSIGN(copied_buffer,
+                                       buf->CopySlice(0, buf->size()));
+#endif
+      auto buffer_reader =
+          std::make_shared<arrow::io::BufferReader>(copied_buffer);
+      std::shared_ptr<arrow::ipc::RecordBatchReader> reader;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      RETURN_ON_ARROW_ERROR(
+          arrow::ipc::RecordBatchStreamReader::Open(buffer_reader, &reader));
+#else
+      RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+          reader, arrow::ipc::RecordBatchStreamReader::Open(buffer_reader));
+#endif
+      RETURN_ON_ARROW_ERROR(reader->ReadNext(&batch));
+
+      std::shared_ptr<arrow::KeyValueMetadata> metadata;
+      if (batch->schema()->metadata() != nullptr) {
+        metadata = batch->schema()->metadata()->Copy();
+      } else {
+        metadata.reset(new arrow::KeyValueMetadata());
+      }
+      for (auto const& kv : params_) {
+        CHECK_ARROW_ERROR(metadata->Set(kv.first, kv.second));
+      }
+      batch = batch->ReplaceSchemaMetadata(metadata);
+    }
+    return status;
   }
 
   Status ReadLine(std::string& line) {
