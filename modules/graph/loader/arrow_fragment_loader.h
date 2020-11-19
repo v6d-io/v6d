@@ -280,7 +280,7 @@ class ArrowFragmentLoader {
     // When vfiles_ is empty, it means we build vertex table from efile
     BOOST_LEAF_AUTO(local_v_tables,
                     basic_arrow_fragment_loader_.ShuffleVertexTables(
-                        possbile_duplicate_oid));
+                        possible_duplicate_oid));
     auto oid_lists = basic_arrow_fragment_loader_.GetOidLists();
 
     BasicArrowVertexMapBuilder<typename InternalType<oid_t>::type, vid_t>
