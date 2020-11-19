@@ -21,7 +21,6 @@ import logging
 import os
 
 import vineyard.io
-from urllib.parse import urlparse
 from vineyard.launcher.script import ScriptLauncher
 
 logger = logging.getLogger('vineyard')
@@ -275,6 +274,7 @@ def read_hive_dataframe(path, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher()
     # Note that vineyard currently supports hive tables stored as orc format only
     launcher.run(get_executable('read_hive_orc'), *((vineyard_socket, 'hive://' + path) + args), **kwargs)
+<<<<<<< HEAD
     return launcher.wait()
 
 
@@ -283,6 +283,8 @@ def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher()
     # Note that vineyard currently supports hive tables stored as orc format only
     launcher.run(get_executable('read_vineyard_dataframe'), *((vineyard_socket, path) + args), **kwargs)
+=======
+>>>>>>> 1265d30fe23f081ca388c7122dbc135202f7ba79
     return launcher.wait()
 
 
@@ -293,6 +295,12 @@ vineyard.io.read.register('kafka', read_kafka_dataframe)
 vineyard.io.read.register('hdfs', read_hdfs_dataframe)
 vineyard.io.read.register('hive', read_hive_dataframe)
 vineyard.io.read.register('vineyard', read_vineyard_dataframe)
+
+
+def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('parse_dataframe_to_bytes'), *((vineyard_socket, dataframe_stream) + args), **kwargs)
+    return launcher.wait()
 
 
 def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):
@@ -354,12 +362,15 @@ def write_hdfs_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwarg
     else:
         write_hdfs_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs),
                          vineyard_socket, *args, **kwargs)
+<<<<<<< HEAD
 
 
 def write_vineyard_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('write_vineyard_dataframe'), *((vineyard_socket, dataframe_stream) + args), **kwargs)
     return launcher.wait_all(name=path)
+=======
+>>>>>>> 1265d30fe23f081ca388c7122dbc135202f7ba79
 
 
 vineyard.io.write.register('file', write_local_dataframe)

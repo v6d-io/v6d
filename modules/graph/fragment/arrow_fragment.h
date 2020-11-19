@@ -43,8 +43,6 @@ limitations under the License.
 #include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/context_protocols.h"
 #include "graph/utils/error.h"
-#include "graph/utils/selector_utils.h"
-#include "graph/utils/transform_utils.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 namespace gs {
@@ -105,19 +103,6 @@ class ArrowFragmentBase : public vineyard::Object {
           columns) = 0;
 
   virtual vineyard::ObjectID vertex_map_id() const = 0;
-
-#if defined(ENABLE_SELECTOR)
-  virtual void to_nd_array(grape::InArchive& arc,
-                           const grape::CommSpec& comm_spec,
-                           const std::string& selector,
-                           const std::string& begin,
-                           const std::string& end) const = 0;
-
-  virtual void to_pandas(grape::InArchive& arc,
-                         const grape::CommSpec& comm_spec,
-                         const std::string& selectors, const std::string& begin,
-                         const std::string& end) const = 0;
-#endif
 };
 
 inline const void* get_arrow_array_ptr(std::shared_ptr<arrow::Array> array) {

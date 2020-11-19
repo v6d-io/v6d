@@ -95,6 +95,7 @@ def read_local_orc(vineyard_socket, path, proc_num, proc_index):
             buf_writer.write(buf)
             buf_writer.close()
 
+
     writer.finish()
 
 

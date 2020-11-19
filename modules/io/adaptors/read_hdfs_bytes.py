@@ -39,7 +39,6 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
 
     header_row = False
     fragments = urlparse(path).fragment.split('&')
-
     path = urlparse(path).path
 
     for frag in fragments:

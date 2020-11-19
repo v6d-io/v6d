@@ -136,7 +136,7 @@ def test_hdfs_bytes(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_d
     assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
 
 
-def test_write_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
+def test_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
     stream = vineyard.io.open('file://%s/p2p-31.e#header_row=false&delimiter= ' % test_dataset,
                               vineyard_ipc_socket=vineyard_ipc_socket,
                               vineyard_endpoint=vineyard_endpoint)

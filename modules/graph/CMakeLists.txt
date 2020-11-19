@@ -23,8 +23,6 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
                                                                 "vertex_map/*.cc"
 )
 
-option(BUILD_VINEYARD_GRAPH_SELECTOR "Enable vineyard's selector operators on graphs" ON)
-
 # boost::leaf for error_handling
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf"
                  "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/boost-leaf"
@@ -50,10 +48,6 @@ if(APPLE)
 endif()
 if(VINEYARD_MOD_SRCS)
     add_dependencies(vineyard_graph vineyard_graph_gen)
-endif()
-
-if(BUILD_VINEYARD_GRAPH_SELECTOR)
-    target_compile_definitions(vineyard_graph PUBLIC -DENABLE_SELECTOR)
 endif()
 
 install_vineyard_target(vineyard_graph)
