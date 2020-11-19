@@ -434,6 +434,12 @@ class TableAppender {
   size_t col_num_;
 };
 
+/**
+ * @brief Concatenate multiple arrow tables into one.
+ */
+std::shared_ptr<arrow::Table> ConcatenateTables(
+    std::vector<std::shared_ptr<arrow::Table>>& tables);
+
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_ARROW_UTILS_H_

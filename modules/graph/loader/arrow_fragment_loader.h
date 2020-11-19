@@ -19,6 +19,7 @@ limitations under the License.
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -44,6 +45,7 @@ limitations under the License.
 #include "graph/loader/basic_arrow_fragment_loader.h"
 #include "graph/utils/error.h"
 #include "graph/utils/partitioner.h"
+#include "graph/utils/thread_group.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 #define HASH_PARTITION
@@ -145,13 +147,10 @@ class ArrowFragmentLoader {
                       bool directed = true)
       : client_(client),
         comm_spec_(comm_spec),
-        vertex_label_num_(vstreams.size()),
-        edge_label_num_(estreams.size()),
+        v_streams_(vstreams),
+        e_streams_(estreams),
         directed_(directed),
-        basic_arrow_fragment_loader_(comm_spec) {
-    partial_v_tables_ = gatherVTables(client, vstreams);
-    partial_e_tables_ = gatherETables(client, estreams);
-  }
+        basic_arrow_fragment_loader_(comm_spec) {}
 
   ArrowFragmentLoader(
       vineyard::Client& client, const grape::CommSpec& comm_spec,
@@ -241,9 +240,35 @@ class ArrowFragmentLoader {
   boost::leaf::result<void> initBasicLoader() {
     std::vector<std::shared_ptr<arrow::Table>> partial_v_tables;
     std::vector<std::vector<std::shared_ptr<arrow::Table>>> partial_e_tables;
-    if (!partial_v_tables_.empty() && !partial_e_tables_.empty()) {
-      partial_v_tables = partial_v_tables_;
-      partial_e_tables = partial_e_tables_;
+    if (!v_streams_.empty() && !e_streams_.empty()) {
+      {
+        BOOST_LEAF_AUTO(tmp, gatherVTables(client_, v_streams_));
+        partial_v_tables = tmp;
+      }
+      {
+        BOOST_LEAF_AUTO(tmp, gatherETables(client_, e_streams_));
+        partial_e_tables = tmp;
+      }
+      // note that batches of multiple labels may comes in the same stream.
+      vertex_label_num_ = partial_v_tables.size();
+      edge_label_num_ = partial_e_tables.size();
+    } else if (!partial_v_tables_.empty() && !partial_e_tables_.empty()) {
+      for (size_t vlabel = 0; vlabel < partial_v_tables_.size(); ++vlabel) {
+        std::shared_ptr<arrow::Table> result_table;
+        VY_OK_OR_RAISE(rebuildVTableMetadata(vlabel, partial_v_tables_[vlabel],
+                                             result_table));
+        partial_v_tables.emplace_back(result_table);
+      }
+      for (size_t elabel = 0; elabel < partial_e_tables_.size(); ++elabel) {
+        std::vector<std::shared_ptr<arrow::Table>> subetables;
+        for (auto const& etable : partial_e_tables_[elabel]) {
+          std::shared_ptr<arrow::Table> result_table;
+          VY_OK_OR_RAISE(rebuildETableMetadata(
+              elabel, partial_e_tables_[elabel].size(), etable, result_table));
+          subetables.emplace_back(result_table);
+        }
+        partial_e_tables.emplace_back(subetables);
+      }
     } else {
       // if vfiles is empty, we infer oids from efile
       if (vfiles_.empty()) {
@@ -470,7 +495,7 @@ class ArrowFragmentLoader {
 
       auto adaptor_meta = io_adaptor->GetMeta();
       for (auto const& kv : adaptor_meta) {
-        meta->Append(kv.first, kv.second);
+        CHECK_ARROW_ERROR(meta->Set(kv.first, kv.second));
       }
       // If label name is not in meta, we assign a default label '_'
       if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
@@ -479,7 +504,7 @@ class ArrowFragmentLoader {
             "Metadata of input vertex files should contain label name");
       }
       auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
-      meta->Append("label", v_label_name);
+      CHECK_ARROW_ERROR(meta->Set("label", v_label_name));
       tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
 
       vertex_label_to_index_[v_label_name] = label_id;
@@ -536,7 +561,7 @@ class ArrowFragmentLoader {
                 "Metadata of input edge files should contain label name");
           }
           std::string edge_label_name = it->second;
-          meta->Append("label", edge_label_name);
+          CHECK_ARROW_ERROR(meta->Set("label", edge_label_name));
 
           it = adaptor_meta.find(SRC_LABEL_TAG);
           if (it == adaptor_meta.end()) {
@@ -545,9 +570,9 @@ class ArrowFragmentLoader {
                 "Metadata of input edge files should contain src label name");
           }
           std::string src_label_name = it->second;
-          meta->Append(
+          CHECK_ARROW_ERROR(meta->Set(
               basic_loader_t::SRC_LABEL_ID,
-              std::to_string(vertex_label_to_index_.at(src_label_name)));
+              std::to_string(vertex_label_to_index_.at(src_label_name))));
 
           it = adaptor_meta.find(DST_LABEL_TAG);
           if (it == adaptor_meta.end()) {
@@ -556,9 +581,9 @@ class ArrowFragmentLoader {
                 "Metadata of input edge files should contain dst label name");
           }
           std::string dst_label_name = it->second;
-          meta->Append(
+          CHECK_ARROW_ERROR(meta->Set(
               basic_loader_t::DST_LABEL_ID,
-              std::to_string(vertex_label_to_index_.at(dst_label_name)));
+              std::to_string(vertex_label_to_index_.at(dst_label_name))));
 
           tables[label_id].emplace_back(
               normalized_table->ReplaceSchemaMetadata(meta));
@@ -684,8 +709,8 @@ class ArrowFragmentLoader {
           std::string src_label_name = it->second;
           auto src_label_id = vertex_label_to_index_.at(src_label_name);
 
-          meta->Append(basic_loader_t::SRC_LABEL_ID,
-                       std::to_string(src_label_id));
+          CHECK_ARROW_ERROR(meta->Set(basic_loader_t::SRC_LABEL_ID,
+                                      std::to_string(src_label_id)));
           it = adaptor_meta.find(DST_LABEL_TAG);
 
           if (it == adaptor_meta.end()) {
@@ -697,8 +722,8 @@ class ArrowFragmentLoader {
           std::string dst_label_name = it->second;
           auto dst_label_id = vertex_label_to_index_.at(dst_label_name);
 
-          meta->Append(basic_loader_t::DST_LABEL_ID,
-                       std::to_string(dst_label_id));
+          CHECK_ARROW_ERROR(meta->Set(basic_loader_t::DST_LABEL_ID,
+                                      std::to_string(dst_label_id)));
           auto e_table = normalized_table->ReplaceSchemaMetadata(meta);
 
           etables[e_label_id].emplace_back(e_table);
@@ -750,118 +775,285 @@ class ArrowFragmentLoader {
   }
 
   Status readTableFromVineyard(vineyard::Client& client,
-
                                const ObjectID object_id,
                                std::shared_ptr<arrow::Table>& table) {
     auto pstream = client.GetObject<vineyard::ParallelStream>(object_id);
     RETURN_ON_ASSERT(pstream != nullptr,
                      "Object not exists: " + VYObjectIDToString(object_id));
-    int index = comm_spec_.worker_id();
-    int total_parts = comm_spec_.worker_num();
-    RETURN_ON_ASSERT(
-        total_parts == pstream->GetStreamSize() && index < total_parts,
-        "read " + std::to_string(index) + " from " +
-            std::to_string(total_parts) + ", but totally has " +
-            std::to_string(pstream->GetStreamSize()));
-    auto dataframe_stream =
-        pstream->GetStream<vineyard::DataframeStream>(index);
-    RETURN_ON_ASSERT(dataframe_stream != nullptr,
-                     "The stream must be a dataframe stream");
-    auto reader = dataframe_stream->OpenReader(client);
-    RETURN_ON_ERROR(reader->ReadTable(table));
-    VLOG(10) << "table from stream: " << table->schema()->ToString();
+    auto local_streams = pstream->GetLocalStreams<vineyard::DataframeStream>();
+    int local_worker_num = comm_spec_.local_num();
+
+    size_t split_size = local_streams.size() / local_worker_num +
+                        (local_streams.size() % local_worker_num == 0 ? 0 : 1);
+    int start_to_read = comm_spec_.local_id() * split_size;
+    int end_to_read = std::max(local_streams.size(),
+                               (comm_spec_.local_id() + 1) * split_size);
+
+    std::mutex mutex_for_results;
+    std::vector<std::shared_ptr<arrow::Table>> tables;
+
+    auto reader = [&client, &local_streams, &mutex_for_results,
+                   &tables](size_t idx) {
+      // use a local client, since reading from stream may block the client.
+      Client local_client;
+      RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
+      auto reader = local_streams[idx]->OpenReader(local_client);
+      std::shared_ptr<arrow::Table> table;
+      RETURN_ON_ERROR(reader->ReadTable(table));
+      VLOG(10) << "table from stream: " << table->schema()->ToString();
+      {
+        std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
+        tables.emplace_back(table);
+      }
+      return Status::OK();
+    };
+
+    ThreadGroup tg;
+    for (size_t idx = start_to_read; idx != end_to_read; ++idx) {
+      tg.AddTask(reader, idx);
+    }
+    auto readers_status = tg.TakeResults();
+    for (auto const& status : readers_status) {
+      RETURN_ON_ERROR(status);
+    }
+    RETURN_ON_ASSERT(tables.size() > 0,
+                     "This worker doesn't receive any streams");
+    table = vineyard::ConcatenateTables(tables);
     return Status::OK();
   }
 
-  std::vector<std::shared_ptr<arrow::Table>> gatherVTables(
-      vineyard::Client& client, const std::vector<ObjectID>& vstreams) {
-    std::vector<std::shared_ptr<arrow::Table>> tables;
-    for (label_id_t label_id = 0; label_id < vstreams.size(); ++label_id) {
-      auto const& vstream = vstreams[label_id];
-      std::shared_ptr<arrow::Table> table;
-      auto status = readTableFromVineyard(client, vstream, table);
-      if (status.ok()) {
-        std::shared_ptr<arrow::KeyValueMetadata> meta;
-        if (table->schema()->metadata() != nullptr) {
-          meta = table->schema()->metadata()->Copy();
-        } else {
-          meta.reset(new arrow::KeyValueMetadata());
-        }
-        meta->Append("type", "VERTEX");
-        meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
-        tables.emplace_back(table->ReplaceSchemaMetadata(meta));
+  Status readRecordBatchesFromVineyard(
+      vineyard::Client& client, const ObjectID object_id,
+      std::vector<std::shared_ptr<arrow::RecordBatch>>& batches) {
+    auto pstream = client.GetObject<vineyard::ParallelStream>(object_id);
+    RETURN_ON_ASSERT(pstream != nullptr,
+                     "Object not exists: " + VYObjectIDToString(object_id));
+    auto local_streams = pstream->GetLocalStreams<vineyard::DataframeStream>();
+    int local_worker_num = comm_spec_.local_num();
 
-        int label_meta_index = meta->FindKey(LABEL_TAG);
-        VINEYARD_ASSERT(
-            label_meta_index != -1,
-            "Metadata of input vertex files should contain label name");
-        vertex_label_to_index_[meta->value(label_meta_index)] = label_id;
-      } else {
-        LOG(ERROR) << "Failed to read vertex stream: " << status.ToString();
+    size_t split_size = local_streams.size() / local_worker_num +
+                        (local_streams.size() % local_worker_num == 0 ? 0 : 1);
+    int start_to_read = comm_spec_.local_id() * split_size;
+    int end_to_read = std::max(local_streams.size(),
+                               (comm_spec_.local_id() + 1) * split_size);
+
+    std::mutex mutex_for_results;
+
+    auto reader = [&client, &local_streams, &mutex_for_results,
+                   &batches](size_t idx) {
+      // use a local client, since reading from stream may block the client.
+      Client local_client;
+      RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
+      auto reader = local_streams[idx]->OpenReader(local_client);
+      std::vector<std::shared_ptr<arrow::RecordBatch>> read_batches;
+      RETURN_ON_ERROR(reader->ReadRecordBatches(read_batches));
+      {
+        std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
+        for (auto const& batch : read_batches) {
+          VLOG(10) << "recordbatch from stream: "
+                   << batch->schema()->ToString();
+          batches.emplace_back(batch);
+        }
       }
+      return Status::OK();
+    };
+
+    ThreadGroup tg;
+    for (size_t idx = start_to_read; idx != end_to_read; ++idx) {
+      tg.AddTask(reader, idx);
+    }
+    auto readers_status = tg.TakeResults();
+    for (auto const& status : readers_status) {
+      RETURN_ON_ERROR(status);
+    }
+    RETURN_ON_ASSERT(batches.size() > 0,
+                     "This worker doesn't receive any streams");
+    return Status::OK();
+  }
+
+  Status rebuildVTableMetadata(label_id_t label_id,
+                               std::shared_ptr<arrow::Table> table,
+                               std::shared_ptr<arrow::Table>& target) {
+    std::shared_ptr<arrow::KeyValueMetadata> meta;
+    if (table->schema()->metadata() != nullptr) {
+      meta = table->schema()->metadata()->Copy();
+    } else {
+      meta.reset(new arrow::KeyValueMetadata());
+    }
+    meta->Append("type", "VERTEX");
+    meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
+
+    int label_meta_index = meta->FindKey(LABEL_TAG);
+    RETURN_ON_ASSERT(
+        label_meta_index != -1,
+        "Metadata of input vertex files should contain label name");
+    vertex_label_to_index_[meta->value(label_meta_index)] = label_id;
+
+    target = table->ReplaceSchemaMetadata(meta);
+    return Status::OK();
+  }
+
+  Status rebuildETableMetadata(label_id_t label_id, size_t const subtable_size,
+                               std::shared_ptr<arrow::Table> table,
+                               std::shared_ptr<arrow::Table>& target) {
+    std::shared_ptr<arrow::KeyValueMetadata> meta;
+    if (table->schema()->metadata() != nullptr) {
+      meta = table->schema()->metadata()->Copy();
+    } else {
+      meta.reset(new arrow::KeyValueMetadata());
+    }
+    meta->Append("type", "EDGE");
+    meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
+    meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
+    meta->Append("sub_label_num", std::to_string(subtable_size));
+
+    int label_meta_index = meta->FindKey(LABEL_TAG);
+    RETURN_ON_ASSERT(label_meta_index != -1,
+                     "Metadata of input edge files should contain label name");
+    std::string edge_label_name = meta->value(label_meta_index);
+
+    int src_label_meta_index = meta->FindKey(SRC_LABEL_TAG);
+    RETURN_ON_ASSERT(
+        src_label_meta_index != -1,
+        "Metadata of input edge files should contain src_label name");
+    std::string src_label_name = meta->value(src_label_meta_index);
+
+    int dst_label_meta_index = meta->FindKey(DST_LABEL_TAG);
+    RETURN_ON_ASSERT(
+        dst_label_meta_index != -1,
+        "Metadata of input edge files should contain dst_label name");
+    std::string dst_label_name = meta->value(dst_label_meta_index);
+
+    RETURN_ON_ARROW_ERROR(
+        meta->Set(basic_loader_t::SRC_LABEL_ID,
+                  std::to_string(vertex_label_to_index_.at(src_label_name))));
+    RETURN_ON_ARROW_ERROR(
+        meta->Set(basic_loader_t::DST_LABEL_ID,
+                  std::to_string(vertex_label_to_index_.at(dst_label_name))));
+
+    edge_vertex_label_[edge_label_name].insert(
+        std::make_pair(src_label_name, dst_label_name));
+    edge_label_to_index_[edge_label_name] = label_id;
+
+    target = table->ReplaceSchemaMetadata(meta);
+    return Status::OK();
+  }
+
+  boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> gatherVTables(
+      vineyard::Client& client, const std::vector<ObjectID>& vstreams) {
+    using batch_group_t =
+        std::unordered_map<std::string,
+                           std::vector<std::shared_ptr<arrow::RecordBatch>>>;
+    std::vector<std::shared_ptr<arrow::RecordBatch>> record_batches;
+    std::mutex mutex_for_results;
+    auto reader = [this, &client, &mutex_for_results,
+                   &record_batches](ObjectID const vstream) {
+      std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+      auto status = readRecordBatchesFromVineyard(client, vstream, batches);
+      if (status.ok()) {
+        std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
+        record_batches.insert(record_batches.end(), batches.begin(),
+                              batches.end());
+      } else {
+        LOG(ERROR) << "Failed to read from stream "
+                   << VYObjectIDToString(vstream) << ": " << status.ToString();
+      }
+      return Status::OK();
+    };
+
+    ThreadGroup tg;
+    for (auto const& vstream : vstreams) {
+      tg.AddTask(reader, vstream);
+    }
+    tg.TakeResults();
+
+    batch_group_t grouped_batches;
+    for (auto const& batch : record_batches) {
+      auto metadata = batch->schema()->metadata();
+      if (metadata == nullptr) {
+        LOG(ERROR) << "Invalid batch ignored: no metadata: "
+                   << batch->schema()->ToString();
+        continue;
+      }
+      std::unordered_map<std::string, std::string> meta_map;
+      metadata->ToUnorderedMap(&meta_map);
+      grouped_batches[meta_map.at("label")].emplace_back(batch);
+    }
+
+    std::vector<std::shared_ptr<arrow::Table>> tables;
+    label_id_t v_label_id = 0;
+    for (auto const& group : grouped_batches) {
+      std::shared_ptr<arrow::Table> table;
+      VY_OK_OR_RAISE(vineyard::RecordBatchesToTable(group.second, &table));
+      std::shared_ptr<arrow::Table> result_table;
+      VY_OK_OR_RAISE(rebuildVTableMetadata(v_label_id++, table, result_table));
+      tables.emplace_back(result_table);
     }
     return tables;
   }
 
-  std::vector<std::vector<std::shared_ptr<arrow::Table>>> gatherETables(
-      vineyard::Client& client,
-      const std::vector<std::vector<ObjectID>>& estreams) {
-    std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables;
-    for (label_id_t label_id = 0; label_id < estreams.size(); ++label_id) {
-      auto const& esubstreams = estreams[label_id];
-      std::vector<std::shared_ptr<arrow::Table>> subtables;
+  boost::leaf::result<std::vector<std::vector<std::shared_ptr<arrow::Table>>>>
+  gatherETables(vineyard::Client& client,
+                const std::vector<std::vector<ObjectID>>& estreams) {
+    using batch_group_t = std::unordered_map<
+        std::string,
+        std::map<std::pair<std::string, std::string>,
+                 std::vector<std::shared_ptr<arrow::RecordBatch>>>>;
+    std::vector<std::shared_ptr<arrow::RecordBatch>> record_batches;
+    std::mutex mutex_for_results;
+    auto reader = [this, &client, &mutex_for_results,
+                   &record_batches](ObjectID const estream) {
+      std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+      auto status = readRecordBatchesFromVineyard(client, estream, batches);
+      if (status.ok()) {
+        std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
+        record_batches.insert(record_batches.end(), batches.begin(),
+                              batches.end());
+      } else {
+        LOG(ERROR) << "Failed to read from stream "
+                   << VYObjectIDToString(estream) << ": " << status.ToString();
+      }
+      return Status::OK();
+    };
+
+    ThreadGroup tg;
+    for (auto const& esubstreams : estreams) {
       for (auto const& estream : esubstreams) {
-        std::shared_ptr<arrow::Table> table;
-        auto status = readTableFromVineyard(client, estream, table);
-        if (status.ok()) {
-          std::shared_ptr<arrow::KeyValueMetadata> meta;
-          if (table->schema()->metadata() != nullptr) {
-            meta = table->schema()->metadata()->Copy();
-          } else {
-            meta.reset(new arrow::KeyValueMetadata());
-          }
-          meta->Append("type", "EDGE");
-          meta->Append(basic_loader_t::SRC_COLUMN, std::to_string(src_column));
-          meta->Append(basic_loader_t::DST_COLUMN, std::to_string(dst_column));
-          meta->Append("sub_label_num", std::to_string(esubstreams.size()));
-
-          int label_meta_index = meta->FindKey(LABEL_TAG);
-          VINEYARD_ASSERT(
-              label_meta_index != -1,
-              "Metadata of input edge files should contain label name");
-          std::string edge_label_name = meta->value(label_meta_index);
-
-          int src_label_meta_index = meta->FindKey(SRC_LABEL_TAG);
-          VINEYARD_ASSERT(
-              src_label_meta_index != -1,
-              "Metadata of input edge files should contain src_label name");
-          std::string src_label_name = meta->value(src_label_meta_index);
-
-          int dst_label_meta_index = meta->FindKey(DST_LABEL_TAG);
-          VINEYARD_ASSERT(
-              dst_label_meta_index != -1,
-              "Metadata of input edge files should contain dst_label name");
-          std::string dst_label_name = meta->value(dst_label_meta_index);
-
-          meta->Append(
-              basic_loader_t::SRC_LABEL_ID,
-              std::to_string(vertex_label_to_index_.at(src_label_name)));
-          meta->Append(
-              basic_loader_t::DST_LABEL_ID,
-              std::to_string(vertex_label_to_index_.at(dst_label_name)));
-
-          edge_vertex_label_[edge_label_name].insert(
-              std::make_pair(src_label_name, dst_label_name));
-          edge_label_to_index_[edge_label_name] = label_id;
-
-          subtables.emplace_back(table->ReplaceSchemaMetadata(meta));
-        } else {
-          LOG(ERROR) << "Failed to read edge stream: " << status.ToString();
-        }
+        tg.AddTask(reader, estream);
       }
-      if (!subtables.empty()) {
-        tables.emplace_back(subtables);
+    }
+    tg.TakeResults();
+
+    batch_group_t grouped_batches;
+    for (auto const& batch : record_batches) {
+      auto metadata = batch->schema()->metadata();
+      if (metadata == nullptr) {
+        LOG(ERROR) << "Invalid batch ignored: no metadata: "
+                   << batch->schema()->ToString();
+        continue;
       }
+      std::unordered_map<std::string, std::string> meta_map;
+      metadata->ToUnorderedMap(&meta_map);
+      grouped_batches[meta_map.at("label")]
+                     [std::make_pair(meta_map.at("src_label"),
+                                     meta_map.at("dst_label"))]
+                         .emplace_back(batch);
+    }
+
+    std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables;
+    label_id_t e_label_id = 0;
+    for (auto const& group : grouped_batches) {
+      std::shared_ptr<arrow::Table> table;
+      std::vector<std::shared_ptr<arrow::Table>> subtables;
+      for (auto const& subgroup : group.second) {
+        VY_OK_OR_RAISE(vineyard::RecordBatchesToTable(subgroup.second, &table));
+        std::shared_ptr<arrow::Table> result_table;
+        VY_OK_OR_RAISE(rebuildETableMetadata(e_label_id, group.second.size(),
+                                             table, result_table));
+        subtables.emplace_back(result_table);
+      }
+      e_label_id += 1;
+      tables.emplace_back(subtables);
     }
     return tables;
   }
@@ -1064,6 +1256,8 @@ class ArrowFragmentLoader {
   bool possible_duplicate_oid = false;
 
   label_id_t vertex_label_num_, edge_label_num_;
+  std::vector<vineyard::ObjectID> v_streams_;
+  std::vector<std::vector<vineyard::ObjectID>> e_streams_;
   std::vector<std::shared_ptr<arrow::Table>> partial_v_tables_;
   std::vector<std::vector<std::shared_ptr<arrow::Table>>> partial_e_tables_;
   partitioner_t partitioner_;
