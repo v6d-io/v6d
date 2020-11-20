@@ -1716,10 +1716,11 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
       auto tvnum = tvnums_[v_label];
       auto& offset_vec = offsets[v_label];
-      offset_vec.resize(tvnum + 1);
       auto& degree_vec = degree[v_label];
-      offset_vec[0] = 0;
       arrow::Int64Builder builder;
+
+      offset_vec.resize(tvnum + 1);
+      offset_vec[0] = 0;
 
       if (tvnum > 0) {
         if (concurrency == 1) {
@@ -1781,32 +1782,29 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
       auto& builder = edge_builders[v_label];
       auto tvnum = tvnums_[v_label];
       auto offsets = edge_offsets[v_label];
+      const int64_t* offsets_ptr = offsets->raw_values();
 
-      if (offsets != nullptr) {
-        const int64_t* offsets_ptr = offsets->raw_values();
-
-        if (concurrency == 1) {
-          for (vid_t i = 0; i < tvnum; ++i) {
-            nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-            nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-            std::sort(begin, end,
-                      [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-                        return lhs.vid < rhs.vid;
-                      });
-          }
-        } else {
-          parallel_for(
-              static_cast<vid_t>(0), tvnum,
-              [offsets_ptr, &builder](vid_t i) {
-                nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-                nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-                std::sort(begin, end,
-                          [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-                            return lhs.vid < rhs.vid;
-                          });
-              },
-              concurrency);
+      if (concurrency == 1) {
+        for (vid_t i = 0; i < tvnum; ++i) {
+          nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+          nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+          std::sort(begin, end,
+                    [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                      return lhs.vid < rhs.vid;
+                    });
         }
+      } else {
+        parallel_for(
+            static_cast<vid_t>(0), tvnum,
+            [offsets_ptr, &builder](vid_t i) {
+              nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+              nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+              std::sort(begin, end,
+                        [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                          return lhs.vid < rhs.vid;
+                        });
+            },
+            concurrency);
       }
       ARROW_OK_OR_RAISE(
           edge_builders[v_label].Advance(actual_edge_num[v_label]));
@@ -1857,10 +1855,11 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
       auto tvnum = tvnums_[v_label];
       auto& offset_vec = offsets[v_label];
-      offset_vec.resize(tvnum + 1);
       auto& degree_vec = degree[v_label];
-      offset_vec[0] = 0;
       arrow::Int64Builder builder;
+
+      offset_vec.resize(tvnum + 1);
+      offset_vec[0] = 0;
 
       if (tvnum > 0) {
         if (concurrency == 1) {
@@ -1944,32 +1943,29 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
       auto& builder = edge_builders[v_label];
       auto tvnum = tvnums_[v_label];
       auto offsets = edge_offsets[v_label];
+      const int64_t* offsets_ptr = offsets->raw_values();
 
-      if (offsets != nullptr) {
-        const int64_t* offsets_ptr = offsets->raw_values();
-
-        if (concurrency == 1) {
-          for (vid_t i = 0; i < tvnum; ++i) {
-            nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-            nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-            std::sort(begin, end,
-                      [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-                        return lhs.vid < rhs.vid;
-                      });
-          }
-        } else {
-          parallel_for(
-              static_cast<vid_t>(0), tvnum,
-              [offsets_ptr, &builder](vid_t i) {
-                nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-                nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-                std::sort(begin, end,
-                          [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-                            return lhs.vid < rhs.vid;
-                          });
-              },
-              concurrency);
+      if (concurrency == 1) {
+        for (vid_t i = 0; i < tvnum; ++i) {
+          nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+          nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+          std::sort(begin, end,
+                    [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                      return lhs.vid < rhs.vid;
+                    });
         }
+      } else {
+        parallel_for(
+            static_cast<vid_t>(0), tvnum,
+            [offsets_ptr, &builder](vid_t i) {
+              nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+              nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+              std::sort(begin, end,
+                        [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                          return lhs.vid < rhs.vid;
+                        });
+            },
+            concurrency);
       }
       ARROW_OK_OR_RAISE(
           edge_builders[v_label].Advance(actual_edge_num[v_label]));
