@@ -210,7 +210,20 @@ jobs:
           cat ./vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
           tar zcvfh vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz ./fixed_wheels vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload wheels to release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: fixed_wheels/*.whl
+          file_glob: true
+          tag: latest
+          prerelease: true
+          overwrite: true
+          body: "Prerelease for latest vineyard"
+
+      - name: Upload CI artifacts
+        uses: actions/upload-artifact@v2
         with:
           name: vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz
           path: vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz
