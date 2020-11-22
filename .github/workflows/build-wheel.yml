@@ -214,9 +214,14 @@ jobs:
           cat ./vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
           tar zcvfh vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz ./fixed_wheels vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
 
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+
       - name: Upload wheels to latest release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: fixed_wheels/*.whl
@@ -226,14 +231,9 @@ jobs:
           overwrite: true
           body: "prerelease for latest vineyard"
 
-      - name: Extract tag name
-        id: tag
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
-
       - name: Upload wheels to tagged release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/libvineyard' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: fixed_wheels/*.whl

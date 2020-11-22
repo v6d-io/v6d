@@ -46,12 +46,12 @@ jobs:
 
       - name: Extract tag name
         id: tag
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/libvineyard' }}
         run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
 
       - name: Cut a versioned release
         uses: "marvinpinto/action-automatic-releases@latest"
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/libvineyard' }}
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: ${{ steps.tag.outputs.TAG }}
