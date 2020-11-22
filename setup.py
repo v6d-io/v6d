@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import textwrap
 
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
@@ -44,6 +45,19 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
           encoding='utf-8',
           mode='r') as fp:
     long_description = fp.read()
+
+    # Github doesn't respect "align: center", and pypi disables `.. raw`.
+    replacement = textwrap.dedent('''
+        .. image:: https://v6d.io/_static/vineyard_logo.png
+           :target: https://v6d.io
+           :align: center
+           :alt: libvineyard
+           :width: 397px
+
+        vineyard:: an in-memory immutable data manager
+        ----------------------------------------------
+        ''')
+    long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 
 setup(
