@@ -171,9 +171,22 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
       } else {
         metadata.reset(new arrow::KeyValueMetadata());
       }
+
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      std::unordered_map<std::string, std::string> metakv;
+      metadata->ToUnorderedMap(&metakv);
+      for (auto const& kv : params_) {
+        metakv[kv.first, kv.second];
+      }
+      metadata = std::make_shared<arrow::KeyValueMetadata>();
+      for (auto const& kv : metakv) {
+        metadata.Append(kv.first, kv.second);
+      }
+#else
       for (auto const& kv : params_) {
         CHECK_ARROW_ERROR(metadata->Set(kv.first, kv.second));
       }
+#endif
 
       batches.push_back(batch->ReplaceSchemaMetadata(metadata));
     }
@@ -222,9 +235,23 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
       } else {
         metadata.reset(new arrow::KeyValueMetadata());
       }
+
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      std::unordered_map<std::string, std::string> metakv;
+      metadata->ToUnorderedMap(&metakv);
+      for (auto const& kv : params_) {
+        metakv[kv.first, kv.second];
+      }
+      metadata = std::make_shared<arrow::KeyValueMetadata>();
+      for (auto const& kv : metakv) {
+        metadata.Append(kv.first, kv.second);
+      }
+#else
       for (auto const& kv : params_) {
         CHECK_ARROW_ERROR(metadata->Set(kv.first, kv.second));
       }
+#endif
+
       batch = batch->ReplaceSchemaMetadata(metadata);
     }
     return status;

@@ -43,6 +43,7 @@ limitations under the License.
 #include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/context_protocols.h"
 #include "graph/utils/error.h"
+#include "graph/utils/thread_group.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 namespace gs {
@@ -1356,7 +1357,10 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     this->set_directed(directed_);
     this->set_label_num(vertex_label_num_, edge_label_num_);
     this->set_property_graph_schema(schema_);
-    {
+
+    ThreadGroup tg;
+
+    auto fn = [this](Client& client) {
       vineyard::ArrayBuilder<vid_t> ivnums_builder(client, ivnums_);
       vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums_);
       vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums_);
@@ -1366,70 +1370,85 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
           ovnums_builder.Seal(client)));
       this->set_tvnums(*std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
           tvnums_builder.Seal(client)));
-    }
+      return Status::OK();
+    };
+
+    tg.AddTask(fn, std::ref(client));
 
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      vineyard::TableBuilder vt(client, vertex_tables_[i]);
-      this->set_vertex_table(
-          i, std::dynamic_pointer_cast<vineyard::Table>(vt.Seal(client)));
+      auto fn = [this, i](Client& client) {
+        vineyard::TableBuilder vt(client, vertex_tables_[i]);
+        this->set_vertex_table(
+            i, std::dynamic_pointer_cast<vineyard::Table>(vt.Seal(client)));
 
-      vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(client,
-                                                              ovgid_lists_[i]);
-      this->set_ovgid_list(
-          i, std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
-                 ovgid_list_builder.Seal(client)));
+        vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(
+            client, ovgid_lists_[i]);
+        this->set_ovgid_list(
+            i, std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
+                   ovgid_list_builder.Seal(client)));
 
-      vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
-          client, std::move(ovg2l_maps_[i]));
-      this->set_ovg2l_map(
-          i, std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
-                 ovg2l_builder.Seal(client)));
+        vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
+            client, std::move(ovg2l_maps_[i]));
+        this->set_ovg2l_map(
+            i, std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
+                   ovg2l_builder.Seal(client)));
+        return Status::OK();
+      };
+      tg.AddTask(fn, std::ref(client));
     }
 
     for (label_id_t i = 0; i < edge_label_num_; ++i) {
-      {
+      auto fn = [this, i](Client& client) {
         vineyard::TableBuilder et(client, edge_tables_[i]);
         this->set_edge_table(
             i, std::dynamic_pointer_cast<vineyard::Table>(et.Seal(client)));
-      }
+        return Status::OK();
+      };
+      tg.AddTask(fn, std::ref(client));
     }
 
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       for (label_id_t j = 0; j < edge_label_num_; ++j) {
-        if (directed_) {
-          vineyard::FixedSizeBinaryArrayBuilder ie_builder(client,
-                                                           ie_lists_[i][j]);
-          this->set_in_edge_list(
-              i, j,
-              std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
-                  ie_builder.Seal(client)));
-        }
-        {
-          vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
-                                                           oe_lists_[i][j]);
-          this->set_out_edge_list(
-              i, j,
-              std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
-                  oe_builder.Seal(client)));
-        }
-        if (directed_) {
-          vineyard::NumericArrayBuilder<int64_t> ieo(client,
-                                                     ie_offsets_lists_[i][j]);
-          this->set_in_edge_offsets(
-              i, j,
-              std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
-                  ieo.Seal(client)));
-        }
-        {
-          vineyard::NumericArrayBuilder<int64_t> oeo(client,
-                                                     oe_offsets_lists_[i][j]);
-          this->set_out_edge_offsets(
-              i, j,
-              std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
-                  oeo.Seal(client)));
-        }
+        auto fn = [this, i, j](Client& client) {
+          if (directed_) {
+            vineyard::FixedSizeBinaryArrayBuilder ie_builder(client,
+                                                             ie_lists_[i][j]);
+            this->set_in_edge_list(
+                i, j,
+                std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+                    ie_builder.Seal(client)));
+          }
+          {
+            vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
+                                                             oe_lists_[i][j]);
+            this->set_out_edge_list(
+                i, j,
+                std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+                    oe_builder.Seal(client)));
+          }
+          if (directed_) {
+            vineyard::NumericArrayBuilder<int64_t> ieo(client,
+                                                       ie_offsets_lists_[i][j]);
+            this->set_in_edge_offsets(
+                i, j,
+                std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                    ieo.Seal(client)));
+          }
+          {
+            vineyard::NumericArrayBuilder<int64_t> oeo(client,
+                                                       oe_offsets_lists_[i][j]);
+            this->set_out_edge_offsets(
+                i, j,
+                std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                    oeo.Seal(client)));
+          }
+          return Status::OK();
+        };
+        tg.AddTask(fn, std::ref(client));
       }
     }
+
+    tg.TakeResults();
 
     this->set_vertex_map(vm_ptr_);
     return vineyard::Status::OK();

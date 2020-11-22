@@ -184,9 +184,30 @@ class ArrowFragmentLoader {
   ~ArrowFragmentLoader() = default;
 
   boost::leaf::result<vineyard::ObjectID> LoadFragment() {
+#if defined(WITH_PROFILING)
+    double start_ts = GetCurrentTime();
+#endif
     BOOST_LEAF_CHECK(initPartitioner());
+#if defined(WITH_PROFILING)
+    double init_partitioner_ts = GetCurrentTime();
+    VLOG(2) << "initPartitioner uses " << (init_partitioner_ts - start_ts)
+            << " seconds";
+#endif
     BOOST_LEAF_CHECK(initBasicLoader());
+#if defined(WITH_PROFILING)
+    double init_basic_loader_ts = GetCurrentTime();
+    VLOG(2) << "initBasicLoader uses "
+            << (init_basic_loader_ts - init_partitioner_ts) << " seconds";
+#endif
     BOOST_LEAF_AUTO(frag_id, shuffleAndBuild());
+#if defined(WITH_PROFILING)
+    double shuffle_and_build_ts = GetCurrentTime();
+    VLOG(2) << "shuffleAndBuild uses "
+            << (shuffle_and_build_ts - init_basic_loader_ts) << " seconds";
+    VLOG(2) << "[worker-" << comm_spec_.worker_id()
+            << "] load fragments use: " << (shuffle_and_build_ts - start_ts)
+            << " seconds";
+#endif
     return frag_id;
   }
 
@@ -302,12 +323,19 @@ class ArrowFragmentLoader {
   }
 
   boost::leaf::result<vineyard::ObjectID> shuffleAndBuild() {
+#if defined(WITH_PROFILING)
+    auto start_ts = GetCurrentTime();
+#endif
     // When vfiles_ is empty, it means we build vertex table from efile
     BOOST_LEAF_AUTO(local_v_tables,
                     basic_arrow_fragment_loader_.ShuffleVertexTables(
                         possible_duplicate_oid));
+#if defined(WITH_PROFILING)
+    auto shuffle_vtable_ts = GetCurrentTime();
+    VLOG(2) << "ShuffleVertexTables uses " << (shuffle_vtable_ts - start_ts)
+            << " seconds";
+#endif
     auto oid_lists = basic_arrow_fragment_loader_.GetOidLists();
-
     BasicArrowVertexMapBuilder<typename InternalType<oid_t>::type, vid_t>
         vm_builder(client_, comm_spec_.fnum(), vertex_label_num_, oid_lists);
     auto vm = vm_builder.Seal(client_);
@@ -318,8 +346,19 @@ class ArrowFragmentLoader {
       CHECK(vm_ptr->GetGid(fid, label, oid, gid));
       return true;
     };
+
+#if defined(WITH_PROFILING)
+    auto build_vertex_map_ts = GetCurrentTime();
+    VLOG(2) << "Build vertex map uses "
+            << (build_vertex_map_ts - shuffle_vtable_ts) << " seconds";
+#endif
     BOOST_LEAF_AUTO(local_e_tables,
                     basic_arrow_fragment_loader_.ShuffleEdgeTables(mapper));
+#if defined(WITH_PROFILING)
+    auto shuffle_etable_ts = GetCurrentTime();
+    VLOG(2) << "ShuffleEdgeTables uses "
+            << (shuffle_etable_ts - build_vertex_map_ts) << " seconds";
+#endif
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr);
     PropertyGraphSchema schema;
 
@@ -398,12 +437,30 @@ class ArrowFragmentLoader {
     int thread_num =
         (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
         comm_spec_.local_num();
+#if defined(WITH_PROFILING)
+    auto frag_builder_start_ts = GetCurrentTime();
+#endif
     BOOST_LEAF_CHECK(frag_builder.Init(
         comm_spec_.fid(), comm_spec_.fnum(), std::move(local_v_tables),
         std::move(local_e_tables), directed_, thread_num));
+#if defined(WITH_PROFILING)
+    auto frag_builder_init_ts = GetCurrentTime();
+    VLOG(2) << "Init frag builder uses "
+            << (frag_builder_init_ts - frag_builder_start_ts) << " seconds";
+#endif
     auto frag = std::dynamic_pointer_cast<ArrowFragment<oid_t, vid_t>>(
         frag_builder.Seal(client_));
+#if defined(WITH_PROFILING)
+    auto frag_builder_seal_ts = GetCurrentTime();
+    VLOG(2) << "Seal frag builder uses "
+            << (frag_builder_seal_ts - frag_builder_init_ts) << " seconds";
+#endif
     VINEYARD_CHECK_OK(client_.Persist(frag->id()));
+#if defined(WITH_PROFILING)
+    auto frag_builder_persist_ts = GetCurrentTime();
+    VLOG(2) << "Persist frag builder uses "
+            << (frag_builder_persist_ts - frag_builder_seal_ts) << " seconds";
+#endif
     return frag->id();
   }
 
@@ -494,19 +551,31 @@ class ArrowFragmentLoader {
       meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
 
       auto adaptor_meta = io_adaptor->GetMeta();
-      for (auto const& kv : adaptor_meta) {
-        CHECK_ARROW_ERROR(meta->Set(kv.first, kv.second));
-      }
-      // If label name is not in meta, we assign a default label '_'
+      // Check if label name is in meta
       if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
         RETURN_GS_ERROR(
             ErrorCode::kIOError,
             "Metadata of input vertex files should contain label name");
       }
       auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
-      CHECK_ARROW_ERROR(meta->Set("label", v_label_name));
-      tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
 
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      std::unordered_map<std::string, std::string> metakv;
+      meta->ToUnorderedMap(&metakv);
+      for (auto const& kv : adaptor_meta) {
+        metakv[kv.first] = kv.second;
+      }
+      meta = std::make_shared<arrow::KeyValueMetadata>();
+      for (auto const& kv : metakv) {
+        meta->Append(kv.first, kv.second);
+      }
+#else
+      for (auto const& kv : adaptor_meta) {
+        CHECK_ARROW_ERROR(meta->Set(kv.first, kv.second));
+      }
+#endif
+
+      tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
       vertex_label_to_index_[v_label_name] = label_id;
     }
     return tables;
@@ -561,7 +630,6 @@ class ArrowFragmentLoader {
                 "Metadata of input edge files should contain label name");
           }
           std::string edge_label_name = it->second;
-          CHECK_ARROW_ERROR(meta->Set("label", edge_label_name));
 
           it = adaptor_meta.find(SRC_LABEL_TAG);
           if (it == adaptor_meta.end()) {
@@ -570,9 +638,6 @@ class ArrowFragmentLoader {
                 "Metadata of input edge files should contain src label name");
           }
           std::string src_label_name = it->second;
-          CHECK_ARROW_ERROR(meta->Set(
-              basic_loader_t::SRC_LABEL_ID,
-              std::to_string(vertex_label_to_index_.at(src_label_name))));
 
           it = adaptor_meta.find(DST_LABEL_TAG);
           if (it == adaptor_meta.end()) {
@@ -581,9 +646,28 @@ class ArrowFragmentLoader {
                 "Metadata of input edge files should contain dst label name");
           }
           std::string dst_label_name = it->second;
+
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+          std::unordered_map<std::string, std::string> metakv;
+          meta->ToUnorderedMap(&metakv);
+          metakv[LABEL_TAG] = edge_label_name;
+          metakv[basic_loader_t::SRC_LABEL_ID] =
+              std::to_string(vertex_label_to_index_.at(src_label_name));
+          metakv[basic_loader_t::DST_LABEL_ID] =
+              std::to_string(vertex_label_to_index_.at(dst_label_name));
+          meta = std::make_shared<arrow::KeyValueMetadata>();
+          for (auto const& kv : metakv) {
+            meta->Append(kv.first, kv.second);
+          }
+#else
+          CHECK_ARROW_ERROR(meta->Set(LABEL_TAG, edge_label_name));
+          CHECK_ARROW_ERROR(meta->Set(
+              basic_loader_t::SRC_LABEL_ID,
+              std::to_string(vertex_label_to_index_.at(src_label_name))));
           CHECK_ARROW_ERROR(meta->Set(
               basic_loader_t::DST_LABEL_ID,
               std::to_string(vertex_label_to_index_.at(dst_label_name))));
+#endif
 
           tables[label_id].emplace_back(
               normalized_table->ReplaceSchemaMetadata(meta));
@@ -709,21 +793,32 @@ class ArrowFragmentLoader {
           std::string src_label_name = it->second;
           auto src_label_id = vertex_label_to_index_.at(src_label_name);
 
-          CHECK_ARROW_ERROR(meta->Set(basic_loader_t::SRC_LABEL_ID,
-                                      std::to_string(src_label_id)));
           it = adaptor_meta.find(DST_LABEL_TAG);
-
           if (it == adaptor_meta.end()) {
             RETURN_GS_ERROR(
                 ErrorCode::kIOError,
                 "Metadata of input edge files should contain dst label name");
           }
-
           std::string dst_label_name = it->second;
           auto dst_label_id = vertex_label_to_index_.at(dst_label_name);
 
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+          std::unordered_map<std::string, std::string> metakv;
+          meta->ToUnorderedMap(&metakv);
+          metakv[LABEL_TAG] = edge_label_name;
+          metakv[basic_loader_t::SRC_LABEL_ID] = std::to_string(src_label_id);
+          metakv[basic_loader_t::DST_LABEL_ID] = std::to_string(dst_label_id);
+          meta = std::make_shared<arrow::KeyValueMetadata>();
+          for (auto const& kv : metakv) {
+            meta->Append(kv.first, kv.second);
+          }
+#else
+          CHECK_ARROW_ERROR(meta->Set(basic_loader_t::SRC_LABEL_ID,
+                                      std::to_string(src_label_id)));
           CHECK_ARROW_ERROR(meta->Set(basic_loader_t::DST_LABEL_ID,
                                       std::to_string(dst_label_id)));
+#endif
+
           auto e_table = normalized_table->ReplaceSchemaMetadata(meta);
 
           etables[e_label_id].emplace_back(e_table);
@@ -833,9 +928,9 @@ class ArrowFragmentLoader {
 
     size_t split_size = local_streams.size() / local_worker_num +
                         (local_streams.size() % local_worker_num == 0 ? 0 : 1);
-    int start_to_read = comm_spec_.local_id() * split_size;
-    int end_to_read = std::max(local_streams.size(),
-                               (comm_spec_.local_id() + 1) * split_size);
+    size_t start_to_read = comm_spec_.local_id() * split_size;
+    size_t end_to_read = std::max(local_streams.size(),
+                                  (comm_spec_.local_id() + 1) * split_size);
 
     std::mutex mutex_for_results;
 
@@ -924,12 +1019,26 @@ class ArrowFragmentLoader {
         "Metadata of input edge files should contain dst_label name");
     std::string dst_label_name = meta->value(dst_label_meta_index);
 
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    std::unordered_map<std::string, std::string> metakv;
+    meta->ToUnorderedMap(&metakv);
+    metakv[LABEL_TAG] = edge_label_name;
+    metakv[basic_loader_t::SRC_LABEL_ID] =
+        std::to_string(vertex_label_to_index_.at(src_label_name));
+    metakv[basic_loader_t::DST_LABEL_ID] =
+        std::to_string(vertex_label_to_index_.at(dst_label_name));
+    meta = std::make_shared<arrow::KeyValueMetadata>();
+    for (auto const& kv : metakv) {
+      meta->Append(kv.first, kv.second);
+    }
+#else
     RETURN_ON_ARROW_ERROR(
         meta->Set(basic_loader_t::SRC_LABEL_ID,
                   std::to_string(vertex_label_to_index_.at(src_label_name))));
     RETURN_ON_ARROW_ERROR(
         meta->Set(basic_loader_t::DST_LABEL_ID,
                   std::to_string(vertex_label_to_index_.at(dst_label_name))));
+#endif
 
     edge_vertex_label_[edge_label_name].insert(
         std::make_pair(src_label_name, dst_label_name));
