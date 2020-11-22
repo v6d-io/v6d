@@ -141,8 +141,8 @@ Besides sharing the high level data abstractions, vineyard extends the capabily
 of data structures by drivers, enabling out-of-box reusable runtines for the
 boilerplate part in computation jobs.
 
-Installation
-------------
+Install vineyard
+----------------
 
 Vineyard is distributed as a `python package`_ and can be easily installed with ``pip``:
 

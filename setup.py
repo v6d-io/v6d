@@ -53,6 +53,7 @@ setup(
     description='An in-memory immutable data manager',
     long_description=long_description,
     long_description_content_type='text/x-rst',
+    url='https://v6d.io',
     package_dir={'': 'python'},
     packages=find_packages('python'),
     package_data={
