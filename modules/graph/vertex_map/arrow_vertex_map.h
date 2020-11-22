@@ -28,10 +28,12 @@ limitations under the License.
 #include "basic/ds/arrow.h"
 #include "basic/ds/hashmap.h"
 #include "client/client.h"
+#include "common/util/functions.h"
 #include "common/util/typename.h"
 
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
+#include "graph/utils/thread_group.h"
 
 namespace gs {
 
@@ -563,8 +565,11 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
     int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
     int thread_num = std::min(
         static_cast<int>(std::thread::hardware_concurrency()), task_num);
-    std::mutex lock;
     std::atomic<int> task_id(0);
+
+#if defined(WITH_PROFILING)
+    auto start_ts = GetCurrentTime();
+#endif
 
     std::vector<std::thread> threads(thread_num);
     for (int i = 0; i < thread_num; ++i) {
@@ -583,6 +588,7 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
           {
             vid_t cur_gid = id_parser_.GenerateId(cur_fid, cur_label, 0);
             int64_t vnum = array->length();
+            // builder.reserve(static_cast<size_t>(vnum));
             for (int64_t k = 0; k < vnum; ++k) {
               builder.emplace(array->GetView(k), cur_gid);
               ++cur_gid;
@@ -590,7 +596,6 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
           }
 
           {
-            std::lock_guard<std::mutex> guard(lock);
             typename InternalType<oid_t>::vineyard_builder_type array_builder(
                 client, array);
             this->set_oid_array(
@@ -609,6 +614,13 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
     for (auto& thrd : threads) {
       thrd.join();
     }
+
+#if defined(WITH_PROFILING)
+    auto finish_seal_ts = GetCurrentTime();
+    LOG(INFO) << "Seal hashmaps uses " << (finish_seal_ts - start_ts)
+              << " seconds";
+#endif
+
 #endif
 
     return vineyard::Status::OK();
@@ -646,19 +658,27 @@ class BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>
   vineyard::Status Build(vineyard::Client& client) override {
     this->set_fnum_label_num(fnum_, label_num_);
 
-    for (fid_t i = 0; i < fnum_; ++i) {
-      // TODO(luoxiaojian): parallel construct hashmap
-      for (label_id_t j = 0; j < label_num_; ++j) {
-        auto array = oid_arrays_[j][i];
-        typename InternalType<oid_t>::vineyard_builder_type array_builder(
-            client, array);
-        this->set_oid_array(
-            i, j,
-            *std::dynamic_pointer_cast<
-                typename InternalType<oid_t>::vineyard_array_type>(
-                array_builder.Seal(client)));
+    ThreadGroup tg;
+
+    auto builder_fn = [this, &client](fid_t const fid,
+                                      label_id_t const vlabel_id) -> Status {
+      auto& array = oid_arrays_[vlabel_id][fid];
+      typename InternalType<oid_t>::vineyard_builder_type array_builder(client,
+                                                                        array);
+      this->set_oid_array(
+          fid, vlabel_id,
+          *std::dynamic_pointer_cast<
+              typename InternalType<oid_t>::vineyard_array_type>(
+              array_builder.Seal(client)));
+      return Status::OK();
+    };
+
+    for (fid_t fid = 0; fid < fnum_; ++fid) {
+      for (label_id_t vlabel_id = 0; vlabel_id < label_num_; ++vlabel_id) {
+        tg.AddTask(builder_fn, fid, vlabel_id);
       }
     }
+    tg.TakeResults();
     return vineyard::Status::OK();
   }
 

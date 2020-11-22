@@ -63,6 +63,10 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    */
   inline V& operator[](K&& key) { return hashmap_[std::move(key)]; }
 
+  /**
+   * @brief Emplace key-value pair into the hashmap.
+   *
+   */
   template <class... Args>
   inline void emplace(Args&&... args) {
     hashmap_.emplace(std::forward<Args>(args)...);

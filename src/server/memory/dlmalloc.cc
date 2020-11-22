@@ -31,6 +31,8 @@
 #include <string>
 #include <vector>
 
+#include "gflags/gflags.h"
+
 #include "common/util/logging.h"
 #include "server/memory/malloc.h"
 
@@ -70,6 +72,15 @@ int fake_munmap(void*, int64_t);
 constexpr int64_t kMmapRegionsGap = sizeof(size_t);
 
 constexpr int GRANULARITY_MULTIPLIER = 2;
+
+// Fine-grained control for whether we need pre-populate the shared memory.
+//
+// Usually it causes a long wait time at the start up, but it could improved
+// the performance of visiting shared memory.
+//
+// In cases that the startup time doesn't much matter, e.g., in kubernetes
+// environment, pre-populate will archive a win.
+DEFINE_bool(reserve_memory, false, "Pre-reserving enough memory pages");
 
 static void* pointer_advance(void* p, ptrdiff_t n) {
   return (unsigned char*) p + n;
@@ -134,9 +145,17 @@ void* fake_mmap(size_t size) {
   // which avoids work when accessing the pages later. However it causes long
   // pauses
   // when mmapping the files. Only supported on Linux.
-  void* pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+  int mmap_flag = MAP_SHARED;
+  if (FLAGS_reserve_memory) {
+#ifdef __linux__
+    mmap_flag |= MAP_POPULATE;
+#endif
+  }
+
+  void* pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, mmap_flag, fd, 0);
   if (pointer == MAP_FAILED) {
-    LOG(ERROR) << "mmap failed with error: ";
+    LOG(ERROR) << "mmap failed with error: " << strerror(errno);
     return pointer;
   }
 
