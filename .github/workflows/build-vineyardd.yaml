@@ -75,7 +75,7 @@ jobs:
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
 
-      - nam: Tag and upload docker for releases
+      - name: Tag and upload docker for releases
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/libvineyard' }}
         run: |
           sudo docker tag docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }} \
