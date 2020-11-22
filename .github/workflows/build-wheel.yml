@@ -16,6 +16,10 @@ name: Build Wheel
 
 on:
   push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
   pull_request:
     paths:
     - 'CMakeLists.txt'
@@ -210,9 +214,9 @@ jobs:
           cat ./vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
           tar zcvfh vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.tar.gz ./fixed_wheels vineyard.pypi.${{ runner.os }}.${{ matrix.python }}.${{ github.sha }}.sha512sum
 
-      - name: Upload wheels to release
+      - name: Upload wheels to latest release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: fixed_wheels/*.whl
@@ -220,7 +224,24 @@ jobs:
           tag: latest
           prerelease: true
           overwrite: true
-          body: "Prerelease for latest vineyard"
+          body: "prerelease for latest vineyard"
+
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+
+      - name: Upload wheels to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: fixed_wheels/*.whl
+          file_glob: true
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v2
