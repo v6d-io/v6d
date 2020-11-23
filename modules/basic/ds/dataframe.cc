@@ -51,6 +51,10 @@ void DataFrameBuilder::set_partition_index(size_t partition_index_row,
   this->set_partition_index_column_(partition_index_column);
 }
 
+void DataFrameBuilder::set_row_batch_index(size_t row_batch_index) {
+  this->set_row_batch_index_(row_batch_index);
+}
+
 std::shared_ptr<ITensorBuilder> DataFrameBuilder::Column(
     std::string const& column) const {
   return values_.at(column);
