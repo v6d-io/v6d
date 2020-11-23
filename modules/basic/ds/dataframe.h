@@ -65,6 +65,15 @@ class DataFrameBuilder : public DataFrameBaseBuilder {
                            size_t partition_index_column);
 
   /**
+   * @brief Set the row batch index in the global dataframe.
+   * Note that the row batch index gives the order of
+   * batches on rows.
+   *
+   * @param row_batch_index The row batch index.
+   */
+  void set_row_batch_index(size_t row_batch_index);
+
+  /**
    * @brief Get the column of the given column name.
    *
    * @param column The given column name.
