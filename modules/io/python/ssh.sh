@@ -4,7 +4,7 @@ set -x
 HOST_NAME=$1
 shift
 
-if [ "${hostname}" = "localhost" ] || [ "${hostname}" = "$(hostname)" ] || [ "${hostname}" = "$(hostname -i)" ];
+if [ "${HOST_NAME}" = "localhost" ] || [ "${HOST_NAME}" = "$(hostname)" ] || [ "${HOST_NAME}" = "$(hostname -i)" ];
 then
     shopt -s huponexit 2>/dev/null || true;
     $*
