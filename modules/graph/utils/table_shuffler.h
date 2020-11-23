@@ -205,9 +205,7 @@ Status FragmentAllGatherArray(
   auto results = tg.TakeResults();
 
   for (auto& res : results) {
-    if (!res) {
-      return res;
-    }
+    RETURN_ON_ERROR(res);
   }
   return Status::OK();
 }
@@ -298,7 +296,7 @@ Status ShufflePropertyVertexTable(const grape::CommSpec& comm_spec,
   std::vector<Status> results = tg.TakeResults();
 
   for (auto& st : results) {
-    if (!st) {
+    if (!st.ok()) {
       return st;
     }
   }
@@ -443,9 +441,7 @@ Status ShufflePropertyEdgeTable(const grape::CommSpec& comm_spec,
   auto results = tg.TakeResults();
 
   for (auto& res : results) {
-    if (!res) {
-      return res;
-    }
+    RETURN_ON_ERROR(res);
   }
 
   auto batches = divided_record_batches[comm_spec.fid()];

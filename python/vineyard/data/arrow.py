@@ -18,7 +18,6 @@
 
 import re
 import pyarrow as pa
-import pytest
 
 from vineyard._C import ObjectMeta
 from .utils import normalize_dtype

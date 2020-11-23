@@ -165,7 +165,6 @@ int main(int argc, char** argv) {
     traverse_graph(graph, "./xx/output_graph_" + std::to_string(graph->fid()));
   }
   // client.DelData(fragment_id, true, true);
-
 #else
   {
     auto loader =

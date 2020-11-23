@@ -87,8 +87,8 @@ int main(int argc, char** argv) {
   if (argc < 6) {
     printf(
         "usage: ./arrow_fragment_stream_test <ipc_socket> "
-        "<e_label_num> <estreams...> "
-        "<v_label_num> <vstreams...> [directed]\n");
+        "<e_stream_num> <estreams...> "
+        "<v_stream_num> <vstreams...> [directed]\n");
     return 1;
   }
   int index = 1;
