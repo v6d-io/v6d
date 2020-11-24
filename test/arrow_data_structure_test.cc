@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
 
   {
     LOG(INFO) << "#########  String Array Test ########";
-    arrow::StringBuilder b1;
+    arrow::LargeStringBuilder b1;
     CHECK_ARROW_ERROR(b1.AppendValues({"a", "bb", "ccc", "dddd"}));
     CHECK_ARROW_ERROR(b1.AppendNull());
     CHECK_ARROW_ERROR(b1.AppendValues({"eeeee"}));
@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
 
   {
     LOG(INFO) << "#########  Record Batch Test #######";
-    arrow::StringBuilder key_builder;
+    arrow::LargeStringBuilder key_builder;
     arrow::Int64Builder value_builder;
     std::shared_ptr<arrow::Array> array1;
     std::shared_ptr<arrow::Array> array2;
@@ -266,7 +266,7 @@ int main(int argc, char** argv) {
 
   {
     LOG(INFO) << "#########  Table Test #############";
-    arrow::StringBuilder key_builder;
+    arrow::LargeStringBuilder key_builder;
     arrow::Int64Builder value_builder;
     std::shared_ptr<arrow::Array> array1;
     std::shared_ptr<arrow::Array> array2;

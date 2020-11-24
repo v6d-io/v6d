@@ -242,7 +242,7 @@ inline void deserialize_selected_typed_items(grape::OutArchive& arc,
 
 inline void deserialize_string_items(grape::OutArchive& arc, int64_t num,
                                      arrow::ArrayBuilder* builder) {
-  auto casted_builder = dynamic_cast<arrow::StringBuilder*>(builder);
+  auto casted_builder = dynamic_cast<arrow::LargeStringBuilder*>(builder);
   arrow::util::string_view val;
   for (int64_t i = 0; i != num; ++i) {
     arc >> val;
@@ -306,8 +306,8 @@ inline void select_string_items(std::shared_ptr<arrow::Array> array,
                                 arrow::ArrayBuilder* builder) {
   auto* ptr =
       std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
-  arrow::StringBuilder* casted_builder =
-      dynamic_cast<arrow::StringBuilder*>(builder);
+  arrow::LargeStringBuilder* casted_builder =
+      dynamic_cast<arrow::LargeStringBuilder*>(builder);
   for (auto x : offset) {
     casted_builder->Append(ptr->GetView(x));
   }
