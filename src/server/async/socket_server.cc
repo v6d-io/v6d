@@ -60,6 +60,16 @@ void SocketConnection::doReadHeader() {
 }
 
 void SocketConnection::doReadBody() {
+  if (read_msg_header_ > 64 * 1024 * 1024) {  // 64M bytes
+    // We set a hard limit for the message buffer size, since an evil client,
+    // e.g., telnet.
+    //
+    // We don't revise the structure of protocol, for backwards compatible, as
+    // we already released wheel packages on pypi.
+    doStop();
+    socket_server_ptr_->RemoveConnection(conn_id_);
+    return;
+  }
   read_msg_body_.resize(read_msg_header_);
   auto self(shared_from_this());
   asio::async_read(socket_, asio::buffer(&read_msg_body_[0], read_msg_header_),
