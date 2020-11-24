@@ -210,7 +210,7 @@ void SerializeSelectedItems(grape::InArchive& arc,
     serialize_selected_typed_items<uint64_t>(arc, array, offset);
   } else if (array->type()->Equals(arrow::uint32())) {
     serialize_selected_typed_items<uint32_t>(arc, array, offset);
-  } else if (array->type()->Equals(arrow::utf8())) {
+  } else if (array->type()->Equals(arrow::large_utf8())) {
     serialize_string_items(arc, array, offset);
   } else {
     LOG(FATAL) << "Unsupported data type - " << array->type()->ToString();
@@ -264,7 +264,7 @@ void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
     deserialize_selected_typed_items<uint64_t>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::uint32())) {
     deserialize_selected_typed_items<uint32_t>(arc, num, builder);
-  } else if (builder->type()->Equals(arrow::utf8())) {
+  } else if (builder->type()->Equals(arrow::large_utf8())) {
     deserialize_string_items(arc, num, builder);
   } else {
     LOG(FATAL) << "Unsupported data type - " << builder->type()->ToString();
@@ -328,7 +328,7 @@ inline void SelectItems(std::shared_ptr<arrow::Array> array,
     select_typed_items<uint64_t>(array, offset, builder);
   } else if (array->type()->Equals(arrow::uint32())) {
     select_typed_items<uint32_t>(array, offset, builder);
-  } else if (array->type()->Equals(arrow::utf8())) {
+  } else if (array->type()->Equals(arrow::large_utf8())) {
     select_string_items(array, offset, builder);
   } else {
     LOG(FATAL) << "Unsupported data type - " << builder->type()->ToString();

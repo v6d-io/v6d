@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
     CHECK_ARROW_ERROR(value_builder.Finish(&array2));
 
     auto arrowSchema =
-        arrow::schema({std::make_shared<arrow::Field>("f1", arrow::utf8()),
+        arrow::schema({std::make_shared<arrow::Field>("f1", arrow::large_utf8()),
                        std::make_shared<arrow::Field>("f2", arrow::int64())});
     std::shared_ptr<arrow::RecordBatch> batch = arrow::RecordBatch::Make(
         arrowSchema, array1->length(), {array1, array2});
