@@ -131,52 +131,6 @@ class NullArrayBuilder : public NullArrayBaseBuilder {
   std::shared_ptr<arrow::NullArray> array_;
 };
 
-/**
- * @brief StringArrayBuilder is designed for constructing  Arrow arrays of
- * string data type
- *
- */
-class StringArrayBuilder : public StringArrayBaseBuilder {
- public:
-  using ArrayType = typename ConvertToArrowType<std::string>::ArrayType;
-
-  StringArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
-      : StringArrayBaseBuilder(client), array_(array) {}
-
-  std::shared_ptr<ArrayType> GetArray() { return array_; }
-
-  Status Build(Client& client) override {
-    {
-      std::unique_ptr<BlobWriter> buffer_writer;
-      RETURN_ON_ERROR(
-          client.CreateBlob(array_->value_offsets()->size(), buffer_writer));
-      memcpy(buffer_writer->data(), array_->value_offsets()->data(),
-             array_->value_offsets()->size());
-
-      this->set_buffer_offsets_(
-          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
-    }
-    {
-      std::unique_ptr<BlobWriter> buffer_writer;
-      RETURN_ON_ERROR(
-          client.CreateBlob(array_->value_data()->size(), buffer_writer));
-      memcpy(buffer_writer->data(), array_->value_data()->data(),
-             array_->value_data()->size());
-
-      this->set_buffer_data_(
-          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
-    }
-    this->set_length_(array_->length());
-    this->set_null_count_(array_->null_count());
-    this->set_offset_(array_->offset());
-    BUILD_NULL_BITMAP(this, array_);
-    return Status::OK();
-  }
-
- private:
-  std::shared_ptr<ArrayType> array_;
-};
-
 
 /**
  * @brief LargeStringArrayBuilder is designed for constructing  Arrow arrays of
@@ -273,11 +227,6 @@ inline std::shared_ptr<ObjectBuilder> BuildArray(
 }
 
 inline std::shared_ptr<ObjectBuilder> BuildArray(
-    Client& client, std::shared_ptr<arrow::StringArray> arr) {
-  return std::make_shared<StringArrayBuilder>(client, arr);
-}
-
-inline std::shared_ptr<ObjectBuilder> BuildArray(
     Client& client, std::shared_ptr<arrow::LargeStringArray> arr) {
   return std::make_shared<LargeStringArrayBuilder>(client, arr);
 }
@@ -337,9 +286,6 @@ inline std::shared_ptr<ObjectBuilder> BuildArray(
   if (auto arr =
           std::dynamic_pointer_cast<arrow::FixedSizeBinaryArray>(array)) {
     return std::make_shared<FixedSizeBinaryArrayBuilder>(client, arr);
-  }
-  if (auto arr = std::dynamic_pointer_cast<arrow::StringArray>(array)) {
-    return std::make_shared<StringArrayBuilder>(client, arr);
   }
   if (auto arr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array)) {
     return std::make_shared<LargeStringArrayBuilder>(client, arr);

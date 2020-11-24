@@ -70,7 +70,7 @@ def fixed_size_binary_array_builder(client, array, builder):
 
 def string_array_builder(client, array, builder):
     meta = ObjectMeta()
-    meta['typename'] = 'vineyard::StringArray'
+    meta['typename'] = 'vineyard::LargeStringArray'
     meta['length_'] = len(array)
     meta['null_count_'] = array.null_count
     meta['offset_'] = array.offset
@@ -232,7 +232,7 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
         builder_ctx.register(pa.Buffer, buffer_builder)
         builder_ctx.register(pa.NumericArray, numeric_array_builder)
         builder_ctx.register(pa.FixedSizeBinaryArray, fixed_size_binary_array_builder)
-        builder_ctx.register(pa.StringArray, string_array_builder)
+        builder_ctx.register(pa.LargeStringArray, string_array_builder)
         builder_ctx.register(pa.NullArray, null_array_builder)
         builder_ctx.register(pa.BooleanArray, boolean_array_builder)
         builder_ctx.register(pa.Schema, schema_proxy_builder)
@@ -242,7 +242,7 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
         resolver_ctx.register('vineyard::FixedSizeBinaryArray', fixed_size_binary_array_resolver)
-        resolver_ctx.register('vineyard::StringArray', string_array_resolver)
+        resolver_ctx.register('vineyard::LargeStringArray', string_array_resolver)
         resolver_ctx.register('vineyard::NullArray', null_array_resolver)
         resolver_ctx.register('vineyard::BooleanArray', boolean_array_resolver)
         resolver_ctx.register('vineyard::SchemaProxy', schema_proxy_resolver)
