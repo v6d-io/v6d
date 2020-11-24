@@ -188,8 +188,7 @@ inline void serialize_selected_typed_items(grape::InArchive& arc,
 void serialize_string_items(grape::InArchive& arc,
                             std::shared_ptr<arrow::Array> array,
                             const std::vector<int64_t>& offset) {
-  auto* ptr =
-      std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
+  auto* ptr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
   for (auto x : offset) {
     arc << ptr->GetView(x);
   }
@@ -304,8 +303,7 @@ inline void select_typed_items(std::shared_ptr<arrow::Array> array,
 inline void select_string_items(std::shared_ptr<arrow::Array> array,
                                 const std::vector<int64_t>& offset,
                                 arrow::ArrayBuilder* builder) {
-  auto* ptr =
-      std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
+  auto* ptr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
   arrow::LargeStringBuilder* casted_builder =
       dynamic_cast<arrow::LargeStringBuilder*>(builder);
   for (auto x : offset) {

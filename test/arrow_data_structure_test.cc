@@ -165,7 +165,8 @@ int main(int argc, char** argv) {
     CHECK(internal_array->Equals(*a1));
 
     // test sliced array.
-    auto a3 = std::dynamic_pointer_cast<arrow::LargeStringArray>(a1->Slice(2, 2));
+    auto a3 =
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(a1->Slice(2, 2));
     CHECK_EQ(a3->length(), 2);
     LargeStringArrayBuilder sliced_array_builder(client, a3);
     auto r3 = std::dynamic_pointer_cast<LargeStringArray>(
@@ -226,9 +227,9 @@ int main(int argc, char** argv) {
     CHECK_ARROW_ERROR(key_builder.Finish(&array1));
     CHECK_ARROW_ERROR(value_builder.Finish(&array2));
 
-    auto arrowSchema =
-        arrow::schema({std::make_shared<arrow::Field>("f1", arrow::large_utf8()),
-                       std::make_shared<arrow::Field>("f2", arrow::int64())});
+    auto arrowSchema = arrow::schema(
+        {std::make_shared<arrow::Field>("f1", arrow::large_utf8()),
+         std::make_shared<arrow::Field>("f2", arrow::int64())});
     std::shared_ptr<arrow::RecordBatch> batch = arrow::RecordBatch::Make(
         arrowSchema, array1->length(), {array1, array2});
     RecordBatchBuilder builder(client, batch);

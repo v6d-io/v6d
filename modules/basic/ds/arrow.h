@@ -131,7 +131,6 @@ class NullArrayBuilder : public NullArrayBaseBuilder {
   std::shared_ptr<arrow::NullArray> array_;
 };
 
-
 /**
  * @brief LargeStringArrayBuilder is designed for constructing  Arrow arrays of
  * string data type

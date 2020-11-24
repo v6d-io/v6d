@@ -90,8 +90,8 @@ int main(int argc, char** argv) {
     std::vector<std::vector<std::shared_ptr<arrow::Table>>> v_tables;
     loadVertices(vpath, vertex_label_num, v_tables);
 
-    std::vector<std::vector<std::shared_ptr<arrow::LargeStringArray>>> oid_lists(
-        vertex_label_num);
+    std::vector<std::vector<std::shared_ptr<arrow::LargeStringArray>>>
+        oid_lists(vertex_label_num);
     for (auto& vec : oid_lists) {
       vec.resize(fnum);
     }

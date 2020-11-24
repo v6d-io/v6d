@@ -163,7 +163,8 @@ inline Status recv_numeric_array<std::string>(
   CHECK_EQ(batches.size(), 1);
   CHECK_EQ(batches[0]->num_columns(), 1);
   CHECK_EQ(batches[0]->column(0)->type(), arrow::large_utf8());
-  array = std::dynamic_pointer_cast<arrow::LargeStringArray>(batches[0]->column(0));
+  array =
+      std::dynamic_pointer_cast<arrow::LargeStringArray>(batches[0]->column(0));
   return Status::OK();
 }
 
