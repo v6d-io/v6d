@@ -31,6 +31,8 @@ include(CheckLibraryExists)
 include(GNUInstallDirs)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+add_definitions(-DOSS_ENABLED)
+
 # resolve targets dependencies
 if(BUILD_VINEYARD_PYPI_PACKAGES)
     set(BUILD_VINEYARD_PYTHON_BINDINGS ON)
