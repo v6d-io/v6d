@@ -149,6 +149,35 @@ class StringArray : public Registered<StringArray> {
   friend class StringArrayBaseBuilder;
 };
 
+class LargeStringArrayBaseBuilder;
+
+class LargeStringArray : public Registered<LargeStringArray> {
+ public:
+  using ArrayType = typename ConvertToArrowType<std::string>::ArrayType;
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<ArrayType>(
+        this->length_, this->buffer_offsets_->Buffer(),
+        this->buffer_data_->Buffer(), this->null_bitmap_->Buffer(),
+        this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<ArrayType> GetArray() { return array_; }
+
+  const uint8_t* GetBase() const { return array_->value_data()->data(); }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_data_,
+      buffer_offsets_, null_bitmap_;
+
+  std::shared_ptr<ArrayType> array_;
+
+  friend class Client;
+  friend class LargeStringArrayBaseBuilder;
+};
+
 class BooleanArrayBaseBuilder;
 
 class BooleanArray : public Registered<BooleanArray> {
