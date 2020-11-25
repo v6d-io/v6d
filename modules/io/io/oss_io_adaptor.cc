@@ -24,6 +24,7 @@ limitations under the License.
 #include <memory>
 #include <random>
 #include <thread>
+#include <unordered_map>
 
 #include "alibabacloud/oss/OssClient.h"
 #include "alibabacloud/oss/client/RetryStrategy.h"
@@ -248,6 +249,42 @@ void OSSIOAdaptor::parseYamlLocation(const std::string& location) {
     bucket_name_as_host = true;
   }
 
+  size_t pos = location.find_first_of('#');
+  if (pos != std::string::npos) {
+    std::string config_field = location.substr(pos + 1);
+    std::vector<std::string> config_list;
+    // allows multiple # in configs
+    ::boost::split(config_list, config_field, ::boost::is_any_of("&#"));
+    for (auto& iter : config_list) {
+      std::vector<std::string> kv_pair;
+      ::boost::split(kv_pair, iter, ::boost::is_any_of("="));
+      if (kv_pair[0] == "schema") {
+        ::boost::split(columns_, kv_pair[1], ::boost::is_any_of(","));
+        meta_.emplace("schema", kv_pair[1]);
+      } else if (kv_pair[0] == "column_types") {
+        ::boost::split(column_types_, kv_pair[1], ::boost::is_any_of(","));
+        meta_.emplace(kv_pair[0], kv_pair[1]);
+      } else if (kv_pair[0] == "delimiter") {
+        ::boost::algorithm::trim_if(kv_pair[1],
+                                    boost::algorithm::is_any_of("\"\'"));
+        if (kv_pair.size() > 1) {
+          // handle escape character
+          if (kv_pair[1][0] == '\\' && kv_pair[1][1] == 't') {
+            delimiter_ = '\t';
+          } else {
+            delimiter_ = kv_pair[1][0];
+          }
+        }
+        meta_.emplace("delimiter", std::string(1, delimiter_));
+      } else if (kv_pair[0] == "header_row") {
+        header_row_ = (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
+        meta_.emplace("header_row", std::to_string(header_row_));
+      } else if (kv_pair.size() > 1) {
+        meta_.emplace(kv_pair[0], kv_pair[1]);
+      }
+    }
+  }
+
   std::vector<std::string> locs;
   boost::split(locs, path, boost::is_any_of("/"));
   if (bucket_name_as_host) {
@@ -285,7 +322,7 @@ Status OSSIOAdaptor::Open(const char* mode) {
 Status OSSIOAdaptor::Open() {
   opened_ = true;
 
-  if (!listAllObjects(prefix_, suffix_)) {
+  if (!listAllObjects(prefix_, suffix_).ok()) {
     LOG(FATAL) << "IOException: OSS Exception: list object failed.";
   }
   if (partial_read_) {
@@ -324,6 +361,28 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
     queue_.Get(buffer);
     RETURN_ON_ARROW_ERROR(builder.Append(buffer.c_str(), buffer.size()));
   }
+
+  if (header_row_) {
+    size_t pos = buffer.find_first_of('\n');
+    header_line_ = buffer.substr(0, pos);
+    buffer = buffer.substr(pos + 1);
+    ::boost::algorithm::trim(header_line_);
+    ::boost::split(original_columns_, header_line_,
+                   ::boost::is_any_of(std::string(1, delimiter_)));
+  } else {
+    // Name columns as f0 ... fn
+    std::string one_line;
+    size_t pos = buffer.find_first_of('\n');
+    one_line = buffer.substr(0, pos);
+    ::boost::algorithm::trim(one_line);
+    std::vector<std::string> one_column;
+    ::boost::split(one_column, one_line,
+                   ::boost::is_any_of(std::string(1, delimiter_)));
+    for (size_t i = 0; i < one_column.size(); ++i) {
+      original_columns_.push_back("f" + std::to_string(i));
+    }
+  }
+
   std::shared_ptr<arrow::Buffer> buf;
   RETURN_ON_ARROW_ERROR(builder.Finish(&buf));
   auto file = std::make_shared<arrow::io::BufferReader>(buf);
@@ -332,16 +391,84 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
   auto read_options = arrow::csv::ReadOptions::Defaults();
   auto parse_options = arrow::csv::ParseOptions::Defaults();
 
+  read_options.column_names = original_columns_;
+  parse_options.delimiter = delimiter_;
+
   auto convert_options = arrow::csv::ConvertOptions::Defaults();
-  auto reader_result = arrow::csv::TableReader::Make(
-      pool, stream, read_options, parse_options, convert_options);
 
-  RETURN_ON_ARROW_ERROR(reader_result.status());
+  auto is_number = [](const std::string& s) -> bool {
+    return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) {
+                           return !std::isdigit(c);
+                         }) == s.end();
+  };
 
-  auto reader = reader_result.ValueOrDie();
-  auto table_result = reader->Read();
-  RETURN_ON_ARROW_ERROR(table_result.status());
-  *table = table_result.ValueOrDie();
+  bool add_all_columns = false;
+  if (std::all_of(
+          columns_.begin(), columns_.end(),
+          [&is_number](const std::string& s) { return is_number(s); })) {
+    add_all_columns = true;
+  }
+  std::vector<int> indices;
+  for (size_t i = 0; i < columns_.size(); ++i) {
+    if (is_number(columns_[i])) {
+      int col_idx = std::stoi(columns_[i]);
+      if (col_idx >= static_cast<int>(original_columns_.size())) {
+        return Status(StatusCode::kArrowError,
+                      "Index out of range: " + columns_[i]);
+      }
+      indices.push_back(col_idx);
+      columns_[i] = original_columns_[col_idx];
+    }
+  }
+  // If all column given is number, we need to add all other columns
+  if (add_all_columns) {
+    for (size_t i = 0; i < original_columns_.size(); ++i) {
+      if (std::find(std::begin(indices), std::end(indices), i) ==
+          indices.end()) {
+        columns_.push_back(original_columns_[i]);
+      }
+    }
+  }
+
+  convert_options.include_columns = columns_;
+
+  if (column_types_.size() > convert_options.include_columns.size()) {
+    return Status(StatusCode::kArrowError,
+                  "Format of column type schema is incorrect.");
+  }
+  std::unordered_map<std::string, std::shared_ptr<arrow::DataType>>
+      column_types;
+
+  for (size_t i = 0; i < column_types_.size(); ++i) {
+    if (!column_types_[i].empty()) {
+      column_types[convert_options.include_columns[i]] =
+          type_name_to_arrow_type(column_types_[i]);
+    }
+  }
+  convert_options.column_types = column_types;
+
+  std::shared_ptr<arrow::csv::TableReader> reader;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      reader, arrow::csv::TableReader::Make(pool, stream, read_options,
+                                            parse_options, convert_options));
+
+  // RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table, reader->Read());
+  auto result = reader->Read();
+  if (!result.status().ok()) {
+    if (result.status().message() == "Empty CSV file") {
+      *table = nullptr;
+      return Status::OK();
+    } else {
+      return Status::ArrowError(result.status());
+    }
+  }
+  *table = result.ValueOrDie();
+
+  RETURN_ON_ARROW_ERROR((*table)->Validate());
+
+  VLOG(2) << "[file-" << location_ << "] contains: " << (*table)->num_rows()
+          << " rows, " << (*table)->num_columns() << " columns";
+  VLOG(2) << (*table)->schema()->ToString();
   return Status::OK();
 }
 

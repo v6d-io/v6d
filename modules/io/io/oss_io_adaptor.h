@@ -23,6 +23,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -87,6 +88,10 @@ class OSSIOAdaptor : public IIOAdaptor {
 
   static void Finalize();
 
+  std::unordered_multimap<std::string, std::string> GetMeta() override {
+    return meta_;
+  }
+
  private:
   Status listAllObjects(const std::string& prefix, const std::string& suffix);
 
@@ -137,6 +142,16 @@ class OSSIOAdaptor : public IIOAdaptor {
 
   size_t part_num_;
   size_t part_id_;
+  std::unordered_multimap<std::string, std::string> meta_;
+
+  // for arrow
+  std::vector<std::string> columns_;
+  std::vector<std::string> column_types_;
+  char delimiter_ = ',';
+  bool header_row_;
+  std::string header_line_ = "";
+  // schema of header row
+  std::vector<std::string> original_columns_;
 };
 }  // namespace vineyard
 

@@ -46,7 +46,11 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
         except:
             break
         buf_reader = pa.ipc.open_stream(content)
-        for batch in buf_reader:
+        while True:
+            try:
+                batch = buf_reader.read_next_batch()
+            except StopIteration:
+                break
             df = batch.to_pandas()
             df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=idx)
             idx += 1
