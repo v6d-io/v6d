@@ -26,7 +26,6 @@ limitations under the License.
 #include <thread>
 #include <unordered_map>
 
-
 #include "alibabacloud/oss/OssClient.h"
 #include "alibabacloud/oss/client/RetryStrategy.h"
 #include "arrow/api.h"
@@ -39,7 +38,6 @@ limitations under the License.
 
 #include "basic/ds/arrow_utils.h"
 #include "common/util/functions.h"
-#include "graph/fragment/property_graph_utils.h"
 
 DEFINE_string(oss_endpoint, "", "OSS endpoint");
 DEFINE_string(oss_access_key_id, "", "OSS Access Key ID");

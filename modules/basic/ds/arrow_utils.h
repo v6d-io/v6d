@@ -440,6 +440,45 @@ class TableAppender {
 std::shared_ptr<arrow::Table> ConcatenateTables(
     std::vector<std::shared_ptr<arrow::Table>>& tables);
 
+/**
+ * @brief Convert type name in string to arrow type.
+ *
+ */
+inline std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
+    const std::string& name) {
+  if (name == "bool") {
+    return vineyard::ConvertToArrowType<bool>::TypeValue();
+  } else if (name == "int8_t" || name == "int8" || name == "byte") {
+    return vineyard::ConvertToArrowType<int8_t>::TypeValue();
+  } else if (name == "uint8_t" || name == "uint8" || name == "char") {
+    return vineyard::ConvertToArrowType<uint8_t>::TypeValue();
+  } else if (name == "int16_t" || name == "int16" || name == "half") {
+    return vineyard::ConvertToArrowType<int16_t>::TypeValue();
+  } else if (name == "uint16_t" || name == "uint16") {
+    return vineyard::ConvertToArrowType<uint16_t>::TypeValue();
+  } else if (name == "int32_t" || name == "int32" || name == "int") {
+    return vineyard::ConvertToArrowType<int32_t>::TypeValue();
+  } else if (name == "uint32_t" || name == "uint32") {
+    return vineyard::ConvertToArrowType<uint32_t>::TypeValue();
+  } else if (name == "int64_t" || name == "int64" || name == "long") {
+    return vineyard::ConvertToArrowType<int64_t>::TypeValue();
+  } else if (name == "uint64_t" || name == "uint64") {
+    return vineyard::ConvertToArrowType<uint64_t>::TypeValue();
+  } else if (name == "float") {
+    return vineyard::ConvertToArrowType<float>::TypeValue();
+  } else if (name == "double") {
+    return vineyard::ConvertToArrowType<double>::TypeValue();
+  } else if (name == "string" || name == "std::string" || name == "str" ||
+             name == "std::__1::string") {
+    return vineyard::ConvertToArrowType<std::string>::TypeValue();
+  } else if (name == "null" || name == "NULL") {
+    return arrow::null();
+  } else {
+    LOG(ERROR) << "Unsupported data type: " << name;
+    return nullptr;
+  }
+}
+
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_ARROW_UTILS_H_

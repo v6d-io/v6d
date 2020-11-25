@@ -32,7 +32,6 @@ limitations under the License.
 #include "glog/logging.h"
 
 #include "basic/ds/arrow_utils.h"
-#include "graph/fragment/property_graph_utils.h"
 
 namespace vineyard {
 LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
