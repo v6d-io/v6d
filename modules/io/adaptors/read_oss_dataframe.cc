@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef OSS_ENABLED
-
 #include <string>
 
 #include "arrow/table.h"
@@ -33,6 +31,9 @@ int main(int argc, const char** argv) {
         "<proc_index>");
     return 1;
   }
+  
+  #ifdef OSS_ENABLED
+
   std::string ipc_socket = std::string(argv[1]);
   std::string efile = std::string(argv[2]);
   int pnum = std::stoi(argv[3]);
@@ -82,7 +83,8 @@ int main(int argc, const char** argv) {
   }
   VINEYARD_CHECK_OK(writer->Finish());
 
+  #endif  // OSS_ENABLED
+
   return 0;
 }
 
-#endif  // OSS_ENABLED
