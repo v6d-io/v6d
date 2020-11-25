@@ -189,6 +189,42 @@ def get_data_path(name):
         return os.path.join(binary_dir, name)
 
 
+def run_invalid_client_test(host, port):
+    def send_garbage_bytes(bytes):
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((host, port))
+        sock.sendall(bytes)
+        sock.close()
+
+    send_garbage_bytes(b'\x01')
+    send_garbage_bytes(b'\x0001')
+    send_garbage_bytes(b'\x0101')
+    send_garbage_bytes(b'\x000001')
+    send_garbage_bytes(b'\x010101')
+    send_garbage_bytes(b'\x00000001')
+    send_garbage_bytes(b'\x01010101')
+    send_garbage_bytes(b'\x0000000001')
+    send_garbage_bytes(b'\x0101010101')
+    send_garbage_bytes(b'\x000000000001')
+    send_garbage_bytes(b'\x010101010101')
+    send_garbage_bytes(b'\x00000000000001')
+    send_garbage_bytes(b'\x01010101010101')
+    send_garbage_bytes(b'\x01010101010101')
+    send_garbage_bytes(b'1' * 1)
+    send_garbage_bytes(b'1' * 10)
+    send_garbage_bytes(b'1' * 100)
+    send_garbage_bytes(b'1' * 1000)
+    send_garbage_bytes(b'1' * 10000)
+    send_garbage_bytes(b'1' * 100000)
+    send_garbage_bytes(b'\xFF' * 1)
+    send_garbage_bytes(b'\xFF' * 10)
+    send_garbage_bytes(b'\xFF' * 100)
+    send_garbage_bytes(b'\xFF' * 1000)
+    send_garbage_bytes(b'\xFF' * 10000)
+    send_garbage_bytes(b'\xFF' * 100000)
+
+
 def run_single_vineyardd_tests(etcd_endpoints):
     with start_vineyardd(etcd_endpoints,
                          'vineyard_test_%s' % time.time(),
@@ -214,6 +250,8 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('stream_test')
         run_test('tensor_test')
         run_test('tuple_test')
+
+        run_invalid_client_test('127.0.0.1', rpc_socket_port)
 
 
 def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
@@ -270,11 +308,16 @@ def parse_sys_args():
                             help='Whether to run python tests')
     arg_parser.add_argument('--with-io', action='store_true', default=False,
                             help='Whether to run IO adaptors tests')
-    return arg_parser.parse_args()
+    return arg_parser, arg_parser.parse_args()
 
 
 def main():
-    args = parse_sys_args()
+    parser, args = parse_sys_args()
+
+    if not (args.with_cpp or args.with_python or args.with_io):
+        parser.print_help()
+        exit(1)
+
     if args.with_cpp:
         run_single_vineyardd_tests('http://localhost:%d' % find_port())
         with start_etcd() as (_, etcd_endpoints):
