@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifdef OSS_ENABLED
+
 #include <string>
 
 #include "arrow/table.h"
@@ -82,3 +84,5 @@ int main(int argc, const char** argv) {
 
   return 0;
 }
+
+#endif  // OSS_ENABLED
