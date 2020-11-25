@@ -24,6 +24,7 @@ import vineyard
 import pyarrow as pa
 import pyorc
 
+
 def orc_type(field):
     if pa.types.is_boolean(field):
         return pyorc.Boolean()

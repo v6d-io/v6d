@@ -156,6 +156,7 @@ def test_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset
                      vineyard_endpoint=vineyard_endpoint)
     assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
 
+
 @pytest.mark.skip('oss not available at github ci')
 def test_oss(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp, oss_config):
     oss_config_file = oss_config + '/.ossutilconfig'
