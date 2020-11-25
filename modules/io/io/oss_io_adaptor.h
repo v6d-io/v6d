@@ -23,6 +23,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 

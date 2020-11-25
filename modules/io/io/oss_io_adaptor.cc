@@ -24,6 +24,8 @@ limitations under the License.
 #include <memory>
 #include <random>
 #include <thread>
+#include <unordered_map>
+
 
 #include "alibabacloud/oss/OssClient.h"
 #include "alibabacloud/oss/client/RetryStrategy.h"
