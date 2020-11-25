@@ -1316,7 +1316,7 @@ class ArrowFragmentLoader {
 
   boost::leaf::result<std::shared_ptr<arrow::Array>> CastStringToBigString(
       const std::shared_ptr<arrow::Array>& in,
-      const std::shared_ptr<arrow::DateType>& to_type) {
+      const std::shared_ptr<arrow::DataType>& to_type) {
     auto array_data = in->data()->Copy();
     auto offset = array_data->buffers[1];
     using from_offset_type = typename arrow::StringArray::offset_type;
