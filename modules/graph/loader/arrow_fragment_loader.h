@@ -1241,6 +1241,9 @@ class ArrowFragmentLoader {
           }
         }
       }
+      if (res->Equals(arrow::utf8())) {
+        res = arrow::large_utf8();
+      }
       lossen_fields[i] = fields[i][0]->WithType(res);
     }
     return std::make_shared<arrow::Schema>(lossen_fields);
@@ -1311,6 +1314,33 @@ class ArrowFragmentLoader {
     return out;
   }
 
+  boost::leaf::result<std::shared_ptr<arrow::Array>> CastStringToBigString(
+      const std::shared_ptr<arrow::Array>& in,
+      const std::shared_ptr<arrow::DataType>& to_type) {
+    auto array_data = in->data()->Copy();
+    auto offset = array_data->buffers[1];
+    using from_offset_type = typename arrow::StringArray::offset_type;
+    using to_string_offset_type = typename arrow::LargeStringArray::offset_type;
+    auto raw_value_offsets_ =
+        offset == NULLPTR
+            ? NULLPTR
+            : reinterpret_cast<const from_offset_type*>(offset->data());
+    std::vector<to_string_offset_type> to_offset(offset->size() /
+                                                 sizeof(from_offset_type));
+    for (size_t i = 0; i < to_offset.size(); ++i) {
+      to_offset[i] = raw_value_offsets_[i];
+    }
+    std::shared_ptr<arrow::Buffer> buffer;
+    arrow::TypedBufferBuilder<to_string_offset_type> buffer_builder;
+    buffer_builder.Append(to_offset.data(), to_offset.size());
+    buffer_builder.Finish(&buffer);
+    array_data->type = to_type;
+    array_data->buffers[1] = buffer;
+    auto out = arrow::MakeArray(array_data);
+    ARROW_OK_OR_RAISE(out->ValidateFull());
+    return out;
+  }
+
   boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
       const std::shared_ptr<arrow::Table>& table,
       const std::shared_ptr<arrow::Schema>& schema) {
@@ -1335,6 +1365,10 @@ class ArrowFragmentLoader {
                          arrow::timestamp(arrow::TimeUnit::SECOND)) &&
                      to_type->Equals(arrow::int64())) {
             BOOST_LEAF_AUTO(new_array, CastDateToInt(array, to_type));
+            chunks.push_back(new_array);
+          } else if (from_type->Equals(arrow::utf8()) &&
+                     to_type->Equals(arrow::large_utf8())) {
+            BOOST_LEAF_AUTO(new_array, CastStringToBigString(array, to_type));
             chunks.push_back(new_array);
           } else {
             RETURN_GS_ERROR(ErrorCode::kDataTypeError,

@@ -127,7 +127,7 @@ inline Status send_numeric_array(
 
 template <>
 inline Status send_numeric_array<std::string>(
-    const std::shared_ptr<arrow::StringArray>& array, int dst_worker_id,
+    const std::shared_ptr<arrow::LargeStringArray>& array, int dst_worker_id,
     MPI_Comm comm, int tag) {
   auto batch =
       ArrayToRecordBatch(std::dynamic_pointer_cast<arrow::Array>(array));
@@ -162,8 +162,9 @@ inline Status recv_numeric_array<std::string>(
   RETURN_ON_ERROR(DeserializeRecordBatches(buffer, &batches));
   CHECK_EQ(batches.size(), 1);
   CHECK_EQ(batches[0]->num_columns(), 1);
-  CHECK_EQ(batches[0]->column(0)->type(), arrow::utf8());
-  array = std::dynamic_pointer_cast<arrow::StringArray>(batches[0]->column(0));
+  CHECK_EQ(batches[0]->column(0)->type(), arrow::large_utf8());
+  array =
+      std::dynamic_pointer_cast<arrow::LargeStringArray>(batches[0]->column(0));
   return Status::OK();
 }
 

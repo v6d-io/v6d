@@ -122,7 +122,9 @@ class NullArray : public Registered<NullArray> {
 
 class StringArrayBaseBuilder;
 
-class StringArray : public Registered<StringArray> {
+class LargeStringArrayBaseBuilder;
+
+class LargeStringArray : public Registered<LargeStringArray> {
  public:
   using ArrayType = typename ConvertToArrowType<std::string>::ArrayType;
 
@@ -146,7 +148,7 @@ class StringArray : public Registered<StringArray> {
   std::shared_ptr<ArrayType> array_;
 
   friend class Client;
-  friend class StringArrayBaseBuilder;
+  friend class LargeStringArrayBaseBuilder;
 };
 
 class BooleanArrayBaseBuilder;
@@ -185,7 +187,7 @@ inline std::shared_ptr<arrow::Array> ConstructArray(
   if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(obj)) {
     return arr->GetArray();
   }
-  if (auto arr = std::dynamic_pointer_cast<StringArray>(obj)) {
+  if (auto arr = std::dynamic_pointer_cast<LargeStringArray>(obj)) {
     return arr->GetArray();
   }
   if (auto arr = std::dynamic_pointer_cast<NullArray>(obj)) {

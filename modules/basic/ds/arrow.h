@@ -132,16 +132,16 @@ class NullArrayBuilder : public NullArrayBaseBuilder {
 };
 
 /**
- * @brief StringArrayBuilder is designed for constructing  Arrow arrays of
+ * @brief LargeStringArrayBuilder is designed for constructing  Arrow arrays of
  * string data type
  *
  */
-class StringArrayBuilder : public StringArrayBaseBuilder {
+class LargeStringArrayBuilder : public LargeStringArrayBaseBuilder {
  public:
   using ArrayType = typename ConvertToArrowType<std::string>::ArrayType;
 
-  StringArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
-      : StringArrayBaseBuilder(client), array_(array) {}
+  LargeStringArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
+      : LargeStringArrayBaseBuilder(client), array_(array) {}
 
   std::shared_ptr<ArrayType> GetArray() { return array_; }
 
@@ -226,8 +226,8 @@ inline std::shared_ptr<ObjectBuilder> BuildArray(
 }
 
 inline std::shared_ptr<ObjectBuilder> BuildArray(
-    Client& client, std::shared_ptr<arrow::StringArray> arr) {
-  return std::make_shared<StringArrayBuilder>(client, arr);
+    Client& client, std::shared_ptr<arrow::LargeStringArray> arr) {
+  return std::make_shared<LargeStringArrayBuilder>(client, arr);
 }
 
 inline std::shared_ptr<ObjectBuilder> BuildArray(
@@ -286,8 +286,8 @@ inline std::shared_ptr<ObjectBuilder> BuildArray(
           std::dynamic_pointer_cast<arrow::FixedSizeBinaryArray>(array)) {
     return std::make_shared<FixedSizeBinaryArrayBuilder>(client, arr);
   }
-  if (auto arr = std::dynamic_pointer_cast<arrow::StringArray>(array)) {
-    return std::make_shared<StringArrayBuilder>(client, arr);
+  if (auto arr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array)) {
+    return std::make_shared<LargeStringArrayBuilder>(client, arr);
   }
   if (auto arr = std::dynamic_pointer_cast<arrow::NullArray>(array)) {
     return std::make_shared<NullArrayBuilder>(client, arr);

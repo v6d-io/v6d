@@ -103,10 +103,10 @@ CONVERT_TO_ARROW_TYPE(float, arrow::FloatArray, arrow::FloatBuilder,
                       arrow::float32())
 CONVERT_TO_ARROW_TYPE(double, arrow::DoubleArray, arrow::DoubleBuilder,
                       arrow::float64())
-CONVERT_TO_ARROW_TYPE(RefString, arrow::StringArray, arrow::StringBuilder,
-                      arrow::utf8())
-CONVERT_TO_ARROW_TYPE(std::string, arrow::StringArray, arrow::StringBuilder,
-                      arrow::utf8())
+CONVERT_TO_ARROW_TYPE(RefString, arrow::LargeStringArray,
+                      arrow::LargeStringBuilder, arrow::large_utf8())
+CONVERT_TO_ARROW_TYPE(std::string, arrow::LargeStringArray,
+                      arrow::LargeStringBuilder, arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(arrow::TimestampType, arrow::TimestampArray,
                       arrow::TimestampBuilder,
                       arrow::timestamp(arrow::TimeUnit::MILLI))
@@ -294,8 +294,8 @@ struct EmptyTableBuilder {
       } else if (type == arrow::float64()) {
         arrow::DoubleBuilder builder;
         RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-      } else if (type == arrow::utf8()) {
-        arrow::StringBuilder builder;
+      } else if (type == arrow::large_utf8()) {
+        arrow::LargeStringBuilder builder;
         RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
       } else if (type == arrow::null()) {
         arrow::NullBuilder builder;

@@ -138,8 +138,8 @@ class EdgeDataColumn<std::string, NBR_T> {
   EdgeDataColumn() = default;
 
   explicit EdgeDataColumn(std::shared_ptr<arrow::Array> array) {
-    if (array->type()->Equals(arrow::utf8())) {
-      array_ = std::dynamic_pointer_cast<arrow::StringArray>(array);
+    if (array->type()->Equals(arrow::large_utf8())) {
+      array_ = std::dynamic_pointer_cast<arrow::LargeStringArray>(array);
     } else {
       array_ = nullptr;
     }
@@ -150,7 +150,7 @@ class EdgeDataColumn<std::string, NBR_T> {
   }
 
  private:
-  std::shared_ptr<arrow::StringArray> array_;
+  std::shared_ptr<arrow::LargeStringArray> array_;
 };
 
 template <typename DATA_T, typename VID_T>
@@ -190,8 +190,8 @@ class VertexDataColumn<std::string, VID_T> {
   VertexDataColumn(grape::VertexRange<VID_T> range,
                    std::shared_ptr<arrow::Array> array)
       : range_(range) {
-    if (array->type()->Equals(arrow::utf8())) {
-      array_ = std::dynamic_pointer_cast<arrow::StringArray>(array);
+    if (array->type()->Equals(arrow::large_utf8())) {
+      array_ = std::dynamic_pointer_cast<arrow::LargeStringArray>(array);
     } else {
       array_ = nullptr;
     }
@@ -208,7 +208,7 @@ class VertexDataColumn<std::string, VID_T> {
 
  private:
   grape::VertexRange<VID_T> range_;
-  std::shared_ptr<arrow::StringArray> array_;
+  std::shared_ptr<arrow::LargeStringArray> array_;
 };
 
 template <typename T>
@@ -222,7 +222,8 @@ template <>
 struct ValueGetter<std::string> {
   inline static std::string Value(const void* data, int64_t offset) {
     return std::string(
-        reinterpret_cast<const arrow::StringArray*>(data)->GetView(offset));
+        reinterpret_cast<const arrow::LargeStringArray*>(data)->GetView(
+            offset));
   }
 };
 

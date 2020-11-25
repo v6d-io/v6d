@@ -192,7 +192,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   using oid_t = arrow::util::string_view;
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
-  using oid_array_t = arrow::StringArray;
+  using oid_array_t = arrow::LargeStringArray;
 
  public:
   ArrowVertexMap() {}
@@ -640,7 +640,7 @@ class BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>
     : public ArrowVertexMapBuilder<arrow::util::string_view, VID_T> {
   using oid_t = arrow::util::string_view;
   using vid_t = VID_T;
-  using oid_array_t = arrow::StringArray;
+  using oid_array_t = arrow::LargeStringArray;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
 
  public:
