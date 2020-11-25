@@ -78,7 +78,11 @@ def write_local_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
                 for field in buf_reader.schema:
                     schema[field.name] = orc_type(field.type)
                 writer = pyorc.Writer(f, pyorc.Struct(**schema))
-            for batch in buf_reader:
+            while True:
+                try:
+                    batch = buf_reader.read_next_batch()
+                except StopIteration:
+                    break
                 df = batch.to_pandas()
                 writer.writerows(df.itertuples(False, None))
 

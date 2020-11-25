@@ -285,6 +285,15 @@ def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
     return launcher.wait()
 
 
+def read_oss_dataframe(path, vineyard_socket, *args, **kwargs):
+    ''' Read a dataframe stream from oss files.
+    '''
+    path = json.dumps('oss://' + path)
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('read_oss_dataframe'), *((vineyard_socket, path) + args), **kwargs)
+    return launcher.wait()
+
+
 vineyard.io.read.register('file', read_local_bytes)
 vineyard.io.read.register('file', read_local_dataframe)
 vineyard.io.read.register('kafka', read_kafka_bytes)
@@ -292,6 +301,7 @@ vineyard.io.read.register('kafka', read_kafka_dataframe)
 vineyard.io.read.register('hdfs', read_hdfs_dataframe)
 vineyard.io.read.register('hive', read_hive_dataframe)
 vineyard.io.read.register('vineyard', read_vineyard_dataframe)
+vineyard.io.read.register('oss', read_oss_dataframe)
 
 
 def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):

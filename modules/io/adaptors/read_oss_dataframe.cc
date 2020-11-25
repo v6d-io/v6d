@@ -40,35 +40,34 @@ int main(int argc, const char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  std::unique_ptr<OSSIOAdaptor> oss_io_adaptor(
-      new OSSIOAdaptor(efile.c_str()));
+  std::unique_ptr<OSSIOAdaptor> oss_io_adaptor(new OSSIOAdaptor(efile.c_str()));
 
   VINEYARD_CHECK_OK(oss_io_adaptor->SetPartialRead(proc, pnum));
 
   VINEYARD_CHECK_OK(oss_io_adaptor->Open());
 
-  //auto params = oss_io_adaptor->GetMeta();
+  auto params = oss_io_adaptor->GetMeta();
   DataframeStreamBuilder builder(client);
-  //builder.SetParams(params);
-  auto dfstream = std::dynamic_pointer_cast<DataframeStream>(builder.Seal(client));
+  builder.SetParams(params);
+  auto dfstream =
+      std::dynamic_pointer_cast<DataframeStream>(builder.Seal(client));
   VINEYARD_CHECK_OK(client.Persist(dfstream->id()));
   LOG(INFO) << "Create dataframe stream: " << dfstream->id();
 
-  auto lstream =
-      std::dynamic_pointer_cast<DataframeStream>(client.GetObject(dfstream->id()));
+  auto lstream = std::dynamic_pointer_cast<DataframeStream>(
+      client.GetObject(dfstream->id()));
   LOG(INFO) << "Local stream: " << proc << " " << lstream->id();
   ReportStatus("return", VYObjectIDToString(lstream->id()));
 
   auto writer = lstream->OpenWriter(client);
-  //writer->SetBufferSizeLimit(2 * 1024 * 1024);
 
   std::shared_ptr<arrow::Table> table;
-  while (oss_io_adaptor->ReadTable(table).ok()) {
-    auto st = writer->WriteTable(table);
-    if (!st.ok()) {
-      ReportStatus("error", st.ToString());
-      VINEYARD_CHECK_OK(st);
-    }
+  VINEYARD_CHECK_OK(oss_io_adaptor->ReadTable(&table));
+
+  auto st = writer->WriteTable(table);
+  if (!st.ok()) {
+    ReportStatus("error", st.ToString());
+    VINEYARD_CHECK_OK(st);
   }
 
   oss_io_adaptor->Finalize();

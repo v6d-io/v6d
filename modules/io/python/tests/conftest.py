@@ -75,6 +75,13 @@ def pytest_addoption(parser):
         help='Hive\'s hiveserver2 endpoint that will be used to run vineyard tests',
     )
 
+    parser.addoption(
+        '--oss-config',
+        action='store',
+        default=os.path.expandvars('$OSS_CONFIG_DIR'),
+        help='Location of oss config to login oss server',
+    )
+
 
 @pytest.fixture(scope='session')
 def vineyard_ipc_socket(request):
@@ -109,6 +116,11 @@ def hdfs_endpoint(request):
 @pytest.fixture(scope='session')
 def hive_endpoint(request):
     return request.config.option.hive_endpoint
+
+
+@pytest.fixture(scope='session')
+def oss_config(request):
+    return request.config.option.oss_config
 
 
 @pytest.fixture(scope='session')

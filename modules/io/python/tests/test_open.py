@@ -41,6 +41,7 @@
 
 import filecmp
 import pytest
+import configparser
 
 import vineyard
 import vineyard.io
@@ -150,6 +151,25 @@ def test_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset
                                 vineyard_endpoint=vineyard_endpoint)
     vineyard.io.open('file://%s/p2p-31.out' % test_dataset_tmp,
                      dfstream,
+                     mode='w',
+                     vineyard_ipc_socket=vineyard_ipc_socket,
+                     vineyard_endpoint=vineyard_endpoint)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+
+
+def test_oss(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp, oss_config):
+    oss_config_file = oss_config + '/.ossutilconfig'
+    oss_config = configparser.ConfigParser()
+    oss_config.read(oss_config_file)
+    accessKeyID = oss_config['Credentials']['accessKeyID']
+    accessKeySecret = oss_config['Credentials']['accessKeySecret']
+    oss_endpoint = oss_config['Credentials']['endpoint']
+    stream = vineyard.io.open(
+        f'oss://{accessKeyID}:{accessKeySecret}@{oss_endpoint}/grape-uk/p2p-31.e#header_row=false&delimiter= ',
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint)
+    vineyard.io.open('file://%s/p2p-31.out' % test_dataset_tmp,
+                     stream,
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
