@@ -176,11 +176,11 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
       std::unordered_map<std::string, std::string> metakv;
       metadata->ToUnorderedMap(&metakv);
       for (auto const& kv : params_) {
-        metakv[kv.first, kv.second];
+        metakv[kv.first] = kv.second;
       }
       metadata = std::make_shared<arrow::KeyValueMetadata>();
       for (auto const& kv : metakv) {
-        metadata.Append(kv.first, kv.second);
+        metadata->Append(kv.first, kv.second);
       }
 #else
       for (auto const& kv : params_) {
@@ -240,11 +240,11 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
       std::unordered_map<std::string, std::string> metakv;
       metadata->ToUnorderedMap(&metakv);
       for (auto const& kv : params_) {
-        metakv[kv.first, kv.second];
+        metakv[kv.first] = kv.second;
       }
       metadata = std::make_shared<arrow::KeyValueMetadata>();
       for (auto const& kv : metakv) {
-        metadata.Append(kv.first, kv.second);
+        metadata->Append(kv.first, kv.second);
       }
 #else
       for (auto const& kv : params_) {
