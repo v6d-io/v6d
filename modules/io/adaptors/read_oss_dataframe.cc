@@ -31,8 +31,8 @@ int main(int argc, const char** argv) {
         "<proc_index>");
     return 1;
   }
-  
-  #ifdef OSS_ENABLED
+
+#ifdef OSS_ENABLED
 
   std::string ipc_socket = std::string(argv[1]);
   std::string efile = std::string(argv[2]);
@@ -83,8 +83,7 @@ int main(int argc, const char** argv) {
   }
   VINEYARD_CHECK_OK(writer->Finish());
 
-  #endif  // OSS_ENABLED
+#endif  // OSS_ENABLED
 
   return 0;
 }
-
