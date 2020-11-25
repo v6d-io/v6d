@@ -55,7 +55,7 @@ if(BUILD_VINEYARD_IO_OSS)
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/aliyun-oss-cpp-sdk/sdk/include>
         $<INSTALL_INTERFACE:include>
     )
-    target_compile_definitions(vineyard_io PRIVATE -DOSS_ENABLED)
+    target_compile_definitions(vineyard_io PUBLIC -DOSS_ENABLED)
     target_link_libraries(vineyard_io PRIVATE ${OSS_LIBRARIES}
                                               ${CURL_LIBRARIES}
                                               ${OPENSSL_LIBRARIES}
