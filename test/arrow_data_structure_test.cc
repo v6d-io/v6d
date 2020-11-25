@@ -255,7 +255,7 @@ int main(int argc, char** argv) {
     for (int64_t j = 0; j < 100; j++) {
       CHECK_ARROW_ERROR(key_builder.AppendValues({std::to_string(j)}));
       CHECK_ARROW_ERROR(value_builder.AppendValues({j}));
-      CHECK_ARROW_ERROR(string_builder.AppendValues({std::to_string(j * J)}));
+      CHECK_ARROW_ERROR(string_builder.AppendValues({std::to_string(j * j)}));
     }
     CHECK_ARROW_ERROR(key_builder.Finish(&array1));
     CHECK_ARROW_ERROR(value_builder.Finish(&array2));
