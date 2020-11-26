@@ -262,14 +262,8 @@ class ArrowFragmentLoader {
     std::vector<std::shared_ptr<arrow::Table>> partial_v_tables;
     std::vector<std::vector<std::shared_ptr<arrow::Table>>> partial_e_tables;
     if (!v_streams_.empty() && !e_streams_.empty()) {
-      {
-        BOOST_LEAF_AUTO(tmp, gatherVTables(client_, v_streams_));
-        partial_v_tables = tmp;
-      }
-      {
-        BOOST_LEAF_AUTO(tmp, gatherETables(client_, e_streams_));
-        partial_e_tables = tmp;
-      }
+      BOOST_LEAF_ASSIGN(partial_v_tables, gatherVTables(client_, v_streams_));
+      BOOST_LEAF_ASSIGN(partial_e_tables, gatherETables(client_, e_streams_));
       // note that batches of multiple labels may comes in the same stream.
       vertex_label_num_ = partial_v_tables.size();
       edge_label_num_ = partial_e_tables.size();
@@ -306,14 +300,14 @@ class ArrowFragmentLoader {
           return loadVertexTables(vfiles_, comm_spec_.worker_id(),
                                   comm_spec_.worker_num());
         };
-        BOOST_LEAF_AUTO(tmp_v, sync_gs_error(comm_spec_, load_v_procedure));
-        partial_v_tables = tmp_v;
+        BOOST_LEAF_ASSIGN(partial_v_tables,
+                          sync_gs_error(comm_spec_, load_v_procedure));
         auto load_e_procedure = [&]() {
           return loadEdgeTables(efiles_, comm_spec_.worker_id(),
                                 comm_spec_.worker_num());
         };
-        BOOST_LEAF_AUTO(tmp_e, sync_gs_error(comm_spec_, load_e_procedure));
-        partial_e_tables = tmp_e;
+        BOOST_LEAF_ASSIGN(partial_e_tables,
+                          sync_gs_error(comm_spec_, load_e_procedure));
       }
     }
     basic_arrow_fragment_loader_.Init(partial_v_tables, partial_e_tables);
@@ -369,13 +363,12 @@ class ArrowFragmentLoader {
       std::vector<bool> vertex_label_bitset(vertex_label_num_, false);
       for (auto& pair : vertex_label_to_index_) {
         if (pair.second > vertex_label_num_) {
-          return boost::leaf::new_error(ErrorCode::kIOError,
-                                        "Failed to map vertex label to index");
+          RETURN_GS_ERROR(ErrorCode::kIOError,
+                          "Failed to map vertex label to index");
         }
         if (vertex_label_bitset[pair.second]) {
-          return boost::leaf::new_error(
-              ErrorCode::kIOError,
-              "Multiple vertex labels are mapped to one index.");
+          RETURN_GS_ERROR(ErrorCode::kIOError,
+                          "Multiple vertex labels are mapped to one index.");
         }
         vertex_label_bitset[pair.second] = true;
         vertex_label_list[pair.second] = pair.first;
@@ -403,13 +396,12 @@ class ArrowFragmentLoader {
       std::vector<bool> edge_label_bitset(edge_label_num_, false);
       for (auto& pair : edge_label_to_index_) {
         if (pair.second > edge_label_num_) {
-          return boost::leaf::new_error(ErrorCode::kIOError,
-                                        "Failed to map edge label to index");
+          RETURN_GS_ERROR(ErrorCode::kIOError,
+                          "Failed to map edge label to index");
         }
         if (edge_label_bitset[pair.second]) {
-          return boost::leaf::new_error(
-              ErrorCode::kIOError,
-              "Multiple edge labels are mapped to one index.");
+          RETURN_GS_ERROR(ErrorCode::kIOError,
+                          "Multiple edge labels are mapped to one index.");
         }
         edge_label_bitset[pair.second] = true;
         edge_label_list[pair.second] = pair.first;
@@ -911,7 +903,7 @@ class ArrowFragmentLoader {
     for (auto const& status : readers_status) {
       RETURN_ON_ERROR(status);
     }
-    RETURN_ON_ASSERT(tables.size() > 0,
+    RETURN_ON_ASSERT(!tables.empty(),
                      "This worker doesn't receive any streams");
     table = vineyard::ConcatenateTables(tables);
     return Status::OK();
@@ -973,7 +965,7 @@ class ArrowFragmentLoader {
     if (table->schema()->metadata() != nullptr) {
       meta = table->schema()->metadata()->Copy();
     } else {
-      meta.reset(new arrow::KeyValueMetadata());
+      meta = std::make_shared<arrow::KeyValueMetadata>();
     }
     meta->Append("type", "VERTEX");
     meta->Append(basic_loader_t::ID_COLUMN, std::to_string(id_column));
