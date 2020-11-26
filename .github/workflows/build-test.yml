@@ -159,6 +159,7 @@ jobs:
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
                    -DBUILD_VINEYARD_BASIC=ON \
                    -DBUILD_VINEYARD_IO=ON \
+                   -DBUILD_VINEYARD_IO_OSS=ON \
                    -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 
@@ -169,7 +170,7 @@ jobs:
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
           make vineyard_clformat
-          GIT_DIFF=$(git diff)
+          GIT_DIFF=$(git diff --ignore-submodules)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               echo "| clang-format failures found!"
@@ -209,7 +210,7 @@ jobs:
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
           yapf --in-place --recursive python/ modules/io/python
-          GIT_DIFF=$(git diff)
+          GIT_DIFF=$(git diff --ignore-submodules)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               echo "| yapf (python format) failures found!"
