@@ -35,15 +35,15 @@ struct InternalType {
 template <>
 struct InternalType<std::string> {
   using type = arrow::util::string_view;
-  using vineyard_array_type = vineyard::StringArray;
-  using vineyard_builder_type = vineyard::StringArrayBuilder;
+  using vineyard_array_type = vineyard::LargeStringArray;
+  using vineyard_builder_type = vineyard::LargeStringArrayBuilder;
 };
 
 template <>
 struct InternalType<arrow::util::string_view> {
   using type = arrow::util::string_view;
-  using vineyard_array_type = vineyard::StringArray;
-  using vineyard_builder_type = vineyard::StringArrayBuilder;
+  using vineyard_array_type = vineyard::LargeStringArray;
+  using vineyard_builder_type = vineyard::LargeStringArrayBuilder;
 };
 
 namespace property_graph_types {

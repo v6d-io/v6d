@@ -454,6 +454,10 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
       reader, arrow::csv::TableReader::Make(pool, stream, read_options,
                                             parse_options, convert_options));
 
+<<<<<<< HEAD
+=======
+  // RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table, reader->Read());
+>>>>>>> 04e92bc3f3986970a68de8ab623482e8c4a40765
   auto result = reader->Read();
   if (!result.status().ok()) {
     if (result.status().message() == "Empty CSV file") {

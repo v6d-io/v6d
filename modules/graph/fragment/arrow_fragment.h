@@ -137,9 +137,9 @@ inline const void* get_arrow_array_ptr(std::shared_ptr<arrow::Array> array) {
   } else if (array->type()->Equals(arrow::float64())) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::DoubleArray>(array)->raw_values());
-  } else if (array->type()->Equals(arrow::utf8())) {
+  } else if (array->type()->Equals(arrow::large_utf8())) {
     return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::StringArray>(array).get());
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
   } else {
     LOG(FATAL) << "Array type - " << array->type()->ToString()
                << " is not supported yet...";

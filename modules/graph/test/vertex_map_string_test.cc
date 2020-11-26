@@ -90,8 +90,8 @@ int main(int argc, char** argv) {
     std::vector<std::vector<std::shared_ptr<arrow::Table>>> v_tables;
     loadVertices(vpath, vertex_label_num, v_tables);
 
-    std::vector<std::vector<std::shared_ptr<arrow::StringArray>>> oid_lists(
-        vertex_label_num);
+    std::vector<std::vector<std::shared_ptr<arrow::LargeStringArray>>>
+        oid_lists(vertex_label_num);
     for (auto& vec : oid_lists) {
       vec.resize(fnum);
     }
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
         } else {
           combined_table = table;
         }
-        oid_lists[i][j] = std::dynamic_pointer_cast<arrow::StringArray>(
+        oid_lists[i][j] = std::dynamic_pointer_cast<arrow::LargeStringArray>(
             combined_table->column(0)->chunk(0));
       }
     }

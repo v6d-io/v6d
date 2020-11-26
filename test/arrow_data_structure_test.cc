@@ -177,6 +177,37 @@ int main(int argc, char** argv) {
   }
 
   {
+    LOG(INFO) << "######### Large String Array Test ######";
+    arrow::LargeStringBuilder b1;
+    CHECK_ARROW_ERROR(b1.AppendValues({"a", "bb", "ccc", "dddd"}));
+    CHECK_ARROW_ERROR(b1.AppendNull());
+    CHECK_ARROW_ERROR(b1.AppendValues({"eeeee"}));
+    std::shared_ptr<arrow::LargeStringArray> a1;
+    CHECK_ARROW_ERROR(b1.Finish(&a1));
+    LargeStringArrayBuilder array_builder(client, a1);
+    auto r1 =
+        std::dynamic_pointer_cast<LargeStringArray>(array_builder.Seal(client));
+    VINEYARD_CHECK_OK(client.Persist(r1->id()));
+    ObjectID id = r1->id();
+
+    auto r2 = std::dynamic_pointer_cast<LargeStringArray>(client.GetObject(id));
+    auto internal_array = r2->GetArray();
+    CHECK(internal_array->Equals(*a1));
+
+    // test sliced array.
+    auto a3 =
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(a1->Slice(2, 2));
+    CHECK_EQ(a3->length(), 2);
+    LargeStringArrayBuilder sliced_array_builder(client, a3);
+    auto r3 = std::dynamic_pointer_cast<LargeStringArray>(
+        sliced_array_builder.Seal(client));
+    auto sliced_internal_array = r3->GetArray();
+    CHECK(sliced_internal_array->Equals(a3));
+
+    LOG(INFO) << "Passed string array wrapper tests...";
+  }
+
+  {
     LOG(INFO) << "#########  Boolean Test #############";
     arrow::BooleanBuilder b1;
     CHECK_ARROW_ERROR(
@@ -215,22 +246,27 @@ int main(int argc, char** argv) {
 
   {
     LOG(INFO) << "#########  Record Batch Test #######";
-    arrow::StringBuilder key_builder;
+    arrow::LargeStringBuilder key_builder;
     arrow::Int64Builder value_builder;
+    arrow::StringBuilder string_builder;
     std::shared_ptr<arrow::Array> array1;
     std::shared_ptr<arrow::Array> array2;
+    std::shared_ptr<arrow::Array> array3;
     for (int64_t j = 0; j < 100; j++) {
       CHECK_ARROW_ERROR(key_builder.AppendValues({std::to_string(j)}));
       CHECK_ARROW_ERROR(value_builder.AppendValues({j}));
+      CHECK_ARROW_ERROR(string_builder.AppendValues({std::to_string(j * j)}));
     }
     CHECK_ARROW_ERROR(key_builder.Finish(&array1));
     CHECK_ARROW_ERROR(value_builder.Finish(&array2));
+    CHECK_ARROW_ERROR(string_builder.Finish(&array3));
 
-    auto arrowSchema =
-        arrow::schema({std::make_shared<arrow::Field>("f1", arrow::utf8()),
-                       std::make_shared<arrow::Field>("f2", arrow::int64())});
+    auto arrowSchema = arrow::schema(
+        {std::make_shared<arrow::Field>("f1", arrow::large_utf8()),
+         std::make_shared<arrow::Field>("f2", arrow::int64()),
+         std::make_shared<arrow::Field>("f3", arrow::utf8())});
     std::shared_ptr<arrow::RecordBatch> batch = arrow::RecordBatch::Make(
-        arrowSchema, array1->length(), {array1, array2});
+        arrowSchema, array1->length(), {array1, array2, array3});
     RecordBatchBuilder builder(client, batch);
     auto r1 = std::dynamic_pointer_cast<RecordBatch>(builder.Seal(client));
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
@@ -244,6 +280,7 @@ int main(int argc, char** argv) {
     RecordBatchExtender extender(client, r2);
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f7", array1));
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f8", array2));
+    VINEYARD_CHECK_OK(extender.AddColumn(client, "f9", array3));
     auto r3 = std::dynamic_pointer_cast<RecordBatch>(extender.Seal(client));
     VINEYARD_CHECK_OK(client.Persist(r3->id()));
     ObjectID id3 = r3->id();
@@ -253,11 +290,15 @@ int main(int argc, char** argv) {
         batch->AddColumn(batch->num_columns(), "f7", array1, &batch));
     CHECK_ARROW_ERROR(
         batch->AddColumn(batch->num_columns(), "f8", array2, &batch));
+    CHECK_ARROW_ERROR(
+        batch->AddColumn(batch->num_columns(), "f9", array3, &batch));
 #else
     CHECK_ARROW_ERROR_AND_ASSIGN(
         batch, batch->AddColumn(batch->num_columns(), "f7", array1));
     CHECK_ARROW_ERROR_AND_ASSIGN(
         batch, batch->AddColumn(batch->num_columns(), "f8", array2));
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        batch, batch->AddColumn(batch->num_columns(), "f9", array3));
 #endif
     auto r4 = std::dynamic_pointer_cast<RecordBatch>(client.GetObject(id3));
     CHECK(r4->GetRecordBatch()->Equals(*batch));
@@ -266,7 +307,7 @@ int main(int argc, char** argv) {
 
   {
     LOG(INFO) << "#########  Table Test #############";
-    arrow::StringBuilder key_builder;
+    arrow::LargeStringBuilder key_builder;
     arrow::Int64Builder value_builder;
     std::shared_ptr<arrow::Array> array1;
     std::shared_ptr<arrow::Array> array2;

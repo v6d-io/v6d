@@ -188,8 +188,7 @@ inline void serialize_selected_typed_items(grape::InArchive& arc,
 void serialize_string_items(grape::InArchive& arc,
                             std::shared_ptr<arrow::Array> array,
                             const std::vector<int64_t>& offset) {
-  arrow::StringArray* ptr =
-      std::dynamic_pointer_cast<arrow::StringArray>(array).get();
+  auto* ptr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
   for (auto x : offset) {
     arc << ptr->GetView(x);
   }
@@ -210,7 +209,7 @@ void SerializeSelectedItems(grape::InArchive& arc,
     serialize_selected_typed_items<uint64_t>(arc, array, offset);
   } else if (array->type()->Equals(arrow::uint32())) {
     serialize_selected_typed_items<uint32_t>(arc, array, offset);
-  } else if (array->type()->Equals(arrow::utf8())) {
+  } else if (array->type()->Equals(arrow::large_utf8())) {
     serialize_string_items(arc, array, offset);
   } else {
     LOG(FATAL) << "Unsupported data type - " << array->type()->ToString();
@@ -242,7 +241,7 @@ inline void deserialize_selected_typed_items(grape::OutArchive& arc,
 
 inline void deserialize_string_items(grape::OutArchive& arc, int64_t num,
                                      arrow::ArrayBuilder* builder) {
-  auto casted_builder = dynamic_cast<arrow::StringBuilder*>(builder);
+  auto casted_builder = dynamic_cast<arrow::LargeStringBuilder*>(builder);
   arrow::util::string_view val;
   for (int64_t i = 0; i != num; ++i) {
     arc >> val;
@@ -264,7 +263,7 @@ void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
     deserialize_selected_typed_items<uint64_t>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::uint32())) {
     deserialize_selected_typed_items<uint32_t>(arc, num, builder);
-  } else if (builder->type()->Equals(arrow::utf8())) {
+  } else if (builder->type()->Equals(arrow::large_utf8())) {
     deserialize_string_items(arc, num, builder);
   } else {
     LOG(FATAL) << "Unsupported data type - " << builder->type()->ToString();
@@ -304,10 +303,9 @@ inline void select_typed_items(std::shared_ptr<arrow::Array> array,
 inline void select_string_items(std::shared_ptr<arrow::Array> array,
                                 const std::vector<int64_t>& offset,
                                 arrow::ArrayBuilder* builder) {
-  arrow::StringArray* ptr =
-      std::dynamic_pointer_cast<arrow::StringArray>(array).get();
-  arrow::StringBuilder* casted_builder =
-      dynamic_cast<arrow::StringBuilder*>(builder);
+  auto* ptr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
+  arrow::LargeStringBuilder* casted_builder =
+      dynamic_cast<arrow::LargeStringBuilder*>(builder);
   for (auto x : offset) {
     casted_builder->Append(ptr->GetView(x));
   }
@@ -328,7 +326,7 @@ inline void SelectItems(std::shared_ptr<arrow::Array> array,
     select_typed_items<uint64_t>(array, offset, builder);
   } else if (array->type()->Equals(arrow::uint32())) {
     select_typed_items<uint32_t>(array, offset, builder);
-  } else if (array->type()->Equals(arrow::utf8())) {
+  } else if (array->type()->Equals(arrow::large_utf8())) {
     select_string_items(array, offset, builder);
   } else {
     LOG(FATAL) << "Unsupported data type - " << builder->type()->ToString();
