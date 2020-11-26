@@ -19,7 +19,7 @@ limitations under the License.
 #include "basic/stream/dataframe_stream.h"
 #include "basic/stream/parallel_stream.h"
 #include "client/client.h"
-#include "io/io/oss_io_adaptor.h"
+#include "io/io/io_factory.h"
 #include "io/io/utils.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
@@ -43,7 +43,7 @@ int main(int argc, const char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  std::unique_ptr<OSSIOAdaptor> oss_io_adaptor(new OSSIOAdaptor(efile.c_str()));
+  auto oss_io_adaptor = IOFactory::CreateIOAdaptor(efile);
 
   VINEYARD_CHECK_OK(oss_io_adaptor->SetPartialRead(proc, pnum));
 
@@ -73,7 +73,6 @@ int main(int argc, const char** argv) {
     VINEYARD_CHECK_OK(st);
   }
 
-  oss_io_adaptor->Finalize();
   {
     auto st = oss_io_adaptor->Close();
     if (!st.ok()) {

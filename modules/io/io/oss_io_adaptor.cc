@@ -228,7 +228,9 @@ void OSSIOAdaptor::parseYamlLocation(const std::string& location) {
   // oss:///<bucket_name>/<prefix>
   // oss://bucket_name/prefix
 
-  network::uri instance(location);
+  size_t spos = location.find_first_of('#');
+  std::string subloc = location.substr(0, spos);
+  network::uri instance(subloc);
 
   std::string user_info = instance.user_info().to_string();
   std::string host = instance.host().to_string();
@@ -452,7 +454,6 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
       reader, arrow::csv::TableReader::Make(pool, stream, read_options,
                                             parse_options, convert_options));
 
-  // RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table, reader->Read());
   auto result = reader->Read();
   if (!result.status().ok()) {
     if (result.status().message() == "Empty CSV file") {
