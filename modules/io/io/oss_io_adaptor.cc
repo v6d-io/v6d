@@ -361,29 +361,29 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
   std::string buffer;
   while (!(exited_producers_ == producer_num_ && queue_.Size() == 0)) {
     queue_.Get(buffer);
+    if (header_row_) {
+      size_t pos = buffer.find_first_of('\n');
+      header_line_ = buffer.substr(0, pos);
+      buffer = buffer.substr(pos + 1);
+      ::boost::algorithm::trim(header_line_);
+      ::boost::split(original_columns_, header_line_,
+                    ::boost::is_any_of(std::string(1, delimiter_)));
+    } else {
+      // Name columns as f0 ... fn
+      std::string one_line;
+      size_t pos = buffer.find_first_of('\n');
+      one_line = buffer.substr(0, pos);
+      ::boost::algorithm::trim(one_line);
+      std::vector<std::string> one_column;
+      ::boost::split(one_column, one_line,
+                    ::boost::is_any_of(std::string(1, delimiter_)));
+      for (size_t i = 0; i < one_column.size(); ++i) {
+        original_columns_.push_back("f" + std::to_string(i));
+      }
+    }
     RETURN_ON_ARROW_ERROR(builder.Append(buffer.c_str(), buffer.size()));
   }
 
-  if (header_row_) {
-    size_t pos = buffer.find_first_of('\n');
-    header_line_ = buffer.substr(0, pos);
-    buffer = buffer.substr(pos + 1);
-    ::boost::algorithm::trim(header_line_);
-    ::boost::split(original_columns_, header_line_,
-                   ::boost::is_any_of(std::string(1, delimiter_)));
-  } else {
-    // Name columns as f0 ... fn
-    std::string one_line;
-    size_t pos = buffer.find_first_of('\n');
-    one_line = buffer.substr(0, pos);
-    ::boost::algorithm::trim(one_line);
-    std::vector<std::string> one_column;
-    ::boost::split(one_column, one_line,
-                   ::boost::is_any_of(std::string(1, delimiter_)));
-    for (size_t i = 0; i < one_column.size(); ++i) {
-      original_columns_.push_back("f" + std::to_string(i));
-    }
-  }
 
   std::shared_ptr<arrow::Buffer> buf;
   RETURN_ON_ARROW_ERROR(builder.Finish(&buf));
