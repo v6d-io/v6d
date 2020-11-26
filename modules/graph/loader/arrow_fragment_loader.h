@@ -1375,7 +1375,7 @@ class ArrowFragmentLoader {
                                 "; Origin type: " + from_type->ToString());
           }
           VLOG(2) << "Cast " << from_type->ToString() << " To "
-                    << to_type->ToString();
+                  << to_type->ToString();
         }
         auto chunk_array =
             std::make_shared<arrow::ChunkedArray>(chunks, to_type);
