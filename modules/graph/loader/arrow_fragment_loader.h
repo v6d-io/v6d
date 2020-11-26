@@ -1280,7 +1280,6 @@ class ArrowFragmentLoader {
   boost::leaf::result<std::shared_ptr<arrow::Array>> CastIntToDouble(
       const std::shared_ptr<arrow::Array>& in,
       const std::shared_ptr<arrow::DataType>& to_type) {
-    LOG(INFO) << in->type()->ToString();
     CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
     CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
     using in_type = int64_t;
@@ -1375,7 +1374,7 @@ class ArrowFragmentLoader {
                             "Unexpected type: " + to_type->ToString() +
                                 "; Origin type: " + from_type->ToString());
           }
-          LOG(INFO) << "Cast " << from_type->ToString() << " To "
+          VLOG(2) << "Cast " << from_type->ToString() << " To "
                     << to_type->ToString();
         }
         auto chunk_array =
