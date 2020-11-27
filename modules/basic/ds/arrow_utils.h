@@ -70,6 +70,15 @@ struct RefString;
     lhs = std::move(result).ValueOrDie();                     \
   } while (0)
 
+#define ARROW_CHECK_OK_AND_ASSIGN(lhs, expr)                                   \
+  do {                                                                         \
+    auto status_name = (expr);                                                 \
+    if (!status_name.ok()) {                                                   \
+      LOG(FATAL) << "Arrow check failed: " << status_name.status().ToString(); \
+    }                                                                          \
+    (lhs) = std::move(status_name).ValueOrDie();                               \
+  } while (0)
+
 template <typename T>
 struct ConvertToArrowType {};
 

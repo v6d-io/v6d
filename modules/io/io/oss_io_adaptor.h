@@ -95,7 +95,7 @@ class OSSIOAdaptor : public IIOAdaptor {
   }
 
  private:
-  Status getTotalSize(size_t& size);
+  Status getObjectSize(size_t& size);
 
   Status readLine(std::string& line, size_t& cursor);
 

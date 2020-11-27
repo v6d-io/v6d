@@ -319,7 +319,7 @@ Status OSSIOAdaptor::Open(const char* mode) {
 
 Status OSSIOAdaptor::Open() {
   opened_ = true;
-  RETURN_ON_ERROR(getTotalSize(total_len_));
+  RETURN_ON_ERROR(getObjectSize(total_len_));
 
   if (header_row_) {
     RETURN_ON_ERROR(readLine(header_line_, begin_));
@@ -365,7 +365,7 @@ Status OSSIOAdaptor::Open() {
   return Status::OK();
 }
 
-Status OSSIOAdaptor::getTotalSize(size_t& size) {
+Status OSSIOAdaptor::getObjectSize(size_t& size) {
   OssClient client(oss_endpoint_, access_id_, access_key_, conf_);
   auto outcome = client.GetObjectMeta(bucket_name_, object_name_);
 
@@ -391,13 +391,11 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
     *table = nullptr;
     return Status::OK();
   }
-  arrow::BufferBuilder builder;
-  std::string buffer;
-  RETURN_ON_ERROR(getRange(begin_, end_, buffer));
-  RETURN_ON_ARROW_ERROR(builder.Append(buffer.c_str(), buffer.size()));
-  std::shared_ptr<arrow::Buffer> buf;
-  RETURN_ON_ARROW_ERROR(builder.Finish(&buf));
 
+  std::string content;
+  RETURN_ON_ERROR(getRange(begin_, end_, content));
+  auto buf = std::make_shared<arrow::Buffer>(
+      reinterpret_cast<const uint8_t*>(content.c_str()), content.length());
   auto file = std::make_shared<arrow::io::BufferReader>(buf);
   auto stream = arrow::io::RandomAccessFile::GetStream(file, 0, buf->size());
   arrow::MemoryPool* pool = arrow::default_memory_pool();
@@ -494,9 +492,10 @@ Status OSSIOAdaptor::getRange(const size_t begin, const size_t end,
   if (outcome.isSuccess()) {
     int content_length = outcome.result().Metadata().ContentLength();
     VLOG(2) << "getObjectToBuffer success, Content-Length: " << content_length;
-    std::ostringstream ss;
-    ss << outcome.result().Content()->rdbuf();
-    content = ss.str();
+    content.resize(end - begin);
+    for (size_t i = 0; i < end - begin; ++i) {
+      outcome.result().Content()->get(content[i]);
+    }
   } else {
     LOG(ERROR) << "getObjectToBuffer fail, code: " << outcome.error().Code()
                << ", message: " << outcome.error().Message()
