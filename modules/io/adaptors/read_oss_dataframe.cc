@@ -67,12 +67,13 @@ int main(int argc, const char** argv) {
   std::shared_ptr<arrow::Table> table;
   VINEYARD_CHECK_OK(oss_io_adaptor->ReadTable(&table));
 
-  auto st = writer->WriteTable(table);
-  if (!st.ok()) {
-    ReportStatus("error", st.ToString());
-    VINEYARD_CHECK_OK(st);
+  if (table) {
+    auto st = writer->WriteTable(table);
+    if (!st.ok()) {
+      ReportStatus("error", st.ToString());
+      VINEYARD_CHECK_OK(st);
+    }
   }
-
   {
     auto st = oss_io_adaptor->Close();
     if (!st.ok()) {

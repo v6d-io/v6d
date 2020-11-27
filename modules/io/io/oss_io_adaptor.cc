@@ -42,7 +42,6 @@ limitations under the License.
 DEFINE_string(oss_endpoint, "", "OSS endpoint");
 DEFINE_string(oss_access_key_id, "", "OSS Access Key ID");
 DEFINE_string(oss_access_key_secret, "", "OSS Access Key Secret");
-DEFINE_string(oss_suffix, "", "OSS file filtering suffix");
 DEFINE_int32(oss_concurrency, 4, "concurrency of oss client");
 DEFINE_int32(oss_retries, 5, "oss upload/download retry times");
 
@@ -125,7 +124,6 @@ OSSIOAdaptor::OSSIOAdaptor(const std::string& location) : location_(location) {
   parseYamlLocation(location);
   // There are two kinds of objects. one end with .meta, one end with .tsv,
   // We only want .tsv file
-  suffix_ = FLAGS_oss_suffix;
   current_object_ = 0;
 
   producer_num_ = FLAGS_oss_concurrency;
@@ -143,16 +141,14 @@ OSSIOAdaptor::OSSIOAdaptor(const std::string& location) : location_(location) {
   if (access_id_.empty() || access_key_.empty() || oss_endpoint_.empty()) {
     LOG(FATAL) << "access id / access key / endpoint cannot be empty.";
   }
-  if (bucket_name_.empty() || prefix_.empty()) {
-    LOG(FATAL) << "bucket name or prefix cannot be empty.";
+  if (bucket_name_.empty() || object_name_.empty()) {
+    LOG(FATAL) << "bucket name or object name cannot be empty.";
   }
   VLOG(2) << "id: " << access_id_;
   VLOG(2) << "key: " << access_key_;
   VLOG(2) << "sts_token: " << sts_token_;
   VLOG(2) << "endpoint: " << oss_endpoint_;
   VLOG(2) << "bucket_name: " << bucket_name_;
-  VLOG(2) << "prefix: " << prefix_;
-  VLOG(2) << "suffix: " << suffix_;
   VLOG(2) << "concurrency: " << producer_num_;
 }
 
@@ -224,9 +220,9 @@ void OSSIOAdaptor::parseGFlags() {
 
 void OSSIOAdaptor::parseYamlLocation(const std::string& location) {
   // location format:
-  // oss://<access_id>:<access_key>@<endpoint>/<bucket_name>/<prefix>
-  // oss:///<bucket_name>/<prefix>
-  // oss://bucket_name/prefix
+  // oss://<access_id>:<access_key>@<endpoint>/<bucket_name>/<object_name>
+  // oss:///<bucket_name>/<object_name>
+  // oss://bucket_name/<object_name>
 
   size_t spos = location.find_first_of('#');
   std::string subloc = location.substr(0, spos);
@@ -246,7 +242,7 @@ void OSSIOAdaptor::parseYamlLocation(const std::string& location) {
   bool bucket_name_as_host = false;
   if (host.find(".com") != std::string::npos) {
     oss_endpoint_ = host;
-  } else if (!host.empty()) {  // oss://bucket/prefix
+  } else if (!host.empty()) {  // oss://bucket/object_name
     bucket_name_ = host;
     bucket_name_as_host = true;
   }
@@ -290,14 +286,14 @@ void OSSIOAdaptor::parseYamlLocation(const std::string& location) {
   std::vector<std::string> locs;
   boost::split(locs, path, boost::is_any_of("/"));
   if (bucket_name_as_host) {
-    // path format is '/prefix'
-    prefix_ = path.substr(1);  // skip one '/'
+    // path format is '/object_name'
+    object_name_ = path.substr(1);  // skip one '/'
   } else {
-    // path format is '/bucket/prefix'
+    // path format is '/bucket/object_name'
     // so the locs[0] will be an empty string.
-    if (locs.size() >= 3) {  // oss:///bucket/prefix
+    if (locs.size() >= 3) {  // oss:///bucket/object_name
       bucket_name_ = locs[1];
-      prefix_ = path.substr(bucket_name_.size() + 2);  // skip two '/'
+      object_name_ = path.substr(bucket_name_.size() + 2);  // skip two '/'
     } else {
       LOG(FATAL) << "Invalid uri: " << location;
     }
@@ -323,70 +319,85 @@ Status OSSIOAdaptor::Open(const char* mode) {
 
 Status OSSIOAdaptor::Open() {
   opened_ = true;
+  RETURN_ON_ERROR(getTotalSize(total_len_));
 
-  if (!listAllObjects(prefix_, suffix_).ok()) {
-    LOG(FATAL) << "IOException: OSS Exception: list object failed.";
+  if (header_row_) {
+    RETURN_ON_ERROR(readLine(header_line_, begin_));
+    ::boost::algorithm::trim(header_line_);
+    meta_.emplace("header_line", header_line_);
+    ::boost::split(original_columns_, header_line_,
+                   ::boost::is_any_of(std::string(1, delimiter_)));
+  } else {
+    // Name columns as f0 ... fn
+    std::string one_line;
+    size_t tmp_cursor = 0;
+    RETURN_ON_ERROR(readLine(one_line, tmp_cursor));
+    ::boost::algorithm::trim(one_line);
+    std::vector<std::string> one_column;
+    ::boost::split(one_column, one_line,
+                   ::boost::is_any_of(std::string(1, delimiter_)));
+    for (size_t i = 0; i < one_column.size(); ++i) {
+      original_columns_.push_back("f" + std::to_string(i));
+    }
   }
+
   if (partial_read_) {
-    selectObjects();
+    size_t len = total_len_ - begin_;
+    begin_ += len / part_num_ * part_id_;
+    end_ = begin_ + len / part_num_;
+    if (part_id_ + 1 == part_num_) {
+      end_ = total_len_;
+    }
+    if (part_id_) {
+      std::string tmp;
+      readLine(tmp, begin_);
+    }
+    if (part_id_ + 1 < part_num_ && begin_ <= end_) {
+      std::string tmp;
+      readLine(tmp, end_);
+    }
+  } else {
+    end_ = total_len_;
   }
-  producer_num_ = std::min(producer_num_, objects_.size());
-  producers_.resize(producer_num_);
-  queue_.SetProducerNum(producer_num_);
-  for (size_t i = 0; i < producer_num_; ++i) {
-    producers_[i] = std::thread(&OSSIOAdaptor::producerRoutine, this);
+
+  VLOG(2) << "Partial Read: " << part_id_ << " " << begin_ << " " << end_ << " "
+          << total_len_;
+  return Status::OK();
+}
+
+Status OSSIOAdaptor::getTotalSize(size_t& size) {
+  OssClient client(oss_endpoint_, access_id_, access_key_, conf_);
+  auto outcome = client.GetObjectMeta(bucket_name_, object_name_);
+
+  if (!outcome.isSuccess()) {
+    LOG(ERROR) << "GetObjectMeta fail"
+               << ",code:" << outcome.error().Code()
+               << ",message:" << outcome.error().Message()
+               << ",requestId:" << outcome.error().RequestId();
+    return Status::IOError(outcome.error().Message());
+  } else {
+    auto metadata = outcome.result();
+    VLOG(2) << " get metadata success, ETag:" << metadata.ETag()
+            << "; LastModified:" << metadata.LastModified()
+            << "; Size:" << metadata.ContentLength();
+    size = metadata.ContentLength();
   }
   return Status::OK();
 }
 
-Status OSSIOAdaptor::ReadLine(std::string& line) {
-  while (true) {
-    if (buffer_next_ >= current_buffer_.size()) {
-      if (exited_producers_ == producer_num_ && queue_.Size() == 0) {
-        return Status::EndOfFile();
-      }
-      queue_.Get(current_buffer_);
-      buffer_next_ = 0;
-    } else {
-      auto next = current_buffer_.find('\n', buffer_next_);
-      line = current_buffer_.substr(buffer_next_, next - buffer_next_);
-      buffer_next_ = next == std::string::npos ? next : next + 1;
-      return Status::OK();
-    }
-  }
-}
-
 Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
+  if (begin_ >= end_) {
+    // This part is empty
+    *table = nullptr;
+    return Status::OK();
+  }
   arrow::BufferBuilder builder;
   std::string buffer;
-  while (!(exited_producers_ == producer_num_ && queue_.Size() == 0)) {
-    queue_.Get(buffer);
-    if (header_row_) {
-      size_t pos = buffer.find_first_of('\n');
-      header_line_ = buffer.substr(0, pos);
-      buffer = buffer.substr(pos + 1);
-      ::boost::algorithm::trim(header_line_);
-      ::boost::split(original_columns_, header_line_,
-                    ::boost::is_any_of(std::string(1, delimiter_)));
-    } else {
-      // Name columns as f0 ... fn
-      std::string one_line;
-      size_t pos = buffer.find_first_of('\n');
-      one_line = buffer.substr(0, pos);
-      ::boost::algorithm::trim(one_line);
-      std::vector<std::string> one_column;
-      ::boost::split(one_column, one_line,
-                    ::boost::is_any_of(std::string(1, delimiter_)));
-      for (size_t i = 0; i < one_column.size(); ++i) {
-        original_columns_.push_back("f" + std::to_string(i));
-      }
-    }
-    RETURN_ON_ARROW_ERROR(builder.Append(buffer.c_str(), buffer.size()));
-  }
-
-
+  RETURN_ON_ERROR(getRange(begin_, end_, buffer));
+  RETURN_ON_ARROW_ERROR(builder.Append(buffer.c_str(), buffer.size()));
   std::shared_ptr<arrow::Buffer> buf;
   RETURN_ON_ARROW_ERROR(builder.Finish(&buf));
+
   auto file = std::make_shared<arrow::io::BufferReader>(buf);
   auto stream = arrow::io::RandomAccessFile::GetStream(file, 0, buf->size());
   arrow::MemoryPool* pool = arrow::default_memory_pool();
@@ -473,103 +484,19 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
   return Status::OK();
 }
 
-Status OSSIOAdaptor::Write(void* buffer, size_t size) {
+Status OSSIOAdaptor::getRange(const size_t begin, const size_t end,
+                              std::string& content) {
   OssClient client(oss_endpoint_, access_id_, access_key_, conf_);
-  std::shared_ptr<std::iostream> content =
-      std::make_shared<std::stringstream>();
-  *content << static_cast<char*>(buffer);
-  PutObjectRequest request(bucket_name_, prefix_, content);
-  auto outcome = client.PutObject(request);
-  if (!outcome.isSuccess()) {
-    LOG(ERROR) << "Put object failed, code: " << outcome.error().Code()
-               << ", message: " << outcome.error().Message()
-               << ", requestId: " << outcome.error().RequestId();
-    return Status::IOError(outcome.error().Message());
-  }
-  return Status::OK();
-}
-
-void OSSIOAdaptor::selectObjects() {
-  VLOG(2) << "Using partial read strategy: index = " << part_id_
-          << " total = " << part_num_;
-  size_t object_num = objects_.size();
-  std::vector<std::string> selected;
-  for (size_t i = 0; i < object_num; ++i) {
-    if (i % part_num_ == part_id_) {
-      selected.emplace_back(objects_[i]);
-    }
-  }
-  objects_.swap(selected);
-}
-
-Status OSSIOAdaptor::listAllObjects(const std::string& prefix,
-                                    const std::string& suffix) {
-  OssClient client(oss_endpoint_, access_id_, access_key_, conf_);
-
-  std::string next_marker;
-  bool IsTruncated = false;
-  do {
-    ListObjectsRequest request(bucket_name_);
-    request.setPrefix(prefix);
-    request.setMarker(next_marker);
-    auto outcome = client.ListObjects(request);
-    if (!outcome.isSuccess()) {
-      LOG(ERROR) << "List object fail, code: " << outcome.error().Code()
-                 << ", message: " << outcome.error().Message()
-                 << ", requestId: " << outcome.error().RequestId();
-      break;
-    }
-    for (const auto& object : outcome.result().ObjectSummarys()) {
-      auto name = object.Key();
-      if (suffix.empty() || boost::ends_with(name, suffix)) {
-        objects_.push_back(name);
-      }
-    }
-    next_marker = outcome.result().NextMarker();
-    IsTruncated = outcome.result().IsTruncated();
-  } while (IsTruncated);
-
-  if (objects_.empty()) {
-    return Status::IOError("Cannot find object in the specified prefix: " +
-                           prefix);
-  }
-  return Status::OK();
-}
-
-Status OSSIOAdaptor::producerRoutine() {
-  while (true) {
-    size_t index = __sync_fetch_and_add(&current_object_, 1);
-    if (index >= objects_.size()) {
-      break;
-    }
-    std::string content;
-    auto st = getObjectToBuffer(objects_[index], content);
-    if (!st.ok()) {
-      LOG(ERROR) << "IOException: OSS Exception: get object failed.";
-      return st;
-    }
-    queue_.Put(std::move(content));
-  }
-  ++exited_producers_;
-  queue_.DecProducerNum();
-  return Status::OK();
-}
-
-Status OSSIOAdaptor::getObjectToBuffer(const std::string& object_name,
-                                       std::string& content) {
-  OssClient client(oss_endpoint_, access_id_, access_key_, conf_);
-  GetObjectRequest request(bucket_name_, object_name);
+  GetObjectRequest request(bucket_name_, object_name_);
+  request.setRange(begin, end - 1);
   auto outcome = client.GetObject(request);
 
   if (outcome.isSuccess()) {
     int content_length = outcome.result().Metadata().ContentLength();
     VLOG(2) << "getObjectToBuffer success, Content-Length: " << content_length;
-    content.clear();
-    content.resize(content_length);
-    auto stream = outcome.result().Content();
-    for (int i = 0; i < content_length; ++i) {
-      stream->get(content[i]);
-    }
+    std::ostringstream ss;
+    ss << outcome.result().Content()->rdbuf();
+    content = ss.str();
   } else {
     LOG(ERROR) << "getObjectToBuffer fail, code: " << outcome.error().Code()
                << ", message: " << outcome.error().Message()
@@ -579,15 +506,31 @@ Status OSSIOAdaptor::getObjectToBuffer(const std::string& object_name,
   return Status::OK();
 }
 
-Status OSSIOAdaptor::Close() {
-  for (auto& thrd : producers_) {
-    if (thrd.joinable()) {
-      thrd.join();
+Status OSSIOAdaptor::readLine(std::string& line, size_t& cursor) {
+  std::string content;
+  line.clear();
+  while (cursor < total_len_) {
+    RETURN_ON_ERROR(
+        getRange(cursor, std::min(cursor + seg_len_, total_len_), content));
+    size_t pos = content.find_first_of('\n');
+    if (pos == std::string::npos) {
+      line += content;
+      cursor += content.length();
+    } else {
+      line += content.substr(0, pos + 1);
+      cursor += pos + 1;
+      break;
     }
   }
-  producers_.clear();
   return Status::OK();
 }
+
+Status OSSIOAdaptor::ReadLine(std::string& line) {
+  RETURN_ON_ERROR(readLine(line, line_cur_));
+  return Status::OK();
+}
+
+Status OSSIOAdaptor::Close() { return Status::OK(); }
 
 Status OSSIOAdaptor::SetPartialRead(int index, int total_parts) {
   if (opened_) {
@@ -603,7 +546,7 @@ Status OSSIOAdaptor::SetPartialRead(int index, int total_parts) {
 
 bool OSSIOAdaptor::IsExist(const std::string& path) {
   OssClient client(oss_endpoint_, access_id_, access_key_, conf_);
-  return client.DoesObjectExist(bucket_name_, prefix_);
+  return client.DoesObjectExist(bucket_name_, object_name_);
 }
 }  // namespace vineyard
 
