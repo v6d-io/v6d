@@ -141,7 +141,8 @@ inline const void* get_arrow_array_ptr(std::shared_ptr<arrow::Array> array) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
   } else if (array->type()->Equals(arrow::null())) {
-    return reinterpret_cast<const void*>(std::dynamic_pointer_cast<arrow::NullArray>(array).get());
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::NullArray>(array).get());
   } else {
     LOG(FATAL) << "Array type - " << array->type()->ToString()
                << " is not supported yet...";
