@@ -197,7 +197,7 @@ void serialize_string_items(grape::InArchive& arc,
 void serialize_null_items(grape::InArchive& arc,
                           std::shared_ptr<arrow::Array> array,
                           const std::vector<int64_t>& offset) {
-    return;
+  return;
 }
 
 void SerializeSelectedItems(grape::InArchive& arc,
@@ -219,7 +219,7 @@ void SerializeSelectedItems(grape::InArchive& arc,
     serialize_string_items(arc, array, offset);
   } else if (array->type()->Equals(arrow::null())) {
     serialize_null_items(arc, array, offset);
-  }else {
+  } else {
     LOG(FATAL) << "Unsupported data type - " << array->type()->ToString();
   }
 }
@@ -281,8 +281,7 @@ void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
     deserialize_string_items(arc, num, builder);
   } else if (builder->type()->Equals(arrow::null())) {
     deserialize_null_items(arc, num, builder);
-  }
-  else {
+  } else {
     LOG(FATAL) << "Unsupported data type - " << builder->type()->ToString();
   }
 }
@@ -331,8 +330,9 @@ inline void select_string_items(std::shared_ptr<arrow::Array> array,
 inline void select_null_items(std::shared_ptr<arrow::Array> array,
                               const std::vector<int64_t>& offset,
                               arrow::ArrayBuilder* builder) {
-  arrow::NullBuilder* casted_builder = dynamic_cast<arrow::NullBuilder*>(builder);
-  casted_builder->AppendNulls(array->length());
+  arrow::NullBuilder* casted_builder =
+      dynamic_cast<arrow::NullBuilder*>(builder);
+  casted_builder->AppendNulls(offset.size());
 }
 
 inline void SelectItems(std::shared_ptr<arrow::Array> array,
@@ -371,6 +371,10 @@ inline void SelectRows(std::shared_ptr<arrow::RecordBatch> record_batch_in,
   for (int col_id = 0; col_id != col_num; ++col_id) {
     SelectItems(record_batch_in->column(col_id), offset,
                 builder->GetField(col_id));
+  }
+  for (int col_id = 0; col_id != col_num; ++col_id) {
+    LOG(INFO) << "Column " << col_id
+              << " length: " << record_batch_out->column(col_id)->num_rows();
   }
   ARROW_CHECK_OK(builder->Flush(&record_batch_out));
 }
