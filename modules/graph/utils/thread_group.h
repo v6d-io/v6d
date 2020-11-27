@@ -18,6 +18,7 @@ limitations under the License.
 #include <future>
 #include <map>
 #include <memory>
+#include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -31,22 +32,58 @@ class ThreadGroup {
   using return_t = Status;
 
  public:
+  explicit ThreadGroup(tid_t parallelism = std::numeric_limits<tid_t>::max())
+      : parallelism_(parallelism), tid_(0) {}
+
   template <class F_T, class... ARGS_T>
   tid_t AddTask(F_T&& f, ARGS_T&&... args) {
-    auto task_wrapper = [](F_T&& _f, auto&&... _args) -> return_t {
-      try {
-        return _f(std::forward<ARGS_T>(_args)...);
-      } catch (std::runtime_error& e) {
-        return Status(StatusCode::kUnknownError, e.what());
+    while (getRunningThreadNum() >= parallelism_) {
+      std::lock_guard<std::mutex> lg(mutex_);
+
+      while (!finished_threads_.empty()) {
+        finished_threads_.front().join();
+        finished_threads_.pop();
       }
+    }
+
+    auto task_wrapper = [this](tid_t tid, F_T&& _f,
+                               auto&&... _args) -> return_t {
+      return_t v;
+
+      try {
+        v = std::move(_f(std::forward<ARGS_T>(_args)...));
+      } catch (std::runtime_error& e) {
+        v = Status(StatusCode::kUnknownError, e.what());
+      }
+
+      std::lock_guard<std::mutex> lg(mutex_);
+
+      finished_threads_.push(std::move(threads_.at(tid)));
+      threads_.erase(tid);
+      return v;
     };
 
     auto task = std::make_shared<std::packaged_task<return_t()>>(
-        std::bind(std::move(task_wrapper), std::forward<F_T>(f),
+        std::bind(std::move(task_wrapper), tid_, std::forward<F_T>(f),
                   std::forward<ARGS_T>(args)...));
-    std::thread([task]() { (*task)(); }).detach();
+
+    std::lock_guard<std::mutex> lg(mutex_);
+
+    threads_.emplace(tid_, [task]() { (*task)(); });
     tasks_[tid_] = task->get_future();
     return tid_++;
+  }
+
+  ~ThreadGroup() {
+    while (getRunningThreadNum() > 0) {
+      std::this_thread::yield();
+    }
+
+    std::lock_guard<std::mutex> lg(mutex_);
+    while (!finished_threads_.empty()) {
+      finished_threads_.front().join();
+      finished_threads_.pop();
+    }
   }
 
   return_t TaskResult(tid_t tid) {
@@ -68,8 +105,17 @@ class ThreadGroup {
   }
 
  private:
+  size_t getRunningThreadNum() {
+    std::unique_lock<std::mutex> lk(mutex_);
+    return threads_.size();
+  }
+
+  tid_t parallelism_;
   tid_t tid_;
-  std::map<tid_t, std::future<return_t>> tasks_;
+  std::unordered_map<tid_t, std::thread> threads_;
+  std::unordered_map<tid_t, std::future<return_t>> tasks_;
+  std::queue<std::thread> finished_threads_;
+  std::mutex mutex_;
 };
 }  // namespace vineyard
 #endif  // MODULES_GRAPH_UTILS_THREAD_GROUP_H_
