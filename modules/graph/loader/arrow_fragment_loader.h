@@ -1387,6 +1387,7 @@ class ArrowFragmentLoader {
             chunks.push_back(new_array);
           } else if (from_type->Equals(arrow::null())) {
             BOOST_LEAF_AUTO(new_array, CastNullToOthers(array, to_type));
+            chunks.push_back(new_array);
           } else {
             RETURN_GS_ERROR(ErrorCode::kDataTypeError,
                             "Unexpected type: " + to_type->ToString() +

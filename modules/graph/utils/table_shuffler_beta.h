@@ -372,10 +372,6 @@ inline void SelectRows(std::shared_ptr<arrow::RecordBatch> record_batch_in,
     SelectItems(record_batch_in->column(col_id), offset,
                 builder->GetField(col_id));
   }
-  for (int col_id = 0; col_id != col_num; ++col_id) {
-    LOG(INFO) << "Column " << col_id
-              << " length: " << record_batch_out->column(col_id)->num_rows();
-  }
   ARROW_CHECK_OK(builder->Flush(&record_batch_out));
 }
 
