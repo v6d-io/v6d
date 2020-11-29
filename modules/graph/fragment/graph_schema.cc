@@ -43,6 +43,8 @@ std::string PropertyTypeToString(PropertyType type) {
     return "FLOAT";
   } else if (arrow::float64()->Equals(type)) {
     return "DOUBLE";
+  } else if (arrow::utf8()->Equals(type)) {
+    return "STRING";
   } else if (arrow::large_utf8()->Equals(type)) {
     return "STRING";
   } else if (arrow::null()->Equals(type)) {
