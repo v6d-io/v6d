@@ -77,7 +77,7 @@ std::shared_ptr<Column> CreateColumn(
     return std::make_shared<DoubleColumn>(chunked_array, chunk_size);
   } else if (type == arrow::large_utf8()) {
     return std::make_shared<StringColumn>(chunked_array, chunk_size);
-  } else if (type == arrow::binary()) {
+  } else if (type == arrow::large_binary()) {
     return std::make_shared<StringColumn>(chunked_array, chunk_size);
   } else if (type->id() == arrow::Type::TIMESTAMP) {
     return std::make_shared<TimestampColumn>(chunked_array, chunk_size);
@@ -231,7 +231,7 @@ TableAppender::TableAppender(std::shared_ptr<arrow::Schema> schema) {
       funcs_.push_back(AppendHelper<float>::append);
     } else if (type == arrow::float64()) {
       funcs_.push_back(AppendHelper<double>::append);
-    } else if (type == arrow::binary()) {
+    } else if (type == arrow::large_binary()) {
       funcs_.push_back(AppendHelper<std::string>::append);
     } else if (type == arrow::large_utf8()) {
       funcs_.push_back(AppendHelper<std::string>::append);

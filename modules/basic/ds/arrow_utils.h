@@ -294,6 +294,9 @@ struct EmptyTableBuilder {
       } else if (type == arrow::float64()) {
         arrow::DoubleBuilder builder;
         RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+      } else if (type == arrow::utf8()) {
+        arrow::StringBuilder builder;
+        RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
       } else if (type == arrow::large_utf8()) {
         arrow::LargeStringBuilder builder;
         RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
