@@ -43,50 +43,6 @@ std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   }
 }
 
-bool SameShape(std::shared_ptr<arrow::ChunkedArray> ca1,
-               std::shared_ptr<arrow::ChunkedArray> ca2) {
-  if (ca1->length() != ca2->length()) {
-    return false;
-  }
-  if (ca1->num_chunks() != ca2->num_chunks()) {
-    return false;
-  }
-  size_t num_chunks = ca1->num_chunks();
-  for (size_t i = 0; i < num_chunks; ++i) {
-    if (ca1->chunk(i)->length() != ca2->chunk(i)->length()) {
-      return false;
-    }
-  }
-  return true;
-}
-
-std::shared_ptr<Column> CreateColumn(
-    std::shared_ptr<arrow::ChunkedArray> chunked_array, size_t chunk_size) {
-  std::shared_ptr<arrow::DataType> type = chunked_array->type();
-  if (type == arrow::int32()) {
-    return std::make_shared<Int32Column>(chunked_array, chunk_size);
-  } else if (type == arrow::int64()) {
-    return std::make_shared<Int64Column>(chunked_array, chunk_size);
-  } else if (type == arrow::uint32()) {
-    return std::make_shared<UInt32Column>(chunked_array, chunk_size);
-  } else if (type == arrow::uint64()) {
-    return std::make_shared<UInt64Column>(chunked_array, chunk_size);
-  } else if (type == arrow::float32()) {
-    return std::make_shared<FloatColumn>(chunked_array, chunk_size);
-  } else if (type == arrow::float64()) {
-    return std::make_shared<DoubleColumn>(chunked_array, chunk_size);
-  } else if (type == arrow::large_utf8()) {
-    return std::make_shared<StringColumn>(chunked_array, chunk_size);
-  } else if (type == arrow::large_binary()) {
-    return std::make_shared<StringColumn>(chunked_array, chunk_size);
-  } else if (type->id() == arrow::Type::TIMESTAMP) {
-    return std::make_shared<TimestampColumn>(chunked_array, chunk_size);
-  } else {
-    LOG(ERROR) << "Invalid type when creating column...";
-    return nullptr;
-  }
-}
-
 Status GetRecordBatchStreamSize(const arrow::RecordBatch& batch, size_t* size) {
   // emulates the behavior of Write without actually writing
   arrow::io::MockOutputStream dst;
@@ -214,82 +170,6 @@ Status DeserializeTable(std::shared_ptr<arrow::Buffer> buffer,
 #endif
   RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(table));
   return Status::OK();
-}
-
-TableAppender::TableAppender(std::shared_ptr<arrow::Schema> schema) {
-  for (const auto& field : schema->fields()) {
-    std::shared_ptr<arrow::DataType> type = field->type();
-    if (type == arrow::uint64()) {
-      funcs_.push_back(AppendHelper<uint64_t>::append);
-    } else if (type == arrow::int64()) {
-      funcs_.push_back(AppendHelper<int64_t>::append);
-    } else if (type == arrow::uint32()) {
-      funcs_.push_back(AppendHelper<uint32_t>::append);
-    } else if (type == arrow::int32()) {
-      funcs_.push_back(AppendHelper<int32_t>::append);
-    } else if (type == arrow::float32()) {
-      funcs_.push_back(AppendHelper<float>::append);
-    } else if (type == arrow::float64()) {
-      funcs_.push_back(AppendHelper<double>::append);
-    } else if (type == arrow::large_binary()) {
-      funcs_.push_back(AppendHelper<std::string>::append);
-    } else if (type == arrow::large_utf8()) {
-      funcs_.push_back(AppendHelper<std::string>::append);
-    } else if (type == arrow::null()) {
-      funcs_.push_back(AppendHelper<void>::append);
-    } else if (type->id() == arrow::Type::TIMESTAMP) {
-      funcs_.push_back(AppendHelper<arrow::TimestampType>::append);
-    } else {
-      LOG(FATAL) << "Datatype [" << type->ToString() << "] not implemented...";
-    }
-  }
-  col_num_ = funcs_.size();
-}
-
-Status TableAppender::Apply(
-    std::unique_ptr<arrow::RecordBatchBuilder>& builder,
-    std::shared_ptr<arrow::RecordBatch> batch, size_t offset,
-    std::vector<std::shared_ptr<arrow::RecordBatch>>& batches_out) {
-  for (size_t i = 0; i < col_num_; ++i) {
-    funcs_[i](builder->GetField(i), batch->column(i), offset);
-  }
-  if (builder->GetField(0)->length() == builder->initial_capacity()) {
-    std::shared_ptr<arrow::RecordBatch> tmp_batch;
-    RETURN_ON_ARROW_ERROR(builder->Flush(&tmp_batch));
-    batches_out.emplace_back(std::move(tmp_batch));
-  }
-  return Status::OK();
-}
-
-Status TableAppender::Flush(
-    std::unique_ptr<arrow::RecordBatchBuilder>& builder,
-    std::vector<std::shared_ptr<arrow::RecordBatch>>& batches_out) {
-  // If there's no batch, we need an empty batch to make an empty table
-  if (builder->GetField(0)->length() != 0 || batches_out.size() == 0) {
-    std::shared_ptr<arrow::RecordBatch> batch;
-    RETURN_ON_ARROW_ERROR(builder->Flush(&batch));
-    batches_out.emplace_back(std::move(batch));
-  }
-  return Status::OK();
-}
-
-std::shared_ptr<arrow::Table> ConcatenateTables(
-    std::vector<std::shared_ptr<arrow::Table>>& tables) {
-  if (tables.size() == 1) {
-    return tables[0];
-  }
-  auto col_names = tables[0]->ColumnNames();
-  for (size_t i = 1; i < tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(tables[i]->RenameColumns(col_names, &tables[i]));
-#else
-    CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
-                                 tables[i]->RenameColumns(col_names));
-#endif
-  }
-  std::shared_ptr<arrow::Table> table;
-  CHECK_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(tables));
-  return table;
 }
 
 }  // namespace vineyard
