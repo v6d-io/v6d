@@ -50,46 +50,6 @@ limitations under the License.
 
 #define HASH_PARTITION
 
-namespace grape {
-inline grape::InArchive& operator<<(grape::InArchive& in_archive,
-                                    std::shared_ptr<arrow::Schema>& schema) {
-  if (schema != nullptr) {
-    std::shared_ptr<arrow::Buffer> out;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
-        *schema, nullptr, arrow::default_memory_pool(), &out));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
-    CHECK_ARROW_ERROR_AND_ASSIGN(
-        out, arrow::ipc::SerializeSchema(*schema, nullptr,
-                                         arrow::default_memory_pool()));
-#else
-    CHECK_ARROW_ERROR_AND_ASSIGN(
-        out,
-        arrow::ipc::SerializeSchema(*schema, arrow::default_memory_pool()));
-#endif
-    in_archive.AddBytes(out->data(), out->size());
-  }
-  return in_archive;
-}
-
-inline grape::OutArchive& operator>>(grape::OutArchive& out_archive,
-                                     std::shared_ptr<arrow::Schema>& schema) {
-  if (!out_archive.Empty()) {
-    auto buffer = std::make_shared<arrow::Buffer>(
-        reinterpret_cast<const uint8_t*>(out_archive.GetBuffer()),
-        out_archive.GetSize());
-    arrow::io::BufferReader reader(buffer);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &schema));
-#else
-    CHECK_ARROW_ERROR_AND_ASSIGN(schema,
-                                 arrow::ipc::ReadSchema(&reader, nullptr));
-#endif
-  }
-  return out_archive;
-}
-}  // namespace grape
-
 namespace vineyard {
 
 template <typename OID_T = property_graph_types::OID_TYPE,
@@ -105,6 +65,7 @@ class ArrowFragmentLoader {
   const int id_column = 0;
   const int src_column = 0;
   const int dst_column = 1;
+  const int edge_id_column = 2;
   // These consts represent the key in the path of vfile/efile
   static constexpr const char* LABEL_TAG = "label";
   static constexpr const char* SRC_LABEL_TAG = "src_label";
@@ -130,7 +91,7 @@ class ArrowFragmentLoader {
                       const grape::CommSpec& comm_spec,
                       const std::vector<std::string>& efiles,
                       const std::vector<std::string>& vfiles,
-                      bool directed = true)
+                      bool directed = true, bool generate_eid = false)
       : client_(client),
         comm_spec_(comm_spec),
         efiles_(efiles),
@@ -138,18 +99,20 @@ class ArrowFragmentLoader {
         vertex_label_num_(vfiles.size()),
         edge_label_num_(efiles.size()),
         directed_(directed),
+        generate_eid_(generate_eid),
         basic_arrow_fragment_loader_(comm_spec) {}
 
   ArrowFragmentLoader(vineyard::Client& client,
                       const grape::CommSpec& comm_spec,
                       const std::vector<ObjectID>& vstreams,
                       const std::vector<std::vector<ObjectID>>& estreams,
-                      bool directed = true)
+                      bool directed = true, bool generate_eid = false)
       : client_(client),
         comm_spec_(comm_spec),
         v_streams_(vstreams),
         e_streams_(estreams),
         directed_(directed),
+        generate_eid_(generate_eid),
         basic_arrow_fragment_loader_(comm_spec) {}
 
   ArrowFragmentLoader(
@@ -158,7 +121,7 @@ class ArrowFragmentLoader {
       std::vector<std::shared_ptr<arrow::Table>> const& partial_v_tables,
       std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
           partial_e_tables,
-      bool directed = true)
+      bool directed = true, bool generate_eid = false)
       : client_(client),
         comm_spec_(comm_spec),
         vertex_label_num_(vertex_label_num),
@@ -166,12 +129,13 @@ class ArrowFragmentLoader {
         partial_v_tables_(partial_v_tables),
         partial_e_tables_(partial_e_tables),
         directed_(directed),
+        generate_eid_(generate_eid),
         basic_arrow_fragment_loader_(comm_spec) {}
 
   ArrowFragmentLoader(vineyard::Client& client,
                       const grape::CommSpec& comm_spec,
                       const std::vector<std::string>& efiles,
-                      bool directed = true)
+                      bool directed = true, bool generate_eid = false)
       : client_(client),
         comm_spec_(comm_spec),
         efiles_(efiles),
@@ -179,6 +143,7 @@ class ArrowFragmentLoader {
         vertex_label_num_(0),
         edge_label_num_(efiles.size()),
         directed_(directed),
+        generate_eid_(generate_eid),
         basic_arrow_fragment_loader_(comm_spec) {}
 
   ~ArrowFragmentLoader() = default;
@@ -316,8 +281,58 @@ class ArrowFragmentLoader {
         partial_e_tables = tmp_e;
       }
     }
+
+    if (generate_eid_) {
+      generateEdgeId(partial_e_tables);
+    }
+
     basic_arrow_fragment_loader_.Init(partial_v_tables, partial_e_tables);
     basic_arrow_fragment_loader_.SetPartitioner(partitioner_);
+
+    return {};
+  }
+
+  boost::leaf::result<void> generateEdgeId(
+      std::vector<std::vector<std::shared_ptr<arrow::Table>>>& edge_tables) {
+    IdParser<uint64_t> eid_parser;
+    eid_parser.Init(comm_spec_.fnum(), edge_label_num_);
+    for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+      auto& edge_table_list = edge_tables[e_label];
+      uint64_t cur_id = eid_parser.GenerateId(comm_spec_.fid(), e_label, 0);
+      for (size_t edge_table_index = 0;
+           edge_table_index != edge_table_list.size(); ++edge_table_index) {
+        auto& edge_table = edge_table_list[edge_table_index];
+        std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+        VY_OK_OR_RAISE(TableToRecordBatches(edge_table, &batches));
+        std::vector<std::shared_ptr<arrow::Array>> generated_arrays;
+        for (auto& rb : batches) {
+          int64_t row_num = rb->num_rows();
+          typename ConvertToArrowType<int64_t>::BuilderType builder;
+          for (int64_t i = 0; i != row_num; ++i) {
+            builder.Append(static_cast<int64_t>(cur_id));
+            ++cur_id;
+          }
+          std::shared_ptr<arrow::Array> eid_array;
+          builder.Finish(&eid_array);
+          generated_arrays.push_back(eid_array);
+        }
+        std::shared_ptr<arrow::ChunkedArray> chunked_eid_array =
+            std::make_shared<arrow::ChunkedArray>(
+                generated_arrays, ConvertToArrowType<int64_t>::TypeValue());
+
+        auto eid_field = std::make_shared<arrow::Field>(
+            "eid", ConvertToArrowType<int64_t>::TypeValue());
+
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+        CHECK_ARROW_ERROR(edge_table->AddColumn(
+            edge_id_column, eid_field, chunked_eid_array, &edge_table));
+#else
+        CHECK_ARROW_ERROR_AND_ASSIGN(
+            edge_table, edge_table->AddColumn(edge_id_column, eid_field,
+                                              chunked_eid_array));
+#endif
+      }
+    }
 
     return {};
   }
@@ -1196,216 +1211,6 @@ class ArrowFragmentLoader {
     return arrow::Status::OK();
   }
 
-  boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
-      const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
-    size_t field_num = 0;
-    for (const auto& schema : schemas) {
-      if (schema != nullptr) {
-        field_num = schema->num_fields();
-        break;
-      }
-    }
-    if (field_num == 0) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
-                      "Every schema is empty");
-    }
-    // Perform type lossen.
-    // timestamp -> int64 -> double -> utf8   binary (not supported)
-    std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
-    for (size_t i = 0; i < field_num; ++i) {
-      for (const auto& schema : schemas) {
-        if (schema != nullptr) {
-          fields[i].push_back(schema->field(i));
-        }
-      }
-    }
-    std::vector<std::shared_ptr<arrow::Field>> lossen_fields(field_num);
-
-    for (size_t i = 0; i < field_num; ++i) {
-      lossen_fields[i] = fields[i][0];
-      if (fields[i][0]->type() == arrow::null()) {
-        continue;
-      }
-      auto res = fields[i][0]->type();
-      if (res->Equals(arrow::timestamp(arrow::TimeUnit::SECOND))) {
-        res = arrow::int64();
-      }
-      if (res->Equals(arrow::int64())) {
-        for (size_t j = 1; j < fields[i].size(); ++j) {
-          if (fields[i][j]->type()->Equals(arrow::float64())) {
-            res = arrow::float64();
-          }
-        }
-      }
-      if (res->Equals(arrow::float64())) {
-        for (size_t j = 1; j < fields[i].size(); ++j) {
-          if (fields[i][j]->type()->Equals(arrow::utf8())) {
-            res = arrow::utf8();
-          }
-        }
-      }
-      if (res->Equals(arrow::utf8())) {
-        res = arrow::large_utf8();
-      }
-      lossen_fields[i] = lossen_fields[i]->WithType(res);
-    }
-    return std::make_shared<arrow::Schema>(lossen_fields);
-  }
-
-  // This method used when several workers is loading a file in parallel, each
-  // worker will read a chunk of the origin file into a arrow::Table.
-  // We may get different table schemas as some chunks may have zero rows
-  // or some chunks' data doesn't have any floating numbers, but others might
-  // have. We could use this method to gather their schemas, and find out most
-  // common fields, construct a new schema and broadcast back. Note: We perform
-  // type loosen, int64 -> double. timestamp -> int64.
-  boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
-      const std::shared_ptr<arrow::Table>& table,
-      const grape::CommSpec& comm_spec) {
-    std::shared_ptr<arrow::Schema> local_schema =
-        table != nullptr ? table->schema() : nullptr;
-    std::vector<std::shared_ptr<arrow::Schema>> schemas;
-
-    GlobalAllGatherv(local_schema, schemas, comm_spec);
-    BOOST_LEAF_AUTO(normalized_schema, TypeLoosen(schemas));
-
-    if (table == nullptr) {
-      std::shared_ptr<arrow::Table> table_out;
-      VY_OK_OR_RAISE(
-          vineyard::EmptyTableBuilder::Build(normalized_schema, table_out));
-      return table_out;
-    } else {
-      return CastTableToSchema(table, normalized_schema);
-    }
-  }
-
-  // Inspired by arrow::compute::Cast
-  boost::leaf::result<std::shared_ptr<arrow::Array>> CastIntToDouble(
-      const std::shared_ptr<arrow::Array>& in,
-      const std::shared_ptr<arrow::DataType>& to_type) {
-    CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
-    CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
-    using in_type = int64_t;
-    using out_type = double;
-    auto in_data = in->data()->GetValues<in_type>(1);
-    std::vector<out_type> out_data(in->length());
-    for (int64_t i = 0; i < in->length(); ++i) {
-      out_data[i] = static_cast<out_type>(*in_data++);
-    }
-    arrow::DoubleBuilder builder;
-    ARROW_OK_OR_RAISE(builder.AppendValues(out_data));
-    std::shared_ptr<arrow::Array> out;
-    ARROW_OK_OR_RAISE(builder.Finish(&out));
-    ARROW_OK_OR_RAISE(out->ValidateFull());
-    return out;
-  }
-
-  // Timestamp value are stored as as number of seconds, milliseconds,
-  // microseconds or nanoseconds since UNIX epoch.
-  // CSV reader can only produce timestamp in seconds.
-  boost::leaf::result<std::shared_ptr<arrow::Array>> CastDateToInt(
-      const std::shared_ptr<arrow::Array>& in,
-      const std::shared_ptr<arrow::DataType>& to_type) {
-    CHECK_OR_RAISE(
-        in->type()->Equals(arrow::timestamp(arrow::TimeUnit::SECOND)));
-    CHECK_OR_RAISE(to_type->Equals(arrow::int64()));
-    auto array_data = in->data()->Copy();
-    array_data->type = to_type;
-    auto out = arrow::MakeArray(array_data);
-    ARROW_OK_OR_RAISE(out->ValidateFull());
-    return out;
-  }
-
-  boost::leaf::result<std::shared_ptr<arrow::Array>> CastStringToBigString(
-      const std::shared_ptr<arrow::Array>& in,
-      const std::shared_ptr<arrow::DataType>& to_type) {
-    auto array_data = in->data()->Copy();
-    auto offset = array_data->buffers[1];
-    using from_offset_type = typename arrow::StringArray::offset_type;
-    using to_string_offset_type = typename arrow::LargeStringArray::offset_type;
-    auto raw_value_offsets_ =
-        offset == NULLPTR
-            ? NULLPTR
-            : reinterpret_cast<const from_offset_type*>(offset->data());
-    std::vector<to_string_offset_type> to_offset(offset->size() /
-                                                 sizeof(from_offset_type));
-    for (size_t i = 0; i < to_offset.size(); ++i) {
-      to_offset[i] = raw_value_offsets_[i];
-    }
-    std::shared_ptr<arrow::Buffer> buffer;
-    arrow::TypedBufferBuilder<to_string_offset_type> buffer_builder;
-    buffer_builder.Append(to_offset.data(), to_offset.size());
-    buffer_builder.Finish(&buffer);
-    array_data->type = to_type;
-    array_data->buffers[1] = buffer;
-    auto out = arrow::MakeArray(array_data);
-    ARROW_OK_OR_RAISE(out->ValidateFull());
-    return out;
-  }
-
-  boost::leaf::result<std::shared_ptr<arrow::Array>> CastNullToOthers(
-      const std::shared_ptr<arrow::Array>& in,
-      const std::shared_ptr<arrow::DataType>& to_type) {
-    std::unique_ptr<arrow::ArrayBuilder> builder;
-    ARROW_OK_OR_RAISE(
-        arrow::MakeBuilder(arrow::default_memory_pool(), to_type, &builder));
-    ARROW_OK_OR_RAISE(builder->AppendNulls(in->length()));
-    std::shared_ptr<arrow::Array> out;
-    ARROW_OK_OR_RAISE(builder->Finish(&out));
-    ARROW_OK_OR_RAISE(out->ValidateFull());
-    return out;
-  }
-
-  boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
-      const std::shared_ptr<arrow::Table>& table,
-      const std::shared_ptr<arrow::Schema>& schema) {
-    if (table->schema()->Equals(schema)) {
-      return table;
-    }
-    CHECK_OR_RAISE(table->num_columns() == schema->num_fields());
-    std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
-    for (int64_t i = 0; i < table->num_columns(); ++i) {
-      auto col = table->column(i);
-      if (!table->field(i)->type()->Equals(schema->field(i)->type())) {
-        auto from_type = table->field(i)->type();
-        auto to_type = schema->field(i)->type();
-        std::vector<std::shared_ptr<arrow::Array>> chunks;
-        for (int64_t j = 0; j < col->num_chunks(); ++j) {
-          auto array = col->chunk(j);
-          if (from_type->Equals(arrow::int64()) &&
-              to_type->Equals(arrow::float64())) {
-            BOOST_LEAF_AUTO(new_array, CastIntToDouble(array, to_type));
-            chunks.push_back(new_array);
-          } else if (from_type->Equals(
-                         arrow::timestamp(arrow::TimeUnit::SECOND)) &&
-                     to_type->Equals(arrow::int64())) {
-            BOOST_LEAF_AUTO(new_array, CastDateToInt(array, to_type));
-            chunks.push_back(new_array);
-          } else if (from_type->Equals(arrow::utf8()) &&
-                     to_type->Equals(arrow::large_utf8())) {
-            BOOST_LEAF_AUTO(new_array, CastStringToBigString(array, to_type));
-            chunks.push_back(new_array);
-          } else if (from_type->Equals(arrow::null())) {
-            BOOST_LEAF_AUTO(new_array, CastNullToOthers(array, to_type));
-            chunks.push_back(new_array);
-          } else {
-            RETURN_GS_ERROR(ErrorCode::kDataTypeError,
-                            "Unexpected type: " + to_type->ToString() +
-                                "; Origin type: " + from_type->ToString());
-          }
-          VLOG(2) << "Cast " << from_type->ToString() << " To "
-                  << to_type->ToString();
-        }
-        auto chunk_array =
-            std::make_shared<arrow::ChunkedArray>(chunks, to_type);
-        new_columns.push_back(chunk_array);
-      } else {
-        new_columns.push_back(col);
-      }
-    }
-    return arrow::Table::Make(schema, new_columns);
-  }
-
   std::map<std::string, label_id_t> vertex_label_to_index_;
   std::map<std::string, label_id_t> edge_label_to_index_;
   std::map<std::string, std::set<std::pair<std::string, std::string>>>
@@ -1424,6 +1229,7 @@ class ArrowFragmentLoader {
   partitioner_t partitioner_;
 
   bool directed_;
+  bool generate_eid_;
   basic_loader_t basic_arrow_fragment_loader_;
   std::function<void(vineyard::LocalIOAdaptor*)> io_deleter_ =
       [](vineyard::LocalIOAdaptor* adaptor) {

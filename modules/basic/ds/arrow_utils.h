@@ -25,10 +25,16 @@ limitations under the License.
 #include "arrow/array/builder_binary.h"
 #include "arrow/array/builder_primitive.h"
 #include "arrow/buffer.h"
+#include "arrow/io/memory.h"
+#include "arrow/ipc/reader.h"
+#include "arrow/ipc/writer.h"
 #include "arrow/table.h"
 #include "arrow/table_builder.h"
 #include "arrow/util/config.h"
 #include "glog/logging.h"
+
+#include "grape/serialization/in_archive.h"
+#include "grape/serialization/out_archive.h"
 
 #include "basic/ds/types.h"
 #include "common/util/status.h"
@@ -133,100 +139,6 @@ class PodArrayBuilder : public arrow::FixedSizeBinaryBuilder {
   }
 };
 
-bool SameShape(std::shared_ptr<arrow::ChunkedArray> ca1,
-               std::shared_ptr<arrow::ChunkedArray> ca2);
-
-template <typename ARRAY_TYPE, typename FUNC_TYPE>
-Status IterateDualChunkedArray(std::shared_ptr<arrow::ChunkedArray> ca1,
-                               std::shared_ptr<arrow::ChunkedArray> ca2,
-                               const FUNC_TYPE& func) {
-  VINEYARD_ASSERT(SameShape(ca1, ca2),
-                  "Two chunked arrays have different shapes");
-  size_t chunk_num = ca1->num_chunks();
-  size_t index = 0;
-  for (size_t chunk_i = 0; chunk_i != chunk_num; ++chunk_i) {
-    std::shared_ptr<ARRAY_TYPE> a1 =
-        std::dynamic_pointer_cast<ARRAY_TYPE>(ca1->chunk(chunk_i));
-    std::shared_ptr<ARRAY_TYPE> a2 =
-        std::dynamic_pointer_cast<ARRAY_TYPE>(ca2->chunk(chunk_i));
-    size_t len = a1->length();
-    for (size_t i = 0; i != len; ++i) {
-      func(a1->GetView(i), a2->GetView(i), index++);
-    }
-  }
-  return Status::OK();
-}
-
-template <typename ARRAY_TYPE, typename FUNC_TYPE>
-inline Status IterateChunkedArray(std::shared_ptr<arrow::ChunkedArray> ca,
-                                  const FUNC_TYPE& func) {
-  size_t chunk_num = ca->num_chunks();
-  size_t index = 0;
-  for (size_t chunk_i = 0; chunk_i != chunk_num; ++chunk_i) {
-    std::shared_ptr<ARRAY_TYPE> a =
-        std::dynamic_pointer_cast<ARRAY_TYPE>(ca->chunk(chunk_i));
-    size_t len = a->length();
-    for (size_t i = 0; i != len; ++i) {
-      func(a->GetView(i), index++);
-    }
-  }
-  return Status::OK();
-}
-
-/**
- * @brief The base representation of columns in vineyard
- *
- */
-class Column {
- public:
-  Column(std::shared_ptr<arrow::ChunkedArray> chunked_array, size_t chunk_size)
-      : chunked_array_(chunked_array), chunk_size_(chunk_size) {}
-  virtual ~Column() {}
-
-  std::shared_ptr<arrow::DataType> Type() const {
-    return chunked_array_->type();
-  }
-
-  size_t Length() const { return chunked_array_->length(); }
-
- protected:
-  std::shared_ptr<arrow::ChunkedArray> chunked_array_;
-  size_t chunk_size_;
-};
-
-/**
- * @brief The representation of concrete columns in vineyard
- *
- * @tparam T
- */
-template <typename T>
-class ConcreteColumn : public Column {
-  using array_type = typename ConvertToArrowType<T>::ArrayType;
-
- public:
-  ConcreteColumn(std::shared_ptr<arrow::ChunkedArray> chunked_array,
-                 size_t chunk_size)
-      : Column(chunked_array, chunk_size) {}
-
-  T GetView(size_t index) {
-    std::shared_ptr<array_type> chunk = std::dynamic_pointer_cast<array_type>(
-        Column::chunked_array_->chunk(index / Column::chunk_size_));
-    return chunk->GetView(index % Column::chunk_size_);
-  }
-};
-
-using Int64Column = ConcreteColumn<int64_t>;
-using Int32Column = ConcreteColumn<int32_t>;
-using UInt64Column = ConcreteColumn<uint64_t>;
-using UInt32Column = ConcreteColumn<uint32_t>;
-using FloatColumn = ConcreteColumn<float>;
-using DoubleColumn = ConcreteColumn<double>;
-using StringColumn = ConcreteColumn<RefString>;
-using TimestampColumn = ConcreteColumn<arrow::TimestampType>;
-
-std::shared_ptr<Column> CreateColumn(
-    std::shared_ptr<arrow::ChunkedArray> chunked_array, size_t chunk_size);
-
 /**
  * Similar to arrow's `GetRecordBatchSize`, but considering the schema.
  *
@@ -313,130 +225,6 @@ struct EmptyTableBuilder {
   }
 };
 
-template <typename T>
-struct AppendHelper {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    return Status::NotImplemented("Unimplemented for type: " +
-                                  array->type()->ToString());
-  }
-};
-
-template <>
-struct AppendHelper<uint64_t> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::UInt64Builder*>(builder)->Append(
-        std::dynamic_pointer_cast<arrow::UInt64Array>(array)->GetView(offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<int64_t> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::Int64Builder*>(builder)->Append(
-        std::dynamic_pointer_cast<arrow::Int64Array>(array)->GetView(offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<uint32_t> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::UInt32Builder*>(builder)->Append(
-        std::dynamic_pointer_cast<arrow::UInt32Array>(array)->GetView(offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<int32_t> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::Int32Builder*>(builder)->Append(
-        std::dynamic_pointer_cast<arrow::Int32Array>(array)->GetView(offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<float> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::FloatBuilder*>(builder)->Append(
-        std::dynamic_pointer_cast<arrow::FloatArray>(array)->GetView(offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<double> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::DoubleBuilder*>(builder)->Append(
-        std::dynamic_pointer_cast<arrow::DoubleArray>(array)->GetView(offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<std::string> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::BinaryBuilder*>(builder)->Append(
-        std::dynamic_pointer_cast<arrow::BinaryArray>(array)->GetView(offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<arrow::TimestampType> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(
-        dynamic_cast<arrow::TimestampBuilder*>(builder)->Append(
-            std::dynamic_pointer_cast<arrow::TimestampArray>(array)->GetView(
-                offset)));
-    return Status::OK();
-  }
-};
-
-template <>
-struct AppendHelper<void> {
-  static Status append(arrow::ArrayBuilder* builder,
-                       std::shared_ptr<arrow::Array> array, size_t offset) {
-    RETURN_ON_ARROW_ERROR(
-        dynamic_cast<arrow::NullBuilder*>(builder)->Append(nullptr));
-    return Status::OK();
-  }
-};
-
-typedef Status (*appender_func)(arrow::ArrayBuilder*,
-                                std::shared_ptr<arrow::Array>, size_t);
-
-/**
- * @brief TableAppender supports the append operation for tables in vineyard
- *
- */
-class TableAppender {
- public:
-  explicit TableAppender(std::shared_ptr<arrow::Schema> schema);
-
-  Status Apply(std::unique_ptr<arrow::RecordBatchBuilder>& builder,
-               std::shared_ptr<arrow::RecordBatch> batch, size_t offset,
-               std::vector<std::shared_ptr<arrow::RecordBatch>>& batches_out);
-
-  Status Flush(std::unique_ptr<arrow::RecordBatchBuilder>& builder,
-               std::vector<std::shared_ptr<arrow::RecordBatch>>& batches_out);
-
- private:
-  std::vector<appender_func> funcs_;
-  size_t col_num_;
-};
-
 /**
  * @brief Concatenate multiple arrow tables into one.
  */
@@ -483,5 +271,45 @@ inline std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
 }
 
 }  // namespace vineyard
+
+namespace grape {
+inline grape::InArchive& operator<<(grape::InArchive& in_archive,
+                                    std::shared_ptr<arrow::Schema>& schema) {
+  if (schema != nullptr) {
+    std::shared_ptr<arrow::Buffer> out;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
+        *schema, nullptr, arrow::default_memory_pool(), &out));
+#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out, arrow::ipc::SerializeSchema(*schema, nullptr,
+                                         arrow::default_memory_pool()));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out,
+        arrow::ipc::SerializeSchema(*schema, arrow::default_memory_pool()));
+#endif
+    in_archive.AddBytes(out->data(), out->size());
+  }
+  return in_archive;
+}
+
+inline grape::OutArchive& operator>>(grape::OutArchive& out_archive,
+                                     std::shared_ptr<arrow::Schema>& schema) {
+  if (!out_archive.Empty()) {
+    auto buffer = std::make_shared<arrow::Buffer>(
+        reinterpret_cast<const uint8_t*>(out_archive.GetBuffer()),
+        out_archive.GetSize());
+    arrow::io::BufferReader reader(buffer);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &schema));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(schema,
+                                 arrow::ipc::ReadSchema(&reader, nullptr));
+#endif
+  }
+  return out_archive;
+}
+}  // namespace grape
 
 #endif  // MODULES_BASIC_DS_ARROW_UTILS_H_
