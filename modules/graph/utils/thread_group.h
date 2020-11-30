@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef MODULES_GRAPH_UTILS_THREAD_GROUP_H_
 #define MODULES_GRAPH_UTILS_THREAD_GROUP_H_
 #include <future>
-#include <limits>
 #include <memory>
 #include <queue>
 #include <thread>
@@ -33,7 +32,7 @@ class ThreadGroup {
   using return_t = Status;
 
  public:
-  explicit ThreadGroup(tid_t parallelism = std::numeric_limits<tid_t>::max())
+  explicit ThreadGroup(tid_t parallelism = std::thread::hardware_concurrency())
       : parallelism_(parallelism), tid_(0), stopped_(false) {}
 
   template <class F_T, class... ARGS_T>
