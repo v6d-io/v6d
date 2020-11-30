@@ -89,6 +89,9 @@ jobs:
         run: |
           brew install ccache boost coreutils
 
+          export CC=gcc-9
+          export CXX=g++-9
+
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH
           export MACOSX_DEPLOYMENT_TARGET=10.6
 
@@ -168,6 +171,9 @@ jobs:
       - name: Build wheel package on MacOS
         if: runner.os == 'macOS'
         run: |
+          export CC=gcc-9
+          export CXX=g++-9
+
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$HOME/.local/bin:$PATH
           export MACOSX_DEPLOYMENT_TARGET=10.6
 
