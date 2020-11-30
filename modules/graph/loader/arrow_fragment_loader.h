@@ -1214,7 +1214,10 @@ class ArrowFragmentLoader {
     std::vector<std::shared_ptr<arrow::Field>> lossen_fields(field_num);
 
     for (size_t i = 0; i < field_num; ++i) {
-      // find the max frequency using linear traversal
+      lossen_fields[i] = fields[i][0];
+      if (fields[i][0]->type() == arrow::null()) {
+        continue;
+      }
       auto res = fields[i][0]->type();
       if (res->Equals(arrow::timestamp(arrow::TimeUnit::SECOND))) {
         res = arrow::int64();
@@ -1236,7 +1239,7 @@ class ArrowFragmentLoader {
       if (res->Equals(arrow::utf8())) {
         res = arrow::large_utf8();
       }
-      lossen_fields[i] = fields[i][0]->WithType(res);
+      lossen_fields[i] = lossen_fields[i]->WithType(res);
     }
     return std::make_shared<arrow::Schema>(lossen_fields);
   }
@@ -1272,7 +1275,6 @@ class ArrowFragmentLoader {
   boost::leaf::result<std::shared_ptr<arrow::Array>> CastIntToDouble(
       const std::shared_ptr<arrow::Array>& in,
       const std::shared_ptr<arrow::DataType>& to_type) {
-    LOG(INFO) << in->type()->ToString();
     CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
     CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
     using in_type = int64_t;
@@ -1333,6 +1335,19 @@ class ArrowFragmentLoader {
     return out;
   }
 
+  boost::leaf::result<std::shared_ptr<arrow::Array>> CastNullToOthers(
+      const std::shared_ptr<arrow::Array>& in,
+      const std::shared_ptr<arrow::DataType>& to_type) {
+    std::unique_ptr<arrow::ArrayBuilder> builder;
+    ARROW_OK_OR_RAISE(
+        arrow::MakeBuilder(arrow::default_memory_pool(), to_type, &builder));
+    ARROW_OK_OR_RAISE(builder->AppendNulls(in->length()));
+    std::shared_ptr<arrow::Array> out;
+    ARROW_OK_OR_RAISE(builder->Finish(&out));
+    ARROW_OK_OR_RAISE(out->ValidateFull());
+    return out;
+  }
+
   boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
       const std::shared_ptr<arrow::Table>& table,
       const std::shared_ptr<arrow::Schema>& schema) {
@@ -1362,13 +1377,16 @@ class ArrowFragmentLoader {
                      to_type->Equals(arrow::large_utf8())) {
             BOOST_LEAF_AUTO(new_array, CastStringToBigString(array, to_type));
             chunks.push_back(new_array);
+          } else if (from_type->Equals(arrow::null())) {
+            BOOST_LEAF_AUTO(new_array, CastNullToOthers(array, to_type));
+            chunks.push_back(new_array);
           } else {
             RETURN_GS_ERROR(ErrorCode::kDataTypeError,
                             "Unexpected type: " + to_type->ToString() +
                                 "; Origin type: " + from_type->ToString());
           }
-          LOG(INFO) << "Cast " << from_type->ToString() << " To "
-                    << to_type->ToString();
+          VLOG(2) << "Cast " << from_type->ToString() << " To "
+                  << to_type->ToString();
         }
         auto chunk_array =
             std::make_shared<arrow::ChunkedArray>(chunks, to_type);

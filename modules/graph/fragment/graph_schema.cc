@@ -43,8 +43,12 @@ std::string PropertyTypeToString(PropertyType type) {
     return "FLOAT";
   } else if (arrow::float64()->Equals(type)) {
     return "DOUBLE";
+  } else if (arrow::utf8()->Equals(type)) {
+    return "STRING";
   } else if (arrow::large_utf8()->Equals(type)) {
     return "STRING";
+  } else if (arrow::null()->Equals(type)) {
+    return "NULL";
   }
   LOG(ERROR) << "Unsupported arrow type " << type->ToString();
   return "NULL";
@@ -73,6 +77,8 @@ PropertyType PropertyTypeFromString(const std::string& type) {
     return arrow::float64();
   } else if (type_upper == "STRING") {
     return arrow::large_utf8();
+  } else if (type_upper == "NULL") {
+    return arrow::null();
   } else {
     LOG(ERROR) << "Unsupported property type " << type;
   }
