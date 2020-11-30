@@ -109,21 +109,21 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
   return archive;
 }
 
+#define TOKENPASTE(x, y) x##y
+#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
+
 #ifndef WITHOUT_LIBUNWIND
 #define RETURN_GS_ERROR(code, msg)                                            \
   return ::boost::leaf::new_error(vineyard::GSError(                          \
       (code), std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
                   std::string(__FUNCTION__) + " -> " + (msg)))
 #else
-#define RETURN_GS_ERROR(code, msg) \
-  std::stringstream ss;            \
-  backtrace(ss);                   \
-  return ::boost::leaf::new_error( \
-      vineyard::GSError((code), ss.str() + " -> " + (msg)))
+#define RETURN_GS_ERROR(code, msg)                   \
+  std::stringstream TOKENPASTE2(_ss, __LINE__);      \
+  backtrace(TOKENPASTE2(_ss, __LINE__));             \
+  return ::boost::leaf::new_error(vineyard::GSError( \
+      (code), TOKENPASTE2(_ss, __LINE__).str() + " -> " + (msg)))
 #endif
-
-#define TOKENPASTE(x, y) x##y
-#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
 #define BOOST_LEAF_ASSIGN(v, r)                                     \
   static_assert(::boost::leaf::is_result_type<                      \

@@ -80,6 +80,7 @@ class ThreadGroup {
     }
 
     std::lock_guard<std::mutex> lg(mutex_);
+
     while (!finished_threads_.empty()) {
       finished_threads_.front().join();
       finished_threads_.pop();
