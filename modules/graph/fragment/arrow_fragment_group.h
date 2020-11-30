@@ -142,6 +142,59 @@ class ArrowFragmentGroupBuilder : public vineyard::ObjectBuilder {
   std::unordered_map<fid_t, uint64_t> fragment_locations_;
 };
 
+inline boost::leaf::result<ObjectID> ConstructFragmentGroup(
+    Client& client, ObjectID frag_id, const grape::CommSpec& comm_spec) {
+  ObjectID group_object_id;
+  uint64_t instance_id = client.instance_id();
+
+  if (comm_spec.worker_id() == 0) {
+    std::vector<uint64_t> gathered_instance_ids(comm_spec.worker_num());
+    std::vector<ObjectID> gathered_object_ids(comm_spec.worker_num());
+
+    MPI_Gather(&instance_id, sizeof(uint64_t), MPI_CHAR,
+               &gathered_instance_ids[0], sizeof(uint64_t), MPI_CHAR, 0,
+               comm_spec.comm());
+
+    MPI_Gather(&frag_id, sizeof(ObjectID), MPI_CHAR, &gathered_object_ids[0],
+               sizeof(ObjectID), MPI_CHAR, 0, comm_spec.comm());
+
+    ArrowFragmentGroupBuilder builder;
+    builder.set_total_frag_num(comm_spec.fnum());
+    auto fragment =
+        std::dynamic_pointer_cast<ArrowFragmentBase>(client.GetObject(frag_id));
+    auto& meta = fragment->meta();
+
+    builder.set_vertex_label_num(
+        meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
+            "vertex_label_num"));
+    builder.set_edge_label_num(
+        meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
+            "edge_label_num"));
+    for (fid_t i = 0; i < comm_spec.fnum(); ++i) {
+      builder.AddFragmentObject(
+          i, gathered_object_ids[comm_spec.FragToWorker(i)],
+          gathered_instance_ids[comm_spec.FragToWorker(i)]);
+    }
+
+    auto group_object =
+        std::dynamic_pointer_cast<ArrowFragmentGroup>(builder.Seal(client));
+    group_object_id = group_object->id();
+    VY_OK_OR_RAISE(client.Persist(group_object_id));
+
+    MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,
+              comm_spec.comm());
+  } else {
+    MPI_Gather(&instance_id, sizeof(uint64_t), MPI_CHAR, NULL, sizeof(uint64_t),
+               MPI_CHAR, 0, comm_spec.comm());
+    MPI_Gather(&frag_id, sizeof(ObjectID), MPI_CHAR, NULL, sizeof(ObjectID),
+               MPI_CHAR, 0, comm_spec.comm());
+
+    MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,
+              comm_spec.comm());
+  }
+  return group_object_id;
+}
+
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_GROUP_H_

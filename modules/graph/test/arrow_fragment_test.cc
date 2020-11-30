@@ -127,83 +127,94 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   grape::InitMPIComm();
-  grape::CommSpec comm_spec;
-  comm_spec.Init(MPI_COMM_WORLD);
 
-  // Load from efiles and vfiles
+  {
+    grape::CommSpec comm_spec;
+    comm_spec.Init(MPI_COMM_WORLD);
+
+    // Load from efiles and vfiles
 #if 1
-  vineyard::ObjectID fragment_id = InvalidObjectID();
-  MPI_Barrier(MPI_COMM_WORLD);
-  double t = -GetCurrentTime();
-  {
+    vineyard::ObjectID fragment_id = InvalidObjectID();
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t = -GetCurrentTime();
+    {
+#if 0
     auto loader =
         std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                              property_graph_types::VID_TYPE>>(
             client, comm_spec, efiles, vfiles, directed != 0);
-    fragment_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragment(); },
-        [](const GSError& e) {
-          LOG(FATAL) << e.error_msg;
-          return 0;
-        },
-        [](const boost::leaf::error_info& unmatched) {
-          LOG(FATAL) << "Unmatched error " << unmatched;
-          return 0;
-        });
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-  t += GetCurrentTime();
-  if (comm_spec.fid() == 0) {
-    LOG(INFO) << "loading time: " << t;
-  }
-
-  {
-    std::shared_ptr<GraphType> graph =
-        std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
-    LOG(INFO) << "[frag-" << graph->fid()
-              << "]: " << VYObjectIDToString(fragment_id);
-    traverse_graph(graph, "./xx/output_graph_" + std::to_string(graph->fid()));
-  }
-  // client.DelData(fragment_id, true, true);
 #else
-  {
-    auto loader =
-        std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                             property_graph_types::VID_TYPE>>(
-            client, comm_spec, efiles, vfiles, directed != 0);
-    vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
-        [](const GSError& e) {
-          LOG(FATAL) << e.error_msg;
-          return 0;
-        },
-        [](const boost::leaf::error_info& unmatched) {
-          LOG(FATAL) << "Unmatched error " << unmatched;
-          return 0;
-        });
-    WriteOut(client, comm_spec, fragment_group_id);
-  }
-
-  // Load from efiles
-  {
-    auto loader =
-        std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                             property_graph_types::VID_TYPE>>(
-            client, comm_spec, efiles, directed != 0);
-    vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
-        [](const GSError& e) {
-          LOG(FATAL) << e.error_msg;
-          return 0;
-        },
-        [](const boost::leaf::error_info& unmatched) {
-          LOG(FATAL) << "Unmatched error " << unmatched;
-          return 0;
-        });
-    WriteOut(client, comm_spec, fragment_group_id);
-  }
+      vfiles.clear();
+      auto loader =
+          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
+                                               property_graph_types::VID_TYPE>>(
+              client, comm_spec, efiles, vfiles, directed != 0);
 #endif
+      fragment_id = boost::leaf::try_handle_all(
+          [&loader]() { return loader->LoadFragment(); },
+          [](const GSError& e) {
+            LOG(FATAL) << e.error_msg;
+            return 0;
+          },
+          [](const boost::leaf::error_info& unmatched) {
+            LOG(FATAL) << "Unmatched error " << unmatched;
+            return 0;
+          });
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    t += GetCurrentTime();
+    if (comm_spec.fid() == 0) {
+      LOG(INFO) << "loading time: " << t;
+    }
 
+    {
+      std::shared_ptr<GraphType> graph =
+          std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
+      LOG(INFO) << "[frag-" << graph->fid()
+                << "]: " << VYObjectIDToString(fragment_id);
+      traverse_graph(graph,
+                     "./xx/output_graph_" + std::to_string(graph->fid()));
+    }
+    // client.DelData(fragment_id, true, true);
+#else
+    {
+      auto loader =
+          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
+                                               property_graph_types::VID_TYPE>>(
+              client, comm_spec, efiles, vfiles, directed != 0);
+      vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
+          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+          [](const GSError& e) {
+            LOG(FATAL) << e.error_msg;
+            return 0;
+          },
+          [](const boost::leaf::error_info& unmatched) {
+            LOG(FATAL) << "Unmatched error " << unmatched;
+            return 0;
+          });
+      WriteOut(client, comm_spec, fragment_group_id);
+    }
+
+    // Load from efiles
+    {
+      auto loader =
+          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
+                                               property_graph_types::VID_TYPE>>(
+              client, comm_spec, efiles, directed != 0);
+      vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
+          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+          [](const GSError& e) {
+            LOG(FATAL) << e.error_msg;
+            return 0;
+          },
+          [](const boost::leaf::error_info& unmatched) {
+            LOG(FATAL) << "Unmatched error " << unmatched;
+            return 0;
+          });
+      WriteOut(client, comm_spec, fragment_group_id);
+    }
+#endif
+  }
   grape::FinalizeMPIComm();
 
   LOG(INFO) << "Passed arrow fragment test...";
