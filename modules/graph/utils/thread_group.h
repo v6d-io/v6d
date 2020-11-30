@@ -16,10 +16,11 @@ limitations under the License.
 #ifndef MODULES_GRAPH_UTILS_THREAD_GROUP_H_
 #define MODULES_GRAPH_UTILS_THREAD_GROUP_H_
 #include <future>
-#include <map>
+#include <limits>
 #include <memory>
 #include <queue>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
