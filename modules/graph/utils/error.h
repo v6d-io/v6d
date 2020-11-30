@@ -223,5 +223,14 @@ sync_gs_error(const grape::CommSpec& comm_spec, F_T&& f, ARGS_T&&... args) {
     }                                                            \
   } while (0)
 
+#define ARROW_CHECK_OK_AND_ASSIGN(lhs, expr)                                   \
+  do {                                                                         \
+    auto status_name = (expr);                                                 \
+    if (!status_name.ok()) {                                                   \
+      LOG(FATAL) << "Arrow check failed: " << status_name.status().ToString(); \
+    }                                                                          \
+    (lhs) = std::move(status_name).ValueOrDie();                               \
+  } while (0)
+
 }  // namespace vineyard
 #endif  // MODULES_GRAPH_UTILS_ERROR_H_
