@@ -23,6 +23,7 @@ limitations under the License.
 
 #include "boost/leaf/all.hpp"
 
+#include "common/backtrace/backtrace.hpp"
 #include "graph/utils/mpi_utils.h"
 
 namespace vineyard {
@@ -33,6 +34,7 @@ enum class ErrorCode {
   kArrowError,
   kVineyardError,
   kUnspecificError,
+  kDistributedError,
   kNetworkError,
   kCommandError,
   kDataTypeError,
@@ -55,6 +57,8 @@ inline const char* ErrorCodeToString(ErrorCode ec) {
     return "VineyardError";
   case ErrorCode::kUnspecificError:
     return "UnspecificError";
+  case ErrorCode::kDistributedError:
+    return "DistributedError";
   case ErrorCode::kNetworkError:
     return "NetworkError";
   case ErrorCode::kCommandError:
@@ -105,27 +109,35 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
   return archive;
 }
 
+#define TOKENPASTE(x, y) x##y
+#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
+
 #define RETURN_GS_ERROR(code, msg)                                            \
   return ::boost::leaf::new_error(vineyard::GSError(                          \
       (code), std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
                   std::string(__FUNCTION__) + " -> " + (msg)))
 
+#define BOOST_LEAF_ASSIGN(v, r)                                     \
+  static_assert(::boost::leaf::is_result_type<                      \
+                    typename std::decay<decltype(r)>::type>::value, \
+                "BOOST_LEAF_ASSIGN requires a result type");        \
+  auto&& TOKENPASTE2(_leaf_r, __LINE__) = r;                        \
+  if (!TOKENPASTE2(_leaf_r, __LINE__))                              \
+    return TOKENPASTE2(_leaf_r, __LINE__).error();                  \
+  v = TOKENPASTE2(_leaf_r, __LINE__).value()
+
 inline GSError all_gather_error(const GSError& e,
                                 const grape::CommSpec& comm_spec) {
   std::stringstream ss;
-  ss << ErrorCodeToString(e.error_code) << " " << e.error_msg;
-  ss << " occurred on Worker " << comm_spec.worker_id();
+  ss << ErrorCodeToString(e.error_code) << " occurred on worker "
+     << comm_spec.worker_id();
+  ss << ": " << e.error_msg;
   auto msg = ss.str();
 
   std::vector<std::string> error_msgs(comm_spec.worker_num());
   GlobalAllGatherv<std::string>(msg, error_msgs, comm_spec);
-  auto msgs = std::accumulate(
-      error_msgs.begin(), error_msgs.end(), std::string(),
-      [](const std::string& a, const std::string& b) -> std::string {
-        return a + (!a.empty() ? ";" : "") + b;
-      });
 
-  return {ErrorCode::kUnspecificError, msgs};
+  return {e.error_code, msg};
 }
 
 inline GSError all_gather_error(const grape::CommSpec& comm_spec) {
@@ -139,8 +151,10 @@ inline GSError all_gather_error(const grape::CommSpec& comm_spec) {
         return a + (!a.empty() ? ";" : "") + b;
       });
 
+  // Return a distributed error, the error messages will be aggregated by
+  // upstream
   if (!msgs.empty()) {
-    return {ErrorCode::kUnspecificError, msgs};
+    return {ErrorCode::kDistributedError, ""};
   }
   return {ErrorCode::kOk, ""};
 }
@@ -163,20 +177,22 @@ sync_gs_error(const grape::CommSpec& comm_spec, F_T&& f, ARGS_T&&... args) {
   return boost::leaf::try_handle_some(
       [&]() -> return_t {
         auto&& r = f_wrapper(f, args...);
-        if (!r) {
+        // We have to return here. Then the concrete error object(GSError) will
+        // be caught by the third lambda.
+        if (!r) {  // throw #1
           return r.error();
         }
         auto e = all_gather_error(comm_spec);
         if (e) {
-          // throw a new error type to prevent invoking AllGatherError twice
-          return boost::leaf::new_error(e, std::string());
+          // throw a new error type to prevent invoking all_gather_error twice
+          return boost::leaf::new_error(e, std::string());  // throw #2
         }
         return r.value();
       },
-      [](const GSError& e, const std::string& dummy) {
+      [](const GSError& e, const std::string& dummy) {  // catch #2
         return boost::leaf::new_error(e);
       },
-      [&comm_spec](const GSError& e) {
+      [&comm_spec](const GSError& e) {  // catch #1
         return boost::leaf::new_error(all_gather_error(e, comm_spec));
       });
 }

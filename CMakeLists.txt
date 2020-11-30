@@ -189,6 +189,10 @@ if(BUILD_VINEYARD_PROFILING)
     add_definitions(-DWITH_PROFILING)
 endif()
 
+if(${LIBUNWIND_FOUND})
+    add_definitions(-DWITH_LIBUNWIND)
+endif ()
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
@@ -261,9 +265,6 @@ if(BUILD_VINEYARD_SERVER)
             add_target_link_options(vineyardd PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
         endif()
         target_link_libraries(vineyardd PRIVATE ${GRPC_GRPC++_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
-    endif()
-    if(NOT LIBUNWIND_FOUND)
-        target_compile_definitions(vineyardd PRIVATE -DWITHOUT_LIBUNWIND)
     endif()
 endif()
 
@@ -366,7 +367,9 @@ endif()
 
 if(BUILD_VINEYARD_TESTS)
     enable_testing()
-    file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test" "${PROJECT_SOURCE_DIR}/test/*.cc")
+    file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test"
+                                  "${PROJECT_SOURCE_DIR}/test/*.cc"
+    )
     foreach(f ${TEST_FILES})
         string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${f})
         set(T_NAME ${CMAKE_MATCH_1})
@@ -376,14 +379,20 @@ if(BUILD_VINEYARD_TESTS)
         else()
             add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
         endif()
-        target_link_libraries(${T_NAME}
+
+        target_link_libraries(${T_NAME} PRIVATE
                               ${VINEYARD_INSTALL_LIBS}
                               ${CPPNETLIB_LIBRARIES})
         if(ARROW_SHARED_LIB)
-            target_link_libraries(${T_NAME} ${ARROW_SHARED_LIB})
+            target_link_libraries(${T_NAME} PRIVATE ${ARROW_SHARED_LIB})
         else()
-            target_link_libraries(${T_NAME} ${ARROW_STATIC_LIB})
+            target_link_libraries(${T_NAME} PRIVATE ${ARROW_STATIC_LIB})
         endif()
+
+        if(${LIBUNWIND_FOUND})
+            target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})
+        endif()
+
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
 

@@ -229,8 +229,8 @@ class BasicArrowFragmentLoader {
         oid_lists_[v_label] = oids_group_by_worker;
         return tmp_table;
       };
-      BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
-      local_v_tables[v_label] = table;
+      BOOST_LEAF_ASSIGN(local_v_tables[v_label],
+                        sync_gs_error(comm_spec_, shuffle_procedure));
     }
 
     return local_v_tables;
@@ -345,10 +345,9 @@ class BasicArrowFragmentLoader {
           }
         }
 #else
-        auto r = beta::ShufflePropertyEdgeTable<vid_t>(
-            comm_spec_, id_parser, src_column_idx, dst_column_idx, table);
-        BOOST_LEAF_CHECK(r);
-        table_out = r.value();
+        BOOST_LEAF_ASSIGN(table_out, beta::ShufflePropertyEdgeTable<vid_t>(
+                                         comm_spec_, id_parser, src_column_idx,
+                                         dst_column_idx, table));
 #endif
         return table_out;
       };

@@ -30,7 +30,7 @@ DECLARE_string(helpmatch);
 static std::shared_ptr<vineyard::VineyardServer> server_ptr_ = nullptr;
 
 void terminate_handle() {
-#ifndef WITHOUT_LIBUNWIND
+#ifdef WITH_LIBUNWIND
   backtrace(std::cerr);
 #endif
 }
