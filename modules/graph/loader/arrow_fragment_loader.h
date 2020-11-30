@@ -190,21 +190,21 @@ class ArrowFragmentLoader {
     BOOST_LEAF_CHECK(initPartitioner());
 #if defined(WITH_PROFILING)
     double init_partitioner_ts = GetCurrentTime();
-    VLOG(2) << "initPartitioner uses " << (init_partitioner_ts - start_ts)
+    VLOG(1) << "initPartitioner uses " << (init_partitioner_ts - start_ts)
             << " seconds";
 #endif
     BOOST_LEAF_CHECK(initBasicLoader());
 #if defined(WITH_PROFILING)
     double init_basic_loader_ts = GetCurrentTime();
-    VLOG(2) << "initBasicLoader uses "
+    VLOG(1) << "initBasicLoader uses "
             << (init_basic_loader_ts - init_partitioner_ts) << " seconds";
 #endif
     BOOST_LEAF_AUTO(frag_id, shuffleAndBuild());
 #if defined(WITH_PROFILING)
     double shuffle_and_build_ts = GetCurrentTime();
-    VLOG(2) << "shuffleAndBuild uses "
+    VLOG(1) << "shuffleAndBuild uses "
             << (shuffle_and_build_ts - init_basic_loader_ts) << " seconds";
-    VLOG(2) << "[worker-" << comm_spec_.worker_id()
+    VLOG(1) << "[worker-" << comm_spec_.worker_id()
             << "] load fragments use: " << (shuffle_and_build_ts - start_ts)
             << " seconds";
 #endif
@@ -326,7 +326,7 @@ class ArrowFragmentLoader {
                         possible_duplicate_oid));
 #if defined(WITH_PROFILING)
     auto shuffle_vtable_ts = GetCurrentTime();
-    VLOG(2) << "ShuffleVertexTables uses " << (shuffle_vtable_ts - start_ts)
+    VLOG(1) << "ShuffleVertexTables uses " << (shuffle_vtable_ts - start_ts)
             << " seconds";
 #endif
     auto oid_lists = basic_arrow_fragment_loader_.GetOidLists();
@@ -343,14 +343,14 @@ class ArrowFragmentLoader {
 
 #if defined(WITH_PROFILING)
     auto build_vertex_map_ts = GetCurrentTime();
-    VLOG(2) << "Build vertex map uses "
+    VLOG(1) << "Build vertex map uses "
             << (build_vertex_map_ts - shuffle_vtable_ts) << " seconds";
 #endif
     BOOST_LEAF_AUTO(local_e_tables,
                     basic_arrow_fragment_loader_.ShuffleEdgeTables(mapper));
 #if defined(WITH_PROFILING)
     auto shuffle_etable_ts = GetCurrentTime();
-    VLOG(2) << "ShuffleEdgeTables uses "
+    VLOG(1) << "ShuffleEdgeTables uses "
             << (shuffle_etable_ts - build_vertex_map_ts) << " seconds";
 #endif
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr);
@@ -437,20 +437,20 @@ class ArrowFragmentLoader {
         std::move(local_e_tables), directed_, thread_num));
 #if defined(WITH_PROFILING)
     auto frag_builder_init_ts = GetCurrentTime();
-    VLOG(2) << "Init frag builder uses "
+    VLOG(1) << "Init frag builder uses "
             << (frag_builder_init_ts - frag_builder_start_ts) << " seconds";
 #endif
     auto frag = std::dynamic_pointer_cast<ArrowFragment<oid_t, vid_t>>(
         frag_builder.Seal(client_));
 #if defined(WITH_PROFILING)
     auto frag_builder_seal_ts = GetCurrentTime();
-    VLOG(2) << "Seal frag builder uses "
+    VLOG(1) << "Seal frag builder uses "
             << (frag_builder_seal_ts - frag_builder_init_ts) << " seconds";
 #endif
     VINEYARD_CHECK_OK(client_.Persist(frag->id()));
 #if defined(WITH_PROFILING)
     auto frag_builder_persist_ts = GetCurrentTime();
-    VLOG(2) << "Persist frag builder uses "
+    VLOG(1) << "Persist frag builder uses "
             << (frag_builder_persist_ts - frag_builder_seal_ts) << " seconds";
 #endif
     return frag->id();
@@ -1385,7 +1385,7 @@ class ArrowFragmentLoader {
                             "Unexpected type: " + to_type->ToString() +
                                 "; Origin type: " + from_type->ToString());
           }
-          VLOG(2) << "Cast " << from_type->ToString() << " To "
+          VLOG(10) << "Cast " << from_type->ToString() << " To "
                   << to_type->ToString();
         }
         auto chunk_array =

@@ -34,10 +34,13 @@ class ThreadGroup {
 
  public:
   explicit ThreadGroup(tid_t parallelism = std::numeric_limits<tid_t>::max())
-      : parallelism_(parallelism), tid_(0) {}
+      : parallelism_(parallelism), tid_(0), stopped_(false) {}
 
   template <class F_T, class... ARGS_T>
   tid_t AddTask(F_T&& f, ARGS_T&&... args) {
+    if (stopped_) {
+      throw std::runtime_error("ThreadGroup is stopped");
+    }
     while (getRunningThreadNum() >= parallelism_) {
       std::lock_guard<std::mutex> lg(mutex_);
 
@@ -45,6 +48,7 @@ class ThreadGroup {
         finished_threads_.front().join();
         finished_threads_.pop();
       }
+      std::this_thread::yield();
     }
 
     auto task_wrapper = [this](tid_t tid, F_T&& _f,
@@ -76,6 +80,7 @@ class ThreadGroup {
   }
 
   ~ThreadGroup() {
+    stopped_ = true;
     while (getRunningThreadNum() > 0) {
       std::this_thread::yield();
     }
@@ -114,6 +119,7 @@ class ThreadGroup {
 
   tid_t parallelism_;
   tid_t tid_;
+  bool stopped_;
   std::unordered_map<tid_t, std::thread> threads_;
   std::unordered_map<tid_t, std::future<return_t>> tasks_;
   std::queue<std::thread> finished_threads_;
