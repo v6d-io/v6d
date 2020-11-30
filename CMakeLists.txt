@@ -378,7 +378,7 @@ if(BUILD_VINEYARD_TESTS)
         if(BUILD_VINEYARD_TESTS_ALL)
             add_executable(${T_NAME} test/${T_NAME}.cc ${BT_SRC_FILES})
         else()
-            add_executable(${T_NAME} ${BT_SRC_FILES} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
+            add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
         endif()
 
         target_link_libraries(${T_NAME} PRIVATE
