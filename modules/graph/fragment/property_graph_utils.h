@@ -22,10 +22,15 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "arrow/builder.h"
+#include "boost/leaf/all.hpp"
+
 #include "grape/utils/vertex_array.h"
+#include "grape/worker/comm_spec.h"
 
 #include "graph/fragment/property_graph_types.h"
-#include "graph/fragment/property_graph_utils.h"
+#include "graph/utils/error.h"
+#include "graph/utils/mpi_utils.h"
 
 namespace vineyard {
 
@@ -613,15 +618,218 @@ assign_array(std::shared_ptr<arrow::Array> array, int64_t) {
       typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array);
 }
 
-}  // namespace vineyard
-
-namespace vineyard {
-
 template <>
 struct ConvertToArrowType<::grape::EmptyType> {
   using ArrayType = EmptyArray;
   static std::shared_ptr<arrow::DataType> TypeValue() { return arrow::null(); }
 };
+
+inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
+    const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
+  size_t field_num = 0;
+  for (const auto& schema : schemas) {
+    if (schema != nullptr) {
+      field_num = schema->num_fields();
+      break;
+    }
+  }
+  if (field_num == 0) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidOperationError, "Every schema is empty");
+  }
+  // Perform type lossen.
+  // timestamp -> int64 -> double -> utf8   binary (not supported)
+  std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
+  for (size_t i = 0; i < field_num; ++i) {
+    for (const auto& schema : schemas) {
+      if (schema != nullptr) {
+        fields[i].push_back(schema->field(i));
+      }
+    }
+  }
+  std::vector<std::shared_ptr<arrow::Field>> lossen_fields(field_num);
+
+  for (size_t i = 0; i < field_num; ++i) {
+    lossen_fields[i] = fields[i][0];
+    if (fields[i][0]->type() == arrow::null()) {
+      continue;
+    }
+    auto res = fields[i][0]->type();
+    if (res->Equals(arrow::timestamp(arrow::TimeUnit::SECOND))) {
+      res = arrow::int64();
+    }
+    if (res->Equals(arrow::int64())) {
+      for (size_t j = 1; j < fields[i].size(); ++j) {
+        if (fields[i][j]->type()->Equals(arrow::float64())) {
+          res = arrow::float64();
+        }
+      }
+    }
+    if (res->Equals(arrow::float64())) {
+      for (size_t j = 1; j < fields[i].size(); ++j) {
+        if (fields[i][j]->type()->Equals(arrow::utf8())) {
+          res = arrow::utf8();
+        }
+      }
+    }
+    if (res->Equals(arrow::utf8())) {
+      res = arrow::large_utf8();
+    }
+    lossen_fields[i] = lossen_fields[i]->WithType(res);
+  }
+  return std::make_shared<arrow::Schema>(lossen_fields);
+}
+
+// Inspired by arrow::compute::Cast
+inline boost::leaf::result<std::shared_ptr<arrow::Array>> CastIntToDouble(
+    const std::shared_ptr<arrow::Array>& in,
+    const std::shared_ptr<arrow::DataType>& to_type) {
+  CHECK_OR_RAISE(in->type()->Equals(arrow::int64()));
+  CHECK_OR_RAISE(to_type->Equals(arrow::float64()));
+  using in_type = int64_t;
+  using out_type = double;
+  auto in_data = in->data()->GetValues<in_type>(1);
+  std::vector<out_type> out_data(in->length());
+  for (int64_t i = 0; i < in->length(); ++i) {
+    out_data[i] = static_cast<out_type>(*in_data++);
+  }
+  arrow::DoubleBuilder builder;
+  ARROW_OK_OR_RAISE(builder.AppendValues(out_data));
+  std::shared_ptr<arrow::Array> out;
+  ARROW_OK_OR_RAISE(builder.Finish(&out));
+  ARROW_OK_OR_RAISE(out->ValidateFull());
+  return out;
+}
+
+// Timestamp value are stored as as number of seconds, milliseconds,
+// microseconds or nanoseconds since UNIX epoch.
+// CSV reader can only produce timestamp in seconds.
+inline boost::leaf::result<std::shared_ptr<arrow::Array>> CastDateToInt(
+    const std::shared_ptr<arrow::Array>& in,
+    const std::shared_ptr<arrow::DataType>& to_type) {
+  CHECK_OR_RAISE(in->type()->Equals(arrow::timestamp(arrow::TimeUnit::SECOND)));
+  CHECK_OR_RAISE(to_type->Equals(arrow::int64()));
+  auto array_data = in->data()->Copy();
+  array_data->type = to_type;
+  auto out = arrow::MakeArray(array_data);
+  ARROW_OK_OR_RAISE(out->ValidateFull());
+  return out;
+}
+
+inline boost::leaf::result<std::shared_ptr<arrow::Array>> CastStringToBigString(
+    const std::shared_ptr<arrow::Array>& in,
+    const std::shared_ptr<arrow::DataType>& to_type) {
+  auto array_data = in->data()->Copy();
+  auto offset = array_data->buffers[1];
+  using from_offset_type = typename arrow::StringArray::offset_type;
+  using to_string_offset_type = typename arrow::LargeStringArray::offset_type;
+  auto raw_value_offsets_ =
+      offset == NULLPTR
+          ? NULLPTR
+          : reinterpret_cast<const from_offset_type*>(offset->data());
+  std::vector<to_string_offset_type> to_offset(offset->size() /
+                                               sizeof(from_offset_type));
+  for (size_t i = 0; i < to_offset.size(); ++i) {
+    to_offset[i] = raw_value_offsets_[i];
+  }
+  std::shared_ptr<arrow::Buffer> buffer;
+  arrow::TypedBufferBuilder<to_string_offset_type> buffer_builder;
+  buffer_builder.Append(to_offset.data(), to_offset.size());
+  buffer_builder.Finish(&buffer);
+  array_data->type = to_type;
+  array_data->buffers[1] = buffer;
+  auto out = arrow::MakeArray(array_data);
+  ARROW_OK_OR_RAISE(out->ValidateFull());
+  return out;
+}
+
+inline boost::leaf::result<std::shared_ptr<arrow::Array>> CastNullToOthers(
+    const std::shared_ptr<arrow::Array>& in,
+    const std::shared_ptr<arrow::DataType>& to_type) {
+  std::unique_ptr<arrow::ArrayBuilder> builder;
+  ARROW_OK_OR_RAISE(
+      arrow::MakeBuilder(arrow::default_memory_pool(), to_type, &builder));
+  ARROW_OK_OR_RAISE(builder->AppendNulls(in->length()));
+  std::shared_ptr<arrow::Array> out;
+  ARROW_OK_OR_RAISE(builder->Finish(&out));
+  ARROW_OK_OR_RAISE(out->ValidateFull());
+  return out;
+}
+
+inline boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
+    const std::shared_ptr<arrow::Table>& table,
+    const std::shared_ptr<arrow::Schema>& schema) {
+  if (table->schema()->Equals(schema)) {
+    return table;
+  }
+  CHECK_OR_RAISE(table->num_columns() == schema->num_fields());
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
+  for (int64_t i = 0; i < table->num_columns(); ++i) {
+    auto col = table->column(i);
+    if (!table->field(i)->type()->Equals(schema->field(i)->type())) {
+      auto from_type = table->field(i)->type();
+      auto to_type = schema->field(i)->type();
+      std::vector<std::shared_ptr<arrow::Array>> chunks;
+      for (int64_t j = 0; j < col->num_chunks(); ++j) {
+        auto array = col->chunk(j);
+        if (from_type->Equals(arrow::int64()) &&
+            to_type->Equals(arrow::float64())) {
+          BOOST_LEAF_AUTO(new_array, CastIntToDouble(array, to_type));
+          chunks.push_back(new_array);
+        } else if (from_type->Equals(
+                       arrow::timestamp(arrow::TimeUnit::SECOND)) &&
+                   to_type->Equals(arrow::int64())) {
+          BOOST_LEAF_AUTO(new_array, CastDateToInt(array, to_type));
+          chunks.push_back(new_array);
+        } else if (from_type->Equals(arrow::utf8()) &&
+                   to_type->Equals(arrow::large_utf8())) {
+          BOOST_LEAF_AUTO(new_array, CastStringToBigString(array, to_type));
+          chunks.push_back(new_array);
+        } else if (from_type->Equals(arrow::null())) {
+          BOOST_LEAF_AUTO(new_array, CastNullToOthers(array, to_type));
+          chunks.push_back(new_array);
+        } else {
+          RETURN_GS_ERROR(ErrorCode::kDataTypeError,
+                          "Unexpected type: " + to_type->ToString() +
+                              "; Origin type: " + from_type->ToString());
+        }
+        VLOG(2) << "Cast " << from_type->ToString() << " To "
+                << to_type->ToString();
+      }
+      auto chunk_array = std::make_shared<arrow::ChunkedArray>(chunks, to_type);
+      new_columns.push_back(chunk_array);
+    } else {
+      new_columns.push_back(col);
+    }
+  }
+  return arrow::Table::Make(schema, new_columns);
+}
+
+// This method used when several workers is loading a file in parallel, each
+// worker will read a chunk of the origin file into a arrow::Table.
+// We may get different table schemas as some chunks may have zero rows
+// or some chunks' data doesn't have any floating numbers, but others might
+// have. We could use this method to gather their schemas, and find out most
+// common fields, construct a new schema and broadcast back. Note: We perform
+// type loosen, int64 -> double. timestamp -> int64.
+inline boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
+    const std::shared_ptr<arrow::Table>& table,
+    const grape::CommSpec& comm_spec) {
+  std::shared_ptr<arrow::Schema> local_schema =
+      table != nullptr ? table->schema() : nullptr;
+  std::vector<std::shared_ptr<arrow::Schema>> schemas;
+
+  GlobalAllGatherv(local_schema, schemas, comm_spec);
+  BOOST_LEAF_AUTO(normalized_schema, TypeLoosen(schemas));
+
+  if (table == nullptr) {
+    std::shared_ptr<arrow::Table> table_out;
+    VY_OK_OR_RAISE(
+        vineyard::EmptyTableBuilder::Build(normalized_schema, table_out));
+    return table_out;
+  } else {
+    return CastTableToSchema(table, normalized_schema);
+  }
+}
 
 }  // namespace vineyard
 

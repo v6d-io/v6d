@@ -42,6 +42,130 @@ limitations under the License.
 
 namespace vineyard {
 
+template <typename T>
+struct AppendHelper {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    return Status::NotImplemented("Unimplemented for type: " +
+                                  array->type()->ToString());
+  }
+};
+
+template <>
+struct AppendHelper<uint64_t> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::UInt64Builder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::UInt64Array>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<int64_t> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::Int64Builder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::Int64Array>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<uint32_t> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::UInt32Builder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::UInt32Array>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<int32_t> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::Int32Builder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::Int32Array>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<float> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::FloatBuilder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::FloatArray>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<double> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::DoubleBuilder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::DoubleArray>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<std::string> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::BinaryBuilder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::BinaryArray>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<arrow::TimestampType> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(
+        dynamic_cast<arrow::TimestampBuilder*>(builder)->Append(
+            std::dynamic_pointer_cast<arrow::TimestampArray>(array)->GetView(
+                offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<void> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(
+        dynamic_cast<arrow::NullBuilder*>(builder)->Append(nullptr));
+    return Status::OK();
+  }
+};
+
+typedef Status (*appender_func)(arrow::ArrayBuilder*,
+                                std::shared_ptr<arrow::Array>, size_t);
+
+/**
+ * @brief TableAppender supports the append operation for tables in vineyard
+ *
+ */
+class TableAppender {
+ public:
+  explicit TableAppender(std::shared_ptr<arrow::Schema> schema);
+
+  Status Apply(std::unique_ptr<arrow::RecordBatchBuilder>& builder,
+               std::shared_ptr<arrow::RecordBatch> batch, size_t offset,
+               std::vector<std::shared_ptr<arrow::RecordBatch>>& batches_out);
+
+  Status Flush(std::unique_ptr<arrow::RecordBatchBuilder>& builder,
+               std::vector<std::shared_ptr<arrow::RecordBatch>>& batches_out);
+
+ private:
+  std::vector<appender_func> funcs_;
+  size_t col_num_;
+};
+
 const int chunk_size = 409600;
 
 template <typename T>
