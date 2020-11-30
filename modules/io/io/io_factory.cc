@@ -44,7 +44,8 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
   std::string scheme = "file";
   size_t pos = location.find_first_of(':');
 
-  if (pos == std::string::npos || !pos || pos == location.length() - 1 || location[pos + 1] != '/') {
+  if (pos == std::string::npos || !pos || pos == location.length() - 1 ||
+      location[pos + 1] != '/') {
     VLOG(1) << "Use default file location(local) to open: " + location;
   } else {
     scheme = location.substr(0, pos);
