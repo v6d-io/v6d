@@ -156,22 +156,22 @@ class ArrowFragmentLoader {
 #if defined(WITH_PROFILING)
     double init_partitioner_ts = GetCurrentTime();
     VLOG(10) << "initPartitioner uses " << (init_partitioner_ts - start_ts)
-            << " seconds";
+             << " seconds";
 #endif
     BOOST_LEAF_CHECK(initBasicLoader());
 #if defined(WITH_PROFILING)
     double init_basic_loader_ts = GetCurrentTime();
     VLOG(10) << "initBasicLoader uses "
-            << (init_basic_loader_ts - init_partitioner_ts) << " seconds";
+             << (init_basic_loader_ts - init_partitioner_ts) << " seconds";
 #endif
     BOOST_LEAF_AUTO(frag_id, shuffleAndBuild());
 #if defined(WITH_PROFILING)
     double shuffle_and_build_ts = GetCurrentTime();
     VLOG(10) << "shuffleAndBuild uses "
-            << (shuffle_and_build_ts - init_basic_loader_ts) << " seconds";
+             << (shuffle_and_build_ts - init_basic_loader_ts) << " seconds";
     VLOG(10) << "[worker-" << comm_spec_.worker_id()
-            << "] load fragments use: " << (shuffle_and_build_ts - start_ts)
-            << " seconds";
+             << "] load fragments use: " << (shuffle_and_build_ts - start_ts)
+             << " seconds";
 #endif
     return frag_id;
   }
@@ -342,7 +342,7 @@ class ArrowFragmentLoader {
 #if defined(WITH_PROFILING)
     auto shuffle_vtable_ts = GetCurrentTime();
     VLOG(10) << "ShuffleVertexTables uses " << (shuffle_vtable_ts - start_ts)
-            << " seconds";
+             << " seconds";
 #endif
     auto oid_lists = basic_arrow_fragment_loader_.GetOidLists();
     BasicArrowVertexMapBuilder<typename InternalType<oid_t>::type, vid_t>
@@ -359,14 +359,14 @@ class ArrowFragmentLoader {
 #if defined(WITH_PROFILING)
     auto build_vertex_map_ts = GetCurrentTime();
     VLOG(10) << "Build vertex map uses "
-            << (build_vertex_map_ts - shuffle_vtable_ts) << " seconds";
+             << (build_vertex_map_ts - shuffle_vtable_ts) << " seconds";
 #endif
     BOOST_LEAF_AUTO(local_e_tables,
                     basic_arrow_fragment_loader_.ShuffleEdgeTables(mapper));
 #if defined(WITH_PROFILING)
     auto shuffle_etable_ts = GetCurrentTime();
     VLOG(10) << "ShuffleEdgeTables uses "
-            << (shuffle_etable_ts - build_vertex_map_ts) << " seconds";
+             << (shuffle_etable_ts - build_vertex_map_ts) << " seconds";
 #endif
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr);
     PropertyGraphSchema schema;
@@ -453,20 +453,20 @@ class ArrowFragmentLoader {
 #if defined(WITH_PROFILING)
     auto frag_builder_init_ts = GetCurrentTime();
     VLOG(10) << "Init frag builder uses "
-            << (frag_builder_init_ts - frag_builder_start_ts) << " seconds";
+             << (frag_builder_init_ts - frag_builder_start_ts) << " seconds";
 #endif
     auto frag = std::dynamic_pointer_cast<ArrowFragment<oid_t, vid_t>>(
         frag_builder.Seal(client_));
 #if defined(WITH_PROFILING)
     auto frag_builder_seal_ts = GetCurrentTime();
     VLOG(10) << "Seal frag builder uses "
-            << (frag_builder_seal_ts - frag_builder_init_ts) << " seconds";
+             << (frag_builder_seal_ts - frag_builder_init_ts) << " seconds";
 #endif
     VINEYARD_CHECK_OK(client_.Persist(frag->id()));
 #if defined(WITH_PROFILING)
     auto frag_builder_persist_ts = GetCurrentTime();
     VLOG(10) << "Persist frag builder uses "
-            << (frag_builder_persist_ts - frag_builder_seal_ts) << " seconds";
+             << (frag_builder_persist_ts - frag_builder_seal_ts) << " seconds";
 #endif
     return frag->id();
   }
