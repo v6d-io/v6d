@@ -380,13 +380,13 @@ if(BUILD_VINEYARD_TESTS)
             add_executable(${T_NAME} ${BT_SRC_FILES} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
         endif()
 
-        target_link_libraries(${T_NAME}
+        target_link_libraries(${T_NAME} PRIVATE
                               ${VINEYARD_INSTALL_LIBS}
                               ${CPPNETLIB_LIBRARIES})
         if(ARROW_SHARED_LIB)
-            target_link_libraries(${T_NAME} ${ARROW_SHARED_LIB})
+            target_link_libraries(${T_NAME} PRIVATE ${ARROW_SHARED_LIB})
         else()
-            target_link_libraries(${T_NAME} ${ARROW_STATIC_LIB})
+            target_link_libraries(${T_NAME} PRIVATE ${ARROW_STATIC_LIB})
         endif()
 
         if(${LIBUNWIND_FOUND})
