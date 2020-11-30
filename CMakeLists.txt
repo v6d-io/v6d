@@ -366,16 +366,20 @@ endif()
 
 if(BUILD_VINEYARD_TESTS)
     enable_testing()
-    file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test" "${PROJECT_SOURCE_DIR}/test/*.cc")
+    file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test"
+                                  "${PROJECT_SOURCE_DIR}/test/*.cc"
+    )
+    file(GLOB_RECURSE BT_SRC_FILES "${PROJECT_SOURCE_DIR}/src/common/backtrace/*.cc")
     foreach(f ${TEST_FILES})
         string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${f})
         set(T_NAME ${CMAKE_MATCH_1})
         message(STATUS "Found unit_test - " ${T_NAME})
         if(BUILD_VINEYARD_TESTS_ALL)
-            add_executable(${T_NAME} test/${T_NAME}.cc)
+            add_executable(${T_NAME} test/${T_NAME}.cc ${BT_SRC_FILES})
         else()
-            add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
+            add_executable(${T_NAME} ${BT_SRC_FILES} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
         endif()
+
         target_link_libraries(${T_NAME}
                               ${VINEYARD_INSTALL_LIBS}
                               ${CPPNETLIB_LIBRARIES})
@@ -384,6 +388,13 @@ if(BUILD_VINEYARD_TESTS)
         else()
             target_link_libraries(${T_NAME} ${ARROW_STATIC_LIB})
         endif()
+
+        if(${LIBUNWIND_FOUND})
+            target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})
+        else()
+            target_compile_definitions(${T_NAME} PRIVATE -DWITHOUT_LIBUNWIND)
+        endif()
+
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
 
