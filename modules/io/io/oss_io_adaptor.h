@@ -69,7 +69,9 @@ class OSSIOAdaptor : public IIOAdaptor {
     return Status::NotImplemented();
   }
 
-  Status Write(void* buffer, size_t size) override;
+  Status Write(void* buffer, size_t size) override {
+    return Status::NotImplemented();
+  }
 
   Status ReadTable(std::shared_ptr<arrow::Table>* table) override;
 
@@ -93,13 +95,11 @@ class OSSIOAdaptor : public IIOAdaptor {
   }
 
  private:
-  Status listAllObjects(const std::string& prefix, const std::string& suffix);
+  Status getObjectSize(size_t& size);
 
-  void selectObjects();
+  Status readLine(std::string& line, size_t& cursor);
 
-  Status producerRoutine();
-
-  Status getObjectToBuffer(const std::string& object_name, std::string& block);
+  Status getRange(const size_t begin, const size_t end, std::string& content);
 
   void parseOssCredentials(const std::string& file_name);
   void parseOssEnvironmentVariables();
@@ -124,9 +124,7 @@ class OSSIOAdaptor : public IIOAdaptor {
   std::string sts_token_;
 
   std::string bucket_name_;
-
-  std::string prefix_;
-  std::string suffix_;
+  std::string object_name_;
 
   std::vector<std::string> objects_;
   size_t current_object_;
@@ -140,6 +138,11 @@ class OSSIOAdaptor : public IIOAdaptor {
 
   PCBlockingQueue<std::string> queue_;
 
+  size_t line_cur_ = 0;
+  size_t begin_ = 0;
+  size_t end_;
+  size_t seg_len_ = 1024;
+  size_t total_len_;
   size_t part_num_;
   size_t part_id_;
   std::unordered_multimap<std::string, std::string> meta_;

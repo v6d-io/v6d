@@ -41,14 +41,14 @@ void IOFactory::Finalize() { LocalIOAdaptor::Finalize(); }
  */
 std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
     const std::string& location, Client*) {
-  std::error_code err;
-  network::uri instance(location, err);
-  std::string scheme;
-  if (!err) {
-    scheme = instance.scheme().to_string();
-  } else {
+  std::string scheme = "file";
+  size_t pos = location.find_first_of(':');
+
+  if (pos == std::string::npos || !pos || pos == location.length() - 1 ||
+      location[pos + 1] != '/') {
     VLOG(1) << "Use default file location(local) to open: " + location;
-    scheme = "file";
+  } else {
+    scheme = location.substr(0, pos);
   }
 
   if (scheme == "file") {
