@@ -69,7 +69,8 @@ inline std::string generate_name_with_suffix(
   return prefix + "_" + std::to_string(v_label) + "_" + std::to_string(e_label);
 }
 
-inline std::string arrow_type_to_string(std::shared_ptr<arrow::DataType> type) {
+inline std::string arrow_type_to_string(
+    const std::shared_ptr<arrow::DataType>& type) {
   if (type->Equals(arrow::int32())) {
     return "int32_t";
   } else if (type->Equals(arrow::int64())) {
@@ -82,7 +83,7 @@ inline std::string arrow_type_to_string(std::shared_ptr<arrow::DataType> type) {
     return "uint32_t";
   } else if (type->Equals(arrow::uint64())) {
     return "uint64_t";
-  } else if (type->Equals(arrow::utf8())) {
+  } else if (type->Equals(arrow::utf8()) || type->Equals(arrow::large_utf8())) {
     return "string";
   } else {
     return "undefined";
