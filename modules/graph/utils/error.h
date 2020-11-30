@@ -112,7 +112,7 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
 #define TOKENPASTE(x, y) x##y
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
-#ifndef WITHOUT_LIBUNWIND
+#ifdef WITH_LIBUNWIND
 #define RETURN_GS_ERROR(code, msg)                   \
   std::stringstream TOKENPASTE2(_ss, __LINE__);      \
   backtrace(TOKENPASTE2(_ss, __LINE__));             \
