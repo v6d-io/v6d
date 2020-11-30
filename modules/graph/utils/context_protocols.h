@@ -68,16 +68,26 @@ struct TypeToInt<std::string> {
   static constexpr int value = 8;
 };
 
-inline int ArrowDataTypeToInt(std::shared_ptr<arrow::DataType> type) {
-  if (type->Equals(arrow::int32())) {
-    return 1;
-  } else if (type->Equals(arrow::float64())) {
-    return 2;
+inline int ArrowDataTypeToInt(const std::shared_ptr<arrow::DataType>& type) {
+  if (type->Equals(arrow::boolean())) {
+    return TypeToInt<bool>::value;
+  } else if (type->Equals(arrow::int32())) {
+    return TypeToInt<int32_t>::value;
+  } else if (type->Equals(arrow::uint32())) {
+    return TypeToInt<uint32_t>::value;
   } else if (type->Equals(arrow::int64())) {
-    return 3;
-  } else {
-    return -1;
+    return TypeToInt<int32_t>::value;
+  } else if (type->Equals(arrow::uint64())) {
+    return TypeToInt<uint32_t>::value;
+  } else if (type->Equals(arrow::float32())) {
+    return TypeToInt<float>::value;
+  } else if (type->Equals(arrow::float64())) {
+    return TypeToInt<double>::value;
+  } else if (type->Equals(arrow::utf8()) || type->Equals(arrow::large_utf8())) {
+    return TypeToInt<std::string>::value;
   }
+
+  return -1;
 }
 
 }  // namespace vineyard
