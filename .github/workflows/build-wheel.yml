@@ -94,9 +94,6 @@ jobs:
 
           ccache --show-stats
 
-          export CC=gcc-8
-          export CXX=g++-8
-
           echo "Installing gflags ..."
           cd /tmp
           curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
@@ -173,9 +170,6 @@ jobs:
         run: |
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$HOME/.local/bin:$PATH
           export MACOSX_DEPLOYMENT_TARGET=10.6
-
-          export CC=gcc-8
-          export CXX=g++-8
 
           source ~/.bash_profile
           conda activate buildwheel
