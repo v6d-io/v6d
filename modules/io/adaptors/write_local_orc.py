@@ -65,6 +65,7 @@ def write_local_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
     reader = instream.open_reader(client)
 
     writer = None
+    path += f'_{proc_index}'
     with open(path, 'wb') as f:
         while True:
             try:

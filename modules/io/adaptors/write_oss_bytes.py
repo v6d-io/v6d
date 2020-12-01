@@ -18,17 +18,14 @@
 
 import json
 import sys
+import oss2
 from urllib.parse import urlparse
 
 import vineyard
-
-from hdfs3 import HDFileSystem
-import pyarrow as pa
-
 from vineyard.io.byte import ByteStreamBuilder
 
 
-def write_hdfs_bytes(vineyard_socket, stream_id, path, proc_num, proc_index):
+def write_oss_bytes(vineyard_socket, stream_id, path, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
@@ -36,28 +33,33 @@ def write_hdfs_bytes(vineyard_socket, stream_id, path, proc_num, proc_index):
     instream = streams[proc_index]
     reader = instream.open_reader(client)
 
-    host, port = urlparse(path).netloc.split(':')
-    hdfs = HDFileSystem(host=host, port=int(port))
-    path = urlparse(path).path
+    parsed = urlparse(path)
+    auth = oss2.Auth(parsed.username, parsed.password)
+    _, bucket_name, object_name = parsed.path.split('/', 2)
+    bucket = oss2.Bucket(auth, parsed.hostname, bucket_name)
 
-    path += f'_{proc_index}'
-    with hdfs.open(path, 'wb') as f:
-        while True:
-            try:
-                buf = reader.next()
-            except vineyard.StreamDrainedException:
-                f.close()
-                break
-            f.write(bytes(memoryview(buf)))
+    result = None
+    object_name += f'_{proc_index}'
+
+    while True:
+        try:
+            buf = reader.next()
+        except vineyard.StreamDrainedException:
+            break
+        if result is None:
+            offset = 0
+        else:
+            offset = result.next_position
+        result = bucket.append_object(object_name, offset, bytes(memoryview(buf)))
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 6:
-        print('usage: ./write_hdfs_bytes <ipc_socket> <stream_id> <hdfs path> <proc_num> <proc_index>')
+        print('usage: ./write_oss_bytes <ipc_socket> <stream_id> <file_path> <proc_num> <proc_index>')
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
-    hdfs_path = sys.argv[3]
+    file_path = sys.argv[3]
     proc_num = int(sys.argv[4])
     proc_index = int(sys.argv[5])
-    write_hdfs_bytes(ipc_socket, stream_id, hdfs_path, proc_num, proc_index)
+    write_oss_bytes(ipc_socket, stream_id, file_path, proc_num, proc_index)
