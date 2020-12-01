@@ -56,7 +56,7 @@ def test_local_with_header(vineyard_ipc_socket, vineyard_endpoint, test_dataset,
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 def test_local_without_header(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
@@ -68,7 +68,7 @@ def test_local_without_header(vineyard_ipc_socket, vineyard_endpoint, test_datas
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 def test_local_orc(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
@@ -80,7 +80,7 @@ def test_local_orc(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_da
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e.orc' % test_dataset, '%s/testout.orc' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e.orc' % test_dataset, '%s/testout.orc_0' % test_dataset_tmp)
 
 
 @pytest.mark.skip_without_hdfs()
@@ -134,7 +134,7 @@ def test_hdfs_bytes(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_d
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 def test_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
@@ -154,7 +154,7 @@ def test_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 @pytest.mark.skip('oss not available at github ci')
