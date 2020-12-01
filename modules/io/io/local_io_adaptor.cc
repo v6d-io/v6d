@@ -343,10 +343,10 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
 
   // If include_all_columns_ is set, push other names as well
   if (include_all_columns_) {
-    for (size_t i = 0; i < original_columns_.size(); ++i) {
-      if (std::find(std::begin(indices), std::end(indices), i) ==
-          indices.end()) {
-        columns_.push_back(original_columns_[i]);
+    for (const auto& col : original_columns_) {
+      if (std::find(std::begin(columns_), std::end(columns_), col) ==
+          columns_.end()) {
+        columns_.push_back(col);
       }
     }
   }
