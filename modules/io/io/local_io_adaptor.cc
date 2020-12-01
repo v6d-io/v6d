@@ -76,6 +76,11 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
       } else if (kv_pair[0] == "header_row") {
         header_row_ = (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
         meta_.emplace("header_row", std::to_string(header_row_));
+      } else if (kv_pair[0] == "include_all_columns") {
+        include_all_columns_ =
+            (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
+        meta_.emplace("include_all_columns",
+                      std::to_string(include_all_columns_));
       } else if (kv_pair.size() > 1) {
         meta_.emplace(kv_pair[0], kv_pair[1]);
       }
@@ -288,9 +293,6 @@ Status LocalIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
 /// We only use numbers for vid index.
 /// So we should get the name from \a origin_columns, then associate it with
 /// column type.
-///
-/// N.B. When all include_columns is numbers, we should read all other
-/// properties, Because no property is specified.
 
 /// \a column_types also may have empty fields, means let arrow deduce type
 /// for that column.
@@ -325,12 +327,7 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
                          }) == s.end();
   };
 
-  bool add_all_columns = false;
-  if (std::all_of(
-          columns_.begin(), columns_.end(),
-          [&is_number](const std::string& s) { return is_number(s); })) {
-    add_all_columns = true;
-  }
+  // Get all indices represented column, and get their name
   std::vector<int> indices;
   for (size_t i = 0; i < columns_.size(); ++i) {
     if (is_number(columns_[i])) {
@@ -343,8 +340,9 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
       columns_[i] = original_columns_[col_idx];
     }
   }
-  // If all column given is number, we need to add all other columns
-  if (add_all_columns) {
+
+  // If include_all_columns_ is set, push other names as well
+  if (include_all_columns_) {
     for (size_t i = 0; i < original_columns_.size(); ++i) {
       if (std::find(std::begin(indices), std::end(indices), i) ==
           indices.end()) {

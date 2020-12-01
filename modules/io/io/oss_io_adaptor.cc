@@ -121,7 +121,7 @@ OSSIOAdaptor::OSSIOAdaptor(const std::string& location) : location_(location) {
   parseOssCredentials(OSS_CREDENTIALS_PATH);
   parseOssEnvironmentVariables();
   parseGFlags();
-  parseYamlLocation(location);
+  parseLocationURI(location);
   // There are two kinds of objects. one end with .meta, one end with .tsv,
   // We only want .tsv file
   current_object_ = 0;
@@ -218,7 +218,7 @@ void OSSIOAdaptor::parseGFlags() {
   }
 }
 
-void OSSIOAdaptor::parseYamlLocation(const std::string& location) {
+void OSSIOAdaptor::parseLocationURI(const std::string& location) {
   // location format:
   // oss://<access_id>:<access_key>@<endpoint>/<bucket_name>/<object_name>
   // oss:///<bucket_name>/<object_name>
@@ -277,6 +277,11 @@ void OSSIOAdaptor::parseYamlLocation(const std::string& location) {
       } else if (kv_pair[0] == "header_row") {
         header_row_ = (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
         meta_.emplace("header_row", std::to_string(header_row_));
+      } else if (kv_pair[0] == "include_all_columns") {
+        include_all_columns_ =
+            (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
+        meta_.emplace("include_all_columns",
+                      std::to_string(include_all_columns_));
       } else if (kv_pair.size() > 1) {
         meta_.emplace(kv_pair[0], kv_pair[1]);
       }
@@ -413,12 +418,6 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
                          }) == s.end();
   };
 
-  bool add_all_columns = false;
-  if (std::all_of(
-          columns_.begin(), columns_.end(),
-          [&is_number](const std::string& s) { return is_number(s); })) {
-    add_all_columns = true;
-  }
   std::vector<int> indices;
   for (size_t i = 0; i < columns_.size(); ++i) {
     if (is_number(columns_[i])) {
@@ -432,7 +431,7 @@ Status OSSIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
     }
   }
   // If all column given is number, we need to add all other columns
-  if (add_all_columns) {
+  if (include_all_columns_) {
     for (size_t i = 0; i < original_columns_.size(); ++i) {
       if (std::find(std::begin(indices), std::end(indices), i) ==
           indices.end()) {
