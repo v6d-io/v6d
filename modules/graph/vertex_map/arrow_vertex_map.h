@@ -134,6 +134,10 @@ class ArrowVertexMap
     return oids;
   }
 
+  std::shared_ptr<oid_array_t> GetOidArray(fid_t fid, label_id_t label_id) {
+    return oid_arrays_[fid][label_id];
+  }
+
   fid_t fnum() { return fnum_; }
 
   size_t GetTotalNodesNum() const {
