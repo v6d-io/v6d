@@ -168,7 +168,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         logger.debug('partial_id_matrix = %s', partial_id_matrix)
         if func is None:
             return self.create_global_dataframe(partial_id_matrix, **kwargs)
-        return func(partial_id_matrix, kwargs)
+        return func(partial_id_matrix, **kwargs)
 
     def create_objectset(self, partial_id_matrix):
         meta = vineyard.ObjectMeta()
@@ -310,12 +310,6 @@ def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs)
     return launcher.wait()
 
 
-def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):
-    launcher = ParallelStreamLauncher()
-    launcher.run(get_executable('parse_dataframe_to_bytes'), *((vineyard_socket, dataframe_stream) + args), **kwargs)
-    return launcher.wait()
-
-
 def write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher()
     launcher.run(get_executable('write_local_orc'), *((vineyard_socket, dataframe_stream, path) + args), **kwargs)
@@ -377,8 +371,21 @@ def write_vineyard_dataframe(path, dataframe_stream, vineyard_socket, *args, **k
     return launcher.wait_all(name=path)
 
 
+def write_oss_bytes(path, byte_stream, vineyard_socket, *args, **kwargs):
+    path = json.dumps('oss://' + path)
+    launcher = ParallelStreamLauncher()
+    launcher.run(get_executable('write_oss_bytes'), *((vineyard_socket, byte_stream, path) + args), **kwargs)
+    launcher.join()
+
+
+def write_oss_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
+    write_oss_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs), vineyard_socket,
+                    *args, **kwargs)
+
+
 vineyard.io.write.register('file', write_local_dataframe)
 vineyard.io.write.register('kafka', write_kafka_bytes)
 vineyard.io.write.register('kafka', write_kafka_dataframe)
 vineyard.io.write.register('hdfs', write_hdfs_dataframe)
 vineyard.io.write.register('vineyard', write_vineyard_dataframe)
+vineyard.io.write.register('oss', write_oss_dataframe)

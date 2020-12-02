@@ -66,6 +66,7 @@ int main(int argc, const char** argv) {
 
   std::shared_ptr<arrow::Table> table;
   VINEYARD_CHECK_OK(oss_io_adaptor->ReadTable(&table));
+  VLOG(2) << "Read Table Done, part: " << proc;
 
   if (table) {
     auto st = writer->WriteTable(table);

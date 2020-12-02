@@ -32,7 +32,9 @@ def write_local_bytes(vineyard_socket, stream_id, path, proc_num, proc_index):
     instream = streams[proc_index]
     reader = instream.open_reader(client)
 
-    with open(urlparse(path).path, 'wb') as f:
+    path = urlparse(path).path + f'_{proc_index}'
+
+    with open(path, 'wb') as f:
         while True:
             try:
                 buf = reader.next()
