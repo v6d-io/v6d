@@ -244,13 +244,24 @@ Status GetData(const ptree& tree, const std::string& name, ptree& sub_tree) {
         return status;
       }
       ptree sub_sub_tree;
-      status =
-          GetData(tree, VYObjectIDFromString(sub_sub_tree_name), sub_sub_tree);
-      if (!status.ok()) {
-        sub_tree.clear();
-        return status;
+      ObjectID sub_sub_tree_id = VYObjectIDFromString(sub_sub_tree_name);
+      status = GetData(tree, sub_sub_tree_name, sub_sub_tree);
+      if (status.ok()) {
+        sub_tree.add_child(it->first, sub_sub_tree);
+      } else {
+        if (IsBlob(sub_sub_tree_id) && status.IsMetaTreeSubtreeNotExists()) {
+          // make an empty blob
+          sub_sub_tree.put("id", VYObjectIDToString(EmptyBlobID()));
+          sub_sub_tree.put("type_name", "vineyard::Blob");
+          sub_sub_tree.put("length", 0);
+          sub_sub_tree.put("nbytes", 0);
+          sub_sub_tree.put("instance_id", UnspecifiedInstanceID());
+          sub_sub_tree.put("transient", true);
+        } else {
+          sub_tree.clear();
+          return status;
+        }
       }
-      sub_tree.add_child(it->first, sub_sub_tree);
     } else {
       return Status::MetaTreeTypeInvalid();
     }
@@ -401,7 +412,8 @@ static void generate_persist_ops(const ptree& diff, const std::string& name,
     if (!it->second.empty()) {
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
-      if (it->second.get<bool>("transient")) {
+      // Don't persist blob into etcd, but the link cannot be omitted.
+      if (it->second.get<bool>("transient") && sub_type != "vineyard::Blob") {
         // otherwise, skip recursively generate ops
         generate_persist_ops(it->second, sub_name, ops, dedup);
       }
@@ -581,13 +593,9 @@ static Status diff_data_meta_tree(const ptree& meta,
   return Status::OK();
 }
 
-static bool persist_meta_tree(const ptree& sub_tree, ptree& diff) {
+static void persist_meta_tree(const ptree& sub_tree, ptree& diff) {
   // NB: we don't need to track which objects are persist since the ptree
   // cached in the server will be updated by the background watcher task.
-  if (IsBlob(VYObjectIDFromString(sub_tree.get<std::string>("id")))) {
-    // Don't persist blob into etcd.
-    return false;
-  }
   if (sub_tree.get<bool>("transient")) {
     for (ptree::const_iterator it = sub_tree.begin(); it != sub_tree.end();
          ++it) {
@@ -595,10 +603,10 @@ static bool persist_meta_tree(const ptree& sub_tree, ptree& diff) {
         const ptree& sub_sub_tree = it->second;
         // recursive
         ptree sub_diff;
-        bool ret = persist_meta_tree(sub_sub_tree, sub_diff);
+        persist_meta_tree(sub_sub_tree, sub_diff);
         if (!sub_diff.empty()) {
           diff.add_child(it->first, sub_diff);
-        } else if (ret) {
+        } else {
           // will be used to generate the link.
           diff.add_child(it->first, sub_sub_tree);
         }
@@ -607,7 +615,6 @@ static bool persist_meta_tree(const ptree& sub_tree, ptree& diff) {
       }
     }
   }
-  return true;
 }
 
 Status PutDataOps(const ptree& tree, const ObjectID id, const ptree& sub_tree,
