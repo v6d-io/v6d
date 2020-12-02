@@ -573,8 +573,12 @@ class ArrowFragment
                           &oe[offset_array[v_offset + 1]]);
   }
 
-  inline std::pair<int64_t, int64_t> GetOutgoingAdjOffsets(const vertex_t& v,
-                                              label_id_t e_label) const {
+  /**
+   * N.B.: as an temporay solution, for POC of graph-learn, will be removed
+   * later.
+   */
+  inline std::pair<int64_t, int64_t> GetOutgoingAdjOffsets(
+      const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
