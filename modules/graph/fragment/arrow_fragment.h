@@ -191,15 +191,15 @@ class ArrowFragment
 
   vineyard::ObjectID vertex_map_id() const override { return vm_ptr_->id(); }
 
-#define CONSTRUCT_ARRAY_VECTOR(type, vec, label_num, prefix)         \
-  do {                                                               \
-    vec.resize(label_num);                                           \
-    for (label_id_t i = 0; i < label_num; ++i) {                     \
-      vineyard::NumericArray<type> array;                            \
-      array.Construct(                                               \
-          meta.GetMemberMeta(generate_name_with_suffix(prefix, i))); \
-      vec[i] = array.GetArray();                                     \
-    }                                                                \
+#define CONSTRUCT_ARRAY_VECTOR(type, vec, label_num, prefix)                   \
+  do {                                                                         \
+    vec.resize(label_num);                                                     \
+    for (label_id_t i = 0; i < label_num; ++i) {                               \
+      vineyard::NumericArray<type> array;                                      \
+      array.Construct(                                                         \
+          meta.GetMemberMeta(vineyard::generate_name_with_suffix(prefix, i))); \
+      vec[i] = array.GetArray();                                               \
+    }                                                                          \
   } while (0)
 
 #define CONSTRUCT_ARRAY_VECTOR_VECTOR(type, vec, v_label_num, e_label_num, \
@@ -210,8 +210,8 @@ class ArrowFragment
       vec[i].resize(e_label_num);                                          \
       for (label_id_t j = 0; j < e_label_num; ++j) {                       \
         vineyard::NumericArray<type> array;                                \
-        array.Construct(                                                   \
-            meta.GetMemberMeta(generate_name_with_suffix(prefix, i, j)));  \
+        array.Construct(meta.GetMemberMeta(                                \
+            vineyard::generate_name_with_suffix(prefix, i, j)));           \
         vec[i][j] = array.GetArray();                                      \
       }                                                                    \
     }                                                                      \
@@ -225,22 +225,22 @@ class ArrowFragment
       vec[i].resize(e_label_num);                                           \
       for (label_id_t j = 0; j < e_label_num; ++j) {                        \
         vineyard::FixedSizeBinaryArray array;                               \
-        array.Construct(                                                    \
-            meta.GetMemberMeta(generate_name_with_suffix(prefix, i, j)));   \
+        array.Construct(meta.GetMemberMeta(                                 \
+            vineyard::generate_name_with_suffix(prefix, i, j)));            \
         vec[i][j] = array.GetArray();                                       \
       }                                                                     \
     }                                                                       \
   } while (0)
 
-#define CONSTRUCT_TABLE_VECTOR(vec, label_num, prefix)               \
-  do {                                                               \
-    vec.resize(label_num);                                           \
-    for (label_id_t i = 0; i < label_num; ++i) {                     \
-      vineyard::Table table;                                         \
-      table.Construct(                                               \
-          meta.GetMemberMeta(generate_name_with_suffix(prefix, i))); \
-      vec[i] = table.GetTable();                                     \
-    }                                                                \
+#define CONSTRUCT_TABLE_VECTOR(vec, label_num, prefix)                         \
+  do {                                                                         \
+    vec.resize(label_num);                                                     \
+    for (label_id_t i = 0; i < label_num; ++i) {                               \
+      vineyard::Table table;                                                   \
+      table.Construct(                                                         \
+          meta.GetMemberMeta(vineyard::generate_name_with_suffix(prefix, i))); \
+      vec[i] = table.GetTable();                                               \
+    }                                                                          \
   } while (0)
 
   void Construct(const vineyard::ObjectMeta& meta) override {
@@ -629,20 +629,20 @@ class ArrowFragment
     }
   }
 
-#define ASSIGNE_IDENTICAL_VEC_META(prefix, num)               \
-  for (label_id_t i = 0; i < num; ++i) {                      \
-    std::string _name = generate_name_with_suffix(prefix, i); \
-    new_meta.AddMember(_name, old_meta.GetMemberMeta(_name)); \
-    nbytes += old_meta.GetMemberMeta(_name).GetNBytes();      \
+#define ASSIGNE_IDENTICAL_VEC_META(prefix, num)                         \
+  for (label_id_t i = 0; i < num; ++i) {                                \
+    std::string _name = vineyard::generate_name_with_suffix(prefix, i); \
+    new_meta.AddMember(_name, old_meta.GetMemberMeta(_name));           \
+    nbytes += old_meta.GetMemberMeta(_name).GetNBytes();                \
   }
 
-#define ASSIGNE_IDENTICAL_VEC_VEC_META(prefix, x, y)               \
-  for (label_id_t i = 0; i < x; ++i) {                             \
-    for (label_id_t j = 0; j < y; ++j) {                           \
-      std::string _name = generate_name_with_suffix(prefix, i, j); \
-      new_meta.AddMember(_name, old_meta.GetMemberMeta(_name));    \
-      nbytes += old_meta.GetMemberMeta(_name).GetNBytes();         \
-    }                                                              \
+#define ASSIGNE_IDENTICAL_VEC_VEC_META(prefix, x, y)                         \
+  for (label_id_t i = 0; i < x; ++i) {                                       \
+    for (label_id_t j = 0; j < y; ++j) {                                     \
+      std::string _name = vineyard::generate_name_with_suffix(prefix, i, j); \
+      new_meta.AddMember(_name, old_meta.GetMemberMeta(_name));              \
+      nbytes += old_meta.GetMemberMeta(_name).GetNBytes();                   \
+    }                                                                        \
   }
 
   vineyard::ObjectID AddVertexColumns(
@@ -1105,24 +1105,25 @@ class ArrowFragmentBuilder : public vineyard::ObjectBuilder {
     }                                                     \
   } while (0)
 
-#define GENERATE_VEC_META(prefix, vec, label_num)                 \
-  do {                                                            \
-    for (label_id_t i = 0; i < label_num; ++i) {                  \
-      frag->meta_.AddMember(generate_name_with_suffix(prefix, i), \
-                            vec[i]->meta());                      \
-      nbytes += vec[i]->nbytes();                                 \
-    }                                                             \
+#define GENERATE_VEC_META(prefix, vec, label_num)                           \
+  do {                                                                      \
+    for (label_id_t i = 0; i < label_num; ++i) {                            \
+      frag->meta_.AddMember(vineyard::generate_name_with_suffix(prefix, i), \
+                            vec[i]->meta());                                \
+      nbytes += vec[i]->nbytes();                                           \
+    }                                                                       \
   } while (0)
 
-#define GENERATE_VEC_VEC_META(prefix, vec, v_label_num, e_label_num)   \
-  do {                                                                 \
-    for (label_id_t i = 0; i < v_label_num; ++i) {                     \
-      for (label_id_t j = 0; j < e_label_num; ++j) {                   \
-        frag->meta_.AddMember(generate_name_with_suffix(prefix, i, j), \
-                              vec[i][j]->meta());                      \
-        nbytes += vec[i][j]->nbytes();                                 \
-      }                                                                \
-    }                                                                  \
+#define GENERATE_VEC_VEC_META(prefix, vec, v_label_num, e_label_num) \
+  do {                                                               \
+    for (label_id_t i = 0; i < v_label_num; ++i) {                   \
+      for (label_id_t j = 0; j < e_label_num; ++j) {                 \
+        frag->meta_.AddMember(                                       \
+            vineyard::generate_name_with_suffix(prefix, i, j),       \
+            vec[i][j]->meta());                                      \
+        nbytes += vec[i][j]->nbytes();                               \
+      }                                                              \
+    }                                                                \
   } while (0)
 
   std::shared_ptr<vineyard::Object> _Seal(vineyard::Client& client) override {
@@ -1380,21 +1381,22 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     this->set_property_graph_schema(schema_);
 
     ThreadGroup tg;
+    {
+      auto fn = [this](Client& client) {
+        vineyard::ArrayBuilder<vid_t> ivnums_builder(client, ivnums_);
+        vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums_);
+        vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums_);
+        this->set_ivnums(*std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+            ivnums_builder.Seal(client)));
+        this->set_ovnums(*std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+            ovnums_builder.Seal(client)));
+        this->set_tvnums(*std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+            tvnums_builder.Seal(client)));
+        return Status::OK();
+      };
 
-    auto fn = [this](Client& client) {
-      vineyard::ArrayBuilder<vid_t> ivnums_builder(client, ivnums_);
-      vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums_);
-      vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums_);
-      this->set_ivnums(*std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          ivnums_builder.Seal(client)));
-      this->set_ovnums(*std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          ovnums_builder.Seal(client)));
-      this->set_tvnums(*std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          tvnums_builder.Seal(client)));
-      return Status::OK();
-    };
-
-    tg.AddTask(fn, std::ref(client));
+      tg.AddTask(fn, std::ref(client));
+    }
 
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       auto fn = [this, i](Client& client) {
@@ -1821,8 +1823,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
       auto& builder = edge_builders[v_label];
       auto tvnum = tvnums_[v_label];
-      auto offsets = edge_offsets[v_label];
-      const int64_t* offsets_ptr = offsets->raw_values();
+      const int64_t* offsets_ptr = edge_offsets[v_label]->raw_values();
 
       if (concurrency == 1) {
         for (vid_t i = 0; i < tvnum; ++i) {
