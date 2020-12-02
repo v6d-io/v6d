@@ -42,6 +42,7 @@
 import filecmp
 import pytest
 import configparser
+import glob
 
 import vineyard
 import vineyard.io
@@ -174,4 +175,25 @@ def test_oss(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+
+def combine_files(prefix):
+    read_files = glob.glob(f'{prefix}_')
+    with open(prefix, 'wb') as outfile:
+        for f in read_files:
+            with open(f, 'rb') as infile:
+                outfile.write(infile.read())
+
+def test_hdfs_parallel(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
+    hdfs_stream = vineyard.io.open('hdfs://dev:9000/tmp/p2p-31.out#header_row=true&delimiter= ',
+                                   vineyard_ipc_socket=vineyard_ipc_socket,
+                                   vineyard_endpoint=vineyard_endpoint,
+                                   num_workers=4)
+    vineyard.io.open('file://%s/p2p-31.out' % test_dataset_tmp,
+                     hdfs_stream,
+                     mode='w',
+                     vineyard_ipc_socket=vineyard_ipc_socket,
+                     vineyard_endpoint=vineyard_endpoint,
+                     num_workers=4)
+    combine_files('%s/p2p-31.out' % test_dataset_tmp)
     assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)

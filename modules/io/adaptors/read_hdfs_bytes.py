@@ -29,8 +29,6 @@ from vineyard.io.byte import ByteStreamBuilder
 
 
 def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
-    if proc_index:
-        return
     client = vineyard.connect(vineyard_socket)
     builder = ByteStreamBuilder(client)
 
@@ -72,12 +70,19 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
 
     writer = stream.open_writer(client)
 
-    while True:
-        buf = hdfs.read_block(path, offset, length, b'\n')
+    total_size = hdfs.info(path)['size']
+    offset = total_size // proc_num * proc_index
+    end = total_size // proc_num + offset
+    if proc_index + 1 == proc_num:
+        end = total_size
+
+    while offset < end:
+        buf = hdfs.read_block(path, offset, min(length, end - offset), b'\n')
         size = len(buf)
+        print("(%d)(%d)(%s)(%s)" % (proc_index, size, buf[:50], buf[-50:]))
         if not size:
             break
-        offset += size
+        offset += size - 1
         chunk = writer.next(size)
         buf_writer = pa.FixedSizeBufferWriter(chunk)
         buf_writer.write(buf)
