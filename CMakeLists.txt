@@ -271,6 +271,7 @@ endif()
 # build vineyard-client
 if(BUILD_VINEYARD_CLIENT)
     file(GLOB_RECURSE CLIENT_SRC_FILES "src/client/*.cc"
+                                    "src/common/backtrace/*.cc"
                                     "src/common/memory/*.cc"
                                     "src/common/util/*.cc"
     )
@@ -287,7 +288,9 @@ if(BUILD_VINEYARD_CLIENT)
     else()
         target_link_libraries(vineyard_client PUBLIC ${ARROW_STATIC_LIB})
     endif()
-
+    if(${LIBUNWIND_FOUND})
+        target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
+    endif()
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
         if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
             target_compile_options(vineyard_client PRIVATE -static)

@@ -67,6 +67,7 @@ if(BUILD_VINEYARD_TESTS)
         endif()
         target_link_libraries(${T_NAME}
                               vineyard_graph
+                              vineyard_client
                               ${ARROW_SHARED_LIB}
                               ${CPPNETLIB_LIBRARIES}
                               ${MPI_CXX_LIBRARIES})

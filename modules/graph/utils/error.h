@@ -84,10 +84,14 @@ inline const char* ErrorCodeToString(ErrorCode ec) {
 struct GSError {
   ErrorCode error_code;
   std::string error_msg;
-  GSError() : error_code(ErrorCode::kOk), error_msg() {}
+  std::string backtrace;
+  GSError() : error_code(ErrorCode::kOk) {}
 
   GSError(ErrorCode code, std::string msg)
       : error_code(code), error_msg(std::move(msg)) {}
+
+  GSError(ErrorCode code, std::string msg, std::string bt)
+      : error_code(code), error_msg(std::move(msg)), backtrace(std::move(bt)) {}
 
   explicit GSError(ErrorCode code) : GSError(code, "") {}
 
@@ -100,22 +104,35 @@ inline grape::InArchive& operator<<(grape::InArchive& archive,
                                     const GSError& e) {
   archive << e.error_code;
   archive << e.error_msg;
+  archive << e.backtrace;
   return archive;
 }
 
 inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
   archive >> e.error_code;
   archive >> e.error_msg;
+  archive >> e.backtrace;
   return archive;
 }
 
 #define TOKENPASTE(x, y) x##y
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
+#ifdef WITH_LIBUNWIND
+#define RETURN_GS_ERROR(code, msg)                                    \
+  std::stringstream TOKENPASTE2(_ss, __LINE__);                       \
+  backtrace(TOKENPASTE2(_ss, __LINE__));                              \
+  return ::boost::leaf::new_error(vineyard::GSError(                  \
+      (code),                                                         \
+      std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
+          std::string(__FUNCTION__) + " -> " + (msg),                 \
+      TOKENPASTE2(_ss, __LINE__).str()))
+#else
 #define RETURN_GS_ERROR(code, msg)                                            \
   return ::boost::leaf::new_error(vineyard::GSError(                          \
       (code), std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
                   std::string(__FUNCTION__) + " -> " + (msg)))
+#endif
 
 #define BOOST_LEAF_ASSIGN(v, r)                                     \
   static_assert(::boost::leaf::is_result_type<                      \
@@ -132,30 +149,27 @@ inline GSError all_gather_error(const GSError& e,
   ss << ErrorCodeToString(e.error_code) << " occurred on worker "
      << comm_spec.worker_id();
   ss << ": " << e.error_msg;
-  auto msg = ss.str();
 
-  std::vector<std::string> error_msgs(comm_spec.worker_num());
-  GlobalAllGatherv<std::string>(msg, error_msgs, comm_spec);
+  std::vector<GSError> error_objs(comm_spec.worker_num());
+  GlobalAllGatherv<GSError>(const_cast<GSError&>(e), error_objs, comm_spec);
 
-  return {e.error_code, msg};
+  return {e.error_code, ss.str(), e.backtrace};
 }
 
 inline GSError all_gather_error(const grape::CommSpec& comm_spec) {
-  std::vector<std::string> error_msgs(comm_spec.worker_num());
-  std::string msg;
+  std::vector<GSError> error_objs(comm_spec.worker_num());
+  GSError ok;
 
-  GlobalAllGatherv<std::string>(msg, error_msgs, comm_spec);
-  auto msgs = std::accumulate(
-      error_msgs.begin(), error_msgs.end(), std::string(),
-      [](const std::string& a, const std::string& b) -> std::string {
-        return a + (!a.empty() ? ";" : "") + b;
-      });
+  GlobalAllGatherv<GSError>(ok, error_objs, comm_spec);
 
   // Return a distributed error, the error messages will be aggregated by
   // upstream
-  if (!msgs.empty()) {
-    return {ErrorCode::kDistributedError, ""};
+  for (auto& e : error_objs) {
+    if (!e.ok()) {
+      return {ErrorCode::kDistributedError, ""};
+    }
   }
+
   return {ErrorCode::kOk, ""};
 }
 
