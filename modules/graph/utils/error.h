@@ -197,35 +197,37 @@ sync_gs_error(const grape::CommSpec& comm_spec, F_T&& f, ARGS_T&&... args) {
       });
 }
 
-#define CHECK_OR_RAISE(condition)                    \
-  do {                                               \
-    if (!(condition)) {                              \
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, \
-                      "Check failed: " #condition);  \
-    }                                                \
+#define CHECK_OR_RAISE(condition)                              \
+  do {                                                         \
+    if (!(condition)) {                                        \
+      RETURN_GS_ERROR(vineyard::ErrorCode::kInvalidValueError, \
+                      "Check failed: " #condition);            \
+    }                                                          \
   } while (0)
 
-#define VY_OK_OR_RAISE(expr)                                                \
-  do {                                                                      \
-    auto status_name = (expr);                                              \
-    if (!(status_name).ok()) {                                              \
-      RETURN_GS_ERROR(ErrorCode::kVineyardError, (status_name).ToString()); \
-    }                                                                       \
+#define VY_OK_OR_RAISE(expr)                               \
+  do {                                                     \
+    auto status_name = (expr);                             \
+    if (!(status_name).ok()) {                             \
+      RETURN_GS_ERROR(vineyard::ErrorCode::kVineyardError, \
+                      (status_name).ToString());           \
+    }                                                      \
   } while (0)
 
-#define ARROW_OK_OR_RAISE(expr)                                          \
-  do {                                                                   \
-    auto status_name = (expr);                                           \
-    if (!(status_name).ok()) {                                           \
-      RETURN_GS_ERROR(ErrorCode::kArrowError, (status_name).ToString()); \
-    }                                                                    \
+#define ARROW_OK_OR_RAISE(expr)                         \
+  do {                                                  \
+    auto status_name = (expr);                          \
+    if (!(status_name).ok()) {                          \
+      RETURN_GS_ERROR(vineyard::ErrorCode::kArrowError, \
+                      (status_name).ToString());        \
+    }                                                   \
   } while (0)
 
 #define ARROW_OK_ASSIGN_OR_RAISE(lhs, expr)               \
   do {                                                    \
     auto status_name = (expr);                            \
     if (!(status_name).ok()) {                            \
-      RETURN_GS_ERROR(ErrorCode::kArrowError,             \
+      RETURN_GS_ERROR(vineyard::ErrorCode::kArrowError,   \
                       (status_name).status().ToString()); \
     }                                                     \
     (lhs) = std::move(status_name).ValueOrDie();          \
