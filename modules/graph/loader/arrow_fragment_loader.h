@@ -1071,7 +1071,7 @@ class ArrowFragmentLoader {
         record_batches.insert(record_batches.end(), batches.begin(),
                               batches.end());
       } else {
-        LOG(ERROR) << "Failed to read from stream "
+        LOG(ERROR) << "Failed to read from vertex stream "
                    << VYObjectIDToString(vstream) << ": " << status.ToString();
       }
       return Status::OK();
@@ -1126,7 +1126,7 @@ class ArrowFragmentLoader {
         record_batches.insert(record_batches.end(), batches.begin(),
                               batches.end());
       } else {
-        LOG(ERROR) << "Failed to read from stream "
+        LOG(ERROR) << "Failed to read from edge stream "
                    << VYObjectIDToString(estream) << ": " << status.ToString();
       }
       return Status::OK();
