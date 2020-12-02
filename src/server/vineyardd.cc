@@ -31,7 +31,7 @@ static std::shared_ptr<vineyard::VineyardServer> server_ptr_ = nullptr;
 
 void terminate_handle() {
 #ifdef WITH_LIBUNWIND
-  backtrace(std::cerr);
+  vineyard::backtrace_info::backtrace(std::cerr);
 #endif
 }
 
