@@ -73,7 +73,7 @@ class ThreadGroup {
 
     std::lock_guard<std::mutex> lg(mutex_);
 
-    threads_.emplace(tid_, [task]() { (*task)(); });
+    threads_.emplace(tid_, std::thread([task]() { (*task)(); }));
     tasks_[tid_] = task->get_future();
     return tid_++;
   }

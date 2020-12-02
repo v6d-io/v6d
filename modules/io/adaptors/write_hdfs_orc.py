@@ -73,6 +73,7 @@ def write_hdfs_orc(vineyard_socket, stream_id, path, proc_num, proc_index):
     path = urlparse(path).path
 
     writer = None
+    path += f'_{proc_index}'
     with hdfs.open(path, 'wb') as f:
         while True:
             try:

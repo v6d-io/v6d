@@ -104,7 +104,7 @@ class OSSIOAdaptor : public IIOAdaptor {
   void parseOssCredentials(const std::string& file_name);
   void parseOssEnvironmentVariables();
   void parseGFlags();
-  void parseYamlLocation(const std::string& location);
+  void parseLocationURI(const std::string& location);
 
   const std::string OSS_CREDENTIALS_PATH = "$HOME/.osscredentials";
   const char* OSS_ACCESS_ID = "accessid";
@@ -151,7 +151,8 @@ class OSSIOAdaptor : public IIOAdaptor {
   std::vector<std::string> columns_;
   std::vector<std::string> column_types_;
   char delimiter_ = ',';
-  bool header_row_;
+  bool header_row_ = false;
+  bool include_all_columns_ = false;
   std::string header_line_ = "";
   // schema of header row
   std::vector<std::string> original_columns_;

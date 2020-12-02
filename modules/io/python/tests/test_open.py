@@ -57,7 +57,7 @@ def test_local_with_header(vineyard_ipc_socket, vineyard_endpoint, test_dataset,
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 def test_local_without_header(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
@@ -69,7 +69,7 @@ def test_local_without_header(vineyard_ipc_socket, vineyard_endpoint, test_datas
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 def test_local_orc(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
@@ -81,7 +81,7 @@ def test_local_orc(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_da
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e.orc' % test_dataset, '%s/testout.orc' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e.orc' % test_dataset, '%s/testout.orc_0' % test_dataset_tmp)
 
 
 @pytest.mark.skip_without_hdfs()
@@ -135,7 +135,7 @@ def test_hdfs_bytes(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_d
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 def test_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
@@ -155,11 +155,11 @@ def test_vineyard_dataframe(vineyard_ipc_socket, vineyard_endpoint, test_dataset
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out_0' % test_dataset_tmp)
 
 
 @pytest.mark.skip('oss not available at github ci')
-def test_oss(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp, oss_config):
+def test_oss_read(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp, oss_config):
     oss_config_file = oss_config + '/.ossutilconfig'
     oss_config = configparser.ConfigParser()
     oss_config.read(oss_config_file)
@@ -176,6 +176,26 @@ def test_oss(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
     assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
+
+@pytest.mark.skip('oss not available at github ci')
+def test_oss_io(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp, oss_config):
+    oss_config_file = oss_config + '/.ossutilconfig'
+    oss_config = configparser.ConfigParser()
+    oss_config.read(oss_config_file)
+    accessKeyID = oss_config['Credentials']['accessKeyID']
+    accessKeySecret = oss_config['Credentials']['accessKeySecret']
+    oss_endpoint = oss_config['Credentials']['endpoint']
+    stream = vineyard.io.open(
+        f'oss://{accessKeyID}:{accessKeySecret}@{oss_endpoint}/grape-uk/p2p-31.e#header_row=false&delimiter= ',
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        num_workers=2)
+    vineyard.io.open(f'oss://{accessKeyID}:{accessKeySecret}@{oss_endpoint}/grape-uk/p2p-31.out',
+                     stream,
+                     mode='w',
+                     vineyard_ipc_socket=vineyard_ipc_socket,
+                     vineyard_endpoint=vineyard_endpoint,
+                     num_workers=2)
 
 def combine_files(prefix):
     read_files = glob.glob(f'{prefix}_')
