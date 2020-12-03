@@ -212,10 +212,13 @@ int main(int argc, const char** argv) {
     if (status.ok()) {
       LOG(INFO) << "consumer: buffer size = " << buffer->size();
       std::shared_ptr<arrow::Table> table;
-      VINEYARD_CHECK_OK(ParseTable(&table, buffer, delimiter[0], header_row,
-                                   columns, column_types, original_columns,
-                                   include_all_columns));
-      auto st = writer->WriteTable(table);
+      Status st =
+          ParseTable(&table, buffer, delimiter[0], header_row, columns,
+                     column_types, original_columns, include_all_columns);
+      if (!st.ok()) {
+        ReportStatus("error", st.ToString());
+      }
+      st = writer->WriteTable(table);
       if (!st.ok()) {
         ReportStatus("error", st.ToString());
       }

@@ -89,7 +89,6 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
     while offset < end:
         buf = hdfs.read_block(path, offset, min(length, end - offset), b'\n')
         size = len(buf)
-        print("(%d)(%d)(%s)(%s)" % (proc_index, size, buf[:50], buf[-50:]))
         if not size:
             break
         offset += size - 1
