@@ -24,9 +24,9 @@ target_link_libraries(vineyard_basic vineyard_client
 
 target_include_directories(vineyard_basic PUBLIC
                                           ${MPI_CXX_INCLUDE_PATH}
-                                          ${LIBGRAPELITE_INCLUDE_DIRS}
 )
 target_include_directories(vineyard_basic PUBLIC
+    $<BUILD_INTERFACE:${LIBGRAPELITE_INCLUDE_DIRS}>
     $<INSTALL_INTERFACE:include>
 )
 if(VINEYARD_MOD_SRCS)
