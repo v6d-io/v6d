@@ -320,7 +320,7 @@ void bind_client(py::module& mod) {
                                                                 "RPCClient")
       .def(
           "get_object",
-          [](Client* self, const ObjectIDWrapper object_id) {
+          [](RPCClient* self, const ObjectIDWrapper object_id) {
             return self->GetObject(object_id);
           },
           "object_id"_a)
