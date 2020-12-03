@@ -118,6 +118,21 @@ def test_hive(vineyard_ipc_socket, vineyard_endpoint, test_dataset, hive_endpoin
 
 
 @pytest.mark.skip_without_hdfs()
+def test_hdfs_tag(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
+    hdfs_stream = vineyard.io.open(
+        'hdfs://dev:9000/tmp/tag_0_0.csv#delimiter=|&header_row=True&schema=id,name,url&column_types=int64_t,std::string,std::string',
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint)
+    vineyard.io.open('file://%s/tag_0_0.out' % test_dataset_tmp,
+                     hdfs_stream,
+                     mode='w',
+                     vineyard_ipc_socket=vineyard_ipc_socket,
+                     vineyard_endpoint=vineyard_endpoint)
+    combine_files('%s/tag_0_0.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/ldbc_sample/tag_0_0.csv' % test_dataset, '%s/tag_0_0.out' % test_dataset_tmp)
+
+
+@pytest.mark.skip_without_hdfs()
 def test_hdfs_bytes(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp, hdfs_endpoint):
     stream = vineyard.io.open('file://%s/p2p-31.e#header_row=true&delimiter= ' % test_dataset,
                               vineyard_ipc_socket=vineyard_ipc_socket,
@@ -177,6 +192,7 @@ def test_oss_read(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dat
                      vineyard_endpoint=vineyard_endpoint)
     assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
 
+
 @pytest.mark.skip('oss not available at github ci')
 def test_oss_io(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp, oss_config):
     oss_config_file = oss_config + '/.ossutilconfig'
@@ -197,23 +213,10 @@ def test_oss_io(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_datas
                      vineyard_endpoint=vineyard_endpoint,
                      num_workers=2)
 
+
 def combine_files(prefix):
-    read_files = glob.glob(f'{prefix}_')
+    read_files = glob.glob(f'{prefix}_*')
     with open(prefix, 'wb') as outfile:
-        for f in read_files:
+        for f in sorted(read_files):
             with open(f, 'rb') as infile:
                 outfile.write(infile.read())
-
-def test_hdfs_parallel(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
-    hdfs_stream = vineyard.io.open('hdfs://dev:9000/tmp/p2p-31.out#header_row=true&delimiter= ',
-                                   vineyard_ipc_socket=vineyard_ipc_socket,
-                                   vineyard_endpoint=vineyard_endpoint,
-                                   num_workers=4)
-    vineyard.io.open('file://%s/p2p-31.out' % test_dataset_tmp,
-                     hdfs_stream,
-                     mode='w',
-                     vineyard_ipc_socket=vineyard_ipc_socket,
-                     vineyard_endpoint=vineyard_endpoint,
-                     num_workers=4)
-    combine_files('%s/p2p-31.out' % test_dataset_tmp)
-    assert filecmp.cmp('%s/p2p-31.e' % test_dataset, '%s/p2p-31.out' % test_dataset_tmp)
