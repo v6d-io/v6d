@@ -42,6 +42,7 @@
 import filecmp
 import pytest
 import configparser
+import glob
 
 import vineyard
 import vineyard.io
@@ -114,6 +115,21 @@ def test_hive(vineyard_ipc_socket, vineyard_endpoint, test_dataset, hive_endpoin
                      mode='w',
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint)
+
+
+@pytest.mark.skip_without_hdfs()
+def test_hdfs_tag(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
+    hdfs_stream = vineyard.io.open(
+        'hdfs://dev:9000/tmp/tag_0_0.csv#delimiter=|&header_row=True&schema=id,name,url&column_types=int64_t,std::string,std::string',
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint)
+    vineyard.io.open('file://%s/tag_0_0.out' % test_dataset_tmp,
+                     hdfs_stream,
+                     mode='w',
+                     vineyard_ipc_socket=vineyard_ipc_socket,
+                     vineyard_endpoint=vineyard_endpoint)
+    combine_files('%s/tag_0_0.out' % test_dataset_tmp)
+    assert filecmp.cmp('%s/ldbc_sample/tag_0_0.csv' % test_dataset, '%s/tag_0_0.out' % test_dataset_tmp)
 
 
 @pytest.mark.skip_without_hdfs()
@@ -196,3 +212,11 @@ def test_oss_io(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_datas
                      vineyard_ipc_socket=vineyard_ipc_socket,
                      vineyard_endpoint=vineyard_endpoint,
                      num_workers=2)
+
+
+def combine_files(prefix):
+    read_files = glob.glob(f'{prefix}_*')
+    with open(prefix, 'wb') as outfile:
+        for f in sorted(read_files):
+            with open(f, 'rb') as infile:
+                outfile.write(infile.read())

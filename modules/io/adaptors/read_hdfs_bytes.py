@@ -29,8 +29,6 @@ from vineyard.io.byte import ByteStreamBuilder
 
 
 def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
-    if proc_index:
-        return
     client = vineyard.connect(vineyard_socket)
     builder = ByteStreamBuilder(client)
 
@@ -55,14 +53,21 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
                     builder[k] = '0'
             elif k == 'delimiter':
                 builder[k] = bytes(v, "utf-8").decode("unicode_escape")
+            elif k == 'include_all_columns':
+                if v.upper() == 'TRUE':
+                    builder[k] = '1'
+                else:
+                    builder[k] = '0'
+            else:
+                builder[k] = v
 
     offset = 0
     length = 1024 * 1024
 
+    header_line = hdfs.read_block(path, 0, 1, b'\n')
+    builder['header_line'] = header_line.decode('unicode_escape')
     if header_row:
-        header_line = hdfs.read_block(path, 0, 1, b'\n')
-        builder['header_line'] = header_line.decode('unicode_escape')
-        offset = len(header_line) - 1
+        offset = len(header_line)
 
     stream = builder.seal(client)
 
@@ -72,12 +77,21 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
 
     writer = stream.open_writer(client)
 
-    while True:
-        buf = hdfs.read_block(path, offset, length, b'\n')
+    total_size = hdfs.info(path)['size']
+    begin = (total_size - offset) // proc_num * proc_index + offset
+    end = (total_size - offset) // proc_num + begin
+    if proc_index + 1 == proc_num:
+        end = total_size
+    if header_row and not proc_index:
+        begin -= 1
+
+    offset = begin
+    while offset < end:
+        buf = hdfs.read_block(path, offset, min(length, end - offset), b'\n')
         size = len(buf)
         if not size:
             break
-        offset += size
+        offset += size - 1
         chunk = writer.next(size)
         buf_writer = pa.FixedSizeBufferWriter(chunk)
         buf_writer.write(buf)

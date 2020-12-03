@@ -21,6 +21,7 @@ limitations under the License.
 #include "arrow/io/api.h"
 #include "arrow/util/config.h"
 
+#include "basic/ds/arrow_utils.h"
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/dataframe_stream.h"
 #include "basic/stream/parallel_stream.h"
@@ -30,9 +31,12 @@ limitations under the License.
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
-void ParseTable(std::shared_ptr<arrow::Table>* table,
-                std::unique_ptr<arrow::Buffer>& buffer, char delimiter,
-                bool header_row, std::vector<std::string> col_names) {
+Status ParseTable(std::shared_ptr<arrow::Table>* table,
+                  std::unique_ptr<arrow::Buffer>& buffer, char delimiter,
+                  bool header_row, std::vector<std::string> columns,
+                  std::vector<std::string> column_types,
+                  std::vector<std::string> original_columns,
+                  bool include_all_columns) {
   // FIXME IF NO NEED TO COPY
   std::shared_ptr<arrow::Buffer> copied_buffer;
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
@@ -51,31 +55,80 @@ void ParseTable(std::shared_ptr<arrow::Table>* table,
 
   auto read_options = arrow::csv::ReadOptions::Defaults();
   auto parse_options = arrow::csv::ParseOptions::Defaults();
-  auto convert_options = arrow::csv::ConvertOptions::Defaults();
 
-  if (col_names.size() > 0) {
-    read_options.column_names = col_names;
-  } else {
-    read_options.autogenerate_column_names = (!header_row);
-  }
+  read_options.column_names = original_columns;
   parse_options.delimiter = delimiter;
 
+  auto convert_options = arrow::csv::ConvertOptions::Defaults();
+
+  auto is_number = [](const std::string& s) -> bool {
+    return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) {
+                           return !std::isdigit(c);
+                         }) == s.end();
+  };
+
+  std::vector<int> indices;
+  for (size_t i = 0; i < columns.size(); ++i) {
+    if (is_number(columns[i])) {
+      int col_idx = std::stoi(columns[i]);
+      if (col_idx >= static_cast<int>(original_columns.size())) {
+        return Status(StatusCode::kArrowError,
+                      "Index out of range: " + columns[i]);
+      }
+      indices.push_back(col_idx);
+      columns[i] = original_columns[col_idx];
+    }
+  }
+
+  // If include_all_columns_ is set, push other names as well
+  if (include_all_columns) {
+    for (const auto& col : original_columns) {
+      if (std::find(std::begin(columns), std::end(columns), col) ==
+          columns.end()) {
+        columns.push_back(col);
+      }
+    }
+  }
+
+  convert_options.include_columns = columns;
+
+  if (column_types.size() > convert_options.include_columns.size()) {
+    return Status(StatusCode::kArrowError,
+                  "Format of column type schema is incorrect.");
+  }
+  std::unordered_map<std::string, std::shared_ptr<arrow::DataType>>
+      arrow_column_types;
+
+  for (size_t i = 0; i < column_types.size(); ++i) {
+    if (!column_types[i].empty()) {
+      arrow_column_types[convert_options.include_columns[i]] =
+          type_name_to_arrow_type(column_types[i]);
+    }
+  }
+  convert_options.column_types = arrow_column_types;
+
   std::shared_ptr<arrow::csv::TableReader> reader;
-  CHECK_ARROW_ERROR_AND_ASSIGN(
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       reader, arrow::csv::TableReader::Make(pool, input, read_options,
                                             parse_options, convert_options));
 
-  CHECK_ARROW_ERROR_AND_ASSIGN(*table, reader->Read());
-
-  CHECK_ARROW_ERROR((*table)->Validate());
-
-  VLOG(2) << (*table)->num_rows() << " rows, " << (*table)->num_columns()
-          << " columns";
-  VLOG(2) << (*table)->schema()->ToString();
-
-  if (col_names.size() == 0) {
-    col_names = (*table)->ColumnNames();
+  auto result = reader->Read();
+  if (!result.status().ok()) {
+    if (result.status().message() == "Empty CSV file") {
+      *table = nullptr;
+      return Status::OK();
+    } else {
+      return Status::ArrowError(result.status());
+    }
   }
+  *table = result.ValueOrDie();
+
+  RETURN_ON_ARROW_ERROR((*table)->Validate());
+
+  VLOG(2) << "Parsed: " << (*table)->num_rows() << " rows, "
+          << (*table)->num_columns() << " columns";
+  VLOG(2) << (*table)->schema()->ToString();
+  return Status::OK();
 }
 
 int main(int argc, const char** argv) {
@@ -106,12 +159,41 @@ int main(int argc, const char** argv) {
   auto params = ls->GetParams();
   bool header_row = (params["header_row"] == "1");
   std::string delimiter = params["delimiter"];
-  std::vector<std::string> col_names;
+  std::vector<std::string> columns;
+  std::vector<std::string> column_types;
+  std::vector<std::string> original_columns;
   std::string header_line = "None";
+
   if (header_row) {
     header_line = params["header_line"];
     ::boost::algorithm::trim(header_line);
-    ::boost::split(col_names, header_line, ::boost::is_any_of(delimiter));
+    ::boost::split(original_columns, header_line,
+                   ::boost::is_any_of(delimiter.substr(0, 1)));
+  } else {
+    // Name columns as f0 ... fn
+    std::string one_line = params["header_line"];
+    ::boost::algorithm::trim(one_line);
+    std::vector<std::string> one_column;
+    ::boost::split(one_column, one_line,
+                   ::boost::is_any_of(delimiter.substr(0, 1)));
+    for (size_t i = 0; i < one_column.size(); ++i) {
+      original_columns.push_back("f" + std::to_string(i));
+    }
+  }
+
+  if (params.find("schema") != params.end()) {
+    VLOG(2) << "param schema: " << params["schema"];
+    ::boost::split(columns, params["schema"], ::boost::is_any_of(","));
+  }
+  if (params.find("column_types") != params.end()) {
+    VLOG(2) << "param column_types: " << params["column_types"];
+    ::boost::split(column_types, params["column_types"],
+                   ::boost::is_any_of(","));
+  }
+  bool include_all_columns = false;
+  if (params.find("include_all_columns") != params.end()) {
+    VLOG(2) << "param include_all_columns: " << params["include_all_columns"];
+    include_all_columns = (params["include_all_columns"] == "1");
   }
 
   DataframeStreamBuilder dfbuilder(client);
@@ -130,8 +212,13 @@ int main(int argc, const char** argv) {
     if (status.ok()) {
       LOG(INFO) << "consumer: buffer size = " << buffer->size();
       std::shared_ptr<arrow::Table> table;
-      ParseTable(&table, buffer, delimiter[0], header_row, col_names);
-      auto st = writer->WriteTable(table);
+      Status st =
+          ParseTable(&table, buffer, delimiter[0], header_row, columns,
+                     column_types, original_columns, include_all_columns);
+      if (!st.ok()) {
+        ReportStatus("error", st.ToString());
+      }
+      st = writer->WriteTable(table);
       if (!st.ok()) {
         ReportStatus("error", st.ToString());
       }
