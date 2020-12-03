@@ -61,7 +61,7 @@ def test_local_with_header(vineyard_ipc_socket, vineyard_endpoint, test_dataset,
 
 
 def test_local_without_header(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
-    stream = vineyard.io.open('file://%s/p2p-31.e#header_row=false&delimiter= &include_all_columns=true' % test_dataset,
+    stream = vineyard.io.open('file://%s/p2p-31.e#header_row=false&delimiter= ' % test_dataset,
                               vineyard_ipc_socket=vineyard_ipc_socket,
                               vineyard_endpoint=vineyard_endpoint)
     vineyard.io.open('file://%s/p2p-31.out' % test_dataset_tmp,
