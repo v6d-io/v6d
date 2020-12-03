@@ -29,9 +29,9 @@ limitations under the License.
 #include "grape/worker/comm_spec.h"
 #include "io/io/local_io_adaptor.h"
 
-#include "grape/loader/basic_e_fragment_loader.h"
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/property_graph_types.h"
+#include "graph/loader/basic_e_fragment_loader.h"
 #include "graph/utils/partitioner.h"
 #include "graph/utils/table_shuffler.h"
 #include "graph/utils/table_shuffler_beta.h"
