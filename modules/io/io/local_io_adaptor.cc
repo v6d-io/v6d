@@ -235,6 +235,7 @@ Status LocalIOAdaptor::setPartialReadImpl() {
     RETURN_ON_ERROR(seek(0, kFileLocationBegin));
     RETURN_ON_ERROR(ReadLine(one_line));
     ::boost::algorithm::trim(one_line);
+    meta_.emplace("header_line", one_line);
     std::vector<std::string> one_column;
     ::boost::split(one_column, one_line,
                    ::boost::is_any_of(std::string(1, delimiter_)));
