@@ -16,6 +16,13 @@ limitations under the License.
 #ifndef MODULES_GRAPH_LOADER_BASIC_E_FRAGMENT_LOADER_H_
 #define MODULES_GRAPH_LOADER_BASIC_E_FRAGMENT_LOADER_H_
 
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
 #include "graph/loader/basic_ev_fragment_loader.h"
 
 namespace vineyard {

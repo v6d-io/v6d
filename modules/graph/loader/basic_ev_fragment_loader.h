@@ -16,6 +16,13 @@ limitations under the License.
 #ifndef MODULES_GRAPH_LOADER_BASIC_EV_FRAGMENT_LOADER_H_
 #define MODULES_GRAPH_LOADER_BASIC_EV_FRAGMENT_LOADER_H_
 
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "grape/worker/comm_spec.h"
 
 #include "graph/fragment/arrow_fragment.h"
