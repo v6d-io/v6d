@@ -237,7 +237,6 @@ add_custom_target(vineyard_tests)
 if(BUILD_VINEYARD_SERVER)
     find_openssl_libraries()
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
-                                       "src/common/backtrace/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
     )
@@ -402,11 +401,11 @@ if(BUILD_VINEYARD_TESTS)
     endforeach()
 endif()
 
-file(GLOB_RECURSE FILES_NEED_FORMAT "src/*.cc" "src/*.h" "src/*.vineyard-mod"
+file(GLOB_RECURSE FILES_NEED_FORMAT "src/*.cc" "src/*.h" "src/*.hpp" "src/*.vineyard-mod"
                                     "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
                                     "test/*.cc"
 )
-file(GLOB_RECURSE FILES_NEED_LINT "src/*.cc" "src/*.h"
+file(GLOB_RECURSE FILES_NEED_LINT "src/*.cc" "src/*.h" "src/*.hpp"
                                   "modules/*.cc" "modules/*.h"
                                   "test/*.cc"
 )
