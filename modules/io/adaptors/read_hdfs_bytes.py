@@ -82,8 +82,10 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
     end = (total_size - offset) // proc_num + begin
     if proc_index + 1 == proc_num:
         end = total_size
-    if header_row and not proc_index:
-        begin -= 1
+    if proc_index:
+        begin = next_delimiter(hdfs, path, begin, end, b'\n')
+    else:
+        begin -= int(header_row)
 
     offset = begin
     while offset < end:
@@ -98,6 +100,18 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
         buf_writer.close()
 
     writer.finish()
+
+
+def next_delimiter(hdfs, path, begin, end, delimiter):
+    length = 1024
+    while begin < end:
+        buf = hdfs.read_block(path, begin, length)
+        if delimiter not in buf:
+            begin += length
+        else:
+            begin += buf.find(delimiter)
+            break
+    return begin
 
 
 if __name__ == '__main__':
