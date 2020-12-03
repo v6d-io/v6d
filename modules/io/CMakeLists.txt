@@ -81,7 +81,7 @@ foreach(fname ${CPP_IO_ADAPTORS})
     set(IO_BINARY_TOOL ${CMAKE_MATCH_1})
     message(STATUS "Found (cpp) io binary tool - " ${IO_BINARY_TOOL})
     add_executable(${IO_BINARY_TOOL} ${CMAKE_CURRENT_SOURCE_DIR}/adaptors/${IO_BINARY_TOOL}.cc)
-    target_link_libraries(${IO_BINARY_TOOL}
+    target_link_libraries(${IO_BINARY_TOOL} PRIVATE
                           vineyard_basic
                           vineyard_io
                           ${ARROW_SHARED_LIB}

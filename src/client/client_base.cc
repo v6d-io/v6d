@@ -77,6 +77,11 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
   if (!meta_data.Haskey("nbytes")) {
     meta_data.SetNBytes(0);
   }
+  // if the metadata has incomplete components, trigger an remote meta sync.
+  if (meta_data.incomplete()) {
+    ptree dummy;
+    VINEYARD_SUPPRESS(GetData(InvalidObjectID(), dummy, true, false));
+  }
   auto status = CreateData(meta_data.MetaData(), id, instance_id);
   if (status.ok()) {
     meta_data.SetId(id);
