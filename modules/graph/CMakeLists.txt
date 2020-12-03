@@ -30,8 +30,11 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf"
 
 add_library(vineyard_graph ${GRAPH_SRC_FILES})
 target_include_directories(vineyard_graph PUBLIC
-                                          ${LIBGRAPELITE_INCLUDE_DIRS}
                                           ${MPI_CXX_INCLUDE_PATH}
+)
+target_include_directories(vineyard_graph PUBLIC
+    $<BUILD_INTERFACE:${LIBGRAPELITE_INCLUDE_DIRS}>
+    $<INSTALL_INTERFACE:include>
 )
 target_include_directories(vineyard_graph PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include>
