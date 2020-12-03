@@ -289,7 +289,7 @@ PropertyGraphSchema::LabelId PropertyGraphSchema::GetEdgeLabelId(
 }
 
 std::string PropertyGraphSchema::GetEdgeLabelName(LabelId label_id) const {
-  return vertex_entries_[label_id].label;
+  return edge_entries_[label_id].label;
 }
 
 Entry* PropertyGraphSchema::CreateEntry(const std::string& name,

@@ -70,6 +70,9 @@ if(BUILD_VINEYARD_TESTS)
                               ${ARROW_SHARED_LIB}
                               ${CPPNETLIB_LIBRARIES}
                               ${MPI_CXX_LIBRARIES})
+        if(${LIBUNWIND_FOUND})
+            target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})
+        endif()
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
     endforeach()

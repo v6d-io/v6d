@@ -20,7 +20,6 @@ limitations under the License.
 #include "boost/algorithm/string.hpp"
 
 #include "client/client.h"
-#include "common/backtrace/backtrace.hpp"
 #include "common/util/callback.h"
 #include "common/util/flags.h"
 #include "common/util/logging.h"
