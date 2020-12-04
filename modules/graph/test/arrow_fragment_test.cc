@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
     comm_spec.Init(MPI_COMM_WORLD);
 
     // Load from efiles and vfiles
-#if 1
+#if 0
     vineyard::ObjectID fragment_id = InvalidObjectID();
     MPI_Barrier(MPI_COMM_WORLD);
     double t = -GetCurrentTime();
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
       auto loader =
           std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                                property_graph_types::VID_TYPE>>(
-              client, comm_spec, efiles, vfiles, directed != 0);
+              client, comm_spec, efiles, directed != 0);
 #endif
       fragment_id = boost::leaf::try_handle_all(
           [&loader]() { return loader->LoadFragment(); },

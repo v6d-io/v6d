@@ -312,7 +312,7 @@ class ArrowFragmentLoader {
         vfiles_(),
         directed_(directed),
         generate_eid_(generate_eid),
-        load_with_ve_(true) {}
+        load_with_ve_(false) {}
 
   ArrowFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                       const std::vector<ObjectID>& vstreams,

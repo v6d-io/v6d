@@ -465,8 +465,8 @@ class BasicEVFragmentLoader {
       auto table = output_vertex_tables_[v_label];
 
       if (retain_oid_) {
-        entry->AddPrimaryKeys(1, std::vector<std::string>{
-                                     std::to_string(table->num_columns() - 1)});
+        int col_id = table->num_columns() - 1;
+        entry->AddPrimaryKeys(1, std::vector<std::string>{ table->schema()->field(col_id)->name() });
       }
 
       for (int i = 0; i < table->num_columns(); ++i) {
