@@ -252,11 +252,12 @@ Status GetData(const ptree& tree, const std::string& name, ptree& sub_tree) {
         if (IsBlob(sub_sub_tree_id) && status.IsMetaTreeSubtreeNotExists()) {
           // make an empty blob
           sub_sub_tree.put("id", VYObjectIDToString(EmptyBlobID()));
-          sub_sub_tree.put("type_name", "vineyard::Blob");
+          sub_sub_tree.put("typename", "vineyard::Blob");
           sub_sub_tree.put("length", 0);
           sub_sub_tree.put("nbytes", 0);
           sub_sub_tree.put("instance_id", UnspecifiedInstanceID());
           sub_sub_tree.put("transient", true);
+          sub_tree.add_child(it->first, sub_sub_tree);
         } else {
           sub_tree.clear();
           return status;
