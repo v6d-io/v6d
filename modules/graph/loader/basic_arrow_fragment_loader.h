@@ -31,57 +31,13 @@ limitations under the License.
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/property_graph_types.h"
+#include "graph/loader/basic_e_fragment_loader.h"
 #include "graph/utils/partitioner.h"
 #include "graph/utils/table_shuffler.h"
 #include "graph/utils/table_shuffler_beta.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 namespace vineyard {
-template <typename T>
-class OidSet {
-  using oid_t = T;
-  using internal_oid_t = typename InternalType<oid_t>::type;
-  using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
-
- public:
-  boost::leaf::result<void> BatchInsert(
-      const std::shared_ptr<arrow::Array>& arr) {
-    if (vineyard::ConvertToArrowType<oid_t>::TypeValue() != arr->type()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                      "OID_T is not same with arrow::Column(" +
-                          arr->type()->ToString() + ")");
-    }
-    auto oid_arr = std::dynamic_pointer_cast<oid_array_t>(arr);
-    for (int64_t i = 0; i < oid_arr->length(); i++) {
-      oids.insert(oid_arr->GetView(i));
-    }
-    return {};
-  }
-
-  boost::leaf::result<void> BatchInsert(
-      const std::shared_ptr<arrow::ChunkedArray>& chunked_arr) {
-    for (auto chunk_idx = 0; chunk_idx < chunked_arr->num_chunks();
-         chunk_idx++) {
-      BOOST_LEAF_CHECK(BatchInsert(chunked_arr->chunk(chunk_idx)));
-    }
-    return {};
-  }
-
-  boost::leaf::result<std::shared_ptr<oid_array_t>> ToArrowArray() {
-    typename vineyard::ConvertToArrowType<oid_t>::BuilderType builder;
-
-    for (auto& oid : oids) {
-      builder.Append(oid);
-    }
-
-    std::shared_ptr<oid_array_t> oid_arr;
-    ARROW_OK_OR_RAISE(builder.Finish(&oid_arr));
-    return oid_arr;
-  }
-
- private:
-  std::unordered_set<internal_oid_t> oids;
-};
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T>
 class BasicArrowFragmentLoader {

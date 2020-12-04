@@ -24,6 +24,25 @@ limitations under the License.
 
 namespace vineyard {
 
+std::shared_ptr<arrow::Table> ConcatenateTables(
+    std::vector<std::shared_ptr<arrow::Table>>& tables) {
+  if (tables.size() == 1) {
+    return tables[0];
+  }
+  auto col_names = tables[0]->ColumnNames();
+  for (size_t i = 1; i < tables.size(); ++i) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(tables[i]->RenameColumns(col_names, &tables[i]));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
+                                 tables[i]->RenameColumns(col_names));
+#endif
+  }
+  std::shared_ptr<arrow::Table> table;
+  CHECK_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(tables));
+  return table;
+}
+
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   switch (type) {
   case AnyType::Int32:
