@@ -466,7 +466,8 @@ class BasicEVFragmentLoader {
 
       if (retain_oid_) {
         int col_id = table->num_columns() - 1;
-        entry->AddPrimaryKeys(1, std::vector<std::string>{ table->schema()->field(col_id)->name() });
+        entry->AddPrimaryKeys(1, std::vector<std::string>{
+                                     table->schema()->field(col_id)->name()});
       }
 
       for (int i = 0; i < table->num_columns(); ++i) {
