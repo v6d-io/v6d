@@ -53,6 +53,7 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
                 break
             df = batch.to_pandas()
             df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=idx)
+            client.persist(df_id)
             idx += 1
             print_vineyard_id(df_id)
 

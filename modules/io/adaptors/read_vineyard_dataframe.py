@@ -28,8 +28,6 @@ from vineyard.io.dataframe import DataframeStreamBuilder
 
 
 def read_vineyard_dataframe(vineyard_socket, path, proc_num, proc_index):
-    if proc_index:
-        return
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
 
@@ -54,6 +52,7 @@ def read_vineyard_dataframe(vineyard_socket, path, proc_num, proc_index):
                 builder[k] = bytes(v, "utf-8").decode("unicode_escape")
 
     stream = builder.seal(client)
+    client.persist(stream)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
     print(json.dumps(ret))
