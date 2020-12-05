@@ -110,7 +110,7 @@ def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
     #    'hive://user/hive/warehouse/sometable/date=20201112'
     #
     if proc_index:
-        return
+        raise ValueError('Parallel reading ORC hasn\'t been supported yet')
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
     stream = builder.seal(client)

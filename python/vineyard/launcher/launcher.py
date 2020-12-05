@@ -18,9 +18,12 @@
 
 from enum import Enum
 import json
+import logging
 import sys
 import threading
 import uuid
+
+logger = logging.getLogger('vineyard')
 
 
 class LauncherStatus(Enum):
@@ -120,7 +123,15 @@ class Launcher(object):
                 }
         '''
         try:
-            r = json.loads(line.strip())
+            line = line.strip()
+            if line:
+                logger.debug('receive output: %s', line)
+            else:
+                return None
+
+            r = json.loads(line)
+            if not isinstance(r, dict):
+                return None
 
             if 'return' in r:
                 return self.on_return(r['return'])

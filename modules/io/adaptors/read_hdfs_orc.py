@@ -63,7 +63,7 @@ def arrow_type(field):
 
 def read_hdfs_orc(vineyard_socket, path, proc_num, proc_index):
     if proc_index:
-        return
+        raise ValueError('Parallel reading ORC hasn\'t been supported yet')
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
 
