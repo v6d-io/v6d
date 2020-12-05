@@ -34,8 +34,7 @@ def parallel_stream_resolver(obj):
     '''
     meta = obj.meta
     partition_size = int(meta['size_'])
-    streams = [meta.get_member('stream_%d' % i) for i in range(partition_size)]
-    return [stream for stream in streams if stream.islocal]
+    return [meta.get_member('stream_%d' % i) for i in range(partition_size)]
 
 
 def global_dataframe_resolver(obj, resolver):
@@ -159,7 +158,9 @@ class ParallelStreamLauncher(ScriptLauncher):
         for idx, partition_id in enumerate(partial_ids):
             meta.add_member('stream_%d' % idx, partition_id)
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
-        return vineyard_rpc_client.create_metadata(meta)
+        ret_id = vineyard_rpc_client.create_metadata(meta)
+        vineyard_rpc_client.persist(ret_id)
+        return ret_id
 
     def wait_all(self, func=None, **kwargs):
         partial_id_matrix = []
@@ -183,7 +184,9 @@ class ParallelStreamLauncher(ScriptLauncher):
         meta['num_of_objects'] = idx
         meta['nbytes'] = 0  # FIXME
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
-        return vineyard_rpc_client.create_metadata(meta)
+        ret_id = vineyard_rpc_client.create_metadata(meta)
+        vineyard_rpc_client.persist(ret_id)
+        return ret_id
 
     def create_global_dataframe(self, partial_id_matrix, **kwargs):
         # use the partial_id_matrix and the name in **kwargs
@@ -202,6 +205,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         meta['nbytes'] = 0  # FIXME
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
         gdf = vineyard_rpc_client.create_metadata(meta)
+        vineyard_rpc_client.persist(gdf)
         vineyard_rpc_client.put_name(gdf, name)
 
 

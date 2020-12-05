@@ -67,6 +67,7 @@ def read_local_orc(vineyard_socket, path, proc_num, proc_index):
     builder = DataframeStreamBuilder(client)
 
     stream = builder.seal(client)
+    client.persist(stream)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
     print(json.dumps(ret))

@@ -279,17 +279,17 @@ void bind_client(py::module& mod) {
           "object_ids"_a)
       .def(
           "get_meta",
-          [](Client* self, ObjectIDWrapper const& object_id) -> ObjectMeta {
+          [](Client* self, ObjectIDWrapper const& object_id, bool const sync_remote) -> ObjectMeta {
             ObjectMeta meta;
             // FIXME: do we really not need to sync from etcd? We assume the
             // object is a local object
-            throw_on_error(self->GetMetaData(object_id, meta, false));
+            throw_on_error(self->GetMetaData(object_id, meta, sync_remote));
             return meta;
           },
-          "object_id"_a)
+          "object_id"_a, py::arg("sync_remote") = false)
       .def(
           "get_metas",
-          [](Client* self, std::vector<ObjectIDWrapper> const& object_ids)
+          [](Client* self, std::vector<ObjectIDWrapper> const& object_ids, bool const sync_remote)
               -> std::vector<ObjectMeta> {
             std::vector<ObjectMeta> metas;
             // FIXME: do we really not need to sync from etcd? We assume the
@@ -299,10 +299,10 @@ void bind_client(py::module& mod) {
               unwrapped_object_ids[idx] = object_ids[idx];
             }
             throw_on_error(
-                self->GetMetaData(unwrapped_object_ids, metas, false));
+                self->GetMetaData(unwrapped_object_ids, metas, sync_remote));
             return metas;
           },
-          "object_ids"_a)
+          "object_ids"_a, py::arg("sync_remote") = false)
       .def("list_objects", &Client::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5)
       .def("close",

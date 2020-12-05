@@ -70,6 +70,7 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
         offset = len(header_line)
 
     stream = builder.seal(client)
+    client.persist(stream)
 
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)

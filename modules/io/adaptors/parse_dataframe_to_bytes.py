@@ -41,6 +41,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
 
     builder = ByteStreamBuilder(client)
     stream = builder.seal(client)
+    client.persist(stream)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
     print(json.dumps(ret))
