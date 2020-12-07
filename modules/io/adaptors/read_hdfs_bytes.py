@@ -62,7 +62,7 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
                 builder[k] = v
 
     offset = 0
-    length = 1024 * 1024
+    chunk_size = 1024 * 1024 * 4
 
     header_line = hdfs.read_block(path, 0, 1, b'\n')
     builder['header_line'] = header_line.decode('unicode_escape')
@@ -74,7 +74,7 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
 
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
-    print(json.dumps(ret))
+    print(json.dumps(ret), flush=True)
 
     writer = stream.open_writer(client)
 
@@ -90,7 +90,7 @@ def read_hdfs_bytes(vineyard_socket, path, proc_num, proc_index):
 
     offset = begin
     while offset < end:
-        buf = hdfs.read_block(path, offset, min(length, end - offset), b'\n')
+        buf = hdfs.read_block(path, offset, min(chunk_size, end - offset), b'\n')
         size = len(buf)
         if not size:
             break

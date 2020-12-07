@@ -76,7 +76,6 @@ Status StreamStore::Get(ObjectID const stream_id, size_t const size,
     }
   }
 
-  // if (true /* FIXME: allocatable */) {
   if (allocatable(stream, size)) {
     // do allocation
     ObjectID chunk;

@@ -44,7 +44,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client.persist(stream)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
-    print(json.dumps(ret))
+    print(json.dumps(ret), flush=True)
 
     stream_writer = stream.open_writer(client)
     first_write = header_row

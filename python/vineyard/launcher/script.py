@@ -106,12 +106,12 @@ class ScriptLauncher(Launcher):
         while self._proc.poll() is None:
             line = stream.readline()
             self.parse(line)
-            logger.info(line)
+            logger.debug(line)
 
         # consume all extra lines if the proc exits.
         for line in stream.readlines():
             self.parse(line)
-            logger.info(line)
+            logger.debug(line)
 
     def join(self):
         if self._proc.wait():

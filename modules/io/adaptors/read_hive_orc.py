@@ -63,6 +63,8 @@ def arrow_type(field):
 
 
 def read_hdfs_orc(path, hdfs, writer):
+    chunk_rows = 1024 * 256
+
     with hdfs.open(path, 'rb') as f:
         reader = pyorc.Reader(f)
         fields = reader.schema.fields
@@ -71,7 +73,7 @@ def read_hdfs_orc(path, hdfs, writer):
             schema.append((c, arrow_type(fields[c])))
         pa_struct = pa.struct(schema)
         while True:
-            rows = reader.read(num=1024)
+            rows = reader.read(num=chunk_rows)
             if not rows:
                 break
             rb = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
@@ -117,7 +119,7 @@ def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
     client.persist(stream)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
-    print(json.dumps(ret))
+    print(json.dumps(ret), flush=True)
 
     writer = stream.open_writer(client)
     host, port = urlparse(path).netloc.split(':')
