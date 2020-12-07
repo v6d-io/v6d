@@ -210,7 +210,7 @@ int main(int argc, const char** argv) {
     std::unique_ptr<arrow::Buffer> buffer;
     auto status = reader->GetNext(buffer);
     if (status.ok()) {
-      LOG(INFO) << "consumer: buffer size = " << buffer->size();
+      VLOG(10) << "consumer: buffer size = " << buffer->size();
       std::shared_ptr<arrow::Table> table;
       Status st =
           ParseTable(&table, buffer, delimiter[0], header_row, columns,

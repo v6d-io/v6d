@@ -55,7 +55,7 @@ def read_vineyard_dataframe(vineyard_socket, path, proc_num, proc_index):
     client.persist(stream)
     ret = {'type': 'return'}
     ret['content'] = repr(stream.id)
-    print(json.dumps(ret))
+    print(json.dumps(ret), flush=True)
 
     writer = stream.open_writer(client)
 
