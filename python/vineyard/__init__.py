@@ -19,6 +19,7 @@
 from .version import __version__
 
 import logging
+import os
 import traceback
 
 
@@ -49,7 +50,8 @@ def _init_global_context():
         sys.setdlopenflags(old_flags)
 
 
-_init_global_context()
+if os.environ.get('VINEYARD_DEV', None) is not None:
+    _init_global_context()
 del _init_global_context
 
 
