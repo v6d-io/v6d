@@ -266,6 +266,8 @@ jobs:
 
       - name: Run Python Tests
         run: |
+          export VINEYARD_DEV=TRUE
+
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
@@ -278,6 +280,8 @@ jobs:
 
       - name: Run IO Tests
         run: |
+          export VINEYARD_DEV=TRUE
+
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
