@@ -134,7 +134,7 @@ class PropertyGraphSchema {
 
   const std::vector<Entry>& edge_entries() const { return edge_entries_; }
 
-  std::vector<std::string> GetVextexLabels() const;
+  std::vector<std::string> GetVertexLabels() const;
 
   std::vector<std::string> GetEdgeLabels() const;
 

@@ -309,7 +309,7 @@ Entry* PropertyGraphSchema::CreateEntry(const std::string& name,
   }
 }
 
-std::vector<std::string> PropertyGraphSchema::GetVextexLabels() const {
+std::vector<std::string> PropertyGraphSchema::GetVertexLabels() const {
   std::vector<std::string> labels;
   for (auto& entry : vertex_entries_) {
     labels.emplace_back(entry.label);
