@@ -23,6 +23,7 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/builder.h"
+#include "arrow/compute/api.h"
 #include "boost/leaf/all.hpp"
 
 #include "grape/utils/vertex_array.h"
@@ -756,6 +757,7 @@ inline boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
           chunks.push_back(new_array);
         } else if (arrow::compute::CanCast(*from_type, *to_type)) {
           BOOST_LEAF_AUTO(new_array, GeneralCast(array, to_type));
+          chunks.push_back(new_array);
         } else {
           RETURN_GS_ERROR(ErrorCode::kDataTypeError,
                           "Unsupported cast: To type: " + to_type->ToString() +
