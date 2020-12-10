@@ -54,8 +54,8 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
            :alt: libvineyard
            :width: 397px
 
-        vineyard:: an in-memory immutable data manager
-        ----------------------------------------------
+        vineyard: an in-memory immutable data manager
+        ---------------------------------------------
         ''')
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
