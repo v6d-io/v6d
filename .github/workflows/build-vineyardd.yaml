@@ -58,17 +58,17 @@ jobs:
           cat ./*.sha512sum
           tar zcvfh vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ github.sha }}.sha512sum
 
-      - name: Upload docker image
+      - name: Upload docker image as nightly
         if: ${{ github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
         run: |
           sudo docker tag docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-latest
+                          docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-nightly
           sudo docker tag docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/libvineyard/vineyardd:latest
+                          docker.pkg.github.com/alibaba/libvineyard/vineyardd:nightly
 
           sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }}
-          sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-latest
-          sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:latest
+          sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-nightly
+          sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:nightly
 
       - name: Extract tag name
         id: tag
@@ -85,6 +85,15 @@ jobs:
 
           sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
           sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:${{ steps.tag.outputs.TAG }}
+
+          sudo docker tag docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-latest
+          sudo docker tag docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/alibaba/libvineyard/vineyardd:latest
+
+          sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-${{ github.sha }}
+          sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-latest
+          sudo docker push docker.pkg.github.com/alibaba/libvineyard/vineyardd:latest
 
       - name: Upload vineyardd to latest release
         uses: svenstaro/upload-release-action@v2
