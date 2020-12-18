@@ -5,7 +5,7 @@ version = @VINEYARD_VERSION@
 install_requires =
     numpy
     pandas
-    pyarrow==@ARROW_VERSION@
+    pyarrow
     sortedcontainers
     setuptools
 
