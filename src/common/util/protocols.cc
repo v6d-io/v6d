@@ -88,6 +88,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::ShallowCopyRequest;
   } else if (str_type == "open_stream_request") {
     return CommandType::OpenStreamRequest;
+  } else if (str_type == "migrate_object_request") {
+    return CommandType::MigrateObjectRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -609,6 +611,35 @@ void WriteDropNameReply(std::string& msg) {
 
 Status ReadDropNameReply(const json& root) {
   CHECK_IPC_ERROR(root, "drop_name_reply");
+  return Status::OK();
+}
+
+void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg) {
+  json root;
+  root["type"] = "migrate_object_request";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
+                   "migrate_object_request");
+  object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteMigrateObjectReply(const ObjectID& object_id, std::string& msg) {
+  json root;
+  root["type"] = "migrate_object_reply";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMigrateObjectReply(const json& root, ObjectID& object_id) {
+  CHECK_IPC_ERROR(root, "migrate_object_reply");
+  object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
 

@@ -212,6 +212,18 @@ Status ClientBase::DropName(const std::string& name) {
   return Status::OK();
 }
 
+Status ClientBase::MigrateObject(const ObjectID object_id,
+                                 ObjectID& result_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteMigrateObjectRequest(object_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMigrateObjectReply(message_in, result_id));
+  return Status::OK();
+}
+
 bool ClientBase::Connected() const {
   if (connected_ &&
       recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1) {
