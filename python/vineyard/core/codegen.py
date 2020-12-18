@@ -1062,7 +1062,8 @@ def parse_module(root_directory,
             # system includes, since we `-nostdinc{++}`.
             if system_includes:
                 for inc in system_includes.split(';'):
-                    flags.append('-I%s' % inc)
+                    flags.append('-isystem')
+                    flags.append(inc)
 
             if extra_flags:
                 flags.extend(extra_flags)
@@ -1071,7 +1072,8 @@ def parse_module(root_directory,
         flags = []
         if system_includes:
             for inc in system_includes.split(';'):
-                flags.append('-I%s' % inc)
+                flags.append('-isystem')
+                flags.append(inc)
         if includes:
             for inc in includes.split(';'):
                 flags.append('-I%s' % inc)
@@ -1094,7 +1096,7 @@ def parse_module(root_directory,
     if parse_only:
         options |= ParseOption.SingleFileParse
 
-    parse_flags = flags + base_flags
+    parse_flags = base_flags + flags
     unit = index.parse(source, unsaved_files=unsaved_files, args=parse_flags, options=options)
 
     if not parse_only:
