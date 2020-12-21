@@ -52,7 +52,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
       ops.emplace_back(op);
       break;
     }
-    case mvccpb::Event::DELETE: {
+    case mvccpb::Event::DELETE_: {
       auto op = EtcdMetaService::op_t::Del(op_key, event.kv().mod_revision());
       ops.emplace_back(op);
       break;
