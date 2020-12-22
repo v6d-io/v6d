@@ -187,9 +187,21 @@ void bind_core(py::module& mod) {
       .def("__int__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
       .def("__repr__",
            [](const ObjectIDWrapper& id) { return VYObjectIDToString(id); })
-      .def("__str__", [](const ObjectIDWrapper& id) {
-        return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
-      });
+      .def("__str__",
+           [](const ObjectIDWrapper& id) {
+             return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
+           })
+      .def(py::pickle(
+          [](const ObjectIDWrapper& id) {  // __getstate__
+            return py::make_tuple(ObjectID(id));
+          },
+          [](py::tuple const& tup) {  // __setstate__
+            if (tup.size() != 1) {
+              throw std::runtime_error(
+                  "Invalid state, cannot be pickled as ObjectID!");
+            }
+            return ObjectIDWrapper{tup[0].cast<ObjectID>()};
+          }));
 
   // Object
   py::class_<Object, std::shared_ptr<Object>>(mod, "Object")
