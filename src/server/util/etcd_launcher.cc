@@ -121,6 +121,11 @@ Status EtcdLauncher::LaunchEtcdServer(
       "http://" + host_to_advertise + ":" + std::to_string(endpoint_port_ + 1);
 
   std::vector<std::string> args;
+  // This flag will be deprecated since etcd 3.5, but after then we could adjust
+  // the warn duration.
+  //
+  // c.f.: https://github.com/etcd-io/etcd/pull/12448
+  args.emplace_back("--log-package-levels='etcdserver=ERROR'");
   args.emplace_back("--max-txn-ops=102400");
   args.emplace_back("--listen-client-urls");
   args.emplace_back("http://0.0.0.0:" + std::to_string(endpoint_port_));
