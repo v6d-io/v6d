@@ -121,6 +121,7 @@ Status EtcdLauncher::LaunchEtcdServer(
       "http://" + host_to_advertise + ":" + std::to_string(endpoint_port_ + 1);
 
   std::vector<std::string> args;
+  args.emplace_back("--log-package-levels=etcdserver=ERROR");
   args.emplace_back("--max-txn-ops=102400");
   args.emplace_back("--listen-client-urls");
   args.emplace_back("http://0.0.0.0:" + std::to_string(endpoint_port_));
