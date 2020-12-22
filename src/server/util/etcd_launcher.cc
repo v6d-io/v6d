@@ -125,7 +125,7 @@ Status EtcdLauncher::LaunchEtcdServer(
   // the warn duration.
   //
   // c.f.: https://github.com/etcd-io/etcd/pull/12448
-  args.emplace_back("--log-package-levels=etcdserver=ERROR");
+  args.emplace_back("--log-package-levels='etcdserver=ERROR'");
   args.emplace_back("--max-txn-ops=102400");
   args.emplace_back("--listen-client-urls");
   args.emplace_back("http://0.0.0.0:" + std::to_string(endpoint_port_));
