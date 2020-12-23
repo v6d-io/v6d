@@ -19,3 +19,9 @@ set(VINEYARD_INCLUDE_DIRS "${VINEYARD_INCLUDE_DIR}")
 set(VINEYARDD_EXECUTABLE "${VINEYARD_HOME}/bin/vineyardd")
 
 set(VINEYARD_CODEGEN_EXECUTABLE "${VINEYARD_HOME}/bin/vineyard-codegen")
+
+include(FindPackageMessage)
+find_package_message(vineyard
+    "Found vineyard: ${CMAKE_CURRENT_LIST_FILE} (found version \"@VINEYARD_VERSION@\")"
+    "Vineyard version: @VINEYARD_VERSION@\nVineyard libraries: ${VINEYARD_LIBRARIES}, include directories: ${VINEYARD_INCLUDE_DIRS}"
+)
