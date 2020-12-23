@@ -41,9 +41,7 @@ class BinDistribution(Distribution):
         return True
 
 
-with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
-          encoding='utf-8',
-          mode='r') as fp:
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'), encoding='utf-8', mode='r') as fp:
     long_description = fp.read()
 
     # Github doesn't respect "align: center", and pypi disables `.. raw`.
@@ -58,7 +56,6 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
         ---------------------------------------------
         ''')
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
-
 
 setup(
     name='vineyard',
@@ -102,4 +99,22 @@ setup(
             'sphinx_rtd_theme',
         ],
     },
+    license="Apache License 2.0",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: System :: Distributed Computing",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+    ],
 )
