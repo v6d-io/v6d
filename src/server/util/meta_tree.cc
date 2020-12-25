@@ -405,6 +405,9 @@ static void generate_put_ops(const ptree& meta, const ptree& diff,
   }
 }
 
+/// Store metas to etcd.
+/// We create an entry for each subtree recursively, and delete processed
+/// subtree to avoid duplicate information.
 static void generate_persist_ops(ptree& diff, const std::string& name,
                                  std::vector<IMetaService::op_t>& ops,
                                  std::set<std::string>& dedup) {
@@ -431,7 +434,6 @@ static void generate_persist_ops(ptree& diff, const std::string& name,
       }
       // Remove subtree to avoid duplicates
       it = diff.erase(it);
-
     } else {
       ++it;
     }

@@ -620,6 +620,8 @@ class IMetaService {
     }
   }
 
+  /// Flatten potential subtree, which is uploaded to etcd by `Persist`.
+  /// See meta_tree.cc:`generate_persist_ops` for reference.
   void decode_ops(const IMetaService::op_t& op,
                   std::vector<IMetaService::op_t>& out) {
     auto kv = op.kv;
