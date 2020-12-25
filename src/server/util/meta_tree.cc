@@ -405,14 +405,15 @@ static void generate_put_ops(const ptree& meta, const ptree& diff,
   }
 }
 
-static void generate_persist_ops(const ptree& diff, const std::string& name,
+static void generate_persist_ops(ptree& diff, const std::string& name,
                                  std::vector<IMetaService::op_t>& ops,
                                  std::set<std::string>& dedup) {
   std::string key_prefix = "data." + name + ".";
-  for (ptree::const_iterator it = diff.begin(); it != diff.end(); ++it) {
+  for (ptree::iterator it = diff.begin(); it != diff.end();) {
     if (!it->second.empty()) {
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
+
       // Don't persist blob into etcd, but the link cannot be omitted.
       if (it->second.get<bool>("transient") && sub_type != "vineyard::Blob") {
         // otherwise, skip recursively generate ops
@@ -422,29 +423,22 @@ static void generate_persist_ops(const ptree& diff, const std::string& name,
       generate_link(sub_type, sub_name, link);
       std::string encoded_value;
       encode_value(NodeType::Link, link, encoded_value);
+
       std::string encoded_key = key_prefix + it->first;
       if (dedup.find(encoded_key) == dedup.end()) {
         ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
         dedup.emplace(encoded_key);
       }
+      // Remove subtree to avoid duplicates
+      it = diff.erase(it);
+
     } else {
-      // don't repeat "id" in the etcd kvs.
-      if (it->first == "id") {
-        continue;
-      }
-      std::string encoded_value;
-      if (it->first == "transient") {
-        encode_value(NodeType::Value, "false", encoded_value);
-      } else {
-        encode_value(NodeType::Value, it->second.data(), encoded_value);
-      }
-      std::string encoded_key = key_prefix + it->first;
-      if (dedup.find(encoded_key) == dedup.end()) {
-        ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
-        dedup.emplace(encoded_key);
-      }
+      ++it;
     }
   }
+  std::ostringstream stream;
+  boost::property_tree::write_json(stream, diff);
+  ops.emplace_back(IMetaService::op_t::Put(key_prefix, stream.str()));
 }
 
 /**

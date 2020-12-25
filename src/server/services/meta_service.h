@@ -25,6 +25,8 @@ limitations under the License.
 #include <vector>
 
 #include "boost/asio.hpp"
+#include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 #include "boost/range/iterator_range.hpp"
 
 #include "common/util/boost.h"
@@ -618,6 +620,31 @@ class IMetaService {
     }
   }
 
+  void decode_ops(const IMetaService::op_t& op,
+                  std::vector<IMetaService::op_t>& out) {
+    auto kv = op.kv;
+    if (kv.key.back() == '.' && op.op == op_t::op_type_t::kPut) {
+      boost::property_tree::ptree pt;
+      std::stringstream ss(kv.value);
+      boost::property_tree::read_json(ss, pt);
+      for (ptree::iterator it = pt.begin(); it != pt.end(); ++it) {
+        if (it->first == "id" || it->second.data().empty()) {
+          continue;
+        }
+        std::string encoded_value = "v";
+        if (it->first == "transient") {
+          encoded_value += "false";
+        } else {
+          encoded_value += it->second.data();
+        }
+        out.push_back(
+            IMetaService::op_t::Put(kv.key + it->first, encoded_value));
+      }
+    } else {
+      out.push_back(op);
+    }
+  }
+
   template <class RangeT>
   void metaUpdate(const RangeT& ops) {
     std::set<ObjectID> blobs_to_delete;
@@ -637,11 +664,14 @@ class IMetaService {
 #ifndef NDEBUG
       VLOG(10) << "update op in meta tree: " << op.ToString();
 #endif
-      const kv_t& kv = op.kv;
-      if (op.op == op_t::op_type_t::kPut) {
-        putVal(kv);
-      } else if (op.op == op_t::op_type_t::kDel) {
-        delVal(kv, blobs_to_delete);
+      std::vector<IMetaService::op_t> sub_ops;
+      decode_ops(op, sub_ops);
+      for (auto& sub_op : sub_ops) {
+        if (sub_op.op == op_t::op_type_t::kPut) {
+          putVal(sub_op.kv);
+        } else if (sub_op.op == op_t::op_type_t::kDel) {
+          delVal(sub_op.kv, blobs_to_delete);
+        }
       }
     }
     VINEYARD_SUPPRESS(server_ptr_->DeleteBlobBatch(blobs_to_delete));

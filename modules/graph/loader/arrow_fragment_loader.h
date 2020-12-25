@@ -524,9 +524,6 @@ class ArrowFragmentLoader {
     auto frag = std::dynamic_pointer_cast<ArrowFragment<OID_T, VID_T>>(
         client_.GetObject(frag_id));
 
-    label_id_t vertex_label_num = frag->vertex_label_num();
-    label_id_t edge_label_num = frag->edge_label_num();
-
     BOOST_LEAF_AUTO(group_id,
                     ConstructFragmentGroup(client_, frag_id, comm_spec_));
     return group_id;
