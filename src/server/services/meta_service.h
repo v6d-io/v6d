@@ -629,18 +629,27 @@ class IMetaService {
       boost::property_tree::ptree pt;
       std::stringstream ss(kv.value);
       boost::property_tree::read_json(ss, pt);
+
       for (ptree::iterator it = pt.begin(); it != pt.end(); ++it) {
-        if (it->first == "id" || it->second.data().empty()) {
-          continue;
-        }
-        std::string encoded_value = "v";
-        if (it->first == "transient") {
-          encoded_value += "false";
+        std::string encoded_value;
+        if (it->second.empty()) {
+          if (it->first == "id" || it->second.data().empty()) {
+            continue;
+          }
+          encoded_value = "v";
+          if (it->first == "transient") {
+            encoded_value += "false";
+          } else {
+            encoded_value += it->second.data();
+          }
         } else {
-          encoded_value += it->second.data();
+          encoded_value = "l";
+          encoded_value += it->second.get<std::string>("__subtree", "");
         }
-        out.push_back(
-            IMetaService::op_t::Put(kv.key + it->first, encoded_value));
+        if (encoded_value.size() > 1) {
+          out.push_back(
+              IMetaService::op_t::Put(kv.key + it->first, encoded_value));
+        }
       }
     } else {
       out.push_back(op);
