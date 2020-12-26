@@ -49,6 +49,13 @@ class DataFrame : public Registered<DataFrame> {
   const std::vector<std::string>& Columns() const;
 
   /**
+   * @brief Get the index of dataframe.
+   *
+   * @return The shared pointer to the index tensor.
+   */
+  std::shared_ptr<ITensor> Index() const;
+
+  /**
    * @brief Get the column of the given column name.
    *
    * @param column The given column name.

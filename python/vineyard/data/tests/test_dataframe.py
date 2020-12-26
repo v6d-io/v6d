@@ -18,6 +18,7 @@
 
 import pandas as pd
 import pytest
+import numpy as np
 
 import vineyard
 from vineyard.core import default_builder_context, default_resolver_context
@@ -30,3 +31,10 @@ def test_pandas_dataframe(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8]})
     object_id = vineyard_client.put(df)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
+def test_dataframe_reindex(vineyard_client):
+    df = pd.DataFrame(np.random.rand(10, 5), columns=['c1', 'c2', 'c3', 'c4', 'c5'])
+    expected = df.reindex(index=np.arange(10, 1, -1))
+    object_id = vineyard_client.put(expected)
+    pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))
