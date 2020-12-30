@@ -23,6 +23,34 @@ limitations under the License.
 #include "server/util/meta_tree.h"
 
 namespace vineyard {
+
+namespace metatree {
+void decode_value(const std::string& str, NodeType& type, std::string& value) {
+  if (str[0] == 'v') {
+    type = NodeType::Value;
+    value = str.substr(1);
+  } else if (str[0] == 'l') {
+    type = NodeType::Link;
+    value = str.substr(1);
+  } else {
+    type = NodeType::InvalidType;
+    value.clear();
+  }
+}
+
+void encode_value(NodeType type, const std::string& value, std::string& str) {
+  str.clear();
+  if (type == NodeType::Value) {
+    str.resize(value.size() + 1);
+    str[0] = 'v';
+    memcpy(&str[1], value.c_str(), value.size());
+  } else if (type == NodeType::Link) {
+    str.resize(value.size() + 1);
+    str[0] = 'l';
+    memcpy(&str[1], value.c_str(), value.size());
+  }
+}
+}  // namespace metatree
 std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t ptr) {
   return std::shared_ptr<IMetaService>(new EtcdMetaService(ptr));
 }

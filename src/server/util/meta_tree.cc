@@ -43,34 +43,6 @@ namespace vineyard {
 
 namespace meta_tree {
 
-static void decode_value(const std::string& str, NodeType& type,
-                         std::string& value) {
-  if (str[0] == 'v') {
-    type = NodeType::Value;
-    value = str.substr(1);
-  } else if (str[0] == 'l') {
-    type = NodeType::Link;
-    value = str.substr(1);
-  } else {
-    type = NodeType::InvalidType;
-    value.clear();
-  }
-}
-
-static void encode_value(NodeType type, const std::string& value,
-                         std::string& str) {
-  str.clear();
-  if (type == NodeType::Value) {
-    str.resize(value.size() + 1);
-    str[0] = 'v';
-    memcpy(&str[1], value.c_str(), value.size());
-  } else if (type == NodeType::Link) {
-    str.resize(value.size() + 1);
-    str[0] = 'l';
-    memcpy(&str[1], value.c_str(), value.size());
-  }
-}
-
 static bool __attribute__((used)) is_link_node(const std::string& str) {
   return str[0] == 'l';
 }
@@ -364,11 +336,6 @@ Status DelDataOps(const ptree& tree, const std::string& name,
     if (node_op) {
       // erase from etcd
       std::string key_prefix = data_prefix + "." + name + ".";
-      for (auto it = node_op->begin(); it != node_op->end(); ++it) {
-        ops.emplace_back(IMetaService::op_t::Del(key_prefix + it->first));
-      }
-      // ensure the node will be erased from in-server ptree correctly.
-      ops.emplace_back(IMetaService::op_t::Del(data_prefix + "." + name));
       ops.emplace_back(IMetaService::op_t::Del(key_prefix));
       return Status::OK();
     }

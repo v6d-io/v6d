@@ -25,13 +25,6 @@ limitations under the License.
 namespace vineyard {
 
 namespace meta_tree {
-
-enum class NodeType {
-  Value = 0,
-  Link = 1,
-  InvalidType = 15,
-};
-
 Status GetData(const ptree& tree, const ObjectID id, ptree& sub_tree);
 Status GetData(const ptree& tree, const std::string& name, ptree& sub_tree);
 Status ListData(const ptree& tree, const std::string& pattern, bool const regex,
