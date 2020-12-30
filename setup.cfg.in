@@ -4,7 +4,7 @@ version = @VINEYARD_VERSION@
 [options]
 install_requires =
     numpy
-    pandas
+    pandas < 1.2.0
     pyarrow
     sortedcontainers
     setuptools
