@@ -41,7 +41,7 @@ limitations under the License.
 
 namespace vineyard {
 
-namespace metatree {
+namespace meta_tree {
 enum class NodeType {
   Value = 0,
   Link = 1,
@@ -50,7 +50,7 @@ enum class NodeType {
 
 void encode_value(NodeType type, const std::string& value, std::string& str);
 void decode_value(const std::string& str, NodeType& type, std::string& value);
-}  // namespace metatree
+}  // namespace meta_tree
 
 namespace asio = boost::asio;
 
@@ -648,16 +648,16 @@ class IMetaService {
             continue;
           }
           if (it->first == "transient") {
-            metatree::encode_value(metatree::NodeType::Value, "false",
-                                   encoded_value);
+            meta_tree::encode_value(meta_tree::NodeType::Value, "false",
+                                    encoded_value);
           } else {
-            metatree::encode_value(metatree::NodeType::Value, it->second.data(),
-                                   encoded_value);
+            meta_tree::encode_value(meta_tree::NodeType::Value,
+                                    it->second.data(), encoded_value);
           }
         } else {
-          metatree::encode_value(metatree::NodeType::Link,
-                                 it->second.get<std::string>("__subtree", ""),
-                                 encoded_value);
+          meta_tree::encode_value(meta_tree::NodeType::Link,
+                                  it->second.get<std::string>("__subtree", ""),
+                                  encoded_value);
         }
         if (encoded_value.size() > 1) {
           out.push_back(

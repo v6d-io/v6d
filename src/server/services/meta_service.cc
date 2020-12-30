@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace vineyard {
 
-namespace metatree {
+namespace meta_tree {
 void decode_value(const std::string& str, NodeType& type, std::string& value) {
   if (str[0] == 'v') {
     type = NodeType::Value;
@@ -50,7 +50,8 @@ void encode_value(NodeType type, const std::string& value, std::string& str) {
     memcpy(&str[1], value.c_str(), value.size());
   }
 }
-}  // namespace metatree
+}  // namespace meta_tree
+
 std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t ptr) {
   return std::shared_ptr<IMetaService>(new EtcdMetaService(ptr));
 }
