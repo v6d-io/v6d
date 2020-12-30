@@ -648,7 +648,7 @@ class IMetaService {
             continue;
           }
           if (it->first == "transient") {
-            metatree::encode_value(metatree::NodeType::Value, false,
+            metatree::encode_value(metatree::NodeType::Value, "false",
                                    encoded_value);
           } else {
             metatree::encode_value(metatree::NodeType::Value, it->second.data(),
