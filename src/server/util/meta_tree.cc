@@ -336,6 +336,9 @@ Status DelDataOps(const ptree& tree, const std::string& name,
     if (node_op) {
       // erase from etcd
       std::string key_prefix = data_prefix + "." + name + ".";
+      for (auto it = node_op->begin(); it != node_op->end(); ++it) {
+        ops.emplace_back(IMetaService::op_t::Del(key_prefix + it->first));
+      }
       ops.emplace_back(IMetaService::op_t::Del(key_prefix));
       return Status::OK();
     }
