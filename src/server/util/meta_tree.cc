@@ -43,34 +43,6 @@ namespace vineyard {
 
 namespace meta_tree {
 
-static void decode_value(const std::string& str, NodeType& type,
-                         std::string& value) {
-  if (str[0] == 'v') {
-    type = NodeType::Value;
-    value = str.substr(1);
-  } else if (str[0] == 'l') {
-    type = NodeType::Link;
-    value = str.substr(1);
-  } else {
-    type = NodeType::InvalidType;
-    value.clear();
-  }
-}
-
-static void encode_value(NodeType type, const std::string& value,
-                         std::string& str) {
-  str.clear();
-  if (type == NodeType::Value) {
-    str.resize(value.size() + 1);
-    str[0] = 'v';
-    memcpy(&str[1], value.c_str(), value.size());
-  } else if (type == NodeType::Link) {
-    str.resize(value.size() + 1);
-    str[0] = 'l';
-    memcpy(&str[1], value.c_str(), value.size());
-  }
-}
-
 static bool __attribute__((used)) is_link_node(const std::string& str) {
   return str[0] == 'l';
 }
@@ -367,8 +339,7 @@ Status DelDataOps(const ptree& tree, const std::string& name,
       for (auto it = node_op->begin(); it != node_op->end(); ++it) {
         ops.emplace_back(IMetaService::op_t::Del(key_prefix + it->first));
       }
-      // ensure the node will be erased from in-server ptree correctly.
-      ops.emplace_back(IMetaService::op_t::Del(data_prefix + "." + name));
+      ops.emplace_back(IMetaService::op_t::Del(key_prefix));
       return Status::OK();
     }
   }
@@ -405,14 +376,18 @@ static void generate_put_ops(const ptree& meta, const ptree& diff,
   }
 }
 
-static void generate_persist_ops(const ptree& diff, const std::string& name,
+/// Store metas to etcd.
+/// We create an entry for each subtree recursively, and reset processed
+/// subtree to its link to avoid duplicate information.
+static void generate_persist_ops(ptree& diff, const std::string& name,
                                  std::vector<IMetaService::op_t>& ops,
                                  std::set<std::string>& dedup) {
   std::string key_prefix = "data." + name + ".";
-  for (ptree::const_iterator it = diff.begin(); it != diff.end(); ++it) {
+  for (ptree::iterator it = diff.begin(); it != diff.end(); ++it) {
     if (!it->second.empty()) {
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
+
       // Don't persist blob into etcd, but the link cannot be omitted.
       if (it->second.get<bool>("transient") && sub_type != "vineyard::Blob") {
         // otherwise, skip recursively generate ops
@@ -420,30 +395,16 @@ static void generate_persist_ops(const ptree& diff, const std::string& name,
       }
       std::string link;
       generate_link(sub_type, sub_name, link);
-      std::string encoded_value;
-      encode_value(NodeType::Link, link, encoded_value);
-      std::string encoded_key = key_prefix + it->first;
-      if (dedup.find(encoded_key) == dedup.end()) {
-        ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
-        dedup.emplace(encoded_key);
-      }
-    } else {
-      // don't repeat "id" in the etcd kvs.
-      if (it->first == "id") {
-        continue;
-      }
-      std::string encoded_value;
-      if (it->first == "transient") {
-        encode_value(NodeType::Value, "false", encoded_value);
-      } else {
-        encode_value(NodeType::Value, it->second.data(), encoded_value);
-      }
-      std::string encoded_key = key_prefix + it->first;
-      if (dedup.find(encoded_key) == dedup.end()) {
-        ops.emplace_back(IMetaService::op_t::Put(encoded_key, encoded_value));
-        dedup.emplace(encoded_key);
-      }
+      ptree pt;
+      pt.put("__subtree", link);
+      it->second = pt;
     }
+  }
+  if (dedup.find(key_prefix) == dedup.end()) {
+    std::ostringstream stream;
+    boost::property_tree::write_json(stream, diff);
+    ops.emplace_back(IMetaService::op_t::Put(key_prefix, stream.str()));
+    dedup.emplace(key_prefix);
   }
 }
 

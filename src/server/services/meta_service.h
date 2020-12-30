@@ -25,6 +25,8 @@ limitations under the License.
 #include <vector>
 
 #include "boost/asio.hpp"
+#include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 #include "boost/range/iterator_range.hpp"
 
 #include "common/util/boost.h"
@@ -38,6 +40,17 @@ limitations under the License.
 #define MAX_TIMEOUT_COUNT 3
 
 namespace vineyard {
+
+namespace meta_tree {
+enum class NodeType {
+  Value = 0,
+  Link = 1,
+  InvalidType = 15,
+};
+
+void encode_value(NodeType type, const std::string& value, std::string& str);
+void decode_value(const std::string& str, NodeType& type, std::string& value);
+}  // namespace meta_tree
 
 namespace asio = boost::asio;
 
@@ -618,6 +631,44 @@ class IMetaService {
     }
   }
 
+  /// Flatten potential subtree, which is uploaded to etcd by `Persist`.
+  /// See meta_tree.cc:`generate_persist_ops` for reference.
+  void decode_ops(const IMetaService::op_t& op,
+                  std::vector<IMetaService::op_t>& out) {
+    auto kv = op.kv;
+    if (kv.key.back() == '.' && op.op == op_t::op_type_t::kPut) {
+      boost::property_tree::ptree pt;
+      std::stringstream ss(kv.value);
+      boost::property_tree::read_json(ss, pt);
+
+      for (ptree::iterator it = pt.begin(); it != pt.end(); ++it) {
+        std::string encoded_value;
+        if (it->second.empty()) {
+          if (it->first == "id" || it->second.data().empty()) {
+            continue;
+          }
+          if (it->first == "transient") {
+            meta_tree::encode_value(meta_tree::NodeType::Value, "false",
+                                    encoded_value);
+          } else {
+            meta_tree::encode_value(meta_tree::NodeType::Value,
+                                    it->second.data(), encoded_value);
+          }
+        } else {
+          meta_tree::encode_value(meta_tree::NodeType::Link,
+                                  it->second.get<std::string>("__subtree", ""),
+                                  encoded_value);
+        }
+        if (encoded_value.size() > 1) {
+          out.push_back(
+              IMetaService::op_t::Put(kv.key + it->first, encoded_value));
+        }
+      }
+    } else {
+      out.push_back(op);
+    }
+  }
+
   template <class RangeT>
   void metaUpdate(const RangeT& ops) {
     std::set<ObjectID> blobs_to_delete;
@@ -637,11 +688,14 @@ class IMetaService {
 #ifndef NDEBUG
       VLOG(10) << "update op in meta tree: " << op.ToString();
 #endif
-      const kv_t& kv = op.kv;
-      if (op.op == op_t::op_type_t::kPut) {
-        putVal(kv);
-      } else if (op.op == op_t::op_type_t::kDel) {
-        delVal(kv, blobs_to_delete);
+      std::vector<IMetaService::op_t> sub_ops;
+      decode_ops(op, sub_ops);
+      for (auto& sub_op : sub_ops) {
+        if (sub_op.op == op_t::op_type_t::kPut) {
+          putVal(sub_op.kv);
+        } else if (sub_op.op == op_t::op_type_t::kDel) {
+          delVal(sub_op.kv, blobs_to_delete);
+        }
       }
     }
     VINEYARD_SUPPRESS(server_ptr_->DeleteBlobBatch(blobs_to_delete));
