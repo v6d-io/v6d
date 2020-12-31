@@ -51,7 +51,8 @@ def dataframe_resolver(obj, resolver):
     index_size = 0
     for idx, name in enumerate(columns):
         np_value = resolver.run(obj.member('__values_-value-%d' % idx))
-        blocks.append(Block(np.expand_dims(np_value, 0), slice(idx, idx + 1, 1)))
+        # ndim: 1 for SingleBlockManager/Series, 2 for BlockManager/DataFrame
+        blocks.append(Block(np.expand_dims(np_value, 0), slice(idx, idx + 1, 1), ndim=2))
         index_size = len(np_value)
     return pd.DataFrame(BlockManager(blocks, [columns, np.arange(index_size)]))
 
