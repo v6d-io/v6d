@@ -29,7 +29,7 @@ def pandas_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
     meta['columns_'] = json.dumps(value.columns.values.tolist())
-    meta.add_member('index_', builder.run(client, value.index.values.tolist()))
+    meta.add_member('index_', builder.run(client, value.index))
     for i, (name, column_value) in enumerate(value.iteritems()):
         np_value = column_value.to_numpy(copy=False)
         meta['__values_-key-%d' % i] = str(name)

@@ -38,3 +38,10 @@ def test_dataframe_reindex(vineyard_client):
     expected = df.reindex(index=np.arange(10, 1, -1))
     object_id = vineyard_client.put(expected)
     pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))
+
+def test_dataframe_set_index(vineyard_client):
+    df1 = pd.DataFrame([[1, 3, 3], [4, 2, 6], [7, 8, 9]],
+                           index=['a1', 'a2', 'a3'], columns=['x', 'y', 'z'])
+    expected = df1.set_index('y', drop=True)
+    object_id = vineyard_client.put(expected)
+    pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))
