@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import json
 import pandas as pd
 
 from vineyard._C import ObjectMeta
@@ -26,7 +27,7 @@ from .utils import normalize_dtype
 def pandas_index_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Index'
-    meta['name'] = value.name
+    meta['name'] = json.dumps(value.name)
     meta['value_type_'] = value.dtype.name
     meta.add_member('value_', builder.run(client, value.to_numpy(), **kw))
     return client.create_metadata(meta)
@@ -35,7 +36,7 @@ def pandas_index_builder(client, value, builder, **kw):
 def pandas_index_resolver(obj, resolver):
     meta = obj.meta
     value_type = normalize_dtype(meta['value_type_'])
-    name = meta['name']
+    name = json.loads(meta['name'])
     value = resolver.run(obj.member('value_'))
     return pd.Index(value, dtype=value_type, name=name)
 
