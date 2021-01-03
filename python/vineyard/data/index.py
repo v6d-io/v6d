@@ -26,12 +26,13 @@ from .utils import normalize_dtype
 def pandas_index_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Index'
+    meta['name'] = value.name
     meta['value_type_'] = value.dtype.name
     meta.add_member('value_', builder.run(client, value.to_numpy(), **kw))
     return client.create_metadata(meta)
 
 
-def index_resolver(obj, resolver):
+def pandas_index_resolver(obj, resolver):
     meta = obj.meta
     value_type = normalize_dtype(meta['value_type_'])
     name = meta['name']
@@ -44,4 +45,4 @@ def register_index_types(builder_ctx, resolver_ctx):
         builder_ctx.register(pd.Index, pandas_index_builder)
 
     if resolver_ctx is not None:
-        resolver_ctx.register('vineyard::Index', index_resolver)
+        resolver_ctx.register('vineyard::Index', pandas_index_resolver)

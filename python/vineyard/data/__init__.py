@@ -22,6 +22,7 @@ from vineyard.data.default import register_default_types
 from vineyard.data.base import register_base_types
 from vineyard.data.arrow import register_arrow_types
 from vineyard.data.tensor import register_tensor_types
+from vineyard.data.index import register_index_types
 from vineyard.data.dataframe import register_dataframe_types
 from vineyard.data.graph import register_graph_types
 
@@ -31,6 +32,7 @@ def register_builtin_types(builder_ctx, resolver_ctx):
     register_base_types(builder_ctx, resolver_ctx)
     register_arrow_types(builder_ctx, resolver_ctx)
     register_tensor_types(builder_ctx, resolver_ctx)
+    register_index_types(builder_ctx, resolver_ctx)
     register_dataframe_types(builder_ctx, resolver_ctx)
     register_graph_types(builder_ctx, resolver_ctx)
 
