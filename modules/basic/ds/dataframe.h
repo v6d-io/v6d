@@ -36,6 +36,8 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "common/util/ptree.h"
 
+#define INDEX_COL_NAME "index_"
+
 namespace vineyard {
 
 /**
@@ -72,6 +74,13 @@ class DataFrameBuilder : public DataFrameBaseBuilder {
    * @param row_batch_index The row batch index.
    */
   void set_row_batch_index(size_t row_batch_index);
+
+  /**
+   * @brief Set the index of dataframe by add a index column to dataframe.
+   *
+   * @param builder The index tensor builder.
+   */
+  void set_index(std::shared_ptr<ITensorBuilder> builder);
 
   /**
    * @brief Get the column of the given column name.

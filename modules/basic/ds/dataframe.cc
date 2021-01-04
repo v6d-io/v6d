@@ -23,6 +23,10 @@ const std::vector<std::string>& DataFrame::Columns() const {
   return this->columns_;
 }
 
+std::shared_ptr<ITensor> DataFrame::Index() const {
+  return values_.at(INDEX_COL_NAME);
+}
+
 std::shared_ptr<ITensor> DataFrame::Column(std::string const& column) const {
   return values_.at(column);
 }
@@ -53,6 +57,10 @@ void DataFrameBuilder::set_partition_index(size_t partition_index_row,
 
 void DataFrameBuilder::set_row_batch_index(size_t row_batch_index) {
   this->set_row_batch_index_(row_batch_index);
+}
+
+void DataFrameBuilder::set_index(std::shared_ptr<ITensorBuilder> builder) {
+  this->values_.emplace(INDEX_COL_NAME, builder);
 }
 
 std::shared_ptr<ITensorBuilder> DataFrameBuilder::Column(

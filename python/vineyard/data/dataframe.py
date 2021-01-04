@@ -28,7 +28,8 @@ from vineyard._C import ObjectMeta
 def pandas_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
-    meta['columns_'] = json.dumps([str(x) for x in value.columns])
+    meta['columns_'] = json.dumps(value.columns.values.tolist())
+    meta.add_member('index_', builder.run(client, value.index))
     for i, (name, column_value) in enumerate(value.iteritems()):
         np_value = column_value.to_numpy(copy=False)
         meta['__values_-key-%d' % i] = str(name)
@@ -44,17 +45,16 @@ def pandas_dataframe_builder(client, value, builder, **kw):
 def dataframe_resolver(obj, resolver):
     meta = obj.meta
     columns = json.loads(meta['columns_'])
+    index = resolver.run(obj.member('index_'))
     if not columns:
         return pd.DataFrame()
     # ensure zero-copy
     blocks = []
-    index_size = 0
     for idx, name in enumerate(columns):
         np_value = resolver.run(obj.member('__values_-value-%d' % idx))
         # ndim: 1 for SingleBlockManager/Series, 2 for BlockManager/DataFrame
         blocks.append(Block(np.expand_dims(np_value, 0), slice(idx, idx + 1, 1), ndim=2))
-        index_size = len(np_value)
-    return pd.DataFrame(BlockManager(blocks, [columns, np.arange(index_size)]))
+    return pd.DataFrame(BlockManager(blocks, [columns, index]))
 
 
 def register_dataframe_types(builder_ctx, resolver_ctx):
