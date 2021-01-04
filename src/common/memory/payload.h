@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef SRC_COMMON_MEMORY_PAYLOAD_H_
 #define SRC_COMMON_MEMORY_PAYLOAD_H_
 
-#include "common/util/boost.h"
+#include "common/util/json.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -46,9 +46,9 @@ struct Payload {
             (data_size == other.data_size));
   }
 
-  void ToJSON(ptree& tree) const;
+  void ToJSON(json& tree) const;
 
-  void FromJSON(const ptree& tree);
+  void FromJSON(const json& tree);
 };
 
 }  // namespace vineyard

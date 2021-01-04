@@ -32,7 +32,7 @@ limitations under the License.
 namespace vineyard {
 class EtcdLauncher {
  public:
-  explicit EtcdLauncher(const ptree& etcd_spec) : etcd_spec_(etcd_spec) {}
+  explicit EtcdLauncher(const json& etcd_spec) : etcd_spec_(etcd_spec) {}
 
   Status LaunchEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
                           std::string& sync_lock,
@@ -48,7 +48,7 @@ class EtcdLauncher {
 
   void initHostInfo();
 
-  const ptree etcd_spec_;
+  const json etcd_spec_;
   std::string endpoint_host_;
   int endpoint_port_;
   std::set<std::string> local_hostnames_;

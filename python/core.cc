@@ -54,12 +54,12 @@ void bind_core(py::module& mod) {
           "__getitem__",
           [](ObjectMeta* self, std::string const& key) -> py::object {
             auto const& tree = self->MetaData();
-            ptree::const_assoc_iterator iter = tree.find(key);
-            if (iter == tree.not_found()) {
+            auto iter = tree.find(key);
+            if (iter == tree.end()) {
               throw py::key_error("key '" + key + "' does not exist");
             }
-            if (iter->second.empty()) {
-              return py::cast(iter->second.data());
+            if (!iter->is_object()) {
+              return json_to_python(*iter);
             } else {
               return py::cast(self->GetMemberMeta(key));
             }
@@ -70,12 +70,12 @@ void bind_core(py::module& mod) {
           [](ObjectMeta* self, std::string const& key,
              py::object default_value) -> py::object {
             auto const& tree = self->MetaData();
-            ptree::const_assoc_iterator iter = tree.find(key);
-            if (iter == tree.not_found()) {
+            auto iter = tree.find(key);
+            if (iter == tree.end()) {
               return default_value;
             }
-            if (iter->second.empty()) {
-              return py::cast(iter->second.data());
+            if (!iter->is_object()) {
+              return json_to_python(*iter);
             } else {
               return py::cast(self->GetMemberMeta(key));
             }
@@ -84,11 +84,11 @@ void bind_core(py::module& mod) {
       .def("get_member",
            [](ObjectMeta* self, std::string const& key) -> py::object {
              auto const& tree = self->MetaData();
-             ptree::const_assoc_iterator iter = tree.find(key);
-             if (iter == tree.not_found()) {
+             auto iter = tree.find(key);
+             if (iter == tree.end()) {
                return py::none();
              }
-             VINEYARD_ASSERT(!iter->second.empty(),
+             VINEYARD_ASSERT(iter->is_object() && !iter->empty(),
                              "The value is not a member, but a meta");
              return py::cast(self->GetMember(key));
            })
@@ -145,37 +145,38 @@ void bind_core(py::module& mod) {
       .def(
           "__iter__",
           [](const ObjectMeta& meta) {
-            return py::make_key_iterator(meta.begin(), meta.end());
+            std::function<py::object(ObjectMeta::const_iterator &)> fn = [](
+              ObjectMeta::const_iterator &iter) {
+              return py::cast(iter.key());
+            };
+            return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
           },
           py::keep_alive<0, 1>())
       .def(
           "items",
           [](const ObjectMeta& meta) {
-            std::function<py::object(ptree::const_iterator&)> fn =
-                [&meta](ptree::const_iterator& iter) {
-                  if (iter->second.empty()) {
-                    return py::cast(iter->second.data());
-                  } else {
-                    return py::cast(meta.GetMemberMeta(iter->first));
-                  }
-                };
+            std::function<py::object(ObjectMeta::const_iterator &)> fn = [&meta](
+              ObjectMeta::const_iterator &iter) {
+              if (iter.value().is_object()) {
+                return py::cast(meta.GetMemberMeta(iter.key()));
+              } else {
+                return json_to_python(iter.value());
+              }
+            };
             return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
           },
           py::keep_alive<0, 1>())
       .def("__repr__",
            [](const ObjectMeta* meta) {
              thread_local std::stringstream ss;
-             ss.str("");
-             ss.clear();
-             bpt::write_json(ss, meta->MetaData(), true);
-             return ss.str();
+             return meta->MetaData().dump(0);
            })
       .def("__str__", [](const ObjectMeta* meta) {
         thread_local std::stringstream ss;
         ss.str("");
         ss.clear();
         ss << "ObjectMeta ";
-        bpt::write_json(ss, meta->MetaData(), true);
+        ss << meta->MetaData().dump(4);
         return ss.str();
       });
 

@@ -57,9 +57,8 @@ int main(int argc, char** argv) {
         std::dynamic_pointer_cast<Array<double>>(builder.Seal(client));
     id = sealed_double_array->id();
     blob_id = VYObjectIDFromString(sealed_double_array->meta()
-                                       .MetaData()
-                                       .get_child("buffer_")
-                                       .get<std::string>("id"));
+                                       .MetaData()["buffer_"]["id"]
+                                       .get_ref<std::string const&>());
     CHECK(blob_id != InvalidObjectID());
   }
 
@@ -74,6 +73,7 @@ int main(int argc, char** argv) {
   CHECK(exists);
   VINEYARD_CHECK_OK(client.Exists(blob_id, exists));
   CHECK(exists);
+  LOG(INFO) << "delete id: " << id << ": " << VYObjectIDToString(id);
   VINEYARD_CHECK_OK(client.DelData(id, false, true));
   VINEYARD_CHECK_OK(client.Exists(id, exists));
   CHECK(!exists);
@@ -95,9 +95,8 @@ int main(int argc, char** argv) {
     VINEYARD_CHECK_OK(client.Persist(sealed_double_array->id()));
     id = sealed_double_array->id();
     blob_id = VYObjectIDFromString(sealed_double_array->meta()
-                                       .MetaData()
-                                       .get_child("buffer_")
-                                       .get<std::string>("id"));
+                                       .MetaData()["buffer_"]["id"]
+                                       .get_ref<std::string const&>());
     CHECK(blob_id != InvalidObjectID());
   }
 
@@ -134,9 +133,8 @@ int main(int argc, char** argv) {
     VINEYARD_CHECK_OK(client.Persist(sealed_double_array->id()));
     id = sealed_double_array->id();
     blob_id = VYObjectIDFromString(sealed_double_array->meta()
-                                       .MetaData()
-                                       .get_child("buffer_")
-                                       .get<std::string>("id"));
+                                       .MetaData()["buffer_"]["id"]
+                                       .get_ref<std::string const&>());
     CHECK(blob_id != InvalidObjectID());
   }
 

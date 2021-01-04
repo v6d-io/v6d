@@ -20,22 +20,20 @@ limitations under the License.
 
 #include "boost/algorithm/string.hpp"
 
-#include "common/util/boost.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
 
-#define CHECK_IPC_ERROR(tree, type)                             \
-  do {                                                          \
-    auto stcode = tree.get_optional<int>("code");               \
-    if (stcode) {                                               \
-      Status st = Status(static_cast<StatusCode>(stcode.get()), \
-                         tree.get<std::string>("message", "")); \
-      if (!st.ok()) {                                           \
-        return st;                                              \
-      }                                                         \
-    }                                                           \
-    RETURN_ON_ASSERT(root.get<std::string>("type") == (type));  \
+#define CHECK_IPC_ERROR(tree, type)                                      \
+  do {                                                                   \
+    if (tree.contains("code")) {                                         \
+      Status st = Status(static_cast<StatusCode>(tree.value("code", 0)), \
+                         tree.value("message", ""));                     \
+      if (!st.ok()) {                                                    \
+        return st;                                                       \
+      }                                                                  \
+    }                                                                    \
+    RETURN_ON_ASSERT(root["type"] == (type));                            \
   } while (0)
 
 CommandType ParseCommandType(const std::string& str_type) {
@@ -92,10 +90,8 @@ CommandType ParseCommandType(const std::string& str_type) {
   }
 }
 
-static inline void encode_msg(const ptree& root, std::string& msg) {
-  std::stringstream ss;
-  bpt::write_json(ss, root, false);
-  msg = ss.str();
+static inline void encode_msg(const json& root, std::string& msg) {
+  msg = root.dump();
 }
 
 void WriteErrorReply(Status const& status, std::string& msg) {
@@ -103,52 +99,52 @@ void WriteErrorReply(Status const& status, std::string& msg) {
 }
 
 void WriteRegisterRequest(std::string& msg) {
-  ptree root;
-  root.put("type", "register_request");
+  json root;
+  root["type"] = "register_request";
 
   encode_msg(root, msg);
 }
 
-Status ReadRegisterRequest(const ptree& root) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "register_request");
+Status ReadRegisterRequest(const json& root) {
+  RETURN_ON_ASSERT(root["type"] == "register_request");
   return Status::OK();
 }
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
-                        const uint64_t instance_id, std::string& msg) {
-  ptree root;
-  root.put("type", "register_reply");
-  root.put("ipc_socket", ipc_socket);
-  root.put("rpc_endpoint", rpc_endpoint);
-  root.put("instance_id", instance_id);
+                        const InstanceID instance_id, std::string& msg) {
+  json root;
+  root["type"] = "register_reply";
+  root["ipc_socket"] = ipc_socket;
+  root["rpc_endpoint"] = rpc_endpoint;
+  root["instance_id"] = instance_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadRegisterReply(const ptree& root, std::string& ipc_socket,
-                         std::string& rpc_endpoint, uint64_t& instance_id) {
+Status ReadRegisterReply(const json& root, std::string& ipc_socket,
+                         std::string& rpc_endpoint, InstanceID& instance_id) {
   CHECK_IPC_ERROR(root, "register_reply");
-  ipc_socket = root.get<std::string>("ipc_socket");
-  rpc_endpoint = root.get<std::string>("rpc_endpoint");
-  instance_id = root.get<uint64_t>("instance_id");
+  ipc_socket = root["ipc_socket"].get_ref<std::string const&>();
+  rpc_endpoint = root["rpc_endpoint"].get_ref<std::string const&>();
+  instance_id = root["instance_id"].get<InstanceID>();
   return Status::OK();
 }
 
 void WriteExitRequest(std::string& msg) {
-  ptree root;
-  root.put("type", "exit_request");
+  json root;
+  root["type"] = "exit_request";
 
   encode_msg(root, msg);
 }
 
 void WriteGetDataRequest(const ObjectID id, const bool sync_remote,
                          const bool wait, std::string& msg) {
-  ptree root;
-  root.put("type", "get_data_request");
-  root.put("id", VYObjectIDToString(id));
-  root.put("sync_remote", sync_remote);
-  root.put("wait", wait);
+  json root;
+  root["type"] = "get_data_request";
+  root["id"] = std::vector<ObjectID>{id};
+  root["sync_remote"] = sync_remote;
+  root["wait"] = wait;
 
   encode_msg(root, msg);
 }
@@ -156,159 +152,148 @@ void WriteGetDataRequest(const ObjectID id, const bool sync_remote,
 void WriteGetDataRequest(const std::vector<ObjectID>& ids,
                          const bool sync_remote, const bool wait,
                          std::string& msg) {
-  ptree root;
-  root.put("type", "get_data_request");
-
-  std::vector<std::string> ids_string;
-  ids_string.reserve(ids.size());
-  for (ObjectID const& id : ids) {
-    ids_string.emplace_back(VYObjectIDToString(id));
-  }
-  root.put("id", boost::algorithm::join(ids_string, ";"));
-  root.put("sync_remote", sync_remote);
-  root.put("wait", wait);
+  json root;
+  root["type"] = "get_data_request";
+  root["id"] = ids;
+  root["sync_remote"] = sync_remote;
+  root["wait"] = wait;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetDataRequest(const ptree& root, std::vector<ObjectID>& ids,
+Status ReadGetDataRequest(const json& root, std::vector<ObjectID>& ids,
                           bool& sync_remote, bool& wait) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "get_data_request");
-  std::vector<std::string> id_strings;
-  std::string id_string = root.get<std::string>("id");
-  boost::algorithm::split(id_strings, id_string, boost::is_any_of(";"));
-  for (auto const& s : id_strings) {
-    ids.emplace_back(VYObjectIDFromString(s));
-  }
-  sync_remote = root.get<bool>("sync_remote");
-  wait = root.get<bool>("wait");
+  RETURN_ON_ASSERT(root["type"] == "get_data_request");
+  ids = root["id"].get_to(ids);
+  sync_remote = root.value("sync_remote", false);
+  wait = root.value("wait", false);
   return Status::OK();
 }
 
-void WriteGetDataReply(const ptree& content, std::string& msg) {
-  ptree root;
-  root.put("type", "get_data_reply");
-  root.add_child("content", content);
+void WriteGetDataReply(const json& content, std::string& msg) {
+  json root;
+  root["type"] = "get_data_reply";
+  root["content"] = content;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetDataReply(const ptree& root, ptree& content) {
+Status ReadGetDataReply(const json& root, json& content) {
   CHECK_IPC_ERROR(root, "get_data_reply");
   // should be only one item
-  auto content_group = root.get_child("content");
+  auto content_group = root["content"];
   if (content_group.size() != 1) {
     return Status::ObjectNotExists();
   }
-  content = content_group.begin()->second;
+  content = *content_group.begin();
   return Status::OK();
 }
 
-Status ReadGetDataReply(const ptree& root,
-                        std::unordered_map<ObjectID, ptree>& content) {
+Status ReadGetDataReply(const json& root,
+                        std::unordered_map<ObjectID, json>& content) {
   CHECK_IPC_ERROR(root, "get_data_reply");
-  for (auto const& kv : root.get_child("content")) {
-    content.emplace(VYObjectIDFromString(kv.first), kv.second);
+  for (auto const& kv : json::iterator_wrapper(root["content"])) {
+    content.emplace(VYObjectIDFromString(kv.key()), kv.value());
   }
   return Status::OK();
 }
 
 void WriteListDataRequest(std::string const& pattern, bool const regex,
                           size_t const limit, std::string& msg) {
-  ptree root;
-  root.put("type", "list_data_request");
-  root.put("pattern", pattern);
-  root.put("regex", regex);
-  root.put("limit", limit);
+  json root;
+  root["type"] = "list_data_request";
+  root["pattern"] = pattern;
+  root["regex"] = regex;
+  root["limit"] = limit;
 
   encode_msg(root, msg);
 }
 
-Status ReadListDataRequest(const ptree& root, std::string& pattern, bool& regex,
+Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
                            size_t& limit) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "list_data_request");
-  pattern = root.get<std::string>("pattern");
-  regex = root.get<bool>("regex");
-  limit = root.get<size_t>("limit");
+  RETURN_ON_ASSERT(root["type"] == "list_data_request");
+  pattern = root["pattern"].get_ref<std::string const&>();
+  regex = root.value("regex", false);
+  limit = root["limit"].get<size_t>();
   return Status::OK();
 }
 
 void WriteCreateBufferRequest(const size_t size, std::string& msg) {
-  ptree root;
-  root.put("type", "create_buffer_request");
-  root.put("size", size);
+  json root;
+  root["type"] = "create_buffer_request";
+  root["size"] = size;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateBufferRequest(const ptree& root, size_t& size) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "create_buffer_request");
-  size = root.get<size_t>("size");
+Status ReadCreateBufferRequest(const json& root, size_t& size) {
+  RETURN_ON_ASSERT(root["type"] == "create_buffer_request");
+  size = root["size"].get<size_t>();
   return Status::OK();
 }
 
 void WriteCreateBufferReply(const ObjectID id,
                             const std::shared_ptr<Payload>& object,
                             std::string& msg) {
-  ptree root;
-  root.put("type", "create_buffer_reply");
-  root.put("id", id);
-  ptree tree;
+  json root;
+  root["type"] = "create_buffer_reply";
+  root["id"] = id;
+  json tree;
   object->ToJSON(tree);
-  root.add_child("created", tree);
+  root["created"] = tree;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateBufferReply(const ptree& root, ObjectID& id, Payload& object) {
+Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object) {
   CHECK_IPC_ERROR(root, "create_buffer_reply");
-  ptree tree = root.get_child("created");
-  id = root.get<ObjectID>("id");
+  json tree = root["created"];
+  id = root["id"].get<ObjectID>();
   object.FromJSON(tree);
   return Status::OK();
 }
 
 void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
                             std::string& msg) {
-  ptree root;
-  root.put("type", "get_buffers_request");
+  json root;
+  root["type"] = "get_buffers_request";
   int idx = 0;
   for (auto const& id : ids) {
-    root.put(std::to_string(idx++), id);
+    root[std::to_string(idx++)] = id;
   }
-  root.put("num", ids.size());
+  root["num"] = ids.size();
 
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersRequest(const ptree& root, std::vector<ObjectID>& ids) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "get_buffers_request");
-  size_t num = root.get<size_t>("num");
+Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids) {
+  RETURN_ON_ASSERT(root["type"] == "get_buffers_request");
+  size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
-    ids.push_back(root.get<ObjectID>(std::to_string(i)));
+    ids.push_back(root[std::to_string(i)].get<ObjectID>());
   }
   return Status::OK();
 }
 
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           std::string& msg) {
-  ptree root;
-  root.put("type", "get_buffers_reply");
+  json root;
+  root["type"] = "get_buffers_reply";
   for (size_t i = 0; i < objects.size(); ++i) {
-    ptree tree;
+    json tree;
     objects[i]->ToJSON(tree);
-    root.add_child(std::to_string(i), tree);
+    root[std::to_string(i)] = tree;
   }
-  root.put("num", objects.size());
+  root["num"] = objects.size();
 
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersReply(const ptree& root,
+Status ReadGetBuffersReply(const json& root,
                            std::unordered_map<ObjectID, Payload>& objects) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
-  for (size_t i = 0; i < root.get<size_t>("num"); ++i) {
-    ptree tree = root.get_child(std::to_string(i));
+  for (size_t i = 0; i < root["num"]; ++i) {
+    json tree = root[std::to_string(i)];
     Payload object;
     object.FromJSON(tree);
     objects.emplace(object.object_id, object);
@@ -316,464 +301,450 @@ Status ReadGetBuffersReply(const ptree& root,
   return Status::OK();
 }
 
-void WriteCreateDataRequest(const ptree& content, std::string& msg) {
-  ptree root;
-  root.put("type", "create_data_request");
-  root.add_child("content", content);
+void WriteCreateDataRequest(const json& content, std::string& msg) {
+  json root;
+  root["type"] = "create_data_request";
+  root["content"] = content;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateDataRequest(const ptree& root, ptree& content) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "create_data_request");
-  content = root.get_child("content");
+Status ReadCreateDataRequest(const json& root, json& content) {
+  RETURN_ON_ASSERT(root["type"] == "create_data_request");
+  content = root["content"];
   return Status::OK();
 }
 
 void WriteCreateDataReply(const ObjectID& id, const InstanceID& instance_id,
                           std::string& msg) {
-  ptree root;
-  root.put("type", "create_data_reply");
-  root.put("id", id);
-  root.put("instance_id", instance_id);
+  json root;
+  root["type"] = "create_data_reply";
+  root["id"] = id;
+  root["instance_id"] = instance_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateDataReply(const ptree& root, ObjectID& id,
+Status ReadCreateDataReply(const json& root, ObjectID& id,
                            InstanceID& instance_id) {
   CHECK_IPC_ERROR(root, "create_data_reply");
-  id = root.get<ObjectID>("id");
-  instance_id = root.get<ObjectID>("instance_id");
+  id = root["id"].get<ObjectID>();
+  instance_id = root["instance_id"].get<InstanceID>();
   return Status::OK();
 }
 
 void WritePersistRequest(const ObjectID id, std::string& msg) {
-  ptree root;
-  root.put("type", "persist_request");
-  root.put("id", id);
+  json root;
+  root["type"] = "persist_request";
+  root["id"] = id;
 
   encode_msg(root, msg);
 }
 
-Status ReadPersistRequest(const ptree& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "persist_request");
-  id = root.get<ObjectID>("id");
+Status ReadPersistRequest(const json& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "persist_request");
+  id = root["id"].get<ObjectID>();
   return Status::OK();
 }
 
 void WritePersistReply(std::string& msg) {
-  ptree root;
-  root.put("type", "persist_reply");
+  json root;
+  root["type"] = "persist_reply";
 
   encode_msg(root, msg);
 }
 
-Status ReadPersistReply(const ptree& root) {
+Status ReadPersistReply(const json& root) {
   CHECK_IPC_ERROR(root, "persist_reply");
   return Status::OK();
 }
 
 void WriteIfPersistRequest(const ObjectID id, std::string& msg) {
-  ptree root;
-  root.put("type", "if_persist_request");
-  root.put("id", id);
+  json root;
+  root["type"] = "if_persist_request";
+  root["id"] = id;
 
   encode_msg(root, msg);
 }
 
-Status ReadIfPersistRequest(const ptree& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "if_persist_request");
-  id = root.get<ObjectID>("id");
+Status ReadIfPersistRequest(const json& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "if_persist_request");
+  id = root["id"].get<ObjectID>();
   return Status::OK();
 }
 
 void WriteIfPersistReply(bool persist, std::string& msg) {
-  ptree root;
-  root.put("type", "if_persist_reply");
-  root.put("persist", persist);
+  json root;
+  root["type"] = "if_persist_reply";
+  root["persist"] = persist;
 
   encode_msg(root, msg);
 }
 
-Status ReadIfPersistReply(const ptree& root, bool& persist) {
+Status ReadIfPersistReply(const json& root, bool& persist) {
   CHECK_IPC_ERROR(root, "if_persist_reply");
-  persist = root.get<bool>("persist");
+  persist = root.value("persist", false);
   return Status::OK();
 }
 
 void WriteExistsRequest(const ObjectID id, std::string& msg) {
-  ptree root;
-  root.put("type", "exists_request");
-  root.put("id", id);
+  json root;
+  root["type"] = "exists_request";
+  root["id"] = id;
 
   encode_msg(root, msg);
 }
 
-Status ReadExistsRequest(const ptree& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "exists_request");
-  id = root.get<ObjectID>("id");
+Status ReadExistsRequest(const json& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "exists_request");
+  id = root["id"].get<ObjectID>();
   return Status::OK();
 }
 
 void WriteExistsReply(bool exists, std::string& msg) {
-  ptree root;
-  root.put("type", "exists_reply");
-  root.put("exists", exists);
+  json root;
+  root["type"] = "exists_reply";
+  root["exists"] = exists;
 
   encode_msg(root, msg);
 }
 
-Status ReadExistsReply(const ptree& root, bool& exists) {
+Status ReadExistsReply(const json& root, bool& exists) {
   CHECK_IPC_ERROR(root, "exists_reply");
-  exists = root.get<bool>("exists");
+  exists = root.value("exists", false);
   return Status::OK();
 }
 
 void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
                          std::string& msg) {
-  ptree root;
-  root.put("type", "del_data_request");
-  root.put("id", VYObjectIDToString(id));
-  root.put("force", force);
-  root.put("deep", deep);
+  json root;
+  root["type"] = "del_data_request";
+  root["id"] = std::vector<ObjectID>{id};
+  root["force"] = force;
+  root["deep"] = deep;
 
   encode_msg(root, msg);
 }
 
 void WriteDelDataRequest(const std::vector<ObjectID>& ids, const bool force,
                          const bool deep, std::string& msg) {
-  ptree root;
-  root.put("type", "del_data_request");
-
-  std::vector<std::string> ids_string;
-  ids_string.reserve(ids.size());
-  for (ObjectID const& id : ids) {
-    ids_string.emplace_back(VYObjectIDToString(id));
-  }
-  root.put("id", boost::algorithm::join(ids_string, ";"));
-
-  root.put("force", force);
-  root.put("deep", deep);
+  json root;
+  root["type"] = "del_data_request";
+  root["id"] = ids;
+  root["force"] = force;
+  root["deep"] = deep;
 
   encode_msg(root, msg);
 }
 
-Status ReadDelDataRequest(const ptree& root, std::vector<ObjectID>& ids,
+Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& ids,
                           bool& force, bool& deep) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "del_data_request");
-  std::vector<std::string> id_strings;
-  std::string id_string = root.get<std::string>("id");
-  boost::algorithm::split(id_strings, id_string, boost::is_any_of(";"));
-  for (auto const& s : id_strings) {
-    ids.emplace_back(VYObjectIDFromString(s));
-  }
-  force = root.get<bool>("force", false);
-  deep = root.get<bool>("deep", false);
+  RETURN_ON_ASSERT(root["type"] == "del_data_request");
+  ids = root["id"].get_to(ids);
+  force = root.value("force", false);
+  deep = root.value("deep", false);
   return Status::OK();
 }
 
 void WriteDelDataReply(std::string& msg) {
-  ptree root;
-  root.put("type", "del_data_reply");
+  json root;
+  root["type"] = "del_data_reply";
 
   encode_msg(root, msg);
 }
 
-Status ReadDelDataReply(const ptree& root) {
+Status ReadDelDataReply(const json& root) {
   CHECK_IPC_ERROR(root, "del_data_reply");
   return Status::OK();
 }
 
 void WriteClusterMetaRequest(std::string& msg) {
-  ptree root;
-  root.put("type", "cluster_meta");
+  json root;
+  root["type"] = "cluster_meta";
 
   encode_msg(root, msg);
 }
 
-Status ReadClusterMetaRequest(const ptree& root) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "cluster_meta");
+Status ReadClusterMetaRequest(const json& root) {
+  RETURN_ON_ASSERT(root["type"] == "cluster_meta");
   return Status::OK();
 }
 
-void WriteClusterMetaReply(const ptree& meta, std::string& msg) {
-  ptree root;
-  root.put("type", "cluster_meta");
-  root.add_child("meta", meta);
+void WriteClusterMetaReply(const json& meta, std::string& msg) {
+  json root;
+  root["type"] = "cluster_meta";
+  root["meta"] = meta;
 
   encode_msg(root, msg);
 }
 
-Status ReadClusterMetaReply(const ptree& root, ptree& meta) {
+Status ReadClusterMetaReply(const json& root, json& meta) {
   CHECK_IPC_ERROR(root, "cluster_meta");
-  meta = root.get_child("meta");
+  meta = root["meta"];
   return Status::OK();
 }
 
 void WriteInstanceStatusRequest(std::string& msg) {
-  ptree root;
-  root.put("type", "instance_status_request");
+  json root;
+  root["type"] = "instance_status_request";
 
   encode_msg(root, msg);
 }
 
-Status ReadInstanceStatusRequest(const ptree& root) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "instance_status_request");
+Status ReadInstanceStatusRequest(const json& root) {
+  RETURN_ON_ASSERT(root["type"] == "instance_status_request");
   return Status::OK();
 }
 
-void WriteInstanceStatusReply(const ptree& meta, std::string& msg) {
-  ptree root;
-  root.put("type", "instance_status_reply");
-  root.add_child("meta", meta);
+void WriteInstanceStatusReply(const json& meta, std::string& msg) {
+  json root;
+  root["type"] = "instance_status_reply";
+  root["meta"] = meta;
 
   encode_msg(root, msg);
 }
 
-Status ReadInstanceStatusReply(const ptree& root, ptree& meta) {
+Status ReadInstanceStatusReply(const json& root, json& meta) {
   CHECK_IPC_ERROR(root, "instance_status_reply");
-  meta = root.get_child("meta");
+  meta = root["meta"];
   return Status::OK();
 }
 
 void WritePutNameRequest(const ObjectID object_id, const std::string& name,
                          std::string& msg) {
-  ptree root;
-  root.put("type", "put_name_request");
-  root.put("object_id", object_id);
-  root.put("name", name);
+  json root;
+  root["type"] = "put_name_request";
+  root["object_id"] = object_id;
+  root["name"] = name;
 
   encode_msg(root, msg);
 }
 
-Status ReadPutNameRequest(const ptree& root, ObjectID& object_id,
+Status ReadPutNameRequest(const json& root, ObjectID& object_id,
                           std::string& name) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "put_name_request");
-  object_id = root.get<ObjectID>("object_id");
-  name = root.get<std::string>("name");
+  RETURN_ON_ASSERT(root["type"] == "put_name_request");
+  object_id = root["object_id"].get<ObjectID>();
+  name = root["name"].get_ref<std::string const&>();
   return Status::OK();
 }
 
 void WritePutNameReply(std::string& msg) {
-  ptree root;
-  root.put("type", "put_name_reply");
+  json root;
+  root["type"] = "put_name_reply";
 
   encode_msg(root, msg);
 }
 
-Status ReadPutNameReply(const ptree& root) {
+Status ReadPutNameReply(const json& root) {
   CHECK_IPC_ERROR(root, "put_name_reply");
   return Status::OK();
 }
 
 void WriteGetNameRequest(const std::string& name, const bool wait,
                          std::string& msg) {
-  ptree root;
-  root.put("type", "get_name_request");
-  root.put("name", name);
-  root.put("wait", wait);
+  json root;
+  root["type"] = "get_name_request";
+  root["name"] = name;
+  root["wait"] = wait;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetNameRequest(const ptree& root, std::string& name, bool& wait) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "get_name_request");
-  name = root.get<std::string>("name");
-  wait = root.get<bool>("wait");
+Status ReadGetNameRequest(const json& root, std::string& name, bool& wait) {
+  RETURN_ON_ASSERT(root["type"] == "get_name_request");
+  name = root["name"].get_ref<std::string const&>();
+  wait = root["wait"].get<bool>();
   return Status::OK();
 }
 
 void WriteGetNameReply(const ObjectID& object_id, std::string& msg) {
-  ptree root;
-  root.put("type", "get_name_reply");
-  root.put("object_id", object_id);
+  json root;
+  root["type"] = "get_name_reply";
+  root["object_id"] = object_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetNameReply(const ptree& root, ObjectID& object_id) {
+Status ReadGetNameReply(const json& root, ObjectID& object_id) {
   CHECK_IPC_ERROR(root, "get_name_reply");
-  object_id = root.get<ObjectID>("object_id");
+  object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
 
 void WriteDropNameRequest(const std::string& name, std::string& msg) {
-  ptree root;
-  root.put("type", "drop_name_request");
-  root.put("name", name);
+  json root;
+  root["type"] = "drop_name_request";
+  root["name"] = name;
 
   encode_msg(root, msg);
 }
 
-Status ReadDropNameRequest(const ptree& root, std::string& name) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "drop_name_request");
-  name = root.get<std::string>("name");
+Status ReadDropNameRequest(const json& root, std::string& name) {
+  RETURN_ON_ASSERT(root["type"] == "drop_name_request");
+  name = root["name"].get_ref<std::string const&>();
   return Status::OK();
 }
 
 void WriteDropNameReply(std::string& msg) {
-  ptree root;
-  root.put("type", "drop_name_reply");
+  json root;
+  root["type"] = "drop_name_reply";
 
   encode_msg(root, msg);
 }
 
-Status ReadDropNameReply(const ptree& root) {
+Status ReadDropNameReply(const json& root) {
   CHECK_IPC_ERROR(root, "drop_name_reply");
   return Status::OK();
 }
 
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg) {
-  ptree root;
-  root.put("type", "create_stream_request");
-  root.put("object_id", object_id);
+  json root;
+  root["type"] = "create_stream_request";
+  root["object_id"] = object_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateStreamRequest(const ptree& root, ObjectID& object_id) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "create_stream_request");
-  object_id = root.get<ObjectID>("object_id");
+Status ReadCreateStreamRequest(const json& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"] == "create_stream_request");
+  object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
 
 void WriteCreateStreamReply(std::string& msg) {
-  ptree root;
-  root.put("type", "create_stream_reply");
+  json root;
+  root["type"] = "create_stream_reply";
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateStreamReply(const ptree& root) {
+Status ReadCreateStreamReply(const json& root) {
   CHECK_IPC_ERROR(root, "create_stream_reply");
   return Status::OK();
 }
 
 void WriteGetNextStreamChunkRequest(const ObjectID stream_id, const size_t size,
                                     std::string& msg) {
-  ptree root;
-  root.put("type", "get_next_stream_chunk_request");
-  root.put("id", stream_id);
-  root.put("size", size);
+  json root;
+  root["type"] = "get_next_stream_chunk_request";
+  root["id"] = stream_id;
+  root["size"] = size;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetNextStreamChunkRequest(const ptree& root, ObjectID& stream_id,
+Status ReadGetNextStreamChunkRequest(const json& root, ObjectID& stream_id,
                                      size_t& size) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") ==
-                   "get_next_stream_chunk_request");
-  stream_id = root.get<ObjectID>("id");
-  size = root.get<size_t>("size");
+  RETURN_ON_ASSERT(root["type"] == "get_next_stream_chunk_request");
+  stream_id = root["id"].get<ObjectID>();
+  size = root["size"].get<size_t>();
   return Status::OK();
 }
 
 void WriteGetNextStreamChunkReply(std::shared_ptr<Payload>& object,
                                   std::string& msg) {
-  ptree root;
-  root.put("type", "get_next_stream_chunk_reply");
-  ptree buffer_meta;
+  json root;
+  root["type"] = "get_next_stream_chunk_reply";
+  json buffer_meta;
   object->ToJSON(buffer_meta);
-  root.add_child("buffer", buffer_meta);
+  root["buffer"] = buffer_meta;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetNextStreamChunkReply(const ptree& root, Payload& object) {
+Status ReadGetNextStreamChunkReply(const json& root, Payload& object) {
   CHECK_IPC_ERROR(root, "get_next_stream_chunk_reply");
-  object.FromJSON(root.get_child("buffer"));
+  object.FromJSON(root["buffer"]);
   return Status::OK();
 }
 
 void WritePullNextStreamChunkRequest(const ObjectID stream_id,
                                      std::string& msg) {
-  ptree root;
-  root.put("type", "pull_next_stream_chunk_request");
-  root.put("id", stream_id);
+  json root;
+  root["type"] = "pull_next_stream_chunk_request";
+  root["id"] = stream_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadPullNextStreamChunkRequest(const ptree& root, ObjectID& stream_id) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") ==
-                   "pull_next_stream_chunk_request");
-  stream_id = root.get<ObjectID>("id");
+Status ReadPullNextStreamChunkRequest(const json& root, ObjectID& stream_id) {
+  RETURN_ON_ASSERT(root["type"] == "pull_next_stream_chunk_request");
+  stream_id = root["id"].get<ObjectID>();
   return Status::OK();
 }
 
 void WritePullNextStreamChunkReply(std::shared_ptr<Payload>& object,
                                    std::string& msg) {
-  ptree root;
-  root.put("type", "pull_next_stream_chunk_reply");
-  ptree buffer_meta;
+  json root;
+  root["type"] = "pull_next_stream_chunk_reply";
+  json buffer_meta;
   object->ToJSON(buffer_meta);
-  root.add_child("buffer", buffer_meta);
+  root["buffer"] = buffer_meta;
 
   encode_msg(root, msg);
 }
 
-Status ReadPullNextStreamChunkReply(const ptree& root, Payload& object) {
+Status ReadPullNextStreamChunkReply(const json& root, Payload& object) {
   CHECK_IPC_ERROR(root, "pull_next_stream_chunk_reply");
-  object.FromJSON(root.get_child("buffer"));
+  object.FromJSON(root["buffer"]);
   return Status::OK();
 }
 
 void WriteStopStreamRequest(const ObjectID stream_id, const bool failed,
                             std::string& msg) {
-  ptree root;
-  root.put("type", "stop_stream_request");
-  root.put("id", stream_id);
-  root.put("failed", failed);
+  json root;
+  root["type"] = "stop_stream_request";
+  root["id"] = stream_id;
+  root["failed"] = failed;
 
   encode_msg(root, msg);
 }
 
-Status ReadStopStreamRequest(const ptree& root, ObjectID& stream_id,
+Status ReadStopStreamRequest(const json& root, ObjectID& stream_id,
                              bool& failed) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "stop_stream_request");
-  stream_id = root.get<ObjectID>("id");
-  failed = root.get<bool>("failed");
+  RETURN_ON_ASSERT(root["type"] == "stop_stream_request");
+  stream_id = root["id"].get<ObjectID>();
+  failed = root["failed"].get<bool>();
   return Status::OK();
 }
 
 void WriteStopStreamReply(std::string& msg) {
-  ptree root;
-  root.put("type", "stop_stream_reply");
+  json root;
+  root["type"] = "stop_stream_reply";
 
   encode_msg(root, msg);
 }
 
-Status ReadStopStreamReply(const ptree& root) {
+Status ReadStopStreamReply(const json& root) {
   CHECK_IPC_ERROR(root, "stop_stream_reply");
   return Status::OK();
 }
 
 void WriteShallowCopyRequest(const ObjectID id, std::string& msg) {
-  ptree root;
-  root.put("type", "shallow_copy_request");
-  root.put("id", id);
+  json root;
+  root["type"] = "shallow_copy_request";
+  root["id"] = id;
 
   encode_msg(root, msg);
 }
 
-Status ReadShallowCopyRequest(const ptree& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "shallow_copy_request");
-  id = root.get<ObjectID>("id");
+Status ReadShallowCopyRequest(const json& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "shallow_copy_request");
+  id = root["id"].get<ObjectID>();
   return Status::OK();
 }
 
 void WriteShallowCopyReply(const ObjectID target_id, std::string& msg) {
-  ptree root;
-  root.put("type", "shallow_copy_reply");
-  root.put("target_id", target_id);
+  json root;
+  root["type"] = "shallow_copy_reply";
+  root["target_id"] = target_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadShallowCopyReply(const ptree& root, ObjectID& target_id) {
+Status ReadShallowCopyReply(const json& root, ObjectID& target_id) {
   CHECK_IPC_ERROR(root, "shallow_copy_reply");
-  target_id = root.get<ObjectID>("target_id");
+  target_id = root["target_id"].get<ObjectID>();
   return Status::OK();
 }
 

@@ -44,14 +44,16 @@ class IPCServer : public SocketServer {
 
   void Start() override;
 
-  std::string Socket() { return ipc_spec_.get<std::string>("socket"); }
+  std::string Socket() {
+    return ipc_spec_["socket"].get_ref<std::string const&>();
+  }
 
  private:
   asio::local::stream_protocol::endpoint getEndpoint(asio::io_context&);
 
   void doAccept() override;
 
-  const ptree ipc_spec_;
+  const json ipc_spec_;
   asio::local::stream_protocol::acceptor acceptor_;
 };
 

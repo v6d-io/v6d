@@ -45,13 +45,12 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Connected to IPCServer: " << FLAGS_ipc_socket;
   InstanceID instance_id = client.instance_id();
 
-  ptree instance_map_tree;
-  std::istringstream is(FLAGS_instance_map);
-  bpt::read_json(is, instance_map_tree);
+  json instance_map_tree = json::parse(FLAGS_instance_map);
   std::unordered_map<InstanceID, InstanceID> instance_map;
-  for (auto instance : instance_map_tree) {
-    InstanceID src_instance = VYObjectIDFromString(instance.first);
-    InstanceID dst_instance = instance_map_tree.get<InstanceID>(instance.first);
+  for (auto const& instance : json::iterator_wrapper(instance_map_tree)) {
+    InstanceID src_instance = VYObjectIDFromString(instance.key());
+    InstanceID dst_instance =
+        instance_map_tree[instance.key()].get<InstanceID>();
     instance_map.emplace(src_instance, dst_instance);
   }
 

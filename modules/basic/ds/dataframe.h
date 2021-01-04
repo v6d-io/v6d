@@ -34,7 +34,7 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "common/util/ptree.h"
+#include "common/util/json.h"
 
 #define INDEX_COL_NAME "index_"
 

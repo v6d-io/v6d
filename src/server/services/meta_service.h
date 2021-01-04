@@ -25,13 +25,13 @@ limitations under the License.
 #include <vector>
 
 #include "boost/asio.hpp"
-#include "boost/property_tree/json_parser.hpp"
-#include "boost/property_tree/ptree.hpp"
+#include "boost/bind.hpp"
 #include "boost/range/iterator_range.hpp"
 
 #include "common/util/boost.h"
 #include "common/util/callback.h"
 #include "common/util/functions.h"
+#include "common/util/json.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
 #include "server/server/vineyard_server.h"
@@ -40,17 +40,6 @@ limitations under the License.
 #define MAX_TIMEOUT_COUNT 3
 
 namespace vineyard {
-
-namespace meta_tree {
-enum class NodeType {
-  Value = 0,
-  Link = 1,
-  InvalidType = 15,
-};
-
-void encode_value(NodeType type, const std::string& value, std::string& str);
-void decode_value(const std::string& str, NodeType& type, std::string& value);
-}  // namespace meta_tree
 
 namespace asio = boost::asio;
 
@@ -102,16 +91,21 @@ class IMetaService {
       return op_t{.op = op_type_t::kDel,
                   .kv = kv_t{.key = key, .value = "", .rev = rev}};
     }
+    // send to etcd
     template <typename T>
     static op_t Put(std::string const& key, T const& value) {
       return op_t{
           .op = op_type_t::kPut,
-          .kv = kv_t{.key = key, .value = std::to_string(value), .rev = 0}};
+          .kv =
+              kv_t{.key = key, .value = json_to_string(json(value)), .rev = 0}};
     }
-    static op_t Put(std::string const& key, std::string const& value) {
-      return op_t{.op = op_type_t::kPut,
-                  .kv = kv_t{.key = key, .value = value, .rev = 0}};
+    template <typename T>
+    static op_t Put(std::string const& key, json const& value) {
+      return op_t{
+          .op = op_type_t::kPut,
+          .kv = kv_t{.key = key, .value = json_to_string(value), .rev = 0}};
     }
+    // receive from etcd
     static op_t Put(std::string const& key, std::string const& value,
                     unsigned const rev) {
       return op_t{.op = op_type_t::kPut,
@@ -120,10 +114,10 @@ class IMetaService {
   };
 
   struct watcher_t {
-    watcher_t(callback_t<const ptree&, const std::string&> w,
+    watcher_t(callback_t<const json&, const std::string&> w,
               const std::string& t)
         : watcher(w), tag(t) {}
-    callback_t<const ptree&, const std::string&> watcher;
+    callback_t<const json&, const std::string&> watcher;
     std::string tag;
   };
   virtual ~IMetaService() {}
@@ -136,19 +130,19 @@ class IMetaService {
     LOG(INFO) << "start!";
     RETURN_ON_ERROR(this->probe());
     rev_ = 0;
-    requestValues(
-        "", [this](const Status& status, const ptree& meta, unsigned rev) {
-          if (status.ok()) {
-            this->registerToEtcd();
-          } else {
-            Status s = status;
-            s << "Failed to get initial value";
-            // Abort: since the probe has succeeded but the etcd doesn't work,
-            // we have no idea about what happened.
-            s.Abort();
-          }
-          return status;
-        });
+    requestValues("",
+                  [this](const Status& status, const json& meta, unsigned rev) {
+                    if (status.ok()) {
+                      this->registerToEtcd();
+                    } else {
+                      Status s = status;
+                      s << "Failed to get initial value";
+                      // Abort: since the probe has succeeded but the etcd
+                      // doesn't work, we have no idea about what happened.
+                      s.Abort();
+                    }
+                    return status;
+                  });
     return Status::OK();
   }
 
@@ -156,7 +150,7 @@ class IMetaService {
 
  public:
   inline void RequestToBulkUpdate(
-      callback_t<const ptree&, std::vector<op_t>&, InstanceID&>
+      callback_t<const json&, std::vector<op_t>&, InstanceID&>
           callback_after_ready,
       callback_t<const InstanceID> callback_after_finish) {
     boost::asio::post(server_ptr_->GetIOContext(), [this, callback_after_ready,
@@ -181,7 +175,7 @@ class IMetaService {
   }
 
   inline void RequestToPersist(
-      callback_t<const ptree&, std::vector<op_t>&> callback_after_ready,
+      callback_t<const json&, std::vector<op_t>&> callback_after_ready,
       callback_t<> callback_after_finish) {
     // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
     // avoid contention between other vineyard instances.
@@ -192,7 +186,7 @@ class IMetaService {
           if (status.ok()) {
             requestValues(
                 "", [this, callback_after_ready, callback_after_finish, lock](
-                        const Status& status, const ptree& meta, unsigned rev) {
+                        const Status& status, const json& meta, unsigned rev) {
                   std::vector<op_t> ops;
                   auto s = callback_after_ready(status, meta, ops);
                   if (s.ok()) {
@@ -234,11 +228,12 @@ class IMetaService {
   }
 
   inline void RequestToGetData(const bool sync_remote,
-                               callback_t<const ptree&> callback) {
+                               callback_t<const json&> callback) {
     if (sync_remote) {
       requestValues(
-          "", [callback](const Status& status, const ptree& meta,
-                         unsigned rev) { return callback(status, meta); });
+          "", [callback](const Status& status, const json& meta, unsigned rev) {
+            return callback(status, meta);
+          });
     } else {
       // post the task to asio queue as well for well-defined processing order.
       boost::asio::post(server_ptr_->GetIOContext(),
@@ -248,7 +243,7 @@ class IMetaService {
 
   inline void RequestToDelete(
       const std::vector<ObjectID>& ids, const bool force, const bool deep,
-      callback_t<const ptree&, std::set<ObjectID> const&, std::vector<op_t>&>
+      callback_t<const json&, std::set<ObjectID> const&, std::vector<op_t>&>
           callback_after_ready,
       callback_t<> callback_after_finish) {
     // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
@@ -262,11 +257,13 @@ class IMetaService {
             requestValues(
                 "", [this, ids, force, deep, callback_after_ready,
                      callback_after_finish, lock](
-                        const Status& status, const ptree& meta, unsigned rev) {
+                        const Status& status, const json& meta, unsigned rev) {
                   // Implements dependent-based (usage-based) lifecycle.
                   std::set<ObjectID> initial_delete_set{ids.begin(), ids.end()};
                   std::set<ObjectID> delete_set;
                   for (auto const object_id : ids) {
+                    LOG(INFO) << "object id = " << object_id << ": "
+                              << VYObjectIDToString(object_id);
                     traverseToDelete(initial_delete_set, delete_set, object_id,
                                      force, deep);
                   }
@@ -304,10 +301,10 @@ class IMetaService {
   }
 
   inline void RequestToShallowCopy(
-      callback_t<const ptree&, std::vector<op_t>&, bool&> callback_after_ready,
+      callback_t<const json&, std::vector<op_t>&, bool&> callback_after_ready,
       callback_t<> callback_after_finish) {
     requestValues("", [this, callback_after_ready, callback_after_finish](
-                          const Status& status, const ptree& meta,
+                          const Status& status, const json& meta,
                           unsigned rev) {
       if (status.ok()) {
         std::vector<op_t> ops;
@@ -319,7 +316,7 @@ class IMetaService {
             return callback_after_finish(Status::OK());
           } else {
             this->RequestToPersist(
-                [ops](const Status& status, const ptree& meta,
+                [ops](const Status& status, const json& meta,
                       std::vector<IMetaService::op_t>& persist_ops) {
                   persist_ops.insert(persist_ops.end(), ops.begin(), ops.end());
                   return Status::OK();
@@ -341,7 +338,7 @@ class IMetaService {
  private:
   inline void registerToEtcd() {
     RequestToPersist(
-        [&](const Status& status, const ptree& tree, std::vector<op_t>& ops) {
+        [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
           if (status.ok()) {
             char hostname_value[MAXHOSTNAMELEN];
             gethostname(&hostname_value[0], MAXHOSTNAMELEN);
@@ -349,30 +346,31 @@ class IMetaService {
             int64_t timestamp = GetTimestamp();
 
             instances_list_.clear();
-            auto instances = tree.get_child_optional("instances");
             uint64_t self_host_id = static_cast<uint64_t>(gethostid()) |
                                     static_cast<uint64_t>(__rdtsc());
-            if (instances) {
-              for (auto& instance : instances.get()) {
-                auto id = static_cast<InstanceID>(std::stoul(instance.first));
+            if (tree.contains("instances") && !tree["instances"].is_null()) {
+              for (auto& instance : json::iterator_wrapper(tree["instances"])) {
+                auto id = static_cast<InstanceID>(
+                    std::stoul(instance.key().substr(1)));
                 instances_list_.emplace(id);
               }
             }
             InstanceID rank = 0;
-            auto next_instance_id =
-                tree.get_optional<InstanceID>("next_instance_id");
-            if (next_instance_id) {
-              rank = next_instance_id.get();
+            if (tree.contains("next_instance_id") &&
+                !tree["next_instance_id"].is_null()) {
+              rank = tree["next_instance_id"].get<InstanceID>();
             }
             instances_list_.emplace(rank);
             ops.emplace_back(op_t::Put(
-                "instances." + std::to_string(rank) + ".hostid", self_host_id));
+                "/instances/i" + std::to_string(rank) + "/" + "hostid",
+                self_host_id));
             ops.emplace_back(op_t::Put(
-                "instances." + std::to_string(rank) + ".hostname", hostname));
+                "/instances/i" + std::to_string(rank) + "/" + "hostname",
+                hostname));
             ops.emplace_back(op_t::Put(
-                "instances." + std::to_string(rank) + ".timestamp", timestamp));
-            ops.emplace_back(
-                op_t::Put("next_instance_id", std::to_string(rank + 1)));
+                "/instances/i" + std::to_string(rank) + "/" + "timestamp",
+                timestamp));
+            ops.emplace_back(op_t::Put("/next_instance_id", rank + 1));
             this->server_ptr_->set_instance_id(rank);
             LOG(INFO) << "Decide to set rank as " << rank;
             return status;
@@ -410,12 +408,12 @@ class IMetaService {
    */
   void checkInstanceStatus() {
     RequestToPersist(
-        [&](const Status& status, const ptree& tree, std::vector<op_t>& ops) {
+        [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
           if (status.ok()) {
             ops.emplace_back(op_t::Put(
-                "instances." + std::to_string(server_ptr_->instance_id()) +
-                    ".timestamp",
-                std::to_string(GetTimestamp())));
+                "/instances/i" + std::to_string(server_ptr_->instance_id()) +
+                    "/" + "timestamp",
+                GetTimestamp()));
             return status;
           } else {
             LOG(ERROR) << status.ToString();
@@ -438,14 +436,12 @@ class IMetaService {
           }
           VLOG(10) << "Instance size " << instances_list_.size()
                    << ", target instance is " << target_inst;
-          auto mb_target = meta_.get_child("instances")
-                               .get_child_optional(std::to_string(target_inst));
+          auto target = meta_["instances"]["i" + std::to_string(target_inst)];
           // The subtree might be empty, when the etcd been resumed with another
           // data directory but the same endpoint. that leads to a crash here
           // but we just let it crash to help us diagnosis the error.
-          if (mb_target /* && !mb_target.get().empty() */) {
-            auto target = mb_target.get();
-            int64_t ts = target.get<int64_t>("timestamp");
+          if (!target.is_null() /* && !target.empty() */) {
+            int64_t ts = target["timestamp"].get<int64_t>();
             if (ts == target_latest_time_) {
               ++timeout_count_;
             } else {
@@ -457,14 +453,14 @@ class IMetaService {
               timeout_count_ = 0;
               target_latest_time_ = 0;
               RequestToPersist(
-                  [&, target_inst](const Status& status, const ptree& tree,
+                  [&, target_inst](const Status& status, const json& tree,
                                    std::vector<op_t>& ops) {
                     if (status.ok()) {
                       std::string key =
-                          "instances." + std::to_string(target_inst);
-                      ops.emplace_back(op_t::Del(key + ".hostid"));
-                      ops.emplace_back(op_t::Del(key + ".timestamp"));
-                      ops.emplace_back(op_t::Del(key + ".hostname"));
+                          "/instances/i" + std::to_string(target_inst);
+                      ops.emplace_back(op_t::Del(key + "/hostid"));
+                      ops.emplace_back(op_t::Del(key + "/timestamp"));
+                      ops.emplace_back(op_t::Del(key + "/hostname"));
                     } else {
                       LOG(ERROR) << status.ToString();
                     }
@@ -503,25 +499,15 @@ class IMetaService {
                              callback_t<unsigned> callback_after_updated) = 0;
 
   void requestValues(const std::string& prefix,
-                     callback_t<const ptree&, unsigned> callback) {
+                     callback_t<const json&, unsigned> callback) {
     // We still need to run a `etcdctl get` for the first time. With a
     // long-running and no compact Etcd, watching from revision 0 may
     // lead to a super huge amount of events, which is unacceptable.
     if (rev_ == 0) {
       requestAll(prefix, rev_,
                  [this, callback](const Status& status,
-                                  const std::vector<kv_t>& kvs, unsigned rev) {
+                                  const std::vector<op_t>& ops, unsigned rev) {
                    if (status.ok()) {
-                     // NB: don't putVal directly, construct a set of op, and
-                     // call metaUpdate to make sure the instance list correct.
-                     std::vector<op_t> ops;
-                     for (auto const& kv : kvs) {
-                       if (boost::algorithm::trim_copy(kv.key).empty()) {
-                         // skip unprintable keys
-                         continue;
-                       }
-                       ops.emplace_back(op_t::Put(kv.key, kv.value, kv.rev));
-                     }
                      this->metaUpdate(ops);
                      rev_ = rev;
                    }
@@ -547,7 +533,7 @@ class IMetaService {
 
   virtual void requestAll(
       const std::string& prefix, unsigned base_rev,
-      callback_t<const std::vector<kv_t>&, unsigned> callback) = 0;
+      callback_t<const std::vector<op_t>&, unsigned> callback) = 0;
 
   virtual void requestUpdates(
       const std::string& prefix, unsigned since_rev,
@@ -560,10 +546,10 @@ class IMetaService {
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
 
-  void incRef(std::string const& key, std::string const& value);
+  void incRef(std::string const& key, json const& value);
   void printDepsGraph();
 
-  ptree meta_;
+  json meta_;
   vs_ptr_t server_ptr_;
 
   unsigned rev_;
@@ -580,12 +566,13 @@ class IMetaService {
                         const bool deep);
 
   inline void putVal(const kv_t& kv) {
-    incRef(kv.key, kv.value);
-    meta_.put(kv.key, kv.value);
+    json value = json::parse(kv.value);
+    incRef(kv.key, value);
+    meta_[json::json_pointer(kv.key)] = value;
   }
 
   inline void delVal(const kv_t& kv, std::set<ObjectID>& blobs) {
-    size_t last_dot = kv.key.find_last_of('.');
+    size_t last_dot = kv.key.find_last_of('/');
     size_t parent_end = last_dot;
     size_t child_start = last_dot + 1;
     if (static_cast<int>(last_dot) == -1) {
@@ -596,25 +583,31 @@ class IMetaService {
     const std::string child_name(kv.key.cbegin() + child_start, kv.key.cend());
 
     std::vector<std::string> vs;
-    boost::algorithm::split(vs, parent_path,
-                            [](const char c) { return c == '.'; });
+    boost::algorithm::split(vs, kv.key, [](const char c) { return c == '/'; });
+    if (vs[0].empty()) {
+      vs.erase(vs.begin());
+    }
 
     ObjectID id_in_key = InvalidObjectID();
     if (vs[0] == "data" && vs.size() > 1) {
       id_in_key = VYObjectIDFromString(vs[1]);
     }
-
     if (vs[0] != "data" || deleteable(id_in_key)) {
       // delete metadata: a delete operation might be applied multiple times
-      auto parent_node = meta_.get_child_optional(parent_path);
-      if (!parent_node) {
+      auto parent_json_path = json::json_pointer(parent_path);
+      if (!meta_.contains(parent_json_path)) {
         return;
       }
-      parent_node.get().erase(child_name);
-      if (parent_node.get().empty()) {
-        size_t last_dot_in_path = parent_path.find_last_of('.');
-        meta_.get_child(parent_path.substr(0, last_dot_in_path))
-            .erase(parent_path.substr(last_dot_in_path + 1));
+      auto& parent_node = meta_[parent_json_path];
+      parent_node.erase(child_name);
+      if (parent_node.empty()) {
+        size_t last_dot_in_path = parent_path.find_last_of('/');
+        if (last_dot_in_path == 0) {
+          meta_.erase(parent_path.substr(last_dot_in_path + 1));
+        } else {
+          meta_[json::json_pointer(parent_path.substr(0, last_dot_in_path))]
+              .erase(parent_path.substr(last_dot_in_path + 1));
+        }
       }
 
       // if deletable blob: delete blob
@@ -625,47 +618,9 @@ class IMetaService {
       if (vs[0] == "data" && id_in_key != InvalidObjectID()) {
         // mark as transient
         if ("transient" == child_name) {
-          meta_.get_child(parent_path).put("transient", true);
+          meta_[json::json_pointer(parent_path)]["transient"] = true;
         }
       }
-    }
-  }
-
-  /// Flatten potential subtree, which is uploaded to etcd by `Persist`.
-  /// See meta_tree.cc:`generate_persist_ops` for reference.
-  void decode_ops(const IMetaService::op_t& op,
-                  std::vector<IMetaService::op_t>& out) {
-    auto kv = op.kv;
-    if (kv.key.back() == '.' && op.op == op_t::op_type_t::kPut) {
-      boost::property_tree::ptree pt;
-      std::stringstream ss(kv.value);
-      boost::property_tree::read_json(ss, pt);
-
-      for (ptree::iterator it = pt.begin(); it != pt.end(); ++it) {
-        std::string encoded_value;
-        if (it->second.empty()) {
-          if (it->first == "id" || it->second.data().empty()) {
-            continue;
-          }
-          if (it->first == "transient") {
-            meta_tree::encode_value(meta_tree::NodeType::Value, "false",
-                                    encoded_value);
-          } else {
-            meta_tree::encode_value(meta_tree::NodeType::Value,
-                                    it->second.data(), encoded_value);
-          }
-        } else {
-          meta_tree::encode_value(meta_tree::NodeType::Link,
-                                  it->second.get<std::string>("__subtree", ""),
-                                  encoded_value);
-        }
-        if (encoded_value.size() > 1) {
-          out.push_back(
-              IMetaService::op_t::Put(kv.key + it->first, encoded_value));
-        }
-      }
-    } else {
-      out.push_back(op);
     }
   }
 
@@ -682,20 +637,22 @@ class IMetaService {
         // skip unprintable keys
         continue;
       }
-      if (boost::algorithm::starts_with(op.kv.key, "instances.")) {
+      if (boost::algorithm::starts_with(op.kv.key, meta_sync_lock_)) {
+        // skip the update of etcd lock
+        continue;
+      }
+      if (boost::algorithm::starts_with(op.kv.key,
+                                        "/instances" + std::string("/"))) {
         instanceUpdate(op);
       }
 #ifndef NDEBUG
       VLOG(10) << "update op in meta tree: " << op.ToString();
 #endif
-      std::vector<IMetaService::op_t> sub_ops;
-      decode_ops(op, sub_ops);
-      for (auto& sub_op : sub_ops) {
-        if (sub_op.op == op_t::op_type_t::kPut) {
-          putVal(sub_op.kv);
-        } else if (sub_op.op == op_t::op_type_t::kDel) {
-          delVal(sub_op.kv, blobs_to_delete);
-        }
+      const kv_t& kv = op.kv;
+      if (op.op == op_t::op_type_t::kPut) {
+        putVal(kv);
+      } else if (op.op == op_t::op_type_t::kDel) {
+        delVal(kv, blobs_to_delete);
       }
     }
     VINEYARD_SUPPRESS(server_ptr_->DeleteBlobBatch(blobs_to_delete));
@@ -703,10 +660,13 @@ class IMetaService {
   }
 
   void instanceUpdate(const op_t& op) {
-    std::vector<std::string> info_parse;
-    boost::split(info_parse, op.kv.key, boost::is_any_of("."));
-    if (info_parse[2] == "hostid") {
-      uint64_t instance_id = std::stoul(info_parse[1]);
+    std::vector<std::string> key_segments;
+    boost::split(key_segments, op.kv.key, boost::is_any_of("/"));
+    if (key_segments[0].empty()) {
+      key_segments.erase(key_segments.begin());
+    }
+    if (key_segments[2] == "hostid") {
+      uint64_t instance_id = std::stoul(key_segments[1].substr(1));
       if (op.op == op_t::op_type_t::kPut) {
         LOG(INFO) << "Instance join: " << instance_id;
         instances_list_.emplace(instance_id);

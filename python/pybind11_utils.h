@@ -23,6 +23,7 @@ limitations under the License.
 #pragma GCC visibility push(default)
 #include "common/util/status.h"
 #include "common/util/uuid.h"
+#include "common/util/json.h"
 #pragma GCC visibility pop
 
 namespace vineyard {
@@ -80,6 +81,8 @@ iterator make_iterator_fmap(Iterator first, Sentinel last,
 namespace vineyard {
 
 void throw_on_error(Status const& status);
+
+pybind11::object json_to_python(json const &value);
 
 }  // namespace vineyard
 

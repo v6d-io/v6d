@@ -45,7 +45,8 @@ bool validate_advertise_hostname(std::string const& hostname,
 Status EtcdLauncher::LaunchEtcdServer(
     std::unique_ptr<etcd::Client>& etcd_client, std::string& sync_lock,
     std::unique_ptr<boost::process::child>& etcd_proc) {
-  std::string etcd_endpoint = etcd_spec_.get<std::string>("etcd_endpoint");
+  std::string const& etcd_endpoint =
+      etcd_spec_["etcd_endpoint"].get_ref<std::string const&>();
   etcd_client.reset(new etcd::Client(etcd_endpoint));
 
   if (probeEtcdServer(etcd_client, sync_lock)) {
@@ -55,7 +56,7 @@ Status EtcdLauncher::LaunchEtcdServer(
   LOG(INFO) << "Starting the etcd server";
 
   // resolve etcd binary
-  std::string etcd_cmd = etcd_spec_.get<std::string>("etcd_cmd");
+  std::string etcd_cmd = etcd_spec_["etcd_cmd"].get_ref<std::string const&>();
   if (etcd_cmd.empty()) {
     setenv("LC_ALL", "C", 1);  // makes boost's path works as expected.
     etcd_cmd = boost::process::search_path("etcd").string();
@@ -169,7 +170,8 @@ Status EtcdLauncher::LaunchEtcdServer(
 }
 
 void EtcdLauncher::parseEndpoint() {
-  std::string etcd_endpoint = etcd_spec_.get<std::string>("etcd_endpoint");
+  std::string const& etcd_endpoint =
+      etcd_spec_["etcd_endpoint"].get_ref<std::string const&>();
   size_t port_pos = etcd_endpoint.find_last_of(':');
   endpoint_port_ = std::stoi(
       etcd_endpoint.substr(port_pos + 1, etcd_endpoint.size() - port_pos - 1));

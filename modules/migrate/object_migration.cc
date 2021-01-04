@@ -84,12 +84,12 @@ Status ObjectMigration::Migrate(
 
 Status ObjectMigration::getHostName(InstanceID instance_id, Client& client,
                                     std::string& hostname) {
-  std::map<uint64_t, ptree> cluster_info;
+  std::map<uint64_t, json> cluster_info;
   RETURN_ON_ERROR(client.ClusterInfo(cluster_info));
   auto instance_info = cluster_info.find(instance_id);
   if (instance_info != cluster_info.end()) {
-    auto ptree = instance_info->second;
-    hostname = ptree.get<std::string>("hostname");
+    auto& json = instance_info->second;
+    hostname = json["hostname"].get_ref<std::string const&>();
   } else {
     LOG(ERROR) << "Dst instance id " << instance_id << " not exist";
     return Status::KeyError();
@@ -101,7 +101,7 @@ Status ObjectMigration::sendObjectMeta(ObjectID object_id, Client& client,
                                        tcp::socket& socket) {
   ObjectMeta object_meta;
   RETURN_ON_ERROR(client.GetMetaData(object_id, object_meta));
-  ptree meta_tree = object_meta.MetaData();
+  json meta_tree = object_meta.MetaData();
   getBlobList(meta_tree);
   if (object_list_.find(object_id) == object_list_.end()) {
     std::string msg;
@@ -114,18 +114,18 @@ Status ObjectMigration::sendObjectMeta(ObjectID object_id, Client& client,
   return Status::OK();
 }
 
-void ObjectMigration::getBlobList(ptree& meta_tree) {
-  InstanceID instance_id =
-      std::stoull(meta_tree.get<std::string>("instance_id"));
+void ObjectMigration::getBlobList(json& meta_tree) {
+  InstanceID instance_id = meta_tree["instance_id"].get<InstanceID>();
   if (instance_id != instance_id_)
     return;
-  ObjectID id = VYObjectIDFromString(meta_tree.get<std::string>("id"));
+  ObjectID id =
+      VYObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
   if (IsBlob(id) && blob_list_.find(id) == blob_list_.end()) {
     blob_list_.insert(id);
   }
-  for (auto& it : meta_tree) {
-    if (!it.second.empty()) {
-      getBlobList(it.second);
+  for (auto& item : meta_tree) {
+    if (item.is_object() && !item.empty()) {
+      getBlobList(item);
     }
   }
   return;
@@ -144,17 +144,15 @@ Status MigrationServer::Start(Client& client) {
     boost::asio::read(socket, asio::buffer(&length, sizeof(size_t)));
     message_in.resize(length);
     boost::asio::read(socket, asio::buffer(&message_in[0], message_in.size()));
-    ptree root;
-    std::istringstream is(message_in);
-    bpt::read_json(is, root);
+    json root = json::parse(message_in);
 
-    std::string type = root.get<std::string>("type");
+    std::string type = root["type"].get_ref<std::string const&>();
     MigrateActionType cmd = ParseMigrateAction(type);
     switch (cmd) {
     case MigrateActionType::SendObjectRequest: {
       LOG(INFO) << "cmd send object request";
       ObjectID object_id;
-      ptree object_meta;
+      json object_meta;
       RETURN_ON_ERROR(ReadSendObjectRequest(root, object_id, object_meta));
       // FIXME: this part will be abandoned when global object contains meta of
       // sub_object
@@ -183,7 +181,7 @@ Status MigrationServer::Start(Client& client) {
       for (auto it = object_map_.begin(); it != object_map_.end(); it++) {
         ObjectID object_id;
         if (object_id_map_.find(it->first) == object_id_map_.end()) {
-          if (it->second.get<InstanceID>("instance_id") ==
+          if (it->second["instance_id"].get<InstanceID>() ==
               UnspecifiedInstanceID()) {
             object_id = createObject(it->second, client, true);
           } else {
@@ -207,25 +205,26 @@ Status MigrationServer::Start(Client& client) {
   return Status::OK();
 }
 
-ObjectID MigrationServer::createObject(ptree& meta_tree, Client& client,
+ObjectID MigrationServer::createObject(json& meta_tree, Client& client,
                                        bool persist) {
-  InstanceID instance_id =
-      std::stoull(meta_tree.get<std::string>("instance_id"));
-  for (auto& it : meta_tree) {
-    if (!it.second.empty()) {
-      ObjectID id = VYObjectIDFromString(it.second.get<std::string>("id"));
+  InstanceID instance_id = meta_tree["instance_id"].get<InstanceID>();
+  for (auto& item : json::iterator_wrapper(meta_tree)) {
+    if (item.value().is_object() && !item.value().empty()) {
+      ObjectID id = VYObjectIDFromString(
+          item.value()["id"].get_ref<std::string const&>());
       if (object_id_map_.find(id) == object_id_map_.end()) {
         InstanceID child_instance_id =
-            std::stoull(it.second.get<std::string>("instance_id"));
-        std::string object_id = it.second.get<std::string>("id");
+            item.value()["instance_id"].get<InstanceID>();
+        std::string object_id =
+            item.value()["id"].get_ref<std::string const&>();
         std::string query_name =
             object_id + "_" + std::to_string(child_instance_id);
         ObjectID new_object_id;
         if (child_instance_id == UnspecifiedInstanceID()) {
-          new_object_id = createObject(it.second, client, false);
+          new_object_id = createObject(item.value(), client, false);
         } else if (instance_map_.at(child_instance_id) ==
                    client.instance_id()) {
-          new_object_id = createObject(it.second, client,
+          new_object_id = createObject(item.value(), client,
                                        instance_id == UnspecifiedInstanceID());
         } else {
           VINEYARD_CHECK_OK(client.GetName(query_name, new_object_id, true));
@@ -238,7 +237,7 @@ ObjectID MigrationServer::createObject(ptree& meta_tree, Client& client,
       }
       ObjectMeta child_meta;
       VINEYARD_CHECK_OK(client.GetMetaData(id, child_meta));
-      meta_tree.put_child(it.first, child_meta.MetaData());
+      meta_tree[item.key()] = child_meta.MetaData();
     }
   }
   ObjectMeta new_meta;

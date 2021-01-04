@@ -42,7 +42,7 @@ class RPCServer : public SocketServer {
   std::string Endpoint() {
     char hostname[MAXHOSTNAMELEN];
     gethostname(hostname, MAXHOSTNAMELEN);
-    return std::string(hostname) + ":" + rpc_spec_.get<std::string>("port");
+    return std::string(hostname) + ":" + json_to_string(rpc_spec_["port"]);
   }
 
  private:
@@ -50,7 +50,7 @@ class RPCServer : public SocketServer {
 
   void doAccept() override;
 
-  const ptree rpc_spec_;
+  const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
 };
 

@@ -20,13 +20,13 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "common/util/boost.h"
+#include "common/util/json.h"
 
 namespace vineyard {
 
 RPCServer::RPCServer(vs_ptr_t vs_ptr)
     : SocketServer(vs_ptr),
-      rpc_spec_(vs_ptr_->GetSpec().get_child("rpc_spec")),
+      rpc_spec_(vs_ptr_->GetSpec()["rpc_spec"]),
       acceptor_(vs_ptr_->GetIOContext()) {
   auto endpoint = getEndpoint(vs_ptr_->GetIOContext());
   acceptor_.open(endpoint.protocol());
@@ -48,12 +48,12 @@ RPCServer::~RPCServer() {
 void RPCServer::Start() {
   SocketServer::Start();
   LOG(INFO) << "Vineyard will listen on 0.0.0.0:"
-            << rpc_spec_.get<uint32_t>("port") << " for RPC";
+            << rpc_spec_["port"].get<uint32_t>() << " for RPC";
   vs_ptr_->RPCReady();
 }
 
 asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_context&) {
-  uint32_t port = rpc_spec_.get<uint32_t>("port");
+  uint32_t port = rpc_spec_["port"].get<uint32_t>();
   return asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port);
 }
 

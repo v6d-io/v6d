@@ -61,20 +61,20 @@ const Resolver& Resolver::get(std::string name) {
   }
 }
 
-ptree EtcdSpecResolver::resolve() const {
-  ptree spec;
+json EtcdSpecResolver::resolve() const {
+  json spec;
   // FIXME: get from flags or env
-  spec.put("prefix", FLAGS_etcd_prefix + ".");
-  spec.put("etcd_endpoint", FLAGS_etcd_endpoint);
-  spec.put("etcd_cmd", FLAGS_etcd_cmd);
+  spec["prefix"] = FLAGS_etcd_prefix;
+  spec["etcd_endpoint"] = FLAGS_etcd_endpoint;
+  spec["etcd_cmd"] = FLAGS_etcd_cmd;
   return spec;
 }
 
-ptree BulkstoreSpecResolver::resolve() const {
-  ptree spec;
+json BulkstoreSpecResolver::resolve() const {
+  json spec;
   size_t bulkstore_limit = parseMemoryLimit(FLAGS_size);
-  spec.put("memory_size", bulkstore_limit);
-  spec.put("stream_threshold", std::to_string(FLAGS_stream_threshold));
+  spec["memory_size"] = bulkstore_limit;
+  spec["stream_threshold"] = FLAGS_stream_threshold;
   return spec;
 }
 
@@ -121,25 +121,25 @@ size_t BulkstoreSpecResolver::parseMemoryLimit(
   }
 }
 
-ptree IpcSpecResolver::resolve() const {
-  ptree spec;
-  spec.put("socket", FLAGS_socket);
+json IpcSpecResolver::resolve() const {
+  json spec;
+  spec["socket"] = FLAGS_socket;
   return spec;
 }
 
-ptree RpcSpecResolver::resolve() const {
-  ptree spec;
-  spec.put("port", FLAGS_rpc_socket_port);
+json RpcSpecResolver::resolve() const {
+  json spec;
+  spec["port"] = FLAGS_rpc_socket_port;
   return spec;
 }
 
-ptree ServerSpecResolver::resolve() const {
-  ptree spec;
-  spec.put("deployment", FLAGS_deployment);
-  spec.add_child("metastore_spec", Resolver::get("etcd").resolve());
-  spec.add_child("bulkstore_spec", Resolver::get("bulkstore").resolve());
-  spec.add_child("ipc_spec", Resolver::get("ipcserver").resolve());
-  spec.add_child("rpc_spec", Resolver::get("rpcserver").resolve());
+json ServerSpecResolver::resolve() const {
+  json spec;
+  spec["deployment"] = FLAGS_deployment;
+  spec["metastore_spec"] = Resolver::get("etcd").resolve();
+  spec["bulkstore_spec"] = Resolver::get("bulkstore").resolve();
+  spec["ipc_spec"] = Resolver::get("ipcserver").resolve();
+  spec["rpc_spec"] = Resolver::get("rpcserver").resolve();
   return spec;
 }
 

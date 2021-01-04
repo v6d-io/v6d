@@ -182,19 +182,18 @@ void bind_client(py::module& mod) {
       .def_property_readonly(
           "meta",
           [](ClientBase* self)
-              -> std::map<uint64_t, std::map<std::string, std::string>> {
-            std::map<uint64_t, ptree> meta;
+              -> std::map<uint64_t, std::unordered_map<std::string, py::object>> {
+            std::map<uint64_t, json> meta;
             throw_on_error(self->ClusterInfo(meta));
-            std::map<uint64_t, std::map<std::string, std::string>>
-                meta_to_return;
+            std::map<uint64_t, std::unordered_map<std::string, py::object>> meta_to_return;
             for (auto const& kv : meta) {
-              std::map<std::string, std::string> element;
+              std::unordered_map<std::string, py::object> element;
               if (!kv.second.empty()) {
-                for (auto const& elem : kv.second) {
-                  element.emplace(elem.first, elem.second.data());
+                for (auto const& elem : json::iterator_wrapper(kv.second)) {
+                  element[elem.key()] = json_to_python(elem.value());
                 }
               }
-              meta_to_return.emplace(kv.first, element);
+              meta_to_return.emplace(kv.first, std::move(element));
             }
             return meta_to_return;
           })

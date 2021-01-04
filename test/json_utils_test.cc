@@ -20,12 +20,12 @@ limitations under the License.
 #include "glog/logging.h"
 
 #include "basic/ds/types.h"
-#include "common/util/ptree.h"
+#include "common/util/json.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
-  ptree tree;
+  json tree;
   auto value1 = std::vector<int>{1, 2, 3};
   auto value2 = std::vector<double>{1.0, 2.0, 3.0};
   auto value3 = std::vector<std::string>{"a", "bb", "ccc"};
@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
   CHECK(value2 == value2_get);
   CHECK(value3 == value3_get);
 
-  LOG(INFO) << "Passed plain type in ptree tests...";
+  LOG(INFO) << "Passed plain type in json tests...";
 
   auto value4 =
       std::vector<AnyType>{AnyType::Int32, AnyType::UInt32, AnyType::Double};
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
   get_container(tree, "value4", value4_get);
   CHECK(value4 == value4_get);
 
-  LOG(INFO) << "Passed AnyType in ptree tests...";
+  LOG(INFO) << "Passed AnyType in json tests...";
 
   auto value5 =
       std::vector<IdType>{IdType::Int32, IdType::UInt32, IdType::String};
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
   get_container(tree, "value5", value5_get);
   CHECK(value5 == value5_get);
 
-  LOG(INFO) << "Passed IdType in ptree tests...";
+  LOG(INFO) << "Passed IdType in json tests...";
 
   return 0;
 }

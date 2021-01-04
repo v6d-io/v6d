@@ -272,6 +272,7 @@ jobs:
           export VINEYARD_HOME=`pwd`/build/bin
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
+          rm -rf default.etcd
           python3 test/runner.py --with-python
 
       - name: Setup tmate session
@@ -286,6 +287,7 @@ jobs:
           export VINEYARD_HOME=`pwd`/build/bin
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
+          rm -rf default.etcd
           python3 test/runner.py --with-io
 
       - name: Upload Coverage

@@ -51,8 +51,7 @@ int main(int argc, char* argv[]) {
   sigset(SIGINT, SIG_DFL);
   FLAGS_stderrthreshold = 0;
   vineyard::logging::InitGoogleLogging("vineyard");
-  vineyard::logging::InstallFailureSignalHandler();
-  std::set_terminate(terminate_handle);
+  // vineyard::logging::InstallFailureSignalHandler();
 
   vineyard::flags::SetUsageMessage("Usage: vineyardd [options]");
   vineyard::flags::ParseCommandLineNonHelpFlags(&argc, &argv, false);
@@ -71,8 +70,9 @@ int main(int argc, char* argv[]) {
   const auto& spec = vineyard::ServerSpecResolver().resolve();
   server_ptr_ = vineyard::VineyardServer::Get(spec);
   // do proper cleanup in response to signals
-  signal(SIGINT, vineyardd_signal_handler);
-  signal(SIGTERM, vineyardd_signal_handler);
+  // std::set_terminate(terminate_handle);
+  // signal(SIGINT, vineyardd_signal_handler);
+  // signal(SIGTERM, vineyardd_signal_handler);
   VINEYARD_CHECK_OK(server_ptr_->Serve());
   VINEYARD_CHECK_OK(server_ptr_->Finalize());
 
