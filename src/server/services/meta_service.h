@@ -546,7 +546,7 @@ class IMetaService {
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
 
-  void incRef(std::string const& key, json const& value);
+  void incRef(std::string const& key, std::string const& value);
   void printDepsGraph();
 
   json meta_;
@@ -566,9 +566,22 @@ class IMetaService {
                         const bool deep);
 
   inline void putVal(const kv_t& kv) {
-    json value = json::parse(kv.value);
-    incRef(kv.key, value);
-    meta_[json::json_pointer(kv.key)] = value;
+    // don't crash the server for any reason (any potential garbage value)
+    auto upsert_to_meta = [&]() {
+      json value = json::parse(kv.value);
+      if (value.is_string()) {
+        incRef(kv.key, value.get_ref<std::string const&>());
+      } else if (value.is_object() && !value.empty()) {
+        for (auto const& item : json::iterator_wrapper(value)) {
+          if (item.value().is_string()) {
+            incRef(kv.key, item.value().get_ref<std::string const&>());
+          }
+        }
+      }
+      meta_[json::json_pointer(kv.key)] = value;
+      return Status::OK();
+    };
+    CATCH_JSON_ERROR(upsert_to_meta());
   }
 
   inline void delVal(const kv_t& kv, std::set<ObjectID>& blobs) {

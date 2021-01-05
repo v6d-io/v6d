@@ -43,6 +43,10 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
       // FIXME: for simplicity, we don't care the instance-lock related keys.
       continue;
     }
+    if (!boost::algorithm::starts_with(key, prefix_ + "/")) {
+      // ignore garbage values
+      continue;
+    }
     EtcdMetaService::op_t op;
     std::string op_key = boost::algorithm::erase_head_copy(key, prefix_.size());
     switch (event.type()) {
@@ -127,6 +131,10 @@ void EtcdMetaService::requestAll(
                  << " microseconds for " << resp.keys().size() << " keys";
         std::vector<IMetaService::op_t> ops(resp.keys().size());
         for (size_t i = 0; i < resp.keys().size(); ++i) {
+          if (!boost::algorithm::starts_with(resp.key(i), prefix_ + "/")) {
+            // ignore garbage values
+            continue;
+          }
           std::string op_key =
               boost::algorithm::erase_head_copy(resp.key(i), prefix_.size());
           auto op = EtcdMetaService::op_t::Put(

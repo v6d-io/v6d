@@ -28,24 +28,19 @@ std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t ptr) {
   return std::shared_ptr<IMetaService>(new EtcdMetaService(ptr));
 }
 
-void IMetaService::incRef(std::string const& key, json const& value) {
-  if (!value.is_string()) {
-    return;
-  }
+void IMetaService::incRef(std::string const& key, std::string const& value) {
   std::vector<std::string> vs;
   boost::algorithm::split(vs, key, [](const char c) { return c == '/'; });
   if (vs[0].empty()) {
     vs.erase(vs.begin());
   }
-  if (vs.size() < 3) {
-    // The key is not an object id: data.id.field
+  if (vs.size() < 2 || vs[0] != "data") {
+    // The key is not an object id: data.id
     return;
   }
   ObjectID key_obj, value_obj;
-  if (vs[0] == "data" &&
-      meta_tree::DecodeObjectID(value.get_ref<std::string const&>(), value_obj)
-          .ok()) {
-    key_obj = VYObjectIDFromString(vs[vs.size() - 2]);
+  if (meta_tree::DecodeObjectID(value, value_obj).ok()) {
+    key_obj = VYObjectIDFromString(vs[1]);
     {
       // validate the dependency graph
       decltype(subobjects_.begin()) iter;
