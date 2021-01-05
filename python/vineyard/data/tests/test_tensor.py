@@ -17,6 +17,7 @@
 #
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import vineyard
@@ -30,3 +31,11 @@ def test_numpy_ndarray(vineyard_client):
     arr = np.random.rand(4, 5, 6)
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+def test_sparse_array(vineyard_client):
+    arr = np.random.randn(10)
+    arr[2:5] = np.nan
+    arr[7:8] = np.nan
+    sparr = pd.arrays.SparseArray(arr)
+    object_id = vineyard_client.put(sparr)
+    pd.testing.assert_extension_array_equal(sparr, vineyard_client.get(object_id))

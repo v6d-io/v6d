@@ -45,3 +45,11 @@ def test_dataframe_set_index(vineyard_client):
     expected = df1.set_index('y', drop=True)
     object_id = vineyard_client.put(expected)
     pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))
+
+
+def test_dataframe_with_sparse_array(vineyard_client):
+    df = pd.DataFrame(np.random.randn(100, 4))
+    df.iloc[:98] = np.nan
+    sdf = df.astype(pd.SparseDtype("float", np.nan))
+    object_id = vineyard_client.put(sdf)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
