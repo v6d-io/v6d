@@ -48,7 +48,7 @@ def test_dataframe_set_index(vineyard_client):
 
 
 def test_dataframe_with_sparse_array(vineyard_client):
-    df = pd.DataFrame(np.random.randn(100, 4))
+    df = pd.DataFrame(np.random.randn(100, 4), columns=['x', 'y', 'z', 'a'])
     df.iloc[:98] = np.nan
     sdf = df.astype(pd.SparseDtype("float", np.nan))
     object_id = vineyard_client.put(sdf)

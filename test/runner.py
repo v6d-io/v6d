@@ -82,7 +82,6 @@ def start_etcd():
         client_port = find_port()
         peer_port = find_port()
         proc = start_program('etcd',
-                             '--max-txn-ops=102400',
                              '--listen-peer-urls', 'http://0.0.0.0:%d' % peer_port,
                              '--listen-client-urls', 'http://0.0.0.0:%d' % client_port,
                              '--advertise-client-urls', 'http://127.0.0.1:%d' % client_port,
@@ -237,7 +236,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('get_object_test')
         run_test('hashmap_test')
         run_test('id_test')
-        run_test('json_utils_test')
+        run_test('large_meta_test')
         run_test('list_object_test')
         run_test('name_test')
         run_test('pair_test')

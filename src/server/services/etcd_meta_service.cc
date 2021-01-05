@@ -102,8 +102,36 @@ void EtcdMetaService::requestLock(
 void EtcdMetaService::commitUpdates(
     const std::vector<op_t>& changes,
     callback_t<unsigned> callback_after_updated) {
+  // Split to many small txns to conform the requirement of max-txn-ops
+  // limitation (128) from etcd.
+  //
+  // The first n segments will be performed synchronously while the last
+  // txn will still be executed in a asynchronous manner.
+  size_t offset = 0;
+  while (offset + 127 < changes.size()) {
+    etcdv3::Transaction tx;
+    for (size_t idx = offset; idx < offset + 127; ++idx) {
+      auto const& op = changes[idx];
+      if (op.op == op_t::kPut) {
+        tx.setup_put(prefix_ + op.kv.key, op.kv.value);
+      } else if (op.op == op_t::kDel) {
+        tx.setup_delete(prefix_ + op.kv.key);
+      }
+    }
+    auto resp = etcd_->txn(tx).get();
+    if (resp.is_ok()) {
+      offset += 127;
+    } else {
+      auto status = Status::EtcdError(resp.error_code(), resp.error_message());
+      boost::asio::post(
+          server_ptr_->GetIOContext(),
+          boost::bind(callback_after_updated, status, resp.index()));
+      return;
+    }
+  }
   etcdv3::Transaction tx;
-  for (auto const& op : changes) {
+  for (size_t idx = offset; idx < changes.size(); ++idx) {
+    auto const& op = changes[idx];
     if (op.op == op_t::kPut) {
       tx.setup_put(prefix_ + op.kv.key, op.kv.value);
     } else if (op.op == op_t::kDel) {
@@ -113,7 +141,8 @@ void EtcdMetaService::commitUpdates(
   etcd_->txn(tx).then([this, callback_after_updated](
                           pplx::task<etcd::Response> const& resp_task) {
     auto resp = resp_task.get();
-    VLOG(10) << "etcd txn use " << resp.duration().count() << " microseconds";
+    VLOG(10) << "etcd (last) txn use " << resp.duration().count()
+             << " microseconds";
     auto status = Status::EtcdError(resp.error_code(), resp.error_message());
     boost::asio::post(
         server_ptr_->GetIOContext(),
