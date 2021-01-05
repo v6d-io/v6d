@@ -25,36 +25,43 @@ limitations under the License.
 namespace vineyard {
 
 namespace meta_tree {
-Status GetData(const ptree& tree, const ObjectID id, ptree& sub_tree);
-Status GetData(const ptree& tree, const std::string& name, ptree& sub_tree);
-Status ListData(const ptree& tree, const std::string& pattern, bool const regex,
-                size_t const limit, ptree& tree_group);
-Status DelData(ptree& tree, const ObjectID id);
-Status DelData(ptree& tree, const std::vector<ObjectID>& ids);
-Status IfPersist(const ptree& tree, const ObjectID id, bool& persist);
-Status Exists(const ptree& tree, const ObjectID id, bool& exists);
 
-Status PutDataOps(const ptree& tree, const ObjectID id, const ptree& sub_tree,
+enum class NodeType {
+  Value = 0,
+  Link = 1,
+  InvalidType = 15,
+};
+
+Status GetData(const json& tree, const ObjectID id, json& sub_tree);
+Status GetData(const json& tree, const std::string& name, json& sub_tree);
+Status ListData(const json& tree, const std::string& pattern, bool const regex,
+                size_t const limit, json& tree_group);
+Status DelData(json& tree, const ObjectID id);
+Status DelData(json& tree, const std::vector<ObjectID>& ids);
+Status IfPersist(const json& tree, const ObjectID id, bool& persist);
+Status Exists(const json& tree, const ObjectID id, bool& exists);
+
+Status PutDataOps(const json& tree, const ObjectID id, const json& sub_tree,
                   std::vector<IMetaService::op_t>& ops,
                   InstanceID& computed_instance_id);
 
-Status PersistOps(const ptree& tree, const ObjectID id,
+Status PersistOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops);
 
-Status DelDataOps(const ptree& tree, const ObjectID id,
+Status DelDataOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops);
 
-Status DelDataOps(const ptree& tree, const std::set<ObjectID>& ids,
+Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
                   std::vector<IMetaService::op_t>& ops);
 
-Status DelDataOps(const ptree& tree, const std::string& name,
+Status DelDataOps(const json& tree, const std::string& name,
                   std::vector<IMetaService::op_t>& ops);
 
-Status ShallowCopyOps(const ptree& tree, const ObjectID id,
+Status ShallowCopyOps(const json& tree, const ObjectID id,
                       const ObjectID target,
                       std::vector<IMetaService::op_t>& ops, bool& transient);
 
-Status FilterAtInstance(const ptree& tree, const InstanceID& instance_id,
+Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
                         std::vector<ObjectID>& objects);
 
 Status DecodeObjectID(const std::string& value, ObjectID& object_id);

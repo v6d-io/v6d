@@ -24,8 +24,8 @@ limitations under the License.
 
 #include "boost/asio.hpp"
 
-#include "common/util/boost.h"
 #include "common/util/callback.h"
+#include "common/util/json.h"
 #include "common/util/status.h"
 
 #include "server/memory/memory.h"
@@ -48,15 +48,15 @@ class RPCServer;
 class DeferredReq {
  public:
   using alive_t = std::function<bool()>;
-  using test_t = std::function<bool(const ptree& meta)>;
-  using call_t = std::function<Status(const ptree& meta)>;
+  using test_t = std::function<bool(const json& meta)>;
+  using call_t = std::function<Status(const json& meta)>;
 
   DeferredReq(alive_t alive_fn, test_t test_fn, call_t call_fn)
       : alive_fn_(alive_fn), test_fn_(test_fn), call_fn_(call_fn) {}
 
   bool Alive() const;
 
-  bool TestThenCall(const ptree& meta) const;
+  bool TestThenCall(const json& meta) const;
 
  private:
   alive_t alive_fn_;
@@ -72,9 +72,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
  public:
   Status Serve();
   Status Finalize();
-  inline const ptree& GetSpec() { return spec_; }
+  inline const json& GetSpec() { return spec_; }
   inline const std::string GetDeployment() {
-    return spec_.get<std::string>("deployment");
+    return spec_["deployment"].get_ref<std::string const&>();
   }
 #if BOOST_VERSION >= 106600
   inline asio::io_context& GetIOContext() { return context_; }
@@ -83,7 +83,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 #endif
   inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
-  static std::shared_ptr<VineyardServer> Get(const ptree& spec);
+  static std::shared_ptr<VineyardServer> Get(const json& spec);
 
   void MetaReady();
   void BulkReady();
@@ -95,12 +95,12 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status GetData(const std::vector<ObjectID>& ids, const bool sync_remote,
                  const bool wait,
                  DeferredReq::alive_t alive,  // if connection is still alive
-                 callback_t<const ptree&> callback);
+                 callback_t<const json&> callback);
 
   Status ListData(std::string const& pattern, bool const regex,
-                  size_t const limit, callback_t<const ptree&> callback);
+                  size_t const limit, callback_t<const json&> callback);
 
-  Status CreateData(const ptree& tree,
+  Status CreateData(const json& tree,
                     callback_t<const ObjectID, const InstanceID> callback);
 
   Status Persist(const ObjectID id, callback_t<> callback);
@@ -116,7 +116,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status DeleteBlobBatch(const std::set<ObjectID>& blobs);
 
-  Status DeleteAllAt(const ptree& meta, InstanceID const instance_id);
+  Status DeleteAllAt(const json& meta, InstanceID const instance_id);
 
   Status PutName(const ObjectID object_id, const std::string& name,
                  callback_t<> callback);
@@ -127,11 +127,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status DropName(const std::string& name, callback_t<> callback);
 
-  Status ClusterInfo(callback_t<const ptree&> callback);
+  Status ClusterInfo(callback_t<const json&> callback);
 
-  Status InstanceStatus(callback_t<const ptree&> callback);
+  Status InstanceStatus(callback_t<const json&> callback);
 
-  Status ProcessDeferred(const ptree& meta);
+  Status ProcessDeferred(const json& meta);
 
   inline InstanceID instance_id() { return instance_id_; }
   inline void set_instance_id(InstanceID id) { instance_id_ = id; }
@@ -145,14 +145,14 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   ~VineyardServer();
 
  private:
-  explicit VineyardServer(const ptree& spec);
+  explicit VineyardServer(const json& spec);
 
 #if BOOST_VERSION >= 106600
   asio::io_context context_;
 #else
   asio::io_service context_;
 #endif
-  ptree spec_;
+  json spec_;
   std::shared_ptr<IMetaService> meta_service_ptr_;
   std::unique_ptr<IPCServer> ipc_server_ptr_;
   std::unique_ptr<RPCServer> rpc_server_ptr_;

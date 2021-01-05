@@ -24,6 +24,7 @@ limitations under the License.
 
 #include "common/memory/payload.h"
 #include "common/util/boost.h"
+#include "common/util/json.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -63,13 +64,13 @@ void WriteErrorReply(Status const& status, std::string& msg);
 
 void WriteRegisterRequest(std::string& msg);
 
-Status ReadRegisterRequest(const ptree& msg);
+Status ReadRegisterRequest(const json& msg);
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
                         const InstanceID instance_id, std::string& msg);
 
-Status ReadRegisterReply(const ptree& msg, std::string& ipc_socket,
+Status ReadRegisterReply(const json& msg, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id);
 
 void WriteExitRequest(std::string& msg);
@@ -81,55 +82,55 @@ void WriteGetDataRequest(const std::vector<ObjectID>& ids,
                          const bool sync_remote, const bool wait,
                          std::string& msg);
 
-Status ReadGetDataRequest(const ptree& root, std::vector<ObjectID>& ids,
+Status ReadGetDataRequest(const json& root, std::vector<ObjectID>& ids,
                           bool& sync_remote, bool& wait);
 
-void WriteGetDataReply(const ptree& content, std::string& msg);
+void WriteGetDataReply(const json& content, std::string& msg);
 
-Status ReadGetDataReply(const ptree& root, ptree& content);
+Status ReadGetDataReply(const json& root, json& content);
 
-Status ReadGetDataReply(const ptree& root,
-                        std::unordered_map<ObjectID, ptree>& content);
+Status ReadGetDataReply(const json& root,
+                        std::unordered_map<ObjectID, json>& content);
 
 void WriteListDataRequest(std::string const& pattern, bool const regex,
                           size_t const limit, std::string& msg);
 
-Status ReadListDataRequest(const ptree& root, std::string& pattern, bool& regex,
+Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
                            size_t& limit);
 
-void WriteCreateDataRequest(const ptree& content, std::string& msg);
+void WriteCreateDataRequest(const json& content, std::string& msg);
 
-Status ReadCreateDataRequest(const ptree& root, ptree& content);
+Status ReadCreateDataRequest(const json& root, json& content);
 
 void WriteCreateDataReply(const ObjectID& id, const InstanceID& instance_id,
                           std::string& msg);
 
-Status ReadCreateDataReply(const ptree& root, ObjectID& id,
+Status ReadCreateDataReply(const json& root, ObjectID& id,
                            InstanceID& instance_id);
 
 void WritePersistRequest(const ObjectID id, std::string& msg);
 
-Status ReadPersistRequest(const ptree& root, ObjectID& id);
+Status ReadPersistRequest(const json& root, ObjectID& id);
 
 void WritePersistReply(std::string& msg);
 
-Status ReadPersistReply(const ptree& root);
+Status ReadPersistReply(const json& root);
 
 void WriteIfPersistRequest(const ObjectID id, std::string& msg);
 
-Status ReadIfPersistRequest(const ptree& root, ObjectID& id);
+Status ReadIfPersistRequest(const json& root, ObjectID& id);
 
 void WriteIfPersistReply(bool exists, std::string& msg);
 
-Status ReadIfPersistReply(const ptree& root, bool& persist);
+Status ReadIfPersistReply(const json& root, bool& persist);
 
 void WriteExistsRequest(const ObjectID id, std::string& msg);
 
-Status ReadExistsRequest(const ptree& root, ObjectID& id);
+Status ReadExistsRequest(const json& root, ObjectID& id);
 
 void WriteExistsReply(bool exists, std::string& msg);
 
-Status ReadExistsReply(const ptree& root, bool& exists);
+Status ReadExistsReply(const json& root, bool& exists);
 
 void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
                          std::string& msg);
@@ -137,123 +138,123 @@ void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
 void WriteDelDataRequest(const std::vector<ObjectID>& id, const bool force,
                          const bool deep, std::string& msg);
 
-Status ReadDelDataRequest(const ptree& root, std::vector<ObjectID>& id,
+Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& id,
                           bool& force, bool& deep);
 
 void WriteDelDataReply(std::string& msg);
 
-Status ReadDelDataReply(const ptree& root);
+Status ReadDelDataReply(const json& root);
 
 void WriteClusterMetaRequest(std::string& msg);
 
-Status ReadClusterMetaRequest(const ptree& root);
+Status ReadClusterMetaRequest(const json& root);
 
-void WriteClusterMetaReply(const ptree& content, std::string& msg);
+void WriteClusterMetaReply(const json& content, std::string& msg);
 
-Status ReadClusterMetaReply(const ptree& root, ptree& content);
+Status ReadClusterMetaReply(const json& root, json& content);
 
 void WriteInstanceStatusRequest(std::string& msg);
 
-Status ReadInstanceStatusRequest(const ptree& root);
+Status ReadInstanceStatusRequest(const json& root);
 
-void WriteInstanceStatusReply(const ptree& content, std::string& msg);
+void WriteInstanceStatusReply(const json& content, std::string& msg);
 
-Status ReadInstanceStatusReply(const ptree& root, ptree& content);
+Status ReadInstanceStatusReply(const json& root, json& content);
 
 void WriteCreateBufferRequest(const size_t size, std::string& msg);
 
-Status ReadCreateBufferRequest(const ptree& root, size_t& size);
+Status ReadCreateBufferRequest(const json& root, size_t& size);
 
 void WriteCreateBufferReply(const ObjectID id,
                             const std::shared_ptr<Payload>& object,
                             std::string& msg);
 
-Status ReadCreateBufferReply(const ptree& root, ObjectID& id, Payload& object);
+Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object);
 
 void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
                             std::string& msg);
 
-Status ReadGetBuffersRequest(const ptree& root, std::vector<ObjectID>& ids);
+Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids);
 
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           std::string& msg);
 
-Status ReadGetBuffersReply(const ptree& root,
+Status ReadGetBuffersReply(const json& root,
                            std::unordered_map<ObjectID, Payload>& objects);
 
 void WritePutNameRequest(const ObjectID object_id, const std::string& name,
                          std::string& msg);
 
-Status ReadPutNameRequest(const ptree& root, ObjectID& object_id,
+Status ReadPutNameRequest(const json& root, ObjectID& object_id,
                           std::string& name);
 
 void WritePutNameReply(std::string& msg);
 
-Status ReadPutNameReply(const ptree& root);
+Status ReadPutNameReply(const json& root);
 
 void WriteGetNameRequest(const std::string& name, const bool wait,
                          std::string& msg);
 
-Status ReadGetNameRequest(const ptree& root, std::string& name, bool& wait);
+Status ReadGetNameRequest(const json& root, std::string& name, bool& wait);
 
 void WriteGetNameReply(const ObjectID& object_id, std::string& msg);
 
-Status ReadGetNameReply(const ptree& root, ObjectID& object_id);
+Status ReadGetNameReply(const json& root, ObjectID& object_id);
 
 void WriteDropNameRequest(const std::string& name, std::string& msg);
 
-Status ReadDropNameRequest(const ptree& root, std::string& name);
+Status ReadDropNameRequest(const json& root, std::string& name);
 
 void WriteDropNameReply(std::string& msg);
 
-Status ReadDropNameReply(const ptree& root);
+Status ReadDropNameReply(const json& root);
 
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg);
 
-Status ReadCreateStreamRequest(const ptree& root, ObjectID& object_id);
+Status ReadCreateStreamRequest(const json& root, ObjectID& object_id);
 
 void WriteCreateStreamReply(std::string& msg);
 
-Status ReadCreateStreamReply(const ptree& root);
+Status ReadCreateStreamReply(const json& root);
 
 void WriteGetNextStreamChunkRequest(const ObjectID stream_id, const size_t size,
                                     std::string& msg);
 
-Status ReadGetNextStreamChunkRequest(const ptree& root, ObjectID& stream_id,
+Status ReadGetNextStreamChunkRequest(const json& root, ObjectID& stream_id,
                                      size_t& size);
 
 void WriteGetNextStreamChunkReply(std::shared_ptr<Payload>& object,
                                   std::string& msg);
 
-Status ReadGetNextStreamChunkReply(const ptree& root, Payload& object);
+Status ReadGetNextStreamChunkReply(const json& root, Payload& object);
 
 void WritePullNextStreamChunkRequest(const ObjectID stream_id,
                                      std::string& msg);
 
-Status ReadPullNextStreamChunkRequest(const ptree& root, ObjectID& stream_id);
+Status ReadPullNextStreamChunkRequest(const json& root, ObjectID& stream_id);
 
 void WritePullNextStreamChunkReply(std::shared_ptr<Payload>& object,
                                    std::string& msg);
 
-Status ReadPullNextStreamChunkReply(const ptree& root, Payload& object);
+Status ReadPullNextStreamChunkReply(const json& root, Payload& object);
 
 void WriteStopStreamRequest(const ObjectID stream_id, const bool failed,
                             std::string& msg);
 
-Status ReadStopStreamRequest(const ptree& root, ObjectID& stream_id,
+Status ReadStopStreamRequest(const json& root, ObjectID& stream_id,
                              bool& failed);
 
 void WriteStopStreamReply(std::string& msg);
 
-Status ReadStopStreamReply(const ptree& root);
+Status ReadStopStreamReply(const json& root);
 
 void WriteShallowCopyRequest(const ObjectID id, std::string& msg);
 
-Status ReadShallowCopyRequest(const ptree& root, ObjectID& id);
+Status ReadShallowCopyRequest(const json& root, ObjectID& id);
 
 void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
 
-Status ReadShallowCopyReply(const ptree& root, ObjectID& target_id);
+Status ReadShallowCopyReply(const json& root, ObjectID& target_id);
 
 }  // namespace vineyard
 

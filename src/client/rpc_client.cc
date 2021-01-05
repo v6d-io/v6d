@@ -62,7 +62,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
   std::string message_out;
   WriteRegisterRequest(message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
   RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
@@ -79,7 +79,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
 Status RPCClient::GetMetaData(const ObjectID id, ObjectMeta& meta,
                               const bool sync_remote) {
   ENSURE_CONNECTED(this);
-  ptree tree;
+  json tree;
   RETURN_ON_ERROR(GetData(id, tree, sync_remote));
   meta.SetMetaData(this, tree);
   for (const auto& id : meta.GetBlobSet()->AllBlobIds()) {
@@ -92,7 +92,7 @@ Status RPCClient::GetMetaData(const std::vector<ObjectID>& ids,
                               std::vector<ObjectMeta>& metas,
                               const bool sync_remote) {
   ENSURE_CONNECTED(this);
-  std::vector<ptree> trees;
+  std::vector<json> trees;
   RETURN_ON_ERROR(GetData(ids, trees, sync_remote));
   metas.resize(trees.size());
 
@@ -151,7 +151,7 @@ std::vector<std::shared_ptr<Object>> RPCClient::GetObjects(
 
 std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
     std::string const& pattern, const bool regex, size_t const limit) {
-  std::unordered_map<ObjectID, ptree> meta_trees;
+  std::unordered_map<ObjectID, json> meta_trees;
   VINEYARD_CHECK_OK(ListData(pattern, regex, limit, meta_trees));
 
   // construct objects

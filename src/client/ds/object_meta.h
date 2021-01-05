@@ -27,7 +27,7 @@ limitations under the License.
 #include "arrow/buffer.h"
 
 #include "common/util/boost.h"
-#include "common/util/ptree.h"
+#include "common/util/json.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -82,7 +82,7 @@ class ObjectMeta {
   /**
    * @brief Get the `typename` of the metadata.
    */
-  std::string const GetTypeName() const;
+  std::string const& GetTypeName() const;
 
   /**
    * @brief Set the `nbytes` attribute for the metadata, basically it indicates
@@ -126,12 +126,12 @@ class ObjectMeta {
    *
    * @param T The type of metadata's value.
    * @param key The name of metadata entry, it will be first convert to string
-   * by `boost::ptree`.
+   * by `nlohmann::json`.
    * @param value The value of the metadata entry.
    */
   template <typename T>
   void AddKeyValue(const std::string& key, T const& value) {
-    meta_.put(key, value);
+    meta_[key] = value;
   }
 
   /**
@@ -139,12 +139,12 @@ class ObjectMeta {
    *
    * @param T The type of metadata's value.
    * @param key The name of metadata entry, it will be first convert to JSON
-   * array by `boost::ptree`.
+   * array by `nlohmann::json`.
    * @param value The value of the metadata entry.
    */
   template <typename T>
   void AddKeyValue(const std::string& key, std::set<T> const& values) {
-    put_container(meta_, key, values);
+    meta_[key] = json(values).dump();
   }
 
   /**
@@ -152,12 +152,12 @@ class ObjectMeta {
    *
    * @param T The type of metadata's value.
    * @param key The name of metadata entry, it will be first convert to JSON
-   * array by `boost::ptree`.
+   * array by `nlohmann::json`.
    * @param value The value of the metadata entry.
    */
   template <typename T>
   void AddKeyValue(const std::string& key, std::vector<T> const& values) {
-    put_container(meta_, key, values);
+    meta_[key] = json(values).dump();
   }
 
   /**
@@ -170,9 +170,9 @@ class ObjectMeta {
   template <typename Value>
   void AddKeyValue(const std::string& key,
                    std::map<std::string, Value> const& values) {
-    ptree mapping;
+    json mapping;
     for (auto const& kv : values) {
-      mapping.put(kv.first, kv.second);
+      mapping[kv.first] = kv.second;
     }
     AddKeyValue(key, mapping);
   }
@@ -187,22 +187,22 @@ class ObjectMeta {
   template <typename Value>
   void AddKeyValue(const std::string& key,
                    std::unordered_map<std::string, Value> const& values) {
-    ptree mapping;
+    json mapping;
     for (auto const& kv : values) {
-      mapping.put(kv.first, kv.second);
+      mapping[kv.first] = kv.second;
     }
     AddKeyValue(key, mapping);
   }
 
   /**
-   * @brief Add a `boost::ptree` value entry to the metadata.
+   * @brief Add a `nlohmann::json` value entry to the metadata.
    *
    * @param T The type of metadata's value.
    * @param key The name of metadata entry, it will be first convert to string
-   * by `boost:ptree`.
+   * by `nlohmann::json`.
    * @param value The value of the metadata entry.
    */
-  void AddKeyValue(const std::string& key, ptree const& values);
+  void AddKeyValue(const std::string& key, json const& values);
 
   /**
    * @brief Get string metadata value.
@@ -210,7 +210,7 @@ class ObjectMeta {
    * @param key The key of metadata.
    */
   const std::string GetKeyValue(const std::string& key) const {
-    return meta_.get<std::string>(key);
+    return meta_[key].get_ref<const std::string&>();
   }
 
   /**
@@ -221,7 +221,7 @@ class ObjectMeta {
    */
   template <typename T>
   const T GetKeyValue(const std::string& key) const {
-    return meta_.get<typename std::remove_cv<T>::type>(key);
+    return meta_[key].get<typename std::remove_cv<T>::type>();
   }
 
   /**
@@ -234,7 +234,7 @@ class ObjectMeta {
    */
   template <typename T>
   void GetKeyValue(const std::string& key, T& value) const {
-    value = meta_.get<typename std::remove_cv<T>::type>(key);
+    value = meta_[key].get<typename std::remove_cv<T>::type>();
   }
 
   /**
@@ -276,10 +276,10 @@ class ObjectMeta {
   template <typename Value>
   void GetKeyValue(const std::string& key,
                    std::map<std::string, Value>& values) const {
-    ptree tree;
+    json tree;
     GetKeyValue(key, tree);
-    for (auto const& kv : tree) {
-      values.emplace(kv.first, kv.second.get_value<Value>());
+    for (auto const& kv : json::iterator_wrapper(tree)) {
+      values.emplace(kv.key(), kv.value().get<Value>());
     }
   }
 
@@ -295,20 +295,20 @@ class ObjectMeta {
   template <typename Value>
   void GetKeyValue(const std::string& key,
                    std::unordered_map<std::string, Value>& values) const {
-    ptree tree;
+    json tree;
     GetKeyValue(key, tree);
-    for (auto const& kv : tree) {
-      values.emplace(kv.first, tree.get<Value>(kv.first));
+    for (auto const& kv : json::iterator_wrapper(tree)) {
+      values.emplace(kv.key(), kv.value().get<Value>());
     }
   }
 
   /**
-   * @brief Get ptree metadata value.
+   * @brief Get json metadata value.
    *
    * @param key The key of metadata.
    * @param value The result will be stored in `value`.
    */
-  void GetKeyValue(const std::string& key, ptree& value) const;
+  void GetKeyValue(const std::string& key, json& value) const;
 
   /**
    * @brief Add member to ObjectMeta.
@@ -374,14 +374,16 @@ class ObjectMeta {
   const bool incomplete() const;
 
   // FIXME: the following three methods should be `protected`
-  const ptree& MetaData() const;
+  const json& MetaData() const;
 
-  ptree& MutMetaData();
+  json& MutMetaData();
 
-  void SetMetaData(ClientBase* client, const ptree& meta);
+  void SetMetaData(ClientBase* client, const json& meta);
 
-  ptree::const_iterator begin() const { return meta_.begin(); }
-  ptree::const_iterator end() const { return meta_.end(); }
+  using const_iterator =
+      nlohmann::detail::iteration_proxy_value<json::const_iterator>;
+  const_iterator begin() const { return json::iterator_wrapper(meta_).begin(); }
+  const_iterator end() const { return json::iterator_wrapper(meta_).end(); }
 
  protected:
   const std::shared_ptr<BlobSet>& GetBlobSet() const;
@@ -390,14 +392,14 @@ class ObjectMeta {
                const std::shared_ptr<arrow::Buffer>& buffer);
 
  private:
-  void findAllBlobs(const ptree& tree, InstanceID const instance_id);
+  void findAllBlobs(const json& tree, InstanceID const instance_id);
 
   void SetInstanceId(const InstanceID instance_id);
 
   // hold a client_ reference, since we alreay hold blobs in metadata, which,
   // depends on that the "client_" should be valid.
   ClientBase* client_ = nullptr;
-  ptree meta_;
+  json meta_;
   // associated blobs
   std::shared_ptr<BlobSet> blob_set_;
 

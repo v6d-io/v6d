@@ -21,8 +21,8 @@ limitations under the License.
 #include <vector>
 
 #include "common/memory/fling.h"
-#include "common/util/boost.h"
 #include "common/util/callback.h"
+#include "common/util/json.h"
 
 namespace vineyard {
 
@@ -120,21 +120,27 @@ void SocketConnection::doReadBody() {
 #endif  // RESPONSE_ON_ERROR
 
 bool SocketConnection::processMessage(const std::string& message_in) {
-  ptree root;
+  json root;
   std::istringstream is(message_in);
 
   // DON'T let vineyardd crash when the client is malicious.
   try {
-    bpt::read_json(is, root);
-  } catch (bpt::ptree_error const& err) {
-    LOG(ERROR) << "ptree: " << err.what();
+    root = json::parse(message_in);
+  } catch (std::out_of_range const& err) {
+    LOG(ERROR) << "json: " << err.what();
+    std::string message_out;
+    WriteErrorReply(Status::Invalid(err.what()), message_out);
+    this->doWrite(message_out);
+    return false;
+  } catch (json::exception const& err) {
+    LOG(ERROR) << "json: " << err.what();
     std::string message_out;
     WriteErrorReply(Status::Invalid(err.what()), message_out);
     this->doWrite(message_out);
     return false;
   }
 
-  std::string type = root.get<std::string>("type");
+  std::string const& type = root["type"].get_ref<std::string const&>();
   CommandType cmd = ParseCommandType(type);
   auto self(shared_from_this());
   switch (cmd) {
@@ -201,10 +207,10 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     std::vector<ObjectID> ids;
     bool sync_remote = false, wait = false;
     TRY_READ_REQUEST(ReadGetDataRequest(root, ids, sync_remote, wait));
-    ptree tree;
+    json tree;
     RESPONSE_ON_ERROR(server_ptr_->GetData(
         ids, sync_remote, wait, [self]() { return self->running_; },
-        [self](const Status& status, const ptree& tree) {
+        [self](const Status& status, const json& tree) {
           std::string message_out;
           if (status.ok()) {
             WriteGetDataReply(tree, message_out);
@@ -222,7 +228,7 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     size_t limit;
     TRY_READ_REQUEST(ReadListDataRequest(root, pattern, regex, limit));
     RESPONSE_ON_ERROR(server_ptr_->ListData(
-        pattern, regex, limit, [self](const Status& status, const ptree& tree) {
+        pattern, regex, limit, [self](const Status& status, const json& tree) {
           std::string message_out;
           if (status.ok()) {
             WriteGetDataReply(tree, message_out);
@@ -235,7 +241,7 @@ bool SocketConnection::processMessage(const std::string& message_in) {
         }));
   } break;
   case CommandType::CreateDataRequest: {
-    ptree tree;
+    json tree;
     TRY_READ_REQUEST(ReadCreateDataRequest(root, tree));
     RESPONSE_ON_ERROR(server_ptr_->CreateData(
         tree, [self](const Status& status, const ObjectID id,
@@ -467,7 +473,7 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::ClusterMetaRequest: {
     TRY_READ_REQUEST(ReadClusterMetaRequest(root));
     RESPONSE_ON_ERROR(server_ptr_->ClusterInfo(
-        [self](const Status& status, const ptree& tree) {
+        [self](const Status& status, const json& tree) {
           std::string message_out;
           if (status.ok()) {
             WriteClusterMetaReply(tree, message_out);
@@ -482,7 +488,7 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::InstanceStatusRequest: {
     TRY_READ_REQUEST(ReadInstanceStatusRequest(root));
     RESPONSE_ON_ERROR(server_ptr_->InstanceStatus(
-        [self](const Status& status, const ptree& tree) {
+        [self](const Status& status, const json& tree) {
           std::string message_out;
           if (status.ok()) {
             WriteInstanceStatusReply(tree, message_out);

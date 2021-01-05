@@ -63,7 +63,7 @@ class ClientBase {
    *
    * @return Status that indicates whether the get action succeeds.
    */
-  Status GetData(const ObjectID id, ptree& tree, const bool sync_remote = false,
+  Status GetData(const ObjectID id, json& tree, const bool sync_remote = false,
                  const bool wait = false);
 
   /**
@@ -78,7 +78,7 @@ class ClientBase {
    *
    * @return Status that indicates whether the get action has succeeded.
    */
-  Status GetData(const std::vector<ObjectID>& ids, std::vector<ptree>& trees,
+  Status GetData(const std::vector<ObjectID>& ids, std::vector<json>& trees,
                  const bool sync_remote = false, const bool wait = false);
 
   /**
@@ -91,7 +91,7 @@ class ClientBase {
    *
    * @return Status that indicates whether the create action has succeeded.
    */
-  Status CreateData(const ptree& tree, ObjectID& id, InstanceID& instance_id);
+  Status CreateData(const json& tree, ObjectID& id, InstanceID& instance_id);
 
   /**
    * @brief Create the metadata in the vineyard server, after created, the
@@ -160,7 +160,7 @@ class ClientBase {
    */
   Status ListData(std::string const& pattern, bool const regex,
                   size_t const limit,
-                  std::unordered_map<ObjectID, ptree>& meta_trees);
+                  std::unordered_map<ObjectID, json>& meta_trees);
 
   /**
    * @brief Persist the given object to etcd to make it visible to clients that
@@ -288,7 +288,7 @@ class ClientBase {
    *
    * @return Status that indicates whether the query has succeeded.
    */
-  Status ClusterInfo(std::map<InstanceID, ptree>& meta);
+  Status ClusterInfo(std::map<InstanceID, json>& meta);
 
   /**
    * @brief Return the status of connected vineyard instance.
@@ -316,7 +316,7 @@ class ClientBase {
 
   Status doRead(std::string& message_in);
 
-  Status doRead(ptree& root);
+  Status doRead(json& root);
 
   mutable bool connected_;
   std::string ipc_socket_;
@@ -345,12 +345,12 @@ struct InstanceStatus {
   const size_t rpc_connections;
 
   /**
-   * @brief Initialize the status value using a ptree returned from the vineyard
+   * @brief Initialize the status value using a json returned from the vineyard
    * server.
    *
-   * @param tree JSON ptree that returned from the vineyard server.
+   * @param tree JSON that returned from the vineyard server.
    */
-  explicit InstanceStatus(const ptree& tree);
+  explicit InstanceStatus(const json& tree);
 };
 
 }  // namespace vineyard

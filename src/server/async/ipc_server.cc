@@ -19,13 +19,13 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "common/util/boost.h"
+#include "common/util/json.h"
 
 namespace vineyard {
 
 IPCServer::IPCServer(vs_ptr_t vs_ptr)
     : SocketServer(vs_ptr),
-      ipc_spec_(vs_ptr_->GetSpec().get_child("ipc_spec")),
+      ipc_spec_(vs_ptr_->GetSpec()["ipc_spec"]),
       acceptor_(vs_ptr_->GetIOContext(), getEndpoint(vs_ptr_->GetIOContext())) {
 }
 
@@ -33,20 +33,21 @@ IPCServer::~IPCServer() {
   if (acceptor_.is_open()) {
     acceptor_.close();
   }
-  std::string ipc_socket = ipc_spec_.get<std::string>("socket");
+  std::string const& ipc_socket =
+      ipc_spec_["socket"].get_ref<std::string const&>();
   ::unlink(ipc_socket.c_str());
 }
 
 void IPCServer::Start() {
   SocketServer::Start();
-  LOG(INFO) << "Vineyard will listen on "
-            << ipc_spec_.get<std::string>("socket") << " for IPC";
+  LOG(INFO) << "Vineyard will listen on " << ipc_spec_["socket"] << " for IPC";
   vs_ptr_->IPCReady();
 }
 
 asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     asio::io_context& context) {
-  std::string ipc_socket = ipc_spec_.get<std::string>("socket");
+  std::string const& ipc_socket =
+      ipc_spec_["socket"].get_ref<std::string const&>();
   auto endpoint = asio::local::stream_protocol::endpoint(ipc_socket);
   if (access(ipc_socket.c_str(), F_OK) == 0) {
     // first check if the socket file is writable

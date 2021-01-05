@@ -17,20 +17,20 @@ limitations under the License.
 
 namespace vineyard {
 
-void Payload::ToJSON(ptree& tree) const {
-  tree.put("object_id", object_id);
-  tree.put("store_fd", store_fd);
-  tree.put("data_offset", data_offset);
-  tree.put("data_size", data_size);
-  tree.put("map_size", map_size);
+void Payload::ToJSON(json& tree) const {
+  tree["object_id"] = object_id;
+  tree["store_fd"] = store_fd;
+  tree["data_offset"] = data_offset;
+  tree["data_size"] = data_size;
+  tree["map_size"] = map_size;
 }
 
-void Payload::FromJSON(const ptree& tree) {
-  object_id = tree.get<ObjectID>("object_id");
-  store_fd = tree.get<int>("store_fd");
-  data_offset = tree.get<ptrdiff_t>("data_offset");
-  data_size = tree.get<int64_t>("data_size");
-  map_size = tree.get<int64_t>("map_size");
+void Payload::FromJSON(const json& tree) {
+  object_id = tree["object_id"].get<ObjectID>();
+  store_fd = tree["store_fd"].get<int>();
+  data_offset = tree["data_offset"].get<ptrdiff_t>();
+  data_size = tree["data_size"].get<int64_t>();
+  map_size = tree["map_size"].get<int64_t>();
   pointer = nullptr;
 }
 

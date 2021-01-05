@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <string>
 
-#include "common/util/boost.h"
+#include "common/util/json.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -38,16 +38,16 @@ void WriteErrorReply(Status const& status, std::string& msg);
 
 void WriteExitRequest(std::string& msg);
 
-void WriteSendObjectRequest(const ObjectID object_id, const ptree& object_meta,
+void WriteSendObjectRequest(const ObjectID object_id, const json& object_meta,
                             std::string& msg);
 
-Status ReadSendObjectRequest(const ptree& root, ObjectID& object_id,
-                             ptree& object_meta);
+Status ReadSendObjectRequest(const json& root, ObjectID& object_id,
+                             json& object_meta);
 
 void WriteSendBlobBufferRequest(const ObjectID blob_id, const size_t blob_size,
                                 std::string& msg);
 
-Status ReadSendBlobBufferRequest(const ptree& root, ObjectID& blob_id,
+Status ReadSendBlobBufferRequest(const json& root, ObjectID& blob_id,
                                  size_t& blob_size);
 
 }  // namespace vineyard

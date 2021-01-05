@@ -37,10 +37,8 @@ MigrateActionType ParseMigrateAction(const std::string& str_type) {
   }
 }
 
-static inline void encode_msg(const ptree& root, std::string& msg) {
-  std::stringstream ss;
-  bpt::write_json(ss, root, false);
-  msg = ss.str();
+static inline void encode_msg(const json& root, std::string& msg) {
+  msg = root.dump();
 }
 
 void WriteErrorReply(Status const& status, std::string& msg) {
@@ -48,43 +46,45 @@ void WriteErrorReply(Status const& status, std::string& msg) {
 }
 
 void WriteExitRequest(std::string& msg) {
-  ptree root;
-  root.put("type", "exit_request");
+  json root;
+  root["type"] = "exit_request";
 
   encode_msg(root, msg);
 }
 
-void WriteSendObjectRequest(const ObjectID object_id, const ptree& object_meta,
+void WriteSendObjectRequest(const ObjectID object_id, const json& object_meta,
                             std::string& msg) {
-  ptree root;
-  root.put("type", "send_object_request");
-  root.put("id", object_id);
-  root.add_child("meta", object_meta);
+  json root;
+  root["type"] = "send_object_request";
+  root["id"] = object_id;
+  root["meta"] = object_meta;
   encode_msg(root, msg);
 }
 
-Status ReadSendObjectRequest(const ptree& root, ObjectID& object_id,
-                             ptree& object_meta) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "send_object_request");
-  object_id = root.get<ObjectID>("id");
-  object_meta = root.get_child("meta");
+Status ReadSendObjectRequest(const json& root, ObjectID& object_id,
+                             json& object_meta) {
+  RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
+                   "send_object_request");
+  object_id = root["id"].get<ObjectID>();
+  object_meta = root["meta"];
   return Status::OK();
 }
 
 void WriteSendBlobBufferRequest(const ObjectID blob_id, const size_t blob_size,
                                 std::string& msg) {
-  ptree root;
-  root.put("type", "send_blob_buffer_request");
-  root.put("blob_id", blob_id);
-  root.put("blob_size", blob_size);
+  json root;
+  root["type"] = "send_blob_buffer_request";
+  root["blob_id"] = blob_id;
+  root["blob_size"] = blob_size;
   encode_msg(root, msg);
 }
 
-Status ReadSendBlobBufferRequest(const ptree& root, ObjectID& blob_id,
+Status ReadSendBlobBufferRequest(const json& root, ObjectID& blob_id,
                                  size_t& blob_size) {
-  RETURN_ON_ASSERT(root.get<std::string>("type") == "send_blob_buffer_request");
-  blob_id = root.get<ObjectID>("blob_id");
-  blob_size = root.get<size_t>("blob_size");
+  RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
+                   "send_blob_buffer_request");
+  blob_id = root["blob_id"].get<ObjectID>();
+  blob_size = root["blob_size"].get<size_t>();
   return Status::OK();
 }
 

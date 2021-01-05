@@ -33,6 +33,7 @@
 
 #include "arrow/status.h"
 #include "common/util/boost.h"
+#include "common/util/json.h"
 #include "common/util/logging.h"
 #include "common/util/macros.h"
 
@@ -477,9 +478,9 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// The string "OK" is returned for success.
   std::string ToString() const;
 
-  /// \brief Return a JSON representation (ptree) of this status suitable for
+  /// \brief Return a JSON representation of this status suitable for
   /// printing.
-  ptree ToJSON() const;
+  json ToJSON() const;
 
   /// \brief Return a string representation of the status code, without the
   /// message text or POSIX code information.

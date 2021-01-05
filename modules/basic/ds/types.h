@@ -21,7 +21,7 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
-#include "common/util/ptree.h"
+#include "common/util/json.h"
 
 namespace vineyard {
 
@@ -127,15 +127,17 @@ std::ostream& operator<<(std::ostream& os, const AnyType& st);
 
 std::istream& operator>>(std::istream& is, AnyType& st);
 
-template <>
-void print_json_value(std::stringstream& ss, AnyType const& value);
+void to_json(json& j, const AnyType& type);
+
+void from_json(const json& j, AnyType& type);
 
 std::ostream& operator<<(std::ostream& os, const IdType& st);
 
 std::istream& operator>>(std::istream& is, IdType& st);
 
-template <>
-void print_json_value(std::stringstream& ss, IdType const& value);
+void to_json(json& j, const IdType& type);
+
+void from_json(const json& j, IdType& type);
 
 }  // namespace vineyard
 

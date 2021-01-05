@@ -24,7 +24,7 @@ limitations under the License.
 #include "arrow/api.h"
 #include "glog/logging.h"
 
-#include "common/util/ptree.h"
+#include "common/util/json.h"
 
 namespace vineyard {
 
@@ -87,21 +87,20 @@ PropertyType PropertyTypeFromString(const std::string& type) {
 
 }  // namespace detail
 
-using boost::property_tree::ptree;
-
-ptree Entry::PropertyDef::ToJSON() const {
-  ptree root;
-  root.put("id", id);
-  root.put("name", name);
+json Entry::PropertyDef::ToJSON() const {
+  json root;
+  root["id"] = id;
+  root["name"] = name;
   auto type_str = detail::PropertyTypeToString(type);
-  root.put("data_type", type_str);
+  root["data_type"] = type_str;
   return root;
 }
 
-void Entry::PropertyDef::FromJSON(const ptree& root) {
-  id = root.get<PropertyId>("id");
-  name = root.get<std::string>("name");
-  type = detail::PropertyTypeFromString(root.get<std::string>("data_type"));
+void Entry::PropertyDef::FromJSON(const json& root) {
+  id = root["id"].get<PropertyId>();
+  name = root["name"].get_ref<std::string const&>();
+  type = detail::PropertyTypeFromString(
+      root["data_type"].get_ref<std::string const&>());
 }
 
 void Entry::AddProperty(const std::string& name, PropertyType type) {
@@ -147,89 +146,87 @@ PropertyType Entry::GetPropertyType(PropertyId prop_id) const {
   return arrow::null();
 }
 
-ptree Entry::ToJSON() const {
-  ptree root;
-  root.put("id", id);
-  root.put("label", label);
-  root.put("type", type);
-  ptree prop_array, pk_array, relation_array;
+json Entry::ToJSON() const {
+  json root;
+  root["id"] = id;
+  root["label"] = label;
+  root["type"] = type;
+  json prop_array = json::array(), pk_array = json::array(),
+       index_array = json::array(), relation_array = json::array();
   // propertyDefList
   for (const auto& prop : props) {
-    prop_array.push_back(std::make_pair("", prop.ToJSON()));
+    prop_array.emplace_back(prop.ToJSON());
   }
-  root.add_child("propertyDefList", prop_array);
+  root["propertyDefList"] = prop_array;
   // indexes
   if (!primary_keys.empty()) {
-    ptree index_array, pk_array_tree;
+    json pk_array_tree = json::object();
     for (const auto& pk : primary_keys) {
-      ptree pk_tree;
-      pk_tree.put("", pk);
-      pk_array.push_back(std::make_pair("", pk_tree));
+      pk_array.emplace_back(pk);
     }
-    pk_array_tree.add_child("propertyNames", pk_array);
-    index_array.push_back(std::make_pair("", pk_array_tree));
-    root.add_child("indexes", index_array);
+    pk_array_tree["propertyNames"] = pk_array;
+    index_array.emplace_back(pk_array_tree);
   }
+  root["indexes"] = index_array;
   // rawRelationShips
   if (!relations.empty()) {
     for (const auto& rel : relations) {
-      ptree edge_tree;
-      edge_tree.put("srcVertexLabel", rel.first);
-      edge_tree.put("dstVertexLabel", rel.second);
-      relation_array.push_back(std::make_pair("", edge_tree));
+      json edge_tree;
+      edge_tree["srcVertexLabel"] = rel.first;
+      edge_tree["dstVertexLabel"] = rel.second;
+      relation_array.emplace_back(edge_tree);
     }
-    root.add_child("rawRelationShips", relation_array);
   }
+  root["rawRelationShips"] = relation_array;
   // mappings
   if (!mapping.empty()) {
-    vineyard::put_container(root, "mapping", mapping);
+    put_container(root, "mapping", mapping);
   }
   if (!reverse_mapping.empty()) {
-    vineyard::put_container(root, "reverse_mapping", reverse_mapping);
+    put_container(root, "reverse_mapping", reverse_mapping);
   }
   return root;
 }
 
-void Entry::FromJSON(const ptree& root) {
-  id = root.get<LabelId>("id");
-  label = root.get<std::string>("label");
-  type = root.get<std::string>("type");
+void Entry::FromJSON(const json& root) {
+  id = root["id"].get<LabelId>();
+  label = root["label"].get_ref<std::string const&>();
+  type = root["type"].get_ref<std::string const&>();
   // propertyDefList
-  const ptree& prop_array = root.get_child("propertyDefList");
-  for (const auto& kv : prop_array) {
+  const json& prop_array = root["propertyDefList"];
+  for (const auto& item : prop_array) {
     PropertyDef prop;
-    prop.FromJSON(kv.second);
+    prop.FromJSON(item);
     props.emplace_back(prop);
   }
   // indexes
-  if (root.get_child_optional("indexes")) {
-    for (const auto& index_arr_kv : root.get_child("indexes")) {
-      auto pk_arr = index_arr_kv.second.get_child_optional("propertyNames");
-      if (pk_arr) {
-        for (const auto& kv : pk_arr.get()) {
-          primary_keys.emplace_back(kv.second.data());
+  if (root.contains("indexes")) {
+    for (const auto& index_arr_kv : root["indexes"]) {
+      auto pk_arr = index_arr_kv["propertyNames"];
+      if (!pk_arr.is_null()) {
+        for (const auto& item : pk_arr) {
+          primary_keys.emplace_back(item.get_ref<std::string const&>());
         }
         break;
       }
     }
   }
   // rawRelationShips
-  if (root.get_child_optional("rawRelationShips")) {
-    for (const auto& index_arr_kv : root.get_child("rawRelationShips")) {
-      auto src =
-          index_arr_kv.second.get_optional<std::string>("srcVertexLabel");
-      auto dst =
-          index_arr_kv.second.get_optional<std::string>("dstVertexLabel");
-      if (src && dst) {
-        relations.emplace_back(src.get(), dst.get());
+  if (root.contains("rawRelationShips")) {
+    for (const auto& index_arr_kv : root["rawRelationShips"]) {
+      auto src = index_arr_kv["srcVertexLabel"];
+      auto dst = index_arr_kv["dstVertexLabel"];
+      if (!src.is_null() && !dst.is_null()) {
+        relations.emplace_back(src.get_ref<std::string const&>(),
+                               dst.get_ref<std::string const&>());
       }
     }
   }
   // mapping
-  if (root.get_optional<std::string>("mapping")) {
+  if (root.contains("mapping")) {
     vineyard::get_container(root, "mapping", mapping);
   }
-  if (root.get_optional<std::string>("reverse_mapping")) {
+  if (root.contains("reverse_mapping")) {
     vineyard::get_container(root, "reverse_mapping", reverse_mapping);
   }
 }
@@ -357,23 +354,23 @@ PropertyGraphSchema::GetEdgePropertyListByLabel(LabelId label_id) const {
   return properties;
 }
 
-void PropertyGraphSchema::ToJSON(ptree& root) const {
-  root.put("partitionNum", fnum_);
-  ptree types;
+void PropertyGraphSchema::ToJSON(json& root) const {
+  root["partitionNum"] = fnum_;
+  json types = json::array();
   for (const auto& entry : vertex_entries_) {
-    types.push_back(std::make_pair("", entry.ToJSON()));
+    types.emplace_back(entry.ToJSON());
   }
   for (const auto& entry : edge_entries_) {
-    types.push_back(std::make_pair("", entry.ToJSON()));
+    types.emplace_back(entry.ToJSON());
   }
-  root.add_child("types", types);
+  root["types"] = types;
 }
 
-void PropertyGraphSchema::FromJSON(ptree const& root) {
-  fnum_ = root.get<size_t>("partitionNum");
-  for (const auto& kv : root.get_child("types")) {
+void PropertyGraphSchema::FromJSON(json const& root) {
+  fnum_ = root["partitionNum"].get<size_t>();
+  for (const auto& item : root["types"]) {
     Entry entry;
-    entry.FromJSON(kv.second);
+    entry.FromJSON(item);
     if (entry.type == "VERTEX") {
       vertex_entries_.push_back(std::move(entry));
     } else {
@@ -384,16 +381,13 @@ void PropertyGraphSchema::FromJSON(ptree const& root) {
 
 std::string PropertyGraphSchema::ToJSONString() const {
   std::stringstream ss;
-  ptree root;
+  json root;
   ToJSON(root);
-  boost::property_tree::write_json(ss, root, false);
-  return ss.str();
+  return root.dump();
 }
 
 void PropertyGraphSchema::FromJSONString(std::string const& schema) {
-  ptree root;
-  std::istringstream iss(schema);
-  boost::property_tree::read_json(iss, root);
+  json root = json::parse(schema);
   FromJSON(root);
 }
 
@@ -509,36 +503,33 @@ std::string MaxGraphSchema::GetLabelName(LabelId label_id) {
   return "";
 }
 
-void MaxGraphSchema::ToJSON(ptree& root) const {
-  root.put("partitionNum", fnum_);
-  ptree types;
+void MaxGraphSchema::ToJSON(json& root) const {
+  root["partitionNum"] = fnum_;
+  json types = json::array();
   for (const auto& entry : entries_) {
-    types.push_back(std::make_pair("", entry.ToJSON()));
+    types.emplace_back(entry.ToJSON());
   }
-  root.add_child("types", types);
+  root["types"] = types;
 }
 
-void MaxGraphSchema::FromJSON(ptree const& root) {
-  fnum_ = root.get<size_t>("partitionNum");
-  for (const auto& kv : root.get_child("types")) {
+void MaxGraphSchema::FromJSON(json const& root) {
+  fnum_ = root["partitionNum"].get<size_t>();
+  for (const auto& item : root["types"]) {
     Entry entry;
-    entry.FromJSON(kv.second);
+    entry.FromJSON(item);
     entries_.push_back(std::move(entry));
   }
 }
 
 std::string MaxGraphSchema::ToJSONString() const {
   std::stringstream ss;
-  ptree root;
+  json root;
   ToJSON(root);
-  boost::property_tree::write_json(ss, root, false);
-  return ss.str();
+  return root.dump();
 }
 
 void MaxGraphSchema::FromJSONString(std::string const& schema) {
-  ptree root;
-  std::istringstream iss(schema);
-  boost::property_tree::read_json(iss, root);
+  json root = json::parse(schema);
   FromJSON(root);
 }
 

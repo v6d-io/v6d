@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
   CHECK(std::find(instances.begin(), instances.end(), client.instance_id()) !=
         instances.end());
 
-  std::map<InstanceID, ptree> cluster;
+  std::map<InstanceID, json> cluster;
   VINEYARD_CHECK_OK(client.ClusterInfo(cluster));
   CHECK(!cluster.empty());
   CHECK(!cluster[client.instance_id()].empty());

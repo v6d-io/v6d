@@ -17,12 +17,7 @@ limitations under the License.
 #define SRC_COMMON_UTIL_BOOST_H_
 
 #include <boost/optional/optional.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 
-namespace vineyard {
-namespace bpt = boost::property_tree;
-using ptree = boost::property_tree::ptree;
-}  // namespace vineyard
+namespace vineyard {}  // namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_BOOST_H_

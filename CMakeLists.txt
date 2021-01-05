@@ -155,6 +155,13 @@ macro(find_common_libraries)
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     set(THREADS_PREFER_PTHREAD_FLAG TRUE)
     find_package(Threads)
+
+    # include nlohmann/json
+    set(JSON_BuildTests OFF CACHE INTERNAL "")
+    set(JSON_Install ON CACHE INTERNAL "")
+    set(JSON_MultipleHeaders ON CACHE INTERNAL "")
+    set(JSON_ImplicitConversions OFF CACHE INTERNAL "")
+    add_subdirectory(thirdparty/nlohmann-json)
 endmacro(find_common_libraries)
 
 macro(find_openssl_libraries)
@@ -248,6 +255,7 @@ if(BUILD_VINEYARD_SERVER)
                                            ${GFLAGS_LIBRARIES}
                                            ${GLOG_LIBRARIES}
                                            ${OPENSSL_LIBRARIES}
+                                           nlohmann_json::nlohmann_json
     )
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})
@@ -276,7 +284,10 @@ if(BUILD_VINEYARD_CLIENT)
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
     add_library(vineyard_client SHARED ${CLIENT_SRC_FILES})
-    target_link_libraries(vineyard_client PUBLIC ${GLOG_LIBRARIES} Threads::Threads)
+    target_link_libraries(vineyard_client PUBLIC Threads::Threads
+                                                 nlohmann_json::nlohmann_json
+                                                 ${GLOG_LIBRARIES}
+    )
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
         # required on mac, but cause problem on linux.
         target_link_libraries(vineyard_client PUBLIC ${GFLAGS_LIBRARIES})
@@ -381,7 +392,8 @@ if(BUILD_VINEYARD_TESTS)
 
         target_link_libraries(${T_NAME} PRIVATE
                               ${VINEYARD_INSTALL_LIBS}
-                              ${CPPNETLIB_LIBRARIES})
+                              ${CPPNETLIB_LIBRARIES}
+        )
         if(ARROW_SHARED_LIB)
             target_link_libraries(${T_NAME} PRIVATE ${ARROW_SHARED_LIB})
         else()

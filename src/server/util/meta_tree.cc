@@ -43,6 +43,34 @@ namespace vineyard {
 
 namespace meta_tree {
 
+static void decode_value(const std::string& str, NodeType& type,
+                         std::string& value) {
+  if (str[0] == 'v') {
+    type = NodeType::Value;
+    value = str.substr(1);
+  } else if (str[0] == 'l') {
+    type = NodeType::Link;
+    value = str.substr(1);
+  } else {
+    type = NodeType::InvalidType;
+    value.clear();
+  }
+}
+
+static void encode_value(NodeType type, const std::string& value,
+                         std::string& str) {
+  str.clear();
+  if (type == NodeType::Value) {
+    str.resize(value.size() + 1);
+    str[0] = 'v';
+    memcpy(&str[1], value.c_str(), value.size());
+  } else if (type == NodeType::Link) {
+    str.resize(value.size() + 1);
+    str[0] = 'l';
+    memcpy(&str[1], value.c_str(), value.size());
+  }
+}
+
 static bool __attribute__((used)) is_link_node(const std::string& str) {
   return str[0] == 'l';
 }
@@ -79,49 +107,49 @@ static void generate_link(const std::string& type, const std::string& name,
   link = name + "." + type.substr(0, type.find_first_of('<'));
 }
 
-static Status get_sub_tree(const ptree& tree, const std::string& prefix,
-                           const std::string& name, ptree& sub_tree) {
-  if (name.find('.') != std::string::npos) {
+static Status get_sub_tree(const json& tree, const std::string& prefix,
+                           const std::string& name, json& sub_tree) {
+  if (name.find('/') != std::string::npos) {
     LOG(ERROR) << "meta tree name invalid. " << name;
     return Status::MetaTreeNameInvalid();
   }
   std::string path = prefix;
   if (!name.empty()) {
-    path += "." + name;
+    path += "/" + name;
   }
-  boost::optional<const ptree&> tmp_tree_op = tree.get_child_optional(path);
-  if (tmp_tree_op && !tmp_tree_op->empty()) {
-    sub_tree = *tmp_tree_op;
-    return Status::OK();
-  } else {
-    return Status::MetaTreeSubtreeNotExists();
+  auto json_path = json::json_pointer(path);
+  if (tree.contains(json_path)) {
+    auto const& tmp_tree = tree[json_path];
+    if (tmp_tree.is_object() && !tmp_tree.empty()) {
+      sub_tree = tmp_tree;
+      return Status::OK();
+    }
   }
+  return Status::MetaTreeSubtreeNotExists();
 }
 
-static bool has_sub_tree(const ptree& tree, const std::string& prefix,
+static bool has_sub_tree(const json& tree, const std::string& prefix,
                          const std::string& name) {
-  if (name.find('.') != std::string::npos) {
+  if (name.find('/') != std::string::npos) {
     return false;
   }
   std::string path = prefix;
   if (!name.empty()) {
-    path += "." + name;
+    path += "/" + name;
   }
-  return static_cast<bool>(tree.get_child_optional(path));
+  return tree.contains(json::json_pointer(path));
 }
 
-static Status del_sub_tree(ptree& tree, const std::string& prefix,
+static Status del_sub_tree(json& tree, const std::string& prefix,
                            const std::string& name) {
-  if (name.find('.') != std::string::npos) {
+  if (name.find('/') != std::string::npos) {
     LOG(ERROR) << "meta tree name invalid. " << name;
     return Status::MetaTreeNameInvalid();
   }
-  std::string path = prefix;
-  boost::optional<ptree&> tmp_tree_op = tree.get_child_optional(path);
-  if (tmp_tree_op) {
-    boost::optional<ptree&> node_op = tmp_tree_op->get_child_optional(name);
-    if (node_op) {
-      tmp_tree_op->erase(name);
+  auto path = json::json_pointer(prefix);
+  if (tree.contains(path)) {
+    if (tree[path].contains(name)) {
+      tree[path].erase(name);
       return Status::OK();
     } else {
       LOG(ERROR) << "meta tree name doesn't exist: " << name;
@@ -133,32 +161,40 @@ static Status del_sub_tree(ptree& tree, const std::string& prefix,
   }
 }
 
-static Status get_name(const ptree& tree, std::string& name) {
+static Status get_name(const json& tree, std::string& name,
+                       bool const decode = false) {
   // name: get the object id
-  ptree::const_assoc_iterator name_iter = tree.find("id");
-  if (name_iter == tree.not_found()) {
+  json::const_iterator name_iter = tree.find("id");
+  if (name_iter == tree.end()) {
     return Status::MetaTreeNameNotExists();
   }
-  if (!name_iter->second.empty()) {
-    LOG(ERROR) << "meta tree id invalid. " << name_iter->second.data();
-    return Status::MetaTreeTypeInvalid();
+  if (name_iter->is_object()) {
+    LOG(ERROR) << "meta tree id invalid. " << *name_iter;
+    return Status::MetaTreeNameInvalid();
   }
-  name = name_iter->second.data();
+  name = name_iter->get_ref<std::string const&>();
+  if (decode) {
+    NodeType node_type = NodeType::InvalidType;
+    decode_value(name, node_type, name);
+    if (node_type != NodeType::Value) {
+      return Status::MetaTreeNameInvalid();
+    }
+  }
   return Status::OK();
 }
 
-static Status get_type(const ptree& tree, std::string& type,
+static Status get_type(const json& tree, std::string& type,
                        bool const decode = false) {
   // type: get the typename
-  ptree::const_assoc_iterator type_iter = tree.find("typename");
-  if (type_iter == tree.not_found()) {
+  json::const_iterator type_iter = tree.find("typename");
+  if (type_iter == tree.end()) {
     return Status::MetaTreeNameNotExists();
   }
-  if (!type_iter->second.empty()) {
-    LOG(ERROR) << "meta tree typename invalid. " << type_iter->second.data();
+  if (type_iter->is_object()) {
+    LOG(ERROR) << "meta tree typename invalid. " << *type_iter;
     return Status::MetaTreeTypeInvalid();
   }
-  type = type_iter->second.data();
+  type = type_iter->get_ref<std::string const&>();
   if (decode) {
     NodeType node_type = NodeType::InvalidType;
     decode_value(type, node_type, type);
@@ -169,45 +205,50 @@ static Status get_type(const ptree& tree, std::string& type,
   return Status::OK();
 }
 
-static Status get_type_name(const ptree& tree, std::string& type,
-                            std::string& name) {
-  RETURN_ON_ERROR(get_type(tree, type));
-  RETURN_ON_ERROR(get_name(tree, name));
+static Status get_type_name(const json& tree, std::string& type,
+                            std::string& name, bool const decode = false) {
+  RETURN_ON_ERROR(get_type(tree, type, decode));
+  RETURN_ON_ERROR(get_name(tree, name, decode));
   return Status::OK();
 }
 
 /**
  * In `MetaData::AddMember`, the parameter might be an object id. In such cases
- * the client doesn't have the full metadata ptree of the object, there will be
+ * the client doesn't have the full metadata json of the object, there will be
  * just an `ObjectID`.
  */
-static bool is_meta_placeholder(const ptree& tree) {
-  return tree.size() == 1 && tree.find("id") != tree.not_found();
+static bool is_meta_placeholder(const json& tree) {
+  return tree.is_object() && tree.size() == 1 && tree.contains("id");
 }
 
 /**
  * Get metadata for an object "recursively".
  */
-Status GetData(const ptree& tree, const ObjectID id, ptree& sub_tree) {
+Status GetData(const json& tree, const ObjectID id, json& sub_tree) {
   return GetData(tree, VYObjectIDToString(id), sub_tree);
 }
 
 /**
  * Get metadata for an object "recursively".
  */
-Status GetData(const ptree& tree, const std::string& name, ptree& sub_tree) {
-  ptree tmp_tree;
+Status GetData(const json& tree, const std::string& name, json& sub_tree) {
+  json tmp_tree;
   sub_tree.clear();
-  Status status = get_sub_tree(tree, "data", name, tmp_tree);
+  Status status = get_sub_tree(tree, "/data", name, tmp_tree);
   if (!status.ok()) {
     return status;
   }
-  for (ptree::iterator it = tmp_tree.begin(); it != tmp_tree.end(); ++it) {
+  for (auto const& item : json::iterator_wrapper(tmp_tree)) {
+    if (!item.value().is_string()) {
+      sub_tree[item.key()] = item.value();
+      continue;
+    }
+    std::string const& item_value = item.value().get_ref<std::string const&>();
     NodeType type;
     std::string value;
-    decode_value(it->second.data(), type, value);
+    decode_value(item_value, type, value);
     if (type == NodeType::Value) {
-      sub_tree.put(it->first, value);
+      sub_tree[item.key()] = value;
     } else if (type == NodeType::Link) {
       std::string sub_sub_tree_type, sub_sub_tree_name;
       status = parse_link(value, sub_sub_tree_type, sub_sub_tree_name);
@@ -215,21 +256,21 @@ Status GetData(const ptree& tree, const std::string& name, ptree& sub_tree) {
         sub_tree.clear();
         return status;
       }
-      ptree sub_sub_tree;
-      ObjectID sub_sub_tree_id = VYObjectIDFromString(sub_sub_tree_name);
+      json sub_sub_tree;
       status = GetData(tree, sub_sub_tree_name, sub_sub_tree);
       if (status.ok()) {
-        sub_tree.add_child(it->first, sub_sub_tree);
+        sub_tree[item.key()] = sub_sub_tree;
       } else {
+        ObjectID sub_sub_tree_id = VYObjectIDFromString(sub_sub_tree_name);
         if (IsBlob(sub_sub_tree_id) && status.IsMetaTreeSubtreeNotExists()) {
           // make an empty blob
-          sub_sub_tree.put("id", VYObjectIDToString(EmptyBlobID()));
-          sub_sub_tree.put("typename", "vineyard::Blob");
-          sub_sub_tree.put("length", 0);
-          sub_sub_tree.put("nbytes", 0);
-          sub_sub_tree.put("instance_id", UnspecifiedInstanceID());
-          sub_sub_tree.put("transient", true);
-          sub_tree.add_child(it->first, sub_sub_tree);
+          sub_sub_tree["id"] = VYObjectIDToString(EmptyBlobID());
+          sub_sub_tree["typename"] = "vineyard::Blob";
+          sub_sub_tree["length"] = 0;
+          sub_sub_tree["nbytes"] = 0;
+          sub_sub_tree["instance_id"] = UnspecifiedInstanceID();
+          sub_sub_tree["transient"] = true;
+          sub_tree[item.key()] = sub_sub_tree;
         } else {
           sub_tree.clear();
           return status;
@@ -239,14 +280,13 @@ Status GetData(const ptree& tree, const std::string& name, ptree& sub_tree) {
       return Status::MetaTreeTypeInvalid();
     }
   }
-  sub_tree.put("id", name);
+  sub_tree["id"] = name;
   return Status::OK();
 }
 
-Status ListData(const ptree& tree, std::string const& pattern, bool const regex,
-                size_t const limit, ptree& tree_group) {
-  auto metas = tree.get_child_optional("data");
-  if (!metas) {
+Status ListData(const json& tree, std::string const& pattern, bool const regex,
+                size_t const limit, json& tree_group) {
+  if (!tree.contains("data")) {
     return Status::OK();
   }
 
@@ -260,17 +300,17 @@ Status ListData(const ptree& tree, std::string const& pattern, bool const regex,
     } catch (std::regex_error const&) { return Status::OK(); }
   }
 
-  for (auto iter = metas->begin(); iter != metas->end(); ++iter) {
+  for (auto const& item : json::iterator_wrapper(tree["data"])) {
     if (found >= limit) {
       break;
     }
 
-    if (iter->second.empty()) {
+    if (!item.value().is_object() || item.value().empty()) {
       LOG(INFO) << "Object meta shouldn't be empty";
       return Status::MetaTreeInvalid();
     }
     std::string type;
-    RETURN_ON_ERROR(get_type(iter->second, type, true));
+    RETURN_ON_ERROR(get_type(item.value(), type, true));
 
     // match type on pattern
     bool matched = false;
@@ -284,20 +324,20 @@ Status ListData(const ptree& tree, std::string const& pattern, bool const regex,
 
     if (matched) {
       found += 1;
-      ptree object_meta_tree;
-      RETURN_ON_ERROR(GetData(tree, iter->first, object_meta_tree));
-      tree_group.add_child(iter->first, object_meta_tree);
+      json object_meta_tree;
+      RETURN_ON_ERROR(GetData(tree, item.key(), object_meta_tree));
+      tree_group[item.key()] = object_meta_tree;
     }
   }
   return Status::OK();
 }
 
-Status DelData(ptree& tree, const ObjectID id) {
+Status DelData(json& tree, const ObjectID id) {
   std::string name = VYObjectIDToString(id);
-  return del_sub_tree(tree, "data", name);
+  return del_sub_tree(tree, "/data", name);
 }
 
-Status DelData(ptree& tree, const std::vector<ObjectID>& ids) {
+Status DelData(json& tree, const std::vector<ObjectID>& ids) {
   // FIXME: use a more efficient implmentation.
   for (auto const& id : ids) {
     auto s = DelData(tree, id);
@@ -308,12 +348,12 @@ Status DelData(ptree& tree, const std::vector<ObjectID>& ids) {
   return Status::OK();
 }
 
-Status DelDataOps(const ptree& tree, const ObjectID id,
+Status DelDataOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops) {
   return DelDataOps(tree, VYObjectIDToString(id), ops);
 }
 
-Status DelDataOps(const ptree& tree, const std::set<ObjectID>& ids,
+Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
                   std::vector<IMetaService::op_t>& ops) {
   // FIXME: use a more efficient implmentation.
   for (auto const& id : ids) {
@@ -325,106 +365,114 @@ Status DelDataOps(const ptree& tree, const std::set<ObjectID>& ids,
   return Status::OK();
 }
 
-Status DelDataOps(const ptree& tree, const std::string& name,
+Status DelDataOps(const json& tree, const std::string& name,
                   std::vector<IMetaService::op_t>& ops) {
-  std::string data_prefix = "data";
-  boost::optional<const ptree&> data_tree_optional =
-      tree.get_child_optional(data_prefix);
-  if (data_tree_optional) {
-    boost::optional<const ptree&> node_op =
-        data_tree_optional->get_child_optional(name);
-    if (node_op) {
+  std::string data_prefix = "/data";
+  auto json_path = json::json_pointer(data_prefix);
+  if (tree.contains(json_path)) {
+    auto const& data_tree = tree[json_path];
+    if (data_tree.contains(name)) {
       // erase from etcd
-      std::string key_prefix = data_prefix + "." + name + ".";
-      for (auto it = node_op->begin(); it != node_op->end(); ++it) {
-        ops.emplace_back(IMetaService::op_t::Del(key_prefix + it->first));
-      }
-      ops.emplace_back(IMetaService::op_t::Del(key_prefix));
+      ops.emplace_back(IMetaService::op_t::Del(data_prefix + "/" + name));
       return Status::OK();
     }
   }
   return Status::MetaTreeSubtreeNotExists();
 }
 
-static void generate_put_ops(const ptree& meta, const ptree& diff,
+static void generate_put_ops(const json& meta, const json& diff,
                              const std::string& name,
                              std::vector<IMetaService::op_t>& ops) {
-  std::string key_prefix = "data." + name + ".";
-  for (ptree::const_iterator it = diff.begin(); it != diff.end(); ++it) {
-    if (!it->second.empty()) {
+  std::string key_prefix = "/data" + std::string("/") + name + "/";
+  for (auto const& item : json::iterator_wrapper(diff)) {
+    if (item.value().is_object() && !item.value().empty()) {
       std::string sub_type, sub_name;
-      VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
-      if (!has_sub_tree(meta, "data", name)) {
-        generate_put_ops(meta, it->second, sub_name, ops);
+      VINEYARD_SUPPRESS(get_type_name(item.value(), sub_type, sub_name));
+      if (!has_sub_tree(meta, "/data", sub_name)) {
+        generate_put_ops(meta, item.value(), sub_name, ops);
       }
       std::string link;
       generate_link(sub_type, sub_name, link);
       std::string encoded_value;
       encode_value(NodeType::Link, link, encoded_value);
       ops.emplace_back(
-          IMetaService::op_t::Put(key_prefix + it->first, encoded_value));
+          IMetaService::op_t::Put(key_prefix + item.key(), encoded_value));
     } else {
       // don't repeat "id" in the etcd kvs.
-      if (it->first == "id") {
+      if (item.key() == "id") {
         continue;
       }
-      std::string encoded_value;
-      encode_value(NodeType::Value, it->second.data(), encoded_value);
-      ops.emplace_back(
-          IMetaService::op_t::Put(key_prefix + it->first, encoded_value));
+      std::string key = key_prefix + item.key();
+      if (item.value().is_string()) {
+        std::string encoded_value;
+        encode_value(NodeType::Value,
+                     item.value().get_ref<std::string const&>(), encoded_value);
+        ops.emplace_back(IMetaService::op_t::Put(key, encoded_value));
+      } else {
+        ops.emplace_back(IMetaService::op_t::Put(key, item.value()));
+      }
     }
   }
 }
 
-/// Store metas to etcd.
-/// We create an entry for each subtree recursively, and reset processed
-/// subtree to its link to avoid duplicate information.
-static void generate_persist_ops(ptree& diff, const std::string& name,
+static void generate_persist_ops(json& diff, const std::string& name,
                                  std::vector<IMetaService::op_t>& ops,
                                  std::set<std::string>& dedup) {
-  std::string key_prefix = "data." + name + ".";
-  for (ptree::iterator it = diff.begin(); it != diff.end(); ++it) {
-    if (!it->second.empty()) {
+  std::string data_key = "/data" + std::string("/") + name;
+  if (dedup.find(data_key) != dedup.end()) {
+    return;
+  }
+  for (auto& item : json::iterator_wrapper(diff)) {
+    if (item.value().is_object() &&
+        !item.value().empty()) /* build link, and recursively generate */ {
       std::string sub_type, sub_name;
-      VINEYARD_SUPPRESS(get_type_name(it->second, sub_type, sub_name));
-
+      VINEYARD_SUPPRESS(get_type_name(item.value(), sub_type, sub_name));
       // Don't persist blob into etcd, but the link cannot be omitted.
-      if (it->second.get<bool>("transient") && sub_type != "vineyard::Blob") {
+      if (item.value()["transient"].get<bool>() &&
+          sub_type != "vineyard::Blob") {
         // otherwise, skip recursively generate ops
-        generate_persist_ops(it->second, sub_name, ops, dedup);
+        generate_persist_ops(item.value(), sub_name, ops, dedup);
       }
       std::string link;
       generate_link(sub_type, sub_name, link);
-      ptree pt;
-      pt.put("__subtree", link);
-      it->second = pt;
+      std::string encoded_value;
+      encode_value(NodeType::Link, link, encoded_value);
+      diff[item.key()] = encoded_value;
+    } else /* do value transformation (encoding) */ {
+      json value_to_persist;
+      if (item.key() == "transient") {
+        diff[item.key()] = false;
+      } else if (item.value().is_string()) {
+        std::string encoded_value;
+        encode_value(NodeType::Value,
+                     item.value().get_ref<std::string const&>(), encoded_value);
+        diff[item.key()] = encoded_value;
+      }
     }
   }
-  if (dedup.find(key_prefix) == dedup.end()) {
-    std::ostringstream stream;
-    boost::property_tree::write_json(stream, diff);
-    ops.emplace_back(IMetaService::op_t::Put(key_prefix, stream.str()));
-    dedup.emplace(key_prefix);
-  }
+  // don't repeat "id" in the etcd kvs.
+  diff.erase("id");
+  ops.emplace_back(IMetaService::op_t::Put(data_key, diff));
+  dedup.emplace(data_key);
 }
 
 /**
  * Returns:
  *
- *  diff: diff ptree
+ *  diff: diff json
  *  instance_id: instance_id of members and the object itself, can represents
  *               the final instance_id of the object.
  */
-static Status diff_data_meta_tree(const ptree& meta,
+static Status diff_data_meta_tree(const json& meta,
                                   const std::string& sub_tree_name,
-                                  const ptree& sub_tree, ptree& diff,
+                                  const json& sub_tree, json& diff,
                                   InstanceID& instance_id) {
-  ptree old_sub_tree;
-  Status status = get_sub_tree(meta, "data", sub_tree_name, old_sub_tree);
+  json old_sub_tree;
+  Status status = get_sub_tree(meta, "/data", sub_tree_name, old_sub_tree);
 
   if (!status.ok()) {
     if (status.IsMetaTreeSubtreeNotExists()) {
-      diff.put("transient", true);
+      diff["transient"] = true;
     } else {
       return status;
     }
@@ -436,77 +484,72 @@ static Status diff_data_meta_tree(const ptree& meta,
     if (status.ok()) {
       std::string sub_tree_type;
       RETURN_ON_ERROR(get_type(old_sub_tree, sub_tree_type, true));
-      diff.put("id", sub_tree_name);
-      diff.put("typename", sub_tree_type);
-      {
-        const std::string& instance_id_string =
-            old_sub_tree.get<std::string>("instance_id");
-        NodeType instance_id_value_type;
-        std::string instance_id_decoded;
-        decode_value(instance_id_string, instance_id_value_type,
-                     instance_id_decoded);
-        instance_id = boost::lexical_cast<InstanceID>(instance_id_decoded);
-      }
+      diff["id"] = sub_tree_name;
+      diff["typename"] = sub_tree_type;
+      instance_id = old_sub_tree["instance_id"].get<InstanceID>();
     }
     return status;
   }
 
   // recompute instance_id: check if it refers remote objects.
-  instance_id = sub_tree.get<InstanceID>("instance_id");
+  instance_id = sub_tree["instance_id"].get<InstanceID>();
 
-  for (ptree::const_iterator it = sub_tree.begin(); it != sub_tree.end();
-       ++it) {
+  for (auto const& item : json::iterator_wrapper(sub_tree)) {
     // don't diff on id, typename and instance_id and don't update them, that
     // means, we can only update member's meta, cannot update the whole member
     // itself.
-    if (it->first == "id" || it->first == "typename" ||
-        it->first == "instance_id") {
+    if (item.key() == "id" || item.key() == "typename" ||
+        item.key() == "instance_id") {
       continue;
     }
 
-    if (it->second.empty() /* plain value */) {
-      std::string new_value = it->second.data();
+    if (!item.value().is_object() /* plain value */) {
+      const json& new_value = item.value();
       if (status.ok() /* old meta exists */) {
-        boost::optional<std::string> old_value =
-            old_sub_tree.get_optional<std::string>(it->first);
-        if (old_value) {
-          NodeType old_value_type;
-          std::string old_value_decoded;
-          decode_value(*old_value, old_value_type, old_value_decoded);
+        if (old_sub_tree.contains(item.key())) {
+          auto old_value = old_sub_tree[item.key()];
+
+          if (old_value.is_string()) {
+            NodeType old_value_type;
+            std::string old_value_decoded;
+            decode_value(old_value.get_ref<std::string const&>(),
+                         old_value_type, old_value_decoded);
+            old_value = json(old_value_decoded);
+          }
 
           bool require_update = false;
-          if (it->first == "transient") {
+          if (item.key() == "transient") {
             // put_data wan't make persist value becomes transient, since the
             // info in the client may be out-of-date.
-            require_update =
-                old_value_decoded == "true" && old_value_decoded != new_value;
+            require_update = old_value == true && old_value != new_value;
           } else {
-            require_update = old_value_decoded != new_value;
+            require_update = old_value != new_value;
           }
 
           if (require_update) {
-            VLOG(10) << "DIFF: " << it->first << ": " << old_value_decoded
-                     << " -> " << new_value;
-            diff.put(it->first, new_value);
+            VLOG(10) << "DIFF: " << item.key() << ": " << old_value << " -> "
+                     << new_value;
+            diff[item.key()] = new_value;
           }
         } else {
-          VLOG(10) << "DIFF: " << it->first << ": [none] -> " << new_value;
-          diff.put(it->first, new_value);
+          VLOG(10) << "DIFF: " << item.key() << ": [none] -> " << new_value;
+          diff[item.key()] = new_value;
         }
       } else if (status.IsMetaTreeSubtreeNotExists()) {
-        VLOG(10) << "DIFF: " << it->first << ": [none] -> " << new_value;
-        diff.put(it->first, new_value);
+        VLOG(10) << "DIFF: " << item.key() << ": [none] -> " << new_value;
+        diff[item.key()] = new_value;
       } else {
         return status;
       }
     } else /* member object */ {
-      const ptree& sub_sub_tree = it->second;
+      const json& sub_sub_tree = item.value();
 
       // original corresponding field must be a member not a key-value
-      auto mb_old_sub_sub_tree = old_sub_tree.find(it->first);
+      auto mb_old_sub_sub_tree = old_sub_tree.find(item.key());
       if (status.ok() /* old meta exists */) {
-        if (mb_old_sub_sub_tree != old_sub_tree.not_found() &&
-            !is_link_node(mb_old_sub_sub_tree->second.data())) {
+        if (mb_old_sub_sub_tree != old_sub_tree.end() &&
+            !mb_old_sub_sub_tree->is_string() &&
+            !is_link_node(mb_old_sub_sub_tree->get_ref<std::string const&>())) {
           return Status::MetaTreeInvalid();
         }
       }
@@ -514,7 +557,7 @@ static Status diff_data_meta_tree(const ptree& meta,
       std::string sub_sub_tree_name;
       RETURN_ON_ERROR(get_name(sub_sub_tree, sub_sub_tree_name));
 
-      ptree diff_sub_tree;
+      json diff_sub_tree;
       InstanceID sub_instance_id;
       RETURN_ON_ERROR(diff_data_meta_tree(meta, sub_sub_tree_name, sub_sub_tree,
                                           diff_sub_tree, sub_instance_id));
@@ -524,8 +567,8 @@ static Status diff_data_meta_tree(const ptree& meta,
       }
 
       if (status.ok() /* old meta exists */) {
-        if (!diff_sub_tree.empty()) {
-          diff.add_child(it->first, diff_sub_tree);
+        if (diff_sub_tree.is_object() && !diff_sub_tree.empty()) {
+          diff[item.key()] = diff_sub_tree;
         }
       } else if (status.IsMetaTreeSubtreeNotExists()) {
         if (!is_meta_placeholder(sub_sub_tree)) {
@@ -534,55 +577,55 @@ static Status diff_data_meta_tree(const ptree& meta,
           std::string sub_sub_tree_type;
           RETURN_ON_ERROR(get_type_name(sub_sub_tree, sub_sub_tree_type,
                                         sub_sub_tree_name));
-          diff_sub_tree.put("id", sub_sub_tree_name);
-          diff_sub_tree.put("typename", sub_sub_tree_type);
+          diff_sub_tree["id"] = sub_sub_tree_name;
+          diff_sub_tree["typename"] = sub_sub_tree_type;
         }
-        diff.add_child(it->first, diff_sub_tree);
+        diff[item.key()] = diff_sub_tree;
       } else {
         return status;
       }
     }
   }
-  if (!diff.empty() && status.IsMetaTreeSubtreeNotExists()) {
+  if (diff.is_object() && !diff.empty() &&
+      status.IsMetaTreeSubtreeNotExists()) {
     // must not be meta placeholder
     std::string sub_tree_type;
     RETURN_ON_ERROR(get_type(sub_tree, sub_tree_type));
 
-    diff.put("id", sub_tree_name);
-    diff.put("typename", sub_tree_type);
-    diff.put("instance_id", instance_id);
+    diff["id"] = sub_tree_name;
+    diff["typename"] = sub_tree_type;
+    diff["instance_id"] = instance_id;
   }
   return Status::OK();
 }
 
-static void persist_meta_tree(const ptree& sub_tree, ptree& diff) {
-  // NB: we don't need to track which objects are persist since the ptree
+static void persist_meta_tree(const json& sub_tree, json& diff) {
+  // NB: we don't need to track which objects are persist since the json
   // cached in the server will be updated by the background watcher task.
-  if (sub_tree.get<bool>("transient")) {
-    for (ptree::const_iterator it = sub_tree.begin(); it != sub_tree.end();
-         ++it) {
-      if (!it->second.empty()) {
-        const ptree& sub_sub_tree = it->second;
+  if (sub_tree["transient"].get<bool>()) {
+    for (auto const& item : json::iterator_wrapper(sub_tree)) {
+      if (item.value().is_object() && !item.value().empty()) {
+        const json& sub_sub_tree = item.value();
         // recursive
-        ptree sub_diff;
+        json sub_diff;
         persist_meta_tree(sub_sub_tree, sub_diff);
-        if (!sub_diff.empty()) {
-          diff.add_child(it->first, sub_diff);
+        if (sub_diff.is_object() && !sub_diff.empty()) {
+          diff[item.key()] = sub_diff;
         } else {
           // will be used to generate the link.
-          diff.add_child(it->first, sub_sub_tree);
+          diff[item.key()] = sub_sub_tree;
         }
       } else {
-        diff.put(it->first, it->second.data());
+        diff[item.key()] = item.value();
       }
     }
   }
 }
 
-Status PutDataOps(const ptree& tree, const ObjectID id, const ptree& sub_tree,
+Status PutDataOps(const json& tree, const ObjectID id, const json& sub_tree,
                   std::vector<IMetaService::op_t>& ops,
                   InstanceID& computed_instance_id) {
-  ptree diff;
+  json diff;
   std::string name = VYObjectIDToString(id);
   // recompute instance_id: check if it refers remote objects.
   Status status =
@@ -592,7 +635,7 @@ Status PutDataOps(const ptree& tree, const ObjectID id, const ptree& sub_tree,
     return status;
   }
 
-  if (diff.empty()) {
+  if (diff.is_object() && diff.empty()) {
     return Status::OK();
   }
 
@@ -600,16 +643,16 @@ Status PutDataOps(const ptree& tree, const ObjectID id, const ptree& sub_tree,
   return Status::OK();
 }
 
-Status PersistOps(const ptree& tree, const ObjectID id,
+Status PersistOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops) {
-  ptree sub_tree, diff;
+  json sub_tree, diff;
   Status status = GetData(tree, id, sub_tree);
   if (!status.ok()) {
     return status;
   }
   persist_meta_tree(sub_tree, diff);
 
-  if (diff.empty()) {
+  if (diff.is_object() && diff.empty()) {
     return Status::OK();
   }
 
@@ -619,61 +662,52 @@ Status PersistOps(const ptree& tree, const ObjectID id,
   return Status::OK();
 }
 
-Status Exists(const ptree& tree, const ObjectID id, bool& exists) {
+Status Exists(const json& tree, const ObjectID id, bool& exists) {
   std::string name = VYObjectIDToString(id);
-  exists = has_sub_tree(tree, "data", name);
+  exists = has_sub_tree(tree, "/data", name);
   return Status::OK();
 }
 
-Status ShallowCopyOps(const ptree& tree, const ObjectID id,
+Status ShallowCopyOps(const json& tree, const ObjectID id,
                       const ObjectID target,
                       std::vector<IMetaService::op_t>& ops, bool& transient) {
   std::string name = VYObjectIDToString(id);
-  ptree tmp_tree;
-  RETURN_ON_ERROR(get_sub_tree(tree, "data", name, tmp_tree));
-  NodeType field_type;
-  std::string field_value;
-  decode_value(tmp_tree.get<std::string>("transient"), field_type, field_value);
-  RETURN_ON_ASSERT(field_type == NodeType::Value,
-                   "The 'transient' should a plain value");
-  transient = boost::lexical_cast<bool>(field_value);
-  std::string key_prefix = "data." + VYObjectIDToString(target) + ".";
-  for (auto const& kv : tmp_tree) {
+  json tmp_tree;
+  RETURN_ON_ERROR(get_sub_tree(tree, "/data", name, tmp_tree));
+  RETURN_ON_ASSERT(
+      tmp_tree.contains("transient") && tmp_tree["transient"].is_boolean(),
+      "The 'transient' should a plain bool value");
+  transient = tmp_tree["transient"].get<bool>();
+  std::string key_prefix =
+      "/data" + std::string("/") + VYObjectIDToString(target) + "/";
+  for (auto const& item : json::iterator_wrapper(tmp_tree)) {
     ops.emplace_back(
-        IMetaService::op_t::Put(key_prefix + kv.first, kv.second.data()));
+        IMetaService::op_t::Put(key_prefix + item.key(), item.value()));
   }
   return Status::OK();
 }
 
-Status IfPersist(const ptree& tree, const ObjectID id, bool& persist) {
+Status IfPersist(const json& tree, const ObjectID id, bool& persist) {
   std::string name = VYObjectIDToString(id);
-  ptree tmp_tree;
-  Status status = get_sub_tree(tree, "data", name, tmp_tree);
+  json tmp_tree;
+  Status status = get_sub_tree(tree, "/data", name, tmp_tree);
   if (status.ok()) {
-    NodeType field_type;
-    std::string field_value;
-    decode_value(tmp_tree.get<std::string>("transient"), field_type,
-                 field_value);
-    RETURN_ON_ASSERT(field_type == NodeType::Value,
-                     "The 'transient' should a plain value");
-    persist = !boost::lexical_cast<bool>(field_value);
+    RETURN_ON_ASSERT(
+        tmp_tree.contains("transient") && tmp_tree["transient"].is_boolean(),
+        "The 'transient' should a plain boolean value");
+    persist = !tmp_tree["transient"].get<bool>();
   }
   return status;
 }
 
-Status FilterAtInstance(const ptree& tree, const InstanceID& instance_id,
+Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
                         std::vector<ObjectID>& objects) {
-  std::string instance_id_value;
-  encode_value(NodeType::Value, std::to_string(instance_id), instance_id_value);
-  auto mb_datatree = tree.get_child_optional("data");
-  if (mb_datatree) {
-    auto& datatree = mb_datatree.get();
-    for (auto it = datatree.begin(); it != datatree.end(); ++it) {
-      if (!it->second.empty()) {
-        auto mb_instance_id =
-            it->second.get_optional<std::string>("instance_id");
-        if (mb_instance_id && mb_instance_id.get() == instance_id_value) {
-          objects.emplace_back(VYObjectIDFromString(it->first));
+  if (tree.contains("data")) {
+    for (auto const& item : json::iterator_wrapper(tree["data"])) {
+      if (item.value().is_object() && !item.value().empty()) {
+        if (item.value().contains("instance_id") &&
+            item.value()["instance_id"].get<InstanceID>() == instance_id) {
+          objects.emplace_back(VYObjectIDFromString(item.key()));
         }
       }
     }

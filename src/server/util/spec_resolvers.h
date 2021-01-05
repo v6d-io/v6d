@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <string>
 
-#include "common/util/boost.h"
+#include "common/util/json.h"
 
 namespace vineyard {
 
@@ -30,7 +30,7 @@ namespace vineyard {
 class Resolver {
  public:
   static const Resolver& get(std::string name);
-  virtual ptree resolve() const = 0;
+  virtual json resolve() const = 0;
 };
 
 /**
@@ -39,7 +39,7 @@ class Resolver {
  */
 class EtcdSpecResolver : public Resolver {
  public:
-  ptree resolve() const;
+  json resolve() const;
 };
 
 /**
@@ -48,7 +48,7 @@ class EtcdSpecResolver : public Resolver {
  */
 class BulkstoreSpecResolver : public Resolver {
  public:
-  ptree resolve() const;
+  json resolve() const;
 
  private:
   size_t parseMemoryLimit(std::string const& memory_limit) const;
@@ -61,7 +61,7 @@ class BulkstoreSpecResolver : public Resolver {
  */
 class IpcSpecResolver : public Resolver {
  public:
-  ptree resolve() const;
+  json resolve() const;
 };
 
 /**
@@ -71,7 +71,7 @@ class IpcSpecResolver : public Resolver {
  */
 class RpcSpecResolver : public Resolver {
  public:
-  ptree resolve() const;
+  json resolve() const;
 };
 
 /**
@@ -80,7 +80,7 @@ class RpcSpecResolver : public Resolver {
  */
 class ServerSpecResolver : public Resolver {
  public:
-  ptree resolve() const;
+  json resolve() const;
 };
 
 }  // namespace vineyard

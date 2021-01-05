@@ -158,11 +158,11 @@ std::string Status::ToString() const {
   return result;
 }
 
-ptree Status::ToJSON() const {
-  ptree tree;
-  tree.put("code", static_cast<int>(code()));
+json Status::ToJSON() const {
+  json tree;
+  tree["code"] = static_cast<int>(code());
   if (!ok() /* state_ != nullptr */) {
-    tree.put("message", state_->msg);
+    tree["message"] = state_->msg;
   }
   return tree;
 }

@@ -56,7 +56,7 @@ class ObjectMigration {
   Status sendObjectMeta(ObjectID object_id, Client& client,
                         tcp::socket& socket);
 
-  void getBlobList(ptree& meta_tree);
+  void getBlobList(json& meta_tree);
 
   std::vector<ObjectID> object_ids_;
   InstanceID instance_id_;
@@ -74,10 +74,10 @@ class MigrationServer {
   Status Start(Client& client);
 
  private:
-  ObjectID createObject(ptree& meta, Client& client, bool persist);
+  ObjectID createObject(json& meta, Client& client, bool persist);
 
   std::unordered_map<InstanceID, InstanceID> instance_map_;
-  std::unordered_map<ObjectID, ptree> object_map_;
+  std::unordered_map<ObjectID, json> object_map_;
   std::unordered_map<ObjectID, ObjectID> object_id_map_;
 };
 

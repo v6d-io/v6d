@@ -31,7 +31,7 @@ limitations under the License.
 
 namespace vineyard {
 
-// NB: the scalar value is write to meta ptree as a `string` directly,
+// NB: the scalar value is write to meta json as a `string` directly,
 // without touching shared memory and create a blob.
 
 template <typename T>

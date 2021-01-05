@@ -123,4 +123,47 @@ void bind_utils(py::module& mod) {
   PyModule_AddFunctions(mod.ptr(), vineyard_utils_methods);
 }
 
+py::object json_to_python(json const &value) {
+  switch (value.type()) {
+    case json::value_t::null: {
+      return py::none();
+    }
+    case json::value_t::object: {
+      std::unordered_map<std::string, py::object> result;
+      for (auto const &element: json::iterator_wrapper(value)) {
+        result[element.key()] = json_to_python(element.value());
+      }
+      return py::cast(std::move(result));
+    }
+    case json::value_t::array: {
+      py::list result;
+      for (auto const &element: value) {
+        result.append(json_to_python(element));
+      }
+      return std::move(result);
+    }
+    case json::value_t::string: {
+      return py::cast(value.get_ref<std::string const &>());
+    }
+    case json::value_t::boolean: {
+      return py::cast(value.get<bool>());
+    }
+    case json::value_t::number_integer: {
+      return py::cast(value.get<int64_t>());
+    }
+    case json::value_t::number_unsigned: {
+      return py::cast(value.get<uint64_t>());
+    }
+    case json::value_t::number_float: {
+      return py::cast(value.get<double>());
+    }
+    case json::value_t::binary: {
+      return py::cast(value.get_ref<std::string const &>());
+    }
+    default: {
+      return py::none();
+    }
+  }
+}
+
 }  // namespace vineyard

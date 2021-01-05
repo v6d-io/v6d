@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <iomanip>
+
 #include "basic/ds/types.h"
 
 namespace vineyard {
@@ -103,9 +105,10 @@ std::istream& operator>>(std::istream& is, AnyType& st) {
   return is;
 }
 
-template <>
-void print_json_value(std::stringstream& ss, AnyType const& value) {
-  ss << std::quoted(GetAnyTypeName(value));
+void to_json(json& j, const AnyType& type) { j = json(GetAnyTypeName(type)); }
+
+void from_json(const json& j, AnyType& type) {
+  type = ParseAnyType(j.get_ref<std::string const&>());
 }
 
 std::ostream& operator<<(std::ostream& os, const IdType& st) {
@@ -120,9 +123,10 @@ std::istream& operator>>(std::istream& is, IdType& st) {
   return is;
 }
 
-template <>
-void print_json_value(std::stringstream& ss, IdType const& value) {
-  ss << "\"" << GetIdTypeName(value) << "\"";
+void to_json(json& j, const IdType& type) { j = json(GetIdTypeName(type)); }
+
+void from_json(const json& j, IdType& type) {
+  type = ParseIdType(j.get_ref<std::string const&>());
 }
 
 }  // namespace vineyard

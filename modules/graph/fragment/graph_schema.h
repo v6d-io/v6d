@@ -29,9 +29,8 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "boost/leaf/all.hpp"
-#include "boost/property_tree/json_parser.hpp"
-#include "boost/property_tree/ptree.hpp"
 
+#include "common/util/json.h"
 #include "graph/fragment/property_graph_types.h"
 
 namespace vineyard {
@@ -46,8 +45,8 @@ class Entry {
     std::string name;
     PropertyType type;
 
-    boost::property_tree::ptree ToJSON() const;
-    void FromJSON(const boost::property_tree::ptree& root);
+    json ToJSON() const;
+    void FromJSON(const json& root);
   };
   LabelId id;
   std::string label;
@@ -68,8 +67,8 @@ class Entry {
   PropertyType GetPropertyType(PropertyId prop_id) const;
   std::string GetPropertyName(PropertyId prop_id) const;
 
-  boost::property_tree::ptree ToJSON() const;
-  void FromJSON(const boost::property_tree::ptree& root);
+  json ToJSON() const;
+  void FromJSON(const json& root);
 };
 
 class PropertyGraphSchema {
@@ -121,8 +120,8 @@ class PropertyGraphSchema {
                              label);
   }
 
-  void ToJSON(boost::property_tree::ptree& root) const;
-  void FromJSON(boost::property_tree::ptree const& root);
+  void ToJSON(json& root) const;
+  void FromJSON(json const& root);
 
   std::string ToJSONString() const;
   void FromJSONString(std::string const& schema);
@@ -178,8 +177,8 @@ class MaxGraphSchema {
 
   void AddEntry(const Entry& entry) { entries_.push_back(entry); }
 
-  void ToJSON(boost::property_tree::ptree& root) const;
-  void FromJSON(boost::property_tree::ptree const& root);
+  void ToJSON(json& root) const;
+  void FromJSON(json const& root);
 
   std::string ToJSONString() const;
   void FromJSONString(std::string const& schema);

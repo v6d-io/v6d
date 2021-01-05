@@ -43,6 +43,10 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
       // FIXME: for simplicity, we don't care the instance-lock related keys.
       continue;
     }
+    if (!boost::algorithm::starts_with(key, prefix_ + "/")) {
+      // ignore garbage values
+      continue;
+    }
     EtcdMetaService::op_t op;
     std::string op_key = boost::algorithm::erase_head_copy(key, prefix_.size());
     switch (event.type()) {
@@ -119,24 +123,28 @@ void EtcdMetaService::commitUpdates(
 
 void EtcdMetaService::requestAll(
     const std::string& prefix, unsigned base_rev,
-    callback_t<const std::vector<kv_t>&, unsigned> callback) {
+    callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback) {
   etcd_->ls(prefix_ + prefix)
       .then([this, callback](pplx::task<etcd::Response> resp_task) {
         auto resp = resp_task.get();
         VLOG(10) << "etcd ls use " << resp.duration().count()
                  << " microseconds for " << resp.keys().size() << " keys";
-        std::vector<IMetaService::kv_t> kvs(resp.keys().size());
+        std::vector<IMetaService::op_t> ops(resp.keys().size());
         for (size_t i = 0; i < resp.keys().size(); ++i) {
-          IMetaService::kv_t kv;
-          kv.key =
+          if (!boost::algorithm::starts_with(resp.key(i), prefix_ + "/")) {
+            // ignore garbage values
+            continue;
+          }
+          std::string op_key =
               boost::algorithm::erase_head_copy(resp.key(i), prefix_.size());
-          kv.value = resp.value(i).as_string();
-          kvs.emplace_back(kv);
+          auto op = EtcdMetaService::op_t::Put(
+              op_key, resp.value(i).as_string(), resp.index());
+          ops.emplace_back(op);
         }
         auto status =
             Status::EtcdError(resp.error_code(), resp.error_message());
         boost::asio::post(server_ptr_->GetIOContext(),
-                          boost::bind(callback, status, kvs, resp.index()));
+                          boost::bind(callback, status, ops, resp.index()));
       });
 }
 

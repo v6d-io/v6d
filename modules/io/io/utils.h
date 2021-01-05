@@ -28,12 +28,10 @@ namespace vineyard {
 template <typename T>
 void ReportStatus(const std::string& kind, T const& value) {
   LOG(INFO) << "kind: " << kind;
-  ptree result;
-  result.put("type", kind);
-  result.put("content", value);
-  std::stringstream ss;
-  bpt::write_json(ss, result, false);
-  std::cout << ss.str() << std::flush;
+  json result;
+  result["type"] = kind;
+  result["content"] = value;
+  std::cout << result.dump() << std::endl;
 }
 
 }  // namespace vineyard

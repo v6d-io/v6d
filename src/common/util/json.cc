@@ -13,16 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "common/util/ptree.h"
-
 #include <sstream>
 #include <string>
+
+#include "common/util/json.h"
 
 namespace vineyard {
 
 template <>
 void print_json_value(std::stringstream& ss, std::string const& value) {
-  ss << "\"" << value << "\"";
+  ss << json_to_string(json(value));
 }
 
 template <>

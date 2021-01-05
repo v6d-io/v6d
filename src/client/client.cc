@@ -48,7 +48,7 @@ Status Client::Connect(const std::string& ipc_socket) {
   std::string message_out;
   WriteRegisterRequest(message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
   RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
@@ -68,7 +68,7 @@ Client& Client::Default() {
 Status Client::GetMetaData(const ObjectID id, ObjectMeta& meta,
                            const bool sync_remote) {
   ENSURE_CONNECTED(this);
-  ptree tree;
+  json tree;
   RETURN_ON_ERROR(GetData(id, tree, sync_remote));
   meta.SetMetaData(this, tree);
 
@@ -95,7 +95,7 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
                            std::vector<ObjectMeta>& metas,
                            const bool sync_remote) {
   ENSURE_CONNECTED(this);
-  std::vector<ptree> trees;
+  std::vector<json> trees;
   RETURN_ON_ERROR(GetData(ids, trees, sync_remote));
   metas.resize(trees.size());
 
@@ -151,7 +151,7 @@ Status Client::CreateStream(const ObjectID& id) {
   std::string message_out;
   WriteCreateStreamRequest(id, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadCreateStreamReply(message_in));
   return Status::OK();
@@ -163,7 +163,7 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   std::string message_out;
   WriteGetNextStreamChunkRequest(id, size, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   Payload object;
   RETURN_ON_ERROR(ReadGetNextStreamChunkReply(message_in, object));
@@ -180,7 +180,7 @@ Status Client::PullNextStreamChunk(ObjectID const id,
   std::string message_out;
   WritePullNextStreamChunkRequest(id, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   Payload object;
   RETURN_ON_ERROR(ReadPullNextStreamChunkReply(message_in, object));
@@ -197,7 +197,7 @@ Status Client::StopStream(ObjectID const id, const bool failed) {
   std::string message_out;
   WriteStopStreamRequest(id, failed, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadStopStreamReply(message_in));
   return Status::OK();
@@ -251,7 +251,7 @@ std::vector<std::shared_ptr<Object>> Client::GetObjects(
 
 std::vector<std::shared_ptr<Object>> Client::ListObjects(
     std::string const& pattern, const bool regex, size_t const limit) {
-  std::unordered_map<ObjectID, ptree> meta_trees;
+  std::unordered_map<ObjectID, json> meta_trees;
   VINEYARD_CHECK_OK(ListData(pattern, regex, limit, meta_trees));
 
   std::vector<ObjectMeta> metas;
@@ -303,7 +303,7 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& object) {
   std::string message_out;
   WriteCreateBufferRequest(size, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, object));
   return Status::OK();
@@ -328,7 +328,7 @@ Status Client::GetBuffers(const std::unordered_set<ObjectID>& ids,
   std::string message_out;
   WriteGetBuffersRequest(ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
-  ptree message_in;
+  json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, objects));
   return Status::OK();
