@@ -32,6 +32,7 @@ def test_numpy_ndarray(vineyard_client):
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
 
+
 def test_sparse_array(vineyard_client):
     arr = np.random.randn(10)
     arr[2:5] = np.nan
