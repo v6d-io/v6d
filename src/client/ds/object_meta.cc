@@ -199,8 +199,7 @@ void ObjectMeta::SetInstanceId(const InstanceID instance_id) {
 }
 
 template <>
-const json ObjectMeta::GetKeyValue<json>(const std::string& key) const
-{
+const json ObjectMeta::GetKeyValue<json>(const std::string& key) const {
   try {
     return json::parse(meta_[key].get_ref<const std::string&>());
   } catch (nlohmann::json::parse_error const&) {
