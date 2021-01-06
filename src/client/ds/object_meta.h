@@ -238,6 +238,15 @@ class ObjectMeta {
   void AddKeyValue(const std::string& key, json const& values);
 
   /**
+   * @brief Get string metadata value.
+   *
+   * @param key The key of metadata.
+   */
+  const std::string GetKeyValue(const std::string& key) const {
+    return meta_[key].get_ref<const std::string&>();
+  }
+
+  /**
    * @brief Get generic metadata value.
    *
    * @param T The type of metadata value.
@@ -475,10 +484,6 @@ class ObjectMeta {
   friend class Client;
   friend class RPCClient;
 };
-
-template <>
-const std::string ObjectMeta::GetKeyValue<std::string>(
-    const std::string& key) const;
 
 template <>
 const json ObjectMeta::GetKeyValue<json>(const std::string& key) const;
