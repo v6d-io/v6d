@@ -125,8 +125,7 @@ class ObjectMeta {
    * @brief Add a generic value entry to the metadata.
    *
    * @param T The type of metadata's value.
-   * @param key The name of metadata entry, it will be first convert to string
-   * by `nlohmann::json`.
+   * @param key The name of metadata entry.
    * @param value The value of the metadata entry.
    */
   template <typename T>
@@ -144,7 +143,7 @@ class ObjectMeta {
    */
   template <typename T>
   void AddKeyValue(const std::string& key, std::set<T> const& values) {
-    meta_[key] = json(values).dump();
+    meta_[key] = json_to_string(json(values));
   }
 
   /**
@@ -157,7 +156,7 @@ class ObjectMeta {
    */
   template <typename T>
   void AddKeyValue(const std::string& key, std::vector<T> const& values) {
-    meta_[key] = json(values).dump();
+    meta_[key] = json_to_string(json(values));
   }
 
   /**
@@ -186,10 +185,44 @@ class ObjectMeta {
    */
   template <typename Value>
   void AddKeyValue(const std::string& key,
+                   std::map<json, Value> const& values) {
+    json mapping;
+    for (auto const& kv : values) {
+      mapping[json_to_string(kv.first)] = kv.second;
+    }
+    AddKeyValue(key, mapping);
+  }
+
+  /**
+   * @brief Add a associated map value entry to the metadata.
+   *
+   * @param Value The type of metadata's value.
+   * @param key The name of metadata entry, it will be first convert to string.
+   * @param value The value of the metadata entry.
+   */
+  template <typename Value>
+  void AddKeyValue(const std::string& key,
                    std::unordered_map<std::string, Value> const& values) {
     json mapping;
     for (auto const& kv : values) {
       mapping[kv.first] = kv.second;
+    }
+    AddKeyValue(key, mapping);
+  }
+
+  /**
+   * @brief Add a associated map value entry to the metadata.
+   *
+   * @param Value The type of metadata's value.
+   * @param key The name of metadata entry, it will be first convert to string.
+   * @param value The value of the metadata entry.
+   */
+  template <typename Value>
+  void AddKeyValue(const std::string& key,
+                   std::unordered_map<json, Value> const& values) {
+    json mapping;
+    for (auto const& kv : values) {
+      mapping[json_to_string(kv.first)] = kv.second;
     }
     AddKeyValue(key, mapping);
   }
@@ -294,11 +327,51 @@ class ObjectMeta {
    */
   template <typename Value>
   void GetKeyValue(const std::string& key,
+                   std::map<json, Value>& values) const {
+    json tree;
+    GetKeyValue(key, tree);
+    for (auto const& kv : json::iterator_wrapper(tree)) {
+      LOG(INFO) << "kv.key = " << kv.key() << " | " << json::parse(kv.key());
+      values.emplace(json::parse(kv.key()), kv.value().get<Value>());
+    }
+  }
+
+  /**
+   * @brief Get associated map metadata value, with automatically type
+   * deduction.
+   *
+   * @param Value The type of metadata value.
+   * @param key The key of metadata.
+   * @param value The result will be stored in `value`, the generic result is
+   * pass by reference to help type deduction.
+   */
+  template <typename Value>
+  void GetKeyValue(const std::string& key,
                    std::unordered_map<std::string, Value>& values) const {
     json tree;
     GetKeyValue(key, tree);
     for (auto const& kv : json::iterator_wrapper(tree)) {
       values.emplace(kv.key(), kv.value().get<Value>());
+    }
+  }
+
+  /**
+   * @brief Get associated map metadata value, with automatically type
+   * deduction.
+   *
+   * @param Value The type of metadata value.
+   * @param key The key of metadata.
+   * @param value The result will be stored in `value`, the generic result is
+   * pass by reference to help type deduction.
+   */
+  template <typename Value>
+  void GetKeyValue(const std::string& key,
+                   std::unordered_map<json, Value>& values) const {
+    json tree;
+    GetKeyValue(key, tree);
+    for (auto const& kv : json::iterator_wrapper(tree)) {
+      LOG(INFO) << "kv.key = " << kv.key() << " | " << json::parse(kv.key());
+      values.emplace(json::parse(kv.key()), kv.value().get<Value>());
     }
   }
 
@@ -411,6 +484,9 @@ class ObjectMeta {
   friend class Client;
   friend class RPCClient;
 };
+
+template <>
+const json ObjectMeta::GetKeyValue<json>(const std::string& key) const;
 
 }  // namespace vineyard
 

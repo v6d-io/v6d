@@ -98,7 +98,13 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
     std::vector<std::shared_ptr<arrow::Field>> fields(num_columns);
     for (size_t i = 0; i < num_columns; ++i) {
       // cast to arrow::Array
-      std::string cname = df->Columns()[i];
+      auto cname = df->Columns()[i];
+      std::string field_name;
+      if (cname.is_string()) {
+        field_name = cname.get_ref<std::string const&>();
+      } else {
+        field_name = json_to_string(cname);
+      }
       auto df_col = df->Column(cname);
       num_rows = df_col->shape()[0];
       std::shared_ptr<arrow::Buffer> copied_buffer;
@@ -114,7 +120,7 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
           arrow::ArrayData::Make(FromAnyType(df_col->value_type()), num_rows,
                                  {nullptr, copied_buffer}));
       fields[i] = std::make_shared<arrow::Field>(
-          cname, FromAnyType(df_col->value_type()));
+          field_name, FromAnyType(df_col->value_type()));
     }
     auto batch =
         arrow::RecordBatch::Make(arrow::schema(fields), num_rows, columns);

@@ -77,13 +77,16 @@ void ObjectMeta::AddKeyValue(const std::string& key, const std::string& value) {
 }
 
 void ObjectMeta::AddKeyValue(const std::string& key, const json& value) {
-  meta_[key] = value.dump();
+  meta_[key] = json_to_string(value);
 }
 
 void ObjectMeta::GetKeyValue(const std::string& key, json& value) const {
   try {
     value = json::parse(meta_[key].get_ref<const std::string&>());
-  } catch (...) {}  // just ignore the json exception to prevent crash.
+  } catch (nlohmann::json::parse_error const&) {
+    throw std::out_of_range("Invalid json value at key '" + key +
+                            "': " + meta_[key].get_ref<const std::string&>());
+  }
 }
 
 void ObjectMeta::AddMember(const std::string& name, const ObjectMeta& member) {
@@ -147,7 +150,7 @@ ObjectMeta ObjectMeta::GetMemberMeta(const std::string& name) const {
   return ret;
 }
 
-void ObjectMeta::PrintMeta() const { LOG(INFO) << meta_.dump(2); }
+void ObjectMeta::PrintMeta() const { LOG(INFO) << meta_.dump(4); }
 
 const bool ObjectMeta::incomplete() const { return incomplete_; }
 
@@ -193,6 +196,16 @@ void ObjectMeta::findAllBlobs(const json& tree, InstanceID const instance_id) {
 
 void ObjectMeta::SetInstanceId(const InstanceID instance_id) {
   meta_["instance_id"] = instance_id;
+}
+
+template <>
+const json ObjectMeta::GetKeyValue<json>(const std::string& key) const {
+  try {
+    return json::parse(meta_[key].get_ref<const std::string&>());
+  } catch (nlohmann::json::parse_error const&) {
+    throw std::out_of_range("Invalid json value at key '" + key +
+                            "': " + meta_[key].get_ref<const std::string&>());
+  }
 }
 
 }  // namespace vineyard

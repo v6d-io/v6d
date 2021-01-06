@@ -91,7 +91,7 @@ CommandType ParseCommandType(const std::string& str_type) {
 }
 
 static inline void encode_msg(const json& root, std::string& msg) {
-  msg = root.dump();
+  msg = json_to_string(root);
 }
 
 void WriteErrorReply(Status const& status, std::string& msg) {
