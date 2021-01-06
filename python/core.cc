@@ -169,7 +169,7 @@ void bind_core(py::module& mod) {
       .def("__repr__",
            [](const ObjectMeta* meta) {
              thread_local std::stringstream ss;
-             return meta->MetaData().dump(0);
+             return meta->MetaData().dump(4);
            })
       .def("__str__", [](const ObjectMeta* meta) {
         thread_local std::stringstream ss;

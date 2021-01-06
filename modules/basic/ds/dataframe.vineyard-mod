@@ -46,7 +46,7 @@ class DataFrame : public Registered<DataFrame> {
    *
    * @return The vector of column names.
    */
-  const std::vector<std::string>& Columns() const;
+  const std::vector<json>& Columns() const;
 
   /**
    * @brief Get the index of dataframe.
@@ -61,7 +61,7 @@ class DataFrame : public Registered<DataFrame> {
    * @param column The given column name.
    * @return The shared pointer to the column tensor.
    */
-  std::shared_ptr<ITensor> Column(std::string const& column) const;
+  std::shared_ptr<ITensor> Column(json const& column) const;
 
   /**
    * @brief Get the partition index of the global dataframe.
@@ -84,9 +84,9 @@ class DataFrame : public Registered<DataFrame> {
 
   __attribute__((annotate("codegen"))) size_t row_batch_index_;
 
-  __attribute__((annotate("codegen"))) std::vector<std::string> columns_;
-  __attribute__((annotate("codegen:{std::string: ITensor*}")))
-  std::map<std::string, std::shared_ptr<ITensor>>
+  __attribute__((annotate("codegen"))) std::vector<json> columns_;
+  __attribute__((annotate("codegen:{json: ITensor*}")))
+  std::map<json, std::shared_ptr<ITensor>>
       values_;
 
   friend class Client;

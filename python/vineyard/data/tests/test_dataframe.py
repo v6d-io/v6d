@@ -33,6 +33,18 @@ def test_pandas_dataframe(vineyard_client):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
+def test_pandas_dataframe_int_columns(vineyard_client):
+    df = pd.DataFrame({1: [1, 2, 3, 4], 2: [5, 6, 7, 8]})
+    object_id = vineyard_client.put(df)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
+def test_pandas_dataframe_mixed_columns(vineyard_client):
+    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]})
+    object_id = vineyard_client.put(df)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
 def test_dataframe_reindex(vineyard_client):
     df = pd.DataFrame(np.random.rand(10, 5), columns=['c1', 'c2', 'c3', 'c4', 'c5'])
     expected = df.reindex(index=np.arange(10, 1, -1))
@@ -49,6 +61,22 @@ def test_dataframe_set_index(vineyard_client):
 
 def test_dataframe_with_sparse_array(vineyard_client):
     df = pd.DataFrame(np.random.randn(100, 4), columns=['x', 'y', 'z', 'a'])
+    df.iloc[:98] = np.nan
+    sdf = df.astype(pd.SparseDtype("float", np.nan))
+    object_id = vineyard_client.put(sdf)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
+def test_dataframe_with_sparse_array_int_columns(vineyard_client):
+    df = pd.DataFrame(np.random.randn(100, 4), columns=[1, 2, 3, 4])
+    df.iloc[:98] = np.nan
+    sdf = df.astype(pd.SparseDtype("float", np.nan))
+    object_id = vineyard_client.put(sdf)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
+def test_dataframe_with_sparse_array_mixed_columns(vineyard_client):
+    df = pd.DataFrame(np.random.randn(100, 4), columns=['x', 'y', 'z', 0])
     df.iloc[:98] = np.nan
     sdf = df.astype(pd.SparseDtype("float", np.nan))
     object_id = vineyard_client.put(sdf)

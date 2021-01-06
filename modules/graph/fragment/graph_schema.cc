@@ -383,7 +383,7 @@ std::string PropertyGraphSchema::ToJSONString() const {
   std::stringstream ss;
   json root;
   ToJSON(root);
-  return root.dump();
+  return json_to_string(root);
 }
 
 void PropertyGraphSchema::FromJSONString(std::string const& schema) {
@@ -525,7 +525,7 @@ std::string MaxGraphSchema::ToJSONString() const {
   std::stringstream ss;
   json root;
   ToJSON(root);
-  return root.dump();
+  return json_to_string(root);
 }
 
 void MaxGraphSchema::FromJSONString(std::string const& schema) {

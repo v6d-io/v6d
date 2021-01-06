@@ -31,7 +31,7 @@ void ReportStatus(const std::string& kind, T const& value) {
   json result;
   result["type"] = kind;
   result["content"] = value;
-  std::cout << result.dump() << std::endl;
+  std::cout << json_to_string(result) << std::endl;
 }
 
 }  // namespace vineyard

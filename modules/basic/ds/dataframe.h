@@ -88,7 +88,7 @@ class DataFrameBuilder : public DataFrameBaseBuilder {
    * @param column The given column name.
    * @return The shared pointer to the column tensor.
    */
-  std::shared_ptr<ITensorBuilder> Column(std::string const& column) const;
+  std::shared_ptr<ITensorBuilder> Column(json const& column) const;
 
   /**
    * @brief Add a column to the dataframe by registering a tensor builder to the
@@ -98,15 +98,14 @@ class DataFrameBuilder : public DataFrameBaseBuilder {
    * @param column The name of the column.
    * @param builder The tensor builder for the column.
    */
-  void AddColumn(std::string const& column,
-                 std::shared_ptr<ITensorBuilder> builder);
+  void AddColumn(json const& column, std::shared_ptr<ITensorBuilder> builder);
 
   /**
    * @brief Drop the column with the given column name.
    *
    * @param column The name of column to be dropped.
    */
-  void DropColumn(std::string const& column);
+  void DropColumn(json const& column);
 
   /**
    * @brief Build the dataframe object.
@@ -115,8 +114,8 @@ class DataFrameBuilder : public DataFrameBaseBuilder {
   Status Build(Client& client) override;
 
  private:
-  std::vector<std::string> columns_;
-  std::unordered_map<std::string, std::shared_ptr<ITensorBuilder>> values_;
+  std::vector<json> columns_;
+  std::unordered_map<json, std::shared_ptr<ITensorBuilder>> values_;
 };
 
 /**

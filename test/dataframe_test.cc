@@ -46,9 +46,19 @@ int main(int argc, char** argv) {
     builder.AddColumn("a", tb);
   }
   {
-    auto tb =
-        std::make_shared<TensorBuilder<int>>(client, std::vector<int64_t>{100});
+    auto tb = std::make_shared<TensorBuilder<int64_t>>(
+        client, std::vector<int64_t>{100});
     builder.AddColumn("b", tb);
+  }
+  {
+    auto tb = std::make_shared<TensorBuilder<float>>(client,
+                                                     std::vector<int64_t>{100});
+    builder.AddColumn(1, tb);
+  }
+  {
+    auto tb = std::make_shared<TensorBuilder<int32_t>>(
+        client, std::vector<int64_t>{100});
+    builder.AddColumn(2, tb);
   }
 
   // fill the column 'a'
@@ -64,7 +74,27 @@ int main(int argc, char** argv) {
   // fill the column 'b'
   {
     auto column_a =
-        std::dynamic_pointer_cast<TensorBuilder<int>>(builder.Column("b"));
+        std::dynamic_pointer_cast<TensorBuilder<int64_t>>(builder.Column("b"));
+    auto data = column_a->data();
+    for (size_t i = 0; i < 100; ++i) {
+      data[i] = i * i * i;
+    }
+  }
+
+  // fill the column 1
+  {
+    auto column_a =
+        std::dynamic_pointer_cast<TensorBuilder<float>>(builder.Column(1));
+    auto data = column_a->data();
+    for (size_t i = 0; i < 100; ++i) {
+      data[i] = i * i;
+    }
+  }
+
+  // fill the column 2
+  {
+    auto column_a =
+        std::dynamic_pointer_cast<TensorBuilder<int32_t>>(builder.Column(2));
     auto data = column_a->data();
     for (size_t i = 0; i < 100; ++i) {
       data[i] = i * i * i;
@@ -78,21 +108,41 @@ int main(int argc, char** argv) {
       std::dynamic_pointer_cast<DataFrame>(client.GetObject(seal_df->id()));
 
   auto const& columns = df->Columns();
-  CHECK_EQ(columns.size(), 2);
+  CHECK_EQ(columns.size(), 4);
   CHECK_EQ(columns[0], "a");
   CHECK_EQ(columns[1], "b");
+  CHECK_EQ(columns[2], 1);
+  CHECK_EQ(columns[3], 2);
 
   {
     auto column_a = std::dynamic_pointer_cast<Tensor<double>>(df->Column("a"));
     CHECK_EQ(column_a->shape()[0], 100);
     auto data = column_a->data();
     for (size_t i = 0; i < 100; ++i) {
-      CHECK_EQ(data[i], i * i);
+      CHECK_DOUBLE_EQ(data[i], i * i);
     }
   }
 
   {
-    auto column_b = std::dynamic_pointer_cast<Tensor<int>>(df->Column("b"));
+    auto column_b = std::dynamic_pointer_cast<Tensor<int64_t>>(df->Column("b"));
+    CHECK_EQ(column_b->shape()[0], 100);
+    auto data = column_b->data();
+    for (size_t i = 0; i < 100; ++i) {
+      CHECK_EQ(data[i], i * i * i);
+    }
+  }
+
+  {
+    auto column_a = std::dynamic_pointer_cast<Tensor<float>>(df->Column(1));
+    CHECK_EQ(column_a->shape()[0], 100);
+    auto data = column_a->data();
+    for (size_t i = 0; i < 100; ++i) {
+      CHECK_DOUBLE_EQ(data[i], i * i);
+    }
+  }
+
+  {
+    auto column_b = std::dynamic_pointer_cast<Tensor<int32_t>>(df->Column(2));
     CHECK_EQ(column_b->shape()[0], 100);
     auto data = column_b->data();
     for (size_t i = 0; i < 100; ++i) {

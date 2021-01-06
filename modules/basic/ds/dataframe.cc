@@ -19,15 +19,13 @@ namespace vineyard {
 
 class DataFrameBuilder;
 
-const std::vector<std::string>& DataFrame::Columns() const {
-  return this->columns_;
-}
+const std::vector<json>& DataFrame::Columns() const { return this->columns_; }
 
 std::shared_ptr<ITensor> DataFrame::Index() const {
   return values_.at(INDEX_COL_NAME);
 }
 
-std::shared_ptr<ITensor> DataFrame::Column(std::string const& column) const {
+std::shared_ptr<ITensor> DataFrame::Column(json const& column) const {
   return values_.at(column);
 }
 
@@ -64,17 +62,17 @@ void DataFrameBuilder::set_index(std::shared_ptr<ITensorBuilder> builder) {
 }
 
 std::shared_ptr<ITensorBuilder> DataFrameBuilder::Column(
-    std::string const& column) const {
+    json const& column) const {
   return values_.at(column);
 }
 
-void DataFrameBuilder::AddColumn(std::string const& column,
+void DataFrameBuilder::AddColumn(json const& column,
                                  std::shared_ptr<ITensorBuilder> builder) {
   this->columns_.emplace_back(column);
   this->values_.emplace(column, builder);
 }
 
-void DataFrameBuilder::DropColumn(std::string const& column) {
+void DataFrameBuilder::DropColumn(json const& column) {
   // FIXME: how to ensure the removed builder got destroyed/aborted.
 }
 
