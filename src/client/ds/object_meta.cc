@@ -199,7 +199,8 @@ void ObjectMeta::SetInstanceId(const InstanceID instance_id) {
 }
 
 template <>
-const std::string GetKeyValue<std::string>(const std::string& key) const {
+const std::string ObjectMeta::GetKeyValue<std::string>(
+    const std::string& key) const {
   return meta_[key].get_ref<const std::string&>();
 }
 
