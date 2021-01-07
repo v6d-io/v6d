@@ -136,7 +136,7 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
 
 class GlobalTensorBaseBuilder;
 
-class GlobalTensor : public Registered<GlobalTensor> {
+class GlobalTensor : public Registered<GlobalTensor>, GlobalObject {
  public:
   std::vector<int64_t> const& shape() const;
   std::vector<int64_t> const& partition_shape() const;

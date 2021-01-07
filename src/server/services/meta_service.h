@@ -122,7 +122,7 @@ class IMetaService {
   };
   virtual ~IMetaService() {}
   explicit IMetaService(vs_ptr_t& server_ptr)
-      : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("meta_sync_lock") {}
+      : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("/meta_sync_lock") {}
 
   static std::shared_ptr<IMetaService> Get(vs_ptr_t);
 

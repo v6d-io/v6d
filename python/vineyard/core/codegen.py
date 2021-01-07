@@ -544,6 +544,9 @@ class {class_name}BaseBuilder: public ObjectBuilder {{
         size_t __value_nbytes = 0;
 
         __value->meta_.SetTypeName(type_name<{class_name_elaborated}>());
+        if (std::is_base_of<GlobalObject, {class_name_elaborated}>::value) {
+            __value->meta_.SetGlobal(true);
+        }
 
         {assignments}
 

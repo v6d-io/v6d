@@ -154,6 +154,7 @@ class ParallelStreamLauncher(ScriptLauncher):
     def create_parallel_stream(self, partial_ids):
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::ParallelStream'
+        meta.set_global(True)
         meta['size_'] = len(partial_ids)
         for idx, partition_id in enumerate(partial_ids):
             meta.add_member('stream_%d' % idx, partition_id)
@@ -175,6 +176,7 @@ class ParallelStreamLauncher(ScriptLauncher):
     def create_objectset(self, partial_id_matrix):
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::ObjectSet'
+        meta.set_global(True)
         meta['num_of_instances'] = len(partial_id_matrix)
         idx = 0
         for partial_id_list in partial_id_matrix:
@@ -198,6 +200,7 @@ class ParallelStreamLauncher(ScriptLauncher):
             raise ValueError('Name of the global dataframe is not provided')
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::GlobalDataFrame'
+        meta.set_global(True)
         objset = self.create_objectset(partial_id_matrix)
         meta.add_member("objects_", objset)
         meta['partition_shape_row_'] = len(partial_id_matrix)

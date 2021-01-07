@@ -110,6 +110,7 @@ class ObjectSetBuilder : public ObjectBuilder {
     object_set->num_of_objects_ = num_of_objects_;
 
     object_set->meta_.SetTypeName(type_name<ObjectSet>());
+    object_set->meta_.SetGlobal(true);
     object_set->meta_.SetNBytes(-1 /* FIXME */);
 
     object_set->meta_.AddKeyValue("num_of_instances", num_of_instances);

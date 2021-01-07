@@ -95,7 +95,7 @@ class DataFrame : public Registered<DataFrame> {
 
 class GlobalDataFrameBaseBuilder;
 
-class GlobalDataFrame : public Registered<GlobalDataFrame> {
+class GlobalDataFrame : public Registered<GlobalDataFrame>, GlobalObject {
  public:
   /**
    * @brief Set the partition shape of the global dataframe.

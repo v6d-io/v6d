@@ -44,11 +44,16 @@ void bind_core(py::module& mod) {
           "id",
           [](ObjectMeta* self) -> ObjectIDWrapper { return self->GetId(); },
           [](ObjectMeta* self, ObjectIDWrapper const id) { self->SetId(id); })
+      .def_property_readonly("signature", &ObjectMeta::GetSignature)
       .def_property("typename", &ObjectMeta::GetTypeName,
                     &ObjectMeta::SetTypeName)
       .def_property("nbytes", &ObjectMeta::GetNBytes, &ObjectMeta::SetNBytes)
       .def_property_readonly("instance_id", &ObjectMeta::GetInstanceId)
       .def_property_readonly("islocal", &ObjectMeta::IsLocal)
+      .def_property_readonly("isglobal", &ObjectMeta::IsGlobal)
+      .def("set_global", [](ObjectMeta *self, const bool global) {
+        self->SetGlobal(global);
+      }, py::arg("global") = true)
       .def("__contains__", &ObjectMeta::Haskey, "key"_a)
       .def(
           "__getitem__",
@@ -208,6 +213,8 @@ void bind_core(py::module& mod) {
   py::class_<Object, std::shared_ptr<Object>>(mod, "Object")
       .def_property_readonly(
           "id", [](Object* self) -> ObjectIDWrapper { return self->id(); })
+      .def_property_readonly(
+          "signature", [](Object* self) -> Signature { return self->meta().GetSignature(); })
       .def_property_readonly("meta", &Object::meta,
                              py::return_value_policy::reference_internal)
       .def_property_readonly("nbytes", &Object::nbytes)

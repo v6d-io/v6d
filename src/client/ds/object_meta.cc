@@ -34,6 +34,14 @@ const ObjectID ObjectMeta::GetId() const {
   return VYObjectIDFromString(meta_["id"].get_ref<std::string const&>());
 }
 
+const Signature ObjectMeta::GetSignature() const {
+  return meta_["signature"].get<Signature>();
+}
+
+void ObjectMeta::SetGlobal(bool global) { meta_["global"] = global; }
+
+const bool ObjectMeta::IsGlobal() const { return meta_.value("global", true); }
+
 void ObjectMeta::SetTypeName(const std::string& type_name) {
   meta_["typename"] = type_name;
 }

@@ -257,14 +257,17 @@ Status VineyardServer::CreateData(
   // Check if instance_id information available
   RETURN_ON_ASSERT(tree.contains("instance_id"));
 
+  auto decorated_tree = tree;
+  decorated_tree["signature"] = GenerateSignature();
+
   // update meta into json
   meta_service_ptr_->RequestToBulkUpdate(
-      [id, tree](const Status& status, const json& meta,
-                 std::vector<IMetaService::op_t>& ops,
-                 InstanceID& computed_instance_id) {
+      [id, decorated_tree](const Status& status, const json& meta,
+                           std::vector<IMetaService::op_t>& ops,
+                           InstanceID& computed_instance_id) {
         if (status.ok()) {
-          return CATCH_JSON_ERROR(
-              meta_tree::PutDataOps(meta, id, tree, ops, computed_instance_id));
+          return CATCH_JSON_ERROR(meta_tree::PutDataOps(
+              meta, id, decorated_tree, ops, computed_instance_id));
         } else {
           LOG(ERROR) << status.ToString();
           return status;

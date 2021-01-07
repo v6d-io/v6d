@@ -73,6 +73,21 @@ class ObjectMeta {
   const ObjectID GetId() const;
 
   /**
+   * @brief Get the corresponding object signature of the metadata.
+   */
+  const Signature GetSignature() const;
+
+  /**
+   * @brief Mark the vineyard object as a global object.
+   */
+  void SetGlobal(bool global = true);
+
+  /**
+   * @brief Check whether the vineyard object is a global object.
+   */
+  const bool IsGlobal() const;
+
+  /**
    * @brief Set the `typename` of the metadata. The `typename` will be used to
    * resolve in the ObjectFactory to create new object instances when get
    * objects from vineyard server.
