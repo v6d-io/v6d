@@ -451,7 +451,9 @@ static void generate_persist_ops(json& diff, const std::string& name,
     }
   }
   // don't repeat "id" in the etcd kvs.
-  diff.erase("id");
+  if (diff.contains("id")) {
+    diff.erase("id");
+  }
   ops.emplace_back(IMetaService::op_t::Put(data_key, diff));
   dedup.emplace(data_key);
 }
