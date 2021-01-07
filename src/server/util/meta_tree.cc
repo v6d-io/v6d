@@ -635,7 +635,7 @@ Status PutDataOps(const json& tree, const ObjectID id, const json& sub_tree,
     return status;
   }
 
-  if (diff.is_object() && diff.empty()) {
+  if (diff.is_null() || (diff.is_object() && diff.empty())) {
     return Status::OK();
   }
 
@@ -652,7 +652,7 @@ Status PersistOps(const json& tree, const ObjectID id,
   }
   persist_meta_tree(sub_tree, diff);
 
-  if (diff.is_null() || diff.is_object() && diff.empty()) {
+  if (diff.is_null() || (diff.is_object() && diff.empty())) {
     return Status::OK();
   }
 
