@@ -262,8 +262,6 @@ class IMetaService {
                   std::set<ObjectID> initial_delete_set{ids.begin(), ids.end()};
                   std::set<ObjectID> delete_set;
                   for (auto const object_id : ids) {
-                    LOG(INFO) << "object id = " << object_id << ": "
-                              << VYObjectIDToString(object_id);
                     traverseToDelete(initial_delete_set, delete_set, object_id,
                                      force, deep);
                   }

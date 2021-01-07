@@ -8,6 +8,10 @@
 #  VINEYARDD_EXECUTABLE         - the vineyardd executable
 #  VINEYARD_CODEGEN_EXECUTABLE  - the vineyard codegen executable
 
+# find dependencies
+include(CMakeFindDependencyMacro)
+find_dependency(nlohmann_json)
+
 set(VINEYARD_HOME "${CMAKE_CURRENT_LIST_DIR}/../../..")
 include("${CMAKE_CURRENT_LIST_DIR}/vineyard-targets.cmake")
 
