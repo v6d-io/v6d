@@ -240,6 +240,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('list_object_test')
         run_test('name_test')
         run_test('pair_test')
+        run_test('persist_test')
         run_test('rpc_delete_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test('rpc_get_object_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test('rpc_test', '127.0.0.1:%d' % rpc_socket_port)
@@ -282,9 +283,24 @@ def run_python_tests(etcd_endpoints):
     with start_vineyardd(etcd_endpoints,
                          etcd_prefix,
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
-        subprocess.check_call(['pytest', '-s', '-vvv', 'python/vineyard',
+        subprocess.check_call(['pytest', '-s', '-vvv',
+                               'python/vineyard/core',
+                               'python/vineyard/data',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+    ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
+    instance_size = 4
+    with start_multiple_vineyardd(etcd_endpoints,
+                                  etcd_prefix,
+                                  default_ipc_socket=ipc_socket_tpl,
+                                  instance_size=instance_size,
+                                  nowait=True) as instances:
+        vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
+        subprocess.check_call(['pytest', '-s', '-vvv',
+                               'python/vineyard/deploy/tests',
+                               '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
