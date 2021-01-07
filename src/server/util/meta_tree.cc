@@ -652,10 +652,7 @@ Status PersistOps(const json& tree, const ObjectID id,
   }
   persist_meta_tree(sub_tree, diff);
 
-  LOG(INFO) << "[DEBUG] persist: " << sub_tree.dump(4);
-  LOG(INFO) << "[DEBUG] persist: " << diff.dump(4);
-
-  if (diff.is_object() && diff.empty()) {
+  if (diff.is_null() || diff.is_object() && diff.empty()) {
     return Status::OK();
   }
 

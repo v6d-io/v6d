@@ -287,6 +287,18 @@ def run_python_tests(etcd_endpoints):
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
+    ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
+    instance_size = 4
+    with start_multiple_vineyardd(etcd_endpoints,
+                                  etcd_prefix,
+                                  default_ipc_socket=ipc_socket_tpl,
+                                  instance_size=instance_size,
+                                  nowait=True) as instances:
+        vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
+        subprocess.check_call(['pytest', '-s', '-vvv', 'python/vineyard/deploy/tests',
+                               '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
 
 def run_io_adaptor_tests(etcd_endpoints):
     etcd_prefix = 'vineyard_test_%s' % time.time()
