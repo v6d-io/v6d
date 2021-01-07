@@ -451,9 +451,7 @@ static void generate_persist_ops(json& diff, const std::string& name,
     }
   }
   // don't repeat "id" in the etcd kvs.
-  if (diff.contains("id")) {
-    diff.erase("id");
-  }
+  diff.erase("id");
   ops.emplace_back(IMetaService::op_t::Put(data_key, diff));
   dedup.emplace(data_key);
 }
@@ -653,6 +651,9 @@ Status PersistOps(const json& tree, const ObjectID id,
     return status;
   }
   persist_meta_tree(sub_tree, diff);
+
+  LOG(INFO) << "[DEBUG] persist: " << sub_tree.dump(4);
+  LOG(INFO) << "[DEBUG] persist: " << diff.dump(4);
 
   if (diff.is_object() && diff.empty()) {
     return Status::OK();
