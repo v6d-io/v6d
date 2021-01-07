@@ -52,9 +52,18 @@ Status Client::Connect(const std::string& ipc_socket) {
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
   RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
-                                    rpc_endpoint_value, instance_id_));
+                                    rpc_endpoint_value, instance_id_,
+                                    server_version_));
   rpc_endpoint_ = rpc_endpoint_value;
   connected_ = true;
+
+  if (!compatible_server(server_version_)) {
+    LOG(ERROR) << "Warning: this version of vineyard client may be "
+                  "incompatible with connected server: "
+               << "client's version is " << vineyard_version()
+               << ", while the server's version is " << server_version_;
+  }
+
   return Status::OK();
 }
 

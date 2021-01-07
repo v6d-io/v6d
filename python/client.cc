@@ -205,7 +205,8 @@ void bind_client(py::module& mod) {
             return status;
           })
       .def_property_readonly("ipc_socket", &ClientBase::IPCSocket)
-      .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint);
+      .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint)
+      .def_property_readonly("version", &ClientBase::Version);
 
   // InstanceStatus
   py::class_<InstanceStatus, std::shared_ptr<InstanceStatus>>(mod,

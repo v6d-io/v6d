@@ -18,6 +18,10 @@ limitations under the License.
 
 namespace vineyard {
 
+#define VINEYARD_STRINGIFY(x) #x
+
+#define VINEYARD_TO_STRING(x) VINEYARD_STRINGIFY(x)
+
 #if (defined(__GNUC__) || defined(__APPLE__))
 #define VINEYARD_MUST_USE_RESULT __attribute__((warn_unused_result))
 #else

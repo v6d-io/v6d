@@ -128,10 +128,6 @@
   } while (0)
 #endif  // VINEYARD_SUPPRESS
 
-#define VINEYARD_STRINGIFY(x) #x
-
-#define VINEYARD_TO_STRING(x) VINEYARD_STRINGIFY(x)
-
 namespace vineyard {
 
 enum class StatusCode : unsigned char {

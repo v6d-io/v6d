@@ -145,8 +145,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   auto self(shared_from_this());
   switch (cmd) {
   case CommandType::RegisterRequest: {
-    std::string message_out;
-    TRY_READ_REQUEST(ReadRegisterRequest(root));
+    std::string client_version, message_out;
+    TRY_READ_REQUEST(ReadRegisterRequest(root, client_version));
     WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
                        server_ptr_->instance_id(), message_out);
     doWrite(message_out);
