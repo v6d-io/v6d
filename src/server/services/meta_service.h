@@ -579,7 +579,7 @@ class IMetaService {
       meta_[json::json_pointer(kv.key)] = value;
       return Status::OK();
     };
-    CATCH_JSON_ERROR(upsert_to_meta());
+    VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
   }
 
   inline void delVal(const kv_t& kv, std::set<ObjectID>& blobs) {

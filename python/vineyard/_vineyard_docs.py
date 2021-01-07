@@ -498,6 +498,10 @@ add_doc(ClientBase.rpc_endpoint, r'''
 The RPC endpoint of the connected vineyard server.
 ''')
 
+add_doc(ClientBase.version, r'''
+The version number string of connected vineyard server, in the format of semver: MAJOR.MINOR.PATCH.
+''')
+
 add_doc(IPCClient, r'''
 IPC client that connects to vineyard instance's UNIX domain socket.
 ''')

@@ -28,6 +28,7 @@ limitations under the License.
 #include "common/util/boost.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
+#include "common/util/version.h"
 
 namespace vineyard {
 
@@ -311,6 +312,14 @@ class ClientBase {
    */
   Status Instances(std::vector<InstanceID>& instances);
 
+  /**
+   * @brief Get the version of connected vineyard server.
+   *
+   * @return Return a version string MAJOR.MINOR.PATCH that follows the semver
+   * convention.
+   */
+  const std::string& Version() const { return server_version_; }
+
  protected:
   Status doWrite(const std::string& message_out);
 
@@ -323,6 +332,7 @@ class ClientBase {
   std::string rpc_endpoint_;
   int vineyard_conn_;
   InstanceID instance_id_;
+  std::string server_version_;
 
   // A mutex which protects the client.
   std::recursive_mutex client_mutex_;

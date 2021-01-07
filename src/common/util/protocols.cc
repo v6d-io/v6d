@@ -21,6 +21,7 @@ limitations under the License.
 #include "boost/algorithm/string.hpp"
 
 #include "common/util/uuid.h"
+#include "common/util/version.h"
 
 namespace vineyard {
 
@@ -101,12 +102,17 @@ void WriteErrorReply(Status const& status, std::string& msg) {
 void WriteRegisterRequest(std::string& msg) {
   json root;
   root["type"] = "register_request";
+  root["version"] = vineyard_version();
 
   encode_msg(root, msg);
 }
 
-Status ReadRegisterRequest(const json& root) {
+Status ReadRegisterRequest(const json& root, std::string& version) {
   RETURN_ON_ASSERT(root["type"] == "register_request");
+
+  // When the "version" field is missing from the client, we treat it
+  // as default unknown version number: 0.0.0.
+  version = root.value<std::string>("version", "0.0.0");
   return Status::OK();
 }
 
@@ -118,16 +124,21 @@ void WriteRegisterReply(const std::string& ipc_socket,
   root["ipc_socket"] = ipc_socket;
   root["rpc_endpoint"] = rpc_endpoint;
   root["instance_id"] = instance_id;
-
+  root["version"] = vineyard_version();
   encode_msg(root, msg);
 }
 
 Status ReadRegisterReply(const json& root, std::string& ipc_socket,
-                         std::string& rpc_endpoint, InstanceID& instance_id) {
+                         std::string& rpc_endpoint, InstanceID& instance_id,
+                         std::string& version) {
   CHECK_IPC_ERROR(root, "register_reply");
   ipc_socket = root["ipc_socket"].get_ref<std::string const&>();
   rpc_endpoint = root["rpc_endpoint"].get_ref<std::string const&>();
   instance_id = root["instance_id"].get<InstanceID>();
+
+  // When the "version" field is missing from the server, we treat it
+  // as default unknown version number: 0.0.0.
+  version = root.value<std::string>("version", "0.0.0");
   return Status::OK();
 }
 

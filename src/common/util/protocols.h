@@ -64,14 +64,15 @@ void WriteErrorReply(Status const& status, std::string& msg);
 
 void WriteRegisterRequest(std::string& msg);
 
-Status ReadRegisterRequest(const json& msg);
+Status ReadRegisterRequest(const json& msg, std::string& version);
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
                         const InstanceID instance_id, std::string& msg);
 
 Status ReadRegisterReply(const json& msg, std::string& ipc_socket,
-                         std::string& rpc_endpoint, InstanceID& instance_id);
+                         std::string& rpc_endpoint, InstanceID& instance_id,
+                         std::string& version);
 
 void WriteExitRequest(std::string& msg);
 
