@@ -62,7 +62,8 @@ int main(int argc, const char** argv) {
   LOG(INFO) << "Local stream: " << proc << " " << lstream->id();
   ReportStatus("return", VYObjectIDToString(lstream->id()));
 
-  auto writer = lstream->OpenWriter(client);
+  std::unique_ptr<DataframeStreamWriter> writer;
+  VINEYARD_CHECK_OK(lstream->OpenWriter(client, writer));
 
   std::shared_ptr<arrow::Table> table;
   VINEYARD_CHECK_OK(oss_io_adaptor->ReadTable(&table));
