@@ -23,16 +23,17 @@ from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import BlockManager
 
 from vineyard._C import ObjectMeta
+from .utils import from_json, to_json
 
 
 def pandas_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
-    meta['columns_'] = json.dumps(value.columns.values.tolist())
+    meta['columns_'] = to_json(value.columns.values.tolist())
     meta.add_member('index_', builder.run(client, value.index))
     for i, (name, column_value) in enumerate(value.iteritems()):
         np_value = column_value.to_numpy(copy=False)
-        meta['__values_-key-%d' % i] = json.dumps(name)
+        meta['__values_-key-%d' % i] = to_json(name)
         meta.add_member('__values_-value-%d' % i, builder.run(client, np_value))
     meta['nbytes'] = 0  # FIXME
     meta['__values_-size'] = len(value.columns)
@@ -44,7 +45,7 @@ def pandas_dataframe_builder(client, value, builder, **kw):
 
 def dataframe_resolver(obj, resolver):
     meta = obj.meta
-    columns = json.loads(meta['columns_'])
+    columns = from_json(meta['columns_'])
     index = resolver.run(obj.member('index_'))
     if not columns:
         return pd.DataFrame()

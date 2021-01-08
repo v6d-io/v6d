@@ -20,15 +20,15 @@ import json
 import numpy as np
 
 from vineyard._C import ObjectMeta
-from .utils import build_numpy_buffer, normalize_dtype
+from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
 
 def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor<%s>' % value.dtype.name
     meta['value_type_'] = value.dtype.name
-    meta['shape_'] = json.dumps(value.shape)
-    meta['partition_index_'] = json.dumps(kw.get('partition_index', []))
+    meta['shape_'] = to_json(value.shape)
+    meta['partition_index_'] = to_json(kw.get('partition_index', []))
     meta['nbytes'] = value.nbytes
     meta.add_member('buffer_', build_numpy_buffer(client, value))
     return client.create_metadata(meta)
@@ -37,7 +37,7 @@ def numpy_ndarray_builder(client, value, **kw):
 def tensor_resolver(obj):
     meta = obj.meta
     value_type = normalize_dtype(meta['value_type_'])
-    shape = json.loads(meta['shape_'])
+    shape = from_json(meta['shape_'])
     if np.prod(shape) == 0:
         return np.zeros(shape, dtype=value_type)
     return np.frombuffer(memoryview(obj.member("buffer_")), dtype=value_type).reshape(shape)

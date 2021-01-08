@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+import json
+
 import numpy as np
 
 
@@ -52,3 +54,20 @@ def build_numpy_buffer(client, array):
         array = np.ascontiguousarray(array)
     address, _ = array.__array_interface__['data']
     return build_buffer(client, address, array.nbytes)
+
+
+def default_json_encoder(value):
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError
+
+
+def to_json(value):
+    return json.dumps(value, default=default_json_encoder)
+
+
+def from_json(string):
+    return json.loads(string)
+
+
+__all__ = ['normalize_dtype', 'build_buffer', 'build_numpy_buffer', 'to_json', 'from_json']
