@@ -137,6 +137,9 @@ std::string Status::CodeAsString() const {
   case StatusCode::kInvalidStreamState:
     type = "Invalid stream state";
     break;
+  case StatusCode::kStreamOpened:
+    type = "Stream opened";
+    break;
   case StatusCode::kUserInputError:
     type = "User input error";
     break;

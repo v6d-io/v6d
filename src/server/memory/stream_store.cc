@@ -45,6 +45,17 @@ Status StreamStore::Create(ObjectID const stream_id) {
   return Status::OK();
 }
 
+Status StreamStore::Open(ObjectID const stream_id, int64_t const mode) {
+  if (streams_.find(stream_id) == streams_.end()) {
+    return Status::ObjectNotExists();
+  }
+  if (streams_[stream_id]->open_mark & mode) {
+    return Status::StreamOpened();
+  }
+  streams_[stream_id]->open_mark |= mode;
+  return Status::OK();
+}
+
 // for producer: return the next chunk to write, and make current chunk
 // available for consumer to read
 Status StreamStore::Get(ObjectID const stream_id, size_t const size,

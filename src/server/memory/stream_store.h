@@ -39,6 +39,7 @@ struct StreamHolder {
   boost::optional<callback_t<ObjectID>> reader_;
   boost::optional<std::pair<size_t, callback_t<ObjectID>>> writer_;
   bool drained{false}, failed{false};
+  int64_t open_mark{0};
 };
 
 /**
@@ -51,6 +52,8 @@ class StreamStore {
       : store_(store), threshold_(stream_threshold) {}
 
   Status Create(ObjectID const stream_id);
+
+  Status Open(ObjectID const stream_id, int64_t const mode);
 
   /**
    * @brief This is called by the producer of the steram and it makes current

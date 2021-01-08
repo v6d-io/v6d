@@ -25,6 +25,7 @@ limitations under the License.
 #include "arrow/util/key_value_metadata.h"
 
 #include "basic/ds/dataframe.vineyard.h"
+#include "basic/stream/stream_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
@@ -342,14 +343,20 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
 
 class DataframeStream : public Registered<DataframeStream> {
  public:
-  std::unique_ptr<DataframeStreamReader> OpenReader(Client& client) {
-    return std::unique_ptr<DataframeStreamReader>(
+  Status OpenReader(Client& client,
+                    std::unique_ptr<DataframeStreamReader>& reader) {
+    RETURN_ON_ERROR(client.OpenStream(id_, OpenStreamMode::read));
+    reader = std::unique_ptr<DataframeStreamReader>(
         new DataframeStreamReader(client, id_, meta_, params_));
+    return Status::OK();
   }
 
-  std::unique_ptr<DataframeStreamWriter> OpenWriter(Client& client) {
-    return std::unique_ptr<DataframeStreamWriter>(
+  Status OpenWriter(Client& client,
+                    std::unique_ptr<DataframeStreamWriter>& writer) {
+    RETURN_ON_ERROR(client.OpenStream(id_, OpenStreamMode::write));
+    writer = std::unique_ptr<DataframeStreamWriter>(
         new DataframeStreamWriter(client, id_, meta_));
+    return Status::OK();
   }
 
   std::unordered_map<std::string, std::string> GetParams() { return params_; }

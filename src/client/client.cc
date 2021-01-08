@@ -166,6 +166,17 @@ Status Client::CreateStream(const ObjectID& id) {
   return Status::OK();
 }
 
+Status Client::OpenStream(const ObjectID& id, OpenStreamMode mode) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteOpenStreamRequest(id, static_cast<int64_t>(mode), message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadOpenStreamReply(message_in));
+  return Status::OK();
+}
+
 Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
                                   std::unique_ptr<arrow::MutableBuffer>& blob) {
   ENSURE_CONNECTED(this);

@@ -54,7 +54,8 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Persist(bstream->id()));
   ReportStatus("return", VYObjectIDToString(bstream->id()));
 
-  auto writer = bstream->OpenWriter(client);
+  std::unique_ptr<ByteStreamWriter> writer;
+  VINEYARD_CHECK_OK(bstream->OpenWriter(client, writer));
   writer->SetBufferSizeLimit(2 * 1024 * 1024);
 
   std::string line;

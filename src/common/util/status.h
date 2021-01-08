@@ -163,6 +163,7 @@ enum class StatusCode : unsigned char {
   kStreamDrained = 42,
   kStreamFailed = 43,
   kInvalidStreamState = 44,
+  kStreamOpened = 45,
 
   kUserInputError = 51,
 
@@ -379,6 +380,11 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kInvalidStreamState, error_message);
   }
 
+  /// Return a status code that indicates the stream has been opened.
+  static Status StreamOpened() {
+    return Status(StatusCode::kStreamOpened, "Stream already opened");
+  }
+
   /// Return a status code indicates invalid user input.
   static Status UserInputError(std::string const& message = "") {
     return Status(StatusCode::kUserInputError, message);
@@ -461,6 +467,8 @@ class VINEYARD_MUST_USE_TYPE Status {
   bool IsInvalidStreamState() const {
     return code() == StatusCode::kInvalidStreamState;
   }
+  /// Return true iff the stream has been opened.
+  bool IsStreamOpened() const { return code() == StatusCode::kStreamOpened; }
   /// Return true iff there's some problems in user's input.
   bool IsUserInputError() const {
     return code() == StatusCode::kUserInputError;

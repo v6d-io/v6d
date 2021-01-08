@@ -350,6 +350,20 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     }
     this->doWrite(message_out);
   } break;
+  case CommandType::OpenStreamRequest: {
+    ObjectID stream_id;
+    int64_t mode;
+    TRY_READ_REQUEST(ReadOpenStreamRequest(root, stream_id, mode));
+    auto status = server_ptr_->GetStreamStore()->Open(stream_id, mode);
+    std::string message_out;
+    if (status.ok()) {
+      WriteOpenStreamReply(message_out);
+    } else {
+      LOG(ERROR) << status.ToString();
+      WriteErrorReply(status, message_out);
+    }
+    this->doWrite(message_out);
+  } break;
   case CommandType::GetNextStreamChunkRequest: {
     ObjectID stream_id;
     size_t size;

@@ -91,13 +91,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC \
                                         -Wno-unknown-pragmas"
 )
 
-check_cxx_compiler_flag(-std=c++14 HAVE_FLAG_STD_CXX14)
-if(BUILD_VINEYARD_PYPI_PACKAGES AND NOT HAVE_FLAG_STD_CXX14)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-endif()
-
 check_cxx_compiler_flag(-Wno-class-memaccess W_NO_CLASS_MEMACCESS)
 check_cxx_compiler_flag(-Wno-deprecated-declarations W_NO_DEPRECATED_DECLARATIONS)
 check_cxx_compiler_flag(-Wno-defaulted-function-deleted W_NO_DEFAULTED_FUNCTION_DELETED)
@@ -188,6 +181,19 @@ macro(find_openssl_libraries)
 endmacro(find_openssl_libraries)
 
 find_common_libraries()
+
+if (CMAKE_VERSION VERSION_LESS "3.1")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    check_cxx_compiler_flag(-std=c++14 HAVE_FLAG_STD_CXX14)
+    if(BUILD_VINEYARD_PYPI_PACKAGES AND NOT HAVE_FLAG_STD_CXX14)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    else()
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+    endif()
+  endif ()
+else ()
+  set (CMAKE_CXX_STANDARD 14)
+endif ()
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/modules)

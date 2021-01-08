@@ -25,6 +25,7 @@ limitations under the License.
 #include "arrow/status.h"
 
 #include "basic/ds/arrow_utils.h"
+#include "basic/stream/stream_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
@@ -150,22 +151,26 @@ class ByteStream : public Registered<ByteStream> {
    * @brief Open a reader to consume data from the byte stream
    *
    * @param client The client connected to the vineyard server
-   * @return The unique pointer to the reader
+   * @param The unique pointer to the reader
    */
-  std::unique_ptr<ByteStreamReader> OpenReader(Client& client) {
-    return std::unique_ptr<ByteStreamReader>(
+  Status OpenReader(Client& client, std::unique_ptr<ByteStreamReader>& reader) {
+    RETURN_ON_ERROR(client.OpenStream(id_, OpenStreamMode::read));
+    reader = std::unique_ptr<ByteStreamReader>(
         new ByteStreamReader(client, id_, meta_));
+    return Status::OK();
   }
 
   /**
    * @brief Open a writer to produce data to the byte stream
    *
    * @param client The client connected to the vineyard server
-   * @return The unique pointer to the writer
+   * @param The unique pointer to the writer
    */
-  std::unique_ptr<ByteStreamWriter> OpenWriter(Client& client) {
-    return std::unique_ptr<ByteStreamWriter>(
+  Status OpenWriter(Client& client, std::unique_ptr<ByteStreamWriter>& writer) {
+    RETURN_ON_ERROR(client.OpenStream(id_, OpenStreamMode::write));
+    writer = std::unique_ptr<ByteStreamWriter>(
         new ByteStreamWriter(client, id_, meta_));
+    return Status::OK();
   }
 
   std::unordered_map<std::string, std::string> GetParams() { return params_; }

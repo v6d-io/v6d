@@ -59,7 +59,8 @@ int main(int argc, const char** argv) {
   LOG(INFO) << "Local stream: " << proc << " " << lstream->id();
   ReportStatus("return", VYObjectIDToString(lstream->id()));
 
-  auto writer = lstream->OpenWriter(client);
+  std::unique_ptr<ByteStreamWriter> writer;
+  VINEYARD_CHECK_OK(lstream->OpenWriter(client, writer));
   writer->SetBufferSizeLimit(2 * 1024 * 1024);
 
   std::string line;

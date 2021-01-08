@@ -38,7 +38,9 @@ int main(int argc, const char** argv) {
   auto s =
       std::dynamic_pointer_cast<DataframeStream>(client.GetObject(stream_id));
   LOG(INFO) << "Got dataframe stream: " << s->id();
-  auto reader = s->OpenReader(client);
+
+  std::unique_ptr<DataframeStreamReader> reader;
+  VINEYARD_CHECK_OK(s->OpenReader(client, reader));
 
   std::shared_ptr<arrow::Table> table;
   VINEYARD_CHECK_OK(reader->ReadTable(table));
