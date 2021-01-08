@@ -203,8 +203,10 @@ int main(int argc, const char** argv) {
   LOG(INFO) << "Created dataframe stream " << bs->id() << " at " << proc_index;
   ReportStatus("return", VYObjectIDToString(bs->id()));
 
-  auto reader = ls->OpenReader(client);
-  auto writer = bs->OpenWriter(client);
+  std::unique_ptr<ByteStreamReader> reader;
+  std::unique_ptr<DataframeStreamWriter> writer;
+  VINEYARD_CHECK_OK(ls->OpenReader(client, reader));
+  VINEYARD_CHECK_OK(bs->OpenWriter(client, writer));
 
   while (true) {
     std::unique_ptr<arrow::Buffer> buffer;

@@ -467,6 +467,8 @@ class VINEYARD_MUST_USE_TYPE Status {
   bool IsInvalidStreamState() const {
     return code() == StatusCode::kInvalidStreamState;
   }
+  /// Return true iff the stream has been opened.
+  bool IsStreamOpened() const { return code() == StatusCode::kStreamOpened; }
   /// Return true iff there's some problems in user's input.
   bool IsUserInputError() const {
     return code() == StatusCode::kUserInputError;

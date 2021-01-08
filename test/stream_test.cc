@@ -60,9 +60,12 @@ int main(int argc, char** argv) {
     auto byte_stream = reader_client.GetObject<ByteStream>(stream_id);
     CHECK(byte_stream != nullptr);
 
-    auto reader = byte_stream->OpenReader(reader_client);
-    auto failed_reader = byte_stream->OpenReader(reader_client);
-    CHECK(failed_reader == nullptr);
+    std::unique_ptr<ByteStreamReader> reader;
+    VINEYARD_CHECK_OK(byte_stream->OpenReader(reader_client, reader));
+
+    std::unique_ptr<ByteStreamReader> failed_reader;
+    auto status1 = byte_stream->OpenReader(reader_client, failed_reader);
+    CHECK(status1.IsStreamOpened());
 
     while (true) {
       std::unique_ptr<arrow::Buffer> buffer = nullptr;
@@ -85,9 +88,12 @@ int main(int argc, char** argv) {
     auto byte_stream = writer_client.GetObject<ByteStream>(stream_id);
     CHECK(byte_stream != nullptr);
 
-    auto writer = byte_stream->OpenWriter(writer_client);
-    auto failed_writer = byte_stream->OpenWriter(writer_client);
-    CHECK(failed_writer == nullptr);
+    std::unique_ptr<ByteStreamWriter> writer;
+    VINEYARD_CHECK_OK(byte_stream->OpenWriter(writer_client, writer));
+
+    std::unique_ptr<ByteStreamWriter> failed_writer;
+    auto status1 = byte_stream->OpenWriter(writer_client, failed_writer);
+    CHECK(status1.IsStreamOpened());
 
     CHECK(writer != nullptr);
     for (size_t idx = 1; idx <= 11; ++idx) {
@@ -122,8 +128,10 @@ int main(int argc, char** argv) {
 
   auto failed_byte_stream = client.GetObject<ByteStream>(stream_id);
 
-  auto reader = failed_byte_stream->OpenReader(client);
-  auto writer = failed_byte_stream->OpenWriter(client);
+  std::unique_ptr<ByteStreamReader> reader = nullptr;
+  std::unique_ptr<ByteStreamWriter> writer = nullptr;
+  VINEYARD_CHECK_OK(failed_byte_stream->OpenReader(client, reader));
+  VINEYARD_CHECK_OK(failed_byte_stream->OpenWriter(client, writer));
   CHECK(reader != nullptr);
   CHECK(writer != nullptr);
   VINEYARD_CHECK_OK(writer->Abort());

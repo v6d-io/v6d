@@ -42,18 +42,17 @@ Status StreamStore::Create(ObjectID const stream_id) {
     return Status::ObjectExists();
   }
   streams_.emplace(stream_id, std::make_shared<StreamHolder>());
-  stream_marks_.emplace(stream_id, 0);
   return Status::OK();
 }
 
-Status StreamStore::Mark(ObjectID const stream_id, int64_t const mark) {
-  if (stream_marks_.find(stream_id) == stream_marks_.end()) {
+Status StreamStore::Open(ObjectID const stream_id, int64_t const mode) {
+  if (streams_.find(stream_id) == streams_.end()) {
     return Status::ObjectNotExists();
   }
-  if (stream_marks_[stream_id] & mark) {
+  if (streams_[stream_id]->open_mark & mode) {
     return Status::StreamOpened();
   }
-  stream_marks_[stream_id] |= mark;
+  streams_[stream_id]->open_mark |= mode;
   return Status::OK();
 }
 

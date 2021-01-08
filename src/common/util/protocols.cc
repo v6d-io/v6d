@@ -86,8 +86,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::InstanceStatusRequest;
   } else if (str_type == "shallow_copy_request") {
     return CommandType::ShallowCopyRequest;
-  } else if (str_type == "mark_stream_request") {
-    return CommandType::MarkStreamRequest;
+  } else if (str_type == "open_stream_request") {
+    return CommandType::OpenStreamRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -636,33 +636,33 @@ Status ReadCreateStreamReply(const json& root) {
   return Status::OK();
 }
 
-void WriteMarkStreamRequest(const ObjectID& object_id, const int64_t& mark,
+void WriteOpenStreamRequest(const ObjectID& object_id, const int64_t& mode,
                             std::string& msg) {
   json root;
-  root["type"] = "mark_stream_request";
+  root["type"] = "open_stream_request";
   root["object_id"] = object_id;
-  root["mark"] = mark;
+  root["mode"] = mode;
 
   encode_msg(root, msg);
 }
 
-Status ReadMarkStreamRequest(const json& root, ObjectID& object_id,
-                             int64_t& mark) {
-  RETURN_ON_ASSERT(root["type"] == "mark_stream_request");
+Status ReadOpenStreamRequest(const json& root, ObjectID& object_id,
+                             int64_t& mode) {
+  RETURN_ON_ASSERT(root["type"] == "open_stream_request");
   object_id = root["object_id"].get<ObjectID>();
-  mark = root["mark"].get<int64_t>();
+  mode = root["mode"].get<int64_t>();
   return Status::OK();
 }
 
-void WriteMarkStreamReply(std::string& msg) {
+void WriteOpenStreamReply(std::string& msg) {
   json root;
-  root["type"] = "mark_stream_reply";
+  root["type"] = "open_stream_reply";
 
   encode_msg(root, msg);
 }
 
-Status ReadMarkStreamReply(const json& root) {
-  CHECK_IPC_ERROR(root, "mark_stream_reply");
+Status ReadOpenStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, "open_stream_reply");
   return Status::OK();
 }
 

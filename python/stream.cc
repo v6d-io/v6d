@@ -73,14 +73,18 @@ void bind_stream(py::module& mod) {
           "open_reader",
           [](ByteStream* self,
              Client& client) -> std::unique_ptr<ByteStreamReader> {
-            return self->OpenReader(client);
+            std::unique_ptr<ByteStreamReader> reader = nullptr;
+            throw_on_error(self->OpenReader(client, reader));
+            return reader;
           },
           "client"_a)
       .def(
           "open_writer",
           [](ByteStream* self,
              Client& client) -> std::unique_ptr<ByteStreamWriter> {
-            return self->OpenWriter(client);
+            std::unique_ptr<ByteStreamWriter> writer = nullptr;
+            throw_on_error(self->OpenWriter(client, writer));
+            return writer;
           },
           "client"_a)
       .def("__getitem__",
@@ -150,14 +154,18 @@ void bind_stream(py::module& mod) {
           "open_reader",
           [](DataframeStream* self,
              Client& client) -> std::unique_ptr<DataframeStreamReader> {
-            return self->OpenReader(client);
+            std::unique_ptr<DataframeStreamReader> reader = nullptr;
+            throw_on_error(self->OpenReader(client, reader));
+            return reader;
           },
           "client"_a)
       .def(
           "open_writer",
           [](DataframeStream* self,
              Client& client) -> std::unique_ptr<DataframeStreamWriter> {
-            return self->OpenWriter(client);
+            std::unique_ptr<DataframeStreamWriter> writer = nullptr;
+            throw_on_error(self->OpenWriter(client, writer));
+            return writer;
           },
           "client"_a)
       .def("__getitem__",

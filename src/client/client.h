@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "arrow/buffer.h"
 
+#include "basic/stream/stream_utils.h"
 #include "client/client_base.h"
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
@@ -202,14 +203,15 @@ class Client : public ClientBase {
   Status CreateStream(const ObjectID& id);
 
   /**
-   * @brief Mark a stream on vineyard to ensure 1-producer-1-consumer.
+   * @brief open a stream on vineyard. Failed if the stream is already opened on
+   * the given mode.
    *
    * @param id The id of stream to mark.
-   * @param mark The mark, 1 for producer, 2 for consumer.
+   * @param mode The mode, OpenStreamMode::read or OpenStreamMode::write.
    *
-   * @return Status that indicates whether the mark action has succeeded.
+   * @return Status that indicates whether the open action has succeeded.
    */
-  Status MarkStream(const ObjectID& id, const int64_t& mark);
+  Status OpenStream(const ObjectID& id, OpenStreamMode mode);
 
   /**
    * @brief Allocate a chunk of given size in vineyard for a stream. When the

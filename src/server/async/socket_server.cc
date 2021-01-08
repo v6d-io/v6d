@@ -350,14 +350,14 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     }
     this->doWrite(message_out);
   } break;
-  case CommandType::MarkStreamRequest: {
+  case CommandType::OpenStreamRequest: {
     ObjectID stream_id;
-    int64_t mark;
-    TRY_READ_REQUEST(ReadMarkStreamRequest(root, stream_id, mark));
-    auto status = server_ptr_->GetStreamStore()->Mark(stream_id, mark);
+    int64_t mode;
+    TRY_READ_REQUEST(ReadOpenStreamRequest(root, stream_id, mode));
+    auto status = server_ptr_->GetStreamStore()->Open(stream_id, mode);
     std::string message_out;
     if (status.ok()) {
-      WriteMarkStreamReply(message_out);
+      WriteOpenStreamReply(message_out);
     } else {
       LOG(ERROR) << status.ToString();
       WriteErrorReply(status, message_out);

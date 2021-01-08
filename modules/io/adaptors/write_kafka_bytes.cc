@@ -60,7 +60,8 @@ int main(int argc, char** argv) {
   auto ls = s->GetStream<ByteStream>(proc_index);
   LOG(INFO) << "Got dataframe stream " << ls->id() << " at " << proc_index;
 
-  auto reader = ls->OpenReader(client);
+  std::unique_ptr<ByteStreamReader> reader;
+  VINEYARD_CHECK_OK(ls->OpenReader(client, reader));
 
   std::string line;
   while (reader->ReadLine(line).ok()) {

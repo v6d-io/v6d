@@ -75,7 +75,8 @@ inline Status ReadRecordBatchesFromVineyard(
     // use a local client, since reading from stream may block the client.
     Client local_client;
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
-    auto reader = local_streams[idx]->OpenReader(local_client);
+    std::unique_ptr<DataframeStreamReader> reader;
+    VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(local_client, reader));
     std::vector<std::shared_ptr<arrow::RecordBatch>> read_batches;
     RETURN_ON_ERROR(reader->ReadRecordBatches(read_batches));
     {
@@ -119,7 +120,8 @@ inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
     // use a local client, since reading from stream may block the client.
     Client local_client;
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
-    auto reader = local_streams[idx]->OpenReader(local_client);
+    std::unique_ptr<DataframeStreamReader> reader;
+    VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(local_client, reader));
     std::shared_ptr<arrow::Table> table;
     RETURN_ON_ERROR(reader->ReadTable(table));
     VLOG(10) << "table from stream: " << table->schema()->ToString();

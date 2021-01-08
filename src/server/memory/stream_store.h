@@ -39,6 +39,7 @@ struct StreamHolder {
   boost::optional<callback_t<ObjectID>> reader_;
   boost::optional<std::pair<size_t, callback_t<ObjectID>>> writer_;
   bool drained{false}, failed{false};
+  int64_t open_mark{0};
 };
 
 /**
@@ -52,7 +53,7 @@ class StreamStore {
 
   Status Create(ObjectID const stream_id);
 
-  Status Mark(ObjectID const stream_id, int64_t const mark);
+  Status Open(ObjectID const stream_id, int64_t const mode);
 
   /**
    * @brief This is called by the producer of the steram and it makes current
@@ -88,7 +89,6 @@ class StreamStore {
   std::shared_ptr<BulkStore> store_;
   size_t threshold_;
   std::unordered_map<ObjectID, std::shared_ptr<StreamHolder>> streams_;
-  std::unordered_map<ObjectID, int64_t> stream_marks_;
 };
 
 }  // namespace vineyard

@@ -166,14 +166,14 @@ Status Client::CreateStream(const ObjectID& id) {
   return Status::OK();
 }
 
-Status Client::MarkStream(const ObjectID& id, const int64_t& mark) {
+Status Client::OpenStream(const ObjectID& id, OpenStreamMode mode) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteMarkStreamRequest(id, mark, message_out);
+  WriteOpenStreamRequest(id, static_cast<int64_t>(mode), message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadMarkStreamReply(message_in));
+  RETURN_ON_ERROR(ReadOpenStreamReply(message_in));
   return Status::OK();
 }
 
