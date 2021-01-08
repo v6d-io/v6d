@@ -163,6 +163,7 @@ enum class StatusCode : unsigned char {
   kStreamDrained = 42,
   kStreamFailed = 43,
   kInvalidStreamState = 44,
+  kStreamOpened = 45,
 
   kUserInputError = 51,
 
@@ -377,6 +378,11 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// usually means bugs in vineyard and please file an issue to us.
   static Status InvalidStreamState(std::string const& error_message) {
     return Status(StatusCode::kInvalidStreamState, error_message);
+  }
+
+  /// Return a status code that indicates the stream has been opened.
+  static Status StreamOpened() {
+    return Status(StatusCode::kStreamOpened, "Stream already opened");
   }
 
   /// Return a status code indicates invalid user input.

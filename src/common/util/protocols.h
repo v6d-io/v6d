@@ -56,6 +56,7 @@ enum class CommandType {
   IfPersistRequest = 25,
   InstanceStatusRequest = 26,
   ShallowCopyRequest = 27,
+  MarkStreamRequest = 28,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -217,6 +218,14 @@ Status ReadCreateStreamRequest(const json& root, ObjectID& object_id);
 void WriteCreateStreamReply(std::string& msg);
 
 Status ReadCreateStreamReply(const json& root);
+
+void WriteMarkStreamRequest(const ObjectID& object_id, const int64_t& mark, std::string& msg);
+
+Status ReadMarkStreamRequest(const json& root, ObjectID& object_id, int64_t& mark);
+
+void WriteMarkStreamReply(std::string& msg);
+
+Status ReadMarkStreamReply(const json& root);
 
 void WriteGetNextStreamChunkRequest(const ObjectID stream_id, const size_t size,
                                     std::string& msg);

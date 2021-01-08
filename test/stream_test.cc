@@ -61,6 +61,9 @@ int main(int argc, char** argv) {
     CHECK(byte_stream != nullptr);
 
     auto reader = byte_stream->OpenReader(reader_client);
+    auto failed_reader = byte_stream->OpenReader(reader_client);
+    CHECK(failed_reader == nullptr);
+
     while (true) {
       std::unique_ptr<arrow::Buffer> buffer = nullptr;
       auto status = reader->GetNext(buffer);
@@ -83,6 +86,9 @@ int main(int argc, char** argv) {
     CHECK(byte_stream != nullptr);
 
     auto writer = byte_stream->OpenWriter(writer_client);
+    auto failed_writer = byte_stream->OpenWriter(writer_client);
+    CHECK(failed_writer == nullptr);
+    
     CHECK(writer != nullptr);
     for (size_t idx = 1; idx <= 11; ++idx) {
       std::unique_ptr<arrow::MutableBuffer> buffer = nullptr;

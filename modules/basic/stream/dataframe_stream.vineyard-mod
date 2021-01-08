@@ -343,13 +343,19 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
 class DataframeStream : public Registered<DataframeStream> {
  public:
   std::unique_ptr<DataframeStreamReader> OpenReader(Client& client) {
-    return std::unique_ptr<DataframeStreamReader>(
-        new DataframeStreamReader(client, id_, meta_, params_));
+    if (client.MarkStream(id_, 2).ok()) {
+      return std::unique_ptr<DataframeStreamReader>(
+          new DataframeStreamReader(client, id_, meta_, params_));
+    }
+    return nullptr;
   }
 
   std::unique_ptr<DataframeStreamWriter> OpenWriter(Client& client) {
-    return std::unique_ptr<DataframeStreamWriter>(
-        new DataframeStreamWriter(client, id_, meta_));
+    if (client.MarkStream(id_, 1).ok()) {
+      return std::unique_ptr<DataframeStreamWriter>(
+          new DataframeStreamWriter(client, id_, meta_));
+    }
+    return nullptr;
   }
 
   std::unordered_map<std::string, std::string> GetParams() { return params_; }

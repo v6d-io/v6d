@@ -202,6 +202,16 @@ class Client : public ClientBase {
   Status CreateStream(const ObjectID& id);
 
   /**
+   * @brief Mark a stream on vineyard to ensure 1-producer-1-consumer.
+   *
+   * @param id The id of stream to mark.
+   * @param mark The mark, 1 for producer, 2 for consumer.
+   *
+   * @return Status that indicates whether the mark action has succeeded.
+   */
+  Status MarkStream(const ObjectID& id, const int64_t& mark);
+
+  /**
    * @brief Allocate a chunk of given size in vineyard for a stream. When the
    * request cannot be statisfied immediately, e.g., vineyard doesn't have
    * enough memory or the specified has accumulated too many chunks, the request

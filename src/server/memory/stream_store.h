@@ -52,6 +52,8 @@ class StreamStore {
 
   Status Create(ObjectID const stream_id);
 
+  Status Mark(ObjectID const stream_id, int64_t const mark);
+
   /**
    * @brief This is called by the producer of the steram and it makes current
    * chunk available for the consumer to read
@@ -86,6 +88,7 @@ class StreamStore {
   std::shared_ptr<BulkStore> store_;
   size_t threshold_;
   std::unordered_map<ObjectID, std::shared_ptr<StreamHolder>> streams_;
+  std::unordered_map<ObjectID, int64_t> stream_marks_;
 };
 
 }  // namespace vineyard
