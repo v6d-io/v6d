@@ -33,10 +33,35 @@ def test_numpy_ndarray(vineyard_client):
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
 
 
-def test_sparse_array(vineyard_client):
-    arr = np.random.randn(10)
-    arr[2:5] = np.nan
-    arr[7:8] = np.nan
-    sparr = pd.arrays.SparseArray(arr)
-    object_id = vineyard_client.put(sparr)
-    pd.testing.assert_extension_array_equal(sparr, vineyard_client.get(object_id))
+def test_empty_ndarray(vineyard_client):
+    arr = np.ones(())
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+    arr = np.ones((0, 1))
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+    arr = np.ones((0, 1, 2))
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+    arr = np.ones((0, 1, 2, 3))
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+    arr = np.zeros((), dtype='int')
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+    arr = np.zeros((0, 1), dtype='int')
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+    arr = np.zeros((0, 1, 2), dtype='int')
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+    arr = np.zeros((0, 1, 2, 3), dtype='int')
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr, vineyard_client.get(object_id))

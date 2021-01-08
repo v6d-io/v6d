@@ -38,6 +38,8 @@ def tensor_resolver(obj):
     meta = obj.meta
     value_type = normalize_dtype(meta['value_type_'])
     shape = json.loads(meta['shape_'])
+    if np.prod(shape) == 0:
+        return np.zeros(shape, dtype=value_type)
     return np.frombuffer(memoryview(obj.member("buffer_")), dtype=value_type).reshape(shape)
 
 
