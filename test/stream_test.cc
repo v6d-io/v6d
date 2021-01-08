@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     auto writer = byte_stream->OpenWriter(writer_client);
     auto failed_writer = byte_stream->OpenWriter(writer_client);
     CHECK(failed_writer == nullptr);
-    
+
     CHECK(writer != nullptr);
     for (size_t idx = 1; idx <= 11; ++idx) {
       std::unique_ptr<arrow::MutableBuffer> buffer = nullptr;

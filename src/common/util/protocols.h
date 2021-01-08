@@ -219,9 +219,11 @@ void WriteCreateStreamReply(std::string& msg);
 
 Status ReadCreateStreamReply(const json& root);
 
-void WriteMarkStreamRequest(const ObjectID& object_id, const int64_t& mark, std::string& msg);
+void WriteMarkStreamRequest(const ObjectID& object_id, const int64_t& mark,
+                            std::string& msg);
 
-Status ReadMarkStreamRequest(const json& root, ObjectID& object_id, int64_t& mark);
+Status ReadMarkStreamRequest(const json& root, ObjectID& object_id,
+                             int64_t& mark);
 
 void WriteMarkStreamReply(std::string& msg);
 

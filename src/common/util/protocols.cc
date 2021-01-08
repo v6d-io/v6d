@@ -636,7 +636,8 @@ Status ReadCreateStreamReply(const json& root) {
   return Status::OK();
 }
 
-void WriteMarkStreamRequest(const ObjectID& object_id, const int64_t& mark, std::string& msg) {
+void WriteMarkStreamRequest(const ObjectID& object_id, const int64_t& mark,
+                            std::string& msg) {
   json root;
   root["type"] = "mark_stream_request";
   root["object_id"] = object_id;
@@ -645,7 +646,8 @@ void WriteMarkStreamRequest(const ObjectID& object_id, const int64_t& mark, std:
   encode_msg(root, msg);
 }
 
-Status ReadMarkStreamRequest(const json& root, ObjectID& object_id, int64_t& mark) {
+Status ReadMarkStreamRequest(const json& root, ObjectID& object_id,
+                             int64_t& mark) {
   RETURN_ON_ASSERT(root["type"] == "mark_stream_request");
   object_id = root["object_id"].get<ObjectID>();
   mark = root["mark"].get<int64_t>();
