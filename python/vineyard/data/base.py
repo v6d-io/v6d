@@ -93,10 +93,10 @@ def tuple_builder(client, value, builder):
     else:
         meta = ObjectMeta()
         meta['typename'] = 'vineyard::Tuple'
-        meta['size_'] = 3
+        meta['size_'] = len(value)
         for i, item in enumerate(value):
             meta.add_member('__elements_-%d' % i, builder.run(client, item))
-        meta['__elements_-size'] = 3
+        meta['__elements_-size'] = len(value)
         return client.create_metadata(meta)
 
 

@@ -46,5 +46,20 @@ def test_pair(vineyard_client):
 
 
 def test_tuple(vineyard_client):
+    object_id = vineyard_client.put(())
+    assert vineyard_client.get(object_id) == ()
+
+    object_id = vineyard_client.put((1,))
+    assert vineyard_client.get(object_id) == (1,)
+
+    object_id = vineyard_client.put((1, "2"))
+    assert vineyard_client.get(object_id) == (1, "2")
+
     object_id = vineyard_client.put((1, "2", 3.456))
     assert vineyard_client.get(object_id) == (1, "2", pytest.approx(3.456))
+
+    object_id = vineyard_client.put((1, "2", 3.456, 4444))
+    assert vineyard_client.get(object_id) == (1, "2", pytest.approx(3.456), 4444)
+
+    object_id = vineyard_client.put((1, "2", 3.456, 4444, "5.5.5.5.5.5.5"))
+    assert vineyard_client.get(object_id) == (1, "2", pytest.approx(3.456), 4444, "5.5.5.5.5.5.5")
