@@ -118,6 +118,10 @@ foreach(fname ${PYTHON_IO_ADAPTORS})
     add_dependencies(vineyard_io_adaptors ${IO_BINARY_TOOL})
 endforeach()
 
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/adaptors/ossfs.py
+        DESTINATION bin
+)
+
 # install driver's registry script
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/stream.py
         DESTINATION share/vineyard
@@ -133,3 +137,5 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/ssh.sh
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/requirements.txt
         DESTINATION share/vineyard
 )
+
+

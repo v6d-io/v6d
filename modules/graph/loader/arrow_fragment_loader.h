@@ -66,7 +66,7 @@ inline Status ReadRecordBatchesFromVineyard(
                       (local_streams.size() % part_num == 0 ? 0 : 1);
   size_t start_to_read = part_id * split_size;
   size_t end_to_read =
-      std::max(local_streams.size(), (part_id + 1) * split_size);
+      std::min(local_streams.size(), (part_id + 1) * split_size);
 
   std::mutex mutex_for_results;
 
@@ -112,7 +112,7 @@ inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
   size_t split_size = local_streams.size() / part_num +
                       (local_streams.size() % part_num == 0 ? 0 : 1);
   int start_to_read = part_id * split_size;
-  int end_to_read = std::max(local_streams.size(), (part_id + 1) * split_size);
+  int end_to_read = std::min(local_streams.size(), (part_id + 1) * split_size);
   std::mutex mutex_for_results;
   std::vector<std::shared_ptr<arrow::Table>> tables;
   auto reader = [&client, &local_streams, &mutex_for_results,
@@ -189,7 +189,7 @@ GatherETables(Client& client,
     }
     std::unordered_map<std::string, std::string> meta_map;
     metadata->ToUnorderedMap(&meta_map);
-    grouped_batches[meta_map.at("label")]
+    grouped_batches[meta_map["label"]]
                    [std::make_pair(meta_map.at("src_label"),
                                    meta_map.at("dst_label"))]
                        .emplace_back(batch);
@@ -250,7 +250,7 @@ GatherVTables(Client& client, const std::vector<ObjectID>& vstreams,
     }
     std::unordered_map<std::string, std::string> meta_map;
     metadata->ToUnorderedMap(&meta_map);
-    grouped_batches[meta_map.at("label")].emplace_back(batch);
+    grouped_batches[meta_map["label"]].emplace_back(batch);
   }
 
   std::vector<std::shared_ptr<arrow::Table>> tables;

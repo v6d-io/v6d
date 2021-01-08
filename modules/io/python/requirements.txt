@@ -2,3 +2,5 @@ hdfs3
 pyarrow
 pyorc
 vineyard
+fsspec
+s3fs
