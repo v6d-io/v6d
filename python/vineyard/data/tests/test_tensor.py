@@ -65,3 +65,11 @@ def test_empty_ndarray(vineyard_client):
     arr = np.zeros((0, 1, 2, 3), dtype='int')
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+
+def test_tensor_order(vineyard_client):
+    arr = np.asfortranarray(np.random.rand(10, 7))
+    object_id = vineyard_client.put(arr)
+    res = vineyard_client.get(object_id)
+    assert res.flags['C_CONTIGUOUS'] == arr.flags['C_CONTIGUOUS']
+    assert res.flags['F_CONTIGUOUS'] == arr.flags['F_CONTIGUOUS']

@@ -49,8 +49,8 @@ def test_tuple(vineyard_client):
     object_id = vineyard_client.put(())
     assert vineyard_client.get(object_id) == ()
 
-    object_id = vineyard_client.put((1,))
-    assert vineyard_client.get(object_id) == (1,)
+    object_id = vineyard_client.put((1, ))
+    assert vineyard_client.get(object_id) == (1, )
 
     object_id = vineyard_client.put((1, "2"))
     assert vineyard_client.get(object_id) == (1, "2")
