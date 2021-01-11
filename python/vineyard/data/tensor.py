@@ -37,7 +37,7 @@ def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor<%s>' % value.dtype.name
     meta['value_type_'] = value.dtype.name
-    if value.dtype.name in ('str32', 'str64'):
+    if value.dtype.name.startswith('str'):
         meta['str_type_'] = value.dtype.str
     meta['shape_'] = to_json(value.shape)
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
@@ -51,7 +51,7 @@ def tensor_resolver(obj):
     meta = obj.meta
     value_name = meta['value_type_']
     if value_name != 'object':
-        value_type = (np.dtype(meta['str_type_']) if value_name in ('str32', 'str64') else normalize_dtype(value_name))
+        value_type = (np.dtype(meta['str_type_']) if value_name.startswith('str') else normalize_dtype(value_name))
         shape = from_json(meta['shape_'])
         order = from_json(meta['order_'])
         if np.prod(shape) == 0:
