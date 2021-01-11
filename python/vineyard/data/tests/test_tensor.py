@@ -18,6 +18,13 @@
 
 import numpy as np
 import pandas as pd
+
+try:
+    import scipy as sp
+    import scipy.sparse
+except ImportError:
+    sp = None
+
 import pytest
 
 import vineyard
@@ -73,3 +80,38 @@ def test_tensor_order(vineyard_client):
     res = vineyard_client.get(object_id)
     assert res.flags['C_CONTIGUOUS'] == arr.flags['C_CONTIGUOUS']
     assert res.flags['F_CONTIGUOUS'] == arr.flags['F_CONTIGUOUS']
+
+
+@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
+def test_bsr_matrix(vineyard_client):
+    arr = sp.sparse.bsr_matrix((3, 4), dtype=np.int8)
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
+
+
+@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
+def test_coo_matrix(vineyard_client):
+    arr = sp.sparse.coo_matrix((3, 4), dtype=np.int8)
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
+
+
+@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
+def test_csc_matrix(vineyard_client):
+    arr = sp.sparse.csc_matrix((3, 4), dtype=np.int8)
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
+
+
+@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
+def test_csr_matrix(vineyard_client):
+    arr = sp.sparse.csr_matrix((3, 4), dtype=np.int8)
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
+
+
+@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
+def test_dia_matrix(vineyard_client):
+    arr = sp.sparse.dia_matrix((3, 4), dtype=np.int8)
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
