@@ -40,12 +40,6 @@ def test_numpy_ndarray(vineyard_client):
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
 
 
-def test_str_array(vineyard_client):
-    arr = np.array(['', 'x', 'yz', 'uvw'])
-    object_id = vineyard_client.put(arr)
-    np.testing.assert_equal(arr, vineyard_client.get(object_id))
-
-
 def test_empty_ndarray(vineyard_client):
     arr = np.ones(())
     object_id = vineyard_client.put(arr)
@@ -78,6 +72,22 @@ def test_empty_ndarray(vineyard_client):
     arr = np.zeros((0, 1, 2, 3), dtype='int')
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
+
+
+def test_str_ndarray(vineyard_client):
+    arr = np.array(['', 'x', 'yz', 'uvw'])
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_equal(arr, vineyard_client.get(object_id))
+
+
+def test_object_ndarray(vineyard_client):
+    arr = np.array([1, 'x', 3.14, (1, 4)])
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_equal(arr, vineyard_client.get(object_id))
+
+    arr = np.ones((), dtype='object')
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_equal(arr, vineyard_client.get(object_id))
 
 
 def test_tensor_order(vineyard_client):

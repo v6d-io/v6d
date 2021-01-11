@@ -20,6 +20,11 @@ import json
 
 import numpy as np
 
+try:
+    import pyarrow as pa
+except ImportError:
+    pa = None
+
 
 def normalize_dtype(dtype):
     ''' Normalize a descriptive C++ type to numpy.dtype.
@@ -50,10 +55,16 @@ def build_buffer(client, address, size):
 
 
 def build_numpy_buffer(client, array):
-    if not array.flags['C_CONTIGUOUS']:
-        array = np.ascontiguousarray(array)
-    address, _ = array.__array_interface__['data']
-    return build_buffer(client, address, array.nbytes)
+    if array.dtype.name != 'object':
+        if not array.flags['C_CONTIGUOUS']:
+            array = np.ascontiguousarray(array)
+        address, _ = array.__array_interface__['data']
+        return build_buffer(client, address, array.nbytes)
+    else:
+        payload = pa.serialize(array).to_buffer().to_pybytes()
+        buffer = client.create_blob(len(payload))
+        buffer.copy(0, payload)
+        return buffer.seal(client)
 
 
 def default_json_encoder(value):

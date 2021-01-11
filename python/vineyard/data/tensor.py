@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import json
 import numpy as np
 
 try:
@@ -25,6 +24,11 @@ try:
 except ImportError:
     sp = None
 
+try:
+    import pyarrow as pa
+except ImportError:
+    pa = None
+
 from vineyard._C import ObjectMeta
 from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
@@ -32,7 +36,9 @@ from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor<%s>' % value.dtype.name
-    meta['value_type_'] = value.dtype.str
+    meta['value_type_'] = value.dtype.name
+    if value.dtype.name in ('str32', 'str64'):
+        meta['str_type_'] = value.dtype.str
     meta['shape_'] = to_json(value.shape)
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
     meta['nbytes'] = value.nbytes
@@ -43,14 +49,19 @@ def numpy_ndarray_builder(client, value, **kw):
 
 def tensor_resolver(obj):
     meta = obj.meta
-    value_type = normalize_dtype(meta['value_type_'])
-    shape = from_json(meta['shape_'])
-    order = from_json(meta['order_'])
-    if np.prod(shape) == 0:
-        return np.zeros(shape, dtype=value_type)
-    c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
-    # TODO: revise the memory copy of asfortranarray
-    return (c_array if order == 'C' else np.asfortranarray(c_array))
+    value_name = meta['value_type_']
+    if value_name != 'object':
+        value_type = (np.dtype(meta['str_type_']) if value_name in ('str32', 'str64') else normalize_dtype(value_name))
+        shape = from_json(meta['shape_'])
+        order = from_json(meta['order_'])
+        if np.prod(shape) == 0:
+            return np.zeros(shape, dtype=value_type)
+        c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
+        # TODO: revise the memory copy of asfortranarray
+        return (c_array if order == 'C' else np.asfortranarray(c_array))
+    else:
+        view = memoryview(obj.member('buffer_'))
+        return pa.deserialize(view)
 
 
 def bsr_matrix_builder(client, value, builder, **kw):
