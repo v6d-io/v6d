@@ -40,6 +40,12 @@ def test_numpy_ndarray(vineyard_client):
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
 
 
+def test_str_array(vineyard_client):
+    arr = np.array(['', 'x', 'yz', 'uvw'])
+    object_id = vineyard_client.put(arr)
+    np.testing.assert_equal(arr, vineyard_client.get(object_id))
+
+
 def test_empty_ndarray(vineyard_client):
     arr = np.ones(())
     object_id = vineyard_client.put(arr)

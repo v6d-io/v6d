@@ -32,7 +32,7 @@ from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor<%s>' % value.dtype.name
-    meta['value_type_'] = value.dtype.name
+    meta['value_type_'] = value.dtype.str
     meta['shape_'] = to_json(value.shape)
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
     meta['nbytes'] = value.nbytes
@@ -48,7 +48,7 @@ def tensor_resolver(obj):
     order = from_json(meta['order_'])
     if np.prod(shape) == 0:
         return np.zeros(shape, dtype=value_type)
-    c_array = np.frombuffer(memoryview(obj.member("buffer_")), dtype=value_type).reshape(shape)
+    c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
     # TODO: revise the memory copy of asfortranarray
     return (c_array if order == 'C' else np.asfortranarray(c_array))
 
