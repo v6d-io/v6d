@@ -16,34 +16,220 @@
 # limitations under the License.
 #
 
-import json
 import numpy as np
 
+try:
+    import scipy as sp
+    import scipy.sparse
+except ImportError:
+    sp = None
+
+try:
+    import pyarrow as pa
+except ImportError:
+    pa = None
+
 from vineyard._C import ObjectMeta
-from .utils import build_numpy_buffer, normalize_dtype
+from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
 
 def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor<%s>' % value.dtype.name
     meta['value_type_'] = value.dtype.name
-    meta['shape_'] = json.dumps(value.shape)
-    meta['partition_index_'] = json.dumps(kw.get('partition_index', []))
+    meta['value_type_meta_'] = value.dtype.str
+    meta['shape_'] = to_json(value.shape)
+    meta['partition_index_'] = to_json(kw.get('partition_index', []))
     meta['nbytes'] = value.nbytes
+    meta['order_'] = to_json(('C' if value.flags['C_CONTIGUOUS'] else 'F'))
     meta.add_member('buffer_', build_numpy_buffer(client, value))
     return client.create_metadata(meta)
 
 
 def tensor_resolver(obj):
     meta = obj.meta
+    value_name = meta['value_type_']
+    if value_name == 'object':
+        view = memoryview(obj.member('buffer_'))
+        return pa.deserialize(view)
+
+    value_type = normalize_dtype(value_name, meta.get('value_type_meta_', None))
+    shape = from_json(meta['shape_'])
+    order = from_json(meta['order_'])
+    if np.prod(shape) == 0:
+        return np.zeros(shape, dtype=value_type)
+    c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
+    # TODO: revise the memory copy of asfortranarray
+    return (c_array if order == 'C' else np.asfortranarray(c_array))
+
+
+def bsr_matrix_builder(client, value, builder, **kw):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::BSRMatrix<%s>' % value.dtype.name
+    meta['value_type_'] = value.dtype.name
+    meta['shape_'] = to_json(value.shape)
+    meta['ndim'] = value.ndim
+    meta['nnz'] = value.nnz
+    meta.add_member('data', builder.run(client, value.data, **kw))
+    meta.add_member('indices', builder.run(client, value.indices, **kw))
+    meta.add_member('indptr', builder.run(client, value.indptr, **kw))
+    meta['blocksize'] = value.blocksize
+    meta['has_sorted_indices'] = value.has_sorted_indices
+    meta['partition_index_'] = to_json(kw.get('partition_index', []))
+    meta['nbytes'] = value.nnz * value.dtype.itemsize
+    return client.create_metadata(meta)
+
+
+def bsr_matrix_resolver(obj, resolver):
+    meta = obj.meta
+    shape = from_json(meta['shape_'])
     value_type = normalize_dtype(meta['value_type_'])
-    shape = json.loads(meta['shape_'])
-    return np.frombuffer(memoryview(obj.member("buffer_")), dtype=value_type).reshape(shape)
+    data = resolver.run(obj.member('data'))
+    indices = resolver.run(obj.member('indices'))
+    indptr = resolver.run(obj.member('indptr'))
+    return sp.sparse.bsr_matrix((data, indices, indptr), shape=shape, dtype=value_type)
+
+
+def coo_matrix_builder(client, value, builder, **kw):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::COOMatrix<%s>' % value.dtype.name
+    meta['value_type_'] = value.dtype.name
+    meta['shape_'] = to_json(value.shape)
+    meta['ndim'] = value.ndim
+    meta['nnz'] = value.nnz
+    meta.add_member('data', builder.run(client, value.data, **kw))
+    meta.add_member('row', builder.run(client, value.row, **kw))
+    meta.add_member('col', builder.run(client, value.col, **kw))
+    meta['partition_index_'] = to_json(kw.get('partition_index', []))
+    meta['nbytes'] = value.nnz * value.dtype.itemsize
+    return client.create_metadata(meta)
+
+
+def coo_matrix_resolver(obj, resolver):
+    meta = obj.meta
+    shape = from_json(meta['shape_'])
+    value_type = normalize_dtype(meta['value_type_'])
+    data = resolver.run(obj.member('data'))
+    row = resolver.run(obj.member('row'))
+    col = resolver.run(obj.member('col'))
+    return sp.sparse.coo_matrix((data, (row, col)), shape=shape, dtype=value_type)
+
+
+def csc_matrix_builder(client, value, builder, **kw):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::CSCMatrix<%s>' % value.dtype.name
+    meta['value_type_'] = value.dtype.name
+    meta['shape_'] = to_json(value.shape)
+    meta['ndim'] = value.ndim
+    meta['nnz'] = value.nnz
+    meta.add_member('data', builder.run(client, value.data, **kw))
+    meta.add_member('indices', builder.run(client, value.indices, **kw))
+    meta.add_member('indptr', builder.run(client, value.indptr, **kw))
+    meta['partition_index_'] = to_json(kw.get('partition_index', []))
+    meta['nbytes'] = value.nnz * value.dtype.itemsize
+    return client.create_metadata(meta)
+
+
+def csc_matrix_resolver(obj, resolver):
+    meta = obj.meta
+    shape = from_json(meta['shape_'])
+    value_type = normalize_dtype(meta['value_type_'])
+    data = resolver.run(obj.member('data'))
+    indices = resolver.run(obj.member('indices'))
+    indptr = resolver.run(obj.member('indptr'))
+    return sp.sparse.csc_matrix((data, indices, indptr), shape=shape, dtype=value_type)
+
+
+def csr_matrix_builder(client, value, builder, **kw):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::CSRMatrix<%s>' % value.dtype.name
+    meta['value_type_'] = value.dtype.name
+    meta['shape_'] = to_json(value.shape)
+    meta['ndim'] = value.ndim
+    meta['nnz'] = value.nnz
+    meta.add_member('data', builder.run(client, value.data, **kw))
+    meta.add_member('indices', builder.run(client, value.indices, **kw))
+    meta.add_member('indptr', builder.run(client, value.indptr, **kw))
+    meta['has_sorted_indices'] = value.has_sorted_indices
+    meta['partition_index_'] = to_json(kw.get('partition_index', []))
+    meta['nbytes'] = value.nnz * value.dtype.itemsize
+    return client.create_metadata(meta)
+
+
+def csr_matrix_resolver(obj, resolver):
+    meta = obj.meta
+    shape = from_json(meta['shape_'])
+    value_type = normalize_dtype(meta['value_type_'])
+    data = resolver.run(obj.member('data'))
+    indices = resolver.run(obj.member('indices'))
+    indptr = resolver.run(obj.member('indptr'))
+    return sp.sparse.csr_matrix((data, indices, indptr), shape=shape, dtype=value_type)
+
+
+def dia_matrix_builder(client, value, builder, **kw):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::DIAMatrix<%s>' % value.dtype.name
+    meta['value_type_'] = value.dtype.name
+    meta['shape_'] = to_json(value.shape)
+    meta['ndim'] = value.ndim
+    meta['nnz'] = value.nnz
+    meta.add_member('data', builder.run(client, value.data, **kw))
+    meta.add_member('offsets', builder.run(client, value.offsets, **kw))
+    meta['partition_index_'] = to_json(kw.get('partition_index', []))
+    meta['nbytes'] = value.nnz * value.dtype.itemsize
+    return client.create_metadata(meta)
+
+
+def dia_matrix_resolver(obj, resolver):
+    meta = obj.meta
+    shape = from_json(meta['shape_'])
+    value_type = normalize_dtype(meta['value_type_'])
+    data = resolver.run(obj.member('data'))
+    offsets = resolver.run(obj.member('offsets'))
+    return sp.sparse.dia_matrix((data, offsets), shape=shape, dtype=value_type)
+
+
+def dok_matrix_builder(client, value, **kw):
+    # FIXME
+    raise NotImplementedError('sp.sparse.dok_matirx is not supported')
+
+
+def dok_matrix_resolver(obj):
+    # FIXME
+    raise NotImplementedError('sp.sparse.dok_matirx is not supported')
+
+
+def lil_matrix_builder(client, value, builder, **kw):
+    # FIXME
+    raise NotImplementedError('sp.sparse.lil_matirx is not supported')
+
+
+def lil_matrix_resolver(obj):
+    # FIXME
+    raise NotImplementedError('sp.sparse.lil_matirx is not supported')
 
 
 def register_tensor_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(np.ndarray, numpy_ndarray_builder)
 
+        if sp is not None:
+            builder_ctx.register(sp.sparse.bsr_matrix, bsr_matrix_builder)
+            builder_ctx.register(sp.sparse.coo_matrix, coo_matrix_builder)
+            builder_ctx.register(sp.sparse.csc_matrix, csc_matrix_builder)
+            builder_ctx.register(sp.sparse.csr_matrix, csr_matrix_builder)
+            builder_ctx.register(sp.sparse.dia_matrix, dia_matrix_builder)
+            builder_ctx.register(sp.sparse.dok_matrix, dok_matrix_builder)
+            builder_ctx.register(sp.sparse.lil_matrix, lil_matrix_builder)
+
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', tensor_resolver)
+
+        if sp is not None:
+            resolver_ctx.register('vineyard::BSRMatrix', bsr_matrix_resolver)
+            resolver_ctx.register('vineyard::COOMatrix', coo_matrix_resolver)
+            resolver_ctx.register('vineyard::CSCMatrix', csc_matrix_resolver)
+            resolver_ctx.register('vineyard::CSRMatrix', csr_matrix_resolver)
+            resolver_ctx.register('vineyard::DIAMatrix', dia_matrix_resolver)
+            resolver_ctx.register('vineyard::DOKMatrix', dok_matrix_resolver)
+            resolver_ctx.register('vineyard::LILMatrix', lil_matrix_resolver)

@@ -23,16 +23,17 @@ from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import BlockManager
 
 from vineyard._C import ObjectMeta
+from .utils import from_json, to_json, normalize_dtype
 
 
 def pandas_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
-    meta['columns_'] = json.dumps(value.columns.values.tolist())
+    meta['columns_'] = to_json(value.columns.values.tolist())
     meta.add_member('index_', builder.run(client, value.index))
     for i, (name, column_value) in enumerate(value.iteritems()):
         np_value = column_value.to_numpy(copy=False)
-        meta['__values_-key-%d' % i] = json.dumps(name)
+        meta['__values_-key-%d' % i] = to_json(name)
         meta.add_member('__values_-value-%d' % i, builder.run(client, np_value))
     meta['nbytes'] = 0  # FIXME
     meta['__values_-size'] = len(value.columns)
@@ -42,9 +43,9 @@ def pandas_dataframe_builder(client, value, builder, **kw):
     return client.create_metadata(meta)
 
 
-def dataframe_resolver(obj, resolver):
+def pandas_dataframe_resolver(obj, resolver):
     meta = obj.meta
-    columns = json.loads(meta['columns_'])
+    columns = from_json(meta['columns_'])
     index = resolver.run(obj.member('index_'))
     if not columns:
         return pd.DataFrame()
@@ -57,9 +58,34 @@ def dataframe_resolver(obj, resolver):
     return pd.DataFrame(BlockManager(blocks, [columns, index]))
 
 
+def pandas_sparse_array_builder(client, value, builder, **kw):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::SparseArray<%s>' % value.dtype.name
+    meta['value_type_'] = value.dtype.name
+    sp_index_type, (sp_index_size, sp_index_array) = value.sp_index.__reduce__()
+    meta['sp_index_name'] = sp_index_type.__name__
+    meta['sp_index_size'] = sp_index_size
+    meta.add_member('sp_index', builder.run(client, sp_index_array, **kw))
+    meta.add_member('sp_values', builder.run(client, value.sp_values, **kw))
+    return client.create_metadata(meta)
+
+
+def pandas_sparse_array_resolver(obj, resolver):
+    meta = obj.meta
+    value_type = normalize_dtype(meta['value_type_'])
+    sp_index_type = getattr(pd._libs.sparse, meta['sp_index_name'])
+    sp_index_size = meta['sp_index_size']
+    sp_index_array = resolver.run(obj.member('sp_index'))
+    sp_index = sp_index_type(sp_index_size, sp_index_array)
+    sp_values = resolver.run(obj.member('sp_values'))
+    return pd.arrays.SparseArray(sp_values, sparse_index=sp_index, dtype=value_type)
+
+
 def register_dataframe_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(pd.DataFrame, pandas_dataframe_builder)
+        builder_ctx.register(pd.arrays.SparseArray, pandas_sparse_array_builder)
 
     if resolver_ctx is not None:
-        resolver_ctx.register('vineyard::DataFrame', dataframe_resolver)
+        resolver_ctx.register('vineyard::DataFrame', pandas_dataframe_resolver)
+        resolver_ctx.register('vineyard::SparseArray', pandas_sparse_array_resolver)

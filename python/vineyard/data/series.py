@@ -23,12 +23,13 @@ from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import SingleBlockManager
 
 from vineyard._C import ObjectMeta
+from .utils import from_json, to_json
 
 
 def pandas_series_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Series'
-    meta['name'] = json.dumps(value.name)
+    meta['name'] = to_json(value.name)
     meta.add_member('index_', builder.run(client, value.index))
     meta.add_member('value_', builder.run(client, value.to_numpy(), **kw))
     return client.create_metadata(meta)
@@ -36,7 +37,7 @@ def pandas_series_builder(client, value, builder, **kw):
 
 def pandas_series_resolver(obj, resolver):
     meta = obj.meta
-    name = json.loads(meta['name'])
+    name = from_json(meta['name'])
     index = resolver.run(obj.member('index_'))
     np_value = resolver.run(obj.member('value_'))
     block = Block(np_value, slice(0, len(np_value), 1), ndim=1)

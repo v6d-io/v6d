@@ -16,10 +16,17 @@
 # limitations under the License.
 #
 
+import json
+
 import numpy as np
 
+try:
+    import pyarrow as pa
+except ImportError:
+    pa = None
 
-def normalize_dtype(dtype):
+
+def normalize_dtype(dtype, dtype_meta=None):
     ''' Normalize a descriptive C++ type to numpy.dtype.
     '''
     if isinstance(dtype, np.dtype):
@@ -36,6 +43,8 @@ def normalize_dtype(dtype):
         return np.dtype('float')
     if dtype in [float, 'double', 'float64']:
         return np.dtype('double')
+    if dtype.startswith('str'):
+        return np.dtype(dtype_meta)
     return dtype
 
 
@@ -48,7 +57,30 @@ def build_buffer(client, address, size):
 
 
 def build_numpy_buffer(client, array):
-    if not array.flags['C_CONTIGUOUS']:
-        array = np.ascontiguousarray(array)
-    address, _ = array.__array_interface__['data']
-    return build_buffer(client, address, array.nbytes)
+    if array.dtype.name != 'object':
+        if not array.flags['C_CONTIGUOUS']:
+            array = np.ascontiguousarray(array)
+        address, _ = array.__array_interface__['data']
+        return build_buffer(client, address, array.nbytes)
+    else:
+        payload = pa.serialize(array).to_buffer().to_pybytes()
+        buffer = client.create_blob(len(payload))
+        buffer.copy(0, payload)
+        return buffer.seal(client)
+
+
+def default_json_encoder(value):
+    if isinstance(value, (np.integer, np.floating)):
+        return value.item()
+    raise TypeError
+
+
+def to_json(value):
+    return json.dumps(value, default=default_json_encoder)
+
+
+def from_json(string):
+    return json.loads(string)
+
+
+__all__ = ['normalize_dtype', 'build_buffer', 'build_numpy_buffer', 'to_json', 'from_json']

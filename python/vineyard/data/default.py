@@ -20,10 +20,6 @@ import pickle
 
 try:
     import pyarrow as pa
-    try:
-        from pyarrow.serialization import SerializationCallbackError
-    except ImportError:
-        from pyarrow.lib import SerializationCallbackError
 except ImportError:
     pa = None
 
@@ -33,12 +29,8 @@ def default_builder(client, value):
         otherwise with pickle, then build a blob object for it.
     '''
     if pa is not None:
-        try:
-            payload = pa.serialize(value).to_buffer().to_pybytes()
-            serialization = 'pyarrow'
-        except SerializationCallbackError:
-            payload = pickle.dumps(value)
-            serialization = 'pickle'
+        payload = pa.serialize(value).to_buffer().to_pybytes()
+        serialization = 'pyarrow'
     else:
         payload = pickle.dumps(value)
         serialization = 'pickle'

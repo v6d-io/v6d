@@ -59,6 +59,15 @@ def test_dataframe_set_index(vineyard_client):
     pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))
 
 
+def test_sparse_array(vineyard_client):
+    arr = np.random.randn(10)
+    arr[2:5] = np.nan
+    arr[7:8] = np.nan
+    sparr = pd.arrays.SparseArray(arr)
+    object_id = vineyard_client.put(sparr)
+    pd.testing.assert_extension_array_equal(sparr, vineyard_client.get(object_id))
+
+
 def test_dataframe_with_sparse_array(vineyard_client):
     df = pd.DataFrame(np.random.randn(100, 4), columns=['x', 'y', 'z', 'a'])
     df.iloc[:98] = np.nan
