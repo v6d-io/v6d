@@ -29,6 +29,11 @@ try:
 except ImportError:
     pa = None
 
+try:
+    import mars
+except ImportError:
+    mars = None
+
 from vineyard._C import ObjectMeta
 from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
@@ -210,6 +215,21 @@ def lil_matrix_resolver(obj):
     raise NotImplementedError('sp.sparse.lil_matirx is not supported')
 
 
+def mars_sparse_matrix_builder(client, value, builder, **kw):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::SparseMatrix<%s>' % value.dtype.name
+    meta['shape_'] = to_json(value.shape)
+    meta.add_member('spmatrix', builder.run(client, value.spmatrix, **kw))
+    return client.create_metadata(meta)
+
+
+def mars_sparse_matrix_resolver(obj, resolver):
+    meta = obj.meta
+    shape = from_json(meta['shape_'])
+    spmatrix = resolver.run(obj.member('spmatrix'))
+    return mars.lib.sparse.matrix.SparseMatrix(spmatrix, shape=shape)
+
+
 def register_tensor_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(np.ndarray, numpy_ndarray_builder)
@@ -223,6 +243,9 @@ def register_tensor_types(builder_ctx, resolver_ctx):
             builder_ctx.register(sp.sparse.dok_matrix, dok_matrix_builder)
             builder_ctx.register(sp.sparse.lil_matrix, lil_matrix_builder)
 
+        if mars is not None:
+            builder_ctx.register(mars.lib.sparse.matrix.SparseMatrix, mars_sparse_matrix_builder)
+
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', tensor_resolver)
 
@@ -234,3 +257,6 @@ def register_tensor_types(builder_ctx, resolver_ctx):
             resolver_ctx.register('vineyard::DIAMatrix', dia_matrix_resolver)
             resolver_ctx.register('vineyard::DOKMatrix', dok_matrix_resolver)
             resolver_ctx.register('vineyard::LILMatrix', lil_matrix_resolver)
+
+        if mars is not None:
+            resolver_ctx.register('vineyard::SparseMatrix', mars_sparse_matrix_resolver)
