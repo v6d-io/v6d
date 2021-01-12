@@ -27,13 +27,18 @@ jobs:
         with:
           submodules: true
 
+      - name: Generate Summary for Submodules
+        run: |
+          git submodule > git-modules.txt
+          cat git-modules.txt
+
       - name: Cache for cccahe
         uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ${{ runner.os }}-ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
-            ${{ runner.os }}-ccache
+            ${{ runner.os }}-ccache-
 
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'

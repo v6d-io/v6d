@@ -40,13 +40,18 @@ jobs:
         with:
           submodules: true
 
+      - name: Generate Summary for Submodules
+        run: |
+          git submodule > git-modules.txt
+          cat git-modules.txt
+
       - name: Cache for cccahe
         uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ${{ matrix.os }}-${{ matrix.python }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.python }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
-            ${{ matrix.os }}-${{ matrix.python }}-ccache
+            ${{ matrix.os }}-${{ matrix.python }}-ccache-
 
       - name: Login docker registry
         if: runner.os == 'Linux'
