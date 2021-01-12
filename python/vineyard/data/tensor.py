@@ -37,8 +37,7 @@ def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor<%s>' % value.dtype.name
     meta['value_type_'] = value.dtype.name
-    if value.dtype.name.startswith('str'):
-        meta['str_type_'] = value.dtype.str
+    meta['value_type_meta_'] = value.dtype.str
     meta['shape_'] = to_json(value.shape)
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
     meta['nbytes'] = value.nbytes
@@ -50,18 +49,18 @@ def numpy_ndarray_builder(client, value, **kw):
 def tensor_resolver(obj):
     meta = obj.meta
     value_name = meta['value_type_']
-    if value_name != 'object':
-        value_type = (np.dtype(meta['str_type_']) if value_name.startswith('str') else normalize_dtype(value_name))
-        shape = from_json(meta['shape_'])
-        order = from_json(meta['order_'])
-        if np.prod(shape) == 0:
-            return np.zeros(shape, dtype=value_type)
-        c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
-        # TODO: revise the memory copy of asfortranarray
-        return (c_array if order == 'C' else np.asfortranarray(c_array))
-    else:
+    if value_name == 'object':
         view = memoryview(obj.member('buffer_'))
         return pa.deserialize(view)
+
+    value_type = normalize_dtype(value_name, meta.get('value_type_meta_', None))
+    shape = from_json(meta['shape_'])
+    order = from_json(meta['order_'])
+    if np.prod(shape) == 0:
+        return np.zeros(shape, dtype=value_type)
+    c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
+    # TODO: revise the memory copy of asfortranarray
+    return (c_array if order == 'C' else np.asfortranarray(c_array))
 
 
 def bsr_matrix_builder(client, value, builder, **kw):

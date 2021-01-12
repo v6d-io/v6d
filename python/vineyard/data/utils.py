@@ -26,7 +26,7 @@ except ImportError:
     pa = None
 
 
-def normalize_dtype(dtype):
+def normalize_dtype(dtype, dtype_meta=None):
     ''' Normalize a descriptive C++ type to numpy.dtype.
     '''
     if isinstance(dtype, np.dtype):
@@ -43,6 +43,8 @@ def normalize_dtype(dtype):
         return np.dtype('float')
     if dtype in [float, 'double', 'float64']:
         return np.dtype('double')
+    if dtype.startswith('str'):
+        return np.dtype(dtype_meta)
     return dtype
 
 

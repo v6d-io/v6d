@@ -81,7 +81,7 @@ def test_str_ndarray(vineyard_client):
 
 
 def test_object_ndarray(vineyard_client):
-    arr = np.array([1, 'x', 3.14, (1, 4)])
+    arr = np.array([1, 'x', 3.14, (1, 4)], dtype=object)
     object_id = vineyard_client.put(arr)
     np.testing.assert_equal(arr, vineyard_client.get(object_id))
 
