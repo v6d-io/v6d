@@ -227,7 +227,8 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
 }
 
 Status VineyardServer::CreateData(
-    const json& tree, callback_t<const ObjectID, const InstanceID> callback) {
+    const json& tree,
+    callback_t<const ObjectID, const Signature, const InstanceID> callback) {
   ENSURE_VINEYARDD_READY();
 #if !defined(NDEBUG)
   if (VLOG_IS_ON(10)) {
@@ -240,7 +241,8 @@ Status VineyardServer::CreateData(
   auto type_name_node = tree.value("typename", json(nullptr));
   if (type_name_node.is_null() || !type_name_node.is_string()) {
     RETURN_ON_ERROR(callback(Status::MetaTreeInvalid("No typename field"),
-                             InvalidObjectID(), UnspecifiedInstanceID()));
+                             InvalidObjectID(), InvalidSignature(),
+                             UnspecifiedInstanceID()));
   }
   std::string const& type = type_name_node.get_ref<std::string const&>();
 
@@ -258,7 +260,8 @@ Status VineyardServer::CreateData(
   RETURN_ON_ASSERT(tree.contains("instance_id"));
 
   auto decorated_tree = tree;
-  decorated_tree["signature"] = GenerateSignature();
+  Signature signature = GenerateSignature();
+  decorated_tree["signature"] = signature;
 
   // update meta into json
   meta_service_ptr_->RequestToBulkUpdate(
@@ -273,7 +276,7 @@ Status VineyardServer::CreateData(
           return status;
         }
       },
-      boost::bind(callback, _1, id, _2));
+      boost::bind(callback, _1, id, signature, _2));
   return Status::OK();
 }
 

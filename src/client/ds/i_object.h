@@ -159,6 +159,14 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
    */
   bool const IsPersist() const;
 
+  /**
+   * @brief The verb "global" means it is a global object and only refers some
+   * local objects.
+   *
+   * @return True iff the object is a global object.
+   */
+  bool const IsGlobal() const;
+
  protected:
   Object() {}
 

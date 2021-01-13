@@ -459,9 +459,11 @@ static void generate_persist_ops(json& diff, const std::string& name,
 
       // when persist global object, persist the signature record.
       if (global_object) {
-        Signature sig = item.value()["signature"].get<Signature>();
-        ops.emplace_back(IMetaService::op_t::Put(
-            "/signatures/" + SignatureToString(sig), sub_name));
+        std::string sub_sig =
+            SignatureToString(item.value()["signature"].get<Signature>());
+        ops.emplace_back(
+            IMetaService::op_t::Put("/signatures/" + sub_sig, sub_name));
+        sub_name = sub_sig;
       }
 
       // Don't persist blob into etcd, but the link cannot be omitted.
@@ -541,8 +543,8 @@ static Status diff_data_meta_tree(const json& meta,
     // don't diff on id, typename and instance_id and don't update them, that
     // means, we can only update member's meta, cannot update the whole member
     // itself.
-    if (item.key() == "id" || item.key() == "typename" ||
-        item.key() == "instance_id") {
+    if (item.key() == "id" || item.key() == "signature" ||
+        item.key() == "typename" || item.key() == "instance_id") {
       continue;
     }
 
@@ -591,8 +593,9 @@ static Status diff_data_meta_tree(const json& meta,
       if (status.ok() /* old meta exists */) {
         auto mb_old_sub_sub_tree = old_sub_tree.find(item.key());
         if (mb_old_sub_sub_tree != old_sub_tree.end() &&
-            !mb_old_sub_sub_tree->is_string() &&
-            !is_link_node(mb_old_sub_sub_tree->get_ref<std::string const&>())) {
+            (!mb_old_sub_sub_tree->is_string() ||
+             !is_link_node(
+                 mb_old_sub_sub_tree->get_ref<std::string const&>()))) {
           return Status::MetaTreeInvalid();
         }
       }
@@ -606,12 +609,15 @@ static Status diff_data_meta_tree(const json& meta,
                                           diff_sub_tree, signatures,
                                           sub_instance_id));
 
+      LOG(INFO) << "diff_sub_tree = " << diff_sub_tree.dump(4);
+
       if (!global_object && instance_id != sub_instance_id) {
         return Status::GlobalObjectInvalid(
             "Local object cannot refer remote objects");
       }
-      if (global_object && diff_sub_tree.is_object() &&
-          diff_sub_tree.value("global", false)) {
+      if (global_object && ((diff_sub_tree.is_object() &&
+                             diff_sub_tree.value("global", false)) ||
+                            sub_sub_tree.value("global", false))) {
         return Status::GlobalObjectInvalid(
             "Global object cannot have nested structure");
       }
@@ -628,8 +634,8 @@ static Status diff_data_meta_tree(const json& meta,
 
         // record a possible signature link
         if (global_object) {
-          signatures[diff_sub_tree["id"].get_ref<std::string const&>()] =
-              diff_sub_tree["signature"].get<Signature>();
+          signatures[sub_sub_tree["id"].get_ref<std::string const&>()] =
+              sub_sub_tree["signature"].get<Signature>();
         }
       } else if (status.IsMetaTreeSubtreeNotExists()) {
         if (!is_meta_placeholder(sub_sub_tree)) {
@@ -640,14 +646,20 @@ static Status diff_data_meta_tree(const json& meta,
                                         sub_sub_tree_name));
           diff_sub_tree["id"] = sub_sub_tree_name;
           diff_sub_tree["typename"] = sub_sub_tree_type;
+
+          // record a possible signature link
+          if (global_object) {
+            signatures[sub_sub_tree["id"].get_ref<std::string const&>()] =
+                sub_sub_tree["signature"].get<Signature>();
+          }
+        } else {
+          // record a possible signature link
+          if (global_object) {
+            signatures[diff_sub_tree["id"].get_ref<std::string const&>()] =
+                diff_sub_tree["signature"].get<Signature>();
+          }
         }
         diff[item.key()] = diff_sub_tree;
-
-        // record a possible signature link
-        if (global_object) {
-          signatures[diff_sub_tree["id"].get_ref<std::string const&>()] =
-              diff_sub_tree["signature"].get<Signature>();
-        }
       } else {
         return status;
       }
@@ -660,6 +672,7 @@ static Status diff_data_meta_tree(const json& meta,
     RETURN_ON_ERROR(get_type(sub_tree, sub_tree_type));
 
     diff["id"] = sub_tree_name;
+    diff["signature"] = sub_tree["signature"];
     diff["typename"] = sub_tree_type;
     diff["instance_id"] = instance_id;
   }
@@ -783,7 +796,8 @@ Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
   return Status::OK();
 }
 
-Status DecodeObjectID(const json &tree, const std::string& value, ObjectID& object_id) {
+Status DecodeObjectID(const json& tree, const std::string& value,
+                      ObjectID& object_id) {
   meta_tree::NodeType type;
   std::string link_value;
   decode_value(value, type, link_value);
@@ -794,7 +808,8 @@ Status DecodeObjectID(const json &tree, const std::string& value, ObjectID& obje
       if (name_of_value[0] == 'o') {
         object_id = VYObjectIDFromString(name_of_value);
       } else if (name_of_value[0] == 's') {
-        object_id = VYObjectIDFromString(object_id_from_signature(tree, name_of_value));
+        object_id =
+            VYObjectIDFromString(object_id_from_signature(tree, name_of_value));
       } else {
         return Status::Invalid("Not a name or signature: " + name_of_value);
       }

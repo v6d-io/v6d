@@ -40,7 +40,7 @@ const Signature ObjectMeta::GetSignature() const {
 
 void ObjectMeta::SetGlobal(bool global) { meta_["global"] = global; }
 
-const bool ObjectMeta::IsGlobal() const { return meta_.value("global", true); }
+const bool ObjectMeta::IsGlobal() const { return meta_.value("global", false); }
 
 void ObjectMeta::SetTypeName(const std::string& type_name) {
   meta_["typename"] = type_name;
@@ -204,6 +204,10 @@ void ObjectMeta::findAllBlobs(const json& tree, InstanceID const instance_id) {
 
 void ObjectMeta::SetInstanceId(const InstanceID instance_id) {
   meta_["instance_id"] = instance_id;
+}
+
+void ObjectMeta::SetSignature(const Signature signature) {
+  meta_["signature"] = signature;
 }
 
 template <>

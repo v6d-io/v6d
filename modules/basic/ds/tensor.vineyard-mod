@@ -31,7 +31,6 @@ limitations under the License.
 #include "arrow/tensor.h"
 
 #include "basic/ds/array.vineyard.h"
-#include "basic/ds/object_set.h"
 #include "basic/ds/types.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
@@ -132,42 +131,6 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
 
   friend class Client;
   friend class TensorBaseBuilder<T>;
-};
-
-class GlobalTensorBaseBuilder;
-
-class GlobalTensor : public Registered<GlobalTensor>, GlobalObject {
- public:
-  std::vector<int64_t> const& shape() const;
-  std::vector<int64_t> const& partition_shape() const;
-
-  /**
-   * @brief Get the local partitions of the vineyard instance that is
-   * connected from the client.
-   *
-   * @param client The client connected to a vineyard instance.
-   * @return The vector of pointers to the local partitions.
-   */
-  const std::vector<std::shared_ptr<Object>>& LocalPartitions(
-      Client& client) const;
-
-  /**
-   * @brief Get the local partitions stored in the given vineyard instance.
-   *
-   * @param instance_id The given ID of the vineyard instance.
-   * @return The vector of pointers to the local partitions.
-   */
-  const std::vector<std::shared_ptr<Object>>& LocalPartitions(
-      const InstanceID instance_id) const;
-
- private:
-  __attribute__((annotate("codegen"))) std::vector<int64_t> shape_;
-  __attribute__((annotate("codegen"))) std::vector<int64_t> partition_shape_;
-
-  __attribute__((annotate("codegen:ObjectSet"))) ObjectSet partitions_;
-
-  friend class Client;
-  friend class GlobalTensorBaseBuilder;
 };
 
 }  // namespace vineyard

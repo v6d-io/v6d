@@ -154,7 +154,8 @@ add_doc(ObjectMeta.isglobal, r'''
 True if the object is a global object, otherwise a local object or remote object.
 ''')
 
-add_doc(ObjectMeta.set_global, r'''
+add_doc(
+    ObjectMeta.set_global, r'''
 .. method: set_global(global: bool = true)
     :noindex:
 
@@ -342,6 +343,10 @@ add_doc(
     Object.ispersist, r'''
 Whether the object is a persistent object. The word "persistent" means the object could
 be seen by clients that connect to other vineyard server instances.
+''')
+
+add_doc(Object.isglobal, r'''
+Whether the object is a global object.
 ''')
 
 add_doc(ObjectBuilder, r'''

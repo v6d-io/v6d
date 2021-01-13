@@ -234,6 +234,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('delete_test')
         run_test('get_wait_test')
         run_test('get_object_test')
+        run_test('global_object_test')
         run_test('hashmap_test')
         run_test('id_test')
         run_test('large_meta_test')
@@ -246,6 +247,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('rpc_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test('scalar_test')
         run_test('server_status_test')
+        run_test('signature_test')
         run_test('shallow_copy_test')
         run_test('stream_test')
         run_test('tensor_test')
@@ -336,8 +338,8 @@ def main():
 
     if args.with_cpp:
         run_single_vineyardd_tests('http://localhost:%d' % find_port())
-        with start_etcd() as (_, etcd_endpoints):
-            run_scale_in_out_tests(etcd_endpoints, instance_size=4)
+        # with start_etcd() as (_, etcd_endpoints):
+        #     run_scale_in_out_tests(etcd_endpoints, instance_size=4)
 
     if args.with_python:
         with start_etcd() as (_, etcd_endpoints):

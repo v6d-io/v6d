@@ -484,6 +484,8 @@ class ObjectMeta {
 
   void SetInstanceId(const InstanceID instance_id);
 
+  void SetSignature(const Signature signature);
+
   // hold a client_ reference, since we alreay hold blobs in metadata, which,
   // depends on that the "client_" should be valid.
   ClientBase* client_ = nullptr;

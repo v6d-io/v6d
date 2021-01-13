@@ -228,6 +228,7 @@ void bind_core(py::module& mod) {
            })
       .def_property_readonly("islocal", &Object::IsLocal)
       .def_property_readonly("ispersist", &Object::IsPersist)
+      .def_property_readonly("isglobal", &Object::IsGlobal)
       .def("__repr__",
            [](const Object* self) {
              return "Object <\"" + VYObjectIDToString(self->id()) +

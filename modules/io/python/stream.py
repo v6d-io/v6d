@@ -173,23 +173,6 @@ class ParallelStreamLauncher(ScriptLauncher):
             return self.create_global_dataframe(partial_id_matrix, **kwargs)
         return func(partial_id_matrix, **kwargs)
 
-    def create_objectset(self, partial_id_matrix):
-        meta = vineyard.ObjectMeta()
-        meta['typename'] = 'vineyard::ObjectSet'
-        meta.set_global(True)
-        meta['num_of_instances'] = len(partial_id_matrix)
-        idx = 0
-        for partial_id_list in partial_id_matrix:
-            for partial_id in partial_id_list:
-                meta.add_member('object_%d' % idx, partial_id)
-                idx += 1
-        meta['num_of_objects'] = idx
-        meta['nbytes'] = 0  # FIXME
-        vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
-        ret_id = vineyard_rpc_client.create_metadata(meta)
-        vineyard_rpc_client.persist(ret_id)
-        return ret_id
-
     def create_global_dataframe(self, partial_id_matrix, **kwargs):
         # use the partial_id_matrix and the name in **kwargs
         # to create a global dataframe. Here the name is given in the
@@ -201,10 +184,16 @@ class ParallelStreamLauncher(ScriptLauncher):
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::GlobalDataFrame'
         meta.set_global(True)
-        objset = self.create_objectset(partial_id_matrix)
-        meta.add_member("objects_", objset)
         meta['partition_shape_row_'] = len(partial_id_matrix)
         meta['partition_shape_column_'] = 1
+
+        partition_size = 0
+        for partial_id_list in partial_id_matrix:
+            for partial_id in partial_id_list:
+                meta.add_member('partitions__%d' % partition_size, partial_id)
+                partition_size += 1
+        meta['partitions_-size'] = partition_size
+
         meta['nbytes'] = 0  # FIXME
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
         gdf = vineyard_rpc_client.create_metadata(meta)
