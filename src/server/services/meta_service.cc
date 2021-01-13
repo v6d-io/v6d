@@ -98,6 +98,7 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
   if (force || deleteable(object_id)) {
     delete_set.emplace(object_id);
     {
+      std::set<ObjectID> to_delete;
       auto range = subobjects_.equal_range(object_id);
       for (auto it = range.first; it != range.second; ++it) {
         // remove dependency edge
@@ -111,12 +112,17 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
           }
         }
         if (deep) {
-          traverseToDelete(initial_delete_set, delete_set, it->second, false,
-                           true);
+          to_delete.emplace(it->second);
+        }
+      }
+      if (deep) {
+        for (auto const& target : to_delete) {
+          traverseToDelete(initial_delete_set, delete_set, target, false, true);
         }
       }
     }
     if (force) {
+      std::set<ObjectID> to_delete;
       auto range = supobjects_.equal_range(object_id);
       for (auto it = range.first; it != range.second; ++it) {
         // remove dependency edge
@@ -129,8 +135,14 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
             ++p;
           }
         }
-        traverseToDelete(initial_delete_set, delete_set, it->second, true,
-                         false);
+        if (force) {
+          to_delete.emplace(it->second);
+        }
+      }
+      if (force) {
+        for (auto const& target : to_delete) {
+          traverseToDelete(initial_delete_set, delete_set, target, true, false);
+        }
       }
     }
     subobjects_.erase(object_id);
