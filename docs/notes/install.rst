@@ -59,7 +59,7 @@ and other packages to help us biild the documentation, which can be easily insta
 
 .. code:: shell
 
-    pip3 install libclang parsec yapf sphinx sphinx_rtd_theme breathe
+    pip3 install libclang parsec yapf==0.30.0 sphinx sphinx_rtd_theme breathe
 
 Ubuntu (or Debian)
 ~~~~~~~~~~~~~~~~~~
