@@ -189,7 +189,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         partition_size = 0
         for partial_id_list in partial_id_matrix:
             for partial_id in partial_id_list:
-                meta.add_member('partitions__%d' % partition_size, partial_id)
+                meta.add_member('partitions_-%d' % partition_size, partial_id)
                 partition_size += 1
         meta['partitions_-size'] = partition_size
 
