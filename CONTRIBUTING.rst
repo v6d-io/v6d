@@ -62,13 +62,6 @@ design and implementation details. The documentation follows the syntax
 of Doxygen and sphinx markup. If you find anything you can help, submit 
 pull request to us. Thanks for your enthusiasm!
 
-Cut a release
--------------
-
-The vineyard python package is built using the `manylinux1`_ environments. The
-release version is built with Docker. The description of the base image can be
-found at `docker/pypa/Dockerfile.manylinux1`_.
-
 Bug report and pull requests
 ----------------------------
 
@@ -139,6 +132,13 @@ the latest main branch, using the following commands:
 .. code:: shell
 
       git push --force
+
+Cut a release
+-------------
+
+The vineyard python package is built using the `manylinux1`_ environments. The
+release version is built with Docker. The description of the base image can be
+found at `docker/pypa/Dockerfile.manylinux1`_.
 
 .. _file an issue: https://github.com/alibaba/libvineyard/issues/new/new
 .. _manylinux1: https://github.com/pypa/manylinux
