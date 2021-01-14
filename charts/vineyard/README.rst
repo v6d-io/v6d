@@ -6,7 +6,7 @@ Vineyard has been integrated with `Helm`_.
 Install
 -------
 
-Deploy vineyard as a ``DamonSet`` using ``helm``:
+Deploy vineyard as a ``DaemonSet`` using ``helm``:
 
 .. code:: bash 
 
