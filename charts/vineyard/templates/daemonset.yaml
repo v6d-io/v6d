@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "vineyard.fullname" . }}
+  labels:
+    {{- include "vineyard.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "vineyard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "vineyard.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- if .Values.image.tag }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- end }}
+          image: "{{ .Values.image.repository }}:v{{ default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+          - /usr/bin/vineyardd
+          - "--etcd_endpoint"
+          - "http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379"
+          {{- if .Values.vineyard.sharedMemorySize }}
+          - "--size"
+          - "{{ .Values.vineyard.sharedMemorySize }}"
+          {{- end }}
+          ports:
+            - name: ipc
+              containerPort: 9600
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 9600
+          readinessProbe:
+            exec:
+              command:
+              - ls
+              - /var/run/vineyard.sock
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - name: run
+            mountPath: /var/run
+          - name: shm
+            mountPath: /dev/shm
+
+      volumes:
+      - name: run
+        hostPath:
+          path: /var/run/vineyard
+      - name: shm
+        emptyDir:
+          medium: Memory
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

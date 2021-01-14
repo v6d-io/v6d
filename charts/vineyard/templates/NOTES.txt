@@ -1,0 +1,1 @@
+It works! Vineyard has been deployed in your kubernetes.
