@@ -90,6 +90,7 @@ void Blob::Construct(ObjectMeta const& meta) {
 std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
   std::shared_ptr<Blob> empty_blob(new Blob(EmptyBlobID(), 0, nullptr));
   empty_blob->meta_.SetId(EmptyBlobID());
+  empty_blob->meta_.SetSignature(static_cast<Signature>(EmptyBlobID()));
   empty_blob->meta_.SetTypeName(type_name<Blob>());
   empty_blob->meta_.AddKeyValue("length", 0);
   empty_blob->meta_.SetNBytes(0);

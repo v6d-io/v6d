@@ -161,6 +161,12 @@ static Status del_sub_tree(json& tree, const std::string& prefix,
   }
 }
 
+static std::string object_id_from_signature(const json& tree,
+                                            const std::string& signature) {
+  const std::string signature_key = "/signatures/" + signature;
+  return tree[json::json_pointer(signature_key)].get_ref<std::string const&>();
+}
+
 static Status get_name(const json& tree, std::string& name,
                        bool const decode = false) {
   // name: get the object id
@@ -252,6 +258,12 @@ Status GetData(const json& tree, const std::string& name, json& sub_tree) {
     } else if (type == NodeType::Link) {
       std::string sub_sub_tree_type, sub_sub_tree_name;
       status = parse_link(value, sub_sub_tree_type, sub_sub_tree_name);
+
+      // the sub_sub_tree_name might be a signature
+      if (sub_sub_tree_name[0] == 's') {
+        sub_sub_tree_name = object_id_from_signature(tree, sub_sub_tree_name);
+      }
+
       if (!status.ok()) {
         sub_tree.clear();
         return status;
@@ -381,15 +393,29 @@ Status DelDataOps(const json& tree, const std::string& name,
 }
 
 static void generate_put_ops(const json& meta, const json& diff,
-                             const std::string& name,
+                             const json& signatures, const std::string& name,
                              std::vector<IMetaService::op_t>& ops) {
+  if (!diff.is_object() || diff.empty()) {
+    return;
+  }
   std::string key_prefix = "/data" + std::string("/") + name + "/";
+  std::string signature_key_prefix = "/signatures/";
   for (auto const& item : json::iterator_wrapper(diff)) {
+    bool global_object = diff.value("global", false);
     if (item.value().is_object() && !item.value().empty()) {
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(item.value(), sub_type, sub_name));
       if (!has_sub_tree(meta, "/data", sub_name)) {
-        generate_put_ops(meta, item.value(), sub_name, ops);
+        generate_put_ops(meta, item.value(), signatures, sub_name, ops);
+      }
+      // for global object, we record member's signature instead, and the
+      // signature mapping
+      if (global_object) {
+        const std::string sig_as_name =
+            SignatureToString(signatures[sub_name].get<Signature>());
+        ops.emplace_back(IMetaService::op_t::Put(
+            signature_key_prefix + sig_as_name, sub_name));
+        sub_name = sig_as_name;
       }
       std::string link;
       generate_link(sub_type, sub_name, link);
@@ -422,11 +448,23 @@ static void generate_persist_ops(json& diff, const std::string& name,
   if (dedup.find(data_key) != dedup.end()) {
     return;
   }
+  bool global_object = diff.value("global", false);
+
   for (auto& item : json::iterator_wrapper(diff)) {
     if (item.value().is_object() &&
         !item.value().empty()) /* build link, and recursively generate */ {
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(item.value(), sub_type, sub_name));
+
+      // when persist global object, persist the signature record.
+      if (global_object) {
+        std::string sub_sig =
+            SignatureToString(item.value()["signature"].get<Signature>());
+        ops.emplace_back(
+            IMetaService::op_t::Put("/signatures/" + sub_sig, sub_name));
+        sub_name = sub_sig;
+      }
+
       // Don't persist blob into etcd, but the link cannot be omitted.
       if (item.value()["transient"].get<bool>() &&
           sub_type != "vineyard::Blob") {
@@ -466,9 +504,11 @@ static void generate_persist_ops(json& diff, const std::string& name,
 static Status diff_data_meta_tree(const json& meta,
                                   const std::string& sub_tree_name,
                                   const json& sub_tree, json& diff,
-                                  InstanceID& instance_id) {
+                                  json& signatures, InstanceID& instance_id) {
   json old_sub_tree;
   Status status = get_sub_tree(meta, "/data", sub_tree_name, old_sub_tree);
+
+  bool global_object = sub_tree.value("global", false);
 
   if (!status.ok()) {
     if (status.IsMetaTreeSubtreeNotExists()) {
@@ -485,7 +525,11 @@ static Status diff_data_meta_tree(const json& meta,
       std::string sub_tree_type;
       RETURN_ON_ERROR(get_type(old_sub_tree, sub_tree_type, true));
       diff["id"] = sub_tree_name;
+      diff["signature"] = old_sub_tree["signature"].get<Signature>();
       diff["typename"] = sub_tree_type;
+      if (old_sub_tree.contains("global")) {
+        diff["global"] = old_sub_tree["global"].get<bool>();
+      }
       instance_id = old_sub_tree["instance_id"].get<InstanceID>();
     }
     return status;
@@ -498,8 +542,8 @@ static Status diff_data_meta_tree(const json& meta,
     // don't diff on id, typename and instance_id and don't update them, that
     // means, we can only update member's meta, cannot update the whole member
     // itself.
-    if (item.key() == "id" || item.key() == "typename" ||
-        item.key() == "instance_id") {
+    if (item.key() == "id" || item.key() == "signature" ||
+        item.key() == "typename" || item.key() == "instance_id") {
       continue;
     }
 
@@ -545,11 +589,12 @@ static Status diff_data_meta_tree(const json& meta,
       const json& sub_sub_tree = item.value();
 
       // original corresponding field must be a member not a key-value
-      auto mb_old_sub_sub_tree = old_sub_tree.find(item.key());
       if (status.ok() /* old meta exists */) {
+        auto mb_old_sub_sub_tree = old_sub_tree.find(item.key());
         if (mb_old_sub_sub_tree != old_sub_tree.end() &&
-            !mb_old_sub_sub_tree->is_string() &&
-            !is_link_node(mb_old_sub_sub_tree->get_ref<std::string const&>())) {
+            (!mb_old_sub_sub_tree->is_string() ||
+             !is_link_node(
+                 mb_old_sub_sub_tree->get_ref<std::string const&>()))) {
           return Status::MetaTreeInvalid();
         }
       }
@@ -560,15 +605,34 @@ static Status diff_data_meta_tree(const json& meta,
       json diff_sub_tree;
       InstanceID sub_instance_id;
       RETURN_ON_ERROR(diff_data_meta_tree(meta, sub_sub_tree_name, sub_sub_tree,
-                                          diff_sub_tree, sub_instance_id));
+                                          diff_sub_tree, signatures,
+                                          sub_instance_id));
+
+      if (!global_object && instance_id != sub_instance_id) {
+        return Status::GlobalObjectInvalid(
+            "Local object cannot refer remote objects");
+      }
+      if (global_object && ((diff_sub_tree.is_object() &&
+                             diff_sub_tree.value("global", false)) ||
+                            sub_sub_tree.value("global", false))) {
+        return Status::GlobalObjectInvalid(
+            "Global object cannot have nested structure");
+      }
 
       if (instance_id != sub_instance_id) {
         instance_id = UnspecifiedInstanceID();
       }
 
       if (status.ok() /* old meta exists */) {
+        // WARNING: the member object will be updated.
         if (diff_sub_tree.is_object() && !diff_sub_tree.empty()) {
           diff[item.key()] = diff_sub_tree;
+        }
+
+        // record a possible signature link
+        if (global_object) {
+          signatures[sub_sub_tree["id"].get_ref<std::string const&>()] =
+              sub_sub_tree["signature"].get<Signature>();
         }
       } else if (status.IsMetaTreeSubtreeNotExists()) {
         if (!is_meta_placeholder(sub_sub_tree)) {
@@ -579,6 +643,18 @@ static Status diff_data_meta_tree(const json& meta,
                                         sub_sub_tree_name));
           diff_sub_tree["id"] = sub_sub_tree_name;
           diff_sub_tree["typename"] = sub_sub_tree_type;
+
+          // record a possible signature link
+          if (global_object) {
+            signatures[sub_sub_tree["id"].get_ref<std::string const&>()] =
+                sub_sub_tree["signature"].get<Signature>();
+          }
+        } else {
+          // record a possible signature link
+          if (global_object) {
+            signatures[diff_sub_tree["id"].get_ref<std::string const&>()] =
+                diff_sub_tree["signature"].get<Signature>();
+          }
         }
         diff[item.key()] = diff_sub_tree;
       } else {
@@ -593,6 +669,7 @@ static Status diff_data_meta_tree(const json& meta,
     RETURN_ON_ERROR(get_type(sub_tree, sub_tree_type));
 
     diff["id"] = sub_tree_name;
+    diff["signature"] = sub_tree["signature"];
     diff["typename"] = sub_tree_type;
     diff["instance_id"] = instance_id;
   }
@@ -626,10 +703,11 @@ Status PutDataOps(const json& tree, const ObjectID id, const json& sub_tree,
                   std::vector<IMetaService::op_t>& ops,
                   InstanceID& computed_instance_id) {
   json diff;
+  json signatures;
   std::string name = VYObjectIDToString(id);
   // recompute instance_id: check if it refers remote objects.
-  Status status =
-      diff_data_meta_tree(tree, name, sub_tree, diff, computed_instance_id);
+  Status status = diff_data_meta_tree(tree, name, sub_tree, diff, signatures,
+                                      computed_instance_id);
 
   if (!status.ok()) {
     return status;
@@ -639,7 +717,7 @@ Status PutDataOps(const json& tree, const ObjectID id, const json& sub_tree,
     return Status::OK();
   }
 
-  generate_put_ops(tree, diff, name, ops);
+  generate_put_ops(tree, diff, signatures, name, ops);
   return Status::OK();
 }
 
@@ -715,7 +793,8 @@ Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
   return Status::OK();
 }
 
-Status DecodeObjectID(const std::string& value, ObjectID& object_id) {
+Status DecodeObjectID(const json& tree, const std::string& value,
+                      ObjectID& object_id) {
   meta_tree::NodeType type;
   std::string link_value;
   decode_value(value, type, link_value);
@@ -723,7 +802,14 @@ Status DecodeObjectID(const std::string& value, ObjectID& object_id) {
     std::string type_of_value, name_of_value;
     auto status = parse_link(link_value, type_of_value, name_of_value);
     if (status.ok()) {
-      object_id = VYObjectIDFromString(name_of_value);
+      if (name_of_value[0] == 'o') {
+        object_id = VYObjectIDFromString(name_of_value);
+      } else if (name_of_value[0] == 's') {
+        object_id =
+            VYObjectIDFromString(object_id_from_signature(tree, name_of_value));
+      } else {
+        return Status::Invalid("Not a name or signature: " + name_of_value);
+      }
       return Status::OK();
     }
   }

@@ -25,17 +25,31 @@ limitations under the License.
 
 namespace vineyard {
 
-const std::string VYObjectIDToString(const ObjectID id) {
+const std::string ObjectIDToString(const ObjectID id) {
   char buffer[18] = {'\0'};
   std::snprintf(buffer, sizeof(buffer), "o%016" PRIx64, id);
   return std::string(buffer);
 }
 
-ObjectID VYObjectIDFromString(const std::string& s) {
+ObjectID ObjectIDFromString(const std::string& s) {
   return strtoull(s.c_str() + 1, nullptr, 16);
 }
 
-ObjectID VYObjectIDFromString(const char* s) {
+ObjectID ObjectIDFromString(const char* s) {
+  return strtoull(s + 1, nullptr, 16);
+}
+
+const std::string SignatureToString(const Signature id) {
+  char buffer[18] = {'\0'};
+  std::snprintf(buffer, sizeof(buffer), "s%016" PRIx64, id);
+  return std::string(buffer);
+}
+
+Signature SignatureFromString(const std::string& s) {
+  return strtoull(s.c_str() + 1, nullptr, 16);
+}
+
+Signature SignatureFromString(const char* s) {
   return strtoull(s + 1, nullptr, 16);
 }
 
