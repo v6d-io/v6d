@@ -64,7 +64,8 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
 Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
                         std::vector<ObjectID>& objects);
 
-Status DecodeObjectID(const std::string& value, ObjectID& object_id);
+Status DecodeObjectID(const json& tree, const std::string& value,
+                      ObjectID& object_id);
 
 }  // namespace meta_tree
 

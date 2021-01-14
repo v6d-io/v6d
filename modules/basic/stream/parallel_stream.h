@@ -26,7 +26,7 @@ namespace vineyard {
 
 class ParallelStreamBuilder;
 
-class ParallelStream : public Registered<ParallelStream> {
+class ParallelStream : public Registered<ParallelStream>, GlobalObject {
  public:
   static std::shared_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(std::make_shared<ParallelStream>());
@@ -92,6 +92,7 @@ class ParallelStreamBuilder : public ObjectBuilder {
     auto __value = std::make_shared<ParallelStream>();
 
     __value->meta_.SetTypeName(type_name<ParallelStream>());
+    __value->meta_.SetGlobal(true);
 
     __value->size_ = streams_.size();
     __value->meta_.AddKeyValue("size_", __value->size_);

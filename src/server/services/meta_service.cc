@@ -39,7 +39,7 @@ void IMetaService::incRef(std::string const& key, std::string const& value) {
     return;
   }
   ObjectID key_obj, value_obj;
-  if (meta_tree::DecodeObjectID(value, value_obj).ok()) {
+  if (meta_tree::DecodeObjectID(meta_, value, value_obj).ok()) {
     key_obj = VYObjectIDFromString(vs[1]);
     {
       // validate the dependency graph

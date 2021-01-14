@@ -104,10 +104,10 @@ void WriteCreateDataRequest(const json& content, std::string& msg);
 
 Status ReadCreateDataRequest(const json& root, json& content);
 
-void WriteCreateDataReply(const ObjectID& id, const InstanceID& instance_id,
-                          std::string& msg);
+void WriteCreateDataReply(const ObjectID& id, const Signature& sigature,
+                          const InstanceID& instance_id, std::string& msg);
 
-Status ReadCreateDataReply(const json& root, ObjectID& id,
+Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& sigature,
                            InstanceID& instance_id);
 
 void WritePersistRequest(const ObjectID id, std::string& msg);

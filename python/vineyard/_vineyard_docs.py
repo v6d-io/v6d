@@ -130,6 +130,10 @@ add_doc(ObjectMeta.id, r'''
 The corresponding object ID of this metadata.
 ''')
 
+add_doc(ObjectMeta.signature, r'''
+The corresponding object signature of this metadata.
+''')
+
 add_doc(ObjectMeta.typename, r'''
 The :code:`"typename"` attribute of this metadata.
 ''')
@@ -144,6 +148,21 @@ The :code:`"instance_id"` of vineyard instance that the metadata been placed on.
 
 add_doc(ObjectMeta.islocal, r'''
 True if the object is a local object, otherwise a global object or remote object.
+''')
+
+add_doc(ObjectMeta.isglobal, r'''
+True if the object is a global object, otherwise a local object or remote object.
+''')
+
+add_doc(
+    ObjectMeta.set_global, r'''
+.. method: set_global(global: bool = true)
+    :noindex:
+
+Mark the building object as a global object.
+
+Parameters:
+    global: bool, default is True
 ''')
 
 add_doc(
@@ -280,6 +299,10 @@ add_doc(Object.id, r'''
 The object id of this object.
 ''')
 
+add_doc(Object.signature, r'''
+The object signature of this object.
+''')
+
 add_doc(Object.meta, r'''
 The metadata of this object.
 ''')
@@ -320,6 +343,10 @@ add_doc(
     Object.ispersist, r'''
 Whether the object is a persistent object. The word "persistent" means the object could
 be seen by clients that connect to other vineyard server instances.
+''')
+
+add_doc(Object.isglobal, r'''
+Whether the object is a global object.
 ''')
 
 add_doc(ObjectBuilder, r'''

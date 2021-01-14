@@ -160,6 +160,9 @@ void EtcdMetaService::requestAll(
                  << " microseconds for " << resp.keys().size() << " keys";
         std::vector<IMetaService::op_t> ops(resp.keys().size());
         for (size_t i = 0; i < resp.keys().size(); ++i) {
+          if (resp.key(i).empty()) {
+            continue;
+          }
           if (!boost::algorithm::starts_with(resp.key(i), prefix_ + "/")) {
             // ignore garbage values
             continue;

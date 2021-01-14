@@ -355,11 +355,11 @@ Status OSSIOAdaptor::Open() {
     }
     if (part_id_) {
       std::string tmp;
-      readLine(tmp, begin_);
+      RETURN_ON_ERROR(readLine(tmp, begin_));
     }
     if (part_id_ + 1 < part_num_ && begin_ <= end_) {
       std::string tmp;
-      readLine(tmp, end_);
+      RETURN_ON_ERROR(readLine(tmp, end_));
     }
   } else {
     end_ = total_len_;

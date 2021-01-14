@@ -32,7 +32,14 @@ namespace vineyard {
 using ObjectID = uint64_t;
 
 /**
- * @brief ObjectID is an opaque type for vineyard's instance ID id. The
+ * @brief Signature is an opaque type for vineyard's object. The signature of
+ * an object keep unchange during migration. The underlying type of Signature
+ * is a 64-bit unsigned integer.
+ */
+using Signature = uint64_t;
+
+/**
+ * @brief InstanceID is an opaque type for vineyard's instance ID id. The
  * underlying type of ObjectID is a 64-bit unsigned integer.
  */
 using InstanceID = uint64_t;
@@ -56,16 +63,49 @@ inline ObjectID GenerateObjectID() {
   return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
 }
 
+inline ObjectID GenerateSignature() {
+  return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
+}
+
 inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
 
-const std::string VYObjectIDToString(const ObjectID id);
+const std::string ObjectIDToString(const ObjectID id);
 
-ObjectID VYObjectIDFromString(const std::string& s);
+ObjectID ObjectIDFromString(const std::string& s);
 
-ObjectID VYObjectIDFromString(const char* s);
+ObjectID ObjectIDFromString(const char* s);
+
+[[deprecated(
+    "For backwards-compatiblity, will be removed in 1.0.")]] inline const std::
+    string
+    VYObjectIDToString(const ObjectID id) {
+  return ObjectIDToString(id);
+}
+
+[[deprecated(
+    "For backwards-compatiblity, will be removed in 1.0.")]] inline ObjectID
+VYObjectIDFromString(const std::string& s) {
+  return ObjectIDFromString(s);
+}
+
+[[deprecated(
+    "For backwards-compatiblity, will be removed in 1.0.")]] inline ObjectID
+VYObjectIDFromString(const char* s) {
+  return ObjectIDFromString(s);
+}
+
+const std::string SignatureToString(const Signature id);
+
+Signature SignatureFromString(const std::string& s);
+
+Signature SignatureFromString(const char* s);
 
 inline ObjectID InvalidObjectID() {
   return std::numeric_limits<ObjectID>::max();
+}
+
+inline ObjectID InvalidSignature() {
+  return std::numeric_limits<Signature>::max();
 }
 
 inline InstanceID UnspecifiedInstanceID() {
