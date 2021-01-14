@@ -261,7 +261,6 @@ Status GetData(const json& tree, const std::string& name, json& sub_tree) {
 
       // the sub_sub_tree_name might be a signature
       if (sub_sub_tree_name[0] == 's') {
-        VLOG(10) << "Resolving signature: " << sub_sub_tree_name;
         sub_sub_tree_name = object_id_from_signature(tree, sub_sub_tree_name);
       }
 
@@ -608,8 +607,6 @@ static Status diff_data_meta_tree(const json& meta,
       RETURN_ON_ERROR(diff_data_meta_tree(meta, sub_sub_tree_name, sub_sub_tree,
                                           diff_sub_tree, signatures,
                                           sub_instance_id));
-
-      LOG(INFO) << "diff_sub_tree = " << diff_sub_tree.dump(4);
 
       if (!global_object && instance_id != sub_instance_id) {
         return Status::GlobalObjectInvalid(

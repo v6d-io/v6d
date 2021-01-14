@@ -500,6 +500,9 @@ class ObjectMeta {
   friend class ClientBase;
   friend class Client;
   friend class RPCClient;
+
+  friend class Blob;
+  friend class BlobWriter;
 };
 
 template <>

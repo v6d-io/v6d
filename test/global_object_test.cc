@@ -100,6 +100,93 @@ void testGlobalDataFrame(Client& client) {
   }
 }
 
+void testDelete(Client& client) {
+  ObjectID dataframe_id = InvalidObjectID();
+  ObjectID global_dataframe_id = InvalidObjectID();
+
+  // make a dataframe
+  {
+    DataFrameBuilder builder(client);
+    {
+      auto tb = std::make_shared<TensorBuilder<double>>(
+          client, std::vector<int64_t>{100});
+      builder.AddColumn("a", tb);
+    }
+    auto sealed = std::dynamic_pointer_cast<DataFrame>(builder.Seal(client));
+    VINEYARD_CHECK_OK(client.Persist(sealed->id()));
+    dataframe_id = sealed->id();
+  }
+
+  // make a global dataframe
+  {
+    GlobalDataFrameBuilder builder(client);
+    builder.set_partition_shape(1, 1);
+    builder.AddPartition(client.instance_id(), dataframe_id);
+    global_dataframe_id = builder.Seal(client)->id();
+  }
+
+  {
+    bool exists = false;
+    VINEYARD_CHECK_OK(client.Exists(dataframe_id, exists));
+    CHECK(exists);
+    VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
+    CHECK(exists);
+
+    LOG(INFO) << "delete global dataframe id: " << global_dataframe_id << ": "
+              << VYObjectIDToString(global_dataframe_id);
+    VINEYARD_CHECK_OK(client.DelData(global_dataframe_id, false, true));
+    VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
+    CHECK(!exists);
+    VINEYARD_CHECK_OK(client.Exists(dataframe_id, exists));
+    CHECK(!exists);
+  }
+
+  // make a dataframe
+  {
+    DataFrameBuilder builder(client);
+    {
+      auto tb = std::make_shared<TensorBuilder<double>>(
+          client, std::vector<int64_t>{100});
+      builder.AddColumn("a", tb);
+    }
+    auto sealed = std::dynamic_pointer_cast<DataFrame>(builder.Seal(client));
+    VINEYARD_CHECK_OK(client.Persist(sealed->id()));
+    dataframe_id = sealed->id();
+  }
+
+  // make a global dataframe
+  {
+    GlobalDataFrameBuilder builder(client);
+    builder.set_partition_shape(1, 1);
+    builder.AddPartition(client.instance_id(), dataframe_id);
+    global_dataframe_id = builder.Seal(client)->id();
+  }
+
+  {
+    bool exists = false;
+    VINEYARD_CHECK_OK(client.Exists(dataframe_id, exists));
+    CHECK(exists);
+    VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
+    CHECK(exists);
+
+    LOG(INFO) << "delete dataframe chunk id: " << dataframe_id << ": "
+              << VYObjectIDToString(dataframe_id);
+    VINEYARD_CHECK_OK(client.DelData(dataframe_id, false, true));
+    VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
+    CHECK(exists);
+    VINEYARD_CHECK_OK(client.Exists(dataframe_id, exists));
+    CHECK(exists);
+
+    LOG(INFO) << "delete dataframe chunk id with deep: " << dataframe_id << ": "
+              << VYObjectIDToString(dataframe_id);
+    VINEYARD_CHECK_OK(client.DelData(dataframe_id, true, true));
+    VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
+    CHECK(!exists);
+    VINEYARD_CHECK_OK(client.Exists(dataframe_id, exists));
+    CHECK(!exists);
+  }
+}
+
 int main(int argc, char** argv) {
   if (argc < 2) {
     printf("usage ./global_object_test <ipc_socket>");
@@ -113,6 +200,7 @@ int main(int argc, char** argv) {
 
   testGlobalTensor(client);
   testGlobalDataFrame(client);
+  testDelete(client);
 
   client.Disconnect();
 
