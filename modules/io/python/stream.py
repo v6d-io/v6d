@@ -41,13 +41,12 @@ def global_dataframe_resolver(obj, resolver):
     ''' Return a list of dataframes.
     '''
     meta = obj.meta
-    object_set = meta.get_member('objects_')
-    meta = object_set.meta
-    num = int(meta['num_of_objects'])
+    num = int(meta['partitions_-size'])
+
     dataframes = []
     orders = []
     for i in range(num):
-        df = meta.get_member('object_%d' % i)
+        df = meta.get_member('partitions_-%d' % i)
         if df.meta.islocal:
             dataframes.append(resolver.run(df))
             orders.append(df.meta['row_batch_index_'])
