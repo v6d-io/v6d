@@ -328,20 +328,22 @@ Status ReadCreateDataRequest(const json& root, json& content) {
   return Status::OK();
 }
 
-void WriteCreateDataReply(const ObjectID& id, const InstanceID& instance_id,
-                          std::string& msg) {
+void WriteCreateDataReply(const ObjectID& id, const Signature& signature,
+                          const InstanceID& instance_id, std::string& msg) {
   json root;
   root["type"] = "create_data_reply";
   root["id"] = id;
+  root["signature"] = signature;
   root["instance_id"] = instance_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateDataReply(const json& root, ObjectID& id,
+Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& signature,
                            InstanceID& instance_id) {
   CHECK_IPC_ERROR(root, "create_data_reply");
   id = root["id"].get<ObjectID>();
+  signature = root["signature"].get<Signature>();
   instance_id = root["instance_id"].get<InstanceID>();
   return Status::OK();
 }

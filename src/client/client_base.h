@@ -92,7 +92,8 @@ class ClientBase {
    *
    * @return Status that indicates whether the create action has succeeded.
    */
-  Status CreateData(const json& tree, ObjectID& id, InstanceID& instance_id);
+  Status CreateData(const json& tree, ObjectID& id, Signature& signature,
+                    InstanceID& instance_id);
 
   /**
    * @brief Create the metadata in the vineyard server, after created, the

@@ -250,10 +250,10 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     TRY_READ_REQUEST(ReadCreateDataRequest(root, tree));
     RESPONSE_ON_ERROR(server_ptr_->CreateData(
         tree, [self](const Status& status, const ObjectID id,
-                     const InstanceID instance_id) {
+                     const Signature signature, const InstanceID instance_id) {
           std::string message_out;
           if (status.ok()) {
-            WriteCreateDataReply(id, instance_id, message_out);
+            WriteCreateDataReply(id, signature, instance_id, message_out);
           } else {
             LOG(ERROR) << status.ToString();
             WriteErrorReply(status, message_out);

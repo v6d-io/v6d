@@ -73,6 +73,21 @@ class ObjectMeta {
   const ObjectID GetId() const;
 
   /**
+   * @brief Get the corresponding object signature of the metadata.
+   */
+  const Signature GetSignature() const;
+
+  /**
+   * @brief Mark the vineyard object as a global object.
+   */
+  void SetGlobal(bool global = true);
+
+  /**
+   * @brief Check whether the vineyard object is a global object.
+   */
+  const bool IsGlobal() const;
+
+  /**
    * @brief Set the `typename` of the metadata. The `typename` will be used to
    * resolve in the ObjectFactory to create new object instances when get
    * objects from vineyard server.
@@ -469,6 +484,8 @@ class ObjectMeta {
 
   void SetInstanceId(const InstanceID instance_id);
 
+  void SetSignature(const Signature signature);
+
   // hold a client_ reference, since we alreay hold blobs in metadata, which,
   // depends on that the "client_" should be valid.
   ClientBase* client_ = nullptr;
@@ -483,6 +500,9 @@ class ObjectMeta {
   friend class ClientBase;
   friend class Client;
   friend class RPCClient;
+
+  friend class Blob;
+  friend class BlobWriter;
 };
 
 template <>

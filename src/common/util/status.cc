@@ -143,6 +143,9 @@ std::string Status::CodeAsString() const {
   case StatusCode::kUserInputError:
     type = "User input error";
     break;
+  case StatusCode::kGlobalObjectInvalid:
+    type = "Global object invalid";
+    break;
   case StatusCode::kUnknownError:
   default:
     type = "Unknown error";

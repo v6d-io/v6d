@@ -92,7 +92,6 @@ del _vineyard_docs
 
 from .core import default_builder_context, default_resolver_context, default_driver_context
 from .data import register_builtin_types
-from .data.base import ObjectSet
 from .data.graph import Graph
 
 logger = logging.getLogger('vineyard')

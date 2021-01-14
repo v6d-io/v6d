@@ -22,7 +22,6 @@ limitations under the License.
 
 #include "boost/asio.hpp"
 
-#include "basic/ds/object_set.h"
 #include "migrate/flags.h"
 #include "migrate/protocols.h"
 

@@ -54,6 +54,8 @@ bool const Object::IsPersist() const {
   return persist;
 }
 
+bool const Object::IsGlobal() const { return meta_.IsGlobal(); }
+
 std::shared_ptr<Object> ObjectBuilder::Seal(Client& client) {
   return this->_Seal(client);
 }

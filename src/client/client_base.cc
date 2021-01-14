@@ -58,14 +58,14 @@ Status ClientBase::GetData(const std::vector<ObjectID>& ids,
 }
 
 Status ClientBase::CreateData(const json& tree, ObjectID& id,
-                              InstanceID& instance_id) {
+                              Signature& signature, InstanceID& instance_id) {
   ENSURE_CONNECTED(this);
   std::string message_out;
   WriteCreateDataRequest(tree, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadCreateDataReply(message_in, id, instance_id));
+  RETURN_ON_ERROR(ReadCreateDataReply(message_in, id, signature, instance_id));
   return Status::OK();
 }
 
@@ -82,9 +82,11 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
     json dummy;
     VINEYARD_SUPPRESS(GetData(InvalidObjectID(), dummy, true, false));
   }
-  auto status = CreateData(meta_data.MetaData(), id, instance_id);
+  Signature signature;
+  auto status = CreateData(meta_data.MetaData(), id, signature, instance_id);
   if (status.ok()) {
     meta_data.SetId(id);
+    meta_data.SetSignature(signature);
     meta_data.SetClient(this);
     meta_data.SetInstanceId(instance_id);
     if (meta_data.incomplete()) {

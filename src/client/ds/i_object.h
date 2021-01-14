@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_CLIENT_DS_I_OBJECT_H_
 
 #include <memory>
+#include <type_traits>
 
 #include "client/ds/object_factory.h"
 #include "client/ds/object_meta.h"
@@ -158,6 +159,14 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
    */
   bool const IsPersist() const;
 
+  /**
+   * @brief The verb "global" means it is a global object and only refers some
+   * local objects.
+   *
+   * @return True iff the object is a global object.
+   */
+  bool const IsGlobal() const;
+
  protected:
   Object() {}
 
@@ -169,6 +178,13 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
   friend class RPCClient;
   friend class ObjectMeta;
 };
+
+/**
+ * Global object is an tag class to mark a type as a vineyard's GlobalObject.
+ *
+ * User-defined global object types should inherits this tag class.
+ */
+struct GlobalObject {};
 
 class ObjectBuilder : public ObjectBase {
  public:

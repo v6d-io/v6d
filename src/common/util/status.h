@@ -167,6 +167,8 @@ enum class StatusCode : unsigned char {
 
   kUserInputError = 51,
 
+  kGlobalObjectInvalid = 52,
+
   kUnknownError = 255
 };
 
@@ -390,6 +392,12 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kUserInputError, message);
   }
 
+  /// Return a status code indicates invalid global object structure.
+  static Status GlobalObjectInvalid(
+      std::string const& message = "Global object cannot be nested") {
+    return Status(StatusCode::kGlobalObjectInvalid, message);
+  }
+
   /// Return an error status for unknown errors
   static Status UnknownError(std::string const& message = "") {
     return Status(StatusCode::kUnknownError, message);
@@ -472,6 +480,10 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return true iff there's some problems in user's input.
   bool IsUserInputError() const {
     return code() == StatusCode::kUserInputError;
+  }
+  /// Return true iff the given global object is invalid.
+  bool IsGlobalObjectInvalid() const {
+    return code() == StatusCode::kGlobalObjectInvalid;
   }
   /// Return true iff the status indicates an unknown error.
   bool IsUnknownError() const { return code() == StatusCode::kUnknownError; }

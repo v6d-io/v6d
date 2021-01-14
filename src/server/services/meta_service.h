@@ -122,7 +122,7 @@ class IMetaService {
   };
   virtual ~IMetaService() {}
   explicit IMetaService(vs_ptr_t& server_ptr)
-      : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("meta_sync_lock") {}
+      : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("/meta_sync_lock") {}
 
   static std::shared_ptr<IMetaService> Get(vs_ptr_t);
 
@@ -166,7 +166,7 @@ class IMetaService {
           printDepsGraph();
         }
 #endif
-        this->metaUpdate(ops);
+        this->metaUpdate(ops, false);
       } else {
         LOG(ERROR) << status.ToString();
       }
@@ -198,7 +198,7 @@ class IMetaService {
                       return callback_after_finish(Status::OK());
                     }
                     // apply changes locally before committing to etcd
-                    this->metaUpdate(ops);
+                    this->metaUpdate(ops, true);
                     // commit to etcd
                     this->commitUpdates(
                         ops, [this, callback_after_finish, lock](
@@ -269,7 +269,7 @@ class IMetaService {
                   auto s = callback_after_ready(status, meta, delete_set, ops);
                   if (s.ok()) {
                     // apply changes locally before committing to etcd
-                    this->metaUpdate(ops);
+                    this->metaUpdate(ops, true);
                     // commit to etcd
                     this->commitUpdates(
                         ops, [this, callback_after_finish, lock](
@@ -310,7 +310,7 @@ class IMetaService {
         auto status = callback_after_ready(Status::OK(), meta, ops, transient);
         if (status.ok()) {
           if (transient) {
-            this->metaUpdate(ops);
+            this->metaUpdate(ops, true);
             return callback_after_finish(Status::OK());
           } else {
             this->RequestToPersist(
@@ -506,7 +506,7 @@ class IMetaService {
                  [this, callback](const Status& status,
                                   const std::vector<op_t>& ops, unsigned rev) {
                    if (status.ok()) {
-                     this->metaUpdate(ops);
+                     this->metaUpdate(ops, true);
                      rev_ = rev;
                    }
                    return callback(status, meta_, rev_);
@@ -517,7 +517,7 @@ class IMetaService {
           [this, callback](const Status& status, const std::vector<op_t>& ops,
                            unsigned rev) {
             if (status.ok()) {
-              this->metaUpdate(ops);
+              this->metaUpdate(ops, true);
               rev_ = rev;
             }
             return callback(status, meta_, rev_);
@@ -563,7 +563,7 @@ class IMetaService {
                         const ObjectID object_id, const bool force,
                         const bool deep);
 
-  inline void putVal(const kv_t& kv) {
+  inline void putVal(const kv_t& kv, bool const from_remote) {
     // don't crash the server for any reason (any potential garbage value)
     auto upsert_to_meta = [&]() {
       json value = json::parse(kv.value);
@@ -579,6 +579,26 @@ class IMetaService {
       meta_[json::json_pointer(kv.key)] = value;
       return Status::OK();
     };
+    // update signatures
+    if (boost::algorithm::starts_with(kv.key, "/signatures/")) {
+      auto json_path = json::json_pointer(kv.key);
+      if (!from_remote || !meta_.contains(json_path)) {
+        VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
+      }
+      return;
+    }
+
+    // update names
+    if (boost::algorithm::starts_with(kv.key, "/names/")) {
+      auto json_path = json::json_pointer(kv.key);
+      if (meta_.contains(json_path)) {
+        LOG(INFO) << "Warning: name got overwritten: " << kv.key;
+      }
+      VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
+      return;
+    }
+
+    // update ordinary data
     VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
   }
 
@@ -636,7 +656,7 @@ class IMetaService {
   }
 
   template <class RangeT>
-  void metaUpdate(const RangeT& ops) {
+  void metaUpdate(const RangeT& ops, bool const from_remote) {
     std::set<ObjectID> blobs_to_delete;
     for (const op_t& op : ops) {
       if (op.kv.rev != 0 && op.kv.rev <= rev_) {
@@ -661,7 +681,7 @@ class IMetaService {
 #endif
       const kv_t& kv = op.kv;
       if (op.op == op_t::op_type_t::kPut) {
-        putVal(kv);
+        putVal(kv, from_remote);
       } else if (op.op == op_t::op_type_t::kDel) {
         delVal(kv, blobs_to_delete);
       }
@@ -713,7 +733,7 @@ class IMetaService {
         op_batch.emplace_back(ops[idx]);
         idx += 1;
       }
-      metaUpdate(op_batch);
+      metaUpdate(op_batch, true);
       op_batch.clear();
     }
     return Status::OK();

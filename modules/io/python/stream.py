@@ -40,13 +40,12 @@ def parallel_stream_resolver(obj):
 def global_dataframe_resolver(obj, resolver):
     """Return a list of dataframes."""
     meta = obj.meta
-    object_set = meta.get_member('objects_')
-    meta = object_set.meta
-    num = int(meta['num_of_objects'])
+    num = int(meta['partitions_-size'])
+
     dataframes = []
     orders = []
     for i in range(num):
-        df = meta.get_member('object_%d' % i)
+        df = meta.get_member('partitions_-%d' % i)
         if df.meta.islocal:
             dataframes.append(resolver.run(df))
             orders.append(df.meta["row_batch_index_"])
@@ -152,6 +151,7 @@ class ParallelStreamLauncher(ScriptLauncher):
     def create_parallel_stream(self, partial_ids):
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::ParallelStream'
+        meta.set_global(True)
         meta['size_'] = len(partial_ids)
         for idx, partition_id in enumerate(partial_ids):
             meta.add_member("stream_%d" % idx, partition_id)
@@ -170,22 +170,6 @@ class ParallelStreamLauncher(ScriptLauncher):
             return self.create_global_dataframe(partial_id_matrix, **kwargs)
         return func(partial_id_matrix, **kwargs)
 
-    def create_objectset(self, partial_id_matrix):
-        meta = vineyard.ObjectMeta()
-        meta['typename'] = 'vineyard::ObjectSet'
-        meta['num_of_instances'] = len(partial_id_matrix)
-        idx = 0
-        for partial_id_list in partial_id_matrix:
-            for partial_id in partial_id_list:
-                meta.add_member('object_%d' % idx, partial_id)
-                idx += 1
-        meta['num_of_objects'] = idx
-        meta['nbytes'] = 0  # FIXME
-        vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
-        ret_id = vineyard_rpc_client.create_metadata(meta)
-        vineyard_rpc_client.persist(ret_id)
-        return ret_id
-
     def create_global_dataframe(self, partial_id_matrix, **kwargs):
         # use the partial_id_matrix and the name in **kwargs
         # to create a global dataframe. Here the name is given in the
@@ -196,10 +180,17 @@ class ParallelStreamLauncher(ScriptLauncher):
             raise ValueError("Name of the global dataframe is not provided")
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::GlobalDataFrame'
-        objset = self.create_objectset(partial_id_matrix)
-        meta.add_member("objects_", objset)
+        meta.set_global(True)
         meta['partition_shape_row_'] = len(partial_id_matrix)
         meta['partition_shape_column_'] = 1
+
+        partition_size = 0
+        for partial_id_list in partial_id_matrix:
+            for partial_id in partial_id_list:
+                meta.add_member('partitions_-%d' % partition_size, partial_id)
+                partition_size += 1
+        meta['partitions_-size'] = partition_size
+
         meta['nbytes'] = 0  # FIXME
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
         gdf = vineyard_rpc_client.create_metadata(meta)

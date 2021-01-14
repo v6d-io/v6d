@@ -154,6 +154,100 @@ class TensorBuilder : public ITensorBuilder, public TensorBaseBuilder<T> {
   T* data_;
 };
 
+class GlobalTensorBaseBuilder;
+
+/**
+ * @brief GlobalTensor is a holder for a set of tensor chunks that are
+ * distributed over many vineyard nodes.
+ */
+class GlobalTensor : public Registered<GlobalTensor>, GlobalObject {
+ public:
+  static std::shared_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(std::make_shared<GlobalTensor>());
+  }
+
+  void Construct(const ObjectMeta& meta) override;
+
+  std::vector<int64_t> const& shape() const;
+  std::vector<int64_t> const& partition_shape() const;
+
+  /**
+   * @brief Get the local partitions of the vineyard instance that is
+   * connected from the client.
+   *
+   * @param client The client connected to a vineyard instance.
+   * @return The vector of pointers to the local partitions.
+   */
+  const std::vector<std::shared_ptr<ITensor>>& LocalPartitions(
+      Client& client) const;
+
+  /**
+   * @brief Get the local partitions stored in the given vineyard instance.
+   *
+   * @param instance_id The given ID of the vineyard instance.
+   * @return The vector of pointers to the local partitions.
+   */
+  const std::vector<std::shared_ptr<ITensor>>& LocalPartitions(
+      const InstanceID instance_id) const;
+
+ private:
+  std::vector<int64_t> shape_;
+  std::vector<int64_t> partition_shape_;
+
+  std::map<InstanceID, std::vector<std::shared_ptr<ITensor>>> partitions_;
+
+  friend class Client;
+  friend class GlobalTensorBaseBuilder;
+};
+
+class GlobalTensorBaseBuilder : public ObjectBuilder {
+ public:
+  explicit GlobalTensorBaseBuilder(Client& client) {}
+
+  explicit GlobalTensorBaseBuilder(GlobalTensor const& __value) {
+    this->set_shape_(__value.shape_);
+    this->set_partition_shape_(__value.partition_shape_);
+    for (auto const& __partitions__items : __value.partitions_) {
+      for (auto const& __partition : __partitions__items.second) {
+        this->add_partitions_(__partition->id());
+      }
+    }
+  }
+
+  explicit GlobalTensorBaseBuilder(std::shared_ptr<GlobalTensor> const& __value)
+      : GlobalTensorBaseBuilder(*__value) {}
+
+  std::shared_ptr<Object> _Seal(Client& client) override;
+
+  Status Build(Client& client) override { return Status::OK(); }
+
+ protected:
+  std::vector<int64_t> shape_;
+  std::vector<int64_t> partition_shape_;
+  std::vector<ObjectID> partitions_;
+
+  void set_shape_(std::vector<int64_t> const& shape__) {
+    this->shape_ = shape__;
+  }
+
+  void set_partition_shape_(std::vector<int64_t> const& partition_shape__) {
+    this->partition_shape_ = partition_shape__;
+  }
+
+  void set_partitions_(std::vector<ObjectID> const& partitions__) {
+    this->partitions_ = partitions__;
+  }
+  void set_partitions_(size_t const idx, ObjectID const& partitions__) {
+    if (idx >= this->partitions_.size()) {
+      this->partitions_.resize(idx + 1);
+    }
+    this->partitions_[idx] = partitions__;
+  }
+  void add_partitions_(ObjectID const& partitions__) {
+    this->partitions_.emplace_back(partitions__);
+  }
+};
+
 /**
  * @brief GlobalTensorBuilder is designed for building global tensors
  *
@@ -161,7 +255,7 @@ class TensorBuilder : public ITensorBuilder, public TensorBaseBuilder<T> {
 class GlobalTensorBuilder : public GlobalTensorBaseBuilder {
  public:
   explicit GlobalTensorBuilder(Client& client)
-      : GlobalTensorBaseBuilder(client), partitions_builder_(client) {}
+      : GlobalTensorBaseBuilder(client) {}
 
   /**
    * @brief Get the partition shape of the global tensor.
@@ -227,10 +321,6 @@ class GlobalTensorBuilder : public GlobalTensorBaseBuilder {
    * @param client The client connected to the vineyard server.
    */
   Status Build(Client& client) override;
-
- protected:
-  std::shared_ptr<ObjectSet> partitions_;
-  ObjectSetBuilder partitions_builder_;
 };
 
 }  // namespace vineyard
