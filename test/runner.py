@@ -73,7 +73,11 @@ def start_program(name, *args, verbose=False, nowait=False, **kwargs):
         print('Terminating %s' % prog, flush=True)
         if proc.poll() is None:
             proc.terminate()
-            proc.wait()
+            try:
+                proc.wait(5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
 
 
 @contextlib.contextmanager
