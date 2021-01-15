@@ -17,12 +17,14 @@
 #
 
 import contextlib
+import kubernetes
 import os
 import shutil
 import socket
 import subprocess
 import textwrap
 import time
+import yaml
 
 
 def ssh_base_cmd(host):
@@ -116,3 +118,12 @@ def start_etcd(host=None, etcd_executable=None):
         print('Etcd being killed...')
         if proc is not None and proc.poll() is None:
             proc.terminate()
+
+def start_etcd_k8s():
+    kubernetes.config.load_kube_config()
+    with open(os.path.join(os.path.dirname(__file__), 'etcd.yaml')) as f:
+        dep = yaml.safe_load(f)
+        k8s_apps_v1 = kubernetes.client.AppsV1Api()
+        resp = k8s_apps_v1.create_namespaced_deployment(
+            body=dep, namespace="vineyard")
+        print("Deployment created. status=%s" % resp.metadata.name)
