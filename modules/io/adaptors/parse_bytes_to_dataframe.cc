@@ -170,7 +170,8 @@ int main(int argc, const char** argv) {
   if (header_row) {
     header_line = params["header_line"];
     if (header_line.empty()) {
-        ReportStatus("error", "Header line not found while header_row is set to True");
+      ReportStatus("error",
+                   "Header line not found while header_row is set to True");
     }
     ::boost::algorithm::trim(header_line);
     ::boost::split(original_columns, header_line,
