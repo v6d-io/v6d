@@ -144,6 +144,11 @@ boilerplate part in computation jobs.
 Integrate with Kubernetes
 -------------------------
 
+Vineyard helps share immutable data between different workloads, is a natural fit
+to cloud-native computing. Vineyard could provide efficient distributed data sharing
+in cloud-native environment by embracing cloud-native big data processing and Kubernetes
+helps vineyard leverage the scale-in/out and scheduling ability of Kubernetes.
+
 Deployment
 ^^^^^^^^^^
 
@@ -156,22 +161,20 @@ The UNIX domain socket can be either mounted on ``hostPath`` or via a ``Persiste
 When users bundle vineyard and the workload to the same pod, the UNIX domain socket
 could also be shared using an ``emptyDir``.
 
-Vineyard Objects as Resources
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Deployment with Helm
+^^^^^^^^^^^^^^^^^^^^
 
-Vineyard objects are abstracted as Kubernetes resources(i.e., CRDs). Each CRD contains
-the metadata of the represented vineyard object Location specs that describe which
-node an object is located are added to the CRDs of local objects
+Vineyard also has tight integration with Kubernetes and Helm. Vineyard can be deployed
+with ``helm``:
 
-Vineyard Operator
-^^^^^^^^^^^^^^^^^
+.. code:: shell
 
-Vineyard Operator will
+   helm repo add vineyard https://dl.bintray.com/libvineyard/charts/
+   helm install vineyard vineyard/vineyard
 
-+ be responsible for managing the status of vineyard cluster
-+ manage the CRDs (which represents objects in vineyard) in the cluster
-+ provide the scale in/out capability of vineyard on Kubernetes
-+ be responsible for data checkpoint, fault tolarence, etc.
+In the further vineyard will improve the integration with Kubernetes by abstract
+vineyard objects as as Kubernetes resources (i.e., CRDs), and leverage a vineyard
+operator to operate vineyard cluster.
 
 Install vineyard
 ----------------
@@ -181,14 +184,6 @@ Vineyard is distributed as a `python package`_ and can be easily installed with 
 .. code:: shell
 
    pip3 install vineyard
-
-Vineyard also has tight integration with Kubernetes and Helm. Vineyard can be deployed
-with ``helm``:
-
-.. code:: shell
-
-   helm repo add vineyard https://dl.bintray.com/libvineyard/charts/
-   helm install vineyard vineyard/vineyard
 
 The latest version of online documentation can be found at https://v6d.io.
 
