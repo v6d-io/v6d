@@ -54,7 +54,7 @@ Decisions are made based on consensus between maintainers. In extreme cases, a s
 where each maintainer receives one vote.
 
 Proposals and ideas can either be submitted for agreement via a github issue or PR,
-or by sending an email to `community@v6d.io`.
+or by sending an email to [community@v6d.io](mailto:community@v6d.io).
 
 In general, we prefer that technical issues and maintainer membership are amicably worked out between the persons involved.
 If a dispute cannot be decided independently, get a third-party maintainer (e.g. a mutual contact with some background
@@ -67,4 +67,5 @@ The Vineyard [Code of Conduct](CODE_OF_CONDUCT.md) is aligned with the CNCF Code
 
 ## Credits
 
-Some contents in this documents have been borrowed from [BFE](https://github.com/bfenetworks/bfe/blob/develop/GOVERNANCE.md) and [OpenYurt](https://github.com/alibaba/openyurt/blob/master/GOVERNANCE.md).
+Some contents in this documents have been borrowed from [BFE](https://github.com/bfenetworks/bfe/blob/develop/GOVERNANCE.md)
+and [OpenYurt](https://github.com/alibaba/openyurt/blob/master/GOVERNANCE.md).

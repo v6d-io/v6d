@@ -7,7 +7,7 @@
         an in-memory immutable data manager
     </p>
 
-|Build and Test| |Coverage| |Docs|
+|Build and Test| |Coverage| |Docs| |Artifact HUB|
 
 Vineyard is an in-memory immutable data manager
 that provides **out-of-box high-level** abstraction and **zero-copy in-memory** sharing for
@@ -141,6 +141,38 @@ Besides sharing the high level data abstractions, vineyard extends the capabily
 of data structures by drivers, enabling out-of-box reusable runtines for the
 boilerplate part in computation jobs.
 
+Integrate with Kubernetes
+-------------------------
+
+Deployment
+^^^^^^^^^^
+
+For better leveraging the scale-in/out capability of Kubernetes for worker pods of
+a data analytical job, vineyard could be deployed on Kubernetes to as a DaemonSet
+in Kubernetes cluster. Vineyard pods shares memory with worker pods using a UNIX
+domain socket with fine-grained access control.
+
+The UNIX domain socket can be either mounted on ``hostPath`` or via a ``PersistentVolumeClaim``.
+When users bundle vineyard and the workload to the same pod, the UNIX domain socket
+could also be shared using an ``emptyDir``.
+
+Vineyard Objects as Resources
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Vineyard objects are abstracted as Kubernetes resources(i.e., CRDs). Each CRD contains
+the metadata of the represented vineyard object Location specs that describe which
+node an object is located are added to the CRDs of local objects
+
+Vineyard Operator
+^^^^^^^^^^^^^^^^^
+
+Vineyard Operator will
+
++ be responsible for managing the status of vineyard cluster
++ manage the CRDs (which represents objects in vineyard) in the cluster
++ provide the scale in/out capability of vineyard on Kubernetes
++ be responsible for data checkpoint, fault tolarence, etc.
+
 Install vineyard
 ----------------
 
@@ -148,7 +180,15 @@ Vineyard is distributed as a `python package`_ and can be easily installed with 
 
 .. code:: shell
 
-    pip3 install vineyard
+   pip3 install vineyard
+
+Vineyard also has tight integration with Kubernetes and Helm. Vineyard can be deployed
+with ``helm``:
+
+.. code:: shell
+
+   helm repo add vineyard https://dl.bintray.com/libvineyard/charts/
+   helm install vineyard vineyard/vineyard
 
 The latest version of online documentation can be found at https://v6d.io.
 
@@ -193,3 +233,5 @@ Thank you in advance for your contributions to vineyard!
    :target: https://codecov.io/gh/alibaba/libvineyard
 .. |Docs| image:: https://img.shields.io/badge/docs-latest-brightgreen.svg
    :target: https://v6d.io
+.. |Artifact HUB| image:: https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard
+   :target: https://artifacthub.io/packages/helm/vineyard/vineyard
