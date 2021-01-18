@@ -37,6 +37,11 @@ limitations under the License.
 
 namespace vineyard {
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 class DataFrameBaseBuilder;
 
 class DataFrame : public Registered<DataFrame> {
@@ -133,6 +138,10 @@ class GlobalDataFrame : public Registered<GlobalDataFrame> {
   friend class Client;
   friend class GlobalDataFrameBaseBuilder;
 };
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace vineyard
 

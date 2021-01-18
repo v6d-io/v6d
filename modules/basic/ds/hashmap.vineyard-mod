@@ -31,6 +31,11 @@ limitations under the License.
 
 namespace vineyard {
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 struct __attribute__((annotate("no-vineyard"))) prime_hash_policy {
   prime_hash_policy() : current_prime_(1) {}
   prime_hash_policy(const prime_hash_policy& rhs)
@@ -225,6 +230,10 @@ class Hashmap : public Registered<Hashmap<K, V, H, E>>, public H, public E {
     return static_cast<const E&>(*this)(lhs, rhs);
   }
 };
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace vineyard
 

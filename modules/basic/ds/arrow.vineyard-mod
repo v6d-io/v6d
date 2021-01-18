@@ -33,6 +33,11 @@ limitations under the License.
 
 namespace vineyard {
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 /// The arrays in vineyard is a wrapper of arrow arrays, in order to
 /// Simplify the Build and Construct process.
 
@@ -355,6 +360,10 @@ class Table : public Registered<Table> {
   friend class Client;
   friend class TableBaseBuilder;
 };
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace vineyard
 

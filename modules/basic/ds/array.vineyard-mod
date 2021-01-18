@@ -32,6 +32,11 @@ namespace vineyard {
 template <typename T>
 class ArrayBaseBuilder;
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 /**
  * @brief The array type in vineyard.
  *
@@ -69,6 +74,9 @@ class Array : public Registered<Array<T>> {
   friend class ArrayBaseBuilder<T>;
 };
 
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_ARRAY_MOD_H_

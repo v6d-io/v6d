@@ -28,6 +28,11 @@ limitations under the License.
 
 namespace vineyard {
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 class TupleBaseBuilder;
 
 /**
@@ -103,6 +108,10 @@ class Tuple : public Registered<Tuple> {
   friend class Client;
   friend class TupleBaseBuilder;
 };
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace vineyard
 
