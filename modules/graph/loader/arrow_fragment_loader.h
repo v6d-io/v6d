@@ -189,8 +189,8 @@ GatherETables(Client& client,
     }
     std::unordered_map<std::string, std::string> meta_map;
     metadata->ToUnorderedMap(&meta_map);
-    grouped_batches[meta_map["label"]][std::make_pair(meta_map.at("src_label"),
-                                                      meta_map.at("dst_label"))]
+    grouped_batches[meta_map["label"]][std::make_pair(meta_map["src_label"],
+                                                      meta_map["dst_label"])]
         .emplace_back(batch);
   }
 
