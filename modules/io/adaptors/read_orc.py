@@ -16,56 +16,61 @@
 # limitations under the License.
 #
 
+import base64
 import json
 import sys
+from typing import Dict
 from urllib.parse import urlparse
 
-import vineyard
-
-from hdfs3 import HDFileSystem
-
+import fsspec
+import fsspec.implementations.hdfs
 import pyarrow as pa
 import pyorc
-
+import vineyard
 from vineyard.io.dataframe import DataframeStreamBuilder
+
+import ossfs
+
+fsspec.register_implementation("hive", fsspec.implementations.hdfs.PyArrowHDFS)
+fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
 
 def arrow_type(field):
-    if field.name == 'decimal':
+    if field.name == "decimal":
         return pa.decimal128(field.precision)
-    elif field.name == 'uniontype':
+    elif field.name == "uniontype":
         return pa.union(field.cont_types)
-    elif field.name == 'array':
+    elif field.name == "array":
         return pa.list_(field.type)
-    elif field.name == 'map':
+    elif field.name == "map":
         return pa.map_(field.key, field.value)
-    elif field.name == 'struct':
+    elif field.name == "struct":
         return pa.struct(field.fields)
     else:
         types = {
-            'boolean': pa.bool_(),
-            'tinyint': pa.int8(),
-            'smallint': pa.int16(),
-            'int': pa.int32(),
-            'bigint': pa.int64(),
-            'float': pa.float32(),
-            'double': pa.float64(),
-            'string': pa.string(),
-            'char': pa.string(),
-            'varchar': pa.string(),
-            'binary': pa.binary(),
-            'timestamp': pa.timestamp('ms'),
-            'date': pa.date32(),
+            "boolean": pa.bool_(),
+            "tinyint": pa.int8(),
+            "smallint": pa.int16(),
+            "int": pa.int32(),
+            "bigint": pa.int64(),
+            "float": pa.float32(),
+            "double": pa.float64(),
+            "string": pa.string(),
+            "char": pa.string(),
+            "varchar": pa.string(),
+            "binary": pa.binary(),
+            "timestamp": pa.timestamp("ms"),
+            "date": pa.date32(),
         }
         if field.name not in types:
-            raise ValueError('Cannot convert to arrow type: ' + field.name)
+            raise ValueError("Cannot convert to arrow type: " + field.name)
         return types[field.name]
 
 
-def read_hdfs_orc(path, hdfs, writer):
+def read_single_orc(path, fs, writer):
     chunk_rows = 1024 * 256
 
-    with hdfs.open(path, 'rb') as f:
+    with fs.open(path, "rb") as f:
         reader = pyorc.Reader(f)
         fields = reader.schema.fields
         schema = []
@@ -88,7 +93,14 @@ def read_hdfs_orc(path, hdfs, writer):
             buf_writer.close()
 
 
-def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
+def read_orc(
+    vineyard_socket,
+    path,
+    storage_options: Dict,
+    read_options: Dict,
+    proc_num,
+    proc_index,
+):
     # This method is to read the data files of a specific hive table
     # that is stored as orc format in HDFS.
     #
@@ -112,39 +124,47 @@ def read_hive_orc(vineyard_socket, path, proc_num, proc_index):
     #    'hive://user/hive/warehouse/sometable/date=20201112'
     #
     if proc_index:
-        raise ValueError('Parallel reading ORC hasn\'t been supported yet')
+        raise ValueError("Parallel reading ORC hasn't been supported yet")
+    if read_options:
+        raise ValueError("Reading ORC doesn't support read options.")
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
     stream = builder.seal(client)
     client.persist(stream)
-    ret = {'type': 'return'}
-    ret['content'] = repr(stream.id)
+    ret = {"type": "return", "content": repr(stream.id)}
     print(json.dumps(ret), flush=True)
 
     writer = stream.open_writer(client)
-    host, port = urlparse(path).netloc.split(':')
-    hdfs = HDFileSystem(host=host, port=int(port), pars={"dfs.client.read.shortcircuit": "false"})
+    parsed = urlparse(path)
 
-    paths = hdfs.glob(urlparse(path).path)
-    files = []
-    for sub in paths:
-        if hdfs.isfile(sub):
-            files.append(sub)
-        else:
-            files += hdfs.glob(sub)
-
-    for filepath in files:
-        read_hdfs_orc(filepath, hdfs, writer)
+    fs = fsspec.filesystem(parsed.scheme, **storage_options)
+    if fs.isfile(parsed.path):
+        files = [parsed.path]
+    else:
+        files = [f for f in fs.ls(parsed.path, detail=False) if fs.isfile(f)]
+    for file_path in files:
+        read_single_orc(file_path, fs, writer)
+    # hdfs = HDFileSystem(
+    #     host=host, port=int(port), pars={"dfs.client.read.shortcircuit": "false"}
+    # )
 
     writer.finish()
 
 
-if __name__ == '__main__':
-    if len(sys.argv) < 5:
-        print('usage: ./read_hive_orc <ipc_socket> <hive file directory> <proc num> <proc index>')
+if __name__ == "__main__":
+    if len(sys.argv) < 7:
+        print(
+            "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> <read_options> <proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
-    hive_dir = sys.argv[2]
-    proc_num = int(sys.argv[3])
-    proc_index = int(sys.argv[4])
-    read_hive_orc(ipc_socket, hive_dir, proc_num, proc_index)
+    path = sys.argv[2]
+    storage_options = json.loads(
+        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+    )
+    read_options = json.loads(
+        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
+    )
+    proc_num = int(sys.argv[5])
+    proc_index = int(sys.argv[6])
+    read_orc(ipc_socket, path, storage_options, read_options, proc_num, proc_index)

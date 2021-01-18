@@ -159,13 +159,20 @@ int main(int argc, const char** argv) {
   auto params = ls->GetParams();
   bool header_row = (params["header_row"] == "1");
   std::string delimiter = params["delimiter"];
+  if (delimiter.empty()) {
+    delimiter = ",";
+  }
   std::vector<std::string> columns;
   std::vector<std::string> column_types;
   std::vector<std::string> original_columns;
-  std::string header_line = "None";
+  std::string header_line;
 
   if (header_row) {
     header_line = params["header_line"];
+    if (header_line.empty()) {
+      ReportStatus("error",
+                   "Header line not found while header_row is set to True");
+    }
     ::boost::algorithm::trim(header_line);
     ::boost::split(original_columns, header_line,
                    ::boost::is_any_of(delimiter.substr(0, 1)));

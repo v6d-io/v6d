@@ -1,4 +1,7 @@
+fsspec
 hdfs3
+oss2
 pyarrow
 pyorc
+s3fs
 vineyard

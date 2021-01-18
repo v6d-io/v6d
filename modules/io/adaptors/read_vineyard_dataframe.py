@@ -16,52 +16,38 @@
 # limitations under the License.
 #
 
+import base64
 import json
 import sys
-
-import vineyard
+from urllib.parse import urlparse
 
 import pyarrow as pa
-
-from urllib.parse import urlparse
+import vineyard
 from vineyard.io.dataframe import DataframeStreamBuilder
 
 
-def read_vineyard_dataframe(vineyard_socket, path, proc_num, proc_index):
+def read_vineyard_dataframe(
+    vineyard_socket, path, storage_options, read_options, proc_num, proc_index
+):
     client = vineyard.connect(vineyard_socket)
     builder = DataframeStreamBuilder(client)
-
-    header_row = False
-    fragments = urlparse(path).fragment.split('&')
-
-    name = urlparse(path).netloc
-
-    for frag in fragments:
-        try:
-            k, v = frag.split('=')
-        except:
-            pass
-        else:
-            if k == 'header_row':
-                header_row = (v.upper() == 'TRUE')
-                if header_row:
-                    builder[k] = '1'
-                else:
-                    builder[k] = '0'
-            elif k == 'delimiter':
-                builder[k] = bytes(v, "utf-8").decode("unicode_escape")
+    if storage_options:
+        raise ValueError("Read vineyard current not support storage options")
+    builder["header_row"] = "1" if read_options.get("header_row", False) else "0"
+    builder["delimiter"] = bytes(read_options.get("delimiter", ","), "utf-8").decode(
+        "unicode_escape"
+    )
 
     stream = builder.seal(client)
     client.persist(stream)
-    ret = {'type': 'return'}
-    ret['content'] = repr(stream.id)
+    ret = {"type": "return", "content": repr(stream.id)}
     print(json.dumps(ret), flush=True)
 
-    writer = stream.open_writer(client)
-
+    name = urlparse(path).netloc
     df_id = client.get_name(name)
     dataframes = client.get(df_id)
 
+    writer = stream.open_writer(client)
     for df in dataframes:
         rb = pa.RecordBatch.from_pandas(df)
         sink = pa.BufferOutputStream()
@@ -77,12 +63,22 @@ def read_vineyard_dataframe(vineyard_socket, path, proc_num, proc_index):
     writer.finish()
 
 
-if __name__ == '__main__':
-    if len(sys.argv) < 5:
-        print('usage: ./read_vineyard_dataframe <ipc_socket> <vineyard_address> <proc num> <proc index>')
+if __name__ == "__main__":
+    if len(sys.argv) < 7:
+        print(
+            "usage: ./read_vineyard_dataframe <ipc_socket> <vineyard_address> <storage_options> <read_options> <proc num> <proc index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
-    vineyard_address = sys.argv[2]
-    proc_num = int(sys.argv[3])
-    proc_index = int(sys.argv[4])
-    read_vineyard_dataframe(ipc_socket, vineyard_address, proc_num, proc_index)
+    path = sys.argv[2]
+    storage_options = json.loads(
+        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+    )
+    read_options = json.loads(
+        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
+    )
+    proc_num = int(sys.argv[5])
+    proc_index = int(sys.argv[6])
+    read_vineyard_dataframe(
+        ipc_socket, path, storage_options, read_options, proc_num, proc_index
+    )

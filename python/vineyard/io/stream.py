@@ -43,13 +43,11 @@ def read(path, *args, **kwargs):
             or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
-
-    logger.debug('parsed.scheme = %s: %s', parsed.scheme, path)
     if read.__factory and read.__factory[parsed.scheme]:
         for reader in read.__factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
-                r = reader(path[len(parsed.scheme) + 3:], proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+                r = reader(path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
                 if r is not None:
                     return r
             except Exception as e:
@@ -77,13 +75,11 @@ def write(path, stream, *args, **kwargs):
             or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
-
     if write.__factory and write.__factory[parsed.scheme]:
         for writer in write.__factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
-                writer(path[len(parsed.scheme) + 3:], stream, proc_kwargs.pop('vineyard_ipc_socket'), *args,
-                       **proc_kwargs)
+                writer(path, stream, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
             except Exception as e:
                 logger.debug('failed when trying the writer: %s', e)
                 continue
@@ -114,6 +110,10 @@ def open(path, *args, mode='r', **kwargs):
         vineyard.io.read
         vineyard.io.write
     '''
+    parsed = urlparse(path)
+    if not parsed.scheme:
+        path = 'file://' + path
+
     if mode == 'r':
         return read(path, *args, **kwargs)
 

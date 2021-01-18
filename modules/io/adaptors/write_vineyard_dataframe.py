@@ -16,18 +16,17 @@
 # limitations under the License.
 #
 
-import vineyard
-import pyarrow as pa
-import sys
 import io
 import json
-
+import sys
 from urllib.parse import urlparse
+
+import pyarrow as pa
+import vineyard
 
 
 def print_vineyard_id(vineyard_id):
-    ret = {'type': 'return'}
-    ret['content'] = repr(vineyard_id)
+    ret = {"type": "return", "content": repr(vineyard_id)}
     print(json.dumps(ret))
 
 
@@ -35,7 +34,9 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
+        raise ValueError(
+            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
+        )
     instream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
@@ -58,9 +59,11 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
             print_vineyard_id(df_id)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) < 5:
-        print('usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>')
+        print(
+            "usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]

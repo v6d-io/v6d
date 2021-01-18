@@ -112,7 +112,7 @@ class Launcher(object):
             ..code-block:
 
                 {
-                    "status": "return/error/exit",
+                    "type": "return/error/exit",
                     "content": ......
                 }
 
@@ -149,7 +149,7 @@ class Launcher(object):
                     return self.on_exit(r.get('content'))
             return None
         except json.JSONDecodeError:
-            # if not a valid launcher message, sliently ignore it.
+            # if not a valid launcher message, silently ignore it.
             return None
 
     def on_return(self, return_content):

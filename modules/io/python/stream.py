@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import base64
 import json
 import logging
 import os
@@ -23,23 +24,21 @@ import os
 import vineyard.io
 from vineyard.launcher.script import ScriptLauncher
 
-logger = logging.getLogger('vineyard')
+logger = logging.getLogger("vineyard")
 base_path = os.path.abspath(os.path.dirname(__file__))
 
 from vineyard.core.resolver import default_resolver_context
 
 
 def parallel_stream_resolver(obj):
-    ''' Return a list of *local* partial streams.
-    '''
+    """Return a list of *local* partial streams."""
     meta = obj.meta
-    partition_size = int(meta['size_'])
-    return [meta.get_member('stream_%d' % i) for i in range(partition_size)]
+    partition_size = int(meta["size_"])
+    return [meta.get_member("stream_%d" % i) for i in range(partition_size)]
 
 
 def global_dataframe_resolver(obj, resolver):
-    ''' Return a list of dataframes.
-    '''
+    """Return a list of dataframes."""
     meta = obj.meta
     object_set = meta.get_member('objects_')
     meta = object_set.meta
@@ -50,37 +49,36 @@ def global_dataframe_resolver(obj, resolver):
         df = meta.get_member('object_%d' % i)
         if df.meta.islocal:
             dataframes.append(resolver.run(df))
-            orders.append(df.meta['row_batch_index_'])
+            orders.append(df.meta["row_batch_index_"])
     if orders != sorted(orders):
-        raise ValueError('Bad dataframe orders:', orders)
+        raise ValueError("Bad dataframe orders:", orders)
     return dataframes
 
 
-default_resolver_context.register('vineyard::ParallelStream', parallel_stream_resolver)
-default_resolver_context.register('vineyard::GlobalDataFrame', global_dataframe_resolver)
+default_resolver_context.register("vineyard::ParallelStream", parallel_stream_resolver)
+default_resolver_context.register("vineyard::GlobalDataFrame", global_dataframe_resolver)
 
 
-def _resolve_ssh_script(deployment='ssh'):
-    if deployment == 'ssh':
-        return os.path.join(base_path, 'ssh.sh')
-    if deployment == 'kubernetes':
-        return os.path.join(base_path, 'kube_ssh.sh')
+def _resolve_ssh_script(deployment="ssh"):
+    if deployment == "ssh":
+        return os.path.join(base_path, "ssh.sh")
+    if deployment == "kubernetes":
+        return os.path.join(base_path, "kube_ssh.sh")
     raise ValueError('Unknown deployment: "%s"' % deployment)
 
 
 class StreamLauncher(ScriptLauncher):
-    ''' Launch the job by executing a script.
-    '''
-    def __init__(self, vineyard_endpoint=None, deployment='ssh'):
-        ''' Launch a job to read as a vineyard stream.
+    """Launch the job by executing a script."""
+    def __init__(self, vineyard_endpoint=None, deployment="ssh"):
+        """Launch a job to read as a vineyard stream.
 
-            Parameters
-            ----------
-            vineyard_endpoint: str
-                IPC or RPC endpoint to connect to vineyard. If not specified, vineyard
-                will try to discovery vineyardd from the environment variable named
-                :code:`VINEYARD_IPC_SOCKET`.
-        '''
+        Parameters
+        ----------
+        vineyard_endpoint: str
+            IPC or RPC endpoint to connect to vineyard. If not specified, vineyard
+            will try to discovery vineyardd from the environment variable named
+            :code:`VINEYARD_IPC_SOCKET`.
+        """
         self.vineyard_endpoint = vineyard_endpoint
         super(StreamLauncher, self).__init__(_resolve_ssh_script(deployment=deployment))
 
@@ -89,10 +87,10 @@ class StreamLauncher(ScriptLauncher):
 
 
 class ParallelStreamLauncher(ScriptLauncher):
-    ''' Launch the job by executing a script, in which `ssh` or `kubectl exec` will
-        be used under the hood.
-    '''
-    def __init__(self, deployment='ssh'):
+    """Launch the job by executing a script, in which `ssh` or `kubectl exec` will
+    be used under the hood.
+    """
+    def __init__(self, deployment="ssh"):
         self.deployment = deployment
         self.vineyard_endpoint = None
         super(ParallelStreamLauncher, self).__init__(_resolve_ssh_script(deployment=deployment))
@@ -101,23 +99,23 @@ class ParallelStreamLauncher(ScriptLauncher):
         self._procs = []
 
     def run(self, *args, **kwargs):
-        ''' Execute a job to read as a vineyard stream or write a vineyard stream to
-            external data sink.
+        """Execute a job to read as a vineyard stream or write a vineyard stream to
+        external data sink.
 
-            Parameters
-            ----------
-            vineyard_endpoint: str
-                The local IPC or RPC endpoint to connect to vineyard. If not specified,
-                vineyard will try to discovery vineyardd from the environment variable
-                named :code:`VINEYARD_IPC_SOCKET` and :code:`VINEYARD_RPC_ENDPOINT`.
-        '''
+        Parameters
+        ----------
+        vineyard_endpoint: str
+            The local IPC or RPC endpoint to connect to vineyard. If not specified,
+            vineyard will try to discovery vineyardd from the environment variable
+            named :code:`VINEYARD_IPC_SOCKET` and :code:`VINEYARD_RPC_ENDPOINT`.
+        """
         kwargs = kwargs.copy()
-        self.vineyard_endpoint = kwargs.pop('vineyard_endpoint', None)
-        if ':' in self.vineyard_endpoint:
-            self.vineyard_endpoint = tuple(self.vineyard_endpoint.split(':'))
+        self.vineyard_endpoint = kwargs.pop("vineyard_endpoint", None)
+        if ":" in self.vineyard_endpoint:
+            self.vineyard_endpoint = tuple(self.vineyard_endpoint.split(":"))
 
-        hosts = kwargs.pop('hosts', ['localhost'])
-        num_workers = kwargs.pop('num_workers', len(hosts))
+        hosts = kwargs.pop("hosts", ["localhost"])
+        num_workers = kwargs.pop("num_workers", len(hosts))
 
         nh = len(hosts)
         slots = [num_workers // nh + int(i < num_workers % nh) for i in range(nh)]
@@ -146,7 +144,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         for proc in self._procs:
             r = proc.wait(timeout=timeout)
             partial_ids.append(r)
-        logger.debug('partial_ids = %s', partial_ids)
+        logger.debug("partial_ids = %s", partial_ids)
         if func is None:
             return self.create_parallel_stream(partial_ids)
         return func(partial_ids)
@@ -156,7 +154,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         meta['typename'] = 'vineyard::ParallelStream'
         meta['size_'] = len(partial_ids)
         for idx, partition_id in enumerate(partial_ids):
-            meta.add_member('stream_%d' % idx, partition_id)
+            meta.add_member("stream_%d" % idx, partition_id)
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
         ret_id = vineyard_rpc_client.create_metadata(meta)
         vineyard_rpc_client.persist(ret_id)
@@ -167,7 +165,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         for proc in self._procs:
             proc.join()
             partial_id_matrix.append([vineyard.ObjectID(ret_id) for ret_id in proc._result])
-        logger.debug('partial_id_matrix = %s', partial_id_matrix)
+        logger.debug("partial_id_matrix = %s", partial_id_matrix)
         if func is None:
             return self.create_global_dataframe(partial_id_matrix, **kwargs)
         return func(partial_id_matrix, **kwargs)
@@ -193,9 +191,9 @@ class ParallelStreamLauncher(ScriptLauncher):
         # to create a global dataframe. Here the name is given in the
         # the input URI path in the
         # form of vineyard://{name_for_the_global_dataframe}
-        name = kwargs.pop('name', None)
+        name = kwargs.pop("name", None)
         if name is None:
-            raise ValueError('Name of the global dataframe is not provided')
+            raise ValueError("Name of the global dataframe is not provided")
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::GlobalDataFrame'
         objset = self.create_objectset(partial_id_matrix)
@@ -210,205 +208,222 @@ class ParallelStreamLauncher(ScriptLauncher):
 
 
 def get_executable(name):
-    return f'vineyard_{name}'
+    return f"vineyard_{name}"
 
 
 def parse_bytes_to_dataframe(vineyard_socket, byte_stream, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('parse_bytes_to_dataframe'), *((vineyard_socket, byte_stream) + args), **kwargs)
-    return launcher.wait()
-
-
-def read_local_bytes(path, vineyard_socket, *args, **kwargs):
-    ''' Read a byte stream from local files.
-    '''
-    path = json.dumps(path)
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('read_local_bytes'), *((vineyard_socket, path) + args), **kwargs)
+    launcher.run(
+        get_executable("parse_bytes_to_dataframe"),
+        vineyard_socket,
+        byte_stream,
+        *args,
+        **kwargs,
+    )
     return launcher.wait()
 
 
 def read_kafka_bytes(path, vineyard_socket, *args, **kwargs):
-    ''' Read a bytes stream from a kafka topic.
-    '''
+    """Read a bytes stream from a kafka topic."""
     path = json.dumps(path)
-    deployment = kwargs.pop('deployment', 'ssh')
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('read_kafka_bytes'), *((vineyard_socket, path) + args), **kwargs)
+    launcher.run(get_executable("read_kafka_bytes"), vineyard_socket, path, *args, **kwargs)
     return launcher.wait()
-
-
-def read_local_orc(path, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('read_local_orc'), *((vineyard_socket, path) + args), **kwargs)
-    return launcher.wait()
-
-
-def read_local_dataframe(path, vineyard_socket, *args, **kwargs):
-    if '.orc' in path:
-        return read_local_orc(path, vineyard_socket, *args, **kwargs)
-    return parse_bytes_to_dataframe(vineyard_socket, read_local_bytes(path, vineyard_socket, *args, **kwargs.copy()),
-                                    *args, **kwargs.copy())
 
 
 def read_kafka_dataframe(path, vineyard_socket, *args, **kwargs):
-    return parse_bytes_to_dataframe(vineyard_socket, read_kafka_bytes(path, vineyard_socket, *args, **kwargs.copy()),
-                                    *args, **kwargs.copy())
-
-
-def read_hdfs_bytes(path, vineyard_socket, *args, **kwargs):
-    path = json.dumps('hdfs://' + path)
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('read_hdfs_bytes'), *((vineyard_socket, path) + args), **kwargs)
-    return launcher.wait()
-
-
-def read_hdfs_orc(path, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('read_hdfs_orc'), *((vineyard_socket, 'hdfs://' + path) + args), **kwargs)
-    return launcher.wait()
-
-
-def read_hdfs_dataframe(path, vineyard_socket, *args, **kwargs):
-    if '.orc' in path:
-        return read_hdfs_orc(path, vineyard_socket, *args, **kwargs)
-    return parse_bytes_to_dataframe(vineyard_socket, read_hdfs_bytes(path, vineyard_socket, *args, **kwargs.copy()),
-                                    *args, **kwargs.copy())
-
-
-def read_hive_dataframe(path, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    # Note that vineyard currently supports hive tables stored as orc format only
-    launcher.run(get_executable('read_hive_orc'), *((vineyard_socket, 'hive://' + path) + args), **kwargs)
-    return launcher.wait()
+    stream = read_kafka_bytes(path, vineyard_socket, *args, **kwargs.copy())
+    return parse_bytes_to_dataframe(
+        vineyard_socket,
+        stream,
+        *args,
+        **kwargs.copy(),
+    )
 
 
 def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
-    path = json.dumps('vineyard://' + path)
-    deployment = kwargs.pop('deployment', 'ssh')
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
+    storage_options = kwargs.pop("storage_options", {})
+    read_options = kwargs.pop("read_options", {})
+    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
+    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode("utf-8")
     # Note that vineyard currently supports hive tables stored as orc format only
-    launcher.run(get_executable('read_vineyard_dataframe'), *((vineyard_socket, path) + args), **kwargs)
+    launcher.run(
+        get_executable("read_vineyard_dataframe"),
+        vineyard_socket,
+        path,
+        storage_options,
+        read_options,
+        *args,
+        **kwargs,
+    )
     return launcher.wait()
 
 
-def read_oss_dataframe(path, vineyard_socket, *args, **kwargs):
-    ''' Read a dataframe stream from oss files.
-    '''
-    path = json.dumps('oss://' + path)
-    deployment = kwargs.pop('deployment', 'ssh')
+def read_bytes(path, vineyard_socket, storage_options, read_options, *args, **kwargs):
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('read_oss_dataframe'), *((vineyard_socket, path) + args), **kwargs)
+    launcher.run(
+        get_executable("read_bytes"),
+        vineyard_socket,
+        path,
+        storage_options,
+        read_options,
+        *args,
+        **kwargs,
+    )
     return launcher.wait()
 
 
-vineyard.io.read.register('file', read_local_bytes)
-vineyard.io.read.register('file', read_local_dataframe)
-vineyard.io.read.register('kafka', read_kafka_bytes)
-vineyard.io.read.register('kafka', read_kafka_dataframe)
-vineyard.io.read.register('hdfs', read_hdfs_dataframe)
-vineyard.io.read.register('hive', read_hive_dataframe)
-vineyard.io.read.register('vineyard', read_vineyard_dataframe)
-vineyard.io.read.register('oss', read_oss_dataframe)
+def read_orc(path, vineyard_socket, storage_options, read_options, *args, **kwargs):
+    deployment = kwargs.pop("deployment", "ssh")
+    launcher = ParallelStreamLauncher(deployment)
+    launcher.run(
+        get_executable("read_orc"),
+        vineyard_socket,
+        path,
+        storage_options,
+        read_options,
+        *args,
+        **kwargs,
+    )
+    return launcher.wait()
+
+
+def read_dataframe(path, vineyard_socket, *args, **kwargs):
+    path = json.dumps(path)
+    storage_options = kwargs.pop("storage_options", {})
+    read_options = kwargs.pop("read_options", {})
+    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
+    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode("utf-8")
+    if ".orc" in path:
+        logger.debug("Read Orc file from %s.", path)
+        return read_orc(path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy())
+    else:
+        stream = read_bytes(path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy())
+        return parse_bytes_to_dataframe(
+            vineyard_socket,
+            stream,
+            *args,
+            **kwargs.copy(),
+        )
+
+
+vineyard.io.read.register("file", read_dataframe)
+vineyard.io.read.register("hdfs", read_dataframe)
+vineyard.io.read.register("hive", read_dataframe)
+vineyard.io.read.register("s3", read_dataframe)
+vineyard.io.read.register("oss", read_dataframe)
+
+vineyard.io.read.register("kafka", read_kafka_bytes)
+vineyard.io.read.register("kafka", read_kafka_dataframe)
+vineyard.io.read.register("vineyard", read_vineyard_dataframe)
 
 
 def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('parse_dataframe_to_bytes'), *((vineyard_socket, dataframe_stream) + args), **kwargs)
+    launcher.run(
+        get_executable("parse_dataframe_to_bytes"),
+        *((vineyard_socket, dataframe_stream) + args),
+        **kwargs,
+    )
     return launcher.wait()
 
 
-def write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
+def write_bytes(path, byte_stream, vineyard_socket, storage_options, *args, **kwargs):
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_local_orc'), *((vineyard_socket, dataframe_stream, path) + args), **kwargs)
+    launcher.run(
+        get_executable("write_bytes"),
+        vineyard_socket,
+        path,
+        byte_stream,
+        storage_options,
+        *args,
+        **kwargs,
+    )
     launcher.join()
 
 
-def write_local_bytes(path, byte_stream, vineyard_socket, *args, **kwargs):
-    path = json.dumps('file://' + path)
-    deployment = kwargs.pop('deployment', 'ssh')
+def write_orc(path, dataframe_stream, vineyard_socket, storage_options, *args, **kwargs):
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_local_bytes'), *((vineyard_socket, byte_stream, path) + args), **kwargs)
+    launcher.run(
+        get_executable("write_orc"),
+        vineyard_socket,
+        path,
+        dataframe_stream,
+        storage_options,
+        *args,
+        **kwargs,
+    )
     launcher.join()
 
 
-def write_local_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    if '.orc' in path:
-        write_local_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs)
+def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
+    path = json.dumps(path)
+    storage_options = kwargs.pop("storage_options", {})
+    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
+
+    if ".orc" in path:
+        logger.debug("Write Orc file to %s.", path)
+        write_orc(
+            path,
+            dataframe_stream,
+            vineyard_socket,
+            storage_options,
+            *args,
+            **kwargs.copy(),
+        )
     else:
-        write_local_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs.copy()),
-                          vineyard_socket, *args, **kwargs.copy())
+        stream = parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs.copy())
+        write_bytes(path, stream, vineyard_socket, storage_options, *args, **kwargs.copy())
 
 
 def write_kafka_bytes(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_kafka_bytes'), *((vineyard_socket, path, dataframe_stream) + args), **kwargs)
+    launcher.run(
+        get_executable("write_kafka_bytes"),
+        *((vineyard_socket, path, dataframe_stream) + args),
+        **kwargs,
+    )
     launcher.join()
 
 
 def write_kafka_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_kafka_dataframe'), *((vineyard_socket, path, dataframe_stream) + args), **kwargs)
+    launcher.run(
+        get_executable("write_kafka_dataframe"),
+        *((vineyard_socket, path, dataframe_stream) + args),
+        **kwargs,
+    )
     launcher.join()
-
-
-def write_hdfs_bytes(path, byte_stream, vineyard_socket, *args, **kwargs):
-    path = json.dumps('hdfs://' + path)
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_hdfs_bytes'), *((vineyard_socket, byte_stream, path) + args), **kwargs)
-    launcher.join()
-
-
-def write_hdfs_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_hdfs_orc'), *((vineyard_socket, dataframe_stream, 'hdfs://' + path) + args),
-                 **kwargs)
-    launcher.join()
-
-
-def write_hdfs_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    if '.orc' in path:
-        write_hdfs_orc(path, dataframe_stream, vineyard_socket, *args, **kwargs)
-    else:
-        write_hdfs_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs.copy()),
-                         vineyard_socket, *args, **kwargs.copy())
 
 
 def write_vineyard_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop('deployment', 'ssh')
+    deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_vineyard_dataframe'), *((vineyard_socket, dataframe_stream) + args), **kwargs)
-    return launcher.wait_all(name=path)
+    launcher.run(
+        get_executable("write_vineyard_dataframe"),
+        vineyard_socket,
+        dataframe_stream,
+        *args,
+        **kwargs,
+    )
+    return launcher.wait_all(name=path[len("vineyard://"):])
 
 
-def write_oss_bytes(path, byte_stream, vineyard_socket, *args, **kwargs):
-    path = json.dumps('oss://' + path)
-    deployment = kwargs.pop('deployment', 'ssh')
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable('write_oss_bytes'), *((vineyard_socket, byte_stream, path) + args), **kwargs)
-    launcher.join()
+vineyard.io.write.register("file", write_dataframe)
+vineyard.io.write.register("hdfs", write_dataframe)
+vineyard.io.write.register("s3", write_dataframe)
+vineyard.io.write.register("oss", write_dataframe)
 
-
-def write_oss_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    write_oss_bytes(path, parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs.copy()),
-                    vineyard_socket, *args, **kwargs.copy())
-
-
-vineyard.io.write.register('file', write_local_dataframe)
-vineyard.io.write.register('kafka', write_kafka_bytes)
-vineyard.io.write.register('kafka', write_kafka_dataframe)
-vineyard.io.write.register('hdfs', write_hdfs_dataframe)
-vineyard.io.write.register('vineyard', write_vineyard_dataframe)
-vineyard.io.write.register('oss', write_oss_dataframe)
+vineyard.io.write.register("kafka", write_kafka_bytes)
+vineyard.io.write.register("kafka", write_kafka_dataframe)
+vineyard.io.write.register("vineyard", write_vineyard_dataframe)

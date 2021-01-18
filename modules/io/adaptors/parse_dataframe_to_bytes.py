@@ -18,13 +18,11 @@
 
 import io
 import json
-from urllib.parse import urlparse
 import sys
-
-import vineyard
+from urllib.parse import urlparse
 
 import pyarrow as pa
-
+import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
 
@@ -32,18 +30,20 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f'Fetch stream error with proc_num={proc_num},proc_index={proc_index}')
+        raise ValueError(
+            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
+        )
     instream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
-    header_row = (instream.params.get('header_row', None) == '1')
-    delimiter = instream.params.get('delimiter', ',')
+    header_row = instream.params.get("header_row", None) == "1"
+    delimiter = instream.params.get("delimiter", ",")
 
     builder = ByteStreamBuilder(client)
     stream = builder.seal(client)
     client.persist(stream)
-    ret = {'type': 'return'}
-    ret['content'] = repr(stream.id)
+    ret = {"type": "return"}
+    ret["content"] = repr(stream.id)
     print(json.dumps(ret), flush=True)
 
     stream_writer = stream.open_writer(client)
@@ -69,9 +69,11 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
             buf_writer.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) < 5:
-        print('usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>')
+        print(
+            "usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
