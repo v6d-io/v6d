@@ -23,6 +23,7 @@ import pkg_resources
 import subprocess
 import textwrap
 import time
+import yaml
 
 from .utils import start_etcd_k8s
 
@@ -63,16 +64,23 @@ def start_vineyardd(namespace='vineyard',
         debug: bool
             Whether print debug logs.
     '''
-    start_etcd_k8s(namespace)
+    #start_etcd_k8s(namespace)
 
     template_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname(__file__))
     template_env = jinja2.Environment(loader=template_loader)
-    template = template_env.get_template("vineyard_k8s.yaml.tmpl")
-    body = template.render(Namespace=namespace, Size=size, Socket=socket, Port=rpc_socket_port)
-
+    template = template_env.get_template("vineyard_daemonset.yaml.tmpl")
+    body = template.render(Namespace=namespace, Size=size, Socket=socket)
+    body = yaml.safe_load(body)
     kubernetes.config.load_kube_config()
 
     k8s_apps_v1 = kubernetes.client.AppsV1Api()
-    resp = k8s_apps_v1.create_namespaced_daemon_set(
-            body=body, namespace=namespace)
-    print("DaemonSet created. status=%s" % resp.metadata.name)
+    resp = k8s_apps_v1.create_namespaced_daemon_set(body=body, namespace=namespace)
+    print("Vineyard DaemonSet created. status=%s" % resp.metadata.name)
+
+    template = template_env.get_template("vineyard_service.yaml.tmpl")
+    body = template.render(Port=rpc_socket_port)
+    body = yaml.safe_load(body)
+
+    k8s_core_v1 = kubernetes.client.CoreV1Api()
+    resp = k8s_core_v1.create_namespaced_service(body=body, namespace=namespace)
+    print("Vineyard Service created. status=%s" % resp.metadata.name)

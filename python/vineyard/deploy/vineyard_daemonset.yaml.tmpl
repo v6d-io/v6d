@@ -30,10 +30,10 @@ spec:
         - {{ Size }}
         resources:
           limits:
-            memory: 200mi
+            memory: 200m
           requests:
             cpu: 100m
-            memory: 200mi
+            memory: 200m
         volumeMounts:
         - name: varrun
           mountPath: /var/run
@@ -48,16 +48,3 @@ spec:
         emptyDir:
           medium: Memory
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: vineyard-rpc
-  namespace: vineyard
-spec:
-  selector:
-    app: vineyard
-  ports:
-    - protocol: TCP
-      port: {{ Port }}
-      targetPort: {{ Port }}
