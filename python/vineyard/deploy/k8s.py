@@ -27,8 +27,7 @@ import time
 from .utils import start_etcd_k8s
 
 
-def start_vineyardd(etcd_endpoints=None,
-                    vineyardd_path=None,
+def start_vineyardd(namespace='vineyard',
                     size='256Mi',
                     socket='/var/run/vineyard.sock',
                     rpc_socket_port=9600,
@@ -64,17 +63,16 @@ def start_vineyardd(etcd_endpoints=None,
         debug: bool
             Whether print debug logs.
     '''
-    if etcd_endpoints is None:
-        start_etcd_k8s()
+    start_etcd_k8s(namespace)
 
     template_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname(__file__))
     template_env = jinja2.Environment(loader=template_loader)
     template = template_env.get_template("vineyard_k8s.yaml.tmpl")
-    body = template.render()
+    body = template.render(Namespace=namespace, Size=size, Socket=socket, Port=rpc_socket_port)
 
     kubernetes.config.load_kube_config()
 
     k8s_apps_v1 = kubernetes.client.AppsV1Api()
     resp = k8s_apps_v1.create_namespaced_daemon_set(
-            body=body, namespace="vineyard")
+            body=body, namespace=namespace)
     print("DaemonSet created. status=%s" % resp.metadata.name)

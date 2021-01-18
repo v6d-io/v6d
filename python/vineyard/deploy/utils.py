@@ -119,11 +119,11 @@ def start_etcd(host=None, etcd_executable=None):
         if proc is not None and proc.poll() is None:
             proc.terminate()
 
-def start_etcd_k8s():
+def start_etcd_k8s(namespace):
     kubernetes.config.load_kube_config()
     with open(os.path.join(os.path.dirname(__file__), 'etcd.yaml')) as f:
         dep = yaml.safe_load(f)
         k8s_apps_v1 = kubernetes.client.AppsV1Api()
         resp = k8s_apps_v1.create_namespaced_deployment(
-            body=dep, namespace="vineyard")
+            body=dep, namespace=namespace)
         print("Deployment created. status=%s" % resp.metadata.name)

@@ -22,12 +22,18 @@ spec:
       containers:
       - name: vineyard
         image: quay.io/libvineyard/vineyardd:latest
+        args:
+        - {{ Socket }}
+        - "--etcd_endpoint"
+        - "http://etcd-for-vineyard.{{ Namespace }}.svc.cluster.local:2379"
+        - "--size"
+        - {{ Size }}
         resources:
           limits:
-            memory: {{ MemorySize }}
+            memory: 200mi
           requests:
             cpu: 100m
-            memory: {{ MemorySize }}
+            memory: 200mi
         volumeMounts:
         - name: varrun
           mountPath: /var/run
