@@ -28,20 +28,12 @@ import yaml
 from .utils import start_etcd_k8s
 
 
-def start_vineyardd(namespace='vineyard',
-                    size='256Mi',
-                    socket='/var/run/vineyard.sock',
-                    rpc_socket_port=9600,
-                    debug=False):
+def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyard.sock', rpc_socket_port=9600):
     ''' Launch a local vineyard cluster.
 
     Parameters:
-        etcd_endpoint: str
-            Launching vineyard using specified etcd endpoints. If not specified, vineyard
-            will launch its own etcd instance.
-        vineyardd_path: str
-            Location of vineyard server program. If not specified, vineyard will use its
-            own bundled vineyardd binary.
+        namespace: str
+            namespace in kubernetes
         size: int
             The memory size limit for vineyard's shared memory. The memory size can be a plain
             integer or as a fixed-point number using one of these suffixes:
@@ -61,10 +53,8 @@ def start_vineyardd(namespace='vineyard',
             The UNIX domain socket socket path that vineyard server will listen on.
         rpc_socket_port: int
             The port that vineyard will use to privode RPC service.
-        debug: bool
-            Whether print debug logs.
     '''
-    #start_etcd_k8s(namespace)
+    start_etcd_k8s(namespace)
 
     template_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname(__file__))
     template_env = jinja2.Environment(loader=template_loader)
@@ -75,7 +65,6 @@ def start_vineyardd(namespace='vineyard',
 
     k8s_apps_v1 = kubernetes.client.AppsV1Api()
     resp = k8s_apps_v1.create_namespaced_daemon_set(body=body, namespace=namespace)
-    print("Vineyard DaemonSet created. status=%s" % resp.metadata.name)
 
     template = template_env.get_template("vineyard_service.yaml.tmpl")
     body = template.render(Port=rpc_socket_port)
@@ -83,4 +72,3 @@ def start_vineyardd(namespace='vineyard',
 
     k8s_core_v1 = kubernetes.client.CoreV1Api()
     resp = k8s_core_v1.create_namespaced_service(body=body, namespace=namespace)
-    print("Vineyard Service created. status=%s" % resp.metadata.name)

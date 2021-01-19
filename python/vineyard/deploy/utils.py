@@ -121,13 +121,6 @@ def start_etcd(host=None, etcd_executable=None):
             proc.terminate()
 
 
-def delete_namespace(namespace):
-    kubernetes.config.load_kube_config()
-    k8s_core_v1 = kubernetes.client.CoreV1Api()
-    resp = k8s_core_v1.delete_namespace(namespace)
-    print("Delete Namespace. status=%s" % resp)
-
-
 def start_etcd_k8s(namespace):
     kubernetes.config.load_kube_config()
     with open(os.path.join(os.path.dirname(__file__), 'etcd.yaml')) as f:

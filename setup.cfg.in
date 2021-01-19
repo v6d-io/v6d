@@ -4,6 +4,7 @@ version = @VINEYARD_VERSION@
 [options]
 install_requires =
     jinja2
+    kubernetes
     numpy
     pandas<1.0.0; python_version<'3.6'
     pandas<1.2.0; python_version<'3.7'
