@@ -168,6 +168,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
             VLOG(10) << "=========================================";
           }
 #endif
+
           auto test_task = [ids](const json& meta) -> bool {
             for (auto const& id : ids) {
               bool exists = false;
@@ -489,6 +490,13 @@ Status VineyardServer::DropName(const std::string& name,
       },
       callback);
   return Status::OK();
+}
+
+Status VineyardServer::MigrateObject(const ObjectID object_id,
+                                     callback_t<const ObjectID&> callback) {
+  ENSURE_VINEYARDD_READY();
+  // TODO
+  return callback(Status::OK(), object_id);
 }
 
 Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {

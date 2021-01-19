@@ -10,7 +10,7 @@ Starting vineyard server
 
 
 A vineyard daemon server will be launched on the underlying machine with default
-settings. The default ``socket`` is ``/var/run/vineyard.sock``, and it is 
+settings. The default ``socket`` is ``/var/run/vineyard.sock``, and it is
 listened by the server for ipc connections. 
 
 Note that a vineyard daemon server is a vineyard instance in a vineyard cluster.

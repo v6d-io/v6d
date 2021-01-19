@@ -484,6 +484,22 @@ bool SocketConnection::processMessage(const std::string& message_in) {
       return Status::OK();
     }));
   } break;
+  case CommandType::MigrateObjectRequest: {
+    ObjectID object_id;
+    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id));
+    RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
+        object_id, [self](const Status& status, const ObjectID& target) {
+          std::string message_out;
+          if (status.ok()) {
+            WriteMigrateObjectReply(target, message_out);
+          } else {
+            LOG(ERROR) << "Failed to migrate object: " << status.ToString();
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+          return Status::OK();
+        }));
+  } break;
   case CommandType::ClusterMetaRequest: {
     TRY_READ_REQUEST(ReadClusterMetaRequest(root));
     RESPONSE_ON_ERROR(server_ptr_->ClusterInfo(

@@ -473,9 +473,9 @@ class ObjectMeta {
   const_iterator begin() const { return json::iterator_wrapper(meta_).begin(); }
   const_iterator end() const { return json::iterator_wrapper(meta_).end(); }
 
- protected:
   const std::shared_ptr<BlobSet>& GetBlobSet() const;
 
+ protected:
   void SetBlob(const ObjectID& id,
                const std::shared_ptr<arrow::Buffer>& buffer);
 

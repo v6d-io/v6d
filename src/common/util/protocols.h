@@ -57,6 +57,7 @@ enum class CommandType {
   InstanceStatusRequest = 26,
   ShallowCopyRequest = 27,
   OpenStreamRequest = 28,
+  MigrateObjectRequest = 29,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -210,6 +211,14 @@ Status ReadDropNameRequest(const json& root, std::string& name);
 void WriteDropNameReply(std::string& msg);
 
 Status ReadDropNameReply(const json& root);
+
+void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg);
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id);
+
+void WriteMigrateObjectReply(const ObjectID& object_id, std::string& msg);
+
+Status ReadMigrateObjectReply(const json& root, ObjectID& object_id);
 
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg);
 

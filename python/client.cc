@@ -176,7 +176,13 @@ void bind_client(py::module& mod) {
       .def("drop_name",
            [](ClientBase* self, std::string const& name) {
              throw_on_error(self->DropName(name));
-           })
+           }, "name"_a)
+      .def("migrate",
+          [](ClientBase *self, const ObjectID object_id) -> ObjectID {
+            ObjectID target_id = InvalidObjectID();
+            throw_on_error(self->MigrateObject(object_id, target_id));
+            return target_id;
+          }, "object_id"_a)
       .def_property_readonly("connected", &Client::Connected)
       .def_property_readonly("instance_id", &Client::instance_id)
       .def_property_readonly(
