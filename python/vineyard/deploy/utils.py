@@ -127,11 +127,9 @@ def start_etcd_k8s(namespace):
         dep = yaml.safe_load(f)
         k8s_core_v1 = kubernetes.client.CoreV1Api()
         resp = k8s_core_v1.create_namespaced_pod(body=dep, namespace=namespace)
-        print("Etcd Pods created. status=%s" % resp.metadata.name)
 
     with open(os.path.join(os.path.dirname(__file__), 'etcd_service.yaml')) as f:
         dep = yaml.safe_load(f)
         print(dep)
         k8s_core_v1 = kubernetes.client.CoreV1Api()
         resp = k8s_core_v1.create_namespaced_service(body=dep, namespace=namespace)
-        print("Etcd Service created. status=%s" % resp.metadata.name)
