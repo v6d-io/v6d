@@ -44,7 +44,11 @@ def read_vineyard_dataframe(
     print(json.dumps(ret), flush=True)
 
     name = urlparse(path).netloc
-    df_id = client.get_name(name)
+    # the "name" part in URL can be a name, or an ObjectID for convenience.
+    try:
+        df_id = client.get_name(name)
+    except:
+        df_id = vineyard.ObjectID(name)
     dataframes = client.get(df_id)
 
     writer = stream.open_writer(client)
