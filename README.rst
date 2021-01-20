@@ -11,8 +11,8 @@
 
 Vineyard is an in-memory immutable data manager
 that provides **out-of-box high-level** abstraction and **zero-copy in-memory** sharing for
-distributed data in big data tasks, such as numerical computing, machine learning,
-and graph analytics.
+distributed data in big data tasks, such as graph analytics (e.g., `GraphScope`_), numerical
+computing (e.g., `Mars`_), and machine learning.
 
 Vineyard is designed to enable zero-copy data sharing between big data systems.
 Let's begin with a typical machine learning task of `time series prediction with LSTM`_.
@@ -34,7 +34,7 @@ As illustrated on the left side of the figure, a common practice is to store the
 
 1. For the same task, users are forced to program for multiple systems (SQL & Python).
 
-2. Data could be polymorphic. Non-relational data, such as tensors, dataframes and graphs/networks are
+2. Data could be polymorphic. Non-relational data, such as tensors, dataframes and graphs/networks (in `GraphScope`_) are
    becoming increasingly prevalent. Tables and SQL may not be best way to store/exchange or process them.
    Having the data transformed from/to "tables" back and forth between different systems could be a huge
    overhead.
@@ -111,7 +111,7 @@ Out-of-box high level data abstraction
 
 Computation frameworks usually have their own data abstractions for high-level concepts,
 for example tensor could be `torch.tensor`, `tf.Tensor`, `mxnet.ndarray` etc., not to
-mention that every graph processing engine has its own graph structure representations.
+mention that every `graph processing engine <https://github.com/alibaba/GraphScope>`_ has its own graph structure representations.
 
 The variety of data abstractions makes the sharing hard. Vineyard provides out-of-box
 high-level data abstractions over in-memory blobs, by describing objects using hierarchical
@@ -216,6 +216,7 @@ Getting involved
 Thank you in advance for your contributions to vineyard!
 
 .. _Mars: https://github.com/mars-project/mars
+.. _GraphScope: https://github.com/alibaba/GraphScope
 .. _Installation: https://github.com/alibaba/libvineyard/blob/main/docs/notes/install.rst
 .. _Apache License 2.0: https://github.com/alibaba/libvineyard/blob/main/LICENSE
 .. _contribution guide: https://github.com/alibaba/libvineyard/blob/main/CONTRIBUTING.rst
