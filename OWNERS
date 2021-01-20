@@ -1,13 +1,15 @@
 # See: https://go.k8s.io/owners
 approvers:
   - acezen
-  - andydiwenzhu 
+  - andydiwenzhu
+  - luoxiaojian
   - sighingnow
   - siyuan0322
   - wenyuanyu
 reviewers:
   - acezen
-  - andydiwenzhu 
+  - andydiwenzhu
+  - luoxiaojian
   - sighingnow
   - siyuan0322
   - wenyuanyu
