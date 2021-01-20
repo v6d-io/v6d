@@ -105,7 +105,7 @@ class Blob : public Registered<Blob> {
 
 /**
  * @brief The writer to write a blob in vineyard.
- * The writer is initiliazed in the client with a local buffer and its size,
+ * The writer is initialized in the client with a local buffer and its size,
  * and a blob in vineyard will be created when Build is invoked.
  */
 class BlobWriter : public ObjectBuilder {
