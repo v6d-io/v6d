@@ -41,54 +41,100 @@ def read_bytes(
     proc_num: int,
     proc_index: int,
 ):
+    """Read bytes from external storage and produce a ByteStream,
+    which will later be assembled into a ParallelStream.
+
+    Args:
+        vineyard_socket (str): Ipc socket
+        path (str): External storage path to write to
+        storage_options (dict): Configurations of external storage
+        read_options (dict): Additional options that could control the behavior of read
+        proc_num (int): Total amount of process
+        proc_index (int): The sequence of this process
+
+    Raises:
+        ValueError: If the stream is invalid.
+    """
     client = vineyard.connect(vineyard_socket)
     builder = ByteStreamBuilder(client)
 
-    header_row = read_options.get("header_row", False)
-    for k, v in read_options.items():
-        if k in ("header_row", "include_all_columns"):
-            builder[k] = "1" if v else "0"
-        elif k == "delimiter":
-            builder[k] = bytes(v, "utf-8").decode("unicode_escape")
-        else:
+    serialization_mode = read_options.pop('serialization_mode', False)
+    if serialization_mode:
+        # Used for read bytes of serialized graph
+        meta_file = fsspec.open(f"{path}_{proc_index}.meta", mode="rb", **storage_options)
+        with meta_file as f:
+            meta = f.read().decode('utf-8')
+            meta = json.loads(meta)
+        lengths = meta.pop("lengths")
+        for k, v in meta.items():
             builder[k] = v
-
-    offset = 0
-    chunk_size = 1024 * 1024 * 4
-    of = fsspec.open(path, mode="rb", **storage_options)
-    with of as f:
-        header_line = read_block(f, 0, 1, b'\n')
-        builder["header_line"] = header_line.decode("unicode_escape")
-        if header_row:
-            offset = len(header_line)
         stream = builder.seal(client)
         client.persist(stream)
         ret = {"type": "return", "content": repr(stream.id)}
         print(json.dumps(ret), flush=True)
-
         writer = stream.open_writer(client)
-        try:
-            total_size = f.size()
-        except TypeError:
-            total_size = f.size
-        part_size = (total_size - offset) // proc_num
-        begin = part_size * proc_index + offset
-        end = min(begin + part_size, total_size)
-        if proc_index == 0:
-            begin -= int(header_row)
-
-        while begin < end:
-            buf = read_block(f, begin, min(chunk_size, end - begin), delimiter=b"\n")
-            size = len(buf)
-            if not size:
-                break
-            begin += size - 1
-            chunk = writer.next(size)
-            buf_writer = pa.FixedSizeBufferWriter(chunk)
-            buf_writer.write(buf)
-            buf_writer.close()
-
+        of = fsspec.open(f"{path}_{proc_index}", mode="rb", **storage_options)
+        with of as f:
+            try:
+                total_size = f.size()
+            except TypeError:
+                total_size = f.size
+            assert total_size == sum(lengths), "Target file is corrupted"
+            for length in lengths:
+                buf = f.read(length)
+                chunk = writer.next(length)
+                buf_writer = pa.FixedSizeBufferWriter(chunk)
+                buf_writer.write(buf)
+                buf_writer.close()
         writer.finish()
+    else:
+        # Used when reading tables from external storage.
+        # Usually for load a property graph
+        header_row = read_options.get("header_row", False)
+        for k, v in read_options.items():
+            if k in ("header_row", "include_all_columns"):
+                builder[k] = "1" if v else "0"
+            elif k == "delimiter":
+                builder[k] = bytes(v, "utf-8").decode("unicode_escape")
+            else:
+                builder[k] = v
+
+        offset = 0
+        chunk_size = 1024 * 1024 * 4
+        of = fsspec.open(path, mode="rb", **storage_options)
+        with of as f:
+            header_line = read_block(f, 0, 1, b'\n')
+            builder["header_line"] = header_line.decode("unicode_escape")
+            if header_row:
+                offset = len(header_line)
+            stream = builder.seal(client)
+            client.persist(stream)
+            ret = {"type": "return", "content": repr(stream.id)}
+            print(json.dumps(ret), flush=True)
+
+            writer = stream.open_writer(client)
+            try:
+                total_size = f.size()
+            except TypeError:
+                total_size = f.size
+            part_size = (total_size - offset) // proc_num
+            begin = part_size * proc_index + offset
+            end = min(begin + part_size, total_size)
+            if proc_index == 0:
+                begin -= int(header_row)
+
+            while begin < end:
+                buf = read_block(f, begin, min(chunk_size, end - begin), delimiter=b"\n")
+                size = len(buf)
+                if not size:
+                    break
+                begin += size - 1
+                chunk = writer.next(size)
+                buf_writer = pa.FixedSizeBufferWriter(chunk)
+                buf_writer.write(buf)
+                buf_writer.close()
+
+            writer.finish()
 
 
 if __name__ == "__main__":

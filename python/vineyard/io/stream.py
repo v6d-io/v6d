@@ -88,6 +88,25 @@ def write(path, stream, *args, **kwargs):
 
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
+@registerize
+def serialize(path, object_id, *args, **kwargs):
+    obj_type = kwargs.pop('type', 'global')
+    if serialize.__factory and serialize.__factory[obj_type]:
+        proc_kwargs = kwargs.copy()
+        serializer = serialize.__factory[obj_type][0]
+        serializer(path, object_id, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+        return
+    raise RuntimeError('Unable to find a proper IO driver for %s' % object_id)
+
+@registerize
+def deserialize(path, *args, **kwargs):
+    obj_type = kwargs.pop('type', 'global')
+    if deserialize.__factory and deserialize.__factory[obj_type]:
+        proc_kwargs = kwargs.copy()
+        deserializer = deserialize.__factory[obj_type][0]
+        return deserializer(path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+    raise RuntimeError('Unable to find a proper IO driver for %s' % path)
+
 
 def open(path, *args, mode='r', **kwargs):
     ''' Open a path as a reader or writer, depends on the parameter :code:`mode`. If :code:`mode`
@@ -123,4 +142,4 @@ def open(path, *args, mode='r', **kwargs):
     raise RuntimeError('Opening %s with mode %s is not supported' % (path, mode))
 
 
-__all__ = ['open', 'read', 'write']
+__all__ = ['open', 'read', 'write', 'serialize', 'deserialize']

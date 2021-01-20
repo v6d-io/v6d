@@ -41,7 +41,7 @@ limitations under the License.
 namespace vineyard {
 
 /**
- * @brief DataFrameBuilder is used for construcing dataframes that supported by
+ * @brief DataFrameBuilder is used for constructing dataframes that supported by
  * vineyard
  *
  */
@@ -255,7 +255,7 @@ class GlobalDataFrameBuilder : public GlobalDataFrameBaseBuilder {
    * @param partition_id The ObjectID of the partition to added.
    *
    */
-  void AddPartition(const InstanceID instance_id, ObjectID const partition_id);
+  void AddPartition(ObjectID const partition_id);
 
   /**
    * @brief Add a group of partitions in the vineyard instance
@@ -266,8 +266,7 @@ class GlobalDataFrameBuilder : public GlobalDataFrameBaseBuilder {
    * group of partitions to added.
    *
    */
-  void AddPartitions(const InstanceID instance_id,
-                     const std::vector<ObjectID>& partition_ids);
+  void AddPartitions(const std::vector<ObjectID>& partition_ids);
 
   /**
    * @brief Seal the meta data of the global dataframe.

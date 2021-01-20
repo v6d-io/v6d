@@ -77,6 +77,11 @@ class Blob : public Registered<Blob> {
   void Construct(ObjectMeta const& meta) override;
 
   /**
+   * @brief Dump the buffer for debugging.
+   */
+  void Dump() const;
+
+  /**
    * @brief Create an empty blob in the vineyard server.
    *
    * @param client The client connected to the vineyard server.
@@ -105,7 +110,7 @@ class Blob : public Registered<Blob> {
 
 /**
  * @brief The writer to write a blob in vineyard.
- * The writer is initiliazed in the client with a local buffer and its size,
+ * The writer is initialized in the client with a local buffer and its size,
  * and a blob in vineyard will be created when Build is invoked.
  */
 class BlobWriter : public ObjectBuilder {
@@ -162,6 +167,11 @@ class BlobWriter : public ObjectBuilder {
    * @param value The value of the metadata.
    */
   void AddKeyValue(std::string const& key, std::string&& value);
+
+  /**
+   * @brief Dump the buffer for debugging.
+   */
+  void Dump() const;
 
  protected:
   std::shared_ptr<Object> _Seal(Client& client) override;

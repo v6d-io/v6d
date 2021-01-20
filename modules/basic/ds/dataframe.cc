@@ -184,13 +184,12 @@ void GlobalDataFrameBuilder::set_partition_shape(
   this->set_partition_shape_column_(partition_shape_column);
 }
 
-void GlobalDataFrameBuilder::AddPartition(const InstanceID instance_id,
-                                          ObjectID const partition_id) {
+void GlobalDataFrameBuilder::AddPartition(ObjectID const partition_id) {
   this->add_partitions_(partition_id);
 }
 
 void GlobalDataFrameBuilder::AddPartitions(
-    const InstanceID instance_id, const std::vector<ObjectID>& partition_ids) {
+    const std::vector<ObjectID>& partition_ids) {
   for (auto const& partition_id : partition_ids) {
     this->add_partitions_(partition_id);
   }

@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "client/ds/blob.h"
 
+#include <iomanip>
+#include <iostream>
 #include <limits>
 
 #include "client/client.h"
@@ -89,6 +91,23 @@ void Blob::Construct(ObjectMeta const& meta) {
   }
 }
 
+void Blob::Dump() const {
+  if (VLOG_IS_ON(10)) {
+    std::stringstream ss;
+    ss << "size = " << size() << ", buffer = ";
+    {
+      std::ios::fmtflags os_flags(std::cout.flags());
+      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
+      for (size_t idx = 0; idx < size(); ++idx) {
+        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+           << static_cast<const uint32_t>(ptr[idx]);
+      }
+      std::cout.flags(os_flags);
+    }
+    VLOG(10) << "buffer is " << ss.str();
+  }
+}
+
 std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
   std::shared_ptr<Blob> empty_blob(new Blob(EmptyBlobID(), 0, nullptr));
   empty_blob->meta_.SetId(EmptyBlobID());
@@ -129,6 +148,23 @@ void BlobWriter::AddKeyValue(std::string const& key, std::string const& value) {
 
 void BlobWriter::AddKeyValue(std::string const& key, std::string&& value) {
   this->metadata_.emplace(key, std::move(value));
+}
+
+void BlobWriter::Dump() const {
+  if (VLOG_IS_ON(10)) {
+    std::stringstream ss;
+    ss << "size = " << size() << ", buffer = ";
+    {
+      std::ios::fmtflags os_flags(std::cout.flags());
+      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
+      for (size_t idx = 0; idx < size(); ++idx) {
+        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+           << static_cast<const uint32_t>(ptr[idx]);
+      }
+      std::cout.flags(os_flags);
+    }
+    VLOG(10) << "buffer is " << ss.str();
+  }
 }
 
 std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
