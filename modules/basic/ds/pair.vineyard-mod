@@ -28,6 +28,11 @@ limitations under the License.
 
 namespace vineyard {
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 class PairBaseBuilder;
 
 class Pair : public Registered<Pair> {
@@ -93,6 +98,10 @@ class Pair : public Registered<Pair> {
   friend class Client;
   friend class PairBaseBuilder;
 };
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace vineyard
 

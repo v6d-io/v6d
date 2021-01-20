@@ -33,6 +33,11 @@ limitations under the License.
 
 namespace vineyard {
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 class Client;
 
 class __attribute__((annotate("no-vineyard"))) ByteStreamWriter {
@@ -184,6 +189,10 @@ class ByteStream : public Registered<ByteStream> {
   friend class ByteStreamBaseBuilder;
   friend class ByteStreamBuilder;
 };
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace vineyard
 
