@@ -45,7 +45,11 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
     blob_size = blob->size();
     in << blob_id;
     in << blob_size;
+    LOG(INFO) << "blob_id = " << VYObjectIDToString(blob_id) << " " << blob_size;
     if (blob_size != 0) {
+#ifndef NDEBUG
+      blob->Dump();
+#endif
       in.AddBytes(blob->data(), blob_size);
     }
   }
@@ -62,6 +66,7 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
   // For simplicity, write whole buffer as a single chunk.
   // If this results in a memory issue in the future,
   // break the buffer up into pieces.
+  LOG(INFO) << "archive size " << in.GetSize();
   RETURN_ON_ERROR(writer->WriteBytes(in.GetBuffer(), in.GetSize()));
   RETURN_ON_ERROR(writer->Finish());
   LOG(INFO) << "Serialized object " << in_id << " to stream " << *stream_id;
@@ -107,6 +112,7 @@ Status Deserialize(Client& client, ObjectID stream_id, ObjectID* out_id) {
   grape::OutArchive out;
   // The archive does not own the memory space.
   // Which means the `buffer` alive until the end.
+  LOG(INFO) << "buffer size " << buffer->size();
   out.SetSlice(
       reinterpret_cast<char*>(const_cast<unsigned char*>(buffer->data())),
       buffer->size());
@@ -126,11 +132,18 @@ Status Deserialize(Client& client, ObjectID stream_id, ObjectID* out_id) {
   while (!out.Empty()) {
     out >> blob_id;
     out >> blob_size;
+    LOG(INFO) << VYObjectIDToString(blob_id) << " " << blob_size;
     if (blob_size > 0) {
       RETURN_ON_ERROR(client.CreateBlob(blob_size, blob_writer));
       memcpy(blob_writer->data(), out.GetBytes(blob_size), blob_size);
-      blobs.emplace(blob_id,
-                    std::dynamic_pointer_cast<Blob>(blob_writer->Seal(client)));
+#ifndef NDEBUG
+      blob_writer->Dump();
+#endif
+      auto blob = std::dynamic_pointer_cast<Blob>(blob_writer->Seal(client));
+#ifndef NDEBUG
+      blob->Dump();
+#endif
+      blobs.emplace(blob_id, blob);
     } else {
       blobs.emplace(blob_id, Blob::MakeEmpty(client));
     }
