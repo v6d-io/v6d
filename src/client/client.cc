@@ -188,8 +188,10 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   Payload object;
   RETURN_ON_ERROR(ReadGetNextStreamChunkReply(message_in, object));
   uint8_t* mmapped_ptr = nullptr;
-  RETURN_ON_ERROR(
-      mmapToClient(object.store_fd, object.map_size, false, &mmapped_ptr));
+  if (object.data_size != 0) {
+    RETURN_ON_ERROR(
+        mmapToClient(object.store_fd, object.map_size, false, &mmapped_ptr));
+  }
   blob.reset(new arrow::MutableBuffer(mmapped_ptr + object.data_offset, size));
   return Status::OK();
 }
@@ -205,8 +207,10 @@ Status Client::PullNextStreamChunk(ObjectID const id,
   Payload object;
   RETURN_ON_ERROR(ReadPullNextStreamChunkReply(message_in, object));
   uint8_t* mmapped_ptr = nullptr;
-  RETURN_ON_ERROR(
-      mmapToClient(object.store_fd, object.map_size, true, &mmapped_ptr));
+  if (object.data_size != 0) {
+    RETURN_ON_ERROR(
+        mmapToClient(object.store_fd, object.map_size, true, &mmapped_ptr));
+  }
   blob.reset(
       new arrow::Buffer(mmapped_ptr + object.data_offset, object.data_size));
   return Status::OK();

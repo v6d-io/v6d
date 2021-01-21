@@ -378,13 +378,16 @@ bool SocketConnection::processMessage(const std::string& message_in) {
                                                                      object));
             WriteGetNextStreamChunkReply(object, message_out);
             int store_fd = object->store_fd;
-            self->doWrite(message_out, [self, store_fd](const Status& status) {
-              if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                self->used_fds_.emplace(store_fd);
-                send_fd(self->nativeHandle(), store_fd);
-              }
-              return Status::OK();
-            });
+            int data_size = object->data_size;
+            self->doWrite(
+                message_out, [self, store_fd, data_size](const Status& status) {
+                  if (data_size > 0 &&
+                      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+                    self->used_fds_.emplace(store_fd);
+                    send_fd(self->nativeHandle(), store_fd);
+                  }
+                  return Status::OK();
+                });
           } else {
             LOG(ERROR) << status.ToString();
             WriteErrorReply(status, message_out);
@@ -407,13 +410,16 @@ bool SocketConnection::processMessage(const std::string& message_in) {
                                                                      object));
             WritePullNextStreamChunkReply(object, message_out);
             int store_fd = object->store_fd;
-            self->doWrite(message_out, [self, store_fd](const Status& status) {
-              if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                self->used_fds_.emplace(store_fd);
-                send_fd(self->nativeHandle(), store_fd);
-              }
-              return Status::OK();
-            });
+            int data_size = object->data_size;
+            self->doWrite(
+                message_out, [self, store_fd, data_size](const Status& status) {
+                  if (data_size > 0 &&
+                      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+                    self->used_fds_.emplace(store_fd);
+                    send_fd(self->nativeHandle(), store_fd);
+                  }
+                  return Status::OK();
+                });
           } else {
             LOG(ERROR) << status.ToString();
             WriteErrorReply(status, message_out);
