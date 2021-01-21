@@ -193,7 +193,7 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   RETURN_ON_ERROR(doRead(message_in));
   Payload object;
   RETURN_ON_ERROR(ReadGetNextStreamChunkReply(message_in, object));
-  RETURN_ON_ASSERT(size == object.data_size,
+  RETURN_ON_ASSERT(size == static_cast<size_t>(object.data_size),
                    "The size of returned chunk doesn't match");
   uint8_t* mmapped_ptr = nullptr;
   if (object.data_size != 0) {
