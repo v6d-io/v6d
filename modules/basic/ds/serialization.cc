@@ -34,28 +34,13 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
   ObjectMeta meta;
   RETURN_ON_ERROR(client.GetMetaData(in_id, meta, true));
   // Store meta
-  // in << meta.MetaData().dump();
-  auto blobs = meta.GetBlobSet()->AllBlobIds();
-  std::shared_ptr<Blob> blob = nullptr;
-  size_t blob_size = 0;
-
-  // Store blobs
-  for (auto blob_id : blobs) {
-    blob = client.GetObject<Blob>(blob_id);
-    blob_size = blob->size();
-    in << blob_id;
-    in << blob_size;
-    LOG(INFO) << "blob_id = " << VYObjectIDToString(blob_id) << " " << blob_size;
-    if (blob_size != 0) {
-#ifndef NDEBUG
-      blob->Dump();
-#endif
-      in.AddBytes(blob->data(), blob_size);
-    }
-  }
-
   ByteStreamBuilder builder(client);
   builder.SetParam("meta", meta.MetaData().dump());
+
+  auto blobs = meta.GetBlobSet()->AllBlobIds();
+  std::vector<ObjectID> ordered_blobs(blobs.begin(), blobs.end());
+  builder.SetParam("blobs", json(ordered_blobs).dump());
+
   *stream_id =
       std::dynamic_pointer_cast<ByteStream>(builder.Seal(client))->id();
 
@@ -63,11 +48,14 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
 
   std::unique_ptr<ByteStreamWriter> writer;
   RETURN_ON_ERROR(byte_stream->OpenWriter(client, writer));
-  // For simplicity, write whole buffer as a single chunk.
-  // If this results in a memory issue in the future,
-  // break the buffer up into pieces.
-  LOG(INFO) << "archive size " << in.GetSize();
-  RETURN_ON_ERROR(writer->WriteBytes(in.GetBuffer(), in.GetSize()));
+  // Store blobs
+  std::shared_ptr<Blob> blob = nullptr;
+  for (auto blob_id : ordered_blobs) {
+    blob = client.GetObject<Blob>(blob_id);
+    std::unique_ptr<arrow::MutableBuffer> buffer = nullptr;
+    RETURN_ON_ERROR(writer->GetNext(blob->size(), buffer));
+    memcpy(buffer->mutable_data(), blob->data(), blob->size());
+  }
   RETURN_ON_ERROR(writer->Finish());
   LOG(INFO) << "Serialized object " << in_id << " to stream " << *stream_id;
   return Status::OK();
@@ -101,48 +89,23 @@ Status deserialize_helper(
 }
 
 Status Deserialize(Client& client, ObjectID stream_id, ObjectID* out_id) {
-  std::unordered_map<ObjectID, std::shared_ptr<Blob>> blobs;
-
   auto byte_stream = client.GetObject<ByteStream>(stream_id);
   std::unique_ptr<ByteStreamReader> reader;
   RETURN_ON_ERROR(byte_stream->OpenReader(client, reader));
 
-  std::unique_ptr<arrow::Buffer> buffer = nullptr;
-  RETURN_ON_ERROR(reader->GetNext(buffer));
-  grape::OutArchive out;
-  // The archive does not own the memory space.
-  // Which means the `buffer` alive until the end.
-  LOG(INFO) << "buffer size " << buffer->size();
-  out.SetSlice(
-      reinterpret_cast<char*>(const_cast<unsigned char*>(buffer->data())),
-      buffer->size());
-  {
-    // Serialized buffer will have and only have one chunk.
-    std::unique_ptr<arrow::Buffer> null_buffer;
-    auto status = reader->GetNext(null_buffer);
-    RETURN_ON_ASSERT(status.IsStreamDrained());
-  }
-
   // Consume meta
   json meta = json::parse(byte_stream->GetParams()["meta"]);
-  ObjectID blob_id;
-  size_t blob_size;
+
+  std::vector<ObjectID> ordered_blobs = json::parse(byte_stream->GetParams()["blobs"]).get<std::vector<ObjectID>>();
   std::unique_ptr<BlobWriter> blob_writer;
-  // Consume blob
-  while (!out.Empty()) {
-    out >> blob_id;
-    out >> blob_size;
-    LOG(INFO) << VYObjectIDToString(blob_id) << " " << blob_size;
-    if (blob_size > 0) {
-      RETURN_ON_ERROR(client.CreateBlob(blob_size, blob_writer));
-      memcpy(blob_writer->data(), out.GetBytes(blob_size), blob_size);
-#ifndef NDEBUG
-      blob_writer->Dump();
-#endif
+  std::unordered_map<ObjectID, std::shared_ptr<Blob>> blobs;
+  for (auto blob_id : ordered_blobs) {
+    std::unique_ptr<arrow::Buffer> buffer = nullptr;
+    RETURN_ON_ERROR(reader->GetNext(buffer));
+    if (buffer->size() > 0) {
+      RETURN_ON_ERROR(client.CreateBlob(buffer->size(), blob_writer));
+      memcpy(blob_writer->data(), buffer->data(), buffer->size());
       auto blob = std::dynamic_pointer_cast<Blob>(blob_writer->Seal(client));
-#ifndef NDEBUG
-      blob->Dump();
-#endif
       blobs.emplace(blob_id, blob);
     } else {
       blobs.emplace(blob_id, Blob::MakeEmpty(client));
