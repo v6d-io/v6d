@@ -374,7 +374,7 @@ int main(int argc, char** argv) {
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f8", array2));
     auto r3 = std::dynamic_pointer_cast<Table>(extender.Seal(client));
     VINEYARD_CHECK_OK(client.Persist(r3->id()));
-    VINEYARD_CHECK_OK(reconstruct(client, r1->id(), &restored_id));
+    VINEYARD_CHECK_OK(reconstruct(client, r3->id(), &restored_id));
     auto field = ::arrow::field("f7", array1->type());
     auto chunked_array1 = std::make_shared<arrow::ChunkedArray>(array1);
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000

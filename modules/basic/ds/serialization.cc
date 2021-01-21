@@ -34,7 +34,7 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
   ObjectMeta meta;
   RETURN_ON_ERROR(client.GetMetaData(in_id, meta, true));
   // Store meta
-  in << meta.MetaData().dump();
+  // in << meta.MetaData().dump();
   auto blobs = meta.GetBlobSet()->AllBlobIds();
   std::shared_ptr<Blob> blob = nullptr;
   size_t blob_size = 0;
@@ -51,6 +51,7 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
   }
 
   ByteStreamBuilder builder(client);
+  builder.SetParam("meta", meta.MetaData().dump());
   *stream_id =
       std::dynamic_pointer_cast<ByteStream>(builder.Seal(client))->id();
 
@@ -117,10 +118,7 @@ Status Deserialize(Client& client, ObjectID stream_id, ObjectID* out_id) {
   }
 
   // Consume meta
-  json meta;
-  std::string meta_str;
-  out >> meta_str;
-  meta = json::parse(meta_str);
+  json meta = json::parse(byte_stream->GetParams()["meta"]);
   ObjectID blob_id;
   size_t blob_size;
   std::unique_ptr<BlobWriter> blob_writer;
