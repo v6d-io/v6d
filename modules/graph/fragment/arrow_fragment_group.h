@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -30,10 +31,10 @@ namespace vineyard {
 
 class ArrowFragmentGroupBuilder;
 
-class ArrowFragmentGroup : public vineyard::Registered<ArrowFragmentGroup> {
+class ArrowFragmentGroup : public Registered<ArrowFragmentGroup>, GlobalObject {
  public:
   static std::shared_ptr<vineyard::Object> Create() __attribute__((used)) {
-    return std::static_pointer_cast<vineyard::Object>(
+    return std::static_pointer_cast<Object>(
         std::make_shared<ArrowFragmentGroup>());
   }
   fid_t total_frag_num() const { return total_frag_num_; }
@@ -61,8 +62,8 @@ class ArrowFragmentGroup : public vineyard::Registered<ArrowFragmentGroup> {
         meta.GetKeyValue<property_graph_types::LABEL_ID_TYPE>("edge_label_num");
     for (fid_t idx = 0; idx < total_frag_num_; ++idx) {
       fragments_.emplace(meta.GetKeyValue<fid_t>("fid_" + std::to_string(idx)),
-                         meta.GetKeyValue<vineyard::ObjectID>(
-                             "frag_object_id_" + std::to_string(idx)));
+                         meta.GetMemberMeta(
+                             "frag_object_id_" + std::to_string(idx)).GetId());
       fragment_locations_.emplace(
           meta.GetKeyValue<fid_t>("fid_" + std::to_string(idx)),
           meta.GetKeyValue<uint64_t>("frag_instance_id_" +
@@ -80,7 +81,7 @@ class ArrowFragmentGroup : public vineyard::Registered<ArrowFragmentGroup> {
   friend ArrowFragmentGroupBuilder;
 };
 
-class ArrowFragmentGroupBuilder : public vineyard::ObjectBuilder {
+class ArrowFragmentGroupBuilder : public ObjectBuilder {
  public:
   ArrowFragmentGroupBuilder() {}
 
@@ -115,16 +116,20 @@ class ArrowFragmentGroupBuilder : public vineyard::ObjectBuilder {
     fg->vertex_label_num_ = vertex_label_num_;
     fg->edge_label_num_ = edge_label_num_;
     fg->fragments_ = fragments_;
+    if (std::is_base_of<GlobalObject, ArrowFragmentGroup>::value) {
+      fg->meta_.SetGlobal(true);
+    }
     fg->meta_.SetTypeName(type_name<ArrowFragmentGroup>());
     fg->meta_.AddKeyValue("total_frag_num", total_frag_num_);
     fg->meta_.AddKeyValue("vertex_label_num", vertex_label_num_);
     fg->meta_.AddKeyValue("edge_label_num", edge_label_num_);
     int idx = 0;
+
     for (auto const& kv : fragments_) {
       fg->meta_.AddKeyValue("fid_" + std::to_string(idx), kv.first);
-      fg->meta_.AddKeyValue("frag_object_id_" + std::to_string(idx), kv.second);
       fg->meta_.AddKeyValue("frag_instance_id_" + std::to_string(idx),
                             fragment_locations_[kv.first]);
+      fg->meta_.AddMember("frag_object_id_" + std::to_string(idx), kv.second);
       idx += 1;
     }
 
@@ -139,9 +144,10 @@ class ArrowFragmentGroupBuilder : public vineyard::ObjectBuilder {
   fid_t total_frag_num_;
   property_graph_types::LABEL_ID_TYPE vertex_label_num_;
   property_graph_types::LABEL_ID_TYPE edge_label_num_;
-  std::unordered_map<fid_t, vineyard::ObjectID> fragments_;
+  std::unordered_map<fid_t, ObjectID> fragments_;
   std::unordered_map<fid_t, uint64_t> fragment_locations_;
 };
+
 
 inline boost::leaf::result<ObjectID> ConstructFragmentGroup(
     Client& client, ObjectID frag_id, const grape::CommSpec& comm_spec) {

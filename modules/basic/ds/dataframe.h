@@ -41,7 +41,7 @@ limitations under the License.
 namespace vineyard {
 
 /**
- * @brief DataFrameBuilder is used for construcing dataframes that supported by
+ * @brief DataFrameBuilder is used for constructing dataframes that supported by
  * vineyard
  *
  */

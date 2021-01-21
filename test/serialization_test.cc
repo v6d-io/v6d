@@ -49,8 +49,6 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  std::string prefix = "/tmp/serialization-test/array";
-
   {
     LOG(INFO) << "#########  Int64 Test #############";
     arrow::Int64Builder b1;
