@@ -89,9 +89,11 @@ Status Client::GetMetaData(const ObjectID id, ObjectMeta& meta,
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
     if (object != buffers.end()) {
       uint8_t* mmapped_ptr = nullptr;
-      RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
-                                   object->second.map_size, true,
-                                   &mmapped_ptr));
+      if (object->second.data_size > 0) {
+        RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
+                                     object->second.map_size, true,
+                                     &mmapped_ptr));
+      }
       buffer = arrow::Buffer::Wrap(mmapped_ptr + object->second.data_offset,
                                    object->second.data_size);
     }
@@ -125,9 +127,11 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
       std::shared_ptr<arrow::Buffer> buffer = nullptr;
       if (object != buffers.end()) {
         uint8_t* mmapped_ptr = nullptr;
-        RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
-                                     object->second.map_size, true,
-                                     &mmapped_ptr));
+        if (object->second.data_size > 0) {
+          RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
+                                       object->second.map_size, true,
+                                       &mmapped_ptr));
+        }
         buffer = std::make_shared<arrow::Buffer>(
             mmapped_ptr + object->second.data_offset, object->second.data_size);
       }
@@ -146,11 +150,13 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   RETURN_ON_ERROR(CreateBuffer(size, object_id, object));
   RETURN_ON_ASSERT((size_t) object.data_size == size);
   uint8_t* mmapped_ptr = nullptr;
-  RETURN_ON_ERROR(
-      mmapToClient(object.store_fd, object.map_size, false, &mmapped_ptr));
+  if (object.data_size > 0) {
+    RETURN_ON_ERROR(
+        mmapToClient(object.store_fd, object.map_size, false, &mmapped_ptr));
+  }
   std::shared_ptr<arrow::MutableBuffer> buffer =
       std::make_shared<arrow::MutableBuffer>(mmapped_ptr + object.data_offset,
-                                             size);
+                                             object.data_size);
   blob.reset(new BlobWriter(object_id, buffer));
   return Status::OK();
 }
@@ -187,12 +193,15 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   RETURN_ON_ERROR(doRead(message_in));
   Payload object;
   RETURN_ON_ERROR(ReadGetNextStreamChunkReply(message_in, object));
+  RETURN_ON_ASSERT(size == object.data_size,
+                   "The size of returned chunk doesn't match");
   uint8_t* mmapped_ptr = nullptr;
   if (object.data_size != 0) {
     RETURN_ON_ERROR(
         mmapToClient(object.store_fd, object.map_size, false, &mmapped_ptr));
   }
-  blob.reset(new arrow::MutableBuffer(mmapped_ptr + object.data_offset, size));
+  blob.reset(new arrow::MutableBuffer(mmapped_ptr + object.data_offset,
+                                      object.data_size));
   return Status::OK();
 }
 
@@ -303,9 +312,11 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
       std::shared_ptr<arrow::Buffer> buffer = nullptr;
       if (object != buffers.end()) {
         uint8_t* mmapped_ptr = nullptr;
-        VINEYARD_CHECK_OK(mmapToClient(object->second.store_fd,
-                                       object->second.map_size, true,
-                                       &mmapped_ptr));
+        if (object->second.data_size) {
+          VINEYARD_CHECK_OK(mmapToClient(object->second.store_fd,
+                                         object->second.map_size, true,
+                                         &mmapped_ptr));
+        }
         buffer = std::make_shared<arrow::Buffer>(
             mmapped_ptr + object->second.data_offset, object->second.data_size);
       }
