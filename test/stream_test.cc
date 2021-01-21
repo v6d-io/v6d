@@ -140,6 +140,46 @@ int main(int argc, char** argv) {
   auto status = reader->GetNext(buffer);
   CHECK(status.IsStreamFailed());
 
+  // when stream contains empty chunks
+
+  {
+    ByteStreamBuilder builder(client);
+    builder.SetParams(std::unordered_map<std::string, std::string>{
+        {"kind", "test"}, {"test_name", "stream_test"}});
+    auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
+    stream_id = bstream->id();
+    CHECK(stream_id != InvalidObjectID());
+  }
+
+  auto empty_byte_stream = client.GetObject<ByteStream>(stream_id);
+
+  std::unique_ptr<ByteStreamReader> empty_reader = nullptr;
+  std::unique_ptr<ByteStreamWriter> empty_writer = nullptr;
+  VINEYARD_CHECK_OK(empty_byte_stream->OpenReader(client, empty_reader));
+  VINEYARD_CHECK_OK(empty_byte_stream->OpenWriter(client, empty_writer));
+  CHECK(empty_reader != nullptr);
+  CHECK(empty_writer != nullptr);
+
+  {
+    // write empty chunk
+    std::unique_ptr<arrow::MutableBuffer> buffer = nullptr;
+    VINEYARD_CHECK_OK(empty_writer->GetNext(0, buffer));
+
+    CHECK(buffer != nullptr);
+    CHECK_EQ(buffer->size(), 0);
+    VINEYARD_CHECK_OK(empty_writer->Finish());
+  }
+
+  {
+    // read the empty chunk
+    std::unique_ptr<arrow::Buffer> buffer = nullptr;
+    VINEYARD_CHECK_OK(empty_reader->GetNext(buffer));
+    CHECK(buffer != nullptr);
+    CHECK_EQ(buffer->size(), 0);
+
+    CHECK(empty_reader->GetNext(buffer).IsStreamDrained());
+  }
+
   LOG(INFO) << "Passed stream tests...";
 
   client.Disconnect();

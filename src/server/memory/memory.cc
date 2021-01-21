@@ -71,6 +71,11 @@ uint8_t* BulkStore::AllocateMemory(size_t size, int* fd, int64_t* map_size,
 Status BulkStore::ProcessCreateRequest(const size_t data_size,
                                        ObjectID& object_id,
                                        std::shared_ptr<Payload>& object) {
+  if (data_size == 0) {
+    object_id = EmptyBlobID();
+    object = Payload::MakeEmpty();
+    return Status::OK();
+  }
   int fd = -1;
   int64_t map_size = 0;
   ptrdiff_t offset = 0;
@@ -93,11 +98,14 @@ Status BulkStore::ProcessCreateRequest(const size_t data_size,
 
 Status BulkStore::ProcessGetRequest(const ObjectID id,
                                     std::shared_ptr<Payload>& object) {
-  if (objects_.find(id) == objects_.end()) {
-    return Status::ObjectNotExists();
-  } else {
+  if (id == EmptyBlobID()) {
+    object = Payload::MakeEmpty();
+    return Status::OK();
+  } else if (objects_.find(id) != objects_.end()) {
     object = objects_[id];
     return Status::OK();
+  } else {
+    return Status::ObjectNotExists();
   }
 }
 
@@ -105,7 +113,9 @@ Status BulkStore::ProcessGetRequest(
     const std::vector<ObjectID>& ids,
     std::vector<std::shared_ptr<Payload>>& objects) {
   for (auto object_id : ids) {
-    if (objects_.find(object_id) != objects_.end()) {
+    if (object_id == EmptyBlobID()) {
+      objects.push_back(Payload::MakeEmpty());
+    } else if (objects_.find(object_id) != objects_.end()) {
       objects.push_back(objects_[object_id]);
     }
   }
@@ -113,6 +123,9 @@ Status BulkStore::ProcessGetRequest(
 }
 
 Status BulkStore::ProcessDeleteRequest(const ObjectID& object_id) {
+  if (object_id == EmptyBlobID()) {
+    return Status::OK();
+  }
   if (objects_.find(object_id) == objects_.end()) {
     return Status::ObjectNotExists();
   }

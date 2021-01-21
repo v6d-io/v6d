@@ -75,8 +75,10 @@ void Blob::Construct(ObjectMeta const& meta) {
       auto status = client->GetBuffer(meta.GetId(), object);
       if (status.ok()) {
         uint8_t* mmapped_ptr = nullptr;
-        VINEYARD_CHECK_OK(client->mmapToClient(object.store_fd, object.map_size,
-                                               true, &mmapped_ptr));
+        if (object.data_size > 0) {
+          VINEYARD_CHECK_OK(client->mmapToClient(
+              object.store_fd, object.map_size, true, &mmapped_ptr));
+        }
         buffer_ = arrow::Buffer::Wrap(mmapped_ptr + object.data_offset,
                                       object.data_size);
       } else {
@@ -133,8 +135,10 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   Payload object;
   VINEYARD_CHECK_OK(client.GetBuffer(object_id_, object));
   uint8_t* mmapped_ptr = nullptr;
-  VINEYARD_CHECK_OK(client.mmapToClient(object.store_fd, object.map_size, false,
-                                        &mmapped_ptr));
+  if (object.data_size > 0) {
+    VINEYARD_CHECK_OK(client.mmapToClient(object.store_fd, object.map_size,
+                                          false, &mmapped_ptr));
+  }
   auto ro_buffer =
       arrow::Buffer::Wrap(mmapped_ptr + object.data_offset, object.data_size);
 
