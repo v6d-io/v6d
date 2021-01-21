@@ -97,11 +97,12 @@ inline Status ReadRecordBatchesFromVineyard(
   for (auto const& status : readers_status) {
     RETURN_ON_ERROR(status);
   }
-  RETURN_ON_ASSERT(batches.size() > 0,
-                   "This worker doesn't receive any streams");
   return Status::OK();
 }
 
+/**
+ * @brief When the stream is empty, the result `table` will be set as nullptr.
+ */
 inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
                                     std::shared_ptr<arrow::Table>& table,
                                     int part_id, int part_num) {
@@ -124,7 +125,11 @@ inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
     VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(local_client, reader));
     std::shared_ptr<arrow::Table> table;
     RETURN_ON_ERROR(reader->ReadTable(table));
-    VLOG(10) << "table from stream: " << table->schema()->ToString();
+    if (table == nullptr) {
+      VLOG(10) << "table from stream is null.";
+    } else {
+      VLOG(10) << "table from stream: " << table->schema()->ToString();
+    }
     {
       std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
       tables.emplace_back(table);
@@ -139,11 +144,26 @@ inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
   for (auto const& status : readers_status) {
     RETURN_ON_ERROR(status);
   }
-  RETURN_ON_ASSERT(tables.size() > 0,
-                   "This worker doesn't receive any streams");
-  table = ConcatenateTables(tables);
+  if (tables.empty()) {
+    table = nullptr;
+  } else {
+    table = ConcatenateTables(tables);
+  }
   return Status::OK();
 }
+
+/** Note [GatherETables and GatherVTables]
+ *
+ * GatherETables and GatherVTables gathers all edges and vertices as table from
+ * multiple streams.
+ *
+ * It requires (one of the follows):
+ *
+ * + all chunks in the stream has a "label" (and "src_label", "dst_label" for
+ *   edges) in meta, and at least one batch available on each worker.
+ *
+ * + or all chunks doesn't have such meta.
+ */
 
 inline boost::leaf::result<
     std::vector<std::vector<std::shared_ptr<arrow::Table>>>>
@@ -153,17 +173,30 @@ GatherETables(Client& client,
   using batch_group_t = std::unordered_map<
       std::string, std::map<std::pair<std::string, std::string>,
                             std::vector<std::shared_ptr<arrow::RecordBatch>>>>;
-  std::vector<std::shared_ptr<arrow::RecordBatch>> record_batches;
+  batch_group_t grouped_batches;
   std::mutex mutex_for_results;
-  auto reader = [&client, &mutex_for_results, &record_batches, part_id,
-                 part_num](ObjectID const estream) {
+  auto reader = [&client, &mutex_for_results, &grouped_batches, part_id,
+                 part_num](size_t const index, ObjectID const estream) {
     std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
     auto status = ReadRecordBatchesFromVineyard(client, estream, batches,
                                                 part_id, part_num);
     if (status.ok()) {
       std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      record_batches.insert(record_batches.end(), batches.begin(),
-                            batches.end());
+      std::string label = std::to_string(index), src_label = "", dst_label = "";
+      for (auto const& batch : batches) {
+        auto metadata = batch->schema()->metadata();
+        if (metadata != nullptr) {
+          std::unordered_map<std::string, std::string> meta_map;
+          metadata->ToUnorderedMap(&meta_map);
+          if (meta_map.find("label") != meta_map.end()) {
+            label = meta_map["label"];
+          }
+          src_label = meta_map["src_label"];
+          dst_label = meta_map["dst_label"];
+        }
+        grouped_batches[label][std::make_pair(src_label, dst_label)]
+            .emplace_back(batch);
+      }
     } else {
       LOG(ERROR) << "Failed to read from stream " << VYObjectIDToString(estream)
                  << ": " << status.ToString();
@@ -172,26 +205,15 @@ GatherETables(Client& client,
   };
 
   ThreadGroup tg;
-  for (auto const& esubstreams : estreams) {
-    for (auto const& estream : esubstreams) {
-      tg.AddTask(reader, estream);
+  for (size_t index = 0; index < estreams.size(); ++index) {
+    for (auto const& estream : estreams[index]) {
+      tg.AddTask(reader, index, estream);
     }
   }
   tg.TakeResults();
 
-  batch_group_t grouped_batches;
-  for (auto const& batch : record_batches) {
-    auto metadata = batch->schema()->metadata();
-    if (metadata == nullptr) {
-      LOG(ERROR) << "Invalid batch ignored: no metadata: "
-                 << batch->schema()->ToString();
-      continue;
-    }
-    std::unordered_map<std::string, std::string> meta_map;
-    metadata->ToUnorderedMap(&meta_map);
-    grouped_batches[meta_map["label"]][std::make_pair(meta_map["src_label"],
-                                                      meta_map["dst_label"])]
-        .emplace_back(batch);
+  if (!estreams.empty() && grouped_batches.empty()) {
+    grouped_batches[std::to_string(0)][std::make_pair("", "")] = {};
   }
 
   std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables;
@@ -200,7 +222,11 @@ GatherETables(Client& client,
     std::shared_ptr<arrow::Table> table;
     std::vector<std::shared_ptr<arrow::Table>> subtables;
     for (auto const& subgroup : group.second) {
-      VY_OK_OR_RAISE(RecordBatchesToTable(subgroup.second, &table));
+      if (subgroup.second.empty()) {
+        table = nullptr;  // no tables at current worker
+      } else {
+        VY_OK_OR_RAISE(RecordBatchesToTable(subgroup.second, &table));
+      }
       subtables.emplace_back(table);
     }
     e_label_id += 1;
@@ -215,17 +241,26 @@ GatherVTables(Client& client, const std::vector<ObjectID>& vstreams,
   using batch_group_t =
       std::unordered_map<std::string,
                          std::vector<std::shared_ptr<arrow::RecordBatch>>>;
-  std::vector<std::shared_ptr<arrow::RecordBatch>> record_batches;
+  batch_group_t grouped_batches;
   std::mutex mutex_for_results;
-  auto reader = [&client, &mutex_for_results, &record_batches, part_id,
-                 part_num](ObjectID const vstream) {
+  auto reader = [&client, &mutex_for_results, &grouped_batches, part_id,
+                 part_num](size_t const index, ObjectID const vstream) {
     std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
     auto status = ReadRecordBatchesFromVineyard(client, vstream, batches,
                                                 part_id, part_num);
     if (status.ok()) {
       std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      record_batches.insert(record_batches.end(), batches.begin(),
-                            batches.end());
+      for (auto const& batch : batches) {
+        std::string label = std::to_string(index);
+        if (batch->schema()->metadata() != nullptr) {
+          std::unordered_map<std::string, std::string> meta_map;
+          batch->schema()->metadata()->ToUnorderedMap(&meta_map);
+          if (meta_map.find("label") != meta_map.end()) {
+            label = meta_map["label"];
+          }
+        }
+        grouped_batches[label].emplace_back(batch);
+      }
     } else {
       LOG(ERROR) << "Failed to read from stream " << VYObjectIDToString(vstream)
                  << ": " << status.ToString();
@@ -234,28 +269,23 @@ GatherVTables(Client& client, const std::vector<ObjectID>& vstreams,
   };
 
   ThreadGroup tg;
-  for (auto const& vstream : vstreams) {
-    tg.AddTask(reader, vstream);
+  for (size_t index = 0; index < vstreams.size(); ++index) {
+    tg.AddTask(reader, index, vstreams[index]);
   }
   tg.TakeResults();
 
-  batch_group_t grouped_batches;
-  for (auto const& batch : record_batches) {
-    auto metadata = batch->schema()->metadata();
-    if (metadata == nullptr) {
-      LOG(ERROR) << "Invalid batch ignored: no metadata: "
-                 << batch->schema()->ToString();
-      continue;
-    }
-    std::unordered_map<std::string, std::string> meta_map;
-    metadata->ToUnorderedMap(&meta_map);
-    grouped_batches[meta_map["label"]].emplace_back(batch);
+  if (!vstreams.empty() && grouped_batches.empty()) {
+    grouped_batches[std::to_string(0)] = {};
   }
 
   std::vector<std::shared_ptr<arrow::Table>> tables;
   for (auto const& group : grouped_batches) {
     std::shared_ptr<arrow::Table> table;
-    VY_OK_OR_RAISE(RecordBatchesToTable(group.second, &table));
+    if (group.second.empty()) {
+      table = nullptr;  // no tables at current worker
+    } else {
+      VY_OK_OR_RAISE(RecordBatchesToTable(group.second, &table));
+    }
     tables.emplace_back(table);
   }
   return tables;

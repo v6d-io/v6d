@@ -19,11 +19,13 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "arrow/builder.h"
 #include "arrow/compute/api.h"
+#include "arrow/util/key_value_metadata.h"
 #include "boost/leaf/all.hpp"
 
 #include "grape/utils/vertex_array.h"
@@ -627,11 +629,23 @@ struct ConvertToArrowType<::grape::EmptyType> {
 
 inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
     const std::vector<std::shared_ptr<arrow::Schema>>& schemas) {
-  size_t field_num = 0;
+  int field_num = -1;
+  std::shared_ptr<arrow::KeyValueMetadata> metadata(
+      new arrow::KeyValueMetadata());
   for (const auto& schema : schemas) {
     if (schema != nullptr) {
+      if (field_num != -1 && field_num != schema->num_fields()) {
+        RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                        "Inconsistent field number");
+      }
       field_num = schema->num_fields();
-      break;
+      if (schema->metadata() != nullptr) {
+        std::unordered_map<std::string, std::string> metakv;
+        schema->metadata()->ToUnorderedMap(&metakv);
+        for (auto const& kv : metakv) {
+          metadata->Append(kv.first, kv.second);
+        }
+      }
     }
   }
   if (field_num == 0) {
@@ -644,7 +658,7 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
   // microseconds or nanoseconds since UNIX epoch.
   // CSV reader can only produce timestamp in seconds.
   std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
-  for (size_t i = 0; i < field_num; ++i) {
+  for (int i = 0; i < field_num; ++i) {
     for (const auto& schema : schemas) {
       if (schema != nullptr) {
         fields[i].push_back(schema->field(i));
@@ -653,7 +667,7 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
   }
   std::vector<std::shared_ptr<arrow::Field>> lossen_fields(field_num);
 
-  for (size_t i = 0; i < field_num; ++i) {
+  for (int i = 0; i < field_num; ++i) {
     lossen_fields[i] = fields[i][0];
     if (fields[i][0]->type() == arrow::null()) {
       continue;
@@ -681,7 +695,7 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
     }
     lossen_fields[i] = lossen_fields[i]->WithType(res);
   }
-  return std::make_shared<arrow::Schema>(lossen_fields);
+  return std::make_shared<arrow::Schema>(lossen_fields, metadata);
 }
 
 inline boost::leaf::result<std::shared_ptr<arrow::Array>> CastStringToBigString(

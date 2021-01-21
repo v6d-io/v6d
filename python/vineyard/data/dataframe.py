@@ -46,15 +46,20 @@ def pandas_dataframe_builder(client, value, builder, **kw):
 def pandas_dataframe_resolver(obj, resolver):
     meta = obj.meta
     columns = from_json(meta['columns_'])
-    index = resolver.run(obj.member('index_'))
     if not columns:
         return pd.DataFrame()
     # ensure zero-copy
     blocks = []
+    index_size = 0
     for idx, name in enumerate(columns):
         np_value = resolver.run(obj.member('__values_-value-%d' % idx))
+        index_size = len(np_value)
         # ndim: 1 for SingleBlockManager/Series, 2 for BlockManager/DataFrame
         blocks.append(Block(np.expand_dims(np_value, 0), slice(idx, idx + 1, 1), ndim=2))
+    if 'index_' in meta:
+        index = resolver.run(obj.member('index_'))
+    else:
+        index = np.arange(index_size)
     return pd.DataFrame(BlockManager(blocks, [columns, index]))
 
 
