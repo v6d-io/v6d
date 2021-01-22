@@ -212,9 +212,11 @@ void WriteDropNameReply(std::string& msg);
 
 Status ReadDropNameReply(const json& root);
 
-void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg);
+void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
+                               std::string const& peer, std::string& msg);
 
-Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id);
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id,
+                                bool& local, std::string& peer);
 
 void WriteMigrateObjectReply(const ObjectID& object_id, std::string& msg);
 

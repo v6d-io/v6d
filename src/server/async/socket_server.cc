@@ -486,9 +486,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   } break;
   case CommandType::MigrateObjectRequest: {
     ObjectID object_id;
-    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id));
+    bool local;
+    std::string peer;
+    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, peer));
     RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
-        object_id, [self](const Status& status, const ObjectID& target) {
+        object_id, local, peer,
+        [self](const Status& status, const ObjectID& target) {
           std::string message_out;
           if (status.ok()) {
             WriteMigrateObjectReply(target, message_out);

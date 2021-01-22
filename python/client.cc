@@ -377,41 +377,30 @@ void bind_client(py::module& mod) {
   mod.def(
          "connect",
          [](nullptr_t) -> py::object {
-           try {
+           if (const char *env_p = std::getenv("VINEYARD_IPC_SOCKET")) {
              return py::cast(ClientManager<Client>::GetManager()->Connect());
-           } catch (...) {}
-           try {
+           }
+           if (const char *env_p = std::getenv("VINEYARD_RPC_ENDPOINT")) {
              return py::cast(ClientManager<RPCClient>::GetManager()->Connect());
-           } catch (...) {}
+           }
            throw_on_error(Status::ConnectionFailed(
                "Failed to resolve IPC socket or RPC endpoint of vineyard "
-               "server from environment variables."));
+               "server from environment variables VINEYARD_IPC_SOCKET or VINEYARD_RPC_ENDPOINT."));
            return py::none();
          },
          py::arg("target") = py::none())
       .def(
           "connect",
           [](std::string const& endpoint) -> py::object {
-            try {
-              return py::cast(
-                  ClientManager<Client>::GetManager()->Connect(endpoint));
-            } catch (...) {}
-            try {
-              return py::cast(
-                  ClientManager<RPCClient>::GetManager()->Connect(endpoint));
-            } catch (...) {}
-            throw_on_error(Status::ConnectionFailed(
-                "Failed to resolve IPC socket or RPC endpoint of vineyard "
-                "server"));
-            return py::none();
+            return py::cast(ClientManager<Client>::GetManager()->Connect(endpoint));
           },
           "endpoint"_a)
       .def(
           "connect",
           [](std::string const& host, const uint32_t port) {
             std::string rpc_endpoint = host + ":" + std::to_string(port);
-            return ClientManager<RPCClient>::GetManager()->Connect(
-                rpc_endpoint);
+            return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint));
           },
           "host"_a, "port"_a)
       .def(

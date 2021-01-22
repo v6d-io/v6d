@@ -128,7 +128,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status DropName(const std::string& name, callback_t<> callback);
 
-  Status MigrateObject(const ObjectID object_id,
+  Status MigrateObject(const ObjectID object_id, const bool local,
+                       const std::string& peer,
                        callback_t<const ObjectID&> callback);
 
   Status ClusterInfo(callback_t<const json&> callback);

@@ -28,6 +28,7 @@ limitations under the License.
 #include "server/async/rpc_server.h"
 #include "server/services/meta_service.h"
 #include "server/util/meta_tree.h"
+#include "server/util/proc.h"
 
 namespace vineyard {
 
@@ -492,11 +493,43 @@ Status VineyardServer::DropName(const std::string& name,
   return Status::OK();
 }
 
-Status VineyardServer::MigrateObject(const ObjectID object_id,
+Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
+                                     const std::string& peer,
                                      callback_t<const ObjectID&> callback) {
   ENSURE_VINEYARDD_READY();
-  // TODO
-  return callback(Status::OK(), object_id);
+
+  if (local) {
+    std::vector<std::string> args = {"--client",  "true",   "--ipc_socket",
+                                     IPCSocket(), "--host", peer};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start(
+        "vineyard_migrate", args,
+        [callback, proc](Status const& status, std::string const& line) {
+          if (status.ok()) {
+            proc->Wait();
+            return callback(Status::OK(), VYObjectIDFromString(line));
+          } else {
+            proc->Terminate();
+            return callback(status, InvalidObjectID());
+          }
+        });
+  } else {
+    std::vector<std::string> args = {"--server",  "true",   "--ipc_socket",
+                                     IPCSocket(), "--host", "0.0.0.0"};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start("vineyard_migrate", args,
+                [callback, proc, object_id](Status const& status,
+                                            std::string const& line) {
+                  if (status.ok()) {
+                    proc->Wait();
+                    return callback(Status::OK(), object_id);
+                  } else {
+                    proc->Terminate();
+                    return callback(status, InvalidObjectID());
+                  }
+                });
+  }
+  return Status::OK();
 }
 
 Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {

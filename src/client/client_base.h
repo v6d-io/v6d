@@ -255,7 +255,8 @@ class ClientBase {
    *
    * @return Status that indicates if the migration success.
    */
-  Status MigrateObject(const ObjectID object_id, ObjectID& result_id);
+  Status MigrateObject(const ObjectID object_id, ObjectID& result_id,
+                       bool const local = true);
 
   /**
    * @brief Check if the client still connects to the vineyard server.
