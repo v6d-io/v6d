@@ -1,0 +1,20 @@
+# permissions for end users to view localobjects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: localobject-viewer-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - localobjects
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - localobjects/status
+  verbs:
+  - get

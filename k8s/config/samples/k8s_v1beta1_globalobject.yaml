@@ -1,0 +1,11 @@
+apiVersion: k8s.v6d.io/v1beta1
+kind: GlobalObject
+metadata:
+  name: globalobject-sample
+spec:
+  # Add fields here
+  id: o123
+  instance_id: 0
+  hostname: h2
+  metadata: "yyy"
+  signature: s111

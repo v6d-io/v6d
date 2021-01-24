@@ -1,0 +1,11 @@
+apiVersion: k8s.v6d.io/v1beta1
+kind: LocalObject
+metadata:
+  name: localobject-sample
+spec:
+  # Add fields here
+  id: o123
+  signature: s111
+  instance_id: 10
+  hostname: h1
+  metadata: "xxx"
