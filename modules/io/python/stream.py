@@ -325,7 +325,7 @@ def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs)
     return launcher.wait()
 
 
-def write_bytes(path, byte_stream, vineyard_socket, storage_options, *args, **kwargs):
+def write_bytes(path, byte_stream, vineyard_socket, storage_options, write_options, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -334,13 +334,14 @@ def write_bytes(path, byte_stream, vineyard_socket, storage_options, *args, **kw
         path,
         byte_stream,
         storage_options,
+        write_options,
         *args,
         **kwargs,
     )
     launcher.join()
 
 
-def write_orc(path, dataframe_stream, vineyard_socket, storage_options, *args, **kwargs):
+def write_orc(path, dataframe_stream, vineyard_socket, storage_options, write_options, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -349,6 +350,7 @@ def write_orc(path, dataframe_stream, vineyard_socket, storage_options, *args, *
         path,
         dataframe_stream,
         storage_options,
+        write_options,
         *args,
         **kwargs,
     )
@@ -358,8 +360,9 @@ def write_orc(path, dataframe_stream, vineyard_socket, storage_options, *args, *
 def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
+    write_options = kwargs.pop("write_options", {})
     storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
-
+    write_options = base64.b64encode(json.dumps(write_options).encode("utf-8")).decode("utf-8")
     if ".orc" in path:
         logger.debug("Write Orc file to %s.", path)
         write_orc(
@@ -367,12 +370,13 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
             dataframe_stream,
             vineyard_socket,
             storage_options,
+            write_options,
             *args,
             **kwargs.copy(),
         )
     else:
         stream = parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs.copy())
-        write_bytes(path, stream, vineyard_socket, storage_options, *args, **kwargs.copy())
+        write_bytes(path, stream, vineyard_socket, storage_options, write_options, *args, **kwargs.copy())
 
 
 def write_kafka_bytes(path, dataframe_stream, vineyard_socket, *args, **kwargs):
@@ -418,3 +422,46 @@ vineyard.io.write.register("oss", write_dataframe)
 vineyard.io.write.register("kafka", write_kafka_bytes)
 vineyard.io.write.register("kafka", write_kafka_dataframe)
 vineyard.io.write.register("vineyard", write_vineyard_dataframe)
+
+
+def serialize_to_stream(object_id, vineyard_socket, *args, **kwargs):
+    deployment = kwargs.pop("deployment", "ssh")
+    launcher = ParallelStreamLauncher(deployment)
+    launcher.run(get_executable("serializer"), vineyard_socket, object_id, *args, **kwargs)
+    return launcher.wait()
+
+
+def serialize(path, object_id, vineyard_socket, *args, **kwargs):
+    path = json.dumps(path)
+    storage_options = kwargs.pop("storage_options", {})
+    write_options = kwargs.pop("write_options")
+    write_options['serialization_mode'] = True
+    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
+    write_options = base64.b64encode(json.dumps(write_options).encode("utf-8")).decode("utf-8")
+
+    stream = serialize_to_stream(object_id, vineyard_socket, *args, **kwargs.copy())
+    write_bytes(path, stream, vineyard_socket, storage_options, write_options, *args, **kwargs.copy())
+
+
+vineyard.io.serialize.register("global", serialize)
+
+
+def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
+    deployment = kwargs.pop("deployment", "ssh")
+    launcher = ParallelStreamLauncher(deployment)
+    launcher.run(get_executable("deserializer"), stream, vineyard_socket, *args, **kwargs)
+    return launcher.wait()
+
+
+def deserialize(path, vineyard_socket, *args, **kwargs):
+    path = json.dumps(path)
+    storage_options = kwargs.pop("storage_options", {})
+    read_options = kwargs.pop("read_options", {})
+    read_options['serialization_mode'] = True
+    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
+    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode("utf-8")
+    stream = read_bytes(path, vineyard_socket, storage_options, read_options, *args, **kwargs)
+    return deserialize_from_stream(stream, vineyard_socket, *args, **kwargs.copy())
+
+
+vineyard.io.deserialize.register("local", deserialize)
