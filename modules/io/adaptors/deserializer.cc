@@ -105,7 +105,6 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
     }
   }
   json meta = json::parse(params["meta"]);
-  ObjectMeta target;
   if (meta.value("global", false)) {
     auto sub_metas = json::parse(params["sub_metas"]).get<std::vector<json>>();
     std::unordered_map<std::string, std::string> target_id_map;
@@ -120,7 +119,7 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
         ObjectMeta restored;
         RETURN_ON_ERROR(
             client.GetMetaData(sub_target.GetId(), restored, false));
-        LOG(INFO) << "Target object type is " << target.GetTypeName();
+        LOG(INFO) << "Target object type is " << sub_target.GetTypeName();
       }
     }
     std::stringstream ss;
@@ -129,6 +128,7 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
     }
     *out_id = ss.str();
   } else {
+    ObjectMeta target;
     RETURN_ON_ERROR(deserialize_helper(client, meta, target, blobs));
     RETURN_ON_ERROR(client.Persist(target.GetId()));
     {

@@ -437,7 +437,7 @@ def serialize_to_stream(object_id, vineyard_socket, *args, **kwargs):
 def serialize(path, object_id, vineyard_socket, *args, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
-    write_options = kwargs.pop("write_options")
+    write_options = kwargs.pop("write_options", {})
     write_options['serialization_mode'] = True
     storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
     write_options = base64.b64encode(json.dumps(write_options).encode("utf-8")).decode("utf-8")
@@ -452,7 +452,7 @@ vineyard.io.serialize.register("global", serialize)
 def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable("deserializer"), stream, vineyard_socket, *args, **kwargs)
+    launcher.run(get_executable("deserializer"), vineyard_socket, stream, *args, **kwargs)
 
     def func(vineyard_endpoint, results):
         # results format:
@@ -464,19 +464,23 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
         for row in results:
             for column in row:
                 if ":" in column:
-                    pair = column.split(";")
-                    if pair:
-                        old_id, new_id = pair.split(":")
-                        id_map[old_id] = new_id
+                    pairs = column.split(";")
+                    for pair in pairs:
+                        if pair:
+                            old_id, new_id = pair.split(":")
+                            id_map[old_id] = new_id
                 else:
                     meta = base64.b64decode(column.encode("utf-8")).decode("utf-8")
 
-        new_meta = vineyard.ObjectMeta
+        new_meta = vineyard.ObjectMeta()
         for key, value in meta.items():
             if isinstance(value, dict):
                 new_meta.add_member(key, vineyard.ObjectID(id_map[value['id']]))
             else:
-                new_meta[key] = value
+                if key == "global":
+                    new_meta.set_global(value)
+                else:
+                    new_meta[key] = value
         vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
         ret_id = vineyard_rpc_client.create_metadata(new_meta)
         vineyard_rpc_client.persist(ret_id)
@@ -495,4 +499,4 @@ def deserialize(path, vineyard_socket, *args, **kwargs):
     return deserialize_from_stream(stream, vineyard_socket, *args, **kwargs.copy())
 
 
-vineyard.io.deserialize.register("local", deserialize)
+vineyard.io.deserialize.register("global", deserialize)

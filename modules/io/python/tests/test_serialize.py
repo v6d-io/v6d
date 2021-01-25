@@ -23,14 +23,13 @@ import numpy as np
 import vineyard
 import vineyard.io
 
+
 @pytest.fixture(scope='module')
 def global_obj(vineyard_ipc_socket):
-    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_socket), 4))
-
-    client1 = vineyard.connect(vineyard_ipc_sockets[0])
-    client2 = vineyard.connect(vineyard_ipc_sockets[1])
-    client3 = vineyard.connect(vineyard_ipc_sockets[2])
-    client4 = vineyard.connect(vineyard_ipc_sockets[3])
+    client1 = vineyard.connect(vineyard_ipc_socket)
+    client2 = vineyard.connect(vineyard_ipc_socket)
+    client3 = vineyard.connect(vineyard_ipc_socket)
+    client4 = vineyard.connect(vineyard_ipc_socket)
 
     data = np.ones((1, 2, 3, 4, 5))
 
