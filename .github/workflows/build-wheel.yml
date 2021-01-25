@@ -33,7 +33,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, macos-10.15]
-        python: [cp35-cp35m, cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39]
+        python: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39]
 
     steps:
       - uses: actions/checkout@v2
@@ -72,7 +72,6 @@ jobs:
         run: |
           # setup python
           case "${{ matrix.python }}" in
-            ("cp35-cp35m") sudo conda create --quiet --yes -n buildwheel python=3.5 ;;
             ("cp36-cp36m") sudo conda create --quiet --yes -n buildwheel python=3.6 ;;
             ("cp37-cp37m") sudo conda create --quiet --yes -n buildwheel python=3.7 ;;
             ("cp38-cp38")  sudo conda create --quiet --yes -n buildwheel python=3.8 ;;
