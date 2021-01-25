@@ -61,9 +61,9 @@ class ArrowFragmentGroup : public Registered<ArrowFragmentGroup>, GlobalObject {
     edge_label_num_ =
         meta.GetKeyValue<property_graph_types::LABEL_ID_TYPE>("edge_label_num");
     for (fid_t idx = 0; idx < total_frag_num_; ++idx) {
-      fragments_.emplace(meta.GetKeyValue<fid_t>("fid_" + std::to_string(idx)),
-                         meta.GetMemberMeta(
-                             "frag_object_id_" + std::to_string(idx)).GetId());
+      fragments_.emplace(
+          meta.GetKeyValue<fid_t>("fid_" + std::to_string(idx)),
+          meta.GetMemberMeta("frag_object_id_" + std::to_string(idx)).GetId());
       fragment_locations_.emplace(
           meta.GetKeyValue<fid_t>("fid_" + std::to_string(idx)),
           meta.GetKeyValue<uint64_t>("frag_instance_id_" +
@@ -147,7 +147,6 @@ class ArrowFragmentGroupBuilder : public ObjectBuilder {
   std::unordered_map<fid_t, ObjectID> fragments_;
   std::unordered_map<fid_t, uint64_t> fragment_locations_;
 };
-
 
 inline boost::leaf::result<ObjectID> ConstructFragmentGroup(
     Client& client, ObjectID frag_id, const grape::CommSpec& comm_spec) {
