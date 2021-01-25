@@ -477,10 +477,7 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
             if isinstance(value, dict):
                 new_meta.add_member(key, vineyard.ObjectID(id_map[value['id']]))
             else:
-                if key == "global":
-                    new_meta.set_global(value)
-                else:
-                    new_meta[key] = value
+                new_meta[key] = value
         vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
         ret_id = vineyard_rpc_client.create_metadata(new_meta)
         vineyard_rpc_client.persist(ret_id)

@@ -108,6 +108,8 @@ void bind_core(py::module& mod) {
                              float value) { self->AddKeyValue(key, value); })
       .def("__setitem__", [](ObjectMeta* self, std::string const& key,
                              double value) { self->AddKeyValue(key, value); })
+      .def("__setitem__", [](ObjectMeta* self, std::string const& key,
+                             bool value) { self->AddKeyValue(key, value); })
       .def("__setitem__",
            [](ObjectMeta* self, std::string const& key,
               std::vector<int32_t> const& value) {
