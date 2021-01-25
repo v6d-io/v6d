@@ -146,7 +146,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         logger.debug("partial_ids = %s", partial_ids)
         if func is None:
             return self.create_parallel_stream(partial_ids)
-        return func(partial_ids)
+        return func(self.vineyard_endpoint, partial_ids)
 
     def create_parallel_stream(self, partial_ids):
         meta = vineyard.ObjectMeta()
@@ -161,16 +161,16 @@ class ParallelStreamLauncher(ScriptLauncher):
         return ret_id
 
     def wait_all(self, func=None, **kwargs):
-        partial_id_matrix = []
+        results = []
         for proc in self._procs:
             proc.join()
-            partial_id_matrix.append([vineyard.ObjectID(ret_id) for ret_id in proc._result])
-        logger.debug("partial_id_matrix = %s", partial_id_matrix)
+            results.append(proc._result)
+        logger.debug("results of wait_all = %s", results)
         if func is None:
-            return self.create_global_dataframe(partial_id_matrix, **kwargs)
-        return func(partial_id_matrix, **kwargs)
+            return self.create_global_dataframe(results, **kwargs)
+        return func(self.vineyard_endpoint, results, **kwargs)
 
-    def create_global_dataframe(self, partial_id_matrix, **kwargs):
+    def create_global_dataframe(self, results, **kwargs):
         # use the partial_id_matrix and the name in **kwargs
         # to create a global dataframe. Here the name is given in the
         # the input URI path in the
@@ -181,10 +181,13 @@ class ParallelStreamLauncher(ScriptLauncher):
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::GlobalDataFrame'
         meta.set_global(True)
-        meta['partition_shape_row_'] = len(partial_id_matrix)
+        meta['partition_shape_row_'] = len(results)
         meta['partition_shape_column_'] = 1
 
         partition_size = 0
+        partial_id_matrix = []
+        for row in results:
+            partial_id_matrix.append([vineyard.ObjectID(ret_id) for ret_id in row])
         for partial_id_list in partial_id_matrix:
             for partial_id in partial_id_list:
                 meta.add_member('partitions_-%d' % partition_size, partial_id)
@@ -450,7 +453,35 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(get_executable("deserializer"), stream, vineyard_socket, *args, **kwargs)
-    return launcher.wait()
+
+    def func(vineyard_endpoint, results):
+        # results format:
+        # one base64encoded meta string
+        # others are ';' separated old_id -> new-id map
+        # x1:y1;x2:y2;
+        id_map = {}
+        meta = {}
+        for row in results:
+            for column in row:
+                if ":" in column:
+                    pair = column.split(";")
+                    if pair:
+                        old_id, new_id = pair.split(":")
+                        id_map[old_id] = new_id
+                else:
+                    meta = base64.b64decode(column.encode("utf-8")).decode("utf-8")
+
+        new_meta = vineyard.ObjectMeta
+        for key, value in meta.items():
+            if isinstance(value, dict):
+                new_meta.add_member(key, vineyard.ObjectID(id_map[value['id']]))
+            else:
+                new_meta[key] = value
+        vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
+        ret_id = vineyard_rpc_client.create_metadata(new_meta)
+        vineyard_rpc_client.persist(ret_id)
+        return ret_id
+    return launcher.wait_all(func=func)
 
 
 def deserialize(path, vineyard_socket, *args, **kwargs):

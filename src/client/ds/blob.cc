@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "client/ds/blob.h"
 
+#include <iomanip>
 #include <iostream>
 #include <limits>
 
@@ -93,10 +94,11 @@ void Blob::Dump() const {
     std::stringstream ss;
     ss << "size = " << size() << ", buffer = ";
     {
-      std::ios::fmtflags os_flags (std::cout.flags());
-      auto ptr = reinterpret_cast<const uint8_t *>(this->data());
+      std::ios::fmtflags os_flags(std::cout.flags());
+      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
       for (size_t idx = 0; idx < size(); ++idx) {
-        ss << "\\x" << std::hex << static_cast<const uint32_t>(ptr[idx]);
+        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+           << static_cast<const uint32_t>(ptr[idx]);
       }
       std::cout.flags(os_flags);
     }
@@ -151,10 +153,11 @@ void BlobWriter::Dump() const {
     std::stringstream ss;
     ss << "size = " << size() << ", buffer = ";
     {
-      std::ios::fmtflags os_flags (std::cout.flags());
-      auto ptr = reinterpret_cast<const uint8_t *>(this->data());
+      std::ios::fmtflags os_flags(std::cout.flags());
+      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
       for (size_t idx = 0; idx < size(); ++idx) {
-        ss << "\\x" << std::hex << static_cast<const uint32_t>(ptr[idx]);
+        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+           << static_cast<const uint32_t>(ptr[idx]);
       }
       std::cout.flags(os_flags);
     }

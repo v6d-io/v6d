@@ -41,7 +41,8 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
         if (sub_meta.GetInstanceId() == client.instance_id()) {
           sub_metas.push_back(sub_meta.MetaData());
           auto blob_ids = sub_meta.GetBlobSet()->AllBlobIds();
-          ordered_blobs.insert(ordered_blobs.end(), blob_ids.begin(), blob_ids.end());
+          ordered_blobs.insert(ordered_blobs.end(), blob_ids.begin(),
+                               blob_ids.end());
         }
       }
     }
@@ -79,7 +80,6 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
   LOG(INFO) << "Serialized object " << in_id << " to stream " << *stream_id;
   return Status::OK();
 }
-
 
 int main(int argc, const char** argv) {
   if (argc < 3) {

@@ -24,6 +24,29 @@ limitations under the License.
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
+static std::string base64_encode(const std::string& in) {
+  std::string out;
+
+  int val = 0, valb = -6;
+  for (auto c : in) {
+    val = (val << 8) + c;
+    valb += 8;
+    while (valb >= 0) {
+      out.push_back(
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+              [(val >> valb) & 0x3F]);
+      valb -= 6;
+    }
+  }
+  if (valb > -6)
+    out.push_back(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+            [((val << 8) >> (valb + 8)) & 0x3F]);
+  while (out.size() % 4)
+    out.push_back('=');
+  return out;
+}
+
 Status deserialize_helper(
     Client& client, const json& meta, ObjectMeta& target,
     const std::unordered_map<ObjectID, std::shared_ptr<Blob>>& blobs) {
@@ -63,8 +86,10 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
   // Consume meta
   auto params = byte_stream->GetParams();
 
-  auto ordered_blobs = json::parse(params["blobs"]).get<std::vector<ObjectID>>();
-  auto blobs_size = json::parse(params["blobs_size"]).get<std::vector<size_t>>();
+  auto ordered_blobs =
+      json::parse(params["blobs"]).get<std::vector<ObjectID>>();
+  auto blobs_size =
+      json::parse(params["blobs_size"]).get<std::vector<size_t>>();
   std::unique_ptr<BlobWriter> blob_writer;
   std::unordered_map<ObjectID, std::shared_ptr<Blob>> blobs;
   for (size_t i = 0; i < ordered_blobs.size(); ++i) {
@@ -85,19 +110,21 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
     auto sub_metas = json::parse(params["sub_metas"]).get<std::vector<json>>();
     std::unordered_map<std::string, std::string> target_id_map;
     // Reconstruct member's meta
-    for (auto &sub_meta : sub_metas) {
+    for (auto& sub_meta : sub_metas) {
       ObjectMeta sub_target;
       RETURN_ON_ERROR(deserialize_helper(client, sub_meta, sub_target, blobs));
       RETURN_ON_ERROR(client.Persist(sub_target.GetId()));
-      target_id_map[sub_meta["id"].get<std::string>()] = sub_target.MetaData()["id"].get<std::string>();
+      target_id_map[sub_meta["id"].get<std::string>()] =
+          sub_target.MetaData()["id"].get<std::string>();
       {
         ObjectMeta restored;
-        RETURN_ON_ERROR(client.GetMetaData(sub_target.GetId(), restored, false));
+        RETURN_ON_ERROR(
+            client.GetMetaData(sub_target.GetId(), restored, false));
         LOG(INFO) << "Target object type is " << target.GetTypeName();
       }
     }
     std::stringstream ss;
-    for (auto &pair : target_id_map) {
+    for (auto& pair : target_id_map) {
       ss << pair.first << ":" << pair.second << ";";
     }
     *out_id = ss.str();
@@ -118,11 +145,11 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
   return Status::OK();
 }
 
-
 int main(int argc, const char** argv) {
   if (argc < 5) {
     printf(
-        "usage ./deserializer <ipc_socket> <stream_id> <proc_num> <proc_index>\n");
+        "usage ./deserializer <ipc_socket> <stream_id> <proc_num> "
+        "<proc_index>\n");
     return 1;
   }
 
@@ -142,7 +169,10 @@ int main(int argc, const char** argv) {
   auto ls = s->GetStream<ByteStream>(proc_index);
   LOG(INFO) << "Got byte stream " << ls->id() << " at " << proc_index << " (of "
             << proc_num << ")";
-
+  if (proc_index == 0) {
+    auto params = ls->GetParams();
+    ReportStatus("return", base64_encode(params["meta"]));
+  }
   std::string out;
   auto status = Deserialize(client, ls->id(), &out);
   if (status.ok()) {
