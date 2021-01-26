@@ -88,6 +88,7 @@ def write(path, stream, *args, **kwargs):
 
     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
 
+
 @registerize
 def serialize(path, object_id, *args, **kwargs):
     obj_type = kwargs.pop('type', 'global')
@@ -97,6 +98,7 @@ def serialize(path, object_id, *args, **kwargs):
         serializer(path, object_id, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
         return
     raise RuntimeError('Unable to find a proper IO driver for %s' % object_id)
+
 
 @registerize
 def deserialize(path, *args, **kwargs):

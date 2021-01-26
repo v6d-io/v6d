@@ -482,6 +482,7 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
         ret_id = vineyard_rpc_client.create_metadata(new_meta)
         vineyard_rpc_client.persist(ret_id)
         return ret_id
+
     return launcher.wait_all(func=func)
 
 

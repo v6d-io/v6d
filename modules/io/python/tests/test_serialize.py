@@ -58,15 +58,15 @@ def global_obj(vineyard_ipc_socket):
 
 
 def test_seriarialize_round_trip(vineyard_ipc_socket, vineyard_endpoint, global_obj):
-    vineyard.io.serialize('/tmp/seri-test', global_obj, vineyard_ipc_socket=vineyard_ipc_socket,
+    vineyard.io.serialize('/tmp/seri-test',
+                          global_obj,
+                          vineyard_ipc_socket=vineyard_ipc_socket,
                           vineyard_endpoint=vineyard_endpoint)
-    ret = vineyard.io.deserialize('/tmp/seri-test', vineyard_ipc_socket=vineyard_ipc_socket,
+    ret = vineyard.io.deserialize('/tmp/seri-test',
+                                  vineyard_ipc_socket=vineyard_ipc_socket,
                                   vineyard_endpoint=vineyard_endpoint)
     client = vineyard.connect(vineyard_ipc_socket)
     old_meta = client.get_meta(global_obj)
     new_meta = client.get_meta(ret)
     print('old meta', old_meta)
     print('new meta', new_meta)
-
-
-
