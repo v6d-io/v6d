@@ -62,22 +62,18 @@ def read_bytes(
     if serialization_mode:
         parsed = urlparse(path)
         fs = fsspec.filesystem(parsed.scheme)
-        # meta files
-        required_files = [f"{path}_{idx}.meta" for idx in range(proc_num)]
-        # blob files
-        required_files.extend([f"{path}_{idx}" for idx in range(proc_num)])
-
-        for fname in required_files:
-            if not fs.exists(fname):
-                ret = {
-                    "type": "error",
-                    "content": "Some serialization file cannot be found. "
-                    "Expected: {}".format('\n'.join(required_files))
-                }
-                print(json.dumps(ret), flush=True)
-                raise FileNotFoundError(fname)
+        meta_file = f"{path}_{proc_index}.meta"
+        blob_file = f"{path}_{proc_index}"
+        if not fs.exists(meta_file) or not fs.exists(blob_file):
+            ret = {
+                "type": "error",
+                "content": "Some serialization file cannot be found. "
+                "Expected: {} and {}".format(meta_file, blob_file)
+            }
+            print(json.dumps(ret), flush=True)
+            raise FileNotFoundError('{}, {}'.format(meta_file, blob_file))
         # Used for read bytes of serialized graph
-        meta_file = fsspec.open(f"{path}_{proc_index}.meta", mode="rb", **storage_options)
+        meta_file = fsspec.open(meta_file, mode="rb", **storage_options)
         with meta_file as f:
             meta = f.read().decode('utf-8')
             meta = json.loads(meta)
@@ -89,7 +85,7 @@ def read_bytes(
         ret = {"type": "return", "content": repr(stream.id)}
         print(json.dumps(ret), flush=True)
         writer = stream.open_writer(client)
-        of = fsspec.open(f"{path}_{proc_index}", mode="rb", **storage_options)
+        of = fsspec.open(blob_file, mode="rb", **storage_options)
         with of as f:
             try:
                 total_size = f.size()
