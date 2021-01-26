@@ -471,7 +471,7 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
                             id_map[old_id] = new_id
                 else:
                     meta = base64.b64decode(column.encode("utf-8")).decode("utf-8")
-
+        meta = json.loads(meta)
         new_meta = vineyard.ObjectMeta()
         for key, value in meta.items():
             if isinstance(value, dict):
