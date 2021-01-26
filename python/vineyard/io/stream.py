@@ -91,6 +91,9 @@ def write(path, stream, *args, **kwargs):
 
 @registerize
 def serialize(path, object_id, *args, **kwargs):
+    parsed = urlparse(path)
+    if not parsed.scheme:
+        path = 'file://' + path
     obj_type = kwargs.pop('type', 'global')
     if serialize.__factory and serialize.__factory[obj_type]:
         proc_kwargs = kwargs.copy()
@@ -102,6 +105,9 @@ def serialize(path, object_id, *args, **kwargs):
 
 @registerize
 def deserialize(path, *args, **kwargs):
+    parsed = urlparse(path)
+    if not parsed.scheme:
+        path = 'file://' + path
     obj_type = kwargs.pop('type', 'global')
     if deserialize.__factory and deserialize.__factory[obj_type]:
         proc_kwargs = kwargs.copy()

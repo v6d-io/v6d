@@ -63,7 +63,7 @@ Status Serialize(Client& client, ObjectID in_id, ObjectID* stream_id) {
 
   *stream_id =
       std::dynamic_pointer_cast<ByteStream>(builder.Seal(client))->id();
-
+  VINEYARD_CHECK_OK(client.Persist(*stream_id));
   auto byte_stream = client.GetObject<ByteStream>(*stream_id);
 
   std::unique_ptr<ByteStreamWriter> writer;

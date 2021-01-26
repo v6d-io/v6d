@@ -23,7 +23,7 @@ from typing import Dict
 
 import fsspec
 import pyarrow as pa
-import pyorc
+from urllib.parse import urlparse
 import vineyard
 from fsspec.utils import read_block
 from vineyard.io.byte import ByteStreamBuilder
@@ -60,6 +60,22 @@ def read_bytes(
 
     serialization_mode = read_options.pop('serialization_mode', False)
     if serialization_mode:
+        parsed = urlparse(path)
+        fs = fsspec.filesystem(parsed.scheme)
+        # meta files
+        required_files = [f"{path}_{idx}.meta" for idx in range(proc_num)]
+        # blob files
+        required_files.extend([f"{path}_{idx}" for idx in range(proc_num)])
+
+        for fname in required_files:
+            if not fs.exists(fname):
+                ret = {
+                    "type": "error",
+                    "content": "Some serialization file cannot be found. "
+                    "Expected: {}".format('\n'.join(required_files))
+                }
+                print(json.dumps(ret), flush=True)
+                raise FileNotFoundError(fname)
         # Used for read bytes of serialized graph
         meta_file = fsspec.open(f"{path}_{proc_index}.meta", mode="rb", **storage_options)
         with meta_file as f:
@@ -139,18 +155,12 @@ def read_bytes(
 
 if __name__ == "__main__":
     if len(sys.argv) < 7:
-        print(
-            "usage: ./read_bytes <ipc_socket> <path> <storage_options> <read_options> <proc_num> <proc_index>"
-        )
+        print("usage: ./read_bytes <ipc_socket> <path> <storage_options> <read_options> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
     path = sys.argv[2]
-    storage_options = json.loads(
-        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
-    )
-    read_options = json.loads(
-        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
-    )
+    storage_options = json.loads(base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8"))
+    read_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
     read_bytes(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
