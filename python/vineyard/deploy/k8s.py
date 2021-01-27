@@ -54,21 +54,17 @@ def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyar
         rpc_socket_port: int
             The port that vineyard will use to privode RPC service.
     '''
-    start_etcd_k8s(namespace)
+    # start_etcd_k8s(namespace)
 
     template_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname(__file__))
     template_env = jinja2.Environment(loader=template_loader)
     template = template_env.get_template("vineyard_daemonset.yaml.tmpl")
-    body = template.render(Namespace=namespace, Size=size, Socket=socket)
-    body = yaml.safe_load(body)
+    body = template.render(Namespace=namespace, Size=size, Socket=socket, Port=rpc_socket_port)
+    with open(os.path.join(os.path.dirname(__file__), "vineyard_daemonset.yaml"), "w") as f:
+        f.write(body)
+
     kubernetes.config.load_kube_config()
-
-    k8s_apps_v1 = kubernetes.client.AppsV1Api()
-    resp = k8s_apps_v1.create_namespaced_daemon_set(body=body, namespace=namespace)
-
-    template = template_env.get_template("vineyard_service.yaml.tmpl")
-    body = template.render(Port=rpc_socket_port)
-    body = yaml.safe_load(body)
-
-    k8s_core_v1 = kubernetes.client.CoreV1Api()
-    resp = k8s_core_v1.create_namespaced_service(body=body, namespace=namespace)
+    k8s_client = kubernetes.client.ApiClient()
+    resp = kubernetes.utils.create_from_yaml(k8s_client,
+                                             os.path.join(os.path.dirname(__file__), "vineyard_daemonset.yaml"),
+                                             namespace=namespace)

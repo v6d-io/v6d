@@ -123,13 +123,7 @@ def start_etcd(host=None, etcd_executable=None):
 
 def start_etcd_k8s(namespace):
     kubernetes.config.load_kube_config()
-    with open(os.path.join(os.path.dirname(__file__), 'etcd.yaml')) as f:
-        dep = yaml.safe_load(f)
-        k8s_core_v1 = kubernetes.client.CoreV1Api()
-        resp = k8s_core_v1.create_namespaced_pod(body=dep, namespace=namespace)
-
-    with open(os.path.join(os.path.dirname(__file__), 'etcd_service.yaml')) as f:
-        dep = yaml.safe_load(f)
-        print(dep)
-        k8s_core_v1 = kubernetes.client.CoreV1Api()
-        resp = k8s_core_v1.create_namespaced_service(body=dep, namespace=namespace)
+    k8s_client = kubernetes.client.ApiClient()
+    resp = kubernetes.utils.create_from_yaml(k8s_client,
+                                             os.path.join(os.path.dirname(__file__), 'etcd.yaml'),
+                                             namespace=namespace)
