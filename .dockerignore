@@ -37,3 +37,6 @@ docker/dist/
 
 # docs
 docs/_build/
+
+# go vendor
+vendor/
