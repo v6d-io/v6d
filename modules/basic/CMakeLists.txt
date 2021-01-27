@@ -2,8 +2,6 @@
 file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                     "*.vineyard-mod")
 
-find_package(libgrapelite REQUIRED)
-
 if (VINEYARD_MOD_SRCS)
     vineyard_generate(
         OUT_VAR VINEYARD_GENERATES
@@ -19,16 +17,8 @@ file(GLOB_RECURSE BASIC_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "*.cc")
 add_library(vineyard_basic ${BASIC_SRC_FILES})
 target_link_libraries(vineyard_basic vineyard_client
                                      ${ARROW_SHARED_LIB}
-                                     ${MPI_CXX_LIBRARIES}
 )
 
-target_include_directories(vineyard_basic PUBLIC
-                                          ${MPI_CXX_INCLUDE_PATH}
-)
-target_include_directories(vineyard_basic PUBLIC
-    $<BUILD_INTERFACE:${LIBGRAPELITE_INCLUDE_DIRS}>
-    $<INSTALL_INTERFACE:include>
-)
 if(VINEYARD_MOD_SRCS)
     add_dependencies(vineyard_basic vineyard_basic_gen)
 endif()

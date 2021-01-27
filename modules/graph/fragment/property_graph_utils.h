@@ -28,6 +28,8 @@ limitations under the License.
 #include "arrow/util/key_value_metadata.h"
 #include "boost/leaf/all.hpp"
 
+#include "grape/serialization/in_archive.h"
+#include "grape/serialization/out_archive.h"
 #include "grape/utils/vertex_array.h"
 #include "grape/worker/comm_spec.h"
 
@@ -818,5 +820,45 @@ inline boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
 }
 
 }  // namespace vineyard
+
+namespace grape {
+inline InArchive& operator<<(InArchive& in_archive,
+                             std::shared_ptr<arrow::Schema>& schema) {
+  if (schema != nullptr) {
+    std::shared_ptr<arrow::Buffer> out;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
+        *schema, nullptr, arrow::default_memory_pool(), &out));
+#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out, arrow::ipc::SerializeSchema(*schema, nullptr,
+                                         arrow::default_memory_pool()));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        out,
+        arrow::ipc::SerializeSchema(*schema, arrow::default_memory_pool()));
+#endif
+    in_archive.AddBytes(out->data(), out->size());
+  }
+  return in_archive;
+}
+
+inline OutArchive& operator>>(OutArchive& out_archive,
+                              std::shared_ptr<arrow::Schema>& schema) {
+  if (!out_archive.Empty()) {
+    auto buffer = std::make_shared<arrow::Buffer>(
+        reinterpret_cast<const uint8_t*>(out_archive.GetBuffer()),
+        out_archive.GetSize());
+    arrow::io::BufferReader reader(buffer);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &schema));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(schema,
+                                 arrow::ipc::ReadSchema(&reader, nullptr));
+#endif
+  }
+  return out_archive;
+}
+}  // namespace grape
 
 #endif  // MODULES_GRAPH_FRAGMENT_PROPERTY_GRAPH_UTILS_H_
