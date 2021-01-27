@@ -16,4 +16,5 @@
 # limitations under the License.
 #
 
-from .stream import open, read, write, serialize, deserialize
+from .stream import open, read, write
+from .serialization import serialize, deserialize

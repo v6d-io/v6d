@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import os
 import pytest
 import itertools
 import numpy as np
@@ -65,6 +66,72 @@ def test_seriarialize_round_trip(vineyard_ipc_socket, vineyard_endpoint, global_
     ret = vineyard.io.deserialize('/tmp/seri-test',
                                   vineyard_ipc_socket=vineyard_ipc_socket,
                                   vineyard_endpoint=vineyard_endpoint)
+    client = vineyard.connect(vineyard_ipc_socket)
+    old_meta = client.get_meta(global_obj)
+    new_meta = client.get_meta(ret)
+    print('old meta', old_meta)
+    print('new meta', new_meta)
+
+
+@pytest.mark.skip("require oss")
+def test_seriarialize_round_trip_on_oss(vineyard_ipc_socket, vineyard_endpoint, global_obj):
+    accessKeyID = os.environ["ACCESS_KEY_ID"]
+    accessKeySecret = os.environ["SECRET_ACCESS_KEY"]
+    endpoint = os.environ.get("ENDPOINT", "http://oss-cn-hangzhou.aliyuncs.com")
+    vineyard.io.serialize('oss://grape-uk/tmp/seri-test',
+                          global_obj,
+                          vineyard_ipc_socket=vineyard_ipc_socket,
+                          vineyard_endpoint=vineyard_endpoint,
+                          storage_options={
+                              "key": accessKeyID,
+                              "secret": accessKeySecret,
+                              "endpoint": endpoint,
+                          })
+    ret = vineyard.io.deserialize('oss://grape-uk/tmp/seri-test',
+                                  vineyard_ipc_socket=vineyard_ipc_socket,
+                                  vineyard_endpoint=vineyard_endpoint,
+                                  storage_options={
+                                      "key": accessKeyID,
+                                      "secret": accessKeySecret,
+                                      "endpoint": endpoint,
+                                  })
+    client = vineyard.connect(vineyard_ipc_socket)
+    old_meta = client.get_meta(global_obj)
+    new_meta = client.get_meta(ret)
+    print('old meta', old_meta)
+    print('new meta', new_meta)
+
+
+@pytest.mark.skip(reason="require s3")
+def test_seriarialize_round_trip_on_s3(vineyard_ipc_socket, vineyard_endpoint, global_obj):
+    accessKeyID = os.environ["ACCESS_KEY_ID"]
+    accessKeySecret = os.environ["SECRET_ACCESS_KEY"]
+    region_name = os.environ.get("REGION", "us-east-1")
+    stream = vineyard.io.serialize(
+        "s3://test-bucket/tmp/seri-test",
+        global_obj,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        storage_options={
+            "key": accessKeyID,
+            "secret": accessKeySecret,
+            "client_kwargs": {
+                "region_name": region_name
+            },
+        },
+    )
+    ret = vineyard.io.deserialize(
+        's3://test-bucket/tmp/seri-test',
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        storage_options={
+            "key": accessKeyID,
+            "secret": accessKeySecret,
+            "client_kwargs": {
+                "region_name": region_name
+            },
+        },
+    )
     client = vineyard.connect(vineyard_ipc_socket)
     old_meta = client.get_meta(global_obj)
     new_meta = client.get_meta(ret)

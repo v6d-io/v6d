@@ -78,7 +78,7 @@ Status deserialize_helper(
 /// If is a global object, then only restore local object
 /// Return local object's id,
 /// The caller is responsible for assemble objects into a global object.
-Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
+Status Deserialize(Client& client, ObjectID stream_id, std::string& out_id) {
   auto byte_stream = client.GetObject<ByteStream>(stream_id);
   std::unique_ptr<ByteStreamReader> reader;
   RETURN_ON_ERROR(byte_stream->OpenReader(client, reader));
@@ -126,7 +126,7 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
     for (auto& pair : target_id_map) {
       ss << pair.first << ":" << pair.second << ";";
     }
-    *out_id = ss.str();
+    out_id = ss.str();
   } else {
     ObjectMeta target;
     RETURN_ON_ERROR(deserialize_helper(client, meta, target, blobs));
@@ -136,11 +136,11 @@ Status Deserialize(Client& client, ObjectID stream_id, std::string* out_id) {
       RETURN_ON_ERROR(client.GetMetaData(target.GetId(), restored, false));
       LOG(INFO) << "Target object type is " << target.GetTypeName();
     }
-    *out_id = target.MetaData()["id"].get<std::string>();
+    out_id = target.MetaData()["id"].get<std::string>();
   }
 
   LOG(INFO) << "Deserialized from stream " << stream_id << " to object "
-            << *out_id;
+            << out_id;
 
   return Status::OK();
 }
@@ -174,7 +174,7 @@ int main(int argc, const char** argv) {
     ReportStatus("return", base64_encode(params["meta"]));
   }
   std::string out;
-  auto status = Deserialize(client, ls->id(), &out);
+  auto status = Deserialize(client, ls->id(), out);
   if (status.ok()) {
     ReportStatus("return", out);
     ReportStatus("exit", "");
