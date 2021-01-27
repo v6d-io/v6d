@@ -253,7 +253,7 @@ Parameters:
     key: str
         The name of the new metadata entry.
 
-    value: str, int, float or list of int
+    value: str, int, float, bool or list of int
         The value of the new metadata entry.
 
         +  When the value is a :class:`str`, it will be convert to string at first.

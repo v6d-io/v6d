@@ -290,7 +290,7 @@ class GlobalTensorBuilder : public GlobalTensorBaseBuilder {
    * @param partition_id The ObjectID of the partition to added.
    *
    */
-  void AddPartition(const InstanceID instance_id, const ObjectID partition_id);
+  void AddPartition(const ObjectID partition_id);
 
   /**
    * @brief Add a group of partitions in the vineyard instance
@@ -301,8 +301,7 @@ class GlobalTensorBuilder : public GlobalTensorBaseBuilder {
    * group of partitions to add.
    *
    */
-  void AddPartitions(const InstanceID instance_id,
-                     const std::vector<ObjectID>& partition_ids);
+  void AddPartitions(const std::vector<ObjectID>& partition_ids);
 
   /**
    * @brief Seal the meta data of the global tensor.

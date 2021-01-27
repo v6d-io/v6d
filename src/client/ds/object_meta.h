@@ -44,7 +44,7 @@ class Object;
  * @brief ObjectMeta is the type for metadata of an Object. The ObjectMeta can
  * be treat as a *dict-like* type. If the the metadata if the metadata obtained
  * from vineyard, the metadata is readonly. Otherwise *key-value* attributes or
- * object members could be assoicated with the metadata to construct a new
+ * object members could be associated with the metadata to construct a new
  * vineyard object.
  */
 class ObjectMeta {
@@ -53,12 +53,12 @@ class ObjectMeta {
   ~ObjectMeta() {}
 
   /**
-   * @brief Assoicate the client with the metadata.
+   * @brief Associate the client with the metadata.
    */
   void SetClient(ClientBase* client);
 
   /**
-   * @brief Get the assoicate client with the metadata.
+   * @brief Get the associate client with the metadata.
    */
   ClientBase* GetClient() const;
 
@@ -473,9 +473,9 @@ class ObjectMeta {
   const_iterator begin() const { return json::iterator_wrapper(meta_).begin(); }
   const_iterator end() const { return json::iterator_wrapper(meta_).end(); }
 
- protected:
   const std::shared_ptr<BlobSet>& GetBlobSet() const;
 
+ protected:
   void SetBlob(const ObjectID& id,
                const std::shared_ptr<arrow::Buffer>& buffer);
 
@@ -486,14 +486,14 @@ class ObjectMeta {
 
   void SetSignature(const Signature signature);
 
-  // hold a client_ reference, since we alreay hold blobs in metadata, which,
+  // hold a client_ reference, since we already hold blobs in metadata, which,
   // depends on that the "client_" should be valid.
   ClientBase* client_ = nullptr;
   json meta_;
   // associated blobs
   std::shared_ptr<BlobSet> blob_set_;
 
-  // imcomplete: whether the metadata has incomplete member, introuduced by
+  // incomplete: whether the metadata has incomplete member, introduced by
   // `AddMember(name, member_id)`.
   bool incomplete_ = false;
 

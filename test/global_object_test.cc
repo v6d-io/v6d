@@ -50,7 +50,7 @@ void testGlobalTensor(Client& client) {
     GlobalTensorBuilder builder(client);
     builder.set_partition_shape({1, 1});
     builder.set_shape({2, 3});
-    builder.AddPartition(client.instance_id(), tensor_id);
+    builder.AddPartition(tensor_id);
     global_tensor_id = builder.Seal(client)->id();
   }
 
@@ -85,7 +85,7 @@ void testGlobalDataFrame(Client& client) {
   {
     GlobalDataFrameBuilder builder(client);
     builder.set_partition_shape(1, 1);
-    builder.AddPartition(client.instance_id(), dataframe_id);
+    builder.AddPartition(dataframe_id);
     global_dataframe_id = builder.Seal(client)->id();
   }
 
@@ -121,7 +121,7 @@ void testDelete(Client& client) {
   {
     GlobalDataFrameBuilder builder(client);
     builder.set_partition_shape(1, 1);
-    builder.AddPartition(client.instance_id(), dataframe_id);
+    builder.AddPartition(dataframe_id);
     global_dataframe_id = builder.Seal(client)->id();
   }
 
@@ -158,7 +158,7 @@ void testDelete(Client& client) {
   {
     GlobalDataFrameBuilder builder(client);
     builder.set_partition_shape(1, 1);
-    builder.AddPartition(client.instance_id(), dataframe_id);
+    builder.AddPartition(dataframe_id);
     global_dataframe_id = builder.Seal(client)->id();
   }
 

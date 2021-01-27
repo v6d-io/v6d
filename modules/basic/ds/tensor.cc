@@ -121,13 +121,12 @@ void GlobalTensorBuilder::set_shape(std::vector<int64_t> const& shape) {
   this->set_shape_(shape);
 }
 
-void GlobalTensorBuilder::AddPartition(const InstanceID instance_id,
-                                       const ObjectID partition_id) {
+void GlobalTensorBuilder::AddPartition(const ObjectID partition_id) {
   this->add_partitions_(partition_id);
 }
 
 void GlobalTensorBuilder::AddPartitions(
-    const InstanceID instance_id, const std::vector<ObjectID>& partition_ids) {
+    const std::vector<ObjectID>& partition_ids) {
   for (auto const& partition_id : partition_ids) {
     this->add_partitions_(partition_id);
   }

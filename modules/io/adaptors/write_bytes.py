@@ -29,35 +29,53 @@ import ossfs
 
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
+def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options, proc_num, proc_index):
+    """Read bytes from stream and write to external storage.
 
-def write_bytes(
-    vineyard_socket, path, stream_id, storage_options, proc_num, proc_index
-):
+    Args:
+        vineyard_socket (str): Ipc socket
+        path (str): External storage path to write to
+        stream_id (str): ObjectID of the stream to be read from, which is a ParallelStream
+        storage_options (dict): Configurations of external storage
+        write_options (dict): Additional options that could control the behavior of write
+        proc_num (int): Total amount of process
+        proc_index (int): The sequence of this process
+
+    Raises:
+        ValueError: If the stream is invalid.
+    """
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(
-            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
-        )
+        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+    serialization_mode = write_options.pop('serialization_mode', False)
     instream = streams[proc_index]
     reader = instream.open_reader(client)
 
-    # Write file distributively
-    path += f"_{proc_index}"
-    of = fsspec.open(path, "wb", **storage_options)
+    of = fsspec.open(f"{path}_{proc_index}", "wb", **storage_options)
+    lengths = []  # store lengths of each chunk. may be unused
     with of as f:
         while True:
             try:
                 buf = reader.next()
             except vineyard.StreamDrainedException:
                 break
+            lengths.append(len(buf))
             f.write(bytes(memoryview(buf)))
+    if serialization_mode:
+        # Used when serialize a graph to bytes, and write to external storage
+        params = instream.params
+        params["lengths"] = lengths
+        meta = fsspec.open(f"{path}_{proc_index}.meta", "wb", **storage_options)
+        with meta as f:
+            f.write(json.dumps(params).encode('utf-8'))
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 7:
         print(
-            "usage: ./write_bytes <ipc_socket> <path> <stream_id> <storage_options> <proc_num> <proc_index>"
+            "usage: ./write_bytes <ipc_socket> <path> <stream_id> "
+            "<storage_options> <write_options> <proc_num> <proc_index>"
         )
         exit(1)
     ipc_socket = sys.argv[1]
@@ -66,6 +84,7 @@ if __name__ == "__main__":
     storage_options = json.loads(
         base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
     )
-    proc_num = int(sys.argv[5])
-    proc_index = int(sys.argv[6])
-    write_bytes(ipc_socket, path, stream_id, storage_options, proc_num, proc_index)
+    write_options = json.loads(base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8"))
+    proc_num = int(sys.argv[6])
+    proc_index = int(sys.argv[7])
+    write_bytes(ipc_socket, path, stream_id, storage_options, write_options, proc_num, proc_index)
