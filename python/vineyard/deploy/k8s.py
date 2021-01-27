@@ -54,7 +54,7 @@ def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyar
         rpc_socket_port: int
             The port that vineyard will use to privode RPC service.
     '''
-    # start_etcd_k8s(namespace)
+    start_etcd_k8s(namespace)
 
     template_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname(__file__))
     template_env = jinja2.Environment(loader=template_loader)
