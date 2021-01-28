@@ -151,7 +151,7 @@ void bind_client(py::module& mod) {
           "object_id"_a)
       .def(
           "shallow_copy",
-          [](ClientBase* self, const ObjectIDWrapper object_id) -> bool {
+          [](ClientBase* self, const ObjectIDWrapper object_id) -> ObjectIDWrapper {
             ObjectID target_id;
             throw_on_error(self->ShallowCopy(object_id, target_id));
             return target_id;
@@ -176,7 +176,13 @@ void bind_client(py::module& mod) {
       .def("drop_name",
            [](ClientBase* self, std::string const& name) {
              throw_on_error(self->DropName(name));
-           })
+           }, "name"_a)
+      .def("migrate",
+          [](ClientBase *self, const ObjectID object_id) -> ObjectIDWrapper {
+            ObjectID target_id = InvalidObjectID();
+            throw_on_error(self->MigrateObject(object_id, target_id));
+            return target_id;
+          }, "object_id"_a)
       .def_property_readonly("connected", &Client::Connected)
       .def_property_readonly("instance_id", &Client::instance_id)
       .def_property_readonly(
@@ -371,41 +377,30 @@ void bind_client(py::module& mod) {
   mod.def(
          "connect",
          [](nullptr_t) -> py::object {
-           try {
+           if (std::getenv("VINEYARD_IPC_SOCKET") != nullptr) {
              return py::cast(ClientManager<Client>::GetManager()->Connect());
-           } catch (...) {}
-           try {
+           }
+           if (std::getenv("VINEYARD_RPC_ENDPOINT") != nullptr) {
              return py::cast(ClientManager<RPCClient>::GetManager()->Connect());
-           } catch (...) {}
+           }
            throw_on_error(Status::ConnectionFailed(
                "Failed to resolve IPC socket or RPC endpoint of vineyard "
-               "server from environment variables."));
+               "server from environment variables VINEYARD_IPC_SOCKET or VINEYARD_RPC_ENDPOINT."));
            return py::none();
          },
          py::arg("target") = py::none())
       .def(
           "connect",
           [](std::string const& endpoint) -> py::object {
-            try {
-              return py::cast(
-                  ClientManager<Client>::GetManager()->Connect(endpoint));
-            } catch (...) {}
-            try {
-              return py::cast(
-                  ClientManager<RPCClient>::GetManager()->Connect(endpoint));
-            } catch (...) {}
-            throw_on_error(Status::ConnectionFailed(
-                "Failed to resolve IPC socket or RPC endpoint of vineyard "
-                "server"));
-            return py::none();
+            return py::cast(ClientManager<Client>::GetManager()->Connect(endpoint));
           },
           "endpoint"_a)
       .def(
           "connect",
           [](std::string const& host, const uint32_t port) {
             std::string rpc_endpoint = host + ":" + std::to_string(port);
-            return ClientManager<RPCClient>::GetManager()->Connect(
-                rpc_endpoint);
+            return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint));
           },
           "host"_a, "port"_a)
       .def(

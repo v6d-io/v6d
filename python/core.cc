@@ -51,9 +51,10 @@ void bind_core(py::module& mod) {
       .def_property_readonly("instance_id", &ObjectMeta::GetInstanceId)
       .def_property_readonly("islocal", &ObjectMeta::IsLocal)
       .def_property_readonly("isglobal", &ObjectMeta::IsGlobal)
-      .def("set_global", [](ObjectMeta *self, const bool global) {
-        self->SetGlobal(global);
-      }, py::arg("global") = true)
+      .def(
+          "set_global",
+          [](ObjectMeta* self, const bool global) { self->SetGlobal(global); },
+          py::arg("global") = true)
       .def("__contains__", &ObjectMeta::Haskey, "key"_a)
       .def(
           "__getitem__",
@@ -152,24 +153,24 @@ void bind_core(py::module& mod) {
       .def(
           "__iter__",
           [](const ObjectMeta& meta) {
-            std::function<py::object(ObjectMeta::const_iterator &)> fn = [](
-              ObjectMeta::const_iterator &iter) {
-              return py::cast(iter.key());
-            };
+            std::function<py::object(ObjectMeta::const_iterator&)> fn =
+                [](ObjectMeta::const_iterator& iter) {
+                  return py::cast(iter.key());
+                };
             return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
           },
           py::keep_alive<0, 1>())
       .def(
           "items",
           [](const ObjectMeta& meta) {
-            std::function<py::object(ObjectMeta::const_iterator &)> fn = [&meta](
-              ObjectMeta::const_iterator &iter) {
-              if (iter.value().is_object()) {
-                return py::cast(meta.GetMemberMeta(iter.key()));
-              } else {
-                return json_to_python(iter.value());
-              }
-            };
+            std::function<py::object(ObjectMeta::const_iterator&)> fn =
+                [&meta](ObjectMeta::const_iterator& iter) {
+                  if (iter.value().is_object()) {
+                    return py::cast(meta.GetMemberMeta(iter.key()));
+                  } else {
+                    return json_to_python(iter.value());
+                  }
+                };
             return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
           },
           py::keep_alive<0, 1>())
@@ -199,6 +200,11 @@ void bind_core(py::module& mod) {
            [](const ObjectIDWrapper& id) {
              return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
            })
+      .def("__hash__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
+      .def("__eq__",
+           [](const ObjectIDWrapper& id, const ObjectIDWrapper& other) {
+             return ObjectID(id) == ObjectID(other);
+           })
       .def(py::pickle(
           [](const ObjectIDWrapper& id) {  // __getstate__
             return py::make_tuple(ObjectID(id));
@@ -216,7 +222,8 @@ void bind_core(py::module& mod) {
       .def_property_readonly(
           "id", [](Object* self) -> ObjectIDWrapper { return self->id(); })
       .def_property_readonly(
-          "signature", [](Object* self) -> Signature { return self->meta().GetSignature(); })
+          "signature",
+          [](Object* self) -> Signature { return self->meta().GetSignature(); })
       .def_property_readonly("meta", &Object::meta,
                              py::return_value_policy::reference_internal)
       .def_property_readonly("nbytes", &Object::nbytes)

@@ -340,9 +340,20 @@ class IMetaService {
     RequestToPersist(
         [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
           if (status.ok()) {
-            char hostname_value[MAXHOSTNAMELEN];
-            gethostname(&hostname_value[0], MAXHOSTNAMELEN);
-            std::string hostname = std::string(hostname_value);
+            std::string hostname, nodename;
+            if (const char* envp = std::getenv("MY_HOST_NAME")) {
+              hostname = std::string(envp);
+            } else {
+              char hostname_value[MAXHOSTNAMELEN];
+              gethostname(&hostname_value[0], MAXHOSTNAMELEN);
+              hostname = std::string(hostname_value);
+            }
+            if (const char* envp = std::getenv("MY_NODE_NAME")) {
+              nodename = std::string(envp);
+            } else {
+              nodename = hostname;
+            }
+
             int64_t timestamp = GetTimestamp();
 
             instances_list_.clear();
@@ -361,17 +372,19 @@ class IMetaService {
               rank = tree["next_instance_id"].get<InstanceID>();
             }
             instances_list_.emplace(rank);
-            ops.emplace_back(op_t::Put(
-                "/instances/i" + std::to_string(rank) + "/" + "hostid",
-                self_host_id));
-            ops.emplace_back(op_t::Put(
-                "/instances/i" + std::to_string(rank) + "/" + "hostname",
-                hostname));
-            ops.emplace_back(op_t::Put(
-                "/instances/i" + std::to_string(rank) + "/" + "timestamp",
-                timestamp));
+            std::string key = "/instances/i" + std::to_string(rank) + "/";
+            ops.emplace_back(op_t::Put(key + "hostid", self_host_id));
+            ops.emplace_back(op_t::Put(key + "hostname", hostname));
+            ops.emplace_back(op_t::Put(key + "nodename", nodename));
+            ops.emplace_back(op_t::Put(key + "rpc_endpoint",
+                                       this->server_ptr_->RPCEndpoint()));
+            ops.emplace_back(
+                op_t::Put(key + "ipc_socket", this->server_ptr_->IPCSocket()));
+            ops.emplace_back(op_t::Put(key + "timestamp", timestamp));
             ops.emplace_back(op_t::Put("/next_instance_id", rank + 1));
             this->server_ptr_->set_instance_id(rank);
+            this->server_ptr_->set_hostname(hostname);
+            this->server_ptr_->set_nodename(nodename);
             LOG(INFO) << "Decide to set rank as " << rank;
             return status;
           } else {
@@ -461,6 +474,9 @@ class IMetaService {
                       ops.emplace_back(op_t::Del(key + "/hostid"));
                       ops.emplace_back(op_t::Del(key + "/timestamp"));
                       ops.emplace_back(op_t::Del(key + "/hostname"));
+                      ops.emplace_back(op_t::Del(key + "/nodename"));
+                      ops.emplace_back(op_t::Del(key + "/rpc_endpoint"));
+                      ops.emplace_back(op_t::Del(key + "/ipc_socket"));
                     } else {
                       LOG(ERROR) << status.ToString();
                     }
