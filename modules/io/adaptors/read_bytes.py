@@ -28,7 +28,7 @@ import vineyard
 from fsspec.utils import read_block
 from vineyard.io.byte import ByteStreamBuilder
 
-import ossfs
+import vineyard.drivers.io.ossfs
 
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 

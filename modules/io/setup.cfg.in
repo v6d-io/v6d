@@ -1,0 +1,20 @@
+[metadata]
+version = @VINEYARD_VERSION@
+
+[options]
+install_requires =
+    fsspec
+    hdfs3
+    oss2
+    pyarrow
+    pyorc
+    s3fs
+    vineyard==@VINEYARD_VERSION@
+
+[pycodestyle]
+max_line_length = 120
+
+[yapf]
+based_on_style = pep8
+column_limit = 120
+blank_line_before_module_docstring = True

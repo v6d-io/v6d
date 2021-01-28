@@ -226,7 +226,7 @@ jobs:
         run: |
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
-          yapf --in-place --recursive python/ modules/io/python
+          yapf --in-place --recursive setup.py python/ modules/io/setup.py modules/io/python
           GIT_DIFF=$(git diff --ignore-submodules)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -236,7 +236,7 @@ jobs:
               echo "|"
               echo "|Run: "
               echo "|"
-              echo "|    yapf --in-place --recursive python/"
+              echo "|    yapf --in-place --recursive setup.py python/ modules/io/setup.py modules/io/python"
               echo "|"
               echo "| to fix this error."
               echo "|"
@@ -315,6 +315,54 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           verbose: true
+
+      - name: Build vineyard-io wheels
+        run: |
+          cd modules/io
+          python3 setup.py bdist_wheel
+
+      - name: Prepare checksum and artifacts
+        run: |
+          cd modules/io
+          sha512sum ./dist/* > vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.sha512sum
+          echo "Checksum is: "
+          cat ./vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.sha512sum
+          tar zcvfh vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz ./dist vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.sha512sum
+
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+
+      - name: Upload wheels to latest release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: modules/io/dist/*.whl
+          file_glob: true
+          tag: latest
+          prerelease: true
+          overwrite: true
+          body: "prerelease of vineyard-io for latest vineyard"
+
+      - name: Upload wheels to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/libvineyard' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: modules/io/dist/*.whl
+          file_glob: true
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard-io ${{ steps.tag.outputs.TAG }}"
+
+      - name: Upload CI artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz
+          path: vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz
 
       - name: Generate Doc
         run: |

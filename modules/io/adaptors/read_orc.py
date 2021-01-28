@@ -29,7 +29,7 @@ import pyorc
 import vineyard
 from vineyard.io.dataframe import DataframeStreamBuilder
 
-import ossfs
+import vineyard.drivers.io.ossfs
 
 fsspec.register_implementation("hive", fsspec.implementations.hdfs.PyArrowHDFS)
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
