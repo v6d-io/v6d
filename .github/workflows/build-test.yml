@@ -91,7 +91,6 @@ jobs:
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install libclang parsec yapf==0.30.0 sphinx sphinx_rtd_theme breathe gcovr pytest hdfs3
-          sudo pip3 install -r modules/io/python/requirements.txt
 
           # install clang-format
           if [ ! -f /usr/bin/clang-format ]; then
@@ -253,15 +252,25 @@ jobs:
           # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
 
-          cd build
+          pushd build
           make -j2
           make vineyard_tests -j2
           make vineyard_client_python -j2
           make ccache-stats
           sudo make install
-          cd ..
+          popd
+
+          # build & install vineyard for python
+
           python3 setup.py bdist_wheel
           sudo pip3 install dist/*.whl -U
+
+          # build & install vineyard-io
+
+          pushd modules/io
+          python3 setup.py bdist_wheel
+          sudo pip3 install dist/*.whl -U
+          popd
 
       - name: Get Test Data
         run: |
@@ -315,11 +324,6 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           verbose: true
-
-      - name: Build vineyard-io wheels
-        run: |
-          cd modules/io
-          python3 setup.py bdist_wheel
 
       - name: Prepare checksum and artifacts
         run: |

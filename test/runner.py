@@ -315,7 +315,7 @@ def run_io_adaptor_tests(etcd_endpoints):
     with start_vineyardd(etcd_endpoints,
                          etcd_prefix,
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
-        subprocess.check_call(['pytest', '-s', '-vvv', 'modules/io/python/io/tests',
+        subprocess.check_call(['pytest', '-s', '-vvv', 'modules/io/python/drivers/io/tests',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                                '--test-dataset=%s' % get_data_path(None)],

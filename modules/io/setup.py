@@ -26,7 +26,7 @@ repo_root = os.path.dirname(os.path.abspath(__file__))
 def find_vineyard_io_packages():
     packages = []
 
-    for pkg in find_packages("python"):
+    for pkg in find_packages("python/drivers"):
         packages.append('vineyard.drivers.%s' % pkg)
 
     return packages
@@ -34,7 +34,7 @@ def find_vineyard_io_packages():
 
 def resolve_vineyard_io_package_dir():
     package_dir = {
-        "vineyard.drivers": "python",
+        "vineyard.drivers": "python/drivers",
     }
     return package_dir
 
