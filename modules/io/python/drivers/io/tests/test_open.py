@@ -26,17 +26,19 @@
 
     .. code:: console
 
-        pytest modules/io/python/tests/test_open.py --vineyard-ipc-socket=/tmp/vineyard.sock \
-                                                    --vineyard-endpoint=127.0.0.1:9600 \
-                                                    --test-dataset=<directory of gstest>
+        pytest modules/io/python/drivers/io/tests/test_open.py \
+                --vineyard-ipc-socket=/tmp/vineyard.sock \
+                --vineyard-endpoint=127.0.0.1:9600 \
+                --test-dataset=<directory of gstest>
 
     If you want to run those HDFS tests, add the following paramters:
 
     .. code:: console
 
-        pytest modules/io/python/tests/test_open.py --with-hdfs \
-                                                    --hdfs-endpoint=hdfs://dev:9000 \
-                                                    --hive-endpoint=hive://dev:9000
+        pytest modules/io/python/drivers/io/tests/test_open.py \
+                --with-hdfs \
+                --hdfs-endpoint=hdfs://dev:9000 \
+                --hive-endpoint=hive://dev:9000
 """
 
 import filecmp

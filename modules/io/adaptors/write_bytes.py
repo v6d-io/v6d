@@ -25,7 +25,7 @@ import pyarrow as pa
 import vineyard
 from vineyard.io.byte import ByteStreamBuilder
 
-import ossfs
+from vineyard.drivers.io import ossfs
 
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 

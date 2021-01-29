@@ -118,24 +118,4 @@ foreach(fname ${PYTHON_IO_ADAPTORS})
     add_dependencies(vineyard_io_adaptors ${IO_BINARY_TOOL})
 endforeach()
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/adaptors/ossfs.py
-        DESTINATION bin
-)
-
-# install driver's registry script
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/stream.py
-        DESTINATION share/vineyard
-        RENAME 01-stream.py
-)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/ssh.sh
-              ${CMAKE_CURRENT_SOURCE_DIR}/python/kube_ssh.sh
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-                    GROUP_READ GROUP_EXECUTE
-                    WORLD_READ WORLD_EXECUTE
-        DESTINATION share/vineyard
-)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/requirements.txt
-        DESTINATION share/vineyard
-)
-
-
+configure_file(setup.cfg.in "${CMAKE_CURRENT_SOURCE_DIR}/setup.cfg" @ONLY)

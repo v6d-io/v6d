@@ -37,7 +37,7 @@ def serialize(path, object_id, *args, **kwargs):
         serializer = serialize.__factory[obj_type][0]
         serializer(path, object_id, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
         return
-    raise RuntimeError('Unable to find a proper IO driver for %s' % object_id)
+    raise RuntimeError('Unable to find a proper seraialization driver for %s' % path)
 
 
 @registerize
@@ -50,7 +50,7 @@ def deserialize(path, *args, **kwargs):
         proc_kwargs = kwargs.copy()
         deserializer = deserialize.__factory[obj_type][0]
         return deserializer(path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
-    raise RuntimeError('Unable to find a proper IO driver for %s' % path)
+    raise RuntimeError('Unable to find a proper deseraialization driver for %s' % path)
 
 
 __all__ = ['serialize', 'deserialize']
