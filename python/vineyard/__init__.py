@@ -145,7 +145,7 @@ def _init_vineyard_modules():
     for filepath in glob.glob(os.path.expanduser('$HOME/.vineyard/*-*.py')):
         _import_module_from_file(filepath)
 
-    for _, mod, _ in pkgutil.iter_modules([os.path.join(os.path.dirname(vineyard.__file__), 'drivers')]):
+    for _, mod, _ in pkgutil.iter_modules([os.path.join(os.path.dirname(__file__), 'drivers')]):
         _import_module_from_qualified_name('vineyard.drivers.%s' % mod)
 
 
