@@ -59,9 +59,14 @@ bool DeferredReq::TestThenCall(const json& meta) const {
 
 VineyardServer::VineyardServer(const json& spec)
     : spec_(spec),
+#if BOOST_VERSION >= 106600
       guard_(asio::make_work_guard(context_)),
+#else
+      guard_(new boost::asio::io_service::work(context_)),
+#endif
       ready_(0),
-      stopped_(false) {}
+      stopped_(false) {
+}
 
 Status VineyardServer::Serve() {
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
@@ -557,6 +562,7 @@ void VineyardServer::Stop() {
     return;
   }
   stopped_ = true;
+  guard_.reset();
   if (this->ipc_server_ptr_) {
     this->ipc_server_ptr_->Stop();
     this->ipc_server_ptr_.reset(nullptr);

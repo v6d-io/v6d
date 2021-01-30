@@ -95,41 +95,39 @@ inline void RecvArrowBuffer(std::shared_ptr<arrow::Buffer>& buffer,
 inline boost::leaf::result<void> SchemaConsistent(
     const arrow::Schema& schema, const grape::CommSpec& comm_spec) {
   std::shared_ptr<arrow::Buffer> buffer;
-  arrow::ipc::DictionaryMemo out_memo;
+  arrow::Status serialized_status;
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  arrow::Status ret = arrow::ipc::SerializeSchema(
+  arrow::ipc::DictionaryMemo out_memo;
+  serialized_status = arrow::ipc::SerializeSchema(
       schema, &out_memo, arrow::default_memory_pool(), &buffer);
-  if (!ret.ok()) {
-    int flag = 1;
-    int sum;
-    MPI_Allreduce(&flag, &sum, 1, MPI_INT, MPI_SUM, comm_spec.comm());
-    RETURN_GS_ERROR(ErrorCode::kArrowError, "Serializing schema failed.");
-  } else {
-    int flag = 0;
-    int sum;
-    MPI_Allreduce(&flag, &sum, 1, MPI_INT, MPI_SUM, comm_spec.comm());
-    if (sum != 0) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError, "Serializing schema failed.");
-    }
-  }
-#else
+#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+  arrow::ipc::DictionaryMemo out_memo;
   auto ret = arrow::ipc::SerializeSchema(schema, &out_memo,
                                          arrow::default_memory_pool());
-  if (!ret.ok()) {
-    int flag = 1;
-    int sum;
-    MPI_Allreduce(&flag, &sum, 1, MPI_INT, MPI_SUM, comm_spec.comm());
-    RETURN_GS_ERROR(ErrorCode::kArrowError, "Serializing schema failed.");
-  } else {
-    int flag = 0;
-    int sum;
-    MPI_Allreduce(&flag, &sum, 1, MPI_INT, MPI_SUM, comm_spec.comm());
-    if (sum != 0) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError, "Serializing schema failed.");
-    }
+  serialized_status = ret.status();
+  if (ret.ok()) {
+    buffer = std::move(ret).ValueOrDie();
+  }
+#else
+  auto ret = arrow::ipc::SerializeSchema(schema, arrow::default_memory_pool());
+  serialized_status = ret.status();
+  if (ret.ok()) {
     buffer = std::move(ret).ValueOrDie();
   }
 #endif
+  if (!serialized_status.ok()) {
+    int flag = 1;
+    int sum;
+    MPI_Allreduce(&flag, &sum, 1, MPI_INT, MPI_SUM, comm_spec.comm());
+    RETURN_GS_ERROR(ErrorCode::kArrowError, "Serializing schema failed.");
+  } else {
+    int flag = 0;
+    int sum;
+    MPI_Allreduce(&flag, &sum, 1, MPI_INT, MPI_SUM, comm_spec.comm());
+    if (sum != 0) {
+      RETURN_GS_ERROR(ErrorCode::kArrowError, "Serializing schema failed.");
+    }
+  }
 
   int worker_id = comm_spec.worker_id();
   int worker_num = comm_spec.worker_num();

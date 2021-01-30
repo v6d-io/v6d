@@ -54,7 +54,7 @@ RUN cd /tmp && \
          -DBUILD_VINEYARD_TESTS=OFF \
          -DBUILD_VINEYARD_TESTS_ALL=OFF \
          -DBUILD_VINEYARD_PROFILING=OFF && \
-    make -j2 && \
+    make -j`nproc` && \
     strip ./bin/vineyardd
 
 FROM frolvlad/alpine-glibc:alpine-3.12

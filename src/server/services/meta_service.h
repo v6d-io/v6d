@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <sys/param.h>
 
+#include <chrono>
 #include <map>
 #include <memory>
 #include <set>
@@ -25,6 +26,7 @@ limitations under the License.
 #include <vector>
 
 #include "boost/asio.hpp"
+#include "boost/asio/steady_timer.hpp"
 #include "boost/bind.hpp"
 #include "boost/range/iterator_range.hpp"
 
@@ -153,8 +155,8 @@ class IMetaService {
       callback_t<const json&, std::vector<op_t>&, InstanceID&>
           callback_after_ready,
       callback_t<const InstanceID> callback_after_finish) {
-    boost::asio::post(server_ptr_->GetIOContext(), [this, callback_after_ready,
-                                                    callback_after_finish]() {
+    server_ptr_->GetIOContext().post([this, callback_after_ready,
+                                      callback_after_finish]() {
       std::vector<op_t> ops;
       InstanceID computed_instance_id;
       auto status =
@@ -236,8 +238,8 @@ class IMetaService {
           });
     } else {
       // post the task to asio queue as well for well-defined processing order.
-      boost::asio::post(server_ptr_->GetIOContext(),
-                        boost::bind(callback, Status::OK(), meta_));
+      server_ptr_->GetIOContext().post(
+          boost::bind(callback, Status::OK(), meta_));
     }
   }
 
@@ -474,7 +476,7 @@ class IMetaService {
 
   void startHeartbeat() {
     heartbeat_timer_.reset(new asio::steady_timer(
-        server_ptr_->GetIOContext(), asio::chrono::seconds(HEARTBEAT_TIME)));
+        server_ptr_->GetIOContext(), std::chrono::seconds(HEARTBEAT_TIME)));
     heartbeat_timer_->async_wait([&](const boost::system::error_code& error) {
       if (error) {
         LOG(ERROR) << "heartbeat timer error: " << error << ", "
