@@ -164,7 +164,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::shared_ptr<StreamStore> stream_store_;
 
   Status serve_status_;
+#if BOOST_VERSION >= 106600
   using ctx_guard = asio::executor_work_guard<asio::io_context::executor_type>;
+#else
+  using ctx_guard = std::unique_ptr<boost::asio::io_service::work>;
+#endif
   ctx_guard guard_;
 
   enum ready_t {

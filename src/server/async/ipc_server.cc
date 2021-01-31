@@ -26,8 +26,8 @@ namespace vineyard {
 IPCServer::IPCServer(vs_ptr_t vs_ptr)
     : SocketServer(vs_ptr),
       ipc_spec_(vs_ptr_->GetSpec()["ipc_spec"]),
-      acceptor_(vs_ptr_->GetIOContext(), getEndpoint(vs_ptr_->GetIOContext())) {
-}
+      acceptor_(vs_ptr_->GetIOContext(), getEndpoint(vs_ptr_->GetIOContext())),
+      socket_(vs_ptr_->GetIOContext()) {}
 
 IPCServer::~IPCServer() {
   if (acceptor_.is_open()) {
@@ -44,8 +44,13 @@ void IPCServer::Start() {
   vs_ptr_->IPCReady();
 }
 
+#if BOOST_VERSION >= 106600
 asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     asio::io_context& context) {
+#else
+asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
+    asio::io_service& context) {
+#endif
   std::string const& ipc_socket =
       ipc_spec_["socket"].get_ref<std::string const&>();
   auto endpoint = asio::local::stream_protocol::endpoint(ipc_socket);
@@ -73,19 +78,18 @@ void IPCServer::doAccept() {
   if (!acceptor_.is_open()) {
     return;
   }
-  acceptor_.async_accept(
-      [this](boost::system::error_code ec, stream_protocol::socket socket) {
-        if (!ec) {
-          std::shared_ptr<SocketConnection> conn =
-              std::make_shared<SocketConnection>(std::move(socket), vs_ptr_,
-                                                 this, next_conn_id_);
-          conn->Start();
-          std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
-          connections_.emplace(next_conn_id_, conn);
-          ++next_conn_id_;
-        }
-        doAccept();
-      });
+  acceptor_.async_accept(socket_, [this](boost::system::error_code ec) {
+    if (!ec) {
+      std::shared_ptr<SocketConnection> conn =
+          std::make_shared<SocketConnection>(std::move(this->socket_), vs_ptr_,
+                                             this, next_conn_id_);
+      conn->Start();
+      std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+      connections_.emplace(next_conn_id_, conn);
+      ++next_conn_id_;
+    }
+    doAccept();
+  });
 }
 
 }  // namespace vineyard

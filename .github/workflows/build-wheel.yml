@@ -109,7 +109,7 @@ jobs:
           mkdir -p build-dir
           cd build-dir
           cmake .. -DBUILD_SHARED_LIBS=OFF
-          make install -j2
+          make install -j`nproc`
 
           echo "Installing glog ..."
           cd /tmp
@@ -120,7 +120,7 @@ jobs:
           cd build-dir
           cmake .. -DBUILD_SHARED_LIBS=OFF \
                    -DBUILD_TESTING=OFF
-          make install -j2
+          make install -j`nproc`
 
           echo "Installing apache-arrow ..."
           cd /tmp
@@ -168,7 +168,7 @@ jobs:
               -DARROW_JEMALLOC=OFF \
               -DARROW_BUILD_SHARED=OFF \
               -DARROW_BUILD_STATIC=ON
-          make install -j2
+          make install -j`nproc`
 
           ccache --show-stats
 
@@ -202,7 +202,7 @@ jobs:
                    -DBUILD_VINEYARD_PROFILING=OFF \
                    -DCMAKE_BUILD_TYPE=Release \
                    -DPYTHON_EXECUTABLE=`which python`
-          make vineyard_client_python -j2
+          make vineyard_client_python -j`nproc`
           cd ..
           python setup.py bdist_wheel
           export LD_LIBRARY_PATH=`pwd`/build/lib:$LD_LIBRARY_PATH

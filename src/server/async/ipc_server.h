@@ -49,12 +49,17 @@ class IPCServer : public SocketServer {
   }
 
  private:
+#if BOOST_VERSION >= 106600
   asio::local::stream_protocol::endpoint getEndpoint(asio::io_context&);
+#else
+  asio::local::stream_protocol::endpoint getEndpoint(asio::io_service&);
+#endif
 
   void doAccept() override;
 
   const json ipc_spec_;
   asio::local::stream_protocol::acceptor acceptor_;
+  asio::local::stream_protocol::socket socket_;
 };
 
 }  // namespace vineyard

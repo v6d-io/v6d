@@ -180,10 +180,14 @@ macro(find_openssl_libraries)
             endif()
         endif()
     endif()
-    find_package(OpenSSL REQUIRED)
-    include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+    find_package(OpenSSL ${ARGN})
+    if (OPENSSL_FOUND)
+        include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+    endif()
 endmacro(find_openssl_libraries)
 
+# find openssl first since apache-arrow may requires that (on MacOS, installed by brew)
+find_openssl_libraries(QUIET)
 find_common_libraries()
 
 if (CMAKE_VERSION VERSION_LESS "3.1")
@@ -254,7 +258,7 @@ add_custom_target(vineyard_tests)
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
-    find_openssl_libraries()
+    find_openssl_libraries(REQUIRED)
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"

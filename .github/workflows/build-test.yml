@@ -109,7 +109,7 @@ jobs:
           mkdir build
           cd build
           cmake ..
-          make -j2
+          make -j`nproc`
           sudo make install
 
       - name: Install libhdfs3
@@ -123,7 +123,7 @@ jobs:
           mkdir build
           cd build
           cmake ..
-          make -j
+          make -j`nproc`
           sudo make install
 
       - name: Setup SSH environment
@@ -253,9 +253,9 @@ jobs:
           export PATH=/usr/lib/ccache:$PATH
 
           pushd build
-          make -j2
-          make vineyard_tests -j2
-          make vineyard_client_python -j2
+          make -j`nproc`
+          make vineyard_tests -j`nproc`
+          make vineyard_client_python -j`nproc`
           make ccache-stats
           sudo make install
           popd
@@ -366,7 +366,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz
-          path: vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz
+          path: modules/io/vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz
 
       - name: Generate Doc
         run: |
