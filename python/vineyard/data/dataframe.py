@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import json
 import numpy as np
 import pandas as pd
 from pandas.core.internals.blocks import Block

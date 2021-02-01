@@ -28,6 +28,7 @@ limitations under the License.
 #include "server/async/rpc_server.h"
 #include "server/services/meta_service.h"
 #include "server/util/meta_tree.h"
+#include "server/util/proc.h"
 
 namespace vineyard {
 
@@ -69,6 +70,13 @@ VineyardServer::VineyardServer(const json& spec)
 }
 
 Status VineyardServer::Serve() {
+  // Initialize the ipc/rpc server ptr first to get self endpoints when
+  // initializing the metadata service.
+  ipc_server_ptr_ =
+      std::unique_ptr<IPCServer>(new IPCServer(shared_from_this()));
+  rpc_server_ptr_ =
+      std::unique_ptr<RPCServer>(new RPCServer(shared_from_this()));
+
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
@@ -94,8 +102,6 @@ void VineyardServer::Ready() {}
 
 void VineyardServer::BackendReady() {
   try {
-    ipc_server_ptr_ =
-        std::unique_ptr<IPCServer>(new IPCServer(shared_from_this()));
     ipc_server_ptr_->Start();
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard IPC server: " << ex.what()
@@ -106,8 +112,6 @@ void VineyardServer::BackendReady() {
     return;
   }
   try {
-    rpc_server_ptr_ =
-        std::unique_ptr<RPCServer>(new RPCServer(shared_from_this()));
     rpc_server_ptr_->Start();
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard RPC server: " << ex.what();
@@ -173,6 +177,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
             VLOG(10) << "=========================================";
           }
 #endif
+
           auto test_task = [ids](const json& meta) -> bool {
             for (auto const& id : ids) {
               bool exists = false;
@@ -496,6 +501,93 @@ Status VineyardServer::DropName(const std::string& name,
   return Status::OK();
 }
 
+Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
+                                     const std::string& peer,
+                                     const std::string& peer_rpc_endpoint,
+                                     callback_t<const ObjectID&> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  static const std::string migrate_process = "vineyard-migrate";
+
+  if (!local) {
+    std::vector<std::string> args = {
+        "--client",       "true",
+        "--ipc_socket",   IPCSocket(),
+        "--rpc_endpoint", peer_rpc_endpoint,
+        "--host",         peer,
+        "--id",           VYObjectIDToString(object_id)};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start(
+        migrate_process, args,
+        [self, callback, proc, object_id](Status const& status,
+                                          std::string const& line) {
+          if (status.ok()) {
+            proc->Wait();
+            if (proc->ExitCode() != 0) {
+              return callback(
+                  Status::IOError("The migration server exit abnormally"),
+                  InvalidObjectID());
+            }
+
+            ObjectID result_id = VYObjectIDFromString(line);
+
+            // associate the signature
+            self->meta_service_ptr_->RequestToBulkUpdate(
+                [object_id, result_id](const Status& status, const json& meta,
+                                       std::vector<IMetaService::op_t>& ops,
+                                       InstanceID&) {
+                  // get signature
+                  json tree;
+                  VINEYARD_SUPPRESS(CATCH_JSON_ERROR(
+                      meta_tree::GetData(meta, object_id, tree)));
+                  Signature sig = tree["signature"].get<Signature>();
+                  VLOG(2) << "original " << ObjectIDToString(object_id)
+                          << " -> " << SignatureToString(sig);
+                  // put signature
+                  ops.emplace_back(IMetaService::op_t::Put(
+                      "/signatures/" + SignatureToString(sig),
+                      ObjectIDToString(result_id)));
+                  VLOG(2) << "becomes " << ObjectIDToString(object_id) << " -> "
+                          << SignatureToString(sig);
+                  return Status::OK();
+                },
+                [callback, result_id](const Status& status, InstanceID const&) {
+                  return callback(Status::OK(), result_id);
+                });
+          } else {
+            proc->Terminate();
+            return callback(status, InvalidObjectID());
+          }
+          return Status::OK();
+        });
+  } else {
+    std::vector<std::string> args = {"--server",       "true",
+                                     "--ipc_socket",   IPCSocket(),
+                                     "--rpc_endpoint", peer_rpc_endpoint,
+                                     "--host",         "0.0.0.0"};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start(
+        migrate_process, args,
+        [callback, proc, object_id](Status const& status,
+                                    std::string const& line) {
+          if (status.ok()) {
+            proc->Wait();
+            if (proc->ExitCode() != 0) {
+              return callback(
+                  Status::IOError("The migration server exit abnormally"),
+                  InvalidObjectID());
+            } else {
+              return callback(Status::OK(), object_id);
+            }
+          } else {
+            proc->Terminate();
+            return callback(status, InvalidObjectID());
+          }
+        });
+  }
+  return Status::OK();
+}
+
 Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();
   meta_service_ptr_->RequestToGetData(
@@ -546,7 +638,11 @@ Status VineyardServer::ProcessDeferred(const json& meta) {
 }
 
 const std::string VineyardServer::IPCSocket() {
-  return ipc_server_ptr_->Socket();
+  if (this->ipc_server_ptr_) {
+    return ipc_server_ptr_->Socket();
+  } else {
+    return "-";
+  }
 }
 
 const std::string VineyardServer::RPCEndpoint() {

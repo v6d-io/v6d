@@ -17,7 +17,7 @@ def add_doc(target, doc):
 
 add_doc(
     connect, r'''
-.. function:: connect(endpoint: str) -> IPCClient or RPCClient
+.. function:: connect(endpoint: str) -> IPCClient
     :noindex:
 
     Connect to vineyard via UNIX domain socket for IPC service:
@@ -26,16 +26,9 @@ add_doc(
 
         client = vineyard.connect('/var/run/vineyard.sock')
 
-    or connect to vineyard's TCP socket for RPC service:
-
-    .. code:: python
-
-        client = vineyard.connect('127.0.0.01')
-
     Parameters:
         endpoint: str
-            UNIX domain socket path to setup an IPC connection, or TCP endpoint
-            in format :code:`host:port` to setup an RPC connection.
+            UNIX domain socket path to setup an IPC connection.
 
     Returns:
         IPCClient: The connected IPC client.

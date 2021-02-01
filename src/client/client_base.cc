@@ -15,11 +15,14 @@ limitations under the License.
 
 #include "client/client_base.h"
 
+#include <future>
 #include <utility>
 
 #include "boost/range/combine.hpp"
 
+#include "client/client.h"
 #include "client/io.h"
+#include "client/rpc_client.h"
 #include "client/utils.h"
 #include "common/util/protocols.h"
 
@@ -209,6 +212,66 @@ Status ClientBase::DropName(const std::string& name) {
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadDropNameReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::MigrateObject(const ObjectID object_id,
+                                 ObjectID& result_id) {
+  ENSURE_CONNECTED(this);
+
+  // query the object location info
+  ObjectMeta meta;
+  RETURN_ON_ERROR(this->GetMetaData(object_id, meta, true));
+  VLOG(10) << "migrate local: " << this->instance_id()
+           << ", remote: " << meta.GetInstanceId();
+  if (meta.GetInstanceId() == this->instance_id()) {
+    result_id = object_id;
+    return Status::OK();
+  }
+
+  // findout remote server
+  std::map<InstanceID, json> cluster;
+  RETURN_ON_ERROR(this->ClusterInfo(cluster));
+  auto selfhost =
+      cluster.at(this->instance_id())["hostname"].get_ref<std::string const&>();
+  auto otherHost = cluster.at(meta.GetInstanceId())["hostname"]
+                       .get_ref<std::string const&>();
+  auto otherEndpoint = cluster.at(meta.GetInstanceId())["rpc_endpoint"]
+                           .get_ref<std::string const&>();
+
+  // launch remote migrate sender
+  auto sender = std::async(std::launch::async, [&]() -> Status {
+    RPCClient other;
+    RETURN_ON_ERROR(other.Connect(otherEndpoint));
+    ObjectID dummy = InvalidObjectID();
+    RETURN_ON_ERROR(other.migrateObjectImpl(object_id, dummy, true, selfhost,
+                                            otherEndpoint));
+    return Status::OK();
+  });
+
+  // local migrate receiver
+  auto receiver = std::async(std::launch::async, [&]() -> Status {
+    RETURN_ON_ERROR(this->migrateObjectImpl(object_id, result_id, false,
+                                            otherHost, otherEndpoint));
+    VLOG(10) << "receive from migration: " << VYObjectIDToString(object_id)
+             << " -> " << VYObjectIDToString(result_id);
+    return Status::OK();
+  });
+
+  return sender.get() & receiver.get();
+}
+
+Status ClientBase::migrateObjectImpl(const ObjectID object_id,
+                                     ObjectID& result_id, bool const local,
+                                     std::string const& peer,
+                                     std::string const& peer_rpc_endpoint) {
+  std::string message_out;
+  WriteMigrateObjectRequest(object_id, local, peer, peer_rpc_endpoint,
+                            message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMigrateObjectReply(message_in, result_id));
   return Status::OK();
 }
 
