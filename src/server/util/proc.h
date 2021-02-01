@@ -34,7 +34,11 @@ namespace asio = boost::asio;
 
 class Process : public std::enable_shared_from_this<Process> {
  public:
+#if BOOST_VERSION >= 106600
   explicit Process(asio::io_context& context);
+#else
+  explicit Process(asio::io_service& context);
+#endif
 
   ~Process();
 

@@ -90,8 +90,11 @@ Status RunServer() {
 
   Client client;
   RETURN_ON_ERROR(client.Connect(FLAGS_ipc_socket));
+
   LOG(INFO) << "Starting server for migration ...";
-  return Serve(client, acceptor.accept());
+  asio::ip::tcp::socket socket(context);
+  acceptor.accept(socket);
+  return Serve(client, std::move(socket));
 }
 
 Status Rebuild(
@@ -191,8 +194,15 @@ Status RunClient() {
   int retries = 0, max_connect_retries = 10;
   boost::system::error_code ec;
   while (retries < max_connect_retries) {
+#if BOOST_VERSION >= 106600
     asio::connect(socket,
                   resolver.resolve(FLAGS_host, std::to_string(FLAGS_port)), ec);
+#else
+    asio::connect(socket,
+                  resolver.resolve(asio::ip::tcp::resolver::query(
+                      FLAGS_host, std::to_string(FLAGS_port))),
+                  ec);
+#endif
     if (ec) {
       LOG(ERROR) << "Failed to connect to migration peer: " << ec.message();
       usleep(static_cast<int>(1 * 1000));

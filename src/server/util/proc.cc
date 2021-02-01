@@ -28,8 +28,13 @@ limitations under the License.
 
 namespace vineyard {
 
+#if BOOST_VERSION >= 106600
 Process::Process(asio::io_context& context)
-    : stdin_pipe_(context), stdout_pipe_(context), stderr_pipe_(context) {}
+#else
+Process::Process(asio::io_service& context)
+#endif
+    : stdin_pipe_(context), stdout_pipe_(context), stderr_pipe_(context) {
+}
 
 Process::~Process() {
   this->Terminate();
