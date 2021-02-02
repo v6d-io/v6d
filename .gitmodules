@@ -14,10 +14,6 @@
 	path = thirdparty/uri
 	url = https://github.com/cpp-netlib/uri.git
 	shallow = true
-[submodule "thirdparty/aliyun-oss-cpp-sdk"]
-	path = thirdparty/aliyun-oss-cpp-sdk
-	url = https://github.com/aliyun/aliyun-oss-cpp-sdk.git
-	shallow = true
 [submodule "thirdparty/boost-leaf"]
 	path = modules/graph/thirdparty/boost-leaf
 	url = https://github.com/boostorg/leaf.git
