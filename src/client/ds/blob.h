@@ -116,6 +116,14 @@ class Blob : public Registered<Blob> {
 class BlobWriter : public ObjectBuilder {
  public:
   /**
+   * @brief Return the object id of this blob builder. Note that before sealing
+   * the blob builder the object id cannot be used to get "Blob" objects.
+   *
+   * @return The ObjectID of the blob writer.
+   */
+  ObjectID id() const;
+
+  /**
    * @brief Get the size of the blob, i.e., the number of bytes of the data
    * payload in the blob.
    *

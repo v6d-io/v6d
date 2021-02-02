@@ -299,6 +299,9 @@ void bind_core(py::module& mod) {
   // BlobBuilder
   py::class_<BlobWriter, std::shared_ptr<BlobWriter>, ObjectBuilder>(
       mod, "BlobBuilder", py::buffer_protocol())
+      .def_property_readonly("id", [](BlobWriter* self) -> ObjectIDWrapper {
+        return self->id();
+      })
       .def_property_readonly("size", &BlobWriter::size)
       .def("__len__", &BlobWriter::size)
       .def("__iter__",
