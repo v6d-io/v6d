@@ -21,7 +21,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-10.15]
+        # os: [ubuntu-18.04, macos-10.15]
+        # disable mac: latest apache-arrow conflicts with latest grpc.
+        os: [ubuntu-18.04]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -81,10 +83,8 @@ jobs:
       - name: Install Dependencies for MacOS
         if: runner.os == 'macOS'
         run: |
-          brew install apache-arrow boost ccache cmake gflags glog googletest librdkafka libunwind-headers mpich openssl protobuf
-
-          # N.B.
-          # a proper version of grpc will be installed as apache-arrow's dependency.
+          brew update
+          brew install apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers mpich openssl protobuf
 
           # install python packages for codegen
           pip3 install -U pip

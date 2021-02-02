@@ -20,6 +20,7 @@ import contextlib
 import logging
 import pkg_resources
 import subprocess
+import sys
 import textwrap
 import time
 
@@ -102,7 +103,7 @@ def start_vineyardd(hosts=None,
             proc = subprocess.Popen(ssh_base_cmd(host) + command,
                                     env=env,
                                     stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
+                                    stderr=sys.__stderr__,
                                     universal_newlines=True,
                                     encoding='utf-8')
             procs.append(proc)

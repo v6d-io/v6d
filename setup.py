@@ -84,6 +84,7 @@ setup(
     packages=find_packages('python'),
     package_data={
         'vineyard': [
+            "vineyardd",
             "**/*.yaml",
             "**/*.yaml.tpl",
             "**/**/*.sh",

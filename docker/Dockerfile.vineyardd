@@ -30,6 +30,7 @@ RUN cd /tmp && \
     cd /work/libvineyard/build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_SHARED_LIBS=OFF \
+         -DUSE_STATIC_BOOST_LIBS=ON \
          -DBUILD_VINEYARD_SERVER=ON \
          -DBUILD_VINEYARD_CLIENT=OFF \
          -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
@@ -43,6 +44,7 @@ RUN cd /tmp && \
          -DBUILD_VINEYARD_PROFILING=OFF || true && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_SHARED_LIBS=OFF \
+         -DUSE_STATIC_BOOST_LIBS=ON \
          -DBUILD_VINEYARD_SERVER=ON \
          -DBUILD_VINEYARD_CLIENT=OFF \
          -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
