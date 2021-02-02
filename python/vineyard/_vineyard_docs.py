@@ -822,6 +822,10 @@ See Also:
     IPCClient.create_empty_blob
 ''')
 
+add_doc(BlobBuilder.id, r'''
+ObjectID of this blob builder.
+''')
+
 add_doc(BlobBuilder.size, r'''
 Size of this blob builder.
 ''')
