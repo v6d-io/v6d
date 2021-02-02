@@ -1,20 +1,13 @@
 # build vineyard-io
 file(GLOB IO_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "io/*.cc")
 
-option(BUILD_VINEYARD_IO_OSS "Enable vineyard's IOAdaptor with OSS support" OFF)
 option(BUILD_VINEYARD_IO_KAFKA "Enable vineyard's IOAdaptor with KAFKA support" OFF)
 
-if(BUILD_VINEYARD_IO_OSS)
-    find_package(CURL REQUIRED)
-endif()
 if(BUILD_VINEYARD_IO_KAFKA)
     include(FindRdkafka)
 endif()
 
 # force build some thirdparty as static libraries, to make "install" easy
-set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build network-uri as static library" FORCE)
-
 set(Uri_BUILD_DOCS OFF CACHE BOOL "Disable network-uri docs.")
 set(Uri_BUILD_TESTS OFF CACHE BOOL "Disable network-uri tests.")
 add_subdirectory("${PROJECT_SOURCE_DIR}/thirdparty/uri"
@@ -22,17 +15,6 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/thirdparty/uri"
 )
 set(CPPNETLIB_LIBRARIES network-uri)
 set(CPPNETLIB_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/thirdparty/uri/include")
-
-if(BUILD_VINEYARD_IO_OSS)
-    set(BUILD_SAMPLE OFF CACHE BOOL "Build aliyun-oss-cpp-sdk samples" FORCE)
-    add_subdirectory("${PROJECT_SOURCE_DIR}/thirdparty/aliyun-oss-cpp-sdk"
-                     "${PROJECT_BINARY_DIR}/thirdparty/aliyun-oss-cpp-sdk"
-    )
-    set(OSS_LIBRARIES cpp-sdk)
-endif()
-
-# restore
-set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}" CACHE BOOL "Restore the default value" FORCE)
 
 add_library(vineyard_io ${IO_SRC_FILES})
 target_include_directories(vineyard_io PRIVATE ${CPPNETLIB_INCLUDE_DIRS}
@@ -49,18 +31,6 @@ target_include_directories(vineyard_io PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libgrape-lite>
     $<INSTALL_INTERFACE:include>
 )
-
-if(BUILD_VINEYARD_IO_OSS)
-    target_include_directories(vineyard_io PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/aliyun-oss-cpp-sdk/sdk/include>
-        $<INSTALL_INTERFACE:include>
-    )
-    target_compile_definitions(vineyard_io PUBLIC -DOSS_ENABLED)
-    target_link_libraries(vineyard_io PRIVATE ${OSS_LIBRARIES}
-                                              ${CURL_LIBRARIES}
-                                              ${OPENSSL_LIBRARIES}
-    )
-endif()
 
 if(RDKAFKA_FOUND)
     target_include_directories(vineyard_io PUBLIC ${RDKAFKA_INCLUDE_DIRS})

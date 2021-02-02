@@ -47,10 +47,6 @@ class IIOAdaptor {
    * [SetPartialRead description]
    *
    * for local: it will read the i_th part of a file according to bytes offset.
-   * for oss: if the opened path is a prefix for a group of files, it will read
-   * the i_th file in the group; if the prefix is targeting to a file, it will
-   * perform like local.
-   * for odps: read i_th records with offset, from a big
    * table.
    *
    * @param  index
@@ -62,8 +58,6 @@ class IIOAdaptor {
   /**
    * [Configure sub-class specific items]
    * e.g.,
-   * odps_access_key = abcd;
-   * oss_read_concurrency = 16;
    * local ReadLine use std::getline;
    *
    * @param  key   [description]
