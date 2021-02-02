@@ -175,7 +175,6 @@ jobs:
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
                    -DBUILD_VINEYARD_BASIC=ON \
                    -DBUILD_VINEYARD_IO=ON \
-                   -DBUILD_VINEYARD_IO_OSS=ON \
                    -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 
