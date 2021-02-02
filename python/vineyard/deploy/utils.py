@@ -17,12 +17,20 @@
 #
 
 import contextlib
+import logging
 import os
 import shutil
 import socket
 import subprocess
 import textwrap
 import time
+
+try:
+    import kubernetes
+except ImportError:
+    kubernetes = None
+
+logger = logging.getLogger('vineyard')
 
 
 def ssh_base_cmd(host):
@@ -113,6 +121,16 @@ def start_etcd(host=None, etcd_executable=None):
             raise RuntimeError('Failed to launch program etcd on %s, error:\n%s' % (srv_host, err))
         yield proc, 'http://%s:%d' % (srv_host, client_port)
     finally:
-        print('Etcd being killed...')
+        logging.info('Etcd being killed...')
         if proc is not None and proc.poll() is None:
             proc.terminate()
+
+
+def start_etcd_k8s(namespace):
+    if kubernetes is None:
+        raise RuntimeError('Please install the kubernetes python first')
+    kubernetes.config.load_kube_config()
+    k8s_client = kubernetes.client.ApiClient()
+    resp = kubernetes.utils.create_from_yaml(k8s_client,
+                                             os.path.join(os.path.dirname(__file__), 'etcd.yaml'),
+                                             namespace=namespace)

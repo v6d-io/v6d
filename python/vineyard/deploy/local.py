@@ -17,12 +17,15 @@
 #
 
 import contextlib
+import logging
 import pkg_resources
 import subprocess
 import textwrap
 import time
 
 from .utils import start_etcd
+
+logger = logging.getLogger('vineyard')
 
 
 @contextlib.contextmanager
@@ -102,7 +105,7 @@ def start_vineyardd(etcd_endpoints=None,
             raise RuntimeError('vineyardd exited unexpectedly with code %d, error is:\n%s' % (rc, err))
         yield proc, socket
     finally:
-        print('Local vineyardd being killed')
+        logger.info('Local vineyardd being killed')
         if proc.poll() is None:
             proc.kill()
         if etcd_ctx is not None:

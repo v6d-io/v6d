@@ -84,9 +84,9 @@ setup(
     packages=find_packages('python'),
     package_data={
         'vineyard': [
-            '*/**/*.sh',
-            '*/**/*.yaml',
-            '*/**/*.bin',
+            "**/*.yaml",
+            "**/*.yaml.tpl",
+            "**/**/*.sh",
         ],
     },
     ext_modules=[
@@ -112,6 +112,9 @@ setup(
             'pytest-datafiles',
             'sphinx>=3.0.2',
             'sphinx_rtd_theme',
+        ],
+        "kubernetes": [
+            "kubernetes",
         ],
     },
     license="Apache License 2.0",
