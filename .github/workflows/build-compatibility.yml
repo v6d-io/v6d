@@ -81,7 +81,10 @@ jobs:
       - name: Install Dependencies for MacOS
         if: runner.os == 'macOS'
         run: |
-          brew install apache-arrow boost ccache cmake gflags glog grpc googletest grpc librdkafka libunwind-headers  mpich openssl protobuf
+          brew install apache-arrow boost ccache cmake gflags glog googletest librdkafka libunwind-headers mpich openssl protobuf
+
+          # N.B.
+          # a proper version of grpc will be installed as apache-arrow's dependency.
 
           # install python packages for codegen
           pip3 install -U pip
