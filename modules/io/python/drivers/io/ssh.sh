@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -x
 HOST_NAME=$1
 shift
 

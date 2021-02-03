@@ -68,7 +68,7 @@ class ScriptLauncher(Launcher):
                                       universal_newlines=True,
                                       encoding='utf-8',
                                       stdout=subprocess.PIPE,
-                                      stderr=subprocess.STDOUT)
+                                      stderr=subprocess.PIPE)
         self._status = LauncherStatus.RUNNING
 
         self._listen_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, ))
@@ -100,7 +100,8 @@ class ScriptLauncher(Launcher):
         r = super(ScriptLauncher, self).wait(timeout=period)
         if r is not None:
             return r
-        raise RuntimeError('Failed to launch job [%s], exited with %r: %s' % (self._cmd, self._proc.poll(), remaining))
+        raise RuntimeError('Failed to launch job [%s], exited with %r: %s' %
+                           (self._cmd, self._proc.poll(), self._proc.stderr.read()))
 
     def read_output(self, stream):
         while self._proc.poll() is None:
