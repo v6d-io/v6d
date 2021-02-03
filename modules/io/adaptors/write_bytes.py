@@ -19,6 +19,7 @@
 import base64
 import json
 import sys
+import traceback
 
 import fsspec
 import pyarrow as pa
@@ -28,6 +29,12 @@ from vineyard.io.byte import ByteStreamBuilder
 from vineyard.drivers.io import ossfs
 
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
+
+
+def report_status(status, content):
+    ret = {"type": status, "content": content}
+    print(json.dumps(ret), flush=True)
+
 
 def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options, proc_num, proc_index):
     """Read bytes from stream and write to external storage.
@@ -47,12 +54,20 @@ def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+        err = f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
+        report_status("error", err)
+        raise ValueError(err)
+
     serialization_mode = write_options.pop('serialization_mode', False)
     instream = streams[proc_index]
-    reader = instream.open_reader(client)
+    try:
+        reader = instream.open_reader(client)
+        of = fsspec.open(f"{path}_{proc_index}", "wb", **storage_options)
+    except Exception as e:
+        err = traceback.format_exc()
+        report_status("error", err)
+        raise
 
-    of = fsspec.open(f"{path}_{proc_index}", "wb", **storage_options)
     lengths = []  # store lengths of each chunk. may be unused
     with of as f:
         while True:
@@ -67,8 +82,13 @@ def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options
         params = instream.params
         params["lengths"] = lengths
         meta = fsspec.open(f"{path}_{proc_index}.meta", "wb", **storage_options)
-        with meta as f:
-            f.write(json.dumps(params).encode('utf-8'))
+        try:
+            with meta as f:
+                f.write(json.dumps(params).encode('utf-8'))
+        except Exception as e:
+            err = traceback.format_exc()
+            report_status("error", err)
+            raise
 
 
 if __name__ == "__main__":

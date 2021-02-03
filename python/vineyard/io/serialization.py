@@ -32,12 +32,15 @@ def serialize(path, object_id, *args, **kwargs):
     if not parsed.scheme:
         path = 'file://' + path
     obj_type = kwargs.pop('type', 'global')
-    if serialize.__factory and serialize.__factory[obj_type]:
+    if serialize.__factory and serialize.__factory.get(obj_type):
         proc_kwargs = kwargs.copy()
         serializer = serialize.__factory[obj_type][0]
-        serializer(path, object_id, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
-        return
-    raise RuntimeError('Unable to find a proper seraialization driver for %s' % path)
+        try:
+            serializer(path, object_id, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+        except Exception as e:
+            raise RuntimeError("Unable to serialize %s" % path) from e
+    else:
+        raise ValueError("No serialization driver registered for %s. type: %s" % (path, obj_type))
 
 
 @registerize
@@ -46,11 +49,15 @@ def deserialize(path, *args, **kwargs):
     if not parsed.scheme:
         path = 'file://' + path
     obj_type = kwargs.pop('type', 'global')
-    if deserialize.__factory and deserialize.__factory[obj_type]:
+    if deserialize.__factory and deserialize.__factory.get(obj_type):
         proc_kwargs = kwargs.copy()
         deserializer = deserialize.__factory[obj_type][0]
-        return deserializer(path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
-    raise RuntimeError('Unable to find a proper deseraialization driver for %s' % path)
+        try:
+            return deserializer(path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+        except Exception as e:
+            raise RuntimeError("Unable to deserialize %s" % path) from e
+    else:
+        raise ValueError("No deserialization driver registered for %s. type: %s" % (path, obj_type))
 
 
 __all__ = ['serialize', 'deserialize']

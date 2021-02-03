@@ -32,6 +32,10 @@ from vineyard.drivers.io import ossfs
 
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
+def report_status(status, content):
+    ret = {"type": status, "content": content}
+    print(json.dumps(ret), flush=True)
+
 
 def read_bytes(
     vineyard_socket: str,
@@ -61,16 +65,15 @@ def read_bytes(
     serialization_mode = read_options.pop('serialization_mode', False)
     if serialization_mode:
         parsed = urlparse(path)
-        fs = fsspec.filesystem(parsed.scheme)
+        try:
+            fs = fsspec.filesystem(parsed.scheme)
+        except ValueError as e:
+            report_status("error", str(e))
+            raise
         meta_file = f"{path}_{proc_index}.meta"
         blob_file = f"{path}_{proc_index}"
         if not fs.exists(meta_file) or not fs.exists(blob_file):
-            ret = {
-                "type": "error",
-                "content": "Some serialization file cannot be found. "
-                "Expected: {} and {}".format(meta_file, blob_file)
-            }
-            print(json.dumps(ret), flush=True)
+            report_status("error", f"Some serialization file cannot be found. Expected: {meta_file} and {blob_file}")
             raise FileNotFoundError('{}, {}'.format(meta_file, blob_file))
         # Used for read bytes of serialized graph
         meta_file = fsspec.open(meta_file, mode="rb", **storage_options)
@@ -113,7 +116,11 @@ def read_bytes(
 
         offset = 0
         chunk_size = 1024 * 1024 * 4
-        of = fsspec.open(path, mode="rb", **storage_options)
+        try:
+            of = fsspec.open(path, mode="rb", **storage_options)
+        except Exception as e:
+            report_status("error", str(e))
+            raise
         with of as f:
             header_line = read_block(f, 0, 1, b'\n')
             builder["header_line"] = header_line.decode("unicode_escape")

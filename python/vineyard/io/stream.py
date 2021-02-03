@@ -43,7 +43,8 @@ def read(path, *args, **kwargs):
             or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
-    if read.__factory and read.__factory[parsed.scheme]:
+    if read.__factory and read.__factory.get(parsed.scheme):
+        errors = []
         for reader in read.__factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
@@ -51,9 +52,11 @@ def read(path, *args, **kwargs):
                 if r is not None:
                     return r
             except Exception as e:
-                logger.debug('failed when trying the reader: %s:\n%s', e, traceback.format_exc())
-
-    raise RuntimeError('Unable to find a proper IO driver for %s' % path)
+                errors.append('%s: %s' % (reader.__name__, traceback.format_exc()))
+        raise RuntimeError('Unable to find a proper IO driver for %s, potential causes are:\n %s' %
+                           (path, '\n'.join(errors)))
+    else:
+        raise ValueError("No IO driver registered for %s" % path)
 
 
 @registerize
@@ -75,18 +78,21 @@ def write(path, stream, *args, **kwargs):
             or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
-    if write.__factory and write.__factory[parsed.scheme]:
+    if write.__factory and write.__factory.get(parsed.scheme):
+        errors = []
         for writer in write.__factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
                 writer(path, stream, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
             except Exception as e:
-                logger.debug('failed when trying the writer: %s', e)
+                errors.append('%s: %s' % (writer.__name__, traceback.format_exc()))
                 continue
             else:
                 return
-
-    raise RuntimeError('Unable to find a proper IO driver for %s' % path)
+        raise RuntimeError('Unable to find a proper IO driver for %s, potential causes are:\n %s' %
+                           (path, '\n'.join(errors)))
+    else:
+        raise ValueError("No IO driver registered for %s" % path)
 
 
 def open(path, *args, mode='r', **kwargs):
