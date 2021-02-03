@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "client/ds/blob.h"
 
+#include <iomanip>
+#include <iostream>
 #include <limits>
 
 #include "client/client.h"
@@ -75,8 +77,10 @@ void Blob::Construct(ObjectMeta const& meta) {
       auto status = client->GetBuffer(meta.GetId(), object);
       if (status.ok()) {
         uint8_t* mmapped_ptr = nullptr;
-        VINEYARD_CHECK_OK(client->mmapToClient(object.store_fd, object.map_size,
-                                               true, &mmapped_ptr));
+        if (object.data_size > 0) {
+          VINEYARD_CHECK_OK(client->mmapToClient(
+              object.store_fd, object.map_size, true, &mmapped_ptr));
+        }
         buffer_ = arrow::Buffer::Wrap(mmapped_ptr + object.data_offset,
                                       object.data_size);
       } else {
@@ -87,9 +91,27 @@ void Blob::Construct(ObjectMeta const& meta) {
   }
 }
 
+void Blob::Dump() const {
+  if (VLOG_IS_ON(10)) {
+    std::stringstream ss;
+    ss << "size = " << size() << ", buffer = ";
+    {
+      std::ios::fmtflags os_flags(std::cout.flags());
+      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
+      for (size_t idx = 0; idx < size(); ++idx) {
+        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+           << static_cast<const uint32_t>(ptr[idx]);
+      }
+      std::cout.flags(os_flags);
+    }
+    VLOG(10) << "buffer is " << ss.str();
+  }
+}
+
 std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
   std::shared_ptr<Blob> empty_blob(new Blob(EmptyBlobID(), 0, nullptr));
   empty_blob->meta_.SetId(EmptyBlobID());
+  empty_blob->meta_.SetSignature(static_cast<Signature>(EmptyBlobID()));
   empty_blob->meta_.SetTypeName(type_name<Blob>());
   empty_blob->meta_.AddKeyValue("length", 0);
   empty_blob->meta_.SetNBytes(0);
@@ -104,6 +126,8 @@ std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
 const std::shared_ptr<arrow::Buffer>& Blob::BufferUnsafe() const {
   return buffer_;
 }
+
+ObjectID BlobWriter::id() const { return object_id_; }
 
 size_t BlobWriter::size() const { return buffer_ ? buffer_->size() : 0; }
 
@@ -128,13 +152,32 @@ void BlobWriter::AddKeyValue(std::string const& key, std::string&& value) {
   this->metadata_.emplace(key, std::move(value));
 }
 
+void BlobWriter::Dump() const {
+  if (VLOG_IS_ON(10)) {
+    std::stringstream ss;
+    ss << "size = " << size() << ", buffer = ";
+    {
+      std::ios::fmtflags os_flags(std::cout.flags());
+      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
+      for (size_t idx = 0; idx < size(); ++idx) {
+        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+           << static_cast<const uint32_t>(ptr[idx]);
+      }
+      std::cout.flags(os_flags);
+    }
+    VLOG(10) << "buffer is " << ss.str();
+  }
+}
+
 std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   // get blob and re-map
   Payload object;
   VINEYARD_CHECK_OK(client.GetBuffer(object_id_, object));
   uint8_t* mmapped_ptr = nullptr;
-  VINEYARD_CHECK_OK(client.mmapToClient(object.store_fd, object.map_size, false,
-                                        &mmapped_ptr));
+  if (object.data_size > 0) {
+    VINEYARD_CHECK_OK(client.mmapToClient(object.store_fd, object.map_size,
+                                          false, &mmapped_ptr));
+  }
   auto ro_buffer =
       arrow::Buffer::Wrap(mmapped_ptr + object.data_offset, object.data_size);
 

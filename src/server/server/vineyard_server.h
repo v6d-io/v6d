@@ -100,8 +100,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status ListData(std::string const& pattern, bool const regex,
                   size_t const limit, callback_t<const json&> callback);
 
-  Status CreateData(const json& tree,
-                    callback_t<const ObjectID, const InstanceID> callback);
+  Status CreateData(
+      const json& tree,
+      callback_t<const ObjectID, const Signature, const InstanceID> callback);
 
   Status Persist(const ObjectID id, callback_t<> callback);
 
@@ -127,6 +128,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status DropName(const std::string& name, callback_t<> callback);
 
+  Status MigrateObject(const ObjectID object_id, const bool local,
+                       const std::string& peer,
+                       const std::string& peer_rpc_endpoint,
+                       callback_t<const ObjectID&> callback);
+
   Status ClusterInfo(callback_t<const json&> callback);
 
   Status InstanceStatus(callback_t<const json&> callback);
@@ -135,6 +141,16 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   inline InstanceID instance_id() { return instance_id_; }
   inline void set_instance_id(InstanceID id) { instance_id_ = id; }
+
+  inline std::string const& hostname() { return hostname_; }
+  inline void set_hostname(std::string const& hostname) {
+    hostname_ = hostname;
+  }
+
+  inline std::string const& nodename() { return nodename_; }
+  inline void set_nodename(std::string const& nodename) {
+    nodename_ = nodename;
+  }
 
   const std::string IPCSocket();
 
@@ -163,7 +179,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::shared_ptr<StreamStore> stream_store_;
 
   Status serve_status_;
+#if BOOST_VERSION >= 106600
   using ctx_guard = asio::executor_work_guard<asio::io_context::executor_type>;
+#else
+  using ctx_guard = std::unique_ptr<boost::asio::io_service::work>;
+#endif
   ctx_guard guard_;
 
   enum ready_t {
@@ -178,6 +198,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   bool stopped_;  // avoid invoke Stop() twice.
 
   InstanceID instance_id_;
+  std::string hostname_;
+  std::string nodename_;
 };
 
 using vs_ptr_t = std::shared_ptr<VineyardServer>;

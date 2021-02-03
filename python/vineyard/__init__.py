@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020 Alibaba Group Holding Limited.
+# Copyright 2020-2021 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,7 +92,6 @@ del _vineyard_docs
 
 from .core import default_builder_context, default_resolver_context, default_driver_context
 from .data import register_builtin_types
-from .data.base import ObjectSet
 from .data.graph import Graph
 
 logger = logging.getLogger('vineyard')
@@ -107,12 +106,17 @@ def _init_vineyard_modules():
         * /usr/local/share/vineyard/01-xxx.py
         * {sys.prefix}/share/vineyard/02-xxxx.py
         * $HOME/.vineyard/03-xxxxx.py
+
+        Then import packages like vineyard.drivers.*:
+
+        * vineyard.drivers.io
     '''
 
     import glob
     import importlib.util
     import os
     import sys
+    import pkgutil
 
     def _import_module_from_file(filepath):
         filepath = os.path.expanduser(os.path.expandvars(filepath))
@@ -124,6 +128,12 @@ def _init_vineyard_modules():
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("Failed to load %s: %s\n%s", filepath, e, traceback.format_exc())
 
+    def _import_module_from_qualified_name(module):
+        try:
+            importlib.import_module(module)
+        except Exception as e:
+            logger.debug('Failed to load module %s: %s\n%s', module, e, traceback.format_exc())
+
     _import_module_from_file('/etc/vineyard/config.py')
     _import_module_from_file(os.path.join(sys.prefix, '/etc/vineyard/config.py'))
     for filepath in glob.glob('/usr/share/vineyard/*-*.py'):
@@ -134,6 +144,9 @@ def _init_vineyard_modules():
         _import_module_from_file(filepath)
     for filepath in glob.glob(os.path.expanduser('$HOME/.vineyard/*-*.py')):
         _import_module_from_file(filepath)
+
+    for _, mod, _ in pkgutil.iter_modules([os.path.join(os.path.dirname(__file__), 'drivers')]):
+        _import_module_from_qualified_name('vineyard.drivers.%s' % mod)
 
 
 try:

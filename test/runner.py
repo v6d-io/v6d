@@ -238,6 +238,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('delete_test')
         run_test('get_wait_test')
         run_test('get_object_test')
+        run_test('global_object_test')
         run_test('hashmap_test')
         run_test('id_test')
         run_test('large_meta_test')
@@ -250,6 +251,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('rpc_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test('scalar_test')
         run_test('server_status_test')
+        run_test('signature_test')
         run_test('shallow_copy_test')
         run_test('stream_test')
         run_test('tensor_test')
@@ -282,7 +284,7 @@ def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
         time.sleep(5)
 
 
-def run_python_tests(etcd_endpoints):
+def run_python_tests(etcd_endpoints, with_migration):
     etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_vineyardd(etcd_endpoints,
                          etcd_prefix,
@@ -296,6 +298,9 @@ def run_python_tests(etcd_endpoints):
 
     ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
     instance_size = 4
+    extra_args = []
+    if with_migration:
+        extra_args.append('--with-migration')
     with start_multiple_vineyardd(etcd_endpoints,
                                   etcd_prefix,
                                   default_ipc_socket=ipc_socket_tpl,
@@ -304,7 +309,7 @@ def run_python_tests(etcd_endpoints):
         vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
         subprocess.check_call(['pytest', '-s', '-vvv',
                                'python/vineyard/deploy/tests',
-                               '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets],
+                               '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets] + extra_args,
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
@@ -313,7 +318,7 @@ def run_io_adaptor_tests(etcd_endpoints):
     with start_vineyardd(etcd_endpoints,
                          etcd_prefix,
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
-        subprocess.check_call(['pytest', '-s', '-vvv', 'modules/io/python/tests',
+        subprocess.check_call(['pytest', '-s', '-vvv', 'modules/io/python/drivers/io/tests',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                                '--test-dataset=%s' % get_data_path(None)],
@@ -328,6 +333,8 @@ def parse_sys_args():
                             help='Whether to run python tests')
     arg_parser.add_argument('--with-io', action='store_true', default=False,
                             help='Whether to run IO adaptors tests')
+    arg_parser.add_argument('--with-migration', action='store_true', default=False,
+                            help='Whether to run object migration tests')
     return arg_parser, arg_parser.parse_args()
 
 
@@ -345,7 +352,7 @@ def main():
 
     if args.with_python:
         with start_etcd() as (_, etcd_endpoints):
-            run_python_tests(etcd_endpoints)
+            run_python_tests(etcd_endpoints, args.with_migration)
 
     if args.with_io:
         with start_etcd() as (_, etcd_endpoints):

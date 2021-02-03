@@ -23,14 +23,85 @@ std::vector<int64_t> const& GlobalTensor::partition_shape() const {
   return partition_shape_;
 }
 
-const std::vector<std::shared_ptr<Object>>& GlobalTensor::LocalPartitions(
-    Client& client) const {
-  return partitions_.ObjectsAt(client.instance_id());
+void GlobalTensor::Construct(const ObjectMeta& meta) {
+  std::string __type_name = type_name<GlobalTensor>();
+  CHECK(meta.GetTypeName() == __type_name);
+  this->meta_ = meta;
+  this->id_ = meta.GetId();
+
+  meta.GetKeyValue("shape_", this->shape_);
+  meta.GetKeyValue("partition_shape_", this->partition_shape_);
+  for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("partitions_-size");
+       ++__idx) {
+    auto chunk = std::dynamic_pointer_cast<ITensor>(
+        meta.GetMember("partitions_-" + std::to_string(__idx)));
+    this->partitions_[chunk->meta().GetInstanceId()].emplace_back(chunk);
+  }
+
+  if (meta.IsLocal()) {
+    this->PostConstruct(meta);
+  }
 }
 
-const std::vector<std::shared_ptr<Object>>& GlobalTensor::LocalPartitions(
+const std::vector<std::shared_ptr<ITensor>>& GlobalTensor::LocalPartitions(
+    Client& client) const {
+  return partitions_.at(client.instance_id());
+}
+
+const std::vector<std::shared_ptr<ITensor>>& GlobalTensor::LocalPartitions(
     const InstanceID instance_id) const {
-  return partitions_.ObjectsAt(instance_id);
+  return partitions_.at(instance_id);
+}
+
+std::shared_ptr<Object> GlobalTensorBaseBuilder::_Seal(Client& client) {
+  // ensure the builder hasn't been sealed yet.
+  ENSURE_NOT_SEALED(this);
+
+  {
+    // trigger an remote sync.
+    json dummy;
+    VINEYARD_SUPPRESS(client.GetData(InvalidObjectID(), dummy, true, false));
+  }
+
+  VINEYARD_CHECK_OK(this->Build(client));
+  auto __value = std::make_shared<GlobalTensor>();
+
+  size_t __value_nbytes = 0;
+
+  __value->meta_.SetTypeName(type_name<GlobalTensor>());
+  if (std::is_base_of<GlobalObject, GlobalTensor>::value) {
+    __value->meta_.SetGlobal(true);
+  }
+
+  __value->shape_ = shape_;
+  __value->meta_.AddKeyValue("shape_", __value->shape_);
+
+  __value->partition_shape_ = partition_shape_;
+  __value->meta_.AddKeyValue("partition_shape_", __value->partition_shape_);
+
+  size_t __partitions__idx = 0;
+  for (auto& __partitions__value : partitions_) {
+    auto __value_partitions_ = client.GetObject<ITensor>(__partitions__value);
+    __value->partitions_[__value_partitions_->meta().GetInstanceId()]
+        .emplace_back(__value_partitions_);
+    __value->meta_.AddMember("partitions_-" + std::to_string(__partitions__idx),
+                             __partitions__value);
+    __value_nbytes += __value_partitions_->nbytes();
+    __partitions__idx += 1;
+  }
+  __value->meta_.AddKeyValue("partitions_-size", __value->partitions_.size());
+
+  __value->meta_.SetNBytes(__value_nbytes);
+
+  VINEYARD_CHECK_OK(client.CreateMetaData(__value->meta_, __value->id_));
+
+  // mark the builder as sealed
+  this->set_sealed(true);
+
+  // run `PostConstruct` to return a valid object
+  __value->PostConstruct(__value->meta_);
+
+  return std::static_pointer_cast<Object>(__value);
 }
 
 std::vector<int64_t> const& GlobalTensorBuilder::partition_shape() const {
@@ -50,14 +121,15 @@ void GlobalTensorBuilder::set_shape(std::vector<int64_t> const& shape) {
   this->set_shape_(shape);
 }
 
-void GlobalTensorBuilder::AddPartition(const InstanceID instance_id,
-                                       const ObjectID partition_id) {
-  partitions_builder_.AddObject(instance_id, partition_id);
+void GlobalTensorBuilder::AddPartition(const ObjectID partition_id) {
+  this->add_partitions_(partition_id);
 }
 
 void GlobalTensorBuilder::AddPartitions(
-    const InstanceID instance_id, const std::vector<ObjectID>& partition_ids) {
-  partitions_builder_.AddObjects(instance_id, partition_ids);
+    const std::vector<ObjectID>& partition_ids) {
+  for (auto const& partition_id : partition_ids) {
+    this->add_partitions_(partition_id);
+  }
 }
 
 std::shared_ptr<Object> GlobalTensorBuilder::_Seal(Client& client) {
@@ -67,9 +139,6 @@ std::shared_ptr<Object> GlobalTensorBuilder::_Seal(Client& client) {
   return object;
 }
 
-Status GlobalTensorBuilder::Build(Client& client) {
-  this->set_partitions_(partitions_builder_.Seal(client));
-  return Status::OK();
-}
+Status GlobalTensorBuilder::Build(Client& client) { return Status::OK(); }
 
 }  // namespace vineyard

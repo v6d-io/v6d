@@ -1,0 +1,151 @@
+# Copyright 2020-2021 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Compatibility Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # os: [ubuntu-18.04, macos-10.15]
+        # disable mac: latest apache-arrow conflicts with latest grpc.
+        os: [ubuntu-18.04]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Generate Summary for Submodules
+        run: |
+          git submodule > git-modules.txt
+          cat git-modules.txt
+
+      - name: Cache for cccahe
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ${{ matrix.os }}-build-ccache-${{ hashFiles('**/git-modules.txt') }}
+          restore-keys: |
+            ${{ matrix.os }}-build-ccache-
+
+      - name: Install Dependencies for Linux
+        if: runner.os == 'Linux'
+        run: |
+          # leverage ccache
+          export PATH=/usr/lib/ccache:$PATH
+
+          sudo apt update -y
+          sudo apt install -y ca-certificates \
+                              ccache \
+                              cmake \
+                              libboost-all-dev \
+                              libcurl4-openssl-dev \
+                              libgflags-dev \
+                              libgoogle-glog-dev \
+                              libgrpc-dev \
+                              libgrpc++-dev \
+                              libgtest-dev \
+                              libmpich-dev \
+                              libprotobuf-dev \
+                              librdkafka-dev \
+                              libssl-dev \
+                              libunwind-dev \
+                              libz-dev \
+                              lsb-release \
+                              protobuf-compiler-grpc \
+                              python3-pip \
+                              wget
+
+          # install apache-arrow
+          wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+          sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+          sudo apt update
+          sudo apt install -y libarrow-dev=1.0.1-1 libarrow-python-dev=1.0.1-1
+
+          # install python packages for codegen
+          sudo pip3 install -U pip
+          sudo pip3 install libclang parsec setuptools wheel twine
+
+      - name: Install Dependencies for MacOS
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers mpich openssl protobuf
+
+          # install python packages for codegen
+          pip3 install -U pip
+          pip3 install libclang parsec
+
+      - name: Install libgrape-lite
+        run: |
+          # leverage ccache
+          export PATH=/usr/lib/ccache:$PATH
+
+          git clone https://github.com/alibaba/libgrape-lite.git
+          cd libgrape-lite
+          mkdir build
+          cd build
+          cmake ..
+          make -j`nproc`
+          sudo make install
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
+      - name: CMake
+        run: |
+          # leverage ccache
+          export PATH=/usr/lib/ccache:$PATH
+
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug \
+                   -DBUILD_SHARED_LIBS=ON \
+                   -DBUILD_VINEYARD_COVERAGE=ON \
+                   -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+                   -DBUILD_VINEYARD_BASIC=ON \
+                   -DBUILD_VINEYARD_IO=ON \
+                   -DBUILD_VINEYARD_IO_OSS=ON \
+                   -DBUILD_VINEYARD_MIGRATION=ON \
+                   -DBUILD_VINEYARD_TESTS=ON
+
+      - name: Build
+        run: |
+          # leverage ccache
+          export PATH=/usr/lib/ccache:$PATH
+
+          pushd build
+          make -j`nproc`
+          make vineyard_tests -j`nproc`
+          make vineyard_client_python -j`nproc`
+          make ccache-stats
+          sudo make install
+          popd
+
+          # build & install vineyard for python
+
+          python3 setup.py bdist_wheel
+          sudo pip3 install dist/*.whl -U
+
+          # build & install vineyard-io
+
+          pushd modules/io
+          python3 setup.py bdist_wheel
+          sudo pip3 install dist/*.whl -U
+          popd
+

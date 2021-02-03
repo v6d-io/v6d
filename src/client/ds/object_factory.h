@@ -37,15 +37,15 @@ template <typename T>
 inline void FORCE_INSTANTIATE(T) {}
 
 /**
- * @brief ObjectFactory is responsible for type registeration at the
- * initiliazation time.
+ * @brief ObjectFactory is responsible for type registration at the
+ * initialization time.
  */
 class ObjectFactory {
  public:
   using object_initializer_t = std::shared_ptr<Object> (*)();
 
   /**
-   * @brief Register tht type `T` to the factory. A registerable type must have
+   * @brief Register tht type `T` to the factory. A registrable type must have
    * a static method `Create` that accepts no arguments and returns an instance
    * of type `T`.
    *

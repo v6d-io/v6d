@@ -17,3 +17,4 @@
 #
 
 from .stream import open, read, write
+from .serialization import serialize, deserialize

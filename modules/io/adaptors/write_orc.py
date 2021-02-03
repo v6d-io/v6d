@@ -60,7 +60,7 @@ def orc_type(field):
         raise ValueError("Cannot Convert %s" % field)
 
 
-def write_orc(vineyard_socket, path, stream_id, storage_options, proc_num, proc_index):
+def write_orc(vineyard_socket, path, stream_id, storage_options, write_options, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
@@ -98,7 +98,7 @@ def write_orc(vineyard_socket, path, stream_id, storage_options, proc_num, proc_
 if __name__ == "__main__":
     if len(sys.argv) < 7:
         print(
-            "usage: ./write_hdfs_orc <ipc_socket> <path> <stream id> <storage_options> <proc_num> <proc_index>"
+            "usage: ./write_hdfs_orc <ipc_socket> <path> <stream id> <storage_options> <write_options> <proc_num> <proc_index>"
         )
         exit(1)
     ipc_socket = sys.argv[1]
@@ -107,6 +107,9 @@ if __name__ == "__main__":
     storage_options = json.loads(
         base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
     )
-    proc_num = int(sys.argv[5])
-    proc_index = int(sys.argv[6])
-    write_orc(ipc_socket, path, stream_id, storage_options, proc_num, proc_index)
+    write_options = json.loads(
+        base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8")
+    )
+    proc_num = int(sys.argv[6])
+    proc_index = int(sys.argv[7])
+    write_orc(ipc_socket, path, stream_id, storage_options, write_options, proc_num, proc_index)

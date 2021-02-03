@@ -32,3 +32,6 @@ default.etcd/
 # setup.cfg will be generated
 /setup.cfg
 /python/vineyard/version.py
+
+# go vendor
+/**/vendor/

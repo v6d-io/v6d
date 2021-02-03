@@ -57,6 +57,7 @@ enum class CommandType {
   InstanceStatusRequest = 26,
   ShallowCopyRequest = 27,
   OpenStreamRequest = 28,
+  MigrateObjectRequest = 29,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -104,10 +105,10 @@ void WriteCreateDataRequest(const json& content, std::string& msg);
 
 Status ReadCreateDataRequest(const json& root, json& content);
 
-void WriteCreateDataReply(const ObjectID& id, const InstanceID& instance_id,
-                          std::string& msg);
+void WriteCreateDataReply(const ObjectID& id, const Signature& sigature,
+                          const InstanceID& instance_id, std::string& msg);
 
-Status ReadCreateDataReply(const json& root, ObjectID& id,
+Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& sigature,
                            InstanceID& instance_id);
 
 void WritePersistRequest(const ObjectID id, std::string& msg);
@@ -210,6 +211,19 @@ Status ReadDropNameRequest(const json& root, std::string& name);
 void WriteDropNameReply(std::string& msg);
 
 Status ReadDropNameReply(const json& root);
+
+void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
+                               std::string const& peer,
+                               std::string const& peer_rpc_endpoint,
+                               std::string& msg);
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id,
+                                bool& local, std::string& peer,
+                                std::string& peer_rpc_endpoint);
+
+void WriteMigrateObjectReply(const ObjectID& object_id, std::string& msg);
+
+Status ReadMigrateObjectReply(const json& root, ObjectID& object_id);
 
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg);
 

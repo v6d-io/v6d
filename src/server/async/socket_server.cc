@@ -175,7 +175,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     this->doWrite(message_out, [self, objects](const Status& status) {
       for (auto object : objects) {
         int store_fd = object->store_fd;
-        if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+        int data_size = object->data_size;
+        if (data_size > 0 &&
+            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
           self->used_fds_.emplace(store_fd);
           send_fd(self->nativeHandle(), store_fd);
         }
@@ -195,13 +197,16 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     WriteCreateBufferReply(object_id, object, message_out);
 
     int store_fd = object->store_fd;
-    this->doWrite(message_out, [self, store_fd](const Status& status) {
-      if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-        self->used_fds_.emplace(store_fd);
-        send_fd(self->nativeHandle(), store_fd);
-      }
-      return Status::OK();
-    });
+    int data_size = object->data_size;
+    this->doWrite(
+        message_out, [self, store_fd, data_size](const Status& status) {
+          if (data_size > 0 &&
+              self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+            self->used_fds_.emplace(store_fd);
+            send_fd(self->nativeHandle(), store_fd);
+          }
+          return Status::OK();
+        });
   } break;
   case CommandType::GetDataRequest: {
     std::vector<ObjectID> ids;
@@ -245,10 +250,10 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     TRY_READ_REQUEST(ReadCreateDataRequest(root, tree));
     RESPONSE_ON_ERROR(server_ptr_->CreateData(
         tree, [self](const Status& status, const ObjectID id,
-                     const InstanceID instance_id) {
+                     const Signature signature, const InstanceID instance_id) {
           std::string message_out;
           if (status.ok()) {
-            WriteCreateDataReply(id, instance_id, message_out);
+            WriteCreateDataReply(id, signature, instance_id, message_out);
           } else {
             LOG(ERROR) << status.ToString();
             WriteErrorReply(status, message_out);
@@ -378,13 +383,16 @@ bool SocketConnection::processMessage(const std::string& message_in) {
                                                                      object));
             WriteGetNextStreamChunkReply(object, message_out);
             int store_fd = object->store_fd;
-            self->doWrite(message_out, [self, store_fd](const Status& status) {
-              if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                self->used_fds_.emplace(store_fd);
-                send_fd(self->nativeHandle(), store_fd);
-              }
-              return Status::OK();
-            });
+            int data_size = object->data_size;
+            self->doWrite(
+                message_out, [self, store_fd, data_size](const Status& status) {
+                  if (data_size > 0 &&
+                      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+                    self->used_fds_.emplace(store_fd);
+                    send_fd(self->nativeHandle(), store_fd);
+                  }
+                  return Status::OK();
+                });
           } else {
             LOG(ERROR) << status.ToString();
             WriteErrorReply(status, message_out);
@@ -407,13 +415,16 @@ bool SocketConnection::processMessage(const std::string& message_in) {
                                                                      object));
             WritePullNextStreamChunkReply(object, message_out);
             int store_fd = object->store_fd;
-            self->doWrite(message_out, [self, store_fd](const Status& status) {
-              if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                self->used_fds_.emplace(store_fd);
-                send_fd(self->nativeHandle(), store_fd);
-              }
-              return Status::OK();
-            });
+            int data_size = object->data_size;
+            self->doWrite(
+                message_out, [self, store_fd, data_size](const Status& status) {
+                  if (data_size > 0 &&
+                      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+                    self->used_fds_.emplace(store_fd);
+                    send_fd(self->nativeHandle(), store_fd);
+                  }
+                  return Status::OK();
+                });
           } else {
             LOG(ERROR) << status.ToString();
             WriteErrorReply(status, message_out);
@@ -483,6 +494,26 @@ bool SocketConnection::processMessage(const std::string& message_in) {
       self->doWrite(message_out);
       return Status::OK();
     }));
+  } break;
+  case CommandType::MigrateObjectRequest: {
+    ObjectID object_id;
+    bool local;
+    std::string peer, peer_rpc_endpoint;
+    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, peer,
+                                              peer_rpc_endpoint));
+    RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
+        object_id, local, peer, peer_rpc_endpoint,
+        [self](const Status& status, const ObjectID& target) {
+          std::string message_out;
+          if (status.ok()) {
+            WriteMigrateObjectReply(target, message_out);
+          } else {
+            LOG(ERROR) << "Failed to migrate object: " << status.ToString();
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+          return Status::OK();
+        }));
   } break;
   case CommandType::ClusterMetaRequest: {
     TRY_READ_REQUEST(ReadClusterMetaRequest(root));

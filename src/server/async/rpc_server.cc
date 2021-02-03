@@ -27,7 +27,8 @@ namespace vineyard {
 RPCServer::RPCServer(vs_ptr_t vs_ptr)
     : SocketServer(vs_ptr),
       rpc_spec_(vs_ptr_->GetSpec()["rpc_spec"]),
-      acceptor_(vs_ptr_->GetIOContext()) {
+      acceptor_(vs_ptr_->GetIOContext()),
+      socket_(vs_ptr_->GetIOContext()) {
   auto endpoint = getEndpoint(vs_ptr_->GetIOContext());
   acceptor_.open(endpoint.protocol());
   using reuse_port =
@@ -52,7 +53,11 @@ void RPCServer::Start() {
   vs_ptr_->RPCReady();
 }
 
+#if BOOST_VERSION >= 106600
 asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_context&) {
+#else
+asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_service&) {
+#endif
   uint32_t port = rpc_spec_["port"].get<uint32_t>();
   return asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port);
 }
@@ -61,19 +66,18 @@ void RPCServer::doAccept() {
   if (!acceptor_.is_open()) {
     return;
   }
-  acceptor_.async_accept(
-      [this](boost::system::error_code ec, stream_protocol::socket socket) {
-        if (!ec) {
-          std::shared_ptr<SocketConnection> conn =
-              std::make_shared<SocketConnection>(std::move(socket), vs_ptr_,
-                                                 this, next_conn_id_);
-          conn->Start();
-          std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
-          connections_.emplace(next_conn_id_, conn);
-          ++next_conn_id_;
-        }
-        doAccept();
-      });
+  acceptor_.async_accept(socket_, [this](boost::system::error_code ec) {
+    if (!ec) {
+      std::shared_ptr<SocketConnection> conn =
+          std::make_shared<SocketConnection>(std::move(this->socket_), vs_ptr_,
+                                             this, next_conn_id_);
+      conn->Start();
+      std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+      connections_.emplace(next_conn_id_, conn);
+      ++next_conn_id_;
+    }
+    doAccept();
+  });
 }
 
 }  // namespace vineyard

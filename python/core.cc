@@ -44,11 +44,17 @@ void bind_core(py::module& mod) {
           "id",
           [](ObjectMeta* self) -> ObjectIDWrapper { return self->GetId(); },
           [](ObjectMeta* self, ObjectIDWrapper const id) { self->SetId(id); })
+      .def_property_readonly("signature", &ObjectMeta::GetSignature)
       .def_property("typename", &ObjectMeta::GetTypeName,
                     &ObjectMeta::SetTypeName)
       .def_property("nbytes", &ObjectMeta::GetNBytes, &ObjectMeta::SetNBytes)
       .def_property_readonly("instance_id", &ObjectMeta::GetInstanceId)
       .def_property_readonly("islocal", &ObjectMeta::IsLocal)
+      .def_property_readonly("isglobal", &ObjectMeta::IsGlobal)
+      .def(
+          "set_global",
+          [](ObjectMeta* self, const bool global) { self->SetGlobal(global); },
+          py::arg("global") = true)
       .def("__contains__", &ObjectMeta::Haskey, "key"_a)
       .def(
           "__getitem__",
@@ -95,6 +101,8 @@ void bind_core(py::module& mod) {
       .def("__setitem__",
            [](ObjectMeta* self, std::string const& key,
               std::string const& value) { self->AddKeyValue(key, value); })
+      .def("__setitem__", [](ObjectMeta* self, std::string const& key,
+                             bool value) { self->AddKeyValue(key, value); })
       .def("__setitem__", [](ObjectMeta* self, std::string const& key,
                              int32_t value) { self->AddKeyValue(key, value); })
       .def("__setitem__", [](ObjectMeta* self, std::string const& key,
@@ -145,24 +153,24 @@ void bind_core(py::module& mod) {
       .def(
           "__iter__",
           [](const ObjectMeta& meta) {
-            std::function<py::object(ObjectMeta::const_iterator &)> fn = [](
-              ObjectMeta::const_iterator &iter) {
-              return py::cast(iter.key());
-            };
+            std::function<py::object(ObjectMeta::const_iterator&)> fn =
+                [](ObjectMeta::const_iterator& iter) {
+                  return py::cast(iter.key());
+                };
             return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
           },
           py::keep_alive<0, 1>())
       .def(
           "items",
           [](const ObjectMeta& meta) {
-            std::function<py::object(ObjectMeta::const_iterator &)> fn = [&meta](
-              ObjectMeta::const_iterator &iter) {
-              if (iter.value().is_object()) {
-                return py::cast(meta.GetMemberMeta(iter.key()));
-              } else {
-                return json_to_python(iter.value());
-              }
-            };
+            std::function<py::object(ObjectMeta::const_iterator&)> fn =
+                [&meta](ObjectMeta::const_iterator& iter) {
+                  if (iter.value().is_object()) {
+                    return py::cast(meta.GetMemberMeta(iter.key()));
+                  } else {
+                    return json_to_python(iter.value());
+                  }
+                };
             return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
           },
           py::keep_alive<0, 1>())
@@ -192,6 +200,11 @@ void bind_core(py::module& mod) {
            [](const ObjectIDWrapper& id) {
              return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
            })
+      .def("__hash__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
+      .def("__eq__",
+           [](const ObjectIDWrapper& id, const ObjectIDWrapper& other) {
+             return ObjectID(id) == ObjectID(other);
+           })
       .def(py::pickle(
           [](const ObjectIDWrapper& id) {  // __getstate__
             return py::make_tuple(ObjectID(id));
@@ -208,6 +221,9 @@ void bind_core(py::module& mod) {
   py::class_<Object, std::shared_ptr<Object>>(mod, "Object")
       .def_property_readonly(
           "id", [](Object* self) -> ObjectIDWrapper { return self->id(); })
+      .def_property_readonly(
+          "signature",
+          [](Object* self) -> Signature { return self->meta().GetSignature(); })
       .def_property_readonly("meta", &Object::meta,
                              py::return_value_policy::reference_internal)
       .def_property_readonly("nbytes", &Object::nbytes)
@@ -221,6 +237,7 @@ void bind_core(py::module& mod) {
            })
       .def_property_readonly("islocal", &Object::IsLocal)
       .def_property_readonly("ispersist", &Object::IsPersist)
+      .def_property_readonly("isglobal", &Object::IsGlobal)
       .def("__repr__",
            [](const Object* self) {
              return "Object <\"" + VYObjectIDToString(self->id()) +
@@ -282,6 +299,9 @@ void bind_core(py::module& mod) {
   // BlobBuilder
   py::class_<BlobWriter, std::shared_ptr<BlobWriter>, ObjectBuilder>(
       mod, "BlobBuilder", py::buffer_protocol())
+      .def_property_readonly("id", [](BlobWriter* self) -> ObjectIDWrapper {
+        return self->id();
+      })
       .def_property_readonly("size", &BlobWriter::size)
       .def("__len__", &BlobWriter::size)
       .def("__iter__",

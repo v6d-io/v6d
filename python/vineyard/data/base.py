@@ -24,37 +24,6 @@ from vineyard._C import Object, ObjectMeta
 from .utils import normalize_dtype
 
 
-class ObjectSet:
-    def __init__(self, object_or_meta):
-        if isinstance(object_or_meta, Object):
-            self.meta = object_or_meta.meta
-        else:
-            self.meta = object_or_meta
-
-    @property
-    def num_of_instances(self):
-        return int(self.meta['num_of_instances'])
-
-    @property
-    def num_of_objects(self):
-        return int(self.meta['num_of_objects'])
-
-    def __getitem__(self, idx):
-        ''' Return the member of ith element.
-        '''
-        return self.meta.get_member('object_%d' % idx)
-
-    def get_member(self, idx):
-        ''' Return the member of ith element.
-        '''
-        return self.meta.get_member('object_%d' % idx)
-
-    def get_member_meta(self, idx):
-        ''' Return the member of ith element.
-        '''
-        return self.meta['object_%d' % idx]
-
-
 def int_builder(client, value):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Scalar<int>'
@@ -132,10 +101,6 @@ def array_resolver(obj):
     return np.frombuffer(memoryview(obj.member("buffer_")), dtype=value_type)
 
 
-def object_set_resolver(obj):
-    return ObjectSet(obj)
-
-
 def register_base_types(builder_ctx=None, resolver_ctx=None):
     if builder_ctx is not None:
         builder_ctx.register(int, int_builder)
@@ -148,4 +113,3 @@ def register_base_types(builder_ctx=None, resolver_ctx=None):
         resolver_ctx.register('vineyard::Pair', pair_resolver)
         resolver_ctx.register('vineyard::Tuple', tuple_resolver)
         resolver_ctx.register('vineyard::Array', array_resolver)
-        resolver_ctx.register('vineyard::ObjectSet', object_set_resolver)

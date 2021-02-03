@@ -15,8 +15,11 @@ limitations under the License.
 
 #include "server/services/etcd_meta_service.h"
 
+#include <chrono>
 #include <string>
 #include <vector>
+
+#include "boost/asio/steady_timer.hpp"
 
 #include "etcd/v3/Transaction.hpp"
 
@@ -68,7 +71,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     }
   }
   auto status = Status::EtcdError(resp.error_code(), resp.error_message());
-  asio::post(ctx_, boost::bind(callback_, status, ops, resp.index()));
+  ctx_.post(boost::bind(callback_, status, ops, resp.index()));
 }
 
 void EtcdMetaService::requestLock(
@@ -94,8 +97,8 @@ void EtcdMetaService::requestLock(
             resp.index());
         auto status =
             Status::EtcdError(resp.error_code(), resp.error_message());
-        boost::asio::post(server_ptr_->GetIOContext(),
-                          boost::bind(callback_after_locked, status, lock_ptr));
+        server_ptr_->GetIOContext().post(
+            boost::bind(callback_after_locked, status, lock_ptr));
       });
 }
 
@@ -123,8 +126,7 @@ void EtcdMetaService::commitUpdates(
       offset += 127;
     } else {
       auto status = Status::EtcdError(resp.error_code(), resp.error_message());
-      boost::asio::post(
-          server_ptr_->GetIOContext(),
+      server_ptr_->GetIOContext().post(
           boost::bind(callback_after_updated, status, resp.index()));
       return;
     }
@@ -144,8 +146,7 @@ void EtcdMetaService::commitUpdates(
     VLOG(10) << "etcd (last) txn use " << resp.duration().count()
              << " microseconds";
     auto status = Status::EtcdError(resp.error_code(), resp.error_message());
-    boost::asio::post(
-        server_ptr_->GetIOContext(),
+    server_ptr_->GetIOContext().post(
         boost::bind(callback_after_updated, status, resp.index()));
   });
 }
@@ -160,6 +161,9 @@ void EtcdMetaService::requestAll(
                  << " microseconds for " << resp.keys().size() << " keys";
         std::vector<IMetaService::op_t> ops(resp.keys().size());
         for (size_t i = 0; i < resp.keys().size(); ++i) {
+          if (resp.key(i).empty()) {
+            continue;
+          }
           if (!boost::algorithm::starts_with(resp.key(i), prefix_ + "/")) {
             // ignore garbage values
             continue;
@@ -172,8 +176,8 @@ void EtcdMetaService::requestAll(
         }
         auto status =
             Status::EtcdError(resp.error_code(), resp.error_message());
-        boost::asio::post(server_ptr_->GetIOContext(),
-                          boost::bind(callback, status, ops, resp.index()));
+        server_ptr_->GetIOContext().post(
+            boost::bind(callback, status, ops, resp.index()));
       });
 }
 
@@ -211,7 +215,7 @@ void EtcdMetaService::retryDaeminWatch(
     const std::string& prefix, unsigned since_rev,
     callback_t<const std::vector<op_t>&, unsigned> callback) {
   backoff_timer_.reset(new asio::steady_timer(
-      server_ptr_->GetIOContext(), asio::chrono::seconds(BACKOFF_RETRY_TIME)));
+      server_ptr_->GetIOContext(), std::chrono::seconds(BACKOFF_RETRY_TIME)));
   backoff_timer_->async_wait([this, prefix, since_rev, callback](
                                  const boost::system::error_code& error) {
     if (error) {

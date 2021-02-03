@@ -1,12 +1,8 @@
 # build vineyard-io
 file(GLOB IO_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "io/*.cc")
 
-option(BUILD_VINEYARD_IO_OSS "Enable vineyard's IOAdaptor with OSS support" OFF)
 option(BUILD_VINEYARD_IO_KAFKA "Enable vineyard's IOAdaptor with KAFKA support" OFF)
 
-if(BUILD_VINEYARD_IO_OSS)
-    find_package(CURL REQUIRED)
-endif()
 if(BUILD_VINEYARD_IO_KAFKA)
     include(FindRdkafka)
 endif()
@@ -22,14 +18,6 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/thirdparty/uri"
 )
 set(CPPNETLIB_LIBRARIES network-uri)
 set(CPPNETLIB_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/thirdparty/uri/include")
-
-if(BUILD_VINEYARD_IO_OSS)
-    set(BUILD_SAMPLE OFF CACHE BOOL "Build aliyun-oss-cpp-sdk samples" FORCE)
-    add_subdirectory("${PROJECT_SOURCE_DIR}/thirdparty/aliyun-oss-cpp-sdk"
-                     "${PROJECT_BINARY_DIR}/thirdparty/aliyun-oss-cpp-sdk"
-    )
-    set(OSS_LIBRARIES cpp-sdk)
-endif()
 
 # restore
 set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}" CACHE BOOL "Restore the default value" FORCE)
@@ -49,18 +37,6 @@ target_include_directories(vineyard_io PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libgrape-lite>
     $<INSTALL_INTERFACE:include>
 )
-
-if(BUILD_VINEYARD_IO_OSS)
-    target_include_directories(vineyard_io PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/aliyun-oss-cpp-sdk/sdk/include>
-        $<INSTALL_INTERFACE:include>
-    )
-    target_compile_definitions(vineyard_io PUBLIC -DOSS_ENABLED)
-    target_link_libraries(vineyard_io PRIVATE ${OSS_LIBRARIES}
-                                              ${CURL_LIBRARIES}
-                                              ${OPENSSL_LIBRARIES}
-    )
-endif()
 
 if(RDKAFKA_FOUND)
     target_include_directories(vineyard_io PUBLIC ${RDKAFKA_INCLUDE_DIRS})
@@ -118,24 +94,4 @@ foreach(fname ${PYTHON_IO_ADAPTORS})
     add_dependencies(vineyard_io_adaptors ${IO_BINARY_TOOL})
 endforeach()
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/adaptors/ossfs.py
-        DESTINATION bin
-)
-
-# install driver's registry script
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/stream.py
-        DESTINATION share/vineyard
-        RENAME 01-stream.py
-)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/ssh.sh
-              ${CMAKE_CURRENT_SOURCE_DIR}/python/kube_ssh.sh
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-                    GROUP_READ GROUP_EXECUTE
-                    WORLD_READ WORLD_EXECUTE
-        DESTINATION share/vineyard
-)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/requirements.txt
-        DESTINATION share/vineyard
-)
-
-
+configure_file(setup.cfg.in "${CMAKE_CURRENT_SOURCE_DIR}/setup.cfg" @ONLY)

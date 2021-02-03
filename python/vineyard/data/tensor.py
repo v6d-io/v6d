@@ -55,7 +55,10 @@ def tensor_resolver(obj):
 
     value_type = normalize_dtype(value_name, meta.get('value_type_meta_', None))
     shape = from_json(meta['shape_'])
-    order = from_json(meta['order_'])
+    if 'order_' in meta:
+        order = from_json(meta['order_'])
+    else:
+        order = 'C'
     if np.prod(shape) == 0:
         return np.zeros(shape, dtype=value_type)
     c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)

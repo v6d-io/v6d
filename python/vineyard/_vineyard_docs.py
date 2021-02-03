@@ -17,7 +17,7 @@ def add_doc(target, doc):
 
 add_doc(
     connect, r'''
-.. function:: connect(endpoint: str) -> IPCClient or RPCClient
+.. function:: connect(endpoint: str) -> IPCClient
     :noindex:
 
     Connect to vineyard via UNIX domain socket for IPC service:
@@ -26,16 +26,9 @@ add_doc(
 
         client = vineyard.connect('/var/run/vineyard.sock')
 
-    or connect to vineyard's TCP socket for RPC service:
-
-    .. code:: python
-
-        client = vineyard.connect('127.0.0.01')
-
     Parameters:
         endpoint: str
-            UNIX domain socket path to setup an IPC connection, or TCP endpoint
-            in format :code:`host:port` to setup an RPC connection.
+            UNIX domain socket path to setup an IPC connection.
 
     Returns:
         IPCClient: The connected IPC client.
@@ -130,6 +123,10 @@ add_doc(ObjectMeta.id, r'''
 The corresponding object ID of this metadata.
 ''')
 
+add_doc(ObjectMeta.signature, r'''
+The corresponding object signature of this metadata.
+''')
+
 add_doc(ObjectMeta.typename, r'''
 The :code:`"typename"` attribute of this metadata.
 ''')
@@ -144,6 +141,21 @@ The :code:`"instance_id"` of vineyard instance that the metadata been placed on.
 
 add_doc(ObjectMeta.islocal, r'''
 True if the object is a local object, otherwise a global object or remote object.
+''')
+
+add_doc(ObjectMeta.isglobal, r'''
+True if the object is a global object, otherwise a local object or remote object.
+''')
+
+add_doc(
+    ObjectMeta.set_global, r'''
+.. method: set_global(global: bool = true)
+    :noindex:
+
+Mark the building object as a global object.
+
+Parameters:
+    global: bool, default is True
 ''')
 
 add_doc(
@@ -234,7 +246,7 @@ Parameters:
     key: str
         The name of the new metadata entry.
 
-    value: str, int, float or list of int
+    value: str, int, float, bool or list of int
         The value of the new metadata entry.
 
         +  When the value is a :class:`str`, it will be convert to string at first.
@@ -280,6 +292,10 @@ add_doc(Object.id, r'''
 The object id of this object.
 ''')
 
+add_doc(Object.signature, r'''
+The object signature of this object.
+''')
+
 add_doc(Object.meta, r'''
 The metadata of this object.
 ''')
@@ -320,6 +336,10 @@ add_doc(
     Object.ispersist, r'''
 Whether the object is a persistent object. The word "persistent" means the object could
 be seen by clients that connect to other vineyard server instances.
+''')
+
+add_doc(Object.isglobal, r'''
+Whether the object is a global object.
 ''')
 
 add_doc(ObjectBuilder, r'''
@@ -800,6 +820,10 @@ A :class:`BlobBuilder` can only be explicitly created using the :meth:`IPCClient
 See Also:
     IPCClient.create_blob
     IPCClient.create_empty_blob
+''')
+
+add_doc(BlobBuilder.id, r'''
+ObjectID of this blob builder.
 ''')
 
 add_doc(BlobBuilder.size, r'''

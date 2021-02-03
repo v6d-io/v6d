@@ -86,19 +86,90 @@ Status DataFrameBuilder::Build(Client& client) {
   return Status::OK();
 }
 
+void GlobalDataFrame::Construct(const ObjectMeta& meta) {
+  std::string __type_name = type_name<GlobalDataFrame>();
+  CHECK(meta.GetTypeName() == __type_name);
+  this->meta_ = meta;
+  this->id_ = meta.GetId();
+
+  meta.GetKeyValue("partition_shape_row_", this->partition_shape_row_);
+  meta.GetKeyValue("partition_shape_column_", this->partition_shape_column_);
+
+  for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("partitions_-size");
+       ++__idx) {
+    auto chunk = std::dynamic_pointer_cast<DataFrame>(
+        meta.GetMember("partitions_-" + std::to_string(__idx)));
+    this->partitions_[chunk->meta().GetInstanceId()].emplace_back(chunk);
+  }
+
+  if (meta.IsLocal()) {
+    this->PostConstruct(meta);
+  }
+}
+
 const std::pair<size_t, size_t> GlobalDataFrame::partition_shape() const {
   return std::make_pair(this->partition_shape_row_,
                         this->partition_shape_column_);
 }
 
-const std::vector<std::shared_ptr<Object>>& GlobalDataFrame::LocalPartitions(
+const std::vector<std::shared_ptr<DataFrame>>& GlobalDataFrame::LocalPartitions(
     Client& client) const {
-  return objects_.ObjectsAt(client.instance_id());
+  return partitions_.at(client.instance_id());
 }
 
-const std::vector<std::shared_ptr<Object>>& GlobalDataFrame::LocalPartitions(
+const std::vector<std::shared_ptr<DataFrame>>& GlobalDataFrame::LocalPartitions(
     const InstanceID instance_id) const {
-  return objects_.ObjectsAt(instance_id);
+  return partitions_.at(instance_id);
+}
+
+std::shared_ptr<Object> GlobalDataFrameBaseBuilder::_Seal(Client& client) {
+  // ensure the builder hasn't been sealed yet.
+  ENSURE_NOT_SEALED(this);
+
+  {
+    // trigger an remote sync.
+    json dummy;
+    VINEYARD_SUPPRESS(client.GetData(InvalidObjectID(), dummy, true, false));
+  }
+
+  VINEYARD_CHECK_OK(this->Build(client));
+  auto __value = std::make_shared<GlobalDataFrame>();
+
+  size_t __value_nbytes = 0;
+
+  __value->meta_.SetTypeName(type_name<GlobalDataFrame>());
+  if (std::is_base_of<GlobalObject, GlobalDataFrame>::value) {
+    __value->meta_.SetGlobal(true);
+  }
+
+  __value->partition_shape_row_ = partition_shape_row_;
+  __value->meta_.AddKeyValue("partition_shape_row_",
+                             __value->partition_shape_row_);
+
+  __value->partition_shape_column_ = partition_shape_column_;
+  __value->meta_.AddKeyValue("partition_shape_column_",
+                             __value->partition_shape_column_);
+
+  size_t __partitions__idx = 0;
+  for (auto& __partitions__value : partitions_) {
+    auto __value_partitions_ = client.GetObject<DataFrame>(__partitions__value);
+    __value->partitions_[__value_partitions_->meta().GetInstanceId()]
+        .emplace_back(__value_partitions_);
+    __value->meta_.AddMember("partitions_-" + std::to_string(__partitions__idx),
+                             __partitions__value);
+    __value_nbytes += __value_partitions_->nbytes();
+    __partitions__idx += 1;
+  }
+  __value->meta_.AddKeyValue("partitions_-size", __value->partitions_.size());
+
+  __value->meta_.SetNBytes(__value_nbytes);
+
+  VINEYARD_CHECK_OK(client.CreateMetaData(__value->meta_, __value->id_));
+
+  // mark the builder as sealed
+  this->set_sealed(true);
+
+  return std::static_pointer_cast<Object>(__value);
 }
 
 const std::pair<size_t, size_t> GlobalDataFrameBuilder::partition_shape()
@@ -113,14 +184,15 @@ void GlobalDataFrameBuilder::set_partition_shape(
   this->set_partition_shape_column_(partition_shape_column);
 }
 
-void GlobalDataFrameBuilder::AddPartition(const InstanceID instance_id,
-                                          ObjectID const partition_id) {
-  object_set_builder_.AddObject(instance_id, partition_id);
+void GlobalDataFrameBuilder::AddPartition(ObjectID const partition_id) {
+  this->add_partitions_(partition_id);
 }
 
 void GlobalDataFrameBuilder::AddPartitions(
-    const InstanceID instance_id, const std::vector<ObjectID>& partition_ids) {
-  object_set_builder_.AddObjects(instance_id, partition_ids);
+    const std::vector<ObjectID>& partition_ids) {
+  for (auto const& partition_id : partition_ids) {
+    this->add_partitions_(partition_id);
+  }
 }
 
 std::shared_ptr<Object> GlobalDataFrameBuilder::_Seal(Client& client) {
@@ -130,9 +202,6 @@ std::shared_ptr<Object> GlobalDataFrameBuilder::_Seal(Client& client) {
   return object;
 }
 
-Status GlobalDataFrameBuilder::Build(Client& client) {
-  this->set_objects_(object_set_builder_.Seal(client));
-  return Status::OK();
-}
+Status GlobalDataFrameBuilder::Build(Client& client) { return Status::OK(); }
 
 }  // namespace vineyard

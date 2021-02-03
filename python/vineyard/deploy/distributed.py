@@ -17,12 +17,16 @@
 #
 
 import contextlib
+import logging
 import pkg_resources
 import subprocess
+import sys
 import textwrap
 import time
 
 from .utils import start_etcd, ssh_base_cmd
+
+logger = logging.getLogger('vineyard')
 
 
 @contextlib.contextmanager
@@ -99,7 +103,7 @@ def start_vineyardd(hosts=None,
             proc = subprocess.Popen(ssh_base_cmd(host) + command,
                                     env=env,
                                     stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
+                                    stderr=sys.__stderr__,
                                     universal_newlines=True,
                                     encoding='utf-8')
             procs.append(proc)
@@ -111,10 +115,10 @@ def start_vineyardd(hosts=None,
                 raise RuntimeError('vineyardd exited unexpectedly with code %d: error is:\n%s' % (rc, err))
         yield procs, socket
     finally:
-        print('Distributed vineyardd being killed')
+        logger.info('Distributed vineyardd being killed')
         for proc in procs:
             if proc.poll() is None:
-                print('killing the vineyardd')
+                logger.info('killing the vineyardd')
                 proc.kill()
         if etcd_ctx is not None:
             etcd_ctx.__exit__(None, None, None)  # pylint: disable=no-member

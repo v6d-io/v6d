@@ -88,6 +88,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::ShallowCopyRequest;
   } else if (str_type == "open_stream_request") {
     return CommandType::OpenStreamRequest;
+  } else if (str_type == "migrate_object_request") {
+    return CommandType::MigrateObjectRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -328,20 +330,22 @@ Status ReadCreateDataRequest(const json& root, json& content) {
   return Status::OK();
 }
 
-void WriteCreateDataReply(const ObjectID& id, const InstanceID& instance_id,
-                          std::string& msg) {
+void WriteCreateDataReply(const ObjectID& id, const Signature& signature,
+                          const InstanceID& instance_id, std::string& msg) {
   json root;
   root["type"] = "create_data_reply";
   root["id"] = id;
+  root["signature"] = signature;
   root["instance_id"] = instance_id;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateDataReply(const json& root, ObjectID& id,
+Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& signature,
                            InstanceID& instance_id) {
   CHECK_IPC_ERROR(root, "create_data_reply");
   id = root["id"].get<ObjectID>();
+  signature = root["signature"].get<Signature>();
   instance_id = root["instance_id"].get<InstanceID>();
   return Status::OK();
 }
@@ -607,6 +611,46 @@ void WriteDropNameReply(std::string& msg) {
 
 Status ReadDropNameReply(const json& root) {
   CHECK_IPC_ERROR(root, "drop_name_reply");
+  return Status::OK();
+}
+
+void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
+                               const std::string& peer,
+                               std::string const& peer_rpc_endpoint,
+                               std::string& msg) {
+  json root;
+  root["type"] = "migrate_object_request";
+  root["object_id"] = object_id;
+  root["local"] = local;
+  root["peer"] = peer;
+  root["peer_rpc_endpoint"] = peer_rpc_endpoint,
+
+  encode_msg(root, msg);
+}
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id,
+                                bool& local, std::string& peer,
+                                std::string& peer_rpc_endpoint) {
+  RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
+                   "migrate_object_request");
+  object_id = root["object_id"].get<ObjectID>();
+  local = root["local"].get<bool>();
+  peer = root["peer"].get_ref<std::string const&>();
+  peer_rpc_endpoint = root["peer_rpc_endpoint"].get_ref<std::string const&>();
+  return Status::OK();
+}
+
+void WriteMigrateObjectReply(const ObjectID& object_id, std::string& msg) {
+  json root;
+  root["type"] = "migrate_object_reply";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMigrateObjectReply(const json& root, ObjectID& object_id) {
+  CHECK_IPC_ERROR(root, "migrate_object_reply");
+  object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
 

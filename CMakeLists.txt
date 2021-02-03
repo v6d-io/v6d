@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 1)
-set(VINEYARD_PATCH_VERSION 6)
+set(VINEYARD_PATCH_VERSION 9)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
 if(POLICY CMP0025)
@@ -15,6 +15,8 @@ endif()
 project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
+
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
@@ -136,7 +138,7 @@ macro(find_common_libraries)
     include("cmake/FindGFlags.cmake")
     include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 
-    if(NOT BUILD_SHARED_LIBS)
+    if(NOT BUILD_SHARED_LIBS AND USE_STATIC_BOOST_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
         set(Boost_USE_STATIC_RUNTIME ON)
     endif()
@@ -180,10 +182,14 @@ macro(find_openssl_libraries)
             endif()
         endif()
     endif()
-    find_package(OpenSSL REQUIRED)
-    include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+    find_package(OpenSSL ${ARGN})
+    if (OPENSSL_FOUND)
+        include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+    endif()
 endmacro(find_openssl_libraries)
 
+# find openssl first since apache-arrow may requires that (on MacOS, installed by brew)
+find_openssl_libraries(QUIET)
 find_common_libraries()
 
 if (CMAKE_VERSION VERSION_LESS "3.1")
@@ -254,7 +260,7 @@ add_custom_target(vineyard_tests)
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
-    find_openssl_libraries()
+    find_openssl_libraries(REQUIRED)
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
@@ -276,7 +282,7 @@ if(BUILD_VINEYARD_SERVER)
     install_vineyard_target(vineyardd)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/server")
     if(NOT BUILD_SHARED_LIBS)
-        if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
             target_compile_options(vineyardd PRIVATE -static-libgcc -static-libstdc++ -Os)
             add_target_link_options(vineyardd PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
         endif()

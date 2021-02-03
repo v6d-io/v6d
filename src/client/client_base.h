@@ -92,7 +92,8 @@ class ClientBase {
    *
    * @return Status that indicates whether the create action has succeeded.
    */
-  Status CreateData(const json& tree, ObjectID& id, InstanceID& instance_id);
+  Status CreateData(const json& tree, ObjectID& id, Signature& signature,
+                    InstanceID& instance_id);
 
   /**
    * @brief Create the metadata in the vineyard server, after created, the
@@ -246,6 +247,17 @@ class ClientBase {
   Status DropName(const std::string& name);
 
   /**
+   * @brief Migrate remote object to local.
+   *
+   * @param object_id The existing object that will be migrated to current
+   * vineyardd.
+   * @param result_id Record the result object id.
+   *
+   * @return Status that indicates if the migration success.
+   */
+  Status MigrateObject(const ObjectID object_id, ObjectID& result_id);
+
+  /**
    * @brief Check if the client still connects to the vineyard server.
    *
    * @return True when the connection is still alive, otherwise false.
@@ -326,6 +338,15 @@ class ClientBase {
   Status doRead(std::string& message_in);
 
   Status doRead(json& root);
+
+  /**
+   * @brief Implementation for migrate remote object to local.
+   *
+   * @return Status that indicates if the migration success.
+   */
+  Status migrateObjectImpl(const ObjectID object_id, ObjectID& result_id,
+                           bool const local, std::string const& peer,
+                           std::string const& peer_rpc_endpoint);
 
   mutable bool connected_;
   std::string ipc_socket_;

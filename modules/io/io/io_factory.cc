@@ -26,7 +26,6 @@ limitations under the License.
 
 #include "io/io/kafka_io_adaptor.h"
 #include "io/io/local_io_adaptor.h"
-#include "io/io/oss_io_adaptor.h"
 
 namespace vineyard {
 
@@ -56,10 +55,6 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
 #ifdef KAFKA_ENABLED
   } else if (scheme == "kafka") {
     return std::unique_ptr<KafkaIOAdaptor>(new KafkaIOAdaptor(location));
-#endif
-#ifdef OSS_ENABLED
-  } else if (scheme == "oss") {
-    return std::unique_ptr<OSSIOAdaptor>(new OSSIOAdaptor(location));
 #endif
   }
   LOG(ERROR) << "Unimplemented adaptor for the scheme: " << scheme;
