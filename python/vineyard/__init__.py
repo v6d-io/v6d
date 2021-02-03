@@ -115,8 +115,10 @@ def _init_vineyard_modules():
     import glob
     import importlib.util
     import os
-    import sys
     import pkgutil
+    import site
+    import sys
+    import sysconfig
 
     def _import_module_from_file(filepath):
         filepath = os.path.expanduser(os.path.expandvars(filepath))
@@ -145,8 +147,33 @@ def _init_vineyard_modules():
     for filepath in glob.glob(os.path.expanduser('$HOME/.vineyard/*-*.py')):
         _import_module_from_file(filepath)
 
-    for _, mod, _ in pkgutil.iter_modules([os.path.join(os.path.dirname(__file__), 'drivers')]):
-        _import_module_from_qualified_name('vineyard.drivers.%s' % mod)
+    package_sites = set()
+    pkg_sites = site.getsitepackages()
+    if not isinstance(pkg_sites, (list, tuple)):
+        pkg_sites = [pkg_sites]
+    package_sites.update(pkg_sites)
+    pkg_sites = site.getusersitepackages()
+    if not isinstance(pkg_sites, (list, tuple)):
+        pkg_sites = [pkg_sites]
+    package_sites.update(pkg_sites)
+
+    paths = sysconfig.get_paths()
+    if 'purelib' in paths:
+        package_sites.add(paths['purelib'])
+    if 'platlib' in paths:
+        package_sites.add(paths['purelib'])
+
+    # add relative path
+    package_sites.add(os.path.join(os.path.dirname(__file__), '..'))
+
+    # dedup
+    deduped = set()
+    for pkg_site in package_sites:
+        deduped.add(os.path.abspath(pkg_site))
+
+    for pkg_site in deduped:
+        for _, mod, _ in pkgutil.iter_modules([os.path.join(pkg_site, 'vineyard', 'drivers')]):
+            _import_module_from_qualified_name('vineyard.drivers.%s' % mod)
 
 
 try:
