@@ -71,7 +71,8 @@ class ScriptLauncher(Launcher):
                                       stderr=subprocess.PIPE)
         self._status = LauncherStatus.RUNNING
 
-        self._listen_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, ))
+        self.err_message = []
+        self._listen_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, self._proc.stderr))
         self._listen_thrd.daemon = True
         self._listen_thrd.start()
 
@@ -101,18 +102,21 @@ class ScriptLauncher(Launcher):
         if r is not None:
             return r
         raise RuntimeError('Failed to launch job [%s], exited with %r: %s' %
-                           (self._cmd, self._proc.poll(), self._proc.stderr.read()))
+                           (self._cmd, self._proc.poll(), ''.join(self.err_message)))
 
-    def read_output(self, stream):
+    def read_output(self, stdout, stderr):
         while self._proc.poll() is None:
-            line = stream.readline()
+            line = stdout.readline()
             self.parse(line)
             logger.debug(line)
+
+            self.err_message.append(stderr.readline())
 
         # consume all extra lines if the proc exits.
-        for line in stream.readlines():
+        for line in stdout.readlines():
             self.parse(line)
             logger.debug(line)
+        self.err_message.extend(stderr.readlines())
 
     def join(self):
         if self._proc.wait():
