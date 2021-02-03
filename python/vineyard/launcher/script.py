@@ -37,7 +37,8 @@ class ScriptLauncher(Launcher):
         super(ScriptLauncher, self).__init__()
         self._script = script
         self._proc = None
-        self._listen_thrd = None
+        self._listen_out_thrd = None
+        self._listen_err_thrd = None
         self._cmd = None
 
     def run(self, *args, **kw):
@@ -71,10 +72,13 @@ class ScriptLauncher(Launcher):
                                       stderr=subprocess.PIPE)
         self._status = LauncherStatus.RUNNING
 
+        self._listen_out_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, ))
+        self._listen_out_thrd.daemon = True
+        self._listen_out_thrd.start()
         self.err_message = []
-        self._listen_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, self._proc.stderr))
-        self._listen_thrd.daemon = True
-        self._listen_thrd.start()
+        self._listen_err_thrd = threading.Thread(target=self.read_err, args=(self._proc.stderr, ))
+        self._listen_err_thrd.daemon = True
+        self._listen_err_thrd.start()
 
     def wait(self, timeout=None):
         # a fast wait: to use existing response directly, since the io adaptor may finish immediately.
@@ -104,18 +108,23 @@ class ScriptLauncher(Launcher):
         raise RuntimeError('Failed to launch job [%s], exited with %r: %s' %
                            (self._cmd, self._proc.poll(), ''.join(self.err_message)))
 
-    def read_output(self, stdout, stderr):
+    def read_output(self, stdout):
         while self._proc.poll() is None:
             line = stdout.readline()
-            self.parse(line)
-            logger.debug(line)
-
-            self.err_message.append(stderr.readline())
+            if line:
+                self.parse(line)
+                logger.debug(line)
 
         # consume all extra lines if the proc exits.
         for line in stdout.readlines():
             self.parse(line)
             logger.debug(line)
+
+    def read_err(self, stderr):
+        while self._proc.poll() is None:
+            line = stderr.readline()
+            if line:
+                self.err_message.append(line)
         self.err_message.extend(stderr.readlines())
 
     def join(self):
@@ -125,7 +134,8 @@ class ScriptLauncher(Launcher):
             self._status = LauncherStatus.SUCCEED
 
         # makes the listen thread exits.
-        self._listen_thrd.join()
+        self._listen_out_thrd.join()
+        self._listen_err_thrd.join()
 
     def dispose(self, desired=True):
         if self._status == LauncherStatus.RUNNING:

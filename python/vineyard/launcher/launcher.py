@@ -167,5 +167,6 @@ class Launcher(object):
     def on_exit(self, exit_content):
         ''' The on-exit handle, can be overrided to process events with type "exit".
         '''
-        print(exit_content, file=sys.stderr)
+        if exit_content and exit_content.strip():
+            print(exit_content, file=sys.stderr)
         self.dispose(True)

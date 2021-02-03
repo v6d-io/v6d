@@ -43,7 +43,7 @@ def read(path, *args, **kwargs):
             or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
-    if read.__factory and read.__factory[parsed.scheme]:
+    if read.__factory and read.__factory.get(parsed.scheme):
         errors = []
         for reader in read.__factory[parsed.scheme][::-1]:
             try:
@@ -78,7 +78,7 @@ def write(path, stream, *args, **kwargs):
             or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
-    if write.__factory and write.__factory[parsed.scheme]:
+    if write.__factory and write.__factory.get(parsed.scheme):
         errors = []
         for writer in write.__factory[parsed.scheme][::-1]:
             try:
