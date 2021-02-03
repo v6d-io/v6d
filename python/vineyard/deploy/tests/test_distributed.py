@@ -39,7 +39,7 @@ def test_get_after_persist(vineyard_ipc_sockets):
     data = np.ones((1, 2, 3, 4, 5))
     o = client1.put(data)
     client1.persist(o)
-    meta = client2.get_meta(o)
+    meta = client2.get_meta(o, True)
     assert data.shape == tuple(json.loads(meta['shape_']))
 
 
@@ -75,5 +75,5 @@ def test_add_remote_placeholder(vineyard_ipc_sockets):
     tupid = client1.create_metadata(meta)
     client1.persist(tupid)
 
-    meta = client2.get_meta(tupid)
+    meta = client2.get_meta(tupid, True)
     assert meta['__elements_-size'] == 4
