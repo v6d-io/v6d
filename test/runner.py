@@ -194,7 +194,6 @@ def get_data_path(name):
 
 def run_invalid_client_test(host, port):
     def send_garbage_bytes(bytes):
-        import socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))
         sock.sendall(bytes)

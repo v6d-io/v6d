@@ -20,7 +20,6 @@ import itertools
 import json
 import logging
 
-import pandas as pd
 import pytest
 import numpy as np
 
