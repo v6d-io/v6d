@@ -49,6 +49,9 @@ RUN cd /work/libvineyard && \
     cd .. && \
     /opt/python/$python/bin/python setup.py bdist_wheel && \
     export LD_LIBRARY_PATH=/work/libvineyard/build/lib:$LD_LIBRARY_PATH && \
+    for pylibs in /opt/_internal/tools/lib/*; \
+        do sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py; \
+    done && \
     for wheel in `ls dist/*`; do auditwheel repair -w fixed_wheels $wheel; done && \
     cd /work && \
     mkdir -p fixed_wheels/ && \

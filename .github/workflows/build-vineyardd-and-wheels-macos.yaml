@@ -1,4 +1,4 @@
-# Copyright 2020 Alibaba Group Holding Limited.
+# Copyright 2020-2021 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Build Wheel
+name: Build Packages for MacOS
 
 on:
   push:
@@ -28,11 +28,192 @@ on:
     - 'src/**'
 
 jobs:
-  build:
+  build-vineyardd:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-10.15]
+        os: [macos-10.15]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Generate Summary for Submodules
+        run: |
+          git submodule > git-modules.txt
+          cat git-modules.txt
+
+      - name: Cache for cccahe
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ${{ matrix.os }}-vineyardd-ccache-${{ hashFiles('**/git-modules.txt') }}
+          restore-keys: |
+            ${{ matrix.os }}-vineyardd-ccache-
+
+      - name: Install dependencies for MacOS
+        run: |
+          brew update
+          brew install ccache boost coreutils grpc protobuf openssl
+
+          export CC=clang
+          export CXX=clang++
+
+          export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH:$HOME/.local/bin
+          export MACOSX_DEPLOYMENT_TARGET=10.9
+
+          echo "Installing gflags ..."
+          cd /tmp
+          curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
+          tar zxf gflags-v2.2.2.tar.gz
+          cd gflags-2.2.2
+          mkdir -p build-dir
+          cd build-dir
+          cmake .. -DBUILD_SHARED_LIBS=OFF
+          make install -j`nproc`
+
+          echo "Installing glog ..."
+          cd /tmp
+          curl -L https://github.com/google/glog/archive/v0.4.0.tar.gz --output glog-v0.4.0.tar.gz
+          tar zxf glog-v0.4.0.tar.gz
+          cd glog-0.4.0
+          mkdir -p build-dir
+          cd build-dir
+          cmake .. -DBUILD_SHARED_LIBS=OFF \
+                   -DBUILD_TESTING=OFF
+          make install -j`nproc`
+
+          echo "Installing apache-arrow ..."
+          cd /tmp
+          curl -L https://github.com/apache/arrow/archive/apache-arrow-1.0.1.tar.gz --output apache-arrow-1.0.1.tar.gz
+          tar zxf apache-arrow-1.0.1.tar.gz
+          cd arrow-apache-arrow-1.0.1
+          mkdir -p build-dir
+          cd build-dir
+          cmake ../cpp \
+              -DARROW_COMPUTE=OFF \
+              -DARROW_WITH_UTF8PROC=OFF \
+              -DARROW_CSV=OFF \
+              -DARROW_CUDA=OFF \
+              -DARROW_DATASET=OFF \
+              -DARROW_FILESYSTEM=OFF \
+              -DARROW_FLIGHT=OFF \
+              -DARROW_GANDIVA=OFF \
+              -DARROW_GANDIVA_JAVA=OFF \
+              -DARROW_HDFS=OFF \
+              -DARROW_HIVESERVER2=OFF \
+              -DARROW_JSON=OFF \
+              -DARROW_ORC=OFF \
+              -DARROW_PARQUET=OFF \
+              -DARROW_PLASMA=OFF \
+              -DARROW_PLASMA_JAVA_CLIENT=OFF \
+              -DARROW_PYTHON=OFF \
+              -DARROW_S3=OFF \
+              -DARROW_WITH_BZ2=OFF \
+              -DARROW_WITH_ZLIB=OFF \
+              -DARROW_WITH_LZ4=OFF \
+              -DARROW_WITH_SNAPPY=OFF \
+              -DARROW_WITH_ZSTD=OFF \
+              -DARROW_WITH_BROTLI=OFF \
+              -DARROW_IPC=ON \
+              -DARROW_BUILD_BENCHMARKS=OFF \
+              -DARROW_BUILD_EXAMPLES=OFF \
+              -DARROW_BUILD_INTEGRATION=OFF \
+              -DARROW_BUILD_UTILITIES=OFF \
+              -DARROW_BUILD_TESTS=OFF \
+              -DARROW_ENABLE_TIMING_TESTS=OFF \
+              -DARROW_FUZZING=OFF \
+              -DARROW_USE_ASAN=OFF \
+              -DARROW_USE_TSAN=OFF \
+              -DARROW_USE_UBSAN=OFF \
+              -DARROW_JEMALLOC=OFF \
+              -DARROW_BUILD_SHARED=OFF \
+              -DARROW_BUILD_STATIC=ON
+          make install -j`nproc`
+
+      - name: Build vineyardd on MacOS
+        run: |
+          export CC=clang
+          export CXX=clang++
+
+          export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH:$HOME/.local/bin
+          export MACOSX_DEPLOYMENT_TARGET=10.9
+
+          # patch cpprestsdk, that is not used, and the cases cannot be handled by delocate well,
+          #
+          # see also: https://github.com/matthew-brett/delocate/issues/89
+          sed -i "" 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
+          sed -i "" 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
+
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_VINEYARD_SERVER=ON \
+            -DBUILD_VINEYARD_CLIENT=OFF \
+            -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
+            -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
+            -DBUILD_VINEYARD_BASIC=OFF \
+            -DBUILD_VINEYARD_GRAPH=OFF \
+            -DBUILD_VINEYARD_IO=OFF \
+            -DBUILD_VINEYARD_MIGRATION=OFF \
+            -DBUILD_VINEYARD_TESTS=OFF \
+            -DBUILD_VINEYARD_TESTS_ALL=OFF \
+            -DBUILD_VINEYARD_PROFILING=OFF
+
+          make vineyardd -j`nproc`
+          cp ./bin/vineyardd ../vineyardd
+
+      - name: Package vineyardd artifact on MacOS
+        run: |
+          sha512sum ./vineyardd > vineyardd.${{ github.sha }}.sha512sum
+          echo "Checksum is: "
+          cat ./*.sha512sum
+          tar zcvfh vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ github.sha }}.sha512sum
+
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+
+      - name: Upload vineyardd to latest release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'alibaba/libvineyard' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          asset_name: vineyardd-latest-macos_x86-64.tar.gz
+          tag: latest
+          prerelease: true
+          overwrite: true
+          body: "prerelease for latest vineyard"
+
+      - name: Upload vineyardd to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/libvineyard' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          asset_name: vineyardd-${{ steps.tag.outputs.TAG }}-macos_x86-64.tar.gz
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard ${{ steps.tag.outputs.TAG }}"
+
+      - name: Upload CI artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          path: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+
+
+  build-wheels:
+    needs: [build-vineyardd]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-10.15]
         python: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39]
 
     steps:
@@ -53,19 +234,15 @@ jobs:
           restore-keys: |
             ${{ matrix.os }}-${{ matrix.python }}-ccache-
 
-      - name: Login docker registry
-        if: runner.os == 'Linux'
-        run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://docker.pkg.github.com -u $GITHUB_ACTOR --password-stdin
+      - name: Download vineyardd artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
 
-      - name: Build wheel package on Linux
-        if: runner.os == 'Linux'
+      - name: Prepare vineyardd binary
         run: |
-          sudo docker build . -f docker/pypa/Dockerfile.manylinux1-wheel \
-                              -t docker.pkg.github.com/alibaba/libvineyard/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
-                              --build-arg python=${{ matrix.python }}
-          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/alibaba/libvineyard/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
-          ls -la ./fixed_wheels/
+          tar zxvf vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          mv vineyardd python/vineyard/vineyardd
 
       - name: Install python for MacOS
         if: runner.os == 'macOS'
@@ -91,7 +268,8 @@ jobs:
       - name: Install dependencies for MacOS
         if: runner.os == 'macOS'
         run: |
-          brew install ccache boost coreutils
+          brew update
+          brew install ccache boost coreutils grpc protobuf openssl
 
           export CC=clang
           export CXX=clang++
