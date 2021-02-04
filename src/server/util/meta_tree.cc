@@ -460,8 +460,13 @@ static void generate_persist_ops(json& diff, const std::string& name,
       if (global_object) {
         std::string sub_sig =
             SignatureToString(item.value()["signature"].get<Signature>());
-        ops.emplace_back(
-            IMetaService::op_t::Put("/signatures/" + sub_sig, sub_name));
+        // a global object may refer a local object multiple times using
+        // the different key.
+        if (dedup.find(sub_sig) == dedup.end()) {
+          dedup.emplace(sub_sig);
+          ops.emplace_back(
+              IMetaService::op_t::Put("/signatures/" + sub_sig, sub_name));
+        }
         sub_name = sub_sig;
       }
 
