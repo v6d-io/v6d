@@ -132,6 +132,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                        const std::string& peer,
                        const std::string& peer_rpc_endpoint,
                        callback_t<const ObjectID&> callback);
+  
+  Status MigrateStream(const ObjectID object_id, const bool local,
+                       const std::string& peer,
+                       const std::string& peer_rpc_endpoint,
+                       callback_t<const ObjectID&> callback);
 
   Status ClusterInfo(callback_t<const json&> callback);
 

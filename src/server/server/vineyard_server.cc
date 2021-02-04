@@ -588,6 +588,67 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
   return Status::OK();
 }
 
+Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
+                                     const std::string& peer,
+                                     const std::string& peer_rpc_endpoint,
+                                     callback_t<const ObjectID&> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  static const std::string migrate_process = "vineyard-migrate-stream";
+
+  if (local) {
+    std::vector<std::string> args = {
+        "--client",       "true",
+        "--ipc_socket",   IPCSocket(),
+        "--rpc_endpoint", peer_rpc_endpoint,
+        "--host",         peer,
+        "--id",           VYObjectIDToString(stream_id)};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start(
+        migrate_process, args,
+        [self, callback, proc, stream_id](Status const& status,
+                                          std::string const& line) {
+          if (status.ok()) {
+            ObjectID result_id = VYObjectIDFromString(line);
+            callback(Status::OK(), result_id);
+            proc->Wait();
+            if (proc->ExitCode() != 0) {
+              return Status::IOError("The migration client exit abnormally");
+            }
+            return Status::OK();
+          } else {
+            proc->Terminate();
+            return callback(status, InvalidObjectID());
+          }
+          return Status::OK();
+        });
+  } else {
+    std::vector<std::string> args = {"--server",       "true",
+                                     "--ipc_socket",   IPCSocket(),
+                                     "--rpc_endpoint", peer_rpc_endpoint,
+                                     "--host",         "0.0.0.0"};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start(
+        migrate_process, args,
+        [callback, proc, stream_id](Status const& status,
+                                    std::string const& line) {
+          if (status.ok()) {
+            callback(Status::OK(), stream_id);
+            proc->Wait();
+            if (proc->ExitCode() != 0) {
+              return Status::IOError("The migration server exit abnormally");
+            }
+            return Status::OK();
+          } else {
+            proc->Terminate();
+            return callback(status, InvalidObjectID());
+          }
+        });
+  }
+  return Status::OK();
+}
+
+
 Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();
   meta_service_ptr_->RequestToGetData(

@@ -24,6 +24,7 @@ import pytest
 import numpy as np
 
 import vineyard
+import vineyard.io
 from vineyard.core import default_builder_context, default_resolver_context
 from vineyard.data import register_builtin_types
 
@@ -56,3 +57,29 @@ def test_migration(vineyard_ipc_sockets):
     assert o != o2
     np.testing.assert_allclose(client1.get(o1), client2.get(o2))
     logger.info('------- finish round 2 --------')
+
+@pytest.mark.skip()
+def test_stream_migration(vineyard_ipc_sockets, vineyard_endpoint, test_dataset):
+    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2))
+
+    stream = vineyard.io.open(
+        "file://%s/p2p-31.e" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_sockets[0],
+        vineyard_endpoint=vineyard_endpoint,
+        read_options={
+            "header_row": True,
+            "delimiter": " "
+        },
+    )
+
+    client = vineyard.connect(vineyard_ipc_sockets[1])
+    new_stream = client.migrate_stream(stream.id)
+
+    vineyard.io.open(
+        "file://%s/p2p-31.out" % test_dataset_tmp,
+        new_stream,
+        mode="w",
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+    )
+    assert filecmp.cmp("%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp)

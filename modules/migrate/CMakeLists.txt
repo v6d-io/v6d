@@ -26,3 +26,12 @@ target_link_libraries(vineyard-migrate vineyard_client
                                        ${GFLAGS_LIBRARIES}
 )
 install_vineyard_target(vineyard-migrate)
+
+# build vineyard-migrate-stream
+add_executable(vineyard-migrate-stream "vineyard_migrate_stream.cc")
+target_link_libraries(vineyard-migrate-stream vineyard_client
+                                              ${ARROW_SHARED_LIB}
+                                              ${Boost_LIBRARIES}
+                                              ${GFLAGS_LIBRARIES}
+)
+install_vineyard_target(vineyard-migrate-stream)
