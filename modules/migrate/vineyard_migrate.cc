@@ -205,7 +205,7 @@ Status RunClient() {
 #endif
     if (ec) {
       LOG(ERROR) << "Failed to connect to migration peer: " << ec.message();
-      usleep(static_cast<int>(1 * 1000));
+      usleep(static_cast<int>(1 * 1000000));
       retries += 1;
     } else {
       break;
