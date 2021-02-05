@@ -34,6 +34,13 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
+        "--vineyard-ipc-sockets",
+        action="store",
+        default='/tmp/vineyard.sock',
+        help='Location of vineyard IPC sockets, seperated by ","',
+    )
+
+    parser.addoption(
         '--vineyard-endpoint',
         action='store',
         default='127.0.0.1:9600',
@@ -82,10 +89,22 @@ def pytest_addoption(parser):
         help='Location of oss config to login oss server',
     )
 
+    parser.addoption(
+        '--with-migration',
+        action='store_true',
+        default=False,
+        help='Test with object migration enabled',
+    )
+
 
 @pytest.fixture(scope='session')
 def vineyard_ipc_socket(request):
     return request.config.option.vineyard_ipc_socket
+
+
+@pytest.fixture(scope='session')
+def vineyard_ipc_sockets(request):
+    return request.config.option.vineyard_ipc_sockets.split(',')
 
 
 @pytest.fixture(scope='session')
@@ -124,6 +143,11 @@ def oss_config(request):
 
 
 @pytest.fixture(scope='session')
+def with_migration(request):
+    return request.config.option.with_migration
+
+
+@pytest.fixture(scope='session')
 def vineyard_client(request):
     ipc_socket = request.config.option.vineyard_ipc_socket
     rpc_endpoint = request.config.option.vineyard_rpc_endpoint
@@ -139,12 +163,21 @@ def pytest_configure(config):
         "skip_without_hdfs(): skip HDFS test if HDFS service is not available",
     )
 
+    config.addinivalue_line(
+        "markers",
+        "skip_without_migration(): skip migration tests if object migration is not available",
+    )
 
 def pytest_runtest_setup(item):
     markers = [mark for mark in item.iter_markers(name='skip_without_hdfs')]
     if markers:
         if not item.config.option.with_hdfs:
             pytest.skip('Skip since HDFS service is not available')
+
+    markers = [mark for mark in item.iter_markers(name='skip_without_migration')]
+    if markers:
+        if not item.config.option.with_migration:
+            pytest.skip('Skip since object migration is not available')
 
 
 pytest_plugins = []
