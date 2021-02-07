@@ -31,6 +31,8 @@ limitations under the License.
 
 #include "grape/worker/comm_spec.h"
 
+#include "basic/ds/dataframe.h"
+#include "basic/ds/tensor.h"
 #include "basic/stream/dataframe_stream.h"
 #include "basic/stream/parallel_stream.h"
 #include "client/client.h"
@@ -53,13 +55,10 @@ limitations under the License.
 
 namespace vineyard {
 
-inline Status ReadRecordBatchesFromVineyard(
-    Client& client, const ObjectID object_id,
+inline Status ReadRecordBatchesFromVineyardStream(
+    Client& client, std::shared_ptr<ParallelStream>& pstream,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
     int part_num) {
-  auto pstream = client.GetObject<ParallelStream>(object_id);
-  RETURN_ON_ASSERT(pstream != nullptr,
-                   "Object not exists: " + VYObjectIDToString(object_id));
   auto local_streams = pstream->GetLocalStreams<DataframeStream>();
 
   size_t split_size = local_streams.size() / part_num +
@@ -100,15 +99,48 @@ inline Status ReadRecordBatchesFromVineyard(
   return Status::OK();
 }
 
+inline Status ReadRecordBatchesFromVineyardDataFrame(
+    Client& client, std::shared_ptr<GlobalDataFrame>& gdf,
+    std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
+    int part_num) {
+  auto local_chunks = gdf->LocalPartitions(client);
+  size_t split_size = local_chunks.size() / part_num +
+                      (local_chunks.size() % part_num == 0 ? 0 : 1);
+  int start_to_read = part_id * split_size;
+  int end_to_read = std::min(local_chunks.size(), (part_id + 1) * split_size);
+  for (int idx = start_to_read; idx != end_to_read; ++idx) {
+    batches.emplace_back(local_chunks[idx]->RecordBatchView());
+  }
+  return Status::OK();
+}
+
+inline Status ReadRecordBatchesFromVineyard(
+    Client& client, const ObjectID object_id,
+    std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
+    int part_num) {
+  auto source = client.GetObject(object_id);
+  RETURN_ON_ASSERT(source != nullptr,
+                   "Object not exists: " + VYObjectIDToString(object_id));
+  if (auto pstream = std::dynamic_pointer_cast<ParallelStream>(source)) {
+    return ReadRecordBatchesFromVineyardStream(client, pstream, batches,
+                                               part_id, part_num);
+  }
+  if (auto gdf = std::dynamic_pointer_cast<GlobalDataFrame>(source)) {
+    return ReadRecordBatchesFromVineyardDataFrame(client, gdf, batches, part_id,
+                                                  part_num);
+  }
+
+  return Status::Invalid(
+      "The source is not a parallel stream nor a global dataframe: " +
+      source->meta().GetTypeName());
+}
+
 /**
  * @brief When the stream is empty, the result `table` will be set as nullptr.
  */
-inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
-                                    std::shared_ptr<arrow::Table>& table,
-                                    int part_id, int part_num) {
-  auto pstream = client.GetObject<ParallelStream>(object_id);
-  RETURN_ON_ASSERT(pstream != nullptr,
-                   "Object not exists: " + VYObjectIDToString(object_id));
+inline Status ReadTableFromVineyardStream(
+    Client& client, std::shared_ptr<ParallelStream>& pstream,
+    std::shared_ptr<arrow::Table>& table, int part_id, int part_num) {
   auto local_streams = pstream->GetLocalStreams<DataframeStream>();
   size_t split_size = local_streams.size() / part_num +
                       (local_streams.size() % part_num == 0 ? 0 : 1);
@@ -150,6 +182,53 @@ inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
     table = ConcatenateTables(tables);
   }
   return Status::OK();
+}
+
+/**
+ * @brief When no local chunk, the result `table` will be set as nullptr.
+ */
+inline Status ReadTableFromVineyardDataFrame(
+    Client& client, std::shared_ptr<GlobalDataFrame>& gdf,
+    std::shared_ptr<arrow::Table>& table, int part_id, int part_num) {
+  auto local_chunks = gdf->LocalPartitions(client);
+  size_t split_size = local_chunks.size() / part_num +
+                      (local_chunks.size() % part_num == 0 ? 0 : 1);
+  int start_to_read = part_id * split_size;
+  int end_to_read = std::min(local_chunks.size(), (part_id + 1) * split_size);
+  std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+  batches.reserve(end_to_read - start_to_read);
+  for (int idx = start_to_read; idx != end_to_read; ++idx) {
+    batches.emplace_back(local_chunks[idx]->RecordBatchView());
+  }
+  if (batches.empty()) {
+    table = nullptr;
+    return Status::OK();
+  } else {
+    return RecordBatchesToTable(batches, &table);
+  }
+}
+
+/**
+ * @brief The result `table` will be set as nullptr.
+ */
+inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
+                                    std::shared_ptr<arrow::Table>& table,
+                                    int part_id, int part_num) {
+  auto source = client.GetObject(object_id);
+  RETURN_ON_ASSERT(source != nullptr,
+                   "Object not exists: " + VYObjectIDToString(object_id));
+  if (auto pstream = std::dynamic_pointer_cast<ParallelStream>(source)) {
+    return ReadTableFromVineyardStream(client, pstream, table, part_id,
+                                       part_num);
+  }
+  if (auto gdf = std::dynamic_pointer_cast<GlobalDataFrame>(source)) {
+    return ReadTableFromVineyardDataFrame(client, gdf, table, part_id,
+                                          part_num);
+  }
+
+  return Status::Invalid(
+      "The source is not a parallel stream nor a global dataframe: " +
+      source->meta().GetTypeName());
 }
 
 /** Note [GatherETables and GatherVTables]

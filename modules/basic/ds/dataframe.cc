@@ -42,6 +42,39 @@ const std::pair<size_t, size_t> DataFrame::shape() const {
   }
 }
 
+const std::shared_ptr<arrow::RecordBatch> DataFrame::RecordBatchView() const {
+  size_t num_columns = this->Columns().size();
+  int64_t num_rows = 0;
+  std::vector<std::shared_ptr<arrow::Array>> columns(num_columns);
+  std::vector<std::shared_ptr<arrow::Field>> fields(num_columns);
+  for (size_t i = 0; i < num_columns; ++i) {
+    // cast to arrow::Array
+    auto cname = this->Columns()[i];
+    std::string field_name;
+    if (cname.is_string()) {
+      field_name = cname.get_ref<std::string const&>();
+    } else {
+      field_name = json_to_string(cname);
+    }
+    auto df_col = this->Column(cname);
+    num_rows = df_col->shape()[0];
+    std::shared_ptr<arrow::Buffer> copied_buffer;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(
+        df_col->buffer()->Copy(0, df_col->buffer()->size(), &copied_buffer));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        copied_buffer,
+        df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
+#endif
+    columns[i] = arrow::MakeArray(arrow::ArrayData::Make(
+        FromAnyType(df_col->value_type()), num_rows, {nullptr, copied_buffer}));
+    fields[i] = std::make_shared<arrow::Field>(
+        field_name, FromAnyType(df_col->value_type()));
+  }
+  return arrow::RecordBatch::Make(arrow::schema(fields), num_rows, columns);
+}
+
 const std::pair<size_t, size_t> DataFrameBuilder::partition_index() const {
   return std::make_pair(this->partition_index_row_,
                         this->partition_index_column_);
