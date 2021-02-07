@@ -62,4 +62,4 @@ COPY --from=builder /tmp/etcd-v3.4.13-linux-amd64/etcd /usr/bin/etcd
 COPY --from=builder /work/libvineyard/build/bin/vineyardd /usr/bin/vineyardd
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["/usr/bin/vineyardd"]
+CMD ["/usr/local/bin/vineyardd"]

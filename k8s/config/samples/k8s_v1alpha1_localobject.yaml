@@ -1,0 +1,14 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: LocalObject
+metadata:
+  name: localobject-sample
+  labels:
+    k8s.v6d.io/signature: xxxx
+spec:
+  # Add fields here
+  id: o123
+  signature: s111
+  typename: vineyard::Array<int>
+  instance_id: 10
+  hostname: h1
+  metadata: "xxx"

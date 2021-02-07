@@ -1,7 +1,7 @@
 .. raw:: html
 
     <h1 align="center">
-        <img src="https://v6d.io/_static/vineyard_logo.png" width="397" alt="vineyard">
+        <img src="https://v6d.io/_static/vineyard-logo.png" width="397" alt="vineyard">
     </h1>
     <p align="center">
         an in-memory immutable data manager

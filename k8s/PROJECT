@@ -1,0 +1,14 @@
+domain: v6d.io
+layout: go.kubebuilder.io/v2
+projectName: vineyard
+repo: github.com/v6d-io/v6d/k8s
+resources:
+- group: k8s
+  kind: LocalObject
+  version: v1alpha1
+- group: k8s
+  kind: GlobalObject
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}

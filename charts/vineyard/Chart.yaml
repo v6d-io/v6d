@@ -36,4 +36,3 @@ version: 0.2.1
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 appVersion: 0.2.1
-

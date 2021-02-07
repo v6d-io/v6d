@@ -1,0 +1,26 @@
+apiVersion: kubescheduler.config.k8s.io/v1beta1
+kind: KubeSchedulerConfiguration
+leaderElection:
+  leaderElect: false
+  leaseDuration: 60s
+  resourceLock: leases
+  resourceName: vineyard-scheduler
+  resourceNamespace: vineyard-system
+profiles:
+  - schedulerName: vineyard-scheduler
+    plugins:
+      score:
+        enabled:
+          - name: Vineyard
+        disabled:
+          - name: "*"
+      preFilter:
+        enabled:
+          - name: Vineyard
+      permit:
+        enabled:
+          - name: Vineyard
+      postBind:
+        enabled:
+          - name: Vineyard
+

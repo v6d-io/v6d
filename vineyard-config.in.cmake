@@ -38,7 +38,7 @@ if(NOT Arrow_FOUND)
     find_dependency(Arrow)
 endif()
 
-if(BUILD_VINEYARD_IO_KAFKA)
+if(BUILD_VINEYARD_IO AND BUILD_VINEYARD_IO_KAFKA)
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
     find_dependency(Rdkafka)
 endif()

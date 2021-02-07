@@ -72,6 +72,7 @@ def get(client, object_id, resolver=None, **kw):
     # wrap object_id
     if isinstance(object_id, (int, str)):
         object_id = ObjectID(object_id)
+
     # run resolver
     obj = client.get_object(object_id)
     meta = obj.meta
