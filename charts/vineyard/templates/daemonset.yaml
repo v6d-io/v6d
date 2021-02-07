@@ -64,7 +64,7 @@ spec:
       volumes:
       - name: run
         hostPath:
-          path: /var/run/vineyard
+          path: /var/run/vineyard-{{ .Release.Namespace }}
       - name: shm
         emptyDir:
           medium: Memory
