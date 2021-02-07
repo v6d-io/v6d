@@ -609,7 +609,7 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         [self, callback, proc, stream_id](Status const& status,
                                           std::string const& line) {
           if (status.ok()) {
-            callback(Status::OK(), stream_id);
+            RETURN_ON_ERROR(callback(Status::OK(), stream_id));
             if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration client exit abnormally");
             }
@@ -631,11 +631,10 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
     auto proc = std::make_shared<Process>(context_);
     proc->Start(
         migrate_process, args,
-        [callback, proc, stream_id](Status const& status,
-                                    std::string const& line) {
+        [callback, proc](Status const& status, std::string const& line) {
           if (status.ok()) {
             ObjectID result_id = VYObjectIDFromString(line);
-            callback(Status::OK(), result_id);
+            RETURN_ON_ERROR(callback(Status::OK(), result_id));
             if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration server exit abnormally");
             }
