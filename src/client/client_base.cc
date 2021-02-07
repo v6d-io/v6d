@@ -229,11 +229,6 @@ Status ClientBase::MigrateObject(const ObjectID object_id, ObjectID& result_id,
   RETURN_ON_ERROR(this->GetMetaData(object_id, meta, true));
   VLOG(10) << "migrate local: " << this->instance_id()
            << ", remote: " << meta.GetInstanceId();
-  if (is_stream && meta.GetTypeName().find("Stream") == std::string::npos) {
-    VLOG(10) << meta.GetTypeName();
-    return Status::Invalid("object_id does not indicate a stream: " +
-                           VYObjectIDToString(object_id));
-  }
   if (meta.GetInstanceId() == this->instance_id()) {
     result_id = object_id;
     return Status::OK();

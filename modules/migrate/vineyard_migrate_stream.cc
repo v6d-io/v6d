@@ -51,7 +51,6 @@ Status Rebuild(Client& client, ObjectMeta const& metadata,
                ObjectID& target_id) {
   ObjectMeta target;
   for (auto const& kv : metadata) {
-    //    if (kv.key() != "params_" && kv.key() != "typename") continue;
     if (kv.value().is_string()) {
       target.AddKeyValue(kv.key(), kv.value().get_ref<std::string const&>());
     } else {
@@ -82,11 +81,11 @@ Status Serve(Client& client, RPCClient& rpc_client,
     size_t buffer_size;
     asio::read(socket, asio::buffer(&buffer_size, sizeof(size_t)));
     VLOG(10) << "Recieve buffer size " << buffer_size;
-    if (buffer_size == 0) {
+    if (buffer_size == std::numeric_limits<size_t>::max()) {
       client.StopStream(target_id, false);
       LOG(INFO) << "The server finishes its job, exit normally";
       return Status::OK();
-    } else if (buffer_size == std::numeric_limits<size_t>::max()) {
+    } else if (buffer_size == std::numeric_limits<size_t>::max() - 1) {
       client.StopStream(target_id, true);
       LOG(ERROR) << "The server exit unnormally as the source stream corrupted";
       return Status::StreamFailed();
@@ -94,7 +93,9 @@ Status Serve(Client& client, RPCClient& rpc_client,
       std::unique_ptr<arrow::MutableBuffer> buffer;
       RETURN_ON_ERROR(
           client.GetNextStreamChunk(target_id, buffer_size, buffer));
-      asio::read(socket, asio::buffer(buffer->mutable_data(), buffer_size));
+      if (buffer_size > 0) {
+        asio::read(socket, asio::buffer(buffer->mutable_data(), buffer_size));
+      }
     }
   }
   return Status::OK();
@@ -136,15 +137,17 @@ Status Work(Client& client, asio::ip::tcp::socket& socket) {
     std::unique_ptr<arrow::Buffer> buffer;
     Status status = client.PullNextStreamChunk(stream_id, buffer);
     if (status.IsStreamDrained()) {
-      size_t buffer_size = 0;
+      size_t buffer_size = std::numeric_limits<size_t>::max();
       asio::write(socket, asio::buffer(&buffer_size, sizeof(size_t)));
       return Status::OK();
     } else if (status.ok()) {
       size_t buffer_size = buffer->size();
       asio::write(socket, asio::buffer(&buffer_size, sizeof(size_t)));
-      asio::write(socket, asio::buffer(buffer->data(), buffer_size));
+      if (buffer_size > 0) {
+        asio::write(socket, asio::buffer(buffer->data(), buffer_size));
+      }
     } else {
-      size_t buffer_size = std::numeric_limits<size_t>::max();
+      size_t buffer_size = std::numeric_limits<size_t>::max() - 1;
       asio::write(socket, asio::buffer(&buffer_size, sizeof(size_t)));
       return status;
     }

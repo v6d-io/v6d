@@ -22,18 +22,6 @@ from setuptools import setup, find_packages
 
 repo_root = os.path.dirname(os.path.abspath(__file__))
 
-try:
-    from wheel.bdist_wheel import bdist_wheel
-
-    class bdist_wheel_force_plat(bdist_wheel):
-        ''' Force the pacakge to be installed to platdir.
-        '''
-        def finalize_options(self):
-            bdist_wheel.finalize_options(self)
-            self.root_is_pure = False
-except ImportError:
-    bdist_wheel_force_plat = None
-
 
 def find_vineyard_io_packages():
     packages = []
@@ -70,7 +58,6 @@ setup(
     include_package_data=True,
     zip_safe=False,
     entry_points={},
-    cmdclass={'bdist_wheel': bdist_wheel_force_plat},
     extras_require={
         'dev': [
             'pytest',
