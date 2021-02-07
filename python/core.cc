@@ -164,13 +164,15 @@ void bind_core(py::module& mod) {
           "items",
           [](const ObjectMeta& meta) {
             std::function<py::object(ObjectMeta::const_iterator&)> fn =
-                [&meta](ObjectMeta::const_iterator& iter) {
-                  if (iter.value().is_object()) {
-                    return py::cast(meta.GetMemberMeta(iter.key()));
-                  } else {
-                    return json_to_python(iter.value());
-                  }
-                };
+                [&meta](ObjectMeta::const_iterator& iter) -> py::object {
+              if (iter.value().is_object()) {
+                return py::cast(std::make_pair(
+                    iter.key(), py::cast(meta.GetMemberMeta(iter.key()))));
+              } else {
+                return py::cast(
+                    std::make_pair(iter.key(), json_to_python(iter.value())));
+              }
+            };
             return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
           },
           py::keep_alive<0, 1>())
@@ -299,9 +301,8 @@ void bind_core(py::module& mod) {
   // BlobBuilder
   py::class_<BlobWriter, std::shared_ptr<BlobWriter>, ObjectBuilder>(
       mod, "BlobBuilder", py::buffer_protocol())
-      .def_property_readonly("id", [](BlobWriter* self) -> ObjectIDWrapper {
-        return self->id();
-      })
+      .def_property_readonly(
+          "id", [](BlobWriter* self) -> ObjectIDWrapper { return self->id(); })
       .def_property_readonly("size", &BlobWriter::size)
       .def("__len__", &BlobWriter::size)
       .def("__iter__",

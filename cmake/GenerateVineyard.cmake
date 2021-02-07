@@ -18,7 +18,7 @@ add_executable(vineyard::codegen IMPORTED)
 set_target_properties(vineyard::codegen PROPERTIES
                       IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/python/vineyard/core/codegen.py")
 
-include(DetermineImplicitIncludes)
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/DetermineImplicitIncludes.cmake")
 determine_implicit_includes(CXX CXX_IMPLICIT_INCLUDE_DIRECTORIES)
 
 function(vineyard_generate)
