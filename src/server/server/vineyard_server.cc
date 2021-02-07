@@ -609,12 +609,11 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         [self, callback, proc, stream_id](Status const& status,
                                           std::string const& line) {
           if (status.ok()) {
-            ObjectID result_id = VYObjectIDFromString(line);
-            callback(Status::OK(), result_id);
-            proc->Wait();
-            if (proc->ExitCode() != 0) {
+            callback(Status::OK(), stream_id);
+            if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration client exit abnormally");
             }
+            proc->Detach();
             return Status::OK();
           } else {
             proc->Terminate();
@@ -623,21 +622,24 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
           return Status::OK();
         });
   } else {
-    std::vector<std::string> args = {"--server",       "true",
-                                     "--ipc_socket",   IPCSocket(),
-                                     "--rpc_endpoint", peer_rpc_endpoint,
-                                     "--host",         "0.0.0.0"};
+    std::vector<std::string> args = {
+        "--server",       "true",
+        "--ipc_socket",   IPCSocket(),
+        "--rpc_endpoint", peer_rpc_endpoint,
+        "--host",         "0.0.0.0",
+        "--id",           VYObjectIDToString(stream_id)};
     auto proc = std::make_shared<Process>(context_);
     proc->Start(
         migrate_process, args,
         [callback, proc, stream_id](Status const& status,
                                     std::string const& line) {
           if (status.ok()) {
-            callback(Status::OK(), stream_id);
-            proc->Wait();
-            if (proc->ExitCode() != 0) {
+            ObjectID result_id = VYObjectIDFromString(line);
+            callback(Status::OK(), result_id);
+            if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration server exit abnormally");
             }
+            proc->Detach();
             return Status::OK();
           } else {
             proc->Terminate();
@@ -647,7 +649,6 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
   }
   return Status::OK();
 }
-
 
 Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();

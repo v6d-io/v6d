@@ -500,8 +500,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     bool local;
     bool is_stream;
     std::string peer, peer_rpc_endpoint;
-    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, is_stream, peer,
-                                              peer_rpc_endpoint));
+    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, is_stream,
+                                              peer, peer_rpc_endpoint));
     if (is_stream) {
       RESPONSE_ON_ERROR(server_ptr_->MigrateStream(
           object_id, local, peer, peer_rpc_endpoint,
@@ -510,7 +510,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
             if (status.ok()) {
               WriteMigrateObjectReply(target, message_out);
             } else {
-              LOG(ERROR) << "Failed to start migrating stream: " << status.ToString();
+              LOG(ERROR) << "Failed to start migrating stream: "
+                         << status.ToString();
               WriteErrorReply(status, message_out);
             }
             self->doWrite(message_out);

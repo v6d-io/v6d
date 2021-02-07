@@ -47,15 +47,33 @@ DEFINE_string(
 DEFINE_string(id, VYObjectIDToString(InvalidObjectID()),
               "Object to migrate to local");
 
-Status Serve(Client& client, RPCClient& rpc_client, asio::ip::tcp::socket&& socket) {
+Status Rebuild(Client& client, ObjectMeta const& metadata,
+               ObjectID& target_id) {
+  ObjectMeta target;
+  for (auto const& kv : metadata) {
+    //    if (kv.key() != "params_" && kv.key() != "typename") continue;
+    if (kv.value().is_string()) {
+      target.AddKeyValue(kv.key(), kv.value().get_ref<std::string const&>());
+    } else {
+      target.AddKeyValue(kv.key(), kv.value());
+    }
+  }
+  RETURN_ON_ERROR(client.CreateMetaData(target, target_id));
+  RETURN_ON_ERROR(client.CreateStream(target_id));
+  RETURN_ON_ERROR(client.Persist(target_id));
+  RETURN_ON_ERROR(client.OpenStream(target_id, OpenStreamMode::write));
+
+  return Status::OK();
+}
+
+Status Serve(Client& client, RPCClient& rpc_client,
+             asio::ip::tcp::socket&& socket) {
   ObjectMeta metadata;
   RETURN_ON_ERROR(
       rpc_client.GetMetaData(VYObjectIDFromString(FLAGS_id), metadata, true));
 
   ObjectID target_id;
-  RETURN_ON_ERROR(client.CreateMetaData(metadata, target_id));
-  RETURN_ON_ERROR(client.CreateStream(target_id));
-  RETURN_ON_ERROR(client.OpenStream(target_id, OpenStreamMode::write));
+  RETURN_ON_ERROR(Rebuild(client, metadata, target_id));
 
   // print the result object id to stdout
   std::cout << VYObjectIDToString(target_id) << std::endl;
@@ -74,7 +92,8 @@ Status Serve(Client& client, RPCClient& rpc_client, asio::ip::tcp::socket&& sock
       return Status::StreamFailed();
     } else {
       std::unique_ptr<arrow::MutableBuffer> buffer;
-      client.GetNextStreamChunk(target_id, buffer_size, buffer);
+      RETURN_ON_ERROR(
+          client.GetNextStreamChunk(target_id, buffer_size, buffer));
       asio::read(socket, asio::buffer(buffer->mutable_data(), buffer_size));
     }
   }
@@ -100,7 +119,7 @@ Status RunServer() {
 
   Client client;
   RETURN_ON_ERROR(client.Connect(FLAGS_ipc_socket));
-  
+
   RPCClient rpc_client;
   RETURN_ON_ERROR(rpc_client.Connect(FLAGS_rpc_endpoint));
 
@@ -110,11 +129,9 @@ Status RunServer() {
   return Serve(client, rpc_client, std::move(socket));
 }
 
-
-Status Work(Client& client,
-            asio::ip::tcp::socket& socket) {
+Status Work(Client& client, asio::ip::tcp::socket& socket) {
   ObjectID stream_id = VYObjectIDFromString(FLAGS_id);
-  client.OpenStream(stream_id, OpenStreamMode::read);
+  RETURN_ON_ERROR(client.OpenStream(stream_id, OpenStreamMode::read));
   while (true) {
     std::unique_ptr<arrow::Buffer> buffer;
     Status status = client.PullNextStreamChunk(stream_id, buffer);

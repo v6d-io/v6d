@@ -59,7 +59,7 @@ void Process::Start(const std::string& command,
     }
   }
   LOG(INFO) << "command path = " << command_path;
-  for (auto const &arg: args) {
+  for (auto const& arg : args) {
     std::cerr << arg << " ";
   }
   std::cerr << std::endl;

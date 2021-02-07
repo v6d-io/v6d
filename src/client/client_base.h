@@ -256,7 +256,8 @@ class ClientBase {
    *
    * @return Status that indicates if the migration success.
    */
-  Status MigrateObject(const ObjectID object_id, ObjectID& result_id, bool is_stream = false);
+  Status MigrateObject(const ObjectID object_id, ObjectID& result_id,
+                       bool is_stream = false);
 
   /**
    * @brief Migrate remote stream to local.
@@ -357,7 +358,8 @@ class ClientBase {
    * @return Status that indicates if the migration success.
    */
   Status migrateObjectImpl(const ObjectID object_id, ObjectID& result_id,
-                           bool const local, bool const is_stream, std::string const& peer,
+                           bool const local, bool const is_stream,
+                           std::string const& peer,
                            std::string const& peer_rpc_endpoint);
 
   mutable bool connected_;

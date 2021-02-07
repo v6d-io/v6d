@@ -656,7 +656,6 @@ Status ReadMigrateObjectReply(const json& root, ObjectID& object_id) {
   return Status::OK();
 }
 
-
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg) {
   json root;
   root["type"] = "create_stream_request";

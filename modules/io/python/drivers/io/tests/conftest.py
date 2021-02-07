@@ -168,6 +168,7 @@ def pytest_configure(config):
         "skip_without_migration(): skip migration tests if object migration is not available",
     )
 
+
 def pytest_runtest_setup(item):
     markers = [mark for mark in item.iter_markers(name='skip_without_hdfs')]
     if markers:
