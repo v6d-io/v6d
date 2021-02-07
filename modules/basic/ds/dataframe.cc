@@ -57,7 +57,25 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::RecordBatchView() const {
       field_name = json_to_string(cname);
     }
     auto df_col = this->Column(cname);
-    num_rows = df_col->shape()[0];
+
+    if (auto tensor = std::dynamic_pointer_cast<Tensor<int32_t>>(df_col)) {
+      num_rows = tensor->shape()[0];
+    } else if (auto tensor =
+                   std::dynamic_pointer_cast<Tensor<uint32_t>>(df_col)) {
+      num_rows = tensor->shape()[0];
+    } else if (auto tensor =
+                   std::dynamic_pointer_cast<Tensor<int64_t>>(df_col)) {
+      num_rows = tensor->shape()[0];
+    } else if (auto tensor =
+                   std::dynamic_pointer_cast<Tensor<uint64_t>>(df_col)) {
+      num_rows = tensor->shape()[0];
+    } else if (auto tensor = std::dynamic_pointer_cast<Tensor<float>>(df_col)) {
+      num_rows = tensor->shape()[0];
+    } else if (auto tensor =
+                   std::dynamic_pointer_cast<Tensor<double>>(df_col)) {
+      num_rows = tensor->shape()[0];
+    }
+
     std::shared_ptr<arrow::Buffer> copied_buffer;
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
     CHECK_ARROW_ERROR(

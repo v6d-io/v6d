@@ -17,6 +17,7 @@
 #
 
 import json
+import platform
 
 import numpy as np
 
@@ -46,6 +47,28 @@ def normalize_dtype(dtype, dtype_meta=None):
     if dtype.startswith('str'):
         return np.dtype(dtype_meta)
     return dtype
+
+
+def normalize_cpptype(dtype):
+    if dtype.name == 'int32':
+        return 'int'
+    if dtype.name == 'uint32':
+        return 'unsigned int'
+    if dtype.name == 'int64':
+        if platform.system() == 'Linux':
+            return 'long'
+        else:
+            return 'long long'
+    if dtype.name == 'uint64':
+        if platform.system() == 'Linux':
+            return 'unsigned long'
+        else:
+            return 'unsigned long long'
+    if dtype.name == 'float32':
+        return 'float'
+    if dtype.name == 'float64':
+        return 'double'
+    return dtype.name
 
 
 def build_buffer(client, address, size):
@@ -83,4 +106,6 @@ def from_json(string):
     return json.loads(string)
 
 
-__all__ = ['normalize_dtype', 'build_buffer', 'build_numpy_buffer', 'to_json', 'from_json']
+__all__ = ['normalize_dtype', 'normalize_cpptype',
+           'build_buffer', 'build_numpy_buffer',
+           'to_json', 'from_json']

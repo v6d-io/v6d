@@ -30,12 +30,12 @@ except ImportError:
     pa = None
 
 from vineyard._C import ObjectMeta
-from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype
+from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype
 
 
 def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
-    meta['typename'] = 'vineyard::Tensor<%s>' % value.dtype.name
+    meta['typename'] = 'vineyard::Tensor<%s>' % normalize_cpptype(value.dtype)
     meta['value_type_'] = value.dtype.name
     meta['value_type_meta_'] = value.dtype.str
     meta['shape_'] = to_json(value.shape)
