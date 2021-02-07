@@ -316,7 +316,7 @@ jobs:
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
-          python3 test/runner.py --with-io
+          python3 test/runner.py --with-io --with-migration
 
       - name: Upload Coverage
         if: runner.os == 'Linux'

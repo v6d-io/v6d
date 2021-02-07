@@ -215,8 +215,13 @@ Status ClientBase::DropName(const std::string& name) {
   return Status::OK();
 }
 
-Status ClientBase::MigrateObject(const ObjectID object_id,
+Status ClientBase::MigrateStream(const ObjectID stream_id,
                                  ObjectID& result_id) {
+  return MigrateObject(stream_id, result_id, true);
+}
+
+Status ClientBase::MigrateObject(const ObjectID object_id, ObjectID& result_id,
+                                 bool is_stream) {
   ENSURE_CONNECTED(this);
 
   // query the object location info
@@ -244,15 +249,15 @@ Status ClientBase::MigrateObject(const ObjectID object_id,
     RPCClient other;
     RETURN_ON_ERROR(other.Connect(otherEndpoint));
     ObjectID dummy = InvalidObjectID();
-    RETURN_ON_ERROR(other.migrateObjectImpl(object_id, dummy, true, selfhost,
-                                            otherEndpoint));
+    RETURN_ON_ERROR(other.migrateObjectImpl(object_id, dummy, true, is_stream,
+                                            selfhost, otherEndpoint));
     return Status::OK();
   });
 
   // local migrate receiver
   auto receiver = std::async(std::launch::async, [&]() -> Status {
-    RETURN_ON_ERROR(this->migrateObjectImpl(object_id, result_id, false,
-                                            otherHost, otherEndpoint));
+    RETURN_ON_ERROR(this->migrateObjectImpl(
+        object_id, result_id, false, is_stream, otherHost, otherEndpoint));
     VLOG(10) << "receive from migration: " << VYObjectIDToString(object_id)
              << " -> " << VYObjectIDToString(result_id);
     return Status::OK();
@@ -263,11 +268,12 @@ Status ClientBase::MigrateObject(const ObjectID object_id,
 
 Status ClientBase::migrateObjectImpl(const ObjectID object_id,
                                      ObjectID& result_id, bool const local,
+                                     bool const is_stream,
                                      std::string const& peer,
                                      std::string const& peer_rpc_endpoint) {
   std::string message_out;
-  WriteMigrateObjectRequest(object_id, local, peer, peer_rpc_endpoint,
-                            message_out);
+  WriteMigrateObjectRequest(object_id, local, is_stream, peer,
+                            peer_rpc_endpoint, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));

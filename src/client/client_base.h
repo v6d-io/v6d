@@ -252,10 +252,23 @@ class ClientBase {
    * @param object_id The existing object that will be migrated to current
    * vineyardd.
    * @param result_id Record the result object id.
+   * @param is_stream Indicates whether the migrated object is a stream
    *
    * @return Status that indicates if the migration success.
    */
-  Status MigrateObject(const ObjectID object_id, ObjectID& result_id);
+  Status MigrateObject(const ObjectID object_id, ObjectID& result_id,
+                       bool is_stream = false);
+
+  /**
+   * @brief Migrate remote stream to local.
+   *
+   * @param object_id The existing stream that will be migrated to current
+   * vineyardd.
+   * @param result_id Record the result stream id.
+   *
+   * @return Status that indicates if the migration success.
+   */
+  Status MigrateStream(const ObjectID object_id, ObjectID& result_id);
 
   /**
    * @brief Check if the client still connects to the vineyard server.
@@ -345,7 +358,8 @@ class ClientBase {
    * @return Status that indicates if the migration success.
    */
   Status migrateObjectImpl(const ObjectID object_id, ObjectID& result_id,
-                           bool const local, std::string const& peer,
+                           bool const local, bool const is_stream,
+                           std::string const& peer,
                            std::string const& peer_rpc_endpoint);
 
   mutable bool connected_;

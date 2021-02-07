@@ -183,6 +183,12 @@ void bind_client(py::module& mod) {
             throw_on_error(self->MigrateObject(object_id, target_id));
             return target_id;
           }, "object_id"_a)
+      .def("migrate_stream",
+          [](ClientBase *self, const ObjectID object_id) -> ObjectIDWrapper {
+            ObjectID target_id = InvalidObjectID();
+            throw_on_error(self->MigrateStream(object_id, target_id));
+            return target_id;
+          }, "object_id"_a)
       .def_property_readonly("connected", &Client::Connected)
       .def_property_readonly("instance_id", &Client::instance_id)
       .def_property_readonly(

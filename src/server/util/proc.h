@@ -73,6 +73,12 @@ class Process : public std::enable_shared_from_this<Process> {
     }
   }
 
+  void Detach() {
+    if (proc_ && proc_->valid()) {
+      proc_->detach();
+    }
+  }
+
   void Wait() {
     if (proc_ && proc_->valid()) {
       std::error_code err;

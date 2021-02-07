@@ -615,13 +615,14 @@ Status ReadDropNameReply(const json& root) {
 }
 
 void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
-                               const std::string& peer,
+                               const bool is_stream, const std::string& peer,
                                std::string const& peer_rpc_endpoint,
                                std::string& msg) {
   json root;
   root["type"] = "migrate_object_request";
   root["object_id"] = object_id;
   root["local"] = local;
+  root["is_stream"] = is_stream;
   root["peer"] = peer;
   root["peer_rpc_endpoint"] = peer_rpc_endpoint,
 
@@ -629,12 +630,13 @@ void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
 }
 
 Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id,
-                                bool& local, std::string& peer,
+                                bool& local, bool& is_stream, std::string& peer,
                                 std::string& peer_rpc_endpoint) {
   RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
                    "migrate_object_request");
   object_id = root["object_id"].get<ObjectID>();
   local = root["local"].get<bool>();
+  is_stream = root["is_stream"].get<bool>();
   peer = root["peer"].get_ref<std::string const&>();
   peer_rpc_endpoint = root["peer_rpc_endpoint"].get_ref<std::string const&>();
   return Status::OK();

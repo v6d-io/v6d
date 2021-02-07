@@ -498,22 +498,40 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::MigrateObjectRequest: {
     ObjectID object_id;
     bool local;
+    bool is_stream;
     std::string peer, peer_rpc_endpoint;
-    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, peer,
-                                              peer_rpc_endpoint));
-    RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
-        object_id, local, peer, peer_rpc_endpoint,
-        [self](const Status& status, const ObjectID& target) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteMigrateObjectReply(target, message_out);
-          } else {
-            LOG(ERROR) << "Failed to migrate object: " << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
+    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, is_stream,
+                                              peer, peer_rpc_endpoint));
+    if (is_stream) {
+      RESPONSE_ON_ERROR(server_ptr_->MigrateStream(
+          object_id, local, peer, peer_rpc_endpoint,
+          [self](const Status& status, const ObjectID& target) {
+            std::string message_out;
+            if (status.ok()) {
+              WriteMigrateObjectReply(target, message_out);
+            } else {
+              LOG(ERROR) << "Failed to start migrating stream: "
+                         << status.ToString();
+              WriteErrorReply(status, message_out);
+            }
+            self->doWrite(message_out);
+            return Status::OK();
+          }));
+    } else {
+      RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
+          object_id, local, peer, peer_rpc_endpoint,
+          [self](const Status& status, const ObjectID& target) {
+            std::string message_out;
+            if (status.ok()) {
+              WriteMigrateObjectReply(target, message_out);
+            } else {
+              LOG(ERROR) << "Failed to migrate object: " << status.ToString();
+              WriteErrorReply(status, message_out);
+            }
+            self->doWrite(message_out);
+            return Status::OK();
+          }));
+    }
   } break;
   case CommandType::ClusterMetaRequest: {
     TRY_READ_REQUEST(ReadClusterMetaRequest(root));
