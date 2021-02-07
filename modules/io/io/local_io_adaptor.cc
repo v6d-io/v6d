@@ -121,7 +121,6 @@ Status LocalIOAdaptor::Open(const char* mode) {
         }
       }
     }
-    LOG(INFO) << "XXXXXXXXXXXXXXXXXXXXX: " << location_;
     if (using_std_getline_) {
       if (strchr(mode, 'b') != NULL) {
         fs_.open(location_.c_str(),

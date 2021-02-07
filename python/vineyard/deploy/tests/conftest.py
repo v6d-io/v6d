@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
 import pytest
 
 import vineyard
@@ -37,20 +36,6 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
-        '--test-dataset',
-        action='store',
-        default=os.path.expandvars('$VINEYARD_DATA_DIR'),
-        help='Location of dataset that will be used for running test cases',
-    )
-
-    parser.addoption(
-        '--test-dataset-tmp',
-        action='store',
-        default=os.path.expandvars('$TMPDIR'),
-        help='Location of temporary directory that will be used for running test cases',
-    )
-
-    parser.addoption(
         '--with-migration',
         action='store_true',
         default=False,
@@ -66,16 +51,6 @@ def vineyard_ipc_sockets(request):
 @pytest.fixture(scope='session')
 def vineyard_endpoints(request):
     return request.config.option.vineyard_endpoint.split(',')
-
-
-@pytest.fixture(scope='session')
-def test_dataset(request):
-    return request.config.option.test_dataset
-
-
-@pytest.fixture(scope='session')
-def test_dataset_tmp(request):
-    return request.config.option.test_dataset_tmp
 
 
 @pytest.fixture(scope='session')

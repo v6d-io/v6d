@@ -15,7 +15,6 @@ limitations under the License.
 
 #include "server/util/proc.h"
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -58,11 +57,6 @@ void Process::Start(const std::string& command,
       command_path = path;
     }
   }
-  LOG(INFO) << "command path = " << command_path;
-  for (auto const& arg : args) {
-    std::cerr << arg << " ";
-  }
-  std::cerr << std::endl;
   // launch proc
   auto env = boost::this_process::environment();
   std::error_code ec;
