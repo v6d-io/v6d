@@ -525,7 +525,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
             proc->Wait();
             if (proc->ExitCode() != 0) {
               return callback(
-                  Status::IOError("The migration server exit abnormally"),
+                  Status::IOError("The migration client exit abnormally"),
                   InvalidObjectID());
             }
 

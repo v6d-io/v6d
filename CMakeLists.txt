@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 1)
-set(VINEYARD_PATCH_VERSION 9)
+set(VINEYARD_PATCH_VERSION 10)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
 if(POLICY CMP0025)
@@ -16,6 +16,7 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
+option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the bundled one" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
@@ -88,8 +89,6 @@ endif(ccache_EXECUTABLE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC \
                                         -Wall \
@@ -266,7 +265,15 @@ if(BUILD_VINEYARD_SERVER)
                                        "src/common/util/*.cc"
     )
     add_executable(vineyardd ${SERVER_SRC_FILES})
-    include("cmake/BuildEtcdCpp.cmake")
+    if(USE_EXTERNAL_ETCD_LIBS)
+        find_package(etcd-cpp-api QUIET)
+        if(NOT etcd-cpp-api_FOUND)
+            message(WARNING "etcd-cpp-apiv3 not found, will use the bundled one from git submodules.")
+            include("cmake/BuildEtcdCpp.cmake")
+        endif()
+    else()
+        include("cmake/BuildEtcdCpp.cmake")
+    endif()
     target_link_libraries(vineyardd PUBLIC ${Boost_LIBRARIES}
                                            ${CPPREST_LIB}
                                            ${ETCD_CPP_LIBRARIES}
@@ -322,7 +329,7 @@ if(BUILD_VINEYARD_CLIENT)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
 endif()
 
-include(GenerateVineyard)
+include("cmake/GenerateVineyard.cmake")
 
 if(BUILD_VINEYARD_PYTHON_BINDINGS)
     set(PYBIND11_PYTHON_VERSION 3)

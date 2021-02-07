@@ -676,6 +676,15 @@ class IMetaService {
   template <class RangeT>
   void metaUpdate(const RangeT& ops, bool const from_remote) {
     std::set<ObjectID> blobs_to_delete;
+    // apply signature mappings first.
+    for (const op_t& op : ops) {
+      if (boost::algorithm::starts_with(op.kv.key, "/signatures/")) {
+        if (op.op == op_t::op_type_t::kPut) {
+          putVal(op.kv, from_remote);
+        }
+      }
+    }
+
     for (const op_t& op : ops) {
       if (op.kv.rev != 0 && op.kv.rev <= rev_) {
         // revision resolution: means this revision has already been updated
@@ -688,6 +697,10 @@ class IMetaService {
       }
       if (boost::algorithm::starts_with(op.kv.key, meta_sync_lock_)) {
         // skip the update of etcd lock
+        continue;
+      }
+      // signatures already been applied.
+      if (boost::algorithm::starts_with(op.kv.key, "/signatures/")) {
         continue;
       }
       if (boost::algorithm::starts_with(op.kv.key,
