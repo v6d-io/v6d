@@ -27,6 +27,9 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "arrow/util/config.h"
+#include "arrow/util/key_value_metadata.h"
+
 #include "basic/ds/array.vineyard.h"
 #include "basic/ds/arrow.vineyard.h"
 #include "basic/ds/tensor.vineyard.h"
@@ -81,6 +84,11 @@ class DataFrame : public Registered<DataFrame> {
    * @return The pair of the number of rows and the number of columns.
    */
   const std::pair<size_t, size_t> shape() const;
+
+  /**
+   * @brief Get a RecordBatch view for the dataframe.
+   */
+  const std::shared_ptr<arrow::RecordBatch> RecordBatchView() const;
 
  private:
   __attribute__((annotate("codegen"))) size_t partition_index_row_;
