@@ -106,6 +106,4 @@ def from_json(string):
     return json.loads(string)
 
 
-__all__ = ['normalize_dtype', 'normalize_cpptype',
-           'build_buffer', 'build_numpy_buffer',
-           'to_json', 'from_json']
+__all__ = ['normalize_dtype', 'normalize_cpptype', 'build_buffer', 'build_numpy_buffer', 'to_json', 'from_json']
