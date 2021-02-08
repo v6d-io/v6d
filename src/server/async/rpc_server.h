@@ -16,12 +16,11 @@ limitations under the License.
 #ifndef SRC_SERVER_ASYNC_RPC_SERVER_H_
 #define SRC_SERVER_ASYNC_RPC_SERVER_H_
 
-#include <sys/param.h>
-
 #include <string>
 
 #include "boost/asio.hpp"
 
+#include "common/util/env.h"
 #include "server/async/socket_server.h"
 #include "server/server/vineyard_server.h"
 
@@ -40,9 +39,7 @@ class RPCServer : public SocketServer {
   void Start() override;
 
   std::string Endpoint() {
-    char hostname[MAXHOSTNAMELEN];
-    gethostname(hostname, MAXHOSTNAMELEN);
-    return std::string(hostname) + ":" + json_to_string(rpc_spec_["port"]);
+    return get_hostname() + ":" + json_to_string(rpc_spec_["port"]);
   }
 
  private:
