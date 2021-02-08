@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef SRC_SERVER_SERVICES_META_SERVICE_H_
 #define SRC_SERVER_SERVICES_META_SERVICE_H_
 
-#include <sys/param.h>
-
 #include <chrono>
 #include <map>
 #include <memory>
@@ -32,6 +30,7 @@ limitations under the License.
 
 #include "common/util/boost.h"
 #include "common/util/callback.h"
+#include "common/util/env.h"
 #include "common/util/functions.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"
@@ -340,19 +339,7 @@ class IMetaService {
     RequestToPersist(
         [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
           if (status.ok()) {
-            std::string hostname, nodename;
-            if (const char* envp = std::getenv("MY_HOST_NAME")) {
-              hostname = std::string(envp);
-            } else {
-              char hostname_value[MAXHOSTNAMELEN];
-              gethostname(&hostname_value[0], MAXHOSTNAMELEN);
-              hostname = std::string(hostname_value);
-            }
-            if (const char* envp = std::getenv("MY_NODE_NAME")) {
-              nodename = std::string(envp);
-            } else {
-              nodename = hostname;
-            }
+            std::string hostname = get_hostname(), nodename = get_nodename();
 
             int64_t timestamp = GetTimestamp();
 
