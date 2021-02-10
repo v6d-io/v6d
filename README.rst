@@ -10,7 +10,7 @@
 |Build and Test| |Coverage| |Docs| |Artifact HUB|
 
 Vineyard is an in-memory immutable data manager
-that provides **out-of-box high-level** abstraction and **zero-copy in-memory** sharing for
+that provides **out-of-the-box high-level** abstraction and **zero-copy in-memory** sharing for
 distributed data in big data tasks, such as graph analytics (e.g., `GraphScope`_), numerical
 computing (e.g., `Mars`_), and machine learning.
 
