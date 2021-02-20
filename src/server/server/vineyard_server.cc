@@ -270,8 +270,14 @@ Status VineyardServer::CreateData(
   RETURN_ON_ASSERT(tree.contains("instance_id"));
 
   auto decorated_tree = tree;
-  Signature signature = GenerateSignature();
-  decorated_tree["signature"] = signature;
+  Signature signature;
+
+  if (decorated_tree.find("signature") != decorated_tree.end()) {
+    signature = decorated_tree["signature"].get<Signature>();
+  } else {
+    signature = GenerateSignature();
+    decorated_tree["signature"] = signature;
+  }
 
   // update meta into json
   meta_service_ptr_->RequestToBulkUpdate(
