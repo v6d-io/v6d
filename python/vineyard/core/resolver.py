@@ -74,6 +74,9 @@ def get(client, object_id, resolver=None, **kw):
         object_id = ObjectID(object_id)
     # run resolver
     obj = client.get_object(object_id)
+    meta = obj.meta
+    if not meta.islocal and not meta.isglobal:
+        raise ValueError("Not a local object: for remote object, you can only get its metadata")
     if resolver is not None:
         value = resolver(obj, **kw)
     else:

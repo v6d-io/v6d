@@ -113,6 +113,12 @@ Status Rebuild(
     } else {
       if (kv.value().is_string()) {
         target.AddKeyValue(kv.key(), kv.value().get_ref<std::string const&>());
+      } else if (kv.value().is_boolean()) {
+        target.AddKeyValue(kv.key(), kv.value().get<bool>());
+      } else if (kv.value().is_number_integer()) {
+        target.AddKeyValue(kv.key(), kv.value().get<int64_t>());
+      } else if (kv.value().is_number_float()) {
+        target.AddKeyValue(kv.key(), kv.value().get<double>());
       } else {
         target.AddKeyValue(kv.key(), kv.value());
       }
