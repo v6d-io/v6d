@@ -37,9 +37,7 @@ logger = logging.getLogger("vineyard.io.ossfs")
 
 def setup_logging(level=None):
     handle = logging.StreamHandler()
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s " "- %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s " "- %(message)s")
     handle.setFormatter(formatter)
     logger.addHandler(handle)
     logger.setLevel(level or os.environ["OSSFS_LOGGING_LEVEL"])
@@ -48,8 +46,7 @@ def setup_logging(level=None):
 if "OSSFS_LOGGING_LEVEL" in os.environ:
     setup_logging()
 
-
-RETRYABLE_ERRORS = (socket.timeout,)
+RETRYABLE_ERRORS = (socket.timeout, )
 
 _VALID_FILE_MODES = {"r", "w", "a", "rb", "wb", "ab"}
 
@@ -69,10 +66,7 @@ buck_acls = {
 
 def infer_storage_options(urlpath, inherit_storage_options=None):
     # Handle Windows paths including disk name in this special case
-    if (
-        re.match(r"^[a-zA-Z]:[\\/]", urlpath)
-        or re.match(r"^[a-zA-Z0-9]+://", urlpath) is None
-    ):
+    if (re.match(r"^[a-zA-Z]:[\\/]", urlpath) or re.match(r"^[a-zA-Z0-9]+://", urlpath) is None):
         return {"protocol": "file", "path": urlpath}
 
     parsed_path = urlsplit(urlpath)
@@ -133,10 +127,7 @@ def _coalesce_version_id(*args):
     if None in version_ids:
         version_ids.remove(None)
     if len(version_ids) > 1:
-        raise ValueError(
-            "Cannot coalesce version_ids where more than one are defined,"
-            " {}".format(version_ids)
-        )
+        raise ValueError("Cannot coalesce version_ids where more than one are defined," " {}".format(version_ids))
     elif len(version_ids) == 0:
         return None
     else:
@@ -160,33 +151,31 @@ class OSSFileSystem(AbstractFileSystem):
     root_marker = ""
     connect_timeout = 60
     retries = 5
-    default_block_size = 5 * 2 ** 20
+    default_block_size = 5 * 2**20
     protocol = ["oss"]
-    _extra_tokenize_attributes = ("default_block_size",)
+    _extra_tokenize_attributes = ("default_block_size", )
 
-    def __init__(
-        self,
-        anon=False,
-        key=None,
-        secret=None,
-        token=None,
-        endpoint=None,
-        is_cname=False,
-        session=None,
-        connect_timeout=None,
-        app_name="",
-        enable_crc=True,
-        requester_pays=False,
-        default_block_size=None,
-        default_fill_cache=True,
-        default_cache_type="bytes",
-        version_aware=False,
-        additional_header=None,
-        additional_params=None,
-        username=None,
-        password=None,
-        **kwargs
-    ):
+    def __init__(self,
+                 anon=False,
+                 key=None,
+                 secret=None,
+                 token=None,
+                 endpoint=None,
+                 is_cname=False,
+                 session=None,
+                 connect_timeout=None,
+                 app_name="",
+                 enable_crc=True,
+                 requester_pays=False,
+                 default_block_size=None,
+                 default_fill_cache=True,
+                 default_cache_type="bytes",
+                 version_aware=False,
+                 additional_header=None,
+                 additional_params=None,
+                 username=None,
+                 password=None,
+                 **kwargs):
         if key and username:
             raise KeyError("Supply either key or username, not both")
         if secret and password:
@@ -213,8 +202,7 @@ class OSSFileSystem(AbstractFileSystem):
         # passed to fsspec superclass
         super_kwargs = {
             k: kwargs.pop(k)
-            for k in ["use_listings_cache", "listings_expiry_time", "max_paths"]
-            if k in kwargs
+            for k in ["use_listings_cache", "listings_expiry_time", "max_paths"] if k in kwargs
         }
         super().__init__(loop=None, asynchronous=False, **super_kwargs)
 
@@ -246,9 +234,7 @@ class OSSFileSystem(AbstractFileSystem):
         )
 
     def _make_service(self):
-        return oss2.Service(
-            self.auth, self.endpoint, self.session, self.connect_timeout, self.app_name
-        )
+        return oss2.Service(self.auth, self.endpoint, self.session, self.connect_timeout, self.app_name)
 
     def call_oss(self, bucket_name, method, *args, **kwargs):
         kw2 = kwargs.copy()
@@ -260,7 +246,7 @@ class OSSFileSystem(AbstractFileSystem):
                 return caller(*args, **kwargs)
             except RETRYABLE_ERRORS as e:
                 logger.debug("Retryable error: %s", e)
-                time.sleep(min(1.7 ** i * 0.1, 15))
+                time.sleep(min(1.7**i * 0.1, 15))
             except Exception as e:
                 logger.exception("Nonretryable error: %s", e)
                 raise
@@ -299,27 +285,22 @@ class OSSFileSystem(AbstractFileSystem):
                 version_id if self.version_aware and version_id else None,
             )
 
-    def _open(
-        self,
-        path,
-        mode="rb",
-        block_size=None,
-        version_id=None,
-        fill_cache=None,
-        cache_type=None,
-        autocommit=True,
-        **kwargs
-    ):
+    def _open(self,
+              path,
+              mode="rb",
+              block_size=None,
+              version_id=None,
+              fill_cache=None,
+              cache_type=None,
+              autocommit=True,
+              **kwargs):
         if block_size is None:
             block_size = self.default_block_size
         if fill_cache is None:
             fill_cache = self.default_fill_cache
 
         if not self.version_aware and version_id:
-            raise ValueError(
-                "version_id cannot be specified if the filesystem "
-                "is not version aware"
-            )
+            raise ValueError("version_id cannot be specified if the filesystem " "is not version aware")
 
         if cache_type is None:
             cache_type = self.default_cache_type
@@ -361,16 +342,14 @@ class OSSFileSystem(AbstractFileSystem):
                 if par not in sdirs:
                     sdirs.add(par)
                     if len(path) <= len(par):
-                        dirs.append(
-                            {
-                                "Key": self.split_path(par)[1],
-                                "Size": 0,
-                                "name": par,
-                                "StorageClass": "DIRECTORY",
-                                "type": "directory",
-                                "size": 0,
-                            }
-                        )
+                        dirs.append({
+                            "Key": self.split_path(par)[1],
+                            "Size": 0,
+                            "name": par,
+                            "StorageClass": "DIRECTORY",
+                            "type": "directory",
+                            "size": 0,
+                        })
                     self.dircache[par] = []
             if par in sdirs:
                 self.dircache[par].append(o)
@@ -459,9 +438,7 @@ class OSSFileSystem(AbstractFileSystem):
             raise ValueError("OSS does not support touching existent files")
         try:
             kwargs.update(self.additional_header)
-            write_result = self.call_oss(
-                bucket_name, "put_object", key, data="", headers=kwargs
-            )
+            write_result = self.call_oss(bucket_name, "put_object", key, data="", headers=kwargs)
         except Exception as ex:
             raise ex
         self.invalidate_cache(self._parent(path))
@@ -491,10 +468,10 @@ class OSSFileSystem(AbstractFileSystem):
         stream.close()
         return data
 
-    def pipe_file(self, path, data, chunksize=50 * 2 ** 20, **kwargs):
+    def pipe_file(self, path, data, chunksize=50 * 2**20, **kwargs):
         bucket_name, key, _ = self.split_path(path)
         size = len(data)
-        if size < 5 * 2 ** 20:
+        if size < 5 * 2**20:
             return self.call_oss(bucket_name, "put_object", key, data, **kwargs)
         else:
             mpu = self.call_oss(bucket_name, "init_multipart_upload", key, **kwargs)
@@ -506,18 +483,15 @@ class OSSFileSystem(AbstractFileSystem):
                     key,
                     mpu.upload_id,
                     i + 1,
-                    data[off : off + chunksize],
-                )
-                for i, off in enumerate(range(0, len(data), chunksize))
+                    data[off:off + chunksize],
+                ) for i, off in enumerate(range(0, len(data), chunksize))
             ]
 
             parts = [PartInfo(i + 1, o.etag) for i, o in enumerate(out)]
-            self.call_oss(
-                bucket_name, "complete_multipart_upload", key, mpu.upload_id, parts
-            )
+            self.call_oss(bucket_name, "complete_multipart_upload", key, mpu.upload_id, parts)
         self.invalidate_cache(path)
 
-    def put_file(self, lpath, rpath, chunksize=50 * 2 ** 20, **kwargs):
+    def put_file(self, lpath, rpath, chunksize=50 * 2**20, **kwargs):
         bucket_name, key, _ = self.split_path(rpath)
         if os.path.isdir(lpath) and key:
             # don't make remote "directory"
@@ -533,21 +507,17 @@ class OSSFileSystem(AbstractFileSystem):
                     chunk = f0.read(chunksize)
                     if not chunk:
                         break
-                    out.append(
-                        self.call_oss(
-                            bucket_name,
-                            "upload_part",
-                            key,
-                            mpu.upload_id,
-                            len(out) + 1,
-                            chunk,
-                        )
-                    )
+                    out.append(self.call_oss(
+                        bucket_name,
+                        "upload_part",
+                        key,
+                        mpu.upload_id,
+                        len(out) + 1,
+                        chunk,
+                    ))
 
                 parts = [PartInfo(i + 1, o.etag) for i, o in enumerate(out)]
-                self.call_oss(
-                    bucket_name, "complete_multipart_upload", key, mpu.upload_id, parts
-                )
+                self.call_oss(bucket_name, "complete_multipart_upload", key, mpu.upload_id, parts)
         self.invalidate_cache(rpath)
 
     def get_file(self, rpath, lpath, version_id=None):
@@ -625,10 +595,7 @@ class OSSFileSystem(AbstractFileSystem):
         kwargs = self.kwargs.copy()
         if version_id is not None:
             if not self.version_aware:
-                raise ValueError(
-                    "version_id cannot be specified if the "
-                    "filesystem is not version aware"
-                )
+                raise ValueError("version_id cannot be specified if the " "filesystem is not version aware")
         bucket_name, key, path_version_id = self.split_path(path)
         version_id = _coalesce_version_id(path_version_id, version_id)
 
@@ -656,40 +623,31 @@ class OSSFileSystem(AbstractFileSystem):
                 files = []
                 dircache = []
                 for obj in oss2.ObjectIteratorV2(
-                    bucket,
-                    prefix=prefix,
-                    delimiter=delimiter,
-                    max_keys=max_items,
-                    max_retries=self.retries,
+                        bucket,
+                        prefix=prefix,
+                        delimiter=delimiter,
+                        max_keys=max_items,
+                        max_retries=self.retries,
                 ):
                     if obj.is_prefix():
                         dircache.append(obj.key)
                     else:
-                        files.append(
-                            {
-                                "Key": obj.key,
-                                "Size": obj.size,
-                                "StorageClass": "STANDARD",
-                                "type": "file",
-                                "size": obj.size,
-                                "LastModified": datetime.fromtimestamp(
-                                    obj.last_modified
-                                ),
-                                "ETag": obj.etag,
-                            }
-                        )
-                files.extend(
-                    [
-                        {
-                            "Key": d[:-1],
-                            "Size": 0,
-                            "StorageClass": "DIRECTORY",
-                            "type": "directory",
-                            "size": 0,
-                        }
-                        for d in dircache
-                    ]
-                )
+                        files.append({
+                            "Key": obj.key,
+                            "Size": obj.size,
+                            "StorageClass": "STANDARD",
+                            "type": "file",
+                            "size": obj.size,
+                            "LastModified": datetime.fromtimestamp(obj.last_modified),
+                            "ETag": obj.etag,
+                        })
+                files.extend([{
+                    "Key": d[:-1],
+                    "Size": 0,
+                    "StorageClass": "DIRECTORY",
+                    "type": "directory",
+                    "size": 0,
+                } for d in dircache])
                 for f in files:
                     f["Key"] = "/".join([bucket_name, f["Key"]])
                     f["name"] = f["Key"]
@@ -714,16 +672,14 @@ class OSSFileSystem(AbstractFileSystem):
                 return []
             files = []
             for name in bucket_names:
-                files.append(
-                    {
-                        "Key": name,
-                        "Size": 0,
-                        "StorageClass": "BUCKET",
-                        "size": 0,
-                        "type": "directory",
-                        "name": name,
-                    }
-                )
+                files.append({
+                    "Key": name,
+                    "Size": 0,
+                    "StorageClass": "BUCKET",
+                    "size": 0,
+                    "type": "directory",
+                    "name": name,
+                })
             self.dircache[""] = files
             return files
         return self.dircache[""]
@@ -754,11 +710,7 @@ class OSSFileSystem(AbstractFileSystem):
         files = self._ls(path, refresh=refresh)
         if not files:
             files = self._ls(self._parent(path), refresh=refresh)
-            files = [
-                o
-                for o in files
-                if o["name"].rstrip("/") == path and o["type"] != "directory"
-            ]
+            files = [o for o in files if o["name"].rstrip("/") == path and o["type"] != "directory"]
         if detail:
             return files
         else:
@@ -791,28 +743,17 @@ class OSSFileSystem(AbstractFileSystem):
 
     def object_version_info(self, path, **kwargs):
         if not self.version_aware:
-            raise ValueError(
-                "version specific functionality is disabled for "
-                "non-version aware filesystems"
-            )
+            raise ValueError("version specific functionality is disabled for " "non-version aware filesystems")
         bucket_name, key, _ = self.split_path(path)
         versions = []
         is_truncated = True
         while is_truncated:
-            out = self.call_oss(
-                bucket_name,
-                "list_object_versions",
-                key,
-                headers=self.additional_header,
-                **kwargs
-            )
+            out = self.call_oss(bucket_name, "list_object_versions", key, headers=self.additional_header, **kwargs)
             versions.extend(out.versions)
-            kwargs.update(
-                {
-                    "versionid_marker": out.next_versionid_marker,
-                    "key_marker": out.next_key_marker,
-                }
-            )
+            kwargs.update({
+                "versionid_marker": out.next_versionid_marker,
+                "key_marker": out.next_key_marker,
+            })
             is_truncated = out.is_truncated
         return versions
 
@@ -853,9 +794,7 @@ class OSSFileSystem(AbstractFileSystem):
         {str: str}
         """
         bucket_name, key, version_id = self.split_path(path)
-        response = self.call_oss(
-            bucket_name, "get_object_tagging", key, params=version_id_kw(version_id)
-        )
+        response = self.call_oss(bucket_name, "get_object_tagging", key, params=version_id_kw(version_id))
         return response.tag_set.tagging_rule
 
     def put_tags(self, path: str, tags: dict, mode="o"):
@@ -1032,14 +971,11 @@ class OSSFileSystem(AbstractFileSystem):
                 key,
                 mpu.upload_id,
                 i + 1,
-            )
-            for i, f in enumerate(filelist)
+            ) for i, f in enumerate(filelist)
         ]
 
         parts = [PartInfo(i + 1, o.etag) for i, o in enumerate(out)]
-        self.call_oss(
-            bucket_name, "complete_multipart_upload", key, mpu.upload_id, parts
-        )
+        self.call_oss(bucket_name, "complete_multipart_upload", key, mpu.upload_id, parts)
 
         self.invalidate_cache(path)
 
@@ -1053,21 +989,19 @@ class OSSFileSystem(AbstractFileSystem):
         if ver2:
             raise ValueError("Cannot copy to a versioned file!")
         try:
-            self.call_oss(
-                buc2, "copy_object", buc1, key1, key2, params=version_id_kw(ver1)
-            )
+            self.call_oss(buc2, "copy_object", buc1, key1, key2, params=version_id_kw(ver1))
         except Exception as e:
             raise ValueError("Copy failed (%r -> %r): %s" % (path1, path2, e)) from e
         self.invalidate_cache(path2)
 
-    def _copy_managed(self, path1, path2, size, block=5 * 2 ** 30, **kwargs):
+    def _copy_managed(self, path1, path2, size, block=5 * 2**30, **kwargs):
         """Copy file between locations on OSS as multi-part
 
         block: int
             The size of the pieces, must be larger than 5MB and at most 5GB.
             Smaller blocks mean more calls, only useful for testing.
         """
-        if block < 5 * 2 ** 20 or block > 5 * 2 ** 30:
+        if block < 5 * 2**20 or block > 5 * 2**30:
             raise ValueError("Copy block size must be 5MB<=block<=5GB")
         buc1, key1, ver1 = self.split_path(path1)
         buc2, key2, ver2 = self.split_path(path2)
@@ -1086,8 +1020,7 @@ class OSSFileSystem(AbstractFileSystem):
                 mpu.upload_id,
                 i + 1,
                 params=version_id_kw(ver1),
-            )
-            for i, brange in enumerate(_get_brange(size, block))
+            ) for i, brange in enumerate(_get_brange(size, block))
         ]
 
         parts = [PartInfo(i + 1, o.etag) for i, o in enumerate(out)]
@@ -1095,7 +1028,7 @@ class OSSFileSystem(AbstractFileSystem):
         self.invalidate_cache(path2)
 
     def cp_file(self, path1, path2, **kwargs):
-        gb5 = 5 * 2 ** 30
+        gb5 = 5 * 2**30
         path1 = self._strip_protocol(path1)
         size = self._info(path1)["size"]
         if size <= gb5:
@@ -1109,9 +1042,7 @@ class OSSFileSystem(AbstractFileSystem):
         """Remove any partial uploads in the bucket"""
         out = self.call_oss(bucket_name, "list_multipart_uploads")
         for upload in out.upload_list:
-            self.call_oss(
-                bucket_name, "abort_multipart_upload", upload.key, upload.upload_id
-            )
+            self.call_oss(bucket_name, "abort_multipart_upload", upload.key, upload.upload_id)
 
     def _bulk_delete(self, pathlist, **kwargs):
         if not pathlist:
@@ -1138,7 +1069,7 @@ class OSSFileSystem(AbstractFileSystem):
         dirs = [p for p in paths if not self.split_path(p)[1]]
         # TODO: fails if more than one bucket in list
         for i in range(0, len(files), 1000):
-            self._bulk_delete(files[i : i + 1000])
+            self._bulk_delete(files[i:i + 1000])
         for d in dirs:
             self.rmdir(d)
         for p in paths:
@@ -1169,9 +1100,7 @@ class OSSFileSystem(AbstractFileSystem):
             )
             version_list = oss2.models.BatchDeleteObjectVersionList()
             for o in itertools.chain(result.versions, result.delete_marker):
-                version_list.append(
-                    oss2.models.BatchDeleteObjectVersion(o.key, o.versionid)
-                )
+                version_list.append(oss2.models.BatchDeleteObjectVersion(o.key, o.versionid))
             if version_list.len() == 0:
                 break
             self.call_oss(bucket_name, "delete_object_versions", version_list)
@@ -1217,15 +1146,15 @@ class OSSFileSystem(AbstractFileSystem):
 
 class OSSFile(AbstractBufferedFile):
     retries = 5
-    part_min = 5 * 2 ** 20
-    part_max = 5 * 2 ** 30
+    part_min = 5 * 2**20
+    part_max = 5 * 2**30
 
     def __init__(
         self,
         oss,
         path,
         mode="rb",
-        block_size=5 * 2 ** 20,
+        block_size=5 * 2**20,
         version_id=None,
         fill_cache=True,
         autocommit=True,
@@ -1243,7 +1172,7 @@ class OSSFile(AbstractBufferedFile):
         self.fill_cache = fill_cache
 
         if "r" not in mode:
-            if block_size < 5 * 2 ** 20:
+            if block_size < 5 * 2**20:
                 raise ValueError("Block size must be >=5MB")
         else:
             if version_id and oss.version_aware:
@@ -1257,9 +1186,7 @@ class OSSFile(AbstractBufferedFile):
                 oss.invalidate_cache(path)
                 self.details = oss.info(path)
                 self.version_id = self.details.get("VersionId")
-        super().__init__(
-            oss, path, mode, block_size, autocommit=autocommit, cache_type=cache_type
-        )
+        super().__init__(oss, path, mode, block_size, autocommit=autocommit, cache_type=cache_type)
         self.oss = self.fs  # compatibility
 
         # when not using autocommit we want to have transactional state to manage
@@ -1267,7 +1194,7 @@ class OSSFile(AbstractBufferedFile):
 
         if "a" in mode and oss.exists(path):
             loc = oss.info(path)["size"]
-            if loc < 5 * 2 ** 20:
+            if loc < 5 * 2**20:
                 # existing file too small for multi-upload: download
                 self.write(self.fs.cat(self.path))
             else:
@@ -1327,9 +1254,7 @@ class OSSFile(AbstractBufferedFile):
         >>> mys3file.setxattr(attribute_1='value1', attribute_2='value2')  # doctest: +SKIP
         """
         if self.writable():
-            raise NotImplementedError(
-                "cannot update metadata while file " "is open for writing"
-            )
+            raise NotImplementedError("cannot update metadata while file " "is open for writing")
         return self.fs.setxattr(self.path, copy_kwargs=copy_kwargs, **kwargs)
 
     def url(self, **kwargs):
@@ -1337,21 +1262,11 @@ class OSSFile(AbstractBufferedFile):
         return self.fs.url(self.path, **kwargs)
 
     def _fetch_range(self, start, end):
-        return _fetch_range(
-            self.fs, self.bucket_name, self.key, self.version_id, start, end
-        )
+        return _fetch_range(self.fs, self.bucket_name, self.key, self.version_id, start, end)
 
     def _upload_chunk(self, final=False):
-        logger.debug(
-            "Upload for %s, final=%s, loc=%s, buffer loc=%s"
-            % (self, final, self.loc, self.buffer.tell())
-        )
-        if (
-            self.autocommit
-            and not self.append_block
-            and final
-            and self.tell() < self.blocksize
-        ):
+        logger.debug("Upload for %s, final=%s, loc=%s, buffer loc=%s" % (self, final, self.loc, self.buffer.tell()))
+        if (self.autocommit and not self.append_block and final and self.tell() < self.blocksize):
             # only happens when closing small file, use on-shot PUT
             data1 = False
         else:
@@ -1374,9 +1289,7 @@ class OSSFile(AbstractBufferedFile):
 
             part = len(self.parts) + 1
             logger.debug("Upload chunk %s, %s" % (self, part))
-            result = self._call_oss(
-                "upload_part", self.key, self.mpu.upload_id, part, data0
-            )
+            result = self._call_oss("upload_part", self.key, self.mpu.upload_id, part, data0)
             self.parts.append(PartInfo(part, result.etag))
 
         if self.autocommit and final:
@@ -1400,9 +1313,7 @@ class OSSFile(AbstractBufferedFile):
                 raise RuntimeError
         else:
             logger.debug("Complete multi-part upload for %s " % self)
-            result = self._call_oss(
-                "complete_multipart_upload", self.key, self.mpu.upload_id, self.parts
-            )
+            result = self._call_oss("complete_multipart_upload", self.key, self.mpu.upload_id, self.parts)
         if self.fs.version_aware:
             self.version_id = result.versionid
 
@@ -1412,9 +1323,7 @@ class OSSFile(AbstractBufferedFile):
         parts = self.path.split("/")
         path = parts[0]
         for p in parts[1:]:
-            if path in self.fs.dircache and not [
-                True for f in self.fs.dircache[path] if f["name"] == path + "/" + p
-            ]:
+            if path in self.fs.dircache and not [True for f in self.fs.dircache[path] if f["name"] == path + "/" + p]:
                 self.fs.invalidate_cache(path)
             path = path + "/" + p
 
@@ -1443,9 +1352,7 @@ def _fetch_range(fs, bucket_name, key, version_id, start, end, params=None):
         return b""
     logger.info("Fetch: %s/%s, %s-%s", bucket_name, key, start, end)
 
-    resp = fs.call_oss(
-        bucket_name, "get_object", key, byte_range=(start, end - 1), params=params
-    )
+    resp = fs.call_oss(bucket_name, "get_object", key, byte_range=(start, end - 1), params=params)
     data = resp.read()
     resp.close()
     return data
