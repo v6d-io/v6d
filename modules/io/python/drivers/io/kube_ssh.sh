@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -x
 POD_NAME=$1
 shift
 

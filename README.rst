@@ -205,6 +205,9 @@ Acknowledgements
 - `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation;
 - `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python;
 - `uri <https://github.com/cpp-netlib/uri>`_, a library for URI parsing.
+- `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
+
+
 
 Getting involved
 ----------------
