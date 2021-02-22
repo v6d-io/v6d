@@ -18,20 +18,15 @@
 
 import datetime
 import io
-import json
 import os
-import sys
 import time
 import uuid
-from concurrent.futures import ProcessPoolExecutor
-from contextlib import contextmanager
 from itertools import chain
 
 import fsspec.core
 import oss2
 import oss2.headers
 import pytest
-import requests
 
 ossfs = pytest.importorskip("ossfs")
 from ossfs import OSSFileSystem
@@ -73,9 +68,6 @@ a = test_bucket_name + "/tmp/test/a"
 b = test_bucket_name + "/tmp/test/b"
 c = test_bucket_name + "/tmp/test/c"
 d = test_bucket_name + "/tmp/test/d"
-py35 = sys.version_info[:2] == (3, 5)
-port = 5555
-endpoint_uri = "http://127.0.0.1:%s/" % port
 
 key = os.environ.get("ACCESS_KEY_ID")
 secret = os.environ.get("SECRET_ACCESS_KEY")
@@ -436,27 +428,6 @@ def test_rmdir(oss):
     assert bucket in oss.ls("/")
     oss.rmdir(bucket)
     assert bucket not in oss.ls("/")
-
-
-@pytest.mark.skip(reason="region")
-def test_mkdir_region_name(oss):
-    bucket = "test2_bucket"
-    oss.mkdir(bucket, region_name="eu-central-1")
-    assert bucket in oss.ls("/")
-
-
-@pytest.mark.skip(reason="region")
-def test_mkdir_client_region_name():
-    bucket = "test3_bucket"
-    oss = OSSFileSystem(
-        anon=False,
-        client_kwargs={
-            "region_name": "eu-central-1",
-            "endpoint_url": endpoint_uri
-        },
-    )
-    oss.mkdir(bucket)
-    assert bucket in oss.ls("/")
 
 
 def test_makedirs(oss):

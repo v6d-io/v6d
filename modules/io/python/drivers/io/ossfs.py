@@ -1107,7 +1107,7 @@ class OSSFileSystem(AbstractFileSystem):
 
             is_truncated = result.is_truncated
 
-            # 查看列举结果是否完整。如果结果不完整，则继续罗列。如果结果已完整，则退出循环。
+            # If list results is not complete, continue to list from marker
             if is_truncated:
                 next_key_marker = result.next_key_marker
                 next_versionid_marker = result.next_versionid_marker
