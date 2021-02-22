@@ -208,10 +208,10 @@ Acknowledgements
 - `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
 
 
-
 Getting involved
 ----------------
 
+- Join in the `Slack channel`_ for discussion.
 - Read `contribution guide`_.
 - Please report bugs by submitting a GitHub issue.
 - Submit contributions using pull requests.
@@ -225,6 +225,7 @@ Thank you in advance for your contributions to vineyard!
 .. _contribution guide: https://github.com/alibaba/libvineyard/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
 .. _python package: https://pypi.org/project/vineyard/
+.. _Slack channel: https://join.slack.com/t/v6d/shared_invite/zt-ml78e62u-IKb4jhHVSIroGDpBDi_q7Q
 
 .. |Build and Test| image:: https://github.com/alibaba/libvineyard/workflows/Build%20and%20Test/badge.svg
    :target: https://github.com/alibaba/libvineyard/actions?workflow=Build%20and%20Test
