@@ -495,7 +495,7 @@ class OSSFileSystem(AbstractFileSystem):
         bucket_name, key, _ = self.split_path(path)
         size = len(data)
         # Max size of PutObject is 5GB
-        if size < min(5 * 2 ** 30, 2 * chunksize):
+        if size < min(5 * 2**30, 2 * chunksize):
             return self.call_oss(bucket_name, "put_object", key, data, **kwargs)
         else:
             mpu = self.call_oss(bucket_name, "init_multipart_upload", key, **kwargs)
@@ -522,7 +522,7 @@ class OSSFileSystem(AbstractFileSystem):
             return
         size = os.path.getsize(lpath)
         with open(lpath, "rb") as f0:
-            if size < min(5 * 2 ** 30, 2 * chunksize):
+            if size < min(5 * 2**30, 2 * chunksize):
                 return self.call_oss(bucket_name, "put_object", key, f0, **kwargs)
             else:
                 mpu = self.call_oss(bucket_name, "init_multipart_upload", key, **kwargs)
