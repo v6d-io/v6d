@@ -1,6 +1,29 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
+# The file modules/io/python/drivers/io/ossfs.py is referred and derived
+# from project s3fs,
+#     https://github.com/dask/s3fs/blob/main/s3fs/core.py
+#
+#  which has the following license:
+#
+# Copyright (c) 2016, Continuum Analytics, Inc. and contributors
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+
+# Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+
+# Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+
+# Neither the name of Continuum Analytics nor the names of any contributors
+# may be used to endorse or promote products derived from this software
+# without specific prior written permission.
+#
 # Copyright 2020 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -471,7 +494,8 @@ class OSSFileSystem(AbstractFileSystem):
     def pipe_file(self, path, data, chunksize=50 * 2**20, **kwargs):
         bucket_name, key, _ = self.split_path(path)
         size = len(data)
-        if size < 5 * 2**20:
+        # Max size of PutObject is 5GB
+        if size < min(5 * 2 ** 30, 2 * chunksize):
             return self.call_oss(bucket_name, "put_object", key, data, **kwargs)
         else:
             mpu = self.call_oss(bucket_name, "init_multipart_upload", key, **kwargs)
@@ -498,7 +522,7 @@ class OSSFileSystem(AbstractFileSystem):
             return
         size = os.path.getsize(lpath)
         with open(lpath, "rb") as f0:
-            if size < chunksize:
+            if size < min(5 * 2 ** 30, 2 * chunksize):
                 return self.call_oss(bucket_name, "put_object", key, f0, **kwargs)
             else:
                 mpu = self.call_oss(bucket_name, "init_multipart_upload", key, **kwargs)
