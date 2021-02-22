@@ -33,8 +33,7 @@ import oss2.headers
 import pytest
 import requests
 
-pytestmark = pytest.mark.skipif(True, reason='skip ossfs test')
-
+ossfs = pytest.importorskip("ossfs")
 from ossfs import OSSFileSystem
 
 test_bucket_name = "test-ossfs-zsy"
