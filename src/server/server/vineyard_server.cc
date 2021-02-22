@@ -385,7 +385,7 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
   meta_service_ptr_->RequestToDelete(
       ids, force, deep,
       [](const Status& status, const json& meta,
-         std::set<ObjectID> const& ids_to_delete,
+         std::vector<ObjectID> const& ids_to_delete,
          std::vector<IMetaService::op_t>& ops) {
         if (status.ok()) {
           auto status =

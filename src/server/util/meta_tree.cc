@@ -367,10 +367,22 @@ Status DelDataOps(const json& tree, const ObjectID id,
 
 Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
                   std::vector<IMetaService::op_t>& ops) {
-  // FIXME: use a more efficient implmentation.
   for (auto const& id : ids) {
     auto s = DelDataOps(tree, id, ops);
-    if (!s.ok()) {
+    if (!s.ok() && !IsBlob(id)) {
+      // here it might be a "remote" blobs.
+      return s;
+    }
+  }
+  return Status::OK();
+}
+
+Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
+                  std::vector<IMetaService::op_t>& ops) {
+  for (auto const& id : ids) {
+    auto s = DelDataOps(tree, id, ops);
+    if (!s.ok() && !IsBlob(id)) {
+      // here it might be a "remote" blobs.
       return s;
     }
   }

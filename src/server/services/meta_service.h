@@ -37,7 +37,7 @@ limitations under the License.
 #include "common/util/status.h"
 #include "server/server/vineyard_server.h"
 
-#define HEARTBEAT_TIME 20
+#define HEARTBEAT_TIME 60
 #define MAX_TIMEOUT_COUNT 3
 
 namespace vineyard {
@@ -243,54 +243,60 @@ class IMetaService {
   }
 
   inline void RequestToDelete(
-      const std::vector<ObjectID>& ids, const bool force, const bool deep,
-      callback_t<const json&, std::set<ObjectID> const&, std::vector<op_t>&>
+      const std::vector<ObjectID>& object_ids, const bool force,
+      const bool deep,
+      callback_t<const json&, std::vector<ObjectID> const&, std::vector<op_t>&>
           callback_after_ready,
       callback_t<> callback_after_finish) {
     // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
     // avoid contention between other vineyard instances.
     this->requestLock(
-        meta_sync_lock_,
-        [this, ids, force, deep, callback_after_ready, callback_after_finish](
-            const Status& status, std::shared_ptr<ILock> lock) {
+        meta_sync_lock_, [this, object_ids, force, deep, callback_after_ready,
+                          callback_after_finish](const Status& status,
+                                                 std::shared_ptr<ILock> lock) {
           if (status.ok()) {
             rev_ = lock->GetRev();
-            requestValues(
-                "", [this, ids, force, deep, callback_after_ready,
-                     callback_after_finish, lock](
-                        const Status& status, const json& meta, unsigned rev) {
-                  // Implements dependent-based (usage-based) lifecycle.
-                  std::set<ObjectID> initial_delete_set{ids.begin(), ids.end()};
-                  std::set<ObjectID> delete_set;
-                  for (auto const object_id : ids) {
-                    traverseToDelete(initial_delete_set, delete_set, object_id,
-                                     force, deep);
-                  }
-                  std::vector<op_t> ops;
-                  auto s = callback_after_ready(status, meta, delete_set, ops);
-                  if (s.ok()) {
-                    // apply changes locally before committing to etcd
-                    this->metaUpdate(ops, true);
-                    // commit to etcd
-                    this->commitUpdates(
-                        ops, [this, callback_after_finish, lock](
-                                 const Status& status, unsigned rev) {
-                          // update rev_ to the revision after unlock.
-                          unsigned rev_after_unlock = 0;
-                          if (lock->Release(rev_after_unlock).ok()) {
-                            rev_ = rev_after_unlock;
-                          }
-                          return callback_after_finish(status);
-                        });
-                    return Status::OK();
-                  } else {
-                    unsigned rev_after_unlock = 0;
-                    if (lock->Release(rev_after_unlock).ok()) {
-                      rev_ = rev_after_unlock;
-                    }
-                    return callback_after_finish(s);  // propogate the error.
-                  }
-                });
+            requestValues("", [this, object_ids, force, deep,
+                               callback_after_ready, callback_after_finish,
+                               lock](const Status& status, const json& meta,
+                                     unsigned rev) {
+              // Implements dependent-based (usage-based) lifecycle.
+              std::set<ObjectID> initial_delete_set{object_ids.begin(),
+                                                    object_ids.end()};
+              std::set<ObjectID> delete_set;
+              std::map<ObjectID, int32_t> depthes;
+              for (auto const object_id : object_ids) {
+                traverseToDelete(initial_delete_set, delete_set, 0, depthes,
+                                 object_id, force, deep);
+              }
+              std::vector<ObjectID> processed_delete_set;
+              postProcessForDelete(delete_set, depthes, processed_delete_set);
+              std::vector<op_t> ops;
+              auto s =
+                  callback_after_ready(status, meta, processed_delete_set, ops);
+              if (s.ok()) {
+                // apply changes locally before committing to etcd
+                this->metaUpdate(ops, true);
+                // commit to etcd
+                this->commitUpdates(
+                    ops, [this, callback_after_finish, lock](
+                             const Status& status, unsigned rev) {
+                      // update rev_ to the revision after unlock.
+                      unsigned rev_after_unlock = 0;
+                      if (lock->Release(rev_after_unlock).ok()) {
+                        rev_ = rev_after_unlock;
+                      }
+                      return callback_after_finish(status);
+                    });
+                return Status::OK();
+              } else {
+                unsigned rev_after_unlock = 0;
+                if (lock->Release(rev_after_unlock).ok()) {
+                  rev_ = rev_after_unlock;
+                }
+                return callback_after_finish(s);  // propogate the error.
+              }
+            });
             return Status::OK();
           } else {
             LOG(ERROR) << status.ToString();
@@ -564,9 +570,14 @@ class IMetaService {
   bool deleteable(ObjectID const object_id);
 
   void traverseToDelete(std::set<ObjectID>& initial_delete_set,
-                        std::set<ObjectID>& delete_set,
+                        std::set<ObjectID>& delete_set, int32_t depth,
+                        std::map<ObjectID, int32_t>& depthes,
                         const ObjectID object_id, const bool force,
                         const bool deep);
+
+  void postProcessForDelete(const std::set<ObjectID>& delete_set,
+                            const std::map<ObjectID, int32_t>& depthes,
+                            std::vector<ObjectID>& delete_objects);
 
   inline void putVal(const kv_t& kv, bool const from_remote) {
     // don't crash the server for any reason (any potential garbage value)
@@ -607,71 +618,45 @@ class IMetaService {
     VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
   }
 
-  inline void delVal(const kv_t& kv, std::set<ObjectID>& blobs) {
-    size_t last_dot = kv.key.find_last_of('/');
-    size_t parent_end = last_dot;
-    size_t child_start = last_dot + 1;
-    if (static_cast<int>(last_dot) == -1) {
-      child_start = parent_end = 0;
-    }
-    const std::string parent_path(kv.key.cbegin(),
-                                  kv.key.cbegin() + parent_end);
-    const std::string child_name(kv.key.cbegin() + child_start, kv.key.cend());
-
-    std::vector<std::string> vs;
-    boost::algorithm::split(vs, kv.key, [](const char c) { return c == '/'; });
-    if (vs[0].empty()) {
-      vs.erase(vs.begin());
-    }
-
-    ObjectID id_in_key = InvalidObjectID();
-    if (vs[0] == "data" && vs.size() > 1) {
-      id_in_key = VYObjectIDFromString(vs[1]);
-    }
-    if (vs[0] != "data" || deleteable(id_in_key)) {
-      // delete metadata: a delete operation might be applied multiple times
-      auto parent_json_path = json::json_pointer(parent_path);
-      if (!meta_.contains(parent_json_path)) {
-        return;
+  inline void delVal(std::string const& key) {
+    auto path = json::json_pointer(key);
+    if (meta_.contains(path)) {
+      auto ppath = path.parent_pointer();
+      meta_[ppath].erase(path.back());
+      if (meta_[ppath].empty()) {
+        meta_[ppath.parent_pointer()].erase(ppath.back());
       }
-      auto& parent_node = meta_[parent_json_path];
-      parent_node.erase(child_name);
-      if (parent_node.empty()) {
-        size_t last_dot_in_path = parent_path.find_last_of('/');
-        if (last_dot_in_path == 0) {
-          meta_.erase(parent_path.substr(last_dot_in_path + 1));
-        } else {
-          meta_[json::json_pointer(parent_path.substr(0, last_dot_in_path))]
-              .erase(parent_path.substr(last_dot_in_path + 1));
-        }
-      }
+    }
+  }
 
+  inline void delVal(const kv_t& kv) { delVal(kv.key); }
+
+  inline void delVal(ObjectID const& target, std::set<ObjectID>& blobs) {
+    if (target == InvalidObjectID()) {
+      return;
+    }
+    auto targetkey = json::json_pointer("/data/" + VYObjectIDToString(target));
+    if (deleteable(target)) {
       // if deletable blob: delete blob
-      if (id_in_key != InvalidObjectID() && IsBlob(id_in_key)) {
-        blobs.emplace(id_in_key);
+      if (IsBlob(target)) {
+        blobs.emplace(target);
       }
-    } else {
-      if (vs[0] == "data" && id_in_key != InvalidObjectID()) {
-        // mark as transient
-        if ("transient" == child_name) {
-          meta_[json::json_pointer(parent_path)]["transient"] = true;
-        }
-      }
+      delVal(targetkey);
+    } else if (target != InvalidObjectID()) {
+      // mark as transient
+      meta_[targetkey]["transient"] = true;
     }
   }
 
   template <class RangeT>
   void metaUpdate(const RangeT& ops, bool const from_remote) {
     std::set<ObjectID> blobs_to_delete;
-    // apply signature mappings first.
-    for (const op_t& op : ops) {
-      if (boost::algorithm::starts_with(op.kv.key, "/signatures/")) {
-        if (op.op == op_t::op_type_t::kPut) {
-          putVal(op.kv, from_remote);
-        }
-      }
-    }
 
+    std::vector<op_t> add_sigs, drop_sigs;
+    std::vector<op_t> add_datas, drop_datas;
+    std::vector<op_t> add_others, drop_others;
+
+    // group-by all changes
     for (const op_t& op : ops) {
       if (op.kv.rev != 0 && op.kv.rev <= rev_) {
         // revision resolution: means this revision has already been updated
@@ -686,24 +671,103 @@ class IMetaService {
         // skip the update of etcd lock
         continue;
       }
-      // signatures already been applied.
-      if (boost::algorithm::starts_with(op.kv.key, "/signatures/")) {
-        continue;
-      }
+
+      // update instance status
       if (boost::algorithm::starts_with(op.kv.key,
                                         "/instances" + std::string("/"))) {
         instanceUpdate(op);
       }
+
 #ifndef NDEBUG
       VLOG(10) << "update op in meta tree: " << op.ToString();
 #endif
-      const kv_t& kv = op.kv;
-      if (op.op == op_t::op_type_t::kPut) {
-        putVal(kv, from_remote);
-      } else if (op.op == op_t::op_type_t::kDel) {
-        delVal(kv, blobs_to_delete);
+
+      if (boost::algorithm::starts_with(op.kv.key, "/signatures/")) {
+        if (op.op == op_t::op_type_t::kPut) {
+          add_sigs.emplace_back(op);
+        } else if (op.op == op_t::op_type_t::kDel) {
+          drop_sigs.emplace_back(op);
+        } else {
+          LOG(ERROR) << "warn: unknown op type for signatures: " << op.op;
+        }
+      } else if (boost::algorithm::starts_with(op.kv.key, "/data/")) {
+        if (op.op == op_t::op_type_t::kPut) {
+          add_datas.emplace_back(op);
+        } else if (op.op == op_t::op_type_t::kDel) {
+          drop_datas.emplace_back(op);
+        } else {
+          LOG(ERROR) << "warn: unknown op type for datas: " << op.op;
+        }
+      } else {
+        if (op.op == op_t::op_type_t::kPut) {
+          add_others.emplace_back(op);
+        } else if (op.op == op_t::op_type_t::kDel) {
+          drop_others.emplace_back(op);
+        } else {
+          LOG(ERROR) << "warn: unknown op type for others: " << op.op;
+        }
       }
     }
+
+    // apply adding signature mappings first.
+    for (const op_t& op : add_sigs) {
+      putVal(op.kv, from_remote);
+    }
+
+    // apply adding others
+    for (const op_t& op : add_others) {
+      putVal(op.kv, from_remote);
+    }
+
+    // apply adding datas
+    for (const op_t& op : add_datas) {
+      putVal(op.kv, from_remote);
+    }
+
+    // apply drop datas
+
+    {
+      // 1. collect all ids
+      std::set<ObjectID> initial_delete_set;
+      std::vector<std::string> vs;
+      for (const op_t& op : drop_datas) {
+        vs.clear();
+        boost::algorithm::split(vs, op.kv.key,
+                                [](const char c) { return c == '/'; });
+        if (vs[0].empty()) {
+          vs.erase(vs.begin());
+        }
+        initial_delete_set.emplace(VYObjectIDFromString(vs[1]));
+      }
+      std::vector<ObjectID> object_ids{initial_delete_set.begin(),
+                                       initial_delete_set.end()};
+
+      // 2. traverse to find the delete set
+      std::set<ObjectID> delete_set;
+      std::map<ObjectID, int32_t> depthes;
+      for (auto const object_id : object_ids) {
+        traverseToDelete(initial_delete_set, delete_set, 0, depthes, object_id,
+                         false, false);
+      }
+      std::vector<ObjectID> processed_delete_set;
+      postProcessForDelete(delete_set, depthes, processed_delete_set);
+
+      // 3. execute delete for every object
+      for (auto const target : processed_delete_set) {
+        delVal(target, blobs_to_delete);
+      }
+    }
+
+    // apply drop others
+    for (const op_t& op : drop_others) {
+      delVal(op.kv);
+    }
+
+    // apply drop signatures
+    for (const op_t& op : drop_sigs) {
+      delVal(op.kv);
+    }
+
     VINEYARD_SUPPRESS(server_ptr_->DeleteBlobBatch(blobs_to_delete));
     VINEYARD_SUPPRESS(server_ptr_->ProcessDeferred(meta_));
   }

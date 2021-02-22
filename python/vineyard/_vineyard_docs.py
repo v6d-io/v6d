@@ -375,6 +375,9 @@ Parameters:
     deep: bool
         Deeply delete an object means we will deleting the members recursively. The default
         value is :code:`True`.
+
+        Note that when deleting objects which have *direct* blob members, the
+        processing on those blobs yields a "deep" behavior.
 ''')
 
 add_doc(
