@@ -32,6 +32,7 @@ Development
 
    notes/contributing.rst
    notes/troubleshooting.rst
+   notes/roadmap.rst
 
 Indexes
 -------
