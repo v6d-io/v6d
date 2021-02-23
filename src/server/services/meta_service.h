@@ -245,64 +245,80 @@ class IMetaService {
   inline void RequestToDelete(
       const std::vector<ObjectID>& object_ids, const bool force,
       const bool deep,
-      callback_t<const json&, std::vector<ObjectID> const&, std::vector<op_t>&>
+      callback_t<const json&, std::vector<ObjectID> const&, std::vector<op_t>&,
+                 bool&>
           callback_after_ready,
       callback_t<> callback_after_finish) {
+    // implements dependent-based (usage-based) lifecycle: find the delete set.
+    std::set<ObjectID> initial_delete_set{object_ids.begin(), object_ids.end()};
+    std::set<ObjectID> delete_set;
+    std::map<ObjectID, int32_t> depthes;
+    for (auto const object_id : object_ids) {
+      traverseToDelete(initial_delete_set, delete_set, 0, depthes, object_id,
+                       force, deep);
+    }
+    std::vector<ObjectID> processed_delete_set;
+    postProcessForDelete(delete_set, depthes, processed_delete_set);
+
+    // generate ops.
+    std::vector<op_t> ops;
+    bool sync_remote = false;
+    auto s = callback_after_ready(Status::OK(), meta_, processed_delete_set,
+                                  ops, sync_remote);
+
+    // apply local updates
+    if (s.ok()) {
+      // apply changes locally (before committing to etcd)
+      this->metaUpdate(ops, false);
+    } else {
+      VINEYARD_DISCARD(callback_after_finish(s));
+      return;
+    }
+
+    if (!sync_remote) {
+      VINEYARD_DISCARD(callback_after_finish(s));
+      return;
+    }
+
+    // apply remote updates
+    //
     // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
     // avoid contention between other vineyard instances.
-    this->requestLock(
-        meta_sync_lock_, [this, object_ids, force, deep, callback_after_ready,
-                          callback_after_finish](const Status& status,
-                                                 std::shared_ptr<ILock> lock) {
+    this->requestLock(meta_sync_lock_, [this, ops /* by copy */,
+                                        callback_after_finish](
+                                           const Status& status,
+                                           std::shared_ptr<ILock> lock) {
+      if (status.ok()) {
+        rev_ = lock->GetRev();
+        requestValues("", [this, ops /* by copy */, callback_after_finish,
+                           lock](const Status& status, const json& meta,
+                                 unsigned rev) {
           if (status.ok()) {
-            rev_ = lock->GetRev();
-            requestValues("", [this, object_ids, force, deep,
-                               callback_after_ready, callback_after_finish,
-                               lock](const Status& status, const json& meta,
-                                     unsigned rev) {
-              // Implements dependent-based (usage-based) lifecycle.
-              std::set<ObjectID> initial_delete_set{object_ids.begin(),
-                                                    object_ids.end()};
-              std::set<ObjectID> delete_set;
-              std::map<ObjectID, int32_t> depthes;
-              for (auto const object_id : object_ids) {
-                traverseToDelete(initial_delete_set, delete_set, 0, depthes,
-                                 object_id, force, deep);
+            // commit to etcd
+            this->commitUpdates(ops, [this, callback_after_finish, lock](
+                                         const Status& status, unsigned rev) {
+              // update rev_ to the revision after unlock.
+              unsigned rev_after_unlock = 0;
+              if (lock->Release(rev_after_unlock).ok()) {
+                rev_ = rev_after_unlock;
               }
-              std::vector<ObjectID> processed_delete_set;
-              postProcessForDelete(delete_set, depthes, processed_delete_set);
-              std::vector<op_t> ops;
-              auto s =
-                  callback_after_ready(status, meta, processed_delete_set, ops);
-              if (s.ok()) {
-                // apply changes locally before committing to etcd
-                this->metaUpdate(ops, true);
-                // commit to etcd
-                this->commitUpdates(
-                    ops, [this, callback_after_finish, lock](
-                             const Status& status, unsigned rev) {
-                      // update rev_ to the revision after unlock.
-                      unsigned rev_after_unlock = 0;
-                      if (lock->Release(rev_after_unlock).ok()) {
-                        rev_ = rev_after_unlock;
-                      }
-                      return callback_after_finish(status);
-                    });
-                return Status::OK();
-              } else {
-                unsigned rev_after_unlock = 0;
-                if (lock->Release(rev_after_unlock).ok()) {
-                  rev_ = rev_after_unlock;
-                }
-                return callback_after_finish(s);  // propogate the error.
-              }
+              return callback_after_finish(status);
             });
             return Status::OK();
           } else {
-            LOG(ERROR) << status.ToString();
+            unsigned rev_after_unlock = 0;
+            if (lock->Release(rev_after_unlock).ok()) {
+              rev_ = rev_after_unlock;
+            }
             return callback_after_finish(status);  // propogate the error.
           }
         });
+        return Status::OK();
+      } else {
+        LOG(ERROR) << status.ToString();
+        return callback_after_finish(status);  // propogate the error.
+      }
+    });
   }
 
   inline void RequestToShallowCopy(

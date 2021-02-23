@@ -63,6 +63,11 @@ class RPCClient : public ClientBase {
   Status Connect(const std::string& host, uint32_t port);
 
   /**
+   * @brief Create a new client using self endpoint.
+   */
+  Status Fork(RPCClient& client);
+
+  /**
    * @brief Obtain metadata from vineyard server. Note that unlike IPC client,
    * RPC client doesn't map shared memorys to the client's process.
    *

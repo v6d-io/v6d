@@ -119,7 +119,17 @@
   (__VA_ARGS__)
 #endif  // RETURN_ON_ASSERT
 
-// suppress and ignore the error status.
+// discard and ignore the error status.
+#ifndef VINEYARD_DISCARD
+#define VINEYARD_DISCARD(status)                              \
+  do {                                                        \
+    auto _ret = (status);                                     \
+    if (!_ret.ok()) {} /* NOLINT(whitespace/empty_if_body) */ \
+  } while (0)
+#endif  // VINEYARD_DISCARD
+
+// suppress and ignore the error status, deprecated in favour of
+// VINEYARD_DISCARD
 #ifndef VINEYARD_SUPPRESS
 #define VINEYARD_SUPPRESS(status)                             \
   do {                                                        \
@@ -196,8 +206,11 @@ enum class StatusCode : unsigned char {
  * - `RETURN_ON_ASSERT`: it looks like VINEYARD_ASSERT, but return a status of
  *   AssertionFailed, without causing an exception and abort the program.
  *
- * - `VINEYARD_SUPPRESS`: suppress and ignore the error status, just logging it
+ * - `VINEYARD_DISCARD`: suppress and ignore the error status, just logging it
  *   out.
+ *
+ * - `VINEYARD_SUPPRESS`: suppress and ignore the error status, just logging it
+ *   out, deprecated in favour of VINEYARD_DISCARD.
  *
  *   This one is usaully used in dtor that we shouldn't raise exceptions.
  */

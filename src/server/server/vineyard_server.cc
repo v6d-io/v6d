@@ -386,10 +386,10 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
       ids, force, deep,
       [](const Status& status, const json& meta,
          std::vector<ObjectID> const& ids_to_delete,
-         std::vector<IMetaService::op_t>& ops) {
+         std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
         if (status.ok()) {
-          auto status =
-              CATCH_JSON_ERROR(meta_tree::DelDataOps(meta, ids_to_delete, ops));
+          auto status = CATCH_JSON_ERROR(
+              meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
           if (status.IsMetaTreeSubtreeNotExists()) {
             return Status::ObjectNotExists();
           }
