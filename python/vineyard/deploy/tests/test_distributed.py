@@ -77,3 +77,28 @@ def test_add_remote_placeholder(vineyard_ipc_sockets):
 
     meta = client2.get_meta(tupid, True)
     assert meta['__elements_-size'] == 4
+
+
+def test_remote_deletion(vineyard_ipc_sockets):
+    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2))
+
+    client1 = vineyard.connect(vineyard_ipc_sockets[0])
+    client2 = vineyard.connect(vineyard_ipc_sockets[1])
+
+    old_status = client1.status
+
+    data = np.ones((1, 2, 3, 4, 5))
+    o1 = client1.put(data)
+    client1.persist(o1)
+
+    new_status = client1.status
+
+    assert old_status.memory_limit == new_status.memory_limit
+    assert old_status.memory_usage != new_status.memory_usage
+
+    client2.delete(o1)
+
+    new_status = client1.status
+
+    assert old_status.memory_limit == new_status.memory_limit
+    assert old_status.memory_usage == new_status.memory_usage
