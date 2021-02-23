@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "server/services/meta_service.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "glog/logging.h"
@@ -27,6 +28,16 @@ namespace vineyard {
 std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t ptr) {
   return std::shared_ptr<IMetaService>(new EtcdMetaService(ptr));
 }
+
+/** Note [Deleting objects and blobs]
+ *
+ * Blob is special: suppose A -> B and A -> C, where A is an object, B is an
+ * object as well, but C is a blob, when delete(A, deep=False), B will won't be
+ * touched but C will be checked (and possible deleted) as well.
+ *
+ * That is because, for remote object, when it being delete (with deep), the
+ * deletion of the blobs cannot be reflected in watched etcd events.
+ */
 
 void IMetaService::incRef(std::string const& key, std::string const& value) {
   std::vector<std::string> vs;
@@ -77,12 +88,17 @@ bool IMetaService::deleteable(ObjectID const object_id) {
 
 void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
                                     std::set<ObjectID>& delete_set,
+                                    int32_t depth,
+                                    std::map<ObjectID, int32_t>& depthes,
                                     const ObjectID object_id, const bool force,
                                     const bool deep) {
   // emulate a topological sort to ensure the correctness when deleting multiple
   // objects at the same time.
   if (delete_set.find(object_id) != delete_set.end()) {
     // already been processed
+    if (depthes[depth] < depth) {
+      depthes[depth] = depth;
+    }
     return;
   }
   auto sup_target_range = supobjects_.equal_range(object_id);
@@ -93,11 +109,14 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
     }
   }
   for (ObjectID const& sup_target : sup_traget_to_preprocess) {
-    traverseToDelete(initial_delete_set, delete_set, sup_target, force, deep);
+    traverseToDelete(initial_delete_set, delete_set, depth + 1, depthes,
+                     sup_target, force, deep);
   }
   if (force || deleteable(object_id)) {
     delete_set.emplace(object_id);
+    depthes[object_id] = depth;
     {
+      // delete downwards
       std::set<ObjectID> to_delete;
       auto range = subobjects_.equal_range(object_id);
       for (auto it = range.first; it != range.second; ++it) {
@@ -111,17 +130,18 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
             ++p;
           }
         }
-        if (deep) {
+        if (deep || IsBlob(it->second)) {
+          // blob is special: see Note [Deleting objects and blobs].
           to_delete.emplace(it->second);
         }
       }
-      if (deep) {
-        for (auto const& target : to_delete) {
-          traverseToDelete(initial_delete_set, delete_set, target, false, true);
-        }
+      for (auto const& target : to_delete) {
+        traverseToDelete(initial_delete_set, delete_set, depth - 1, depthes,
+                         target, false, true);
       }
     }
     if (force) {
+      // delete upwards
       std::set<ObjectID> to_delete;
       auto range = supobjects_.equal_range(object_id);
       for (auto it = range.first; it != range.second; ++it) {
@@ -141,14 +161,31 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
       }
       if (force) {
         for (auto const& target : to_delete) {
-          traverseToDelete(initial_delete_set, delete_set, target, true, false);
+          traverseToDelete(initial_delete_set, delete_set, depth + 1, depthes,
+                           target, true, false);
         }
       }
     }
     subobjects_.erase(object_id);
     supobjects_.erase(object_id);
   }
-  initial_delete_set.erase(object_id);
+  if (initial_delete_set.find(object_id) != initial_delete_set.end()) {
+    initial_delete_set.erase(object_id);
+  }
+}
+
+/**
+ * N.B.: all object ids are guaranteed to exist in `depthes`.
+ */
+void IMetaService::postProcessForDelete(
+    const std::set<ObjectID>& delete_set,
+    const std::map<ObjectID, int32_t>& depthes,
+    std::vector<ObjectID>& delete_objects) {
+  delete_objects.assign(delete_set.begin(), delete_set.end());
+  std::sort(delete_objects.begin(), delete_objects.end(),
+            [&depthes](const ObjectID& x, const ObjectID& y) {
+              return depthes.at(x) > depthes.at(y);
+            });
 }
 
 void IMetaService::printDepsGraph() {

@@ -127,6 +127,8 @@ class ClientBase {
    *        means the object and objects which use this object will be delete.
    *        Default is false.
    * @param deep Whether to delete the member of this object. Default is false.
+   *        Note that when deleting object which has *direct* blob members, the
+   *        processing on those blobs yields a "deep" behavior.
    *
    * @return Status that indicates whether the delete action has succeeded.
    */
@@ -140,6 +142,8 @@ class ClientBase {
    *        means the object and objects which use this object will be delete.
    *        Default is false.
    * @param deep Whether to delete the member of this object. Default is false.
+   *        Note that when deleting objects which have *direct* blob members,
+   *        the processing on those blobs yields a "deep" behavior.
    *
    * @return Status that indicates whether the delete action has succeeded.
    */

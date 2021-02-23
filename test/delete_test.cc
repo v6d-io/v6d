@@ -46,7 +46,8 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  ObjectID id = InvalidObjectID(), blob_id = InvalidObjectID();
+  ObjectID id = InvalidObjectID(), blob_id = InvalidObjectID(),
+           wrapper_id = InvalidObjectID();
   bool exists;
 
   {
@@ -144,7 +145,7 @@ int main(int argc, char** argv) {
     CHECK(s.ok() && objects.size() == 1);
   }
 
-  // shallow deletion
+  // shallow deletion on blob members
   VINEYARD_CHECK_OK(client.Exists(id, exists));
   CHECK(exists);
   VINEYARD_CHECK_OK(client.Exists(blob_id, exists));
@@ -153,12 +154,61 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Exists(id, exists));
   CHECK(!exists);
   VINEYARD_CHECK_OK(client.Exists(blob_id, exists));
-  CHECK(exists);
+  CHECK(!exists);  // see Note [Deleting objects and blobs]
 
   {
     std::unordered_map<ObjectID, Payload> objects;
     auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 1);  // the deletion is shallow
+    // the deletion on direct blob member is not shallow
+    CHECK(s.ok() && objects.size() == 0);
+  }
+
+  {
+    // prepare data
+    std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
+    ArrayBuilder<double> builder(client, double_array);
+    auto sealed_double_array =
+        std::dynamic_pointer_cast<Array<double>>(builder.Seal(client));
+    VINEYARD_CHECK_OK(client.Persist(sealed_double_array->id()));
+    id = sealed_double_array->id();
+    blob_id = VYObjectIDFromString(sealed_double_array->meta()
+                                       .MetaData()["buffer_"]["id"]
+                                       .get_ref<std::string const&>());
+    CHECK(blob_id != InvalidObjectID());
+
+    // wrap
+    PairBuilder pair_builder(client);
+    pair_builder.SetFirst(sealed_double_array);
+    pair_builder.SetSecond(sealed_double_array);
+    wrapper_id = pair_builder.Seal(client)->id();
+  }
+
+  {
+    std::unordered_map<ObjectID, Payload> objects;
+    auto s = client.GetBuffers({blob_id}, objects);
+    CHECK(s.ok() && objects.size() == 1);
+  }
+
+  // shallow deletion on object members
+  VINEYARD_CHECK_OK(client.Exists(wrapper_id, exists));
+  CHECK(exists);
+  VINEYARD_CHECK_OK(client.Exists(id, exists));
+  CHECK(exists);
+  VINEYARD_CHECK_OK(client.Exists(blob_id, exists));
+  CHECK(exists);
+  VINEYARD_CHECK_OK(client.DelData(wrapper_id, false, false));
+  VINEYARD_CHECK_OK(client.Exists(wrapper_id, exists));
+  CHECK(!exists);
+  VINEYARD_CHECK_OK(client.Exists(id, exists));
+  CHECK(exists);
+  VINEYARD_CHECK_OK(client.Exists(blob_id, exists));
+  CHECK(exists);  // see Note [Deleting objects and blobs]
+
+  {
+    std::unordered_map<ObjectID, Payload> objects;
+    auto s = client.GetBuffers({blob_id}, objects);
+    // the deletion on non-direct blob member is shallow
+    CHECK(s.ok() && objects.size() == 1);
   }
 
   {

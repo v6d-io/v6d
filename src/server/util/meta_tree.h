@@ -54,6 +54,9 @@ Status DelDataOps(const json& tree, const ObjectID id,
 Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
                   std::vector<IMetaService::op_t>& ops);
 
+Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
+                  std::vector<IMetaService::op_t>& ops);
+
 Status DelDataOps(const json& tree, const std::string& name,
                   std::vector<IMetaService::op_t>& ops);
 

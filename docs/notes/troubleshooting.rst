@@ -42,4 +42,15 @@ could helps you when error occurs.
 
     Besides, you may also meet strange crashes or runtime exceptions if you have
     :code:`import` pyarrow before vineyard, you could try to adjust the import order
-    by :code:`import vineyard` before :code:`import pyarrow`.
+    by :code:`import vineyard` before :code:`import pyarrow`. And please export environment
+    variable :code:`VINEYARD_DEV=TRUE` if you have encountered any shared library related
+    issue.
+
+3. *Resource of etcd pod when deploying on Kubernetes*
+
+    We have noticed that etcd performs pretty poor when vineyard client persist a large
+    object, especially in Kubernetes deployment the CPU cores of etcd pod is limited by
+    cgroup. For such cases, users need to increase the CPU resources of etcd pod. For
+    more details about etcd tuning, please refer to the section `Hardware recommendations
+    <https://etcd.io/docs/v3.4.0/op-guide/hardware/>`_
+    in etcd docs.

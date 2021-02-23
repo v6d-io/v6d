@@ -103,6 +103,20 @@ setup(
         'cli': ['vineyard-codegen=vineyard.cli:main'],
         'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
     },
+    setup_requires=[
+        'libclang',
+        'parsec',
+        'setuptools',
+    ],
+    install_requires=[
+        'numpy',
+        'pandas<1.0.0; python_version<"3.6"',
+        'pandas<1.2.0; python_version<"3.7"',
+        'pandas>=1.0.0; python_version>="3.7"',
+        'pyarrow',
+        'setuptools',
+        'sortedcontainers',
+    ],
     extras_require={
         'dev': [
             'breathe',
