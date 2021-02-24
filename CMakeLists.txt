@@ -68,9 +68,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo"
     )
 endif()
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(BUILD_VINEYARD_PROFILING ON)
-endif()
 
 find_program(ccache_EXECUTABLE ccache)
 if(ccache_EXECUTABLE)
