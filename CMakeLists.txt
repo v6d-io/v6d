@@ -144,6 +144,8 @@ macro(find_common_libraries)
     # Don't depends on the boost::system library.
     add_compile_options(-DBOOST_ERROR_CODE_HEADER_ONLY)
     add_compile_options(-DBOOST_SYSTEM_NO_DEPRECATED)
+    # eliminate a lot of warnings for newer version of boost library.
+    add_compile_options(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
     include("cmake/FindLibUnwind.cmake")

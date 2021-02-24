@@ -203,10 +203,8 @@ void bind_core(py::module& mod) {
              return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
            })
       .def("__hash__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
-      .def("__eq__",
-           [](const ObjectIDWrapper& id, const ObjectIDWrapper& other) {
-             return ObjectID(id) == ObjectID(other);
-           })
+      .def("__eq__", [](const ObjectIDWrapper& id,
+                        const ObjectIDWrapper& other) { return id == other; })
       .def(py::pickle(
           [](const ObjectIDWrapper& id) {  // __getstate__
             return py::make_tuple(ObjectID(id));
@@ -217,6 +215,37 @@ void bind_core(py::module& mod) {
                   "Invalid state, cannot be pickled as ObjectID!");
             }
             return ObjectIDWrapper{tup[0].cast<ObjectID>()};
+          }));
+
+  // ObjectNameWrapper
+  py::class_<ObjectNameWrapper>(mod, "ObjectName")
+      .def(py::init<std::string const&>(), "name"_a)
+      .def("__repr__",
+           [](const ObjectNameWrapper& name) {
+             return py::repr(py::cast(std::string(name)));
+           })
+      .def("__str__",
+           [](const ObjectNameWrapper& name) {
+             return py::str(py::cast(std::string(name)));
+           })
+      .def("__hash__",
+           [](const ObjectNameWrapper& name) {
+             return py::hash(py::cast(std::string(name)));
+           })
+      .def("__eq__",
+           [](const ObjectNameWrapper& name, const ObjectNameWrapper& other) {
+             return name == other;
+           })
+      .def(py::pickle(
+          [](const ObjectNameWrapper& name) {  // __getstate__
+            return py::make_tuple(py::cast(std::string(name)));
+          },
+          [](py::tuple const& tup) {  // __setstate__
+            if (tup.size() != 1) {
+              throw std::runtime_error(
+                  "Invalid state, cannot be pickled as ObjectName!");
+            }
+            return ObjectNameWrapper{tup[0].cast<std::string>()};
           }));
 
   // Object
