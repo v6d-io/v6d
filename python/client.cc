@@ -165,6 +165,13 @@ void bind_client(py::module& mod) {
           },
           "object_id"_a, "name"_a)
       .def(
+          "put_name",
+          [](ClientBase* self, const ObjectIDWrapper object_id,
+             ObjectNameWrapper const& name) {
+            throw_on_error(self->PutName(object_id, name));
+          },
+          "object_id"_a, "name"_a)
+      .def(
           "get_name",
           [](ClientBase* self, std::string const& name,
              const bool wait) -> ObjectIDWrapper {
@@ -173,8 +180,21 @@ void bind_client(py::module& mod) {
             return object_id;
           },
           "object_id"_a, py::arg("wait") = false)
+      .def(
+          "get_name",
+          [](ClientBase* self, ObjectNameWrapper const& name,
+             const bool wait) -> ObjectIDWrapper {
+            ObjectID object_id;
+            throw_on_error(self->GetName(name, object_id));
+            return object_id;
+          },
+          "object_id"_a, py::arg("wait") = false)
       .def("drop_name",
            [](ClientBase* self, std::string const& name) {
+             throw_on_error(self->DropName(name));
+           }, "name"_a)
+      .def("drop_name",
+           [](ClientBase* self, ObjectNameWrapper const& name) {
              throw_on_error(self->DropName(name));
            }, "name"_a)
       .def("migrate",

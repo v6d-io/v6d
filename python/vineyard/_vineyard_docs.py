@@ -4,7 +4,7 @@
 import logging
 
 from ._C import _add_doc, connect, ClientBase, IPCClient, RPCClient, \
-    Object, ObjectBuilder, ObjectID, ObjectMeta, InstanceStatus, \
+    Object, ObjectBuilder, ObjectID, ObjectName, ObjectMeta, InstanceStatus, \
     Blob, BlobBuilder
 
 
@@ -284,6 +284,23 @@ are provided to interact with the external python world.
     74516723525190
 ''')
 
+add_doc(
+    ObjectName, r'''
+Opaque type for vineyard's object name. ObjectName wraps a string, but it let users know
+whether the variable represents a vineyard object, and do some smart dispatch based on that.
+Wrapper utilities are provided to interact with the external python world.
+
+.. code:: python
+
+    >>> name = ObjectName("a_tensor")
+    >>> name
+    'a_tensor'
+    >>> repr(name)
+    "'a_tensor'"
+    >>> print(name)
+    a_tensor
+''')
+
 add_doc(Object, r'''
 Base class for vineyard objects.
 ''')
@@ -434,7 +451,7 @@ Returns:
 
 add_doc(
     ClientBase.put_name, r'''
-.. method:: put_name(object_id: ObjectID, name: str) -> None
+.. method:: put_name(object_id: ObjectID, name: str or ObjectName) -> None
     :noindex:
 
 Associate the given object id with a name. An :class:`ObjectID` can be assoicated with more
@@ -447,7 +464,7 @@ Parameters:
 
 add_doc(
     ClientBase.get_name, r'''
-.. method:: get_name(name: str, wait: bool = False) -> ObjectID
+.. method:: get_name(name: str or ObjectName, wait: bool = False) -> ObjectID
     :noindex:
 
 Get the associated object id of the given name.
@@ -465,7 +482,7 @@ Return:
 
 add_doc(
     ClientBase.drop_name, r'''
-.. method:: drop_name(name: str) -> None
+.. method:: drop_name(name: str or ObjectName) -> None
     :noindex:
 
 Remove the assoication of the given name.
