@@ -21,6 +21,7 @@ limitations under the License.
 #include "glog/logging.h"
 
 #include "server/services/etcd_meta_service.h"
+#include "server/services/local_meta_service.h"
 #include "server/util/meta_tree.h"
 
 namespace vineyard {
