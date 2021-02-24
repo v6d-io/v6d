@@ -361,14 +361,14 @@ Status DelData(json& tree, const std::vector<ObjectID>& ids) {
 }
 
 Status DelDataOps(const json& tree, const ObjectID id,
-                  std::vector<IMetaService::op_t>& ops) {
-  return DelDataOps(tree, VYObjectIDToString(id), ops);
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
+  return DelDataOps(tree, VYObjectIDToString(id), ops, sync_remote);
 }
 
 Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops) {
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
   for (auto const& id : ids) {
-    auto s = DelDataOps(tree, id, ops);
+    auto s = DelDataOps(tree, id, ops, sync_remote);
     if (!s.ok() && !IsBlob(id)) {
       // here it might be a "remote" blobs.
       return s;
@@ -378,9 +378,9 @@ Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
 }
 
 Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops) {
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
   for (auto const& id : ids) {
-    auto s = DelDataOps(tree, id, ops);
+    auto s = DelDataOps(tree, id, ops, sync_remote);
     if (!s.ok() && !IsBlob(id)) {
       // here it might be a "remote" blobs.
       return s;
@@ -390,13 +390,16 @@ Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
 }
 
 Status DelDataOps(const json& tree, const std::string& name,
-                  std::vector<IMetaService::op_t>& ops) {
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
   std::string data_prefix = "/data";
   auto json_path = json::json_pointer(data_prefix);
   if (tree.contains(json_path)) {
     auto const& data_tree = tree[json_path];
     if (data_tree.contains(name)) {
       // erase from etcd
+      if (!sync_remote && !data_tree[name].value("transient", true)) {
+        sync_remote = true;
+      }
       ops.emplace_back(IMetaService::op_t::Del(data_prefix + "/" + name));
       return Status::OK();
     }

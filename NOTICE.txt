@@ -36,7 +36,10 @@ This product includes software from the boost/leaf project
  * Copyright (c) 2018-2020 Emil Dotchevski and Reverge Studios, Inc.
  * https://github.com/boostorg/leaf
 
-
 This product includes software from the s3fs project
  * Copyright (c) 2016, Continuum Analytics, Inc. and contributors
  * https://github.com/dask/s3fs
+
+This product includes software from the omniscidb project
+ * Copyright 2019 OmniSci, Inc.
+ * https://github.com/omnisci/omniscidb

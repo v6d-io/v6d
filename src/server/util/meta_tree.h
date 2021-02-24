@@ -49,16 +49,16 @@ Status PersistOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops);
 
 Status DelDataOps(const json& tree, const ObjectID id,
-                  std::vector<IMetaService::op_t>& ops);
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
 
 Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops);
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
 
 Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops);
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
 
 Status DelDataOps(const json& tree, const std::string& name,
-                  std::vector<IMetaService::op_t>& ops);
+                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
 
 Status ShallowCopyOps(const json& tree, const ObjectID id,
                       const ObjectID target,

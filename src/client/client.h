@@ -145,6 +145,11 @@ class Client : public ClientBase {
   Status Connect(const std::string& ipc_socket);
 
   /**
+   * @brief Create a new client using self UNIX domain socket.
+   */
+  Status Fork(Client& client);
+
+  /**
    * @brief Get a default client reference, using the UNIX domain socket file
    *        specified by the environment variable `VINEYARD_IPC_SOCKET`.
    *

@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_COMMON_UTIL_ENV_H_
 
 #include <sys/param.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <string>
@@ -40,6 +41,8 @@ inline std::string get_nodename() {
     return get_hostname();
   }
 }
+
+inline int get_pid() { return static_cast<int>(getpid()); }
 
 }  // namespace vineyard
 

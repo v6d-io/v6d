@@ -17,7 +17,12 @@ limitations under the License.
 
 #include <iostream>
 
+#if defined(WITH_PROFILING)
+#include "gperftools/profiler.h"
+#endif
+
 #include "common/backtrace/backtrace.hpp"
+#include "common/util/env.h"
 #include "common/util/flags.h"
 #include "common/util/logging.h"
 #include "server/server/vineyard_server.h"
@@ -73,8 +78,19 @@ int main(int argc, char* argv[]) {
   std::set_terminate(terminate_handle);
   signal(SIGINT, vineyardd_signal_handler);
   signal(SIGTERM, vineyardd_signal_handler);
+
+#if defined(WITH_PROFILING)
+  static const std::string profiling =
+      "vineyardd." + std::to_string(vineyard::get_pid()) + ".prof";
+  ProfilerStart(profiling.c_str());
+#endif
+
   VINEYARD_CHECK_OK(server_ptr_->Serve());
   VINEYARD_CHECK_OK(server_ptr_->Finalize());
+
+#if defined(WITH_PROFILING)
+  ProfilerStop();
+#endif
 
   vineyard::flags::ShutDownCommandLineFlags();
   vineyard::logging::ShutdownGoogleLogging();

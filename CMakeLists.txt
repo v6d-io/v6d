@@ -58,7 +58,7 @@ if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUIL
     set(BUILD_VINEYARD_CLIENT ON)
 endif()
 
-SET(DEFAULT_BUILD_TYPE "Release")
+set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified.")
     set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE
@@ -67,9 +67,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo"
     )
-endif()
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(BUILD_VINEYARD_PROFILING ON)
 endif()
 
 find_program(ccache_EXECUTABLE ccache)
@@ -211,6 +208,7 @@ include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/thirdparty)
 # build profiling library
 if(BUILD_VINEYARD_PROFILING)
     add_definitions(-DWITH_PROFILING)
+    include("cmake/FindGperftools.cmake")
 endif()
 
 if(${LIBUNWIND_FOUND})
@@ -294,6 +292,10 @@ if(BUILD_VINEYARD_SERVER)
             add_target_link_options(vineyardd PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
         endif()
         target_link_libraries(vineyardd PRIVATE ${GRPC_GRPC++_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+    endif()
+    if(BUILD_VINEYARD_PROFILING)
+        target_include_directories(vineyardd PRIVATE ${Gperftools_INCLUDE_DIRS})
+        target_link_libraries(vineyardd PRIVATE ${Gperftools_LIBRARIES})
     endif()
 endif()
 
