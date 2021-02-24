@@ -33,14 +33,19 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:v{{ default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          args:
-          - /usr/bin/vineyardd
-          - "--etcd_endpoint"
-          - "http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379"
+          command:
+          - bash
+          - "-c"
+          - |
+            /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379;
+            sleep 1;
+            /usr/local/bin/vineyardd \
           {{- if .Values.vineyard.sharedMemorySize }}
-          - "--size"
-          - "{{ .Values.vineyard.sharedMemorySize }}"
+              --size \
+              {{ .Values.vineyard.sharedMemorySize }} \
           {{- end }}
+              --etcd_endpoint \
+              http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379
           ports:
             - name: ipc
               containerPort: 9600
