@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/alibaba/libvineyard/vineyardd-alpine-builder:20201028 as builder
+FROM docker.pkg.github.com/alibaba/libvineyard/vineyardd-alpine-builder:20210224 as builder
 
 # target: docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-latest
 
@@ -20,28 +20,21 @@ ADD . /work/libvineyard
 
 # FIXME It is still not clear why the first run of cmake will fail.
 
+# patch cpprestsdk to drop boost::regex dependency.
+RUN cd /work/libvineyard && \
+    sed -i 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake && \
+    sed -i 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
+
 RUN cd /tmp && \
-    curl -LJO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 && \
+    curl -LO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 && \
     chmod +x dumb-init_1.2.2_amd64 && \
-    curl -LJO https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz && \
+    curl -LO https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && \
+    chmod +x wait-for-it.sh && \
+    curl -LO https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz && \
     tar zxvf etcd-v3.4.13-linux-amd64.tar.gz && \
     cd /work/libvineyard && \
     mkdir -p /work/libvineyard/build && \
     cd /work/libvineyard/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release \
-         -DBUILD_SHARED_LIBS=OFF \
-         -DUSE_STATIC_BOOST_LIBS=ON \
-         -DBUILD_VINEYARD_SERVER=ON \
-         -DBUILD_VINEYARD_CLIENT=OFF \
-         -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
-         -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
-         -DBUILD_VINEYARD_BASIC=OFF \
-         -DBUILD_VINEYARD_GRAPH=OFF \
-         -DBUILD_VINEYARD_IO=OFF \
-         -DBUILD_VINEYARD_MIGRATION=OFF \
-         -DBUILD_VINEYARD_TESTS=OFF \
-         -DBUILD_VINEYARD_TESTS_ALL=OFF \
-         -DBUILD_VINEYARD_PROFILING=OFF || true && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_SHARED_LIBS=OFF \
          -DUSE_STATIC_BOOST_LIBS=ON \
@@ -62,6 +55,7 @@ RUN cd /tmp && \
 FROM frolvlad/alpine-glibc:alpine-3.12
 
 COPY --from=builder /tmp/dumb-init_1.2.2_amd64 /usr/bin/dumb-init
+COPY --from=builder /tmp/wait-for-it.sh /usr/bin/wait-for-it.sh
 COPY --from=builder /tmp/etcd-v3.4.13-linux-amd64/etcd /usr/bin/etcd
 COPY --from=builder /work/libvineyard/build/bin/vineyardd /usr/bin/vineyardd
 

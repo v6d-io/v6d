@@ -135,8 +135,8 @@ macro(find_common_libraries)
     include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 
     if(NOT BUILD_SHARED_LIBS AND USE_STATIC_BOOST_LIBS)
-        set(Boost_USE_STATIC_LIBS ON)
-        set(Boost_USE_STATIC_RUNTIME ON)
+        set(Boost_USE_STATIC_LIBS ON CACHE BOOL "Use static version of boost libraries.")
+        set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "Use static version of boost runtimes.")
     endif()
     find_package(Boost COMPONENTS system)
     # Make boost::property_tree thread safe.
