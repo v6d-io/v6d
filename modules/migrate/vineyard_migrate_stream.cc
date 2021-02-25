@@ -88,11 +88,11 @@ Status Serve(Client& client, RPCClient& rpc_client,
     asio::read(socket, asio::buffer(&buffer_size, sizeof(size_t)));
     VLOG(10) << "Recieve buffer size " << buffer_size;
     if (buffer_size == std::numeric_limits<size_t>::max()) {
-      client.StopStream(target_id, false);
+      RETURN_ON_ERROR(client.StopStream(target_id, false));
       LOG(INFO) << "The server finishes its job, exit normally";
       return Status::OK();
     } else if (buffer_size == std::numeric_limits<size_t>::max() - 1) {
-      client.StopStream(target_id, true);
+      RETURN_ON_ERROR(client.StopStream(target_id, true));
       LOG(ERROR) << "The server exit unnormally as the source stream corrupted";
       return Status::StreamFailed();
     } else {

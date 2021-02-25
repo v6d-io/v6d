@@ -107,6 +107,7 @@ setup(
         'libclang',
         'parsec',
         'setuptools',
+        'wheel',
     ],
     install_requires=[
         'numpy',
@@ -132,6 +133,7 @@ setup(
             "kubernetes",
         ],
     },
+    platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",

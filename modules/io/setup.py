@@ -19,6 +19,27 @@
 import os
 
 from setuptools import setup, find_packages
+from setuptools.command.install import install
+from wheel.bdist_wheel import bdist_wheel
+
+
+class bdist_wheel_plat(bdist_wheel):
+    def finalize_options(self):
+        bdist_wheel.finalize_options(self)
+        self.root_is_pure = False
+
+    def get_tag(self):
+        self.root_is_pure = True
+        tag = bdist_wheel.get_tag(self)
+        self.root_is_pure = False
+        return tag
+
+
+class install_plat(install):
+    def finalize_options(self):
+        self.install_lib = self.install_platlib
+        install.finalize_options(self)
+
 
 repo_root = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,12 +78,21 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
+    cmdclass={
+        'bdist_wheel': bdist_wheel_plat,
+        "install": install_plat
+    },
     entry_points={},
+    setup_requires=[
+        'setuptools',
+        'wheel',
+    ],
     extras_require={
         'dev': [
             'pytest',
         ],
     },
+    platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
