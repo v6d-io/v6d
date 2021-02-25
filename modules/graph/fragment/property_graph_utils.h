@@ -771,6 +771,12 @@ inline boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
         } else if (from_type->Equals(arrow::null())) {
           BOOST_LEAF_AUTO(new_array, CastNullToOthers(array, to_type));
           chunks.push_back(new_array);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 1000000
+        } else {
+          BOOST_LEAF_AUTO(new_array, GeneralCast(array, to_type));
+          chunks.push_back(new_array);
+        }
+#else
         } else if (arrow::compute::CanCast(*from_type, *to_type)) {
           BOOST_LEAF_AUTO(new_array, GeneralCast(array, to_type));
           chunks.push_back(new_array);
@@ -779,6 +785,7 @@ inline boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
                           "Unsupported cast: To type: " + to_type->ToString() +
                               "; Origin type: " + from_type->ToString());
         }
+#endif
         VLOG(10) << "Cast " << from_type->ToString() << " To "
                  << to_type->ToString();
       }
