@@ -125,7 +125,7 @@ static Status get_sub_tree(const json& tree, const std::string& prefix,
       return Status::OK();
     }
   }
-  return Status::MetaTreeSubtreeNotExists();
+  return Status::MetaTreeSubtreeNotExists(name);
 }
 
 static bool has_sub_tree(const json& tree, const std::string& prefix,
@@ -157,7 +157,7 @@ static Status del_sub_tree(json& tree, const std::string& prefix,
     }
   } else {
     LOG(ERROR) << "meta tree subtree doesn't exist." << path;
-    return Status::MetaTreeSubtreeNotExists();
+    return Status::MetaTreeSubtreeNotExists(name);
   }
 }
 
@@ -404,7 +404,7 @@ Status DelDataOps(const json& tree, const std::string& name,
       return Status::OK();
     }
   }
-  return Status::MetaTreeSubtreeNotExists();
+  return Status::MetaTreeSubtreeNotExists(name);
 }
 
 static void generate_put_ops(const json& meta, const json& diff,

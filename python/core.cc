@@ -312,13 +312,12 @@ void bind_core(py::module& mod) {
       .def_property_readonly(
           "buffer",
           [](Blob& blob) -> py::object {
-            auto pa = py::module::import("pyarrow");
             auto buffer = blob.Buffer();
             if (buffer == nullptr) {
               return py::none();
             } else {
-              return pa.attr("py_buffer")(py::memoryview::from_memory(
-                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true));
+              return py::memoryview::from_memory(
+                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
             }
           })
       .def_buffer([](Blob& blob) -> py::buffer_info {
@@ -386,13 +385,12 @@ void bind_core(py::module& mod) {
       .def_property_readonly(
           "buffer",
           [](BlobWriter& blob) -> py::object {
-            auto pa = py::module::import("pyarrow");
             auto buffer = blob.Buffer();
             if (buffer == nullptr) {
               return py::none();
             } else {
-              return pa.attr("py_buffer")(py::memoryview::from_memory(
-                  buffer->mutable_data(), buffer->size(), false));
+              return py::memoryview::from_memory(
+                  buffer->mutable_data(), buffer->size(), false);
             }
           })
       .def_buffer([](BlobWriter& blob) -> py::buffer_info {
