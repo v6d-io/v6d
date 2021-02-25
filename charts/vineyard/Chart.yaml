@@ -4,6 +4,20 @@ description: Vineyard is an in-memory immutable data manager
 
 home: https://v6d.io
 
+sources:
+  - https://github.com/alibaba/libvineyard
+
+keywords:
+  - vineyard
+  - libvineyard
+  - distributed-systems
+  - distributed
+  - shared-memory
+  - graph-analytics
+  - in-memory-storage
+  - big-data-analytics
+  - distributed-computation
+
 # A chart can be either an 'application' or a 'library' chart.
 #
 # Application charts are a collection of templates that can be packaged into versioned archives
@@ -17,10 +31,9 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.10
+version: 0.1.11
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
-appVersion: 0.1.10
-
+appVersion: 0.1.11
