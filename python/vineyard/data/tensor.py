@@ -24,10 +24,10 @@ try:
 except ImportError:
     sp = None
 
-try:
-    import pyarrow as pa
-except ImportError:
-    pa = None
+import pickle
+
+if pickle.HIGHEST_PROTOCOL < 5:
+    import pickle5 as pickle
 
 from vineyard._C import ObjectMeta
 from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype
@@ -46,12 +46,12 @@ def numpy_ndarray_builder(client, value, **kw):
     return client.create_metadata(meta)
 
 
-def tensor_resolver(obj):
+def numpy_ndarray_resolver(obj):
     meta = obj.meta
     value_name = meta['value_type_']
     if value_name == 'object':
         view = memoryview(obj.member('buffer_'))
-        return pa.deserialize(view)
+        return pickle.loads(view, fix_imports=True)
 
     value_type = normalize_dtype(value_name, meta.get('value_type_meta_', None))
     shape = from_json(meta['shape_'])
@@ -226,7 +226,7 @@ def register_tensor_types(builder_ctx, resolver_ctx):
             builder_ctx.register(sp.sparse.lil_matrix, lil_matrix_builder)
 
     if resolver_ctx is not None:
-        resolver_ctx.register('vineyard::Tensor', tensor_resolver)
+        resolver_ctx.register('vineyard::Tensor', numpy_ndarray_resolver)
 
         if sp is not None:
             resolver_ctx.register('vineyard::BSRMatrix', bsr_matrix_resolver)

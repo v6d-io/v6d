@@ -21,10 +21,10 @@ import platform
 
 import numpy as np
 
-try:
-    import pyarrow as pa
-except ImportError:
-    pa = None
+import pickle
+
+if pickle.HIGHEST_PROTOCOL < 5:
+    import pickle5 as pickle
 
 
 def normalize_dtype(dtype, dtype_meta=None):
@@ -86,7 +86,7 @@ def build_numpy_buffer(client, array):
         address, _ = array.__array_interface__['data']
         return build_buffer(client, address, array.nbytes)
     else:
-        payload = pa.serialize(array).to_buffer().to_pybytes()
+        payload = pickle.dumps(array, protocol=5)
         buffer = client.create_blob(len(payload))
         buffer.copy(0, payload)
         return buffer.seal(client)

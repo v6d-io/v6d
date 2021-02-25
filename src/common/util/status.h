@@ -335,7 +335,7 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
 
   /// Return an error when expected subtree doesn't exist in metatree.
-  static Status MetaTreeSubtreeNotExists(std::string const &key) {
+  static Status MetaTreeSubtreeNotExists(std::string const& key) {
     return Status(StatusCode::kMetaTreeSubtreeNotExists, key);
   }
 
