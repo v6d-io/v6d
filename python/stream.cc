@@ -45,8 +45,8 @@ void bind_stream(py::module& mod) {
             std::unique_ptr<arrow::MutableBuffer> chunk = nullptr;
             throw_on_error(self->GetNext(size, chunk));
             auto chunk_ptr = chunk.release();
-            py::memoryview::from_memory(
-                chunk_ptr->mutable_data(), chunk_ptr->size(), false)
+            return py::memoryview::from_memory(
+                chunk_ptr->mutable_data(), chunk_ptr->size(), false);
           },
           "size"_a)
       .def("finish",
