@@ -88,7 +88,7 @@ def read_single_orc(path, fs, writer):
             rb_writer.close()
             buf = sink.getvalue()
             chunk = writer.next(buf.size)
-            buf_writer = pa.FixedSizeBufferWriter(chunk)
+            buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
             buf_writer.write(buf)
             buf_writer.close()
 

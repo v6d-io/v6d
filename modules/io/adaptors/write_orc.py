@@ -79,7 +79,7 @@ def write_orc(vineyard_socket, path, stream_id, storage_options, write_options, 
             except vineyard.StreamDrainedException:
                 writer.close()
                 break
-            buf_reader = pa.ipc.open_stream(buf)
+            buf_reader = pa.ipc.open_stream(pa.py_buffer(buf))
             if writer is None:
                 # get schema
                 schema = {}

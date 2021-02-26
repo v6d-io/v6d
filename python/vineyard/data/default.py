@@ -18,39 +18,23 @@
 
 import pickle
 
-try:
-    import pyarrow as pa
-except ImportError:
-    pa = None
+if pickle.HIGHEST_PROTOCOL < 5:
+    import pickle5 as pickle
 
 
 def default_builder(client, value):
-    ''' Default builder: serialize the object, using pyarrow if it presents,
-        otherwise with pickle, then build a blob object for it.
+    ''' Default builder: pickle (version 5), then build a blob object for it.
     '''
-    if pa is not None:
-        payload = pa.serialize(value).to_buffer().to_pybytes()
-        serialization = 'pyarrow'
-    else:
-        payload = pickle.dumps(value)
-        serialization = 'pickle'
+    payload = pickle.dumps(value, protocol=5)
 
     buffer = client.create_blob(len(payload))
     buffer.copy(0, payload)
-    buffer['serialization'] = serialization
     return buffer.seal(client).id
 
 
 def default_resolver(obj):
     view = memoryview(obj)
-    serialization = obj.meta['serialization']
-    if serialization:
-        if pa is not None and serialization == 'pyarrow':
-            return pa.deserialize(view)
-        if serialization == 'pickle':
-            return pickle.loads(view, fix_imports=True)
-    # fallback: still returns the blob
-    return obj
+    return pickle.loads(view, fix_imports=True)
 
 
 def register_default_types(builder_ctx=None, resolver_ctx=None):

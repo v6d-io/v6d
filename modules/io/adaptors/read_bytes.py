@@ -98,7 +98,7 @@ def read_bytes(
             for length in lengths:
                 buf = f.read(length)
                 chunk = writer.next(length)
-                buf_writer = pa.FixedSizeBufferWriter(chunk)
+                buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
                 buf_writer.write(buf)
                 buf_writer.close()
         writer.finish()
@@ -149,7 +149,7 @@ def read_bytes(
                     break
                 begin += size - 1
                 chunk = writer.next(size)
-                buf_writer = pa.FixedSizeBufferWriter(chunk)
+                buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
                 buf_writer.write(buf)
                 buf_writer.close()
 

@@ -334,6 +334,11 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kMetaTreeSubtreeNotExists, "");
   }
 
+  /// Return an error when expected subtree doesn't exist in metatree.
+  static Status MetaTreeSubtreeNotExists(std::string const& key) {
+    return Status(StatusCode::kMetaTreeSubtreeNotExists, key);
+  }
+
   /// Return an error when the requested vineyard server is not ready yet.
   static Status VineyardServerNotReady(std::string const& message) {
     return Status(StatusCode::kVineyardServerNotReady, message);

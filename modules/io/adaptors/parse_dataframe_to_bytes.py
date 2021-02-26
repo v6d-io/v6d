@@ -54,7 +54,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
         except vineyard.StreamDrainedException:
             stream_writer.finish()
             break
-        buf_reader = pa.ipc.open_stream(content)
+        buf_reader = pa.ipc.open_stream(pa.py_buffer(content))
         while True:
             try:
                 batch = buf_reader.read_next_batch()
@@ -64,7 +64,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
             buf = df.to_csv(header=first_write, index=False, sep=delimiter).encode()
             first_write = False
             chunk = stream_writer.next(len(buf))
-            buf_writer = pa.FixedSizeBufferWriter(chunk)
+            buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
             buf_writer.write(buf)
             buf_writer.close()
 

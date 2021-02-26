@@ -32,7 +32,10 @@ def buffer_builder(client, buffer, builder):
 
 
 def as_arrow_buffer(blob):
-    return blob.buffer
+    buffer = blob.buffer
+    if buffer is None:
+        return None
+    return pa.py_buffer(buffer)
 
 
 def numeric_array_builder(client, array, builder):
@@ -76,6 +79,13 @@ def string_array_builder(client, array, builder):
     meta['offset_'] = array.offset
 
     null_bitmap = buffer_builder(client, array.buffers()[0], builder)
+    if isinstance(array, pa.StringArray):
+        buffer = array.buffers()[1]
+        length = len(buffer) // (pa.uint32().bit_width // 8)
+        offset_array = pa.Array.from_buffers(pa.uint32(), length, [None, buffer])
+        offset_array = offset_array.cast(pa.uint64())
+    else:  # is pa.LargeStringArray
+        offset_array = array.buffers()[1]
     buffer_offsets = buffer_builder(client, array.buffers()[1], builder)
     buffer_data = buffer_builder(client, array.buffers()[2], builder)
 
@@ -232,6 +242,7 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
         builder_ctx.register(pa.Buffer, buffer_builder)
         builder_ctx.register(pa.NumericArray, numeric_array_builder)
         builder_ctx.register(pa.FixedSizeBinaryArray, fixed_size_binary_array_builder)
+        builder_ctx.register(pa.StringArray, string_array_builder)
         builder_ctx.register(pa.LargeStringArray, string_array_builder)
         builder_ctx.register(pa.NullArray, null_array_builder)
         builder_ctx.register(pa.BooleanArray, boolean_array_builder)
