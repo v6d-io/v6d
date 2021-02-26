@@ -58,6 +58,8 @@ enum class CommandType {
   ShallowCopyRequest = 27,
   OpenStreamRequest = 28,
   MigrateObjectRequest = 29,
+  CreateRemoteBufferRequest = 30,
+  GetRemoteBuffersRequest = 31,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -174,6 +176,10 @@ void WriteCreateBufferReply(const ObjectID id,
 
 Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object);
 
+void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
+
+Status ReadCreateRemoteBufferRequest(const json& root, size_t& size);
+
 void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
                             std::string& msg);
 
@@ -184,6 +190,12 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
 
 Status ReadGetBuffersReply(const json& root,
                            std::unordered_map<ObjectID, Payload>& objects);
+
+void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                                  std::string& msg);
+
+Status ReadGetRemoteBuffersRequest(const json& root,
+                                   std::vector<ObjectID>& ids);
 
 void WritePutNameRequest(const ObjectID object_id, const std::string& name,
                          std::string& msg);

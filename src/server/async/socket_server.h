@@ -22,6 +22,7 @@ limitations under the License.
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "boost/asio.hpp"
 
@@ -50,21 +51,81 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   void Start();
 
   /**
-   * Invoke internal doStop, and set the running status to false.
+   * @brief Invoke internal doStop, and set the running status to false.
    */
   void Stop();
+
+ protected:
+  bool doRegister(const json& root);
+
+  bool doGetBuffers(const json& root);
+
+  /**
+   * @brief doGetRemoteBuffers differs from doGetRemoteBuffers, that the
+   * content of blob is in the response body, rather than via memory sharing.
+   */
+  bool doGetRemoteBuffers(const json& root);
+
+  bool doCreateBuffer(const json& root);
+
+  /**
+   * @brief doCreateBuffer differs from doCreateRemoteBuffer, that the content
+   * of blob is in the request body, rather than via memory sharing.
+   */
+  bool doCreateRemoteBuffer(const json& root);
+
+  bool doGetData(const json& root);
+
+  bool doListData(const json& root);
+
+  bool doCreateData(const json& root);
+
+  bool doPersist(const json& root);
+
+  bool doIfPersist(const json& root);
+
+  bool doExists(const json& root);
+
+  bool doShallowCopy(const json& root);
+
+  bool doDelData(const json& root);
+
+  bool doCreateStream(const json& root);
+
+  bool doOpenStream(const json& root);
+
+  bool doGetNextStreamChunk(const json& root);
+
+  bool doPullNextStreamChunk(const json& root);
+
+  bool doStopStream(const json& root);
+
+  bool doPutName(const json& root);
+
+  bool doGetName(const json& root);
+
+  bool doDropName(const json& root);
+
+  bool doMigrateObject(const json& root);
+
+  bool doClusterMeta(const json& root);
+
+  bool doInstanceStatus(const json& root);
 
  private:
   int nativeHandle() { return socket_.native_handle(); }
 
+  /**
+   * @brief Return should be exit after this message.
+   *
+   * @return Returns true if stop the client and close the connection (i.e.,
+   * handling a ExitRequest), otherwise false.
+   */
+  bool processMessage(const std::string& message_in);
+
   void doReadHeader();
 
   void doReadBody();
-
-  /**
-   * Return should be exit after this message.
-   */
-  bool processMessage(const std::string& message_in);
 
   void doWrite(const std::string& buf);
 
@@ -83,6 +144,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   void doAsyncWrite();
 
   void doAsyncWrite(callback_t<> callback);
+
+  void sendBufferHelper(std::vector<std::shared_ptr<Payload>> const objects,
+                        size_t index, boost::system::error_code const ec,
+                        callback_t<> callback_after_finish);
 
   stream_protocol::socket socket_;
   vs_ptr_t server_ptr_;

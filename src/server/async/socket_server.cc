@@ -142,433 +142,641 @@ bool SocketConnection::processMessage(const std::string& message_in) {
 
   std::string const& type = root["type"].get_ref<std::string const&>();
   CommandType cmd = ParseCommandType(type);
-  auto self(shared_from_this());
   switch (cmd) {
   case CommandType::RegisterRequest: {
-    std::string client_version, message_out;
-    TRY_READ_REQUEST(ReadRegisterRequest(root, client_version));
-    WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
-                       server_ptr_->instance_id(), message_out);
-    doWrite(message_out);
-  } break;
+    return doRegister(root);
+  }
   case CommandType::GetBuffersRequest: {
-    std::vector<ObjectID> ids;
-    std::vector<std::shared_ptr<Payload>> objects;
-    std::string message_out;
+    return doGetBuffers(root);
+  }
+  case CommandType::CreateBufferRequest: {
+    return doCreateBuffer(root);
+  }
+  case CommandType::GetDataRequest: {
+    return doGetData(root);
+  }
+  case CommandType::ListDataRequest: {
+    return doListData(root);
+  }
+  case CommandType::CreateDataRequest: {
+    return doCreateData(root);
+  }
+  case CommandType::PersistRequest: {
+    return doPersist(root);
+  }
+  case CommandType::IfPersistRequest: {
+    return doIfPersist(root);
+  }
+  case CommandType::ExistsRequest: {
+    return doExists(root);
+  }
+  case CommandType::ShallowCopyRequest: {
+    return doShallowCopy(root);
+  }
+  case CommandType::DelDataRequest: {
+    return doDelData(root);
+  }
+  case CommandType::CreateStreamRequest: {
+    return doCreateStream(root);
+  }
+  case CommandType::OpenStreamRequest: {
+    return doOpenStream(root);
+  }
+  case CommandType::GetNextStreamChunkRequest: {
+    return doGetNextStreamChunk(root);
+  }
+  case CommandType::PullNextStreamChunkRequest: {
+    return doPullNextStreamChunk(root);
+  }
+  case CommandType::StopStreamRequest: {
+    return doStopStream(root);
+  }
+  case CommandType::PutNameRequest: {
+    return doPutName(root);
+  }
+  case CommandType::GetNameRequest: {
+    return doGetName(root);
+  }
+  case CommandType::DropNameRequest: {
+    return doDropName(root);
+  }
+  case CommandType::MigrateObjectRequest: {
+    return doMigrateObject(root);
+  }
+  case CommandType::ClusterMetaRequest: {
+    return doClusterMeta(root);
+  }
+  case CommandType::InstanceStatusRequest: {
+    return doInstanceStatus(root);
+  }
+  case CommandType::ExitRequest: {
+    return true;
+  }
+  default: {
+    LOG(ERROR) << "Got unexpected command: " << type;
+    return false;
+  }
+  }
+}
 
-    TRY_READ_REQUEST(ReadGetBuffersRequest(root, ids));
-    RESPONSE_ON_ERROR(
-        server_ptr_->GetBulkStore()->ProcessGetRequest(ids, objects));
-    WriteGetBuffersReply(objects, message_out);
+bool SocketConnection::doRegister(const json& root) {
+  auto self(shared_from_this());
+  std::string client_version, message_out;
+  TRY_READ_REQUEST(ReadRegisterRequest(root, client_version));
+  WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
+                     server_ptr_->instance_id(), message_out);
+  doWrite(message_out);
+  return false;
+}
 
-    /* NOTE: Here we send the file descriptor after the objects.
-     *       We are using sendmsg to send the file descriptor
-     *       which is a sync method. In theory, this might cause
-     *       the server to block, but currently this seems to be
-     *       the only method that are widely used in practice, e.g.,
-     *       boost and Plasma, and actually the file descriptor is
-     *       a very short message.
-     *       We will examine other methods later, such as using
-     *       explicit file descritors.
-     */
-    auto self(shared_from_this());
-    this->doWrite(message_out, [self, objects](const Status& status) {
-      for (auto object : objects) {
-        int store_fd = object->store_fd;
-        int data_size = object->data_size;
-        if (data_size > 0 &&
-            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-          self->used_fds_.emplace(store_fd);
-          send_fd(self->nativeHandle(), store_fd);
-        }
+bool SocketConnection::doGetBuffers(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadGetBuffersRequest(root, ids));
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->ProcessGetRequest(ids, objects));
+  WriteGetBuffersReply(objects, message_out);
+
+  /* NOTE: Here we send the file descriptor after the objects.
+   *       We are using sendmsg to send the file descriptor
+   *       which is a sync method. In theory, this might cause
+   *       the server to block, but currently this seems to be
+   *       the only method that are widely used in practice, e.g.,
+   *       boost and Plasma, and actually the file descriptor is
+   *       a very short message.
+   *
+   *       We will examine other methods later, such as using
+   *       explicit file descritors.
+   */
+  this->doWrite(message_out, [self, objects](const Status& status) {
+    for (auto object : objects) {
+      int store_fd = object->store_fd;
+      int data_size = object->data_size;
+      if (data_size > 0 &&
+          self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+        self->used_fds_.emplace(store_fd);
+        send_fd(self->nativeHandle(), store_fd);
+      }
+    }
+    return Status::OK();
+  });
+  return false;
+}
+
+void SocketConnection::sendBufferHelper(
+    std::vector<std::shared_ptr<Payload>> const objects, size_t index,
+    boost::system::error_code const ec, callback_t<> callback_after_finish) {
+  auto self(shared_from_this());
+  if (!ec && index < objects.size()) {
+    async_write(
+        socket_,
+        boost::asio::buffer(objects[index]->pointer, objects[index]->data_size),
+        [this, self, callback_after_finish, objects, index](
+            boost::system::error_code ec, std::size_t) {
+          sendBufferHelper(objects, index + 1, ec, callback_after_finish);
+        });
+  } else {
+    if (ec) {
+      VINEYARD_DISCARD(callback_after_finish(Status::IOError(
+          "Failed to write buffer to client: " + ec.message())));
+    } else {
+      VINEYARD_DISCARD(callback_after_finish(Status::OK()));
+    }
+  }
+}
+
+bool SocketConnection::doGetRemoteBuffers(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadGetBuffersRequest(root, ids));
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->ProcessGetRequest(ids, objects));
+  WriteGetBuffersReply(objects, message_out);
+
+  this->doWrite(message_out, [this, self, objects](const Status& status) {
+    boost::system::error_code ec;
+    sendBufferHelper(objects, 0, ec, [self](const Status& status) {
+      if (!status.ok()) {
+        LOG(ERROR) << "Failed to send buffers to remote client: "
+                   << status.ToString();
       }
       return Status::OK();
     });
-  } break;
-  case CommandType::CreateBufferRequest: {
-    size_t size;
-    std::shared_ptr<Payload> object;
-    std::string message_out;
+    return Status::OK();
+  });
+  return false;
+}
 
-    TRY_READ_REQUEST(ReadCreateBufferRequest(root, size));
-    ObjectID object_id;
-    RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->ProcessCreateRequest(
-        size, object_id, object));
-    WriteCreateBufferReply(object_id, object, message_out);
+bool SocketConnection::doCreateBuffer(const json& root) {
+  auto self(shared_from_this());
+  size_t size;
+  std::shared_ptr<Payload> object;
+  std::string message_out;
 
-    int store_fd = object->store_fd;
-    int data_size = object->data_size;
-    this->doWrite(
-        message_out, [self, store_fd, data_size](const Status& status) {
-          if (data_size > 0 &&
-              self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-            self->used_fds_.emplace(store_fd);
-            send_fd(self->nativeHandle(), store_fd);
-          }
-          return Status::OK();
-        });
-  } break;
-  case CommandType::GetDataRequest: {
-    std::vector<ObjectID> ids;
-    bool sync_remote = false, wait = false;
-    TRY_READ_REQUEST(ReadGetDataRequest(root, ids, sync_remote, wait));
-    json tree;
-    RESPONSE_ON_ERROR(server_ptr_->GetData(
-        ids, sync_remote, wait, [self]() { return self->running_; },
-        [self](const Status& status, const json& tree) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteGetDataReply(tree, message_out);
+  TRY_READ_REQUEST(ReadCreateBufferRequest(root, size));
+  ObjectID object_id;
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->ProcessCreateRequest(
+      size, object_id, object));
+  WriteCreateBufferReply(object_id, object, message_out);
+
+  int store_fd = object->store_fd;
+  int data_size = object->data_size;
+  this->doWrite(message_out, [self, store_fd, data_size](const Status& status) {
+    if (data_size > 0 &&
+        self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+      self->used_fds_.emplace(store_fd);
+      send_fd(self->nativeHandle(), store_fd);
+    }
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doCreateRemoteBuffer(const json& root) {
+  auto self(shared_from_this());
+  size_t size;
+  std::shared_ptr<Payload> object;
+
+  TRY_READ_REQUEST(ReadCreateBufferRequest(root, size));
+  ObjectID object_id;
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->ProcessCreateRequest(
+      size, object_id, object));
+
+  asio::async_read(
+      socket_, asio::buffer(object->pointer, size),
+      [this, self, &object](boost::system::error_code ec, std::size_t size) {
+        std::string message_out;
+        if (object->data_size == size && (!ec || ec == asio::error::eof)) {
+          WriteCreateBufferReply(object->object_id, object, message_out);
+        } else {
+          VINEYARD_DISCARD(server_ptr_->GetBulkStore()->ProcessDeleteRequest(
+              object->object_id));
+          if (object->data_size == size) {
+            WriteErrorReply(
+                Status::IOError("Failed to read buffer's content from client"),
+                message_out);
           } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
+            WriteErrorReply(Status::IOError(ec.message()), message_out);
           }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::ListDataRequest: {
-    std::string pattern;
-    bool regex;
-    size_t limit;
-    TRY_READ_REQUEST(ReadListDataRequest(root, pattern, regex, limit));
-    RESPONSE_ON_ERROR(server_ptr_->ListData(
-        pattern, regex, limit, [self](const Status& status, const json& tree) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteGetDataReply(tree, message_out);
-          } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::CreateDataRequest: {
-    json tree;
-    TRY_READ_REQUEST(ReadCreateDataRequest(root, tree));
-    RESPONSE_ON_ERROR(server_ptr_->CreateData(
-        tree, [self](const Status& status, const ObjectID id,
-                     const Signature signature, const InstanceID instance_id) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteCreateDataReply(id, signature, instance_id, message_out);
-          } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::PersistRequest: {
-    ObjectID id;
-    TRY_READ_REQUEST(ReadPersistRequest(root, id));
-    RESPONSE_ON_ERROR(server_ptr_->Persist(id, [self](const Status& status) {
-      std::string message_out;
-      if (status.ok()) {
-        WritePersistReply(message_out);
-      } else {
-        LOG(ERROR) << status.ToString();
-        WriteErrorReply(status, message_out);
-      }
-      self->doWrite(message_out);
-      return Status::OK();
-    }));
-  } break;
-  case CommandType::IfPersistRequest: {
-    ObjectID id;
-    TRY_READ_REQUEST(ReadIfPersistRequest(root, id));
-    RESPONSE_ON_ERROR(server_ptr_->IfPersist(
-        id, [self](const Status& status, bool const persist) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteIfPersistReply(persist, message_out);
-          } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::ExistsRequest: {
-    ObjectID id;
-    TRY_READ_REQUEST(ReadExistsRequest(root, id));
-    RESPONSE_ON_ERROR(server_ptr_->Exists(
-        id, [self](const Status& status, bool const exists) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteExistsReply(exists, message_out);
-          } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::ShallowCopyRequest: {
-    ObjectID id;
-    TRY_READ_REQUEST(ReadShallowCopyRequest(root, id));
-    RESPONSE_ON_ERROR(server_ptr_->ShallowCopy(
-        id, [self](const Status& status, const ObjectID target) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteShallowCopyReply(target, message_out);
-          } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::DelDataRequest: {
-    std::vector<ObjectID> ids;
-    bool force, deep;
-    TRY_READ_REQUEST(ReadDelDataRequest(root, ids, force, deep));
-    RESPONSE_ON_ERROR(
-        server_ptr_->DelData(ids, force, deep, [self](const Status& status) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteDelDataReply(message_out);
-          } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::CreateStreamRequest: {
-    ObjectID stream_id;
-    TRY_READ_REQUEST(ReadCreateStreamRequest(root, stream_id));
-    auto status = server_ptr_->GetStreamStore()->Create(stream_id);
+        }
+        self->doWrite(message_out);
+      });
+  return false;
+}
+
+bool SocketConnection::doGetData(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool sync_remote = false, wait = false;
+  TRY_READ_REQUEST(ReadGetDataRequest(root, ids, sync_remote, wait));
+  json tree;
+  RESPONSE_ON_ERROR(server_ptr_->GetData(
+      ids, sync_remote, wait, [self]() { return self->running_; },
+      [self](const Status& status, const json& tree) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteGetDataReply(tree, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doListData(const json& root) {
+  auto self(shared_from_this());
+  std::string pattern;
+  bool regex;
+  size_t limit;
+  TRY_READ_REQUEST(ReadListDataRequest(root, pattern, regex, limit));
+  RESPONSE_ON_ERROR(server_ptr_->ListData(
+      pattern, regex, limit, [self](const Status& status, const json& tree) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteGetDataReply(tree, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doCreateData(const json& root) {
+  auto self(shared_from_this());
+  json tree;
+  TRY_READ_REQUEST(ReadCreateDataRequest(root, tree));
+  RESPONSE_ON_ERROR(server_ptr_->CreateData(
+      tree, [self](const Status& status, const ObjectID id,
+                   const Signature signature, const InstanceID instance_id) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteCreateDataReply(id, signature, instance_id, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doPersist(const json& root) {
+  auto self(shared_from_this());
+  ObjectID id;
+  TRY_READ_REQUEST(ReadPersistRequest(root, id));
+  RESPONSE_ON_ERROR(server_ptr_->Persist(id, [self](const Status& status) {
     std::string message_out;
     if (status.ok()) {
-      WriteCreateStreamReply(message_out);
+      WritePersistReply(message_out);
     } else {
       LOG(ERROR) << status.ToString();
       WriteErrorReply(status, message_out);
     }
-    this->doWrite(message_out);
-  } break;
-  case CommandType::OpenStreamRequest: {
-    ObjectID stream_id;
-    int64_t mode;
-    TRY_READ_REQUEST(ReadOpenStreamRequest(root, stream_id, mode));
-    auto status = server_ptr_->GetStreamStore()->Open(stream_id, mode);
+    self->doWrite(message_out);
+    return Status::OK();
+  }));
+  return false;
+}
+
+bool SocketConnection::doIfPersist(const json& root) {
+  auto self(shared_from_this());
+  ObjectID id;
+  TRY_READ_REQUEST(ReadIfPersistRequest(root, id));
+  RESPONSE_ON_ERROR(server_ptr_->IfPersist(
+      id, [self](const Status& status, bool const persist) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteIfPersistReply(persist, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doExists(const json& root) {
+  auto self(shared_from_this());
+  ObjectID id;
+  TRY_READ_REQUEST(ReadExistsRequest(root, id));
+  RESPONSE_ON_ERROR(
+      server_ptr_->Exists(id, [self](const Status& status, bool const exists) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteExistsReply(exists, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doShallowCopy(const json& root) {
+  auto self(shared_from_this());
+  ObjectID id;
+  TRY_READ_REQUEST(ReadShallowCopyRequest(root, id));
+  RESPONSE_ON_ERROR(server_ptr_->ShallowCopy(
+      id, [self](const Status& status, const ObjectID target) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteShallowCopyReply(target, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doDelData(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool force, deep;
+  TRY_READ_REQUEST(ReadDelDataRequest(root, ids, force, deep));
+  RESPONSE_ON_ERROR(
+      server_ptr_->DelData(ids, force, deep, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteDelDataReply(message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doCreateStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadCreateStreamRequest(root, stream_id));
+  auto status = server_ptr_->GetStreamStore()->Create(stream_id);
+  std::string message_out;
+  if (status.ok()) {
+    WriteCreateStreamReply(message_out);
+  } else {
+    LOG(ERROR) << status.ToString();
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doOpenStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  int64_t mode;
+  TRY_READ_REQUEST(ReadOpenStreamRequest(root, stream_id, mode));
+  auto status = server_ptr_->GetStreamStore()->Open(stream_id, mode);
+  std::string message_out;
+  if (status.ok()) {
+    WriteOpenStreamReply(message_out);
+  } else {
+    LOG(ERROR) << status.ToString();
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doGetNextStreamChunk(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  size_t size;
+  TRY_READ_REQUEST(ReadGetNextStreamChunkRequest(root, stream_id, size));
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Get(
+      stream_id, size, [self](const Status& status, const ObjectID chunk) {
+        std::string message_out;
+        if (status.ok()) {
+          std::shared_ptr<Payload> object;
+          RETURN_ON_ERROR(self->server_ptr_->GetBulkStore()->ProcessGetRequest(
+              chunk, object));
+          WriteGetNextStreamChunkReply(object, message_out);
+          int store_fd = object->store_fd;
+          int data_size = object->data_size;
+          self->doWrite(
+              message_out, [self, store_fd, data_size](const Status& status) {
+                if (data_size > 0 &&
+                    self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+                  self->used_fds_.emplace(store_fd);
+                  send_fd(self->nativeHandle(), store_fd);
+                }
+                return Status::OK();
+              });
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+          self->doWrite(message_out);
+        }
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doPullNextStreamChunk(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadPullNextStreamChunkRequest(root, stream_id));
+  this->associated_streams_.emplace(stream_id);
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Pull(
+      stream_id, [self](const Status& status, const ObjectID chunk) {
+        std::string message_out;
+        if (status.ok()) {
+          std::shared_ptr<Payload> object;
+          RETURN_ON_ERROR(self->server_ptr_->GetBulkStore()->ProcessGetRequest(
+              chunk, object));
+          WritePullNextStreamChunkReply(object, message_out);
+          int store_fd = object->store_fd;
+          int data_size = object->data_size;
+          self->doWrite(
+              message_out, [self, store_fd, data_size](const Status& status) {
+                if (data_size > 0 &&
+                    self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+                  self->used_fds_.emplace(store_fd);
+                  send_fd(self->nativeHandle(), store_fd);
+                }
+                return Status::OK();
+              });
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+          self->doWrite(message_out);
+        }
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doStopStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  bool failed;
+  TRY_READ_REQUEST(ReadStopStreamRequest(root, stream_id, failed));
+  // NB: don't erase the metadata from meta_service, since there's may
+  // reader listen on this stream.
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Stop(stream_id, failed));
+  std::string message_out;
+  WriteStopStreamReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doPutName(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id;
+  std::string name;
+  TRY_READ_REQUEST(ReadPutNameRequest(root, object_id, name));
+  RESPONSE_ON_ERROR(
+      server_ptr_->PutName(object_id, name, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WritePutNameReply(message_out);
+        } else {
+          LOG(ERROR) << "Failed to put name: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doGetName(const json& root) {
+  auto self(shared_from_this());
+  std::string name;
+  bool wait;
+  TRY_READ_REQUEST(ReadGetNameRequest(root, name, wait));
+  RESPONSE_ON_ERROR(server_ptr_->GetName(
+      name, wait, [self]() { return self->running_; },
+      [self](const Status& status, const ObjectID& object_id) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteGetNameReply(object_id, message_out);
+        } else {
+          LOG(ERROR) << "Failed to get name: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doDropName(const json& root) {
+  auto self(shared_from_this());
+  std::string name;
+  TRY_READ_REQUEST(ReadDropNameRequest(root, name));
+  RESPONSE_ON_ERROR(server_ptr_->DropName(name, [self](const Status& status) {
     std::string message_out;
+    LOG(INFO) << "drop name callback: " << status;
     if (status.ok()) {
-      WriteOpenStreamReply(message_out);
+      WriteDropNameReply(message_out);
     } else {
-      LOG(ERROR) << status.ToString();
+      LOG(ERROR) << "Failed to drop name: " << status.ToString();
       WriteErrorReply(status, message_out);
     }
-    this->doWrite(message_out);
-  } break;
-  case CommandType::GetNextStreamChunkRequest: {
-    ObjectID stream_id;
-    size_t size;
-    TRY_READ_REQUEST(ReadGetNextStreamChunkRequest(root, stream_id, size));
-    RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Get(
-        stream_id, size, [self](const Status& status, const ObjectID chunk) {
+    self->doWrite(message_out);
+    return Status::OK();
+  }));
+  return false;
+}
+
+bool SocketConnection::doMigrateObject(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id;
+  bool local;
+  bool is_stream;
+  std::string peer, peer_rpc_endpoint;
+  TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, is_stream,
+                                            peer, peer_rpc_endpoint));
+  if (is_stream) {
+    RESPONSE_ON_ERROR(server_ptr_->MigrateStream(
+        object_id, local, peer, peer_rpc_endpoint,
+        [self](const Status& status, const ObjectID& target) {
           std::string message_out;
           if (status.ok()) {
-            std::shared_ptr<Payload> object;
-            RETURN_ON_ERROR(
-                self->server_ptr_->GetBulkStore()->ProcessGetRequest(chunk,
-                                                                     object));
-            WriteGetNextStreamChunkReply(object, message_out);
-            int store_fd = object->store_fd;
-            int data_size = object->data_size;
-            self->doWrite(
-                message_out, [self, store_fd, data_size](const Status& status) {
-                  if (data_size > 0 &&
-                      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                    self->used_fds_.emplace(store_fd);
-                    send_fd(self->nativeHandle(), store_fd);
-                  }
-                  return Status::OK();
-                });
+            WriteMigrateObjectReply(target, message_out);
           } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-            self->doWrite(message_out);
-          }
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::PullNextStreamChunkRequest: {
-    ObjectID stream_id;
-    TRY_READ_REQUEST(ReadPullNextStreamChunkRequest(root, stream_id));
-    this->associated_streams_.emplace(stream_id);
-    RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Pull(
-        stream_id, [self](const Status& status, const ObjectID chunk) {
-          std::string message_out;
-          if (status.ok()) {
-            std::shared_ptr<Payload> object;
-            RETURN_ON_ERROR(
-                self->server_ptr_->GetBulkStore()->ProcessGetRequest(chunk,
-                                                                     object));
-            WritePullNextStreamChunkReply(object, message_out);
-            int store_fd = object->store_fd;
-            int data_size = object->data_size;
-            self->doWrite(
-                message_out, [self, store_fd, data_size](const Status& status) {
-                  if (data_size > 0 &&
-                      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                    self->used_fds_.emplace(store_fd);
-                    send_fd(self->nativeHandle(), store_fd);
-                  }
-                  return Status::OK();
-                });
-          } else {
-            LOG(ERROR) << status.ToString();
-            WriteErrorReply(status, message_out);
-            self->doWrite(message_out);
-          }
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::StopStreamRequest: {
-    ObjectID stream_id;
-    bool failed;
-    TRY_READ_REQUEST(ReadStopStreamRequest(root, stream_id, failed));
-    // NB: don't erase the metadata from meta_service, since there's may
-    // reader listen on this stream.
-    RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Stop(stream_id, failed));
-    std::string message_out;
-    WriteStopStreamReply(message_out);
-    this->doWrite(message_out);
-  } break;
-  case CommandType::PutNameRequest: {
-    ObjectID object_id;
-    std::string name;
-    TRY_READ_REQUEST(ReadPutNameRequest(root, object_id, name));
-    RESPONSE_ON_ERROR(
-        server_ptr_->PutName(object_id, name, [self](const Status& status) {
-          std::string message_out;
-          if (status.ok()) {
-            WritePutNameReply(message_out);
-          } else {
-            LOG(ERROR) << "Failed to put name: " << status.ToString();
+            LOG(ERROR) << "Failed to start migrating stream: "
+                       << status.ToString();
             WriteErrorReply(status, message_out);
           }
           self->doWrite(message_out);
           return Status::OK();
         }));
-  } break;
-  case CommandType::GetNameRequest: {
-    std::string name;
-    bool wait;
-    TRY_READ_REQUEST(ReadGetNameRequest(root, name, wait));
-    RESPONSE_ON_ERROR(server_ptr_->GetName(
-        name, wait, [self]() { return self->running_; },
-        [self](const Status& status, const ObjectID& object_id) {
+  } else {
+    RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
+        object_id, local, peer, peer_rpc_endpoint,
+        [self](const Status& status, const ObjectID& target) {
           std::string message_out;
           if (status.ok()) {
-            WriteGetNameReply(object_id, message_out);
+            WriteMigrateObjectReply(target, message_out);
           } else {
-            LOG(ERROR) << "Failed to get name: " << status.ToString();
+            LOG(ERROR) << "Failed to migrate object: " << status.ToString();
             WriteErrorReply(status, message_out);
           }
           self->doWrite(message_out);
           return Status::OK();
         }));
-  } break;
-  case CommandType::DropNameRequest: {
-    std::string name;
-    TRY_READ_REQUEST(ReadDropNameRequest(root, name));
-    RESPONSE_ON_ERROR(server_ptr_->DropName(name, [self](const Status& status) {
-      std::string message_out;
-      LOG(INFO) << "drop name callback: " << status;
-      if (status.ok()) {
-        WriteDropNameReply(message_out);
-      } else {
-        LOG(ERROR) << "Failed to drop name: " << status.ToString();
-        WriteErrorReply(status, message_out);
-      }
-      self->doWrite(message_out);
-      return Status::OK();
-    }));
-  } break;
-  case CommandType::MigrateObjectRequest: {
-    ObjectID object_id;
-    bool local;
-    bool is_stream;
-    std::string peer, peer_rpc_endpoint;
-    TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, is_stream,
-                                              peer, peer_rpc_endpoint));
-    if (is_stream) {
-      RESPONSE_ON_ERROR(server_ptr_->MigrateStream(
-          object_id, local, peer, peer_rpc_endpoint,
-          [self](const Status& status, const ObjectID& target) {
-            std::string message_out;
-            if (status.ok()) {
-              WriteMigrateObjectReply(target, message_out);
-            } else {
-              LOG(ERROR) << "Failed to start migrating stream: "
-                         << status.ToString();
-              WriteErrorReply(status, message_out);
-            }
-            self->doWrite(message_out);
-            return Status::OK();
-          }));
-    } else {
-      RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
-          object_id, local, peer, peer_rpc_endpoint,
-          [self](const Status& status, const ObjectID& target) {
-            std::string message_out;
-            if (status.ok()) {
-              WriteMigrateObjectReply(target, message_out);
-            } else {
-              LOG(ERROR) << "Failed to migrate object: " << status.ToString();
-              WriteErrorReply(status, message_out);
-            }
-            self->doWrite(message_out);
-            return Status::OK();
-          }));
-    }
-  } break;
-  case CommandType::ClusterMetaRequest: {
-    TRY_READ_REQUEST(ReadClusterMetaRequest(root));
-    RESPONSE_ON_ERROR(server_ptr_->ClusterInfo(
-        [self](const Status& status, const json& tree) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteClusterMetaReply(tree, message_out);
-          } else {
-            LOG(ERROR) << "Check cluster meta: " << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::InstanceStatusRequest: {
-    TRY_READ_REQUEST(ReadInstanceStatusRequest(root));
-    RESPONSE_ON_ERROR(server_ptr_->InstanceStatus(
-        [self](const Status& status, const json& tree) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteInstanceStatusReply(tree, message_out);
-          } else {
-            LOG(ERROR) << "Check instance status: " << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } break;
-  case CommandType::ExitRequest:
-    return true;
-  default: {
-    LOG(ERROR) << "Got unexpected command: " << type;
   }
-  }
+  return false;
+}
+
+bool SocketConnection::doClusterMeta(const json& root) {
+  auto self(shared_from_this());
+  TRY_READ_REQUEST(ReadClusterMetaRequest(root));
+  RESPONSE_ON_ERROR(
+      server_ptr_->ClusterInfo([self](const Status& status, const json& tree) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteClusterMetaReply(tree, message_out);
+        } else {
+          LOG(ERROR) << "Check cluster meta: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doInstanceStatus(const json& root) {
+  auto self(shared_from_this());
+  TRY_READ_REQUEST(ReadInstanceStatusRequest(root));
+  RESPONSE_ON_ERROR(server_ptr_->InstanceStatus(
+      [self](const Status& status, const json& tree) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteInstanceStatusReply(tree, message_out);
+        } else {
+          LOG(ERROR) << "Check instance status: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
   return false;
 }
 

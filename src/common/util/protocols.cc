@@ -90,6 +90,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::OpenStreamRequest;
   } else if (str_type == "migrate_object_request") {
     return CommandType::MigrateObjectRequest;
+  } else if (str_type == "create_remote_buffer") {
+    return CommandType::CreateRemoteBufferRequest;
+  } else if (str_type == "get_remote_buffers") {
+    return CommandType::GetRemoteBuffersRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -268,6 +272,20 @@ Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object) {
   return Status::OK();
 }
 
+void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg) {
+  json root;
+  root["type"] = "create_remote_buffer_request";
+  root["size"] = size;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateRemoteBufferRequest(const json& root, size_t& size) {
+  RETURN_ON_ASSERT(root["type"] == "create_remote_buffer_request");
+  size = root["size"].get<size_t>();
+  return Status::OK();
+}
+
 void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
                             std::string& msg) {
   json root;
@@ -312,6 +330,29 @@ Status ReadGetBuffersReply(const json& root,
     Payload object;
     object.FromJSON(tree);
     objects.emplace(object.object_id, object);
+  }
+  return Status::OK();
+}
+
+void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                                  std::string& msg) {
+  json root;
+  root["type"] = "get_remote_buffers_request";
+  int idx = 0;
+  for (auto const& id : ids) {
+    root[std::to_string(idx++)] = id;
+  }
+  root["num"] = ids.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetRemoteBuffersRequest(const json& root,
+                                   std::vector<ObjectID>& ids) {
+  RETURN_ON_ASSERT(root["type"] == "get_remote_buffers_request");
+  size_t num = root["num"].get<size_t>();
+  for (size_t i = 0; i < num; ++i) {
+    ids.push_back(root[std::to_string(i)].get<ObjectID>());
   }
   return Status::OK();
 }
