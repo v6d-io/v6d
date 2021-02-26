@@ -60,7 +60,7 @@ def read_vineyard_dataframe(
         rb_writer.close()
         buf = sink.getvalue()
         chunk = writer.next(buf.size)
-        buf_writer = pa.FixedSizeBufferWriter(chunk)
+        buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
         buf_writer.write(buf)
         buf_writer.close()
 
