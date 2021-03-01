@@ -744,7 +744,12 @@ inline boost::leaf::result<std::shared_ptr<arrow::Array>> GeneralCast(
     const std::shared_ptr<arrow::Array>& in,
     const std::shared_ptr<arrow::DataType>& to_type) {
   std::shared_ptr<arrow::Array> out;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 1000000
+  arrow::compute::FunctionContext ctx;
+  ARROW_OK_OR_RAISE(arrow::compute::Cast(&ctx, *in, to_type, {}, &out));
+#else
   CHECK_ARROW_ERROR_AND_ASSIGN(out, arrow::compute::Cast(*in, to_type));
+#endif
   return out;
 }
 

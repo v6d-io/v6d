@@ -21,13 +21,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # os: [ubuntu-18.04, macos-10.15]
-        # disable mac: latest apache-arrow conflicts with latest grpc.
-        os: [ubuntu-18.04]
+        os: [ubuntu-18.04, macos-10.15]
         arrow: [none, 0.17.1-1, 1.0.1-1, 2.0.0-1, 3.0.0-1]
         exclude:
           - os: ubuntu-18.04
             arrow: none
+          - os: macos-10.15
+            arrow: 0.17.1-1
+          - os: macos-10.15
+            arrow: 1.0.1-1
+          - os: macos-10.15
+            arrow: 2.0.0-1
+          - os: macos-10.15
+            arrow: 3.0.0-1
 
     steps:
       - uses: actions/checkout@v2
@@ -53,24 +59,36 @@ jobs:
           # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
 
+          # Note:
+          #
+          # install libgandiva-dev for workaround for https://issues.apache.org/jira/browse/ARROW-10495
+          #
+          # that affects arrow-2.0.0
+
           sudo apt update -y
           sudo apt install -y ca-certificates \
                               ccache \
                               cmake \
                               libboost-all-dev \
+                              libbrotli-dev \
+                              libbz2-dev \
                               libcurl4-openssl-dev \
                               libgflags-dev \
                               libgoogle-glog-dev \
                               libgrpc-dev \
                               libgrpc++-dev \
                               libgtest-dev \
+                              liblz4-dev \
                               libmpich-dev \
                               libprotobuf-dev \
                               librdkafka-dev \
+                              libre2-dev \
                               libsnappy-dev \
                               libssl-dev \
                               libunwind-dev \
+                              libutf8proc-dev \
                               libz-dev \
+                              libzstd-dev \
                               lsb-release \
                               protobuf-compiler-grpc \
                               python3-pip \
@@ -126,7 +144,6 @@ jobs:
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
                    -DBUILD_VINEYARD_BASIC=ON \
                    -DBUILD_VINEYARD_IO=ON \
-                   -DBUILD_VINEYARD_IO_OSS=ON \
                    -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 

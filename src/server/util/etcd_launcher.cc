@@ -23,6 +23,8 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "common/util/env.h"
+
 namespace vineyard {
 
 constexpr int max_probe_retries = 15;
@@ -183,14 +185,9 @@ void EtcdLauncher::initHostInfo() {
   local_hostnames_.emplace("localhost");
   local_ip_addresses_.emplace("127.0.0.1");
   local_ip_addresses_.emplace("0.0.0.0");
-  char hostname_value[MAXHOSTNAMELEN];
-  int err = gethostname(&hostname_value[0], MAXHOSTNAMELEN);
-  if (err != 0) {
-    LOG(ERROR) << "Failed in gethostname: " << strerror(err);
-    return;
-  }
+  std::string hostname_value = get_hostname();
   local_hostnames_.emplace(hostname_value);
-  struct hostent* host_entry = gethostbyname(hostname_value);
+  struct hostent* host_entry = gethostbyname(hostname_value.c_str());
   if (host_entry == nullptr) {
     LOG(ERROR) << "Failed in gethostbyname: " << hstrerror(h_errno);
     return;
