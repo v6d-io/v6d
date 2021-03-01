@@ -25,11 +25,10 @@ jobs:
         # disable mac: latest apache-arrow conflicts with latest grpc.
         os: [ubuntu-18.04]
         arrow: [none, 0.17.1-1, 1.0.1-1, 2.0.0-1, 3.0.0-1]
-        include:
-          - { os: ubuntu-18.04, arrow: 0.17.1-1 }
-          - { os: ubuntu-18.04, arrow: 1.0.1-1 }
-          - { os: ubuntu-18.04, arrow: 2.0.0-1 }
-          - { os: ubuntu-18.04, arrow: 3.0.0-1 }
+        exclude:
+          - os: ubuntu-18.04
+            arrow: none
+
     steps:
       - uses: actions/checkout@v2
         with:
