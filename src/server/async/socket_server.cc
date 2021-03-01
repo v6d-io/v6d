@@ -352,12 +352,13 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
       socket_, asio::buffer(object->pointer, size),
       [this, self, &object](boost::system::error_code ec, std::size_t size) {
         std::string message_out;
-        if (object->data_size == size && (!ec || ec == asio::error::eof)) {
+        if (static_cast<size_t>(object->data_size) == size &&
+            (!ec || ec == asio::error::eof)) {
           WriteCreateBufferReply(object->object_id, object, message_out);
         } else {
           VINEYARD_DISCARD(server_ptr_->GetBulkStore()->ProcessDeleteRequest(
               object->object_id));
-          if (object->data_size == size) {
+          if (static_cast<size_t>(object->data_size) == size) {
             WriteErrorReply(
                 Status::IOError("Failed to read buffer's content from client"),
                 message_out);
