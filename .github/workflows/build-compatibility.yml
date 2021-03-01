@@ -67,6 +67,7 @@ jobs:
                               libmpich-dev \
                               libprotobuf-dev \
                               librdkafka-dev \
+                              libsnappy-dev \
                               libssl-dev \
                               libunwind-dev \
                               libz-dev \
