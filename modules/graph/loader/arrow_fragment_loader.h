@@ -524,7 +524,8 @@ class ArrowFragmentLoader {
         partial_e_tables.emplace_back(subetables);
       }
     } else {
-      LOG(FATAL) << "Unsupported...";
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "Error when processing input source");
     }
 
     if (load_with_ve_) {
@@ -537,14 +538,13 @@ class ArrowFragmentLoader {
       for (auto table : partial_v_tables) {
         auto meta = table->schema()->metadata();
         if (meta == nullptr) {
-          return boost::leaf::new_error(
-              ErrorCode::kInvalidValueError,
-              "Metadata of input vertex files shouldn't be empty");
+          RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                          "Metadata of input vertex files shouldn't be empty");
         }
 
         int label_meta_index = meta->FindKey(LABEL_TAG);
         if (label_meta_index == -1) {
-          return boost::leaf::new_error(
+          RETURN_GS_ERROR(
               ErrorCode::kInvalidValueError,
               "Metadata of input vertex files should contain label name");
         }
@@ -587,14 +587,13 @@ class ArrowFragmentLoader {
         for (auto table : table_vec) {
           auto meta = table->schema()->metadata();
           if (meta == nullptr) {
-            return boost::leaf::new_error(
-                ErrorCode::kInvalidValueError,
-                "Metadata of input edge files shouldn't be empty.");
+            RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                            "Metadata of input edge files shouldn't be empty.");
           }
 
           int label_meta_index = meta->FindKey(LABEL_TAG);
           if (label_meta_index == -1) {
-            return boost::leaf::new_error(
+            RETURN_GS_ERROR(
                 ErrorCode::kInvalidValueError,
                 "Metadata of input edge files should contain label name");
           }
@@ -602,7 +601,7 @@ class ArrowFragmentLoader {
 
           int src_label_meta_index = meta->FindKey(SRC_LABEL_TAG);
           if (src_label_meta_index == -1) {
-            return boost::leaf::new_error(
+            RETURN_GS_ERROR(
                 ErrorCode::kInvalidValueError,
                 "Metadata of input edge files should contain src label name");
           }
@@ -610,7 +609,7 @@ class ArrowFragmentLoader {
 
           int dst_label_meta_index = meta->FindKey(DST_LABEL_TAG);
           if (dst_label_meta_index == -1) {
-            return boost::leaf::new_error(
+            RETURN_GS_ERROR(
                 ErrorCode::kInvalidValueError,
                 "Metadata of input edge files should contain dst label name");
           }
