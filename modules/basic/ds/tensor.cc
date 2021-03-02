@@ -45,12 +45,12 @@ void GlobalTensor::Construct(const ObjectMeta& meta) {
 
 const std::vector<std::shared_ptr<ITensor>>& GlobalTensor::LocalPartitions(
     Client& client) const {
-  return partitions_.at(client.instance_id());
+  return partitions_[client.instance_id()];
 }
 
 const std::vector<std::shared_ptr<ITensor>>& GlobalTensor::LocalPartitions(
     const InstanceID instance_id) const {
-  return partitions_.at(instance_id);
+  return partitions_[instance_id];
 }
 
 std::shared_ptr<Object> GlobalTensorBaseBuilder::_Seal(Client& client) {

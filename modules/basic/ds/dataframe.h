@@ -164,7 +164,8 @@ class GlobalDataFrame : public Registered<GlobalDataFrame>, GlobalObject {
   size_t partition_shape_row_;
   size_t partition_shape_column_;
 
-  std::map<InstanceID, std::vector<std::shared_ptr<DataFrame>>> partitions_;
+  mutable std::map<InstanceID, std::vector<std::shared_ptr<DataFrame>>>
+      partitions_;
 
   friend class Client;
   friend class GlobalDataFrameBaseBuilder;

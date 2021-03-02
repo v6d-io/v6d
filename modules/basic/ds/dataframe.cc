@@ -165,12 +165,12 @@ const std::pair<size_t, size_t> GlobalDataFrame::partition_shape() const {
 
 const std::vector<std::shared_ptr<DataFrame>>& GlobalDataFrame::LocalPartitions(
     Client& client) const {
-  return partitions_.at(client.instance_id());
+  return partitions_[client.instance_id()];
 }
 
 const std::vector<std::shared_ptr<DataFrame>>& GlobalDataFrame::LocalPartitions(
     const InstanceID instance_id) const {
-  return partitions_.at(instance_id);
+  return partitions_[instance_id];
 }
 
 std::shared_ptr<Object> GlobalDataFrameBaseBuilder::_Seal(Client& client) {

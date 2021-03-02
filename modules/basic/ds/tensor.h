@@ -194,7 +194,8 @@ class GlobalTensor : public Registered<GlobalTensor>, GlobalObject {
   std::vector<int64_t> shape_;
   std::vector<int64_t> partition_shape_;
 
-  std::map<InstanceID, std::vector<std::shared_ptr<ITensor>>> partitions_;
+  mutable std::map<InstanceID, std::vector<std::shared_ptr<ITensor>>>
+      partitions_;
 
   friend class Client;
   friend class GlobalTensorBaseBuilder;
