@@ -309,17 +309,17 @@ void bind_core(py::module& mod) {
       .def_property_readonly(
           "address",
           [](Blob* self) { return reinterpret_cast<uintptr_t>(self->data()); })
-      .def_property_readonly(
-          "buffer",
-          [](Blob& blob) -> py::object {
-            auto buffer = blob.Buffer();
-            if (buffer == nullptr) {
-              return py::none();
-            } else {
-              return py::memoryview::from_memory(
-                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
-            }
-          })
+      .def_property_readonly("buffer",
+                             [](Blob& blob) -> py::object {
+                               auto buffer = blob.Buffer();
+                               if (buffer == nullptr) {
+                                 return py::none();
+                               } else {
+                                 return py::memoryview::from_memory(
+                                     const_cast<uint8_t*>(buffer->data()),
+                                     buffer->size(), true);
+                               }
+                             })
       .def_buffer([](Blob& blob) -> py::buffer_info {
         return py::buffer_info(const_cast<char*>(blob.data()), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,
@@ -361,7 +361,9 @@ void bind_core(py::module& mod) {
             self->AddKeyValue(key, value);
           },
           "key"_a, "value"_a)
-      .def("abort", [](BlobWriter *self, Client &client) {
+      .def(
+          "abort",
+          [](BlobWriter* self, Client& client) {
             throw_on_error(self->Abort(client));
           },
           "client"_a)
@@ -386,17 +388,17 @@ void bind_core(py::module& mod) {
                              [](BlobWriter* self) {
                                return reinterpret_cast<uintptr_t>(self->data());
                              })
-      .def_property_readonly(
-          "buffer",
-          [](BlobWriter& blob) -> py::object {
-            auto buffer = blob.Buffer();
-            if (buffer == nullptr) {
-              return py::none();
-            } else {
-              return py::memoryview::from_memory(
-                  buffer->mutable_data(), buffer->size(), false);
-            }
-          })
+      .def_property_readonly("buffer",
+                             [](BlobWriter& blob) -> py::object {
+                               auto buffer = blob.Buffer();
+                               if (buffer == nullptr) {
+                                 return py::none();
+                               } else {
+                                 return py::memoryview::from_memory(
+                                     buffer->mutable_data(), buffer->size(),
+                                     false);
+                               }
+                             })
       .def_buffer([](BlobWriter& blob) -> py::buffer_info {
         return py::buffer_info(blob.data(), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,

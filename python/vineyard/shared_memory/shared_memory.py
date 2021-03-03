@@ -63,12 +63,9 @@ class SharedMemory:
                 raise ValueError("'name' can only be None if create=True")
         else:
             if size != 0:
-                warnings.warn(
-                    "'size' will take no effect if create=False",
-                )
+                warnings.warn("'size' will take no effect if create=False", )
             if name is None:
                 raise ValueError("'name' cannot be None if create=False")
-
 
         self._name = None
         self._size = None
@@ -165,6 +162,10 @@ class ShareableList(multiprocessing.shared_memory.ShareableList):
     multiprocessing.shared_memory.ShareableList
     '''
 
+    # yapf: disable
+
+    # note that the implementation of ``__init__`` entirely comes from multiprocessing.shared_memory.
+
     def __init__(self, vineyard_client, sequence=None, *, name=None):
         if name is None or sequence is not None:
             if name is not None:
@@ -243,6 +244,8 @@ class ShareableList(multiprocessing.shared_memory.ShareableList):
                 )
             )
 
+    # yapf: enable
+
     def freeze(self):
         ''' Make the shareable list immutable and visible for other vineyard clients.
         '''
@@ -251,4 +254,4 @@ class ShareableList(multiprocessing.shared_memory.ShareableList):
     __class_getitem__ = classmethod(types.GenericAlias)
 
 
-__all__ = [ 'SharedMemory', 'ShareableList' ]
+__all__ = ['SharedMemory', 'ShareableList']
