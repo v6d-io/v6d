@@ -38,6 +38,8 @@ const Signature ObjectMeta::GetSignature() const {
   return meta_["signature"].get<Signature>();
 }
 
+void ObjectMeta::ResetSignature() { this->ResetKey("signature"); }
+
 void ObjectMeta::SetGlobal(bool global) { meta_["global"] = global; }
 
 const bool ObjectMeta::IsGlobal() const { return meta_.value("global", false); }
@@ -78,6 +80,12 @@ bool const ObjectMeta::IsLocal() const {
 
 bool const ObjectMeta::Haskey(std::string const& key) const {
   return meta_.contains(key);
+}
+
+void ObjectMeta::ResetKey(std::string const& key) {
+  if (meta_.contains(key)) {
+    meta_.erase(key);
+  }
 }
 
 void ObjectMeta::AddKeyValue(const std::string& key, const std::string& value) {
