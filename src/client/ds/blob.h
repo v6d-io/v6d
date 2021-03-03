@@ -161,6 +161,13 @@ class BlobWriter : public ObjectBuilder {
   Status Build(Client& client) override;
 
   /**
+   * @brief Abort the blob builder.
+   *
+   * @param client Release the blob builder object if it is not sealed.
+   */
+  Status Abort(Client& client);
+
+  /**
    * @brief Add key-value metadata for the blob.
    *
    * @param key The key of the metadata.
@@ -185,11 +192,12 @@ class BlobWriter : public ObjectBuilder {
   std::shared_ptr<Object> _Seal(Client& client) override;
 
  private:
-  BlobWriter(ObjectID const object_id,
+  BlobWriter(ObjectID const object_id, int const fd,
              std::shared_ptr<arrow::MutableBuffer> const& buffer)
-      : object_id_(object_id), buffer_(buffer) {}
+      : object_id_(object_id), fd_(fd), buffer_(buffer) {}
 
   ObjectID object_id_;
+  int fd_;
   std::shared_ptr<arrow::MutableBuffer> buffer_;
   // Allowing blobs have extra key-value metadata
   std::unordered_map<std::string, std::string> metadata_;

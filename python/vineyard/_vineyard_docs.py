@@ -850,6 +850,10 @@ add_doc(BlobBuilder.size, r'''
 Size of this blob builder.
 ''')
 
+add_doc(BlobBuilder.abort, r'''
+Abort the blob builder if it is not sealed yet.
+''')
+
 add_doc(
     BlobBuilder.copy, r'''
 .. method:: copy(self, offset: int, ptr: int, size: int)

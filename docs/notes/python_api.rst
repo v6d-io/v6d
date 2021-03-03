@@ -59,6 +59,15 @@ Primitives
 .. autoclass:: BlobBuilder
     :members:
 
+Shared Memory
+-------------
+
+.. autoclass:: vineyard.shared_memory.SharedMemory
+    :members:
+
+.. autoclass:: vineyard.shared_memory.ShareableList
+    :members:
+
 Deployment
 ----------
 

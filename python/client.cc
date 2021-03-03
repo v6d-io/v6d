@@ -151,7 +151,8 @@ void bind_client(py::module& mod) {
           "object_id"_a)
       .def(
           "shallow_copy",
-          [](ClientBase* self, const ObjectIDWrapper object_id) -> ObjectIDWrapper {
+          [](ClientBase* self,
+             const ObjectIDWrapper object_id) -> ObjectIDWrapper {
             ObjectID target_id;
             throw_on_error(self->ShallowCopy(object_id, target_id));
             return target_id;
@@ -189,35 +190,45 @@ void bind_client(py::module& mod) {
             return object_id;
           },
           "object_id"_a, py::arg("wait") = false)
-      .def("drop_name",
-           [](ClientBase* self, std::string const& name) {
-             throw_on_error(self->DropName(name));
-           }, "name"_a)
-      .def("drop_name",
-           [](ClientBase* self, ObjectNameWrapper const& name) {
-             throw_on_error(self->DropName(name));
-           }, "name"_a)
-      .def("migrate",
-          [](ClientBase *self, const ObjectID object_id) -> ObjectIDWrapper {
+      .def(
+          "drop_name",
+          [](ClientBase* self, std::string const& name) {
+            throw_on_error(self->DropName(name));
+          },
+          "name"_a)
+      .def(
+          "drop_name",
+          [](ClientBase* self, ObjectNameWrapper const& name) {
+            throw_on_error(self->DropName(name));
+          },
+          "name"_a)
+      .def(
+          "migrate",
+          [](ClientBase* self, const ObjectID object_id) -> ObjectIDWrapper {
             ObjectID target_id = InvalidObjectID();
             throw_on_error(self->MigrateObject(object_id, target_id));
             return target_id;
-          }, "object_id"_a)
-      .def("migrate_stream",
-          [](ClientBase *self, const ObjectID object_id) -> ObjectIDWrapper {
+          },
+          "object_id"_a)
+      .def(
+          "migrate_stream",
+          [](ClientBase* self, const ObjectID object_id) -> ObjectIDWrapper {
             ObjectID target_id = InvalidObjectID();
             throw_on_error(self->MigrateStream(object_id, target_id));
             return target_id;
-          }, "object_id"_a)
+          },
+          "object_id"_a)
       .def_property_readonly("connected", &Client::Connected)
       .def_property_readonly("instance_id", &Client::instance_id)
       .def_property_readonly(
           "meta",
           [](ClientBase* self)
-              -> std::map<uint64_t, std::unordered_map<std::string, py::object>> {
+              -> std::map<uint64_t,
+                          std::unordered_map<std::string, py::object>> {
             std::map<uint64_t, json> meta;
             throw_on_error(self->ClusterInfo(meta));
-            std::map<uint64_t, std::unordered_map<std::string, py::object>> meta_to_return;
+            std::map<uint64_t, std::unordered_map<std::string, py::object>>
+                meta_to_return;
             for (auto const& kv : meta) {
               std::unordered_map<std::string, py::object> element;
               if (!kv.second.empty()) {
@@ -296,7 +307,10 @@ void bind_client(py::module& mod) {
       .def(
           "get_object",
           [](Client* self, const ObjectIDWrapper object_id) {
-            return self->GetObject(object_id);
+            // receive the status to throw a more precise exception when failed.
+            std::shared_ptr<Object> object;
+            throw_on_error(self->GetObject(object_id, object));
+            return object;
           },
           "object_id"_a)
       .def(
@@ -311,7 +325,8 @@ void bind_client(py::module& mod) {
           "object_ids"_a)
       .def(
           "get_meta",
-          [](Client* self, ObjectIDWrapper const& object_id, bool const sync_remote) -> ObjectMeta {
+          [](Client* self, ObjectIDWrapper const& object_id,
+             bool const sync_remote) -> ObjectMeta {
             ObjectMeta meta;
             // FIXME: do we really not need to sync from etcd? We assume the
             // object is a local object
@@ -321,8 +336,8 @@ void bind_client(py::module& mod) {
           "object_id"_a, py::arg("sync_remote") = false)
       .def(
           "get_metas",
-          [](Client* self, std::vector<ObjectIDWrapper> const& object_ids, bool const sync_remote)
-              -> std::vector<ObjectMeta> {
+          [](Client* self, std::vector<ObjectIDWrapper> const& object_ids,
+             bool const sync_remote) -> std::vector<ObjectMeta> {
             std::vector<ObjectMeta> metas;
             // FIXME: do we really not need to sync from etcd? We assume the
             // object is a local object
@@ -353,7 +368,10 @@ void bind_client(py::module& mod) {
       .def(
           "get_object",
           [](RPCClient* self, const ObjectIDWrapper object_id) {
-            return self->GetObject(object_id);
+            // receive the status to throw a more precise exception when failed.
+            std::shared_ptr<Object> object;
+            throw_on_error(self->GetObject(object_id, object));
+            return object;
           },
           "object_id"_a)
       .def(
@@ -411,22 +429,24 @@ void bind_client(py::module& mod) {
            }
            throw_on_error(Status::ConnectionFailed(
                "Failed to resolve IPC socket or RPC endpoint of vineyard "
-               "server from environment variables VINEYARD_IPC_SOCKET or VINEYARD_RPC_ENDPOINT."));
+               "server from environment variables VINEYARD_IPC_SOCKET or "
+               "VINEYARD_RPC_ENDPOINT."));
            return py::none();
          },
          py::arg("target") = py::none())
       .def(
           "connect",
           [](std::string const& endpoint) -> py::object {
-            return py::cast(ClientManager<Client>::GetManager()->Connect(endpoint));
+            return py::cast(
+                ClientManager<Client>::GetManager()->Connect(endpoint));
           },
           "endpoint"_a)
       .def(
           "connect",
           [](std::string const& host, const uint32_t port) {
             std::string rpc_endpoint = host + ":" + std::to_string(port);
-            return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
-                rpc_endpoint));
+            return py::cast(
+                ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint));
           },
           "host"_a, "port"_a)
       .def(

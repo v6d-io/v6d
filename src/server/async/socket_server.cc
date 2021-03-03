@@ -149,8 +149,17 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::GetBuffersRequest: {
     return doGetBuffers(root);
   }
+  case CommandType::GetRemoteBuffersRequest: {
+    return doGetRemoteBuffers(root);
+  }
   case CommandType::CreateBufferRequest: {
     return doCreateBuffer(root);
+  }
+  case CommandType::CreateRemoteBufferRequest: {
+    return doCreateRemoteBuffer(root);
+  }
+  case CommandType::DropBufferRequest: {
+    return doDropBuffer(root);
   }
   case CommandType::GetDataRequest: {
     return doGetData(root);
@@ -368,6 +377,21 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
         }
         self->doWrite(message_out);
       });
+  return false;
+}
+
+bool SocketConnection::doDropBuffer(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id = InvalidObjectID();
+  TRY_READ_REQUEST(ReadDropBufferRequest(root, object_id));
+  auto status = server_ptr_->GetBulkStore()->ProcessDeleteRequest(object_id);
+  std::string message_out;
+  if (status.ok()) {
+    WriteDropBufferReply(message_out);
+  } else {
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
   return false;
 }
 
