@@ -68,8 +68,6 @@ To address this issue, vineyard provides:
     the high-level abstracted graph traversal operations are built-in with the vineyard distributed
     graph, as a result, nearly zero extra development are required to reuse the data.
 
-
-
 Architecture
 ------------
 
@@ -104,13 +102,11 @@ On the server/daemon side (i.e., the aforementioned vineyard instance), there ar
     the client has to connect to the vineyard instance through UNIX domain socket, this is because, 
     the data sharing is via the system call of memory mapping, thus requires the client 
     to stay in the same machine of the vineyard instance.
-    
 
 On the other hand, the client side consists of both the high-level APIs (e.g., edge traversals for 
 distributed graphs) to easily reuse the
 data in vineyard and the low-level APIs for specific drivers to access the vineyard instance
 in a more delicate fashion.
-
 
 Vineyard Object Design
 ----------------------
@@ -151,6 +147,17 @@ In particular, for the meta data and methods of vineyard objects, vineyard emplo
     vineyard objects to enable flexible data sharing between different computation systems
     with nearly zero extra development cost.
 
+Distributed Object
+^^^^^^^^^^^^^^^^^^
+
+Vineyard supports store very large objects across many nodes in a cluster and allows user programs
+to treat those as a whole. Data are shaded to many machines and no replication happens.
+
+Taking ``DataFrame`` as an example, in real world cases the table may consists billions of rows
+and cannot be fit into a single machine. Under such conditions, the dataframe could be split
+along the index axis or column axis and every vineyard node holds a subset of chunks. Vineyard
+still provides a *logical view* about the complete dataframe and allows distributed computation
+engines like Mars and GraphScope to process such data structures as a whole.
 
 Composable Design
 ^^^^^^^^^^^^^^^^^
@@ -204,7 +211,6 @@ Further more, the registered methods can be implemented and optimized
 in accordance with specific data analytical tasks for further efficiency
 augmentation.
 
-
 Implementation Details
 ----------------------
 
@@ -235,7 +241,6 @@ memory mapping.
 .. code:: console
 
     > vineyard::Blob 13 Hello, World!
-
 
 On the other hand, the hierarchical meta data of vineyard objects are
 shared across the cluster. In the following example, for simplicity, 
@@ -376,7 +381,6 @@ Most importantly, the registration design allows users to register their own
 drivers to ``registerized`` vineyard methods using ``.register``, which prevents
 major revisions on the processing code to fullfill customized computation requirements.
 
-
 Features and Limitations
 -----------------------------
 
@@ -403,7 +407,6 @@ Thus vineyard is designed accordingly with:
 In general, the design choices of vineyard are fully determined on coping
 the difficulties in handling large-scale distributed data in practice.
 
-
 Out-of-box high-level data abstraction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -414,7 +417,6 @@ index can be provided. Thus, users don't have to implement the index-building
 function and edge iterators by themselves, which is usually required in the 
 existing big data practice.
 
-
 Zero-cost in-memory data sharing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -424,7 +426,6 @@ vineyard to store the data payload, on the other hand, when getting the object,
 we map the blob from the vineyard instance into the application process with
 inter-process memory mapping approaches, so that no memory copy is involved
 in sharing the data payload.
-
 
 Convinient data integration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -444,7 +445,6 @@ involved provides python API, users can write down the entire processing
 pipeline in a python notebook. By running the python script, users can
 manage trillions of data and different computation systems in the backgound
 distributedly across the cluster.
-
 
 NOT for mutable objects
 ^^^^^^^^^^^^^^^^^^^^^^^

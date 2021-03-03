@@ -1,4 +1,4 @@
-Python API reference
+Python API Reference
 ====================
 
 .. default-domain:: py

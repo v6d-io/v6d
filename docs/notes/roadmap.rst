@@ -4,10 +4,36 @@ Roadmap
 Vineyard aims to serve as an open-source in-memory immutable data manager. The roadmap
 for major vineyard releases are listed as follows:
 
-v1.0.0
+v0.5.0
 ------
 
-We plan to release *v1.0.0* after vineyard becomes a CNCF sandbox project. vineyard *v1.0.0*
+We plan to release the first preliminary version for the Rust SDK and Go SDK
+in vineyard *v0.5.0*, that is expected to be delivered in later May, 2021.
+
+In vineyard *v0.5.0*, we will investigate the opportunity about code generation
+based on the metadata of vineyard objects, i.e., we could generate the data
+structure definition based on the structure of metadata in runtime (for Python)
+and in compile time (even maybe in runtime) for C++ and Rust.
+
+The integration with Kubernetes (especially the CSI part) will be another key
+improvement for *v0.5.0*.
+
+Further details about release for *v0.5.0* will be added later.
+
+v0.4.0
+------
+
+The release of vineyard *v0.4.0* is a follow-up bugfix releases after *v0.3.0*.
+The version *v0.4.0* makes the kubernetes related components better.
+
++ Improve the robustness of the scheduler plugin.
++ Refine the definition of CRDs.
++ Distribute the vineyard operator to artifact hub as a chart, to make it available for more users.
+
+v0.3.0
+------
+
+We plan to release *v0.3.0* in Apr, 2021. vineyard *v0.3.0*
 will be the first major stable releases with fully kubernetes support, which will include:
 
 + Match the criterion of CNCF sandbox project.
