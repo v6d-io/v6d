@@ -131,6 +131,8 @@ is available for other clients:
 .. code:: python
 
      >>> value1 = shared_memory.ShareableList(client, name=value.shm.name)
+     >>> value1
+     ShareableList([b'a', 'bb', 1234, 56.78, False], name='o8000000119aa10c0')
 
 Using streams
 -------------
