@@ -1,4 +1,4 @@
-C++ API reference
+C++ API Reference
 =================
 
 .. _python_cpp:

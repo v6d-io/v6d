@@ -117,7 +117,7 @@ class SharedMemory:
         "Size in bytes."
         return self._size
 
-    def seal(self):
+    def freeze(self):
         "Seal the shared memory to make it visible for other processes."
         if self._blob_builder:
             self._blob = self._blob_builder.seal(self._vineyard_client)
@@ -125,7 +125,7 @@ class SharedMemory:
         return self
 
     def close(self):
-        self.seal()
+        self.freeze()
 
     def unlink(self):
         """Requests that the underlying shared memory block be destroyed."""
@@ -368,7 +368,7 @@ class ShareableList(multiprocessing.shared_memory.ShareableList):
     def freeze(self):
         ''' Make the shareable list immutable and visible for other vineyard clients.
         '''
-        self.shm.seal()
+        self.shm.freeze()
 
 
 __all__ = ['SharedMemory', 'ShareableList']
