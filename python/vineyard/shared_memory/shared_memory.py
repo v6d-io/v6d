@@ -29,7 +29,6 @@ Refer to the documentation of multiprocessing.shared_memory for details.
 
 import multiprocessing.shared_memory
 import struct
-import types
 import warnings
 
 from vineyard._C import ObjectID
@@ -250,8 +249,6 @@ class ShareableList(multiprocessing.shared_memory.ShareableList):
         ''' Make the shareable list immutable and visible for other vineyard clients.
         '''
         self.shm.seal()
-
-    __class_getitem__ = classmethod(types.GenericAlias)
 
 
 __all__ = ['SharedMemory', 'ShareableList']
