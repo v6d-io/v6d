@@ -296,7 +296,10 @@ void bind_client(py::module& mod) {
       .def(
           "get_object",
           [](Client* self, const ObjectIDWrapper object_id) {
-            return self->GetObject(object_id);
+            // receive the status to throw a more precise exception when failed.
+            std::shared_ptr<Object> object;
+            throw_on_error(self->GetObject(object_id, object));
+            return object;
           },
           "object_id"_a)
       .def(
@@ -353,7 +356,10 @@ void bind_client(py::module& mod) {
       .def(
           "get_object",
           [](RPCClient* self, const ObjectIDWrapper object_id) {
-            return self->GetObject(object_id);
+            // receive the status to throw a more precise exception when failed.
+            std::shared_ptr<Object> object;
+            throw_on_error(self->GetObject(object_id, object));
+            return object;
           },
           "object_id"_a)
       .def(

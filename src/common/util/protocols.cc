@@ -90,10 +90,12 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::OpenStreamRequest;
   } else if (str_type == "migrate_object_request") {
     return CommandType::MigrateObjectRequest;
-  } else if (str_type == "create_remote_buffer") {
+  } else if (str_type == "create_remote_buffer_request") {
     return CommandType::CreateRemoteBufferRequest;
-  } else if (str_type == "get_remote_buffers") {
+  } else if (str_type == "get_remote_buffers_request") {
     return CommandType::GetRemoteBuffersRequest;
+  } else if (str_type == "drop_buffer_request") {
+    return CommandType::DropBufferRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -354,6 +356,32 @@ Status ReadGetRemoteBuffersRequest(const json& root,
   for (size_t i = 0; i < num; ++i) {
     ids.push_back(root[std::to_string(i)].get<ObjectID>());
   }
+  return Status::OK();
+}
+
+void WriteDropBufferRequest(const ObjectID id, std::string& msg) {
+  json root;
+  root["type"] = "drop_buffer_request";
+  root["id"] = id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDropBufferRequest(const json& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "drop_buffer_request");
+  id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteDropBufferReply(std::string& msg) {
+  json root;
+  root["type"] = "drop_buffer_reply";
+
+  encode_msg(root, msg);
+}
+
+Status ReadDropBufferReply(const json& root) {
+  CHECK_IPC_ERROR(root, "drop_buffer_reply");
   return Status::OK();
 }
 

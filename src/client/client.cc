@@ -163,7 +163,7 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   std::shared_ptr<arrow::MutableBuffer> buffer =
       std::make_shared<arrow::MutableBuffer>(mmapped_ptr + object.data_offset,
                                              object.data_size);
-  blob.reset(new BlobWriter(object_id, buffer));
+  blob.reset(new BlobWriter(object_id, object.store_fd, buffer));
   return Status::OK();
 }
 
@@ -372,6 +372,25 @@ Status Client::GetBuffers(const std::unordered_set<ObjectID>& ids,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, objects));
+  return Status::OK();
+}
+
+Status Client::DropBuffer(const ObjectID id, const int fd) {
+  ENSURE_CONNECTED(this);
+
+  // unmap from client
+  auto entry = mmap_table_.find(fd);
+  if (entry != mmap_table_.end()) {
+    mmap_table_.erase(entry);
+  }
+
+  // free on server
+  std::string message_out;
+  WriteDropBufferRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDropBufferReply(message_in));
   return Status::OK();
 }
 

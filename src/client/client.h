@@ -361,6 +361,11 @@ class Client : public ClientBase {
   Status GetBuffers(const std::unordered_set<ObjectID>& ids,
                     std::unordered_map<ObjectID, Payload>& objects);
 
+  /**
+   * N.B.: can only be used for **UN-SEALED** blob writers.
+   */
+  Status DropBuffer(const ObjectID id, const int fd);
+
   Status mmapToClient(int fd, int64_t map_size, bool readonly, uint8_t** ptr);
 
   std::unordered_map<int, std::unique_ptr<MmapEntry>> mmap_table_;

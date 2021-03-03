@@ -361,6 +361,10 @@ void bind_core(py::module& mod) {
             self->AddKeyValue(key, value);
           },
           "key"_a, "value"_a)
+      .def("abort", [](BlobWriter *self, Client &client) {
+            throw_on_error(self->Abort(client));
+          },
+          "client"_a)
       .def(
           "copy",
           [](BlobWriter* self, size_t const offset, uintptr_t ptr,

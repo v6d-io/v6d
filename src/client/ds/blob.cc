@@ -144,6 +144,13 @@ const std::shared_ptr<arrow::MutableBuffer>& BlobWriter::Buffer() const {
 
 Status BlobWriter::Build(Client& client) { return Status::OK(); }
 
+Status BlobWriter::Abort(Client& client) {
+  if (this->sealed()) {
+    return Status::ObjectSealed();
+  }
+  return client.DropBuffer(this->object_id_, this->fd_);
+}
+
 void BlobWriter::AddKeyValue(std::string const& key, std::string const& value) {
   this->metadata_.emplace(key, value);
 }
@@ -170,6 +177,7 @@ void BlobWriter::Dump() const {
 }
 
 std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
+  VINEYARD_ASSERT(!this->sealed(), "The blob writer has been already sealed.");
   // get blob and re-map
   Payload object;
   VINEYARD_CHECK_OK(client.GetBuffer(object_id_, object));
@@ -195,6 +203,7 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   }
 
   VINEYARD_CHECK_OK(client.CreateMetaData(blob->meta_, blob->id_));
+  this->set_sealed(true);
   return blob;
 }
 

@@ -60,6 +60,7 @@ enum class CommandType {
   MigrateObjectRequest = 29,
   CreateRemoteBufferRequest = 30,
   GetRemoteBuffersRequest = 31,
+  DropBufferRequest = 32,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -196,6 +197,14 @@ void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
 
 Status ReadGetRemoteBuffersRequest(const json& root,
                                    std::vector<ObjectID>& ids);
+
+void WriteDropBufferRequest(const ObjectID id, std::string& msg);
+
+Status ReadDropBufferRequest(const json& root, ObjectID& id);
+
+void WriteDropBufferReply(std::string& msg);
+
+Status ReadDropBufferReply(const json& root);
 
 void WritePutNameRequest(const ObjectID object_id, const std::string& name,
                          std::string& msg);

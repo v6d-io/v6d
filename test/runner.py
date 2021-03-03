@@ -291,6 +291,7 @@ def run_python_tests(etcd_endpoints, with_migration):
         subprocess.check_call(['pytest', '-s', '-vvv',
                                'python/vineyard/core',
                                'python/vineyard/data',
+                               'python/vineyard/shared_memory',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
