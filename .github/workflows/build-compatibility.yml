@@ -107,8 +107,18 @@ jobs:
       - name: Install Dependencies for MacOS
         if: runner.os == 'macOS'
         run: |
+          function install_or_upgrade {
+              if brew ls --versions "$1" >/dev/null; then
+                  HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade "$1"
+              else
+                  HOMEBREW_NO_AUTO_UPDATE=1 brew install "$1"
+              fi
+          }
+
           brew update
-          brew install apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers mpich openssl protobuf
+          for dep in apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers mpich openssl protobuf; do
+              install_or_upgrade $dep;
+          done
 
           # install python packages for codegen
           pip3 install -U pip
