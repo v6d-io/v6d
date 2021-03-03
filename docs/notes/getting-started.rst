@@ -121,10 +121,14 @@ vineyard cannot be mutable after been visible to other clients.
 
 We have added a :code:`freeze` method to make such transformation happen:
 
+.. code:: python
+
      >>> value.freeze()
 
 After being freezed, the shared memory (aka. the :code:`ShareableList` in this case)
 is available for other clients:
+
+.. code:: python
 
      >>> value1 = shared_memory.ShareableList(client, name=value.shm.name)
 
