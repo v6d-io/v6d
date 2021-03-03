@@ -32,4 +32,4 @@ def test_shareable_list(vineyard_client):
     for x, y in zip(a, b):
         assert x == y
 
-    b.unlink()
+    b.shm.unlink()

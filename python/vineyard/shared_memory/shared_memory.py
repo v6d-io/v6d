@@ -164,6 +164,10 @@ class ShareableList(multiprocessing.shared_memory.ShareableList):
     # yapf: disable
 
     # note that the implementation of ``__init__`` entirely comes from multiprocessing.shared_memory.
+    #
+    # and note that https://github.com/python/cpython/commit/c8f1715283ec51822fb37a702bf253cbac1af276
+    # has made a set of changes to the ``ShareableList`` code.
+    #
 
     def __init__(self, vineyard_client, sequence=None, *, name=None):
         if name is None or sequence is not None:
@@ -242,6 +246,122 @@ class ShareableList(multiprocessing.shared_memory.ShareableList):
                     1 * 8
                 )
             )
+
+    def _get_back_transform(self, position):
+        "Gets the back transformation function for a single value."
+
+        if (position >= self._list_len) or (self._list_len < 0):
+            raise IndexError("Requested position out of range.")
+
+        transform_code = struct.unpack_from(
+            "b",
+            self.shm.buf,
+            self._offset_back_transform_codes + position
+        )[0]
+        transform_function = self._back_transforms_mapping[transform_code]
+
+        return transform_function
+
+    def _set_packing_format_and_transform(self, position, fmt_as_str, value):
+        """Sets the packing format and back transformation code for a
+        single value in the list at the specified position."""
+
+        if (position >= self._list_len) or (self._list_len < 0):
+            raise IndexError("Requested position out of range.")
+
+        struct.pack_into(
+            "8s",
+            self.shm.buf,
+            self._offset_packing_formats + position * 8,
+            fmt_as_str.encode(_encoding)
+        )
+
+        transform_code = self._extract_recreation_code(value)
+        struct.pack_into(
+            "b",
+            self.shm.buf,
+            self._offset_back_transform_codes + position,
+            transform_code
+        )
+
+    def __getitem__(self, position):
+        position = position if position >= 0 else position + self._list_len
+        try:
+            offset = self._offset_data_start + self._allocated_offsets[position]
+            (v,) = struct.unpack_from(
+                self._get_packing_format(position),
+                self.shm.buf,
+                offset
+            )
+        except IndexError:
+            raise IndexError("index out of range")
+
+        back_transform = self._get_back_transform(position)
+        v = back_transform(v)
+
+        return v
+
+    def __setitem__(self, position, value):
+        position = position if position >= 0 else position + self._list_len
+        try:
+            item_offset = self._allocated_offsets[position]
+            offset = self._offset_data_start + item_offset
+            current_format = self._get_packing_format(position)
+        except IndexError:
+            raise IndexError("assignment index out of range")
+
+        if not isinstance(value, (str, bytes)):
+            new_format = self._types_mapping[type(value)]
+            encoded_value = value
+        else:
+            allocated_length = self._allocated_offsets[position + 1] - item_offset
+
+            encoded_value = (value.encode(_encoding)
+                             if isinstance(value, str) else value)
+            if len(encoded_value) > allocated_length:
+                raise ValueError("bytes/str item exceeds available storage")
+            if current_format[-1] == "s":
+                new_format = current_format
+            else:
+                new_format = self._types_mapping[str] % (
+                    allocated_length,
+                )
+
+        self._set_packing_format_and_transform(
+            position,
+            new_format,
+            value
+        )
+        struct.pack_into(new_format, self.shm.buf, offset, encoded_value)
+
+    @property
+    def _format_size_metainfo(self):
+        "The struct packing format used for the items' storage offsets."
+        return "q" * (self._list_len + 1)
+
+    @property
+    def _format_packing_metainfo(self):
+        "The struct packing format used for the items' packing formats."
+        return "8s" * self._list_len
+
+    @property
+    def _format_back_transform_codes(self):
+        "The struct packing format used for the items' back transforms."
+        return "b" * self._list_len
+
+    @property
+    def _offset_data_start(self):
+        # - 8 bytes for the list length
+        # - (N + 1) * 8 bytes for the element offsets
+        return (self._list_len + 2) * 8
+
+    @property
+    def _offset_packing_formats(self):
+        return self._offset_data_start + self._allocated_offsets[-1]
+
+    @property
+    def _offset_back_transform_codes(self):
+        return self._offset_packing_formats + self._list_len * 8
 
     # yapf: enable
 
