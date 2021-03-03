@@ -78,6 +78,11 @@ class ObjectMeta {
   const Signature GetSignature() const;
 
   /**
+   * @brief Reset the signatures in the metadata (for duplicating objects).
+   */
+  void ResetSignature();
+
+  /**
    * @brief Mark the vineyard object as a global object.
    */
   void SetGlobal(bool global = true);
@@ -127,6 +132,11 @@ class ObjectMeta {
    * @brief Whether specific `key` exists in this metadata.
    */
   bool const Haskey(std::string const& key) const;
+
+  /**
+   * @brief Reset the given key in the metadata.
+   */
+  void ResetKey(std::string const& key);
 
   /**
    * @brief Add a string value entry to the metadata.

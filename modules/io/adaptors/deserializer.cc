@@ -64,7 +64,9 @@ Status deserialize_helper(
         target.AddMember(kv.key(), sub_target);
       }
     } else {
-      target.MutMetaData()[kv.key()] = kv.value();
+      if (kv.key() != "signature") {
+        target.MutMetaData()[kv.key()] = kv.value();
+      }
     }
   }
   ObjectID target_id = InvalidObjectID();
