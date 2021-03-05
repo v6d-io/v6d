@@ -32,6 +32,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
+#include <map>
 #include <unordered_map>
 
 namespace plasma {
@@ -44,10 +45,10 @@ struct MmapRecord {
   int64_t size;
 };
 
-/// Hashtable that contains one entry per segment that we got from the OS
+/// Table that contains one entry per segment that we got from the OS
 /// via mmap. Associates the address of that segment with its file descriptor
 /// and size.
-extern std::unordered_map<void*, MmapRecord> mmap_records;
+extern std::map<void*, MmapRecord> mmap_records;
 
 }  // namespace plasma
 

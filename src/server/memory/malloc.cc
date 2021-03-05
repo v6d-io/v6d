@@ -34,7 +34,7 @@
 
 namespace plasma {
 
-std::unordered_map<void*, MmapRecord> mmap_records;
+std::map<void*, MmapRecord> mmap_records;
 
 static void* pointer_advance(void* p, ptrdiff_t n) {
   return (unsigned char*) p + n;
@@ -46,15 +46,17 @@ static ptrdiff_t pointer_distance(void const* pfrom, void const* pto) {
 
 void GetMallocMapinfo(void* addr, int* fd, int64_t* map_size,
                       ptrdiff_t* offset) {
-  // TODO(rshin): Implement a more efficient search through mmap_records.
-  for (const auto& entry : mmap_records) {
-    if (addr >= entry.first &&
-        addr < pointer_advance(entry.first, entry.second.size)) {
-      *fd = entry.second.fd;
-      *map_size = entry.second.size;
-      *offset = pointer_distance(entry.first, addr);
+  auto entry = mmap_records.lower_bound(addr);
+  auto upper = mmap_records.upper_bound(addr);
+  while (entry != upper) {
+    if (entry->first <= addr &&
+        addr < pointer_advance(entry->first, entry->second.size)) {
+      *fd = entry->second.fd;
+      *map_size = entry->second.size;
+      *offset = pointer_distance(entry->first, addr);
       return;
     }
+    ++entry;
   }
   *fd = -1;
   *map_size = 0;
