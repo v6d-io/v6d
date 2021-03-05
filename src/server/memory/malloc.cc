@@ -47,7 +47,13 @@ static ptrdiff_t pointer_distance(void const* pfrom, void const* pto) {
 void GetMallocMapinfo(void* addr, int* fd, int64_t* map_size,
                       ptrdiff_t* offset) {
   auto entry = mmap_records.lower_bound(addr);
+  if (!mmap_records.empty()) {
+    std::advance(entry, -1);
+  }
   auto upper = mmap_records.upper_bound(addr);
+  if (upper != mmap_records.end()) {
+    std::advance(upper, 1);
+  }
   while (entry != upper) {
     if (entry->first <= addr &&
         addr < pointer_advance(entry->first, entry->second.size)) {
