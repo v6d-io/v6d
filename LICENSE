@@ -395,8 +395,8 @@ license:
 
 -------------------------------------------------------------------------------
 
-The files cmake/{FindEtcdCpp.cmake,FindGFlags.cmake,FindGlog.cmake,FindRdkafka.cmake}
-is based on code from BVLC/Caffe, has the following license:
+The files cmake/{FindEtcdCpp.cmake,FindGFlags.cmake,FindGlog.cmake,FindJemalloc.cmake,
+FindRdkafka.cmake} is based on code from BVLC/Caffe, has the following license:
 
 COPYRIGHT
 

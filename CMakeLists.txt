@@ -17,6 +17,7 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the bundled one" OFF)
+option(USE_JEMALLOC "Build with jemalloc in vineyard server (vineyardd)" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
@@ -288,6 +289,9 @@ if(BUILD_VINEYARD_SERVER)
     else()
         include("cmake/BuildEtcdCpp.cmake")
     endif()
+    if(USE_JEMALLOC)
+        include("cmake/FindJemalloc.cmake")
+    endif()
     target_link_libraries(vineyardd PUBLIC ${Boost_LIBRARIES}
                                            ${CPPREST_LIB}
                                            ${ETCD_CPP_LIBRARIES}
@@ -312,6 +316,15 @@ if(BUILD_VINEYARD_SERVER)
     if(BUILD_VINEYARD_PROFILING)
         target_include_directories(vineyardd PRIVATE ${Gperftools_INCLUDE_DIRS})
         target_link_libraries(vineyardd PRIVATE ${Gperftools_LIBRARIES})
+    endif()
+    if(USE_JEMALLOC)
+        # use jemalloc
+        target_include_directories(vineyardd PRIVATE ${JEMALLOC_INCLUDE_DIRS})
+        target_link_libraries(vineyardd PRIVATE ${JEMALLOC_LIBRARIES})
+        target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
+    else()
+        # use dlmalloc
+        target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
     endif()
 endif()
 

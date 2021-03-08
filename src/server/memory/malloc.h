@@ -36,6 +36,9 @@
 
 namespace plasma {
 
+/// Memory alignment.
+constexpr int64_t kBlockSize = 64;
+
 void GetMallocMapinfo(void* addr, int* fd, int64_t* map_length,
                       ptrdiff_t* offset);
 
@@ -48,6 +51,12 @@ struct MmapRecord {
 /// via mmap. Associates the address of that segment with its file descriptor
 /// and size.
 extern std::unordered_map<void*, MmapRecord> mmap_records;
+
+// Create a buffer. This is creating a temporary file and then
+// immediately unlinking it so we do not leave traces in the system.
+//
+// Returns a fd as expected.
+int create_buffer(int64_t size);
 
 }  // namespace plasma
 

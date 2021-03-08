@@ -33,9 +33,19 @@
 #include <cstdint>
 
 namespace plasma {
+  class DLAllocator;
+}
+
+namespace vineyard {
+  class JeAllocator;
+}
+
+namespace plasma {
 
 class BulkAllocator {
  public:
+  static void* Init(const size_t size);
+
   /// Allocates size bytes and returns a pointer to the allocated memory. The
   /// memory address will be a multiple of alignment, which must be a power of
   /// two.
@@ -69,10 +79,15 @@ class BulkAllocator {
  private:
   static int64_t allocated_;
   static int64_t footprint_limit_;
-};
 
-/// Memory alignment.
-constexpr int64_t kBlockSize = 64;
+#if defined(WITH_DLMALLOC)
+  using Allocator = plasma::DLAllocator;
+#endif
+
+#if defined(WITH_JEMALLOC)
+  using Allocator = vineyard::JeAllocator;
+#endif
+};
 
 }  // namespace plasma
 
