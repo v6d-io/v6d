@@ -32,15 +32,12 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace plasma {
-  class DLAllocator;
-}
-
 namespace vineyard {
-  class JeAllocator;
-}
 
-namespace plasma {
+namespace memory {
+class DLmallocAllocator;
+class JemallocAllocator;
+}  // namespace memory
 
 class BulkAllocator {
  public:
@@ -53,7 +50,7 @@ class BulkAllocator {
   /// \param alignment Memory alignment.
   /// \param bytes Number of bytes.
   /// \return Pointer to allocated memory.
-  static void* Memalign(size_t alignment, size_t bytes);
+  static void* Memalign(size_t bytes, size_t alignment);
 
   /// Frees the memory space pointed to by mem, which must have been returned by
   /// a previous call to Memalign()
@@ -81,14 +78,14 @@ class BulkAllocator {
   static int64_t footprint_limit_;
 
 #if defined(WITH_DLMALLOC)
-  using Allocator = plasma::DLAllocator;
+  using Allocator = vineyard::memory::DLmallocAllocator;
 #endif
 
 #if defined(WITH_JEMALLOC)
-  using Allocator = vineyard::JeAllocator;
+  using Allocator = vineyard::memory::JemallocAllocator;
 #endif
 };
 
-}  // namespace plasma
+}  // namespace vineyard
 
 #endif  // SRC_SERVER_MEMORY_ALLOCATOR_H_

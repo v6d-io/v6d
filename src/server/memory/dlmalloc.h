@@ -20,33 +20,22 @@ limitations under the License.
 
 #include "common/util/status.h"
 
-extern "C" {
-void* dlmemalign(size_t alignment, size_t bytes);
-void dlfree(void* mem);
-}
-
 namespace vineyard {
 
-class DLAllocator {
+namespace memory {
+
+class DLmallocAllocator {
  public:
-  static void* Init(const size_t size) {
-    void* pointer = dlmemalign(plasma::kBlockSize, size - 256 * sizeof(size_t));
-    if (pointer != nullptr) {
-      dlfree(pointer);
-    }
-    return pointer;
-  }
+  static void* Init(const size_t size);
 
-  static void* Allocate(const size_t alignment, const size_t bytes) {
-    return dlmemalign(alignment, bytes);
-  }
+  static void* Allocate(const size_t bytes, const size_t alignment);
 
-  static void Free(const void* pointer) { dlfree(pointer); }
+  static void Free(void* pointer, size_t = 0);
 
-  static void SetMallocGranularity(int value) {
-    change_mparam(M_GRANULARITY, value);
-  }
-}
+  static void SetMallocGranularity(int value);
+};
+
+}  // namespace memory
 
 }  // namespace vineyard
 

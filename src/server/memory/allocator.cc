@@ -38,19 +38,19 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include "server/memory/jemalloc.h"
 #endif
 
-namespace plasma {
+namespace vineyard {
 
 int64_t BulkAllocator::footprint_limit_ = 0;
 int64_t BulkAllocator::allocated_ = 0;
 
 void* BulkAllocator::Init(const size_t size) { return Allocator::Init(size); }
 
-void* BulkAllocator::Memalign(const size_t alignment, const size_t bytes) {
+void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
   if (allocated_ + static_cast<int64_t>(bytes) > footprint_limit_) {
     return nullptr;
   }
 
-  void* mem = Allocator::Allocate(alignment, bytes);
+  void* mem = Allocator::Allocate(bytes, alignment);
   allocated_ += bytes;
   return mem;
 }
@@ -68,4 +68,4 @@ int64_t BulkAllocator::GetFootprintLimit() { return footprint_limit_; }
 
 int64_t BulkAllocator::Allocated() { return allocated_; }
 
-}  // namespace plasma
+}  // namespace vineyard

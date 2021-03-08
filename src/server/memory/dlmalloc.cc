@@ -39,7 +39,9 @@
 #include "server/memory/dlmalloc.h"
 #include "server/memory/malloc.h"
 
-namespace plasma {
+namespace vineyard {
+
+namespace memory {
 
 void* fake_mmap(size_t);
 int fake_munmap(void*, int64_t);
@@ -52,6 +54,7 @@ int fake_munmap(void*, int64_t);
 #define HAVE_MORECORE 0
 #define DEFAULT_MMAP_THRESHOLD MAX_SIZE_T
 #define DEFAULT_GRANULARITY ((size_t) 128U * 1024U)
+#define USE_LOCKS 1 /* makes the dlmalloc thread safe (but is not scalable) */
 
 #include "dlmalloc/dlmalloc.c"  // NOLINT
 
@@ -62,6 +65,7 @@ int fake_munmap(void*, int64_t);
 #undef USE_DL_PREFIX
 #undef HAVE_MORECORE
 #undef DEFAULT_GRANULARITY
+#undef USE_LOCKS
 
 // dlmalloc.c defined DEBUG which will conflict with ARROW_LOG(DEBUG).
 #ifdef DEBUG
@@ -153,6 +157,26 @@ int fake_munmap(void* addr, int64_t size) {
   return r;
 }
 
-}  // namespace plasma
+void* DLmallocAllocator::Init(const size_t size) {
+  void* pointer = dlmemalign(kBlockSize, size - 256 * sizeof(size_t));
+  if (pointer != nullptr) {
+    dlfree(pointer);
+  }
+  return pointer;
+}
+
+void* DLmallocAllocator::Allocate(const size_t bytes, const size_t alignment) {
+  return dlmemalign(alignment, bytes);
+}
+
+void DLmallocAllocator::Free(void* pointer, size_t) { dlfree(pointer); }
+
+void DLmallocAllocator::SetMallocGranularity(int value) {
+  change_mparam(M_GRANULARITY, value);
+}
+
+}  // namespace memory
+
+}  // namespace vineyard
 
 #endif  // WITH_DLMALLOC

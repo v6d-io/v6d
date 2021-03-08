@@ -34,7 +34,9 @@
 
 #include <unordered_map>
 
-namespace plasma {
+namespace vineyard {
+
+namespace memory {
 
 /// Memory alignment.
 constexpr int64_t kBlockSize = 64;
@@ -58,6 +60,8 @@ extern std::unordered_map<void*, MmapRecord> mmap_records;
 // Returns a fd as expected.
 int create_buffer(int64_t size);
 
-}  // namespace plasma
+}  // namespace memory
+
+}  // namespace vineyard
 
 #endif  // SRC_SERVER_MEMORY_MALLOC_H_

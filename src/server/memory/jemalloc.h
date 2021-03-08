@@ -18,67 +18,37 @@ limitations under the License.
 
 #if defined(WITH_JEMALLOC)
 
-#include <sys/mman.h>
-
-#define JEMALLOC_NO_DEMANGLE
-#include <jemalloc/jemalloc.h>
-
 #include "server/memory/malloc.h"
 
 namespace vineyard {
 
-// static void *
-// AllocHook(extent_hooks_t *extent_hooks, void *new_addr, size_t size,
-// 		size_t alignment, bool *zero, bool *commit, unsigned arena_index)
-// {
-//   char *ret = (char *) JeAllocator::pre_alloc;
-//   if (ret + size >= pre_alloc_end) {
-//     return NULL;
-//   }
-//   pre_alloc = (char *)pre_alloc + size;
-//   return ret;
-// }
+namespace memory {
 
-class JeAllocator {
+class JemallocAllocator {
  public:
-  static void* Init(const size_t size) {
-    base_fd_ = plasma::create_buffer(size);
-    base_pointer_ =
-        mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, base_fd_, 0);
-    if (base_pointer_ == nullptr) {
-      return base_pointer_;
-    }
-    base_end_pointer_ = static_cast<char *>(base_pointer_) + size;
+  static void* Init(const size_t size);
 
-    // jemalloc_hooks_ = {AllocHook, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // NULL}; extent_hooks_t *new_hooks = &jemalloc_hooks_;
-    size_t index_size = sizeof(arena_index_);
-    //  je_mallctl("arenas.create", (void *)&arena_index_, &index_size, (void
-    //  *)&new_hooks, sizeof(extent_hooks_t *));
-    mallctl("arenas.create", (void*) &arena_index_, &index_size, nullptr, 0);
+  static void* Allocate(const size_t bytes, const size_t alignment);
 
-    plasma::MmapRecord& record = plasma::mmap_records[base_pointer_];
-    record.fd = base_fd_;
-    record.size = size;
+  static void* Reallocate(void* pointer, size_t size);
 
-    return base_pointer_;
-  }
+  static void Free(void* pointer, size_t = 0);
 
-  static void* Allocate(const size_t alignment, const size_t bytes) {
-    return reinterpret_cast<uint8_t*>(
-        mallocx(std::max(bytes, alignment), MALLOCX_ALIGN(alignment) |
-                                                   MALLOCX_ARENA(arena_index_) |
-                                                   MALLOCX_TCACHE_NONE));
-  }
+  static constexpr size_t Alignment = 1 * 1024 * 1024;  // 1MB
 
-  static void Free(void* pointer) { free(pointer); }
+ private:
+  static uintptr_t base_pointer_;
+  static uintptr_t base_end_pointer_;
 
- public:
-  static int base_fd_;
-  static void* base_pointer_;
-  static void* base_end_pointer_;
-  static int arena_index_;
+  static int flags_;
+  static uintptr_t pre_alloc_;
+
+  static void* theAllocHook(extent_hooks_t* extent_hooks, void* new_addr,
+                            size_t size, size_t alignment, bool* zero,
+                            bool* commit, unsigned arena_index);
 };
+
+}  // namespace memory
 
 }  // namespace vineyard
 

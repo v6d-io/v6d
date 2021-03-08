@@ -30,9 +30,14 @@
 
 #include <stddef.h>
 
+#include <string>
+#include <vector>
+
 #include "common/util/logging.h"
 
-namespace plasma {
+namespace vineyard {
+
+namespace memory {
 
 std::unordered_map<void*, MmapRecord> mmap_records;
 
@@ -90,7 +95,9 @@ void GetMallocMapinfo(void* addr, int* fd, int64_t* map_size,
                       ptrdiff_t* offset) {
   // TODO(rshin): Implement a more efficient search through mmap_records.
   for (const auto& entry : mmap_records) {
-    LOG(INFO) << "entry.first = " << entry.first << ", size = " << entry.second.size << ", ... " << pointer_advance(entry.first, entry.second.size);
+    LOG(INFO) << "entry.first = " << entry.first
+              << ", size = " << entry.second.size << ", ... "
+              << pointer_advance(entry.first, entry.second.size);
     if (addr >= entry.first &&
         addr < pointer_advance(entry.first, entry.second.size)) {
       *fd = entry.second.fd;
@@ -100,10 +107,13 @@ void GetMallocMapinfo(void* addr, int* fd, int64_t* map_size,
       return;
     }
   }
-  LOG(INFO) << "fd not found... for  " << addr << ", size = " << mmap_records.size();
+  LOG(INFO) << "fd not found... for  " << addr
+            << ", size = " << mmap_records.size();
   *fd = -1;
   *map_size = 0;
   *offset = 0;
 }
 
-}  // namespace plasma
+}  // namespace memory
+
+}  // namespace vineyard

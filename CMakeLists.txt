@@ -17,7 +17,6 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the bundled one" OFF)
-option(USE_JEMALLOC "Build with jemalloc in vineyard server (vineyardd)" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
@@ -58,6 +57,14 @@ endif()
 if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUILD_VINEYARD_PYTHON_BINDINGS)
     set(BUILD_VINEYARD_CLIENT ON)
 endif()
+
+set(DEFAUTL_ALLOCATOR "dlmalloc")
+set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
+    STRING "Choose the allocator for vineyard server (vineyardd)."
+)
+set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
+    "dlmalloc" "jemalloc"
+)
 
 set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -289,9 +296,6 @@ if(BUILD_VINEYARD_SERVER)
     else()
         include("cmake/BuildEtcdCpp.cmake")
     endif()
-    if(USE_JEMALLOC)
-        include("cmake/FindJemalloc.cmake")
-    endif()
     target_link_libraries(vineyardd PUBLIC ${Boost_LIBRARIES}
                                            ${CPPREST_LIB}
                                            ${ETCD_CPP_LIBRARIES}
@@ -317,14 +321,18 @@ if(BUILD_VINEYARD_SERVER)
         target_include_directories(vineyardd PRIVATE ${Gperftools_INCLUDE_DIRS})
         target_link_libraries(vineyardd PRIVATE ${Gperftools_LIBRARIES})
     endif()
-    if(USE_JEMALLOC)
+    message(STATUS "Vineyard will use '${WITH_ALLOCATOR}' for shared memory allocation")
+    if(WITH_ALLOCATOR STREQUAL "dlmalloc")
+        # use dlmalloc
+        target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
+    elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
         # use jemalloc
+        include("cmake/FindJemalloc.cmake")
         target_include_directories(vineyardd PRIVATE ${JEMALLOC_INCLUDE_DIRS})
         target_link_libraries(vineyardd PRIVATE ${JEMALLOC_LIBRARIES})
         target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
     else()
-        # use dlmalloc
-        target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
+        message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
     endif()
 endif()
 
