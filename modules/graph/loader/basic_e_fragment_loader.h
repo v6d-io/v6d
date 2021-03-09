@@ -175,7 +175,7 @@ class BasicEFragmentLoader {
     std::shared_ptr<arrow::Table> table;
   };
 
-  boost::leaf::result<void> constructVertices() {
+  boost::leaf::result<ObjectID> constructVertices() {
     std::vector<OidSet<oid_t>> oids(vertex_label_num_);
     for (auto& tab : input_tables_) {
       label_id_t src_label_id = vertex_label_to_index_.at(tab.src_label);

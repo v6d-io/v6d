@@ -668,8 +668,225 @@ class ArrowFragment
     }                                                                         \
   } while (0);
 
-  boost::leaf::result<ObjectID> AddEdge(
-      Client& client, std::vector<std::shared_ptr<arrow::Table>>& edge_tables,
+  boost::leaf::result<ObjectID> AddVertices(
+      Client& client, ObjectID vm_id,
+      std::vector<std::shared_ptr<arrow::Table>>& vertex_tables,
+      int concurrency) {
+    int extra_vertex_label_num = vertex_tables.size();
+    int total_vertex_label_num = vertex_label_num_ + extra_vertex_label_num;
+
+    auto vm_ptr =
+        std::dynamic_pointer_cast<vertex_map_t>(client.GetObject(vm_id));
+
+    std::vector<vid_t> ivnums(total_vertex_label_num);
+    std::vector<vid_t> ovnums(total_vertex_label_num);
+    std::vector<vid_t> tvnums(total_vertex_label_num);
+    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+      ivnums[i] = ivnums_[i];
+      ovnums[i] = ovnums_[i];
+      tvnums[i] = tvnums_[i];
+    }
+    for (size_t i = 0; i < vertex_tables.size(); ++i) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      ARROW_OK_OR_RAISE(vertex_tables[i]->CombineChunks(
+          arrow::default_memory_pool(), &vertex_tables[i]));
+#else
+      ARROW_OK_ASSIGN_OR_RAISE(
+          vertex_tables[i],
+          vertex_tables[i]->CombineChunks(arrow::default_memory_pool()));
+#endif
+      ivnums[vertex_label_num_ + i] =
+          vm_ptr->GetInnerVertexSize(fid_, vertex_label_num_ + i);
+      ovnums[vertex_label_num_ + i] = 0;
+      tvnums[vertex_label_num_ + i] = ivnums[vertex_label_num_ + i];
+    }
+    vineyard::ObjectMeta old_meta, new_meta;
+    VINEYARD_CHECK_OK(client.GetMetaData(this->id_, old_meta));
+
+    new_meta.SetTypeName(type_name<ArrowFragment<oid_t, vid_t>>());
+    new_meta.AddKeyValue("fid", fid_);
+    new_meta.AddKeyValue("fnum", fnum_);
+    new_meta.AddKeyValue("directed", static_cast<int>(directed_));
+    new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
+    new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
+    new_meta.AddKeyValue("vertex_label_num", total_vertex_label_num);
+    new_meta.AddKeyValue("edge_label_num", edge_label_num_);
+
+    for (int i = 0; i < extra_vertex_label_num; ++i) {
+      int cur_label_id = vertex_label_num_ + i;
+      std::string table_name =
+          generate_name_with_suffix("vertex_tables", cur_label_id);
+      TableBuilder vt(client, vertex_tables[i]);
+      auto vy_vertex_table =
+          std::dynamic_pointer_cast<vineyard::Table>(vt.Seal(client));
+      new_meta.AddMember(table_name, vy_vertex_table->meta());
+      auto table = vertex_tables[i];
+      std::unordered_map<std::string, std::string> kvs;
+      table->schema()->metadata()->ToUnorderedMap(&kvs);
+      prop_id_t prop_num = table->num_columns();
+      std::string label = old_meta.GetKeyValue(kvs["label"]);
+      new_meta.AddKeyValue("vertex_label_name_" + std::to_string(cur_label_id),
+                           label);
+      new_meta.AddKeyValue(
+          "vertex_property_num_" + std::to_string(cur_label_id), prop_num);
+      std::string name_prefix =
+          "vertex_property_name_" + std::to_string(i) + "_";
+      std::string type_prefix =
+          "vertex_property_type_" + std::to_string(i) + "_";
+      auto& entry = schema_.CreateEntry(label, "VERTEX");
+      for (prop_id_t j = 0; j < prop_num; ++j) {
+        new_meta.AddKeyValue(name_prefix + std::to_string(j),
+                             table->field(j)->name());
+        new_meta.AddKeyValue(type_prefix + std::to_string(j),
+                             arrow_type_to_string(table->field(j)->type()));
+        entry.AddProperty(table->field(j)->name(), table->field(j)->type());
+      }
+    }
+    new_meta.AddKeyValue("schema", schema_.ToJSONString());
+
+    size_t nbytes = 0;
+    vineyard::ArrayBuilder<vid_t> ivnums_builder(client, ivnums);
+    vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums);
+    vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums);
+    auto vy_ivnums = *std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+        ivnums_builder.Seal(client));
+    auto vy_ovnums = *std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+        ovnums_builder.Seal(client));
+    auto vy_tvnums = *std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+        tvnums_builder.Seal(client));
+    new_meta.AddMember("ivnums", vy_ivnums.meta());
+    nbytes += vy_ivnums.nbytes();
+    new_meta.AddMember("ovnums", vy_ovnums.meta());
+    nbytes += vy_ovnums.nbytes();
+    new_meta.AddMember("tvnums", vy_tvnums.meta());
+    nbytes += vy_tvnums.nbytes();
+
+    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_)
+    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_)
+
+    ASSIGN_IDENTICAL_VEC_META("ovgid_lists", vertex_label_num_)
+    ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_)
+
+    if (directed_) {
+      ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
+                                    edge_label_num_);
+      ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
+                                    edge_label_num_);
+    }
+    ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
+                                  edge_label_num_);
+    ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
+                                  edge_label_num_);
+    // Assign additional meta for new vertex labels
+    std::vector<std::vector<std::shared_ptr<vineyard::FixedSizeBinaryArray>>>
+        vy_ie_lists, vy_oe_lists;
+    std::vector<std::vector<std::shared_ptr<vineyard::NumericArray<int64_t>>>>
+        vy_ie_offsets_lists, vy_oe_offsets_lists;
+
+    for (int i = 0; i < extra_vertex_label_num; ++i) {
+      vid_builder_t builder;
+      std::shared_ptr<vid_array_t> array;
+      builder.Finish(&array);
+      vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(client, array);
+      auto ovgid_list =
+          std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
+              ovgid_list_builder.Seal(client));
+      new_meta.AddMember(
+          generate_name_with_suffix("ovgid_lists", vertex_label_num_ + i),
+          ovgid_list->meta());
+      nbytes += ovgid_list->nbytes();
+
+      vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(client);
+      auto ovg2l = std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
+          ovg2l_builder.Seal(client));
+      new_meta.AddMember(
+          generate_name_with_suffix("ovg2l_maps", vertex_label_num_ + i),
+          ovgid_list->meta());
+      nbytes += ovgid_list->nbytes();
+    }
+
+    if (directed_) {
+      vy_ie_lists.resize(extra_vertex_label_num);
+      vy_ie_offsets_lists.resize(extra_vertex_label_num);
+    }
+    vy_oe_lists.resize(extra_vertex_label_num);
+    vy_oe_offsets_lists.resize(extra_vertex_label_num);
+
+    for (label_id_t i = 0; i < extra_vertex_label_num; ++i) {
+      if (directed_) {
+        vy_ie_lists[i].resize(edge_label_num_);
+        vy_ie_offsets_lists[i].resize(edge_label_num_);
+      }
+      vy_oe_lists[i].resize(edge_label_num_);
+      vy_oe_offsets_lists[i].resize(edge_label_num_);
+    }
+
+    for (label_id_t i = 0; i < extra_vertex_label_num; ++i) {
+      for (label_id_t j = 0; j < edge_label_num_; ++j) {
+        if (directed_) {
+          PodArrayBuilder<nbr_unit_t> binary_builder;
+          std::shared_ptr<arrow::FixedSizeBinaryArray> ie_array;
+          binary_builder.Finish(&ie_array);
+          vineyard::FixedSizeBinaryArrayBuilder ie_builder(client, ie_array);
+
+          auto ie = std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+              ie_builder.Seal(client));
+          new_meta.AddMember(
+              generate_name_with_suffix("ie_lists", vertex_label_num_ + i),
+              ie->meta());
+          nbytes += ie->nbytes();
+
+          arrow::Int64Builder int64_builder;
+          std::shared_ptr<arrow::Int64Array> ie_offset_array;
+          int64_builder.Finish(&ie_offset_array);
+          vineyard::NumericArrayBuilder<int64_t> ie_offset_builder(
+              client, ie_offset_array);
+          auto ie_offset =
+              std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                  ie_offset_builder.Seal(client));
+          new_meta.AddMember(generate_name_with_suffix("ie_offsets_lists",
+                                                       vertex_label_num_ + i),
+                             ie_offset->meta());
+          nbytes += ie_offset->nbytes();
+        }
+        PodArrayBuilder<nbr_unit_t> binary_builder;
+        std::shared_ptr<arrow::FixedSizeBinaryArray> oe_array;
+        binary_builder.Finish(&oe_array);
+        vineyard::FixedSizeBinaryArrayBuilder oe_builder(client, oe_array);
+
+        auto oe = std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+            oe_builder.Seal(client));
+        new_meta.AddMember(
+            generate_name_with_suffix("oe_lists", vertex_label_num_ + i),
+            oe->meta());
+        nbytes += oe->nbytes();
+
+        arrow::Int64Builder int64_builder;
+        std::shared_ptr<arrow::Int64Array> oe_offset_array;
+        int64_builder.Finish(&oe_offset_array);
+        vineyard::NumericArrayBuilder<int64_t> oe_offset_builder(
+            client, oe_offset_array);
+        auto oe_offset =
+            std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                oe_offset_builder.Seal(client));
+        new_meta.AddMember(generate_name_with_suffix("oe_offsets_lists",
+                                                     vertex_label_num_ + i),
+                           oe_offset->meta());
+        nbytes += oe_offset->nbytes();
+      }
+    }
+
+    new_meta.AddMember("vertex_map", vm_ptr->meta());
+
+    new_meta.SetNBytes(nbytes);
+
+    vineyard::ObjectID ret;
+    VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+    return ret;
+  }
+
+  boost::leaf::result<ObjectID> AddEdges(
+      Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
       int concurrency) {
@@ -708,15 +925,6 @@ class ArrowFragment
       vy_oe_offsets_lists[i].resize(extra_edge_label_num);
     }
 
-    // Make a copy of ovg2l map, since we need to add some extra outer vertices
-    // pulled in this fragment by new edges.
-    std::vector<ska::flat_hash_map<vid_t, vid_t>> ovg2l_maps(vertex_label_num_);
-    for (int i = 0; i < vertex_label_num_; ++i) {
-      for (auto iter = ovg2l_maps_ptr_[i]->begin();
-           iter != ovg2l_maps_ptr_[i]->end(); ++iter) {
-        ovg2l_maps[i].emplace(iter->first, iter->second);
-      }
-    }
     // Collect extra outer vertices.
     auto collect_extra_outer_vertices =
         [this](const std::shared_ptr<vid_array_t>& gid_array,
@@ -759,6 +967,16 @@ class ArrowFragment
     std::vector<vid_t> start_ids(vertex_label_num_);
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       start_ids[i] = vid_parser_.GenerateId(0, i, ivnums_[i]) + ovnums_[i];
+    }
+
+    // Make a copy of ovg2l map, since we need to add some extra outer vertices
+    // pulled in this fragment by new edges.
+    std::vector<ska::flat_hash_map<vid_t, vid_t>> ovg2l_maps(vertex_label_num_);
+    for (int i = 0; i < vertex_label_num_; ++i) {
+      for (auto iter = ovg2l_maps_ptr_[i]->begin();
+           iter != ovg2l_maps_ptr_[i]->end(); ++iter) {
+        ovg2l_maps[i].emplace(iter->first, iter->second);
+      }
     }
 
     std::vector<std::shared_ptr<vid_array_t>> extra_ovgid_lists(

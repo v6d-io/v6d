@@ -41,6 +41,9 @@ limitations under the License.
 
 namespace vineyard {
 
+// Hardcoded the max vertex label num to 128
+constexpr int MAX_VERTEX_LABEL_NUM = 128;
+
 static inline int num_to_bitwidth(int num) {
   if (num <= 2) {
     return 1;
@@ -69,9 +72,10 @@ class IdParser {
   ~IdParser() {}
 
   void Init(fid_t fnum, LabelIDT label_num) {
+    CHECK_LE(label_num, MAX_VERTEX_LABEL_NUM);
     int fid_width = num_to_bitwidth(fnum);
     fid_offset_ = (sizeof(ID_TYPE) * 8) - fid_width;
-    int label_width = num_to_bitwidth(label_num);
+    int label_width = num_to_bitwidth(MAX_VERTEX_LABEL_NUM);
     label_id_offset_ = fid_offset_ - label_width;
     fid_mask_ = ((((ID_TYPE) 1) << fid_width) - (ID_TYPE) 1) << fid_offset_;
     lid_mask_ = (((ID_TYPE) 1) << fid_offset_) - ((ID_TYPE) 1);

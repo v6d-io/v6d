@@ -196,7 +196,7 @@ class ObjectBuilder : public ObjectBase {
   //  protected: FIXME
   std::shared_ptr<Object> _Seal(Client& client) override = 0;
 
-  bool const sealed() const { return sealed_; }
+  bool sealed() const { return sealed_; }
 
  protected:
   void set_sealed(bool const sealed = true) { this->sealed_ = sealed; }

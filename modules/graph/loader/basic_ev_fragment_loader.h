@@ -86,7 +86,8 @@ class BasicEVFragmentLoader {
 
   /// Set attributes: vertex_label_num_, vm_ptr_, output_vertex_tables_
   ///                 vertex_label_to_index_, vertex_labels_
-  boost::leaf::result<void> ConstructVertices() {
+  boost::leaf::result<ObjectID> ConstructVertices(
+      ObjectID vm_id = InvalidObjectID()) {
     std::vector<std::string> input_vertex_labels;
     for (auto& pair : input_vertex_tables_) {
       input_vertex_labels.push_back(pair.first);
@@ -168,17 +169,27 @@ class BasicEVFragmentLoader {
       metadata->Append("type", "VERTEX");
       output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
     }
+    if (vm_id == InvalidObjectID()) {
+      BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
+          client_, comm_spec_.fnum(), vertex_label_num_, oid_lists);
 
-    BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
-        client_, comm_spec_.fnum(), vertex_label_num_, oid_lists);
+      auto vm = vm_builder.Seal(client_);
 
-    auto vm = vm_builder.Seal(client_);
-
-    vm_ptr_ = std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
-        client_.GetObject(vm->id()));
+      vm_ptr_ =
+          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
+              client_.GetObject(vm->id()));
+    } else {
+      auto old_vm_ptr =
+          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
+              client_.GetObject(vm_id));
+      auto new_vm_id = old_vm_ptr->AddVertices(client_, oid_lists);
+      vm_ptr_ =
+          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
+              client_.GetObject(new_vm_id));
+    }
 
     ordered_vertex_tables_.clear();
-    return {};
+    return vm_ptr_->id();
   }
 
   /**
@@ -370,8 +381,8 @@ class BasicEVFragmentLoader {
     int thread_num =
         (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
         comm_spec_.local_num();
-    return frag->AddEdge(client_, output_edge_tables_, edge_relations,
-                         thread_num);
+    return frag->AddEdges(client_, std::move(output_edge_tables_),
+                          edge_relations, thread_num);
   }
 
   boost::leaf::result<ObjectID> ConstructFragment() {
