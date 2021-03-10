@@ -246,7 +246,7 @@ class ArrowVertexMap
 
     size_t nbytes = 0;
     for (fid_t i = 0; i < fnum_; ++i) {
-      for (label_id_t j = 0; j < label_num_; ++j) {
+      for (label_id_t j = 0; j < total_label_num; ++j) {
         std::string array_name =
             "oid_arrays_" + std::to_string(i) + "_" + std::to_string(j);
         std::string map_name =
@@ -262,10 +262,10 @@ class ArrowVertexMap
         } else {
           new_meta.AddMember(array_name,
                              vy_oid_arrays[i][j - label_num_].meta());
-          nbytes += vy_oid_arrays[i][j].nbytes();
+          nbytes += vy_oid_arrays[i][j - label_num_].nbytes();
 
           new_meta.AddMember(map_name, vy_o2g[i][j - label_num_].meta());
-          nbytes += vy_o2g[i][j].nbytes();
+          nbytes += vy_o2g[i][j - label_num_].nbytes();
         }
       }
     }
@@ -456,7 +456,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
 
     size_t nbytes = 0;
     for (fid_t i = 0; i < fnum_; ++i) {
-      for (label_id_t j = 0; j < label_num_; ++j) {
+      for (label_id_t j = 0; j < total_label_num; ++j) {
         std::string array_name =
             "oid_arrays_" + std::to_string(i) + "_" + std::to_string(j);
         if (j < label_num_) {
@@ -466,7 +466,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
         } else {
           new_meta.AddMember(array_name,
                              vy_oid_arrays[i][j - label_num_].meta());
-          nbytes += vy_oid_arrays[i][j].nbytes();
+          nbytes += vy_oid_arrays[i][j - label_num_].nbytes();
         }
       }
     }
