@@ -669,9 +669,9 @@ class ArrowFragment
   } while (0);
 
   boost::leaf::result<ObjectID> AddVertices(
-      Client& client, ObjectID vm_id,
-      std::vector<std::shared_ptr<arrow::Table>>& vertex_tables,
-      int concurrency) {
+      Client& client,
+      std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
+      ObjectID vm_id) {
     int extra_vertex_label_num = vertex_tables.size();
     int total_vertex_label_num = vertex_label_num_ + extra_vertex_label_num;
 

@@ -86,7 +86,7 @@ class BasicEVFragmentLoader {
 
   /// Set attributes: vertex_label_num_, vm_ptr_, output_vertex_tables_
   ///                 vertex_label_to_index_, vertex_labels_
-  boost::leaf::result<ObjectID> ConstructVertices(
+  boost::leaf::result<void> ConstructVertices(
       ObjectID vm_id = InvalidObjectID()) {
     std::vector<std::string> input_vertex_labels;
     for (auto& pair : input_vertex_tables_) {
@@ -189,7 +189,7 @@ class BasicEVFragmentLoader {
     }
 
     ordered_vertex_tables_.clear();
-    return vm_ptr_->id();
+    return {};
   }
 
   /**
@@ -361,6 +361,12 @@ class BasicEVFragmentLoader {
     }
     ordered_edge_tables_.clear();
     return {};
+  }
+
+  boost::leaf::result<ObjectID> AddVerticesToFragment(
+      std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
+    return frag->AddVertices(client_, std::move(output_vertex_tables_),
+                             vm_ptr_->id());
   }
 
   boost::leaf::result<ObjectID> AddEdgesToFragment(
