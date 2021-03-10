@@ -735,7 +735,7 @@ class ArrowFragment
           "vertex_property_name_" + std::to_string(i) + "_";
       std::string type_prefix =
           "vertex_property_type_" + std::to_string(i) + "_";
-      auto& entry = schema_.CreateEntry(label, "VERTEX");
+      auto entry = schema_.CreateEntry(label, "VERTEX");
       for (prop_id_t j = 0; j < prop_num; ++j) {
         new_meta.AddKeyValue(name_prefix + std::to_string(j),
                              table->field(j)->name());
