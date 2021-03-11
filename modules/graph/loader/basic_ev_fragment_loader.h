@@ -182,7 +182,13 @@ class BasicEVFragmentLoader {
       auto old_vm_ptr =
           std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
               client_.GetObject(vm_id));
-      auto new_vm_id = old_vm_ptr->AddVertices(client_, oid_lists);
+      label_id_t pre_label_num = old_vm_ptr->label_num();
+      std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>
+          oid_lists_map;
+      for (size_t i = 0; i < oid_lists.size(); ++i) {
+        oid_lists_map[pre_label_num + i] = oid_lists[i];
+      }
+      auto new_vm_id = old_vm_ptr->AddVertices(client_, oid_lists_map);
       vm_ptr_ =
           std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
               client_.GetObject(new_vm_id));
@@ -365,7 +371,12 @@ class BasicEVFragmentLoader {
 
   boost::leaf::result<ObjectID> AddVerticesToFragment(
       std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
-    return frag->AddVertices(client_, std::move(output_vertex_tables_),
+    int pre_vlabel_num = frag->vertex_label_num();
+    std::map<label_id_t, std::shared_ptr<arrow::Table>> vertex_tables_map;
+    for (size_t i = 0; i < output_vertex_tables_.size(); ++i) {
+      vertex_tables_map[pre_vlabel_num + i] = output_vertex_tables_[i];
+    }
+    return frag->AddVertices(client_, std::move(vertex_tables_map),
                              vm_ptr_->id());
   }
 
@@ -373,7 +384,14 @@ class BasicEVFragmentLoader {
       std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
     std::vector<std::set<std::pair<std::string, std::string>>> edge_relations(
         edge_label_num_);
-    vertex_labels_.resize(vertex_label_num_);
+    int pre_vlabel_num = frag->vertex_label_num();
+    int pre_elabel_num = frag->edge_label_num();
+    std::map<label_id_t, std::shared_ptr<arrow::Table>> edge_tables_map;
+    for (size_t i = 0; i < output_edge_tables_.size(); ++i) {
+      edge_tables_map[pre_elabel_num + i] = output_edge_tables_[i];
+    }
+
+    vertex_labels_.resize(pre_vlabel_num);
     for (auto& pair : vertex_label_to_index_) {
       vertex_labels_[pair.second] = pair.first;
     }
@@ -387,8 +405,8 @@ class BasicEVFragmentLoader {
     int thread_num =
         (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
         comm_spec_.local_num();
-    return frag->AddEdges(client_, std::move(output_edge_tables_),
-                          edge_relations, thread_num);
+    return frag->AddEdges(client_, std::move(edge_tables_map), edge_relations,
+                          thread_num);
   }
 
   boost::leaf::result<ObjectID> ConstructFragment() {
@@ -419,9 +437,6 @@ class BasicEVFragmentLoader {
 
   void set_vm_ptr(std::shared_ptr<ArrowVertexMap<internal_oid_t, vid_t>> in) {
     vm_ptr_ = in;
-  }
-  void set_vertex_label_num(label_id_t vertex_label_num) {
-    vertex_label_num_ = vertex_label_num;
   }
 
  private:

@@ -174,6 +174,20 @@ class ArrowVertexMap
 
   ObjectID AddVertices(
       Client& client,
+      const std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>&
+          oid_arrays_map) {
+    int extra_label_num = oid_arrays_map.size();
+
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays;
+    oid_arrays.resize(extra_label_num);
+    for (auto& pair : oid_arrays_map) {
+      oid_arrays[pair.first - label_num_] = pair.second;
+    }
+    return AddNewVertexLabels(client, oid_arrays);
+  }
+
+  ObjectID AddNewVertexLabels(
+      Client& client,
       const std::vector<std::vector<std::shared_ptr<oid_array_t>>>&
           oid_arrays) {
     size_t extra_label_num = oid_arrays.size();
@@ -413,6 +427,20 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   }
 
   ObjectID AddVertices(
+      Client& client,
+      const std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>&
+          oid_arrays_map) {
+    int extra_label_num = oid_arrays_map.size();
+
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays;
+    oid_arrays.resize(extra_label_num);
+    for (auto& pair : oid_arrays_map) {
+      oid_arrays[pair.first - label_num_] = pair.second;
+    }
+    return AddNewVertexLabels(client, oid_arrays);
+  }
+
+  ObjectID AddNewVertexLabels(
       Client& client,
       const std::vector<std::vector<std::shared_ptr<oid_array_t>>>&
           oid_arrays) {

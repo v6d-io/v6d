@@ -670,6 +670,51 @@ class ArrowFragment
 
   boost::leaf::result<ObjectID> AddVertices(
       Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
+      ObjectID vm_id) {
+    int extra_vertex_label_num = vertex_tables_map.size();
+    int total_vertex_label_num = vertex_label_num_ + extra_vertex_label_num;
+
+    std::vector<std::shared_ptr<arrow::Table>> vertex_tables;
+    vertex_tables.resize(extra_vertex_label_num);
+    for (auto& pair : vertex_tables_map) {
+      if (pair.first < vertex_label_num_ ||
+          pair.first >= total_vertex_label_num) {
+        RETURN_GS_ERROR(
+            ErrorCode::kInvalidValueError,
+            "Invalid vertex label id: " + std::to_string(pair.first));
+      }
+      vertex_tables[pair.first - vertex_label_num_] = pair.second;
+    }
+    return AddNewVertexLabels(client, std::move(vertex_tables), vm_id);
+  }
+
+  boost::leaf::result<ObjectID> AddEdges(
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
+      const std::vector<std::set<std::pair<std::string, std::string>>>&
+          edge_relations,
+      int concurrency) {
+    int extra_edge_label_num = edge_tables_map.size();
+    int total_edge_label_num = edge_label_num_ + extra_edge_label_num;
+
+    std::vector<std::shared_ptr<arrow::Table>> edge_tables;
+    edge_tables.resize(extra_edge_label_num);
+    for (auto& pair : edge_tables_map) {
+      if (pair.first < edge_label_num_ || pair.first >= total_edge_label_num) {
+        RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                        "Invalid edge label id: " + std::to_string(pair.first));
+      }
+      edge_tables[pair.first - edge_label_num_] = pair.second;
+    }
+    return AddNewEdgeLabels(client, std::move(edge_tables), edge_relations,
+                            concurrency);
+  }
+
+  /// Add a set of new vertex labels in graph. Vertex label id started from
+  /// vertex_label_num_.
+  boost::leaf::result<ObjectID> AddNewVertexLabels(
+      Client& client,
       std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
       ObjectID vm_id) {
     int extra_vertex_label_num = vertex_tables.size();
@@ -701,7 +746,7 @@ class ArrowFragment
       tvnums[vertex_label_num_ + i] = ivnums[vertex_label_num_ + i];
     }
     vineyard::ObjectMeta old_meta, new_meta;
-    VINEYARD_CHECK_OK(client.GetMetaData(this->id_, old_meta));
+    RETURN_ON_ERROR(client.GetMetaData(this->id_, old_meta));
 
     new_meta.SetTypeName(type_name<ArrowFragment<oid_t, vid_t>>());
     new_meta.AddKeyValue("fid", fid_);
@@ -926,14 +971,15 @@ class ArrowFragment
     return ret;
   }
 
-  boost::leaf::result<ObjectID> AddEdges(
+  /// Add a set of new edge labels in graph. Edge label id started from
+  /// edge_label_num_.
+  boost::leaf::result<ObjectID> AddNewEdgeLabels(
       Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
       int concurrency) {
     int extra_edge_label_num = edge_tables.size();
     int total_edge_label_num = edge_label_num_ + extra_edge_label_num;
-
     // Newly constructed data structures
     vineyard::Array<vid_t> vy_ovnums, vy_tvnums;
     std::vector<std::shared_ptr<vineyard::NumericArray<vid_t>>> vy_ovgid_lists;
