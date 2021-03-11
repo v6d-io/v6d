@@ -874,6 +874,8 @@ class ArrowFragment
           nbytes += ie->nbytes();
 
           arrow::Int64Builder int64_builder;
+          std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i], 0);
+          int64_builder.AppendValues(offset_vec);
           std::shared_ptr<arrow::Int64Array> ie_offset_array;
           int64_builder.Finish(&ie_offset_array);
           vineyard::NumericArrayBuilder<int64_t> ie_offset_builder(
@@ -899,6 +901,8 @@ class ArrowFragment
         nbytes += oe->nbytes();
 
         arrow::Int64Builder int64_builder;
+        std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i], 0);
+        int64_builder.AppendValues(offset_vec);
         std::shared_ptr<arrow::Int64Array> oe_offset_array;
         int64_builder.Finish(&oe_offset_array);
         vineyard::NumericArrayBuilder<int64_t> oe_offset_builder(
