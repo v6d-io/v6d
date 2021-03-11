@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <algorithm>
 #include <atomic>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -172,6 +173,124 @@ class ArrowVertexMap
     return static_cast<vid_t>(oid_arrays_[fid][label_id]->length());
   }
 
+  ObjectID AddVertices(
+      Client& client,
+      const std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>&
+          oid_arrays_map) {
+    int extra_label_num = oid_arrays_map.size();
+
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays;
+    oid_arrays.resize(extra_label_num);
+    for (auto& pair : oid_arrays_map) {
+      oid_arrays[pair.first - label_num_] = pair.second;
+    }
+    return AddNewVertexLabels(client, oid_arrays);
+  }
+
+  ObjectID AddNewVertexLabels(
+      Client& client,
+      const std::vector<std::vector<std::shared_ptr<oid_array_t>>>&
+          oid_arrays) {
+    size_t extra_label_num = oid_arrays.size();
+    int task_num = static_cast<int>(fnum_) * static_cast<int>(extra_label_num);
+
+    std::vector<std::vector<typename InternalType<oid_t>::vineyard_array_type>>
+        vy_oid_arrays;
+    std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> vy_o2g;
+    int total_label_num = label_num_ + extra_label_num;
+    vy_oid_arrays.resize(fnum_);
+    vy_o2g.resize(fnum_);
+    for (fid_t i = 0; i < fnum_; ++i) {
+      vy_oid_arrays[i].resize(extra_label_num);
+      vy_o2g[i].resize(extra_label_num);
+    }
+
+    int thread_num = std::min(
+        static_cast<int>(std::thread::hardware_concurrency()), task_num);
+    std::atomic<int> task_id(0);
+    std::vector<std::thread> threads(thread_num);
+    for (int i = 0; i < thread_num; ++i) {
+      threads[i] = std::thread([&]() {
+        while (true) {
+          int got_task_id = task_id.fetch_add(1);
+          if (got_task_id >= task_num) {
+            break;
+          }
+          fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
+          auto cur_label =
+              static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
+
+          vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
+          auto array = oid_arrays[cur_label][cur_fid];
+          {
+            vid_t cur_gid =
+                id_parser_.GenerateId(cur_fid, label_num_ + cur_label, 0);
+            int64_t vnum = array->length();
+            // builder.reserve(static_cast<size_t>(vnum));
+            for (int64_t k = 0; k < vnum; ++k) {
+              builder.emplace(array->GetView(k), cur_gid);
+              ++cur_gid;
+            }
+          }
+
+          {
+            typename InternalType<oid_t>::vineyard_builder_type array_builder(
+                client, array);
+            vy_oid_arrays[cur_fid][cur_label] =
+                *std::dynamic_pointer_cast<vineyard::NumericArray<oid_t>>(
+                    array_builder.Seal(client));
+
+            vy_o2g[cur_fid][cur_label] =
+                *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
+                    builder.Seal(client));
+          }
+        }
+      });
+    }
+    for (auto& thrd : threads) {
+      thrd.join();
+    }
+
+    vineyard::ObjectMeta old_meta, new_meta;
+    VINEYARD_CHECK_OK(client.GetMetaData(this->id(), old_meta));
+
+    new_meta.SetTypeName(type_name<ArrowVertexMap<oid_t, vid_t>>());
+
+    new_meta.AddKeyValue("fnum", fnum_);
+    new_meta.AddKeyValue("label_num", total_label_num);
+
+    size_t nbytes = 0;
+    for (fid_t i = 0; i < fnum_; ++i) {
+      for (label_id_t j = 0; j < total_label_num; ++j) {
+        std::string array_name =
+            "oid_arrays_" + std::to_string(i) + "_" + std::to_string(j);
+        std::string map_name =
+            "o2g_" + std::to_string(i) + "_" + std::to_string(j);
+        if (j < label_num_) {
+          auto array_meta = old_meta.GetMemberMeta(array_name);
+          new_meta.AddMember(array_name, array_meta);
+          nbytes += array_meta.GetNBytes();
+
+          auto map_meta = old_meta.GetMemberMeta(map_name);
+          new_meta.AddMember(map_name, map_meta);
+          nbytes += map_meta.GetNBytes();
+        } else {
+          new_meta.AddMember(array_name,
+                             vy_oid_arrays[i][j - label_num_].meta());
+          nbytes += vy_oid_arrays[i][j - label_num_].nbytes();
+
+          new_meta.AddMember(map_name, vy_o2g[i][j - label_num_].meta());
+          nbytes += vy_o2g[i][j - label_num_].nbytes();
+        }
+      }
+    }
+
+    new_meta.SetNBytes(nbytes);
+    ObjectID ret;
+    VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+    return ret;
+  }
+
  private:
   fid_t fnum_;
   label_id_t label_num_;
@@ -306,6 +425,84 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
 
   vid_t GetInnerVertexSize(fid_t fid, label_id_t label_id) const {
     return static_cast<vid_t>(oid_arrays_[fid][label_id]->length());
+  }
+
+  ObjectID AddVertices(
+      Client& client,
+      const std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>&
+          oid_arrays_map) {
+    int extra_label_num = oid_arrays_map.size();
+
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays;
+    oid_arrays.resize(extra_label_num);
+    for (auto& pair : oid_arrays_map) {
+      oid_arrays[pair.first - label_num_] = pair.second;
+    }
+    return AddNewVertexLabels(client, oid_arrays);
+  }
+
+  ObjectID AddNewVertexLabels(
+      Client& client,
+      const std::vector<std::vector<std::shared_ptr<oid_array_t>>>&
+          oid_arrays) {
+    size_t extra_label_num = oid_arrays.size();
+
+    std::vector<std::vector<typename InternalType<oid_t>::vineyard_array_type>>
+        vy_oid_arrays;
+    int total_label_num = label_num_ + extra_label_num;
+    vy_oid_arrays.resize(fnum_);
+    for (fid_t i = 0; i < fnum_; ++i) {
+      vy_oid_arrays[i].resize(extra_label_num);
+    }
+
+    ThreadGroup tg;
+    auto builder_fn = [this, &client, &oid_arrays, &vy_oid_arrays](
+                          fid_t const fid,
+                          label_id_t const vlabel_id) -> Status {
+      auto& array = oid_arrays[vlabel_id][fid];
+      typename InternalType<oid_t>::vineyard_builder_type array_builder(client,
+                                                                        array);
+      vy_oid_arrays[fid][vlabel_id] = *std::dynamic_pointer_cast<
+          typename InternalType<oid_t>::vineyard_array_type>(
+          array_builder.Seal(client));
+      return Status::OK();
+    };
+
+    for (fid_t fid = 0; fid < fnum_; ++fid) {
+      for (label_id_t vlabel_id = 0; vlabel_id < extra_label_num; ++vlabel_id) {
+        tg.AddTask(builder_fn, fid, vlabel_id);
+      }
+    }
+    tg.TakeResults();
+
+    vineyard::ObjectMeta old_meta, new_meta;
+    VINEYARD_CHECK_OK(client.GetMetaData(this->id(), old_meta));
+
+    new_meta.SetTypeName(type_name<ArrowVertexMap<oid_t, vid_t>>());
+
+    new_meta.AddKeyValue("fnum", fnum_);
+    new_meta.AddKeyValue("label_num", total_label_num);
+
+    size_t nbytes = 0;
+    for (fid_t i = 0; i < fnum_; ++i) {
+      for (label_id_t j = 0; j < total_label_num; ++j) {
+        std::string array_name =
+            "oid_arrays_" + std::to_string(i) + "_" + std::to_string(j);
+        if (j < label_num_) {
+          auto array_meta = old_meta.GetMemberMeta(array_name);
+          new_meta.AddMember(array_name, array_meta);
+          nbytes += array_meta.GetNBytes();
+        } else {
+          new_meta.AddMember(array_name,
+                             vy_oid_arrays[i][j - label_num_].meta());
+          nbytes += vy_oid_arrays[i][j - label_num_].nbytes();
+        }
+      }
+    }
+    new_meta.SetNBytes(nbytes);
+    ObjectID ret;
+    VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+    return ret;
   }
 
  private:

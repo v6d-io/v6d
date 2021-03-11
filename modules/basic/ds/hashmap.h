@@ -49,7 +49,7 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
       : HashmapBaseBuilder<K, V, H, E>(client) {}
 
   explicit HashmapBuilder(Client& client, ska::flat_hash_map<K, V>&& hashmap)
-      : HashmapBaseBuilder<K, V, H, E>(client), hashmap_(hashmap) {}
+      : HashmapBaseBuilder<K, V, H, E>(client), hashmap_(std::move(hashmap)) {}
 
   /**
    * @brief Get the mapping value of the given key.

@@ -52,6 +52,8 @@ class HashPartitioner {
     return *this;
   }
 
+  HashPartitioner(const HashPartitioner& other) { fnum_ = other.fnum_; }
+
   HashPartitioner& operator=(HashPartitioner&& other) {
     if (this == &other) {
       return *this;
@@ -85,6 +87,8 @@ class HashPartitioner<std::string> {
     fnum_ = other.fnum_;
     return *this;
   }
+
+  HashPartitioner(const HashPartitioner& other) { fnum_ = other.fnum_; }
 
   HashPartitioner& operator=(HashPartitioner&& other) {
     if (this == &other) {

@@ -84,7 +84,10 @@ class BasicEVFragmentLoader {
     return {};
   }
 
-  boost::leaf::result<void> ConstructVertices() {
+  /// Set attributes: vertex_label_num_, vm_ptr_, output_vertex_tables_
+  ///                 vertex_label_to_index_, vertex_labels_
+  boost::leaf::result<void> ConstructVertices(
+      ObjectID vm_id = InvalidObjectID()) {
     std::vector<std::string> input_vertex_labels;
     for (auto& pair : input_vertex_tables_) {
       input_vertex_labels.push_back(pair.first);
@@ -120,10 +123,6 @@ class BasicEVFragmentLoader {
 
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
       auto vertex_table = ordered_vertex_tables_[v_label];
-      auto metadata = std::make_shared<arrow::KeyValueMetadata>();
-      metadata->Append("label", vertex_labels_[v_label]);
-      metadata->Append("label_id", std::to_string(v_label));
-      metadata->Append("type", "VERTEX");
       auto shuffle_procedure =
           [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
         auto id_column_type = vertex_table->column(id_column)->type();
@@ -163,16 +162,37 @@ class BasicEVFragmentLoader {
         return tmp_table;
       };
       BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
+
+      auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+      metadata->Append("label", vertex_labels_[v_label]);
+      metadata->Append("label_id", std::to_string(v_label));
+      metadata->Append("type", "VERTEX");
       output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
     }
+    if (vm_id == InvalidObjectID()) {
+      BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
+          client_, comm_spec_.fnum(), vertex_label_num_, oid_lists);
 
-    BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
-        client_, comm_spec_.fnum(), vertex_label_num_, oid_lists);
+      auto vm = vm_builder.Seal(client_);
 
-    auto vm = vm_builder.Seal(client_);
-
-    vm_ptr_ = std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
-        client_.GetObject(vm->id()));
+      vm_ptr_ =
+          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
+              client_.GetObject(vm->id()));
+    } else {
+      auto old_vm_ptr =
+          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
+              client_.GetObject(vm_id));
+      label_id_t pre_label_num = old_vm_ptr->label_num();
+      std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>
+          oid_lists_map;
+      for (size_t i = 0; i < oid_lists.size(); ++i) {
+        oid_lists_map[pre_label_num + i] = oid_lists[i];
+      }
+      auto new_vm_id = old_vm_ptr->AddVertices(client_, oid_lists_map);
+      vm_ptr_ =
+          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
+              client_.GetObject(new_vm_id));
+    }
 
     ordered_vertex_tables_.clear();
     return {};
@@ -210,17 +230,58 @@ class BasicEVFragmentLoader {
     return {};
   }
 
-  boost::leaf::result<void> ConstructEdges() {
-    vineyard::IdParser<vid_t> id_parser;
+  boost::leaf::result<std::shared_ptr<arrow::Table>> edgesId2Gid(
+      std::shared_ptr<arrow::Table> edge_table, label_id_t src_label,
+      label_id_t dst_label) {
     std::shared_ptr<arrow::Field> src_gid_field =
         std::make_shared<arrow::Field>(
             "src", vineyard::ConvertToArrowType<vid_t>::TypeValue());
     std::shared_ptr<arrow::Field> dst_gid_field =
         std::make_shared<arrow::Field>(
             "dst", vineyard::ConvertToArrowType<vid_t>::TypeValue());
+    auto src_column_type = edge_table->column(src_column)->type();
+    auto dst_column_type = edge_table->column(dst_column)->type();
 
-    id_parser.Init(comm_spec_.fnum(), vertex_label_num_);
+    if (!src_column_type->Equals(
+            vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "OID_T is not consistent with src id of edge table");
+    }
+    if (!dst_column_type->Equals(
+            vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "OID_T is not consistent with dst id of edge table");
+    }
 
+    BOOST_LEAF_AUTO(
+        src_gid_array,
+        parseOidChunkedArray(src_label, edge_table->column(src_column)));
+    BOOST_LEAF_AUTO(
+        dst_gid_array,
+        parseOidChunkedArray(dst_label, edge_table->column(dst_column)));
+
+    // replace oid columns with gid
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    ARROW_OK_OR_RAISE(edge_table->SetColumn(src_column, src_gid_field,
+                                            src_gid_array, &edge_table));
+    ARROW_OK_OR_RAISE(edge_table->SetColumn(dst_column, dst_gid_field,
+                                            dst_gid_array, &edge_table));
+#else
+    ARROW_OK_ASSIGN_OR_RAISE(
+        edge_table,
+        edge_table->SetColumn(src_column, src_gid_field, src_gid_array));
+    ARROW_OK_ASSIGN_OR_RAISE(
+        edge_table,
+        edge_table->SetColumn(dst_column, dst_gid_field, dst_gid_array));
+#endif
+    return edge_table;
+  }
+
+  boost::leaf::result<void> ConstructEdges(int label_offset = 0,
+                                           int vertex_label_num = 0) {
+    if (vertex_label_num == 0) {
+      vertex_label_num = vertex_label_num_;
+    }
     std::vector<std::string> input_edge_labels;
     for (auto& pair : input_edge_tables_) {
       input_edge_labels.push_back(pair.first);
@@ -252,7 +313,7 @@ class BasicEVFragmentLoader {
     input_edge_tables_.clear();
 
     if (generate_eid_) {
-      generateEdgeId(ordered_edge_tables_);
+      generateEdgeId(ordered_edge_tables_, comm_spec_, label_offset);
     }
 
     edge_relations_.resize(edge_label_num_);
@@ -272,61 +333,22 @@ class BasicEVFragmentLoader {
       }
     }
 
+    vineyard::IdParser<vid_t> id_parser;
+    id_parser.Init(comm_spec_.fnum(), vertex_label_num);
+
     output_edge_tables_.resize(edge_label_num_);
     for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
-      auto metadata = std::make_shared<arrow::KeyValueMetadata>();
-      metadata->Append("label", edge_labels_[e_label]);
-      metadata->Append("label_id", std::to_string(e_label));
-      metadata->Append("type", "EDGE");
       auto shuffle_procedure =
           [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
         auto& edge_table_list = ordered_edge_tables_[e_label];
-        std::vector<std::shared_ptr<arrow::Table>> processed_table_list(
-            edge_table_list.size());
-        for (size_t edge_table_index = 0;
-             edge_table_index < edge_table_list.size(); ++edge_table_index) {
-          label_id_t src_label = edge_table_list[edge_table_index].first.first;
-          label_id_t dst_label = edge_table_list[edge_table_index].first.second;
-          auto edge_table = edge_table_list[edge_table_index].second;
-
-          auto src_column_type = edge_table->column(src_column)->type();
-          auto dst_column_type = edge_table->column(dst_column)->type();
-
-          if (!src_column_type->Equals(
-                  vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
-            RETURN_GS_ERROR(
-                ErrorCode::kInvalidValueError,
-                "OID_T is not consistent with src id of edge table");
-          }
-          if (!dst_column_type->Equals(
-                  vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
-            RETURN_GS_ERROR(
-                ErrorCode::kInvalidValueError,
-                "OID_T is not consistent with dst id of edge table");
-          }
-
-          BOOST_LEAF_AUTO(
-              src_gid_array,
-              parseOidChunkedArray(src_label, edge_table->column(src_column)));
-          BOOST_LEAF_AUTO(
-              dst_gid_array,
-              parseOidChunkedArray(dst_label, edge_table->column(dst_column)));
-
-          // replace oid columns with gid
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-          ARROW_OK_OR_RAISE(edge_table->SetColumn(src_column, src_gid_field,
-                                                  src_gid_array, &edge_table));
-          ARROW_OK_OR_RAISE(edge_table->SetColumn(dst_column, dst_gid_field,
-                                                  dst_gid_array, &edge_table));
-#else
-          ARROW_OK_ASSIGN_OR_RAISE(
-              edge_table,
-              edge_table->SetColumn(src_column, src_gid_field, src_gid_array));
-          ARROW_OK_ASSIGN_OR_RAISE(
-              edge_table,
-              edge_table->SetColumn(dst_column, dst_gid_field, dst_gid_array));
-#endif
-          processed_table_list[edge_table_index] = edge_table;
+        std::vector<std::shared_ptr<arrow::Table>> processed_table_list;
+        for (auto& item : edge_table_list) {
+          label_id_t src_label = item.first.first;
+          label_id_t dst_label = item.first.second;
+          auto edge_table = item.second;
+          BOOST_LEAF_AUTO(tmp_table,
+                          edgesId2Gid(edge_table, src_label, dst_label));
+          processed_table_list.push_back(tmp_table);
         }
 
         auto table = vineyard::ConcatenateTables(processed_table_list);
@@ -339,6 +361,11 @@ class BasicEVFragmentLoader {
       };
 
       BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
+
+      auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+      metadata->Append("label", edge_labels_[e_label]);
+      metadata->Append("label_id", std::to_string(e_label));
+      metadata->Append("type", "EDGE");
       output_edge_tables_[e_label] = table->ReplaceSchemaMetadata(metadata);
       ordered_edge_tables_[e_label].clear();
     }
@@ -346,7 +373,47 @@ class BasicEVFragmentLoader {
     return {};
   }
 
-  boost::leaf::result<vineyard::ObjectID> ConstructFragment() {
+  boost::leaf::result<ObjectID> AddVerticesToFragment(
+      std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
+    int pre_vlabel_num = frag->vertex_label_num();
+    std::map<label_id_t, std::shared_ptr<arrow::Table>> vertex_tables_map;
+    for (size_t i = 0; i < output_vertex_tables_.size(); ++i) {
+      vertex_tables_map[pre_vlabel_num + i] = output_vertex_tables_[i];
+    }
+    return frag->AddVertices(client_, std::move(vertex_tables_map),
+                             vm_ptr_->id());
+  }
+
+  boost::leaf::result<ObjectID> AddEdgesToFragment(
+      std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
+    std::vector<std::set<std::pair<std::string, std::string>>> edge_relations(
+        edge_label_num_);
+    int pre_vlabel_num = frag->vertex_label_num();
+    int pre_elabel_num = frag->edge_label_num();
+    std::map<label_id_t, std::shared_ptr<arrow::Table>> edge_tables_map;
+    for (size_t i = 0; i < output_edge_tables_.size(); ++i) {
+      edge_tables_map[pre_elabel_num + i] = output_edge_tables_[i];
+    }
+
+    vertex_labels_.resize(pre_vlabel_num);
+    for (auto& pair : vertex_label_to_index_) {
+      vertex_labels_[pair.second] = pair.first;
+    }
+    for (label_id_t e_label = 0; e_label != edge_label_num_; ++e_label) {
+      for (auto& pair : edge_relations_[e_label]) {
+        std::string src_label = vertex_labels_[pair.first];
+        std::string dst_label = vertex_labels_[pair.second];
+        edge_relations[e_label].insert({src_label, dst_label});
+      }
+    }
+    int thread_num =
+        (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
+        comm_spec_.local_num();
+    return frag->AddEdges(client_, std::move(edge_tables_map), edge_relations,
+                          thread_num);
+  }
+
+  boost::leaf::result<ObjectID> ConstructFragment() {
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr_);
 
     PropertyGraphSchema schema;
@@ -366,6 +433,14 @@ class BasicEVFragmentLoader {
 
     VINEYARD_CHECK_OK(client_.Persist(frag->id()));
     return frag->id();
+  }
+
+  void set_vertex_label_to_index(std::map<std::string, label_id_t>&& in) {
+    vertex_label_to_index_ = std::move(in);
+  }
+
+  void set_vm_ptr(std::shared_ptr<ArrowVertexMap<internal_oid_t, vid_t>> in) {
+    vm_ptr_ = in;
   }
 
  private:
@@ -498,13 +573,15 @@ class BasicEVFragmentLoader {
   boost::leaf::result<void> generateEdgeId(
       std::vector<std::vector<std::pair<std::pair<label_id_t, label_id_t>,
                                         std::shared_ptr<arrow::Table>>>>&
-          edge_tables) {
+          edge_tables,
+      grape::CommSpec& comm_spec, int label_offset) {
     IdParser<uint64_t> eid_parser;
     label_id_t edge_label_num = edge_tables.size();
-    eid_parser.Init(comm_spec_.fnum(), edge_label_num);
+    eid_parser.Init(comm_spec.fnum(), edge_label_num + label_offset);
     for (label_id_t e_label = 0; e_label < edge_label_num; ++e_label) {
       auto& edge_table_list = edge_tables[e_label];
-      uint64_t cur_id = eid_parser.GenerateId(comm_spec_.fid(), e_label, 0);
+      uint64_t cur_id =
+          eid_parser.GenerateId(comm_spec.fid(), e_label + label_offset, 0);
       for (size_t edge_table_index = 0;
            edge_table_index != edge_table_list.size(); ++edge_table_index) {
         auto& edge_table = edge_table_list[edge_table_index].second;
