@@ -277,7 +277,11 @@ class BasicEVFragmentLoader {
     return edge_table;
   }
 
-  boost::leaf::result<void> ConstructEdges(int label_offset = 0) {
+  boost::leaf::result<void> ConstructEdges(int label_offset = 0,
+                                           int vertex_label_num = 0) {
+    if (vertex_label_num == 0) {
+      vertex_label_num = vertex_label_num_;
+    }
     std::vector<std::string> input_edge_labels;
     for (auto& pair : input_edge_tables_) {
       input_edge_labels.push_back(pair.first);
@@ -330,7 +334,7 @@ class BasicEVFragmentLoader {
     }
 
     vineyard::IdParser<vid_t> id_parser;
-    id_parser.Init(comm_spec_.fnum(), vertex_label_num_);
+    id_parser.Init(comm_spec_.fnum(), vertex_label_num);
 
     output_edge_tables_.resize(edge_label_num_);
     for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {

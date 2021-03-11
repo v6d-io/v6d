@@ -746,7 +746,7 @@ class ArrowFragment
       tvnums[vertex_label_num_ + i] = ivnums[vertex_label_num_ + i];
     }
     vineyard::ObjectMeta old_meta, new_meta;
-    RETURN_ON_ERROR(client.GetMetaData(this->id_, old_meta));
+    VINEYARD_CHECK_OK(client.GetMetaData(this->id_, old_meta));
 
     new_meta.SetTypeName(type_name<ArrowFragment<oid_t, vid_t>>());
     new_meta.AddKeyValue("fid", fid_);
