@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <algorithm>
 #include <atomic>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
