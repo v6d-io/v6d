@@ -603,7 +603,7 @@ Returns:
 
 add_doc(
     IPCClient.get_meta, r'''
-.. method:: get_meta(object_id: ObjectID) -> ObjectMeta
+.. method:: get_meta(object_id: ObjectID, sync_remote: bool = False) -> ObjectMeta
     :noindex:
 
 Get object metadata from vineyard.
@@ -611,6 +611,9 @@ Get object metadata from vineyard.
 Parameters:
     object_id: ObjectID
         The object id to get.
+    sync_remote: bool
+        If the target object is a remote object, :code:`code_remote=True` will force
+        a meta synchronization on the vineyard server. Default is :code:`False`.
 
 Returns:
     ObjectMeta
@@ -618,13 +621,17 @@ Returns:
 
 add_doc(
     IPCClient.get_metas, r'''
-.. method:: get_metas(object_ids: List[ObjectID] -> List[ObjectMeta]
+.. method:: get_metas(object_ids: List[ObjectID], sync_remote: bool = False) -> List[ObjectMeta]
     :noindex:
 
 Get metadatas of multiple objects from vineyard.
 
 Paramters:
     object_ids: List[ObjectID]
+        The object ids to get.
+    sync_remote: bool
+        If the target object is a remote object, :code:`code_remote=True` will force
+        a meta synchronization on the vineyard server. Default is :code:`False`.
 
 Returns:
     List[ObjectMeta]

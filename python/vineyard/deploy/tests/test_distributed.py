@@ -96,6 +96,7 @@ def test_remote_deletion(vineyard_ipc_sockets):
     assert old_status.memory_limit == new_status.memory_limit
     assert old_status.memory_usage != new_status.memory_usage
 
+    client2.get_meta(o1, sync_remote=True)
     client2.delete(o1)
 
     new_status = client1.status

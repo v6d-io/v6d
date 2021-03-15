@@ -85,7 +85,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
 }
 
 Status RPCClient::Fork(RPCClient& client) {
-  RETURN_ON_ASSERT(client.Connected(),
+  RETURN_ON_ASSERT(!client.Connected(),
                    "The client has already been connected to vineyard server");
   return client.Connect(rpc_endpoint_);
 }

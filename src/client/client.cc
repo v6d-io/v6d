@@ -68,7 +68,7 @@ Status Client::Connect(const std::string& ipc_socket) {
 }
 
 Status Client::Fork(Client& client) {
-  RETURN_ON_ASSERT(client.Connected(),
+  RETURN_ON_ASSERT(!client.Connected(),
                    "The client has already been connected to vineyard server");
   return client.Connect(ipc_socket_);
 }
