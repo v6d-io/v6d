@@ -116,7 +116,7 @@ jobs:
           }
 
           brew update
-          for dep in apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers mpich openssl protobuf; do
+          for dep in apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers open-mpi openssl protobuf; do
               install_or_upgrade $dep;
           done
 

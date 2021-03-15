@@ -29,6 +29,7 @@
 #include "server/memory/memory.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "server/memory/allocator.h"
@@ -36,22 +37,36 @@
 
 namespace vineyard {
 
-using plasma::BulkAllocator;
-using plasma::GetMallocMapinfo;
-using plasma::kBlockSize;
+using memory::GetMallocMapinfo;
+using memory::kBlockSize;
 
 Status BulkStore::PreAllocate(const size_t size) {
   BulkAllocator::SetFootprintLimit(size);
+  BulkAllocator::Init(size);
+
+#if defined(DLMALLOC)
   // We are using a single memory-mapped file by mallocing and freeing a single
   // large amount of space up front.
   void* pointer =
-      BulkAllocator::Memalign(kBlockSize, size - 256 * sizeof(size_t));
+      BulkAllocator::Memalign(size - 256 * sizeof(size_t), kBlockSize);
   if (pointer == nullptr) {
     return Status::NotEnoughMemory("size = " + std::to_string(size));
   }
   // This will unmap the file, but the next one created will be as large
   // as this one (this is an implementation detail of dlmalloc).
   BulkAllocator::Free(pointer, size - 256 * sizeof(size_t));
+#endif  // JEMALLOC
+
+#if defined(JEMALLOC)
+  int base_fd = create_buffer(size);
+  base_pointer_ =
+      mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, base_fd, 0);
+  if (base_pointer_ == MAP_FAILED) {
+    LOG(ERROR) << "mmap failed with error: " << strerror(errno);
+    return Status::NotEnoughMemory(std::string("mmap failed: ") +
+                                   strerror(errno));
+  }
+#endif  // JEMALLOC
   return Status::OK();
 }
 
@@ -61,7 +76,7 @@ uint8_t* BulkStore::AllocateMemory(size_t size, int* fd, int64_t* map_size,
   // Try to evict objects until there is enough space.
   uint8_t* pointer = nullptr;
   pointer =
-      reinterpret_cast<uint8_t*>(BulkAllocator::Memalign(kBlockSize, size));
+      reinterpret_cast<uint8_t*>(BulkAllocator::Memalign(size, kBlockSize));
   if (pointer) {
     GetMallocMapinfo(pointer, fd, map_size, offset);
   }

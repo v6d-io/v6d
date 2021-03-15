@@ -32,10 +32,17 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace plasma {
+namespace vineyard {
+
+namespace memory {
+class DLmallocAllocator;
+class JemallocAllocator;
+}  // namespace memory
 
 class BulkAllocator {
  public:
+  static void* Init(const size_t size);
+
   /// Allocates size bytes and returns a pointer to the allocated memory. The
   /// memory address will be a multiple of alignment, which must be a power of
   /// two.
@@ -43,7 +50,7 @@ class BulkAllocator {
   /// \param alignment Memory alignment.
   /// \param bytes Number of bytes.
   /// \return Pointer to allocated memory.
-  static void* Memalign(size_t alignment, size_t bytes);
+  static void* Memalign(size_t bytes, size_t alignment);
 
   /// Frees the memory space pointed to by mem, which must have been returned by
   /// a previous call to Memalign()
@@ -69,11 +76,16 @@ class BulkAllocator {
  private:
   static int64_t allocated_;
   static int64_t footprint_limit_;
+
+#if defined(WITH_DLMALLOC)
+  using Allocator = vineyard::memory::DLmallocAllocator;
+#endif
+
+#if defined(WITH_JEMALLOC)
+  using Allocator = vineyard::memory::JemallocAllocator;
+#endif
 };
 
-/// Memory alignment.
-constexpr int64_t kBlockSize = 64;
-
-}  // namespace plasma
+}  // namespace vineyard
 
 #endif  // SRC_SERVER_MEMORY_ALLOCATOR_H_

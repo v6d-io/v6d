@@ -34,7 +34,12 @@
 
 #include <unordered_map>
 
-namespace plasma {
+namespace vineyard {
+
+namespace memory {
+
+/// Memory alignment.
+constexpr int64_t kBlockSize = 64;
 
 void GetMallocMapinfo(void* addr, int* fd, int64_t* map_length,
                       ptrdiff_t* offset);
@@ -49,6 +54,14 @@ struct MmapRecord {
 /// and size.
 extern std::unordered_map<void*, MmapRecord> mmap_records;
 
-}  // namespace plasma
+// Create a buffer. This is creating a temporary file and then
+// immediately unlinking it so we do not leave traces in the system.
+//
+// Returns a fd as expected.
+int create_buffer(int64_t size);
+
+}  // namespace memory
+
+}  // namespace vineyard
 
 #endif  // SRC_SERVER_MEMORY_MALLOC_H_

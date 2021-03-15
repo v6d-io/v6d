@@ -26,6 +26,8 @@
 // under the License.
  */
 
+#if defined(WITH_DLMALLOC)
+
 #include <stddef.h>
 
 #include <string>
@@ -34,9 +36,12 @@
 #include "gflags/gflags.h"
 
 #include "common/util/logging.h"
+#include "server/memory/dlmalloc.h"
 #include "server/memory/malloc.h"
 
-namespace plasma {
+namespace vineyard {
+
+namespace memory {
 
 void* fake_mmap(size_t);
 int fake_munmap(void*, int64_t);
@@ -49,6 +54,7 @@ int fake_munmap(void*, int64_t);
 #define HAVE_MORECORE 0
 #define DEFAULT_MMAP_THRESHOLD MAX_SIZE_T
 #define DEFAULT_GRANULARITY ((size_t) 128U * 1024U)
+#define USE_LOCKS 1 /* makes the dlmalloc thread safe (but is not scalable) */
 
 #include "dlmalloc/dlmalloc.c"  // NOLINT
 
@@ -59,6 +65,7 @@ int fake_munmap(void*, int64_t);
 #undef USE_DL_PREFIX
 #undef HAVE_MORECORE
 #undef DEFAULT_GRANULARITY
+#undef USE_LOCKS
 
 // dlmalloc.c defined DEBUG which will conflict with ARROW_LOG(DEBUG).
 #ifdef DEBUG
@@ -88,48 +95,6 @@ static void* pointer_advance(void* p, ptrdiff_t n) {
 
 static void* pointer_retreat(void* p, ptrdiff_t n) {
   return (unsigned char*) p - n;
-}
-
-// Create a buffer. This is creating a temporary file and then
-// immediately unlinking it so we do not leave traces in the system.
-int create_buffer(int64_t size) {
-  int fd;
-#ifdef _WIN32
-  if (!CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
-                         (DWORD)((uint64_t) size >> (CHAR_BIT * sizeof(DWORD))),
-                         (DWORD)(uint64_t) size, NULL)) {
-    fd = -1;
-  }
-#else
-  // directory where to create the memory-backed file
-#ifdef __linux__
-  std::string file_template = "/dev/shm/vineyard-bulk-XXXXXX";
-#else
-  std::string file_template = "/tmp/vineyard-bulk-XXXXXX";
-#endif
-  std::vector<char> file_name(file_template.begin(), file_template.end());
-  file_name.push_back('\0');
-  fd = mkstemp(&file_name[0]);
-  if (fd < 0) {
-    LOG(FATAL) << "create_buffer failed to open file " << &file_name[0];
-    return -1;
-  }
-  // Immediately unlink the file so we do not leave traces in the system.
-  if (unlink(&file_name[0]) != 0) {
-    LOG(FATAL) << "failed to unlink file " << &file_name[0];
-    return -1;
-  }
-  if (true) {
-    // Increase the size of the file to the desired size. This seems not to be
-    // needed for files that are backed by the huge page fs, see also
-    // http://www.mail-archive.com/kvm-devel@lists.sourceforge.net/msg14737.html
-    if (ftruncate(fd, (off_t) size) != 0) {
-      LOG(FATAL) << "failed to ftruncate file " << &file_name[0];
-      return -1;
-    }
-  }
-#endif
-  return fd;
 }
 
 void* fake_mmap(size_t size) {
@@ -192,6 +157,26 @@ int fake_munmap(void* addr, int64_t size) {
   return r;
 }
 
-void SetMallocGranularity(int value) { change_mparam(M_GRANULARITY, value); }
+void* DLmallocAllocator::Init(const size_t size) {
+  void* pointer = dlmemalign(kBlockSize, size - 256 * sizeof(size_t));
+  if (pointer != nullptr) {
+    dlfree(pointer);
+  }
+  return pointer;
+}
 
-}  // namespace plasma
+void* DLmallocAllocator::Allocate(const size_t bytes, const size_t alignment) {
+  return dlmemalign(alignment, bytes);
+}
+
+void DLmallocAllocator::Free(void* pointer, size_t) { dlfree(pointer); }
+
+void DLmallocAllocator::SetMallocGranularity(int value) {
+  change_mparam(M_GRANULARITY, value);
+}
+
+}  // namespace memory
+
+}  // namespace vineyard
+
+#endif  // WITH_DLMALLOC

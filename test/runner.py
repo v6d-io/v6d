@@ -314,7 +314,7 @@ def run_python_tests(etcd_endpoints, with_migration):
 
 def run_io_adaptor_tests(etcd_endpoints, with_migration):
     etcd_prefix = 'vineyard_test_%s' % time.time()
-    
+
     with start_vineyardd(etcd_endpoints,
                          etcd_prefix,
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):

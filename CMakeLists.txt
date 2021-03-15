@@ -58,6 +58,14 @@ if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUIL
     set(BUILD_VINEYARD_CLIENT ON)
 endif()
 
+set(DEFAUTL_ALLOCATOR "dlmalloc")
+set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
+    STRING "Choose the allocator for vineyard server (vineyardd)."
+)
+set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
+    "dlmalloc" "jemalloc"
+)
+
 set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified.")
@@ -312,6 +320,19 @@ if(BUILD_VINEYARD_SERVER)
     if(BUILD_VINEYARD_PROFILING)
         target_include_directories(vineyardd PRIVATE ${Gperftools_INCLUDE_DIRS})
         target_link_libraries(vineyardd PRIVATE ${Gperftools_LIBRARIES})
+    endif()
+    message(STATUS "Vineyard will use '${WITH_ALLOCATOR}' for shared memory allocation")
+    if(WITH_ALLOCATOR STREQUAL "dlmalloc")
+        # use dlmalloc
+        target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
+    elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
+        # use jemalloc
+        include("cmake/FindJemalloc.cmake")
+        target_include_directories(vineyardd PRIVATE ${JEMALLOC_INCLUDE_DIRS})
+        target_link_libraries(vineyardd PRIVATE ${JEMALLOC_LIBRARIES})
+        target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
+    else()
+        message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
     endif()
 endif()
 

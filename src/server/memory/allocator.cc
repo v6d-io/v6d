@@ -30,27 +30,33 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"
 
-namespace plasma {
+#if defined(WITH_DLMALLOC)
+#include "server/memory/dlmalloc.h"
+#endif
 
-extern "C" {
-void* dlmemalign(size_t alignment, size_t bytes);
-void dlfree(void* mem);
-}
+#if defined(WITH_JEMALLOC)
+#include "server/memory/jemalloc.h"
+#endif
+
+namespace vineyard {
 
 int64_t BulkAllocator::footprint_limit_ = 0;
 int64_t BulkAllocator::allocated_ = 0;
 
-void* BulkAllocator::Memalign(size_t alignment, size_t bytes) {
+void* BulkAllocator::Init(const size_t size) { return Allocator::Init(size); }
+
+void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
   if (allocated_ + static_cast<int64_t>(bytes) > footprint_limit_) {
     return nullptr;
   }
-  void* mem = dlmemalign(alignment, bytes);
+
+  void* mem = Allocator::Allocate(bytes, alignment);
   allocated_ += bytes;
   return mem;
 }
 
 void BulkAllocator::Free(void* mem, size_t bytes) {
-  dlfree(mem);
+  Allocator::Free(mem);
   allocated_ -= bytes;
 }
 
@@ -62,4 +68,4 @@ int64_t BulkAllocator::GetFootprintLimit() { return footprint_limit_; }
 
 int64_t BulkAllocator::Allocated() { return allocated_; }
 
-}  // namespace plasma
+}  // namespace vineyard
