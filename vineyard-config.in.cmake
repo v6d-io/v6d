@@ -10,7 +10,17 @@
 
 # find dependencies
 include(CMakeFindDependencyMacro)
+
+# find nlohmann/json
 find_dependency(nlohmann_json)
+
+# find apache-arrow
+find_package(Arrow QUIET)
+if(NOT Arrow_FOUND)
+    include("cmake/FindArrow.cmake")
+    list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+    find_dependency(Arrow)
+endif()
 
 set(VINEYARD_HOME "${CMAKE_CURRENT_LIST_DIR}/../../..")
 include("${CMAKE_CURRENT_LIST_DIR}/vineyard-targets.cmake")

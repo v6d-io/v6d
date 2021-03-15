@@ -16,7 +16,7 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
-option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the bundled one" OFF)
+option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
@@ -129,7 +129,7 @@ else()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,$ORIGIN:$ORIGIN/../lib")
 endif()
 
-macro(find_common_libraries)
+macro(find_apache_arrow)
     # workaround for: https://issues.apache.org/jira/projects/ARROW/issues/ARROW-11836
     if(NOT BUILD_VINEYARD_PYPI_PACKAGES)
       find_package(Arrow QUIET)
@@ -148,14 +148,9 @@ macro(find_common_libraries)
             message(FATAL_ERROR "apache-arrow is required, please install it and retry")
         endif()
     endif()
-    include_directories(SYSTEM ${ARROW_INCLUDE_DIR})
+endmacro(find_apache_arrow)
 
-    include("cmake/FindGlog.cmake")
-    include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
-
-    include("cmake/FindGFlags.cmake")
-    include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
-
+macro(find_boost)
     if(NOT BUILD_SHARED_LIBS AND USE_STATIC_BOOST_LIBS)
         set(Boost_USE_STATIC_LIBS ON CACHE BOOL "Use static version of boost libraries.")
         set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "Use static version of boost runtimes.")
@@ -168,22 +163,40 @@ macro(find_common_libraries)
     add_compile_options(-DBOOST_SYSTEM_NO_DEPRECATED)
     # eliminate a lot of warnings for newer version of boost library.
     add_compile_options(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
-    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+endmacro(find_boost)
 
+macro(find_etcd_cpp_apiv3)
+    if(USE_EXTERNAL_ETCD_LIBS)
+        find_package(etcd-cpp-api QUIET)
+        if(NOT etcd-cpp-api_FOUND)
+            message(WARNING "etcd-cpp-apiv3 not found, will use the bundled one from git submodules.")
+            include("cmake/BuildEtcdCpp.cmake")
+        endif()
+    else()
+        include("cmake/BuildEtcdCpp.cmake")
+    endif()
+endmacro(find_etcd_cpp_apiv3)
+
+macro(find_glog)
+    include("cmake/FindGlog.cmake")
+endmacro(find_glog)
+
+macro(find_gflags)
+    include("cmake/FindGFlags.cmake")
+endmacro(find_gflags)
+
+macro(find_libunwind)
     include("cmake/FindLibUnwind.cmake")
+endmacro(find_libunwind)
 
-    # find pthread
-    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-    find_package(Threads)
-
+macro(find_nlohmann_json)
     # include nlohmann/json
     set(JSON_BuildTests OFF CACHE INTERNAL "")
     set(JSON_Install ON CACHE INTERNAL "")
     set(JSON_MultipleHeaders ON CACHE INTERNAL "")
     set(JSON_ImplicitConversions OFF CACHE INTERNAL "")
     add_subdirectory(thirdparty/nlohmann-json)
-endmacro(find_common_libraries)
+endmacro(find_nlohmann_json)
 
 macro(find_openssl_libraries)
     if (APPLE)
@@ -207,6 +220,28 @@ macro(find_openssl_libraries)
         include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
     endif()
 endmacro(find_openssl_libraries)
+
+macro(find_pthread)
+    # find pthread
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+    find_package(Threads)
+endmacro(find_pthread)
+
+macro(find_common_libraries)
+    find_apache_arrow()
+    find_boost()
+    find_glog()
+    find_gflags()
+    find_libunwind()
+    find_pthread()
+    find_nlohmann_json()
+
+    include_directories(SYSTEM ${ARROW_INCLUDE_DIR})
+    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+    include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
+    include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
+endmacro(find_common_libraries)
 
 # find openssl first since apache-arrow may requires that (on MacOS, installed by brew)
 find_openssl_libraries(QUIET)
@@ -282,20 +317,13 @@ add_custom_target(vineyard_tests)
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
     find_openssl_libraries(REQUIRED)
+    find_etcd_cpp_apiv3()
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
     )
     add_executable(vineyardd ${SERVER_SRC_FILES})
-    if(USE_EXTERNAL_ETCD_LIBS)
-        find_package(etcd-cpp-api QUIET)
-        if(NOT etcd-cpp-api_FOUND)
-            message(WARNING "etcd-cpp-apiv3 not found, will use the bundled one from git submodules.")
-            include("cmake/BuildEtcdCpp.cmake")
-        endif()
-    else()
-        include("cmake/BuildEtcdCpp.cmake")
-    endif()
+    target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
     target_link_libraries(vineyardd PUBLIC ${Boost_LIBRARIES}
                                            ${CPPREST_LIB}
                                            ${ETCD_CPP_LIBRARIES}
@@ -531,6 +559,11 @@ install(PROGRAMS "${VINEYARD_CODEGEN_SCRIPT}"
 )
 install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/FindArrow.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/FindGFlags.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/FindGlog.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/GenerateVineyard.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/DetermineImplicitIncludes.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vineyard
 )
 install(EXPORT vineyard-targets
