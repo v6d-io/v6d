@@ -93,17 +93,14 @@ int create_buffer(int64_t size) {
 
 void GetMallocMapinfo(void* addr, int* fd, int64_t* map_size,
                       ptrdiff_t* offset) {
-  // TODO(rshin): Implement a more efficient search through mmap_records.
+  // About the efficiences: the records size usually small, thus linear search
+  // is enough.
   for (const auto& entry : mmap_records) {
-    LOG(INFO) << "entry.first = " << entry.first
-              << ", size = " << entry.second.size << ", ... "
-              << pointer_advance(entry.first, entry.second.size);
     if (addr >= entry.first &&
         addr < pointer_advance(entry.first, entry.second.size)) {
       *fd = entry.second.fd;
       *map_size = entry.second.size;
       *offset = pointer_distance(entry.first, addr);
-      LOG(INFO) << "found fd...";
       return;
     }
   }
