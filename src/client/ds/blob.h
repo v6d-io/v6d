@@ -88,8 +88,23 @@ class Blob : public Registered<Blob> {
    */
   static std::shared_ptr<Blob> MakeEmpty(Client& client);
 
+  /**
+   * @brief Create the blob from a buffer from allocator.
+   *
+   * @param base The base address of arena in vineyard server.
+   * @param ubase The base address of memory-mapped arena in the client
+   * allocator.
+   * @param pointer The address of buffer in the client allocator.
+   * @param size The estimated size of the buffer.
+   */
+  static std::shared_ptr<Blob> FromBuffer(Client& client, const uintptr_t base,
+                                          const uintptr_t ubase,
+                                          const uintptr_t pointer,
+                                          const size_t size);
+
  private:
-  /** The default constructor is only used in BlobWriter.
+  /**
+   * The default constructor is only used in BlobWriter.
    */
   Blob();
   Blob(const ObjectID id, const size_t size);

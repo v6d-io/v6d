@@ -456,7 +456,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
     }
 
     ThreadGroup tg;
-    auto builder_fn = [this, &client, &oid_arrays, &vy_oid_arrays](
+    auto builder_fn = [&client, &oid_arrays, &vy_oid_arrays](
                           fid_t const fid,
                           label_id_t const vlabel_id) -> Status {
       auto& array = oid_arrays[vlabel_id][fid];

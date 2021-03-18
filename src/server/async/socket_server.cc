@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "server/async/socket_server.h"
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -217,6 +218,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   }
   case CommandType::InstanceStatusRequest: {
     return doInstanceStatus(root);
+  }
+  case CommandType::MakeArenaRequest: {
+    return doMakeArena(root);
+  }
+  case CommandType::FinalizeArenaRequest: {
+    return doFinalizeArena(root);
   }
   case CommandType::ExitRequest: {
     return true;
@@ -802,6 +809,46 @@ bool SocketConnection::doInstanceStatus(const json& root) {
         self->doWrite(message_out);
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doMakeArena(const json& root) {
+  auto self(shared_from_this());
+  size_t size;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadMakeArenaRequest(root, size));
+  if (size == std::numeric_limits<size_t>::max()) {
+    size = server_ptr_->GetBulkStore()->FootprintLimit();
+  }
+  int store_fd = -1;
+  uintptr_t base = reinterpret_cast<uintptr_t>(nullptr);
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->MakeArena(size, store_fd, base));
+  WriteMakeArenaReply(store_fd, size, base, message_out);
+
+  this->doWrite(message_out, [self, store_fd](const Status& status) {
+    if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+      self->used_fds_.emplace(store_fd);
+      send_fd(self->nativeHandle(), store_fd);
+    }
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doFinalizeArena(const json& root) {
+  auto self(shared_from_this());
+  int fd = -1;
+  std::vector<size_t> offsets, sizes;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadFinalizeArenaRequest(root, fd, offsets, sizes));
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->FinalizeArena(fd, offsets, sizes));
+  WriteFinalizeArenaReply(message_out);
+
+  this->doWrite(message_out);
   return false;
 }
 

@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "client/client.h"
 
+#include <limits>
 #include <mutex>
 #include <utility>
 
@@ -97,7 +98,7 @@ Status Client::GetMetaData(const ObjectID id, ObjectMeta& meta,
       uint8_t* mmapped_ptr = nullptr;
       if (object->second.data_size > 0) {
         RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
-                                     object->second.map_size, true,
+                                     object->second.map_size, true, true,
                                      &mmapped_ptr));
       }
       buffer = arrow::Buffer::Wrap(mmapped_ptr + object->second.data_offset,
@@ -135,7 +136,7 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
         uint8_t* mmapped_ptr = nullptr;
         if (object->second.data_size > 0) {
           RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
-                                       object->second.map_size, true,
+                                       object->second.map_size, true, true,
                                        &mmapped_ptr));
         }
         buffer = std::make_shared<arrow::Buffer>(
@@ -157,8 +158,8 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   RETURN_ON_ASSERT((size_t) object.data_size == size);
   uint8_t* mmapped_ptr = nullptr;
   if (object.data_size > 0) {
-    RETURN_ON_ERROR(
-        mmapToClient(object.store_fd, object.map_size, false, &mmapped_ptr));
+    RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, false, true,
+                                 &mmapped_ptr));
   }
   std::shared_ptr<arrow::MutableBuffer> buffer =
       std::make_shared<arrow::MutableBuffer>(mmapped_ptr + object.data_offset,
@@ -203,8 +204,8 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
                    "The size of returned chunk doesn't match");
   uint8_t* mmapped_ptr = nullptr;
   if (object.data_size != 0) {
-    RETURN_ON_ERROR(
-        mmapToClient(object.store_fd, object.map_size, false, &mmapped_ptr));
+    RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, false, true,
+                                 &mmapped_ptr));
   }
   blob.reset(new arrow::MutableBuffer(mmapped_ptr + object.data_offset,
                                       object.data_size));
@@ -223,8 +224,8 @@ Status Client::PullNextStreamChunk(ObjectID const id,
   RETURN_ON_ERROR(ReadPullNextStreamChunkReply(message_in, object));
   uint8_t* mmapped_ptr = nullptr;
   if (object.data_size != 0) {
-    RETURN_ON_ERROR(
-        mmapToClient(object.store_fd, object.map_size, true, &mmapped_ptr));
+    RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, true, true,
+                                 &mmapped_ptr));
   }
   blob.reset(
       new arrow::Buffer(mmapped_ptr + object.data_offset, object.data_size));
@@ -320,7 +321,7 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
         uint8_t* mmapped_ptr = nullptr;
         if (object->second.data_size) {
           VINEYARD_CHECK_OK(mmapToClient(object->second.store_fd,
-                                         object->second.map_size, true,
+                                         object->second.map_size, true, true,
                                          &mmapped_ptr));
         }
         buffer = std::make_shared<arrow::Buffer>(
@@ -337,6 +338,36 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
     objects.emplace_back(object);
   }
   return objects;
+}
+
+Status Client::CreateArena(const size_t size, int& fd, size_t& available_size,
+                           uintptr_t& base, uintptr_t& space) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteMakeArenaRequest(size, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMakeArenaReply(message_in, fd, available_size, base));
+  VINEYARD_ASSERT(size == std::numeric_limits<size_t>::max() ||
+                  size == available_size);
+  uint8_t* mmapped_ptr = nullptr;
+  VINEYARD_CHECK_OK(
+      mmapToClient(fd, available_size, false, false, &mmapped_ptr));
+  space = reinterpret_cast<uintptr_t>(mmapped_ptr);
+  return Status::OK();
+}
+
+Status Client::ReleaseArena(const int fd, std::vector<size_t> const& offsets,
+                            std::vector<size_t> const& sizes) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteFinalizeArenaRequest(fd, offsets, sizes, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadFinalizeArenaReply(message_in));
+  return Status::OK();
 }
 
 Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& object) {
@@ -395,7 +426,7 @@ Status Client::DropBuffer(const ObjectID id, const int fd) {
 }
 
 Status Client::mmapToClient(int fd, int64_t map_size, bool readonly,
-                            uint8_t** ptr) {
+                            bool realign, uint8_t** ptr) {
   auto entry = mmap_table_.find(fd);
   if (entry == mmap_table_.end()) {
     int client_fd = recv_fd(vineyard_conn_);
@@ -404,7 +435,7 @@ Status Client::mmapToClient(int fd, int64_t map_size, bool readonly,
           "Failed to receieve file descriptor from the socket");
     }
     auto mmap_entry = std::unique_ptr<MmapEntry>(
-        new MmapEntry(client_fd, map_size, readonly));
+        new MmapEntry(client_fd, map_size, readonly, realign));
     entry = mmap_table_.emplace(fd, std::move(mmap_entry)).first;
   }
   if (readonly) {

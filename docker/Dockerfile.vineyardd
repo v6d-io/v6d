@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/alibaba/libvineyard/vineyardd-alpine-builder:20210224 as builder
+FROM docker.pkg.github.com/alibaba/libvineyard/vineyardd-alpine-builder:20210409 as builder
 
 # target: docker.pkg.github.com/alibaba/libvineyard/vineyardd:alpine-latest
 

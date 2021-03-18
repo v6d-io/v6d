@@ -79,7 +79,7 @@ void Blob::Construct(ObjectMeta const& meta) {
         uint8_t* mmapped_ptr = nullptr;
         if (object.data_size > 0) {
           VINEYARD_CHECK_OK(client->mmapToClient(
-              object.store_fd, object.map_size, true, &mmapped_ptr));
+              object.store_fd, object.map_size, true, true, &mmapped_ptr));
         }
         buffer_ = arrow::Buffer::Wrap(mmapped_ptr + object.data_offset,
                                       object.data_size);
@@ -121,6 +121,28 @@ std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
 
   // NB: no need to create metadata in vineyardd at once
   return empty_blob;
+}
+
+std::shared_ptr<Blob> Blob::FromBuffer(Client& client, const uintptr_t base,
+                                       const uintptr_t ubase,
+                                       const uintptr_t pointer,
+                                       const size_t size) {
+  ObjectID blob_id = static_cast<ObjectID>(pointer - ubase + base);
+  std::shared_ptr<Blob> blob(
+      new Blob(blob_id, size,
+               std::make_shared<arrow::Buffer>(
+                   reinterpret_cast<uint8_t*>(pointer), size)));
+  blob->meta_.SetId(blob_id);
+  blob->meta_.SetSignature(static_cast<Signature>(blob_id));
+  blob->meta_.SetTypeName(type_name<Blob>());
+  blob->meta_.AddKeyValue("length", size);
+  blob->meta_.SetNBytes(size);
+
+  blob->meta_.AddKeyValue("instance_id", client.instance_id());
+  blob->meta_.AddKeyValue("transient", true);
+
+  VINEYARD_CHECK_OK(client.CreateMetaData(blob->meta_, blob->id_));
+  return blob;
 }
 
 const std::shared_ptr<arrow::Buffer>& Blob::BufferUnsafe() const {
@@ -184,7 +206,7 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   uint8_t* mmapped_ptr = nullptr;
   if (object.data_size > 0) {
     VINEYARD_CHECK_OK(client.mmapToClient(object.store_fd, object.map_size,
-                                          false, &mmapped_ptr));
+                                          false, true, &mmapped_ptr));
   }
   auto ro_buffer =
       arrow::Buffer::Wrap(mmapped_ptr + object.data_offset, object.data_size);

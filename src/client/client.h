@@ -45,11 +45,15 @@ class BlobWriter;
  */
 class MmapEntry {
  public:
-  MmapEntry(int fd, int64_t map_size, bool readonly)
+  MmapEntry(int fd, int64_t map_size, bool readonly, bool realign = false)
       : fd_(fd), ro_pointer_(nullptr), rw_pointer_(nullptr), length_(0) {
     // fake_mmap in malloc.h leaves a gap between memory segments, to make
     // map_size page-aligned again.
-    length_ = map_size - sizeof(size_t);
+    if (realign) {
+      length_ = map_size - sizeof(size_t);
+    } else {
+      length_ = map_size;
+    }
   }
 
   ~MmapEntry() {
@@ -353,7 +357,12 @@ class Client : public ClientBase {
                                                    const bool regex = false,
                                                    size_t const limit = 5);
 
- private:
+  Status CreateArena(const size_t size, int& fd, size_t& available_size,
+                     uintptr_t& base, uintptr_t& space);
+
+  Status ReleaseArena(const int fd, std::vector<size_t> const& offsets,
+                      std::vector<size_t> const& sizes);
+
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& object);
 
   Status GetBuffer(const ObjectID id, Payload& object);
@@ -366,10 +375,12 @@ class Client : public ClientBase {
    */
   Status DropBuffer(const ObjectID id, const int fd);
 
-  Status mmapToClient(int fd, int64_t map_size, bool readonly, uint8_t** ptr);
+  Status mmapToClient(int fd, int64_t map_size, bool readonly, bool realign,
+                      uint8_t** ptr);
 
   std::unordered_map<int, std::unique_ptr<MmapEntry>> mmap_table_;
 
+ private:
   friend class Blob;
   friend class BlobWriter;
 };

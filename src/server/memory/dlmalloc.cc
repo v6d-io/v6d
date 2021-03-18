@@ -158,8 +158,12 @@ int fake_munmap(void* addr, int64_t size) {
 }
 
 void* DLmallocAllocator::Init(const size_t size) {
+  // We are using a single memory-mapped file by mallocing and freeing a single
+  // large amount of space up front.
   void* pointer = dlmemalign(kBlockSize, size - 256 * sizeof(size_t));
   if (pointer != nullptr) {
+    // This will unmap the file, but the next one created will be as large
+    // as this one (this is an implementation detail of dlmalloc).
     dlfree(pointer);
   }
   return pointer;

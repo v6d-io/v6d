@@ -22,3 +22,10 @@
 	path = thirdparty/nlohmann-json
 	url = https://github.com/nlohmann/json.git
 	shallow = true
+[submodule "thirdparty/intel-tbb"]
+	path = thirdparty/intel-tbb
+	url = https://github.com/oneapi-src/oneTBB.git
+	shallow = true
+[submodule "thirdparty/jemalloc"]
+	path = thirdparty/jemalloc
+	url = https://github.com/jemalloc/jemalloc.git

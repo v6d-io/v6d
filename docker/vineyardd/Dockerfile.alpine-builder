@@ -37,7 +37,7 @@ RUN echo "multilib_policy=best" >> /etc/yum.conf && \
     fixup-mirrors && \
     yum -y install devtoolset-8-binutils devtoolset-8-gcc devtoolset-8-gcc-c++ && \
     localedef -i en_US -f UTF-8 en_US.UTF-8 && \
-    yum -y install curl git wget && \
+    yum -y install curl git wget m4 && \
     yum clean all && \
 	rm -rf /var/cache/yum
 
@@ -186,3 +186,12 @@ RUN cd /tmp && \
     make install -j`nproc` && \
     cd /tmp && \
     rm -rf grpc/
+
+# install autoconf (requires 2.68)
+RUN cd /tmp && \
+    wget http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz && \
+    tar zxf autoconf-2.69.tar.gz && \
+    cd autoconf-2.69 && \
+    ./configure && \
+    make install -j`nproc` && \
+    rm -rf autoconf-2.69 autoconf-2.69.tar.gz

@@ -61,6 +61,8 @@ enum class CommandType {
   CreateRemoteBufferRequest = 30,
   GetRemoteBuffersRequest = 31,
   DropBufferRequest = 32,
+  MakeArenaRequest = 33,
+  FinalizeArenaRequest = 34,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -302,6 +304,28 @@ Status ReadShallowCopyRequest(const json& root, ObjectID& id);
 void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
 
 Status ReadShallowCopyReply(const json& root, ObjectID& target_id);
+
+void WriteMakeArenaRequest(const size_t size, std::string& msg);
+
+Status ReadMakeArenaRequest(const json& root, size_t& size);
+
+void WriteMakeArenaReply(const int fd, const size_t size, const uintptr_t base,
+                         std::string& msg);
+
+Status ReadMakeArenaReply(const json& root, int& fd, size_t& size,
+                          uintptr_t& base);
+
+void WriteFinalizeArenaRequest(const int fd, std::vector<size_t> const& offsets,
+                               std::vector<size_t> const& sizes,
+                               std::string& msg);
+
+Status ReadFinalizeArenaRequest(const json& root, int& fd,
+                                std::vector<size_t>& offsets,
+                                std::vector<size_t>& sizes);
+
+void WriteFinalizeArenaReply(std::string& msg);
+
+Status ReadFinalizeArenaReply(const json& root);
 
 }  // namespace vineyard
 

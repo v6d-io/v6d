@@ -73,16 +73,20 @@ class BulkAllocator {
   /// \return Number of bytes allocated by Plasma so far.
   static int64_t Allocated();
 
- private:
-  static int64_t allocated_;
-  static int64_t footprint_limit_;
-
 #if defined(WITH_DLMALLOC)
   using Allocator = vineyard::memory::DLmallocAllocator;
 #endif
 
 #if defined(WITH_JEMALLOC)
   using Allocator = vineyard::memory::JemallocAllocator;
+#endif
+
+ private:
+  static int64_t allocated_;
+  static int64_t footprint_limit_;
+
+#if defined(WITH_JEMALLOC)
+  static Allocator allocator_;
 #endif
 };
 
