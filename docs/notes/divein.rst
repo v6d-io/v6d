@@ -5,11 +5,11 @@ Motivation
 ----------
 
 Existing big data practice usually adopts distributed databases or file systems as the 
-intermedia storage to share **immutable** distributed data between heterogeneous 
+intermediate storage to share **immutable** distributed data between heterogeneous
 computation systems that are involved in a big data task. This
 brings two significant overheads:
 
-1. the structual data are transformed from/to the
+1. the structural data are transformed from/to the
    external data storage format (e.g., tables in relational databases, files in HDFS) 
    back and forth in the beginning/end of each computation step, meanwhile, the 
    structure and operations of the data are dismissed.
@@ -84,7 +84,7 @@ On the server/daemon side (i.e., the aforementioned vineyard instance), there ar
     the cluster.
 
 2.  the metadata manager provides management for the metadata of the data stored in vineyard. 
-    It keeps the strutures, layouts and properties of the data to provide high-level abstractions 
+    It keeps the structures, layouts and properties of the data to provide high-level abstractions
     (e.g., graphs, tensors, dataframes). The metadata
     managers in a vineyard cluster communicate with each other through the backend key-value store, 
     e.g., etcd server, to keep the consistency of the distributed data stored in vineyard.
@@ -93,7 +93,7 @@ On the server/daemon side (i.e., the aforementioned vineyard instance), there ar
     In particular, I/O drivers sync with external storages such as databases and file systems to
     read data into and write data from vineyard, while partition and re-partition drivers 
     reorganize the distributed graphs stored in vineyard to balance the workload. Note that the 
-    drivers usually employes the low-level API for delicate operations.
+    drivers usually employs the low-level API for delicate operations.
 
 4.  the ipc/rpc servers handle the ipc/rpc connections respectively from vineyard clients 
     and the communicator supports
@@ -196,16 +196,16 @@ So what is the registry mechanism?
 
 In general, the registry mechanism
 decouples the methods from the definition of vineyard data types. For
-builders and resolvers, it means users can flexiblely register different
+builders and resolvers, it means users can flexibility register different
 implementation in different languages to build and resolve the same
 vineyard data type, which makes the data available to share between
 different systems and paradigms, and makes it possible to exploit native
 language optimizations. 
 
 On the other hand, for drivers, the registry
-mechanism allows users to flexiblely plug-in functionality methods in
+mechanism allows users to flexibly plug-in functionality methods in
 different languages for vineyard data types, which assigns required
-capability to the data types along with the data analyical process.
+capability to the data types along with the data analytical process.
 
 Further more, the registered methods can be implemented and optimized
 in accordance with specific data analytical tasks for further efficiency
@@ -379,7 +379,7 @@ registration examples.
 
 Most importantly, the registration design allows users to register their own 
 drivers to ``registerized`` vineyard methods using ``.register``, which prevents
-major revisions on the processing code to fullfill customized computation requirements.
+major revisions on the processing code to fulfill customized computation requirements.
 
 Features and Limitations
 -----------------------------
@@ -387,11 +387,11 @@ Features and Limitations
 Targeted design for distributed data sharing in big data tasks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By examing the practice of big data tasks such as numeric computing, machine learning
+By examining the practice of big data tasks such as numeric computing, machine learning
 and graph analysis carefully,
-we summerize that the data involved has four properites:
+we summarize that the data involved has four properties:
 
-+ distributed and each partioned fragment usually fits into memory;
++ distributed and each partitioned fragment usually fits into memory;
 + immutable, i.e., never modified after creation;
 + with complex structure, e.g., graph in CSR format;
 + required to share between different computation systems and programming languages.
@@ -430,7 +430,7 @@ in sharing the data payload.
 Convinient data integration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The extensive design on builder/resolver/driver allows convinient extention
+The extensive design on builder/resolver/driver allows convenient extension
 of existing vineyard objects to different programming languages. Moreover,
 with codegen tools in vineyard, makes it possible for users to transplant their data
 structures into vineyard with only a few annotations.
@@ -439,11 +439,11 @@ Data orchestration in a python notebook
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Using vineyard as the common data orchestration engine through the end-to-end
-big data processing, users can hold lareg-scale distributed data as variables
+big data processing, users can hold large-scale distributed data as variables
 of vineyard objects in python. Thus, as long as the computation modules
 involved provides python API, users can write down the entire processing
 pipeline in a python notebook. By running the python script, users can
-manage trillions of data and different computation systems in the backgound
+manage trillions of data and different computation systems in the background
 distributedly across the cluster.
 
 NOT for mutable objects
@@ -460,4 +460,4 @@ NOT for instant remote data partition accessing
 The partitions of a distributed data are stored distributedly in corresponding
 vineyard instances of the cluster. Only the client on the same machine can access
 the data partition. In case to access a remote partition, data migration APIs of vineyard
-can be invoked to trigger migration process, but not for instant accessment.
+can be invoked to trigger migration process, but not for instant accessing.

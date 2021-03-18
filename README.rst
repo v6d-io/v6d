@@ -121,8 +121,8 @@ to exchange data with other systems in computation pipeline in a concise manner.
 Stream pipelining
 ^^^^^^^^^^^^^^^^^
 
-A computation doens't need to wait all precedent's result arrive before starting to work.
-Vineyard provides stream as a special kind of immmutable data for such pipeling scenarios.
+A computation doesn't need to wait all precedent's result arrive before starting to work.
+Vineyard provides stream as a special kind of immutable data for such pipelining scenarios.
 The precedent job can write the immutable data chunk by chunk to vineyard, while maintaining
 the data structure semantic, and the successor job reads shared-memory chunks from vineyard's
 stream without extra copy cost, then triggers it's own work. The overlapping helps for
@@ -137,8 +137,8 @@ strategies and migration jobs. As the data structure abstraction usually differs
 between systems such routines cannot be easily reused.
 
 Vineyard provides such common manipulate routines on immutable data as drivers.
-Besides sharing the high level data abstractions, vineyard extends the capabily
-of data structures by drivers, enabling out-of-box reusable runtines for the
+Besides sharing the high level data abstractions, vineyard extends the capability
+of data structures by drivers, enabling out-of-box reusable routines for the
 boilerplate part in computation jobs.
 
 Integrate with Kubernetes

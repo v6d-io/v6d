@@ -55,7 +55,7 @@ And the following python packages is required:
 + libclang
 + parsec
 
-and other packages to help us biild the documentation, which can be easily installed using ``pip``:
+and other packages to help us build the documentation, which can be easily installed using ``pip``:
 
 .. code:: shell
 
