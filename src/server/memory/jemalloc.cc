@@ -129,8 +129,7 @@ void* JemallocAllocator::Init(const size_t size) {
   return space;
 }
 
-void* JemallocAllocator::Allocate(const size_t bytes,
-                                  const size_t alignment = Alignment) {
+void* JemallocAllocator::Allocate(const size_t bytes, const size_t alignment) {
   return je_mallocx(std::max(bytes, alignment), flags_);
 }
 
@@ -149,12 +148,13 @@ void* JemallocAllocator::theAllocHook(extent_hooks_t* extent_hooks,
                                       size_t alignment, bool* zero,
                                       bool* commit, unsigned arena_index) {
   // align
-  uintptr_t ret = (pre_alloc_ + Alignment - 1) & ~(Alignment - 1);
-  if (ret + size >= JemallocAllocator::base_end_pointer_) {
+  uintptr_t ret = (pre_alloc_ + alignment - 1) & ~(alignment - 1);
+  if (ret + size > JemallocAllocator::base_end_pointer_) {
     return nullptr;
   }
   pre_alloc_ = ret + size;
-  *commit = false;  // not committed
+  // N.B. no need to manipulate the `commit` bit.
+  // *commit = false;
   return reinterpret_cast<void*>(ret);
 }
 

@@ -32,7 +32,7 @@ class JemallocAllocator {
  public:
   static void* Init(const size_t size);
 
-  static void* Allocate(const size_t bytes, const size_t alignment);
+  static void* Allocate(const size_t bytes, const size_t alignment = Alignment);
 
   static void* Reallocate(void* pointer, size_t size);
 
