@@ -18,6 +18,10 @@ limitations under the License.
 
 #if defined(WITH_JEMALLOC)
 
+#define JEMALLOC_NO_DEMANGLE
+#include <jemalloc/jemalloc.h>
+#undef JEMALLOC_NO_DEMANGLE
+
 #include "server/memory/malloc.h"
 
 namespace vineyard {
@@ -42,6 +46,7 @@ class JemallocAllocator {
 
   static int flags_;
   static uintptr_t pre_alloc_;
+  static extent_hooks_t extent_hooks_;
 
   static void* theAllocHook(extent_hooks_t* extent_hooks, void* new_addr,
                             size_t size, size_t alignment, bool* zero,

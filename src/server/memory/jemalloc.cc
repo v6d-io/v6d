@@ -36,8 +36,10 @@ uintptr_t JemallocAllocator::base_pointer_ =
     reinterpret_cast<uintptr_t>(nullptr);
 uintptr_t JemallocAllocator::base_end_pointer_ =
     reinterpret_cast<uintptr_t>(nullptr);
-uintptr_t JemallocAllocator::pre_alloc_ = reinterpret_cast<uintptr_t>(nullptr);
+
 int JemallocAllocator::flags_ = 0;
+uintptr_t JemallocAllocator::pre_alloc_ = reinterpret_cast<uintptr_t>(nullptr);
+extent_hooks_t JemallocAllocator::extent_hooks_ = {};
 
 void* JemallocAllocator::Init(const size_t size) {
   // mmap
@@ -89,9 +91,9 @@ void* JemallocAllocator::Init(const size_t size) {
   }
 
   // Set the custom hook
-  extent_hooks_t extent_hooks = *hooks;
-  extent_hooks.alloc = &theAllocHook;
-  extent_hooks_t* new_hooks = &extent_hooks;
+  extent_hooks_ = *hooks;
+  extent_hooks_.alloc = &theAllocHook;
+  extent_hooks_t* new_hooks = &extent_hooks_;
   if (auto ret = je_mallctl(hooks_key.c_str(), nullptr, nullptr, &new_hooks,
                             sizeof(new_hooks))) {
     int err = std::exchange(errno, ret);
@@ -137,7 +139,9 @@ void* JemallocAllocator::Reallocate(void* pointer, size_t size) {
 }
 
 void JemallocAllocator::Free(void* pointer, size_t) {
-  je_dallocx(pointer, flags_);
+  if (pointer) {
+    je_dallocx(pointer, flags_);
+  }
 }
 
 void* JemallocAllocator::theAllocHook(extent_hooks_t* extent_hooks,
@@ -150,7 +154,7 @@ void* JemallocAllocator::theAllocHook(extent_hooks_t* extent_hooks,
     return nullptr;
   }
   pre_alloc_ = ret + size;
-  *commit = true;
+  *commit = false;  // not committed
   return reinterpret_cast<void*>(ret);
 }
 
