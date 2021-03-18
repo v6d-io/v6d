@@ -27,7 +27,7 @@ could helps you when error occurs.
     vineyard's installation. More specifically,
 
     + For users, just install pyarrow and vineyard both using the :code:`pip` package
-      mananger should be enough. You could install them by
+      manager should be enough. You could install them by
 
         .. code::
 
