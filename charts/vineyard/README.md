@@ -14,7 +14,7 @@ Vineyard is an has been integrated with [Helm](https://helm.sh/). Deploy vineyar
 a `DaemonSet` using `helm`:
 
 ```bash
-helm repo add vineyard https://dl.bintray.com/libvineyard/charts/
+helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
 helm install vineyard vineyard/vineyard
 ```
 

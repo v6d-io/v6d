@@ -169,7 +169,7 @@ with ``helm``:
 
 .. code:: shell
 
-   helm repo add vineyard https://dl.bintray.com/libvineyard/charts/
+   helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
    helm install vineyard vineyard/vineyard
 
 In the further vineyard will improve the integration with Kubernetes by abstract
