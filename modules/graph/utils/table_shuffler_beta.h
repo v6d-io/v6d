@@ -531,6 +531,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
   VY_OK_OR_RAISE(TableToRecordBatches(table_in, &record_batches));
 
   size_t record_batch_num = record_batches.size();
+  // record_batch_num, fragment_num, row_ids
   std::vector<std::vector<std::vector<int64_t>>> offset_lists(record_batch_num);
 
   int thread_num =

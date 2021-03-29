@@ -54,6 +54,7 @@ class Entry {
   std::vector<PropertyDef> props;
   std::vector<std::string> primary_keys;
   std::vector<std::pair<std::string, std::string>> relations;
+  std::vector<PropertyId> valid_properties;
 
   std::vector<int> mapping;          // old prop id -> new prop id
   std::vector<int> reverse_mapping;  // new prop id -> old prop id
@@ -69,6 +70,8 @@ class Entry {
 
   json ToJSON() const;
   void FromJSON(const json& root);
+
+  void InvalidateProperty(PropertyId id) { valid_properties[id] = 0; }
 };
 
 class PropertyGraphSchema {
@@ -97,8 +100,10 @@ class PropertyGraphSchema {
   void AddEntry(const Entry& entry) {
     if (entry.type == "VERTEX") {
       vertex_entries_.push_back(entry);
+      valid_vertices_.push_back(1);
     } else {
       edge_entries_.push_back(entry);
+      valid_edges_.push_back(1);
     }
   }
 
@@ -118,6 +123,14 @@ class PropertyGraphSchema {
     }
     throw std::runtime_error("Not found the entry of label " + type + " " +
                              label);
+  }
+
+  Entry& GetMutableEntry(const LabelId label_id, const std::string& type) {
+    if (type == "VERTEX") {
+      return vertex_entries_[label_id];
+    } else {
+      return edge_entries_[label_id];
+    }
   }
 
   void ToJSON(json& root) const;
@@ -149,10 +162,16 @@ class PropertyGraphSchema {
 
   void DumpToFile(std::string const& path);
 
+  void InvalidateVertex(LabelId label_id) { valid_vertices_[label_id] = 0; }
+
+  void InvalidateEdge(LabelId label_id) { valid_edges_[label_id] = 0; }
+
  private:
   size_t fnum_;
   std::vector<Entry> vertex_entries_;
   std::vector<Entry> edge_entries_;
+  std::vector<LabelId> valid_vertices_;
+  std::vector<LabelId> valid_edges_;
 };
 
 // In Analytical engine, assume label ids of vertex entries are continuous

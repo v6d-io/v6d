@@ -106,6 +106,7 @@ void Entry::PropertyDef::FromJSON(const json& root) {
 void Entry::AddProperty(const std::string& name, PropertyType type) {
   props.emplace_back(PropertyDef{
       .id = static_cast<int>(props.size()), .name = name, .type = type});
+  valid_properties.push_back(1);
 }
 
 void Entry::AddPrimaryKeys(size_t key_count,
@@ -185,6 +186,7 @@ json Entry::ToJSON() const {
   if (!reverse_mapping.empty()) {
     put_container(root, "reverse_mapping", reverse_mapping);
   }
+  put_container(root, "valid_properties", valid_properties);
   return root;
 }
 
@@ -228,6 +230,9 @@ void Entry::FromJSON(const json& root) {
   }
   if (root.contains("reverse_mapping")) {
     vineyard::get_container(root, "reverse_mapping", reverse_mapping);
+  }
+  if (root.contains("valid_properties")) {
+    vineyard::get_container(root, "valid_properties", valid_properties);
   }
 }
 
@@ -296,28 +301,34 @@ Entry* PropertyGraphSchema::CreateEntry(const std::string& name,
         Entry{.id = static_cast<int>(vertex_entries_.size()),
               .label = name,
               .type = type});
+    valid_vertices_.push_back(1);
     return &*vertex_entries_.rbegin();
   } else {
     edge_entries_.emplace_back(
         Entry{.id = static_cast<int>(edge_entries_.size()),
               .label = name,
               .type = type});
+    valid_edges_.push_back(1);
     return &*edge_entries_.rbegin();
   }
 }
 
 std::vector<std::string> PropertyGraphSchema::GetVertexLabels() const {
   std::vector<std::string> labels;
-  for (auto& entry : vertex_entries_) {
-    labels.emplace_back(entry.label);
+  for (size_t i = 0; i < vertex_entries_.size(); ++i) {
+    if (valid_vertices_[i]) {
+      labels.emplace_back(vertex_entries_[i].label);
+    }
   }
   return labels;
 }
 
 std::vector<std::string> PropertyGraphSchema::GetEdgeLabels() const {
   std::vector<std::string> labels;
-  for (auto& entry : edge_entries_) {
-    labels.emplace_back(entry.label);
+  for (size_t i = 0; i < edge_entries_.size(); ++i) {
+    if (valid_edges_[i]) {
+      labels.emplace_back(edge_entries_[i].label);
+    }
   }
   return labels;
 }
@@ -364,6 +375,8 @@ void PropertyGraphSchema::ToJSON(json& root) const {
     types.emplace_back(entry.ToJSON());
   }
   root["types"] = types;
+  put_container(root, "valid_vertices", valid_vertices_);
+  put_container(root, "valid_edges", valid_edges_);
 }
 
 void PropertyGraphSchema::FromJSON(json const& root) {
@@ -376,6 +389,12 @@ void PropertyGraphSchema::FromJSON(json const& root) {
     } else {
       edge_entries_.push_back(std::move(entry));
     }
+  }
+  if (root.contains("valid_vertices")) {
+    get_container(root, "valid_vertices", valid_vertices_);
+  }
+  if (root.contains("valid_edges")) {
+    get_container(root, "valid_edges", valid_edges_);
   }
 }
 
