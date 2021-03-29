@@ -36,12 +36,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- end }}
           command:
-          - bash
+          - /bin/bash
           - "-c"
           - |
             /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379;
             sleep 1;
-            /usr/local/bin/vineyardd \
+            /usr/bin/vineyardd \
           {{- if .Values.vineyard.sharedMemorySize }}
               --size \
               {{ .Values.vineyard.sharedMemorySize }} \
@@ -96,7 +96,7 @@ spec:
       volumes:
       - name: run
         hostPath:
-          path: /var/run/vineyard-{{ .Release.Namespace }}
+          path: /var/run/vineyard-{{ .Release.Namespace }}-{{ include "vineyard.fullname" . }}
       - name: shm
         emptyDir:
           medium: Memory

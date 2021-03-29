@@ -1,1 +1,9 @@
 It works! Vineyard has been deployed in your kubernetes.
+
+The UNIX-domain socket is placed on hosts at:
+
+    /var/run/vineyard-{{ .Release.Namespace }}-{{ include "vineyard.fullname" . }}
+
+The vineyard RPC service could be found by:
+
+    kubectl -n {{ .Release.Namespace }} describe service {{ include "vineyard.fullname" . }}-rpc
