@@ -113,7 +113,7 @@ class PropertyGraphSchema {
     }
   }
 
-  const Entry& GetEntry(LabelId label_id, const std::string& type) {
+  const Entry& GetEntry(LabelId label_id, const std::string& type) const {
     if (type == "VERTEX") {
       return vertex_entries_[label_id];
     } else {
@@ -190,7 +190,6 @@ class PropertyGraphSchema {
   std::vector<std::pair<std::string, std::string>> GetEdgePropertyListByLabel(
       LabelId label_id) const;
 
-
   void DumpToFile(std::string const& path);
 
   void InvalidateVertex(LabelId label_id) { valid_vertices_[label_id] = 0; }
@@ -206,6 +205,7 @@ class PropertyGraphSchema {
   }
 
   friend MaxGraphSchema;
+
  private:
   size_t fnum_;
   std::vector<Entry> vertex_entries_;

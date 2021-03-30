@@ -311,7 +311,8 @@ class ArrowFragment
   label_id_t edge_label_num() const { return schema_.edge_label_num(); }
 
   prop_id_t vertex_property_num(label_id_t label) const {
-    return static_cast<prop_id_t>(schema_.GetEntry(label, "VERTEX").property_num());
+    std::string type = "VERTEX";
+    return static_cast<prop_id_t>(schema_.GetEntry(label, type).property_num());
   }
 
   std::shared_ptr<arrow::DataType> vertex_property_type(label_id_t label,
@@ -320,7 +321,8 @@ class ArrowFragment
   }
 
   prop_id_t edge_property_num(label_id_t label) const {
-    return static_cast<prop_id_t>(schema_.GetEntry(label, "EDGE").property_num());
+    std::string type = "EDGE";
+    return static_cast<prop_id_t>(schema_.GetEntry(label, type).property_num());
   }
 
   std::shared_ptr<arrow::DataType> edge_property_type(label_id_t label,
@@ -1555,7 +1557,9 @@ class ArrowFragment
       edge_properties.push_back(pair.second);
     }
     std::string s1, s2, s3, s4;
-    for (auto x : vertex_labels) { s1 = s1 + std::to_string(x) + ", "; }
+    for (auto x : vertex_labels) {
+      s1 = s1 + std::to_string(x) + ", ";
+    }
     for (auto x : vertex_properties) {
       std::string s = "[";
       for (auto xx : x) {
@@ -1564,7 +1568,9 @@ class ArrowFragment
       s += "]";
       s2 = s2 + s + ", ";
     }
-    for (auto x : edge_labels) { s3 = s3 + std::to_string(x) + ", "; }
+    for (auto x : edge_labels) {
+      s3 = s3 + std::to_string(x) + ", ";
+    }
     for (auto x : edge_properties) {
       std::string s = "[";
       for (auto xx : x) {
@@ -1573,21 +1579,21 @@ class ArrowFragment
       s += "]";
       s4 = s4 + s + ", ";
     }
-LOG(INFO) << "Vertex labels " << s1;
-LOG(INFO) << "Vertex properties " << s2;
-LOG(INFO) << "Edge labels " << s3;
-LOG(INFO) << "Edge properties " << s4;
+    LOG(INFO) << "Vertex labels " << s1;
+    LOG(INFO) << "Vertex properties " << s2;
+    LOG(INFO) << "Edge labels " << s3;
+    LOG(INFO) << "Edge properties " << s4;
 
     // Compute the set difference of reserved labels and all labels.
     auto invalidate_label = [&schema](const std::vector<label_id_t>& labels,
-                               std::string type, size_t label_num) {
+                                      std::string type, size_t label_num) {
       auto it = labels.begin();
       for (size_t i = 0; i < label_num; ++i) {
         if (it == labels.end() || i < *it) {
           if (type == "VERTEX") {
-          schema.InvalidateVertex(i);
+            schema.InvalidateVertex(i);
           } else {
-          schema.InvalidateEdge(i);
+            schema.InvalidateEdge(i);
           }
         } else {
           ++it;
@@ -1602,7 +1608,7 @@ LOG(INFO) << "Edge properties " << s4;
             auto& entry = schema.GetMutableEntry(labels[i], type);
             auto it1 = props[i].begin();
             auto it2 = props[i].end();
-            size_t prop_num = entry.props.size();
+            size_t prop_num = entry.props_.size();
             for (size_t j = 0; j < prop_num; ++j) {
               if (it1 == it2 || j < *it1) {
                 entry.InvalidateProperty(j);
@@ -1618,7 +1624,7 @@ LOG(INFO) << "Edge properties " << s4;
     invalidate_label(edge_labels, "EDGE", schema.edge_entries().size());
 
     new_meta.AddKeyValue("schema", schema.ToJSONString());
-LOG(INFO) << "Schema: " << schema.ToJSONString();
+    LOG(INFO) << "Schema: " << schema.ToJSONString();
 
     size_t nbytes = 0;
     new_meta.AddMember("ivnums", old_meta.GetMemberMeta("ivnums"));
@@ -1694,7 +1700,6 @@ LOG(INFO) << "Schema: " << schema.ToJSONString();
 #undef ASSIGN_IDENTICAL_VEC_VEC_META
 #undef GENERATE_VEC_META
 #undef GENERATE_VEC_VEC_META
-
 
  private:
   void initPointers() {
