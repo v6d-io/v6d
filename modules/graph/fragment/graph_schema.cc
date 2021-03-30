@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "graph/fragment/graph_schema.h"
 
+#include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <set>
@@ -104,8 +105,8 @@ void Entry::PropertyDef::FromJSON(const json& root) {
 }
 
 void Entry::AddProperty(const std::string& name, PropertyType type) {
-  props.emplace_back(PropertyDef{
-      .id = static_cast<int>(props.size()), .name = name, .type = type});
+  props_.emplace_back(PropertyDef{
+      .id = static_cast<int>(props_.size()), .name = name, .type = type});
   valid_properties.push_back(1);
 }
 
@@ -120,9 +121,23 @@ void Entry::AddRelation(const std::string& src, const std::string& dst) {
   relations.emplace_back(src, dst);
 }
 
+size_t Entry::property_num() const {
+  return std::accumulate(valid_properties.begin(), valid_properties.end(), 0);
+}
+
+std::vector<Entry::PropertyDef> Entry::properties() const {
+  std::vector<Entry::PropertyDef> res;
+  for (size_t i = 0; i < valid_properties.size(); ++i) {
+    if (valid_properties[i]) {
+      res.push_back(props_[i]);
+    }
+  }
+  return res;
+}
+
 Entry::PropertyId Entry::GetPropertyId(const std::string& name) const {
-  for (const auto& prop : props) {
-    if (prop.name == name) {
+  for (const auto& prop : props_) {
+    if (prop.name == name && valid_properties[prop.id]) {
       return prop.id;
     }
   }
@@ -130,8 +145,8 @@ Entry::PropertyId Entry::GetPropertyId(const std::string& name) const {
 }
 
 std::string Entry::GetPropertyName(PropertyId prop_id) const {
-  for (const auto& prop : props) {
-    if (prop.id == prop_id) {
+  for (const auto& prop : props_) {
+    if (prop.id == prop_id && valid_properties[prop.id]) {
       return prop.name;
     }
   }
@@ -139,10 +154,8 @@ std::string Entry::GetPropertyName(PropertyId prop_id) const {
 }
 
 PropertyType Entry::GetPropertyType(PropertyId prop_id) const {
-  for (const auto& prop : props) {
-    if (prop.id == prop_id) {
-      return prop.type;
-    }
+  if (prop_id < props_.size() && valid_properties[prop_id]) {
+    return props_[prop_id].type;
   }
   return arrow::null();
 }
@@ -155,7 +168,7 @@ json Entry::ToJSON() const {
   json prop_array = json::array(), pk_array = json::array(),
        index_array = json::array(), relation_array = json::array();
   // propertyDefList
-  for (const auto& prop : props) {
+  for (const auto& prop : props_) {
     prop_array.emplace_back(prop.ToJSON());
   }
   root["propertyDefList"] = prop_array;
@@ -199,7 +212,7 @@ void Entry::FromJSON(const json& root) {
   for (const auto& item : prop_array) {
     PropertyDef prop;
     prop.FromJSON(item);
-    props.emplace_back(prop);
+    props_.emplace_back(prop);
   }
   // indexes
   if (root.contains("indexes")) {
@@ -238,38 +251,56 @@ void Entry::FromJSON(const json& root) {
 
 PropertyGraphSchema::PropertyId PropertyGraphSchema::GetVertexPropertyId(
     LabelId label_id, const std::string& name) const {
-  return vertex_entries_[label_id].GetPropertyId(name);
+  if (label_id >= 0 && label_id < valid_vertices_.size() && valid_vertices_[label_id]) {
+    return vertex_entries_[label_id].GetPropertyId(name);
+  }
+  return -1;
 }
 
 PropertyType PropertyGraphSchema::GetVertexPropertyType(
     LabelId label_id, PropertyId prop_id) const {
-  return vertex_entries_[label_id].props[prop_id].type;
+  if (label_id >= 0 && label_id < valid_vertices_.size() && valid_vertices_[label_id]) {
+    return vertex_entries_[label_id].GetPropertyType(prop_id);
+  }
+  return arrow::null();
 }
 
 std::string PropertyGraphSchema::GetVertexPropertyName(
     LabelId label_id, PropertyId prop_id) const {
-  return vertex_entries_[label_id].props[prop_id].name;
+  if (label_id >= 0 && label_id < valid_vertices_.size() && valid_vertices_[label_id]) {
+    return vertex_entries_[label_id].GetPropertyName(prop_id);
+  }
+  return "";
 }
 
 PropertyGraphSchema::PropertyId PropertyGraphSchema::GetEdgePropertyId(
     LabelId label_id, const std::string& name) const {
-  return edge_entries_[label_id].GetPropertyId(name);
+  if (label_id >= 0 && label_id < valid_edges_.size() && valid_edges_[label_id]) {
+    return edge_entries_[label_id].GetPropertyId(name);
+  }
+  return -1;
 }
 
 PropertyType PropertyGraphSchema::GetEdgePropertyType(
     LabelId label_id, PropertyId prop_id) const {
-  return edge_entries_[label_id].props[prop_id].type;
+  if (label_id >= 0 && label_id < valid_edges_.size() && valid_edges_[label_id]) {
+    return edge_entries_[label_id].GetPropertyType(prop_id);
+  }
+  return arrow::null();
 }
 
 std::string PropertyGraphSchema::GetEdgePropertyName(LabelId label_id,
                                                      PropertyId prop_id) const {
-  return edge_entries_[label_id].props[prop_id].name;
+  if (label_id >= 0 && label_id < valid_edges_.size() && valid_edges_[label_id]) {
+    return edge_entries_[label_id].GetPropertyName(prop_id);
+  }
+  return "";
 }
 
 PropertyGraphSchema::LabelId PropertyGraphSchema::GetVertexLabelId(
     const std::string& name) const {
   for (const auto& entry : vertex_entries_) {
-    if (entry.label == name) {
+    if (entry.label == name && valid_vertices_[entry.id]) {
       return entry.id;
     }
   }
@@ -277,13 +308,16 @@ PropertyGraphSchema::LabelId PropertyGraphSchema::GetVertexLabelId(
 }
 
 std::string PropertyGraphSchema::GetVertexLabelName(LabelId label_id) const {
-  return vertex_entries_[label_id].label;
+  if (label_id >= 0 && label_id < valid_vertices_.size() && valid_vertices_[label_id]) {
+    return vertex_entries_[label_id].label;
+  }
+  return "";
 }
 
 PropertyGraphSchema::LabelId PropertyGraphSchema::GetEdgeLabelId(
     const std::string& name) const {
   for (const auto& entry : edge_entries_) {
-    if (entry.label == name) {
+    if (entry.label == name && valid_edges_[entry.id]) {
       return entry.id;
     }
   }
@@ -291,8 +325,10 @@ PropertyGraphSchema::LabelId PropertyGraphSchema::GetEdgeLabelId(
 }
 
 std::string PropertyGraphSchema::GetEdgeLabelName(LabelId label_id) const {
-  return edge_entries_[label_id].label;
-}
+  if (label_id >= 0 && label_id < valid_edges_.size() && valid_edges_[label_id]) {
+    return edge_entries_[label_id].label;
+  }
+  return "";}
 
 Entry* PropertyGraphSchema::CreateEntry(const std::string& name,
                                         const std::string& type) {
@@ -343,8 +379,10 @@ PropertyGraphSchema::GetVertexPropertyListByLabel(
 std::vector<std::pair<std::string, std::string>>
 PropertyGraphSchema::GetVertexPropertyListByLabel(LabelId label_id) const {
   std::vector<std::pair<std::string, std::string>> properties;
-  for (auto& prop : vertex_entries_[label_id].props) {
-    properties.emplace_back(prop.name, detail::PropertyTypeToString(prop.type));
+  if (label_id > 0 && label_id < valid_vertices_.size() && valid_vertices_[label_id]) {
+    for (auto& prop : vertex_entries_[label_id].properties()) {
+      properties.emplace_back(prop.name, detail::PropertyTypeToString(prop.type));
+    }
   }
   return properties;
 }
@@ -359,8 +397,11 @@ PropertyGraphSchema::GetEdgePropertyListByLabel(
 std::vector<std::pair<std::string, std::string>>
 PropertyGraphSchema::GetEdgePropertyListByLabel(LabelId label_id) const {
   std::vector<std::pair<std::string, std::string>> properties;
-  for (auto& prop : edge_entries_[label_id].props) {
-    properties.emplace_back(prop.name, detail::PropertyTypeToString(prop.type));
+  if (label_id > 0 && label_id < valid_edges_.size() && valid_edges_[label_id]) {
+    for (auto& prop : edge_entries_[label_id].properties()) {
+      properties.emplace_back(prop.name,
+                              detail::PropertyTypeToString(prop.type));
+    }
   }
   return properties;
 }
@@ -418,17 +459,17 @@ void PropertyGraphSchema::DumpToFile(std::string const& path) {
 }
 
 MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
-  const auto& v_entries = schema.vertex_entries();
-  const auto& e_entries = schema.edge_entries();
+  const auto& v_entries = schema.vertex_entries_;
+  const auto& e_entries = schema.edge_entries_;
   // Gather all property names and unique them
   std::set<std::string> prop_names;
   for (const auto& entry : v_entries) {
-    for (const auto& prop : entry.props) {
+    for (const auto& prop : entry.props_) {
       prop_names.insert(prop.name);
     }
   }
   for (const auto& entry : e_entries) {
-    for (const auto& prop : entry.props) {
+    for (const auto& prop : entry.props_) {
       prop_names.insert(prop.name);
     }
   }
@@ -442,9 +483,10 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   // Assign generated id to property by name.
   for (const auto& entry : v_entries) {
     Entry new_entry = entry;
+    std::fill(new_entry.valid_properties.begin(), new_entry.valid_properties.end(), 1);
     new_entry.mapping.resize(prop_names.size());
     new_entry.reverse_mapping.resize(prop_names.size());
-    for (auto& prop : new_entry.props) {
+    for (auto& prop : new_entry.props_) {
       new_entry.mapping[prop.id] = name_to_idx[prop.name];
       new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
       prop.id = name_to_idx[prop.name];
@@ -454,10 +496,11 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   int vertex_label_num = v_entries.size();
   for (const auto& entry : e_entries) {
     Entry new_entry = entry;
+    std::fill(new_entry.valid_properties.begin(), new_entry.valid_properties.end(), 1);
     new_entry.id += vertex_label_num;
     new_entry.mapping.resize(prop_names.size());
     new_entry.reverse_mapping.resize(prop_names.size());
-    for (auto& prop : new_entry.props) {
+    for (auto& prop : new_entry.props_) {
       new_entry.mapping[prop.id] = name_to_idx[prop.name];
       new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
       prop.id = name_to_idx[prop.name];

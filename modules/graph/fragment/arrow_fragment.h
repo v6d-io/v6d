@@ -298,8 +298,6 @@ class ArrowFragment
 
   fid_t fnum() const { return fnum_; }
 
-  label_id_t vertex_label_num() const { return vertex_label_num_; }
-
   label_id_t vertex_label(const vertex_t& v) const {
     return vid_parser_.GetLabelId(v.GetValue());
   }
@@ -308,10 +306,12 @@ class ArrowFragment
     return vid_parser_.GetOffset(v.GetValue());
   }
 
-  label_id_t edge_label_num() const { return edge_label_num_; }
+  label_id_t vertex_label_num() const { return schema_.vertex_label_num(); }
+
+  label_id_t edge_label_num() const { return schema_.edge_label_num(); }
 
   prop_id_t vertex_property_num(label_id_t label) const {
-    return static_cast<prop_id_t>(vertex_tables_[label]->num_columns());
+    return static_cast<prop_id_t>(schema_.GetEntry(label, "VERTEX").property_num());
   }
 
   std::shared_ptr<arrow::DataType> vertex_property_type(label_id_t label,
@@ -320,7 +320,7 @@ class ArrowFragment
   }
 
   prop_id_t edge_property_num(label_id_t label) const {
-    return static_cast<prop_id_t>(edge_tables_[label]->num_columns());
+    return static_cast<prop_id_t>(schema_.GetEntry(label, "EDGE").property_num());
   }
 
   std::shared_ptr<arrow::DataType> edge_property_type(label_id_t label,
@@ -1586,9 +1586,9 @@ LOG(INFO) << "Edge properties " << s4;
         if (it == labels.end() || i < *it) {
           if (type == "VERTEX") {
           schema.InvalidateVertex(i);
-} else {
-schema.InvalidateEdge(i);
-}
+          } else {
+          schema.InvalidateEdge(i);
+          }
         } else {
           ++it;
         }
