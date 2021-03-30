@@ -1556,33 +1556,6 @@ class ArrowFragment
       edge_labels.push_back(pair.first);
       edge_properties.push_back(pair.second);
     }
-    std::string s1, s2, s3, s4;
-    for (auto x : vertex_labels) {
-      s1 = s1 + std::to_string(x) + ", ";
-    }
-    for (auto x : vertex_properties) {
-      std::string s = "[";
-      for (auto xx : x) {
-        s = s + std::to_string(xx) + ",";
-      }
-      s += "]";
-      s2 = s2 + s + ", ";
-    }
-    for (auto x : edge_labels) {
-      s3 = s3 + std::to_string(x) + ", ";
-    }
-    for (auto x : edge_properties) {
-      std::string s = "[";
-      for (auto xx : x) {
-        s = s + std::to_string(xx) + ",";
-      }
-      s += "]";
-      s4 = s4 + s + ", ";
-    }
-    LOG(INFO) << "Vertex labels " << s1;
-    LOG(INFO) << "Vertex properties " << s2;
-    LOG(INFO) << "Edge labels " << s3;
-    LOG(INFO) << "Edge properties " << s4;
 
     // Compute the set difference of reserved labels and all labels.
     auto invalidate_label = [&schema](const std::vector<label_id_t>& labels,
@@ -1624,7 +1597,6 @@ class ArrowFragment
     invalidate_label(edge_labels, "EDGE", schema.edge_entries().size());
 
     new_meta.AddKeyValue("schema", schema.ToJSONString());
-    LOG(INFO) << "Schema: " << schema.ToJSONString();
 
     size_t nbytes = 0;
     new_meta.AddMember("ivnums", old_meta.GetMemberMeta("ivnums"));
