@@ -1525,11 +1525,6 @@ class ArrowFragment
     return ret;
   }
 
-#undef ASSIGN_IDENTICAL_VEC_META
-#undef ASSIGN_IDENTICAL_VEC_VEC_META
-#undef GENERATE_VEC_META
-#undef GENERATE_VEC_VEC_META
-
   boost::leaf::result<vineyard::ObjectID> Project(
       vineyard::Client& client,
       std::map<label_id_t, std::vector<label_id_t>> vertices,
@@ -1543,8 +1538,8 @@ class ArrowFragment
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
-    new_meta.AddKeyValue("vertex_label_num", vertices.size());
-    new_meta.AddKeyValue("edge_label_num", edges.size());
+    new_meta.AddKeyValue("vertex_label_num", vertex_label_num_);
+    new_meta.AddKeyValue("edge_label_num", edge_label_num_);
 
     auto schema = schema_;
 
@@ -1559,14 +1554,41 @@ class ArrowFragment
       edge_labels.push_back(pair.first);
       edge_properties.push_back(pair.second);
     }
+    std::string s1, s2, s3, s4;
+    for (auto x : vertex_labels) { s1 = s1 + std::to_string(x) + ", "; }
+    for (auto x : vertex_properties) {
+      std::string s = "[";
+      for (auto xx : x) {
+        s = s + std::to_string(xx) + ",";
+      }
+      s += "]";
+      s2 = s2 + s + ", ";
+    }
+    for (auto x : edge_labels) { s3 = s3 + std::to_string(x) + ", "; }
+    for (auto x : edge_properties) {
+      std::string s = "[";
+      for (auto xx : x) {
+        s = s + std::to_string(xx) + ",";
+      }
+      s += "]";
+      s4 = s4 + s + ", ";
+    }
+LOG(INFO) << "Vertex labels " << s1;
+LOG(INFO) << "Vertex properties " << s2;
+LOG(INFO) << "Edge labels " << s3;
+LOG(INFO) << "Edge properties " << s4;
 
     // Compute the set difference of reserved labels and all labels.
-    auto invalidate_label = [](const std::vector<label_id_t>& labels,
-                               size_t label_num) {
+    auto invalidate_label = [&schema](const std::vector<label_id_t>& labels,
+                               std::string type, size_t label_num) {
       auto it = labels.begin();
       for (size_t i = 0; i < label_num; ++i) {
         if (it == labels.end() || i < *it) {
+          if (type == "VERTEX") {
           schema.InvalidateVertex(i);
+} else {
+schema.InvalidateEdge(i);
+}
         } else {
           ++it;
         }
@@ -1576,14 +1598,14 @@ class ArrowFragment
     auto invalidate_prop =
         [&schema](const std::vector<label_id_t>& labels, std::string type,
                   const std::vector<std::vector<prop_id_t>>& props) {
-          for (auto label_id : labels) {
-            auto& entry = schema.GetMutableEntry(label_id, type);
-            auto it1 = props[label_id].begin();
-            auto it2 = props[label_id].end();
+          for (size_t i = 0; i < labels.size(); ++i) {
+            auto& entry = schema.GetMutableEntry(labels[i], type);
+            auto it1 = props[i].begin();
+            auto it2 = props[i].end();
             size_t prop_num = entry.props.size();
-            for (size_t i = 0; i < prop_num; ++i) {
-              if (it1 == it2 || i < *it1) {
-                entry.InvalidateProperty(i);
+            for (size_t j = 0; j < prop_num; ++j) {
+              if (it1 == it2 || j < *it1) {
+                entry.InvalidateProperty(j);
               } else {
                 ++it1;
               }
@@ -1592,11 +1614,11 @@ class ArrowFragment
         };
     invalidate_prop(vertex_labels, "VERTEX", vertex_properties);
     invalidate_prop(edge_labels, "EDGE", edge_properties);
-
-    invalidate_label(vertex_labels, schema.vertex_entries().size());
-    invalidate_label(edge_labels, schema.edge_entries().size());
+    invalidate_label(vertex_labels, "VERTEX", schema.vertex_entries().size());
+    invalidate_label(edge_labels, "EDGE", schema.edge_entries().size());
 
     new_meta.AddKeyValue("schema", schema.ToJSONString());
+LOG(INFO) << "Schema: " << schema.ToJSONString();
 
     size_t nbytes = 0;
     new_meta.AddMember("ivnums", old_meta.GetMemberMeta("ivnums"));
@@ -1668,6 +1690,11 @@ class ArrowFragment
     VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
     return ret;
   }
+#undef ASSIGN_IDENTICAL_VEC_META
+#undef ASSIGN_IDENTICAL_VEC_VEC_META
+#undef GENERATE_VEC_META
+#undef GENERATE_VEC_VEC_META
+
 
  private:
   void initPointers() {

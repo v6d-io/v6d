@@ -186,7 +186,7 @@ json Entry::ToJSON() const {
   if (!reverse_mapping.empty()) {
     put_container(root, "reverse_mapping", reverse_mapping);
   }
-  put_container(root, "valid_properties", valid_properties);
+  root["valid_properties"] = json(valid_properties);
   return root;
 }
 
@@ -232,7 +232,7 @@ void Entry::FromJSON(const json& root) {
     vineyard::get_container(root, "reverse_mapping", reverse_mapping);
   }
   if (root.contains("valid_properties")) {
-    vineyard::get_container(root, "valid_properties", valid_properties);
+    valid_properties = root["valid_properties"].get<std::vector<int>>();
   }
 }
 
@@ -375,8 +375,8 @@ void PropertyGraphSchema::ToJSON(json& root) const {
     types.emplace_back(entry.ToJSON());
   }
   root["types"] = types;
-  put_container(root, "valid_vertices", valid_vertices_);
-  put_container(root, "valid_edges", valid_edges_);
+  root["valid_vertices"] = json(valid_vertices_);
+  root["valid_edges"] = json(valid_edges_);
 }
 
 void PropertyGraphSchema::FromJSON(json const& root) {
@@ -391,10 +391,10 @@ void PropertyGraphSchema::FromJSON(json const& root) {
     }
   }
   if (root.contains("valid_vertices")) {
-    get_container(root, "valid_vertices", valid_vertices_);
+    valid_vertices_ = root["valid_vertices"].get<std::vector<int>>();
   }
   if (root.contains("valid_edges")) {
-    get_container(root, "valid_edges", valid_edges_);
+    valid_edges_ = root["valid_edges"].get<std::vector<int>>();
   }
 }
 
