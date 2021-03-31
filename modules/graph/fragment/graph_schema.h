@@ -35,6 +35,8 @@ limitations under the License.
 
 namespace vineyard {
 
+class MaxGraphSchema;
+
 using PropertyType = std::shared_ptr<arrow::DataType>;
 class Entry {
  public:
@@ -51,9 +53,10 @@ class Entry {
   LabelId id;
   std::string label;
   std::string type;
-  std::vector<PropertyDef> props;
+  std::vector<PropertyDef> props_;
   std::vector<std::string> primary_keys;
   std::vector<std::pair<std::string, std::string>> relations;
+  std::vector<int> valid_properties;
 
   std::vector<int> mapping;          // old prop id -> new prop id
   std::vector<int> reverse_mapping;  // new prop id -> old prop id
@@ -63,12 +66,18 @@ class Entry {
                       const std::vector<std::string>& key_name_list);
   void AddRelation(const std::string& src, const std::string& dst);
 
+  size_t property_num() const;
+
+  std::vector<PropertyDef> properties() const;
+
   PropertyId GetPropertyId(const std::string& name) const;
   PropertyType GetPropertyType(PropertyId prop_id) const;
   std::string GetPropertyName(PropertyId prop_id) const;
 
   json ToJSON() const;
   void FromJSON(const json& root);
+
+  void InvalidateProperty(PropertyId id) { valid_properties[id] = 0; }
 };
 
 class PropertyGraphSchema {
@@ -97,8 +106,18 @@ class PropertyGraphSchema {
   void AddEntry(const Entry& entry) {
     if (entry.type == "VERTEX") {
       vertex_entries_.push_back(entry);
+      valid_vertices_.push_back(1);
     } else {
       edge_entries_.push_back(entry);
+      valid_edges_.push_back(1);
+    }
+  }
+
+  const Entry& GetEntry(LabelId label_id, const std::string& type) const {
+    if (type == "VERTEX") {
+      return vertex_entries_[label_id];
+    } else {
+      return edge_entries_[label_id];
     }
   }
 
@@ -120,6 +139,14 @@ class PropertyGraphSchema {
                              label);
   }
 
+  Entry& GetMutableEntry(const LabelId label_id, const std::string& type) {
+    if (type == "VERTEX") {
+      return vertex_entries_[label_id];
+    } else {
+      return edge_entries_[label_id];
+    }
+  }
+
   void ToJSON(json& root) const;
   void FromJSON(json const& root);
 
@@ -129,9 +156,25 @@ class PropertyGraphSchema {
   void set_fnum(size_t fnum) { fnum_ = fnum; }
   size_t fnum() const { return fnum_; }
 
-  const std::vector<Entry>& vertex_entries() const { return vertex_entries_; }
+  std::vector<Entry> vertex_entries() const {
+    std::vector<Entry> res;
+    for (size_t i = 0; i < valid_vertices_.size(); ++i) {
+      if (valid_vertices_[i]) {
+        res.push_back(vertex_entries_[i]);
+      }
+    }
+    return res;
+  }
 
-  const std::vector<Entry>& edge_entries() const { return edge_entries_; }
+  std::vector<Entry> edge_entries() const {
+    std::vector<Entry> res;
+    for (size_t i = 0; i < valid_edges_.size(); ++i) {
+      if (valid_edges_[i]) {
+        res.push_back(edge_entries_[i]);
+      }
+    }
+    return res;
+  }
 
   std::vector<std::string> GetVertexLabels() const;
 
@@ -149,10 +192,26 @@ class PropertyGraphSchema {
 
   void DumpToFile(std::string const& path);
 
+  void InvalidateVertex(LabelId label_id) { valid_vertices_[label_id] = 0; }
+
+  void InvalidateEdge(LabelId label_id) { valid_edges_[label_id] = 0; }
+
+  size_t vertex_label_num() const {
+    return std::accumulate(valid_vertices_.begin(), valid_vertices_.end(), 0);
+  }
+
+  size_t edge_label_num() const {
+    return std::accumulate(valid_edges_.begin(), valid_edges_.end(), 0);
+  }
+
+  friend MaxGraphSchema;
+
  private:
   size_t fnum_;
   std::vector<Entry> vertex_entries_;
   std::vector<Entry> edge_entries_;
+  std::vector<int> valid_vertices_;
+  std::vector<int> valid_edges_;
 };
 
 // In Analytical engine, assume label ids of vertex entries are continuous
