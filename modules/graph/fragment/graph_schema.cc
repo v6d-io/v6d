@@ -393,7 +393,8 @@ PropertyGraphSchema::GetVertexPropertyListByLabel(
 std::vector<std::pair<std::string, std::string>>
 PropertyGraphSchema::GetVertexPropertyListByLabel(LabelId label_id) const {
   std::vector<std::pair<std::string, std::string>> properties;
-  if (label_id > 0 && label_id < static_cast<LabelId>(valid_vertices_.size()) &&
+  if (label_id >= 0 &&
+      label_id < static_cast<LabelId>(valid_vertices_.size()) &&
       valid_vertices_[label_id]) {
     for (auto& prop : vertex_entries_[label_id].properties()) {
       properties.emplace_back(prop.name,
@@ -413,7 +414,7 @@ PropertyGraphSchema::GetEdgePropertyListByLabel(
 std::vector<std::pair<std::string, std::string>>
 PropertyGraphSchema::GetEdgePropertyListByLabel(LabelId label_id) const {
   std::vector<std::pair<std::string, std::string>> properties;
-  if (label_id > 0 && label_id < static_cast<LabelId>(valid_edges_.size()) &&
+  if (label_id >= 0 && label_id < static_cast<LabelId>(valid_edges_.size()) &&
       valid_edges_[label_id]) {
     for (auto& prop : edge_entries_[label_id].properties()) {
       properties.emplace_back(prop.name,

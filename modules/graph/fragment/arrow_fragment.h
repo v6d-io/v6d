@@ -1557,6 +1557,25 @@ class ArrowFragment
       edge_properties.push_back(pair.second);
     }
 
+    auto remove_invalid_relation =
+        [&schema](const std::vector<label_id_t>& edge_labels,
+                  std::map<label_id_t, std::vector<label_id_t>> vertices) {
+          std::string type = "EDGE";
+          for (size_t i = 0; i < edge_labels.size(); ++i) {
+            auto& entry = schema.GetMutableEntry(edge_labels[i], type);
+            auto& relations = entry.relations;
+            std::vector<std::pair<std::string, std::string>> valid_relations;
+            for (auto& pair : relations) {
+              auto src = schema.GetVertexLabelId(pair.first);
+              auto dst = schema.GetVertexLabelId(pair.second);
+              if (vertices.find(src) != vertices.end() &&
+                  vertices.find(dst) != vertices.end()) {
+                valid_relations.push_back(pair);
+              }
+            }
+            entry.relations = valid_relations;
+          }
+        };
     // Compute the set difference of reserved labels and all labels.
     auto invalidate_label = [&schema](const std::vector<label_id_t>& labels,
                                       std::string type, size_t label_num) {
@@ -1591,6 +1610,7 @@ class ArrowFragment
             }
           }
         };
+    remove_invalid_relation(edge_labels, vertices);
     invalidate_prop(vertex_labels, "VERTEX", vertex_properties);
     invalidate_prop(edge_labels, "EDGE", edge_properties);
     invalidate_label(vertex_labels, "VERTEX", schema.vertex_entries().size());
