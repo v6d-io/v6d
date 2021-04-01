@@ -660,7 +660,8 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
     RETURN_GS_ERROR(ErrorCode::kInvalidOperationError, "Every schema is empty");
   }
   // Perform type lossen.
-  // timestamp -> int64 -> double -> utf8   binary (not supported)
+  // Date32 -> int32
+  // Timestamp(s) -> int64 -> double -> utf8   binary (not supported)
 
   // Timestamp value are stored as as number of seconds, milliseconds,
   // microseconds or nanoseconds since UNIX epoch.
@@ -681,6 +682,9 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
       continue;
     }
     auto res = fields[i][0]->type();
+    if (res->Equals(arrow::date32())) {
+      res = arrow::int32();
+    }
     if (res->Equals(arrow::timestamp(arrow::TimeUnit::SECOND))) {
       res = arrow::int64();
     }
@@ -815,7 +819,7 @@ inline boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
 // or some chunks' data doesn't have any floating numbers, but others might
 // have. We could use this method to gather their schemas, and find out most
 // inclusive fields, construct a new schema and broadcast back. Note: We perform
-// type loosen, timestamp -> int64, int64 -> double. double -> string (big
+// type loosen, date32 -> int32; timestamp(s) -> int64 -> double -> string (big
 // string), and any type is prior to null.
 inline boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
     const std::shared_ptr<arrow::Table>& table,
