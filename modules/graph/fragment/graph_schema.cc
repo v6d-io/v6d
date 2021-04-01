@@ -154,9 +154,10 @@ std::string Entry::GetPropertyName(PropertyId prop_id) const {
 }
 
 PropertyType Entry::GetPropertyType(PropertyId prop_id) const {
-  if (prop_id > 0 && prop_id < static_cast<PropertyId>(props_.size()) &&
-      valid_properties[prop_id]) {
-    return props_[prop_id].type;
+  for (const auto& prop : props_) {
+    if (prop.id == prop_id && valid_properties[prop.id]) {
+      return prop.type;
+    }
   }
   return arrow::null();
 }
