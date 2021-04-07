@@ -139,7 +139,10 @@ class ScriptLauncher(Launcher):
 
     def dispose(self, desired=True):
         if self._status == LauncherStatus.RUNNING:
-            self._proc.terminate()
+            try:
+                self._proc.terminate()
+            except ProcessLookupError:
+                pass
             if desired:
                 self._status = LauncherStatus.FAILED
             else:
