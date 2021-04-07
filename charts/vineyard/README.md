@@ -23,5 +23,5 @@ More information about the helm chart could be found at [artifacthub](https://ar
 License
 -------
 
-**libvineyard** is distributed under [Apache License 2.0](https://github.com/alibaba/libvineyard/blob/main/LICENSE).
-Please note that third-party libraries may not have the same license as libvineyard.
+**vineyard** is distributed under [Apache License 2.0](https://github.com/alibaba/libvineyard/blob/main/LICENSE).
+Please note that third-party libraries may not have the same license as vineyard.

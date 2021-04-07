@@ -73,10 +73,10 @@ Before creating a new bug entry, we recommend you first `search` among existing
 vineyard bugs to see if it has already been resolved.
 
 When creating a new bug entry, please provide necessary information of your
-problem in the description, such as operating system version, libvineyard
+problem in the description, such as operating system version, vineyard
 version, and other system configurations to help us diagnose the problem.
 
-We also welcome any help on libvineyard from the community, including but not
+We also welcome any help on vineyard from the community, including but not
 limited to fixing bugs and adding new features. Note that you need to sign
 the `CLA`_ before submitting patches to us.
 
@@ -84,7 +84,7 @@ Code format
 ^^^^^^^^^^^
 
 Vineyard follows the `Google C++ Style Guide`_. When submitting patches
-to libvineyard, please format your code with clang-format by
+to vineyard, please format your code with clang-format by
 the Makefile command `make vineyard_clformat`, and make sure your code doesn't
 break the cpplint convention using the CMakefile command `make vineyard_cpplint`.
 

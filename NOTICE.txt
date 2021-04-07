@@ -1,4 +1,4 @@
-libvineyard
+vineyard
 Copyright 2020 Alibaba Group Holding Limited
 
 The project includes software from the CMake project (BSD, 3-Clause)
