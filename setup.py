@@ -64,7 +64,7 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
         .. image:: https://v6d.io/_static/vineyard_logo.png
            :target: https://v6d.io
            :align: center
-           :alt: libvineyard
+           :alt: vineyard
            :width: 397px
 
         vineyard: an in-memory immutable data manager

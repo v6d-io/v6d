@@ -1,7 +1,7 @@
 .. image:: https://v6d.io/_static/vineyard_logo.png
    :target: https://v6d.io
    :align: center
-   :alt: libvineyard
+   :alt: vineyard
    :width: 397px
 
 vineyard-io: IO drivers for `vineyard <https://v6d.io>`_

@@ -12,7 +12,7 @@ a feature request, or just a problem that need support from the vineyard team.
 If is is a bug report, to help us reproducing this bug, please provide information below:
 
 1. Your Operation System version (`uname -a`):
-2. The version of libvineyard you use (`vineyard.__version__`):
+2. The version of vineyard you use (`vineyard.__version__`):
 3. Versions of crucial packages, such as mpi:
 4. Full stack of the error:
 5. Minimized code to reproduce the error:

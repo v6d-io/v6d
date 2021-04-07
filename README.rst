@@ -1,7 +1,7 @@
 .. raw:: html
 
     <h1 align="center">
-        <img src="https://v6d.io/_static/vineyard_logo.png" width="397" alt="libvineyard">
+        <img src="https://v6d.io/_static/vineyard_logo.png" width="397" alt="vineyard">
     </h1>
     <p align="center">
         an in-memory immutable data manager
@@ -192,8 +192,8 @@ If you want to build vineyard from source, please refer to `Installation`_.
 License
 -------
 
-**libvineyard** is distributed under `Apache License 2.0`_. Please note that
-third-party libraries may not have the same license as libvineyard.
+**Vineyard** is distributed under `Apache License 2.0`_. Please note that
+third-party libraries may not have the same license as vineyard.
 
 Acknowledgements
 ----------------
