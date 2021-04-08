@@ -1039,21 +1039,22 @@ class ArrowFragment
           sub_oe_offset_lists[v_label] = oe_offset_array;
         }
       } else {
+        auto cur_label_index = e_label - edge_label_num_;
         // Process v_num...total_v_num  X  0...e_num  part.
         if (directed_) {
           // Process 0...total_v_num  X  e_num...total_e_num  part.
           generate_directed_csr<vid_t, eid_t>(
-              vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums,
-              total_vertex_label_num, concurrency, sub_oe_lists,
+              vid_parser_, edge_src[cur_label_index], edge_dst[cur_label_index],
+              tvnums, total_vertex_label_num, concurrency, sub_oe_lists,
               sub_oe_offset_lists);
           generate_directed_csr<vid_t, eid_t>(
-              vid_parser_, edge_dst[e_label], edge_src[e_label], tvnums,
-              total_vertex_label_num, concurrency, sub_ie_lists,
+              vid_parser_, edge_dst[cur_label_index], edge_src[cur_label_index],
+              tvnums, total_vertex_label_num, concurrency, sub_ie_lists,
               sub_ie_offset_lists);
         } else {
           generate_undirected_csr<vid_t, eid_t>(
-              vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums,
-              total_vertex_label_num, concurrency, sub_oe_lists,
+              vid_parser_, edge_src[cur_label_index], edge_dst[cur_label_index],
+              tvnums, total_vertex_label_num, concurrency, sub_oe_lists,
               sub_oe_offset_lists);
         }
       }
@@ -1095,17 +1096,14 @@ class ArrowFragment
     ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_)
     ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_)
 
-    ASSIGN_IDENTICAL_VEC_META("ovgid_lists", vertex_label_num_)
-    ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_)
-
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
-                                    edge_label_num_);
+                                    edge_label_num_)
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
-                                    edge_label_num_);
+                                    edge_label_num_)
     }
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
-                                  edge_label_num_);
+                                  edge_label_num_)
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
                                   edge_label_num_)
 
@@ -1213,17 +1211,6 @@ class ArrowFragment
       };
       tg.AddTask(fn, std::ref(client));
     }
-
-    if (directed_) {
-      ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
-                                    edge_label_num_)
-      ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
-                                    edge_label_num_)
-    }
-    ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
-                                  edge_label_num_)
-    ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
-                                  edge_label_num_);
 
     // Extra ie_list, oe_list, ie_offset_list, oe_offset_list
     for (label_id_t i = 0; i < total_vertex_label_num; ++i) {

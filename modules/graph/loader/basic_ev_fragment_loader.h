@@ -427,7 +427,8 @@ class BasicEVFragmentLoader {
       edge_tables_map[pre_elabel_num + i] = output_edge_tables_[i];
     }
 
-    vertex_labels_.resize(pre_vlabel_num);
+    // The size is all vertex label number.
+    vertex_labels_.resize(pre_vlabel_num + output_vertex_tables_.size());
     for (auto& pair : vertex_label_to_index_) {
       vertex_labels_[pair.second] = pair.first;
     }
