@@ -204,6 +204,12 @@ class PropertyGraphSchema {
     return std::accumulate(valid_edges_.begin(), valid_edges_.end(), 0);
   }
 
+  // For internal use, get all vertex label number include invalid ones.
+  size_t all_vertex_label_num() const { return vertex_entries_.size(); }
+
+  // For internal use, get all edge label number include invalid ones.
+  size_t all_edge_label_num() const { return edge_entries_.size(); }
+
   friend MaxGraphSchema;
 
  private:
