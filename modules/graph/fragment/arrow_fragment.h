@@ -639,7 +639,7 @@ class ArrowFragment
       new_meta.AddMember(_name, old_meta.GetMemberMeta(_name)); \
       nbytes += old_meta.GetMemberMeta(_name).GetNBytes();      \
     }                                                           \
-  } while (0);
+  } while (0)
 
 #define ASSIGN_IDENTICAL_VEC_VEC_META(prefix, x, y)                  \
   do {                                                               \
@@ -650,7 +650,7 @@ class ArrowFragment
         nbytes += old_meta.GetMemberMeta(_name).GetNBytes();         \
       }                                                              \
     }                                                                \
-  } while (0);
+  } while (0)
 
 #define GENERATE_TABLE_META(prefix, i, table)                              \
   do {                                                                     \
@@ -670,15 +670,15 @@ class ArrowFragment
       new_meta.AddKeyValue(type_prefix + std::to_string(j),                \
                            arrow_type_to_string(table->field(j)->type())); \
     }                                                                      \
-  } while (0);
+  } while (0)
 
 #define GENERATE_TABLE_VEC_META(prefix, start, end, tables) \
   do {                                                      \
     for (label_id_t i = start; i < end; ++i) {              \
       auto table = tables[i - start];                       \
-      GENERATE_TABLE_META(prefix, i, table)                 \
+      GENERATE_TABLE_META(prefix, i, table);                \
     }                                                       \
-  } while (0);
+  } while (0)
 
 #define GENERATE_VEC_META(prefix, vec, label_num, start_num)               \
   do {                                                                     \
@@ -687,7 +687,7 @@ class ArrowFragment
                          vec[i]->meta());                                  \
       nbytes += vec[i]->nbytes();                                          \
     }                                                                      \
-  } while (0);
+  } while (0)
 
 #define GENERATE_VEC_VEC_META(prefix, vec, v_label_num, e_label_num,          \
                               start_v_num, start_e_num)                       \
@@ -700,7 +700,7 @@ class ArrowFragment
         nbytes += vec[i][j]->nbytes();                                        \
       }                                                                       \
     }                                                                         \
-  } while (0);
+  } while (0)
 
   boost::leaf::result<ObjectID> AddVerticesAndEdges(
       Client& client,
@@ -910,7 +910,7 @@ class ArrowFragment
       start_ids[i] = vid_parser_.GenerateId(0, i, ivnums_[i]) + ovnums_[i];
     }
     for (label_id_t i = vertex_label_num_; i < total_vertex_label_num; ++i) {
-      start_ids[i] = vid_parser_.GenerateId(0, i, ivnums_[i]);
+      start_ids[i] = vid_parser_.GenerateId(0, i, ivnums[i]);
     }
 
     // Make a copy of ovg2l map, since we need to add some extra outer vertices
@@ -1090,22 +1090,22 @@ class ArrowFragment
     auto schema = schema_;
     size_t nbytes = 0;
 
-    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_)
-    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, edge_tables_)
+    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_);
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, edge_tables_);
 
-    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_)
-    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_)
+    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
-                                    edge_label_num_)
+                                    edge_label_num_);
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
-                                    edge_label_num_)
+                                    edge_label_num_);
     }
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
-                                  edge_label_num_)
+                                  edge_label_num_);
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
-                                  edge_label_num_)
+                                  edge_label_num_);
 
     // Extra vertex table
     for (label_id_t i = 0; i < extra_vertex_label_num; ++i) {
@@ -1261,11 +1261,11 @@ class ArrowFragment
     nbytes += vy_tvnums.nbytes();
 
     GENERATE_VEC_META("vertex_tables", vy_vertex_tables, extra_vertex_label_num,
-                      vertex_label_num_)
+                      vertex_label_num_);
     GENERATE_VEC_META("edge_tables", vy_edge_tables, extra_edge_label_num,
-                      edge_label_num_)
-    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, total_vertex_label_num, 0)
-    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, total_vertex_label_num, 0)
+                      edge_label_num_);
+    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, total_vertex_label_num, 0);
+    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, total_vertex_label_num, 0);
 
     for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
       for (label_id_t j = 0; j < total_edge_label_num; ++j) {
@@ -1393,14 +1393,14 @@ class ArrowFragment
     nbytes += vy_ovnums.nbytes();
     new_meta.AddMember("tvnums", vy_tvnums.meta());
     nbytes += vy_tvnums.nbytes();
-    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_)
+    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_);
     GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, edge_tables_);
 
-    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_)
-    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_)
+    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
 
-    ASSIGN_IDENTICAL_VEC_META("ovgid_lists", vertex_label_num_)
-    ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_)
+    ASSIGN_IDENTICAL_VEC_META("ovgid_lists", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
@@ -1804,17 +1804,17 @@ class ArrowFragment
       tg.AddTask(fn, std::ref(client));
     }
 
-    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_)
-    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_)
+    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_);
+    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
-                                    edge_label_num_)
+                                    edge_label_num_);
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
-                                    edge_label_num_)
+                                    edge_label_num_);
     }
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
-                                  edge_label_num_)
+                                  edge_label_num_);
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
                                   edge_label_num_);
 
@@ -1860,15 +1860,15 @@ class ArrowFragment
     nbytes += vy_tvnums.meta().GetNBytes();
 
     GENERATE_VEC_META("edge_tables", vy_edge_tables, extra_edge_label_num,
-                      edge_label_num_)
-    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, vertex_label_num_, 0)
-    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, vertex_label_num_, 0)
+                      edge_label_num_);
+    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, vertex_label_num_, 0);
+    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, vertex_label_num_, 0);
     if (directed_) {
       GENERATE_VEC_VEC_META("ie_lists", vy_ie_lists, vertex_label_num_,
-                            extra_edge_label_num, 0, edge_label_num_)
+                            extra_edge_label_num, 0, edge_label_num_);
       GENERATE_VEC_VEC_META("ie_offsets_lists", vy_ie_offsets_lists,
                             vertex_label_num_, extra_edge_label_num, 0,
-                            edge_label_num_)
+                            edge_label_num_);
     }
     GENERATE_VEC_VEC_META("oe_lists", vy_oe_lists, vertex_label_num_,
                           extra_edge_label_num, 0, edge_label_num_);
@@ -1921,7 +1921,7 @@ class ArrowFragment
             std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
         new_meta.AddMember(table_name, new_table->meta());
         std::shared_ptr<arrow::Table> arrow_table = new_table->GetTable();
-        GENERATE_TABLE_META("vertex", i, arrow_table)
+        GENERATE_TABLE_META("vertex", i, arrow_table);
         auto label =
             old_meta.GetKeyValue("vertex_label_name_" + std::to_string(i));
         auto& entry = schema.GetMutableEntry(label, "VERTEX");
@@ -2076,8 +2076,8 @@ class ArrowFragment
     ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
 
     GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_,
-                            this->vertex_tables_)
-    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, this->edge_tables_)
+                            this->vertex_tables_);
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, this->edge_tables_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
