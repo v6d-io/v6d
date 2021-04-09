@@ -188,7 +188,9 @@ macro(find_intel_tbb)
 endmacro(find_intel_tbb)
 
 macro(find_jemalloc)
-    # ./configure --disable-shared --enable-static --disable-cxx --enable-stats --with-jemalloc-prefix=vineyard_je_
+    # ./configure --disable-shared --enable-static --disable-cxx --enable-stats --disable-initial-exec-tls --with-jemalloc-prefix=vineyard_je_
+    #
+    # see: https://github.com/jemalloc/jemalloc/issues/1237
     ExternalProject_Add(libjemalloc
         SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"
         BUILD_IN_SOURCE 1
@@ -199,6 +201,7 @@ macro(find_jemalloc)
             --enable-static
             --disable-cxx
             --enable-stats
+            --disable-initial-exec-tls
             --with-jemalloc-prefix=vineyard_je_
         BUILD_COMMAND ${MAKE}
         INSTALL_COMMAND echo "No need to install for jemalloc."
@@ -293,7 +296,7 @@ if(CMAKE_VERSION VERSION_LESS "3.1")
         endif()
     endif()
 else()
-    set (CMAKE_CXX_STANDARD 14)
+    set(CMAKE_CXX_STANDARD 14)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
