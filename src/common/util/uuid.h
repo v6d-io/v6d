@@ -57,6 +57,10 @@ inline ObjectID GenerateBlobID(const void* ptr) {
   return 0x8000000000000000UL | reinterpret_cast<uint64_t>(ptr);
 }
 
+inline ObjectID GenerateBlobID(const uintptr_t ptr) {
+  return 0x8000000000000000UL | static_cast<uint64_t>(ptr);
+}
+
 constexpr inline ObjectID EmptyBlobID() { return 0x8000000000000000UL; }
 
 inline ObjectID GenerateObjectID() {

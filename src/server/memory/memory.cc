@@ -44,6 +44,89 @@ namespace vineyard {
 using memory::GetMallocMapinfo;
 using memory::kBlockSize;
 
+namespace memory {
+
+static inline size_t system_page_size() {
+  return (size_t) sysconf(_SC_PAGESIZE);
+}
+
+static inline uintptr_t align_up(const uintptr_t address,
+                                 const size_t alignment) {
+  return (address + alignment - 1) & ~(alignment - 1);
+}
+
+static inline uintptr_t align_down(const uintptr_t address,
+                                   const size_t alignment) {
+  return address & ~(alignment - 1);
+}
+
+static inline void recycle_resident_memory(const uintptr_t aligned_left,
+                                           const uintptr_t aligned_right) {
+  if (aligned_left != aligned_right) {
+    /**
+     * Notes [Recycle Pages with madvise]:
+     *
+     * 1. madvise(.., MADV_FREE) cannot be used for shared memory, thus we use
+     * `MADV_DONTNEED`.
+     * 2. madvise(...) requires alignment to PAGE size.
+     *
+     * See also: https://man7.org/linux/man-pages/man2/madvise.2.html
+     */
+    if (madvise(reinterpret_cast<void*>(aligned_left),
+                aligned_right - aligned_left, MADV_DONTNEED)) {
+      LOG(ERROR) << "madvise: " << errno << " -> " << strerror(errno);
+    }
+  }
+}
+
+static inline void recycle_resident_memory(const uintptr_t base, size_t left,
+                                           size_t right) {
+  static size_t page_size = system_page_size();
+  uintptr_t aligned_left = align_up(base + left, page_size),
+            aligned_right = align_down(base + right, page_size);
+#ifndef NDEBUG
+  VLOG(10) << "recycle memory: " << reinterpret_cast<void*>(base + left) << "("
+           << reinterpret_cast<void*>(aligned_left) << ") to "
+           << reinterpret_cast<void*>(base + right) << "("
+           << reinterpret_cast<void*>(aligned_right) << ")";
+#endif
+  recycle_resident_memory(aligned_left, aligned_right);
+}
+
+/**
+ * @brief Find non-covered intervals, and release the memory back to OS kernel.
+ *
+ * n.b.: the intervals may overlap.
+ */
+static void recycle_arena(const uintptr_t base, const size_t size,
+                          std::vector<size_t> const& offsets,
+                          std::vector<size_t> const& sizes) {
+  std::map<size_t, int32_t> points;
+  points[0] = 0;
+  points[size] = 0;
+  for (size_t idx = 0; idx < offsets.size(); ++idx) {
+    points[offsets[idx]] += 1;
+    points[offsets[idx] + sizes[idx]] -= 1;
+  }
+  auto head = points.begin();
+  int markersum = 0;
+  while (true) {
+    markersum += head->second;
+    auto next = std::next(head);
+    if (next == points.end()) {
+      break;
+    }
+    if (markersum == 0) {
+      // release memory in the untouched interval.
+      recycle_resident_memory(base, head->first, next->first);
+    }
+    head = next;
+  }
+}
+}  // namespace memory
+
+std::set<ObjectID> BulkStore::Arena::spans{};
+
 Status BulkStore::PreAllocate(const size_t size) {
   BulkAllocator::SetFootprintLimit(size);
   void* pointer = BulkAllocator::Init(size);
@@ -142,12 +225,46 @@ Status BulkStore::ProcessDeleteRequest(const ObjectID& object_id) {
     return Status::ObjectNotExists();
   }
   auto& object = objects_[object_id];
-  auto buff_size = object->data_size;
-  BulkAllocator::Free(object->pointer, buff_size);
-  objects_.erase(object_id);
+  if (object->arena_fd == -1) {
+    auto buff_size = object->data_size;
+    BulkAllocator::Free(object->pointer, buff_size);
+    objects_.erase(object_id);
 #ifndef NDEBUG
-  VLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit() << ")";
+    VLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit() << ")";
 #endif
+  } else {
+    static size_t page_size = memory::system_page_size();
+    uintptr_t pointer = reinterpret_cast<uintptr_t>(object->pointer);
+    uintptr_t lower = memory::align_down(pointer, page_size),
+              upper = memory::align_up(pointer, page_size);
+    uintptr_t lower_bound = lower, upper_bound = upper;
+    {
+      auto iter = Arena::spans.find(object_id);
+      if (iter != Arena::spans.begin()) {
+        auto iter_prev = std::prev(iter);
+        auto& object_prev = objects_.at(*iter_prev);
+        lower_bound =
+            memory::align_up(reinterpret_cast<uintptr_t>(object_prev->pointer) +
+                                 object_prev->data_size,
+                             page_size);
+      }
+      auto iter_next = std::next(iter);
+      if (iter_next != Arena::spans.end()) {
+        auto& object_next = objects_.at(*iter_next);
+        upper_bound = memory::align_down(
+            reinterpret_cast<uintptr_t>(object_next->pointer), page_size);
+      }
+    }
+    if (std::max(lower, lower_bound) < std::min(upper, upper_bound)) {
+#ifndef NDEBUG
+      VLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit()
+               << "), recycle: (" << std::max(lower, lower_bound) << ", "
+               << std::min(upper, upper_bound) << ")";
+#endif
+      memory::recycle_resident_memory(std::max(lower, lower_bound),
+                                      std::min(upper, upper_bound));
+    }
+  }
   return Status::OK();
 }
 
@@ -170,12 +287,6 @@ Status BulkStore::MakeArena(size_t const size, int& fd, uintptr_t& base) {
   return Status::OK();
 }
 
-namespace memory {
-static void recycle_arena(const uintptr_t base, const size_t size,
-                          std::vector<size_t> const& offsets,
-                          std::vector<size_t> const& sizes);
-};
-
 Status BulkStore::FinalizeArena(const int fd,
                                 std::vector<size_t> const& offsets,
                                 std::vector<size_t> const& sizes) {
@@ -189,94 +300,33 @@ Status BulkStore::FinalizeArena(const int fd,
     return Status::UserInputError(
         "The offsets and sizes of sealed blobs are not match");
   }
+  size_t mmap_size = arena->second.size;
+  uintptr_t mmap_base = arena->second.base;
   for (size_t idx = 0; idx < offsets.size(); ++idx) {
-    VLOG(2) << "blob in use: " << offsets[idx] << " of size " << sizes[idx];
+    VLOG(2) << "blob in use: in " << fd << ", at " << offsets[idx]
+            << " of size " << sizes[idx];
+    // make them available for blob pool
+    uintptr_t pointer = mmap_base + offsets[idx];
+    ObjectID object_id = GenerateBlobID(pointer);
+    objects_.emplace(object_id, std::make_shared<Payload>(
+                                    object_id, sizes[idx],
+                                    reinterpret_cast<uint8_t*>(pointer), fd,
+                                    mmap_size, offsets[idx]));
+    // record the span, will be used to release memory back to OS when deleting
+    // blobs
+    Arena::spans.emplace(object_id);
   }
   // recycle memory
-  {
-    memory::recycle_arena(arena->second.base, arena->second.size, offsets,
-                          sizes);
-  }
-  // make it available
+  { memory::recycle_arena(mmap_base, mmap_size, offsets, sizes); }
+  // make it available for mmap record
   {
     memory::MmapRecord& record =
-        memory::mmap_records[reinterpret_cast<void*>(arena->second.base)];
-    record.fd = arena->second.fd;
-    record.size = arena->second.size;
+        memory::mmap_records[reinterpret_cast<void*>(mmap_base)];
+    record.fd = fd;
+    record.size = mmap_size;
     arenas_.erase(arena);
   }
   return Status::OK();
 }
-
-namespace memory {
-static inline uintptr_t align_up(const uintptr_t address,
-                                 const size_t alignment) {
-  return (address + alignment - 1) & ~(alignment - 1);
-}
-
-static inline uintptr_t align_down(const uintptr_t address,
-                                   const size_t alignment) {
-  return address & ~(alignment - 1);
-}
-
-static inline void recycle_resident_memory(const uintptr_t base, size_t left,
-                                           size_t right) {
-  static size_t page_size = (size_t) sysconf(_SC_PAGESIZE);
-  uintptr_t aligned_left = align_up(base + left, page_size),
-            aligned_right = align_down(base + right, page_size);
-#ifndef NDEBUG
-  VLOG(10) << "recycle memory: " << reinterpret_cast<void*>(base + left) << "("
-           << reinterpret_cast<void*>(aligned_left) << ") to "
-           << reinterpret_cast<void*>(base + right) << "("
-           << reinterpret_cast<void*>(aligned_right) << ")";
-#endif
-  if (aligned_left != aligned_right) {
-    /**
-     * Notes [Recycle Pages with madvise]:
-     *
-     * 1. madvise(.., MADV_FREE) cannot be used for shared memory, thus we use
-     * `MADV_DONTNEED`.
-     * 2. madvise(...) requires alignment to PAGE size.
-     *
-     * See also: https://man7.org/linux/man-pages/man2/madvise.2.html
-     */
-    if (madvise(reinterpret_cast<void*>(aligned_left),
-                aligned_right - aligned_left, MADV_DONTNEED)) {
-      LOG(ERROR) << "madvise: " << errno << " -> " << strerror(errno);
-    }
-  }
-}
-
-/**
- * @brief Find non-covered intervals, and release the memory back to OS kernel.
- *
- * n.b.: the intervals may overlap.
- */
-static void recycle_arena(const uintptr_t base, const size_t size,
-                          std::vector<size_t> const& offsets,
-                          std::vector<size_t> const& sizes) {
-  std::map<size_t, int32_t> points;
-  points[0] = 0;
-  points[size] = 0;
-  for (size_t idx = 0; idx < offsets.size(); ++idx) {
-    points[offsets[idx]] += 1;
-    points[offsets[idx] + sizes[idx]] -= 1;
-  }
-  auto head = points.begin();
-  int markersum = 0;
-  while (true) {
-    markersum += head->second;
-    auto next = std::next(head);
-    if (next == points.end()) {
-      break;
-    }
-    if (markersum == 0) {
-      // release memory in the untouched interval.
-      recycle_resident_memory(base, head->first, next->first);
-    }
-    head = next;
-  }
-}
-}  // namespace memory
 
 }  // namespace vineyard

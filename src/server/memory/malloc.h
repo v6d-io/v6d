@@ -45,8 +45,8 @@ void GetMallocMapinfo(void* addr, int* fd, int64_t* map_length,
                       ptrdiff_t* offset);
 
 struct MmapRecord {
-  int fd;
-  int64_t size;
+  int fd = -1;
+  int64_t size = -1;
 };
 
 /// Hashtable that contains one entry per segment that we got from the OS

@@ -30,6 +30,7 @@
 #define SRC_SERVER_MEMORY_MEMORY_H_
 
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -73,6 +74,7 @@ class BulkStore {
     int fd;
     size_t size;
     uintptr_t base;
+    static std::set<ObjectID> spans;
   };
 
   std::unordered_map<int /* fd */, Arena> arenas_;
