@@ -19,7 +19,7 @@ limitations under the License.
 #include <string>
 
 #define JEMALLOC_NO_DEMANGLE
-#include "jemalloc/jemalloc.h"
+#include "jemalloc/include/jemalloc/jemalloc.h"
 #undef JEMALLOC_NO_DEMANGLE
 
 #include "common/memory/jemalloc.h"

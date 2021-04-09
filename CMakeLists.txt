@@ -209,7 +209,7 @@ macro(find_jemalloc)
     set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION
                                               ${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/lib/libjemalloc_pic.a)
     set_target_properties(jemalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                              ${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/include)
+                                              ${PROJECT_SOURCE_DIR}/thirdparty)
 endmacro(find_jemalloc)
 
 macro(find_glog)

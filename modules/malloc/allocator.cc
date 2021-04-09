@@ -28,7 +28,12 @@ namespace vineyard {
 
 namespace detail {
 
-static VineyardAllocator<void> default_allocator{};
+static VineyardAllocator<void>& _DefaultAllocator() {
+  static VineyardAllocator<void>* default_allocator =
+      new VineyardAllocator<void>{};
+  return *default_allocator;
+}
+
 static std::mutex allocator_mutex;
 
 }  // namespace detail
@@ -36,26 +41,33 @@ static std::mutex allocator_mutex;
 }  // namespace vineyard
 
 void* vineyard_malloc(size_t size) {
-  return vineyard::detail::default_allocator.Allocate(size);
+  return vineyard::detail::_DefaultAllocator().Allocate(size);
 }
 
 void* vineyard_calloc(size_t num, size_t size) {
-  return vineyard::detail::default_allocator.Allocate(num * size);
+  return vineyard::detail::_DefaultAllocator().Allocate(num * size);
 }
 
 void* vineyard_realloc(void* pointer, size_t size) {
-  return vineyard::detail::default_allocator.Reallocate(pointer, size);
+  return vineyard::detail::_DefaultAllocator().Reallocate(pointer, size);
 }
 
 void vineyard_free(void* pointer) {
-  vineyard::detail::default_allocator.Free(pointer);
+  vineyard::detail::_DefaultAllocator().Free(pointer);
 }
 
 void vineyard_freeze(void* pointer) {
   std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
-  vineyard::detail::default_allocator.Freeze(pointer);
+  vineyard::detail::_DefaultAllocator().Freeze(pointer);
 }
 
-void vineyard_allocator_finalize() {
-  vineyard::detail::default_allocator.Release();
+void vineyard_allocator_finalize(int renew) {
+  std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
+  VineyardAllocator<void>& default_allocator =
+      vineyard::detail::_DefaultAllocator();
+  if (renew) {
+    VINEYARD_CHECK_OK(default_allocator.Renew());
+  } else {
+    VINEYARD_CHECK_OK(default_allocator.Release());
+  }
 }

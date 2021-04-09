@@ -42,23 +42,13 @@ struct VineyardAllocator : public memory::Jemalloc {
   explicit VineyardAllocator(
       const size_t size = std::numeric_limits<size_t>::max())
       : client_(vineyard::Client::Default()) {
-    VLOG(2) << "make arena: " << size;
-    VINEYARD_CHECK_OK(
-        client_.CreateArena(size, fd_, available_size_, base_, space_));
-    Jemalloc::Init(reinterpret_cast<void*>(space_), available_size_);
-    VLOG(2) << "jemalloc arena initialized: " << available_size_ << ", at "
-            << reinterpret_cast<void*>(space_);
+    VINEYARD_CHECK_OK(_initialize_arena());
   }
 
   VineyardAllocator(Client& client,
                     const size_t size = std::numeric_limits<size_t>::max())
       : client_(client) {
-    VLOG(2) << "make arena: " << size;
-    VINEYARD_CHECK_OK(
-        client_.CreateArena(size, fd_, available_size_, base_, space_));
-    Jemalloc::Init(reinterpret_cast<void*>(space_), available_size_);
-    VLOG(2) << "jemalloc arena initialized: " << available_size_ << ", at "
-            << reinterpret_cast<void*>(space_);
+    VINEYARD_CHECK_OK(_initialize_arena());
   }
 
   ~VineyardAllocator() noexcept { VINEYARD_DISCARD(Release()); }
@@ -92,6 +82,11 @@ struct VineyardAllocator : public memory::Jemalloc {
     return client_.ReleaseArena(fd_, offsets_, sizes_);
   }
 
+  Status Renew() {
+    RETURN_ON_ERROR(client_.ReleaseArena(fd_, offsets_, sizes_));
+    return _initialize_arena();
+  }
+
   template <typename U>
   struct rebind {
     using other = VineyardAllocator<U>;
@@ -104,6 +99,21 @@ struct VineyardAllocator : public memory::Jemalloc {
   size_t available_size_;
   std::vector<size_t> offsets_, sizes_;
   std::set<uintptr_t> freezed_;
+
+  Status _initialize_arena() {
+    VLOG(2) << "make arena: " << size;
+    RETURN_ON_ERROR(
+        client_.CreateArena(size, fd_, available_size_, base_, space_));
+    Jemalloc::Init(reinterpret_cast<void*>(space_), available_size_);
+    VLOG(2) << "jemalloc arena initialized: " << available_size_ << ", at "
+            << reinterpret_cast<void*>(space_);
+
+    // reset the context
+    offsets_.clear();
+    sizes_.clear();
+    freezed_.clear();
+    return Status::OK();
+  }
 };
 
 template <typename T, typename U>

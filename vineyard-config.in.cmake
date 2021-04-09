@@ -37,11 +37,6 @@ if(NOT Arrow_FOUND)
     find_dependency(Arrow)
 endif()
 
-# find intel-tbb
-if(BUILD_VINEYARD_MALLOC)
-    find_dependency(TBB)
-endif()
-
 set(VINEYARD_HOME "${CMAKE_CURRENT_LIST_DIR}/../../..")
 include("${CMAKE_CURRENT_LIST_DIR}/vineyard-targets.cmake")
 

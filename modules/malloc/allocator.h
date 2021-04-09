@@ -31,7 +31,7 @@ void* vineyard_realloc(void* pointer, size_t size);
 void* vineyard_calloc(size_t num, size_t size);
 void vineyard_free(void* pointer);
 void vineyard_freeze(void* pointer);
-void vineyard_allocator_finalize();
+void vineyard_allocator_finalize(int renew);
 
 #ifdef __cplusplus
 }
