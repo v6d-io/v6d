@@ -162,9 +162,9 @@ RUN cd /tmp && \
     cd /tmp && \
     rm -rf openssl-1.1.1j.tar.gz openssl-1.1.1j
 
-# install protobuf & grpc
+# install protobuf & grpc: v1.36.x
 RUN cd /tmp && \
-    git clone https://github.com/grpc/grpc.git -b v1.36.0 --depth=1 && \
+    git clone https://github.com/grpc/grpc.git -b v1.36.x --depth=1 && \
     cd grpc && \
     git submodule update --init && \
     mkdir build && \
