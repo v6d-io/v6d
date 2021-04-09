@@ -42,13 +42,13 @@ struct VineyardAllocator : public memory::Jemalloc {
   explicit VineyardAllocator(
       const size_t size = std::numeric_limits<size_t>::max())
       : client_(vineyard::Client::Default()) {
-    VINEYARD_CHECK_OK(_initialize_arena());
+    VINEYARD_CHECK_OK(_initialize_arena(size));
   }
 
   VineyardAllocator(Client& client,
                     const size_t size = std::numeric_limits<size_t>::max())
       : client_(client) {
-    VINEYARD_CHECK_OK(_initialize_arena());
+    VINEYARD_CHECK_OK(_initialize_arena(size));
   }
 
   ~VineyardAllocator() noexcept { VINEYARD_DISCARD(Release()); }
@@ -84,7 +84,7 @@ struct VineyardAllocator : public memory::Jemalloc {
 
   Status Renew() {
     RETURN_ON_ERROR(client_.ReleaseArena(fd_, offsets_, sizes_));
-    return _initialize_arena();
+    return _initialize_arena(available_size_);
   }
 
   template <typename U>
@@ -100,7 +100,7 @@ struct VineyardAllocator : public memory::Jemalloc {
   std::vector<size_t> offsets_, sizes_;
   std::set<uintptr_t> freezed_;
 
-  Status _initialize_arena() {
+  Status _initialize_arena(size_t size) {
     VLOG(2) << "make arena: " << size;
     RETURN_ON_ERROR(
         client_.CreateArena(size, fd_, available_size_, base_, space_));

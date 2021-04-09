@@ -63,7 +63,7 @@ void vineyard_freeze(void* pointer) {
 
 void vineyard_allocator_finalize(int renew) {
   std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
-  VineyardAllocator<void>& default_allocator =
+  vineyard::VineyardAllocator<void>& default_allocator =
       vineyard::detail::_DefaultAllocator();
   if (renew) {
     VINEYARD_CHECK_OK(default_allocator.Renew());
