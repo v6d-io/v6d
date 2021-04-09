@@ -1949,7 +1949,7 @@ class ArrowFragment
     ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_);
     ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
 
-    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, this->edge_tables_)
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, this->edge_tables_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
