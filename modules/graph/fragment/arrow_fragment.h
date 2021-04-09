@@ -632,21 +632,53 @@ class ArrowFragment
     }
   }
 
-#define ASSIGN_IDENTICAL_VEC_META(prefix, num)                \
-  for (label_id_t i = 0; i < num; ++i) {                      \
-    std::string _name = generate_name_with_suffix(prefix, i); \
-    new_meta.AddMember(_name, old_meta.GetMemberMeta(_name)); \
-    nbytes += old_meta.GetMemberMeta(_name).GetNBytes();      \
-  }
+#define ASSIGN_IDENTICAL_VEC_META(prefix, num)                  \
+  do {                                                          \
+    for (label_id_t i = 0; i < num; ++i) {                      \
+      std::string _name = generate_name_with_suffix(prefix, i); \
+      new_meta.AddMember(_name, old_meta.GetMemberMeta(_name)); \
+      nbytes += old_meta.GetMemberMeta(_name).GetNBytes();      \
+    }                                                           \
+  } while (0)
 
-#define ASSIGN_IDENTICAL_VEC_VEC_META(prefix, x, y)                \
-  for (label_id_t i = 0; i < x; ++i) {                             \
-    for (label_id_t j = 0; j < y; ++j) {                           \
-      std::string _name = generate_name_with_suffix(prefix, i, j); \
-      new_meta.AddMember(_name, old_meta.GetMemberMeta(_name));    \
-      nbytes += old_meta.GetMemberMeta(_name).GetNBytes();         \
-    }                                                              \
-  }
+#define ASSIGN_IDENTICAL_VEC_VEC_META(prefix, x, y)                  \
+  do {                                                               \
+    for (label_id_t i = 0; i < x; ++i) {                             \
+      for (label_id_t j = 0; j < y; ++j) {                           \
+        std::string _name = generate_name_with_suffix(prefix, i, j); \
+        new_meta.AddMember(_name, old_meta.GetMemberMeta(_name));    \
+        nbytes += old_meta.GetMemberMeta(_name).GetNBytes();         \
+      }                                                              \
+    }                                                                \
+  } while (0)
+
+#define GENERATE_TABLE_META(prefix, i, table)                              \
+  do {                                                                     \
+    prop_id_t prop_num = table->num_columns();                             \
+    new_meta.AddKeyValue(                                                  \
+        prefix "_label_name_" + std::to_string(i),                         \
+        old_meta.GetKeyValue(prefix "_label_name_" + std::to_string(i)));  \
+    new_meta.AddKeyValue(prefix "_property_num_" + std::to_string(i),      \
+                         std::to_string(prop_num));                        \
+    std::string name_prefix =                                              \
+        prefix "_property_name_" + std::to_string(i) + "_";                \
+    std::string type_prefix =                                              \
+        prefix "_property_type_" + std::to_string(i) + "_";                \
+    for (prop_id_t j = 0; j < prop_num; ++j) {                             \
+      new_meta.AddKeyValue(name_prefix + std::to_string(j),                \
+                           table->field(j)->name());                       \
+      new_meta.AddKeyValue(type_prefix + std::to_string(j),                \
+                           arrow_type_to_string(table->field(j)->type())); \
+    }                                                                      \
+  } while (0)
+
+#define GENERATE_TABLE_VEC_META(prefix, start, end, tables) \
+  do {                                                      \
+    for (label_id_t i = start; i < end; ++i) {              \
+      auto table = tables[i - start];                       \
+      GENERATE_TABLE_META(prefix, i, table);                \
+    }                                                       \
+  } while (0)
 
 #define GENERATE_VEC_META(prefix, vec, label_num, start_num)               \
   do {                                                                     \
@@ -655,7 +687,7 @@ class ArrowFragment
                          vec[i]->meta());                                  \
       nbytes += vec[i]->nbytes();                                          \
     }                                                                      \
-  } while (0);
+  } while (0)
 
 #define GENERATE_VEC_VEC_META(prefix, vec, v_label_num, e_label_num,          \
                               start_v_num, start_e_num)                       \
@@ -668,7 +700,46 @@ class ArrowFragment
         nbytes += vec[i][j]->nbytes();                                        \
       }                                                                       \
     }                                                                         \
-  } while (0);
+  } while (0)
+
+  boost::leaf::result<ObjectID> AddVerticesAndEdges(
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
+      ObjectID vm_id,
+      const std::vector<std::set<std::pair<std::string, std::string>>>&
+          edge_relations,
+      int concurrency) {
+    int extra_vertex_label_num = vertex_tables_map.size();
+    int total_vertex_label_num = vertex_label_num_ + extra_vertex_label_num;
+
+    std::vector<std::shared_ptr<arrow::Table>> vertex_tables;
+    vertex_tables.resize(extra_vertex_label_num);
+    for (auto& pair : vertex_tables_map) {
+      if (pair.first < vertex_label_num_ ||
+          pair.first >= total_vertex_label_num) {
+        RETURN_GS_ERROR(
+            ErrorCode::kInvalidValueError,
+            "Invalid vertex label id: " + std::to_string(pair.first));
+      }
+      vertex_tables[pair.first - vertex_label_num_] = pair.second;
+    }
+    int extra_edge_label_num = edge_tables_map.size();
+    int total_edge_label_num = edge_label_num_ + extra_edge_label_num;
+
+    std::vector<std::shared_ptr<arrow::Table>> edge_tables;
+    edge_tables.resize(extra_edge_label_num);
+    for (auto& pair : edge_tables_map) {
+      if (pair.first < edge_label_num_ || pair.first >= total_edge_label_num) {
+        RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                        "Invalid edge label id: " + std::to_string(pair.first));
+      }
+      edge_tables[pair.first - edge_label_num_] = pair.second;
+    }
+    return AddNewVertexEdgeLabels(client, std::move(vertex_tables),
+                                  std::move(edge_tables), vm_id, edge_relations,
+                                  concurrency);
+  }
 
   boost::leaf::result<ObjectID> AddVertices(
       Client& client,
@@ -713,7 +784,520 @@ class ArrowFragment
                             concurrency);
   }
 
-  /// Add a set of new vertex labels in graph. Vertex label id started from
+  /// Add a set of new vertex labels and a set of new edge labels to graph.
+  /// Vertex label id started from vertex_label_num_, and edge label id
+  /// started from edge_label_num_.
+  boost::leaf::result<ObjectID> AddNewVertexEdgeLabels(
+      Client& client,
+      std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
+      std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, ObjectID vm_id,
+      const std::vector<std::set<std::pair<std::string, std::string>>>&
+          edge_relations,
+      int concurrency) {
+    int extra_vertex_label_num = vertex_tables.size();
+    int total_vertex_label_num = vertex_label_num_ + extra_vertex_label_num;
+    int extra_edge_label_num = edge_tables.size();
+    int total_edge_label_num = edge_label_num_ + extra_edge_label_num;
+
+    // Newly constructed data structures
+    vineyard::Array<vid_t> vy_ivnums, vy_ovnums, vy_tvnums;
+    std::vector<std::shared_ptr<vineyard::NumericArray<vid_t>>> vy_ovgid_lists;
+    std::vector<std::shared_ptr<vineyard::Hashmap<vid_t, vid_t>>> vy_ovg2l_maps;
+    std::vector<std::shared_ptr<vineyard::Table>> vy_vertex_tables,
+        vy_edge_tables;
+
+    std::vector<std::vector<std::shared_ptr<vineyard::FixedSizeBinaryArray>>>
+        vy_ie_lists, vy_oe_lists;
+    std::vector<std::vector<std::shared_ptr<vineyard::NumericArray<int64_t>>>>
+        vy_ie_offsets_lists, vy_oe_offsets_lists;
+
+    // Init size
+    vy_vertex_tables.resize(extra_vertex_label_num);
+    vy_edge_tables.resize(extra_edge_label_num);
+
+    vy_ovgid_lists.resize(total_vertex_label_num);
+    vy_ovg2l_maps.resize(total_vertex_label_num);
+
+    // Assign additional meta for new vertex labels
+    if (directed_) {
+      vy_ie_lists.resize(total_vertex_label_num);
+      vy_ie_offsets_lists.resize(total_vertex_label_num);
+    }
+    vy_oe_lists.resize(total_vertex_label_num);
+    vy_oe_offsets_lists.resize(total_vertex_label_num);
+
+    for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
+      if (directed_) {
+        vy_ie_lists[i].resize(total_edge_label_num);
+        vy_ie_offsets_lists[i].resize(total_edge_label_num);
+      }
+      vy_oe_lists[i].resize(total_edge_label_num);
+      vy_oe_offsets_lists[i].resize(total_edge_label_num);
+    }
+
+    auto vm_ptr =
+        std::dynamic_pointer_cast<vertex_map_t>(client.GetObject(vm_id));
+
+    std::vector<vid_t> ivnums(total_vertex_label_num);
+    std::vector<vid_t> ovnums(total_vertex_label_num);
+    std::vector<vid_t> tvnums(total_vertex_label_num);
+    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+      ivnums[i] = ivnums_[i];
+    }
+    for (size_t i = 0; i < vertex_tables.size(); ++i) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      ARROW_OK_OR_RAISE(vertex_tables[i]->CombineChunks(
+          arrow::default_memory_pool(), &vertex_tables[i]));
+#else
+      ARROW_OK_ASSIGN_OR_RAISE(
+          vertex_tables[i],
+          vertex_tables[i]->CombineChunks(arrow::default_memory_pool()));
+#endif
+      ivnums[vertex_label_num_ + i] =
+          vm_ptr->GetInnerVertexSize(fid_, vertex_label_num_ + i);
+    }
+
+    // Collect extra outer vertices.
+    auto collect_extra_outer_vertices =
+        [this](const std::shared_ptr<vid_array_t>& gid_array,
+               std::vector<std::vector<vid_t>>& extra_ovgids) {
+          const VID_T* arr = gid_array->raw_values();
+          for (int64_t i = 0; i < gid_array->length(); ++i) {
+            fid_t fid = vid_parser_.GetFid(arr[i]);
+            label_id_t label_id = vid_parser_.GetLabelId(arr[i]);
+            bool flag = true;
+            if (fid != fid_) {
+              if (label_id < vertex_label_num_) {
+                auto cur_map = ovg2l_maps_ptr_[label_id];
+                flag = cur_map->find(arr[i]) == cur_map->end();
+              }
+            } else {
+              flag = false;
+            }
+
+            if (flag) {
+              extra_ovgids[label_id].push_back(arr[i]);
+            }
+          }
+        };
+
+    std::vector<std::vector<vid_t>> extra_ovgids(total_vertex_label_num);
+    for (int i = 0; i < extra_edge_label_num; ++i) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      ARROW_OK_OR_RAISE(edge_tables[i]->CombineChunks(
+          arrow::default_memory_pool(), &edge_tables[i]));
+#else
+      ARROW_OK_ASSIGN_OR_RAISE(
+          edge_tables[i],
+          edge_tables[i]->CombineChunks(arrow::default_memory_pool()));
+#endif
+
+      collect_extra_outer_vertices(
+          std::dynamic_pointer_cast<
+              typename vineyard::ConvertToArrowType<vid_t>::ArrayType>(
+              edge_tables[i]->column(0)->chunk(0)),
+          extra_ovgids);
+      collect_extra_outer_vertices(
+          std::dynamic_pointer_cast<
+              typename vineyard::ConvertToArrowType<vid_t>::ArrayType>(
+              edge_tables[i]->column(1)->chunk(0)),
+          extra_ovgids);
+    }
+
+    // Construct the new start value of lid of extra outer vertices
+    std::vector<vid_t> start_ids(total_vertex_label_num);
+    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+      start_ids[i] = vid_parser_.GenerateId(0, i, ivnums_[i]) + ovnums_[i];
+    }
+    for (label_id_t i = vertex_label_num_; i < total_vertex_label_num; ++i) {
+      start_ids[i] = vid_parser_.GenerateId(0, i, ivnums[i]);
+    }
+
+    // Make a copy of ovg2l map, since we need to add some extra outer vertices
+    // pulled in this fragment by new edges.
+    std::vector<ska::flat_hash_map<vid_t, vid_t>> ovg2l_maps(
+        total_vertex_label_num);
+    for (int i = 0; i < vertex_label_num_; ++i) {
+      for (auto iter = ovg2l_maps_ptr_[i]->begin();
+           iter != ovg2l_maps_ptr_[i]->end(); ++iter) {
+        ovg2l_maps[i].emplace(iter->first, iter->second);
+      }
+    }
+
+    std::vector<std::shared_ptr<vid_array_t>> extra_ovgid_lists(
+        total_vertex_label_num);
+    // Add extra outer vertices to ovg2l map, and collect distinct gid of extra
+    // outer vertices.
+    generate_outer_vertices_map(extra_ovgids, start_ids, total_vertex_label_num,
+                                ovg2l_maps, extra_ovgid_lists);
+    extra_ovgids.clear();
+
+    std::vector<std::shared_ptr<vid_array_t>> ovgid_lists(
+        total_vertex_label_num);
+    // Append extra ovgid_lists with origin ovgid_lists to make it complete
+    for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
+      vid_builder_t ovgid_list_builder;
+      if (i < vertex_label_num_) {
+        ovgid_list_builder.AppendValues(ovgid_lists_[i]->raw_values(),
+                                        ovgid_lists_[i]->length());
+      }
+      ovgid_list_builder.AppendValues(extra_ovgid_lists[i]->raw_values(),
+                                      extra_ovgid_lists[i]->length());
+      ovgid_list_builder.Finish(&ovgid_lists[i]);
+    }
+
+    for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
+      ovnums[i] = ovgid_lists[i]->length();
+      tvnums[i] = ivnums[i] + ovnums[i];
+    }
+
+    // Gather all local id of new edges.
+    // And delete the src/dst column in edge tables.
+    std::vector<std::shared_ptr<vid_array_t>> edge_src, edge_dst;
+    edge_src.resize(extra_edge_label_num);
+    edge_dst.resize(extra_edge_label_num);
+    for (int i = 0; i < extra_edge_label_num; ++i) {
+      generate_local_id_list(vid_parser_,
+                             std::dynamic_pointer_cast<vid_array_t>(
+                                 edge_tables[i]->column(0)->chunk(0)),
+                             fid_, ovg2l_maps, concurrency, edge_src[i]);
+      generate_local_id_list(vid_parser_,
+                             std::dynamic_pointer_cast<vid_array_t>(
+                                 edge_tables[i]->column(1)->chunk(0)),
+                             fid_, ovg2l_maps, concurrency, edge_dst[i]);
+      std::shared_ptr<arrow::Table> tmp_table0;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+      ARROW_OK_OR_RAISE(edge_tables[i]->RemoveColumn(0, &tmp_table0));
+      ARROW_OK_OR_RAISE(tmp_table0->RemoveColumn(0, &edge_tables[i]));
+#else
+      ARROW_OK_ASSIGN_OR_RAISE(tmp_table0, edge_tables[i]->RemoveColumn(0));
+      ARROW_OK_ASSIGN_OR_RAISE(edge_tables[i], tmp_table0->RemoveColumn(0));
+#endif
+    }
+
+    // Generate CSR vector of new edge tables.
+
+    std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
+        ie_lists(total_vertex_label_num);
+    std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
+        oe_lists(total_vertex_label_num);
+    std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+        ie_offsets_lists(total_vertex_label_num);
+    std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+        oe_offsets_lists(total_vertex_label_num);
+
+    for (label_id_t v_label = 0; v_label < total_vertex_label_num; ++v_label) {
+      oe_lists[v_label].resize(total_edge_label_num);
+      oe_offsets_lists[v_label].resize(total_edge_label_num);
+      if (directed_) {
+        ie_lists[v_label].resize(total_edge_label_num);
+        ie_offsets_lists[v_label].resize(total_edge_label_num);
+      }
+    }
+
+    for (label_id_t e_label = 0; e_label < total_edge_label_num; ++e_label) {
+      std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>> sub_ie_lists(
+          total_vertex_label_num);
+      std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>> sub_oe_lists(
+          total_vertex_label_num);
+      std::vector<std::shared_ptr<arrow::Int64Array>> sub_ie_offset_lists(
+          total_vertex_label_num);
+      std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
+          total_vertex_label_num);
+
+      // Process v_num...total_v_num  X  0...e_num  part.
+      if (e_label < edge_label_num_) {
+        if (directed_) {
+          for (label_id_t v_label = vertex_label_num_;
+               v_label < total_vertex_label_num; ++v_label) {
+            PodArrayBuilder<nbr_unit_t> binary_builder;
+            std::shared_ptr<arrow::FixedSizeBinaryArray> ie_array;
+            binary_builder.Finish(&ie_array);
+
+            sub_ie_lists[v_label] = ie_array;
+
+            arrow::Int64Builder int64_builder;
+            std::vector<int64_t> offset_vec(tvnums[v_label], 0);
+            int64_builder.AppendValues(offset_vec);
+            std::shared_ptr<arrow::Int64Array> ie_offset_array;
+            int64_builder.Finish(&ie_offset_array);
+            sub_ie_offset_lists[v_label] = ie_offset_array;
+          }
+        }
+        for (label_id_t v_label = vertex_label_num_;
+             v_label < total_vertex_label_num; ++v_label) {
+          PodArrayBuilder<nbr_unit_t> binary_builder;
+          std::shared_ptr<arrow::FixedSizeBinaryArray> oe_array;
+          binary_builder.Finish(&oe_array);
+          sub_oe_lists[v_label] = oe_array;
+
+          arrow::Int64Builder int64_builder;
+          std::vector<int64_t> offset_vec(tvnums[v_label], 0);
+          int64_builder.AppendValues(offset_vec);
+          std::shared_ptr<arrow::Int64Array> oe_offset_array;
+          int64_builder.Finish(&oe_offset_array);
+          sub_oe_offset_lists[v_label] = oe_offset_array;
+        }
+      } else {
+        auto cur_label_index = e_label - edge_label_num_;
+        // Process v_num...total_v_num  X  0...e_num  part.
+        if (directed_) {
+          // Process 0...total_v_num  X  e_num...total_e_num  part.
+          generate_directed_csr<vid_t, eid_t>(
+              vid_parser_, edge_src[cur_label_index], edge_dst[cur_label_index],
+              tvnums, total_vertex_label_num, concurrency, sub_oe_lists,
+              sub_oe_offset_lists);
+          generate_directed_csr<vid_t, eid_t>(
+              vid_parser_, edge_dst[cur_label_index], edge_src[cur_label_index],
+              tvnums, total_vertex_label_num, concurrency, sub_ie_lists,
+              sub_ie_offset_lists);
+        } else {
+          generate_undirected_csr<vid_t, eid_t>(
+              vid_parser_, edge_src[cur_label_index], edge_dst[cur_label_index],
+              tvnums, total_vertex_label_num, concurrency, sub_oe_lists,
+              sub_oe_offset_lists);
+        }
+      }
+
+      for (label_id_t v_label = 0; v_label < total_vertex_label_num;
+           ++v_label) {
+        if (v_label < vertex_label_num_ && e_label < edge_label_num_) {
+          continue;
+        }
+        if (directed_) {
+          ie_lists[v_label][e_label] = sub_ie_lists[v_label];
+          ie_offsets_lists[v_label][e_label] = sub_ie_offset_lists[v_label];
+        }
+        oe_lists[v_label][e_label] = sub_oe_lists[v_label];
+        oe_offsets_lists[v_label][e_label] = sub_oe_offset_lists[v_label];
+      }
+    }
+
+    // Construct new fragment meta
+    vineyard::ObjectMeta old_meta, new_meta;
+    VINEYARD_CHECK_OK(client.GetMetaData(this->id_, old_meta));
+
+    new_meta.SetTypeName(type_name<ArrowFragment<oid_t, vid_t>>());
+    new_meta.AddKeyValue("fid", fid_);
+    new_meta.AddKeyValue("fnum", fnum_);
+    new_meta.AddKeyValue("directed", static_cast<int>(directed_));
+    new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
+    new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
+    new_meta.AddKeyValue("vertex_label_num", total_vertex_label_num);
+    // Increase edge label num
+    new_meta.AddKeyValue("edge_label_num", total_edge_label_num);
+
+    auto schema = schema_;
+    size_t nbytes = 0;
+
+    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_);
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, edge_tables_);
+
+    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
+
+    if (directed_) {
+      ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
+                                    edge_label_num_);
+      ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
+                                    edge_label_num_);
+    }
+    ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
+                                  edge_label_num_);
+    ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
+                                  edge_label_num_);
+
+    // Extra vertex table
+    for (label_id_t i = 0; i < extra_vertex_label_num; ++i) {
+      int cur_label_id = vertex_label_num_ + i;
+      std::string table_name =
+          generate_name_with_suffix("vertex_tables", cur_label_id);
+      TableBuilder vt(client, vertex_tables[i]);
+      vy_vertex_tables[i] =
+          std::dynamic_pointer_cast<vineyard::Table>(vt.Seal(client));
+
+      auto table = vertex_tables[i];
+      std::unordered_map<std::string, std::string> kvs;
+      table->schema()->metadata()->ToUnorderedMap(&kvs);
+      prop_id_t prop_num = table->num_columns();
+      std::string label = kvs["label"];
+      new_meta.AddKeyValue("vertex_label_name_" + std::to_string(cur_label_id),
+                           label);
+      new_meta.AddKeyValue(
+          "vertex_property_num_" + std::to_string(cur_label_id), prop_num);
+      std::string name_prefix =
+          "vertex_property_name_" + std::to_string(cur_label_id) + "_";
+      std::string type_prefix =
+          "vertex_property_type_" + std::to_string(cur_label_id) + "_";
+      auto entry = schema.CreateEntry(label, "VERTEX");
+      for (prop_id_t j = 0; j < prop_num; ++j) {
+        new_meta.AddKeyValue(name_prefix + std::to_string(j),
+                             table->field(j)->name());
+        new_meta.AddKeyValue(type_prefix + std::to_string(j),
+                             arrow_type_to_string(table->field(j)->type()));
+        entry->AddProperty(table->field(j)->name(), table->field(j)->type());
+      }
+    }
+
+    // extra edge tables
+    for (label_id_t i = 0; i < extra_edge_label_num; ++i) {
+      label_id_t cur_label_id = edge_label_num_ + i;
+      vineyard::TableBuilder et(client, edge_tables[i]);
+      vy_edge_tables[i] =
+          std::dynamic_pointer_cast<vineyard::Table>(et.Seal(client));
+
+      std::unordered_map<std::string, std::string> kvs;
+      auto table = edge_tables[i];
+      table->schema()->metadata()->ToUnorderedMap(&kvs);
+      new_meta.AddKeyValue("edge_label_name_" + std::to_string(cur_label_id),
+                           kvs["label"]);
+      new_meta.AddKeyValue("edge_property_num_" + std::to_string(cur_label_id),
+                           std::to_string(table->num_columns()));
+      std::string name_prefix =
+          "edge_property_name_" + std::to_string(cur_label_id) + "_";
+      std::string type_prefix =
+          "edge_property_type_" + std::to_string(cur_label_id) + "_";
+      auto entry = schema.CreateEntry(kvs["label"], "EDGE");
+      for (prop_id_t j = 0; j < table->num_columns(); ++j) {
+        new_meta.AddKeyValue(name_prefix + std::to_string(j),
+                             table->field(j)->name());
+        new_meta.AddKeyValue(type_prefix + std::to_string(j),
+                             arrow_type_to_string(table->field(j)->type()));
+        entry->AddProperty(table->field(j)->name(), table->field(j)->type());
+      }
+      for (const auto& rel : edge_relations[i]) {
+        entry->AddRelation(rel.first, rel.second);
+      }
+    }
+
+    // Schema
+    new_meta.AddKeyValue("schema", schema.ToJSONString());
+
+    ThreadGroup tg;
+    {
+      // ivnums, ovnums, tvnums
+      auto fn = [this, &vy_ivnums, &vy_ovnums, &vy_tvnums, &ivnums, &ovnums,
+                 &tvnums](Client& client) {
+        vineyard::ArrayBuilder<vid_t> ivnums_builder(client, ivnums);
+        vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums);
+        vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums);
+        vy_ivnums = *std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+            ivnums_builder.Seal(client));
+        vy_ovnums = *std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+            ovnums_builder.Seal(client));
+        vy_tvnums = *std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
+            tvnums_builder.Seal(client));
+        return Status::OK();
+      };
+      tg.AddTask(fn, std::ref(client));
+    }
+
+    // Extra ovgid, ovg2l
+    for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
+      auto fn = [this, i, &vy_ovgid_lists, &vy_ovg2l_maps, &ovgid_lists,
+                 &ovg2l_maps](Client& client) {
+        vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(client,
+                                                                ovgid_lists[i]);
+        vy_ovgid_lists[i] =
+            std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
+                ovgid_list_builder.Seal(client));
+
+        vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
+            client, std::move(ovg2l_maps[i]));
+        vy_ovg2l_maps[i] =
+            std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
+                ovg2l_builder.Seal(client));
+        return Status::OK();
+      };
+      tg.AddTask(fn, std::ref(client));
+    }
+
+    // Extra ie_list, oe_list, ie_offset_list, oe_offset_list
+    for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
+      for (label_id_t j = 0; j < total_edge_label_num; ++j) {
+        if (i < vertex_label_num_ && j < edge_label_num_) {
+          continue;
+        }
+        auto fn = [this, i, j, &vy_ie_lists, &vy_oe_lists, &vy_ie_offsets_lists,
+                   &vy_oe_offsets_lists, &ie_lists, &oe_lists,
+                   &ie_offsets_lists, &oe_offsets_lists](Client& client) {
+          if (directed_) {
+            vineyard::FixedSizeBinaryArrayBuilder ie_builder(client,
+                                                             ie_lists[i][j]);
+            vy_ie_lists[i][j] =
+                std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+                    ie_builder.Seal(client));
+
+            vineyard::NumericArrayBuilder<int64_t> ieo_builder(
+                client, ie_offsets_lists[i][j]);
+            vy_ie_offsets_lists[i][j] =
+                std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                    ieo_builder.Seal(client));
+          }
+          vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
+                                                           oe_lists[i][j]);
+          vy_oe_lists[i][j] =
+              std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+                  oe_builder.Seal(client));
+
+          vineyard::NumericArrayBuilder<int64_t> oeo_builder(
+              client, oe_offsets_lists[i][j]);
+          vy_oe_offsets_lists[i][j] =
+              std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                  oeo_builder.Seal(client));
+          return Status::OK();
+        };
+        tg.AddTask(fn, std::ref(client));
+      }
+    }
+
+    tg.TakeResults();
+
+    new_meta.AddMember("ivnums", vy_ivnums.meta());
+    nbytes += vy_ivnums.nbytes();
+    new_meta.AddMember("ovnums", vy_ovnums.meta());
+    nbytes += vy_ovnums.nbytes();
+    new_meta.AddMember("tvnums", vy_tvnums.meta());
+    nbytes += vy_tvnums.nbytes();
+
+    GENERATE_VEC_META("vertex_tables", vy_vertex_tables, extra_vertex_label_num,
+                      vertex_label_num_);
+    GENERATE_VEC_META("edge_tables", vy_edge_tables, extra_edge_label_num,
+                      edge_label_num_);
+    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, total_vertex_label_num, 0);
+    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, total_vertex_label_num, 0);
+
+    for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
+      for (label_id_t j = 0; j < total_edge_label_num; ++j) {
+        if (i < vertex_label_num_ && j < edge_label_num_) {
+          continue;
+        }
+        if (directed_) {
+          new_meta.AddMember(generate_name_with_suffix("ie_lists", i, j),
+                             vy_ie_lists[i][j]->meta());
+          nbytes += vy_ie_lists[i][j]->nbytes();
+          new_meta.AddMember(
+              generate_name_with_suffix("ie_offsets_lists", i, j),
+              vy_ie_offsets_lists[i][j]->meta());
+          nbytes += vy_ie_offsets_lists[i][j]->nbytes();
+        }
+        new_meta.AddMember(generate_name_with_suffix("oe_lists", i, j),
+                           vy_oe_lists[i][j]->meta());
+        nbytes += vy_oe_lists[i][j]->nbytes();
+        new_meta.AddMember(generate_name_with_suffix("oe_offsets_lists", i, j),
+                           vy_oe_offsets_lists[i][j]->meta());
+        nbytes += vy_oe_offsets_lists[i][j]->nbytes();
+      }
+    }
+    new_meta.AddMember("vertex_map", vm_ptr->meta());
+
+    new_meta.SetNBytes(nbytes);
+
+    vineyard::ObjectID ret;
+    VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+    return ret;
+  }
+  /// Add a set of new vertex labels to graph. Vertex label id started from
   /// vertex_label_num_.
   boost::leaf::result<ObjectID> AddNewVertexLabels(
       Client& client,
@@ -780,9 +1364,9 @@ class ArrowFragment
       new_meta.AddKeyValue(
           "vertex_property_num_" + std::to_string(cur_label_id), prop_num);
       std::string name_prefix =
-          "vertex_property_name_" + std::to_string(i) + "_";
+          "vertex_property_name_" + std::to_string(cur_label_id) + "_";
       std::string type_prefix =
-          "vertex_property_type_" + std::to_string(i) + "_";
+          "vertex_property_type_" + std::to_string(cur_label_id) + "_";
       auto entry = schema.CreateEntry(label, "VERTEX");
       for (prop_id_t j = 0; j < prop_num; ++j) {
         new_meta.AddKeyValue(name_prefix + std::to_string(j),
@@ -809,48 +1393,14 @@ class ArrowFragment
     nbytes += vy_ovnums.nbytes();
     new_meta.AddMember("tvnums", vy_tvnums.meta());
     nbytes += vy_tvnums.nbytes();
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      std::shared_ptr<arrow::Table> table = this->vertex_tables_[i];
-      prop_id_t prop_num = table->num_columns();
-      new_meta.AddKeyValue(
-          "vertex_label_name_" + std::to_string(i),
-          old_meta.GetKeyValue("vertex_label_name_" + std::to_string(i)));
-      new_meta.AddKeyValue("vertex_property_num_" + std::to_string(i),
-                           std::to_string(prop_num));
-      std::string name_prefix =
-          "vertex_property_name_" + std::to_string(i) + "_";
-      std::string type_prefix =
-          "vertex_property_type_" + std::to_string(i) + "_";
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                             table->field(j)->name());
-        new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                             arrow_type_to_string(table->field(j)->type()));
-      }
-    }
-    for (label_id_t i = 0; i < edge_label_num_; ++i) {
-      std::shared_ptr<arrow::Table> table = this->edge_tables_[i];
-      prop_id_t prop_num = table->num_columns();
-      new_meta.AddKeyValue(
-          "edge_label_name_" + std::to_string(i),
-          old_meta.GetKeyValue("edge_label_name_" + std::to_string(i)));
-      new_meta.AddKeyValue("edge_property_num_" + std::to_string(i),
-                           std::to_string(prop_num));
-      std::string name_prefix = "edge_property_name_" + std::to_string(i) + "_";
-      std::string type_prefix = "edge_property_type_" + std::to_string(i) + "_";
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                             table->field(j)->name());
-        new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                             arrow_type_to_string(table->field(j)->type()));
-      }
-    }
+    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_);
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, edge_tables_);
 
-    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_)
-    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_)
+    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
 
-    ASSIGN_IDENTICAL_VEC_META("ovgid_lists", vertex_label_num_)
-    ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_)
+    ASSIGN_IDENTICAL_VEC_META("ovgid_lists", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
@@ -974,7 +1524,7 @@ class ArrowFragment
     return ret;
   }
 
-  /// Add a set of new edge labels in graph. Edge label id started from
+  /// Add a set of new edge labels to graph. Edge label id started from
   /// edge_label_num_.
   boost::leaf::result<ObjectID> AddNewEdgeLabels(
       Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
@@ -1184,79 +1734,38 @@ class ArrowFragment
 
     auto schema = schema_;
     size_t nbytes = 0;
-    for (label_id_t i = 0; i < total_edge_label_num; ++i) {
-      if (i >= edge_label_num_) {
-        vineyard::TableBuilder et(client, edge_tables[i - edge_label_num_]);
-        vy_edge_tables[i - edge_label_num_] =
-            std::dynamic_pointer_cast<vineyard::Table>(et.Seal(client));
+    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, edge_tables_);
+    for (label_id_t i = 0; i < extra_edge_label_num; ++i) {
+      label_id_t cur_label_id = edge_label_num_ + i;
+      vineyard::TableBuilder et(client, edge_tables[i]);
+      vy_edge_tables[i] =
+          std::dynamic_pointer_cast<vineyard::Table>(et.Seal(client));
 
-        std::unordered_map<std::string, std::string> kvs;
-        auto table = edge_tables[i - edge_label_num_];
-        table->schema()->metadata()->ToUnorderedMap(&kvs);
-        new_meta.AddKeyValue("edge_label_name_" + std::to_string(i),
-                             kvs["label"]);
-        new_meta.AddKeyValue("edge_property_num_" + std::to_string(i),
-                             std::to_string(table->num_columns()));
-        std::string name_prefix =
-            "edge_property_name_" + std::to_string(i) + "_";
-        std::string type_prefix =
-            "edge_property_type_" + std::to_string(i) + "_";
-        auto entry = schema.CreateEntry(kvs["label"], "EDGE");
-        for (prop_id_t j = 0; j < table->num_columns(); ++j) {
-          new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                               table->field(j)->name());
-          new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                               arrow_type_to_string(table->field(j)->type()));
-          entry->AddProperty(table->field(j)->name(), table->field(j)->type());
-        }
-        for (const auto& rel : edge_relations[i - edge_label_num_]) {
-          entry->AddRelation(rel.first, rel.second);
-        }
-      } else {
-        std::string table_name = generate_name_with_suffix("edge_tables", i);
-        auto table_meta = old_meta.GetMemberMeta(table_name);
-        new_meta.AddMember(table_name, table_meta);
-        nbytes += table_meta.GetNBytes();
-        auto table = edge_tables_[i];
-        prop_id_t prop_num = table->num_columns();
-        new_meta.AddKeyValue(
-            "edge_label_name_" + std::to_string(i),
-            old_meta.GetKeyValue("edge_label_name_" + std::to_string(i)));
-        new_meta.AddKeyValue("edge_property_num_" + std::to_string(i),
-                             std::to_string(prop_num));
-        std::string name_prefix =
-            "edge_property_name_" + std::to_string(i) + "_";
-        std::string type_prefix =
-            "edge_property_type_" + std::to_string(i) + "_";
-        for (prop_id_t j = 0; j < prop_num; ++j) {
-          new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                               table->field(j)->name());
-          new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                               arrow_type_to_string(table->field(j)->type()));
-        }
-      }
-    }
-    new_meta.AddKeyValue("schema", schema.ToJSONString());
-
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      std::shared_ptr<arrow::Table> table = this->vertex_tables_[i];
-      prop_id_t prop_num = table->num_columns();
-      new_meta.AddKeyValue(
-          "vertex_label_name_" + std::to_string(i),
-          old_meta.GetKeyValue("vertex_label_name_" + std::to_string(i)));
-      new_meta.AddKeyValue("vertex_property_num_" + std::to_string(i),
-                           std::to_string(prop_num));
+      std::unordered_map<std::string, std::string> kvs;
+      auto table = edge_tables[i];
+      table->schema()->metadata()->ToUnorderedMap(&kvs);
+      new_meta.AddKeyValue("edge_label_name_" + std::to_string(cur_label_id),
+                           kvs["label"]);
+      new_meta.AddKeyValue("edge_property_num_" + std::to_string(cur_label_id),
+                           std::to_string(table->num_columns()));
       std::string name_prefix =
-          "vertex_property_name_" + std::to_string(i) + "_";
+          "edge_property_name_" + std::to_string(cur_label_id) + "_";
       std::string type_prefix =
-          "vertex_property_type_" + std::to_string(i) + "_";
-      for (prop_id_t j = 0; j < prop_num; ++j) {
+          "edge_property_type_" + std::to_string(cur_label_id) + "_";
+      auto entry = schema.CreateEntry(kvs["label"], "EDGE");
+      for (prop_id_t j = 0; j < table->num_columns(); ++j) {
         new_meta.AddKeyValue(name_prefix + std::to_string(j),
                              table->field(j)->name());
         new_meta.AddKeyValue(type_prefix + std::to_string(j),
                              arrow_type_to_string(table->field(j)->type()));
+        entry->AddProperty(table->field(j)->name(), table->field(j)->type());
+      }
+      for (const auto& rel : edge_relations[i]) {
+        entry->AddRelation(rel.first, rel.second);
       }
     }
+    new_meta.AddKeyValue("schema", schema.ToJSONString());
 
     new_meta.AddMember("ivnums", old_meta.GetMemberMeta("ivnums"));
     nbytes += old_meta.GetMemberMeta("ivnums").GetNBytes();
@@ -1295,36 +1804,17 @@ class ArrowFragment
       tg.AddTask(fn, std::ref(client));
     }
 
-    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_)
-
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      std::shared_ptr<arrow::Table> table = vertex_tables_[i];
-      prop_id_t prop_num = table->num_columns();
-      new_meta.AddKeyValue(
-          "vertex_label_name_" + std::to_string(i),
-          old_meta.GetKeyValue("vertex_label_name_" + std::to_string(i)));
-      new_meta.AddKeyValue("vertex_property_num_" + std::to_string(i),
-                           std::to_string(prop_num));
-      std::string name_prefix =
-          "vertex_property_name_" + std::to_string(i) + "_";
-      std::string type_prefix =
-          "vertex_property_type_" + std::to_string(i) + "_";
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                             table->field(j)->name());
-        new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                             arrow_type_to_string(table->field(j)->type()));
-      }
-    }
+    ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_);
+    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_, vertex_tables_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
-                                    edge_label_num_)
+                                    edge_label_num_);
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
-                                    edge_label_num_)
+                                    edge_label_num_);
     }
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
-                                  edge_label_num_)
+                                  edge_label_num_);
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
                                   edge_label_num_);
 
@@ -1370,15 +1860,15 @@ class ArrowFragment
     nbytes += vy_tvnums.meta().GetNBytes();
 
     GENERATE_VEC_META("edge_tables", vy_edge_tables, extra_edge_label_num,
-                      edge_label_num_)
-    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, vertex_label_num_, 0)
-    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, vertex_label_num_, 0)
+                      edge_label_num_);
+    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, vertex_label_num_, 0);
+    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, vertex_label_num_, 0);
     if (directed_) {
       GENERATE_VEC_VEC_META("ie_lists", vy_ie_lists, vertex_label_num_,
-                            extra_edge_label_num, 0, edge_label_num_)
+                            extra_edge_label_num, 0, edge_label_num_);
       GENERATE_VEC_VEC_META("ie_offsets_lists", vy_ie_offsets_lists,
                             vertex_label_num_, extra_edge_label_num, 0,
-                            edge_label_num_)
+                            edge_label_num_);
     }
     GENERATE_VEC_VEC_META("oe_lists", vy_oe_lists, vertex_label_num_,
                           extra_edge_label_num, 0, edge_label_num_);
@@ -1431,48 +1921,18 @@ class ArrowFragment
             std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
         new_meta.AddMember(table_name, new_table->meta());
         std::shared_ptr<arrow::Table> arrow_table = new_table->GetTable();
-        prop_id_t prop_num = arrow_table->num_columns();
-        std::string label =
+        GENERATE_TABLE_META("vertex", i, arrow_table);
+        auto label =
             old_meta.GetKeyValue("vertex_label_name_" + std::to_string(i));
-        new_meta.AddKeyValue("vertex_label_name_" + std::to_string(i), label);
-        new_meta.AddKeyValue("vertex_property_num_" + std::to_string(i),
-                             prop_num);
-        std::string name_prefix =
-            "vertex_property_name_" + std::to_string(i) + "_";
-        std::string type_prefix =
-            "vertex_property_type_" + std::to_string(i) + "_";
         auto& entry = schema.GetMutableEntry(label, "VERTEX");
-        for (prop_id_t j = 0; j < prop_num; ++j) {
-          new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                               arrow_table->field(j)->name());
-          new_meta.AddKeyValue(
-              type_prefix + std::to_string(j),
-              arrow_type_to_string(arrow_table->field(j)->type()));
-          if (j >= old_prop_num) {
-            entry.AddProperty(arrow_table->field(j)->name(),
-                              arrow_table->field(j)->type());
-          }
+        prop_id_t prop_num = arrow_table->num_columns();
+        for (prop_id_t j = old_prop_num; j < prop_num; ++j) {
+          entry.AddProperty(arrow_table->field(j)->name(),
+                            arrow_table->field(j)->type());
         }
       } else {
+        GENERATE_TABLE_META("vertex", i, this->vertex_tables_[i]);
         new_meta.AddMember(table_name, old_meta.GetMemberMeta(table_name));
-
-        std::shared_ptr<arrow::Table> table = this->vertex_tables_[i];
-        prop_id_t prop_num = table->num_columns();
-        new_meta.AddKeyValue(
-            "vertex_label_name_" + std::to_string(i),
-            old_meta.GetKeyValue("vertex_label_name_" + std::to_string(i)));
-        new_meta.AddKeyValue("vertex_property_num_" + std::to_string(i),
-                             std::to_string(prop_num));
-        std::string name_prefix =
-            "vertex_property_name_" + std::to_string(i) + "_";
-        std::string type_prefix =
-            "vertex_property_type_" + std::to_string(i) + "_";
-        for (prop_id_t j = 0; j < prop_num; ++j) {
-          new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                               table->field(j)->name());
-          new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                               arrow_type_to_string(table->field(j)->type()));
-        }
       }
     }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
@@ -1489,23 +1949,7 @@ class ArrowFragment
     ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_);
     ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
 
-    for (label_id_t i = 0; i < edge_label_num_; ++i) {
-      std::shared_ptr<arrow::Table> table = this->edge_tables_[i];
-      prop_id_t prop_num = table->num_columns();
-      new_meta.AddKeyValue(
-          "edge_label_name_" + std::to_string(i),
-          old_meta.GetKeyValue("edge_label_name_" + std::to_string(i)));
-      new_meta.AddKeyValue("edge_property_num_" + std::to_string(i),
-                           std::to_string(prop_num));
-      std::string name_prefix = "edge_property_name_" + std::to_string(i) + "_";
-      std::string type_prefix = "edge_property_type_" + std::to_string(i) + "_";
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                             table->field(j)->name());
-        new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                             arrow_type_to_string(table->field(j)->type()));
-      }
-    }
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, this->edge_tables_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
@@ -1631,43 +2075,9 @@ class ArrowFragment
     ASSIGN_IDENTICAL_VEC_META("vertex_tables", vertex_label_num_);
     ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
 
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      std::shared_ptr<arrow::Table> table = this->vertex_tables_[i];
-      prop_id_t prop_num = table->num_columns();
-      new_meta.AddKeyValue(
-          "vertex_label_name_" + std::to_string(i),
-          old_meta.GetKeyValue("vertex_label_name_" + std::to_string(i)));
-      new_meta.AddKeyValue("vertex_property_num_" + std::to_string(i),
-                           std::to_string(prop_num));
-      std::string name_prefix =
-          "vertex_property_name_" + std::to_string(i) + "_";
-      std::string type_prefix =
-          "vertex_property_type_" + std::to_string(i) + "_";
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                             table->field(j)->name());
-        new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                             arrow_type_to_string(table->field(j)->type()));
-      }
-    }
-
-    for (label_id_t i = 0; i < edge_label_num_; ++i) {
-      std::shared_ptr<arrow::Table> table = this->edge_tables_[i];
-      prop_id_t prop_num = table->num_columns();
-      new_meta.AddKeyValue(
-          "edge_label_name_" + std::to_string(i),
-          old_meta.GetKeyValue("edge_label_name_" + std::to_string(i)));
-      new_meta.AddKeyValue("edge_property_num_" + std::to_string(i),
-                           std::to_string(prop_num));
-      std::string name_prefix = "edge_property_name_" + std::to_string(i) + "_";
-      std::string type_prefix = "edge_property_type_" + std::to_string(i) + "_";
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        new_meta.AddKeyValue(name_prefix + std::to_string(j),
-                             table->field(j)->name());
-        new_meta.AddKeyValue(type_prefix + std::to_string(j),
-                             arrow_type_to_string(table->field(j)->type()));
-      }
-    }
+    GENERATE_TABLE_VEC_META("vertex", 0, vertex_label_num_,
+                            this->vertex_tables_);
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, this->edge_tables_);
 
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
@@ -1690,6 +2100,8 @@ class ArrowFragment
   }
 #undef ASSIGN_IDENTICAL_VEC_META
 #undef ASSIGN_IDENTICAL_VEC_VEC_META
+#undef GENERATE_TABLE_VEC_META
+#undef GENERATE_TABLE_META
 #undef GENERATE_VEC_META
 #undef GENERATE_VEC_VEC_META
 
