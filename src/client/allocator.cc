@@ -13,26 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef SRC_SERVER_MEMORY_JEMALLOC_H_
-#define SRC_SERVER_MEMORY_JEMALLOC_H_
+#include "client/allocator.h"
 
-#if defined(WITH_JEMALLOC)
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <utility>
 
-#include "common/memory/jemalloc.h"
+#include "client/client.h"
+#include "client/ds/blob.h"
 
-namespace vineyard {
-
-namespace memory {
-
-class JemallocAllocator : public Jemalloc {
- public:
-  void* Init(const size_t size);
-};
-
-}  // namespace memory
-
-}  // namespace vineyard
-
-#endif  // WITH_JEMALLOC
-
-#endif  // SRC_SERVER_MEMORY_JEMALLOC_H_
+namespace vineyard {}  // namespace vineyard

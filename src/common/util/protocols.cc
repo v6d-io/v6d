@@ -96,6 +96,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::GetRemoteBuffersRequest;
   } else if (str_type == "drop_buffer_request") {
     return CommandType::DropBufferRequest;
+  } else if (str_type == "make_arena_request") {
+    return CommandType::MakeArenaRequest;
+  } else if (str_type == "finalize_arena_request") {
+    return CommandType::FinalizeArenaRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -903,6 +907,73 @@ void WriteShallowCopyReply(const ObjectID target_id, std::string& msg) {
 Status ReadShallowCopyReply(const json& root, ObjectID& target_id) {
   CHECK_IPC_ERROR(root, "shallow_copy_reply");
   target_id = root["target_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteMakeArenaRequest(const size_t size, std::string& msg) {
+  json root;
+  root["type"] = "make_arena_request";
+  root["size"] = size;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMakeArenaRequest(const json& root, size_t& size) {
+  RETURN_ON_ASSERT(root["type"] == "make_arena_request");
+  size = root["size"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteMakeArenaReply(const int fd, const size_t size, const uintptr_t base,
+                         std::string& msg) {
+  json root;
+  root["type"] = "make_arena_reply";
+  root["fd"] = fd;
+  root["size"] = size;
+  root["base"] = base;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMakeArenaReply(const json& root, int& fd, size_t& size,
+                          uintptr_t& base) {
+  CHECK_IPC_ERROR(root, "make_arena_reply");
+  fd = root["fd"].get<int>();
+  size = root["size"].get<size_t>();
+  base = root["base"].get<uintptr_t>();
+  return Status::OK();
+}
+
+void WriteFinalizeArenaRequest(const int fd, std::vector<size_t> const& offsets,
+                               std::vector<size_t> const& sizes,
+                               std::string& msg) {
+  json root;
+  root["type"] = "finalize_arena_request";
+  root["fd"] = fd;
+  root["offsets"] = offsets;
+  root["sizes"] = sizes;
+
+  encode_msg(root, msg);
+}
+
+Status ReadFinalizeArenaRequest(const json& root, int& fd,
+                                std::vector<size_t>& offsets,
+                                std::vector<size_t>& sizes) {
+  RETURN_ON_ASSERT(root["type"] == "finalize_arena_request");
+  fd = root["fd"].get<int>();
+  offsets = root["offsets"].get<std::vector<size_t>>();
+  sizes = root["sizes"].get<std::vector<size_t>>();
+  return Status::OK();
+}
+
+void WriteFinalizeArenaReply(std::string& msg) {
+  json root;
+  root["type"] = "finalize_arena_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadFinalizeArenaReply(const json& root) {
+  CHECK_IPC_ERROR(root, "finalize_arena_reply");
   return Status::OK();
 }
 

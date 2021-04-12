@@ -13,24 +13,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <sys/mman.h>
+
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
 
 #include "arrow/status.h"
 #include "arrow/util/io_util.h"
-#include "arrow/util/logging.h"
 #include "glog/logging.h"
 
 #include "basic/ds/array.h"
+#include "client/allocator.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
+#include "common/util/env.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    printf("usage ./vector_test <ipc_socket>");
+    printf("usage ./allocator_test <ipc_socket>");
     return 1;
   }
   std::string ipc_socket = std::string(argv[1]);
@@ -39,35 +44,17 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
-  ArrayBuilder<double> builder(client, double_array);
-  auto sealed_double_array =
-      std::dynamic_pointer_cast<Array<double>>(builder.Seal(client));
+  VineyardAllocator<void> allocator(client);
 
-  LOG(INFO) << "successfully sealed...";
-  ObjectID id = sealed_double_array->id();
+  void* p1 = allocator.Allocate(1025);
+  allocator.Free(p1);
 
-  CHECK(!sealed_double_array->IsPersist());
-  CHECK(sealed_double_array->IsLocal());
+  void* p2 = allocator.Allocate(1026);
+  allocator.Freeze(p2);
 
-  VINEYARD_CHECK_OK(sealed_double_array->Persist(client));
-  LOG(INFO) << "successfully persisted...";
+  VINEYARD_CHECK_OK(allocator.Release());
 
-  CHECK(sealed_double_array->IsPersist());
-  CHECK(sealed_double_array->IsLocal());
-
-  auto vy_double_array =
-      std::dynamic_pointer_cast<Array<double>>(client.GetObject(id));
-  LOG(INFO) << "successfully obtained...";
-
-  CHECK_EQ(sealed_double_array->size(), double_array.size());
-  CHECK_EQ(vy_double_array->size(), double_array.size());
-  for (size_t i = 0; i < double_array.size(); ++i) {
-    CHECK_EQ((*sealed_double_array)[i], double_array[i]);
-    CHECK_EQ((*vy_double_array)[i], double_array[i]);
-  }
-
-  LOG(INFO) << "Passed double array tests...";
+  LOG(INFO) << "Passed allocator tests...";
 
   client.Disconnect();
 

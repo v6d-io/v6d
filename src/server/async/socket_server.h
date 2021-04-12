@@ -114,6 +114,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doInstanceStatus(const json& root);
 
+  bool doMakeArena(const json& root);
+
+  bool doFinalizeArena(const json& root);
+
  private:
   int nativeHandle() { return socket_.native_handle(); }
 

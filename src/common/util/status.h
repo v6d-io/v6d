@@ -282,8 +282,8 @@ class VINEYARD_MUST_USE_TYPE Status {
 
   /// Return an error when user want to get an object however the target object
   /// not exists.
-  static Status ObjectNotExists() {
-    return Status(StatusCode::kObjectNotExists, "");
+  static Status ObjectNotExists(std::string const& message = "") {
+    return Status(StatusCode::kObjectNotExists, message);
   }
 
   /// Return an error when user are trying to seal a builder but the builder has

@@ -13,26 +13,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef SRC_SERVER_MEMORY_JEMALLOC_H_
-#define SRC_SERVER_MEMORY_JEMALLOC_H_
+#ifndef MODULES_MALLOC_ALLOCATOR_H_
+#define MODULES_MALLOC_ALLOCATOR_H_
 
-#if defined(WITH_JEMALLOC)
+#include <stddef.h>
 
-#include "common/memory/jemalloc.h"
+#if !defined(VINEYARD_MALLOC_PREFIX)
+#define VINEYARD_MALLOC_PREFIX
+#endif
 
-namespace vineyard {
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
 
-namespace memory {
+void* vineyard_malloc(size_t size);
+void* vineyard_realloc(void* pointer, size_t size);
+void* vineyard_calloc(size_t num, size_t size);
+void vineyard_free(void* pointer);
+void vineyard_freeze(void* pointer);
+void vineyard_allocator_finalize(int renew);
 
-class JemallocAllocator : public Jemalloc {
- public:
-  void* Init(const size_t size);
-};
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
 
-}  // namespace memory
-
-}  // namespace vineyard
-
-#endif  // WITH_JEMALLOC
-
-#endif  // SRC_SERVER_MEMORY_JEMALLOC_H_
+#endif  // MODULES_MALLOC_ALLOCATOR_H_

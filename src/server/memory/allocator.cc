@@ -43,20 +43,41 @@ namespace vineyard {
 int64_t BulkAllocator::footprint_limit_ = 0;
 int64_t BulkAllocator::allocated_ = 0;
 
-void* BulkAllocator::Init(const size_t size) { return Allocator::Init(size); }
+#if defined(WITH_JEMALLOC)
+BulkAllocator::Allocator BulkAllocator::allocator_{};
+#endif
+
+void* BulkAllocator::Init(const size_t size) {
+#if defined(WITH_DLMALLOC)
+  return Allocator::Init(size);
+#endif
+#if defined(WITH_JEMALLOC)
+  return allocator_.Init(size);
+#endif
+}
 
 void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
   if (allocated_ + static_cast<int64_t>(bytes) > footprint_limit_) {
     return nullptr;
   }
 
+#if defined(WITH_DLMALLOC)
   void* mem = Allocator::Allocate(bytes, alignment);
+#endif
+#if defined(WITH_JEMALLOC)
+  void* mem = allocator_.Allocate(bytes, alignment);
+#endif
   allocated_ += bytes;
   return mem;
 }
 
 void BulkAllocator::Free(void* mem, size_t bytes) {
+#if defined(WITH_DLMALLOC)
   Allocator::Free(mem);
+#endif
+#if defined(WITH_JEMALLOC)
+  allocator_.Free(mem);
+#endif
   allocated_ -= bytes;
 }
 

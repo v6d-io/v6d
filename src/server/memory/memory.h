@@ -30,6 +30,7 @@
 #define SRC_SERVER_MEMORY_MEMORY_H_
 
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -59,10 +60,24 @@ class BulkStore {
   size_t Footprint() const;
   size_t FootprintLimit() const;
 
+  Status MakeArena(const size_t size, int& fd, uintptr_t& base);
+
+  Status FinalizeArena(const int fd, std::vector<size_t> const& offsets,
+                       std::vector<size_t> const& sizes);
+
  private:
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
                           ptrdiff_t* offset);
   std::unordered_map<ObjectID, std::shared_ptr<Payload>> objects_;
+
+  struct Arena {
+    int fd;
+    size_t size;
+    uintptr_t base;
+    static std::set<ObjectID> spans;
+  };
+
+  std::unordered_map<int /* fd */, Arena> arenas_;
 };
 
 }  // namespace vineyard

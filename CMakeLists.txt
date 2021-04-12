@@ -17,6 +17,7 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
+option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
@@ -26,6 +27,7 @@ option(BUILD_VINEYARD_PYPI_PACKAGES "Build vineyard's python bindings" OFF)
 option(BUILD_VINEYARD_BASIC "Build vineyard's basic data structures" ON)
 option(BUILD_VINEYARD_IO "Enable vineyard's IOAdaptor support" ON)
 option(BUILD_VINEYARD_GRAPH "Enable vineyard's graph data structures" ON)
+option(BUILD_VINEYARD_MALLOC "Build vineyard's implementation for client-side malloc" ON)
 option(BUILD_VINEYARD_MIGRATION "Enable vineyard's object migration support" ON)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
@@ -35,36 +37,15 @@ option(BUILD_VINEYARD_PROFILING "Build vineyard with profiling information" OFF)
 
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
+include(ExternalProject)
 include(GNUInstallDirs)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include(ProcessorCount)
+ProcessorCount(N)
+
 add_definitions(-DVINEYARD_VERSION=${VINEYARD_VERSION})
-
-# resolve targets dependencies
-if(BUILD_VINEYARD_PYPI_PACKAGES)
-    set(BUILD_VINEYARD_PYTHON_BINDINGS ON)
-endif()
-
-if(BUILD_VINEYARD_GRAPH)
-    set(BUILD_VINEYARD_BASIC ON)
-    set(BUILD_VINEYARD_IO ON)
-endif()
-
-if(BUILD_VINEYARD_IO)
-    set(BUILD_VINEYARD_BASIC ON)
-endif()
-
-if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUILD_VINEYARD_PYTHON_BINDINGS)
-    set(BUILD_VINEYARD_CLIENT ON)
-endif()
-
-set(DEFAUTL_ALLOCATOR "dlmalloc")
-set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
-    STRING "Choose the allocator for vineyard server (vineyardd)."
-)
-set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
-    "dlmalloc" "jemalloc"
-)
+message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
 
 set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -75,6 +56,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo"
     )
+else()
+    message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}'.")
 endif()
 
 find_program(ccache_EXECUTABLE ccache)
@@ -89,6 +72,15 @@ else()
         COMMAND echo "ccache not found."
     )
 endif(ccache_EXECUTABLE)
+
+set(DEFAUTL_ALLOCATOR "dlmalloc")
+set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
+    STRING "Choose the allocator for vineyard server (vineyardd)."
+)
+set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
+    "dlmalloc" "jemalloc"
+)
+message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
 # reference: https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling#always-full-rpath
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
@@ -177,6 +169,52 @@ macro(find_etcd_cpp_apiv3)
     endif()
 endmacro(find_etcd_cpp_apiv3)
 
+macro(find_intel_tbb)
+    set(TBB_TEST OFF CACHE BOOL "Disable tbb testing")
+    set(TBB_EXAMPLES OFF CACHE BOOL "Disable tbb examples")
+    set(TBB_STRICT OFF CACHE BOOL "Don't treat warnings as errors for tbb library")
+    set(TBB4PY_BUILD OFF CACHE BOOL "Disable tbb4py build")
+    set(TBB_CPF ON CACHE BOOL "Enable preview features of the library")
+
+    if(USE_EXTERNAL_TBB_LIBS)
+        find_package(TBB QUIET)
+        if(NOT TBB_FOUND)
+            message(WARNING "intel-tbb not found, will use the bundled one from git submodules.")
+            add_subdirectory(thirdparty/intel-tbb)
+        endif()
+    else()
+        add_subdirectory(thirdparty/intel-tbb)
+    endif()
+endmacro(find_intel_tbb)
+
+macro(find_jemalloc)
+    # ./configure --disable-shared --enable-static --disable-cxx --enable-stats --disable-initial-exec-tls --with-jemalloc-prefix=vineyard_je_
+    #
+    # see: https://github.com/jemalloc/jemalloc/issues/1237
+    ExternalProject_Add(libjemalloc
+        SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"
+        BUILD_IN_SOURCE 1
+        BUILD_ALWAYS 1
+        CONFIGURE_COMMAND "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/autogen.sh"
+            --prefix=${CMAKE_INSTALL_PREFIX}
+            --disable-shared
+            --enable-static
+            --disable-cxx
+            --enable-stats
+            --disable-initial-exec-tls
+            --with-jemalloc-prefix=vineyard_je_
+        BUILD_COMMAND ${MAKE}
+        INSTALL_COMMAND echo "No need to install for jemalloc."
+    )
+
+    add_library(jemalloc STATIC IMPORTED)
+    add_dependencies(jemalloc libjemalloc)
+    set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION
+                                              ${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/lib/libjemalloc_pic.a)
+    set_target_properties(jemalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                              ${PROJECT_SOURCE_DIR}/thirdparty)
+endmacro(find_jemalloc)
+
 macro(find_glog)
     include("cmake/FindGlog.cmake")
 endmacro(find_glog)
@@ -233,6 +271,7 @@ macro(find_common_libraries)
     find_boost()
     find_glog()
     find_gflags()
+    find_jemalloc()
     find_libunwind()
     find_pthread()
     find_nlohmann_json()
@@ -247,18 +286,18 @@ endmacro(find_common_libraries)
 find_openssl_libraries(QUIET)
 find_common_libraries()
 
-if (CMAKE_VERSION VERSION_LESS "3.1")
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    check_cxx_compiler_flag(-std=c++14 HAVE_FLAG_STD_CXX14)
-    if(BUILD_VINEYARD_PYPI_PACKAGES AND NOT HAVE_FLAG_STD_CXX14)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    else()
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+if(CMAKE_VERSION VERSION_LESS "3.1")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        check_cxx_compiler_flag(-std=c++14 HAVE_FLAG_STD_CXX14)
+        if(BUILD_VINEYARD_PYPI_PACKAGES AND NOT HAVE_FLAG_STD_CXX14)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+        else()
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+        endif()
     endif()
-  endif ()
-else ()
-  set (CMAKE_CXX_STANDARD 14)
-endif ()
+else()
+    set(CMAKE_CXX_STANDARD 14)
+endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/modules)
@@ -312,7 +351,27 @@ endmacro()
 install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/common")
 set(VINEYARD_INSTALL_LIBS)
 
-add_custom_target(vineyard_tests)
+# resolve targets dependencies
+if(BUILD_VINEYARD_PYPI_PACKAGES)
+    set(BUILD_VINEYARD_PYTHON_BINDINGS ON)
+endif()
+
+if(BUILD_VINEYARD_GRAPH)
+    set(BUILD_VINEYARD_BASIC ON)
+    set(BUILD_VINEYARD_IO ON)
+endif()
+
+if(BUILD_VINEYARD_IO)
+    set(BUILD_VINEYARD_BASIC ON)
+endif()
+
+if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUILD_VINEYARD_PYTHON_BINDINGS)
+    set(BUILD_VINEYARD_CLIENT ON)
+endif()
+
+if(BUILD_VINEYARD_MALLOC)
+    set(BUILD_VINEYARD_CLIENT ON)
+endif()
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
@@ -354,10 +413,7 @@ if(BUILD_VINEYARD_SERVER)
         # use dlmalloc
         target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
     elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
-        # use jemalloc
-        include("cmake/FindJemalloc.cmake")
-        target_include_directories(vineyardd PRIVATE ${JEMALLOC_INCLUDE_DIRS})
-        target_link_libraries(vineyardd PRIVATE ${JEMALLOC_LIBRARIES})
+        target_link_libraries(vineyardd PRIVATE jemalloc)
         target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
     else()
         message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
@@ -386,6 +442,9 @@ if(BUILD_VINEYARD_CLIENT)
     else()
         target_link_libraries(vineyard_client PUBLIC ${ARROW_STATIC_LIB})
     endif()
+
+    target_link_libraries(vineyard_client PRIVATE jemalloc)
+    target_compile_options(vineyard_client PUBLIC -DWITH_JEMALLOC)
 
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)
@@ -438,6 +497,8 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         VERBATIM)
 endif()
 
+add_custom_target(vineyard_tests)
+
 # add sub_directories
 if(BUILD_VINEYARD_BASIC)
     add_subdirectory(modules/basic)
@@ -452,6 +513,11 @@ endif()
 if(BUILD_VINEYARD_GRAPH)
     add_subdirectory(modules/graph)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_graph)
+endif()
+
+if(BUILD_VINEYARD_MALLOC)
+    add_subdirectory(modules/malloc)
+    list(APPEND VINEYARD_INSTALL_LIBS vineyard_malloc)
 endif()
 
 if(BUILD_VINEYARD_MIGRATION)
@@ -475,7 +541,7 @@ if(BUILD_VINEYARD_TESTS)
         endif()
 
         target_link_libraries(${T_NAME} PRIVATE
-                              ${VINEYARD_INSTALL_LIBS}
+                              vineyard_client vineyard_basic vineyard_io vineyard_graph
                               ${CPPNETLIB_LIBRARIES}
         )
         if(ARROW_SHARED_LIB)

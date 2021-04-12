@@ -203,10 +203,11 @@ Acknowledgements
 - `dlmalloc <http://gee.cs.oswego.edu/dl/html/malloc.htmlp>`_, Doug Lea's memory allocator;
 - `etcd-cpp-apiv3 <https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3>`_, a C++ API for etcd's v3 client API;
 - `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation;
+- `tbb <https://github.com/oneapi-src/oneTBB>`_ a C++ library for threading building blocks.
 - `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python;
-- `uri <https://github.com/cpp-netlib/uri>`_, a library for URI parsing.
 - `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
-
+- `uri <https://github.com/cpp-netlib/uri>`_, a library for URI parsing.
+- `nlohmann/json <https://github.com/nlohmann/json>`_, a json library for modern c++.
 
 Getting involved
 ----------------
