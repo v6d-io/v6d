@@ -114,12 +114,10 @@ class HashPartitioner<folly::dynamic> {
 
   inline fid_t GetPartitionId(const oid_t& oid) const {
     size_t hash_value;
-    if (oid.isInt()) {
-      hash_value = std::hash<folly::dynamic>()(oid);
-    } else if (oid.isString()) {
+    if (oid.isString()) {
       hash_value = std::hash<std::string>()(oid.getString());
     } else {
-      LOG(FATAL) << "Not dynamic type: null/object/array/bool/double";
+      hash_value = std::hash<folly::dynamic>()(oid);
     }
     return static_cast<fid_t>(static_cast<uint64_t>(hash_value) % fnum_);
   }
