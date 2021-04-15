@@ -109,6 +109,7 @@ def list_array_builder(client, array, builder):
     meta['nbytes'] = array.nbytes
     return client.create_metadata(meta)
 
+
 def null_array_builder(client, array):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::NullArray'
