@@ -23,6 +23,7 @@ limitations under the License.
 
 #include "arrow/array.h"
 #include "arrow/array/builder_binary.h"
+#include "arrow/array/builder_nested.h"
 #include "arrow/array/builder_primitive.h"
 #include "arrow/buffer.h"
 #include "arrow/io/memory.h"
@@ -209,6 +210,30 @@ struct EmptyTableBuilder {
       } else if (type == arrow::large_utf8()) {
         arrow::LargeStringBuilder builder;
         RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+      } else if (type == arrow::list(arrow::uint64())) {
+        auto builder = std::make_shared<arrow::UInt64Builder>();
+        arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+        list_builder.Finish(&dummy);
+      } else if (type == arrow::list(arrow::int64())) {
+        auto builder = std::make_shared<arrow::Int64Builder>();
+        arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+        list_builder.Finish(&dummy);
+      } else if (type == arrow::list(arrow::uint32())) {
+        auto builder = std::make_shared<arrow::UInt32Builder>();
+        arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+        list_builder.Finish(&dummy);
+      } else if (type == arrow::list(arrow::int32())) {
+        auto builder = std::make_shared<arrow::Int32Builder>();
+        arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+        list_builder.Finish(&dummy);
+      } else if (type == arrow::list(arrow::float64())) {
+        auto builder = std::make_shared<arrow::DoubleBuilder>();
+        arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+        list_builder.Finish(&dummy);
+      } else if (type == arrow::list(arrow::int64())) {
+        auto builder = std::make_shared<arrow::FloatBuilder>();
+        arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+        list_builder.Finish(&dummy);
       } else if (type == arrow::null()) {
         arrow::NullBuilder builder;
         RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
@@ -259,6 +284,18 @@ inline std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
   } else if (name == "string" || name == "std::string" || name == "str" ||
              name == "std::__1::string") {
     return vineyard::ConvertToArrowType<std::string>::TypeValue();
+  } else if (name == "large_list<item: int32>") {
+    return arrow::large_list(arrow::int32());
+  } else if (name == "large_list<item: uint32>") {
+    return arrow::large_list(arrow::uint32());
+  } else if (name == "large_list<item: int64>") {
+    return arrow::large_list(arrow::int64());
+  } else if (name == "large_list<item: uint64>") {
+    return arrow::large_list(arrow::int32());
+  } else if (name == "large_list<item: float>") {
+    return arrow::large_list(arrow::float32());
+  } else if (name == "large_list<item: double>") {
+    return arrow::large_list(arrow::float64());
   } else if (name == "null" || name == "NULL") {
     return arrow::null();
   } else {

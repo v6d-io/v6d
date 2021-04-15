@@ -96,6 +96,19 @@ def string_array_builder(client, array, builder):
     return client.create_metadata(meta)
 
 
+def list_array_builder(client, array, builder):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::LargeListArray'
+    meta['length_'] = len(array)
+    meta['null_count_'] = array.null_count
+    meta['offset'] = array.offset
+
+    meta.add_member('null_bitmap_', buffer_builder(client, array.buffers()[2], builder))
+    meta.add_member('buffer_', buffer_builder(client, array.buffers()[3], builder))
+    meta.add_member('values_', builder.run(client, array.values))
+    meta['nbytes'] = array.nbytes
+    return client.create_metadata(meta)
+
 def null_array_builder(client, array):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::NullArray'
@@ -213,6 +226,19 @@ def boolean_array_resolver(obj):
     return pa.lib.Array.from_buffers(pa.bool_(), length, [null_bitmap, buffer], null_count, offset)
 
 
+def list_array_resolver(obj, resolver):
+    meta = obj.meta
+    buffer_offsets = as_arrow_buffer(obj.member('buffer_offsets_'))
+    length = int(meta['length_'])
+    null_count = int(meta['null_count_'])
+    offset = int(meta['offset_'])
+    null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
+    buffer = as_arrow_buffer(obj.member('buffer_'))
+    values = resolver.run(obj.member('values_'))
+    return pa.lib.Array.from_buffers(pa.list(values.type), length, [null_bitmap, buffer], null_count,
+                                     offset, [values])
+
+
 def schema_proxy_resolver(obj):
     buffer = as_arrow_buffer(obj.member('buffer_'))
     return pa.ipc.read_schema(buffer)
@@ -249,6 +275,7 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
         builder_ctx.register(pa.Schema, schema_proxy_builder)
         builder_ctx.register(pa.RecordBatch, record_batch_builder)
         builder_ctx.register(pa.Table, table_builder)
+        builder_ctx.register(pa.ListArray, list_array_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
@@ -259,3 +286,4 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
         resolver_ctx.register('vineyard::SchemaProxy', schema_proxy_resolver)
         resolver_ctx.register('vineyard::RecordBatch', record_batch_resolver)
         resolver_ctx.register('vineyard::Table', table_resolver)
+        resolver_ctx.register('vineyard::LargeListArray', list_array_resolver)
