@@ -253,7 +253,7 @@ int main(int argc, char** argv) {
     CHECK_ARROW_ERROR(builder->AppendValues({5, 6}));
     CHECK_ARROW_ERROR(b1.Append(true));
     CHECK_ARROW_ERROR(b1.AppendNull());
-    CHECK_ARROW_ERROR(b1.AppendEmptyValue());
+    CHECK_ARROW_ERROR(b1.Append(true));
 
     std::shared_ptr<arrow::ListArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
     CHECK_ARROW_ERROR(builder->AppendValues({5, 6}));
     CHECK_ARROW_ERROR(b1.Append(true));
     CHECK_ARROW_ERROR(b1.AppendNull());
-    CHECK_ARROW_ERROR(b1.AppendEmptyValue());
+    CHECK_ARROW_ERROR(b1.Append(true));
 
     std::shared_ptr<arrow::LargeListArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));

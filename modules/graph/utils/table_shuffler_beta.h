@@ -177,7 +177,7 @@ inline void serialize_selected_typed_items(
       std::dynamic_pointer_cast<typename ConvertToArrowType<T>::ArrayType>(
           array)
           ->raw_values();
-  for (size_t x = 0; x < array->length(); ++x) {
+  for (int64_t x = 0; x < array->length(); ++x) {
     arc << ptr[x];
   }
 }
