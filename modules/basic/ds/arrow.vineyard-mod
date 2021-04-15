@@ -41,11 +41,19 @@ namespace vineyard {
 /// The arrays in vineyard is a wrapper of arrow arrays, in order to
 /// Simplify the Build and Construct process.
 
-/// Base class for numeric arrays for type factory.
-class __attribute__((annotate("no-vineyard"))) PrimitiveArray {
+class __attribute__((annotate("no-vineyard"))) ArrowArray {
  public:
   virtual std::shared_ptr<arrow::Array> ToArray() const = 0;
 };
+
+class __attribute__((annotate("no-vineyard"))) FlatArray : public ArrowArray {};
+
+/// Primitive array
+
+/// Base class for primitive arrays for type factory.
+
+class __attribute__((annotate("no-vineyard"))) PrimitiveArray
+    : public FlatArray {};
 
 template <typename T>
 class NumericArrayBaseBuilder;
@@ -75,14 +83,107 @@ class NumericArray : public PrimitiveArray, public Registered<NumericArray<T>> {
       null_bitmap_;
 
   std::shared_ptr<ArrayType> array_;
-
   friend class Client;
   friend class NumericArrayBaseBuilder<T>;
 };
 
+class BooleanArrayBaseBuilder;
+
+class BooleanArray : public PrimitiveArray, public Registered<BooleanArray> {
+ public:
+  using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<ArrayType>(
+        ConvertToArrowType<bool>::TypeValue(), this->length_,
+        this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
+        this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<ArrayType> GetArray() const { return array_; }
+
+  std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
+
+  const uint8_t* GetBase() const { return array_->values()->data(); }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
+      null_bitmap_;
+
+  std::shared_ptr<ArrayType> array_;
+  friend class Client;
+  friend class BooleanArrayBaseBuilder;
+};
+
+/// Binary array
+
+template <typename ArrayType>
+class BaseBinaryArrayBaseBuilder;
+
+template <typename ArrayType>
+class BaseBinaryArray : public FlatArray,
+                        public Registered<BaseBinaryArray<ArrayType>> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->array_ = std::make_shared<ArrayType>(
+        this->length_, this->buffer_offsets_->Buffer(),
+        this->buffer_data_->Buffer(), this->null_bitmap_->Buffer(),
+        this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<ArrayType> GetArray() const { return array_; }
+
+  std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
+  const uint8_t* GetBase() const { return array_->value_data()->data(); }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_data_,
+      buffer_offsets_, null_bitmap_;
+
+  std::shared_ptr<ArrayType> array_;
+
+  friend class Client;
+
+  friend class BaseBinaryArrayBaseBuilder<ArrayType>;
+};
+
+using BinaryArray = BaseBinaryArray<arrow::BinaryArray>;
+using LargeBinaryArray = BaseBinaryArray<arrow::LargeBinaryArray>;
+using StringArray = BaseBinaryArray<arrow::StringArray>;
+using LargeStringArray = BaseBinaryArray<arrow::LargeStringArray>;
+
+// class BinaryArray : public BaseBinaryArray<arrow::BinaryArray>, public
+// Registered<BinaryArray> {
+//   friend class Client;
+//   friend class BinaryArrayBuilder;
+// };
+//
+// class LargeBinaryArray : public BaseBinaryArray<arrow::LargeBinaryArray>,
+// public Registered<LargeBinaryArray> {
+//  friend class Client;
+//  friend class LargeBinaryArrayBaseBuilder;
+//};
+//
+// class StringArray : public BaseBinaryArray<arrow::StringArray>, public
+// Registered<StringArray> {
+//   friend class Client;
+//   friend class StringArrayBaseBuilder;
+//};
+//
+// class LargeStringArray : public BaseBinaryArray<arrow::LargeStringArray>,
+// public Registered<LargeStringArray> {
+//  friend class Client;
+//  friend class LargeStringArrayBaseBuilder;
+//};
+
 class FixedSizeBinaryArrayBaseBuilder;
 
-class FixedSizeBinaryArray : public Registered<FixedSizeBinaryArray> {
+class FixedSizeBinaryArray : public PrimitiveArray,
+                             public Registered<FixedSizeBinaryArray> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
@@ -91,7 +192,10 @@ class FixedSizeBinaryArray : public Registered<FixedSizeBinaryArray> {
         this->null_count_, this->offset_);
   }
 
-  std::shared_ptr<arrow::FixedSizeBinaryArray> GetArray() { return array_; }
+  std::shared_ptr<arrow::FixedSizeBinaryArray> GetArray() const {
+    return array_;
+  }
+  std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
 
  private:
   __attribute__((annotate("codegen"))) int32_t byte_width_;
@@ -106,15 +210,20 @@ class FixedSizeBinaryArray : public Registered<FixedSizeBinaryArray> {
   friend class FixedSizeBinaryArrayBaseBuilder;
 };
 
+/// Null array
+
 class NullArrayBaseBuilder;
 
-class NullArray : public Registered<NullArray> {
+class NullArray : public FlatArray, public Registered<NullArray> {
  public:
+  using ArrayType = arrow::NullArray;
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<arrow::NullArray>(this->length_);
   }
 
-  std::shared_ptr<arrow::NullArray> GetArray() { return array_; }
+  std::shared_ptr<ArrayType> GetArray() const { return array_; }
+
+  std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
 
  private:
   __attribute__((annotate("codegen"))) size_t length_;
@@ -125,108 +234,12 @@ class NullArray : public Registered<NullArray> {
   friend class NullArrayBaseBuilder;
 };
 
-class StringArrayBaseBuilder;
-
-class StringArray : public Registered<StringArray> {
- public:
-  using ArrayType = arrow::StringArray;
-
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<ArrayType>(
-        this->length_, this->buffer_offsets_->Buffer(),
-        this->buffer_data_->Buffer(), this->null_bitmap_->Buffer(),
-        this->null_count_, this->offset_);
-  }
-
-  std::shared_ptr<ArrayType> GetArray() { return array_; }
-
-  const uint8_t* GetBase() const { return array_->value_data()->data(); }
-
- private:
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_data_,
-      buffer_offsets_, null_bitmap_;
-
-  std::shared_ptr<ArrayType> array_;
-
-  friend class Client;
-  friend class StringArrayBaseBuilder;
-};
-
-class LargeStringArrayBaseBuilder;
-
-class LargeStringArray : public Registered<LargeStringArray> {
- public:
-  using ArrayType = typename ConvertToArrowType<std::string>::ArrayType;
-
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<ArrayType>(
-        this->length_, this->buffer_offsets_->Buffer(),
-        this->buffer_data_->Buffer(), this->null_bitmap_->Buffer(),
-        this->null_count_, this->offset_);
-  }
-
-  std::shared_ptr<ArrayType> GetArray() { return array_; }
-
-  const uint8_t* GetBase() const { return array_->value_data()->data(); }
-
- private:
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_data_,
-      buffer_offsets_, null_bitmap_;
-
-  std::shared_ptr<ArrayType> array_;
-
-  friend class Client;
-  friend class LargeStringArrayBaseBuilder;
-};
-
-class BooleanArrayBaseBuilder;
-
-class BooleanArray : public Registered<BooleanArray> {
- public:
-  using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
-
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<ArrayType>(
-        this->length_, this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
-        this->null_count_, this->offset_);
-  }
-
-  std::shared_ptr<ArrayType> GetArray() { return array_; }
-
- private:
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
-      null_bitmap_;
-
-  std::shared_ptr<ArrayType> array_;
-
-  friend class Client;
-  friend class BooleanArrayBaseBuilder;
-};
-
 namespace detail {
 
 inline std::shared_ptr<arrow::Array> ConstructArray(
     std::shared_ptr<Object> obj) {
-  if (auto arr = std::dynamic_pointer_cast<PrimitiveArray>(obj)) {
+  if (auto arr = std::dynamic_pointer_cast<ArrowArray>(obj)) {
     return arr->ToArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<StringArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<LargeStringArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<NullArray>(obj)) {
-    return arr->GetArray();
   }
   // Don't abort the program, the unresolvable array should be reported lazily.
   //
@@ -236,6 +249,46 @@ inline std::shared_ptr<arrow::Array> ConstructArray(
 }
 
 }  // namespace detail
+
+/// Nested array
+
+template <typename ArrayType>
+class BaseListArrayBaseBuilder;
+
+template <typename ArrayType>
+class BaseListArray : public ArrowArray,
+                      public Registered<BaseListArray<ArrayType>> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    auto arr = detail::ConstructArray(values_);
+    auto list_type =
+        std::make_shared<typename ArrayType::TypeClass>(arr->type());
+    this->array_ = std::make_shared<ArrayType>(
+        list_type, this->length_, this->buffer_offsets_->Buffer(), arr,
+        this->null_bitmap_->Buffer(), this->null_count_, this->offset_);
+  }
+
+  std::shared_ptr<ArrayType> GetArray() const { return array_; }
+
+  std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
+
+  const uint8_t* GetBase() const { return array_->value_data()->data(); }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob>
+      buffer_offsets_, null_bitmap_;
+  __attribute__((annotate("codegen:Object*"))) std::shared_ptr<Object> values_;
+
+  std::shared_ptr<ArrayType> array_;
+
+  friend class Client;
+  friend class BaseListArrayBaseBuilder<ArrayType>;
+};
+
+using ListArray = BaseListArray<arrow::ListArray>;
+using LargeListArray = BaseListArray<arrow::LargeListArray>;
 
 class SchemaProxyBaseBuilder;
 

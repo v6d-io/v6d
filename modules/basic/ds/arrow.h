@@ -47,7 +47,7 @@ namespace vineyard {
 #endif
 
 /**
- * @brief NumericArrayBuilder is desinged for building Arrow numeric arrays
+ * @brief NumericArrayBuilder is designed for building Arrow numeric arrays
  *
  * @tparam T
  */
@@ -78,6 +78,88 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
  private:
   std::shared_ptr<ArrayType> array_;
 };
+
+/**
+ * @brief BooleanArrayBuilder is designed for constructing  Arrow arrays of
+ * boolean data type
+ *
+ */
+class BooleanArrayBuilder : public BooleanArrayBaseBuilder {
+ public:
+  using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
+
+  BooleanArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
+      : BooleanArrayBaseBuilder(client), array_(array) {}
+
+  std::shared_ptr<ArrayType> GetArray() { return array_; }
+
+  Status Build(Client& client) override {
+    std::unique_ptr<BlobWriter> buffer_writer;
+    RETURN_ON_ERROR(client.CreateBlob(array_->values()->size(), buffer_writer));
+    memcpy(buffer_writer->data(), array_->values()->data(),
+           array_->values()->size());
+
+    this->set_length_(array_->length());
+    this->set_null_count_(array_->null_count());
+    this->set_offset_(array_->offset());
+    this->set_buffer_(std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
+    BUILD_NULL_BITMAP(this, array_);
+    return Status::OK();
+  }
+
+ private:
+  std::shared_ptr<ArrayType> array_;
+};
+
+/**
+ * @brief BaseBinaryArray is designed for constructing  Arrow arrays of
+ * binary data type
+ *
+ */
+template <typename ArrayType>
+class BaseBinaryArrayBuilder : public BaseBinaryArrayBaseBuilder<ArrayType> {
+ public:
+  BaseBinaryArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
+      : BaseBinaryArrayBaseBuilder<ArrayType>(client), array_(array) {}
+
+  std::shared_ptr<ArrayType> GetArray() { return array_; }
+
+  Status Build(Client& client) override {
+    {
+      std::unique_ptr<BlobWriter> buffer_writer;
+      RETURN_ON_ERROR(
+          client.CreateBlob(array_->value_offsets()->size(), buffer_writer));
+      memcpy(buffer_writer->data(), array_->value_offsets()->data(),
+             array_->value_offsets()->size());
+
+      this->set_buffer_offsets_(
+          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
+    }
+    {
+      std::unique_ptr<BlobWriter> buffer_writer;
+      RETURN_ON_ERROR(
+          client.CreateBlob(array_->value_data()->size(), buffer_writer));
+      memcpy(buffer_writer->data(), array_->value_data()->data(),
+             array_->value_data()->size());
+
+      this->set_buffer_data_(
+          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
+    }
+    this->set_length_(array_->length());
+    this->set_null_count_(array_->null_count());
+    this->set_offset_(array_->offset());
+    BUILD_NULL_BITMAP(this, array_);
+    return Status::OK();
+  }
+
+ private:
+  std::shared_ptr<ArrayType> array_;
+};
+
+using BinaryArrayBuilder = BaseBinaryArrayBuilder<arrow::BinaryArray>;
+using LargeBinaryArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeBinaryArray>;
+using StringArrayBuilder = BaseBinaryArrayBuilder<arrow::StringArray>;
+using LargeStringArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeStringArray>;
 
 /**
  * @brief FixedSizeBinaryArrayBuilder is designed for constructing Arrow arrays
@@ -131,207 +213,66 @@ class NullArrayBuilder : public NullArrayBaseBuilder {
   std::shared_ptr<arrow::NullArray> array_;
 };
 
-/**
- * @brief StringArrayBuilder is designed for constructing  Arrow arrays of
- * string data type
- *
- */
-class StringArrayBuilder : public StringArrayBaseBuilder {
- public:
-  using ArrayType = arrow::StringArray;
-
-  StringArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
-      : StringArrayBaseBuilder(client), array_(array) {}
-
-  std::shared_ptr<ArrayType> GetArray() { return array_; }
-
-  Status Build(Client& client) override {
-    {
-      std::unique_ptr<BlobWriter> buffer_writer;
-      RETURN_ON_ERROR(
-          client.CreateBlob(array_->value_offsets()->size(), buffer_writer));
-      memcpy(buffer_writer->data(), array_->value_offsets()->data(),
-             array_->value_offsets()->size());
-
-      this->set_buffer_offsets_(
-          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
-    }
-    {
-      std::unique_ptr<BlobWriter> buffer_writer;
-      RETURN_ON_ERROR(
-          client.CreateBlob(array_->value_data()->size(), buffer_writer));
-      memcpy(buffer_writer->data(), array_->value_data()->data(),
-             array_->value_data()->size());
-
-      this->set_buffer_data_(
-          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
-    }
-    this->set_length_(array_->length());
-    this->set_null_count_(array_->null_count());
-    this->set_offset_(array_->offset());
-    BUILD_NULL_BITMAP(this, array_);
-    return Status::OK();
-  }
-
- private:
-  std::shared_ptr<ArrayType> array_;
-};
-
-/**
- * @brief LargeStringArrayBuilder is designed for constructing  Arrow arrays of
- * string data type
- *
- */
-class LargeStringArrayBuilder : public LargeStringArrayBaseBuilder {
- public:
-  using ArrayType = typename ConvertToArrowType<std::string>::ArrayType;
-
-  LargeStringArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
-      : LargeStringArrayBaseBuilder(client), array_(array) {}
-
-  std::shared_ptr<ArrayType> GetArray() { return array_; }
-
-  Status Build(Client& client) override {
-    {
-      std::unique_ptr<BlobWriter> buffer_writer;
-      RETURN_ON_ERROR(
-          client.CreateBlob(array_->value_offsets()->size(), buffer_writer));
-      memcpy(buffer_writer->data(), array_->value_offsets()->data(),
-             array_->value_offsets()->size());
-
-      this->set_buffer_offsets_(
-          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
-    }
-    {
-      std::unique_ptr<BlobWriter> buffer_writer;
-      RETURN_ON_ERROR(
-          client.CreateBlob(array_->value_data()->size(), buffer_writer));
-      memcpy(buffer_writer->data(), array_->value_data()->data(),
-             array_->value_data()->size());
-
-      this->set_buffer_data_(
-          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
-    }
-    this->set_length_(array_->length());
-    this->set_null_count_(array_->null_count());
-    this->set_offset_(array_->offset());
-    BUILD_NULL_BITMAP(this, array_);
-    return Status::OK();
-  }
-
- private:
-  std::shared_ptr<ArrayType> array_;
-};
-
-/**
- * @brief BooleanArrayBuilder is designed for constructing  Arrow arrays of
- * boolean data type
- *
- */
-class BooleanArrayBuilder : public BooleanArrayBaseBuilder {
- public:
-  using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
-
-  BooleanArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
-      : BooleanArrayBaseBuilder(client), array_(array) {}
-
-  std::shared_ptr<ArrayType> GetArray() { return array_; }
-
-  Status Build(Client& client) override {
-    std::unique_ptr<BlobWriter> buffer_writer;
-    RETURN_ON_ERROR(client.CreateBlob(array_->values()->size(), buffer_writer));
-    memcpy(buffer_writer->data(), array_->values()->data(),
-           array_->values()->size());
-
-    this->set_length_(array_->length());
-    this->set_null_count_(array_->null_count());
-    this->set_offset_(array_->offset());
-    this->set_buffer_(std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
-    BUILD_NULL_BITMAP(this, array_);
-    return Status::OK();
-  }
-
- private:
-  std::shared_ptr<ArrayType> array_;
-};
-
-#undef BUILD_NULL_BITMAP
-
 namespace detail {
 
 template <typename T>
-inline std::shared_ptr<ObjectBuilder> BuildArray(
+inline std::shared_ptr<ObjectBuilder> BuildNumericArray(
     Client& client,
     std::shared_ptr<typename ConvertToArrowType<T>::ArrayType> arr) {
   return std::make_shared<NumericArrayBuilder<T>>(client, arr);
 }
 
-inline std::shared_ptr<ObjectBuilder> BuildArray(
-    Client& client, std::shared_ptr<arrow::FixedSizeBinaryArray> arr) {
-  return std::make_shared<FixedSizeBinaryArrayBuilder>(client, arr);
-}
-
-inline std::shared_ptr<ObjectBuilder> BuildArray(
-    Client& client, std::shared_ptr<arrow::StringArray> arr) {
-  return std::make_shared<StringArrayBuilder>(client, arr);
-}
-
-inline std::shared_ptr<ObjectBuilder> BuildArray(
-    Client& client, std::shared_ptr<arrow::LargeStringArray> arr) {
-  return std::make_shared<LargeStringArrayBuilder>(client, arr);
-}
-
-inline std::shared_ptr<ObjectBuilder> BuildArray(
+inline std::shared_ptr<ObjectBuilder> BuildSimpleArray(
     Client& client, std::shared_ptr<arrow::Array> array) {
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<int8_t>::ArrayType>(
               array)) {
-    return BuildArray<int8_t>(client, arr);
+    return BuildNumericArray<int8_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<uint8_t>::ArrayType>(
               array)) {
-    return BuildArray<uint8_t>(client, arr);
+    return BuildNumericArray<uint8_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<int16_t>::ArrayType>(
               array)) {
-    return BuildArray<int16_t>(client, arr);
+    return BuildNumericArray<int16_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<uint16_t>::ArrayType>(
               array)) {
-    return BuildArray<uint16_t>(client, arr);
+    return BuildNumericArray<uint16_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<int32_t>::ArrayType>(
               array)) {
-    return BuildArray<int32_t>(client, arr);
+    return BuildNumericArray<int32_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<uint32_t>::ArrayType>(
               array)) {
-    return BuildArray<uint32_t>(client, arr);
+    return BuildNumericArray<uint32_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<int64_t>::ArrayType>(
               array)) {
-    return BuildArray<int64_t>(client, arr);
+    return BuildNumericArray<int64_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<uint64_t>::ArrayType>(
               array)) {
-    return BuildArray<uint64_t>(client, arr);
+    return BuildNumericArray<uint64_t>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<float>::ArrayType>(
               array)) {
-    return BuildArray<float>(client, arr);
+    return BuildNumericArray<float>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<double>::ArrayType>(
               array)) {
-    return BuildArray<double>(client, arr);
+    return BuildNumericArray<double>(client, arr);
   }
   if (auto arr =
           std::dynamic_pointer_cast<arrow::FixedSizeBinaryArray>(array)) {
@@ -351,6 +292,65 @@ inline std::shared_ptr<ObjectBuilder> BuildArray(
   return nullptr;
 }
 
+}  // namespace detail
+
+/**
+ * @brief BaseListArrayBuilder is designed for constructing  Arrow arrays of
+ * list data type
+ *
+ */
+template <typename ArrayType>
+class BaseListArrayBuilder : public BaseListArrayBaseBuilder<ArrayType> {
+ public:
+  BaseListArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
+      : BaseListArrayBaseBuilder<ArrayType>(client), array_(array) {}
+
+  std::shared_ptr<ArrayType> GetArray() { return array_; }
+
+  Status Build(Client& client) override {
+    {
+      std::unique_ptr<BlobWriter> buffer_writer;
+      RETURN_ON_ERROR(
+          client.CreateBlob(array_->value_offsets()->size(), buffer_writer));
+      memcpy(buffer_writer->data(), array_->value_offsets()->data(),
+             array_->value_offsets()->size());
+
+      this->set_buffer_offsets_(
+          std::shared_ptr<BlobWriter>(std::move(buffer_writer)));
+    }
+    {
+      // Assuming the list is not nested.
+      // We need to split the definition to .cc if someday we need to consider
+      // nested list in list case.
+      this->set_values_(detail::BuildSimpleArray(client, array_->values()));
+    }
+    this->set_length_(array_->length());
+    this->set_null_count_(array_->null_count());
+    this->set_offset_(array_->offset());
+    BUILD_NULL_BITMAP(this, array_);
+    return Status::OK();
+  }
+
+ private:
+  std::shared_ptr<ArrayType> array_;
+};
+
+using ListArrayBuilder = BaseListArrayBuilder<arrow::ListArray>;
+using LargeListArrayBuilder = BaseListArrayBuilder<arrow::LargeListArray>;
+
+#undef BUILD_NULL_BITMAP
+
+namespace detail {
+inline std::shared_ptr<ObjectBuilder> BuildArray(
+    Client& client, std::shared_ptr<arrow::Array> array) {
+  if (auto arr = std::dynamic_pointer_cast<arrow::ListArray>(array)) {
+    return std::make_shared<ListArrayBuilder>(client, arr);
+  }
+  if (auto arr = std::dynamic_pointer_cast<arrow::LargeListArray>(array)) {
+    return std::make_shared<LargeListArrayBuilder>(client, arr);
+  }
+  return BuildSimpleArray(client, array);
+}
 }  // namespace detail
 
 /**
