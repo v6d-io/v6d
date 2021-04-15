@@ -156,30 +156,6 @@ using LargeBinaryArray = BaseBinaryArray<arrow::LargeBinaryArray>;
 using StringArray = BaseBinaryArray<arrow::StringArray>;
 using LargeStringArray = BaseBinaryArray<arrow::LargeStringArray>;
 
-// class BinaryArray : public BaseBinaryArray<arrow::BinaryArray>, public
-// Registered<BinaryArray> {
-//   friend class Client;
-//   friend class BinaryArrayBuilder;
-// };
-//
-// class LargeBinaryArray : public BaseBinaryArray<arrow::LargeBinaryArray>,
-// public Registered<LargeBinaryArray> {
-//  friend class Client;
-//  friend class LargeBinaryArrayBaseBuilder;
-//};
-//
-// class StringArray : public BaseBinaryArray<arrow::StringArray>, public
-// Registered<StringArray> {
-//   friend class Client;
-//   friend class StringArrayBaseBuilder;
-//};
-//
-// class LargeStringArray : public BaseBinaryArray<arrow::LargeStringArray>,
-// public Registered<LargeStringArray> {
-//  friend class Client;
-//  friend class LargeStringArrayBaseBuilder;
-//};
-
 class FixedSizeBinaryArrayBaseBuilder;
 
 class FixedSizeBinaryArray : public PrimitiveArray,

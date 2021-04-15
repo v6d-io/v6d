@@ -235,8 +235,7 @@ def list_array_resolver(obj, resolver):
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
     buffer = as_arrow_buffer(obj.member('buffer_'))
     values = resolver.run(obj.member('values_'))
-    return pa.lib.Array.from_buffers(pa.list(values.type), length, [null_bitmap, buffer], null_count,
-                                     offset, [values])
+    return pa.lib.Array.from_buffers(pa.list(values.type), length, [null_bitmap, buffer], null_count, offset, [values])
 
 
 def schema_proxy_resolver(obj):
