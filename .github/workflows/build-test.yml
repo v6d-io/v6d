@@ -84,10 +84,10 @@ jobs:
           wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=1.0.1-1 libarrow-python-dev=1.0.1-1
+          sudo apt install -y libarrow-dev=3.0.0-1 libarrow-python-dev=3.0.0-1
 
           # install pyarrow from scratch
-          sudo pip3 install --no-binary pyarrow pyarrow==1.0.1
+          sudo pip3 install --no-binary pyarrow pyarrow==3.0.0
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install libclang parsec yapf==0.30.0 sphinx sphinx_rtd_theme breathe gcovr pytest hdfs3
