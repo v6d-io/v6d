@@ -93,8 +93,11 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
     meta_data.SetClient(this);
     meta_data.SetInstanceId(instance_id);
     if (meta_data.incomplete()) {
-      RETURN_ON_ERROR(this->GetMetaData(id, meta_data));
-      meta_data.incomplete_ = false;
+      // N.B.: don't use `meta_data` directly to `GetMetaData` otherwise it may
+      // violate the invariant of `BufferSet` in `ObjectMeta`.
+      ObjectMeta result_meta;
+      RETURN_ON_ERROR(this->GetMetaData(id, result_meta));
+      meta_data = result_meta;
     }
   }
   return status;

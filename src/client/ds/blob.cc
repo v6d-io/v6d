@@ -236,7 +236,7 @@ Status BufferSet::EmplaceBuffer(ObjectID const id) {
   auto p = buffers_.find(id);
   if (p != buffers_.end() && p->second != nullptr) {
     return Status::Invalid(
-        "Invalid internal state: the buffer shouldn't has been finalized, id "
+        "Invalid internal state: the buffer shouldn't has been filled, id "
         "= " +
         ObjectIDToString(id));
   }
