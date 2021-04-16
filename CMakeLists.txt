@@ -415,7 +415,7 @@ if(BUILD_VINEYARD_SERVER)
         # use dlmalloc
         target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
     elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
-        target_link_libraries(vineyardd PRIVATE jemalloc)
+        target_link_libraries(vineyardd PRIVATE jemalloc ${CMAKE_DL_LIBS})
         target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
     else()
         message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
@@ -445,7 +445,7 @@ if(BUILD_VINEYARD_CLIENT)
         target_link_libraries(vineyard_client PUBLIC ${ARROW_STATIC_LIB})
     endif()
 
-    target_link_libraries(vineyard_client PRIVATE jemalloc)
+    target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
     target_compile_options(vineyard_client PUBLIC -DWITH_JEMALLOC)
 
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
