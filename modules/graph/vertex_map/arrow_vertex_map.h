@@ -469,7 +469,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
     };
 
     for (fid_t fid = 0; fid < fnum_; ++fid) {
-      for (label_id_t vlabel_id = 0; vlabel_id < extra_label_num; ++vlabel_id) {
+      for (size_t vlabel_id = 0; vlabel_id < extra_label_num; ++vlabel_id) {
         tg.AddTask(builder_fn, fid, vlabel_id);
       }
     }

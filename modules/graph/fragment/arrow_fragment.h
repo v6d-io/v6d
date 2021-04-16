@@ -143,6 +143,14 @@ inline const void* get_arrow_array_ptr(std::shared_ptr<arrow::Array> array) {
   } else if (array->type()->Equals(arrow::large_utf8())) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
+  } else if (array->type()->Equals(arrow::list(arrow::int32())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint32())) ||
+             array->type()->Equals(arrow::large_list(arrow::int64())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint64())) ||
+             array->type()->Equals(arrow::large_list(arrow::float32())) ||
+             array->type()->Equals(arrow::large_list(arrow::float64()))) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeListArray>(array).get());
   } else if (array->type()->Equals(arrow::null())) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::NullArray>(array).get());

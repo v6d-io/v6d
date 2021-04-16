@@ -84,14 +84,38 @@ def string_array_builder(client, array, builder):
         length = len(buffer) // (pa.uint32().bit_width // 8)
         offset_array = pa.Array.from_buffers(pa.uint32(), length, [None, buffer])
         offset_array = offset_array.cast(pa.uint64())
+        offset_buffer = offset_array.buffers()[1]
     else:  # is pa.LargeStringArray
-        offset_array = array.buffers()[1]
-    buffer_offsets = buffer_builder(client, array.buffers()[1], builder)
+        offset_buffer = array.buffers()[1]
+    buffer_offsets = buffer_builder(client, offset_buffer, builder)
     buffer_data = buffer_builder(client, array.buffers()[2], builder)
 
     meta.add_member('buffer_offsets_', buffer_offsets)
     meta.add_member('buffer_data_', buffer_data)
     meta.add_member('null_bitmap_', null_bitmap)
+    meta['nbytes'] = array.nbytes
+    return client.create_metadata(meta)
+
+
+def list_array_builder(client, array, builder):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::LargeListArray'
+    meta['length_'] = len(array)
+    meta['null_count_'] = array.null_count
+    meta['offset_'] = array.offset
+
+    if isinstance(array, pa.ListArray):
+        buffer = array.buffers()[1]
+        length = len(buffer) // (pa.uint32().bit_width // 8)
+        offset_array = pa.Array.from_buffers(pa.uint32(), length, [None, buffer])
+        offset_array = offset_array.cast(pa.uint64())
+        offset_buffer = offset_array.buffers()[1]
+    else:  # is pa.LargeListArray
+        offset_buffer = array.buffers()[1]
+
+    meta.add_member('null_bitmap_', buffer_builder(client, array.buffers()[0], builder))
+    meta.add_member('buffer_offsets_', buffer_builder(client, offset_buffer, builder))
+    meta.add_member('values_', builder.run(client, array.values))
     meta['nbytes'] = array.nbytes
     return client.create_metadata(meta)
 
@@ -191,7 +215,7 @@ def string_array_resolver(obj):
     length = int(meta['length_'])
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
-    return pa.lib.Array.from_buffers(pa.string(), length, [null_bitmap, buffer_offsets, buffer_data], null_count,
+    return pa.lib.Array.from_buffers(pa.large_string(), length, [null_bitmap, buffer_offsets, buffer_data], null_count,
                                      offset)
 
 
@@ -211,6 +235,18 @@ def boolean_array_resolver(obj):
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
     return pa.lib.Array.from_buffers(pa.bool_(), length, [null_bitmap, buffer], null_count, offset)
+
+
+def list_array_resolver(obj, resolver):
+    meta = obj.meta
+    buffer_offsets = as_arrow_buffer(obj.member('buffer_offsets_'))
+    length = int(meta['length_'])
+    null_count = int(meta['null_count_'])
+    offset = int(meta['offset_'])
+    null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
+    values = resolver.run(obj.member('values_'))
+    return pa.lib.Array.from_buffers(pa.large_list(values.type), length, [null_bitmap, buffer_offsets], null_count,
+                                     offset, [values])
 
 
 def schema_proxy_resolver(obj):
@@ -249,6 +285,7 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
         builder_ctx.register(pa.Schema, schema_proxy_builder)
         builder_ctx.register(pa.RecordBatch, record_batch_builder)
         builder_ctx.register(pa.Table, table_builder)
+        builder_ctx.register(pa.ListArray, list_array_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
@@ -259,3 +296,4 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
         resolver_ctx.register('vineyard::SchemaProxy', schema_proxy_resolver)
         resolver_ctx.register('vineyard::RecordBatch', record_batch_resolver)
         resolver_ctx.register('vineyard::Table', table_resolver)
+        resolver_ctx.register('vineyard::LargeListArray', list_array_resolver)

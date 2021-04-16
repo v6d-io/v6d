@@ -301,6 +301,7 @@ def run_python_tests(etcd_endpoints, with_migration):
     extra_args = []
     if with_migration:
         extra_args.append('--with-migration')
+    etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_multiple_vineyardd(etcd_endpoints,
                                   etcd_prefix,
                                   default_ipc_socket=ipc_socket_tpl,
@@ -330,6 +331,7 @@ def run_io_adaptor_tests(etcd_endpoints, with_migration):
     extra_args = []
     if with_migration:
         extra_args.append('--with-migration')
+    etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_multiple_vineyardd(etcd_endpoints,
                                   etcd_prefix,
                                   default_ipc_socket=ipc_socket_tpl,

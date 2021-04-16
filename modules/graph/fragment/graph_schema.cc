@@ -48,6 +48,16 @@ std::string PropertyTypeToString(PropertyType type) {
     return "STRING";
   } else if (arrow::large_utf8()->Equals(type)) {
     return "STRING";
+  } else if (arrow::large_list(arrow::int32())->Equals(type)) {
+    return "LISTINT";
+  } else if (arrow::large_list(arrow::int64())->Equals(type)) {
+    return "LISTLONG";
+  } else if (arrow::large_list(arrow::float32())->Equals(type)) {
+    return "LISTFLOAT";
+  } else if (arrow::large_list(arrow::float64())->Equals(type)) {
+    return "LISTDOUBLE";
+  } else if (arrow::large_list(arrow::large_utf8())->Equals(type)) {
+    return "LISTSTRING";
   } else if (arrow::null()->Equals(type)) {
     return "NULL";
   }
@@ -78,6 +88,16 @@ PropertyType PropertyTypeFromString(const std::string& type) {
     return arrow::float64();
   } else if (type_upper == "STRING") {
     return arrow::large_utf8();
+  } else if (type_upper == "LISTINT") {
+    return arrow::large_list(arrow::int32());
+  } else if (type_upper == "LISTLONG") {
+    return arrow::large_list(arrow::int64());
+  } else if (type_upper == "LISTFLOAT") {
+    return arrow::large_list(arrow::float32());
+  } else if (type_upper == "LISTDOUBLE") {
+    return arrow::large_list(arrow::float64());
+  } else if (type_upper == "LISTSTRING") {
+    return arrow::large_list(arrow::large_utf8());
   } else if (type_upper == "NULL") {
     return arrow::null();
   } else {

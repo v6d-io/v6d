@@ -51,7 +51,7 @@ class BuilderContext():
               Python type and used the associated builder.
 
             - When the traversal reaches the :code:`object` type, since there's a default
-              builder that serailization the python value, the parameter will be serialized
+              builder that serialization the python value, the parameter will be serialized
               and be put into a blob.
         '''
         for ty in type(value).__mro__:

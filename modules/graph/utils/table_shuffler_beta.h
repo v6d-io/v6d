@@ -171,6 +171,18 @@ inline boost::leaf::result<void> SchemaConsistent(
 }
 
 template <typename T>
+inline void serialize_selected_typed_items(
+    grape::InArchive& arc, std::shared_ptr<arrow::Array> array) {
+  auto ptr =
+      std::dynamic_pointer_cast<typename ConvertToArrowType<T>::ArrayType>(
+          array)
+          ->raw_values();
+  for (int64_t x = 0; x < array->length(); ++x) {
+    arc << ptr[x];
+  }
+}
+
+template <typename T>
 inline void serialize_selected_typed_items(grape::InArchive& arc,
                                            std::shared_ptr<arrow::Array> array,
                                            const std::vector<int64_t>& offset) {
@@ -198,6 +210,19 @@ void serialize_null_items(grape::InArchive& arc,
   return;
 }
 
+template <typename T>
+void serialize_list_items(grape::InArchive& arc,
+                          std::shared_ptr<arrow::Array> array,
+                          const std::vector<int64_t>& offset) {
+  auto* ptr = std::dynamic_pointer_cast<arrow::LargeListArray>(array).get();
+  for (auto x : offset) {
+    arrow::LargeListArray::offset_type length = ptr->value_length(x);
+    arc << length;
+    auto value = ptr->value_slice(x);
+    serialize_selected_typed_items<T>(arc, value);
+  }
+}
+
 void SerializeSelectedItems(grape::InArchive& arc,
                             std::shared_ptr<arrow::Array> array,
                             const std::vector<int64_t>& offset) {
@@ -217,6 +242,18 @@ void SerializeSelectedItems(grape::InArchive& arc,
     serialize_string_items(arc, array, offset);
   } else if (array->type()->Equals(arrow::null())) {
     serialize_null_items(arc, array, offset);
+  } else if (array->type()->Equals(arrow::large_list(arrow::float64()))) {
+    serialize_list_items<double>(arc, array, offset);
+  } else if (array->type()->Equals(arrow::large_list(arrow::float32()))) {
+    serialize_list_items<float>(arc, array, offset);
+  } else if (array->type()->Equals(arrow::large_list(arrow::int64()))) {
+    serialize_list_items<int64_t>(arc, array, offset);
+  } else if (array->type()->Equals(arrow::large_list(arrow::int32()))) {
+    serialize_list_items<int32_t>(arc, array, offset);
+  } else if (array->type()->Equals(arrow::large_list(arrow::uint64()))) {
+    serialize_list_items<uint64_t>(arc, array, offset);
+  } else if (array->type()->Equals(arrow::large_list(arrow::uint32()))) {
+    serialize_list_items<uint32_t>(arc, array, offset);
   } else {
     LOG(FATAL) << "Unsupported data type - " << array->type()->ToString();
   }
@@ -261,6 +298,19 @@ inline void deserialize_null_items(grape::OutArchive& arc, int64_t num,
   casted_builder->AppendNulls(num);
 }
 
+template <typename T>
+inline void deserialize_list_items(grape::OutArchive& arc, int64_t num,
+                                   arrow::ArrayBuilder* builder) {
+  auto casted_builder = dynamic_cast<arrow::LargeListBuilder*>(builder);
+  auto value_builder = casted_builder->value_builder();
+  arrow::LargeListArray::offset_type length;
+  for (int64_t i = 0; i != num; ++i) {
+    arc >> length;
+    deserialize_selected_typed_items<T>(arc, length, value_builder);
+    casted_builder->Append(true);
+  }
+}
+
 void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
                               arrow::ArrayBuilder* builder) {
   if (builder->type()->Equals(arrow::float64())) {
@@ -279,6 +329,18 @@ void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
     deserialize_string_items(arc, num, builder);
   } else if (builder->type()->Equals(arrow::null())) {
     deserialize_null_items(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::large_list(arrow::float64()))) {
+    deserialize_list_items<double>(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::large_list(arrow::float32()))) {
+    deserialize_list_items<float>(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::large_list(arrow::int64()))) {
+    deserialize_list_items<int64_t>(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::large_list(arrow::int32()))) {
+    deserialize_list_items<int32_t>(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::large_list(arrow::uint64()))) {
+    deserialize_list_items<uint64_t>(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::large_list(arrow::uint32()))) {
+    deserialize_list_items<uint32_t>(arc, num, builder);
   } else {
     LOG(FATAL) << "Unsupported data type - " << builder->type()->ToString();
   }
@@ -301,6 +363,18 @@ void DeserializeSelectedRows(grape::OutArchive& arc,
 
 template <typename T>
 inline void select_typed_items(std::shared_ptr<arrow::Array> array,
+                               arrow::ArrayBuilder* builder) {
+  auto ptr =
+      std::dynamic_pointer_cast<typename ConvertToArrowType<T>::ArrayType>(
+          array)
+          ->raw_values();
+  auto casted_builder =
+      dynamic_cast<typename ConvertToArrowType<T>::BuilderType*>(builder);
+  casted_builder->AppendValues(ptr, array->length());
+}
+
+template <typename T>
+inline void select_typed_items(std::shared_ptr<arrow::Array> array,
                                const std::vector<int64_t>& offset,
                                arrow::ArrayBuilder* builder) {
   auto ptr =
@@ -318,8 +392,7 @@ inline void select_string_items(std::shared_ptr<arrow::Array> array,
                                 const std::vector<int64_t>& offset,
                                 arrow::ArrayBuilder* builder) {
   auto* ptr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
-  arrow::LargeStringBuilder* casted_builder =
-      dynamic_cast<arrow::LargeStringBuilder*>(builder);
+  auto casted_builder = dynamic_cast<arrow::LargeStringBuilder*>(builder);
   for (auto x : offset) {
     casted_builder->Append(ptr->GetView(x));
   }
@@ -331,6 +404,20 @@ inline void select_null_items(std::shared_ptr<arrow::Array> array,
   arrow::NullBuilder* casted_builder =
       dynamic_cast<arrow::NullBuilder*>(builder);
   casted_builder->AppendNulls(offset.size());
+}
+
+template <typename T>
+inline void select_list_items(std::shared_ptr<arrow::Array> array,
+                              const std::vector<int64_t>& offset,
+                              arrow::ArrayBuilder* builder) {
+  auto ptr = std::dynamic_pointer_cast<arrow::LargeListArray>(array).get();
+
+  auto casted_builder = dynamic_cast<arrow::LargeListBuilder*>(builder);
+  auto value_builder = casted_builder->value_builder();
+  for (auto x : offset) {
+    select_typed_items<T>(ptr->value_slice(x), value_builder);
+    casted_builder->Append(true);
+  }
 }
 
 inline void SelectItems(std::shared_ptr<arrow::Array> array,
@@ -352,6 +439,18 @@ inline void SelectItems(std::shared_ptr<arrow::Array> array,
     select_string_items(array, offset, builder);
   } else if (array->type()->Equals(arrow::null())) {
     select_null_items(array, offset, builder);
+  } else if (array->type()->Equals(arrow::large_list(arrow::float64()))) {
+    select_list_items<double>(array, offset, builder);
+  } else if (array->type()->Equals(arrow::large_list(arrow::float32()))) {
+    select_list_items<float>(array, offset, builder);
+  } else if (array->type()->Equals(arrow::large_list(arrow::int64()))) {
+    select_list_items<int64_t>(array, offset, builder);
+  } else if (array->type()->Equals(arrow::large_list(arrow::int32()))) {
+    select_list_items<int32_t>(array, offset, builder);
+  } else if (array->type()->Equals(arrow::large_list(arrow::uint64()))) {
+    select_list_items<uint64_t>(array, offset, builder);
+  } else if (array->type()->Equals(arrow::large_list(arrow::uint32()))) {
+    select_list_items<uint32_t>(array, offset, builder);
   } else {
     LOG(FATAL) << "Unsupported data type - " << builder->type()->ToString();
   }

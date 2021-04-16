@@ -42,11 +42,11 @@ def test_arrow_array(vineyard_client):
 
     arr = pa.array(["a", None, None, None])
     object_id = vineyard_client.put(arr)
-    assert arr.equals(vineyard_client.get(object_id))
+    assert arr.cast(pa.large_string()).equals(vineyard_client.get(object_id))
 
     arr = pa.array(["a", "bb", "ccc", "dddd"])
     object_id = vineyard_client.put(arr)
-    assert arr.equals(vineyard_client.get(object_id))
+    assert arr.cast(pa.large_string()).equals(vineyard_client.get(object_id))
 
     arr = pa.array([True, False, True, False])
     object_id = vineyard_client.put(arr)
@@ -55,6 +55,10 @@ def test_arrow_array(vineyard_client):
     arr = pa.array([True, False, None, None])
     object_id = vineyard_client.put(arr)
     assert arr.equals(vineyard_client.get(object_id))
+
+    nested_arr = pa.array([[], None, [1, 2], [None, 1]])
+    object_id = vineyard_client.put(nested_arr)
+    assert vineyard_client.get(object_id).values.equals(nested_arr.values)
 
 
 def test_record_batch(vineyard_client):
