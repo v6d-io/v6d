@@ -419,7 +419,6 @@ Status DelDataOps(const json& tree, const std::string& name,
 static void generate_put_ops(const json& meta, const json& diff,
                              const json& signatures, const std::string& name,
                              std::vector<IMetaService::op_t>& ops) {
-  LOG(INFO) << "generate_put_ops: diff = " << diff.dump(4);
   if (!diff.is_object() || diff.empty()) {
     return;
   }
@@ -448,8 +447,6 @@ static void generate_put_ops(const json& meta, const json& diff,
       }
       std::string link;
       if (sub_type == "vineyard::Blob") {
-        LOG(INFO) << "item instance id: "
-                  << item.value()["instance_id"].get<InstanceID>();
         generate_link(sub_type, sub_name,
                       item.value()["instance_id"].get<InstanceID>(), link);
       } else {

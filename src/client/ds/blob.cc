@@ -55,13 +55,10 @@ const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
 }
 
 void Blob::Construct(ObjectMeta const& meta) {
-  LOG(INFO) << "Construct: prepare to get buffer: " << this->buffer_;
   std::string __type_name = type_name<Blob>();
   CHECK(meta.GetTypeName() == __type_name);
   this->meta_ = meta;
   this->id_ = meta.GetId();
-  LOG(INFO) << "Construct: prepare to get buffer: id = " << this->id_ << ", "
-            << meta.IsLocal();
   if (this->buffer_ != nullptr) {
     return;
   }
