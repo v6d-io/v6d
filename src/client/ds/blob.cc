@@ -72,7 +72,6 @@ void Blob::Construct(ObjectMeta const& meta) {
   if (!meta.IsLocal()) {
     return;
   }
-  LOG(INFO) << "Construct: prepare to get buffer from pool";
   if (meta.GetBuffer(meta.GetId(), this->buffer_).ok()) {
     if (this->buffer_ == nullptr) {
       throw std::runtime_error(
