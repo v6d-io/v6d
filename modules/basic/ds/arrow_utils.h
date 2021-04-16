@@ -115,6 +115,7 @@ CONVERT_TO_ARROW_TYPE(arrow::TimestampType, arrow::TimestampArray,
                       arrow::TimestampBuilder,
                       arrow::timestamp(arrow::TimeUnit::MILLI))
 
+
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type);
 
 /**

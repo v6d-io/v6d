@@ -214,6 +214,18 @@ namespace detail {
 
 inline std::shared_ptr<arrow::Array> ConstructArray(
     std::shared_ptr<Object> obj) {
+  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(obj)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<StringArray>(obj)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<LargeStringArray>(obj)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<NullArray>(obj)) {
+    return arr->GetArray();
+  }
   if (auto arr = std::dynamic_pointer_cast<ArrowArray>(obj)) {
     return arr->ToArray();
   }
