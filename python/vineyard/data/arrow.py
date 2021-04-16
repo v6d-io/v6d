@@ -84,9 +84,10 @@ def string_array_builder(client, array, builder):
         length = len(buffer) // (pa.uint32().bit_width // 8)
         offset_array = pa.Array.from_buffers(pa.uint32(), length, [None, buffer])
         offset_array = offset_array.cast(pa.uint64())
+        offset_buffer = offset_array.buffers()[1]
     else:  # is pa.LargeStringArray
-        offset_array = array.buffers()[1]
-    buffer_offsets = buffer_builder(client, array.buffers()[1], builder)
+        offset_buffer = array.buffers()[1]
+    buffer_offsets = buffer_builder(client, offset_buffer, builder)
     buffer_data = buffer_builder(client, array.buffers()[2], builder)
 
     meta.add_member('buffer_offsets_', buffer_offsets)
@@ -101,10 +102,19 @@ def list_array_builder(client, array, builder):
     meta['typename'] = 'vineyard::LargeListArray'
     meta['length_'] = len(array)
     meta['null_count_'] = array.null_count
-    meta['offset'] = array.offset
+    meta['offset_'] = array.offset
 
-    meta.add_member('null_bitmap_', buffer_builder(client, array.buffers()[2], builder))
-    meta.add_member('buffer_', buffer_builder(client, array.buffers()[3], builder))
+    if isinstance(array, pa.ListArray):
+        buffer = array.buffers()[1]
+        length = len(buffer) // (pa.uint32().bit_width // 8)
+        offset_array = pa.Array.from_buffers(pa.uint32(), length, [None, buffer])
+        offset_array = offset_array.cast(pa.uint64())
+        offset_buffer = offset_array.buffers()[1]
+    else:  # is pa.LargeListArray
+        offset_buffer = array.buffers()[1]
+
+    meta.add_member('null_bitmap_', buffer_builder(client, array.buffers()[0], builder))
+    meta.add_member('buffer_offsets_', buffer_builder(client, offset_buffer, builder))
     meta.add_member('values_', builder.run(client, array.values))
     meta['nbytes'] = array.nbytes
     return client.create_metadata(meta)
@@ -205,7 +215,7 @@ def string_array_resolver(obj):
     length = int(meta['length_'])
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
-    return pa.lib.Array.from_buffers(pa.string(), length, [null_bitmap, buffer_offsets, buffer_data], null_count,
+    return pa.lib.Array.from_buffers(pa.large_string(), length, [null_bitmap, buffer_offsets, buffer_data], null_count,
                                      offset)
 
 
@@ -234,9 +244,9 @@ def list_array_resolver(obj, resolver):
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
-    buffer = as_arrow_buffer(obj.member('buffer_'))
     values = resolver.run(obj.member('values_'))
-    return pa.lib.Array.from_buffers(pa.list(values.type), length, [null_bitmap, buffer], null_count, offset, [values])
+    return pa.lib.Array.from_buffers(pa.large_list(values.type), length, [null_bitmap, buffer_offsets], null_count,
+                                     offset, [values])
 
 
 def schema_proxy_resolver(obj):
