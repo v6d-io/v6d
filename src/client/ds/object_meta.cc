@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace vineyard {
 
-ObjectMeta::ObjectMeta() : blob_set_(std::make_shared<BlobSet>()) {}
+ObjectMeta::ObjectMeta() : buffer_set_(std::make_shared<BufferSet>()) {}
 
 void ObjectMeta::SetClient(ClientBase* client) { this->client_ = client; }
 
@@ -108,7 +108,7 @@ void ObjectMeta::GetKeyValue(const std::string& key, json& value) const {
 void ObjectMeta::AddMember(const std::string& name, const ObjectMeta& member) {
   VINEYARD_ASSERT(!meta_.contains(name));
   meta_[name] = member.meta_;
-  this->blob_set_->Extend(member.blob_set_);
+  this->buffer_set_->Extend(member.buffer_set_);
 }
 
 void ObjectMeta::AddMember(const std::string& name, const Object& member) {
@@ -147,23 +147,35 @@ ObjectMeta ObjectMeta::GetMemberMeta(const std::string& name) const {
   ObjectMeta ret;
   auto const& child_meta = meta_[name];
   VINEYARD_ASSERT(!child_meta.is_null(), "Failed to get member " + name);
-  ret.SetClient(client_);
 
-#if !defined(NDEBUG)  // slow path, but accurate
   ret.SetMetaData(this->client_, child_meta);
-  auto const& all_blobs = blob_set_->AllBlobs();
-  for (auto const& id : ret.blob_set_->AllBlobIds()) {
-    auto iter = all_blobs.find(id);
+  auto const& all_blobs = buffer_set_->AllBuffers();
+  for (auto const& blob : ret.buffer_set_->AllBuffers()) {
+    auto iter = all_blobs.find(blob.first);
     // for remote object, the blob may not present here
     if (iter != all_blobs.end()) {
-      ret.SetBlob(id, iter->second.BufferUnsafe());
+      ret.SetBuffer(blob.first, iter->second);
     }
   }
-#else  // fast path
-  ret.meta_ = child_meta;
-  ret.blob_set_ = this->blob_set_;
-#endif
   return ret;
+}
+
+Status ObjectMeta::GetBuffer(const ObjectID blob_id,
+                             std::shared_ptr<arrow::Buffer>& buffer) const {
+  if (buffer_set_->Get(blob_id, buffer)) {
+    return Status::OK();
+  } else {
+    return Status::ObjectNotExists(
+        "The target blob " + ObjectIDToString(blob_id) + " doesn't exist");
+  }
+}
+
+void ObjectMeta::SetBuffer(const ObjectID& id,
+                           const std::shared_ptr<arrow::Buffer>& buffer) {
+  // After `findAllBlobs` we know the buffer set of this object. If the given id
+  // is not present in the buffer set, it should be an error.
+  VINEYARD_ASSERT(buffer_set_->Contains(id));
+  VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(id, buffer));
 }
 
 void ObjectMeta::PrintMeta() const { LOG(INFO) << meta_.dump(4); }
@@ -177,34 +189,26 @@ json& ObjectMeta::MutMetaData() { return meta_; }
 void ObjectMeta::SetMetaData(ClientBase* client, const json& meta) {
   this->client_ = client;
   this->meta_ = meta;
-  findAllBlobs(meta_, this->client_->instance_id());
+  findAllBlobs(meta_);
 }
 
-const std::shared_ptr<BlobSet>& ObjectMeta::GetBlobSet() const {
-  return blob_set_;
+const std::shared_ptr<BufferSet>& ObjectMeta::GetBufferSet() const {
+  return buffer_set_;
 }
 
-void ObjectMeta::SetBlob(const ObjectID& id,
-                         const std::shared_ptr<arrow::Buffer>& buffer) {
-  // After `findAllBlobs` we know the blob set of this object. If the given id
-  // is not present in the blob set, it should be an error.
-  VINEYARD_ASSERT(blob_set_->Contains(id));
-  blob_set_->EmplaceBlob(id, buffer);
-}
-
-void ObjectMeta::findAllBlobs(const json& tree, InstanceID const instance_id) {
+void ObjectMeta::findAllBlobs(const json& tree) {
   if (tree.empty()) {
     return;
   }
   ObjectID member_id =
       VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
-  if (IsBlob(member_id)) {
-    blob_set_->EmplaceId(member_id, tree["length"].get<size_t>(),
-                         tree["instance_id"].get<InstanceID>() == instance_id);
+  if (IsBlob(member_id) &&
+      tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
+    VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
   } else {
     for (auto& item : tree) {
       if (item.is_object()) {
-        this->findAllBlobs(item, instance_id);
+        this->findAllBlobs(item);
       }
     }
   }

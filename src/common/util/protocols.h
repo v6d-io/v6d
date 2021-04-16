@@ -16,7 +16,9 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_PROTOCOLS_H_
 #define SRC_COMMON_UTIL_PROTOCOLS_H_
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -141,13 +143,14 @@ void WriteExistsReply(bool exists, std::string& msg);
 Status ReadExistsReply(const json& root, bool& exists);
 
 void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
-                         std::string& msg);
+                         const bool fastpath, std::string& msg);
 
 void WriteDelDataRequest(const std::vector<ObjectID>& id, const bool force,
-                         const bool deep, std::string& msg);
+                         const bool deep, const bool fastpath,
+                         std::string& msg);
 
 Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& id,
-                          bool& force, bool& deep);
+                          bool& force, bool& deep, bool& fastpath);
 
 void WriteDelDataReply(std::string& msg);
 
@@ -183,8 +186,7 @@ void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
 
 Status ReadCreateRemoteBufferRequest(const json& root, size_t& size);
 
-void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                            std::string& msg);
+void WriteGetBuffersRequest(const std::set<ObjectID>& ids, std::string& msg);
 
 Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids);
 
@@ -192,7 +194,7 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           std::string& msg);
 
 Status ReadGetBuffersReply(const json& root,
-                           std::unordered_map<ObjectID, Payload>& objects);
+                           std::map<ObjectID, Payload>& objects);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   std::string& msg);

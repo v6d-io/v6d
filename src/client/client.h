@@ -18,10 +18,11 @@ limitations under the License.
 
 #include <sys/mman.h>
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "arrow/buffer.h"
@@ -202,6 +203,30 @@ class Client : public ClientBase {
   Status CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob);
 
   /**
+   * @brief Get a blob from vineyard server. When obtaining blobs from vineyard
+   * server, the memory address in the server process will be mmapped to the
+   * client's process to share the memory.
+   *
+   * @param id Object id for the blob to get.
+   * @param blob: The result immutable blob will be set in `blob`. Note that
+   * blob is special, since it can be get as immutable object before sealing.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
+  Status GetBlob(const ObjectID id, Payload& object);
+
+  /**
+   * @brief Get a set of blobs from vineyard server. See also `GetBlob`.
+   *
+   * @param ids Object ids for the blobs to get.
+   * @param blobs: The result immutable blobs will be added to `blobs`.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
+  Status GetBlobs(const std::vector<ObjectID>& ids,
+                  std::vector<std::shared_ptr<Blob>>& blobs);
+
+  /**
    * @brief Allocate a stream on vineyard. The metadata of parameter `id` must
    * has already been created on vineyard.
    *
@@ -363,18 +388,26 @@ class Client : public ClientBase {
   Status ReleaseArena(const int fd, std::vector<size_t> const& offsets,
                       std::vector<size_t> const& sizes);
 
-  Status CreateBuffer(const size_t size, ObjectID& id, Payload& object);
+ protected:
+  Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
+                      std::shared_ptr<arrow::MutableBuffer>& buffer);
 
-  Status GetBuffer(const ObjectID id, Payload& object);
+  Status GetBuffer(const ObjectID id, std::shared_ptr<arrow::Buffer>& buffer);
 
-  Status GetBuffers(const std::unordered_set<ObjectID>& ids,
-                    std::unordered_map<ObjectID, Payload>& objects);
+  Status GetBuffers(
+      const std::set<ObjectID>& ids,
+      std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers);
 
   /**
-   * N.B.: can only be used for **UN-SEALED** blob writers.
+   * @brief An (unsafe) internal-usage method that drop the buffer, without
+   * checking the dependency. To achieve the "DeleteObject" semantic for blobs,
+   * use `DelData` instead.
+   *
+   * Note that the target buffer could be both sealed and unsealed.
    */
   Status DropBuffer(const ObjectID id, const int fd);
 
+ private:
   Status mmapToClient(int fd, int64_t map_size, bool readonly, bool realign,
                       uint8_t** ptr);
 

@@ -97,7 +97,7 @@ void EtcdMetaService::requestLock(
             resp.index());
         auto status =
             Status::EtcdError(resp.error_code(), resp.error_message());
-        server_ptr_->GetIOContext().post(
+        server_ptr_->GetMetaContext().post(
             boost::bind(callback_after_locked, status, lock_ptr));
       });
 }
@@ -126,7 +126,7 @@ void EtcdMetaService::commitUpdates(
       offset += 127;
     } else {
       auto status = Status::EtcdError(resp.error_code(), resp.error_message());
-      server_ptr_->GetIOContext().post(
+      server_ptr_->GetMetaContext().post(
           boost::bind(callback_after_updated, status, resp.index()));
       return;
     }
@@ -146,7 +146,7 @@ void EtcdMetaService::commitUpdates(
     VLOG(10) << "etcd (last) txn use " << resp.duration().count()
              << " microseconds";
     auto status = Status::EtcdError(resp.error_code(), resp.error_message());
-    server_ptr_->GetIOContext().post(
+    server_ptr_->GetMetaContext().post(
         boost::bind(callback_after_updated, status, resp.index()));
   });
 }
@@ -176,7 +176,7 @@ void EtcdMetaService::requestAll(
         }
         auto status =
             Status::EtcdError(resp.error_code(), resp.error_message());
-        server_ptr_->GetIOContext().post(
+        server_ptr_->GetMetaContext().post(
             boost::bind(callback, status, ops, resp.index()));
       });
 }
@@ -186,7 +186,7 @@ void EtcdMetaService::requestUpdates(
     callback_t<const std::vector<op_t>&, unsigned> callback) {
   // NB: watching from latest version (since_rev) + 1
   etcd_->watch(prefix_ + prefix, since_rev + 1, true)
-      .then(EtcdWatchHandler(server_ptr_->GetIOContext(), callback, prefix_,
+      .then(EtcdWatchHandler(server_ptr_->GetMetaContext(), callback, prefix_,
                              prefix_ + meta_sync_lock_));
 }
 
@@ -196,7 +196,7 @@ void EtcdMetaService::startDaemonWatch(
   try {
     this->watcher_.reset(new etcd::Watcher(
         *etcd_, prefix_ + prefix, since_rev + 1,
-        EtcdWatchHandler(server_ptr_->GetIOContext(), callback, prefix_,
+        EtcdWatchHandler(server_ptr_->GetMetaContext(), callback, prefix_,
                          prefix_ + meta_sync_lock_),
         true));
     this->watcher_->Wait([this, prefix, callback](bool cancalled) {
@@ -215,7 +215,7 @@ void EtcdMetaService::retryDaeminWatch(
     const std::string& prefix, unsigned since_rev,
     callback_t<const std::vector<op_t>&, unsigned> callback) {
   backoff_timer_.reset(new asio::steady_timer(
-      server_ptr_->GetIOContext(), std::chrono::seconds(BACKOFF_RETRY_TIME)));
+      server_ptr_->GetMetaContext(), std::chrono::seconds(BACKOFF_RETRY_TIME)));
   backoff_timer_->async_wait([this, prefix, since_rev, callback](
                                  const boost::system::error_code& error) {
     if (error) {

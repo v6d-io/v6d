@@ -97,9 +97,8 @@ Status RunServer() {
   return Serve(client, std::move(socket));
 }
 
-Status Rebuild(
-    Client& client, ObjectMeta const& metadata, ObjectMeta& target,
-    std::unordered_map<ObjectID, std::shared_ptr<Blob>> const& target_blobs) {
+Status Rebuild(Client& client, ObjectMeta const& metadata, ObjectMeta& target,
+               std::map<ObjectID, std::shared_ptr<Blob>> const& target_blobs) {
   for (auto const& kv : metadata) {
     if (kv.value().is_object()) {
       ObjectMeta member = metadata.GetMemberMeta(kv.key());
@@ -144,10 +143,10 @@ Status Work(Client& client, RPCClient& rpc_client,
       rpc_client.GetMetaData(VYObjectIDFromString(FLAGS_id), metadata, true));
 
   // step 1: collect blob set
-  auto blobs = metadata.GetBlobSet()->AllBlobs();
+  auto blobs = metadata.GetBufferSet()->AllBuffers();
   metadata.PrintMeta();
   VLOG(10) << "blob sizes to migrate: " << blobs.size();
-  std::unordered_map<ObjectID, std::shared_ptr<Blob>> target_blobs;
+  std::map<ObjectID, std::shared_ptr<Blob>> target_blobs;
 
   // step 2: migrate blobs to local
   for (auto const& item : blobs) {

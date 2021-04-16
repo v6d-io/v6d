@@ -154,8 +154,8 @@ class IMetaService {
       callback_t<const json&, std::vector<op_t>&, InstanceID&>
           callback_after_ready,
       callback_t<const InstanceID> callback_after_finish) {
-    server_ptr_->GetIOContext().post([this, callback_after_ready,
-                                      callback_after_finish]() {
+    server_ptr_->GetMetaContext().post([this, callback_after_ready,
+                                        callback_after_finish]() {
       std::vector<op_t> ops;
       InstanceID computed_instance_id;
       auto status =
@@ -199,7 +199,7 @@ class IMetaService {
                       return callback_after_finish(Status::OK());
                     }
                     // apply changes locally before committing to etcd
-                    this->metaUpdate(ops, true);
+                    this->metaUpdate(ops, false);
                     // commit to etcd
                     this->commitUpdates(
                         ops, [this, callback_after_finish, lock](
@@ -237,7 +237,7 @@ class IMetaService {
           });
     } else {
       // post the task to asio queue as well for well-defined processing order.
-      server_ptr_->GetIOContext().post(
+      server_ptr_->GetMetaContext().post(
           boost::bind(callback, Status::OK(), meta_));
     }
   }
@@ -249,51 +249,39 @@ class IMetaService {
                  bool&>
           callback_after_ready,
       callback_t<> callback_after_finish) {
-    // implements dependent-based (usage-based) lifecycle: find the delete set.
-    std::set<ObjectID> initial_delete_set{object_ids.begin(), object_ids.end()};
-    std::set<ObjectID> delete_set;
-    std::map<ObjectID, int32_t> depthes;
-    for (auto const object_id : object_ids) {
-      traverseToDelete(initial_delete_set, delete_set, 0, depthes, object_id,
-                       force, deep);
-    }
-    std::vector<ObjectID> processed_delete_set;
-    postProcessForDelete(delete_set, depthes, processed_delete_set);
-
     // generate ops.
     std::vector<op_t> ops;
-    bool sync_remote = false;
-    auto s = callback_after_ready(Status::OK(), meta_, processed_delete_set,
-                                  ops, sync_remote);
+    {
+      bool sync_remote = false;
+      std::vector<ObjectID> processed_delete_set;
+      findDeleteSet(object_ids, processed_delete_set, force, deep);
 
-    // apply local updates
-    if (s.ok()) {
+      auto s = callback_after_ready(Status::OK(), meta_, processed_delete_set,
+                                    ops, sync_remote);
+      if (!s.ok()) {
+        VINEYARD_DISCARD(callback_after_finish(s));
+        return;
+      }
+
       // apply changes locally (before committing to etcd)
       this->metaUpdate(ops, false);
-    } else {
-      VINEYARD_DISCARD(callback_after_finish(s));
-      return;
-    }
 
-    if (!sync_remote) {
-      VINEYARD_DISCARD(callback_after_finish(s));
-      return;
+      if (!sync_remote) {
+        VINEYARD_DISCARD(callback_after_finish(s));
+        return;
+      }
     }
 
     // apply remote updates
     //
     // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
     // avoid contention between other vineyard instances.
-    this->requestLock(meta_sync_lock_, [this, ops /* by copy */,
-                                        callback_after_finish](
-                                           const Status& status,
-                                           std::shared_ptr<ILock> lock) {
-      if (status.ok()) {
-        rev_ = lock->GetRev();
-        requestValues("", [this, ops /* by copy */, callback_after_finish,
-                           lock](const Status& status, const json& meta,
-                                 unsigned rev) {
+    this->requestLock(
+        meta_sync_lock_,
+        [this, ops /* by copy */, callback_after_ready, callback_after_finish](
+            const Status& status, std::shared_ptr<ILock> lock) {
           if (status.ok()) {
+            rev_ = lock->GetRev();
             // commit to etcd
             this->commitUpdates(ops, [this, callback_after_finish, lock](
                                          const Status& status, unsigned rev) {
@@ -306,19 +294,10 @@ class IMetaService {
             });
             return Status::OK();
           } else {
-            unsigned rev_after_unlock = 0;
-            if (lock->Release(rev_after_unlock).ok()) {
-              rev_ = rev_after_unlock;
-            }
+            LOG(ERROR) << status.ToString();
             return callback_after_finish(status);  // propogate the error.
           }
         });
-        return Status::OK();
-      } else {
-        LOG(ERROR) << status.ToString();
-        return callback_after_finish(status);  // propogate the error.
-      }
-    });
   }
 
   inline void RequestToShallowCopy(
@@ -333,7 +312,7 @@ class IMetaService {
         auto status = callback_after_ready(Status::OK(), meta, ops, transient);
         if (status.ok()) {
           if (transient) {
-            this->metaUpdate(ops, true);
+            this->metaUpdate(ops, false);
             return callback_after_finish(Status::OK());
           } else {
             this->RequestToPersist(
@@ -501,7 +480,7 @@ class IMetaService {
 
   void startHeartbeat() {
     heartbeat_timer_.reset(new asio::steady_timer(
-        server_ptr_->GetIOContext(), std::chrono::seconds(HEARTBEAT_TIME)));
+        server_ptr_->GetMetaContext(), std::chrono::seconds(HEARTBEAT_TIME)));
     heartbeat_timer_->async_wait([&](const boost::system::error_code& error) {
       if (error) {
         LOG(ERROR) << "heartbeat timer error: " << error << ", "
@@ -571,7 +550,8 @@ class IMetaService {
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
 
-  void incRef(std::string const& key, std::string const& value);
+  void incRef(std::string const& key, std::string const& value,
+              const bool from_remote);
   void printDepsGraph();
 
   json meta_;
@@ -591,6 +571,10 @@ class IMetaService {
                         const ObjectID object_id, const bool force,
                         const bool deep);
 
+  void findDeleteSet(std::vector<ObjectID> const& object_ids,
+                     std::vector<ObjectID>& processed_delete_set, bool force,
+                     bool deep);
+
   void postProcessForDelete(const std::set<ObjectID>& delete_set,
                             const std::map<ObjectID, int32_t>& depthes,
                             std::vector<ObjectID>& delete_objects);
@@ -600,11 +584,12 @@ class IMetaService {
     auto upsert_to_meta = [&]() {
       json value = json::parse(kv.value);
       if (value.is_string()) {
-        incRef(kv.key, value.get_ref<std::string const&>());
+        incRef(kv.key, value.get_ref<std::string const&>(), from_remote);
       } else if (value.is_object() && !value.empty()) {
         for (auto const& item : json::iterator_wrapper(value)) {
           if (item.value().is_string()) {
-            incRef(kv.key, item.value().get_ref<std::string const&>());
+            incRef(kv.key, item.value().get_ref<std::string const&>(),
+                   from_remote);
           }
         }
       }
@@ -759,14 +744,8 @@ class IMetaService {
                                        initial_delete_set.end()};
 
       // 2. traverse to find the delete set
-      std::set<ObjectID> delete_set;
-      std::map<ObjectID, int32_t> depthes;
-      for (auto const object_id : object_ids) {
-        traverseToDelete(initial_delete_set, delete_set, 0, depthes, object_id,
-                         false, false);
-      }
       std::vector<ObjectID> processed_delete_set;
-      postProcessForDelete(delete_set, depthes, processed_delete_set);
+      findDeleteSet(object_ids, processed_delete_set, false, false);
 
       // 3. execute delete for every object
       for (auto const target : processed_delete_set) {
@@ -783,6 +762,16 @@ class IMetaService {
     for (const op_t& op : drop_sigs) {
       delVal(op.kv);
     }
+
+#ifndef NDEBUG
+    // debugging
+    if (VLOG_IS_ON(10)) {
+      printDepsGraph();
+    }
+    for (auto const& id : blobs_to_delete) {
+      LOG(INFO) << "blob to delete: " << ObjectIDToString(id);
+    }
+#endif
 
     VINEYARD_SUPPRESS(server_ptr_->DeleteBlobBatch(blobs_to_delete));
     VINEYARD_SUPPRESS(server_ptr_->ProcessDeferred(meta_));

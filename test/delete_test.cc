@@ -15,6 +15,7 @@ limitations under the License.
 
 #if defined(__APPLE__) && defined(__clang__)
 #define private public
+#define protected public
 #endif
 
 #include <memory>
@@ -64,9 +65,9 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 1);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 1);
   }
 
   // delete transient object
@@ -82,9 +83,9 @@ int main(int argc, char** argv) {
   CHECK(!exists);
 
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 0);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 0);
   }
 
   {
@@ -102,11 +103,13 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 1);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 1);
   }
 
+  LOG(INFO) << "deep deletion id = " << ObjectIDToString(id)
+            << ", blob id = " << ObjectIDToString(blob_id);
   // deep deletion
   VINEYARD_CHECK_OK(client.Exists(id, exists));
   CHECK(exists);
@@ -120,9 +123,9 @@ int main(int argc, char** argv) {
 
   // the blob should have been removed
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 0);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 0);
   }
 
   {
@@ -140,9 +143,9 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 1);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 1);
   }
 
   // shallow deletion on blob members
@@ -157,10 +160,10 @@ int main(int argc, char** argv) {
   CHECK(!exists);  // see Note [Deleting objects and blobs]
 
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
     // the deletion on direct blob member is not shallow
-    CHECK(s.ok() && objects.size() == 0);
+    CHECK(s.ok() && buffers.size() == 0);
   }
 
   {
@@ -184,9 +187,9 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 1);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 1);
   }
 
   // shallow deletion on object members
@@ -205,10 +208,10 @@ int main(int argc, char** argv) {
   CHECK(exists);  // see Note [Deleting objects and blobs]
 
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
     // the deletion on non-direct blob member is shallow
-    CHECK(s.ok() && objects.size() == 1);
+    CHECK(s.ok() && buffers.size() == 1);
   }
 
   {
@@ -236,9 +239,9 @@ int main(int argc, char** argv) {
 
   // the blob should have been removed
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 0);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 0);
   }
 
   {
@@ -266,9 +269,9 @@ int main(int argc, char** argv) {
 
   // the blob should have been removed
   {
-    std::unordered_map<ObjectID, Payload> objects;
-    auto s = client.GetBuffers({blob_id}, objects);
-    CHECK(s.ok() && objects.size() == 0);
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto s = client.GetBuffers({blob_id}, buffers);
+    CHECK(s.ok() && buffers.size() == 0);
   }
 
   // delete on complex data: and empty blob is quite special, since it cannot

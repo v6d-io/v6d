@@ -104,7 +104,7 @@ Status ClientBase::DelData(const ObjectID id, const bool force,
                            const bool deep) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteDelDataRequest(id, force, deep, message_out);
+  WriteDelDataRequest(id, force, deep, false, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -116,7 +116,7 @@ Status ClientBase::DelData(const std::vector<ObjectID>& ids, const bool force,
                            const bool deep) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteDelDataRequest(ids, force, deep, message_out);
+  WriteDelDataRequest(ids, force, deep, false, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));

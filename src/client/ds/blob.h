@@ -16,21 +16,23 @@ limitations under the License.
 #ifndef SRC_CLIENT_DS_BLOB_H_
 #define SRC_CLIENT_DS_BLOB_H_
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 #include "arrow/buffer.h"
 
 #include "client/ds/i_object.h"
+#include "common/memory/payload.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
 
 class BlobWriter;
-class BlobSet;
+class BufferSet;
 class Client;
 class ObjectMeta;
 
@@ -46,9 +48,22 @@ class Blob : public Registered<Blob> {
    * @brief Get the size of the blob, i.e., the number of bytes of the data
    * payload in the blob.
    *
-   * @return The size of the blob.
+   * Note that the size of blob is the "allocated size" of the blob, and may
+   * (usually) not be the same value of the requested size.
+   *
+   * @return The (allocated) size of the blob.
    */
-  size_t size() const;
+  size_t size() const __attribute__((
+      deprecated("The method `size()` no longer report accurate requested "
+                 "memory size, use allocated_size() instead.")));
+
+  /**
+   * @brief Get the allocated size of the blob, i.e., the number of bytes of the
+   * data payload in the blob.
+   *
+   * @return The allocated size of the blob.
+   */
+  size_t allocated_size() const;
 
   /**
    * @brief Get the const data pointer of the data payload in the blob.
@@ -91,35 +106,31 @@ class Blob : public Registered<Blob> {
   /**
    * @brief Create the blob from a buffer from allocator.
    *
-   * @param base The base address of arena in vineyard server.
-   * @param ubase The base address of memory-mapped arena in the client
+   * @param object_id The object ID of this blob.
    * allocator.
    * @param pointer The address of buffer in the client allocator.
    * @param size The estimated size of the buffer.
    */
-  static std::shared_ptr<Blob> FromBuffer(Client& client, const uintptr_t base,
-                                          const uintptr_t ubase,
-                                          const uintptr_t pointer,
-                                          const size_t size);
+  static std::shared_ptr<Blob> FromBuffer(Client& client,
+                                          const ObjectID object_id,
+                                          const size_t size,
+                                          const uintptr_t pointer);
 
  private:
   /**
    * The default constructor is only used in BlobWriter.
    */
   Blob();
-  Blob(const ObjectID id, const size_t size);
-  Blob(const ObjectID id, const size_t size,
-       std::shared_ptr<arrow::Buffer> const& buffer);
 
   const std::shared_ptr<arrow::Buffer>& BufferUnsafe() const;
 
-  size_t size_;
-  std::shared_ptr<arrow::Buffer> buffer_;
+  size_t size_ = 0;
+  std::shared_ptr<arrow::Buffer> buffer_ = nullptr;
 
   friend class Client;
   friend class RPCClient;
   friend class BlobWriter;
-  friend class BlobSet;
+  friend class BufferSet;
   friend class ObjectMeta;
 };
 
@@ -207,12 +218,16 @@ class BlobWriter : public ObjectBuilder {
   std::shared_ptr<Object> _Seal(Client& client) override;
 
  private:
-  BlobWriter(ObjectID const object_id, int const fd,
+  BlobWriter(ObjectID const object_id, const Payload& payload,
              std::shared_ptr<arrow::MutableBuffer> const& buffer)
-      : object_id_(object_id), fd_(fd), buffer_(buffer) {}
+      : object_id_(object_id), payload_(payload), buffer_(buffer) {}
+
+  BlobWriter(ObjectID const object_id, Payload&& payload,
+             std::shared_ptr<arrow::MutableBuffer> const& buffer)
+      : object_id_(object_id), payload_(payload), buffer_(buffer) {}
 
   ObjectID object_id_;
-  int fd_;
+  Payload payload_;
   std::shared_ptr<arrow::MutableBuffer> buffer_;
   // Allowing blobs have extra key-value metadata
   std::unordered_map<std::string, std::string> metadata_;
@@ -222,30 +237,34 @@ class BlobWriter : public ObjectBuilder {
 };
 
 /**
- * @brief A set of blobs that been associated with an object and its member
+ * @brief A set of (readonly) buffers that been associated with an object and
+ * its members (recursively).
  */
-class BlobSet {
+class BufferSet {
  public:
-  const std::unordered_set<ObjectID>& AllBlobIds() const { return ids_; }
+  const std::set<ObjectID>& AllBufferIds() const { return buffer_ids_; }
 
-  const std::unordered_map<ObjectID, Blob>& AllBlobs() const { return blobs_; }
+  const std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& AllBuffers() const {
+    return buffers_;
+  }
 
-  void EmplaceId(ObjectID const id, size_t const size, bool local);
+  Status EmplaceBuffer(ObjectID const id);
 
-  void EmplaceBlob(ObjectID const id,
-                   std::shared_ptr<arrow::Buffer> const& buffer);
+  Status EmplaceBuffer(ObjectID const id,
+                       std::shared_ptr<arrow::Buffer> const& buffer);
 
-  void Extend(BlobSet const& others);
+  void Extend(BufferSet const& others);
 
-  void Extend(std::shared_ptr<BlobSet> const& others);
+  void Extend(std::shared_ptr<BufferSet> const& others);
 
   bool Contains(ObjectID const id) const;
 
+  bool Get(ObjectID const id, std::shared_ptr<arrow::Buffer>& buffer) const;
+
  private:
-  // fetchable blob ids set, i.e., local blobs
-  std::unordered_set<ObjectID> ids_;
-  // blob ids to blobs mapping: local blobs + remote blobs
-  std::unordered_map<ObjectID, Blob> blobs_;
+  // blob ids to buffer mapping: local blobs (not null) + remote blobs (null).
+  std::set<ObjectID> buffer_ids_;
+  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers_;
 };
 
 }  // namespace vineyard

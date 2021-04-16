@@ -292,8 +292,7 @@ Status ReadCreateRemoteBufferRequest(const json& root, size_t& size) {
   return Status::OK();
 }
 
-void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                            std::string& msg) {
+void WriteGetBuffersRequest(const std::set<ObjectID>& ids, std::string& msg) {
   json root;
   root["type"] = "get_buffers_request";
   int idx = 0;
@@ -329,7 +328,7 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
 }
 
 Status ReadGetBuffersReply(const json& root,
-                           std::unordered_map<ObjectID, Payload>& objects) {
+                           std::map<ObjectID, Payload>& objects) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
@@ -506,33 +505,37 @@ Status ReadExistsReply(const json& root, bool& exists) {
 }
 
 void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
-                         std::string& msg) {
+                         const bool fastpath, std::string& msg) {
   json root;
   root["type"] = "del_data_request";
   root["id"] = std::vector<ObjectID>{id};
   root["force"] = force;
   root["deep"] = deep;
+  root["fastpath"] = fastpath;
 
   encode_msg(root, msg);
 }
 
 void WriteDelDataRequest(const std::vector<ObjectID>& ids, const bool force,
-                         const bool deep, std::string& msg) {
+                         const bool deep, const bool fastpath,
+                         std::string& msg) {
   json root;
   root["type"] = "del_data_request";
   root["id"] = ids;
   root["force"] = force;
   root["deep"] = deep;
+  root["fastpath"] = fastpath;
 
   encode_msg(root, msg);
 }
 
 Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& ids,
-                          bool& force, bool& deep) {
+                          bool& force, bool& deep, bool& fastpath) {
   RETURN_ON_ASSERT(root["type"] == "del_data_request");
   ids = root["id"].get_to(ids);
   force = root.value("force", false);
   deep = root.value("deep", false);
+  fastpath = root.value("fastpath", false);
   return Status::OK();
 }
 

@@ -377,6 +377,7 @@ endif()
 if(BUILD_VINEYARD_SERVER)
     find_openssl_libraries(REQUIRED)
     find_etcd_cpp_apiv3()
+    find_intel_tbb()
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
@@ -390,6 +391,7 @@ if(BUILD_VINEYARD_SERVER)
                                            ${GLOG_LIBRARIES}
                                            ${OPENSSL_LIBRARIES}
                                            nlohmann_json::nlohmann_json
+                                           TBB::tbb
     )
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})

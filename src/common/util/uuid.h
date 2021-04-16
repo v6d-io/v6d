@@ -75,9 +75,13 @@ inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
 
 const std::string ObjectIDToString(const ObjectID id);
 
-ObjectID ObjectIDFromString(const std::string& s);
+inline ObjectID ObjectIDFromString(const std::string& s) {
+  return strtoull(s.c_str() + 1, nullptr, 16);
+}
 
-ObjectID ObjectIDFromString(const char* s);
+inline ObjectID ObjectIDFromString(const char* s) {
+  return strtoull(s + 1, nullptr, 16);
+}
 
 [[deprecated(
     "For backwards-compatiblity, will be removed in 1.0.")]] inline const std::
@@ -100,9 +104,13 @@ VYObjectIDFromString(const char* s) {
 
 const std::string SignatureToString(const Signature id);
 
-Signature SignatureFromString(const std::string& s);
+inline Signature SignatureFromString(const std::string& s) {
+  return strtoull(s.c_str() + 1, nullptr, 16);
+}
 
-Signature SignatureFromString(const char* s);
+inline Signature SignatureFromString(const char* s) {
+  return strtoull(s + 1, nullptr, 16);
+}
 
 inline ObjectID InvalidObjectID() {
   return std::numeric_limits<ObjectID>::max();

@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <fnmatch.h>
 
+#include <iostream>
 #include <regex>
 #include <set>
 #include <string>
@@ -79,10 +80,22 @@ static bool __attribute__((used)) is_value_node(const std::string& str) {
   return str[0] == 'v';
 }
 
+/**
+ * + for non-blob types, link is: "<name>.<type>".
+ * + for blobs, link is "<name>.<type>@instance_id".
+ */
 static Status parse_link(const std::string& str, std::string& type,
-                         std::string& name) {
-  std::string::size_type l1 = str.find(".");
-  std::string::size_type l2 = str.rfind(".");
+                         std::string& name, InstanceID& instance_id) {
+  std::string::size_type at = str.find('@');
+
+  if (at != std::string::npos) {
+    instance_id = std::strtoull(str.c_str() + at + 1, nullptr, 10);
+  } else {
+    instance_id = UnspecifiedInstanceID();
+  }
+
+  std::string::size_type l1 = str.find('.');
+  std::string::size_type l2 = str.rfind('.');
   if (l1 == std::string::npos || l1 != l2) {
     type.clear();
     name.clear();
@@ -90,7 +103,11 @@ static Status parse_link(const std::string& str, std::string& type,
     return Status::MetaTreeLinkInvalid();
   }
   name = str.substr(0, l1);
-  type = str.substr(l1 + 1);
+  if (at != std::string::npos) {
+    type = str.substr(l1 + 1, at - (l1 + 1));
+  } else {
+    type = str.substr(l1 + 1);
+  }
   if (type.empty() || name.empty()) {
     LOG(ERROR) << "meta tree link invalid: " << type << ", " << name;
     type.clear();
@@ -100,11 +117,31 @@ static Status parse_link(const std::string& str, std::string& type,
   return Status::OK();
 }
 
+/**
+ * See also: `parse_link()`.
+ */
 static void generate_link(const std::string& type, const std::string& name,
                           std::string& link) {
   // shorten the typename, but still leave it in the link, to make the metatree
   // more verbose.
-  link = name + "." + type.substr(0, type.find_first_of('<'));
+  thread_local std::stringstream ss;
+  ss.str("");
+  ss << name << "." << type.substr(0, type.find_first_of('<'));
+  link = ss.str();
+}
+
+/**
+ * See also: `parse_link()`.
+ */
+static void generate_link(const std::string& type, const std::string& name,
+                          const InstanceID& instance_id, std::string& link) {
+  // shorten the typename, but still leave it in the link, to make the metatree
+  // more verbose.
+  thread_local std::stringstream ss;
+  ss.str("");
+  ss << name << "." << type.substr(0, type.find_first_of('<')) << "@"
+     << instance_id;
+  link = ss.str();
 }
 
 static Status get_sub_tree(const json& tree, const std::string& prefix,
@@ -138,27 +175,6 @@ static bool has_sub_tree(const json& tree, const std::string& prefix,
     path += "/" + name;
   }
   return tree.contains(json::json_pointer(path));
-}
-
-static Status del_sub_tree(json& tree, const std::string& prefix,
-                           const std::string& name) {
-  if (name.find('/') != std::string::npos) {
-    LOG(ERROR) << "meta tree name invalid. " << name;
-    return Status::MetaTreeNameInvalid();
-  }
-  auto path = json::json_pointer(prefix);
-  if (tree.contains(path)) {
-    if (tree[path].contains(name)) {
-      tree[path].erase(name);
-      return Status::OK();
-    } else {
-      LOG(ERROR) << "meta tree name doesn't exist: " << name;
-      return Status::MetaTreeNameNotExists();
-    }
-  } else {
-    LOG(ERROR) << "meta tree subtree doesn't exist." << path;
-    return Status::MetaTreeSubtreeNotExists(name);
-  }
 }
 
 static std::string object_id_from_signature(const json& tree,
@@ -230,14 +246,16 @@ static bool is_meta_placeholder(const json& tree) {
 /**
  * Get metadata for an object "recursively".
  */
-Status GetData(const json& tree, const ObjectID id, json& sub_tree) {
-  return GetData(tree, VYObjectIDToString(id), sub_tree);
+Status GetData(const json& tree, const ObjectID id, json& sub_tree,
+               InstanceID const& current_instance_id) {
+  return GetData(tree, VYObjectIDToString(id), sub_tree, current_instance_id);
 }
 
 /**
  * Get metadata for an object "recursively".
  */
-Status GetData(const json& tree, const std::string& name, json& sub_tree) {
+Status GetData(const json& tree, const std::string& name, json& sub_tree,
+               InstanceID const& current_instance_id) {
   json tmp_tree;
   sub_tree.clear();
   Status status = get_sub_tree(tree, "/data", name, tmp_tree);
@@ -256,8 +274,10 @@ Status GetData(const json& tree, const std::string& name, json& sub_tree) {
     if (type == NodeType::Value) {
       sub_tree[item.key()] = value;
     } else if (type == NodeType::Link) {
+      InstanceID instance_id = UnspecifiedInstanceID();
       std::string sub_sub_tree_type, sub_sub_tree_name;
-      status = parse_link(value, sub_sub_tree_type, sub_sub_tree_name);
+      status =
+          parse_link(value, sub_sub_tree_type, sub_sub_tree_name, instance_id);
 
       // the sub_sub_tree_name might be a signature
       if (sub_sub_tree_name[0] == 's') {
@@ -269,18 +289,19 @@ Status GetData(const json& tree, const std::string& name, json& sub_tree) {
         return status;
       }
       json sub_sub_tree;
-      status = GetData(tree, sub_sub_tree_name, sub_sub_tree);
+      status =
+          GetData(tree, sub_sub_tree_name, sub_sub_tree, current_instance_id);
       if (status.ok()) {
         sub_tree[item.key()] = sub_sub_tree;
       } else {
         ObjectID sub_sub_tree_id = VYObjectIDFromString(sub_sub_tree_name);
         if (IsBlob(sub_sub_tree_id) && status.IsMetaTreeSubtreeNotExists()) {
           // make an empty blob
-          sub_sub_tree["id"] = VYObjectIDToString(EmptyBlobID());
+          sub_sub_tree["id"] = sub_sub_tree_name;
           sub_sub_tree["typename"] = "vineyard::Blob";
           sub_sub_tree["length"] = 0;
           sub_sub_tree["nbytes"] = 0;
-          sub_sub_tree["instance_id"] = UnspecifiedInstanceID();
+          sub_sub_tree["instance_id"] = instance_id;
           sub_sub_tree["transient"] = true;
           sub_tree[item.key()] = sub_sub_tree;
         } else {
@@ -344,24 +365,12 @@ Status ListData(const json& tree, std::string const& pattern, bool const regex,
   return Status::OK();
 }
 
-Status DelData(json& tree, const ObjectID id) {
-  std::string name = VYObjectIDToString(id);
-  return del_sub_tree(tree, "/data", name);
-}
-
-Status DelData(json& tree, const std::vector<ObjectID>& ids) {
-  // FIXME: use a more efficient implmentation.
-  for (auto const& id : ids) {
-    auto s = DelData(tree, id);
-    if (!s.ok()) {
-      return s;
-    }
-  }
-  return Status::OK();
-}
-
 Status DelDataOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
+  if (IsBlob(id)) {
+    ops.emplace_back(IMetaService::op_t::Del("/data/" + ObjectIDToString(id)));
+    return Status::OK();
+  }
   return DelDataOps(tree, VYObjectIDToString(id), ops, sync_remote);
 }
 
@@ -410,7 +419,12 @@ Status DelDataOps(const json& tree, const std::string& name,
 static void generate_put_ops(const json& meta, const json& diff,
                              const json& signatures, const std::string& name,
                              std::vector<IMetaService::op_t>& ops) {
+  LOG(INFO) << "generate_put_ops: diff = " << diff.dump(4);
   if (!diff.is_object() || diff.empty()) {
+    return;
+  }
+  if (diff["typename"].get_ref<std::string const&>() == "vineyard::Blob") {
+    // blobs won't come into metadata.
     return;
   }
   std::string key_prefix = "/data" + std::string("/") + name + "/";
@@ -433,7 +447,14 @@ static void generate_put_ops(const json& meta, const json& diff,
         sub_name = sig_as_name;
       }
       std::string link;
-      generate_link(sub_type, sub_name, link);
+      if (sub_type == "vineyard::Blob") {
+        LOG(INFO) << "item instance id: "
+                  << item.value()["instance_id"].get<InstanceID>();
+        generate_link(sub_type, sub_name,
+                      item.value()["instance_id"].get<InstanceID>(), link);
+      } else {
+        generate_link(sub_type, sub_name, link);
+      }
       std::string encoded_value;
       encode_value(NodeType::Link, link, encoded_value);
       ops.emplace_back(
@@ -492,7 +513,12 @@ static void generate_persist_ops(json& diff, const std::string& name,
         generate_persist_ops(item.value(), sub_name, ops, dedup);
       }
       std::string link;
-      generate_link(sub_type, sub_name, link);
+      if (sub_type == "vineyard::Blob") {
+        generate_link(sub_type, sub_name,
+                      item.value()["instance_id"].get<InstanceID>(), link);
+      } else {
+        generate_link(sub_type, sub_name, link);
+      }
       std::string encoded_value;
       encode_value(NodeType::Link, link, encoded_value);
       diff[item.key()] = encoded_value;
@@ -527,20 +553,13 @@ static Status diff_data_meta_tree(const json& meta,
                                   json& signatures, InstanceID& instance_id) {
   json old_sub_tree;
   Status status = get_sub_tree(meta, "/data", sub_tree_name, old_sub_tree);
-
   bool global_object = sub_tree.value("global", false);
 
-  if (!status.ok()) {
-    if (status.IsMetaTreeSubtreeNotExists()) {
-      diff["transient"] = true;
-    } else {
-      return status;
-    }
-  }
-
-  // when put data using meta placeholder, the object it points to must exist,
-  // and no need to perform diff.
+  // subtree can be a place holder:
+  //
+  // the object it points to must exist.
   if (is_meta_placeholder(sub_tree)) {
+    // the target exists.
     if (status.ok()) {
       std::string sub_tree_type;
       RETURN_ON_ERROR(get_type(old_sub_tree, sub_tree_type, true));
@@ -551,8 +570,30 @@ static Status diff_data_meta_tree(const json& meta,
         diff["global"] = old_sub_tree["global"].get<bool>();
       }
       instance_id = old_sub_tree["instance_id"].get<InstanceID>();
+      return Status::OK();
     }
+    // blob is special: we cannot do resolution.
+    if (IsBlob(ObjectIDFromString(sub_tree_name))) {
+      return Status::MetaTreeInvalid(
+          "The blobs cannot be added in the placeholder fashion.");
+    }
+    // otherwise: error
     return status;
+  }
+
+  // handle (possible) unexpected errors
+  if (!status.ok()) {
+    if (status.IsMetaTreeSubtreeNotExists()) {
+      if (IsBlob(ObjectIDFromString(sub_tree_name))) {
+        diff = sub_tree;  // won't be a placeholder
+        instance_id = sub_tree["instance_id"].get<InstanceID>();
+        return Status::OK();
+      } else {
+        diff["transient"] = true;
+      }
+    } else {
+      return status;
+    }
   }
 
   // recompute instance_id: check if it refers remote objects.
@@ -615,7 +656,8 @@ static Status diff_data_meta_tree(const json& meta,
             (!mb_old_sub_sub_tree->is_string() ||
              !is_link_node(
                  mb_old_sub_sub_tree->get_ref<std::string const&>()))) {
-          return Status::MetaTreeInvalid();
+          return Status::MetaTreeInvalid(
+              "Here it was a link node, but not it isn't.");
         }
       }
 
@@ -819,8 +861,10 @@ Status DecodeObjectID(const json& tree, const std::string& value,
   std::string link_value;
   decode_value(value, type, link_value);
   if (type == NodeType::Link) {
+    InstanceID instance_id = UnspecifiedInstanceID();
     std::string type_of_value, name_of_value;
-    auto status = parse_link(link_value, type_of_value, name_of_value);
+    auto status =
+        parse_link(link_value, type_of_value, name_of_value, instance_id);
     if (status.ok()) {
       if (name_of_value[0] == 'o') {
         object_id = VYObjectIDFromString(name_of_value);

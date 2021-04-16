@@ -20,6 +20,7 @@ limitations under the License.
 #include <limits>
 
 #include "client/client.h"
+#include "common/memory/payload.h"
 
 namespace vineyard {
 
@@ -29,26 +30,16 @@ Blob::Blob() {
   this->buffer_ = nullptr;
 }
 
-Blob::Blob(const ObjectID id, const size_t size) {
-  this->id_ = id;
-  this->size_ = size;
-  this->buffer_ = nullptr;
-}
+size_t Blob::size() const { return allocated_size(); }
 
-Blob::Blob(const ObjectID id, const size_t size,
-           std::shared_ptr<arrow::Buffer> const& buffer) {
-  this->id_ = id;
-  this->size_ = size;
-  this->buffer_ = buffer;
-}
-
-size_t Blob::size() const { return size_; }
+size_t Blob::allocated_size() const { return size_; }
 
 const char* Blob::data() const {
   if (size_ > 0 && buffer_ == nullptr) {
     throw std::invalid_argument(
         "The object might be a (partially) remote object and the payload data "
-        "is not locally available");
+        "is not locally available: " +
+        ObjectIDToString(id_));
   }
   return reinterpret_cast<const char*>(buffer_->data());
 }
@@ -57,48 +48,54 @@ const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
   if (size_ > 0 && buffer_ == nullptr) {
     throw std::invalid_argument(
         "The object might be a (partially) remote object and the payload data "
-        "is not locally available");
+        "is not locally available: " +
+        ObjectIDToString(id_));
   }
   return buffer_;
 }
 
 void Blob::Construct(ObjectMeta const& meta) {
+  LOG(INFO) << "Construct: prepare to get buffer: " << this->buffer_;
   std::string __type_name = type_name<Blob>();
   CHECK(meta.GetTypeName() == __type_name);
   this->meta_ = meta;
   this->id_ = meta.GetId();
-  meta.GetKeyValue("length", this->size_);
-  if (auto client = dynamic_cast<Client*>(meta.GetClient())) {
-    Payload object;
-    if (this->size_ == 0) {
-      // dummy blob
-      buffer_ = nullptr;  // indicates empty blob
-    } else {
-      auto status = client->GetBuffer(meta.GetId(), object);
-      if (status.ok()) {
-        uint8_t* mmapped_ptr = nullptr;
-        if (object.data_size > 0) {
-          VINEYARD_CHECK_OK(client->mmapToClient(
-              object.store_fd, object.map_size, true, true, &mmapped_ptr));
-        }
-        buffer_ = arrow::Buffer::Wrap(mmapped_ptr + object.data_offset,
-                                      object.data_size);
-      } else {
-        throw std::runtime_error("Failed to construct blob: " +
-                                 VYObjectIDToString(meta.GetId()));
-      }
+  LOG(INFO) << "Construct: prepare to get buffer: id = " << this->id_ << ", "
+            << meta.IsLocal();
+  if (this->buffer_ != nullptr) {
+    return;
+  }
+  if (this->id_ == EmptyBlobID()) {
+    this->size_ = 0;
+    return;
+  }
+  if (!meta.IsLocal()) {
+    return;
+  }
+  LOG(INFO) << "Construct: prepare to get buffer from pool";
+  if (meta.GetBuffer(meta.GetId(), this->buffer_).ok()) {
+    if (this->buffer_ == nullptr) {
+      throw std::runtime_error(
+          "Invalid internal state: local blob found bit it is nullptr: " +
+          VYObjectIDToString(meta.GetId()));
     }
+    this->size_ = this->buffer_->size();
+  } else {
+    throw std::runtime_error(
+        "Invalid internal state: failed to construct local blob since payload "
+        "is missing: " +
+        VYObjectIDToString(meta.GetId()));
   }
 }
 
 void Blob::Dump() const {
   if (VLOG_IS_ON(10)) {
     std::stringstream ss;
-    ss << "size = " << size() << ", buffer = ";
+    ss << "size = " << size_ << ", buffer = ";
     {
       std::ios::fmtflags os_flags(std::cout.flags());
       auto ptr = reinterpret_cast<const uint8_t*>(this->data());
-      for (size_t idx = 0; idx < size(); ++idx) {
+      for (size_t idx = 0; idx < size_; ++idx) {
         ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
            << static_cast<const uint32_t>(ptr[idx]);
       }
@@ -109,39 +106,44 @@ void Blob::Dump() const {
 }
 
 std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
-  std::shared_ptr<Blob> empty_blob(new Blob(EmptyBlobID(), 0, nullptr));
+  std::shared_ptr<Blob> empty_blob(new Blob());
+  empty_blob->id_ = EmptyBlobID();
+  empty_blob->size_ = 0;
   empty_blob->meta_.SetId(EmptyBlobID());
   empty_blob->meta_.SetSignature(static_cast<Signature>(EmptyBlobID()));
   empty_blob->meta_.SetTypeName(type_name<Blob>());
   empty_blob->meta_.AddKeyValue("length", 0);
   empty_blob->meta_.SetNBytes(0);
 
+  empty_blob->meta_.SetClient(&client);
   empty_blob->meta_.AddKeyValue("instance_id", client.instance_id());
   empty_blob->meta_.AddKeyValue("transient", true);
-
-  // NB: no need to create metadata in vineyardd at once
   return empty_blob;
 }
 
-std::shared_ptr<Blob> Blob::FromBuffer(Client& client, const uintptr_t base,
-                                       const uintptr_t ubase,
-                                       const uintptr_t pointer,
-                                       const size_t size) {
-  ObjectID blob_id = static_cast<ObjectID>(pointer - ubase + base);
-  std::shared_ptr<Blob> blob(
-      new Blob(blob_id, size,
-               std::make_shared<arrow::Buffer>(
-                   reinterpret_cast<uint8_t*>(pointer), size)));
-  blob->meta_.SetId(blob_id);
-  blob->meta_.SetSignature(static_cast<Signature>(blob_id));
+std::shared_ptr<Blob> Blob::FromBuffer(Client& client, const ObjectID object_id,
+                                       const size_t size,
+                                       const uintptr_t pointer) {
+  std::shared_ptr<Blob> blob = std::shared_ptr<Blob>(new Blob());
+  blob->id_ = object_id;
+  blob->size_ = size;
+  blob->meta_.SetId(object_id);
+  blob->meta_.SetSignature(static_cast<Signature>(object_id));
   blob->meta_.SetTypeName(type_name<Blob>());
   blob->meta_.AddKeyValue("length", size);
   blob->meta_.SetNBytes(size);
 
+  blob->buffer_ =
+      arrow::Buffer::Wrap(reinterpret_cast<const uint8_t*>(pointer), size);
+
+  // n.b.: the later emplacement requires object id exists
+  VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id));
+  VINEYARD_CHECK_OK(
+      blob->meta_.buffer_set_->EmplaceBuffer(object_id, blob->buffer_));
+
+  blob->meta_.SetClient(&client);
   blob->meta_.AddKeyValue("instance_id", client.instance_id());
   blob->meta_.AddKeyValue("transient", true);
-
-  VINEYARD_CHECK_OK(client.CreateMetaData(blob->meta_, blob->id_));
   return blob;
 }
 
@@ -170,7 +172,7 @@ Status BlobWriter::Abort(Client& client) {
   if (this->sealed()) {
     return Status::ObjectSealed();
   }
-  return client.DropBuffer(this->object_id_, this->fd_);
+  return client.DropBuffer(this->object_id_, this->payload_.store_fd);
 }
 
 void BlobWriter::AddKeyValue(std::string const& key, std::string const& value) {
@@ -201,67 +203,95 @@ void BlobWriter::Dump() const {
 std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   VINEYARD_ASSERT(!this->sealed(), "The blob writer has been already sealed.");
   // get blob and re-map
-  Payload object;
-  VINEYARD_CHECK_OK(client.GetBuffer(object_id_, object));
   uint8_t* mmapped_ptr = nullptr;
-  if (object.data_size > 0) {
-    VINEYARD_CHECK_OK(client.mmapToClient(object.store_fd, object.map_size,
+  if (payload_.data_size > 0) {
+    VINEYARD_CHECK_OK(client.mmapToClient(payload_.store_fd, payload_.map_size,
                                           false, true, &mmapped_ptr));
   }
-  auto ro_buffer =
-      arrow::Buffer::Wrap(mmapped_ptr + object.data_offset, object.data_size);
+  auto buffer = arrow::Buffer::Wrap(mmapped_ptr + payload_.data_offset,
+                                    payload_.data_size);
 
-  std::shared_ptr<Blob> blob(new Blob(object_id_, size(), ro_buffer));
+  std::shared_ptr<Blob> blob(new Blob());
 
+  blob->id_ = object_id_;
+  blob->size_ = size();
   blob->meta_.SetId(object_id_);  // blob's id is the address
+
   // create meta in vineyardd
   blob->meta_.SetTypeName(type_name<Blob>());
   blob->meta_.AddKeyValue("length", size());
   blob->meta_.SetNBytes(size());
+  blob->meta_.AddKeyValue("instance_id", client.instance_id());
+  blob->meta_.AddKeyValue("transient", true);
+
+  blob->buffer_ = buffer;  // assign the readonly buffer.
+  VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id_));
+  VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id_, buffer));
 
   // assoicate extra key-value metadata
   for (auto const& kv : metadata_) {
     blob->meta_.AddKeyValue(kv.first, kv.second);
   }
-
-  VINEYARD_CHECK_OK(client.CreateMetaData(blob->meta_, blob->id_));
   this->set_sealed(true);
   return blob;
 }
 
-void BlobSet::EmplaceId(ObjectID const id, size_t const size, bool local) {
-  if (local) {
-    ids_.emplace(id);
+Status BufferSet::EmplaceBuffer(ObjectID const id) {
+  auto p = buffers_.find(id);
+  if (p != buffers_.end() && p->second != nullptr) {
+    return Status::Invalid(
+        "Invalid internal state: the buffer shouldn't has been finalized, id "
+        "= " +
+        ObjectIDToString(id));
   }
-  blobs_.emplace(id, Blob(id, size));
+  buffer_ids_.emplace(id);
+  buffers_.emplace(id, nullptr);
+  return Status::OK();
 }
 
-void BlobSet::EmplaceBlob(ObjectID const id,
-                          std::shared_ptr<arrow::Buffer> const& buffer) {
-  ids_.emplace(id);
-  auto p = blobs_.find(id);
-  if (p == blobs_.end()) {
-    blobs_.emplace(id, Blob(id, buffer->size(), buffer));
+Status BufferSet::EmplaceBuffer(ObjectID const id,
+                                std::shared_ptr<arrow::Buffer> const& buffer) {
+  auto p = buffers_.find(id);
+  if (p == buffers_.end()) {
+    return Status::Invalid(
+        "Invalid internal state: no such buffer defined, id = " +
+        ObjectIDToString(id));
   } else {
-    p->second.buffer_ = buffer;
+    if (p->second != nullptr) {
+      return Status::Invalid(
+          "Invalid internal state: duplicated buffer, id = " +
+          ObjectIDToString(id));
+
+    } else {
+      p->second = buffer;
+      return Status::OK();
+    }
   }
 }
 
-void BlobSet::Extend(BlobSet const& others) {
-  for (auto const& id : others.ids_) {
-    ids_.emplace(id);
-  }
-  for (auto const& kv : others.blobs_) {
-    blobs_.emplace(kv.first, kv.second);
+void BufferSet::Extend(BufferSet const& others) {
+  for (auto const& kv : others.buffers_) {
+    buffers_.emplace(kv.first, kv.second);
   }
 }
 
-void BlobSet::Extend(std::shared_ptr<BlobSet> const& others) {
+void BufferSet::Extend(std::shared_ptr<BufferSet> const& others) {
   this->Extend(*others);
 }
 
-bool BlobSet::Contains(ObjectID const id) const {
-  return ids_.find(id) != ids_.end();
+bool BufferSet::Contains(ObjectID const id) const {
+  return buffers_.find(id) != buffers_.end();
+}
+
+bool BufferSet::Get(ObjectID const id,
+                    std::shared_ptr<arrow::Buffer>& buffer) const {
+  auto iter = buffers_.find(id);
+  if (iter == buffers_.end()) {
+    return false;
+  } else {
+    buffer = iter->second;
+    return true;
+  }
 }
 
 }  // namespace vineyard

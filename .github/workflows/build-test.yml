@@ -22,6 +22,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
+        malloc: [dlmalloc, jemalloc]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -36,9 +37,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ${{ runner.os }}-ccache-${{ hashFiles('**/git-modules.txt') }}
+          key: ${{ runner.os }}-${{ matrix.malloc }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
-            ${{ runner.os }}-ccache-
+            ${{ runner.os }}-${{ matrix.malloc }}-ccache-
 
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'
@@ -171,6 +172,7 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Debug \
                    -DBUILD_SHARED_LIBS=ON \
+                   -DWITH_ALLOCATOR=${{ matrix.malloc }} \
                    -DBUILD_VINEYARD_COVERAGE=ON \
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
                    -DBUILD_VINEYARD_BASIC=ON \

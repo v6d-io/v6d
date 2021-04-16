@@ -96,9 +96,6 @@ Status RPCClient::GetMetaData(const ObjectID id, ObjectMeta& meta,
   json tree;
   RETURN_ON_ERROR(GetData(id, tree, sync_remote));
   meta.SetMetaData(this, tree);
-  for (const auto& id : meta.GetBlobSet()->AllBlobIds()) {
-    meta.SetBlob(id, nullptr);
-  }
   return Status::OK();
 }
 
@@ -112,9 +109,6 @@ Status RPCClient::GetMetaData(const std::vector<ObjectID>& ids,
 
   for (size_t idx = 0; idx < trees.size(); ++idx) {
     metas[idx].SetMetaData(this, trees[idx]);
-    for (const auto& id : metas[idx].GetBlobSet()->AllBlobIds()) {
-      metas[idx].SetBlob(id, nullptr);
-    }
   }
   return Status::OK();
 }
@@ -174,9 +168,6 @@ std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
   for (auto const& kv : meta_trees) {
     ObjectMeta meta;
     meta.SetMetaData(this, kv.second);
-    for (const auto& id : meta.GetBlobSet()->AllBlobIds()) {
-      meta.SetBlob(id, nullptr);
-    }
     auto object = ObjectFactory::Create(meta.GetTypeName());
     if (object == nullptr) {
       object = std::shared_ptr<Object>(new Object());

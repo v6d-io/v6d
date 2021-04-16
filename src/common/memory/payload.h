@@ -72,9 +72,16 @@ struct Payload {
             (data_size == other.data_size));
   }
 
+  json ToJSON() const;
+
   void ToJSON(json& tree) const;
 
   void FromJSON(const json& tree);
+
+  /**
+   * @brief A static variant for `FromJSON`.
+   */
+  static Payload FromJSON1(const json& tree);
 };
 
 }  // namespace vineyard

@@ -252,8 +252,7 @@ bool SocketConnection::doGetBuffers(const json& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadGetBuffersRequest(root, ids));
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->ProcessGetRequest(ids, objects));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
   WriteGetBuffersReply(objects, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
@@ -311,8 +310,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadGetBuffersRequest(root, ids));
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->ProcessGetRequest(ids, objects));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
   WriteGetBuffersReply(objects, message_out);
 
   this->doWrite(message_out, [this, self, objects](const Status& status) {
@@ -337,8 +335,8 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   TRY_READ_REQUEST(ReadCreateBufferRequest(root, size));
   ObjectID object_id;
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->ProcessCreateRequest(
-      size, object_id, object));
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->Create(size, object_id, object));
   WriteCreateBufferReply(object_id, object, message_out);
 
   int store_fd = object->store_fd;
@@ -361,8 +359,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
 
   TRY_READ_REQUEST(ReadCreateBufferRequest(root, size));
   ObjectID object_id;
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->ProcessCreateRequest(
-      size, object_id, object));
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->Create(size, object_id, object));
 
   asio::async_read(
       socket_, asio::buffer(object->pointer, size),
@@ -372,8 +370,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
             (!ec || ec == asio::error::eof)) {
           WriteCreateBufferReply(object->object_id, object, message_out);
         } else {
-          VINEYARD_DISCARD(server_ptr_->GetBulkStore()->ProcessDeleteRequest(
-              object->object_id));
+          VINEYARD_DISCARD(
+              server_ptr_->GetBulkStore()->Delete(object->object_id));
           if (static_cast<size_t>(object->data_size) == size) {
             WriteErrorReply(
                 Status::IOError("Failed to read buffer's content from client"),
@@ -391,7 +389,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   auto self(shared_from_this());
   ObjectID object_id = InvalidObjectID();
   TRY_READ_REQUEST(ReadDropBufferRequest(root, object_id));
-  auto status = server_ptr_->GetBulkStore()->ProcessDeleteRequest(object_id);
+  auto status = server_ptr_->GetBulkStore()->Delete(object_id);
   std::string message_out;
   if (status.ok()) {
     WriteDropBufferReply(message_out);
@@ -543,10 +541,10 @@ bool SocketConnection::doShallowCopy(const json& root) {
 bool SocketConnection::doDelData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
-  bool force, deep;
-  TRY_READ_REQUEST(ReadDelDataRequest(root, ids, force, deep));
-  RESPONSE_ON_ERROR(
-      server_ptr_->DelData(ids, force, deep, [self](const Status& status) {
+  bool force, deep, fastpath;
+  TRY_READ_REQUEST(ReadDelDataRequest(root, ids, force, deep, fastpath));
+  RESPONSE_ON_ERROR(server_ptr_->DelData(
+      ids, force, deep, fastpath, [self](const Status& status) {
         std::string message_out;
         if (status.ok()) {
           WriteDelDataReply(message_out);
@@ -603,8 +601,8 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
         std::string message_out;
         if (status.ok()) {
           std::shared_ptr<Payload> object;
-          RETURN_ON_ERROR(self->server_ptr_->GetBulkStore()->ProcessGetRequest(
-              chunk, object));
+          RETURN_ON_ERROR(
+              self->server_ptr_->GetBulkStore()->Get(chunk, object));
           WriteGetNextStreamChunkReply(object, message_out);
           int store_fd = object->store_fd;
           int data_size = object->data_size;
@@ -637,8 +635,8 @@ bool SocketConnection::doPullNextStreamChunk(const json& root) {
         std::string message_out;
         if (status.ok()) {
           std::shared_ptr<Payload> object;
-          RETURN_ON_ERROR(self->server_ptr_->GetBulkStore()->ProcessGetRequest(
-              chunk, object));
+          RETURN_ON_ERROR(
+              self->server_ptr_->GetBulkStore()->Get(chunk, object));
           WritePullNextStreamChunkReply(object, message_out);
           int store_fd = object->store_fd;
           int data_size = object->data_size;
