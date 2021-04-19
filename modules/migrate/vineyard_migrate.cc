@@ -143,14 +143,13 @@ Status Work(Client& client, RPCClient& rpc_client,
       rpc_client.GetMetaData(VYObjectIDFromString(FLAGS_id), metadata, true));
 
   // step 1: collect blob set
-  auto blobs = metadata.GetBufferSet()->AllBuffers();
+  auto blobs = metadata.GetBufferSet()->AllBufferIds();
   metadata.PrintMeta();
   VLOG(10) << "blob sizes to migrate: " << blobs.size();
   std::map<ObjectID, std::shared_ptr<Blob>> target_blobs;
 
   // step 2: migrate blobs to local
-  for (auto const& item : blobs) {
-    const ObjectID blob = item.first;
+  for (auto const& blob : blobs) {
     VLOG(10) << "Will migrate blob " << VYObjectIDToString(blob) << " to local";
     asio::write(socket, asio::buffer(&blob, sizeof(ObjectID)));
     size_t size_of_blob = std::numeric_limits<size_t>::max();

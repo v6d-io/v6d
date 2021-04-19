@@ -99,6 +99,11 @@ def test_remote_deletion(vineyard_ipc_sockets):
     client2.get_meta(o1, sync_remote=True)
     client2.delete(o1)
 
+    try:
+        client1.get_meta(o1, sync_remote=True)
+    except Exception:
+        pass
+
     new_status = client1.status
 
     assert old_status.memory_limit == new_status.memory_limit
