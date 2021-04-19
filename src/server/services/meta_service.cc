@@ -39,7 +39,8 @@ std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t ptr) {
  * deletion of the blobs cannot be reflected in watched etcd events.
  */
 
-void IMetaService::incRef(std::string const& key, std::string const& value) {
+void IMetaService::incRef(std::string const& key, std::string const& value,
+                          const bool from_remote) {
   std::vector<std::string> vs;
   boost::algorithm::split(vs, key, [](const char c) { return c == '/'; });
   if (vs[0].empty()) {
@@ -52,6 +53,11 @@ void IMetaService::incRef(std::string const& key, std::string const& value) {
   ObjectID key_obj, value_obj;
   if (meta_tree::DecodeObjectID(meta_, value, value_obj).ok()) {
     key_obj = VYObjectIDFromString(vs[1]);
+    if (from_remote && IsBlob(value_obj)) {
+      // don't put remote blob refs into deps graph, since two blobs may share
+      // the same object id.
+      return;
+    }
     {
       // validate the dependency graph
       decltype(subobjects_.begin()) iter;
@@ -172,6 +178,20 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
   if (initial_delete_set.find(object_id) != initial_delete_set.end()) {
     initial_delete_set.erase(object_id);
   }
+}
+
+void IMetaService::findDeleteSet(std::vector<ObjectID> const& object_ids,
+                                 std::vector<ObjectID>& processed_delete_set,
+                                 bool force, bool deep) {
+  // implements dependent-based (usage-based) lifecycle: find the delete set.
+  std::set<ObjectID> initial_delete_set{object_ids.begin(), object_ids.end()};
+  std::set<ObjectID> delete_set;
+  std::map<ObjectID, int32_t> depthes;
+  for (auto const object_id : object_ids) {
+    traverseToDelete(initial_delete_set, delete_set, 0, depthes, object_id,
+                     force, deep);
+  }
+  postProcessForDelete(delete_set, depthes, processed_delete_set);
 }
 
 /**

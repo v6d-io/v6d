@@ -164,9 +164,8 @@ uint8_t* BulkStore::AllocateMemory(size_t size, int* fd, int64_t* map_size,
   return pointer;
 }
 
-Status BulkStore::ProcessCreateRequest(const size_t data_size,
-                                       ObjectID& object_id,
-                                       std::shared_ptr<Payload>& object) {
+Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
+                         std::shared_ptr<Payload>& object) {
   if (data_size == 0) {
     object_id = EmptyBlobID();
     object = Payload::MakeEmpty();
@@ -181,57 +180,62 @@ Status BulkStore::ProcessCreateRequest(const size_t data_size,
     return Status::NotEnoughMemory("size = " + std::to_string(data_size));
   }
   object_id = GenerateBlobID(pointer);
-  objects_.emplace(object_id,
-                   std::make_shared<Payload>(object_id, data_size, pointer, fd,
-                                             map_size, offset));
-  object = objects_[object_id];
+  object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
+                                     map_size, offset);
+  objects_.emplace(object_id, object);
 #ifndef NDEBUG
-  VLOG(10) << "after allocate: " << Footprint() << "(" << FootprintLimit()
-           << ")";
+  VLOG(10) << "after allocate: " << ObjectIDToString(object_id) << ": "
+           << Footprint() << "(" << FootprintLimit() << ")";
 #endif
   return Status::OK();
 }
 
-Status BulkStore::ProcessGetRequest(const ObjectID id,
-                                    std::shared_ptr<Payload>& object) {
+Status BulkStore::Get(const ObjectID id, std::shared_ptr<Payload>& object) {
   if (id == EmptyBlobID()) {
     object = Payload::MakeEmpty();
     return Status::OK();
-  } else if (objects_.find(id) != objects_.end()) {
-    object = objects_[id];
-    return Status::OK();
   } else {
-    return Status::ObjectNotExists();
+    object_map_t::const_accessor accessor;
+    if (objects_.find(accessor, id)) {
+      object = accessor->second;
+      return Status::OK();
+    } else {
+      return Status::ObjectNotExists("get: id = " + ObjectIDToString(id));
+    }
   }
 }
 
-Status BulkStore::ProcessGetRequest(
-    const std::vector<ObjectID>& ids,
-    std::vector<std::shared_ptr<Payload>>& objects) {
+Status BulkStore::Get(const std::vector<ObjectID>& ids,
+                      std::vector<std::shared_ptr<Payload>>& objects) {
   for (auto object_id : ids) {
     if (object_id == EmptyBlobID()) {
       objects.push_back(Payload::MakeEmpty());
-    } else if (objects_.find(object_id) != objects_.end()) {
-      objects.push_back(objects_[object_id]);
+    } else {
+      object_map_t::const_accessor accessor;
+      if (objects_.find(accessor, object_id)) {
+        objects.push_back(accessor->second);
+      }
     }
   }
   return Status::OK();
 }
 
-Status BulkStore::ProcessDeleteRequest(const ObjectID& object_id) {
+Status BulkStore::Delete(const ObjectID& object_id) {
   if (object_id == EmptyBlobID()) {
     return Status::OK();
   }
-  if (objects_.find(object_id) == objects_.end()) {
-    return Status::ObjectNotExists();
+  object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, object_id)) {
+    return Status::ObjectNotExists("delete: id = " +
+                                   ObjectIDToString(object_id));
   }
-  auto& object = objects_[object_id];
+  auto& object = accessor->second;
   if (object->arena_fd == -1) {
     auto buff_size = object->data_size;
     BulkAllocator::Free(object->pointer, buff_size);
-    objects_.erase(object_id);
 #ifndef NDEBUG
-    VLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit() << ")";
+    VLOG(10) << "after free: " << ObjectIDToString(object_id) << ": "
+             << Footprint() << "(" << FootprintLimit() << ")";
 #endif
   } else {
     static size_t page_size = memory::system_page_size();
@@ -243,7 +247,12 @@ Status BulkStore::ProcessDeleteRequest(const ObjectID& object_id) {
       auto iter = Arena::spans.find(object_id);
       if (iter != Arena::spans.begin()) {
         auto iter_prev = std::prev(iter);
-        auto& object_prev = objects_.at(*iter_prev);
+        object_map_t::const_accessor accessor;
+        if (!objects_.find(accessor, *iter_prev)) {
+          return Status::Invalid(
+              "Internal state error: previous blob not found");
+        }
+        auto& object_prev = accessor->second;
         lower_bound =
             memory::align_up(reinterpret_cast<uintptr_t>(object_prev->pointer) +
                                  object_prev->data_size,
@@ -251,7 +260,11 @@ Status BulkStore::ProcessDeleteRequest(const ObjectID& object_id) {
       }
       auto iter_next = std::next(iter);
       if (iter_next != Arena::spans.end()) {
-        auto& object_next = objects_.at(*iter_next);
+        object_map_t::const_accessor accessor;
+        if (!objects_.find(accessor, *iter_next)) {
+          return Status::Invalid("Internal state error: next blob not found");
+        }
+        auto& object_next = accessor->second;
         upper_bound = memory::align_down(
             reinterpret_cast<uintptr_t>(object_next->pointer), page_size);
       }
@@ -266,7 +279,13 @@ Status BulkStore::ProcessDeleteRequest(const ObjectID& object_id) {
                                       std::min(upper, upper_bound));
     }
   }
+  objects_.erase(accessor);
   return Status::OK();
+}
+
+bool BulkStore::Exists(const ObjectID& object_id) {
+  object_map_t::const_accessor accessor;
+  return objects_.find(accessor, object_id);
 }
 
 size_t BulkStore::Footprint() const { return BulkAllocator::Allocated(); }

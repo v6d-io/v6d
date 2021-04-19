@@ -17,6 +17,12 @@ limitations under the License.
 
 namespace vineyard {
 
+json Payload::ToJSON() const {
+  json payload;
+  this->ToJSON(payload);
+  return payload;
+}
+
 void Payload::ToJSON(json& tree) const {
   tree["object_id"] = object_id;
   tree["store_fd"] = store_fd;
@@ -32,6 +38,12 @@ void Payload::FromJSON(const json& tree) {
   data_size = tree["data_size"].get<int64_t>();
   map_size = tree["map_size"].get<int64_t>();
   pointer = nullptr;
+}
+
+Payload Payload::FromJSON1(const json& tree) {
+  Payload payload;
+  payload.FromJSON(tree);
+  return payload;
 }
 
 }  // namespace vineyard

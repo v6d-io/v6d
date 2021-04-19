@@ -93,8 +93,11 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
     meta_data.SetClient(this);
     meta_data.SetInstanceId(instance_id);
     if (meta_data.incomplete()) {
-      RETURN_ON_ERROR(this->GetMetaData(id, meta_data));
-      meta_data.incomplete_ = false;
+      // N.B.: don't use `meta_data` directly to `GetMetaData` otherwise it may
+      // violate the invariant of `BufferSet` in `ObjectMeta`.
+      ObjectMeta result_meta;
+      RETURN_ON_ERROR(this->GetMetaData(id, result_meta));
+      meta_data = result_meta;
     }
   }
   return status;
@@ -104,7 +107,7 @@ Status ClientBase::DelData(const ObjectID id, const bool force,
                            const bool deep) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteDelDataRequest(id, force, deep, message_out);
+  WriteDelDataRequest(id, force, deep, false, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -116,7 +119,7 @@ Status ClientBase::DelData(const std::vector<ObjectID>& ids, const bool force,
                            const bool deep) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteDelDataRequest(ids, force, deep, message_out);
+  WriteDelDataRequest(ids, force, deep, false, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));

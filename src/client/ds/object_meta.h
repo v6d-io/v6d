@@ -37,7 +37,7 @@ class ClientBase;
 class Client;
 class RPCClient;
 class Blob;
-class BlobSet;
+class BufferSet;
 class Object;
 
 /**
@@ -356,7 +356,6 @@ class ObjectMeta {
     json tree;
     GetKeyValue(key, tree);
     for (auto const& kv : json::iterator_wrapper(tree)) {
-      LOG(INFO) << "kv.key = " << kv.key() << " | " << json::parse(kv.key());
       values.emplace(json::parse(kv.key()), kv.value().get<Value>());
     }
   }
@@ -395,7 +394,6 @@ class ObjectMeta {
     json tree;
     GetKeyValue(key, tree);
     for (auto const& kv : json::iterator_wrapper(tree)) {
-      LOG(INFO) << "kv.key = " << kv.key() << " | " << json::parse(kv.key());
       values.emplace(json::parse(kv.key()), kv.value().get<Value>());
     }
   }
@@ -467,6 +465,16 @@ class ObjectMeta {
    */
   ObjectMeta GetMemberMeta(const std::string& name) const;
 
+  /**
+   * @brief Get buffer member (directed or indirected) from the metadata. The
+   * metadata should has already been initialized.
+   */
+  Status GetBuffer(const ObjectID blob_id,
+                   std::shared_ptr<arrow::Buffer>& buffer) const;
+
+  void SetBuffer(const ObjectID& id,
+                 const std::shared_ptr<arrow::Buffer>& buffer);
+
   void PrintMeta() const;
 
   const bool incomplete() const;
@@ -483,14 +491,10 @@ class ObjectMeta {
   const_iterator begin() const { return json::iterator_wrapper(meta_).begin(); }
   const_iterator end() const { return json::iterator_wrapper(meta_).end(); }
 
-  const std::shared_ptr<BlobSet>& GetBlobSet() const;
-
- protected:
-  void SetBlob(const ObjectID& id,
-               const std::shared_ptr<arrow::Buffer>& buffer);
+  const std::shared_ptr<BufferSet>& GetBufferSet() const;
 
  private:
-  void findAllBlobs(const json& tree, InstanceID const instance_id);
+  void findAllBlobs(const json& tree);
 
   void SetInstanceId(const InstanceID instance_id);
 
@@ -501,7 +505,7 @@ class ObjectMeta {
   ClientBase* client_ = nullptr;
   json meta_;
   // associated blobs
-  std::shared_ptr<BlobSet> blob_set_;
+  std::shared_ptr<BufferSet> buffer_set_;
 
   // incomplete: whether the metadata has incomplete member, introduced by
   // `AddMember(name, member_id)`.

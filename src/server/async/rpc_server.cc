@@ -27,9 +27,9 @@ namespace vineyard {
 RPCServer::RPCServer(vs_ptr_t vs_ptr)
     : SocketServer(vs_ptr),
       rpc_spec_(vs_ptr_->GetSpec()["rpc_spec"]),
-      acceptor_(vs_ptr_->GetIOContext()),
-      socket_(vs_ptr_->GetIOContext()) {
-  auto endpoint = getEndpoint(vs_ptr_->GetIOContext());
+      acceptor_(vs_ptr_->GetContext()),
+      socket_(vs_ptr_->GetContext()) {
+  auto endpoint = getEndpoint(vs_ptr_->GetContext());
   acceptor_.open(endpoint.protocol());
   using reuse_port =
       asio::detail::socket_option::boolean<SOL_SOCKET, SO_REUSEPORT>;

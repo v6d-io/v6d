@@ -16,7 +16,10 @@ limitations under the License.
 #include "client/client.h"
 
 #include <limits>
+#include <map>
 #include <mutex>
+#include <set>
+#include <unordered_map>
 #include <utility>
 
 #include "boost/range/combine.hpp"
@@ -88,23 +91,14 @@ Status Client::GetMetaData(const ObjectID id, ObjectMeta& meta,
   RETURN_ON_ERROR(GetData(id, tree, sync_remote));
   meta.SetMetaData(this, tree);
 
-  std::unordered_map<ObjectID, Payload> buffers;
-  RETURN_ON_ERROR(GetBuffers(meta.GetBlobSet()->AllBlobIds(), buffers));
+  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  RETURN_ON_ERROR(GetBuffers(meta.GetBufferSet()->AllBufferIds(), buffers));
 
-  for (auto const& id : meta.GetBlobSet()->AllBlobIds()) {
-    auto object = buffers.find(id);
-    std::shared_ptr<arrow::Buffer> buffer = nullptr;
-    if (object != buffers.end()) {
-      uint8_t* mmapped_ptr = nullptr;
-      if (object->second.data_size > 0) {
-        RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
-                                     object->second.map_size, true, true,
-                                     &mmapped_ptr));
-      }
-      buffer = arrow::Buffer::Wrap(mmapped_ptr + object->second.data_offset,
-                                   object->second.data_size);
+  for (auto const& id : meta.GetBufferSet()->AllBufferIds()) {
+    const auto& buffer = buffers.find(id);
+    if (buffer != buffers.end()) {
+      meta.SetBuffer(id, buffer->second);
     }
-    meta.SetBlob(id, buffer);
   }
   return Status::OK();
 }
@@ -117,54 +111,36 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
   RETURN_ON_ERROR(GetData(ids, trees, sync_remote));
   metas.resize(trees.size());
 
-  std::unordered_set<ObjectID> blob_ids;
+  std::set<ObjectID> blob_ids;
   for (size_t idx = 0; idx < trees.size(); ++idx) {
     metas[idx].SetMetaData(this, trees[idx]);
-    for (const auto& id : metas[idx].GetBlobSet()->AllBlobIds()) {
+    for (const auto& id : metas[idx].GetBufferSet()->AllBufferIds()) {
       blob_ids.emplace(id);
     }
   }
 
-  std::unordered_map<ObjectID, Payload> buffers;
+  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
   RETURN_ON_ERROR(GetBuffers(blob_ids, buffers));
 
   for (auto& meta : metas) {
-    for (auto const id : meta.GetBlobSet()->AllBlobIds()) {
-      auto object = buffers.find(id);
-      std::shared_ptr<arrow::Buffer> buffer = nullptr;
-      if (object != buffers.end()) {
-        uint8_t* mmapped_ptr = nullptr;
-        if (object->second.data_size > 0) {
-          RETURN_ON_ERROR(mmapToClient(object->second.store_fd,
-                                       object->second.map_size, true, true,
-                                       &mmapped_ptr));
-        }
-        buffer = std::make_shared<arrow::Buffer>(
-            mmapped_ptr + object->second.data_offset, object->second.data_size);
+    for (auto const id : meta.GetBufferSet()->AllBufferIds()) {
+      const auto& buffer = buffers.find(id);
+      if (buffer != buffers.end()) {
+        meta.SetBuffer(id, buffer->second);
       }
-      meta.SetBlob(id, buffer);
     }
   }
-
   return Status::OK();
 }
 
 Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   ENSURE_CONNECTED(this);
 
-  ObjectID object_id;
+  ObjectID object_id = InvalidObjectID();
   Payload object;
-  RETURN_ON_ERROR(CreateBuffer(size, object_id, object));
-  RETURN_ON_ASSERT((size_t) object.data_size == size);
-  uint8_t* mmapped_ptr = nullptr;
-  if (object.data_size > 0) {
-    RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, false, true,
-                                 &mmapped_ptr));
-  }
-  std::shared_ptr<arrow::MutableBuffer> buffer =
-      std::make_shared<arrow::MutableBuffer>(mmapped_ptr + object.data_offset,
-                                             object.data_size);
-  blob.reset(new BlobWriter(object_id, object.store_fd, buffer));
+  std::shared_ptr<arrow::MutableBuffer> buffer = nullptr;
+  RETURN_ON_ERROR(CreateBuffer(size, object_id, object, buffer));
+  blob.reset(new BlobWriter(object_id, object, buffer));
   return Status::OK();
 }
 
@@ -295,39 +271,30 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
   VINEYARD_CHECK_OK(ListData(pattern, regex, limit, meta_trees));
 
   std::vector<ObjectMeta> metas;
-  std::unordered_set<ObjectID> blob_ids;
+  std::set<ObjectID> blob_ids;
   metas.resize(meta_trees.size());
   size_t cnt = 0;
   for (auto const& kv : meta_trees) {
     metas[cnt].SetMetaData(this, kv.second);
-    for (auto const& id : metas[cnt].GetBlobSet()->AllBlobIds()) {
+    for (auto const& id : metas[cnt].GetBufferSet()->AllBufferIds()) {
       blob_ids.emplace(id);
     }
     cnt += 1;
   }
 
   // retrive blobs
-  std::unordered_map<ObjectID, Payload> buffers;
+  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
   VINEYARD_CHECK_OK(GetBuffers(blob_ids, buffers));
 
   // construct objects
   std::vector<std::shared_ptr<Object>> objects;
   objects.reserve(metas.size());
   for (auto& meta : metas) {
-    for (auto const id : meta.GetBlobSet()->AllBlobIds()) {
-      auto object = buffers.find(id);
-      std::shared_ptr<arrow::Buffer> buffer = nullptr;
-      if (object != buffers.end()) {
-        uint8_t* mmapped_ptr = nullptr;
-        if (object->second.data_size) {
-          VINEYARD_CHECK_OK(mmapToClient(object->second.store_fd,
-                                         object->second.map_size, true, true,
-                                         &mmapped_ptr));
-        }
-        buffer = std::make_shared<arrow::Buffer>(
-            mmapped_ptr + object->second.data_offset, object->second.data_size);
+    for (auto const id : meta.GetBufferSet()->AllBufferIds()) {
+      const auto& buffer = buffers.find(id);
+      if (buffer != buffers.end()) {
+        meta.SetBuffer(id, buffer->second);
       }
-      meta.SetBlob(id, buffer);
     }
 
     auto object = ObjectFactory::Create(meta.GetTypeName());
@@ -370,29 +337,40 @@ Status Client::ReleaseArena(const int fd, std::vector<size_t> const& offsets,
   return Status::OK();
 }
 
-Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& object) {
+Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
+                            std::shared_ptr<arrow::MutableBuffer>& buffer) {
   ENSURE_CONNECTED(this);
   std::string message_out;
   WriteCreateBufferRequest(size, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, object));
+  RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload));
+  RETURN_ON_ASSERT(static_cast<size_t>(payload.data_size) == size);
+  if (payload.data_size > 0) {
+    uint8_t* shared = nullptr;
+    RETURN_ON_ERROR(
+        mmapToClient(payload.store_fd, payload.map_size, false, true, &shared));
+    buffer = std::make_shared<arrow::MutableBuffer>(
+        shared + payload.data_offset, payload.data_size);
+  }
   return Status::OK();
 }
 
-Status Client::GetBuffer(const ObjectID id, Payload& object) {
-  std::unordered_map<ObjectID, Payload> objects;
-  RETURN_ON_ERROR(GetBuffers({id}, objects));
-  if (objects.empty()) {
+Status Client::GetBuffer(const ObjectID id,
+                         std::shared_ptr<arrow::Buffer>& buffer) {
+  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  RETURN_ON_ERROR(GetBuffers({id}, buffers));
+  if (buffers.empty()) {
     return Status::ObjectNotExists();
   }
-  object = objects.at(id);
+  buffer = buffers.at(id);
   return Status::OK();
 }
 
-Status Client::GetBuffers(const std::unordered_set<ObjectID>& ids,
-                          std::unordered_map<ObjectID, Payload>& objects) {
+Status Client::GetBuffers(
+    const std::set<ObjectID>& ids,
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers) {
   if (ids.empty()) {
     return Status::OK();
   }
@@ -402,7 +380,19 @@ Status Client::GetBuffers(const std::unordered_set<ObjectID>& ids,
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, objects));
+  std::map<ObjectID, Payload> payloads;
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
+  for (auto const& item : payloads) {
+    std::shared_ptr<arrow::Buffer> buffer = nullptr;
+    if (item.second.data_size > 0) {
+      uint8_t* shared = nullptr;
+      VINEYARD_CHECK_OK(mmapToClient(item.second.store_fd, item.second.map_size,
+                                     true, true, &shared));
+      buffer = std::make_shared<arrow::Buffer>(shared + item.second.data_offset,
+                                               item.second.data_size);
+    }
+    buffers.emplace(item.first, buffer);
+  }
   return Status::OK();
 }
 
@@ -443,7 +433,6 @@ Status Client::mmapToClient(int fd, int64_t map_size, bool readonly,
     if (*ptr == nullptr) {
       return Status::IOError("Failed to mmap received fd as a readonly buffer");
     }
-
   } else {
     *ptr = entry->second->map_readwrite();
     if (*ptr == nullptr) {

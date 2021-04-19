@@ -72,8 +72,9 @@ struct VineyardAllocator : public memory::Jemalloc {
     offsets_.emplace_back(reinterpret_cast<uintptr_t>(ptr) - space_);
     sizes_.emplace_back(allocated_size);
     freezed_.emplace(reinterpret_cast<uintptr_t>(ptr));
-    return Blob::FromBuffer(client_, base_, space_,
-                            reinterpret_cast<uintptr_t>(ptr), allocated_size);
+    ObjectID id = base_ + (reinterpret_cast<uintptr_t>(ptr) - space_);
+    return Blob::FromBuffer(client_, id, reinterpret_cast<uintptr_t>(ptr),
+                            allocated_size);
   }
 
   Status Release() {

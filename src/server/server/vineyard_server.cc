@@ -15,9 +15,11 @@ limitations under the License.
 
 #include "server/server/vineyard_server.h"
 
+#include <iostream>
 #include <memory>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "common/util/boost.h"
@@ -60,10 +62,15 @@ bool DeferredReq::TestThenCall(const json& meta) const {
 
 VineyardServer::VineyardServer(const json& spec)
     : spec_(spec),
+      concurrency_(std::thread::hardware_concurrency()),
+      context_(concurrency_),
+      meta_context_(),
 #if BOOST_VERSION >= 106600
       guard_(asio::make_work_guard(context_)),
+      meta_guard_(asio::make_work_guard(meta_context_)),
 #else
       guard_(new boost::asio::io_service::work(context_)),
+      meta_guard_(new boost::asio::io_service::work(context_)),
 #endif
       ready_(0),
       stopped_(false) {
@@ -88,7 +95,18 @@ Status VineyardServer::Serve() {
   BulkReady();
 
   serve_status_ = Status::OK();
-  context_.run();
+
+  for (unsigned int idx = 0; idx < concurrency_; ++idx) {
+#if BOOST_VERSION >= 106600
+    workers_.emplace_back(
+        boost::bind(&boost::asio::io_context::run, &context_));
+#else
+    workers_.emplace_back(
+        boost::bind(&boost::asio::io_service::run, &context_));
+#endif
+  }
+  meta_context_.run();
+
   return serve_status_;
 }
 
@@ -173,28 +191,51 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
 #if !defined(NDEBUG)
           if (VLOG_IS_ON(10)) {
             VLOG(10) << "Got request from client to get data, dump json:";
-            VLOG(10) << meta.dump(4);
+            std::cerr << meta.dump(4) << std::endl;
             VLOG(10) << "=========================================";
           }
 #endif
 
-          auto test_task = [ids](const json& meta) -> bool {
+          auto test_task = [this, ids](const json& meta) -> bool {
             for (auto const& id : ids) {
               bool exists = false;
-              VINEYARD_SUPPRESS(
-                  CATCH_JSON_ERROR(meta_tree::Exists(meta, id, exists)));
+              if (IsBlob(id)) {
+                exists = this->bulk_store_->Exists(id);
+              } else {
+                VINEYARD_SUPPRESS(
+                    CATCH_JSON_ERROR(meta_tree::Exists(meta, id, exists)));
+              }
               if (!exists) {
                 return exists;
               }
             }
             return true;
           };
-          auto eval_task = [ids, callback](const json& meta) -> Status {
+          auto eval_task = [this, ids, callback](const json& meta) -> Status {
             json sub_tree_group;
             for (auto const& id : ids) {
               json sub_tree;
-              VINEYARD_SUPPRESS(
-                  CATCH_JSON_ERROR(meta_tree::GetData(meta, id, sub_tree)));
+              if (IsBlob(id)) {
+                std::shared_ptr<Payload> object;
+                if (this->bulk_store_->Get(id, object).ok()) {
+                  sub_tree["id"] = VYObjectIDToString(id);
+                  sub_tree["typename"] = "vineyard::Blob";
+                  sub_tree["length"] = object->data_size;
+                  sub_tree["nbytes"] = object->data_size;
+                  sub_tree["transient"] = true;
+                  sub_tree["instance_id"] = this->instance_id();
+                }
+              } else {
+                VINEYARD_SUPPRESS(CATCH_JSON_ERROR(
+                    meta_tree::GetData(meta, id, sub_tree, instance_id_)));
+#if !defined(NDEBUG)
+                if (VLOG_IS_ON(10)) {
+                  VLOG(10) << "Got request response:";
+                  std::cerr << sub_tree.dump(4) << std::endl;
+                  VLOG(10) << "=========================================";
+                }
+#endif
+              }
               if (sub_tree.is_object() && !sub_tree.empty()) {
                 sub_tree_group[VYObjectIDToString(id)] = sub_tree;
               }
@@ -243,7 +284,8 @@ Status VineyardServer::CreateData(
 #if !defined(NDEBUG)
   if (VLOG_IS_ON(10)) {
     VLOG(10) << "Got request from client to create data:";
-    VLOG(10) << tree.dump(4);
+    // NB: glog has limit on maximum lines.
+    std::cerr << tree.dump(4) << std::endl;
     VLOG(10) << "=========================================";
   }
 #endif
@@ -256,18 +298,12 @@ Status VineyardServer::CreateData(
   }
   std::string const& type = type_name_node.get_ref<std::string const&>();
 
-  // generate ObjectID
-  ObjectID id;
-  if (type == "vineyard::Blob") {  // special codepath for creating Blob
-    RETURN_ON_ASSERT(tree.contains("id"));
-    id = VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
-    // RETURN_ON_ASSERT(IsBlob(id));
-  } else {
-    id = GenerateObjectID();
-  }
+  RETURN_ON_ASSERT(type != "vineyard::Blob", "Blob has no metadata");
 
+  ObjectID id = GenerateObjectID();
   // Check if instance_id information available
-  RETURN_ON_ASSERT(tree.contains("instance_id"));
+  RETURN_ON_ASSERT(tree.contains("instance_id"),
+                   "The instance_id filed must be presented");
 
   auto decorated_tree = tree;
   Signature signature;
@@ -298,6 +334,7 @@ Status VineyardServer::CreateData(
 
 Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
+  RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be persisted");
   meta_service_ptr_->RequestToPersist(
       [id](const Status& status, const json& meta,
            std::vector<IMetaService::op_t>& ops) {
@@ -325,6 +362,10 @@ Status VineyardServer::IfPersist(const ObjectID id,
   //
   // Thus we just need to read from the metadata in vineyardd, without
   // touching etcd.
+  if (IsBlob(id)) {
+    context_.post(boost::bind(callback, Status::OK(), false));
+    return Status::OK();
+  }
   meta_service_ptr_->RequestToGetData(
       false, [id, callback](const Status& status, const json& meta) {
         if (status.ok()) {
@@ -342,6 +383,12 @@ Status VineyardServer::IfPersist(const ObjectID id,
 Status VineyardServer::Exists(const ObjectID id,
                               callback_t<const bool> callback) {
   ENSURE_VINEYARDD_READY();
+  if (IsBlob(id)) {
+    context_.post([this, id, callback] {
+      VINEYARD_DISCARD(callback(Status::OK(), bulk_store_->Exists(id)));
+    });
+    return Status::OK();
+  }
   meta_service_ptr_->RequestToGetData(
       true, [id, callback](const Status& status, const json& meta) {
         if (status.ok()) {
@@ -380,8 +427,22 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
 
 Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
                                const bool force, const bool deep,
-                               callback_t<> callback) {
+                               const bool fastpath, callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
+  if (fastpath) {
+    // forcely delete the given blobs: used for allocators
+    for (auto const id : ids) {
+      RETURN_ON_ASSERT(IsBlob(id),
+                       "Fastpath deletion can only be applied to blobs");
+    }
+    context_.post([this, ids, callback] {
+      for (auto const id : ids) {
+        VINEYARD_DISCARD(bulk_store_->Delete(id));
+      }
+      VINEYARD_DISCARD(callback(Status::OK()));
+    });
+    return Status::OK();
+  }
   meta_service_ptr_->RequestToDelete(
       ids, force, deep,
       [](const Status& status, const json& meta,
@@ -391,7 +452,7 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
           auto status = CATCH_JSON_ERROR(
               meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
           if (status.IsMetaTreeSubtreeNotExists()) {
-            return Status::ObjectNotExists();
+            return Status::ObjectNotExists(status.ToString());
           }
           return status;
         } else {
@@ -405,7 +466,7 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
 
 Status VineyardServer::DeleteBlobBatch(const std::set<ObjectID>& ids) {
   for (auto object_id : ids) {
-    VINEYARD_SUPPRESS(this->bulk_store_->ProcessDeleteRequest(object_id));
+    VINEYARD_SUPPRESS(this->bulk_store_->Delete(object_id));
   }
   return Status::OK();
 }
@@ -416,13 +477,14 @@ Status VineyardServer::DeleteAllAt(const json& meta,
   auto status = CATCH_JSON_ERROR(
       meta_tree::FilterAtInstance(meta, instance_id, objects_to_cleanup));
   RETURN_ON_ERROR(status);
-  return this->DelData(
-      objects_to_cleanup, true, true, [](Status const& status) -> Status {
-        if (!status.ok()) {
-          LOG(ERROR) << "Error happens on cleanup: " << status.ToString();
-        }
-        return Status::OK();
-      });
+  return this->DelData(objects_to_cleanup, true, true, false /* fastpath */,
+                       [](Status const& status) -> Status {
+                         if (!status.ok()) {
+                           LOG(ERROR) << "Error happens on cleanup: "
+                                      << status.ToString();
+                         }
+                         return Status::OK();
+                       });
 }
 
 Status VineyardServer::PutName(const ObjectID object_id,
@@ -512,6 +574,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
                                      const std::string& peer_rpc_endpoint,
                                      callback_t<const ObjectID&> callback) {
   ENSURE_VINEYARDD_READY();
+  RETURN_ON_ASSERT(!IsBlob(object_id), "The blobs cannot be migrated");
   auto self(shared_from_this());
   static const std::string migrate_process = "vineyard-migrate";
 
@@ -599,6 +662,7 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
                                      const std::string& peer_rpc_endpoint,
                                      callback_t<const ObjectID&> callback) {
   ENSURE_VINEYARDD_READY();
+  RETURN_ON_ASSERT(!IsBlob(stream_id), "The blobs cannot be migrated");
   auto self(shared_from_this());
   static const std::string migrate_process = "vineyard-migrate-stream";
 
@@ -726,6 +790,7 @@ void VineyardServer::Stop() {
   }
   stopped_ = true;
   guard_.reset();
+  meta_guard_.reset();
   if (this->ipc_server_ptr_) {
     this->ipc_server_ptr_->Stop();
     this->ipc_server_ptr_.reset(nullptr);
@@ -739,6 +804,14 @@ void VineyardServer::Stop() {
 
   // stop the asio context at last
   context_.stop();
+  meta_context_.stop();
+
+  // wait for the IO context finishes.
+  for (auto& worker : workers_) {
+    if (worker.joinable()) {
+      worker.join();
+    }
+  }
 }
 
 VineyardServer::~VineyardServer() { this->Stop(); }

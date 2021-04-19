@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_SERVER_UTIL_META_TREE_H_
 #define SRC_SERVER_UTIL_META_TREE_H_
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -32,12 +33,12 @@ enum class NodeType {
   InvalidType = 15,
 };
 
-Status GetData(const json& tree, const ObjectID id, json& sub_tree);
-Status GetData(const json& tree, const std::string& name, json& sub_tree);
+Status GetData(const json& tree, const ObjectID id, json& sub_tree,
+               InstanceID const& current_instance_id = UnspecifiedInstanceID());
+Status GetData(const json& tree, const std::string& name, json& sub_tree,
+               InstanceID const& current_instance_id = UnspecifiedInstanceID());
 Status ListData(const json& tree, const std::string& pattern, bool const regex,
                 size_t const limit, json& tree_group);
-Status DelData(json& tree, const ObjectID id);
-Status DelData(json& tree, const std::vector<ObjectID>& ids);
 Status IfPersist(const json& tree, const ObjectID id, bool& persist);
 Status Exists(const json& tree, const ObjectID id, bool& exists);
 

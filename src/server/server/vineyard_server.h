@@ -20,6 +20,7 @@ limitations under the License.
 #include <memory>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "boost/asio.hpp"
@@ -77,9 +78,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     return spec_["deployment"].get_ref<std::string const&>();
   }
 #if BOOST_VERSION >= 106600
-  inline asio::io_context& GetIOContext() { return context_; }
+  inline asio::io_context& GetContext() { return context_; }
+  inline asio::io_context& GetMetaContext() { return meta_context_; }
 #else
-  inline asio::io_service& GetIOContext() { return context_; }
+  inline asio::io_service& GetContext() { return context_; }
+  inline asio::io_service& GetMetaContext() { return meta_context_; }
 #endif
   inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
@@ -113,7 +116,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status ShallowCopy(const ObjectID id, callback_t<const ObjectID> callback);
 
   Status DelData(const std::vector<ObjectID>& id, const bool force,
-                 const bool deep, callback_t<> callback);
+                 const bool deep, const bool fastpath, callback_t<> callback);
 
   Status DeleteBlobBatch(const std::set<ObjectID>& blobs);
 
@@ -168,12 +171,23 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
  private:
   explicit VineyardServer(const json& spec);
 
-#if BOOST_VERSION >= 106600
-  asio::io_context context_;
-#else
-  asio::io_service context_;
-#endif
   json spec_;
+
+  unsigned int concurrency_;
+#if BOOST_VERSION >= 106600
+  asio::io_context context_, meta_context_;
+#else
+  asio::io_service context_, meta_context_;
+#endif
+
+#if BOOST_VERSION >= 106600
+  using ctx_guard = asio::executor_work_guard<asio::io_context::executor_type>;
+#else
+  using ctx_guard = std::unique_ptr<boost::asio::io_service::work>;
+#endif
+  ctx_guard guard_, meta_guard_;
+  std::vector<std::thread> workers_;
+
   std::shared_ptr<IMetaService> meta_service_ptr_;
   std::unique_ptr<IPCServer> ipc_server_ptr_;
   std::unique_ptr<RPCServer> rpc_server_ptr_;
@@ -184,12 +198,6 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::shared_ptr<StreamStore> stream_store_;
 
   Status serve_status_;
-#if BOOST_VERSION >= 106600
-  using ctx_guard = asio::executor_work_guard<asio::io_context::executor_type>;
-#else
-  using ctx_guard = std::unique_ptr<boost::asio::io_service::work>;
-#endif
-  ctx_guard guard_;
 
   enum ready_t {
     kMeta = 0b1,

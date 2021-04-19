@@ -26,8 +26,8 @@ namespace vineyard {
 IPCServer::IPCServer(vs_ptr_t vs_ptr)
     : SocketServer(vs_ptr),
       ipc_spec_(vs_ptr_->GetSpec()["ipc_spec"]),
-      acceptor_(vs_ptr_->GetIOContext(), getEndpoint(vs_ptr_->GetIOContext())),
-      socket_(vs_ptr_->GetIOContext()) {}
+      acceptor_(vs_ptr_->GetContext(), getEndpoint(vs_ptr_->GetContext())),
+      socket_(vs_ptr_->GetContext()) {}
 
 IPCServer::~IPCServer() {
   if (acceptor_.is_open()) {

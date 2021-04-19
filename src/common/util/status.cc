@@ -77,6 +77,9 @@ std::string Status::CodeAsString() const {
   case StatusCode::kAssertionFailed:
     type = "Assertion failed";
     break;
+  case StatusCode::kUserInputError:
+    type = "User input error";
+    break;
   case StatusCode::kObjectExists:
     type = "Object exists";
     break;
@@ -88,6 +91,9 @@ std::string Status::CodeAsString() const {
     break;
   case StatusCode::kObjectNotSealed:
     type = "Object not sealed";
+    break;
+  case StatusCode::kObjectIsBlob:
+    type = "Object not blob";
     break;
   case StatusCode::kMetaTreeInvalid:
     type = "Metatree invalid";
@@ -139,9 +145,6 @@ std::string Status::CodeAsString() const {
     break;
   case StatusCode::kStreamOpened:
     type = "Stream opened";
-    break;
-  case StatusCode::kUserInputError:
-    type = "User input error";
     break;
   case StatusCode::kGlobalObjectInvalid:
     type = "Global object invalid";

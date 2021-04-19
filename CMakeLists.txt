@@ -113,7 +113,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 if(BUILD_VINEYARD_COVERAGE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage")
 endif()
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g -Werror")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g")
 
 if(APPLE)
     set(CMAKE_MACOSX_RPATH ON)
@@ -377,6 +377,7 @@ endif()
 if(BUILD_VINEYARD_SERVER)
     find_openssl_libraries(REQUIRED)
     find_etcd_cpp_apiv3()
+    find_intel_tbb()
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
@@ -390,6 +391,7 @@ if(BUILD_VINEYARD_SERVER)
                                            ${GLOG_LIBRARIES}
                                            ${OPENSSL_LIBRARIES}
                                            nlohmann_json::nlohmann_json
+                                           TBB::tbb
     )
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})
@@ -413,7 +415,7 @@ if(BUILD_VINEYARD_SERVER)
         # use dlmalloc
         target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
     elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
-        target_link_libraries(vineyardd PRIVATE jemalloc)
+        target_link_libraries(vineyardd PRIVATE jemalloc ${CMAKE_DL_LIBS})
         target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
     else()
         message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
@@ -443,7 +445,7 @@ if(BUILD_VINEYARD_CLIENT)
         target_link_libraries(vineyard_client PUBLIC ${ARROW_STATIC_LIB})
     endif()
 
-    target_link_libraries(vineyard_client PRIVATE jemalloc)
+    target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
     target_compile_options(vineyard_client PUBLIC -DWITH_JEMALLOC)
 
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)

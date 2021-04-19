@@ -149,19 +149,21 @@ enum class StatusCode : unsigned char {
   kEndOfFile = 5,
   kNotImplemented = 6,
   kAssertionFailed = 7,
+  kUserInputError = 8,
 
   kObjectExists = 11,
   kObjectNotExists = 12,
   kObjectSealed = 13,
   kObjectNotSealed = 14,
+  kObjectIsBlob = 15,
 
   kMetaTreeInvalid = 21,
   kMetaTreeTypeInvalid = 22,
   kMetaTreeTypeNotExists = 23,
   kMetaTreeNameInvalid = 24,
-  kMetaTreeNameNotExists = 26,
-  kMetaTreeLinkInvalid = 27,
-  kMetaTreeSubtreeNotExists = 28,
+  kMetaTreeNameNotExists = 25,
+  kMetaTreeLinkInvalid = 26,
+  kMetaTreeSubtreeNotExists = 27,
 
   kVineyardServerNotReady = 31,
   kArrowError = 32,
@@ -175,9 +177,7 @@ enum class StatusCode : unsigned char {
   kInvalidStreamState = 44,
   kStreamOpened = 45,
 
-  kUserInputError = 51,
-
-  kGlobalObjectInvalid = 52,
+  kGlobalObjectInvalid = 51,
 
   kUnknownError = 255
 };
@@ -276,6 +276,11 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kAssertionFailed, condition);
   }
 
+  /// Return a status code indicates invalid user input.
+  static Status UserInputError(std::string const& message = "") {
+    return Status(StatusCode::kUserInputError, message);
+  }
+
   /// Return an error when the object exists if the user are still trying to
   /// creating such object.
   static Status ObjectExists() { return Status(StatusCode::kObjectExists, ""); }
@@ -296,6 +301,12 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// object hasn't been sealed yet.
   static Status ObjectNotSealed() {
     return Status(StatusCode::kObjectNotSealed, "");
+  }
+
+  /// Return an error when user are trying to perform unsupported operations
+  /// on blob objects.
+  static Status ObjectIsBlob(std::string const& message = "") {
+    return Status(StatusCode::kObjectIsBlob, message);
   }
 
   /// Return an error when metatree related error occurs.
@@ -405,11 +416,6 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kStreamOpened, "Stream already opened");
   }
 
-  /// Return a status code indicates invalid user input.
-  static Status UserInputError(std::string const& message = "") {
-    return Status(StatusCode::kUserInputError, message);
-  }
-
   /// Return a status code indicates invalid global object structure.
   static Status GlobalObjectInvalid(
       std::string const& message = "Global object cannot be nested") {
@@ -442,6 +448,10 @@ class VINEYARD_MUST_USE_TYPE Status {
   bool IsAssertionFailed() const {
     return code() == StatusCode::kAssertionFailed;
   }
+  /// Return true iff there's some problems in user's input.
+  bool IsUserInputError() const {
+    return code() == StatusCode::kUserInputError;
+  }
   /// Return true iff the status indicates already existing object.
   bool IsObjectExists() const { return code() == StatusCode::kObjectExists; }
   /// Return true iff the status indicates non-existing object.
@@ -450,10 +460,12 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
   /// Return true iff the status indicates already existing object.
   bool IsObjectSealed() const { return code() == StatusCode::kObjectSealed; }
-  /// Return true iff the status indicates non-existing object.
+  /// Return true iff the status indicates non-sealed object.
   bool IsObjectNotSealed() const {
     return code() == StatusCode::kObjectNotSealed;
   }
+  /// Return true iff the status indicates unsupported operations on blobs.
+  bool IsObjectIsBlob() const { return code() == StatusCode::kObjectIsBlob; }
   /// Return true iff the status indicates subtree not found in metatree.
   bool IsMetaTreeSubtreeNotExists() const {
     return code() == StatusCode::kMetaTreeSubtreeNotExists;
@@ -495,10 +507,6 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
   /// Return true iff the stream has been opened.
   bool IsStreamOpened() const { return code() == StatusCode::kStreamOpened; }
-  /// Return true iff there's some problems in user's input.
-  bool IsUserInputError() const {
-    return code() == StatusCode::kUserInputError;
-  }
   /// Return true iff the given global object is invalid.
   bool IsGlobalObjectInvalid() const {
     return code() == StatusCode::kGlobalObjectInvalid;

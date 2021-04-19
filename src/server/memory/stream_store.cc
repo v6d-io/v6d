@@ -91,7 +91,7 @@ Status StreamStore::Get(ObjectID const stream_id, size_t const size,
     // do allocation
     ObjectID chunk;
     std::shared_ptr<Payload> object;
-    auto status = store_->ProcessCreateRequest(size, chunk, object);
+    auto status = store_->Create(size, chunk, object);
     if (!status.ok()) {
       return callback(status, InvalidObjectID());
     } else {
@@ -118,7 +118,7 @@ Status StreamStore::Pull(ObjectID const stream_id,
 
   // drop current reading
   if (stream->current_reading_) {
-    auto status = store_->ProcessDeleteRequest(stream->current_reading_.get());
+    auto status = store_->Delete(stream->current_reading_.get());
     if (!status.ok()) {
       return callback(status, InvalidObjectID());
     }
@@ -132,7 +132,7 @@ Status StreamStore::Pull(ObjectID const stream_id,
     if (allocatable(stream, writer.first)) {
       ObjectID chunk;
       std::shared_ptr<Payload> object;
-      auto status = store_->ProcessCreateRequest(writer.first, chunk, object);
+      auto status = store_->Create(writer.first, chunk, object);
       if (!status.ok()) {
         VINEYARD_SUPPRESS(writer.second(status, InvalidObjectID()));
       } else {
@@ -236,8 +236,7 @@ Status StreamStore::Drop(ObjectID const stream_id) {
   // drop all memory chunks in ready queue, but still keep the reading chunk
   // to avoid crash the reader
   while (!stream->ready_chunks_.empty()) {
-    RETURN_ON_ERROR(
-        store_->ProcessDeleteRequest(stream->ready_chunks_.front()));
+    RETURN_ON_ERROR(store_->Delete(stream->ready_chunks_.front()));
     stream->ready_chunks_.pop();
   }
   return Status::OK();

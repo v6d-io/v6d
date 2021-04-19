@@ -34,6 +34,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "oneapi/tbb/concurrent_hash_map.h"
+
 #include "common/memory/payload.h"
 #include "common/util/status.h"
 
@@ -43,19 +45,21 @@ class BulkStore {
  public:
   Status PreAllocate(const size_t size);
 
-  Status ProcessCreateRequest(const size_t size, ObjectID& object_id,
-                              std::shared_ptr<Payload>& object);
+  Status Create(const size_t size, ObjectID& object_id,
+                std::shared_ptr<Payload>& object);
 
-  Status ProcessGetRequest(const ObjectID id, std::shared_ptr<Payload>& object);
+  Status Get(const ObjectID id, std::shared_ptr<Payload>& object);
 
   /**
    * This methods only return available objects, and doesn't fail when object
    * does not exists.
    */
-  Status ProcessGetRequest(const std::vector<ObjectID>& ids,
-                           std::vector<std::shared_ptr<Payload>>& objects);
+  Status Get(const std::vector<ObjectID>& ids,
+             std::vector<std::shared_ptr<Payload>>& objects);
 
-  Status ProcessDeleteRequest(const ObjectID& id);
+  Status Delete(const ObjectID& object_id);
+
+  bool Exists(const ObjectID& object_id);
 
   size_t Footprint() const;
   size_t FootprintLimit() const;
@@ -68,8 +72,6 @@ class BulkStore {
  private:
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
                           ptrdiff_t* offset);
-  std::unordered_map<ObjectID, std::shared_ptr<Payload>> objects_;
-
   struct Arena {
     int fd;
     size_t size;
@@ -78,6 +80,10 @@ class BulkStore {
   };
 
   std::unordered_map<int /* fd */, Arena> arenas_;
+
+  using object_map_t =
+      tbb::concurrent_hash_map<ObjectID, std::shared_ptr<Payload>>;
+  object_map_t objects_;
 };
 
 }  // namespace vineyard

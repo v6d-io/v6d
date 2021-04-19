@@ -165,6 +165,7 @@ mpiexec_cmdargs = resolve_mpiexec_cmdargs()
 
 
 def run_test(test_name, *args, nproc=1, capture=False, vineyard_ipc_socket=VINEYARD_CI_IPC_SOCKET):
+    print('running test case -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-  %s  -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-' % test_name)
     arg_reps = []
     for arg in args:
         if isinstance(arg, str):
