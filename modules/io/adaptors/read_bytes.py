@@ -26,11 +26,13 @@ import pyarrow as pa
 from urllib.parse import urlparse
 import vineyard
 from fsspec.utils import read_block
+from fsspec.core import split_protocol
 from vineyard.io.byte import ByteStreamBuilder
 
 from vineyard.drivers.io import ossfs
 
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
+
 
 def report_status(status, content):
     ret = {"type": status, "content": content}
@@ -114,46 +116,53 @@ def read_bytes(
             else:
                 builder[k] = v
 
-        offset = 0
-        chunk_size = 1024 * 1024 * 4
         try:
-            of = fsspec.open(path, mode="rb", **storage_options)
+            protocol = split_protocol(path)
+            fs = fsspec.filesystem(protocol)
+            files = fs.glob(path + '*')
+            assert files, f"Cannot find such files: {path}"
         except Exception as e:
             report_status("error", str(e))
             raise
-        with of as f:
-            header_line = read_block(f, 0, 1, b'\n')
-            builder["header_line"] = header_line.decode("unicode_escape")
-            if header_row:
-                offset = len(header_line)
-            stream = builder.seal(client)
-            client.persist(stream)
-            ret = {"type": "return", "content": repr(stream.id)}
-            print(json.dumps(ret), flush=True)
 
-            writer = stream.open_writer(client)
-            try:
-                total_size = f.size()
-            except TypeError:
-                total_size = f.size
-            part_size = (total_size - offset) // proc_num
-            begin = part_size * proc_index + offset
-            end = min(begin + part_size, total_size)
-            if proc_index == 0:
-                begin -= int(header_row)
+        chunk_size = 1024 * 1024 * 4
+        for index, file_path in enumerate(files):
+            with fs.open(file_path, mode="rb") as f:
+                offset = 0
+                # Only process header line when processing first file
+                # And open the writer when processing first file
+                if index == 0:
+                    header_line = read_block(f, 0, 1, b'\n')
+                    builder["header_line"] = header_line.decode("unicode_escape")
+                    if header_row:
+                        offset = len(header_line)
+                    stream = builder.seal(client)
+                    client.persist(stream)
+                    ret = {"type": "return", "content": repr(stream.id)}
+                    print(json.dumps(ret), flush=True)
+                    writer = stream.open_writer(client)
 
-            while begin < end:
-                buf = read_block(f, begin, min(chunk_size, end - begin), delimiter=b"\n")
-                size = len(buf)
-                if not size:
-                    break
-                begin += size - 1
-                chunk = writer.next(size)
-                buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
-                buf_writer.write(buf)
-                buf_writer.close()
+                try:
+                    total_size = f.size()
+                except TypeError:
+                    total_size = f.size
+                part_size = (total_size - offset) // proc_num
+                begin = part_size * proc_index + offset
+                end = min(begin + part_size, total_size)
+                if index == 0 and proc_index == 0:
+                    begin -= int(header_row)
 
-            writer.finish()
+                while begin < end:
+                    buf = read_block(f, begin, min(chunk_size, end - begin), delimiter=b"\n")
+                    size = len(buf)
+                    if not size:
+                        break
+                    begin += size - 1
+                    chunk = writer.next(size)
+                    buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
+                    buf_writer.write(buf)
+                    buf_writer.close()
+        writer.finish()
 
 
 if __name__ == "__main__":
