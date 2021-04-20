@@ -544,7 +544,6 @@ if(BUILD_VINEYARD_TESTS)
 
         target_link_libraries(${T_NAME} PRIVATE
                               vineyard_client vineyard_basic vineyard_io vineyard_graph
-                              ${CPPNETLIB_LIBRARIES}
         )
         if(ARROW_SHARED_LIB)
             target_link_libraries(${T_NAME} PRIVATE ${ARROW_SHARED_LIB})

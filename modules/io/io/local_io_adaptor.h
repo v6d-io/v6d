@@ -23,6 +23,8 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/filesystem/api.h"
+#include "arrow/io/api.h"
 
 #include "common/util/functions.h"
 #include "common/util/status.h"
@@ -38,6 +40,7 @@ enum FileLocation {
   kFileLocationCurrent = 1,
   kFileLocationEnd = 2,
 };
+
 class LocalIOAdaptor : public IIOAdaptor {
  public:
   /** Constructor.
@@ -111,11 +114,11 @@ class LocalIOAdaptor : public IIOAdaptor {
   Status setPartialReadImpl();
   int64_t getDistanceToLineBreak(const int index);
 
-  FILE* file_;
-  std::fstream fs_;
   std::string location_;
-  bool using_std_getline_;
   char buff[LINESIZE];
+  std::shared_ptr<arrow::fs::FileSystem> fs_;
+  std::shared_ptr<arrow::io::RandomAccessFile> ifp_;  // for input
+  std::shared_ptr<arrow::io::OutputStream> ofp_;      // for output
 
   // for arrow
   std::vector<std::string> columns_;

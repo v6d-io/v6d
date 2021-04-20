@@ -9,28 +9,17 @@ endif()
 
 # force build some thirdparty as static libraries, to make "install" easy
 set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build network-uri as static library" FORCE)
-
-set(Uri_BUILD_DOCS OFF CACHE BOOL "Disable network-uri docs.")
-set(Uri_BUILD_TESTS OFF CACHE BOOL "Disable network-uri tests.")
-add_subdirectory("${PROJECT_SOURCE_DIR}/thirdparty/uri"
-                 "${PROJECT_BINARY_DIR}/thirdparty/uri"
-)
-set(CPPNETLIB_LIBRARIES network-uri)
-set(CPPNETLIB_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/thirdparty/uri/include")
 
 # restore
 set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}" CACHE BOOL "Restore the default value" FORCE)
 
 add_library(vineyard_io ${IO_SRC_FILES})
-target_include_directories(vineyard_io PRIVATE ${CPPNETLIB_INCLUDE_DIRS}
-                                               ${MPI_CXX_INCLUDE_PATH}
+target_include_directories(vineyard_io PRIVATE ${MPI_CXX_INCLUDE_PATH}
 )
 target_link_libraries(vineyard_io PUBLIC vineyard_client
                                          vineyard_basic
                                          ${ARROW_SHARED_LIB}
 )
-target_link_libraries(vineyard_io PRIVATE ${CPPNETLIB_LIBRARIES})
 target_link_libraries(vineyard_io PRIVATE ${GFLAGS_LIBRARIES})
 
 target_include_directories(vineyard_io PUBLIC

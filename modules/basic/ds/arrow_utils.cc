@@ -191,4 +191,119 @@ Status DeserializeTable(std::shared_ptr<arrow::Buffer> buffer,
   return Status::OK();
 }
 
+Status EmptyTableBuilder::Build(const std::shared_ptr<arrow::Schema>& schema,
+                                std::shared_ptr<arrow::Table>& table) {
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
+
+  for (int i = 0; i < schema->num_fields(); i++) {
+    std::shared_ptr<arrow::Array> dummy;
+    auto type = schema->field(i)->type();
+
+    if (type == arrow::uint64()) {
+      arrow::UInt64Builder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::int64()) {
+      arrow::Int64Builder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::uint32()) {
+      arrow::UInt32Builder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::int32()) {
+      arrow::Int32Builder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::float32()) {
+      arrow::FloatBuilder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::float64()) {
+      arrow::DoubleBuilder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::utf8()) {
+      arrow::StringBuilder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::large_utf8()) {
+      arrow::LargeStringBuilder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::list(arrow::uint64())) {
+      auto builder = std::make_shared<arrow::UInt64Builder>();
+      arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+      RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
+    } else if (type == arrow::list(arrow::int64())) {
+      auto builder = std::make_shared<arrow::Int64Builder>();
+      arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+      RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
+    } else if (type == arrow::list(arrow::uint32())) {
+      auto builder = std::make_shared<arrow::UInt32Builder>();
+      arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+      RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
+    } else if (type == arrow::list(arrow::int32())) {
+      auto builder = std::make_shared<arrow::Int32Builder>();
+      arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+      RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
+    } else if (type == arrow::list(arrow::float64())) {
+      auto builder = std::make_shared<arrow::DoubleBuilder>();
+      arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+      RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
+    } else if (type == arrow::list(arrow::int64())) {
+      auto builder = std::make_shared<arrow::FloatBuilder>();
+      arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+      RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
+    } else if (type == arrow::null()) {
+      arrow::NullBuilder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else {
+      return Status::NotImplemented("Unsupported type: " + type->ToString());
+    }
+    columns.push_back(std::make_shared<arrow::ChunkedArray>(dummy));
+  }
+  table = arrow::Table::Make(schema, columns);
+  return Status::OK();
+}
+
+std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
+    const std::string& name) {
+  if (name == "bool") {
+    return vineyard::ConvertToArrowType<bool>::TypeValue();
+  } else if (name == "int8_t" || name == "int8" || name == "byte") {
+    return vineyard::ConvertToArrowType<int8_t>::TypeValue();
+  } else if (name == "uint8_t" || name == "uint8" || name == "char") {
+    return vineyard::ConvertToArrowType<uint8_t>::TypeValue();
+  } else if (name == "int16_t" || name == "int16" || name == "half") {
+    return vineyard::ConvertToArrowType<int16_t>::TypeValue();
+  } else if (name == "uint16_t" || name == "uint16") {
+    return vineyard::ConvertToArrowType<uint16_t>::TypeValue();
+  } else if (name == "int32_t" || name == "int32" || name == "int") {
+    return vineyard::ConvertToArrowType<int32_t>::TypeValue();
+  } else if (name == "uint32_t" || name == "uint32") {
+    return vineyard::ConvertToArrowType<uint32_t>::TypeValue();
+  } else if (name == "int64_t" || name == "int64" || name == "long") {
+    return vineyard::ConvertToArrowType<int64_t>::TypeValue();
+  } else if (name == "uint64_t" || name == "uint64") {
+    return vineyard::ConvertToArrowType<uint64_t>::TypeValue();
+  } else if (name == "float") {
+    return vineyard::ConvertToArrowType<float>::TypeValue();
+  } else if (name == "double") {
+    return vineyard::ConvertToArrowType<double>::TypeValue();
+  } else if (name == "string" || name == "std::string" || name == "str" ||
+             name == "std::__1::string") {
+    return vineyard::ConvertToArrowType<std::string>::TypeValue();
+  } else if (name == "large_list<item: int32>") {
+    return arrow::large_list(arrow::int32());
+  } else if (name == "large_list<item: uint32>") {
+    return arrow::large_list(arrow::uint32());
+  } else if (name == "large_list<item: int64>") {
+    return arrow::large_list(arrow::int64());
+  } else if (name == "large_list<item: uint64>") {
+    return arrow::large_list(arrow::int32());
+  } else if (name == "large_list<item: float>") {
+    return arrow::large_list(arrow::float32());
+  } else if (name == "large_list<item: double>") {
+    return arrow::large_list(arrow::float64());
+  } else if (name == "null" || name == "NULL") {
+    return arrow::null();
+  } else {
+    LOG(ERROR) << "Unsupported data type: " << name;
+    return nullptr;
+  }
+}
+
 }  // namespace vineyard
