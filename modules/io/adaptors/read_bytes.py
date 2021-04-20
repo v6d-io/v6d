@@ -117,8 +117,8 @@ def read_bytes(
                 builder[k] = v
 
         try:
-            protocol = split_protocol(path)
-            fs = fsspec.filesystem(protocol)
+            protocol = split_protocol(path)[0]
+            fs = fsspec.filesystem(protocol, **storage_options)
             files = fs.glob(path + '*')
             assert files, f"Cannot find such files: {path}"
         except Exception as e:
