@@ -25,5 +25,5 @@
 [submodule "thirdparty/jemalloc"]
 	path = thirdparty/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
-    shallow = true
+	shallow = true
 

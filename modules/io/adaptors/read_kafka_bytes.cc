@@ -41,21 +41,21 @@ int main(int argc, char** argv) {
   std::unique_ptr<IIOAdaptor> kafka_io_adaptor =
       IOFactory::CreateIOAdaptor(kafka_address);
 
-  VINEYARD_CHECK_OK(kafka_io_adaptor->SetPartialRead(proc, pnum));
+  CHECK_AND_REPORT(kafka_io_adaptor->SetPartialRead(proc, pnum));
 
-  VINEYARD_CHECK_OK(kafka_io_adaptor->Open());
+  CHECK_AND_REPORT(kafka_io_adaptor->Open());
 
   Client client;
-  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
+  CHECK_AND_REPORT(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   ByteStreamBuilder builder(client);
   auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
-  VINEYARD_CHECK_OK(client.Persist(bstream->id()));
+  CHECK_AND_REPORT(client.Persist(bstream->id()));
   ReportStatus("return", VYObjectIDToString(bstream->id()));
 
   std::unique_ptr<ByteStreamWriter> writer;
-  VINEYARD_CHECK_OK(bstream->OpenWriter(client, writer));
+  CHECK_AND_REPORT(bstream->OpenWriter(client, writer));
   writer->SetBufferSizeLimit(2 * 1024 * 1024);
 
   std::string line;
@@ -63,11 +63,11 @@ int main(int argc, char** argv) {
     auto st = writer->WriteLine(line + "\n");
     if (!st.ok()) {
       ReportStatus("error", st.ToString());
-      VINEYARD_CHECK_OK(st);
+      CHECK_AND_REPORT(st);
     }
   }
 
-  VINEYARD_CHECK_OK(writer->Finish());
+  CHECK_AND_REPORT(writer->Finish());
   ReportStatus("exit", "");
 
   return 0;
