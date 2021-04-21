@@ -55,8 +55,8 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
     // process arguments
     std::vector<std::string> config_list;
     // allows multiple # in configs
-    ::boost::split(config_list, location.substr(arg_pos + 1),
-                   ::boost::is_any_of("&#"));
+    std::string location_args = location.substr(arg_pos + 1);
+    ::boost::split(config_list, location_args, ::boost::is_any_of("&#"));
     for (auto& iter : config_list) {
       std::vector<std::string> kv_pair;
       ::boost::split(kv_pair, iter, ::boost::is_any_of("="));
@@ -505,7 +505,7 @@ Status LocalIOAdaptor::Read(void* buffer, size_t size) {
   }
   auto r = ifp_->Read(size, buffer);
   if (r.ok()) {
-    if (r.ValueUnsafe() < size) {
+    if (r.ValueUnsafe() < static_cast<int64_t>(size)) {
       return Status::EndOfFile();
     } else {
       return Status::OK();

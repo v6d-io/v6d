@@ -108,9 +108,16 @@ Status ParseTable(std::shared_ptr<arrow::Table>* table,
   convert_options.column_types = arrow_column_types;
 
   std::shared_ptr<arrow::csv::TableReader> reader;
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 4000000
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      reader, arrow::csv::TableReader::Make(arrow::io::AsyncContext(pool),
+                                            input, read_options, parse_options,
+                                            convert_options));
+#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       reader, arrow::csv::TableReader::Make(pool, input, read_options,
                                             parse_options, convert_options));
+#endif
 
   auto result = reader->Read();
   if (!result.status().ok()) {
