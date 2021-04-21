@@ -123,7 +123,7 @@ def read_bytes(
             report_status("error", f"Cannot initialize such filesystem for '{path}'")
             raise
 
-        if fs.isfile():
+        if fs.isfile(path):
             files = [path]
         else:
             try:
