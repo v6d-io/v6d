@@ -159,6 +159,10 @@ jobs:
           # test SSH login, without password
           ssh -vvv -i ~/.ssh/id_rsa -o BatchMode=yes -o StrictHostKeyChecking=no $(whoami)@localhost
 
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
       - name: CMake
         run: |
           # leverage ccache
@@ -273,6 +277,10 @@ jobs:
         run: |
           git clone https://github.com/7br/gstest.git --depth=1
 
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
       - name: Run Tests
         run: |
           export VINEYARD_DATA_DIR=`pwd`/gstest
@@ -281,6 +289,10 @@ jobs:
 
           rm -rf default.etcd
           python3 test/runner.py --with-cpp
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
 
       - name: Run Python Tests
         run: |
@@ -293,6 +305,10 @@ jobs:
           rm -rf default.etcd
           python3 test/runner.py --with-python
           # python3 test/runner.py --with-python --with-migration
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
 
       - name: Run IO Tests
         run: |
@@ -376,7 +392,3 @@ jobs:
           git add -A
           git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
           git push -f origin gh-pages
-
-      - name: Setup tmate session
-        if: always()
-        uses: mxschmitt/action-tmate@v2
