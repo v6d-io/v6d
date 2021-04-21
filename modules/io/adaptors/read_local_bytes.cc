@@ -37,21 +37,21 @@ int main(int argc, const char** argv) {
   int proc = std::stoi(argv[4]);
 
   Client client;
-  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
+  CHECK_AND_REPORT(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   std::unique_ptr<LocalIOAdaptor> local_io_adaptor(
       new LocalIOAdaptor(efile.c_str()));
 
-  VINEYARD_CHECK_OK(local_io_adaptor->SetPartialRead(proc, pnum));
+  CHECK_AND_REPORT(local_io_adaptor->SetPartialRead(proc, pnum));
 
-  VINEYARD_CHECK_OK(local_io_adaptor->Open());
+  CHECK_AND_REPORT(local_io_adaptor->Open());
 
   auto params = local_io_adaptor->GetMeta();
   ByteStreamBuilder builder(client);
   builder.SetParams(params);
   auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
-  VINEYARD_CHECK_OK(client.Persist(bstream->id()));
+  CHECK_AND_REPORT(client.Persist(bstream->id()));
   LOG(INFO) << "Create byte stream: " << bstream->id();
 
   auto lstream =
@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
   ReportStatus("return", VYObjectIDToString(lstream->id()));
 
   std::unique_ptr<ByteStreamWriter> writer;
-  VINEYARD_CHECK_OK(lstream->OpenWriter(client, writer));
+  CHECK_AND_REPORT(lstream->OpenWriter(client, writer));
   writer->SetBufferSizeLimit(2 * 1024 * 1024);
 
   std::string line;
@@ -68,7 +68,7 @@ int main(int argc, const char** argv) {
     auto st = writer->WriteLine(line);
     if (!st.ok()) {
       ReportStatus("error", st.ToString());
-      VINEYARD_CHECK_OK(st);
+      CHECK_AND_REPORT(st);
     }
   }
 
@@ -77,10 +77,10 @@ int main(int argc, const char** argv) {
     auto st = local_io_adaptor->Close();
     if (!st.ok()) {
       ReportStatus("error", st.ToString());
-      VINEYARD_CHECK_OK(st);
+      CHECK_AND_REPORT(st);
     }
   }
-  VINEYARD_CHECK_OK(writer->Finish());
+  CHECK_AND_REPORT(writer->Finish());
 
   return 0;
 }

@@ -16,10 +16,6 @@
 # limitations under the License.
 #
 
-import contextlib
-import inspect
-import sys
-
 
 def find_most_precise_match(typename, candidates):
     ''' Find the most precise match for given typename inside a group of prefixes.

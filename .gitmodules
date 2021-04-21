@@ -10,10 +10,6 @@
 	path = thirdparty/cpprestsdk
 	url = https://github.com/microsoft/cpprestsdk.git
 	shallow = true
-[submodule "thirdparty/uri"]
-	path = thirdparty/uri
-	url = https://github.com/cpp-netlib/uri.git
-	shallow = true
 [submodule "thirdparty/boost-leaf"]
 	path = modules/graph/thirdparty/boost-leaf
 	url = https://github.com/boostorg/leaf.git
@@ -29,3 +25,5 @@
 [submodule "thirdparty/jemalloc"]
 	path = thirdparty/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
+	shallow = true
+

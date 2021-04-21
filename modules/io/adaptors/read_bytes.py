@@ -119,11 +119,28 @@ def read_bytes(
         try:
             protocol = split_protocol(path)[0]
             fs = fsspec.filesystem(protocol, **storage_options)
-            files = fs.glob(path + '*')
-            assert files, f"Cannot find such files: {path}"
         except Exception as e:
-            report_status("error", str(e))
+            report_status("error", f"Cannot initialize such filesystem for '{path}'")
             raise
+
+        if fs.isfile(path):
+            files = [path]
+        else:
+            try:
+                files = fs.glob(path + '*')
+                assert files, f"Cannot find such files: {path}"
+            except:
+                report_status("error", f"Cannot find such files for '{path}'")
+                raise
+
+        ''' Note [Semantic of read_block with delimiter]:
+
+        read_block(fp, begin, size, delimiter) will:
+
+            - find the first `delimiter` from `begin`, then starts read
+            - after `size`, go through util the next `delimiter` or EOF, then finishes read.
+              Note that the returned size may exceed `size`.
+        '''
 
         chunk_size = 1024 * 1024 * 4
         for index, file_path in enumerate(files):
@@ -149,6 +166,8 @@ def read_bytes(
                 part_size = (total_size - offset) // proc_num
                 begin = part_size * proc_index + offset
                 end = min(begin + part_size, total_size)
+
+                # See Note [Semantic of read_block with delimiter].
                 if index == 0 and proc_index == 0:
                     begin -= int(header_row)
 

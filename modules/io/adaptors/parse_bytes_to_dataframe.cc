@@ -108,9 +108,16 @@ Status ParseTable(std::shared_ptr<arrow::Table>* table,
   convert_options.column_types = arrow_column_types;
 
   std::shared_ptr<arrow::csv::TableReader> reader;
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 4000000
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      reader, arrow::csv::TableReader::Make(arrow::io::AsyncContext(pool),
+                                            input, read_options, parse_options,
+                                            convert_options));
+#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       reader, arrow::csv::TableReader::Make(pool, input, read_options,
                                             parse_options, convert_options));
+#endif
 
   auto result = reader->Read();
   if (!result.status().ok()) {
@@ -145,7 +152,7 @@ int main(int argc, const char** argv) {
   int proc_index = std::stoi(argv[4]);
 
   Client client;
-  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
+  CHECK_AND_REPORT(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   auto s =
@@ -206,14 +213,14 @@ int main(int argc, const char** argv) {
   DataframeStreamBuilder dfbuilder(client);
   dfbuilder.SetParams(params);
   auto bs = std::dynamic_pointer_cast<DataframeStream>(dfbuilder.Seal(client));
-  VINEYARD_CHECK_OK(client.Persist(bs->id()));
+  CHECK_AND_REPORT(client.Persist(bs->id()));
   LOG(INFO) << "Created dataframe stream " << bs->id() << " at " << proc_index;
   ReportStatus("return", VYObjectIDToString(bs->id()));
 
   std::unique_ptr<ByteStreamReader> reader;
   std::unique_ptr<DataframeStreamWriter> writer;
-  VINEYARD_CHECK_OK(ls->OpenReader(client, reader));
-  VINEYARD_CHECK_OK(bs->OpenWriter(client, writer));
+  CHECK_AND_REPORT(ls->OpenReader(client, reader));
+  CHECK_AND_REPORT(bs->OpenWriter(client, writer));
 
   while (true) {
     std::unique_ptr<arrow::Buffer> buffer;

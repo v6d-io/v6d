@@ -28,6 +28,10 @@ limitations under the License.
 #include "arrow/csv/api.h"
 #include "arrow/filesystem/api.h"
 #include "arrow/io/api.h"
+#include "arrow/result.h"
+#include "arrow/status.h"
+#include "arrow/util/config.h"
+
 #include "boost/algorithm/string.hpp"
 #include "glog/logging.h"
 
@@ -35,9 +39,7 @@ limitations under the License.
 
 namespace vineyard {
 LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
-    : file_(nullptr),
-      location_(location),
-      using_std_getline_(false),
+    : location_(location),
       header_row_(false),
       enable_partial_read_(false),
       total_parts_(0),
@@ -45,13 +47,16 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
   // in csv format location:
   //    file_path#schema=t1,t2,t3&header_row=true/false
 
+  // process the args
+  //
   // TODO: tidy with netlib for url parsing.
-  size_t pos = location.find_first_of('#');
-  if (pos != std::string::npos) {
-    std::string config_field = location.substr(pos + 1);
+  size_t arg_pos = location.find_first_of('#');
+  if (arg_pos != std::string::npos) {
+    // process arguments
     std::vector<std::string> config_list;
     // allows multiple # in configs
-    ::boost::split(config_list, config_field, ::boost::is_any_of("&#"));
+    std::string location_args = location.substr(arg_pos + 1);
+    ::boost::split(config_list, location_args, ::boost::is_any_of("&#"));
     for (auto& iter : config_list) {
       std::vector<std::string> kv_pair;
       ::boost::split(kv_pair, iter, ::boost::is_any_of("="));
@@ -85,107 +90,68 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
         meta_.emplace(kv_pair[0], kv_pair[1]);
       }
     }
-    // Chech whether location contains protocol
-    size_t begin_pos = 0;
-    if (location_.substr(0, 7) == "file://") {
-      begin_pos = 7;
-    }
-    location_ = location_.substr(begin_pos, pos - begin_pos);
   }
+
+  // process locations
+  location_ = location_.substr(0, arg_pos);
+  fs_ = arrow::fs::FileSystemFromUriOrPath(location_, &location_).ValueOrDie();
 }
 
 LocalIOAdaptor::~LocalIOAdaptor() {
-  if (file_ != nullptr) {
-    fclose(file_);
-    file_ = nullptr;
-  } else if (fs_.is_open()) {
-    fs_.clear();
-    fs_.close();
-  }
+  VINEYARD_DISCARD(Close());
+  fs_.reset();
 }
 
 Status LocalIOAdaptor::Open() { return this->Open("r"); }
 
 Status LocalIOAdaptor::Open(const char* mode) {
-  bool to_write = false;
-  std::string tag = ".gz";
-  size_t pos = location_.find(tag);
-  if (pos != location_.size() - tag.size()) {
-    if (strchr(mode, 'w') != NULL || strchr(mode, 'a') != NULL) {
-      to_write = true;
-      int t = location_.find_last_of('/');
-      if (t != -1) {
-        std::string folder_path = location_.substr(0, t);
-        if (access(folder_path.c_str(), 0) != 0) {
-          RETURN_ON_ERROR(MakeDirectory(folder_path));
-        }
+  if (strchr(mode, 'w') != NULL || strchr(mode, 'a') != NULL) {
+    int t = location_.find_last_of('/');
+    if (t != -1) {
+      std::string folder_path = location_.substr(0, t);
+      if (access(folder_path.c_str(), 0) != 0) {
+        RETURN_ON_ERROR(MakeDirectory(folder_path));
       }
     }
-    if (using_std_getline_) {
-      if (strchr(mode, 'b') != NULL) {
-        fs_.open(location_.c_str(),
-                 std::ios::binary | std::ios::in | std::ios::out);
-      } else if (strchr(mode, 'a') != NULL) {
-        fs_.open(location_.c_str(),
-                 std::ios::out | std::ios::in | std::ios::app);
-      } else if (strchr(mode, 'w') != NULL || strchr(mode, '+') != NULL) {
-        fs_.open(location_.c_str(),
-                 std::ios::out | std::ios::in | std::ios::trunc);
-      } else if (strchr(mode, 'r') != NULL) {
-        fs_.open(location_.c_str(), std::ios::in);
-      }
-    } else {
-      file_ = fopen(location_.c_str(), mode);
-    }
-  } else {
-    return Status::NotImplemented();
-  }
 
-  if (to_write) {
+    if (strchr(mode, 'w') != NULL) {
+      RETURN_ON_ARROW_ERROR_AND_ASSIGN(ofp_, fs_->OpenOutputStream(location_));
+    } else {
+      RETURN_ON_ARROW_ERROR_AND_ASSIGN(ofp_, fs_->OpenAppendStream(location_));
+    }
+    return Status::OK();
+  } else {
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(ifp_, fs_->OpenInputFile(location_));
+
+    // check the partial read flag
+    if (enable_partial_read_) {
+      RETURN_ON_ERROR(setPartialReadImpl());
+    } else if (header_row_) {
+      RETURN_ON_ERROR(ReadLine(header_line_));
+      ::boost::algorithm::trim(header_line_);
+      meta_.emplace("header_line", header_line_);
+      ::boost::split(original_columns_, header_line_,
+                     ::boost::is_any_of(std::string(1, delimiter_)));
+    }
     return Status::OK();
   }
-
-  if ((using_std_getline_ && !fs_) ||
-      (!using_std_getline_ && file_ == nullptr)) {
-    return Status::IOError("Failed to open the " + location_ +
-                           " because: " + std::strerror(errno));
-  }
-
-  // check the partial read flag
-  if (enable_partial_read_) {
-    RETURN_ON_ERROR(setPartialReadImpl());
-  } else if (header_row_) {
-    RETURN_ON_ERROR(ReadLine(header_line_));
-    ::boost::algorithm::trim(header_line_);
-    meta_.emplace("header_line", header_line_);
-    ::boost::split(original_columns_, header_line_,
-                   ::boost::is_any_of(std::string(1, delimiter_)));
-  }
-  return Status::OK();
 }
 
 Status LocalIOAdaptor::Configure(const std::string& key,
                                  const std::string& value) {
-  if (key == "using_std_getline") {
-    if (value == "false") {
-      using_std_getline_ = false;
-    } else if (value == "true") {
-      using_std_getline_ = true;
-    }
-  }
   return Status::OK();
 }
 
 Status LocalIOAdaptor::SetPartialRead(const int index, const int total_parts) {
-  // make sure that the bytes of each line of the file
-  // is smaller than macro FINELINE
+  // make sure that the bytes of each line of the file is smaller than macro
+  // FINELINE
   if (index < 0 || total_parts <= 0 || index >= total_parts) {
     LOG(ERROR) << "error during set_partial_read with [" << index << ", "
                << total_parts << "]";
     return Status::IOError();
   }
-  if (fs_.is_open() || file_ != nullptr) {
-    LOG(WARNING) << "WARNING!! Set partial read after open have no effect,"
+  if (ifp_ != nullptr) {
+    LOG(WARNING) << "WARNING!! Set partial read after open have no effect, "
                     "You probably want to set partial before open!";
     return Status::IOError();
   }
@@ -197,13 +163,8 @@ Status LocalIOAdaptor::SetPartialRead(const int index, const int total_parts) {
 
 Status LocalIOAdaptor::GetPartialReadDetail(int64_t& offset, int64_t& nbytes) {
   if (!enable_partial_read_) {
-    LOG(ERROR) << "Partial read is disabled, you probably want to"
-                  " set partial read first.";
-    return Status::IOError();
-  }
-  if ((using_std_getline_ && !fs_) ||
-      (!using_std_getline_ && file_ == nullptr)) {
-    LOG(ERROR) << "File not open, you probably want to open file first.";
+    LOG(ERROR) << "Partial read is disabled, you probably want to "
+                  "set partial read first.";
     return Status::IOError();
   }
   offset = partial_read_offset_[index_];
@@ -302,17 +263,15 @@ Status LocalIOAdaptor::ReadTable(std::shared_ptr<arrow::Table>* table) {
 /// Means we deduce the type of the second and third column.
 Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
                                         int index) {
-  std::unique_ptr<arrow::fs::LocalFileSystem> arrow_lfs(
-      new arrow::fs::LocalFileSystem());
-  std::shared_ptr<arrow::io::RandomAccessFile> file_in;
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(file_in,
-                                   arrow_lfs->OpenInputFile(location_));
-
+  if (ifp_ == nullptr) {
+    return Status::IOError("The file hasn't been opened in read mode: " +
+                           location_);
+  }
   int64_t offset = partial_read_offset_[index];
   int64_t nbytes =
       partial_read_offset_[index + 1] - partial_read_offset_[index];
   std::shared_ptr<arrow::io::InputStream> input =
-      arrow::io::RandomAccessFile::GetStream(file_in, offset, nbytes);
+      arrow::io::RandomAccessFile::GetStream(ifp_, offset, nbytes);
 
   arrow::MemoryPool* pool = arrow::default_memory_pool();
 
@@ -372,9 +331,16 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   parse_options.delimiter = delimiter_;
 
   std::shared_ptr<arrow::csv::TableReader> reader;
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 4000000
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      reader, arrow::csv::TableReader::Make(arrow::io::AsyncContext(pool),
+                                            input, read_options, parse_options,
+                                            convert_options));
+#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       reader, arrow::csv::TableReader::Make(pool, input, read_options,
                                             parse_options, convert_options));
+#endif
 
   // RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table, reader->Read());
   auto result = reader->Read();
@@ -396,55 +362,87 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   return Status::OK();
 }
 
+// TODO: sub-optimal, requires further optimization
 int64_t LocalIOAdaptor::getDistanceToLineBreak(const int index) {
   VINEYARD_CHECK_OK(seek(partial_read_offset_[index], kFileLocationBegin));
+
+  constexpr int64_t nbytes_for_block = 255;
+  char buffer[256];
+
   int64_t dis = 0;
   while (true) {
-    char buffer[1];
-    // std::memset(buff, 0, sizeof(buffer));
-    auto status = Read(buffer, 1);
-    if (!status.ok() || buffer[0] == '\n') {
-      break;
+    auto sz = ifp_->Read(nbytes_for_block, buffer);
+    if (sz.ok() && sz.ValueUnsafe() > 0) {
+      int64_t read_size = sz.ValueUnsafe();
+
+      buffer[read_size] = '\0';
+      char* endofline = strchr(buffer, '\n');
+      if (endofline != nullptr) {
+        dis += endofline - buffer;  // points to previous char before the `\n`.
+        return dis;
+      } else {
+        dis += read_size;
+      }
     } else {
-      dis++;
+      return dis;
     }
   }
-  return dis;
 }
 
+// TODO: sub-optimal, requires further optimization
 Status LocalIOAdaptor::ReadLine(std::string& line) {
+  if (ifp_ == nullptr) {
+    return Status::IOError("The file hasn't been opened in read mode: " +
+                           location_);
+  }
   if (enable_partial_read_ && tell() >= partial_read_offset_[index_ + 1]) {
     return Status::EndOfFile();
   }
-  if (using_std_getline_) {
-    getline(fs_, line);
-    if (line.empty()) {
-      return Status::EndOfFile();
+
+  constexpr int64_t nbytes_for_block = 256;
+  size_t offset = 0, skip_endofline = 0;
+  int64_t start_position = ifp_->Tell().ValueOrDie();
+
+  // find delimiter
+  while (true) {
+    auto sz = ifp_->Read(nbytes_for_block, buff + offset);
+    if (sz.ok() && sz.ValueUnsafe() > 0) {
+      int64_t read_size = sz.ValueUnsafe();
+
+      // find '\n'
+      VINEYARD_ASSERT(offset + read_size < LINESIZE - 1,
+                      "The line is too long that is not supported");
+      buff[offset + read_size] = '\0';
+      char* endofline = strchr(buff + offset, '\n');
+      if (endofline != nullptr) {
+        offset = endofline - buff;
+        skip_endofline = 1;
+        break;
+      } else {
+        offset += read_size;
+      }
     } else {
-      return Status::OK();
-    }
-  } else {
-    if (file_ && fgets(buff, LINESIZE, file_)) {
-      std::string str(buff);
-      line.swap(str);
-      return Status::OK();
-    } else {
-      return Status::EndOfFile();
+      if (offset == 0) {
+        return Status::EndOfFile();
+      }
+      break;
     }
   }
+
+  VINEYARD_DISCARD(
+      Status::ArrowError(ifp_->Seek(start_position + offset + skip_endofline)));
+  std::string linebuffer = std::string(buff, offset);
+  line.swap(linebuffer);
+  return Status::OK();
 }
 
 Status LocalIOAdaptor::WriteLine(const std::string& line) {
-  if (using_std_getline_) {
-    if (!(fs_ << line)) {
-      return Status::IOError();
-    }
-  } else {
-    if (!file_ || fputs(line.c_str(), file_) <= 0) {
-      return Status::IOError();
-    }
+  if (ofp_ == nullptr) {
+    return Status::IOError("The file hasn't been opened in write mode: " +
+                           location_);
   }
-  return Status::OK();
+  return Status::ArrowError(ofp_->Write(line.c_str(), line.size()) &
+                            ofp_->Write("\n", 1));
 }
 
 Status LocalIOAdaptor::Seek(const int64_t offset) {
@@ -452,138 +450,110 @@ Status LocalIOAdaptor::Seek(const int64_t offset) {
 }
 
 int64_t LocalIOAdaptor::GetFullSize() {
-  VINEYARD_CHECK_OK(seek(0, kFileLocationEnd));
-  return tell();
+  if (ifp_) {
+    return ifp_->GetSize().ValueOr(-1);
+  }
+  return -1;
 }
 
 int64_t LocalIOAdaptor::tell() {
-  if (using_std_getline_) {
-    return fs_.tellg();
-  } else {
-    return ftell(file_);
+  if (ifp_) {
+    return ifp_->Tell().ValueOr(-1);
   }
+  if (ofp_) {
+    return ofp_->Tell().ValueOr(-1);
+  }
+  return -1;
 }
 
 Status LocalIOAdaptor::seek(const int64_t offset,
                             const FileLocation seek_from) {
-  if (using_std_getline_) {
-    fs_.clear();
-    if (seek_from == kFileLocationBegin) {
-      fs_.seekg(offset, fs_.beg);
-    } else if (seek_from == kFileLocationCurrent) {
-      fs_.seekg(offset, fs_.cur);
-    } else if (seek_from == kFileLocationEnd) {
-      fs_.seekg(offset, fs_.end);
-    } else {
-      return Status::Invalid();
-    }
-  } else {
-    if (seek_from == kFileLocationBegin) {
-      fseek(file_, offset, SEEK_SET);
-    } else if (seek_from == kFileLocationCurrent) {
-      fseek(file_, offset, SEEK_CUR);
-    } else if (seek_from == kFileLocationEnd) {
-      fseek(file_, offset, SEEK_END);
-    } else {
-      return Status::Invalid();
-    }
+  if (!ifp_) {
+    return Status::Invalid("Not a seekable random access file: " + location_);
   }
-  return Status::OK();
+  switch (seek_from) {
+  case kFileLocationBegin: {
+    return Status::ArrowError(ifp_->Seek(offset));
+  } break;
+  case kFileLocationCurrent: {
+    auto p = ifp_->Tell();
+    if (p.ok()) {
+      return Status::ArrowError(ifp_->Seek(p.ValueUnsafe() + offset));
+    } else {
+      return Status::IOError("Fail to tell current position: " + location_);
+    }
+  } break;
+  case kFileLocationEnd: {
+    auto sz = ifp_->GetSize();
+    if (sz.ok()) {
+      return Status::ArrowError(ifp_->Seek(sz.ValueUnsafe() - offset));
+    } else {
+      return Status::IOError("Fail to tell the total file size: " + location_);
+    }
+  } break;
+  default: {
+    return Status::Invalid("Not support seek mode: " +
+                           std::to_string(static_cast<int>(seek_from)));
+  }
+  }
 }
 
 Status LocalIOAdaptor::Read(void* buffer, size_t size) {
-  if (using_std_getline_) {
-    fs_.read(static_cast<char*>(buffer), size);
-    if (!fs_) {
+  if (ifp_ == nullptr) {
+    return Status::IOError("The file hasn't been opened in read mode: " +
+                           location_);
+  }
+  auto r = ifp_->Read(size, buffer);
+  if (r.ok()) {
+    if (r.ValueUnsafe() < static_cast<int64_t>(size)) {
       return Status::EndOfFile();
+    } else {
+      return Status::OK();
     }
   } else {
-    if (file_) {
-      bool status = fread(buffer, 1, size, file_);
-      if (!status) {
-        return Status::EndOfFile();
-      }
-    } else {
-      return Status::EndOfFile();
-    }
+    return Status::ArrowError(r.status());
   }
-  return Status::OK();
 }
 
 Status LocalIOAdaptor::Write(void* buffer, size_t size) {
-  if (using_std_getline_) {
-    fs_.write(static_cast<char*>(buffer), size);
-    if (!fs_) {
-      return Status::IOError();
-    }
-    fs_.flush();
-  } else {
-    if (file_) {
-      bool status = fwrite(buffer, 1, size, file_);
-      if (!status) {
-        return Status::IOError();
-      }
-      fflush(file_);
-    } else {
-      return Status::IOError();
-    }
+  if (ofp_ == nullptr) {
+    return Status::IOError("The file hasn't been opened in write mode: " +
+                           location_);
   }
-  return Status::OK();
+  return Status::ArrowError(ofp_->Write(buffer, size) & ofp_->Flush());
 }
 
 Status LocalIOAdaptor::Close() {
-  if (using_std_getline_) {
-    if (fs_.is_open()) {
-      fs_.close();
-    }
-  } else {
-    if (file_ != nullptr) {
-      fclose(file_);
-      file_ = nullptr;
-    }
+  Status s1, s2;
+  if (ifp_) {
+    s1 = Status::ArrowError(ifp_->Close());
   }
-  return Status::OK();
+  if (ofp_) {
+    s2 = Status::ArrowError(ofp_->Flush() & ofp_->Close());
+  }
+  return s1 & s2;
 }
 
 Status LocalIOAdaptor::ListDirectory(const std::string& path,
                                      std::vector<std::string>& files) {
-  std::string s;
-  DIR* dir;
-  struct dirent* rent;
-  dir = opendir(path.c_str());
-  while ((rent = readdir(dir))) {
-    s = rent->d_name;
-    if (s[0] != '.') {
-      files.push_back(s);
-    }
+  arrow::fs::FileSelector selector;
+  selector.base_dir = path;
+  std::vector<arrow::fs::FileInfo> infos;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(infos, fs_->GetFileInfo(selector));
+  for (auto const& finfo : infos) {
+    files.emplace_back(finfo.path());
   }
-  closedir(dir);
   return Status::OK();
 }
 
 Status LocalIOAdaptor::MakeDirectory(const std::string& path) {
-  std::string dir = path;
-  int len = dir.size();
-  if (dir[len - 1] != '/') {
-    dir[len] = '/';
-    len++;
-  }
-  std::string temp;
-  for (int i = 1; i < len; i++) {
-    if (dir[i] == '/') {
-      temp = dir.substr(0, i);
-      if (access(temp.c_str(), 0) != 0) {
-        if (mkdir(temp.c_str(), 0777) != 0) {
-          return Status::IOError();
-        }
-      }
-    }
-  }
-  return Status::OK();
+  return Status::ArrowError(fs_->CreateDir(path, true));
 }
 
 bool LocalIOAdaptor::IsExist(const std::string& path) {
-  return access(location_.c_str(), 0) == 0;
+  auto mfinfo = fs_->GetFileInfo(path);
+  return mfinfo.ok() &&
+         mfinfo.ValueUnsafe().type() != arrow::fs::FileType::NotFound;
 }
 
 void LocalIOAdaptor::Init() {}

@@ -42,10 +42,10 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<IIOAdaptor> kafka_io_adaptor =
       IOFactory::CreateIOAdaptor(kafka_address);
-  VINEYARD_CHECK_OK(kafka_io_adaptor->Open("w"));
+  CHECK_AND_REPORT(kafka_io_adaptor->Open("w"));
 
   Client client;
-  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
+  CHECK_AND_REPORT(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   auto s =
@@ -61,11 +61,11 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Got dataframe stream " << ls->id() << " at " << proc_index;
 
   std::unique_ptr<ByteStreamReader> reader;
-  VINEYARD_CHECK_OK(ls->OpenReader(client, reader));
+  CHECK_AND_REPORT(ls->OpenReader(client, reader));
 
   std::string line;
   while (reader->ReadLine(line).ok()) {
-    VINEYARD_CHECK_OK(kafka_io_adaptor->WriteLine(line));
+    CHECK_AND_REPORT(kafka_io_adaptor->WriteLine(line));
   }
 
   return 0;

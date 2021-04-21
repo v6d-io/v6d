@@ -34,6 +34,17 @@ void ReportStatus(const std::string& kind, T const& value) {
   std::cout << json_to_string(result) << std::endl;
 }
 
+#ifndef CHECK_AND_REPORT
+#define CHECK_AND_REPORT(status)                       \
+  do {                                                 \
+    if (!status.ok()) {                                \
+      LOG(ERROR) << "IO Error: " << status.ToString(); \
+      ReportStatus("error", status.ToString());        \
+      VINEYARD_CHECK_OK(status);                       \
+    }                                                  \
+  } while (0)
+#endif  // CHECK_AND_REPORT
+
 }  // namespace vineyard
 
 #endif  // MODULES_IO_IO_UTILS_H_

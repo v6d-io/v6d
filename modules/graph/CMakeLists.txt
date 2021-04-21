@@ -71,7 +71,6 @@ if(BUILD_VINEYARD_TESTS)
         target_link_libraries(${T_NAME} PRIVATE
                               vineyard_graph
                               ${ARROW_SHARED_LIB}
-                              ${CPPNETLIB_LIBRARIES}
                               ${MPI_CXX_LIBRARIES})
         if(${LIBUNWIND_FOUND})
             target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})

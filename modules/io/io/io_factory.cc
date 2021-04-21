@@ -15,14 +15,17 @@ limitations under the License.
 
 #include "io/io/io_factory.h"
 
+#include <limits.h>
+#include <stdlib.h>
+
 #include <memory>
 #include <string>
 #include <system_error>
 #include <vector>
 
+#include "arrow/status.h"
+#include "arrow/util/uri.h"
 #include "glog/logging.h"
-#include "network/uri.hpp"
-#include "network/uri/uri_io.hpp"
 
 #include "io/io/kafka_io_adaptor.h"
 #include "io/io/local_io_adaptor.h"
@@ -40,24 +43,40 @@ void IOFactory::Finalize() { LocalIOAdaptor::Finalize(); }
  */
 std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
     const std::string& location, Client*) {
-  std::string scheme = "file";
-  size_t pos = location.find_first_of(':');
-
-  if (pos == std::string::npos || !pos || pos == location.length() - 1 ||
-      location[pos + 1] != '/') {
-    VLOG(1) << "Use default file location(local) to open: " + location;
-  } else {
-    scheme = location.substr(0, pos);
+  size_t arg_pos = location.find_first_of('#');
+  std::string location_to_parse = location.substr(0, arg_pos);
+  arrow::internal::Uri uri;
+  {
+    auto s = uri.Parse(location_to_parse);
+    if (!s.ok()) {
+      // defaulting to local file system: resolve to abs path first
+      char resolved_path[PATH_MAX];
+      realpath(location_to_parse.c_str(), resolved_path);
+      location_to_parse = std::string(resolved_path);
+      auto s = uri.Parse("file://" + location_to_parse);
+      if (!s.ok()) {
+        LOG(ERROR) << "Failed to detect the scheme of given location "
+                   << location;
+        return nullptr;
+      }
+    }
+  }
+  if (arg_pos != std::string::npos) {
+    location_to_parse += location.substr(arg_pos);
   }
 
-  if (scheme == "file") {
-    return std::unique_ptr<LocalIOAdaptor>(new LocalIOAdaptor(location));
+  if (uri.scheme() == "file" || uri.scheme() == "hdfs" ||
+      uri.scheme() == "s3") {
+    return std::unique_ptr<LocalIOAdaptor>(
+        new LocalIOAdaptor(location_to_parse));
 #ifdef KAFKA_ENABLED
-  } else if (scheme == "kafka") {
-    return std::unique_ptr<KafkaIOAdaptor>(new KafkaIOAdaptor(location));
+  } else if (uri.scheme() == "kafka") {
+    return std::unique_ptr<KafkaIOAdaptor>(
+        new KafkaIOAdaptor(location_to_parse));
 #endif
   }
-  LOG(ERROR) << "Unimplemented adaptor for the scheme: " << scheme;
+  LOG(ERROR) << "Unimplemented adaptor for the scheme: " << uri.scheme()
+             << " of location " << location;
   return nullptr;
 }
 
