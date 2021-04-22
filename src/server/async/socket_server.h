@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_SERVER_ASYNC_SOCKET_SERVER_H_
 #define SRC_SERVER_ASYNC_SOCKET_SERVER_H_
 
+#include <atomic>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -159,7 +160,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   vs_ptr_t server_ptr_;
   SocketServer* socket_server_ptr_;
   int conn_id_;
-  bool running_;
+  std::atomic_bool running_;
 
   asio::streambuf buf_;
   socket_message_queue_t write_msgs_;
@@ -211,6 +212,7 @@ class SocketServer {
   size_t AliveConnections() const;
 
  protected:
+  std::atomic_bool stopped_;  // if the socket server being stopped.
   vs_ptr_t vs_ptr_;
   int next_conn_id_;
   std::unordered_map<int, std::shared_ptr<SocketConnection>> connections_;

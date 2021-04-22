@@ -227,4 +227,9 @@ void EtcdMetaService::retryDaeminWatch(
   });
 }
 
+Status EtcdMetaService::preStart() {
+  auto launcher = EtcdLauncher(etcd_spec_);
+  return launcher.LaunchEtcdServer(etcd_, meta_sync_lock_, etcd_proc_);
+}
+
 }  // namespace vineyard

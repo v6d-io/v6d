@@ -72,11 +72,12 @@ VineyardServer::VineyardServer(const json& spec)
       guard_(new boost::asio::io_service::work(context_)),
       meta_guard_(new boost::asio::io_service::work(context_)),
 #endif
-      ready_(0),
-      stopped_(false) {
+      ready_(0) {
 }
 
 Status VineyardServer::Serve() {
+  stopped_.store(false);
+
   // Initialize the ipc/rpc server ptr first to get self endpoints when
   // initializing the metadata service.
   ipc_server_ptr_ =
@@ -785,26 +786,30 @@ const std::string VineyardServer::RPCEndpoint() {
 }
 
 void VineyardServer::Stop() {
-  if (stopped_) {
+  if (stopped_.exchange(true)) {
     return;
   }
-  stopped_ = true;
+
   guard_.reset();
   meta_guard_.reset();
   if (this->ipc_server_ptr_) {
     this->ipc_server_ptr_->Stop();
-    this->ipc_server_ptr_.reset(nullptr);
   }
   if (this->rpc_server_ptr_) {
     this->rpc_server_ptr_->Stop();
-    this->rpc_server_ptr_.reset(nullptr);
   }
-
-  meta_service_ptr_->Stop();
+  if (this->meta_service_ptr_) {
+    this->meta_service_ptr_->Stop();
+  }
 
   // stop the asio context at last
   context_.stop();
   meta_context_.stop();
+
+  // cleanup
+  this->ipc_server_ptr_.reset(nullptr);
+  this->rpc_server_ptr_.reset(nullptr);
+  this->meta_service_ptr_.reset();
 
   // wait for the IO context finishes.
   for (auto& worker : workers_) {
@@ -813,6 +818,8 @@ void VineyardServer::Stop() {
     }
   }
 }
+
+bool VineyardServer::Running() const { return !stopped_.load(); }
 
 VineyardServer::~VineyardServer() { this->Stop(); }
 

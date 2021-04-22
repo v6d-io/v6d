@@ -165,7 +165,8 @@ mpiexec_cmdargs = resolve_mpiexec_cmdargs()
 
 
 def run_test(test_name, *args, nproc=1, capture=False, vineyard_ipc_socket=VINEYARD_CI_IPC_SOCKET):
-    print('running test case -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-  %s  -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-' % test_name)
+    print(f'running test case -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-  {test_name}  -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-',
+          flush=True)
     arg_reps = []
     for arg in args:
         if isinstance(arg, str):
@@ -233,6 +234,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
                          'vineyard_test_%s' % time.time(),
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
         run_test('array_test')
+        run_test('allocator_test')
         run_test('arrow_data_structure_test')
         run_test('dataframe_test')
         run_test('delete_test')
@@ -241,6 +243,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('global_object_test')
         run_test('hashmap_test')
         run_test('id_test')
+        run_test('invalid_connect_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test('large_meta_test')
         run_test('list_object_test')
         run_test('name_test')

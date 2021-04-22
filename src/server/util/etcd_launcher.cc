@@ -153,7 +153,9 @@ Status EtcdLauncher::LaunchEtcdServer(
               << endpoint_port_;
 
     int retries = 0;
-    while (etcd_proc->running() && retries < max_probe_retries) {
+    std::error_code err;
+    while (etcd_proc && etcd_proc->running(err) && !err &&
+           retries < max_probe_retries) {
       etcd_client.reset(new etcd::Client(etcd_endpoint));
       if (probeEtcdServer(etcd_client, sync_lock)) {
         break;
@@ -161,7 +163,13 @@ Status EtcdLauncher::LaunchEtcdServer(
       retries += 1;
       sleep(1);
     }
-    if (retries >= max_probe_retries) {
+    if (!etcd_proc) {
+      return Status::IOError(
+          "Failed to wait until etcd ready: operation has been interrupted");
+    } else if (err) {
+      return Status::IOError("Failed to check the process status: " +
+                             err.message());
+    } else if (retries >= max_probe_retries) {
       return Status::EtcdError(
           "Etcd has been launched but failed to connect to it");
     } else {

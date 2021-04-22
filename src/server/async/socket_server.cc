@@ -33,29 +33,23 @@ SocketConnection::SocketConnection(stream_protocol::socket socket,
     : socket_(std::move(socket)),
       server_ptr_(server_ptr),
       socket_server_ptr_(socket_server_ptr),
-      conn_id_(conn_id),
-      running_(false) {}
+      conn_id_(conn_id) {}
 
 void SocketConnection::Start() {
-  running_ = true;
+  running_.store(true);
   doReadHeader();
 }
 
-void SocketConnection::Stop() {
-  doStop();
-  running_ = false;
-}
+void SocketConnection::Stop() { doStop(); }
 
 void SocketConnection::doReadHeader() {
   auto self(this->shared_from_this());
   asio::async_read(socket_, asio::buffer(&read_msg_header_, sizeof(size_t)),
                    [this, self](boost::system::error_code ec, std::size_t) {
-                     if (!ec && running_) {
+                     if (!ec && running_.load()) {
                        doReadBody();
                      } else {
                        doStop();
-                       socket_server_ptr_->RemoveConnection(conn_id_);
-                       return;
                      }
                    });
 }
@@ -75,16 +69,14 @@ void SocketConnection::doReadBody() {
   auto self(shared_from_this());
   asio::async_read(socket_, asio::buffer(&read_msg_body_[0], read_msg_header_),
                    [this, self](boost::system::error_code ec, std::size_t) {
-                     if ((!ec || ec == asio::error::eof) && running_) {
+                     if ((!ec || ec == asio::error::eof) && running_.load()) {
                        bool exit = processMessage(read_msg_body_);
                        if (exit || ec == asio::error::eof) {
                          doStop();
-                         socket_server_ptr_->RemoveConnection(conn_id_);
                          return;
                        }
                      } else {
                        doStop();
-                       socket_server_ptr_->RemoveConnection(conn_id_);
                        return;
                      }
                      // start next-round read
@@ -407,7 +399,7 @@ bool SocketConnection::doGetData(const json& root) {
   TRY_READ_REQUEST(ReadGetDataRequest(root, ids, sync_remote, wait));
   json tree;
   RESPONSE_ON_ERROR(server_ptr_->GetData(
-      ids, sync_remote, wait, [self]() { return self->running_; },
+      ids, sync_remote, wait, [self]() { return self->running_.load(); },
       [self](const Status& status, const json& tree) {
         std::string message_out;
         if (status.ok()) {
@@ -699,7 +691,7 @@ bool SocketConnection::doGetName(const json& root) {
   bool wait;
   TRY_READ_REQUEST(ReadGetNameRequest(root, name, wait));
   RESPONSE_ON_ERROR(server_ptr_->GetName(
-      name, wait, [self]() { return self->running_; },
+      name, wait, [self]() { return self->running_.load(); },
       [self](const Status& status, const ObjectID& object_id) {
         std::string message_out;
         if (status.ok()) {
@@ -889,15 +881,25 @@ void SocketConnection::doWrite(std::string&& buf) {
 }
 
 void SocketConnection::doStop() {
-  // On Mac the state of socket may be "not connected" after the client has
-  // already closed the socket, hence there will be an exception.
-  boost::system::error_code ec;
-  socket_.shutdown(stream_protocol::socket::shutdown_both, ec);
-  socket_.close();
+  if (!running_.exchange(false)) {
+    // already stopped, or haven't started
+    return;
+  }
+
   // do cleanup: clean up streams associated with this client
   for (auto stream_id : associated_streams_) {
     VINEYARD_SUPPRESS(server_ptr_->GetStreamStore()->Drop(stream_id));
   }
+
+  // On Mac the state of socket may be "not connected" after the client has
+  // already closed the socket, hence there will be an exception.
+  boost::system::error_code ec;
+  socket_.cancel(ec);
+  socket_.shutdown(stream_protocol::socket::shutdown_both, ec);
+  socket_.close(ec);
+
+  // drop connection
+  socket_server_ptr_->RemoveConnection(conn_id_);
 }
 
 void SocketConnection::doAsyncWrite() {
@@ -913,7 +915,6 @@ void SocketConnection::doAsyncWrite() {
                         }
                       } else {
                         doStop();
-                        socket_server_ptr_->RemoveConnection(conn_id_);
                       }
                     });
 }
@@ -933,12 +934,10 @@ void SocketConnection::doAsyncWrite(callback_t<> callback) {
             auto status = callback(Status::OK());
             if (!status.ok()) {
               doStop();
-              socket_server_ptr_->RemoveConnection(conn_id_);
             }
           }
         } else {
           doStop();
-          socket_server_ptr_->RemoveConnection(conn_id_);
         }
       });
 }
@@ -946,9 +945,16 @@ void SocketConnection::doAsyncWrite(callback_t<> callback) {
 SocketServer::SocketServer(vs_ptr_t vs_ptr)
     : vs_ptr_(vs_ptr), next_conn_id_(0) {}
 
-void SocketServer::Start() { doAccept(); }
+void SocketServer::Start() {
+  stopped_.store(false);
+  doAccept();
+}
 
 void SocketServer::Stop() {
+  if (stopped_.exchange(true)) {
+    return;
+  }
+
   std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
   for (auto& pair : connections_) {
     pair.second->Stop();
@@ -963,13 +969,19 @@ bool SocketServer::ExistsConnection(int conn_id) const {
 
 void SocketServer::RemoveConnection(int conn_id) {
   std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
-  connections_.erase(conn_id);
+  auto conn = connections_.find(conn_id);
+  if (conn != connections_.end()) {
+    connections_.erase(conn);
+  }
 }
 
 void SocketServer::CloseConnection(int conn_id) {
   std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
-  connections_.at(conn_id)->Stop();
-  RemoveConnection(conn_id);
+  auto conn = connections_.find(conn_id);
+  if (conn != connections_.end()) {
+    conn->second->Stop();
+    connections_.erase(conn);
+  }
 }
 
 size_t SocketServer::AliveConnections() const {

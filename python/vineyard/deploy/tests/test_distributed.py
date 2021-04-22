@@ -18,6 +18,7 @@
 
 import itertools
 import json
+import time
 
 import pandas as pd
 import pytest
@@ -77,6 +78,38 @@ def test_add_remote_placeholder(vineyard_ipc_sockets):
 
     meta = client2.get_meta(tupid, True)
     assert meta['__elements_-size'] == 4
+
+
+def test_add_remote_placeholder_with_sync(vineyard_ipc_sockets):
+    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), 4))
+
+    client1 = vineyard.connect(vineyard_ipc_sockets[0])
+    client2 = vineyard.connect(vineyard_ipc_sockets[1])
+    client3 = vineyard.connect(vineyard_ipc_sockets[2])
+    client4 = vineyard.connect(vineyard_ipc_sockets[3])
+
+    data = np.ones((1, 2, 3, 4, 5))
+
+    o1 = client1.put(data)
+    client1.persist(o1)
+    time.sleep(5)
+
+    o2 = client2.put(data)
+    client2.persist(o2)
+    time.sleep(5)
+
+    o3 = client3.put(data)
+    client3.persist(o3)
+    time.sleep(5)
+
+    o4 = client4.put(data)
+    client4.persist(o4)
+    time.sleep(5)
+
+    client1.get_meta(o4)
+    client2.get_meta(o1)
+    client3.get_meta(o2)
+    client4.get_meta(o3)
 
 
 def test_remote_deletion(vineyard_ipc_sockets):

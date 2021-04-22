@@ -93,9 +93,10 @@ class EtcdMetaService : public IMetaService {
       } catch (...) {}
     }
     if (etcd_proc_) {
-      etcd_proc_->terminate();
+      std::error_code err;
+      etcd_proc_->terminate(err);
       kill(etcd_proc_->id(), SIGTERM);
-      etcd_proc_->wait();
+      etcd_proc_->wait(err);
     }
   }
 
@@ -103,11 +104,7 @@ class EtcdMetaService : public IMetaService {
   explicit EtcdMetaService(vs_ptr_t& server_ptr)
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
-        prefix_(etcd_spec_["prefix"].get_ref<std::string const&>()) {
-    auto launcher = EtcdLauncher(etcd_spec_);
-    VINEYARD_CHECK_OK(
-        launcher.LaunchEtcdServer(etcd_, meta_sync_lock_, etcd_proc_));
-  }
+        prefix_(etcd_spec_["prefix"].get_ref<std::string const&>()) {}
 
   void requestLock(
       std::string lock_name,
@@ -145,6 +142,8 @@ class EtcdMetaService : public IMetaService {
   const std::string prefix_;
 
  private:
+  Status preStart() override;
+
   std::unique_ptr<etcd::Client> etcd_;
   std::shared_ptr<etcd::Watcher> watcher_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;

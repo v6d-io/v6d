@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_SERVER_SERVER_VINEYARD_SERVER_H_
 #define SRC_SERVER_SERVER_VINEYARD_SERVER_H_
 
+#include <atomic>
 #include <list>
 #include <memory>
 #include <set>
@@ -166,6 +167,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   void Stop();
 
+  bool Running() const;
+
   ~VineyardServer();
 
  private:
@@ -208,7 +211,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     kReady = 0b1111,
   };
   unsigned char ready_;
-  bool stopped_;  // avoid invoke Stop() twice.
+  std::atomic_bool stopped_;  // avoid invoke Stop() twice.
 
   InstanceID instance_id_;
   std::string hostname_;
