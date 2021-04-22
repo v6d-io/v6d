@@ -150,6 +150,7 @@ void bind_core(py::module& mod) {
       .def("add_member",
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
+      .def("reset", [](ObjectMeta &meta) { meta.Reset(); })
       .def(
           "__iter__",
           [](const ObjectMeta& meta) {

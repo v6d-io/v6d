@@ -475,6 +475,11 @@ class ObjectMeta {
   void SetBuffer(const ObjectID& id,
                  const std::shared_ptr<arrow::Buffer>& buffer);
 
+  /**
+   * @brief Reset the metadata as an initialized one.
+   */
+  void Reset();
+
   void PrintMeta() const;
 
   const bool incomplete() const;

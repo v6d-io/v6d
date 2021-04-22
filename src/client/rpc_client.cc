@@ -95,6 +95,7 @@ Status RPCClient::GetMetaData(const ObjectID id, ObjectMeta& meta,
   ENSURE_CONNECTED(this);
   json tree;
   RETURN_ON_ERROR(GetData(id, tree, sync_remote));
+  meta.Reset();
   meta.SetMetaData(this, tree);
   return Status::OK();
 }
@@ -108,6 +109,7 @@ Status RPCClient::GetMetaData(const std::vector<ObjectID>& ids,
   metas.resize(trees.size());
 
   for (size_t idx = 0; idx < trees.size(); ++idx) {
+    metas[idx].Reset();
     metas[idx].SetMetaData(this, trees[idx]);
   }
   return Status::OK();

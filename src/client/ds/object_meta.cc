@@ -178,6 +178,13 @@ void ObjectMeta::SetBuffer(const ObjectID& id,
   VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(id, buffer));
 }
 
+void ObjectMeta::Reset() {
+  client_ = nullptr;
+  meta_ = json::object();
+  buffer_set_.reset(new BufferSet());
+  incomplete_ = false;
+}
+
 void ObjectMeta::PrintMeta() const { LOG(INFO) << meta_.dump(4); }
 
 const bool ObjectMeta::incomplete() const { return incomplete_; }

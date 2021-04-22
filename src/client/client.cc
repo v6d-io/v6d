@@ -89,6 +89,7 @@ Status Client::GetMetaData(const ObjectID id, ObjectMeta& meta,
   ENSURE_CONNECTED(this);
   json tree;
   RETURN_ON_ERROR(GetData(id, tree, sync_remote));
+  meta.Reset();
   meta.SetMetaData(this, tree);
 
   std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
@@ -113,6 +114,7 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
 
   std::set<ObjectID> blob_ids;
   for (size_t idx = 0; idx < trees.size(); ++idx) {
+    metas[idx].Reset();
     metas[idx].SetMetaData(this, trees[idx]);
     for (const auto& id : metas[idx].GetBufferSet()->AllBufferIds()) {
       blob_ids.emplace(id);
@@ -179,7 +181,7 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   RETURN_ON_ASSERT(size == static_cast<size_t>(object.data_size),
                    "The size of returned chunk doesn't match");
   uint8_t* mmapped_ptr = nullptr;
-  if (object.data_size != 0) {
+  if (object.data_size > 0) {
     RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, false, true,
                                  &mmapped_ptr));
   }
@@ -199,7 +201,7 @@ Status Client::PullNextStreamChunk(ObjectID const id,
   Payload object;
   RETURN_ON_ERROR(ReadPullNextStreamChunkReply(message_in, object));
   uint8_t* mmapped_ptr = nullptr;
-  if (object.data_size != 0) {
+  if (object.data_size > 0) {
     RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, true, true,
                                  &mmapped_ptr));
   }
@@ -347,13 +349,14 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload));
   RETURN_ON_ASSERT(static_cast<size_t>(payload.data_size) == size);
+
+  uint8_t* shared = nullptr;
   if (payload.data_size > 0) {
-    uint8_t* shared = nullptr;
     RETURN_ON_ERROR(
         mmapToClient(payload.store_fd, payload.map_size, false, true, &shared));
-    buffer = std::make_shared<arrow::MutableBuffer>(
-        shared + payload.data_offset, payload.data_size);
   }
+  buffer = std::make_shared<arrow::MutableBuffer>(shared + payload.data_offset,
+                                                  payload.data_size);
   return Status::OK();
 }
 
@@ -384,13 +387,13 @@ Status Client::GetBuffers(
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
   for (auto const& item : payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
+    uint8_t* shared = nullptr;
     if (item.second.data_size > 0) {
-      uint8_t* shared = nullptr;
       VINEYARD_CHECK_OK(mmapToClient(item.second.store_fd, item.second.map_size,
                                      true, true, &shared));
-      buffer = std::make_shared<arrow::Buffer>(shared + item.second.data_offset,
-                                               item.second.data_size);
     }
+    buffer = std::make_shared<arrow::Buffer>(shared + item.second.data_offset,
+                                             item.second.data_size);
     buffers.emplace(item.first, buffer);
   }
   return Status::OK();
