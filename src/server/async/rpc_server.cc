@@ -76,7 +76,10 @@ void RPCServer::doAccept() {
       connections_.emplace(next_conn_id_, conn);
       ++next_conn_id_;
     }
-    doAccept();
+    // don't continue when the iocontext being cancelled.
+    if (!stopped_.load()) {
+      doAccept();
+    }
   });
 }
 

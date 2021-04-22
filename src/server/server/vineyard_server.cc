@@ -793,18 +793,22 @@ void VineyardServer::Stop() {
   meta_guard_.reset();
   if (this->ipc_server_ptr_) {
     this->ipc_server_ptr_->Stop();
-    this->ipc_server_ptr_.reset(nullptr);
   }
   if (this->rpc_server_ptr_) {
     this->rpc_server_ptr_->Stop();
-    this->rpc_server_ptr_.reset(nullptr);
   }
-
-  meta_service_ptr_->Stop();
+  if (this->meta_service_ptr_) {
+    this->meta_service_ptr_->Stop();
+  }
 
   // stop the asio context at last
   context_.stop();
   meta_context_.stop();
+
+  // cleanup
+  this->ipc_server_ptr_.reset(nullptr);
+  this->rpc_server_ptr_.reset(nullptr);
+  this->meta_service_ptr_.reset();
 
   // wait for the IO context finishes.
   for (auto& worker : workers_) {
