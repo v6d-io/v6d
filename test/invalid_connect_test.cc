@@ -80,8 +80,10 @@ int main(int argc, char** argv) {
 
   // test libunwind and backtrace
 
+#if defined(WITH_LIBUNWIND)
   backtrace_info::backtrace(std::cout, true);
   backtrace_info::backtrace(std::cout, false);
+#endif
 
   LOG(INFO) << "Passed invalid connect tests...";
 
