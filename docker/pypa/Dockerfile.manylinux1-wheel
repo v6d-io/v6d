@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/alibaba/libvineyard/vineyard-manylinux1:20201115
+FROM docker.pkg.github.com/alibaba/v6d/vineyard-manylinux1:20201115
 
-# target: docker.pkg.github.com/alibaba/libvineyard/vineyard-wheel
+# target: docker.pkg.github.com/alibaba/v6d/vineyard-wheel
 
 # specify python version:
 #   - cp36-cp36m

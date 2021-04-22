@@ -112,7 +112,7 @@ setup(
     ],
     project_urls={
         'Documentation': 'https://v6d.io',
-        'Source': 'https://github.com/alibaba/libvineyard',
-        'Tracker': 'https://github.com/alibaba/libvineyard/issues',
+        'Source': 'https://github.com/alibaba/v6d',
+        'Tracker': 'https://github.com/alibaba/v6d/issues',
     },
 )

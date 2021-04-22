@@ -108,13 +108,13 @@ Vineyard has been tests on MacOS as well, the dependencies can be installed usin
 Install from source
 -------------------
 
-Vineyard is open source on Github: `https://github.com/alibaba/libvineyard
-<https://github.com/alibaba/libvineyard>`_.
+Vineyard is open source on Github: `https://github.com/alibaba/v6d
+<https://github.com/alibaba/v6d>`_.
 You can obtain the source code using ``git``:
 
 .. code:: console
 
-    git clone https://github.com/alibaba/libvineyard
+    git clone https://github.com/alibaba/v6d
     cd libvineyard
     git submodule update --init
 
