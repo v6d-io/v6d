@@ -221,17 +221,17 @@ Thank you in advance for your contributions to vineyard!
 
 .. _Mars: https://github.com/mars-project/mars
 .. _GraphScope: https://github.com/alibaba/GraphScope
-.. _Installation: https://github.com/alibaba/libvineyard/blob/main/docs/notes/install.rst
-.. _Apache License 2.0: https://github.com/alibaba/libvineyard/blob/main/LICENSE
-.. _contribution guide: https://github.com/alibaba/libvineyard/blob/main/CONTRIBUTING.rst
+.. _Installation: https://github.com/alibaba/v6d/blob/main/docs/notes/install.rst
+.. _Apache License 2.0: https://github.com/alibaba/v6d/blob/main/LICENSE
+.. _contribution guide: https://github.com/alibaba/v6d/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
 .. _python package: https://pypi.org/project/vineyard/
 .. _Slack channel: https://join.slack.com/t/v6d/shared_invite/zt-ml78e62u-IKb4jhHVSIroGDpBDi_q7Q
 
-.. |Build and Test| image:: https://github.com/alibaba/libvineyard/workflows/Build%20and%20Test/badge.svg
-   :target: https://github.com/alibaba/libvineyard/actions?workflow=Build%20and%20Test
-.. |Coverage| image:: https://codecov.io/gh/alibaba/libvineyard/branch/main/graph/badge.svg
-   :target: https://codecov.io/gh/alibaba/libvineyard
+.. |Build and Test| image:: https://github.com/alibaba/v6d/workflows/Build%20and%20Test/badge.svg
+   :target: https://github.com/alibaba/v6d/actions?workflow=Build%20and%20Test
+.. |Coverage| image:: https://codecov.io/gh/alibaba/v6d/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/alibaba/v6d
 .. |Docs| image:: https://img.shields.io/badge/docs-latest-brightgreen.svg
    :target: https://v6d.io
 .. |Artifact HUB| image:: https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard
