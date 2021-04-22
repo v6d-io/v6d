@@ -54,6 +54,7 @@ int main(int argc, char* argv[]) {
   // restore the default signal handling, when "vineyardd" is launched inside
   // a bash script.
   sigset(SIGINT, SIG_DFL);
+
   FLAGS_stderrthreshold = 0;
   vineyard::logging::InitGoogleLogging("vineyard");
   vineyard::logging::InstallFailureSignalHandler();
@@ -85,8 +86,18 @@ int main(int argc, char* argv[]) {
   ProfilerStart(profiling.c_str());
 #endif
 
-  VINEYARD_CHECK_OK(server_ptr_->Serve());
-  VINEYARD_CHECK_OK(server_ptr_->Finalize());
+  {
+    auto status = server_ptr_->Serve();
+    if (server_ptr_->Running()) {
+      VINEYARD_CHECK_OK(status);
+    }
+  }
+  {
+    auto status = server_ptr_->Finalize();
+    if (server_ptr_->Running()) {
+      VINEYARD_CHECK_OK(status);
+    }
+  }
 
 #if defined(WITH_PROFILING)
   ProfilerStop();

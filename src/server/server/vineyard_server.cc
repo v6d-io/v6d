@@ -72,11 +72,12 @@ VineyardServer::VineyardServer(const json& spec)
       guard_(new boost::asio::io_service::work(context_)),
       meta_guard_(new boost::asio::io_service::work(context_)),
 #endif
-      ready_(0),
-      stopped_(false) {
+      ready_(0) {
 }
 
 Status VineyardServer::Serve() {
+  stopped_.store(false);
+
   // Initialize the ipc/rpc server ptr first to get self endpoints when
   // initializing the metadata service.
   ipc_server_ptr_ =
@@ -785,10 +786,10 @@ const std::string VineyardServer::RPCEndpoint() {
 }
 
 void VineyardServer::Stop() {
-  if (stopped_) {
+  if (stopped_.exchange(true)) {
     return;
   }
-  stopped_ = true;
+
   guard_.reset();
   meta_guard_.reset();
   if (this->ipc_server_ptr_) {
@@ -817,6 +818,8 @@ void VineyardServer::Stop() {
     }
   }
 }
+
+bool VineyardServer::Running() const { return !stopped_.load(); }
 
 VineyardServer::~VineyardServer() { this->Stop(); }
 

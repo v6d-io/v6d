@@ -40,9 +40,7 @@ void SocketConnection::Start() {
   doReadHeader();
 }
 
-void SocketConnection::Stop() {
-  doStop();
-}
+void SocketConnection::Stop() { doStop(); }
 
 void SocketConnection::doReadHeader() {
   auto self(this->shared_from_this());
@@ -945,8 +943,7 @@ void SocketConnection::doAsyncWrite(callback_t<> callback) {
 }
 
 SocketServer::SocketServer(vs_ptr_t vs_ptr)
-    : vs_ptr_(vs_ptr), next_conn_id_(0) {
-}
+    : vs_ptr_(vs_ptr), next_conn_id_(0) {}
 
 void SocketServer::Start() {
   stopped_.store(false);
@@ -954,7 +951,10 @@ void SocketServer::Start() {
 }
 
 void SocketServer::Stop() {
-  stopped_.store(true);
+  if (stopped_.exchange(true)) {
+    return;
+  }
+
   std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
   for (auto& pair : connections_) {
     pair.second->Stop();

@@ -128,9 +128,9 @@ class IMetaService {
   static std::shared_ptr<IMetaService> Get(vs_ptr_t);
 
   inline Status Start() {
-    LOG(INFO) << "start!";
+    LOG(INFO) << "meta service is starting ...";
+    RETURN_ON_ERROR(this->preStart());
     RETURN_ON_ERROR(this->probe());
-    rev_ = 0;
     requestValues("",
                   [this](const Status& status, const json& meta, unsigned rev) {
                     if (status.ok()) {
@@ -147,7 +147,7 @@ class IMetaService {
     return Status::OK();
   }
 
-  virtual inline void Stop() { LOG(INFO) << "stop!"; }
+  virtual inline void Stop() { LOG(INFO) << "meta service is stopping ..."; }
 
  public:
   inline void RequestToBulkUpdate(
@@ -563,6 +563,8 @@ class IMetaService {
   std::string meta_sync_lock_;
 
  private:
+  virtual Status preStart() { return Status::OK(); }
+
   bool deleteable(ObjectID const object_id);
 
   void traverseToDelete(std::set<ObjectID>& initial_delete_set,

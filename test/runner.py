@@ -233,6 +233,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
                          'vineyard_test_%s' % time.time(),
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
         run_test('array_test')
+        run_test('allocator_test')
         run_test('arrow_data_structure_test')
         run_test('dataframe_test')
         run_test('delete_test')
@@ -241,6 +242,7 @@ def run_single_vineyardd_tests(etcd_endpoints):
         run_test('global_object_test')
         run_test('hashmap_test')
         run_test('id_test')
+        run_test('invalid_connect_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test('large_meta_test')
         run_test('list_object_test')
         run_test('name_test')
