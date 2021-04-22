@@ -35,7 +35,7 @@ size_t Blob::size() const { return allocated_size(); }
 size_t Blob::allocated_size() const { return size_; }
 
 const char* Blob::data() const {
-  if (size_ > 0 && buffer_ == nullptr) {
+  if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
         "The object might be a (partially) remote object and the payload data "
         "is not locally available: " +
@@ -45,7 +45,7 @@ const char* Blob::data() const {
 }
 
 const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
-  if (size_ > 0 && buffer_ == nullptr) {
+  if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
         "The object might be a (partially) remote object and the payload data "
         "is not locally available: " +

@@ -92,19 +92,19 @@ def test_add_remote_placeholder_with_sync(vineyard_ipc_sockets):
 
     o1 = client1.put(data)
     client1.persist(o1)
-    time.sleep(5)
+    time.sleep(20)
 
     o2 = client2.put(data)
     client2.persist(o2)
-    time.sleep(5)
+    time.sleep(20)
 
     o3 = client3.put(data)
     client3.persist(o3)
-    time.sleep(5)
+    time.sleep(20)
 
     o4 = client4.put(data)
     client4.persist(o4)
-    time.sleep(5)
+    time.sleep(20)
 
     client1.get_meta(o4)
     client2.get_meta(o1)
