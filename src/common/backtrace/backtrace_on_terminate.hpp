@@ -13,11 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_LIBUNWIND
-
-#pragma once
-
-#include "backtrace.hpp"
+#ifndef SRC_COMMON_BACKTRACE_BACKTRACE_ON_TERMINATE_HPP_
+#define SRC_COMMON_BACKTRACE_BACKTRACE_ON_TERMINATE_HPP_
 
 #include <cxxabi.h>
 
@@ -27,12 +24,15 @@ limitations under the License.
 #include <type_traits>
 #include <typeinfo>
 
+#include "backtrace.hpp"
+
 namespace vineyard {
 
 [[noreturn]] void backtrace_on_terminate() noexcept;
 
 static_assert(
-    std::is_same<std::terminate_handler, decltype(&backtrace_on_terminate)>{});
+    std::is_same<std::terminate_handler, decltype(&backtrace_on_terminate)>{},
+    "invalid terminate handler: type is mismatched");
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wglobal-constructors"
@@ -68,4 +68,4 @@ std::unique_ptr<std::remove_pointer_t<std::terminate_handler>,
 
 }  // namespace vineyard
 
-#endif
+#endif  // SRC_COMMON_BACKTRACE_BACKTRACE_ON_TERMINATE_HPP_

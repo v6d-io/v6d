@@ -15,10 +15,11 @@ limitations under the License.
 #ifndef SRC_COMMON_BACKTRACE_BACKTRACE_HPP_
 #define SRC_COMMON_BACKTRACE_BACKTRACE_HPP_
 
-#ifdef WITH_LIBUNWIND
-
 #include <cxxabi.h>
+
+#ifdef WITH_LIBUNWIND
 #include <libunwind.h>
+#endif
 
 #include <iomanip>
 #include <limits>
@@ -31,6 +32,7 @@ struct backtrace_info {
  public:
   static void backtrace(std::ostream& _out,
                         bool const compact = false) noexcept {
+#ifdef WITH_LIBUNWIND
     thread_local char symbol[1024];
     unw_cursor_t cursor;
     unw_context_t context;
@@ -60,6 +62,7 @@ struct backtrace_info {
       }
     }
     _out << std::flush;
+#endif
   }
 
   static char const* get_demangled_name(char const* const symbol) noexcept {
@@ -75,15 +78,15 @@ struct backtrace_info {
   }
 
  private:
+#ifdef WITH_LIBUNWIND
   static void print_reg(std::ostream& _out, unw_word_t reg) noexcept {
     constexpr std::size_t address_width =
         std::numeric_limits<std::uintptr_t>::digits / 4;
     _out << "0x" << std::setfill('0') << std::setw(address_width) << reg;
   }
+#endif
 };
 
 }  // namespace vineyard
-
-#endif
 
 #endif  // SRC_COMMON_BACKTRACE_BACKTRACE_HPP_

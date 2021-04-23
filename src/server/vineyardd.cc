@@ -21,7 +21,7 @@ limitations under the License.
 #include "gperftools/profiler.h"
 #endif
 
-#include "common/backtrace/backtrace.hpp"
+#include "common/backtrace/backtrace_on_terminate.hpp"
 #include "common/util/env.h"
 #include "common/util/flags.h"
 #include "common/util/logging.h"
@@ -30,9 +30,6 @@ limitations under the License.
 
 DECLARE_bool(help);
 DECLARE_string(helpmatch);
-
-// we need a global reference of the server_ptr to do cleanup
-static std::shared_ptr<vineyard::VineyardServer> server_ptr_ = nullptr;
 
 // for dumpping coverage data
 #ifdef __cplusplus
@@ -43,11 +40,8 @@ void __gcov_flush() __attribute__((weak));
 void __gcov_flush() {}
 #endif
 
-void terminate_handle() {
-#ifdef WITH_LIBUNWIND
-  vineyard::backtrace_info::backtrace(std::cerr);
-#endif
-}
+// we need a global reference of the server_ptr to do cleanup
+static std::shared_ptr<vineyard::VineyardServer> server_ptr_ = nullptr;
 
 extern "C" void vineyardd_signal_handler(int sig) {
   if (sig == SIGTERM || sig == SIGINT) {
@@ -86,7 +80,7 @@ int main(int argc, char* argv[]) {
   const auto& spec = vineyard::ServerSpecResolver().resolve();
   server_ptr_ = vineyard::VineyardServer::Get(spec);
   // do proper cleanup in response to signals
-  std::set_terminate(terminate_handle);
+  std::set_terminate(vineyard::backtrace_on_terminate);
   signal(SIGINT, vineyardd_signal_handler);
   signal(SIGTERM, vineyardd_signal_handler);
 
