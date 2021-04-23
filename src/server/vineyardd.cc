@@ -34,6 +34,15 @@ DECLARE_string(helpmatch);
 // we need a global reference of the server_ptr to do cleanup
 static std::shared_ptr<vineyard::VineyardServer> server_ptr_ = nullptr;
 
+// for dumpping coverage data
+#ifdef __cplusplus
+extern "C" void __gcov_flush() __attribute__((weak));
+extern "C" void __gcov_flush() {}
+#else
+void __gcov_flush() __attribute__((weak));
+void __gcov_flush() {}
+#endif
+
 void terminate_handle() {
 #ifdef WITH_LIBUNWIND
   vineyard::backtrace_info::backtrace(std::cerr);
@@ -48,6 +57,7 @@ extern "C" void vineyardd_signal_handler(int sig) {
       server_ptr_->Stop();
     }
   }
+  __gcov_flush();
 }
 
 int main(int argc, char* argv[]) {
@@ -102,6 +112,8 @@ int main(int argc, char* argv[]) {
 #if defined(WITH_PROFILING)
   ProfilerStop();
 #endif
+
+  __gcov_flush();
 
   vineyard::flags::ShutDownCommandLineFlags();
   vineyard::logging::ShutdownGoogleLogging();

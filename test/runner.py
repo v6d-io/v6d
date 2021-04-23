@@ -74,7 +74,7 @@ def start_program(name, *args, verbose=False, nowait=False, **kwargs):
         if proc.poll() is None:
             proc.terminate()
             try:
-                proc.wait(5)
+                proc.wait(60)
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()

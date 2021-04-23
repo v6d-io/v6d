@@ -323,7 +323,7 @@ jobs:
           # python3 test/runner.py --with-io --with-migration
 
       - name: Setup tmate session
-        if: true
+        if: false
         uses: mxschmitt/action-tmate@v2
 
       - name: Upload Coverage
