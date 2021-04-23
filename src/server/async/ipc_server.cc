@@ -18,6 +18,8 @@ limitations under the License.
 #include <mutex>
 #include <string>
 #include <utility>
+#include "boost/filesystem/operations.hpp"
+#include "boost/filesystem/path.hpp"
 
 #include "common/util/json.h"
 
@@ -69,6 +71,19 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
       throw boost::system::system_error(
           asio::error::make_error_code(asio::error::address_in_use));
     }
+  } else if (errno == ENOENT) {
+    // create parent directory
+    auto socket_path = boost::filesystem::path(ipc_socket);
+    boost::system::error_code ec;
+    boost::filesystem::create_directories(socket_path.parent_path(), ec);
+    if (ec) {
+      throw boost::system::system_error(
+          ec, "Failed to create parent directory for specific socket path");
+    }
+  } else {
+    throw boost::system::system_error(
+        boost::system::errc::make_error_code(boost::system::errc::io_error),
+        strerror(errno));
   }
   ::unlink(ipc_socket.c_str());
   return endpoint;
