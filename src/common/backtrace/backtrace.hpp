@@ -16,7 +16,10 @@ limitations under the License.
 #define SRC_COMMON_BACKTRACE_BACKTRACE_HPP_
 
 #include <cxxabi.h>
+
+#ifdef WITH_LIBUNWIND
 #include <libunwind.h>
+#endif
 
 #include <iomanip>
 #include <limits>
