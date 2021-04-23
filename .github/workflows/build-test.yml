@@ -322,6 +322,10 @@ jobs:
           python3 test/runner.py --with-io
           # python3 test/runner.py --with-io --with-migration
 
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
       - name: Upload Coverage
         if: runner.os == 'Linux'
         uses: codecov/codecov-action@v1
