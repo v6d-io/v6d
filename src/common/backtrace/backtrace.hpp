@@ -68,13 +68,23 @@ struct backtrace_info {
   static char const* get_demangled_name(char const* const symbol) noexcept {
     thread_local std::unique_ptr<char, decltype(std::free)&> demangled_name{
         nullptr, std::free};
+    // reuse the output buffer, for how `__cxa_demangle` works, see:
+    // https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
+    thread_local size_t buffer_length = 0;
     if (!symbol) {
       return "<null>";
     }
     int status = -4;
+    size_t buffer_length_next = buffer_length;
     demangled_name.reset(abi::__cxa_demangle(symbol, demangled_name.release(),
-                                             nullptr, &status));
-    return ((status == 0) ? demangled_name.get() : symbol);
+                                             &buffer_length_next, &status));
+    if (status == 0) {
+      buffer_length = buffer_length > buffer_length_next ? buffer_length
+                                                         : buffer_length_next;
+      return demangled_name.get();
+    } else {
+      return symbol;
+    }
   }
 
  private:
