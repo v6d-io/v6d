@@ -21,12 +21,16 @@ limitations under the License.
 #include "arrow/io/api.h"
 #include "arrow/util/config.h"
 
+#include "boost/algorithm/string.hpp"
+
 #include "basic/ds/arrow_utils.h"
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/dataframe_stream.h"
 #include "basic/stream/parallel_stream.h"
 #include "client/client.h"
-#include "io/io/local_io_adaptor.h"
+#include "io/io/i_io_adaptor.h"
+#include "io/io/io_factory.h"
+
 #include "io/io/utils.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)

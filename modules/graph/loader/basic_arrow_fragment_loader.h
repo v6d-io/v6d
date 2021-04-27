@@ -27,7 +27,8 @@ limitations under the License.
 #include "arrow/util/config.h"
 #include "client/client.h"
 #include "grape/worker/comm_spec.h"
-#include "io/io/local_io_adaptor.h"
+#include "io/io/i_io_adaptor.h"
+#include "io/io/io_factory.h"
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/property_graph_types.h"

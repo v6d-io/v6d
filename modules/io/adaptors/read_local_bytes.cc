@@ -19,7 +19,9 @@ limitations under the License.
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/parallel_stream.h"
 #include "client/client.h"
-#include "io/io/local_io_adaptor.h"
+#include "io/io/i_io_adaptor.h"
+#include "io/io/io_factory.h"
+
 #include "io/io/utils.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
@@ -40,8 +42,7 @@ int main(int argc, const char** argv) {
   CHECK_AND_REPORT(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  std::unique_ptr<LocalIOAdaptor> local_io_adaptor(
-      new LocalIOAdaptor(efile.c_str()));
+  auto local_io_adaptor = IOFactory::CreateIOAdaptor(efile.c_str());
 
   CHECK_AND_REPORT(local_io_adaptor->SetPartialRead(proc, pnum));
 
@@ -72,7 +73,6 @@ int main(int argc, const char** argv) {
     }
   }
 
-  local_io_adaptor->Finalize();
   {
     auto st = local_io_adaptor->Close();
     if (!st.ok()) {

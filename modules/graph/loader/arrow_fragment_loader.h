@@ -37,7 +37,6 @@ limitations under the License.
 #include "basic/stream/parallel_stream.h"
 #include "client/client.h"
 #include "io/io/io_factory.h"
-#include "io/io/local_io_adaptor.h"
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
@@ -684,9 +683,10 @@ class ArrowFragmentLoader {
     std::vector<std::shared_ptr<arrow::Table>> tables(label_num);
 
     for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
-      std::unique_ptr<LocalIOAdaptor, std::function<void(LocalIOAdaptor*)>>
-          io_adaptor(new LocalIOAdaptor(files[label_id] + "#header_row=true"),
-                     io_deleter_);
+      std::unique_ptr<IIOAdaptor, std::function<void(IIOAdaptor*)>> io_adaptor(
+          IOFactory::CreateIOAdaptor(files[label_id] + "#header_row=true")
+              .release(),
+          io_deleter_);
       auto read_procedure =
           [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
         VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
@@ -740,10 +740,11 @@ class ArrowFragmentLoader {
         boost::split(sub_label_files, files[label_id], boost::is_any_of(";"));
 
         for (size_t j = 0; j < sub_label_files.size(); ++j) {
-          std::unique_ptr<LocalIOAdaptor, std::function<void(LocalIOAdaptor*)>>
-              io_adaptor(
-                  new LocalIOAdaptor(sub_label_files[j] + "#header_row=true"),
-                  io_deleter_);
+          std::unique_ptr<IIOAdaptor, std::function<void(IIOAdaptor*)>>
+              io_adaptor(IOFactory::CreateIOAdaptor(sub_label_files[j] +
+                                                    "#header_row=true")
+                             .release(),
+                         io_deleter_);
           auto read_procedure =
               [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
             VY_OK_OR_RAISE(io_adaptor->SetPartialRead(index, total_parts));
@@ -824,11 +825,10 @@ class ArrowFragmentLoader {
   bool generate_eid_;
   bool load_with_ve_;
 
-  std::function<void(LocalIOAdaptor*)> io_deleter_ =
-      [](LocalIOAdaptor* adaptor) {
-        VINEYARD_CHECK_OK(adaptor->Close());
-        delete adaptor;
-      };
+  std::function<void(IIOAdaptor*)> io_deleter_ = [](IIOAdaptor* adaptor) {
+    VINEYARD_CHECK_OK(adaptor->Close());
+    delete adaptor;
+  };
 };
 
 }  // namespace vineyard

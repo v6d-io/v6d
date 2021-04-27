@@ -36,6 +36,13 @@ KafkaIOAdaptor::KafkaIOAdaptor(const std::string& location) {
 
 KafkaIOAdaptor::~KafkaIOAdaptor() {}
 
+std::unique_ptr<IIOAdaptor> KafkaIOAdaptor::Make(const std::string& location,
+                                                 Client* client) {
+  // use `registered` to avoid it being optimized out.
+  VLOG(999) << "Kafka IO adaptor has been registered: " << registered_;
+  return std::unique_ptr<IIOAdaptor>(new KafkaIOAdaptor(location));
+}
+
 Status KafkaIOAdaptor::Open() {
   if (partial_read_) {
     local_partition_num_ = partition_num_ / total_parts_;
@@ -326,6 +333,10 @@ void KafkaIOAdaptor::fetchMessage(int partition_index,
     }
   }
 }
+
+const bool KafkaIOAdaptor::registered_ = IOFactory::Register(
+    "kafka", static_cast<IOFactory::io_initializer_t>(&KafkaIOAdaptor::Make));
+
 }  // namespace vineyard
 
 #endif  // KAFKA_ENABLED

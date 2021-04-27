@@ -102,6 +102,13 @@ LocalIOAdaptor::~LocalIOAdaptor() {
   fs_.reset();
 }
 
+std::unique_ptr<IIOAdaptor> LocalIOAdaptor::Make(const std::string& location,
+                                                 Client* client) {
+  // use `registered` to avoid it being optimized out.
+  VLOG(999) << "Local IO adaptor has been registered: " << registered_;
+  return std::unique_ptr<IIOAdaptor>(new LocalIOAdaptor(location));
+}
+
 Status LocalIOAdaptor::Open() { return this->Open("r"); }
 
 Status LocalIOAdaptor::Open(const char* mode) {
@@ -559,5 +566,9 @@ bool LocalIOAdaptor::IsExist(const std::string& path) {
 void LocalIOAdaptor::Init() {}
 
 void LocalIOAdaptor::Finalize() {}
+
+const bool LocalIOAdaptor::registered_ = IOFactory::Register(
+    {"file", "hdfs", "s3"},
+    static_cast<IOFactory::io_initializer_t>(&LocalIOAdaptor::Make));
 
 }  // namespace vineyard
