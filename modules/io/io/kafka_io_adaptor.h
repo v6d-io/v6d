@@ -31,6 +31,7 @@ limitations under the License.
 #include "common/util/functions.h"
 #include "common/util/status.h"
 #include "io/io/i_io_adaptor.h"
+#include "io/io/io_factory.h"
 
 namespace vineyard {
 
@@ -44,6 +45,9 @@ class KafkaIOAdaptor : public IIOAdaptor {
 
   /** Default destructor. */
   ~KafkaIOAdaptor();
+
+  static std::unique_ptr<IIOAdaptor> Make(const std::string& location,
+                                          Client* client);
 
   Status Open() override;
 

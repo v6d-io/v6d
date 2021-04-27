@@ -29,6 +29,7 @@ limitations under the License.
 #include "common/util/functions.h"
 #include "common/util/status.h"
 #include "io/io/i_io_adaptor.h"
+#include "io/io/io_factory.h"
 
 namespace vineyard {
 // FIXME: do not use fixed value, expend to double space when read to a
@@ -50,6 +51,9 @@ class LocalIOAdaptor : public IIOAdaptor {
 
   /** Default destructor. */
   ~LocalIOAdaptor();
+
+  static std::unique_ptr<IIOAdaptor> Make(const std::string& location,
+                                          Client* client);
 
   Status Open() override;
 
@@ -135,6 +139,9 @@ class LocalIOAdaptor : public IIOAdaptor {
   int total_parts_;
   int index_;
   std::unordered_multimap<std::string, std::string> meta_;
+
+  // register
+  static const bool registered_;
 };
 }  // namespace vineyard
 

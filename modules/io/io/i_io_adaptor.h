@@ -73,6 +73,8 @@ class IIOAdaptor {
   virtual Status Read(void* buffer, size_t size) = 0;
   virtual Status Write(void* buffer, size_t size) = 0;
 
+  virtual Status Flush() { return Status::OK(); }
+
   virtual Status ReadTable(std::shared_ptr<arrow::Table>* table) {
     return Status::OK();
   }

@@ -25,7 +25,8 @@ limitations under the License.
 
 #include "client/client.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
-#include "io/io/local_io_adaptor.h"
+#include "io/io/i_io_adaptor.h"
+#include "io/io/io_factory.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -56,9 +57,8 @@ void loadVertices(
 
   for (auto fname : v_list) {
     for (int i = 0; i < vertex_label_num; ++i) {
-      std::unique_ptr<vineyard::LocalIOAdaptor> io_adaptor(
-          new vineyard::LocalIOAdaptor(fname + "_" + std::to_string(i) +
-                                       "#header_row=true"));
+      auto io_adaptor = vineyard::IOFactory::CreateIOAdaptor(
+          fname + "_" + std::to_string(i) + "#header_row=true");
       VINEYARD_CHECK_OK(io_adaptor->SetPartialRead(0, 1));
       VINEYARD_CHECK_OK(io_adaptor->Open());
       std::shared_ptr<arrow::Table> tmp_table;

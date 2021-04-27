@@ -18,6 +18,9 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "client/client.h"
 #include "io/io/i_io_adaptor.h"
@@ -46,6 +49,17 @@ class IOFactory {
    */
   static std::unique_ptr<IIOAdaptor> CreateIOAdaptor(
       const std::string& location, Client* client = nullptr);
+
+  using io_initializer_t = std::unique_ptr<IIOAdaptor> (*)(const std::string&,
+                                                           Client* client);
+
+  static bool Register(std::string const& kind, io_initializer_t initializer);
+
+  static bool Register(std::vector<std::string> const& kinds,
+                       io_initializer_t initializer);
+
+ private:
+  static std::unordered_map<std::string, io_initializer_t>& getKnownAdaptors();
 };
 
 }  // namespace vineyard

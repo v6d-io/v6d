@@ -21,20 +21,19 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <system_error>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "arrow/status.h"
 #include "arrow/util/uri.h"
 #include "glog/logging.h"
 
-#include "io/io/kafka_io_adaptor.h"
-#include "io/io/local_io_adaptor.h"
-
 namespace vineyard {
 
-void IOFactory::Init() { LocalIOAdaptor::Init(); }
+void IOFactory::Init() {}
 
-void IOFactory::Finalize() { LocalIOAdaptor::Finalize(); }
+void IOFactory::Finalize() {}
 
 /** Create an I/O adaptor.
  * @param location the file location.
@@ -42,7 +41,7 @@ void IOFactory::Finalize() { LocalIOAdaptor::Finalize(); }
  * @return a kind of I/O adaptor.
  */
 std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
-    const std::string& location, Client*) {
+    const std::string& location, Client* client) {
   size_t arg_pos = location.find_first_of('#');
   std::string location_to_parse = location.substr(0, arg_pos);
   arrow::internal::Uri uri;
@@ -65,19 +64,38 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
     location_to_parse += location.substr(arg_pos);
   }
 
-  if (uri.scheme() == "file" || uri.scheme() == "hdfs" ||
-      uri.scheme() == "s3") {
-    return std::unique_ptr<LocalIOAdaptor>(
-        new LocalIOAdaptor(location_to_parse));
-#ifdef KAFKA_ENABLED
-  } else if (uri.scheme() == "kafka") {
-    return std::unique_ptr<KafkaIOAdaptor>(
-        new KafkaIOAdaptor(location_to_parse));
-#endif
+  auto& known_ios = IOFactory::getKnownAdaptors();
+  auto maybe_io = known_ios.find(uri.scheme());
+  if (maybe_io != known_ios.end()) {
+    return maybe_io->second(location_to_parse, client);
+  } else {
+    LOG(ERROR) << "Unimplemented adaptor for the scheme: " << uri.scheme()
+               << " of location " << location;
+    return nullptr;
   }
-  LOG(ERROR) << "Unimplemented adaptor for the scheme: " << uri.scheme()
-             << " of location " << location;
-  return nullptr;
+}
+
+bool IOFactory::Register(std::string const& kind,
+                         IOFactory::io_initializer_t initializer) {
+  auto& known_ios = getKnownAdaptors();
+  known_ios.emplace(kind, initializer);
+  return true;
+}
+
+bool IOFactory::Register(std::vector<std::string> const& kinds,
+                         IOFactory::io_initializer_t initializer) {
+  auto& known_ios = getKnownAdaptors();
+  for (auto const& kind : kinds) {
+    known_ios.emplace(kind, initializer);
+  }
+  return true;
+}
+
+std::unordered_map<std::string, IOFactory::io_initializer_t>&
+IOFactory::getKnownAdaptors() {
+  static std::unordered_map<std::string, io_initializer_t>* known_adaptors =
+      new std::unordered_map<std::string, io_initializer_t>();
+  return *known_adaptors;
 }
 
 }  // namespace vineyard
