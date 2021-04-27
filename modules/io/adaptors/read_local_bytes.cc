@@ -42,8 +42,7 @@ int main(int argc, const char** argv) {
   CHECK_AND_REPORT(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  std::unique_ptr<IIOAdaptor> local_io_adaptor(
-      IOFactory::IOAdaptor(efile.c_str()));
+  auto local_io_adaptor = IOFactory::CreateIOAdaptor(efile.c_str());
 
   CHECK_AND_REPORT(local_io_adaptor->SetPartialRead(proc, pnum));
 
@@ -74,7 +73,6 @@ int main(int argc, const char** argv) {
     }
   }
 
-  local_io_adaptor->Finalize();
   {
     auto st = local_io_adaptor->Close();
     if (!st.ok()) {

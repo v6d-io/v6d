@@ -21,6 +21,8 @@ limitations under the License.
 #include "arrow/io/api.h"
 #include "arrow/util/config.h"
 
+#include "boost/algorithm/string.hpp"
+
 #include "basic/ds/arrow_utils.h"
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/dataframe_stream.h"
