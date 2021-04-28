@@ -6,6 +6,7 @@
 .vscode
 .idea
 .DS_store
+compile_commands.json
 cmake-build-debug
 
 # for python packaging

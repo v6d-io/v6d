@@ -955,7 +955,7 @@ void SocketServer::Stop() {
     return;
   }
 
-  std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
   for (auto& pair : connections_) {
     pair.second->Stop();
   }
@@ -963,12 +963,12 @@ void SocketServer::Stop() {
 }
 
 bool SocketServer::ExistsConnection(int conn_id) const {
-  std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
   return connections_.find(conn_id) != connections_.end();
 }
 
 void SocketServer::RemoveConnection(int conn_id) {
-  std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
   auto conn = connections_.find(conn_id);
   if (conn != connections_.end()) {
     connections_.erase(conn);
@@ -976,7 +976,7 @@ void SocketServer::RemoveConnection(int conn_id) {
 }
 
 void SocketServer::CloseConnection(int conn_id) {
-  std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
   auto conn = connections_.find(conn_id);
   if (conn != connections_.end()) {
     conn->second->Stop();
@@ -985,7 +985,7 @@ void SocketServer::CloseConnection(int conn_id) {
 }
 
 size_t SocketServer::AliveConnections() const {
-  std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
   return connections_.size();
 }
 

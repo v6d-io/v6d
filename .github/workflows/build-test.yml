@@ -280,7 +280,7 @@ jobs:
           git clone https://github.com/7br/gstest.git --depth=1
 
       - name: Setup tmate session
-        if: true
+        if: false
         uses: mxschmitt/action-tmate@v2
 
       - name: Run Tests
