@@ -751,6 +751,10 @@ add_doc(RPCClient.close, r'''
 Close the client.
 ''')
 
+add_doc(RPCClient.remote_instance_id, r'''
+The instance id of the connected remote vineyard server.
+''')
+
 add_doc(
     InstanceStatus, r'''
 :class:`InstanceStatus` represents the status of connected vineyard instance, including

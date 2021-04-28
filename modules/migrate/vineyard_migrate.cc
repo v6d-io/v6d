@@ -47,6 +47,27 @@ DEFINE_string(
 DEFINE_string(id, VYObjectIDToString(InvalidObjectID()),
               "Object to migrate to local");
 
+static void find_blobs_on_remote_instance(const InstanceID remote_instance_id,
+                                          const json& tree,
+                                          std::set<ObjectID>& blobs) {
+  if (tree.empty()) {
+    return;
+  }
+  ObjectID member_id =
+      VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
+  if (IsBlob(member_id)) {
+    if (tree["instance_id"].get<InstanceID>() == remote_instance_id) {
+      blobs.emplace(member_id);
+    }
+  } else {
+    for (auto& item : tree) {
+      if (item.is_object()) {
+        find_blobs_on_remote_instance(remote_instance_id, item, blobs);
+      }
+    }
+  }
+}
+
 Status Serve(Client& client, asio::ip::tcp::socket&& socket) {
   while (true) {
     ObjectID blob_to_send = InvalidObjectID();
@@ -143,13 +164,15 @@ Status Work(Client& client, RPCClient& rpc_client,
       rpc_client.GetMetaData(VYObjectIDFromString(FLAGS_id), metadata, true));
 
   // step 1: collect blob set
-  auto blobs = metadata.GetBufferSet()->AllBufferIds();
+  std::set<ObjectID> remote_blobs;
+  find_blobs_on_remote_instance(rpc_client.remote_instance_id(),
+                                metadata.MetaData(), remote_blobs);
   metadata.PrintMeta();
-  VLOG(10) << "blob sizes to migrate: " << blobs.size();
+  VLOG(10) << "blob sizes to migrate: " << remote_blobs.size();
   std::map<ObjectID, std::shared_ptr<Blob>> target_blobs;
 
   // step 2: migrate blobs to local
-  for (auto const& blob : blobs) {
+  for (auto const& blob : remote_blobs) {
     VLOG(10) << "Will migrate blob " << VYObjectIDToString(blob) << " to local";
     asio::write(socket, asio::buffer(&blob, sizeof(ObjectID)));
     size_t size_of_blob = std::numeric_limits<size_t>::max();
