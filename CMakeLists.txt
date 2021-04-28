@@ -629,6 +629,7 @@ install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindArrow.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGFlags.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGlog.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/FindRdkafka.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/GenerateVineyard.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/DetermineImplicitIncludes.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vineyard

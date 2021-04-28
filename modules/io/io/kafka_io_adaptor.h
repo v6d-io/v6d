@@ -114,6 +114,9 @@ class KafkaIOAdaptor : public IIOAdaptor {
   std::string topic_;
   std::unique_ptr<RdKafka::Producer> producer_;
   std::map<int, std::shared_ptr<RdKafka::KafkaConsumer>> consumer_ptrs_;
+
+  // register
+  static const bool registered_;
 };
 }  // namespace vineyard
 
