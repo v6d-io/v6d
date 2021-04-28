@@ -4,7 +4,7 @@ file(GLOB IO_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "io/*.cc")
 option(BUILD_VINEYARD_IO_KAFKA "Enable vineyard's IOAdaptor with KAFKA support" OFF)
 
 if(BUILD_VINEYARD_IO_KAFKA)
-    include(FindRdkafka)
+    include("${PROJECT_SOURCE_DIR}/cmake/FindRdkafka.cmake")
 endif()
 
 # force build some thirdparty as static libraries, to make "install" easy

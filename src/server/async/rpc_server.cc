@@ -72,7 +72,7 @@ void RPCServer::doAccept() {
           std::make_shared<SocketConnection>(std::move(this->socket_), vs_ptr_,
                                              this, next_conn_id_);
       conn->Start();
-      std::lock_guard<std::mutex> scope_lock(this->connections_mutx_);
+      std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
       connections_.emplace(next_conn_id_, conn);
       ++next_conn_id_;
     }

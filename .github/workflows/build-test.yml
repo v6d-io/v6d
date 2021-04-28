@@ -65,6 +65,7 @@ jobs:
                               libprotobuf-dev \
                               librdkafka-dev \
                               libgsasl7-dev \
+                              librdkafka-dev \
                               libssl-dev \
                               libunwind-dev \
                               libxml2-dev \
@@ -177,6 +178,7 @@ jobs:
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
                    -DBUILD_VINEYARD_BASIC=ON \
                    -DBUILD_VINEYARD_IO=ON \
+                   -DBUILD_VINEYARD_IO_KAFKA=ON \
                    -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 

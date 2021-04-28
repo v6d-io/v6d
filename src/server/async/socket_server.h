@@ -216,7 +216,7 @@ class SocketServer {
   vs_ptr_t vs_ptr_;
   int next_conn_id_;
   std::unordered_map<int, std::shared_ptr<SocketConnection>> connections_;
-  mutable std::mutex connections_mutx_;  // protect connections_ in removing
+  mutable std::recursive_mutex connections_mutx_;  // protect `connections_`
 
  private:
   virtual void doAccept() = 0;
