@@ -182,7 +182,8 @@ Status recv_bytes(int fd, void* data, size_t length) {
 Status recv_message(int fd, std::string& msg) {
   size_t length;
   RETURN_ON_ERROR(recv_bytes(fd, &length, sizeof(size_t)));
-  msg.resize(length);
+  msg.resize(length + 1);
+  msg[length] = '\0';
   RETURN_ON_ERROR(recv_bytes(fd, &msg[0], length));
   return Status::OK();
 }
