@@ -22,7 +22,7 @@ limitations under the License.
 #include <vector>
 
 #include "flat_hash_map/flat_hash_map.hpp"
-#ifdef EXPERIMENTAL_ON
+#ifdef NETWORKX
 #include "folly/dynamic.h"
 #endif
 
@@ -102,7 +102,7 @@ class HashPartitioner<std::string> {
   fid_t fnum_;
 };
 
-#ifdef EXPERIMENTAL_ON
+#ifdef NETWORKX
 template <>
 class HashPartitioner<folly::dynamic> {
  public:
@@ -141,7 +141,7 @@ class HashPartitioner<folly::dynamic> {
  private:
   fid_t fnum_;
 };
-#endif  // EXPERIMENTAL_ON
+#endif  // NETWORKX
 
 template <typename OID_T>
 class SegmentedPartitioner {

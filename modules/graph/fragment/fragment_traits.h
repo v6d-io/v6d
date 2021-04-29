@@ -20,7 +20,7 @@ limitations under the License.
 #include <type_traits>
 #include <typeinfo>
 
-#ifdef EXPERIMENTAL_ON
+#ifdef NETWORKX
 #include "folly/dynamic.h"
 #endif
 
@@ -90,7 +90,7 @@ struct TypeName<uint64_t> {
   static const char* Get() { return "uint64_t"; }
 };
 
-#ifdef EXPERIMENTAL_ON
+#ifdef NETWORKX
 template <>
 struct TypeName<folly::dynamic> {
   static const char* Get() { return "folly::dynamic"; }
