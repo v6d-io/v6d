@@ -44,7 +44,7 @@ function(vineyard_generate)
   string(TOLOWER ${vineyard_generate_LANGUAGE} vineyard_generate_LANGUAGE)
 
   if(NOT vineyard_generate_CMAKE_BUILD_DIR)
-    set(vineyard_generate_CMAKE_BUILD_DIR "${PROJECT_BINARY_DIR}")
+    set(vineyard_generate_CMAKE_BUILD_DIR "${CMAKE_BINARY_DIR}")
   endif()
 
   if(NOT vineyard_generate_VINEYARD_OUT_DIR)
