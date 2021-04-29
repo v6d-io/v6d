@@ -79,6 +79,14 @@ int main(int argc, char** argv) {
   }
 
   // test libunwind and backtrace
+  std::stringstream ss;
+  backtrace_info::backtrace(ss, true);
+  LOG(INFO) << ss.str();
+  ss.str("");
+  backtrace_info::backtrace(ss, false);
+  LOG(INFO) << ss.str();
+  ss.str("");
+
   backtrace_info::backtrace(std::cout, true);
   backtrace_info::backtrace(std::cout, false);
 

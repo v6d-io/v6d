@@ -118,14 +118,19 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
 #define TOKENPASTE(x, y) x##y
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
-#define RETURN_GS_ERROR(code, msg)                                       \
-  std::stringstream TOKENPASTE2(_ss, __LINE__);                          \
-  vineyard::backtrace_info::backtrace(TOKENPASTE2(_ss, __LINE__), true); \
-  return ::boost::leaf::new_error(vineyard::GSError(                     \
-      (code),                                                            \
-      std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " +    \
-          std::string(__FUNCTION__) + " -> " + (msg),                    \
-      TOKENPASTE2(_ss, __LINE__).str()))
+// FIXME: the backtrace seems corrupt the heap
+//
+//  vineyard::backtrace_info::backtrace(TOKENPASTE2(_ss, __LINE__), true);
+//
+#define RETURN_GS_ERROR(code, msg)                                      \
+  do {                                                                  \
+    std::stringstream TOKENPASTE2(_ss, __LINE__);                       \
+    return ::boost::leaf::new_error(vineyard::GSError(                  \
+        (code),                                                         \
+        std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
+            std::string(__FUNCTION__) + " -> " + (msg),                 \
+        TOKENPASTE2(_ss, __LINE__).str()));                             \
+  } while (0)
 
 #define BOOST_LEAF_ASSIGN(v, r)                                     \
   static_assert(::boost::leaf::is_result_type<                      \
