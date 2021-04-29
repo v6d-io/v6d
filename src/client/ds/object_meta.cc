@@ -209,9 +209,10 @@ void ObjectMeta::findAllBlobs(const json& tree) {
   }
   ObjectID member_id =
       VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
-  if (IsBlob(member_id) &&
-      tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
-    VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
+  if (IsBlob(member_id)) {
+    if (tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
+      VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
+    }
   } else {
     for (auto& item : tree) {
       if (item.is_object()) {

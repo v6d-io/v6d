@@ -62,7 +62,6 @@ void SocketConnection::doReadBody() {
     // We don't revise the structure of protocol, for backwards compatible, as
     // we already released wheel packages on pypi.
     doStop();
-    socket_server_ptr_->RemoveConnection(conn_id_);
     return;
   }
   read_msg_body_.resize(read_msg_header_);

@@ -413,6 +413,7 @@ void bind_client(py::module& mod) {
              return ClientManager<RPCClient>::GetManager()->Disconnect(
                  self->RPCEndpoint());
            })
+      .def_property_readonly("remote_instance_id", &RPCClient::remote_instance_id)
       .def("__enter__", [](RPCClient* self) { return self; })
       .def("__exit__", [](RPCClient* self, py::object, py::object, py::object) {
         // DO NOTHING

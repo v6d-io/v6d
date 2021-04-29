@@ -194,6 +194,19 @@ class RPCClient : public ClientBase {
   std::vector<std::shared_ptr<Object>> ListObjects(std::string const& pattern,
                                                    const bool regex = false,
                                                    size_t const limit = 5);
+
+  /**
+   * @brief Get the remote instance id of the connected vineyard server.
+   *
+   * Note that for RPC client the instance id is not available, thus we have
+   * the "remote instance id" to indicate which server we are connecting to.
+   *
+   * @return The vineyard server's instance id.
+   */
+  const InstanceID remote_instance_id() const { return remote_instance_id_; }
+
+ private:
+  InstanceID remote_instance_id_;
 };
 
 }  // namespace vineyard
