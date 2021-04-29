@@ -64,7 +64,8 @@ void SocketConnection::doReadBody() {
     doStop();
     return;
   }
-  read_msg_body_.resize(read_msg_header_ + 1, '\0');
+  read_msg_body_.resize(read_msg_header_ + 1);
+  read_msg_body_[read_msg_header_] = '\0';
   auto self(shared_from_this());
   asio::async_read(socket_, asio::buffer(&read_msg_body_[0], read_msg_header_),
                    [this, self](boost::system::error_code ec, std::size_t) {
