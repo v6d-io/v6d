@@ -15,7 +15,10 @@ limitations under the License.
 
 #include <signal.h>
 
+#include <chrono>
+#include <cstdlib>
 #include <iostream>
+#include <thread>
 
 #if defined(WITH_PROFILING)
 #include "gperftools/profiler.h"
@@ -45,6 +48,13 @@ static std::shared_ptr<vineyard::VineyardServer> server_ptr_ = nullptr;
 
 extern "C" void vineyardd_signal_handler(int sig) {
   if (sig == SIGTERM || sig == SIGINT) {
+    // guaranteed to exit
+    std::thread exit_thread([]() {
+      std::this_thread::sleep_for(std::chrono::seconds(60));
+      __gcov_flush();
+      std::exit(0);
+    });
+    exit_thread.detach();
     // exit normally to guarantee resources are released correctly via dtor.
     if (server_ptr_) {
       LOG(INFO) << "SIGTERM Signal received, stop vineyard server...";
