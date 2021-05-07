@@ -85,6 +85,8 @@ class LocalIOAdaptor : public IIOAdaptor {
 
   Status Write(void* buffer, size_t size) override;
 
+  Status Flush() override;
+
   Status ListDirectory(const std::string& path,
                        std::vector<std::string>& files) override;
 
