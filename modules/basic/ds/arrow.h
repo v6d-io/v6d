@@ -540,7 +540,38 @@ class TableExtender : public TableBaseBuilder {
     for (auto& extender : record_batch_extenders_) {
       RETURN_ON_ERROR(extender->AddColumn(
           client, field_name, column->Slice(offset, extender->num_rows())));
-      offset += extender->num_rows();
+      offset += 1;
+    }
+    column_num_ += 1;
+    return Status::OK();
+  }
+
+  /**
+   * NOTE: `column` is aligned with `table`.
+   */
+  Status AddColumn(Client& client, const std::string& field_name,
+                   std::shared_ptr<arrow::ChunkedArray> column) {
+    // validate input
+    if (static_cast<size_t>(column->length()) != row_num_) {
+      return Status::Invalid(
+          "The newly added columns doesn't have a matched shape");
+    }
+    // extend schema
+    auto field = ::arrow::field(field_name, column->type());
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    RETURN_ON_ARROW_ERROR(
+        schema_->AddField(schema_->num_fields(), field, &schema_));
+#else
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+        schema_, schema_->AddField(schema_->num_fields(), field));
+#endif
+
+    // extend columns on every batch
+    size_t chunk_index = 0;
+    for (auto& extender : record_batch_extenders_) {
+      RETURN_ON_ERROR(
+          extender->AddColumn(client, field_name, column->chunk(chunk_index)));
+      chunk_index += 1;
     }
     column_num_ += 1;
     return Status::OK();
