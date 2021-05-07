@@ -110,6 +110,7 @@ class ArrowFragmentBase : public vineyard::Object {
                          std::string, std::shared_ptr<arrow::ChunkedArray>>>>
           columns) {
     VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
   }
 
   virtual vineyard::ObjectID vertex_map_id() const = 0;
@@ -1905,8 +1906,9 @@ class ArrowFragment
   template <typename ArrayType = arrow::Array>
   vineyard::ObjectID AddVertexColumnsImpl(
       vineyard::Client& client,
-      const std::map<label_id_t,
-                     std::vector<std::pair<std::string, std::shared_ptr<T>>>>
+      const std::map<
+          label_id_t,
+          std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
           columns) {
     vineyard::ObjectMeta old_meta, new_meta;
     VINEYARD_CHECK_OK(client.GetMetaData(this->id_, old_meta));
@@ -1988,7 +1990,7 @@ class ArrowFragment
     return ret;
   }
 
-  vineyard::ObjectID AddVertexColumnsImpl(
+  vineyard::ObjectID AddVertexColumns(
       vineyard::Client& client,
       const std::map<
           label_id_t,
