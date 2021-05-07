@@ -540,7 +540,7 @@ class TableExtender : public TableBaseBuilder {
     for (auto& extender : record_batch_extenders_) {
       RETURN_ON_ERROR(extender->AddColumn(
           client, field_name, column->Slice(offset, extender->num_rows())));
-      offset += 1;
+      offset += extender->num_rows();
     }
     column_num_ += 1;
     return Status::OK();
