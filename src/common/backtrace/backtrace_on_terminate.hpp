@@ -55,8 +55,12 @@ std::unique_ptr<std::remove_pointer_t<std::terminate_handler>,
                 << e.what() << std::endl;
     } catch (...) {
       if (std::type_info* et = abi::__cxa_current_exception_type()) {
+        std::unique_ptr<char, decltype(std::free)&> demangled_name{nullptr,
+                                                                   std::free};
+        size_t demangled_size = 0;
         std::clog << "backtrace: unhandled exception type: "
-                  << backtrace_info::get_demangled_name(et->name())
+                  << backtrace_info::get_demangled_name(
+                         et->name(), demangled_name, demangled_size)
                   << std::endl;
       } else {
         std::clog << "backtrace: unhandled unknown exception" << std::endl;
