@@ -35,20 +35,21 @@ struct backtrace_info {
                         bool const compact = false) noexcept {
 #ifdef WITH_LIBUNWIND
     char symbol[1024];
-    // thread_local char symbol[1024];
     unw_cursor_t cursor;
     unw_context_t context;
     unw_getcontext(&context);
     unw_init_local(&cursor, &context);
     _out << std::hex << std::uppercase;
-    // reuse the output buffer, for how `__cxa_demangle` works, see:
+    // reuse the output buffer, for how `__cxa_demangle` works, see
     //
     // https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
     //
     // and
     //
     // https://github.com/gcc-mirror/gcc/blob/master/libiberty/cp-demangle.c
-    std::unique_ptr<char, decltype(std::free)&> demangled_name{nullptr, std::free};
+    //
+    std::unique_ptr<char, decltype(std::free)&> demangled_name{nullptr,
+                                                               std::free};
     size_t demangled_size = 0;
     while (0 < unw_step(&cursor)) {
       unw_word_t ip = 0;
@@ -63,9 +64,15 @@ struct backtrace_info {
       print_reg(_out, sp);
       _out << ") ";
       unw_word_t offset = 0;
-      // unw_get_proc_name guarantees the result buffer is NULL terminated.
+      // `unw_get_proc_name` guarantees the result buffer is NULL terminated,
+      // see
+      //
+      // https://github.com/libunwind/libunwind/blob/master/src/mi/Gget_proc_name.c
+      //
       if (unw_get_proc_name(&cursor, symbol, sizeof(symbol), &offset) == 0) {
-        _out << "(" << get_demangled_name(symbol, demangled_name, demangled_size) << " + 0x" << offset << ")\n";
+        _out << "("
+             << get_demangled_name(symbol, demangled_name, demangled_size)
+             << " + 0x" << offset << ")\n";
         if (!compact) {
           _out << "\n";
         }
@@ -77,19 +84,20 @@ struct backtrace_info {
 #endif
   }
 
-  static char const* get_demangled_name(char const* const symbol, std::unique_ptr<char, decltype(std::free)&> & demangled_name,
-                                        size_t &demangled_size) noexcept {
+  static char const* get_demangled_name(
+      char const* const symbol,
+      std::unique_ptr<char, decltype(std::free)&>& demangled_name,
+      size_t& demangled_size) noexcept {
     if (!symbol) {
       return "<null>";
     }
-    // return symbol;
     int status = -4;
     size_t buffer_length = demangled_size;
     demangled_name.reset(abi::__cxa_demangle(symbol, demangled_name.release(),
                                              &buffer_length, &status));
     if (status == 0) {
-      demangled_size = buffer_length > demangled_size ? buffer_length
-                                                         : demangled_size;
+      demangled_size =
+          buffer_length > demangled_size ? buffer_length : demangled_size;
       return demangled_name.get();
     } else {
       return symbol;
