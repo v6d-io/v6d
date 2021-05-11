@@ -35,12 +35,33 @@ SocketConnection::SocketConnection(stream_protocol::socket socket,
       socket_server_ptr_(socket_server_ptr),
       conn_id_(conn_id) {}
 
-void SocketConnection::Start() {
+bool SocketConnection::Start() {
   running_.store(true);
   doReadHeader();
+
+  return true;
 }
 
-void SocketConnection::Stop() { doStop(); }
+bool SocketConnection::Stop() {
+  if (!running_.exchange(false)) {
+    // already stopped, or haven't started
+    return false;
+  }
+
+  // do cleanup: clean up streams associated with this client
+  for (auto stream_id : associated_streams_) {
+    VINEYARD_SUPPRESS(server_ptr_->GetStreamStore()->Drop(stream_id));
+  }
+
+  // On Mac the state of socket may be "not connected" after the client has
+  // already closed the socket, hence there will be an exception.
+  boost::system::error_code ec;
+  socket_.cancel(ec);
+  socket_.shutdown(stream_protocol::socket::shutdown_both, ec);
+  socket_.close(ec);
+
+  return true;
+}
 
 void SocketConnection::doReadHeader() {
   auto self(this->shared_from_this());
@@ -881,25 +902,10 @@ void SocketConnection::doWrite(std::string&& buf) {
 }
 
 void SocketConnection::doStop() {
-  if (!running_.exchange(false)) {
-    // already stopped, or haven't started
-    return;
+  if (this->Stop()) {
+    // drop connection
+    socket_server_ptr_->RemoveConnection(conn_id_);
   }
-
-  // do cleanup: clean up streams associated with this client
-  for (auto stream_id : associated_streams_) {
-    VINEYARD_SUPPRESS(server_ptr_->GetStreamStore()->Drop(stream_id));
-  }
-
-  // On Mac the state of socket may be "not connected" after the client has
-  // already closed the socket, hence there will be an exception.
-  boost::system::error_code ec;
-  socket_.cancel(ec);
-  socket_.shutdown(stream_protocol::socket::shutdown_both, ec);
-  socket_.close(ec);
-
-  // drop connection
-  socket_server_ptr_->RemoveConnection(conn_id_);
 }
 
 void SocketConnection::doAsyncWrite() {
@@ -955,20 +961,20 @@ void SocketServer::Stop() {
     return;
   }
 
-  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
+  std::vector<int> connection_ids_;
   for (auto& pair : connections_) {
     pair.second->Stop();
   }
-  connections_.clear();
 }
 
 bool SocketServer::ExistsConnection(int conn_id) const {
-  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
   return connections_.find(conn_id) != connections_.end();
 }
 
 void SocketServer::RemoveConnection(int conn_id) {
-  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
   auto conn = connections_.find(conn_id);
   if (conn != connections_.end()) {
     connections_.erase(conn);
@@ -976,7 +982,7 @@ void SocketServer::RemoveConnection(int conn_id) {
 }
 
 void SocketServer::CloseConnection(int conn_id) {
-  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
   auto conn = connections_.find(conn_id);
   if (conn != connections_.end()) {
     conn->second->Stop();
@@ -985,7 +991,7 @@ void SocketServer::CloseConnection(int conn_id) {
 }
 
 size_t SocketServer::AliveConnections() const {
-  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutx_);
+  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
   return connections_.size();
 }
 
