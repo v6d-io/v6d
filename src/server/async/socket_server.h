@@ -49,12 +49,12 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   SocketConnection(stream_protocol::socket socket, vs_ptr_t server_ptr,
                    SocketServer* socket_server_ptr, int conn_id);
 
-  void Start();
+  bool Start();
 
   /**
    * @brief Invoke internal doStop, and set the running status to false.
    */
-  void Stop();
+  bool Stop();
 
  protected:
   bool doRegister(const json& root);

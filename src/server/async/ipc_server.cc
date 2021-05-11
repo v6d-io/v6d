@@ -99,7 +99,8 @@ void IPCServer::doAccept() {
           std::make_shared<SocketConnection>(std::move(this->socket_), vs_ptr_,
                                              this, next_conn_id_);
       conn->Start();
-      std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
+      std::lock_guard<std::recursive_mutex> scope_lock(
+          this->connections_mutex_);
       connections_.emplace(next_conn_id_, conn);
       ++next_conn_id_;
     }
