@@ -125,6 +125,7 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
 #define RETURN_GS_ERROR(code, msg)                                      \
   do {                                                                  \
     std::stringstream TOKENPASTE2(_ss, __LINE__);                       \
+    vineyard::backtrace_info::backtrace(TOKENPASTE2(_ss, __LINE__), true); \
     return ::boost::leaf::new_error(vineyard::GSError(                  \
         (code),                                                         \
         std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
