@@ -30,9 +30,10 @@ Development
 .. toctree::
    :maxdepth: 6
 
-   notes/contributing.rst
+   notes/faq.rst
    notes/troubleshooting.rst
    notes/roadmap.rst
+   notes/contributing.rst
 
 Indexes
 -------

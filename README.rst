@@ -7,30 +7,38 @@
         an in-memory immutable data manager
     </p>
 
-|Build and Test| |Coverage| |Docs| |Artifact HUB|
+|Build and Test| |Coverage| |Docs| |FAQ| |Artifact HUB|
 
 Vineyard (v6d) is an in-memory immutable data manager
 that provides **out-of-the-box high-level** abstraction and **zero-copy in-memory** sharing for
 distributed data in big data tasks, such as graph analytics (e.g., `GraphScope`_), numerical
 computing (e.g., `Mars`_), and machine learning.
 
+What is vineyard
+----------------
+
 Vineyard is designed to enable zero-copy data sharing between big data systems.
 Let's begin with a typical machine learning task of `time series prediction with LSTM`_.
 We can see that the task is divided into steps of works:
-First, we read the data from the file system as a ``pandas.DataFrame``.
-Then, we apply some preprocessing jobs, such as eliminating null values to the dataframe.
-After that, we define the model, and train the model on the processed dataframe
-in PyTorch.
-Finally, the performance of the model is evaluated.
+
+- First, we read the data from the file system as a ``pandas.DataFrame``.
+- Then, we apply some preprocessing jobs, such as eliminating null values to the dataframe.
+- After that, we define the model, and train the model on the processed dataframe
+  in PyTorch.
+- Finally, the performance of the model is evaluated.
 
 On a single machine, although pandas and PyTorch are two different systems targeting different tasks,
-data can be shared between them efficiently with little extra-cost, with everything happening end-to-end in a single python script.
+data can be shared between them efficiently with little extra-cost, with everything happening
+end-to-end in a single python script.
 
 .. image:: https://v6d.io/_static/vineyard_compare.png
    :alt: Comparing the workflow with and without vineyard
 
 What if the input data is too big to be processed on a single machine?
-As illustrated on the left side of the figure, a common practice is to store the data as tables on a distributed file system (e.g., HDFS), and replace ``pandas`` with ETL processes using SQL over a big data system such as Hive and Spark. To share the data with PyTorch, the intermediate results are typically saved back as tables on HDFS. This can bring some headaches to developers.
+As illustrated on the left side of the figure, a common practice is to store the data as tables on
+a distributed file system (e.g., HDFS), and replace ``pandas`` with ETL processes using SQL over a
+big data system such as Hive and Spark. To share the data with PyTorch, the intermediate results are
+typically saved back as tables on HDFS. This can bring some headaches to developers.
 
 1. For the same task, users are forced to program for multiple systems (SQL & Python).
 
@@ -111,7 +119,8 @@ Out-of-box high level data abstraction
 
 Computation frameworks usually have their own data abstractions for high-level concepts,
 for example tensor could be `torch.tensor`, `tf.Tensor`, `mxnet.ndarray` etc., not to
-mention that every `graph processing engine <https://github.com/alibaba/GraphScope>`_ has its own graph structure representations.
+mention that every `graph processing engine <https://github.com/alibaba/GraphScope>`_
+has its own graph structure representations.
 
 The variety of data abstractions makes the sharing hard. Vineyard provides out-of-box
 high-level data abstractions over in-memory blobs, by describing objects using hierarchical
@@ -189,14 +198,48 @@ The latest version of online documentation can be found at https://v6d.io.
 
 If you want to build vineyard from source, please refer to `Installation`_.
 
+FAQ
+---
+
+Vineyard shares many similarities with other opensource projects, but still differs
+a lot with them. We are frequently asked with the following questions about vineyard,
+
+* Q: Can clients look at the data while the stream is being filled?
+
+   One piece of data for multiple clients is one of the target scenarios as the
+   data live in vineyard is *immutable*, and multiple clients can safely consume
+   the same piece of data by memory sharing, without the extra cost and extra memory
+   usage of copying data back and forth.
+
+* Q: How vineyard avoids serialization/deserialization between systems in different languages?
+
+   Vineyard provides higher-level data abstractions (e.g., ndarrays, dataframes) that
+   could be shared in a natural way between different processes.
+
+* ......
+
+For more detailed information, please refer to our `FAQ`_ page.
+
 License
 -------
 
 **Vineyard** is distributed under `Apache License 2.0`_. Please note that
 third-party libraries may not have the same license as vineyard.
 
+Getting involved
+----------------
+
+- Join in the `CNCF Slack`_ and navigate to the ``#vineyard`` channel for discussion.
+- Read `contribution guide`_.
+- Please report bugs by submitting a `GitHub issue`_ or ask me anything in `Github discussion`_.
+- Submit contributions using pull requests.
+
+Thank you in advance for your contributions to vineyard!
+
 Acknowledgements
 ----------------
+
+We thank the following excellent opensource projects:
 
 - `apache-arrow <https://github.com/apache/arrow>`_, a cross-language development platform for in-memory analytics;
 - `boost-leaf <https://github.com/boostorg/leaf>`_, a C++ lightweight error augmentation framework;
@@ -209,16 +252,6 @@ Acknowledgements
 - `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
 - `tbb <https://github.com/oneapi-src/oneTBB>`_ a C++ library for threading building blocks.
 
-Getting involved
-----------------
-
-- Join in the `CNCF Slack`_ and navigate to the ``#vineyard`` channel for discussion.
-- Read `contribution guide`_.
-- Please report bugs by submitting a GitHub issue.
-- Submit contributions using pull requests.
-
-Thank you in advance for your contributions to vineyard!
-
 .. _Mars: https://github.com/mars-project/mars
 .. _GraphScope: https://github.com/alibaba/GraphScope
 .. _Installation: https://github.com/alibaba/v6d/blob/main/docs/notes/install.rst
@@ -227,6 +260,9 @@ Thank you in advance for your contributions to vineyard!
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
 .. _python package: https://pypi.org/project/vineyard/
 .. _CNCF Slack: https://slack.cncf.io/
+.. _GitHub issue: https://github.com/alibaba/v6d/issues/new
+.. _Github discussion: https://github.com/alibaba/v6d/discussions/new
+.. _FAQ: https://v6d.io/notes/faq.html
 
 .. |Build and Test| image:: https://github.com/alibaba/v6d/workflows/Build%20and%20Test/badge.svg
    :target: https://github.com/alibaba/v6d/actions?workflow=Build%20and%20Test
@@ -234,5 +270,7 @@ Thank you in advance for your contributions to vineyard!
    :target: https://codecov.io/gh/alibaba/v6d
 .. |Docs| image:: https://img.shields.io/badge/docs-latest-brightgreen.svg
    :target: https://v6d.io
+.. |FAQ| image:: https://img.shields.io/badge/-FAQ-blue?logo=Read%20The%20Docs
+   :target: https://v6d.io/notes/faq.html
 .. |Artifact HUB| image:: https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard
    :target: https://artifacthub.io/packages/helm/vineyard/vineyard
