@@ -350,6 +350,12 @@ void bind_client(py::module& mod) {
             return metas;
           },
           "object_ids"_a, py::arg("sync_remote") = false)
+      .def(
+          "sync_meta",
+          [](Client *self) -> void {
+            ObjectMeta meta;
+            VINEYARD_DISCARD(self->GetMetaData(InvalidObjectID(), meta, true));
+          })
       .def("list_objects", &Client::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5)
       .def("close",
