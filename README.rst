@@ -206,15 +206,15 @@ a lot with them. We are frequently asked with the following questions about vine
 
 * Q: Can clients look at the data while the stream is being filled?
 
-   One piece of data for multiple clients is one of the target scenarios as the
-   data live in vineyard is *immutable*, and multiple clients can safely consume
-   the same piece of data by memory sharing, without the extra cost and extra memory
-   usage of copying data back and forth.
+  One piece of data for multiple clients is one of the target scenarios as the
+  data live in vineyard is *immutable*, and multiple clients can safely consume
+  the same piece of data by memory sharing, without the extra cost and extra memory
+  usage of copying data back and forth.
 
 * Q: How vineyard avoids serialization/deserialization between systems in different languages?
 
-   Vineyard provides higher-level data abstractions (e.g., ndarrays, dataframes) that
-   could be shared in a natural way between different processes.
+  Vineyard provides higher-level data abstractions (e.g., ndarrays, dataframes) that
+  could be shared in a natural way between different processes.
 
 * . . . . . .
 
