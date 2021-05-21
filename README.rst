@@ -216,7 +216,7 @@ a lot with them. We are frequently asked with the following questions about vine
    Vineyard provides higher-level data abstractions (e.g., ndarrays, dataframes) that
    could be shared in a natural way between different processes.
 
-* ......
+* . . . . . .
 
 For more detailed information, please refer to our `FAQ`_ page.
 
