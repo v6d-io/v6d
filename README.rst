@@ -9,7 +9,7 @@
 
 |Build and Test| |Coverage| |Docs| |Artifact HUB|
 
-Vineyard is an in-memory immutable data manager
+Vineyard (v6d) is an in-memory immutable data manager
 that provides **out-of-the-box high-level** abstraction and **zero-copy in-memory** sharing for
 distributed data in big data tasks, such as graph analytics (e.g., `GraphScope`_), numerical
 computing (e.g., `Mars`_), and machine learning.
@@ -203,7 +203,7 @@ Acknowledgements
 - `dlmalloc <http://gee.cs.oswego.edu/dl/html/malloc.htmlp>`_, Doug Lea's memory allocator;
 - `etcd-cpp-apiv3 <https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3>`_, a C++ API for etcd's v3 client API;
 - `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation;
-- `jemalloc <https://github.com/jemalloc/jemalloc>`_ a general purpose `malloc(3)` implementation.
+- `jemalloc <https://github.com/jemalloc/jemalloc>`_ a general purpose ``malloc(3)`` implementation.
 - `nlohmann/json <https://github.com/nlohmann/json>`_, a json library for modern c++.
 - `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python;
 - `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
@@ -212,7 +212,7 @@ Acknowledgements
 Getting involved
 ----------------
 
-- Join in the `Slack channel`_ for discussion.
+- Join in the `CNCF Slack`_ and navigate to the ``#vineyard`` channel for discussion.
 - Read `contribution guide`_.
 - Please report bugs by submitting a GitHub issue.
 - Submit contributions using pull requests.
@@ -226,7 +226,7 @@ Thank you in advance for your contributions to vineyard!
 .. _contribution guide: https://github.com/alibaba/v6d/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
 .. _python package: https://pypi.org/project/vineyard/
-.. _Slack channel: https://join.slack.com/t/v6d/shared_invite/zt-ml78e62u-IKb4jhHVSIroGDpBDi_q7Q
+.. _CNCF Slack: https://slack.cncf.io/
 
 .. |Build and Test| image:: https://github.com/alibaba/v6d/workflows/Build%20and%20Test/badge.svg
    :target: https://github.com/alibaba/v6d/actions?workflow=Build%20and%20Test
