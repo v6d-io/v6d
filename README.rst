@@ -220,12 +220,6 @@ a lot with them. We are frequently asked with the following questions about vine
 
 For more detailed information, please refer to our `FAQ`_ page.
 
-License
--------
-
-**Vineyard** is distributed under `Apache License 2.0`_. Please note that
-third-party libraries may not have the same license as vineyard.
-
 Getting involved
 ----------------
 
@@ -251,6 +245,12 @@ We thank the following excellent opensource projects:
 - `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python;
 - `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
 - `tbb <https://github.com/oneapi-src/oneTBB>`_ a C++ library for threading building blocks.
+
+License
+-------
+
+**Vineyard** is distributed under `Apache License 2.0`_. Please note that
+third-party libraries may not have the same license as vineyard.
 
 .. _Mars: https://github.com/mars-project/mars
 .. _GraphScope: https://github.com/alibaba/GraphScope
