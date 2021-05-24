@@ -133,7 +133,7 @@ def test_remote_deletion(vineyard_ipc_sockets):
 
     client2.get_meta(o1, sync_remote=True)
     client2.delete(o1)
-    client1.sync_meta(o1)
+    client1.sync_meta()
 
     new_status = client1.status
 
