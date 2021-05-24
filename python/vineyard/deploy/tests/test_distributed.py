@@ -291,9 +291,9 @@ def test_concurrent_persist(vineyard_ipc_sockets):
 
     jobs = [job1, job2, job3, job4, job5]
 
-    with ThreadPoolExecutor(32) as executor:
+    with ThreadPoolExecutor(16) as executor:
         fs, rs = [], []
-        for _ in range(1024):
+        for _ in range(256):
             job = random.choice(jobs)
             client = random.choice(clients)
             fs.append(executor.submit(job, client))

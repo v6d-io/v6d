@@ -291,7 +291,7 @@ jobs:
           python3 test/runner.py --with-cpp
 
       - name: Setup tmate session
-        if: false
+        if: true
         uses: mxschmitt/action-tmate@v2
 
       - name: Run Python Tests
