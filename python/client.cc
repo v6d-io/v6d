@@ -203,6 +203,12 @@ void bind_client(py::module& mod) {
           },
           "name"_a)
       .def(
+          "sync_meta",
+          [](ClientBase *self) -> void {
+            json tree;
+            VINEYARD_DISCARD(self->GetData(InvalidObjectID(), tree, true));
+          })
+      .def(
           "migrate",
           [](ClientBase* self, const ObjectID object_id) -> ObjectIDWrapper {
             ObjectID target_id = InvalidObjectID();

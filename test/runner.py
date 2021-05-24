@@ -86,6 +86,7 @@ def start_etcd():
         client_port = find_port()
         peer_port = find_port()
         proc = start_program('etcd',
+                             '--data-dir', '/dev/shm/etcd-%s' % time.time(),
                              '--listen-peer-urls', 'http://0.0.0.0:%d' % peer_port,
                              '--listen-client-urls', 'http://0.0.0.0:%d' % client_port,
                              '--advertise-client-urls', 'http://127.0.0.1:%d' % client_port,
@@ -300,6 +301,8 @@ def run_python_tests(etcd_endpoints, with_migration):
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
+
+def run_python_deploy_tests(etcd_endpoints, with_migration):
     ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
     instance_size = 4
     extra_args = []
@@ -317,6 +320,7 @@ def run_python_tests(etcd_endpoints, with_migration):
                                '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets] + extra_args,
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
+
 def run_io_adaptor_tests(etcd_endpoints, with_migration):
     etcd_prefix = 'vineyard_test_%s' % time.time()
 
@@ -329,6 +333,8 @@ def run_io_adaptor_tests(etcd_endpoints, with_migration):
                                '--test-dataset=%s' % get_data_path(None)],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
+
+def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
     etcd_prefix = 'vineyard_test_%s' % time.time()
     ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
     instance_size = 2
@@ -379,11 +385,14 @@ def main():
     if args.with_python:
         with start_etcd() as (_, etcd_endpoints):
             run_python_tests(etcd_endpoints, args.with_migration)
+        with start_etcd() as (_, etcd_endpoints):
+            run_python_deploy_tests(etcd_endpoints, args.with_migration)
 
     if args.with_io:
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_tests(etcd_endpoints, args.with_migration)
-
+        with start_etcd() as (_, etcd_endpoints):
+            run_io_adaptor_distributed_tests(etcd_endpoints, args.with_migration)
 
 
 if __name__ == '__main__':
