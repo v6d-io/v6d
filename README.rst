@@ -7,7 +7,8 @@
         an in-memory immutable data manager
     </p>
 
-|Build and Test| |Coverage| |Docs| |FAQ| |Artifact HUB|
+|Build and Test| |Coverage| |Docs| |FAQ| |Artifact HUB| |License| |CII Best Practices| |FOSSA|
+
 
 Vineyard (v6d) is an in-memory immutable data manager
 that provides **out-of-the-box high-level** abstraction and **zero-copy in-memory** sharing for
@@ -254,6 +255,8 @@ License
 **Vineyard** is distributed under `Apache License 2.0`_. Please note that
 third-party libraries may not have the same license as vineyard.
 
+|FOSSA Status|
+
 .. _Mars: https://github.com/mars-project/mars
 .. _GraphScope: https://github.com/alibaba/GraphScope
 .. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/install.rst
@@ -277,3 +280,11 @@ third-party libraries may not have the same license as vineyard.
    :target: https://v6d.io/notes/faq.html
 .. |Artifact HUB| image:: https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard
    :target: https://artifacthub.io/packages/helm/vineyard/vineyard
+.. |CII Best Practices| image:: https://bestpractices.coreinfrastructure.org/projects/4902/badge
+   :target: https://bestpractices.coreinfrastructure.org/projects/4902
+.. |FOSSA| image:: https://app.fossa.com/api/projects/git%2Bgithub.com%2Fv6d-io%2Fv6d.svg?type=shield
+   :target: https://app.fossa.com/projects/git%2Bgithub.com%2Fv6d-io%2Fv6d?ref=badge_shield
+.. |FOSSA Status| image:: https://app.fossa.com/api/projects/git%2Bgithub.com%2Fv6d-io%2Fv6d.svg?type=large
+   :target: https://app.fossa.com/projects/git%2Bgithub.com%2Fv6d-io%2Fv6d?ref=badge_large
+.. |License| image:: https://img.shields.io/github/license/v6d-io/v6d
+   :target: https://github.com/v6d-io/v6d/blob/main/LICENSE
