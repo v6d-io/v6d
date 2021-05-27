@@ -45,8 +45,8 @@ jobs:
 
       - name: Build vineyardd on Linux
         run: |
-          sudo docker build . -f docker/Dockerfile.vineyardd -t docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/bin/vineyardd /target/"
+          sudo docker build . -f docker/Dockerfile.vineyardd -t docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
+          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/bin/vineyardd /target/"
           ldd ./vineyardd
 
       - name: Package vineyardd artifact on Linux
@@ -57,16 +57,16 @@ jobs:
           tar zcvfh vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ github.sha }}.sha512sum
 
       - name: Upload docker image as nightly
-        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         run: |
-          sudo docker tag docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-nightly
-          sudo docker tag docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/v6d/vineyardd:nightly
+          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-nightly
+          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/v6d-io/v6d/vineyardd:nightly
 
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-nightly
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:nightly
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-nightly
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:nightly
 
       - name: Extract tag name
         id: tag
@@ -74,28 +74,28 @@ jobs:
         run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
 
       - name: Tag and upload docker for releases
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
-          sudo docker tag docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
-          sudo docker tag docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
+          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
+          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
 
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
 
-          sudo docker tag docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-latest
-          sudo docker tag docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/alibaba/v6d/vineyardd:latest
+          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
+          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
 
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:alpine-latest
-          sudo docker push docker.pkg.github.com/alibaba/v6d/vineyardd:latest
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
+          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
 
       - name: Upload vineyardd to latest release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload vineyardd to tagged release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
@@ -166,9 +166,9 @@ jobs:
       - name: Build wheel package on Linux
         run: |
           sudo docker build . -f docker/pypa/Dockerfile.manylinux1-wheel \
-                              -t docker.pkg.github.com/alibaba/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
+                              -t docker.pkg.github.com/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
                               --build-arg python=${{ matrix.python }}
-          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/alibaba/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
+          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
           ls -la ./fixed_wheels/
 
       - name: Prepare checksum and artifacts
@@ -185,7 +185,7 @@ jobs:
 
       - name: Upload wheels to latest release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: fixed_wheels/*.whl
@@ -197,7 +197,7 @@ jobs:
 
       - name: Upload wheels to tagged release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: fixed_wheels/*.whl

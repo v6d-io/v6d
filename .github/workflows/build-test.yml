@@ -345,7 +345,7 @@ jobs:
 
       - name: Upload wheels to latest release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: modules/io/dist/*.whl
@@ -357,7 +357,7 @@ jobs:
 
       - name: Upload wheels to tagged release
         uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: modules/io/dist/*.whl
@@ -379,7 +379,7 @@ jobs:
           make vineyard_doc
 
       - name: Commit Doc
-        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'alibaba/v6d' }}
+        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         run: |
           git config user.email github-actions@github.com
           git config user.name github-actions

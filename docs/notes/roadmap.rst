@@ -69,4 +69,4 @@ Release Notes
 -------------
 
 For more details about what changes happened for every version, please refer to
-our `releases notes <https://github.com/alibaba/v6d/releases>`_.
+our `releases notes <https://github.com/v6d-io/v6d/releases>`_.

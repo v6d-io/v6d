@@ -17,13 +17,14 @@ sys.path.insert(0, os.path.abspath('../python'))
 
 # Initialize attched doc strings.
 import vineyard
+version = vineyard.__version__
 del vineyard
 
 # -- Project information -----------------------------------------------------
 
 project = 'vineyard'
-copyright = '2019-2020, GRAPE Team, Damo Academy'
-author = 'GRAPE Team, Damo Academy'
+copyright = '2019-2021, The Vineyard Contributors'
+author = 'The Vineyard Authors'
 
 
 # -- General configuration ---------------------------------------------------

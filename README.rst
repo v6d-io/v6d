@@ -14,6 +14,8 @@ that provides **out-of-the-box high-level** abstraction and **zero-copy in-memor
 distributed data in big data tasks, such as graph analytics (e.g., `GraphScope`_), numerical
 computing (e.g., `Mars`_), and machine learning.
 
+Vineyard is a `CNCF sandbox project`_ and indeed made successful by its community.
+
 What is vineyard
 ----------------
 
@@ -254,20 +256,21 @@ third-party libraries may not have the same license as vineyard.
 
 .. _Mars: https://github.com/mars-project/mars
 .. _GraphScope: https://github.com/alibaba/GraphScope
-.. _Installation: https://github.com/alibaba/v6d/blob/main/docs/notes/install.rst
-.. _Apache License 2.0: https://github.com/alibaba/v6d/blob/main/LICENSE
-.. _contribution guide: https://github.com/alibaba/v6d/blob/main/CONTRIBUTING.rst
+.. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/install.rst
+.. _Apache License 2.0: https://github.com/v6d-io/v6d/blob/main/LICENSE
+.. _contribution guide: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
 .. _python package: https://pypi.org/project/vineyard/
 .. _CNCF Slack: https://slack.cncf.io/
-.. _GitHub issue: https://github.com/alibaba/v6d/issues/new
-.. _Github discussion: https://github.com/alibaba/v6d/discussions/new
+.. _GitHub issue: https://github.com/v6d-io/v6d/issues/new
+.. _Github discussion: https://github.com/v6d-io/v6d/discussions/new
 .. _FAQ: https://v6d.io/notes/faq.html
+.. _CNCF sandbox project: https://www.cncf.io/sandbox-projects/
 
-.. |Build and Test| image:: https://github.com/alibaba/v6d/workflows/Build%20and%20Test/badge.svg
-   :target: https://github.com/alibaba/v6d/actions?workflow=Build%20and%20Test
-.. |Coverage| image:: https://codecov.io/gh/alibaba/v6d/branch/main/graph/badge.svg
-   :target: https://codecov.io/gh/alibaba/v6d
+.. |Build and Test| image:: https://github.com/v6d-io/v6d/workflows/Build%20and%20Test/badge.svg
+   :target: https://github.com/v6d-io/v6d/actions?workflow=Build%20and%20Test
+.. |Coverage| image:: https://codecov.io/gh/v6d-io/v6d/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/v6d-io/v6d
 .. |Docs| image:: https://img.shields.io/badge/docs-latest-brightgreen.svg
    :target: https://v6d.io
 .. |FAQ| image:: https://img.shields.io/badge/-FAQ-blue?logo=Read%20The%20Docs

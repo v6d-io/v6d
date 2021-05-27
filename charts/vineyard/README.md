@@ -23,5 +23,5 @@ More information about the helm chart could be found at [artifacthub](https://ar
 License
 -------
 
-**vineyard** is distributed under [Apache License 2.0](https://github.com/alibaba/v6d/blob/main/LICENSE).
+**vineyard** is distributed under [Apache License 2.0](https://github.com/v6d-io/v6d/blob/main/LICENSE).
 Please note that third-party libraries may not have the same license as vineyard.

@@ -4,7 +4,7 @@ The governance model adopted in Vineyard is influenced by many CNCF projects.
 
 ## Principles
 
-- **Open**: Vineyard is open source community. See [Contributor License Agreement](https://cla-assistant.io/alibaba/v6d).
+- **Open**: Vineyard is open source community. See [Contributor License Agreement](https://cla-assistant.io/v6d-io/v6d).
 - **Welcoming and respectful**: See [Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 - **Transparent and accessible**: Work and collaboration should be done in public.
 - **Merit**: Ideas and contributions are accepted according to their technical merit
@@ -14,7 +14,7 @@ The governance model adopted in Vineyard is influenced by many CNCF projects.
 
 * Classify GitHub issues and perform pull request reviews for other maintainers and the community.
 
-* During GitHub issue classification, apply all applicable [labels](https://github.com/alibaba/v6d/labels)
+* During GitHub issue classification, apply all applicable [labels](https://github.com/v6d-io/v6d/labels)
   to each new issue. Use your best judgement to apply labels, since they are extremely useful for follow-up of future issues. 
 
 * Maintainers are expected to respond to assigned Pull Requests in a reasonable time frame.

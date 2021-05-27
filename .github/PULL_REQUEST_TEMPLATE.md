@@ -1,5 +1,5 @@
 <!--
-Thanks for your contribution! please review https://github.com/alibaba/v6d/blob/main/CONTRIBUTING.rst before opening an issue.
+Thanks for your contribution! please review https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst before opening an issue.
 -->
 
 ## What do these changes do?

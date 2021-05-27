@@ -5,7 +5,7 @@ description: Vineyard is an in-memory immutable data manager.
 home: https://v6d.io
 
 sources:
-  - https://github.com/alibaba/v6d
+  - https://github.com/v6d-io/v6d
 
 keywords:
   - vineyard

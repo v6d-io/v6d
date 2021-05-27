@@ -108,7 +108,7 @@ the latest main branch, using the following commands:
 
 .. code:: shell
 
-      git remote add upstream https://github.com/alibaba/v6d.git
+      git remote add upstream https://github.com/v6d-io/v6d.git
       git fetch upstream
       git rebase upstream/main
 
@@ -140,10 +140,10 @@ The vineyard python package is built using the `manylinux1`_ environments. The
 release version is built with Docker. The description of the base image can be
 found at `docker/pypa/Dockerfile.manylinux1`_.
 
-.. _file an issue: https://github.com/alibaba/v6d/issues/new/new
+.. _file an issue: https://github.com/v6d-io/v6d/issues/new/new
 .. _manylinux1: https://github.com/pypa/manylinux
-.. _search: https://github.com/alibaba/v6d/pulls
-.. _CLA: https://cla-assistant.io/alibaba/v6d
+.. _search: https://github.com/v6d-io/v6d/pulls
+.. _CLA: https://cla-assistant.io/v6d-io/v6d
 .. _Google C++ Style Guide: https://google.github.io/styleguide/cppguide.html
-.. _docker/pypa/Dockerfile.manylinux1: https://github.com/alibaba/v6d/blob/main/docker/pypa/Dockerfile.manylinux1
-.. _Apache License 2.0: https://github.com/alibaba/v6d/blob/main/LICENSE
+.. _docker/pypa/Dockerfile.manylinux1: https://github.com/v6d-io/v6d/blob/main/docker/pypa/Dockerfile.manylinux1
+.. _Apache License 2.0: https://github.com/v6d-io/v6d/blob/main/LICENSE

@@ -77,5 +77,5 @@ or `post it to discussions`_.
   prioritize h2 when launching B2 to avoid migration when possible.
 
 
-.. _open an issue: https://github.com/alibaba/v6d/issues/new
-.. _post it to discussions: https://github.com/alibaba/v6d/discussions/new
+.. _open an issue: https://github.com/v6d-io/v6d/issues/new
+.. _post it to discussions: https://github.com/v6d-io/v6d/discussions/new
