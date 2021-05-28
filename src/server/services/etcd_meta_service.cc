@@ -52,15 +52,15 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     }
     EtcdMetaService::op_t op;
     std::string op_key = boost::algorithm::erase_head_copy(key, prefix_.size());
-    switch (event.type()) {
-    case mvccpb::Event::PUT: {
-      auto op = EtcdMetaService::op_t::Put(op_key, event.kv().value(),
-                                           event.kv().mod_revision());
+    switch (event.event_type()) {
+    case etcd::Event::EventType::PUT: {
+      auto op = EtcdMetaService::op_t::Put(op_key, event.kv().as_string(),
+                                           event.kv().modified_index());
       ops.emplace_back(op);
       break;
     }
-    case mvccpb::Event::DELETE_: {
-      auto op = EtcdMetaService::op_t::Del(op_key, event.kv().mod_revision());
+    case etcd::Event::EventType::DELETE_: {
+      auto op = EtcdMetaService::op_t::Del(op_key, event.kv().modified_index());
       ops.emplace_back(op);
       break;
     }
