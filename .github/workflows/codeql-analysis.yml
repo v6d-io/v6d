@@ -14,7 +14,13 @@
 
 name: CodeQL
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - "!dependabot/**"
+  pull_request:
+    branches:
+      - "!dependabot/**"
 
 jobs:
   analyze:
@@ -47,9 +53,9 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.ccache
-        key: codeql-build-ccache-${{ hashFiles('**/git-modules.txt') }}
+        key: codeql-build-ccache-${{ matrix.language }}-${{ hashFiles('**/git-modules.txt') }}
         restore-keys: |
-          codeql-build-ccache-
+          codeql-build-ccache-${{ matrix.language }}-
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
