@@ -20,7 +20,7 @@ import numpy as np
 import re
 
 import vineyard
-from vineyard._C import Object, ObjectMeta  # noqa: E0611
+from vineyard._C import Object, ObjectMeta
 from .utils import normalize_dtype
 
 

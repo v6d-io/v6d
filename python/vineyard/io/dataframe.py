@@ -58,4 +58,4 @@
 '''
 
 from vineyard._C import DataframeStream, DataframeStreamBuilder, \
-    DataframeStreamReader, DataframeStreamWriter  # noqa: E0611
+    DataframeStreamReader, DataframeStreamWriter

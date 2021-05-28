@@ -19,7 +19,7 @@
 import inspect
 from sortedcontainers import SortedDict
 
-from vineyard._C import IPCClient, RPCClient, ObjectID, Object  # noqa: E0611
+from vineyard._C import IPCClient, RPCClient, ObjectID, Object
 from vineyard.core.utils import find_most_precise_match
 from vineyard.core.driver import default_driver_context
 

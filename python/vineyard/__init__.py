@@ -39,7 +39,7 @@ def _init_global_context():
 
         # import the extension module
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
-        from . import _C  # noqa: E0611
+        from . import _C
 
         # See Note [Import pyarrow before _C]
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)

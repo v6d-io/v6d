@@ -19,7 +19,7 @@
 import json
 import pandas as pd
 
-from vineyard._C import ObjectMeta  # noqa: E0611
+from vineyard._C import ObjectMeta
 
 from .utils import from_json, to_json, normalize_dtype
 

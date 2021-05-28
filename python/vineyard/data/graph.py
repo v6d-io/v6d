@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-from vineyard._C import Object, ObjectMeta  # noqa: E0611
+from vineyard._C import Object, ObjectMeta
 
 
 class Graph:

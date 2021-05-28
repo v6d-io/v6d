@@ -27,11 +27,11 @@ different. For vineyard, to make the shared memory visible for other process, a 
 Refer to the documentation of multiprocessing.shared_memory for details.
 '''
 
-import multiprocessing.shared_memory  # noqa: E0611
+import multiprocessing.shared_memory
 import struct
 import warnings
 
-from vineyard._C import ObjectID  # noqa: E0611
+from vineyard._C import ObjectID
 
 
 class SharedMemory:
@@ -141,7 +141,7 @@ class SharedMemory:
 _encoding = "utf8"
 
 
-class ShareableList(multiprocessing.shared_memory.ShareableList):  # noqa: E1101
+class ShareableList(multiprocessing.shared_memory.ShareableList):
     '''
     Pattern for a mutable list-like object shareable via a shared
     memory block.  It differs from the built-in list type in that these

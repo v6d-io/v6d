@@ -58,4 +58,4 @@
 '''
 
 from vineyard._C import ByteStream, ByteStreamBuilder, \
-    ByteStreamReader, ByteStreamWriter  # noqa: E0611
+    ByteStreamReader, ByteStreamWriter

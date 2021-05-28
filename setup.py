@@ -22,7 +22,7 @@ import textwrap
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 from setuptools.dist import Distribution
-from wheel.bdist_wheel import bdist_wheel  # noqa: E0611
+from wheel.bdist_wheel import bdist_wheel
 
 
 class CopyCMakeExtension(Extension):

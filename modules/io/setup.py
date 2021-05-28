@@ -20,7 +20,7 @@ import os
 
 from setuptools import setup, find_packages
 from setuptools.command.install import install
-from wheel.bdist_wheel import bdist_wheel  # noqa: E0611
+from wheel.bdist_wheel import bdist_wheel
 
 
 class bdist_wheel_plat(bdist_wheel):
