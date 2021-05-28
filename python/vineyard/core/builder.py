@@ -16,8 +16,6 @@
 # limitations under the License.
 #
 
-[![vulnerabilities](https://snyk.io/test/github/v6d-io/v6d/badge.svg)](https://snyk.io/test/github/v6d-io/v6d)
-
 import inspect
 
 from vineyard._C import IPCClient, RPCClient
