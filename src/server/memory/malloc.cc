@@ -52,7 +52,7 @@ static ptrdiff_t pointer_distance(void const* pfrom, void const* pto) {
 // Create a buffer. This is creating a temporary file and then
 // immediately unlinking it so we do not leave traces in the system.
 int create_buffer(int64_t size) {
-  int fd;
+  int fd = -1;
 #ifdef _WIN32
   if (!CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
                          (DWORD)((uint64_t) size >> (CHAR_BIT * sizeof(DWORD))),

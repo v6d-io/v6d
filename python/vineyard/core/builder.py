@@ -18,7 +18,7 @@
 
 import inspect
 
-from vineyard._C import IPCClient, RPCClient
+from vineyard._C import IPCClient, RPCClient  # noqa: E0611
 
 
 class BuilderContext():

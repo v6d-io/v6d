@@ -57,4 +57,5 @@
     StreamDrainedException: Stream drained: no more chunks
 '''
 
-from vineyard._C import DataframeStream, DataframeStreamBuilder, DataframeStreamReader, DataframeStreamWriter
+from vineyard._C import DataframeStream, DataframeStreamBuilder, \
+    DataframeStreamReader, DataframeStreamWriter  # noqa: E0611

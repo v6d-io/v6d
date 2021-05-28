@@ -22,7 +22,7 @@ import pandas as pd
 from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import SingleBlockManager
 
-from vineyard._C import ObjectMeta
+from vineyard._C import ObjectMeta  # noqa: E0611
 from .utils import from_json, to_json
 
 

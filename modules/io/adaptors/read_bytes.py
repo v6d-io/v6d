@@ -29,7 +29,7 @@ from fsspec.utils import read_block
 from fsspec.core import split_protocol
 from vineyard.io.byte import ByteStreamBuilder
 
-from vineyard.drivers.io import ossfs
+from vineyard.drivers.io import ossfs  # noqa: E0611
 
 fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 

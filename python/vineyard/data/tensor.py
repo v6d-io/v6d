@@ -29,7 +29,7 @@ import pickle
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
 
-from vineyard._C import ObjectMeta
+from vineyard._C import ObjectMeta  # noqa: E0611
 from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype
 
 
