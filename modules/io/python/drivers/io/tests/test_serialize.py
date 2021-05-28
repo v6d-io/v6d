@@ -107,7 +107,7 @@ def test_seriarialize_round_trip_on_s3(vineyard_ipc_socket, vineyard_endpoint, g
     accessKeyID = os.environ["ACCESS_KEY_ID"]
     accessKeySecret = os.environ["SECRET_ACCESS_KEY"]
     region_name = os.environ.get("REGION", "us-east-1")
-    stream = vineyard.io.serialize(
+    vineyard.io.serialize(
         "s3://test-bucket/tmp/seri-test",
         global_obj,
         vineyard_ipc_socket=vineyard_ipc_socket,
