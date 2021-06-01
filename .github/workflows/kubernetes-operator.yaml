@@ -51,5 +51,6 @@ jobs:
       - name: Publish docker images
         if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         run: |
+          cd k8s
           sudo make docker-push IMG=${IMG}:${{ github.sha }}
           sudo docker push ${IMG}:nightly
