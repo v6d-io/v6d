@@ -41,14 +41,14 @@ class PickledReader:
 
         meta = BytesIO()
         meta.write(b'__VINEYARD__')
-        self.poke_int(meta, len(buffers))
+        self._poke_int(meta, len(buffers))
         for buf in buffers:
             raw = buf.raw()
             self._buffers.append(raw)
             self._store_size += len(raw)
-            self.poke_int(meta, len(raw))
+            self._poke_int(meta, len(raw))
 
-        self.poke_int(meta, len(bs))
+        self._poke_int(meta, len(bs))
         meta.write(bs)
         self._buffers[0] = memoryview(meta.getbuffer())
         self._store_size += len(self._buffers[0])
@@ -64,7 +64,7 @@ class PickledReader:
     def store_size(self):
         return self._store_size
 
-    def poke_int(self, bs, value):
+    def _poke_int(self, bs, value):
         bs.write(int.to_bytes(value, length=8, byteorder='big'))
 
     def read(self, block_size):
@@ -86,22 +86,45 @@ class PickledWriter:
     ''' Deserialize a pickled bytes into a python object in zero-copy fashion.
     '''
     def __init__(self, store_size):
-        self._store_size = store_size
+        self._buffer = BytesIO(initial_bytes=b'\x00' * store_size)
+        self._buffer.seek(0)
         self._value = None
-        self._buffers = None
-        self._buffer_sizes = None
 
-        self._chunk_index = 0
-        self._chunk_offset = 0
+    @property
+    def value(self):
+        return self._value
 
     def write(self, bs):
-        if self._buffer_sizes = None:
-            meta = bytes
+        self._buffer.write(bs)
 
-    def peek_int(self, bs, offset):
+    def close(self):
+        bs = self._buffer.getbuffer()
+        buffers = []
+        buffer_sizes = []
+        offset, _ = self._peek_any(bs, 0, b'__VINEYARD__')
+        offset, nbuffers = self._peek_int(bs, offset)
+        for _ in range(nbuffers):
+            offset, sz = self._peek_int(bs, offset)
+            buffer_sizes.append(sz)
+        offset, metalen = self._peek_int(bs, offset)
+        offset, meta = self._peek_buffer(bs, offset, metalen)
+        for nlen in buffer_sizes:
+            offset, block = self._peek_buffer(bs, offset, nlen)
+            buffers.append(block)
+        self._value = pickle.loads(meta, fix_imports=True, buffers=buffers)
+
+    def _peek_any(self, bs, offset, target):
+        value = bs[offset:offset + len(target)]
+        assert value == target, "Unexpected bytes: " + value
+        return offset + len(target), value
+
+    def _peek_int(self, bs, offset):
         value = int.from_bytes(bs[offset:offset + 8], byteorder='big')
-        self._chunk_offset += 8
-        return value
+        return offset + 8, value
+
+    def _peek_buffer(self, bs, offset, size):
+        value = bs[offset:offset + size]
+        return offset + size, value
 
 
-__all__ = []
+__all__ = ['PickledReader', 'PickledWriter']
