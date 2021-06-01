@@ -295,15 +295,17 @@ jobs:
         uses: mxschmitt/action-tmate@v2
 
       - name: Run Python Tests
-        run: |
-          export VINEYARD_DEV=TRUE
+        uses: sighingnow/action-tmate@master
+        with:
+          script-to-run: |
+            export VINEYARD_DEV=TRUE
 
-          export VINEYARD_DATA_DIR=`pwd`/gstest
-          export VINEYARD_HOME=`pwd`/build/bin
-          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
+            export VINEYARD_DATA_DIR=`pwd`/gstest
+            export VINEYARD_HOME=`pwd`/build/bin
+            export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
-          rm -rf default.etcd
-          python3 test/runner.py --with-python --with-migration
+            rm -rf default.etcd
+            python3 test/runner.py --with-python --with-migration
 
       - name: Setup tmate session
         if: false
