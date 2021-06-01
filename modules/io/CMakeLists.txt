@@ -27,10 +27,10 @@ target_include_directories(vineyard_io PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-if(RDKAFKA_FOUND)
-    target_include_directories(vineyard_io PUBLIC ${RDKAFKA_INCLUDE_DIRS})
+if(Rdkafka_FOUND)
+    target_include_directories(vineyard_io PUBLIC ${Rdkafka_INCLUDE_DIRS})
     target_compile_definitions(vineyard_io PRIVATE -DKAFKA_ENABLED)
-    target_link_libraries(vineyard_io PUBLIC ${RDKAFKA_LIBRARIES})
+    target_link_libraries(vineyard_io PUBLIC ${Rdkafka_LIBRARIES})
 endif()
 
 install_vineyard_target(vineyard_io)

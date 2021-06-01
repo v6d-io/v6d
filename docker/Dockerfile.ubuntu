@@ -1,0 +1,149 @@
+FROM ubuntu:20.04
+
+# build command:
+#
+#   docker build . -f docker/Dockerfile.ubuntu -t registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyardd:ubuntu
+
+WORKDIR /workspace
+SHELL ["/bin/bash", "-c"]
+
+RUN export DEBIAN_FRONTEND="noninteractive" && \
+    apt-get update -y && \
+    apt-get install -y \
+        automake \
+        autoconf \
+        ca-certificates \
+        cmake \
+        gcc \
+        g++ \
+        git \
+        libboost-atomic-dev \
+        libboost-chrono-dev \
+        libboost-filesystem-dev \
+        libboost-locale-dev \
+        libboost-random-dev \
+        libboost-regex-dev \
+        libboost-system-dev \
+        libboost-thread-dev \
+        libcurl4-openssl-dev \
+        libgflags-dev \
+        libgoogle-glog-dev \
+        libgrpc-dev \
+        libgrpc++-dev \
+        libprotobuf-dev \
+        libpython3-dev \
+        libssl-dev \
+        libtinfo5 \
+        libunwind-dev \
+        libz-dev \
+        lsb-release \
+        protobuf-compiler-grpc \
+        python3-pip \
+        unzip \
+        wget && \
+    cd /tmp && \
+    wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
+    apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
+    apt update && \
+    apt install -y libarrow-dev=1.0.1-1 libarrow-python-dev=1.0.1-1 && \
+    rm -rf /tmp/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
+    apt-get clean autoclean
+
+# patchelf and auditwheel for wheel packaging
+RUN cd /tmp && \
+    git clone --depth=1 https://github.com/NixOS/patchelf.git && \
+    pushd patchelf && \
+    ./bootstrap.sh && \
+    ./configure && \
+    make install -j && \
+    popd && \
+    rm -rf patchelf/ && \
+    pip3 install auditwheel && \
+    sed -i 's/p.error/logger.warning/g' /usr/local/lib/python3.8/dist-packages/auditwheel/main_repair.py
+
+# install etcd
+RUN cd /tmp && \
+    wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz && \
+    tar zxvf etcd-v3.4.13-linux-amd64.tar.gz && \
+    mv etcd-v3.4.13-linux-amd64/etcd /usr/bin/ && \
+    mv etcd-v3.4.13-linux-amd64/etcdctl /usr/bin/ && \
+    rm -rf /tmp/etcd-v3.4.13-linux-amd64.tar.gz /tmp/etcd-v3.4.13-linux-amd64
+
+# install kubectl
+RUN cd /tmp && \
+    wget https://dl.k8s.io/release/v1.19.0/bin/linux/amd64/kubectl && \
+    chmod +x kubectl && \
+    mv kubectl /usr/bin/kubectl
+
+# install wait-for-it
+RUN cd /tmp && \
+    wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && \
+    chmod +x wait-for-it.sh && \
+    mv wait-for-it.sh /usr/bin/wait-for-it.sh
+
+COPY thirdparty/ thirdparty/
+
+# install cpprestsdk and etcd-cpp-apiv3
+RUN pushd thirdparty/cpprestsdk && \
+    mkdir build && \
+    pushd build && \
+    cmake .. \
+        -DBUILD_TESTS=OFF \
+        -DBUILD_SAMPLES=OFF \
+        -DCPPREST_EXCLUDE_WEBSOCKETS=ON && \
+    make install -j`nproc` && \
+    popd && \
+    rm -rf build && \
+    popd && \
+    pushd thirdparty/etcd-cpp-apiv3 && \
+    mkdir build && \
+    pushd build && \
+    cmake .. \
+        -DBUILD_ETCD_TESTS=OFF && \
+    make install -j`nproc` && \
+    popd && \
+    rm -rf build && \
+    popd
+
+# copy to workspace
+COPY cmake/ cmake/
+COPY README.rst README.rst
+COPY setup.cfg.in setup.cfg.in
+COPY setup.py setup.py
+COPY vineyard-config-version.in.cmake vineyard-config-version.in.cmake
+COPY vineyard-config.in.cmake vineyard-config.in.cmake
+
+COPY CMakeLists.txt CMakeLists.txt
+COPY modules/ modules/
+COPY python/ python/
+COPY src/ src/
+
+# build & install
+RUN mkdir build && \
+    cd build && \
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_EXTERNAL_ETCD_LIBS=ON \
+        -DBUILD_SHARED_LIBS=ON \
+        -DBUILD_VINEYARD_COVERAGE=OFF \
+        -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+        -DBUILD_VINEYARD_SERVER=ON \
+        -DBUILD_VINEYARD_CLIENT=ON \
+        -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
+        -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
+        -DBUILD_VINEYARD_BASIC=OFF \
+        -DBUILD_VINEYARD_GRAPH=OFF \
+        -DBUILD_VINEYARD_IO=OFF \
+        -DBUILD_VINEYARD_MIGRATION=ON \
+        -DBUILD_VINEYARD_TESTS=OFF \
+        -DBUILD_VINEYARD_TESTS_ALL=OFF \
+        -DBUILD_VINEYARD_PROFILING=OFF && \
+    make -j`nproc` && \
+    make vineyard_client_python -j`nproc` && \
+    make install && \
+    cd .. && \
+    python3 setup.py bdist_wheel && \
+    cd dist && \
+    auditwheel repair --plat=manylinux2014_x86_64 ./*.whl && \
+    pip3 install wheelhouse/*.whl && \
+    rm -rf /workspace

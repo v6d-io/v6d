@@ -1,0 +1,24 @@
+# permissions for end users to edit globalobjects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: globalobject-editor-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - globalobjects
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - globalobjects/status
+  verbs:
+  - get

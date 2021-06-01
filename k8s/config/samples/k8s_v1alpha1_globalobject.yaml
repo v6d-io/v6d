@@ -1,0 +1,15 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: GlobalObject
+metadata:
+  name: globalobject-sample
+spec:
+  # Add fields here
+  id: o123
+  signature: s111
+  typename: vineyard::GlobalTensor
+  instance_id: 0
+  members:
+  - a1
+  - a2
+  - a3
+  metadata: "yyy"

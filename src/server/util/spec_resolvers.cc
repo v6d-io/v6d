@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "gflags/gflags.h"
 
+#include "common/util/env.h"
 #include "common/util/logging.h"
 #include "server/util/spec_resolvers.h"
 
@@ -36,6 +37,8 @@ DEFINE_int64(stream_threshold, 80,
 DEFINE_string(socket, "/var/run/vineyard.sock", "IPC socket file location");
 // rpc
 DEFINE_int32(rpc_socket_port, 9600, "port to listen in rpc server");
+// Kubernetes
+DEFINE_bool(sync_crds, false, "Synchronize CRDs when persisting objects");
 
 namespace vineyard {
 
@@ -136,6 +139,8 @@ json RpcSpecResolver::resolve() const {
 json ServerSpecResolver::resolve() const {
   json spec;
   spec["deployment"] = FLAGS_deployment;
+  spec["sync_crds"] =
+      FLAGS_sync_crds || (read_env("VINEYARD_SYNC_CRDS") == "1");
   spec["metastore_spec"] = Resolver::get("etcd").resolve();
   spec["bulkstore_spec"] = Resolver::get("bulkstore").resolve();
   spec["ipc_spec"] = Resolver::get("ipcserver").resolve();

@@ -1,0 +1,24 @@
+# permissions for end users to edit localobjects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: localobject-editor-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - localobjects
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - localobjects/status
+  verbs:
+  - get
