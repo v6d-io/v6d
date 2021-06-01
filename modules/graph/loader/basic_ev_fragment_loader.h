@@ -73,6 +73,7 @@ class BasicEVFragmentLoader {
   boost::leaf::result<void> AddVertexTable(
       const std::string& label, std::shared_ptr<arrow::Table> vertex_table) {
     if (input_vertex_tables_.find(label) == input_vertex_tables_.end()) {
+      vertex_labels_.push_back(label);
       input_vertex_tables_[label] = vertex_table;
     } else {
       std::vector<std::shared_ptr<arrow::Table>> tables;
@@ -88,24 +89,10 @@ class BasicEVFragmentLoader {
   ///                 vertex_label_to_index_, vertex_labels_
   boost::leaf::result<void> ConstructVertices(
       ObjectID vm_id = InvalidObjectID()) {
-    std::vector<std::string> input_vertex_labels;
-    for (auto& pair : input_vertex_tables_) {
-      input_vertex_labels.push_back(pair.first);
+    for (size_t i = 0; i < vertex_labels_.size(); ++i) {
+      vertex_lable_to_index_[vertex_labels_[i]] = i;
     }
-    std::vector<std::vector<std::string>> gathered_vertex_labels;
-    GlobalAllGatherv(input_vertex_labels, gathered_vertex_labels, comm_spec_);
-    label_id_t cur_label = 0;
-    for (auto& vec : gathered_vertex_labels) {
-      for (auto& label_name : vec) {
-        if (vertex_label_to_index_.find(label_name) ==
-            vertex_label_to_index_.end()) {
-          vertex_label_to_index_[label_name] = cur_label;
-          vertex_labels_.push_back(label_name);
-          ++cur_label;
-        }
-      }
-    }
-    vertex_label_num_ = cur_label;
+    vertex_label_num_ = vertex_labels_.size();
 
     ordered_vertex_tables_.clear();
     ordered_vertex_tables_.resize(vertex_label_num_, nullptr);
@@ -214,19 +201,22 @@ class BasicEVFragmentLoader {
     label_id_t src_label_id, dst_label_id;
     auto iter = vertex_label_to_index_.find(src_label);
     if (iter == vertex_label_to_index_.end()) {
-      return boost::leaf::new_error(ErrorCode::kInvalidValueError,
-                                    "Invalid src vertex label " + src_label);
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "Invalid src vertex label " + src_label);
     }
     src_label_id = iter->second;
     iter = vertex_label_to_index_.find(dst_label);
     if (iter == vertex_label_to_index_.end()) {
-      return boost::leaf::new_error(ErrorCode::kInvalidValueError,
-                                    "Invalid dst vertex label " + dst_label);
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "Invalid dst vertex label " + dst_label);
     }
     dst_label_id = iter->second;
     input_edge_tables_[edge_label].emplace_back(
         std::make_pair(src_label_id, dst_label_id), edge_table);
-
+    if (std::find(std::begin(edge_labels_), std::end(edge_labels_),
+                  edge_label) != std::end(edge_labels_)) {
+      edge_labels_.push_back(edge_label);
+    }
     return {};
   }
 
@@ -282,25 +272,10 @@ class BasicEVFragmentLoader {
     if (vertex_label_num == 0) {
       vertex_label_num = vertex_label_num_;
     }
-    std::vector<std::string> input_edge_labels;
-    for (auto& pair : input_edge_tables_) {
-      input_edge_labels.push_back(pair.first);
+    for (size_t i = 0; i < edge_labels_.size(); ++i) {
+      edge_label_to_index_[edge_labels_[i]] = i;
     }
-    std::vector<std::vector<std::string>> gathered_edge_labels;
-    GlobalAllGatherv(input_edge_labels, gathered_edge_labels, comm_spec_);
-
-    label_id_t cur_label = 0;
-    for (auto& vec : gathered_edge_labels) {
-      for (auto& label_name : vec) {
-        if (edge_label_to_index_.find(label_name) ==
-            edge_label_to_index_.end()) {
-          edge_label_to_index_[label_name] = cur_label;
-          edge_labels_.push_back(label_name);
-          ++cur_label;
-        }
-      }
-    }
-    edge_label_num_ = cur_label;
+    edge_label_num_ = edge_labels_.size();
 
     ordered_edge_tables_.clear();
     ordered_edge_tables_.resize(edge_label_num_);
