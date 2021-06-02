@@ -59,7 +59,7 @@ RUN apk add --no-cache bash
 COPY --from=builder /tmp/dumb-init_1.2.2_amd64 /usr/bin/dumb-init
 COPY --from=builder /tmp/wait-for-it.sh /usr/bin/wait-for-it.sh
 COPY --from=builder /tmp/etcd-v3.4.13-linux-amd64/etcd /usr/bin/etcd
-COPY --from=builder /work/libvineyard/build/bin/vineyardd /usr/bin/local/vineyardd
+COPY --from=builder /work/libvineyard/build/bin/vineyardd /usr/local/bin/vineyardd
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/usr/local/bin/vineyardd"]
