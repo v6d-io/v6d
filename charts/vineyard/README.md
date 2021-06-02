@@ -1,11 +1,9 @@
 vineyard charts
 ===============
 
-![Vineyard](https://v6d.io/_static/vineyard-logo.png)
-
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard)](https://artifacthub.io/packages/helm/vineyard/vineyard)
 
-Vineyard is an in-memory immutable data manager that provides **out-of-box high-level**
+[Vineyard][3] is an in-memory immutable data manager that provides **out-of-box high-level**
 abstraction and **zero-copy in-memory** sharing for distributed data in big data tasks,
 such as numerical computing, machine learning, and graph analytics.
 
@@ -39,3 +37,4 @@ Please note that third-party libraries may not have the same license as vineyard
 
 [1]: https://artifacthub.io/packages/helm/vineyard/vineyard
 [2]: https://github.com/v6d-io/v6d/blob/main/charts/vineyard/values.yaml
+[3]: https://github.com/v6d-io/v6d
