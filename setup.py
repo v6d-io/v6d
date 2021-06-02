@@ -129,6 +129,7 @@ setup(
             'pytest-datafiles',
             'sphinx>=3.0.2',
             'sphinx_rtd_theme',
+            'docutils==0.16',
         ],
         "kubernetes": [
             "kubernetes",
