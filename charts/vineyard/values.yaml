@@ -39,6 +39,22 @@ affinity: {}
 vineyard:
   sharedMemorySize: ""
 
+  # volumeType controls the type of UNIX-domain socket volume, can
+  # be either "persistentVolumeClaim" or "hostPath"
+  volumeType: hostPath
+  size: 1Mi
+
+  # PVC name if volume type is persistentVolumeClaim
+  persistVolumeClaimName: "vineyard-domain-socket"
+  accessModes:
+    - ReadWriteOnce
+  storageClass: standard
+
+  # host path if volume type is "hostPath", the default value will be
+  #
+  #   /var/run/vineyard-{{ .Release.Namespace }}-{{ include "vineyard.fullname" . }}
+  hostPath: ""
+
 serviceAccountName: ""
 
 tolerations: {}

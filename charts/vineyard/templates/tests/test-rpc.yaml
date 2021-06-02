@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "{{ include "vineyard.fullname" . }}-test-ipc-service"
+  name: "{{ include "vineyard.fullname" . }}-test-rpc-service"
   labels:
     {{- include "vineyard.labels" . | nindent 4 }}
   annotations:
@@ -10,6 +10,6 @@ spec:
   containers:
     - name: wget
       image: busybox
-      command: ['bash', '-c']
-      args: ['true']
+      command: ['wget']
+      args: ['{{ include "vineyard.fullname" . }}:{{ .Values.service.port }}']
   restartPolicy: Never
