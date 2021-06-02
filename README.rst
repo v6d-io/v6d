@@ -15,7 +15,7 @@ that provides **out-of-the-box high-level** abstraction and **zero-copy in-memor
 distributed data in big data tasks, such as graph analytics (e.g., `GraphScope`_), numerical
 computing (e.g., `Mars`_), and machine learning.
 
-.. image:: https://v6d.io/_static/cncf-tiny.png
+.. image:: https://v6d.io/_static/cncf-color.svg
   :width: 400
   :alt: Vineyard is a CNCF sandbox project
 
