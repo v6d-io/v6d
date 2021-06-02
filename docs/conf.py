@@ -72,3 +72,5 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['images/']
 
 html_extra_path = ['./CNAME', './.nojekyll']
+
+html_favicon = "images/vineyard.ico"
