@@ -12,18 +12,18 @@ Install development dependencies
 
 Vineyard requires the following C++ packages for development:
 
-+ apache-arrow >= 0.17.1
-+ gflags
-+ glog
-+ boost
-+ gtest, for build test suites
-+ protobuf
-+ grpc
+- apache-arrow >= 0.17.1
+- gflags
+- glog
+- boost
+- gtest, for build test suites
+- protobuf
+- grpc
 
 and the following python packages that can be easily installed using `pip`:
 
-+ libclang
-+ parsec
+- libclang
+- parsec
 
 Build the source
 ----------------
@@ -42,18 +42,19 @@ The vineyardd target will be generated under the `bin` directory.
 Documentation
 -------------
 
-Documentation is generated using Doxygen and sphinx. Users can build vineyard's documentation in the build directory using:
+Documentation is generated using Doxygen and sphinx. Users can build vineyard's
+documentation in the :code:`docs/` directory using:
 
 .. code:: bash
 
-      cd build
-      make vineyard_doc
+    cd docs/
+    make html
 
 The HTML documentation will be available under `docs/_build/html`:
 
 .. code:: bash
 
-      open docs/index.html
+    open _build/html/index.html
 
 The latest version of online documentation can be found at https://v6d.io.
 
@@ -77,8 +78,14 @@ problem in the description, such as operating system version, vineyard
 version, and other system configurations to help us diagnose the problem.
 
 We also welcome any help on vineyard from the community, including but not
-limited to fixing bugs and adding new features. Note that you need to sign
-the `CLA`_ before submitting patches to us.
+limited to fixing bugs and adding new features. Our project vineyard has enabled
+`DCO`_ thus you will be asked to `sign-off`_ your commits that are included in
+your pull requests. Git has a :code:`-s` command line option that can `sign-off`_
+your commit automatically:
+
+.. code:: shell
+
+    git commit -s -m 'This is my commit message'
 
 Code format
 ^^^^^^^^^^^
@@ -108,9 +115,9 @@ the latest main branch, using the following commands:
 
 .. code:: shell
 
-      git remote add upstream https://github.com/v6d-io/v6d.git
-      git fetch upstream
-      git rebase upstream/main
+    git remote add upstream https://github.com/v6d-io/v6d.git
+    git fetch upstream
+    git rebase upstream/main
 
 + Then git may show you some conflicts when it cannot merge, say `conflict.cpp`,
   you need
@@ -119,19 +126,19 @@ the latest main branch, using the following commands:
 
 .. code:: shell
 
-        git add conflict.cpp
+    git add conflict.cpp
 
 + Then you can continue rebasing by
 
 .. code:: shell
 
-      git rebase --continue
+    git rebase --continue
 
 + Finally push to your fork, then the pull request will be got updated:
 
 .. code:: shell
 
-      git push --force
+    git push --force
 
 Cut a release
 -------------
@@ -144,6 +151,8 @@ found at `docker/pypa/Dockerfile.manylinux1`_.
 .. _manylinux1: https://github.com/pypa/manylinux
 .. _search: https://github.com/v6d-io/v6d/pulls
 .. _CLA: https://cla-assistant.io/v6d-io/v6d
+.. _DCO: https://github.com/apps/dco
+.. _sign-off: https://git-scm.com/docs/git-commit#Documentation/git-commit.txt--s
 .. _Google C++ Style Guide: https://google.github.io/styleguide/cppguide.html
 .. _docker/pypa/Dockerfile.manylinux1: https://github.com/v6d-io/v6d/blob/main/docker/pypa/Dockerfile.manylinux1
 .. _Apache License 2.0: https://github.com/v6d-io/v6d/blob/main/LICENSE
