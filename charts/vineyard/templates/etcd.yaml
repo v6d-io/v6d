@@ -40,7 +40,7 @@ spec:
     - etcd0=http://etcd0:2380,etcd1=http://etcd1:2380,etcd2=http://etcd2:2380
     - --initial-cluster-state
     - new
-    image: quay.io/coreos/etcd:latest
+    image: quay.io/coreos/etcd:v3.4.16
     name: etcd
     ports:
     - containerPort: 2379
@@ -99,7 +99,7 @@ spec:
     - etcd0=http://etcd0:2380,etcd1=http://etcd1:2380,etcd2=http://etcd2:2380
     - --initial-cluster-state
     - new
-    image: quay.io/coreos/etcd:latest
+    image: quay.io/coreos/etcd:v3.4.16
     name: etcd
     ports:
     - containerPort: 2379
@@ -158,7 +158,7 @@ spec:
     - etcd0=http://etcd0:2380,etcd1=http://etcd1:2380,etcd2=http://etcd2:2380
     - --initial-cluster-state
     - new
-    image: quay.io/coreos/etcd:latest
+    image: quay.io/coreos/etcd:v3.4.16
     name: etcd
     ports:
     - containerPort: 2379
