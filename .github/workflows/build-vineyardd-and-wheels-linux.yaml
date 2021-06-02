@@ -46,7 +46,7 @@ jobs:
       - name: Build vineyardd on Linux
         run: |
           sudo docker build . -f docker/Dockerfile.vineyardd -t docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/bin/vineyardd /target/"
+          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/bin/local/vineyardd /target/"
           ldd ./vineyardd
 
       - name: Package vineyardd artifact on Linux
