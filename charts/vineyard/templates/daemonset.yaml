@@ -105,9 +105,20 @@ spec:
             mountPath: /dev/shm
 
       volumes:
+      {{- if eq .Values.vineyard.volumeType "hostPath" }}
       - name: run
         hostPath:
+          {{- if .Values.vineyard.hostPath }}
+          path: {{ .Values.vineyard.hostPath }}
+          {{- else }}
           path: /var/run/vineyard-{{ .Release.Namespace }}-{{ include "vineyard.fullname" . }}
+          {{- end }}
+      {{- end }}
+      {{- if eq .Values.vineyard.volumeType "persistentVolumeClaim" }}
+      - name: run
+        persistentVolumeClaim:
+          claimName: "{{ .Values.vineyard.persistVolumeClaimName }}"
+      {{- end }}
       - name: shm
         emptyDir:
           medium: Memory
