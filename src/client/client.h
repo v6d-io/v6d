@@ -382,6 +382,11 @@ class Client : public ClientBase {
                                                    const bool regex = false,
                                                    size_t const limit = 5);
 
+  /**
+   * Get the allocated size for the given object.
+   */
+  Status AllocatedSize(const ObjectID id, size_t& size);
+
   Status CreateArena(const size_t size, int& fd, size_t& available_size,
                      uintptr_t& base, uintptr_t& space);
 
@@ -397,6 +402,9 @@ class Client : public ClientBase {
   Status GetBuffers(
       const std::set<ObjectID>& ids,
       std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers);
+
+  Status GetBufferSizes(const std::set<ObjectID>& ids,
+                        std::map<ObjectID, size_t>& sizes);
 
   /**
    * @brief An (unsafe) internal-usage method that drop the buffer, without
