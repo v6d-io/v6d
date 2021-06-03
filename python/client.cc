@@ -358,6 +358,18 @@ void bind_client(py::module& mod) {
           "object_ids"_a, py::arg("sync_remote") = false)
       .def("list_objects", &Client::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5)
+      .def("allocated_size", [](Client *self, const ObjectID id) -> size_t {
+          size_t size = 0;
+          throw_on_error(self->AllocatedSize(id, size));
+          return size;
+      }, "target"_a)
+      .def("allocated_size", [](Client *self, const Object *target) -> size_t {
+          size_t size = 0;
+          if (target) {
+            throw_on_error(self->AllocatedSize(target->id(), size));
+          }
+          return size;
+      }, "target"_a)
       .def("close",
            [](Client* self) {
              return ClientManager<Client>::GetManager()->Disconnect(

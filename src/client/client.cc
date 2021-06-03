@@ -309,6 +309,24 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
   return objects;
 }
 
+Status Client::AllocatedSize(const ObjectID id, size_t& size) {
+  ENSURE_CONNECTED(this);
+  json tree;
+  RETURN_ON_ERROR(GetData(id, tree, false));
+  ObjectMeta meta;
+  meta.SetMetaData(this, tree);
+
+  std::map<ObjectID, size_t> sizes;
+  RETURN_ON_ERROR(GetBufferSizes(meta.GetBufferSet()->AllBufferIds(), sizes));
+  size = 0;
+  for (auto const& sz : sizes) {
+    if (sz.second > 0) {
+      size += sz.second;
+    }
+  }
+  return Status::OK();
+}
+
 Status Client::CreateArena(const size_t size, int& fd, size_t& available_size,
                            uintptr_t& base, uintptr_t& space) {
   ENSURE_CONNECTED(this);
@@ -395,6 +413,25 @@ Status Client::GetBuffers(
     buffer = std::make_shared<arrow::Buffer>(shared + item.second.data_offset,
                                              item.second.data_size);
     buffers.emplace(item.first, buffer);
+  }
+  return Status::OK();
+}
+
+Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
+                              std::map<ObjectID, size_t>& sizes) {
+  if (ids.empty()) {
+    return Status::OK();
+  }
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteGetBuffersRequest(ids, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  std::map<ObjectID, Payload> payloads;
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
+  for (auto const& item : payloads) {
+    sizes.emplace(item.first, item.second.data_size);
   }
   return Status::OK();
 }

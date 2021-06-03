@@ -492,6 +492,13 @@ Parameters:
         The name that will be removed.
 ''')
 
+add_doc(ClientBase.sync_meta, r'''
+.. method:: sync_meta() -> None
+    :noindex:
+
+Synchronize remote metadata to local immediately.
+''')
+
 add_doc(ClientBase.connected, r'''
 Whether the client instance has been connected to the vineyard server.
 ''')
@@ -655,6 +662,21 @@ Parameters:
 
 Returns:
     List[Object]
+''')
+
+add_doc(
+    IPCClient.allocated_size, r'''
+.. method:: allocated_size(target: Object or ObjectID) -> int
+    :noindex:
+
+Get the allocated size of the given object.
+
+Parameters:
+    target: Object or ObjectID
+        The given Object.
+
+Returns:
+    int
 ''')
 
 add_doc(IPCClient.close, r'''
