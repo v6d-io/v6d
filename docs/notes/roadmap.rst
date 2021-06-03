@@ -3,8 +3,9 @@ Roadmap
 
 Vineyard aims to serve as an open-source in-memory immutable data manager. We
 cut a major release once a year, a minor release for about every two months,
-and a patch release every one or two weeks. The roadmap for major vineyard
-releases are listed as follows:
+and a patch release every one or two weeks.
+
+The roadmap for major vineyard releases are listed as follows:
 
 v0.5.0
 ------
@@ -73,4 +74,4 @@ Release Notes
 -------------
 
 For more details about what changes happened for every version, please refer to
-our `releases notes <https://github.com/v6d-io/v6d/releases>`_.
+our `releases notes`_, and `milestones`_ as well.
