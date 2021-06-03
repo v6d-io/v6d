@@ -313,7 +313,7 @@ Status BulkStore::FinalizeArena(const int fd,
   VLOG(2) << "finalizing arena (fd) " << fd << "...";
   auto arena = arenas_.find(fd);
   if (arena == arenas_.end()) {
-    return Status::ObjectNotExists("Arena for fd " + std::to_string(fd) +
+    return Status::ObjectNotExists("arena for fd " + std::to_string(fd) +
                                    " cannot be found");
   }
   if (offsets.size() != sizes.size()) {

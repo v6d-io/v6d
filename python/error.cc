@@ -45,7 +45,7 @@ namespace vineyard {
 #ifndef THROW_ON_ERROR_OF
 #define THROW_ON_ERROR_OF(name) \
   case StatusCode::k##name:     \
-    throw name##Exception(status.message())
+    throw name##Exception(status.ToString())
 #endif
 
 DEFINE_PYBIND_EXCEPTION(Invalid);

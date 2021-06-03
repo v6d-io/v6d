@@ -21,6 +21,7 @@ import json
 import logging
 import random
 import time
+import multiprocessing
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -37,8 +38,12 @@ register_builtin_types(default_builder_context, default_resolver_context)
 logger = logging.getLogger('vineyard')
 
 
+def generate_vineyard_ipc_sockets(vineyard_ipc_sockets, nclients):
+    return list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), nclients))
+
+
 def generate_vineyard_ipc_clients(vineyard_ipc_sockets, nclients):
-    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), nclients))
+    vineyard_ipc_sockets = generate_vineyard_ipc_sockets(vineyard_ipc_sockets, nclients)
     return tuple(vineyard.connect(sock) for sock in vineyard_ipc_sockets)
 
 
@@ -218,6 +223,116 @@ def test_concurrent_meta(vineyard_ipc_sockets):
             rs.append(future.result())
         if not all(rs):
             pytest.fail("Failed to execute tests ...")
+
+
+def test_concurrent_meta_mp(vineyard_ipc_sockets):
+    num_proc = 8
+    job_per_proc = 64
+
+    vineyard_ipc_sockets = \
+            generate_vineyard_ipc_sockets(vineyard_ipc_sockets, num_proc)
+
+    def job1(rs, client):
+        try:
+            o = client.get_object(client.put(1))
+            # client.persist(o.id)
+            if random.random() > 0.5:
+                client.delete(o.id)
+            else:
+                client.sync_meta()
+        except Exception as e:  # pylint: disable=broad-except
+            print('failed: %s' % e, flush=True)
+            rs.put((False, 'failed: %s' % e))
+        else:
+            rs.put((True, ''))
+        finally:
+            print('job finished', flush=True)
+
+    def job2(rs, client):
+        try:
+            o = client.get_object(client.put(1.23456))
+            # client.persist(o.id)
+            if random.random() > 0.5:
+                client.delete(o.id)
+            else:
+                client.sync_meta()
+        except Exception as e:  # pylint: disable=broad-except
+            print('failed: %s' % e, flush=True)
+            rs.put((False, 'failed: %s' % e))
+        else:
+            rs.put((True, ''))
+        finally:
+            print('job finished', flush=True)
+
+    def job3(rs, client):
+        try:
+            o = client.get_object(client.put('xxxxabcd'))
+            # client.persist(o.id)
+            if random.random() > 0.5:
+                client.delete(o.id)
+            else:
+                client.sync_meta()
+        except Exception as e:  # pylint: disable=broad-except
+            print('failed: %s' % e, flush=True)
+            rs.put((False, 'failed: %s' % e))
+        else:
+            rs.put((True, ''))
+        finally:
+            print('job finished', flush=True)
+
+    def job4(rs, client):
+        try:
+            o = client.get_object(client.put((1, 1.2345)))
+            # client.persist(o.id)
+            if random.random() > 0.5:
+                client.delete(o.id)
+            else:
+                client.sync_meta()
+        except Exception as e:  # pylint: disable=broad-except
+            print('failed: %s' % e, flush=True)
+            rs.put((False, 'failed: %s' % e))
+        else:
+            rs.put((True, ''))
+        finally:
+            print('job finished', flush=True)
+
+    def job5(rs, client):
+        try:
+            o = client.get_object(client.put((1, 1.2345, 'xxxxabcd')))
+            # client.persist(o.id)
+            if random.random() > 0.5:
+                client.delete(o.id)
+            else:
+                client.sync_meta()
+        except Exception as e:  # pylint: disable=broad-except
+            print('failed: %s' % e, flush=True)
+            rs.put((False, 'failed: %s' % e))
+        else:
+            rs.put((True, ''))
+        finally:
+            print('job finished', flush=True)
+
+    def start_requests(rs, ipc_socket):
+        jobs = [job1, job2, job3, job4, job5]
+        client = vineyard.connect(ipc_socket).fork()
+
+        for _ in range(job_per_proc):
+            job = random.choice(jobs)
+            job(rs, client)
+
+    procs, rs = [], multiprocessing.Queue()
+    for sock in vineyard_ipc_sockets:
+        proc = multiprocessing.Process(target=start_requests, args=(
+            rs,
+            sock,
+        ))
+        proc.start()
+        procs.append(proc)
+
+    for _ in range(num_proc * job_per_proc):
+        r, message = rs.get(block=True)
+        if not r:
+            pytest.fail(message)
 
 
 def test_concurrent_persist(vineyard_ipc_sockets):

@@ -47,7 +47,8 @@ Status StreamStore::Create(ObjectID const stream_id) {
 
 Status StreamStore::Open(ObjectID const stream_id, int64_t const mode) {
   if (streams_.find(stream_id) == streams_.end()) {
-    return Status::ObjectNotExists();
+    return Status::ObjectNotExists("stream cannot be open: " +
+                                   ObjectIDToString(stream_id));
   }
   if (streams_[stream_id]->open_mark & mode) {
     return Status::StreamOpened();
@@ -61,7 +62,8 @@ Status StreamStore::Open(ObjectID const stream_id, int64_t const mode) {
 Status StreamStore::Get(ObjectID const stream_id, size_t const size,
                         callback_t<const ObjectID> callback) {
   if (streams_.find(stream_id) == streams_.end()) {
-    return callback(Status::ObjectNotExists(), InvalidObjectID());
+    return callback(Status::ObjectNotExists("failed to pull from stream"),
+                    InvalidObjectID());
   }
   auto stream = streams_.at(stream_id);
 
@@ -109,7 +111,8 @@ Status StreamStore::Get(ObjectID const stream_id, size_t const size,
 Status StreamStore::Pull(ObjectID const stream_id,
                          callback_t<const ObjectID> callback) {
   if (streams_.find(stream_id) == streams_.end()) {
-    return callback(Status::ObjectNotExists(), InvalidObjectID());
+    return callback(Status::ObjectNotExists("failed to put to stream"),
+                    InvalidObjectID());
   }
   auto stream = streams_.at(stream_id);
 
@@ -164,7 +167,8 @@ Status StreamStore::Pull(ObjectID const stream_id,
 
 Status StreamStore::Stop(ObjectID const stream_id, bool failed) {
   if (streams_.find(stream_id) == streams_.end()) {
-    return Status::ObjectNotExists();
+    return Status::ObjectNotExists("failed to stop stream: " +
+                                   ObjectIDToString(stream_id));
   }
   auto stream = streams_.at(stream_id);
   // the stream is still running
@@ -219,7 +223,8 @@ Status StreamStore::Stop(ObjectID const stream_id, bool failed) {
 
 Status StreamStore::Drop(ObjectID const stream_id) {
   if (streams_.find(stream_id) == streams_.end()) {
-    return Status::ObjectNotExists();
+    return Status::ObjectNotExists("failed to drop stream: " +
+                                   ObjectIDToString(stream_id));
   }
   auto stream = streams_.at(stream_id);
   stream->failed = true;

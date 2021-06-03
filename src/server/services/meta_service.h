@@ -237,8 +237,12 @@ class IMetaService {
           });
     } else {
       // post the task to asio queue as well for well-defined processing order.
+      //
+      // Note that we need to pass `meta_` as reference, see also:
+      //
+      //    https://www.boost.org/doc/libs/1_73_0/libs/bind/doc/html/bind.html
       server_ptr_->GetMetaContext().post(
-          boost::bind(callback, Status::OK(), meta_));
+          boost::bind(callback, Status::OK(), std::ref(meta_)));
     }
   }
 
@@ -249,9 +253,12 @@ class IMetaService {
                  bool&>
           callback_after_ready,
       callback_t<> callback_after_finish) {
-    // generate ops.
-    std::vector<op_t> ops;
-    {
+    server_ptr_->GetMetaContext().post([this, object_ids, force, deep,
+                                        callback_after_ready,
+                                        callback_after_finish]() {
+      // generated ops.
+      std::vector<op_t> ops;
+
       bool sync_remote = false;
       std::vector<ObjectID> processed_delete_set;
       findDeleteSet(object_ids, processed_delete_set, force, deep);
@@ -270,34 +277,35 @@ class IMetaService {
         VINEYARD_DISCARD(callback_after_finish(s));
         return;
       }
-    }
 
-    // apply remote updates
-    //
-    // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
-    // avoid contention between other vineyard instances.
-    this->requestLock(
-        meta_sync_lock_,
-        [this, ops /* by copy */, callback_after_ready, callback_after_finish](
-            const Status& status, std::shared_ptr<ILock> lock) {
-          if (status.ok()) {
-            rev_ = lock->GetRev();
-            // commit to etcd
-            this->commitUpdates(ops, [this, callback_after_finish, lock](
-                                         const Status& status, unsigned rev) {
-              // update rev_ to the revision after unlock.
-              unsigned rev_after_unlock = 0;
-              if (lock->Release(rev_after_unlock).ok()) {
-                rev_ = rev_after_unlock;
-              }
-              return callback_after_finish(status);
-            });
-            return Status::OK();
-          } else {
-            LOG(ERROR) << status.ToString();
-            return callback_after_finish(status);  // propogate the error.
-          }
-        });
+      // apply remote updates
+      //
+      // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
+      // avoid contention between other vineyard instances.
+      this->requestLock(
+          meta_sync_lock_,
+          [this, ops /* by copy */, callback_after_ready,
+           callback_after_finish](const Status& status,
+                                  std::shared_ptr<ILock> lock) {
+            if (status.ok()) {
+              rev_ = lock->GetRev();
+              // commit to etcd
+              this->commitUpdates(ops, [this, callback_after_finish, lock](
+                                           const Status& status, unsigned rev) {
+                // update rev_ to the revision after unlock.
+                unsigned rev_after_unlock = 0;
+                if (lock->Release(rev_after_unlock).ok()) {
+                  rev_ = rev_after_unlock;
+                }
+                return callback_after_finish(status);
+              });
+              return Status::OK();
+            } else {
+              LOG(ERROR) << status.ToString();
+              return callback_after_finish(status);  // propogate the error.
+            }
+          });
+    });
   }
 
   inline void RequestToShallowCopy(
@@ -389,7 +397,7 @@ class IMetaService {
                 boost::bind(&IMetaService::daemonWatchHandler, this, _1, _2,
                             _3));
             // start heartbeat
-            this->startHeartbeat();
+            VINEYARD_DISCARD(this->startHeartbeat(Status::OK()));
             // mark meta service as ready
             Ready();
           } else {
@@ -407,7 +415,7 @@ class IMetaService {
    *  - the last one watches for the first one;
    *  - if there's only one instance, it does nothing.
    */
-  void checkInstanceStatus() {
+  void checkInstanceStatus(callback_t<> callback_after_finish) {
     RequestToPersist(
         [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
           if (status.ok()) {
@@ -421,10 +429,10 @@ class IMetaService {
             return status;
           }
         },
-        [&](const Status& status) {
+        [&, callback_after_finish](const Status& status) {
           if (!status.ok()) {
             LOG(ERROR) << "Failed to refresh self: " << status.ToString();
-            return status;
+            return callback_after_finish(status);
           }
           auto the_next =
               instances_list_.upper_bound(server_ptr_->instance_id());
@@ -433,7 +441,7 @@ class IMetaService {
           }
           InstanceID target_inst = *the_next;
           if (target_inst == server_ptr_->instance_id()) {
-            return Status::OK();
+            return callback_after_finish(status);
           }
           VLOG(10) << "Instance size " << instances_list_.size()
                    << ", target instance is " << target_inst;
@@ -470,15 +478,21 @@ class IMetaService {
                     }
                     return status;
                   },
-                  [&](const Status& status) { return status; });
+                  [&, callback_after_finish](const Status& status) {
+                    return callback_after_finish(status);
+                  });
               VINEYARD_SUPPRESS(server_ptr_->DeleteAllAt(meta_, target_inst));
+              return status;
+            } else {
+              return callback_after_finish(status);
             }
+          } else {
+            return callback_after_finish(status);
           }
-          return status;
         });
   }
 
-  void startHeartbeat() {
+  Status startHeartbeat(Status const&) {
     heartbeat_timer_.reset(new asio::steady_timer(
         server_ptr_->GetMetaContext(), std::chrono::seconds(HEARTBEAT_TIME)));
     heartbeat_timer_->async_wait([&](const boost::system::error_code& error) {
@@ -486,11 +500,10 @@ class IMetaService {
         LOG(ERROR) << "heartbeat timer error: " << error << ", "
                    << error.message();
       }
-      // run check
-      checkInstanceStatus();
-      // run the next round
-      startHeartbeat();
+      // run check, and start the next round in the finish callback.
+      checkInstanceStatus(boost::bind(&IMetaService::startHeartbeat, this, _1));
     });
+    return Status::OK();
   }
 
  protected:

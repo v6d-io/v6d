@@ -197,7 +197,6 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
             VLOG(10) << "=========================================";
           }
 #endif
-
           auto test_task = [this, ids](const json& meta) -> bool {
             for (auto const& id : ids) {
               bool exists = false;
@@ -465,7 +464,8 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
           auto status = CATCH_JSON_ERROR(
               meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
           if (status.IsMetaTreeSubtreeNotExists()) {
-            return Status::ObjectNotExists(status.ToString());
+            return Status::ObjectNotExists("failed to delete: " +
+                                           status.ToString());
           }
           return status;
         } else {
@@ -526,38 +526,39 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
                                DeferredReq::alive_t alive,
                                callback_t<const ObjectID&> callback) {
   ENSURE_VINEYARDD_READY();
-  meta_service_ptr_->RequestToGetData(
-      true, [this, name, wait, alive, callback](const Status& status,
+  meta_service_ptr_->RequestToGetData(true, [this, name, wait, alive, callback](
+                                                const Status& status,
                                                 const json& meta) {
-        if (status.ok()) {
-          auto test_task = [name](const json& meta) -> bool {
-            auto names = meta.value("names", json(nullptr));
-            if (names.is_object()) {
-              return names.contains(name);
-            }
-            return false;
-          };
-          auto eval_task = [name, callback](const json& meta) -> Status {
-            auto names = meta.value("names", json(nullptr));
-            if (names.is_object() && names.contains(name)) {
-              auto entry = names[name];
-              if (!entry.is_null()) {
-                return callback(Status::OK(), entry.get<ObjectID>());
-              }
-            }
-            return callback(Status::ObjectNotExists(), InvalidObjectID());
-          };
-          if (!wait || test_task(meta)) {
-            return eval_task(meta);
-          } else {
-            deferred_.emplace_back(alive, test_task, eval_task);
-            return Status::OK();
-          }
-        } else {
-          LOG(ERROR) << status.ToString();
-          return status;
+    if (status.ok()) {
+      auto test_task = [name](const json& meta) -> bool {
+        auto names = meta.value("names", json(nullptr));
+        if (names.is_object()) {
+          return names.contains(name);
         }
-      });
+        return false;
+      };
+      auto eval_task = [name, callback](const json& meta) -> Status {
+        auto names = meta.value("names", json(nullptr));
+        if (names.is_object() && names.contains(name)) {
+          auto entry = names[name];
+          if (!entry.is_null()) {
+            return callback(Status::OK(), entry.get<ObjectID>());
+          }
+        }
+        return callback(Status::ObjectNotExists("failed to find name: " + name),
+                        InvalidObjectID());
+      };
+      if (!wait || test_task(meta)) {
+        return eval_task(meta);
+      } else {
+        deferred_.emplace_back(alive, test_task, eval_task);
+        return Status::OK();
+      }
+    } else {
+      LOG(ERROR) << status.ToString();
+      return status;
+    }
+  });
   return Status::OK();
 }
 
