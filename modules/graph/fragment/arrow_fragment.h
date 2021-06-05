@@ -1035,7 +1035,7 @@ class ArrowFragment
         for (size_t k = 0; k < tvnums_[v_label].size(); ++k) {
           offsets[k] = offset_array[k];
         }
-        for (size_t k = tvnums_[v_label].size(); i < tvnums[v_label].size();
+        for (size_t k = tvnums_[v_label].size(); k < tvnums[v_label].size();
              ++k) {
           offsets[k] = offsets[k - 1];
         }
@@ -1608,7 +1608,7 @@ class ArrowFragment
     std::vector<std::shared_ptr<vineyard::Table>> vy_edge_tables;
 
     // This is for extra edge labels.
-    // Size is vertex_label_num_ * extra_edge_label_num_
+    // Size is vertex_label_num_ * extra_edge_label_num
     std::vector<std::vector<std::shared_ptr<vineyard::FixedSizeBinaryArray>>>
         vy_ie_lists, vy_oe_lists;
     std::vector<std::vector<std::shared_ptr<vineyard::NumericArray<int64_t>>>>
@@ -1751,7 +1751,7 @@ class ArrowFragment
         for (size_t k = 0; k < tvnums_[v_label].size(); ++k) {
           offsets[k] = offset_array[k];
         }
-        for (size_t k = tvnums_[v_label].size(); i < tvnums[v_label].size();
+        for (size_t k = tvnums_[v_label].size(); k < tvnums[v_label].size();
              ++k) {
           offsets[k] = offsets[k - 1];
         }
@@ -2012,12 +2012,12 @@ class ArrowFragment
                             vertex_label_num_, extra_edge_label_num, 0,
                             edge_label_num_);
       GENERATE_VEC_VEC_META("ie_offsets_lists", vy_ie_offsets_lists_expanded,
-                            vertex_label_num_, edge_label_num, 0, 0);
+                            vertex_label_num_, edge_label_num_, 0, 0);
     }
     GENERATE_VEC_VEC_META("oe_lists", vy_oe_lists, vertex_label_num_,
                           extra_edge_label_num, 0, edge_label_num_);
     GENERATE_VEC_VEC_META("oe_offsets_lists", vy_oe_offsets_lists,
-                          vertex_label_num_, extra_edge_label_num_, 0,
+                          vertex_label_num_, extra_edge_label_num, 0,
                           edge_label_num_);
     GENERATE_VEC_VEC_META("oe_offsets_lists", vy_oe_offsets_lists_expanded,
                           vertex_label_num_, edge_label_num_, 0, 0);
