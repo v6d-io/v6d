@@ -497,6 +497,75 @@ void PropertyGraphSchema::DumpToFile(std::string const& path) {
   json_file.close();
 }
 
+bool PropertyGraphSchema::Validate() {
+  // We only need to check entries that are still valid.
+  auto v_entries = vertex_entries();
+  auto e_entries = edge_entries();
+
+  std::vector<Entry::PropertyDef> all_props;
+  for (const auto& entry : v_entries) {
+    all_props.insert(all_props.end(), entry.properties().begin(),
+                     entry.properties().end());
+  }
+  for (const auto& entry : e_entries) {
+    all_props.insert(all_props.end(), entry.properties().begin(),
+                     entry.properties().end());
+  }
+  std::sort(
+      all_props.begin(), all_props.end(),
+      [](const auto& lhs, const auto& rhs) { return lhs.name < rhs.name; });
+
+  for (size_t i = 1; i < all_props.size(); ++i) {
+    if (all_props[i].name == all_props[i - 1].name &&
+        !all_props[i].type->Equals(all_props[i - 1].type)) {
+      LOG(ERROR) << "Properties with the same name should have the same type. "
+                    "Found mismatch: "
+                 << all_props[i].type->ToString() << " versus "
+                 << all_props[i - 1].type->ToString();
+      return false;
+    }
+  }
+  // Gather all property names and unique them
+  std::set<std::string> prop_names;
+  for (const auto& entry : vertex_entries_) {
+    for (const auto& prop : entry.props_) {
+      prop_names.insert(prop.name);
+    }
+  }
+  for (const auto& entry : edge_entries_) {
+    for (const auto& prop : entry.props_) {
+      prop_names.insert(prop.name);
+    }
+  }
+
+  // Assign a id to each name.
+  name_to_idx_.clear();
+  for (auto iter = prop_names.begin(); iter != prop_names.end(); ++iter) {
+    name_to_idx_[*iter] = std::distance(prop_names.begin(), iter);
+  }
+  for (auto& entry : vertex_entries_) {
+    entry.mapping.resize(prop_names.size());
+    entry.reverse_mapping.resize(prop_names.size());
+    for (auto& prop : entry.props_) {
+      entry.mapping[prop.id] = name_to_idx_[prop.name];
+      entry.reverse_mapping[name_to_idx_[prop.name]] = prop.id;
+    }
+  }
+  for (auto& entry : edge_entries_) {
+    entry.mapping.resize(prop_names.size());
+    entry.reverse_mapping.resize(prop_names.size());
+    for (auto& prop : entry.props_) {
+      entry.mapping[prop.id] = name_to_idx_[prop.name];
+      entry.reverse_mapping[name_to_idx_[prop.name]] = prop.id;
+    }
+  }
+  return true;
+}
+const std::map<std::string, int>&
+PropertyGraphSchema::GetPropertyNameToIDMapping() const {
+  return name_to_idx_;
+}
+
 MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   const auto& v_entries = schema.vertex_entries_;
   const auto& e_entries = schema.edge_entries_;

@@ -90,7 +90,7 @@ class BasicEVFragmentLoader {
   boost::leaf::result<void> ConstructVertices(
       ObjectID vm_id = InvalidObjectID()) {
     for (size_t i = 0; i < vertex_labels_.size(); ++i) {
-      vertex_lable_to_index_[vertex_labels_[i]] = i;
+      vertex_label_to_index_[vertex_labels_[i]] = i;
     }
     vertex_label_num_ = vertex_labels_.size();
 
@@ -154,6 +154,7 @@ class BasicEVFragmentLoader {
       metadata->Append("label", vertex_labels_[v_label]);
       metadata->Append("label_id", std::to_string(v_label));
       metadata->Append("type", "VERTEX");
+      metadata->Append("retain_oid", std::to_string(retain_oid_));
       output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
     }
     if (vm_id == InvalidObjectID()) {
@@ -428,7 +429,7 @@ class BasicEVFragmentLoader {
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr_);
 
     PropertyGraphSchema schema;
-    initSchema(schema);
+    BOOST_LEAF_CHECK(initSchema(schema));
     frag_builder.SetPropertyGraphSchema(std::move(schema));
 
     int thread_num =
@@ -546,7 +547,7 @@ class BasicEVFragmentLoader {
     return std::make_shared<arrow::ChunkedArray>(chunks_out);
   }
 
-  void initSchema(PropertyGraphSchema& schema) {
+  boost::leaf::result<void> initSchema(PropertyGraphSchema& schema) {
     schema.set_fnum(comm_spec_.fnum());
     for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
       std::string vertex_label = vertex_labels_[v_label];
@@ -583,6 +584,10 @@ class BasicEVFragmentLoader {
                            table->schema()->field(i)->type());
       }
     }
+    if (!schema.Validate()) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Schema is invalid.");
+    }
+    return {};
   }
 
   boost::leaf::result<void> generateEdgeId(
