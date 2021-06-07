@@ -162,7 +162,7 @@ static Status get_sub_tree(const json& tree, const std::string& prefix,
       return Status::OK();
     }
   }
-  return Status::MetaTreeSubtreeNotExists(name);
+  return Status::MetaTreeSubtreeNotExists("get subtree failed: " + name);
 }
 
 static bool has_sub_tree(const json& tree, const std::string& prefix,
@@ -413,7 +413,7 @@ Status DelDataOps(const json& tree, const std::string& name,
       return Status::OK();
     }
   }
-  return Status::MetaTreeSubtreeNotExists(name);
+  return Status::MetaTreeSubtreeNotExists("delete subtree failed: " + name);
 }
 
 static void generate_put_ops(const json& meta, const json& diff,

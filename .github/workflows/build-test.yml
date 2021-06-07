@@ -288,6 +288,7 @@ jobs:
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
+          rm -rf /dev/shm/etcd*
           python3 test/runner.py --with-cpp
 
       - name: Setup tmate session
@@ -298,6 +299,9 @@ jobs:
         uses: sighingnow/action-tmate@master
         with:
           script-to-run: |
+            # enable coredump for debugging
+            ulimit -c unlimited
+
             export VINEYARD_DEV=TRUE
 
             export VINEYARD_DATA_DIR=`pwd`/gstest
@@ -305,6 +309,7 @@ jobs:
             export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
             rm -rf default.etcd
+            rm -rf /dev/shm/etcd*
             python3 test/runner.py --with-python --with-migration
 
       - name: Setup tmate session
@@ -320,6 +325,7 @@ jobs:
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
+          rm -rf /dev/shm/etcd*
           python3 test/runner.py --with-io --with-migration
 
       - name: Setup tmate session

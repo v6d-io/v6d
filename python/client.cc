@@ -375,6 +375,11 @@ void bind_client(py::module& mod) {
              return ClientManager<Client>::GetManager()->Disconnect(
                  self->IPCSocket());
            })
+      .def("fork", [](Client *self) {
+        std::shared_ptr<Client> client(new Client());
+        throw_on_error(self->Fork(*client));
+        return client;
+      })
       .def("__enter__", [](Client* self) { return self; })
       .def("__exit__", [](Client* self, py::object, py::object, py::object) {
         // DO NOTHING
@@ -431,6 +436,11 @@ void bind_client(py::module& mod) {
              return ClientManager<RPCClient>::GetManager()->Disconnect(
                  self->RPCEndpoint());
            })
+      .def("fork", [](Client *self) {
+        std::shared_ptr<Client> client(new Client());
+        throw_on_error(self->Fork(*client));
+        return client;
+      })
       .def_property_readonly("remote_instance_id", &RPCClient::remote_instance_id)
       .def("__enter__", [](RPCClient* self) { return self; })
       .def("__exit__", [](RPCClient* self, py::object, py::object, py::object) {

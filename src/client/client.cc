@@ -383,7 +383,8 @@ Status Client::GetBuffer(const ObjectID id,
   std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
   RETURN_ON_ERROR(GetBuffers({id}, buffers));
   if (buffers.empty()) {
-    return Status::ObjectNotExists();
+    return Status::ObjectNotExists("buffer not exists: " +
+                                   ObjectIDToString(id));
   }
   buffer = buffers.at(id);
   return Status::OK();

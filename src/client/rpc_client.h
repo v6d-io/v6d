@@ -172,7 +172,8 @@ class RPCClient : public ClientBase {
   Status GetObject(const ObjectID id, std::shared_ptr<T>& object) {
     object = std::dynamic_pointer_cast<T>(GetObject(id));
     if (object == nullptr) {
-      return Status::ObjectNotExists();
+      return Status::ObjectNotExists("object not exists: " +
+                                     ObjectIDToString(id));
     } else {
       return Status::OK();
     }
