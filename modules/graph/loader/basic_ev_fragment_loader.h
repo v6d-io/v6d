@@ -215,7 +215,7 @@ class BasicEVFragmentLoader {
     input_edge_tables_[edge_label].emplace_back(
         std::make_pair(src_label_id, dst_label_id), edge_table);
     if (std::find(std::begin(edge_labels_), std::end(edge_labels_),
-                  edge_label) != std::end(edge_labels_)) {
+                  edge_label) == std::end(edge_labels_)) {
       edge_labels_.push_back(edge_label);
     }
     return {};

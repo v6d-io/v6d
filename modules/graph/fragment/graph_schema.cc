@@ -504,12 +504,12 @@ bool PropertyGraphSchema::Validate() {
 
   std::vector<Entry::PropertyDef> all_props;
   for (const auto& entry : v_entries) {
-    all_props.insert(all_props.end(), entry.properties().begin(),
-                     entry.properties().end());
+    auto properties = entry.properties();
+    all_props.insert(all_props.end(), properties.begin(), properties.end());
   }
   for (const auto& entry : e_entries) {
-    all_props.insert(all_props.end(), entry.properties().begin(),
-                     entry.properties().end());
+    auto properties = entry.properties();
+    all_props.insert(all_props.end(), properties.begin(), properties.end());
   }
   std::sort(
       all_props.begin(), all_props.end(),
@@ -519,9 +519,9 @@ bool PropertyGraphSchema::Validate() {
     if (all_props[i].name == all_props[i - 1].name &&
         !all_props[i].type->Equals(all_props[i - 1].type)) {
       LOG(ERROR) << "Properties with the same name should have the same type. "
-                    "Found mismatch: "
-                 << all_props[i].type->ToString() << " versus "
-                 << all_props[i - 1].type->ToString();
+                    "Found mismatch of property "
+                 << all_props[i].name << ": " << all_props[i].type->ToString()
+                 << " versus " << all_props[i - 1].type->ToString();
       return false;
     }
   }
