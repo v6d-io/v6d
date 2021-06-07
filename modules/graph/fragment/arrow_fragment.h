@@ -1748,10 +1748,10 @@ class ArrowFragment
         }
         std::vector<int64_t> offsets(tvnums[v_label]);
         const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-        for (size_t k = 0; k < tvnums_[v_label].size(); ++k) {
+        for (size_t k = 0; k < tvnums_[v_label]; ++k) {
           offsets[k] = offset_array[k];
         }
-        for (size_t k = tvnums_[v_label].size(); k < tvnums[v_label].size();
+        for (size_t k = tvnums_[v_label]; k < tvnums[v_label];
              ++k) {
           offsets[k] = offsets[k - 1];
         }
