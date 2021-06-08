@@ -525,40 +525,6 @@ bool PropertyGraphSchema::Validate() {
       return false;
     }
   }
-  // Gather all property names and unique them
-  std::set<std::string> prop_names;
-  for (const auto& entry : vertex_entries_) {
-    for (const auto& prop : entry.props_) {
-      prop_names.insert(prop.name);
-    }
-  }
-  for (const auto& entry : edge_entries_) {
-    for (const auto& prop : entry.props_) {
-      prop_names.insert(prop.name);
-    }
-  }
-
-  // Assign a id to each name.
-  name_to_idx_.clear();
-  for (auto iter = prop_names.begin(); iter != prop_names.end(); ++iter) {
-    name_to_idx_[*iter] = std::distance(prop_names.begin(), iter);
-  }
-  for (auto& entry : vertex_entries_) {
-    entry.mapping.resize(prop_names.size());
-    entry.reverse_mapping.resize(prop_names.size());
-    for (auto& prop : entry.props_) {
-      entry.mapping[prop.id] = name_to_idx_[prop.name];
-      entry.reverse_mapping[name_to_idx_[prop.name]] = prop.id;
-    }
-  }
-  for (auto& entry : edge_entries_) {
-    entry.mapping.resize(prop_names.size());
-    entry.reverse_mapping.resize(prop_names.size());
-    for (auto& prop : entry.props_) {
-      entry.mapping[prop.id] = name_to_idx_[prop.name];
-      entry.reverse_mapping[name_to_idx_[prop.name]] = prop.id;
-    }
-  }
   return true;
 }
 const std::map<std::string, int>&
