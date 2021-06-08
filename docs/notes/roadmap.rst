@@ -74,4 +74,6 @@ Release Notes
 -------------
 
 For more details about what changes happened for every version, please refer to
-our `releases notes`_, and `milestones`_ as well.
+our `releases notes`_ as well.
+
+.. _releases notes: https://github.com/v6d-io/v6d/releases
