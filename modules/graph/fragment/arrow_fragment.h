@@ -1634,11 +1634,11 @@ class ArrowFragment
       if (directed_) {
         vy_ie_lists[i].resize(extra_edge_label_num);
         vy_ie_offsets_lists[i].resize(extra_edge_label_num);
-        vy_ie_offsets_lists_expanded[i].resize(extra_edge_label_num);
+        vy_ie_offsets_lists_expanded[i].resize(edge_label_num_);
       }
       vy_oe_lists[i].resize(extra_edge_label_num);
       vy_oe_offsets_lists[i].resize(extra_edge_label_num);
-      vy_oe_offsets_lists_expanded[i].resize(extra_edge_label_num);
+      vy_oe_offsets_lists_expanded[i].resize(edge_label_num_);
     }
 
     // Collect extra outer vertices.
