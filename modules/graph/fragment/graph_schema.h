@@ -190,6 +190,10 @@ class PropertyGraphSchema {
   std::vector<std::pair<std::string, std::string>> GetEdgePropertyListByLabel(
       LabelId label_id) const;
 
+  bool Validate();
+
+  const std::map<std::string, int>& GetPropertyNameToIDMapping() const;
+
   void DumpToFile(std::string const& path);
 
   void InvalidateVertex(LabelId label_id) { valid_vertices_[label_id] = 0; }
@@ -218,6 +222,7 @@ class PropertyGraphSchema {
   std::vector<Entry> edge_entries_;
   std::vector<int> valid_vertices_;
   std::vector<int> valid_edges_;
+  std::map<std::string, int> name_to_idx_;
 };
 
 // In Analytical engine, assume label ids of vertex entries are continuous

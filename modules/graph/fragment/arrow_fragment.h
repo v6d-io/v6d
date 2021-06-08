@@ -96,14 +96,14 @@ class ArrowFragmentBase : public vineyard::Object {
 
   virtual ~ArrowFragmentBase() = default;
 
-  virtual vineyard::ObjectID AddVertexColumns(
+  virtual boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
       vineyard::Client& client,
       const std::map<
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
           columns) = 0;
 
-  virtual vineyard::ObjectID AddVertexColumns(
+  virtual boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
       vineyard::Client& client,
       const std::map<label_id_t,
                      std::vector<std::pair<
@@ -114,6 +114,8 @@ class ArrowFragmentBase : public vineyard::Object {
   }
 
   virtual vineyard::ObjectID vertex_map_id() const = 0;
+
+  virtual const PropertyGraphSchema& schema() const = 0;
 };
 
 inline const void* get_arrow_array_ptr(std::shared_ptr<arrow::Array> array) {
@@ -1013,6 +1015,35 @@ class ArrowFragment
       }
     }
 
+    for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
+      for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+        if (directed_) {
+          std::vector<int64_t> offsets(tvnums[v_label]);
+          const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
+          for (vid_t k = 0; k < tvnums_[v_label]; ++k) {
+            offsets[k] = offset_array[k];
+          }
+          for (vid_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+            offsets[k] = offsets[k - 1];
+          }
+          arrow::Int64Builder builder;
+          builder.AppendValues(offsets);
+          builder.Finish(&ie_offsets_lists[v_label][e_label]);
+        }
+        std::vector<int64_t> offsets(tvnums[v_label]);
+        const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+        for (size_t k = 0; k < tvnums_[v_label]; ++k) {
+          offsets[k] = offset_array[k];
+        }
+        for (size_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+          offsets[k] = offsets[k - 1];
+        }
+        arrow::Int64Builder builder;
+        builder.AppendValues(offsets);
+        builder.Finish(&oe_offsets_lists[v_label][e_label]);
+      }
+    }
+
     for (label_id_t e_label = 0; e_label < total_edge_label_num; ++e_label) {
       std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>> sub_ie_lists(
           total_vertex_label_num);
@@ -1117,13 +1148,13 @@ class ArrowFragment
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
                                     edge_label_num_);
-      ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
-                                    edge_label_num_);
+      // ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
+      //                               edge_label_num_);
     }
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
                                   edge_label_num_);
-    ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
-                                  edge_label_num_);
+    // ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
+    //                               edge_label_num_);
 
     // Extra vertex table
     for (label_id_t i = 0; i < extra_vertex_label_num; ++i) {
@@ -1139,6 +1170,7 @@ class ArrowFragment
       table->schema()->metadata()->ToUnorderedMap(&kvs);
       prop_id_t prop_num = table->num_columns();
       std::string label = kvs["label"];
+      std::string retain_oid = kvs["retain_oid"];
       new_meta.AddKeyValue("vertex_label_name_" + std::to_string(cur_label_id),
                            label);
       new_meta.AddKeyValue(
@@ -1154,6 +1186,11 @@ class ArrowFragment
         new_meta.AddKeyValue(type_prefix + std::to_string(j),
                              arrow_type_to_string(table->field(j)->type()));
         entry->AddProperty(table->field(j)->name(), table->field(j)->type());
+      }
+      if (retain_oid == "1") {
+        int col_id = table->num_columns() - 1;
+        entry->AddPrimaryKeys(1, std::vector<std::string>{
+                                     table->schema()->field(col_id)->name()});
       }
     }
 
@@ -1188,6 +1225,9 @@ class ArrowFragment
       }
     }
 
+    if (!schema.Validate()) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    }
     // Schema
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
@@ -1233,31 +1273,30 @@ class ArrowFragment
     // Extra ie_list, oe_list, ie_offset_list, oe_offset_list
     for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
       for (label_id_t j = 0; j < total_edge_label_num; ++j) {
-        if (i < vertex_label_num_ && j < edge_label_num_) {
-          continue;
-        }
         auto fn = [this, i, j, &vy_ie_lists, &vy_oe_lists, &vy_ie_offsets_lists,
                    &vy_oe_offsets_lists, &ie_lists, &oe_lists,
                    &ie_offsets_lists, &oe_offsets_lists](Client& client) {
           if (directed_) {
-            vineyard::FixedSizeBinaryArrayBuilder ie_builder(client,
-                                                             ie_lists[i][j]);
-            vy_ie_lists[i][j] =
-                std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
-                    ie_builder.Seal(client));
-
+            if (!(i < vertex_label_num_ && j < edge_label_num_)) {
+              vineyard::FixedSizeBinaryArrayBuilder ie_builder(client,
+                                                               ie_lists[i][j]);
+              vy_ie_lists[i][j] =
+                  std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+                      ie_builder.Seal(client));
+            }
             vineyard::NumericArrayBuilder<int64_t> ieo_builder(
                 client, ie_offsets_lists[i][j]);
             vy_ie_offsets_lists[i][j] =
                 std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
                     ieo_builder.Seal(client));
           }
-          vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
-                                                           oe_lists[i][j]);
-          vy_oe_lists[i][j] =
-              std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
-                  oe_builder.Seal(client));
-
+          if (!(i < vertex_label_num_ && j < edge_label_num_)) {
+            vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
+                                                             oe_lists[i][j]);
+            vy_oe_lists[i][j] =
+                std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+                    oe_builder.Seal(client));
+          }
           vineyard::NumericArrayBuilder<int64_t> oeo_builder(
               client, oe_offsets_lists[i][j]);
           vy_oe_offsets_lists[i][j] =
@@ -1287,21 +1326,22 @@ class ArrowFragment
 
     for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
       for (label_id_t j = 0; j < total_edge_label_num; ++j) {
-        if (i < vertex_label_num_ && j < edge_label_num_) {
-          continue;
-        }
         if (directed_) {
-          new_meta.AddMember(generate_name_with_suffix("ie_lists", i, j),
-                             vy_ie_lists[i][j]->meta());
-          nbytes += vy_ie_lists[i][j]->nbytes();
+          if (!(i < vertex_label_num_ && j < edge_label_num_)) {
+            new_meta.AddMember(generate_name_with_suffix("ie_lists", i, j),
+                               vy_ie_lists[i][j]->meta());
+            nbytes += vy_ie_lists[i][j]->nbytes();
+          }
           new_meta.AddMember(
               generate_name_with_suffix("ie_offsets_lists", i, j),
               vy_ie_offsets_lists[i][j]->meta());
           nbytes += vy_ie_offsets_lists[i][j]->nbytes();
         }
-        new_meta.AddMember(generate_name_with_suffix("oe_lists", i, j),
-                           vy_oe_lists[i][j]->meta());
-        nbytes += vy_oe_lists[i][j]->nbytes();
+        if (!(i < vertex_label_num_ && j < edge_label_num_)) {
+          new_meta.AddMember(generate_name_with_suffix("oe_lists", i, j),
+                             vy_oe_lists[i][j]->meta());
+          nbytes += vy_oe_lists[i][j]->nbytes();
+        }
         new_meta.AddMember(generate_name_with_suffix("oe_offsets_lists", i, j),
                            vy_oe_offsets_lists[i][j]->meta());
         nbytes += vy_oe_offsets_lists[i][j]->nbytes();
@@ -1377,6 +1417,7 @@ class ArrowFragment
       table->schema()->metadata()->ToUnorderedMap(&kvs);
       prop_id_t prop_num = table->num_columns();
       std::string label = kvs["label"];
+      std::string retain_oid = kvs["retain_oid"];
       new_meta.AddKeyValue("vertex_label_name_" + std::to_string(cur_label_id),
                            label);
       new_meta.AddKeyValue(
@@ -1393,6 +1434,14 @@ class ArrowFragment
                              arrow_type_to_string(table->field(j)->type()));
         entry->AddProperty(table->field(j)->name(), table->field(j)->type());
       }
+      if (retain_oid == "1") {
+        int col_id = table->num_columns() - 1;
+        entry->AddPrimaryKeys(1, std::vector<std::string>{
+                                     table->schema()->field(col_id)->name()});
+      }
+    }
+    if (!schema.Validate()) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
     }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
@@ -1557,11 +1606,17 @@ class ArrowFragment
     std::vector<std::shared_ptr<vineyard::Hashmap<vid_t, vid_t>>> vy_ovg2l_maps;
     std::vector<std::shared_ptr<vineyard::Table>> vy_edge_tables;
 
+    // This is for extra edge labels.
+    // Size is vertex_label_num_ * extra_edge_label_num
     std::vector<std::vector<std::shared_ptr<vineyard::FixedSizeBinaryArray>>>
         vy_ie_lists, vy_oe_lists;
     std::vector<std::vector<std::shared_ptr<vineyard::NumericArray<int64_t>>>>
         vy_ie_offsets_lists, vy_oe_offsets_lists;
 
+    // This is for original edge labels
+    // Size is vertex_label_num_ * edge_label_num_
+    std::vector<std::vector<std::shared_ptr<vineyard::NumericArray<int64_t>>>>
+        vy_ie_offsets_lists_expanded, vy_oe_offsets_lists_expanded;
     // Init size
     vy_ovgid_lists.resize(vertex_label_num_);
     vy_ovg2l_maps.resize(vertex_label_num_);
@@ -1570,17 +1625,20 @@ class ArrowFragment
     if (directed_) {
       vy_ie_lists.resize(vertex_label_num_);
       vy_ie_offsets_lists.resize(vertex_label_num_);
+      vy_ie_offsets_lists_expanded.resize(vertex_label_num_);
     }
     vy_oe_lists.resize(vertex_label_num_);
     vy_oe_offsets_lists.resize(vertex_label_num_);
-
+    vy_oe_offsets_lists_expanded.resize(vertex_label_num_);
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       if (directed_) {
         vy_ie_lists[i].resize(extra_edge_label_num);
         vy_ie_offsets_lists[i].resize(extra_edge_label_num);
+        vy_ie_offsets_lists_expanded[i].resize(extra_edge_label_num);
       }
       vy_oe_lists[i].resize(extra_edge_label_num);
       vy_oe_offsets_lists[i].resize(extra_edge_label_num);
+      vy_oe_offsets_lists_expanded[i].resize(extra_edge_label_num);
     }
 
     // Collect extra outer vertices.
@@ -1661,6 +1719,45 @@ class ArrowFragment
       tvnums[i] = ivnums_[i] + ovnums[i];
     }
 
+    std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+        ie_offsets_lists_expanded(vertex_label_num_);
+    std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+        oe_offsets_lists_expanded(vertex_label_num_);
+
+    for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
+      if (directed_) {
+        ie_offsets_lists_expanded[v_label].resize(edge_label_num_);
+      }
+      oe_offsets_lists_expanded[v_label].resize(edge_label_num_);
+    }
+    for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
+      for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+        if (directed_) {
+          std::vector<int64_t> offsets(tvnums[v_label]);
+          const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
+          for (vid_t k = 0; k < tvnums_[v_label]; ++k) {
+            offsets[k] = offset_array[k];
+          }
+          for (vid_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+            offsets[k] = offsets[k - 1];
+          }
+          arrow::Int64Builder builder;
+          builder.AppendValues(offsets);
+          builder.Finish(&ie_offsets_lists_expanded[v_label][e_label]);
+        }
+        std::vector<int64_t> offsets(tvnums[v_label]);
+        const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+        for (size_t k = 0; k < tvnums_[v_label]; ++k) {
+          offsets[k] = offset_array[k];
+        }
+        for (size_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+          offsets[k] = offsets[k - 1];
+        }
+        arrow::Int64Builder builder;
+        builder.AppendValues(offsets);
+        builder.Finish(&oe_offsets_lists_expanded[v_label][e_label]);
+      }
+    }
     // Gather all local id of new edges.
     // And delete the src/dst column in edge tables.
     std::vector<std::shared_ptr<vid_array_t>> edge_src, edge_dst;
@@ -1783,6 +1880,9 @@ class ArrowFragment
         entry->AddRelation(rel.first, rel.second);
       }
     }
+    if (!schema.Validate()) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
     new_meta.AddMember("ivnums", old_meta.GetMemberMeta("ivnums"));
@@ -1828,13 +1928,13 @@ class ArrowFragment
     if (directed_) {
       ASSIGN_IDENTICAL_VEC_VEC_META("ie_lists", vertex_label_num_,
                                     edge_label_num_);
-      ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
-                                    edge_label_num_);
+      // ASSIGN_IDENTICAL_VEC_VEC_META("ie_offsets_lists", vertex_label_num_,
+      //                               edge_label_num_);
     }
     ASSIGN_IDENTICAL_VEC_VEC_META("oe_lists", vertex_label_num_,
                                   edge_label_num_);
-    ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
-                                  edge_label_num_);
+    // ASSIGN_IDENTICAL_VEC_VEC_META("oe_offsets_lists", vertex_label_num_,
+    //                               edge_label_num_);
 
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       for (label_id_t j = 0; j < extra_edge_label_num; ++j) {
@@ -1871,7 +1971,29 @@ class ArrowFragment
       }
     }
     tg.TakeResults();
-
+    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+      for (label_id_t j = 0; j < extra_edge_label_num; ++j) {
+        auto fn = [this, i, j, &vy_ie_offsets_lists_expanded,
+                   &vy_oe_offsets_lists_expanded, &ie_offsets_lists_expanded,
+                   &oe_offsets_lists_expanded](Client& client) {
+          if (directed_) {
+            vineyard::NumericArrayBuilder<int64_t> ieo_builder_expanded(
+                client, ie_offsets_lists_expanded[i][j]);
+            vy_ie_offsets_lists_expanded[i][j] =
+                std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                    ieo_builder_expanded.Seal(client));
+          }
+          vineyard::NumericArrayBuilder<int64_t> oeo_builder_expanded(
+              client, oe_offsets_lists_expanded[i][j]);
+          vy_oe_offsets_lists_expanded[i][j] =
+              std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                  oeo_builder_expanded.Seal(client));
+          return Status::OK();
+        };
+        tg.AddTask(fn, std::ref(client));
+      }
+    }
+    tg.TakeResults();
     new_meta.AddMember("ovnums", vy_ovnums.meta());
     nbytes += vy_ovnums.meta().GetNBytes();
     new_meta.AddMember("tvnums", vy_tvnums.meta());
@@ -1887,12 +2009,16 @@ class ArrowFragment
       GENERATE_VEC_VEC_META("ie_offsets_lists", vy_ie_offsets_lists,
                             vertex_label_num_, extra_edge_label_num, 0,
                             edge_label_num_);
+      GENERATE_VEC_VEC_META("ie_offsets_lists", vy_ie_offsets_lists_expanded,
+                            vertex_label_num_, edge_label_num_, 0, 0);
     }
     GENERATE_VEC_VEC_META("oe_lists", vy_oe_lists, vertex_label_num_,
                           extra_edge_label_num, 0, edge_label_num_);
     GENERATE_VEC_VEC_META("oe_offsets_lists", vy_oe_offsets_lists,
                           vertex_label_num_, extra_edge_label_num, 0,
                           edge_label_num_);
+    GENERATE_VEC_VEC_META("oe_offsets_lists", vy_oe_offsets_lists_expanded,
+                          vertex_label_num_, edge_label_num_, 0, 0);
 
     new_meta.AddMember("vertex_map", old_meta.GetMemberMeta("vertex_map"));
 
@@ -1904,7 +2030,7 @@ class ArrowFragment
   }
 
   template <typename ArrayType = arrow::Array>
-  vineyard::ObjectID AddVertexColumnsImpl(
+  boost::leaf::result<vineyard::ObjectID> AddVertexColumnsImpl(
       vineyard::Client& client,
       const std::map<
           label_id_t,
@@ -1954,6 +2080,9 @@ class ArrowFragment
         new_meta.AddMember(table_name, old_meta.GetMemberMeta(table_name));
       }
     }
+    if (!schema.Validate()) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
     size_t nbytes = 0;
@@ -1990,7 +2119,7 @@ class ArrowFragment
     return ret;
   }
 
-  vineyard::ObjectID AddVertexColumns(
+  boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
       vineyard::Client& client,
       const std::map<
           label_id_t,
@@ -1999,7 +2128,7 @@ class ArrowFragment
     return AddVertexColumnsImpl<arrow::Array>(client, columns);
   }
 
-  vineyard::ObjectID AddVertexColumns(
+  boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
       vineyard::Client& client,
       const std::map<label_id_t,
                      std::vector<std::pair<
@@ -2097,6 +2226,9 @@ class ArrowFragment
     invalidate_label(vertex_labels, "VERTEX", schema.vertex_entries().size());
     invalidate_label(edge_labels, "EDGE", schema.edge_entries().size());
 
+    if (!schema.Validate()) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
     size_t nbytes = 0;
