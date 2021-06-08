@@ -1634,11 +1634,11 @@ class ArrowFragment
       if (directed_) {
         vy_ie_lists[i].resize(extra_edge_label_num);
         vy_ie_offsets_lists[i].resize(extra_edge_label_num);
-        vy_ie_offsets_lists_expanded[i].resize(extra_edge_label_num);
+        vy_ie_offsets_lists_expanded[i].resize(edge_label_num_);
       }
       vy_oe_lists[i].resize(extra_edge_label_num);
       vy_oe_offsets_lists[i].resize(extra_edge_label_num);
-      vy_oe_offsets_lists_expanded[i].resize(extra_edge_label_num);
+      vy_oe_offsets_lists_expanded[i].resize(edge_label_num_);
     }
 
     // Collect extra outer vertices.
@@ -1972,7 +1972,7 @@ class ArrowFragment
     }
     tg.TakeResults();
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      for (label_id_t j = 0; j < extra_edge_label_num; ++j) {
+      for (label_id_t j = 0; j < edge_label_num_; ++j) {
         auto fn = [this, i, j, &vy_ie_offsets_lists_expanded,
                    &vy_oe_offsets_lists_expanded, &ie_offsets_lists_expanded,
                    &oe_offsets_lists_expanded](Client& client) {
