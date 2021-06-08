@@ -71,6 +71,10 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['images/']
 
-html_extra_path = ['./CNAME', './.nojekyll']
+html_extra_path = [
+    './CNAME',
+    './.nojekyll',
+    './summer.html',
+]
 
 html_favicon = "images/vineyard.ico"
