@@ -17,10 +17,8 @@
 #
 
 import numpy as np
-import pytest
-import vineyard
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from vineyard.core import default_builder_context, default_resolver_context
 from vineyard.data import register_builtin_types
 
@@ -37,7 +35,7 @@ class RandomDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.ds[idx]
-        
+
 def test_dataset(vineyard_client):
     ds = RandomDataset(10)
     object_id = vineyard_client.put(ds)
@@ -46,5 +44,3 @@ def test_dataset(vineyard_client):
     for i in range(len(ds)):
         np.testing.assert_allclose(ds[i][0], new_ds[i][0])
         np.testing.assert_allclose(ds[i][1], new_ds[i][1])
-
-

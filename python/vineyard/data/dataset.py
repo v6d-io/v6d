@@ -17,10 +17,10 @@
 #
 
 from vineyard._C import ObjectMeta
-from .utils import from_json, to_json
 from torch.utils.data import Dataset
+from .utils import from_json, to_json
 
-def dataset_builder(client, value, builder, **kw):
+def dataset_builder(client, value, builder):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataSet'
     meta['num'] = to_json(len(value))
@@ -31,7 +31,14 @@ def dataset_builder(client, value, builder, **kw):
     return client.create_metadata(meta)
 
 class VineyardDataSet(Dataset):
+    '''
+        Vineyard DataSet forked from PyTorch DataSet.
+        Each item is a pair of data and label.
+    '''
     def __init__(self, obj, resolver):
+        '''
+            obj is the object get from vineyard.
+        '''
         self.obj = obj
         self.resolver = resolver
         self.num = from_json(obj.meta['num'])
