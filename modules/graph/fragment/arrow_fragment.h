@@ -638,7 +638,7 @@ class ArrowFragment
 
   std::shared_ptr<vertex_map_t> GetVertexMap() { return vm_ptr_; }
 
-  const PropertyGraphSchema& schema() const { return schema_; }
+  const PropertyGraphSchema& schema() const override { return schema_; }
 
   void PrepareToRunApp(grape::MessageStrategy strategy, bool need_split_edges) {
     if (strategy == grape::MessageStrategy::kAlongEdgeToOuterVertex) {

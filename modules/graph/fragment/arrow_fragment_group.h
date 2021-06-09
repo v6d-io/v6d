@@ -153,6 +153,13 @@ inline boost::leaf::result<ObjectID> ConstructFragmentGroup(
   ObjectID group_object_id;
   uint64_t instance_id = client.instance_id();
 
+  MPI_Barrier(comm_spec.comm());
+  {
+    // sync metadata
+    vineyard::json tree;
+    VINEYARD_DISCARD(client.GetData(InvalidObjectID(), tree, true));
+  }
+
   if (comm_spec.worker_id() == 0) {
     std::vector<uint64_t> gathered_instance_ids(comm_spec.worker_num());
     std::vector<ObjectID> gathered_object_ids(comm_spec.worker_num());
