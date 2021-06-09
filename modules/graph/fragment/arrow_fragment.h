@@ -638,7 +638,7 @@ class ArrowFragment
 
   std::shared_ptr<vertex_map_t> GetVertexMap() { return vm_ptr_; }
 
-  const PropertyGraphSchema& schema() const { return schema_; }
+  const PropertyGraphSchema& schema() const override { return schema_; }
 
   void PrepareToRunApp(grape::MessageStrategy strategy, bool need_split_edges) {
     if (strategy == grape::MessageStrategy::kAlongEdgeToOuterVertex) {
@@ -1017,25 +1017,27 @@ class ArrowFragment
 
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
       for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+        vid_t prev_offset_size = tvnums_[v_label] + 1;
+        vid_t cur_offset_size = tvnums[v_label] + 1;
         if (directed_) {
-          std::vector<int64_t> offsets(tvnums[v_label]);
+          std::vector<int64_t> offsets(cur_offset_size);
           const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
-          for (vid_t k = 0; k < tvnums_[v_label]; ++k) {
+          for (vid_t k = 0; k < prev_offset_size; ++k) {
             offsets[k] = offset_array[k];
           }
-          for (vid_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+          for (vid_t k = prev_offset_size; k < cur_offset_size; ++k) {
             offsets[k] = offsets[k - 1];
           }
           arrow::Int64Builder builder;
           builder.AppendValues(offsets);
           builder.Finish(&ie_offsets_lists[v_label][e_label]);
         }
-        std::vector<int64_t> offsets(tvnums[v_label]);
+        std::vector<int64_t> offsets(cur_offset_size);
         const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-        for (size_t k = 0; k < tvnums_[v_label]; ++k) {
+        for (size_t k = 0; k < prev_offset_size; ++k) {
           offsets[k] = offset_array[k];
         }
-        for (size_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+        for (size_t k = prev_offset_size; k < cur_offset_size; ++k) {
           offsets[k] = offsets[k - 1];
         }
         arrow::Int64Builder builder;
@@ -1066,7 +1068,7 @@ class ArrowFragment
             sub_ie_lists[v_label] = ie_array;
 
             arrow::Int64Builder int64_builder;
-            std::vector<int64_t> offset_vec(tvnums[v_label], 0);
+            std::vector<int64_t> offset_vec(tvnums[v_label] + 1, 0);
             int64_builder.AppendValues(offset_vec);
             std::shared_ptr<arrow::Int64Array> ie_offset_array;
             int64_builder.Finish(&ie_offset_array);
@@ -1081,7 +1083,7 @@ class ArrowFragment
           sub_oe_lists[v_label] = oe_array;
 
           arrow::Int64Builder int64_builder;
-          std::vector<int64_t> offset_vec(tvnums[v_label], 0);
+          std::vector<int64_t> offset_vec(tvnums[v_label] + 1, 0);
           int64_builder.AppendValues(offset_vec);
           std::shared_ptr<arrow::Int64Array> oe_offset_array;
           int64_builder.Finish(&oe_offset_array);
@@ -1539,7 +1541,8 @@ class ArrowFragment
           nbytes += ie->nbytes();
 
           arrow::Int64Builder int64_builder;
-          std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i], 0);
+          // Offset vector's length is tvnum + 1
+          std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i] + 1, 0);
           int64_builder.AppendValues(offset_vec);
           std::shared_ptr<arrow::Int64Array> ie_offset_array;
           int64_builder.Finish(&ie_offset_array);
@@ -1566,7 +1569,8 @@ class ArrowFragment
         nbytes += oe->nbytes();
 
         arrow::Int64Builder int64_builder;
-        std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i], 0);
+        // Offset vector's length is tvnum + 1
+        std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i] + 1, 0);
         int64_builder.AppendValues(offset_vec);
         std::shared_ptr<arrow::Int64Array> oe_offset_array;
         int64_builder.Finish(&oe_offset_array);
@@ -1732,25 +1736,27 @@ class ArrowFragment
     }
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
       for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+        vid_t prev_offset_size = tvnums_[v_label] + 1;
+        vid_t cur_offset_size = tvnums[v_label] + 1;
         if (directed_) {
-          std::vector<int64_t> offsets(tvnums[v_label]);
+          std::vector<int64_t> offsets(cur_offset_size);
           const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
-          for (vid_t k = 0; k < tvnums_[v_label]; ++k) {
+          for (vid_t k = 0; k < prev_offset_size; ++k) {
             offsets[k] = offset_array[k];
           }
-          for (vid_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+          for (vid_t k = prev_offset_size; k < cur_offset_size; ++k) {
             offsets[k] = offsets[k - 1];
           }
           arrow::Int64Builder builder;
           builder.AppendValues(offsets);
           builder.Finish(&ie_offsets_lists_expanded[v_label][e_label]);
         }
-        std::vector<int64_t> offsets(tvnums[v_label]);
+        std::vector<int64_t> offsets(cur_offset_size);
         const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-        for (size_t k = 0; k < tvnums_[v_label]; ++k) {
+        for (size_t k = 0; k < prev_offset_size; ++k) {
           offsets[k] = offset_array[k];
         }
-        for (size_t k = tvnums_[v_label]; k < tvnums[v_label]; ++k) {
+        for (size_t k = prev_offset_size; k < cur_offset_size; ++k) {
           offsets[k] = offsets[k - 1];
         }
         arrow::Int64Builder builder;
