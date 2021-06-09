@@ -1077,6 +1077,8 @@ boost::leaf::result<void> generate_directed_csr(
             concurrency);
         ARROW_OK_OR_RAISE(builder.Advance(tvnum + 1));
       }
+    } else {
+      ARROW_OK_OR_RAISE(builder.AppendValues(offset_vec));
     }
     ARROW_OK_OR_RAISE(builder.Finish(&edge_offsets[v_label]));
     actual_edge_num[v_label] = offset_vec[tvnum];
@@ -1214,6 +1216,8 @@ boost::leaf::result<void> generate_undirected_csr(
             concurrency);
         ARROW_OK_OR_RAISE(builder.Advance(tvnum + 1));
       }
+    } else {
+      ARROW_OK_OR_RAISE(builder.AppendValues(offset_vec));
     }
     ARROW_OK_OR_RAISE(builder.Finish(&edge_offsets[v_label]));
     actual_edge_num[v_label] = offset_vec[tvnum];
