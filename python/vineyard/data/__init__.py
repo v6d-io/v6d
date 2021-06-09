@@ -26,6 +26,7 @@ from vineyard.data.index import register_index_types
 from vineyard.data.series import register_series_types
 from vineyard.data.dataframe import register_dataframe_types
 from vineyard.data.graph import register_graph_types
+from vineyard.data.dataset import register_dataset_types
 
 
 def register_builtin_types(builder_ctx, resolver_ctx):
@@ -37,6 +38,7 @@ def register_builtin_types(builder_ctx, resolver_ctx):
     register_series_types(builder_ctx, resolver_ctx)
     register_dataframe_types(builder_ctx, resolver_ctx)
     register_graph_types(builder_ctx, resolver_ctx)
+    register_dataset_types(builder_ctx, resolver_ctx)
 
 
 # Those builtin builders and resolvers will be registered by default, for better
