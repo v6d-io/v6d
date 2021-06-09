@@ -36,6 +36,7 @@ class RandomDataset(Dataset):
     def __getitem__(self, idx):
         return self.ds[idx]
 
+
 def test_dataset(vineyard_client):
     ds = RandomDataset(10)
     object_id = vineyard_client.put(ds)

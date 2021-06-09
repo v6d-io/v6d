@@ -20,6 +20,7 @@ from vineyard._C import ObjectMeta
 from torch.utils.data import Dataset
 from .utils import from_json, to_json
 
+
 def dataset_builder(client, value, builder):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataSet'
@@ -29,6 +30,7 @@ def dataset_builder(client, value, builder):
         meta.add_member(f'data_{i}_', builder.run(client, data))
         meta.add_member(f'label_{i}_', builder.run(client, label))
     return client.create_metadata(meta)
+
 
 class VineyardDataSet(Dataset):
     '''
@@ -51,8 +53,10 @@ class VineyardDataSet(Dataset):
         label = self.resolver.run(self.obj.member(f'label_{idx}_'))
         return (data, label)
 
+
 def dataset_resolver(obj, resolver):
     return VineyardDataSet(obj, resolver)
+
 
 def register_dataset_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
