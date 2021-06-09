@@ -1068,7 +1068,7 @@ class ArrowFragment
             sub_ie_lists[v_label] = ie_array;
 
             arrow::Int64Builder int64_builder;
-            std::vector<int64_t> offset_vec(tvnums[v_label], 0);
+            std::vector<int64_t> offset_vec(tvnums[v_label] + 1, 0);
             int64_builder.AppendValues(offset_vec);
             std::shared_ptr<arrow::Int64Array> ie_offset_array;
             int64_builder.Finish(&ie_offset_array);
@@ -1083,7 +1083,7 @@ class ArrowFragment
           sub_oe_lists[v_label] = oe_array;
 
           arrow::Int64Builder int64_builder;
-          std::vector<int64_t> offset_vec(tvnums[v_label], 0);
+          std::vector<int64_t> offset_vec(tvnums[v_label] + 1, 0);
           int64_builder.AppendValues(offset_vec);
           std::shared_ptr<arrow::Int64Array> oe_offset_array;
           int64_builder.Finish(&oe_offset_array);
@@ -1541,7 +1541,8 @@ class ArrowFragment
           nbytes += ie->nbytes();
 
           arrow::Int64Builder int64_builder;
-          std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i], 0);
+          // Offset vector's length is tvnum + 1
+          std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i] + 1, 0);
           int64_builder.AppendValues(offset_vec);
           std::shared_ptr<arrow::Int64Array> ie_offset_array;
           int64_builder.Finish(&ie_offset_array);
@@ -1568,7 +1569,8 @@ class ArrowFragment
         nbytes += oe->nbytes();
 
         arrow::Int64Builder int64_builder;
-        std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i], 0);
+        // Offset vector's length is tvnum + 1
+        std::vector<int64_t> offset_vec(tvnums[vertex_label_num_ + i] + 1, 0);
         int64_builder.AppendValues(offset_vec);
         std::shared_ptr<arrow::Int64Array> oe_offset_array;
         int64_builder.Finish(&oe_offset_array);
