@@ -16,12 +16,6 @@
 # limitations under the License.
 #
 
-import json
-import numpy as np
-import pandas as pd
-from pandas.core.internals.blocks import Block
-from pandas.core.internals.managers import SingleBlockManager
-
 from vineyard._C import ObjectMeta
 from .utils import from_json, to_json
 from torch.utils.data import Dataset
