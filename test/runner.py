@@ -4,6 +4,7 @@
 from argparse import ArgumentParser
 import contextlib
 import os
+import platform
 import shutil
 import socket
 import subprocess
@@ -85,8 +86,12 @@ def start_etcd():
     with contextlib.ExitStack() as stack:
         client_port = find_port()
         peer_port = find_port()
+        if platform.system() == 'Linux':
+            data_dir_base = '/dev/shm'
+        else:
+            data_dir_base = '/tmp'
         proc = start_program('etcd',
-                             '--data-dir', '/dev/shm/etcd-%s' % time.time(),
+                             '--data-dir', '%s/etcd-%s' % (data_dir_base, time.time()),
                              '--listen-peer-urls', 'http://0.0.0.0:%d' % peer_port,
                              '--listen-client-urls', 'http://0.0.0.0:%d' % client_port,
                              '--advertise-client-urls', 'http://127.0.0.1:%d' % client_port,
