@@ -119,6 +119,13 @@ class ClientBase {
                              const bool sync_remote = false) = 0;
 
   /**
+   * Sync remote metadata from etcd to the connected vineyardd.
+   *
+   * @return Status that indicates whether the sync action has succeeded.
+   */
+  Status SyncMetaData();
+
+  /**
    * @brief Delete metadata in vineyard. When the object is a used by other
    * object, it will be deleted only when the `force` parameter is specified.
    *

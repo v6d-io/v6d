@@ -138,6 +138,18 @@
   } while (0)
 #endif  // VINEYARD_SUPPRESS
 
+// print the error message when failed, but never throw or abort.
+#ifndef VINEYARD_LOG_ERROR
+#define VINEYARD_LOG_ERROR(status)                                             \
+  do {                                                                         \
+    auto _ret = (status);                                                      \
+    if (!_ret.ok()) {                                                          \
+      LOG(ERROR) << "Check failed: " << _ret.ToString() << " in \"" << #status \
+                 << "\"";                                                      \
+    }                                                                          \
+  } while (0)
+#endif  // VINEYARD_LOG_ERROR
+
 namespace vineyard {
 
 enum class StatusCode : unsigned char {
