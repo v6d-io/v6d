@@ -611,11 +611,12 @@ class IMetaService {
       meta_[json::json_pointer(kv.key)] = value;
       return Status::OK();
     };
+
     // update signatures
     if (boost::algorithm::starts_with(kv.key, "/signatures/")) {
       auto json_path = json::json_pointer(kv.key);
       if (!from_remote || !meta_.contains(json_path)) {
-        VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
+        VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
       }
       return;
     }
@@ -626,12 +627,12 @@ class IMetaService {
       if (meta_.contains(json_path)) {
         LOG(INFO) << "Warning: name got overwritten: " << kv.key;
       }
-      VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
+      VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
       return;
     }
 
     // update ordinary data
-    VINEYARD_SUPPRESS(CATCH_JSON_ERROR(upsert_to_meta()));
+    VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
   }
 
   inline void delVal(std::string const& key) {

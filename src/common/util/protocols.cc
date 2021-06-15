@@ -208,7 +208,7 @@ Status ReadGetDataReply(const json& root, json& content) {
   // should be only one item
   auto content_group = root["content"];
   if (content_group.size() != 1) {
-    return Status::ObjectNotExists("failed to parse get_data reply: " +
+    return Status::ObjectNotExists("failed to read get_data reply: " +
                                    root.dump());
   }
   content = *content_group.begin();

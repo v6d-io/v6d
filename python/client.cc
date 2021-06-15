@@ -205,8 +205,7 @@ void bind_client(py::module& mod) {
       .def(
           "sync_meta",
           [](ClientBase *self) -> void {
-            json tree;
-            VINEYARD_DISCARD(self->GetData(InvalidObjectID(), tree, true));
+            VINEYARD_DISCARD(self->SyncMetaData());
           })
       .def(
           "migrate",

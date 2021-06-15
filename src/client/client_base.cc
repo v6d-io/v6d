@@ -82,8 +82,7 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
   }
   // if the metadata has incomplete components, trigger an remote meta sync.
   if (meta_data.incomplete()) {
-    json dummy;
-    VINEYARD_SUPPRESS(GetData(InvalidObjectID(), dummy, true, false));
+    VINEYARD_SUPPRESS(SyncMetaData());
   }
   Signature signature;
   auto status = CreateData(meta_data.MetaData(), id, signature, instance_id);
@@ -101,6 +100,11 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
     }
   }
   return status;
+}
+
+Status ClientBase::SyncMetaData() {
+  json __dummy;
+  return GetData(InvalidObjectID(), __dummy, true, false);
 }
 
 Status ClientBase::DelData(const ObjectID id, const bool force,

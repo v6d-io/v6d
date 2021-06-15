@@ -177,11 +177,7 @@ std::shared_ptr<Object> GlobalDataFrameBaseBuilder::_Seal(Client& client) {
   // ensure the builder hasn't been sealed yet.
   ENSURE_NOT_SEALED(this);
 
-  {
-    // trigger an remote sync.
-    json dummy;
-    VINEYARD_SUPPRESS(client.GetData(InvalidObjectID(), dummy, true, false));
-  }
+  VINEYARD_DISCARD(client.SyncMetaData());
 
   VINEYARD_CHECK_OK(this->Build(client));
   auto __value = std::make_shared<GlobalDataFrame>();
