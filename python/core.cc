@@ -39,6 +39,11 @@ void bind_core(py::module& mod) {
   // ObjectMeta
   py::class_<ObjectMeta>(mod, "ObjectMeta")
       .def(py::init<>())
+      .def(py::init<>([](bool global_) -> std::unique_ptr<ObjectMeta> {
+        std::unique_ptr<ObjectMeta> meta(new ObjectMeta());
+        meta->SetGlobal(global_);
+        return meta;
+      }), py::arg("global_") = false)
       .def_property("__client", &ObjectMeta::GetClient, &ObjectMeta::SetClient)
       .def_property(
           "id",

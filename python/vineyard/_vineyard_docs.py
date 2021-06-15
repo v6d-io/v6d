@@ -115,8 +115,15 @@ We can inspect the *key-value* attributes and members of an :class:`ObjectMeta`:
      'nbytes', 'typename', 'instance_id', 'id']
 ''')
 
-add_doc(ObjectMeta.__init__, r'''
+add_doc(
+    ObjectMeta.__init__, r'''
+.. method:: __init__(global_: bool=False)
+    :noindex:
+
 Create an empty metadata, the metadata will be used to create a vineyard object.
+
+Parameters
+    global_: bool, if the object meta is for creating a global object.
 ''')
 
 add_doc(ObjectMeta.id, r'''
@@ -149,7 +156,7 @@ True if the object is a global object, otherwise a local object or remote object
 
 add_doc(
     ObjectMeta.set_global, r'''
-.. method: set_global(global: bool = true)
+.. method: set_global(global_: bool = true)
     :noindex:
 
 Mark the building object as a global object.
