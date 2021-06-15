@@ -38,7 +38,6 @@ namespace vineyard {
 void bind_core(py::module& mod) {
   // ObjectMeta
   py::class_<ObjectMeta>(mod, "ObjectMeta")
-      .def(py::init<>())
       .def(py::init<>([](bool global_) -> std::unique_ptr<ObjectMeta> {
         std::unique_ptr<ObjectMeta> meta(new ObjectMeta());
         meta->SetGlobal(global_);
