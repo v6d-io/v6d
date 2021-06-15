@@ -40,9 +40,9 @@ class BuilderContext():
         self.__factory[type_id] = builder
 
     def run(self, client, value, **kw):
-        ''' Follows the order of MRO to find the proper builder for given python value.
+        ''' Follows the MRO to find the proper builder for given python value.
 
-            Here "Follows the order of MRO" implies:
+            Here "Follows the MRO" implies:
 
             - If the type of python value has been found in the context, the registered
               builder will be used.

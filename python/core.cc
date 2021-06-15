@@ -38,7 +38,13 @@ namespace vineyard {
 void bind_core(py::module& mod) {
   // ObjectMeta
   py::class_<ObjectMeta>(mod, "ObjectMeta")
-      .def(py::init<>())
+      .def(py::init<>([](bool global_, py::args,
+                         py::kwargs) -> std::unique_ptr<ObjectMeta> {
+             std::unique_ptr<ObjectMeta> meta(new ObjectMeta());
+             meta->SetGlobal(global_);
+             return meta;
+           }),
+           py::arg("global_") = false)
       .def_property("__client", &ObjectMeta::GetClient, &ObjectMeta::SetClient)
       .def_property(
           "id",
@@ -150,7 +156,7 @@ void bind_core(py::module& mod) {
       .def("add_member",
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
-      .def("reset", [](ObjectMeta &meta) { meta.Reset(); })
+      .def("reset", [](ObjectMeta& meta) { meta.Reset(); })
       .def(
           "__iter__",
           [](const ObjectMeta& meta) {

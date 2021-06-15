@@ -20,12 +20,12 @@ import numpy as np
 import re
 
 import vineyard
-from vineyard._C import Object, ObjectMeta
+from vineyard._C import Object, ObjectID, ObjectMeta
 from .utils import normalize_dtype
 
 
-def int_builder(client, value):
-    meta = ObjectMeta()
+def int_builder(client, value, **kwargs):
+    meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Scalar<int>'
     meta['value_'] = value
     meta['type_'] = getattr(type(value), '__name__')
@@ -33,8 +33,8 @@ def int_builder(client, value):
     return client.create_metadata(meta)
 
 
-def double_builder(client, value):
-    meta = ObjectMeta()
+def double_builder(client, value, **kwargs):
+    meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Scalar<double>'
     meta['value_'] = value
     meta['type_'] = getattr(type(value), '__name__')
@@ -42,8 +42,8 @@ def double_builder(client, value):
     return client.create_metadata(meta)
 
 
-def string_builder(client, value):
-    meta = ObjectMeta()
+def string_builder(client, value, **kwargs):
+    meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Scalar<std::basic_string<char,std::char_traits<char>,std::allocator<char>>>'
     meta['value_'] = value
     meta['type_'] = getattr(type(value), '__name__')
@@ -51,20 +51,29 @@ def string_builder(client, value):
     return client.create_metadata(meta)
 
 
-def tuple_builder(client, value, builder):
+def tuple_builder(client, value, builder, **kwargs):
     if len(value) == 2:
         # use pair
-        meta = ObjectMeta()
+        meta = ObjectMeta(**kwargs)
         meta['typename'] = 'vineyard::Pair'
-        meta.add_member('first_', builder.run(client, value[0]))
-        meta.add_member('second_', builder.run(client, value[1]))
+        if isinstance(value[0], ObjectID):
+            meta.add_member('first_', value[0])
+        else:
+            meta.add_member('first_', builder.run(client, value[0]))
+        if isinstance(value[1], ObjectID):
+            meta.add_member('second_', value[1])
+        else:
+            meta.add_member('second_', builder.run(client, value[1]))
         return client.create_metadata(meta)
     else:
-        meta = ObjectMeta()
+        meta = ObjectMeta(**kwargs)
         meta['typename'] = 'vineyard::Tuple'
         meta['size_'] = len(value)
         for i, item in enumerate(value):
-            meta.add_member('__elements_-%d' % i, builder.run(client, item))
+            if isinstance(item, ObjectID):
+                meta.add_member('__elements_-%d' % i, item)
+            else:
+                meta.add_member('__elements_-%d' % i, builder.run(client, item))
         meta['__elements_-size'] = len(value)
         return client.create_metadata(meta)
 
