@@ -50,7 +50,7 @@ def get(client, object_id, resolver=None, **kw):
 
     .. code:: python
 
-        >>> id = vineyard.ObjectID('00002ec13bc81226')
+        >>> arr_id = vineyard.ObjectID('00002ec13bc81226')
         >>> arr = client.get(arr_id)
         >>> arr
         array([0, 1, 2, 3, 4, 5, 6, 7])

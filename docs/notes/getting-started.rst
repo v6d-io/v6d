@@ -68,9 +68,13 @@ Creating a dataframe
      >>>                    'weight': [1.5, 3.2, 4.7, 0.3, 0.8, 2.5]})
      >>> df_id = client.put(df)
 
+.. code:: python
+
      >>> shared_object = client.get_object(df_id)
      >>> shared_object.typename
      vineyard::DataFrame
+
+.. code:: python
 
      >>> shared_df = client.get(df_id)
      >>> shared_df

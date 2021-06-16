@@ -72,8 +72,8 @@ def put(client, value, builder=None, **kw):
     .. code:: python
 
         >>> arr = np.arange(8)
-        >>> id = client.put(arr)
-        >>> id
+        >>> arr_id = client.put(arr)
+        >>> arr_id
         00002ec13bc81226
 
     Parameters:
