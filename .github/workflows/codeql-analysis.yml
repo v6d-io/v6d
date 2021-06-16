@@ -16,11 +16,8 @@ name: CodeQL
 
 on:
   push:
-    branches:
-      - "!dependabot/**"
-  pull_request:
-    branches:
-      - "!dependabot/**"
+    tags:
+      - 'v*'
 
 jobs:
   analyze:

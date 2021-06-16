@@ -16,12 +16,9 @@ name: Cut Release
 
 on:
   push:
-    branches:
-      - '**'
     tags:
       - 'v*'
-  pull_request:
-  
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}

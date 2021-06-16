@@ -7,7 +7,7 @@
         an in-memory immutable data manager
     </p>
 
-|Build and Test| |Coverage| |Docs| |FAQ| |Artifact HUB| |License| |CII Best Practices| |FOSSA|
+|Vineyard CI| |Coverage| |Docs| |FAQ| |Artifact HUB| |License| |CII Best Practices| |FOSSA|
 
 
 Vineyard (v6d) is an in-memory immutable data manager
@@ -274,8 +274,8 @@ third-party libraries may not have the same license as vineyard.
 .. _FAQ: https://v6d.io/notes/faq.html
 .. _CNCF sandbox project: https://www.cncf.io/sandbox-projects/
 
-.. |Build and Test| image:: https://github.com/v6d-io/v6d/workflows/Build%20and%20Test/badge.svg
-   :target: https://github.com/v6d-io/v6d/actions?workflow=Build%20and%20Test
+.. |Vineyard CI| image:: https://github.com/v6d-io/v6d/workflows/Vineyard%20CI/badge.svg
+   :target: https://github.com/v6d-io/v6d/actions?workflow=Vineyard%20CI
 .. |Coverage| image:: https://codecov.io/gh/v6d-io/v6d/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/v6d-io/v6d
 .. |Docs| image:: https://img.shields.io/badge/docs-latest-brightgreen.svg

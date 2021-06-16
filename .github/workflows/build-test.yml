@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Build and Test
+name: Vineyard CI
 
 on: [push, pull_request]
 
@@ -295,7 +295,8 @@ jobs:
         if: false
         uses: mxschmitt/action-tmate@v2
 
-      - name: Run Python Tests
+      - name: Run Python Tests with Debug
+        if: ${{ github.event_name == 'push' }}
         uses: sighingnow/action-tmate@master
         with:
           script-to-run: |
@@ -311,6 +312,22 @@ jobs:
             rm -rf default.etcd
             rm -rf /dev/shm/etcd*
             python3 test/runner.py --with-python --with-migration
+
+      - name: Run Python Tests
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          # enable coredump for debugging
+          ulimit -c unlimited
+
+          export VINEYARD_DEV=TRUE
+
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export VINEYARD_HOME=`pwd`/build/bin
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
+
+          rm -rf default.etcd
+          rm -rf /dev/shm/etcd*
+          python3 test/runner.py --with-python --with-migration
 
       - name: Setup tmate session
         if: false
@@ -338,30 +355,10 @@ jobs:
         with:
           verbose: true
 
-      - name: Prepare checksum and artifacts
-        run: |
-          cd modules/io
-          sha512sum ./dist/* > vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.sha512sum
-          echo "Checksum is: "
-          cat ./vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.sha512sum
-          tar zcvfh vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz ./dist vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.sha512sum
-
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
-
-      - name: Upload wheels to latest release
-        uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: modules/io/dist/*.whl
-          file_glob: true
-          tag: latest
-          prerelease: true
-          overwrite: true
-          body: "prerelease of vineyard-io for latest vineyard"
 
       - name: Upload wheels to tagged release
         uses: svenstaro/upload-release-action@v2
@@ -374,31 +371,3 @@ jobs:
           prerelease: false
           overwrite: true
           body: "vineyard-io ${{ steps.tag.outputs.TAG }}"
-
-      - name: Upload CI artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz
-          path: modules/io/vineyard-io.pypi.${{ runner.os }}.${{ github.sha }}.tar.gz
-
-      - name: Generate Doc
-        run: |
-          cd build
-          make vineyard_doc
-
-      - name: Commit Doc
-        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
-        run: |
-          git config user.email github-actions@github.com
-          git config user.name github-actions
-          git branch -D gh-pages || true
-          git checkout --orphan gh-pages
-          shopt -s extglob
-          rm -rf !(docs)
-          rm -rf .github .clang-format .gitattributes .gitmodules .gitignore
-          mv docs/_build/html/* ./
-          mv docs/_build/html/.nojekyll ./
-          rm -rf docs
-          git add -A
-          git commit -m "Generate latest docs on CI, from commit ${{ github.sha }}."
-          git push -f origin gh-pages
