@@ -232,21 +232,21 @@ memory mapping.
 
 .. code:: Python
 
-    >>> payload = "Hello, World!"
+    >>> payload = b"Hello, World!"
     >>> blob_id = client.put(payload)
     >>> blob = client.get(blob_id)
-    >>> print(blob.typename, blob.length, blob)
+    >>> print(blob.typename, blob.size, blob)
 
 
 .. code:: console
 
-    > vineyard::Blob 13 Hello, World!
+    vineyard::Blob 28 Object <"o800000011cfa7040": vineyard::Blob>
 
 On the other hand, the hierarchical meta data of vineyard objects are
 shared across the cluster. In the following example, for simplicity, 
 we launch a vineyard cluster with
 two vineyard instances in the same machine, although in practice, 
-these vineyard instances are launched distributedly on each machine of the cluster.
+these vineyard instances are launched distributively on each machine of the cluster.
 
 .. code:: console
 
@@ -280,15 +280,20 @@ listening to ipc_socket ``/var/run/vineyard.sock2``.
     >>> # get the pair object from client2
     >>> obj_pair = client2.get_object(id_pair)
     >>> print(obj_pair.first.typename, obj_pair.first.size(), obj_pair.second.size())
-     
+
+.. code:: console
+
+    vineyard::Array 8 4
+
+.. code:: console
+
     >>> # get the pair value from client2
     >>> value_pair = client2.get(id_pair)
     >>> print(value_pair)
 
 .. code:: console
 
-    > vineyard::Array 8 4
-    > (None, [1, 1, 1, 1])
+    (None, [1, 1, 1, 1])
 
 Here we can get the meta data of the pair object from ``client2``
 though ``client1`` created it, but we can't get the payload of the

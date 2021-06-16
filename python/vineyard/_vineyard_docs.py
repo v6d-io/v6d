@@ -791,7 +791,7 @@ the instance identity, memory statistics and workloads on this instance.
 
 .. code:: python
 
-    >>> status = client.
+    >>> status = client.status
     >>> print(status)
     InstanceStatus:
         instance_id: 5
@@ -802,7 +802,7 @@ the instance identity, memory statistics and workloads on this instance.
         ipc_connections: 1
         rpc_connections: 0
     >>> status.instance_id
-    0
+    5
     >>> status.deployment
     'local'
     >>> status.memory_usage
