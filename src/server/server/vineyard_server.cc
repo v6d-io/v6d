@@ -83,8 +83,10 @@ Status VineyardServer::Serve() {
   // initializing the metadata service.
   ipc_server_ptr_ =
       std::unique_ptr<IPCServer>(new IPCServer(shared_from_this()));
-  rpc_server_ptr_ =
-      std::unique_ptr<RPCServer>(new RPCServer(shared_from_this()));
+  if (spec_["rpc_spec"]["rpc"].get<bool>()) {
+    rpc_server_ptr_ =
+        std::unique_ptr<RPCServer>(new RPCServer(shared_from_this()));
+  }
 
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
@@ -122,7 +124,9 @@ void VineyardServer::Ready() {}
 
 void VineyardServer::BackendReady() {
   try {
-    ipc_server_ptr_->Start();
+    if (ipc_server_ptr_) {
+      ipc_server_ptr_->Start();
+    }
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard IPC server: " << ex.what()
                << ", or please try to cleanup existing "
@@ -131,8 +135,13 @@ void VineyardServer::BackendReady() {
     context_.stop();
     return;
   }
+
   try {
-    rpc_server_ptr_->Start();
+    if (rpc_server_ptr_) {
+      rpc_server_ptr_->Start();
+    } else {
+      RPCReady();
+    }
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard RPC server: " << ex.what();
     serve_status_ = Status::IOError();
