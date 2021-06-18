@@ -17,7 +17,9 @@ limitations under the License.
 #define SRC_SERVER_SERVICES_ETCD_META_SERVICE_H_
 
 #include <memory>
+#include <queue>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "etcd/Client.hpp"
@@ -27,6 +29,8 @@ limitations under the License.
 #include "server/util/etcd_launcher.h"
 
 namespace vineyard {
+using registered_callback_type = std::queue<std::pair<
+    unsigned, callback_t<const std::vector<IMetaService::op_t>&, unsigned>>>;
 
 /**
  * @brief EtcdWatchHandler manages the watch on etcd
@@ -41,11 +45,15 @@ class EtcdWatchHandler {
       asio::io_service& ctx,
 #endif
       callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback,
-      std::string const& prefix, std::string const& filter_prefix)
+      std::string const& prefix, std::string const& filter_prefix,
+      std::shared_ptr<registered_callback_type> registered_callbacks,
+      std::shared_ptr<unsigned> handled)
       : ctx_(ctx),
         callback_(callback),
         prefix_(prefix),
-        filter_prefix_(filter_prefix) {
+        filter_prefix_(filter_prefix),
+        registered_callbacks_(registered_callbacks),
+        handled_(handled) {
   }
 
   void operator()(pplx::task<etcd::Response> const& resp_task);
@@ -59,6 +67,8 @@ class EtcdWatchHandler {
 #endif
   const callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback_;
   std::string const prefix_, filter_prefix_;
+  std::shared_ptr<registered_callback_type> const registered_callbacks_;
+  std::shared_ptr<unsigned> const handled_;
 };
 
 /**
@@ -104,7 +114,10 @@ class EtcdMetaService : public IMetaService {
   explicit EtcdMetaService(vs_ptr_t& server_ptr)
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
-        prefix_(etcd_spec_["prefix"].get_ref<std::string const&>()) {}
+        prefix_(etcd_spec_["prefix"].get_ref<std::string const&>()) {
+    this->registered_callbacks_ = std::make_shared<registered_callback_type>();
+    this->handled_ = std::make_shared<unsigned>(0);
+  }
 
   void requestLock(
       std::string lock_name,
@@ -148,6 +161,8 @@ class EtcdMetaService : public IMetaService {
   std::shared_ptr<etcd::Watcher> watcher_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
   std::unique_ptr<boost::process::child> etcd_proc_;
+  std::shared_ptr<registered_callback_type> registered_callbacks_;
+  std::shared_ptr<unsigned> handled_;
 
   friend class IMetaService;
 };
