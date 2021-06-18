@@ -29,12 +29,23 @@ b128m = 128 * 1024 * 1024
 
 values = [
     (b1m, 1),
+    (b1m, True),
+    (b1m, False),
+    (b1m, (True, False)),
+    (b1m, [True, False]),
     (b1m, (1, 2, 3)),
     (b1m, [1, 2, 3, 4]),
     (b1m, "dsdfsdf"),
     (b1m, (1, "sdfsdfs")),
+    (b1m, b"dsdfsdf"),
+    (b1m, memoryview(b"sdfsdfs")),
     (b1m, [1] * 100000000),
+    (b1m, np.bool_(True)),
+    (b1m, np.bool_(False)),
+    (b1m, (np.bool_(True), np.bool_(False))),
+    (b1m, [np.bool_(True), np.bool_(False)]),
     (b1m, np.arange(1024 * 1024 * 400)),
+    (b16m, np.zeros((1024, 1024, 48), dtype='bool')),
     (b16m, np.zeros((1024, 1024, 48))),
     (b64m, np.zeros((1024, 1024, 512))),
     (b1m, pd.DataFrame({

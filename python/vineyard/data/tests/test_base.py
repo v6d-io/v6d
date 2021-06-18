@@ -40,6 +40,18 @@ def test_string(vineyard_client):
     assert vineyard_client.get(object_id) == 'abcde'
 
 
+def test_bytes(vineyard_client):
+    bs = b'abcde'
+    object_id = vineyard_client.put(bs)
+    assert vineyard_client.get(object_id) == memoryview(bs)
+
+
+def test_memoryview(vineyard_client):
+    bs = memoryview(b'abcde')
+    object_id = vineyard_client.put(bs)
+    assert vineyard_client.get(object_id) == bs
+
+
 def test_pair(vineyard_client):
     object_id = vineyard_client.put((1, "2"))
     assert vineyard_client.get(object_id) == (1, "2")

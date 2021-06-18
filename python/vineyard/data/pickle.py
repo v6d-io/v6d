@@ -23,6 +23,7 @@ Pickle support for arbitrary vineyard objects.
 from io import BytesIO
 
 import pickle
+
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
 
@@ -30,28 +31,47 @@ if pickle.HIGHEST_PROTOCOL < 5:
 class PickledReader:
     ''' Serialize a python object in zero-copy fashion and provides a bytes-like
         read interface.
+
+        How do we keep the round-trip between the reader and writer:
+
+        + for bytes/memoryview:
+
+            - in reader: read it as the only chunk
+            - in writer: write it as a blob
+
+        + for other type of objects:
+
+            - add a special `__VINEYARD__` tag at the beginning
     '''
     def __init__(self, value):
         self._value = value
-        self._buffers = [None]
-        self._store_size = 0
 
-        buffers = []
-        bs = pickle.dumps(value, protocol=5, fix_imports=True, buffer_callback=buffers.append)
+        if isinstance(value, (bytes, memoryview)):
+            self._buffers = [memoryview(value)]
+            self._store_size = len(value)
 
-        meta = BytesIO()
-        meta.write(b'__VINEYARD__')
-        self._poke_int(meta, len(buffers))
-        for buf in buffers:
-            raw = buf.raw()
-            self._buffers.append(raw)
-            self._store_size += len(raw)
-            self._poke_int(meta, len(raw))
+        else:
+            self._buffers = [None]
+            self._store_size = 0
 
-        self._poke_int(meta, len(bs))
-        meta.write(bs)
-        self._buffers[0] = memoryview(meta.getbuffer())
-        self._store_size += len(self._buffers[0])
+            buffers = []
+            bs = pickle.dumps(value, protocol=5, fix_imports=True, buffer_callback=buffers.append)
+
+            meta = BytesIO()
+            meta.write(b'__VINEYARD__')
+            self._poke_int(meta, len(buffers))
+            ks = [len(buffers)]
+            for buf in buffers:
+                raw = buf.raw()
+                self._buffers.append(raw)
+                self._store_size += len(raw)
+                self._poke_int(meta, len(raw))
+                ks.append(len(raw))
+
+            self._poke_int(meta, len(bs))
+            meta.write(bs)
+            self._buffers[0] = memoryview(meta.getbuffer())
+            self._store_size += len(self._buffers[0])
 
         self._chunk_index = 0
         self._chunk_offset = 0
@@ -68,7 +88,10 @@ class PickledReader:
         bs.write(int.to_bytes(value, length=8, byteorder='big'))
 
     def read(self, block_size):
-        assert block_size >= 0, "The next chunk size to read must be greater than 0"
+        if block_size == -1:
+            block_size = 2**30
+        if self._chunk_index >= len(self._buffers):  # may read again when it reach EOF.
+            return b''
         if self._chunk_offset == len(self._buffers[self._chunk_index]):
             self._chunk_index += 1
             self._chunk_offset = 0
@@ -85,8 +108,12 @@ class PickledReader:
 class PickledWriter:
     ''' Deserialize a pickled bytes into a python object in zero-copy fashion.
     '''
-    def __init__(self, store_size):
-        self._buffer = BytesIO(initial_bytes=b'\x00' * store_size)
+    def __init__(self, store_size=-1):
+        if store_size > 0:
+            # optimization: reserve space for incoming contents
+            self._buffer = BytesIO(initial_bytes=b'\x00' * store_size)
+        else:
+            self._buffer = BytesIO()
         self._buffer.seek(0)
         self._value = None
 
@@ -101,7 +128,11 @@ class PickledWriter:
         bs = self._buffer.getbuffer()
         buffers = []
         buffer_sizes = []
-        offset, _ = self._peek_any(bs, 0, b'__VINEYARD__')
+        try:
+            offset, _ = self._peek_any(bs, 0, b'__VINEYARD__')
+        except AssertionError:
+            self._value = bs
+            return
         offset, nbuffers = self._peek_int(bs, offset)
         for _ in range(nbuffers):
             offset, sz = self._peek_int(bs, offset)
@@ -115,7 +146,7 @@ class PickledWriter:
 
     def _peek_any(self, bs, offset, target):
         value = bs[offset:offset + len(target)]
-        assert value == target, "Unexpected bytes: " + value
+        assert value == target, "Unexpected bytes: " + str(value)
         return offset + len(target), value
 
     def _peek_int(self, bs, offset):
