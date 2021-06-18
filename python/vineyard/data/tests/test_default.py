@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import numpy as np
 import pytest
 
 import vineyard
@@ -23,6 +24,26 @@ from vineyard.core import default_builder_context, default_resolver_context
 from vineyard.data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)
+
+
+def test_bool(vineyard_client):
+    value = True
+    object_id = vineyard_client.put(value)
+    assert vineyard_client.get(object_id) == value
+
+    value = False
+    object_id = vineyard_client.put(value)
+    assert vineyard_client.get(object_id) == value
+
+
+def test_np_bool(vineyard_client):
+    value = np.bool_(True)
+    object_id = vineyard_client.put(value)
+    assert vineyard_client.get(object_id) == value
+
+    value = np.bool_(False)
+    object_id = vineyard_client.put(value)
+    assert vineyard_client.get(object_id) == value
 
 
 def test_list(vineyard_client):

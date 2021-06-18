@@ -51,6 +51,18 @@ def string_builder(client, value, **kwargs):
     return client.create_metadata(meta)
 
 
+def bytes_builder(client, value, **kwargs):
+    buffer = client.create_blob(len(value))
+    buffer.copy(0, value)
+    return buffer.seal(client).id
+
+
+def memoryview_builder(client, value, **kwargs):
+    buffer = client.create_blob(len(value))
+    buffer.copy(0, bytes(value))
+    return buffer.seal(client).id
+
+
 def tuple_builder(client, value, builder, **kwargs):
     if len(value) == 2:
         # use pair
@@ -90,6 +102,10 @@ def scalar_resolver(obj):
     return None
 
 
+def bytes_resolver(obj):
+    return memoryview(obj)
+
+
 def pair_resolver(obj, resolver):
     fst = obj.member('first_')
     snd = obj.member('second_')
@@ -116,8 +132,11 @@ def register_base_types(builder_ctx=None, resolver_ctx=None):
         builder_ctx.register(float, double_builder)
         builder_ctx.register(str, string_builder)
         builder_ctx.register(tuple, tuple_builder)
+        builder_ctx.register(bytes, bytes_builder)
+        builder_ctx.register(memoryview, memoryview_builder)
 
     if resolver_ctx is not None:
+        resolver_ctx.register('vineyard::Blob', bytes_resolver)
         resolver_ctx.register('vineyard::Scalar', scalar_resolver)
         resolver_ctx.register('vineyard::Pair', pair_resolver)
         resolver_ctx.register('vineyard::Tuple', tuple_resolver)

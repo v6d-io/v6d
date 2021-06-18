@@ -91,6 +91,13 @@ from ._C import ArrowErrorException, \
 from . import _vineyard_docs
 del _vineyard_docs
 
+from . import core
+from . import data
+from . import deploy
+from . import io
+from . import launcher
+from . import shared_memory
+
 from .core import default_builder_context, default_resolver_context, default_driver_context
 from .data import register_builtin_types
 from .data.graph import Graph
