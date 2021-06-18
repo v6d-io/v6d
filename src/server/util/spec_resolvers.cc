@@ -36,6 +36,7 @@ DEFINE_int64(stream_threshold, 80,
 // ipc
 DEFINE_string(socket, "/var/run/vineyard.sock", "IPC socket file location");
 // rpc
+DEFINE_bool(rpc, true, "Enable RPC service by default");
 DEFINE_int32(rpc_socket_port, 9600, "port to listen in rpc server");
 // Kubernetes
 DEFINE_bool(sync_crds, false, "Synchronize CRDs when persisting objects");
@@ -132,6 +133,7 @@ json IpcSpecResolver::resolve() const {
 
 json RpcSpecResolver::resolve() const {
   json spec;
+  spec["rpc"] = FLAGS_rpc;
   spec["port"] = FLAGS_rpc_socket_port;
   return spec;
 }
