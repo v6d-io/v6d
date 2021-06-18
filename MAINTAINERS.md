@@ -1,13 +1,16 @@
 # The Vineyard Maintainers
 
-This file lists the maintainers of the Vineyard project. The responsibilities of maintainers are listed in the [GOVERNANCE.md](GOVERNANCE.md) file.
+This file lists the maintainers of the Vineyard project. The responsibilities of
+maintainers are listed in the [GOVERNANCE.md](GOVERNANCE.md) file.
 
 ## Project Maintainers
-| Name | GitHub ID | Affiliation |
-| ---- | --------- | ----------- |
-| [Tao He](mailto:linzhu.ht@alibaba-inc.com) | [sighingnow](https://github.com/sighingnow) | Alibaba |
-| [Xiaojian Luo](mailto:lxj193371@alibaba-inc.com) | [luoxiaojian](https://github.com/luoxiaojian) | Alibaba |
-| [Wenyuan Yu](mailto:wenyuan.ywy@alibaba-inc.com) | [wenyuanyu](https://github.com/wenyuanyu) | Alibaba |
-| [Weibin Zeng](mailto:qiaozi.zwb@alibaba-inc.com) | [acezen](https://github.com/acezen) | Alibaba |
-| [Siyuan Zhang](mailto:siyuanzhang.zsy@alibaba-inc.com) | [siyuan0322](https://github.com/siyuan0322) | Alibaba |
-| [Diwen Zhu](mailto:diwen.zdw@alibaba-inc.com) | [andydiwenzhu](https://github.com/andydiwenzhu) | Alibaba |
+
+| Name         | GitHub ID                                       | Affiliation | Email                                                                     |
+| ------------ | ----------------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| Tao He       | [sighingnow](https://github.com/sighingnow)     | Alibaba     | [linzhu.ht@alibaba-inc.com](mailto:linzhu.ht@alibaba-inc.com)             |
+| Xiaojian Luo | [luoxiaojian](https://github.com/luoxiaojian)   | Alibaba     | [lxj193371@alibaba-inc.com](mailto:lxj193371@alibaba-inc.com)             |
+| Wenyuan Yu   | [wenyuanyu](https://github.com/wenyuanyu)       | Alibaba     | [wenyuan.ywy@alibaba-inc.com](mailto:wenyuan.ywy@alibaba-inc.com)         |
+| Weibin Zeng  | [acezen](https://github.com/acezen)             | Alibaba     | [qiaozi.zwb@alibaba-inc.com](mailto:qiaozi.zwb@alibaba-inc.com)           |
+| Siyuan Zhang | [siyuan0322](https://github.com/siyuan0322)     | Alibaba     | [siyuanzhang.zsy@alibaba-inc.com](mailto:siyuanzhang.zsy@alibaba-inc.com) |
+| Diwen Zhu    | [andydiwenzhu](https://github.com/andydiwenzhu) | Alibaba     | [diwen.zdw@alibaba-inc.com](mailto:diwen.zdw@alibaba-inc.com)             |
+
