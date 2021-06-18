@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020 Alibaba Group Holding Limited.
+# Copyright 2020-2021 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,81 +19,29 @@
 import contextlib
 import logging
 import os
-import pkg_resources
+from posixpath import join
 import shutil
-import socket
 import subprocess
+from sys import path
+import tempfile
 import textwrap
 import time
+
+try:
+    import kubernetes
+except ImportError:
+    kubernetes = None
+
+from .utils import find_port, ssh_base_cmd, check_socket
 
 logger = logging.getLogger('vineyard')
 
 
-def ssh_base_cmd(host):
-    return [
-        'ssh', host, '--', 'shopt', '-s', 'huponexit', '2>/dev/null', '||', 'setopt', 'HUP', '2>/dev/null', '||',
-        'true;'
-    ]
-
-
-def find_port_probe(start=2048, end=20480):
-    ''' Find an available port in range [start, end)
-    '''
-    for port in range(start, end):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('localhost', port)) != 0:
-                yield port
-
-
-ipc_port_finder = find_port_probe()
-
-
-def find_port():
-    return next(ipc_port_finder)
-
-
-def check_socket(address):
-    if isinstance(address, tuple):
-        socket_type = socket.AF_INET
-    else:
-        socket_type = socket.AF_UNIX
-    with contextlib.closing(socket.socket(socket_type, socket.SOCK_STREAM)) as sock:
-        return sock.connect_ex(address) == 0
-
-
-__vineyardd_path = None
-
-
-def find_vineyardd_path():
-    global __vineyardd_path
-
-    if __vineyardd_path is not None:
-        return __vineyardd_path
-
-    # find vineyard in the package
-    vineyardd_path = pkg_resources.resource_filename('vineyard', 'vineyardd')
-    if vineyardd_path:
-        if not (os.path.isfile(vineyardd_path) and os.access(vineyardd_path, os.R_OK)):
-            vineyardd_path = None
-
-    if vineyardd_path is None:
-        vineyardd_path = shutil.which('vineyardd')
-
-    if vineyardd_path is None and 'VINEYARD_HOME' in os.environ:
-        vineyardd_path = os.path.expandvars('$VINEYARD_HOME/vineyardd')
-
-    if vineyardd_path is not None:
-        if not (os.path.isfile(vineyardd_path) and os.access(vineyardd_path, os.R_OK)):
-            vineyardd_path = None
-
-    __vineyardd_path = vineyardd_path
-    return vineyardd_path
-
-
 @contextlib.contextmanager
-def start_etcd(host=None, etcd_executable=None):
+def start_etcd(host=None, etcd_executable=None, data_dir=None):
     if etcd_executable is None:
-        etcd_executable = '/usr/local/bin/etcd'
+        etcd_executable = shutil.which('etcd')
+
     if host is None:
         srv_host = '127.0.0.1'
         client_port = find_port()
@@ -103,9 +51,18 @@ def start_etcd(host=None, etcd_executable=None):
         client_port = 2379
         peer_port = 2380
 
+    if data_dir is None:
+        with tempfile.TemporaryDirectory(prefix='etcd-') as td:
+            data_dir_base = td
+            data_dir = os.path.join(td, 'default.etcd')
+    else:
+        data_dir_base = None
+        data_dir = os.path.join(data_dir, 'default.etcd')
+
     # yapf: disable
     prog_args = [
         etcd_executable,
+        '--data-dir', data_dir,
         '--max-txn-ops=102400',
         '--listen-peer-urls', 'http://0.0.0.0:%d' % peer_port,
         '--listen-client-urls', 'http://0.0.0.0:%d' % client_port,
@@ -129,16 +86,35 @@ def start_etcd(host=None, etcd_executable=None):
 
         rc = proc.poll()
         while rc is None:
-            if check_socket(socket) and check_socket(('0.0.0.0', rpc_socket_port)):
+            if check_socket((host or '0.0.0.0', client_port)):
                 break
             time.sleep(1)
             rc = proc.poll()
 
         if rc is not None:
             err = textwrap.indent(proc.stdout.read(), ' ' * 4)
-            raise RuntimeError('Failed to launch program etcd on %s, error:\n%s' % (srv_host, err))
+            raise RuntimeError('Failed to launch program etcd on %s, unexpected error:\n%s' %
+                               (srv_host or 'local', err))
         yield proc, 'http://%s:%d' % (srv_host, client_port)
     finally:
         logging.info('Etcd being killed...')
         if proc is not None and proc.poll() is None:
             proc.terminate()
+            proc.wait()
+        try:
+            if data_dir_base:
+                shutil.rmtree(data_dir_base)
+            else:
+                shutil.rmtree(data_dir)
+        except:
+            pass
+
+
+def start_etcd_k8s(namespace):
+    if kubernetes is None:
+        raise RuntimeError('Please install the kubernetes python first')
+    kubernetes.config.load_kube_config()
+    k8s_client = kubernetes.client.ApiClient()
+    return kubernetes.utils.create_from_yaml(k8s_client,
+                                             os.path.join(os.path.dirname(__file__), 'etcd.yaml'),
+                                             namespace=namespace)

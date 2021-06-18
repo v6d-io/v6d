@@ -26,7 +26,7 @@ import textwrap
 import time
 import yaml
 
-from .utils import start_etcd_k8s
+from .etcd import start_etcd_k8s
 
 logger = logging.getLogger('vineyard')
 
@@ -76,3 +76,6 @@ def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyar
         return kubernetes.utils.create_from_yaml(k8s_client, rendered.name, namespace=namespace)
     finally:
         os.unlink(rendered.name)
+
+
+__all__ = ['start_vineyardd']

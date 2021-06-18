@@ -18,13 +18,17 @@
 
 import contextlib
 import logging
+import os
 import pkg_resources
+import shutil
 import subprocess
 import sys
+import tempfile
 import textwrap
 import time
 
-from .utils import start_etcd
+from .etcd import start_etcd
+from .utils import find_vineyardd_path, check_socket
 
 logger = logging.getLogger('vineyard')
 
@@ -33,7 +37,8 @@ logger = logging.getLogger('vineyard')
 def start_vineyardd(etcd_endpoints=None,
                     vineyardd_path=None,
                     size='256M',
-                    socket='/var/run/vineyard.sock',
+                    socket=None,
+                    rpc=True,
                     rpc_socket_port=9600,
                     debug=False):
     ''' Launch a local vineyard cluster.
@@ -62,14 +67,26 @@ def start_vineyardd(etcd_endpoints=None,
                 128974848, 129k, 129M, 123Mi, 1G, 10Gi, ...
         socket: str
             The UNIX domain socket socket path that vineyard server will listen on.
+            Default is None.
+
+            When the socket parameter is None, a random path under temporary directory will be
+            generated and used.
         rpc_socket_port: int
             The port that vineyard will use to privode RPC service.
         debug: bool
             Whether print debug logs.
     '''
 
-    if vineyardd_path is None:
-        vineyardd_path = pkg_resources.resource_filename('vineyard', 'vineyardd')
+    if not vineyardd_path:
+        vineyardd_path = find_vineyardd_path()
+
+    if not vineyardd_path:
+        raise RuntimeError('Unable to find the "vineyardd" executable')
+
+    if not socket:
+        socketfp = tempfile.NamedTemporaryFile(delete=True, prefix='vineyard-', suffix='.sock')
+        socket = socketfp.name
+        socketfp.close()
 
     if etcd_endpoints is None:
         etcd_ctx = start_etcd()
@@ -77,7 +94,7 @@ def start_vineyardd(etcd_endpoints=None,
     else:
         etcd_ctx = None
 
-    env = dict()
+    env = os.environ.copy()
     if debug:
         env['GLOG_v'] = 11
 
@@ -87,6 +104,7 @@ def start_vineyardd(etcd_endpoints=None,
         '--deployment', 'local',
         '--size', str(size),
         '--socket', socket,
+        '--rpc' if rpc else '--norpc',
         '--rpc_socket_port', str(rpc_socket_port),
         '--etcd_endpoint', etcd_endpoints
     ]
@@ -99,15 +117,31 @@ def start_vineyardd(etcd_endpoints=None,
                                 stderr=sys.__stderr__,
                                 universal_newlines=True,
                                 encoding='utf-8')
-        time.sleep(1)
+        # wait for vineyardd ready: check the rpc port and ipc sockets
         rc = proc.poll()
+        while rc is None:
+            if check_socket(socket) and ((not rpc) or check_socket(('0.0.0.0', rpc_socket_port))):
+                break
+            time.sleep(1)
+            rc = proc.poll()
+
         if rc is not None:
             err = textwrap.indent(proc.stdout.read(), ' ' * 4)
             raise RuntimeError('vineyardd exited unexpectedly with code %d, error is:\n%s' % (rc, err))
+
+        logger.debug('vineyardd is ready.............')
         yield proc, socket
     finally:
-        logger.info('Local vineyardd being killed')
-        if proc.poll() is None:
-            proc.kill()
+        logger.debug('Local vineyardd being killed')
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            proc.wait()
+        try:
+            shutil.rmtree(socket)
+        except:
+            pass
         if etcd_ctx is not None:
             etcd_ctx.__exit__(None, None, None)  # pylint: disable=no-member
+
+
+__all__ = ['start_vineyardd']

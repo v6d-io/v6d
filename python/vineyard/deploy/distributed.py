@@ -122,3 +122,6 @@ def start_vineyardd(hosts=None,
                 proc.kill()
         if etcd_ctx is not None:
             etcd_ctx.__exit__(None, None, None)  # pylint: disable=no-member
+
+
+__all__ = ['start_vineyardd']
