@@ -194,32 +194,32 @@ void EtcdMetaService::requestAll(
 void EtcdMetaService::requestUpdates(
     const std::string& prefix, unsigned since_rev,
     callback_t<const std::vector<op_t>&, unsigned> callback) {
-  etcd_->ls(prefix_ + prefix, 1)
-      .then([this, since_rev, prefix,
-             callback](pplx::task<etcd::Response> resp_task) {
-        auto resp = resp_task.get();
-        if (since_rev < (unsigned) resp.index() &&
-            since_rev + 1 > *this->handled_) {
-          if (this->watcher_) {
-            VLOG(10) << "------------------------- since: " << since_rev
-                     << " current: " << resp.index()
-                     << " handled: " << *this->handled_;
-            this->registered_callbacks_->push(
-                std::pair<unsigned,
-                          callback_t<const std::vector<IMetaService::op_t>&,
-                                     unsigned>>(since_rev + 1, callback));
-          } else {
-            etcd_->watch(prefix_ + prefix, since_rev + 1, true)
-                .then(EtcdWatchHandler(server_ptr_->GetMetaContext(), callback,
-                                       prefix_, prefix_ + meta_sync_lock_,
-                                       this->registered_callbacks_,
-                                       this->handled_));
-          }
-        } else {
-          server_ptr_->GetMetaContext().post(boost::bind(
-              callback, Status::OK(), std::vector<op_t>(), *this->handled_));
-        }
-      });
+  etcd_->head().then([this, since_rev, prefix,
+                      callback](pplx::task<etcd::Response> resp_task) {
+    auto resp = resp_task.get();
+    if (since_rev < (unsigned) resp.index() &&
+        since_rev + 1 > *this->handled_) {
+      if (this->watcher_) {
+        VLOG(10) << "------------------------- since: " << since_rev
+                 << " current: " << resp.index()
+                 << " handled: " << *this->handled_;
+        this->registered_callbacks_->push(
+            std::pair<
+                unsigned,
+                callback_t<const std::vector<IMetaService::op_t>&, unsigned>>(
+                since_rev + 1, callback));
+      } else {
+        etcd_->watch(prefix_ + prefix, since_rev + 1, true)
+            .then(EtcdWatchHandler(server_ptr_->GetMetaContext(), callback,
+                                   prefix_, prefix_ + meta_sync_lock_,
+                                   this->registered_callbacks_,
+                                   this->handled_));
+      }
+    } else {
+      server_ptr_->GetMetaContext().post(boost::bind(
+          callback, Status::OK(), std::vector<op_t>(), *this->handled_));
+    }
+  });
 }
 
 void EtcdMetaService::startDaemonWatch(
