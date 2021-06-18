@@ -59,7 +59,7 @@ def bytes_builder(client, value, **kwargs):
 
 def memoryview_builder(client, value, **kwargs):
     buffer = client.create_blob(len(value))
-    buffer.copy(0, id(value), len(value))
+    buffer.copy(0, bytes(value))
     return buffer.seal(client).id
 
 
