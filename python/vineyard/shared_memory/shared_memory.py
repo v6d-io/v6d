@@ -30,8 +30,16 @@ Refer to the documentation of multiprocessing.shared_memory for details.
 import multiprocessing.shared_memory
 import struct
 import warnings
+import os
+import tempfile
 
 from vineyard._C import ObjectID
+
+
+tmpdir = tempfile.mkdtemp()
+path = '/dev/shm'
+saved_umask = os.umask(77)
+path = os.path.join(tmpdir, path)
 
 
 class SharedMemory:
@@ -55,6 +63,8 @@ class SharedMemory:
         '''
         if not size >= 0:
             raise ValueError("'size' must be a positive integer")
+        if os.path.getsize(path) < size:
+            warnings.warn("'size' is greater than the maximum shared memory size")
         if create:
             if size == 0:
                 raise ValueError("'size' must be a positive number different from zero")
