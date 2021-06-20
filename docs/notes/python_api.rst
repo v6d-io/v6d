@@ -59,6 +59,8 @@ Primitives
 .. autoclass:: BlobBuilder
     :members:
 
+.. _shared-memory:
+
 Shared Memory
 -------------
 
