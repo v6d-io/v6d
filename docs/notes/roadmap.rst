@@ -50,13 +50,13 @@ will be the first major stable releases with fully kubernetes support, which wil
 v0.2.0
 ------
 
-vineyard *v0.2.0* will address the issue about Python ecosystem compatibility, I/O, and
+Vineyard *v0.2.0* will address the issue about Python ecosystem compatibility, I/O, and
 the kubernetes integration.
 
-+ vineyard *v0.2.0* will support any *filesystem-spec*-compatible data source/sink as well as file
++ Vineyard *v0.2.0* will support any *filesystem-spec*-compatible data source/sink as well as file
   format.
-+ vineyard *v0.2.0* will support Python ecosystem (especially numpy and pandas) better.
-+ vineyard *v0.2.0* will include basic Helm integration for deploying on Kubernetes as a ``DaemonSet``.
++ Vineyard *v0.2.0* will support Python ecosystem (especially numpy and pandas) better.
++ Vineyard *v0.2.0* will include basic Helm integration for deploying on Kubernetes as a ``DaemonSet``.
 + A prototype of scheduler plugin to do data locality scheduling will be included into vineyard v0.2.0
   to demonstrates the capability about co-scheduling job and data in kubernetes brought by vineyard.
 + Match the criterion of CNCF sandbox project.
@@ -64,7 +64,7 @@ the kubernetes integration.
 v0.1.0
 ------
 
-vineyard *v0.1.0* is the first release after open source. This version includes:
+Vineyard *v0.1.0* is the first release after open source. This version includes:
 
 + Complete functionality for both server and client.
 + Complete Python SDK.
