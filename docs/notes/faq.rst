@@ -24,7 +24,7 @@ or `post it to discussions`_.
 
 3. *Is Kubernetes a necessity for vineyard?*
 
-  No. But when deploy vineyard on Kubernetes, users can enjoy the flexibility of
+  No. But when deploying vineyard on Kubernetes, users can enjoy the flexibility of
   resource management provided by cloud-native deployments for the workloads of their
   applications. Meanwhile, the scheduler plugin will help co-locate the worker pods
   to the data for better data-work alignment.

@@ -91,7 +91,7 @@ then to further understand the ``client.get()`` method, we use ``client.get_obje
 to get the vineyard object, and check its ``typename``. 
 
 Actually, ``client.get()`` works in two steps, it first gets the vineyard object
-from vineyardd via ``client.get_object()``, and then resolve the vineyard object
+from vineyardd via ``client.get_object()``, and then resolves the vineyard object
 based on the registered resolver. 
 
 In this case, when we ``import vineyard.dataframe``,
@@ -137,6 +137,8 @@ is available for other clients:
      >>> value1 = shared_memory.ShareableList(client, name=value.shm.name)
      >>> value1
      ShareableList([b'a', 'bb', 1234, 56.78, False], name='o8000000119aa10c0')
+
+For more details, see :ref:`shared-memory`.
 
 Using streams
 -------------

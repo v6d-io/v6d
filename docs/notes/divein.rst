@@ -9,12 +9,12 @@ intermediate storage to share **immutable** distributed data between heterogeneo
 computation systems that are involved in a big data task. This
 brings two significant overheads:
 
-1. the structural data are transformed from/to the
+1. The structural data is transformed from/to the
    external data storage format (e.g., tables in relational databases, files in HDFS) 
    back and forth in the beginning/end of each computation step, meanwhile, the 
    structure and operations of the data are dismissed.
 
-2. saving/loading the data to/from the external storage
+2. Saving/Loading the data to/from the external storage
    requires lots of memory-copies and disk-IO costs, which becomes
    the bottleneck of the entire process in more and more cases as the efficiency
    of the computation systems are growing rapidly these years. 
@@ -28,12 +28,12 @@ Overview
 
 To address this issue, vineyard provides:
 
-1.  **in-memory** distributed data sharing in a **zero-copy** fashion to avoid 
+1.  **In-memory** distributed data sharing in a **zero-copy** fashion to avoid 
     introducing extra I/O costs by exploiting a shared memory manager derived from plasma.
 
     In general, vineyard servers are 
     launched as daemons in every machine of the underlying cluster to make up 
-    a vineyard cluster, 
+    a **vineyard cluster**, 
     and each vineyard instance will allocate a shared memory pool to store 
     the corresponding partition of the distributed data, 
     and the meta data of the distributed data will be shared across
@@ -55,7 +55,7 @@ To address this issue, vineyard provides:
     and start to use the data for computation.
     
 
-2.  built-in **out-of-box high-level** abstraction to share the distributed 
+2.  Built-in **out-of-box high-level** abstraction to share the distributed 
     data with complex structures (e.g., distributed graphs) 
     with nearly zero extra development cost, while the transformation costs are eliminated.
 
@@ -78,24 +78,24 @@ The figure demonstrates the architecture of vineyard.
 
 On the server/daemon side (i.e., the aforementioned vineyard instance), there are four major components:
 
-1.  the shared memory is the memory space in vineyard that shares with vineyard clients via
+1.  The **shared memory** is the memory space in vineyard that shares with vineyard clients via
     the UNIX domain socket by memory mapping. As we mentioned before, the partitions of the
     distributed data are living in the shared memory of the corresponding vineyard instance in 
     the cluster.
 
-2.  the metadata manager provides management for the metadata of the data stored in vineyard. 
+2.  The **metadata manager** provides management for the metadata of the data stored in vineyard. 
     It keeps the structures, layouts and properties of the data to provide high-level abstractions
     (e.g., graphs, tensors, dataframes). The metadata
     managers in a vineyard cluster communicate with each other through the backend key-value store, 
     e.g., etcd server, to keep the consistency of the distributed data stored in vineyard.
 
-3.  the pluggable drivers assign specific functionalities to certain types of data in vineyard.
+3.  The **pluggable drivers** assign specific functionalities to certain types of data in vineyard.
     In particular, I/O drivers sync with external storages such as databases and file systems to
     read data into and write data from vineyard, while partition and re-partition drivers 
     reorganize the distributed graphs stored in vineyard to balance the workload. Note that the 
     drivers usually employs the low-level API for delicate operations.
 
-4.  the ipc/rpc servers handle the ipc/rpc connections respectively from vineyard clients 
+4.  The **ipc/rpc servers** handle the ipc/rpc connections respectively from vineyard clients 
     and the communicator supports
     bulk exchange of data between vineyard instances. In particular, the client can get the metadata
     of the data stored in vineyard through both ipc and rpc connections. But to get the data partition,
@@ -114,9 +114,9 @@ Vineyard Object Design
 Vineyard represents all kinds of data as vineyard objects, 
 for any vineyard object, it consists of two parts: 
 
-1.  a set of blobs where the payload of the data lives in;
+1.  A set of blobs where the payload of the data lives in;
 
-2.  a hierarchical meta tree which describes the type,
+2.  A hierarchical meta tree which describes the type,
     layout and properties of the data. 
     
 The decoupling design of data payload and data layout brings three benefits:
@@ -140,10 +140,10 @@ The decoupling design of data payload and data layout brings three benefits:
 
 In particular, for the meta data and methods of vineyard objects, vineyard employs two design choices:
 
-1.  the composable design on vineyard objects to
+1.  The composable design on vineyard objects to
     facilitate distributed data management;
 
-2.  the extensible design on methods of
+2.  The extensible design on methods of
     vineyard objects to enable flexible data sharing between different computation systems
     with nearly zero extra development cost.
 
@@ -192,7 +192,7 @@ through different systems and paradigms respectively, and the registry
 mechanism is so basic that even the core data structures and drivers in
 vineyard also follows the same design.
 
-So what is the registry mechanism? 
+**So what is registry mechanism?** 
 
 In general, the registry mechanism
 decouples the methods from the definition of vineyard data types. For
@@ -396,17 +396,17 @@ By examining the practice of big data tasks such as numeric computing, machine l
 and graph analysis carefully,
 we summarize that the data involved has four properties:
 
-+ distributed and each partitioned fragment usually fits into memory;
-+ immutable, i.e., never modified after creation;
-+ with complex structure, e.g., graph in CSR format;
-+ required to share between different computation systems and programming languages.
++ Distributed and each partitioned fragment usually fits into memory;
++ Immutable, i.e., never modified after creation;
++ With complex structure, e.g., graph in CSR format;
++ Required to share between different computation systems and programming languages.
     
 Thus vineyard is designed accordingly with:
 
-+ composable design on vineyard objects;
-+ immutable zero-cost in-memory data sharing via memory mapping;
-+ out-of-box high-level data abstraction for complex data structures;
-+ extensible design on builder/resolver/driver for flexible crossing-system and
++ Composable design on vineyard objects;
++ Immutable zero-cost in-memory data sharing via memory mapping;
++ Out-of-box high-level data abstraction for complex data structures;
++ Extensible design on builder/resolver/driver for flexible crossing-system and
   crossing-language data sharing.
       
 In general, the design choices of vineyard are fully determined on coping
