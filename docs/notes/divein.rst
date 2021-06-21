@@ -192,7 +192,7 @@ through different systems and paradigms respectively, and the registry
 mechanism is so basic that even the core data structures and drivers in
 vineyard also follows the same design.
 
-**So what is registry mechanism?** 
+**So what is the registry mechanism?** 
 
 In general, the registry mechanism
 decouples the methods from the definition of vineyard data types. For
