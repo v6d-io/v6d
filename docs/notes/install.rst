@@ -16,6 +16,8 @@ Install etcd
 
 Start vineyard requires etcd (>= 3.3.0), a latest version of etcd can be downloaded via
 
+for Ubuntu or (Debian):
+
 .. code:: shell
 
     wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz
@@ -115,7 +117,7 @@ You can obtain the source code using ``git``:
 .. code:: console
 
     git clone https://github.com/v6d-io/v6d
-    cd libvineyard
+    cd v6d
     git submodule update --init
 
 Then you do a out-of-source build using CMake:

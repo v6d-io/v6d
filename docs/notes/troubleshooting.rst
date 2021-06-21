@@ -54,3 +54,17 @@ could helps you when error occurs.
   more details about etcd tuning, please refer to the section `Hardware recommendations
   <https://etcd.io/docs/v3.4.0/op-guide/hardware/>`_
   in etcd docs.
+
+4. *Installation Error: Could not find package configuration file provided by: libgrapelite*
+
+  While attempting to install vineyard from source, user may face this error. A module 
+  named "Graph" in vineyard which is used for distributed data structure 
+  requires `libgrape-lite library <https://github.com/alibaba/libgrape-lite>`_ .
+  This issue can be resolved by:
+
+  + By installing the libgrape-lite library.
+  + Disabling the part by the following code:
+
+  .. code:: console
+
+      cmake .. -DBUILD_VINEYARD_GRAPH=OFF
