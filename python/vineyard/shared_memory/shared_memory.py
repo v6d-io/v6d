@@ -27,7 +27,15 @@ different. For vineyard, to make the shared memory visible for other process, a 
 Refer to the documentation of multiprocessing.shared_memory for details.
 '''
 
-import multiprocessing.shared_memory
+try:
+    import multiprocessing.shared_memory as shm
+except ImportError:
+    # multiprocessing.shared_memory is available since Python 3.8, we use the slim library
+    # for earlier version of Python.
+    #
+    # see also github #327.
+    import shared_memory as shm
+
 import struct
 import warnings
 
@@ -141,7 +149,7 @@ class SharedMemory:
 _encoding = "utf8"
 
 
-class ShareableList(multiprocessing.shared_memory.ShareableList):
+class ShareableList(shm.ShareableList):
     '''
     Pattern for a mutable list-like object shareable via a shared
     memory block.  It differs from the built-in list type in that these
