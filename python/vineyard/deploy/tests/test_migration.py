@@ -43,7 +43,7 @@ def test_migration(vineyard_ipc_sockets):
     data = np.ones((1, 2, 3, 4, 5))
     o = client1.put(data)
     client1.persist(o)
-    meta = client2.get_meta(o)
+    meta = client2.get_meta(o, sync_remote=True)
     assert data.shape == tuple(json.loads(meta['shape_']))
 
     # migrate local to local: do nothing.

@@ -298,13 +298,15 @@ def run_python_tests(etcd_endpoints, with_migration):
     with start_vineyardd(etcd_endpoints,
                          etcd_prefix,
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
-        subprocess.check_call(['pytest', '-s', '-vvv',
+        start_time = time.time()
+        subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
                                'python/vineyard/core',
                                'python/vineyard/data',
                                'python/vineyard/shared_memory',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+        print('running python tests use %s seconds' % (time.time() - start_time), flush=True)
 
 
 def run_python_deploy_tests(etcd_endpoints, with_migration):
@@ -320,10 +322,12 @@ def run_python_deploy_tests(etcd_endpoints, with_migration):
                                   instance_size=instance_size,
                                   nowait=True) as instances:
         vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
-        subprocess.check_call(['pytest', '-s', '-vvv',
+        start_time = time.time()
+        subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
                                'python/vineyard/deploy/tests',
                                '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets] + extra_args,
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+        print('running python distributed tests use %s seconds' % (time.time() - start_time), flush=True)
 
 
 def run_io_adaptor_tests(etcd_endpoints, with_migration):
@@ -332,11 +336,14 @@ def run_io_adaptor_tests(etcd_endpoints, with_migration):
     with start_vineyardd(etcd_endpoints,
                          etcd_prefix,
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
-        subprocess.check_call(['pytest', '-s', '-vvv', 'modules/io/python/drivers/io/tests',
+        start_time = time.time()
+        subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               'modules/io/python/drivers/io/tests',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                                '--test-dataset=%s' % get_data_path(None)],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+        print('running io adaptors tests use %s seconds' % (time.time() - start_time), flush=True)
 
 
 def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
@@ -354,12 +361,13 @@ def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
                                   nowait=True) as instances:
         vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
         rpc_socket_port = instances[0][1]
-        subprocess.check_call(['pytest', '-s', '-vvv',
+        start_time = time.time()
+        subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
                                'modules/io/python/drivers/io/tests/test_migrate_stream.py',
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                                '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets] + extra_args,
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-
+        print('running distributed io adaptors tests use %s seconds' % (time.time() - start_time), flush=True)
 
 
 def parse_sys_args():
