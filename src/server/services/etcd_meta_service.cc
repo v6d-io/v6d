@@ -72,6 +72,13 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     }
     }
   }
+  // Notes on [Execute order in boost asio context]
+  //
+  // The execution order is guaranteed to be the same with the post order.
+  //
+  // Ref: https://www.boost.org/doc/libs/1_75_0/doc/html/boost_asio/reference/
+  //      io_context__strand.html#boost_asio.reference.io_context__strand.orde
+  //      r_of_handler_invocation
   auto status = Status::EtcdError(resp.error_code(), resp.error_message());
   ctx_.post(boost::bind(callback_, status, ops, resp.index()));
   {
