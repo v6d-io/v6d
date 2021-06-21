@@ -117,6 +117,7 @@ setup(
         'pickle5; python_version<="3.7"',
         'pyarrow',
         'setuptools',
+        'shared-memory38; python_version<="3.7"',
         'sortedcontainers',
     ],
     extras_require={
