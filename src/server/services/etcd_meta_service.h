@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_SERVER_SERVICES_ETCD_META_SERVICE_H_
 
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <string>
 #include <utility>
@@ -46,14 +47,16 @@ class EtcdWatchHandler {
 #endif
       callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback,
       std::string const& prefix, std::string const& filter_prefix,
-      std::shared_ptr<registered_callback_type> registered_callbacks,
-      std::shared_ptr<unsigned> handled)
+      registered_callback_type& registered_callbacks,
+      std::atomic<unsigned>& handled_rev,
+      std::mutex& registered_callbacks_mutex)
       : ctx_(ctx),
         callback_(callback),
         prefix_(prefix),
         filter_prefix_(filter_prefix),
         registered_callbacks_(registered_callbacks),
-        handled_(handled) {
+        handled_rev_(handled_rev),
+        registered_callbacks_mutex_(registered_callbacks_mutex) {
   }
 
   void operator()(pplx::task<etcd::Response> const& resp_task);
@@ -67,8 +70,10 @@ class EtcdWatchHandler {
 #endif
   const callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback_;
   std::string const prefix_, filter_prefix_;
-  std::shared_ptr<registered_callback_type> const registered_callbacks_;
-  std::shared_ptr<unsigned> const handled_;
+
+  registered_callback_type& registered_callbacks_;
+  std::atomic<unsigned>& handled_rev_;
+  std::mutex& registered_callbacks_mutex_;
 };
 
 /**
@@ -115,8 +120,7 @@ class EtcdMetaService : public IMetaService {
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
         prefix_(etcd_spec_["prefix"].get_ref<std::string const&>()) {
-    this->registered_callbacks_ = std::make_shared<registered_callback_type>();
-    this->handled_ = std::make_shared<unsigned>(0);
+    this->handled_rev_.store(0);
   }
 
   void requestLock(
@@ -161,8 +165,10 @@ class EtcdMetaService : public IMetaService {
   std::shared_ptr<etcd::Watcher> watcher_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
   std::unique_ptr<boost::process::child> etcd_proc_;
-  std::shared_ptr<registered_callback_type> registered_callbacks_;
-  std::shared_ptr<unsigned> handled_;
+
+  registered_callback_type registered_callbacks_;
+  std::atomic<unsigned> handled_rev_;
+  std::mutex registered_callbacks_mutex_;
 
   friend class IMetaService;
 };
