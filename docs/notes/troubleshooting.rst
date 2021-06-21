@@ -67,4 +67,4 @@ could helps you when error occurs.
 
   .. code:: console
 
-  >>> cmake .. -DBUILD_VINEYARD_GRAPH=OFF
+      cmake .. -DBUILD_VINEYARD_GRAPH=OFF
