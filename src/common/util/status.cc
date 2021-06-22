@@ -26,6 +26,7 @@
 #include <iostream>
 #include <string>
 
+#include "common/backtrace/backtrace.hpp"
 #include "common/util/logging.h"
 
 namespace vineyard {
@@ -35,6 +36,13 @@ Status::Status(StatusCode code, const std::string& msg) {
   state_ = new State;
   state_->code = code;
   state_->msg = msg;
+#ifndef NDEBUG
+  if (VLOG_IS_ON(11) && code != StatusCode::kOK) {
+    std::stringstream ss;
+    vineyard::backtrace_info::backtrace(ss, true);
+    backtrace_ = ss.str();
+  }
+#endif
 }
 
 void Status::CopyFrom(const Status& s) {

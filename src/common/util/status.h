@@ -551,6 +551,7 @@ class VINEYARD_MUST_USE_TYPE Status {
 
   template <typename T>
   Status& operator<<(const T& s);
+  const std::string Backtrace() const { return backtrace_; }
 
  private:
   struct State {
@@ -560,6 +561,8 @@ class VINEYARD_MUST_USE_TYPE Status {
   // OK status has a `NULL` state_.  Otherwise, `state_` points to
   // a `State` structure containing the error code and message(s)
   State* state_;
+  // OK status has a `NULL` backtrace_.
+  std::string backtrace_;
 
   void DeleteState() {
     delete state_;
