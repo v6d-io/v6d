@@ -41,14 +41,6 @@ Status::Status(StatusCode code, const std::string& msg) {
   backtrace_ = ss.str();
 }
 
-Status::Status(StatusCode code, const std::string& msg, const std::string& bt)
-    : backtrace_(bt) {
-  CHECK_NE(code, StatusCode::kOK) << "Cannot construct ok status with message";
-  state_ = new State;
-  state_->code = code;
-  state_->msg = msg;
-}
-
 void Status::CopyFrom(const Status& s) {
   delete state_;
   if (s.state_ == nullptr) {

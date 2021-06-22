@@ -235,7 +235,6 @@ class VINEYARD_MUST_USE_TYPE Status {
     }
   }
   Status(StatusCode, const std::string& msg);
-  Status(StatusCode, const std::string& msg, const std::string& bt);
   // Copy the specified status.
   inline Status(const Status& s);
   inline Status& operator=(const Status& s);
