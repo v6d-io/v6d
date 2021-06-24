@@ -39,7 +39,43 @@ std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t ptr) {
  * deletion of the blobs cannot be reflected in watched etcd events.
  */
 
-void IMetaService::incRef(std::string const& key, std::string const& value,
+/**
+ * Note [Deleting global object and members]
+ *
+ * Because of migration deleting member of global objects is tricky, as, assume
+ * we have
+ *
+ *    A -> B      -- h1
+ *      -> C      -- h2
+ *
+ * then migration happens,
+ *
+ *    A -> B      -- h1
+ *      -> C      -- h2
+ *      -> C'     -- h1
+ *
+ * and if we delete C with (deep=true, force=false), A, B and C' should still be
+ * kept as they still construct a complete object.
+ *
+ * To archive this, we
+ *
+ * - in `incRef(A, B)`: if `B` is a signature, we just record the object id
+ *   instead.
+ *
+ * - in `findDeleteSet` (in `deleteable`), an object is deleteable, when
+ *
+ *      * it is not used, or
+ *      * it has an *equivalent* object in the metatree, whether it is a local
+ *        or remote object. Here *equivalent* means they has the same signature.
+ *
+ *   Note that in the second case, the signature of *equivalent* object must has
+ *   already been pushed into "/signatures/", as we have another assumption that
+ *   only member of global objects can be migrated, see also `MigrateObject` in
+ *   vineyard_server.cc.
+ */
+
+void IMetaService::IncRef(std::string const& instance_name,
+                          std::string const& key, std::string const& value,
                           const bool from_remote) {
   std::vector<std::string> vs;
   boost::algorithm::split(vs, key, [](const char c) { return c == '/'; });
@@ -51,7 +87,7 @@ void IMetaService::incRef(std::string const& key, std::string const& value,
     return;
   }
   ObjectID key_obj, value_obj;
-  if (meta_tree::DecodeObjectID(meta_, value, value_obj).ok()) {
+  if (meta_tree::DecodeObjectID(meta_, instance_name, value, value_obj).ok()) {
     key_obj = VYObjectIDFromString(vs[1]);
     if (from_remote && IsBlob(value_obj)) {
       // don't put remote blob refs into deps graph, since two blobs may share
@@ -87,9 +123,34 @@ void IMetaService::incRef(std::string const& key, std::string const& value,
   }
 }
 
+void IMetaService::CloneRef(ObjectID const target, ObjectID const mirror) {
+  // avoid repeatedly clone
+  VLOG(10) << "clone ref: " << ObjectIDToString(target) << " -> "
+           << ObjectIDToString(mirror);
+  if (supobjects_.find(mirror) != supobjects_.end()) {
+    return;
+  }
+  auto range = supobjects_.equal_range(target);
+  std::vector<ObjectID> suprefs;
+  // n.b.: avoid traverse & modify at the same time (in the same loop).
+  for (auto iter = range.first; iter != range.second; ++iter) {
+    suprefs.emplace_back(iter->second);
+  }
+  for (auto const supref : suprefs) {
+    supobjects_.emplace(mirror, supref);
+    subobjects_.emplace(supref, mirror);
+  }
+}
+
 bool IMetaService::deleteable(ObjectID const object_id) {
-  return object_id != InvalidObjectID() &&
-         supobjects_.find(object_id) == supobjects_.end();
+  if (object_id == InvalidObjectID()) {
+    return true;
+  }
+  if (supobjects_.find(object_id) == supobjects_.end()) {
+    return true;
+  }
+  ObjectID equivalent = InvalidObjectID();
+  return meta_tree::HasEquivalent(meta_, object_id, equivalent);
 }
 
 void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
@@ -107,6 +168,7 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
     }
     return;
   }
+  // process the "initial_delete_set" in topo-sort order.
   auto sup_target_range = supobjects_.equal_range(object_id);
   std::set<ObjectID> sup_traget_to_preprocess;
   for (auto it = sup_target_range.first; it != sup_target_range.second; ++it) {
@@ -124,23 +186,44 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
     {
       // delete downwards
       std::set<ObjectID> to_delete;
-      auto range = subobjects_.equal_range(object_id);
-      for (auto it = range.first; it != range.second; ++it) {
-        // remove dependency edge
-        auto suprange = supobjects_.equal_range(it->second);
-        decltype(suprange.first) p;
-        for (p = suprange.first; p != suprange.second; /* no self-inc */) {
-          if (p->second == object_id) {
-            supobjects_.erase(p++);
-          } else {
-            ++p;
+      {
+        // delete sup-edges of subobjects
+        auto range = subobjects_.equal_range(object_id);
+        for (auto it = range.first; it != range.second; ++it) {
+          // remove dependency edge
+          auto suprange = supobjects_.equal_range(it->second);
+          decltype(suprange.first) p;
+          for (p = suprange.first; p != suprange.second; /* no self-inc */) {
+            if (p->second == object_id) {
+              supobjects_.erase(p++);
+            } else {
+              ++p;
+            }
+          }
+          if (deep || IsBlob(it->second)) {
+            // blob is special: see Note [Deleting objects and blobs].
+            to_delete.emplace(it->second);
           }
         }
-        if (deep || IsBlob(it->second)) {
-          // blob is special: see Note [Deleting objects and blobs].
-          to_delete.emplace(it->second);
+      }
+
+      {
+        // delete sub-edges of supobjects
+        auto range = supobjects_.equal_range(object_id);
+        for (auto it = range.first; it != range.second; ++it) {
+          // remove dependency edge
+          auto subrange = subobjects_.equal_range(it->second);
+          decltype(subrange.first) p;
+          for (p = subrange.first; p != subrange.second; /* no self-inc */) {
+            if (p->second == object_id) {
+              subobjects_.erase(p++);
+            } else {
+              ++p;
+            }
+          }
         }
       }
+
       for (auto const& target : to_delete) {
         traverseToDelete(initial_delete_set, delete_set, depth - 1, depthes,
                          target, false, true);
@@ -202,10 +285,10 @@ void IMetaService::postProcessForDelete(
     const std::map<ObjectID, int32_t>& depthes,
     std::vector<ObjectID>& delete_objects) {
   delete_objects.assign(delete_set.begin(), delete_set.end());
-  std::sort(delete_objects.begin(), delete_objects.end(),
-            [&depthes](const ObjectID& x, const ObjectID& y) {
-              return depthes.at(x) > depthes.at(y);
-            });
+  std::stable_sort(delete_objects.begin(), delete_objects.end(),
+                   [&depthes](const ObjectID& x, const ObjectID& y) {
+                     return depthes.at(x) > depthes.at(y);
+                   });
 }
 
 void IMetaService::printDepsGraph() {
@@ -220,7 +303,97 @@ void IMetaService::printDepsGraph() {
     ss << VYObjectIDToString(kv.first) << " <- "
        << VYObjectIDToString(kv.second) << std::endl;
   }
-  VLOG(10) << "Depenencies graph:\n" << ss.str();
+  VLOG(10) << "Depenencies graph on " << server_ptr_->instance_name() << ": \n"
+           << ss.str();
+}
+
+void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
+  // don't crash the server for any reason (any potential garbage value)
+  auto upsert_to_meta = [&]() -> Status {
+    json value = json::parse(kv.value);
+    if (value.is_string()) {
+      IncRef(server_ptr_->instance_name(), kv.key,
+             value.get_ref<std::string const&>(), from_remote);
+    } else if (value.is_object() && !value.empty()) {
+      for (auto const& item : json::iterator_wrapper(value)) {
+        if (item.value().is_string()) {
+          IncRef(server_ptr_->instance_name(), kv.key,
+                 item.value().get_ref<std::string const&>(), from_remote);
+        }
+      }
+    }
+    meta_[json::json_pointer(kv.key)] = value;
+    return Status::OK();
+  };
+
+  auto upsert_sig_to_meta = [&]() -> Status {
+    json value = json::parse(kv.value);
+    if (value.is_string()) {
+      ObjectID object_id =
+          ObjectIDFromString(value.get_ref<std::string const&>());
+      ObjectID equivalent = InvalidObjectID();
+      if (meta_tree::HasEquivalent(meta_, object_id, equivalent)) {
+        CloneRef(equivalent, object_id);
+      }
+    } else {
+      LOG(ERROR) << "Invalid signature record: " << kv.key << " -> "
+                 << kv.value;
+    }
+    return Status::OK();
+  };
+
+  // update signatures
+  if (boost::algorithm::starts_with(kv.key, "/signatures/")) {
+    auto json_path = json::json_pointer(kv.key);
+    if (!from_remote || !meta_.contains(json_path)) {
+      VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
+    }
+    VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_sig_to_meta()));
+    return;
+  }
+
+  // update names
+  if (boost::algorithm::starts_with(kv.key, "/names/")) {
+    auto json_path = json::json_pointer(kv.key);
+    if (meta_.contains(json_path)) {
+      LOG(WARNING) << "Warning: name got overwritten: " << kv.key;
+    }
+    VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
+    return;
+  }
+
+  // update ordinary data
+  VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
+}
+
+void IMetaService::delVal(std::string const& key) {
+  auto path = json::json_pointer(key);
+  if (meta_.contains(path)) {
+    auto ppath = path.parent_pointer();
+    meta_[ppath].erase(path.back());
+    if (meta_[ppath].empty()) {
+      meta_[ppath.parent_pointer()].erase(ppath.back());
+    }
+  }
+}
+
+void IMetaService::delVal(const kv_t& kv) { delVal(kv.key); }
+
+void IMetaService::delVal(ObjectID const& target, std::set<ObjectID>& blobs) {
+  if (target == InvalidObjectID()) {
+    return;
+  }
+  auto targetkey = json::json_pointer("/data/" + VYObjectIDToString(target));
+  if (deleteable(target)) {
+    // if deletable blob: delete blob
+    if (IsBlob(target)) {
+      blobs.emplace(target);
+    }
+    delVal(targetkey);
+  } else if (target != InvalidObjectID()) {
+    // mark as transient
+    meta_[targetkey]["transient"] = true;
+  }
 }
 
 }  // namespace vineyard

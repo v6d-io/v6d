@@ -236,8 +236,8 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                   sub_tree["instance_id"] = this->instance_id();
                 }
               } else {
-                VINEYARD_SUPPRESS(CATCH_JSON_ERROR(
-                    meta_tree::GetData(meta, id, sub_tree, instance_id_)));
+                VINEYARD_SUPPRESS(CATCH_JSON_ERROR(meta_tree::GetData(
+                    meta, this->instance_name(), id, sub_tree, instance_id_)));
 #if !defined(NDEBUG)
                 if (VLOG_IS_ON(10)) {
                   VLOG(10) << "Got request response:";
@@ -272,12 +272,13 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
   ENSURE_VINEYARDD_READY();
   meta_service_ptr_->RequestToGetData(
       false,  // no need for sync from etcd
-      [pattern, regex, limit, callback](const Status& status,
-                                        const json& meta) {
+      [this, pattern, regex, limit, callback](const Status& status,
+                                              const json& meta) {
         if (status.ok()) {
           json sub_tree_group;
-          VINEYARD_CHECK_OK(CATCH_JSON_ERROR(meta_tree::ListData(
-              meta, pattern, regex, limit, sub_tree_group)));
+          VINEYARD_CHECK_OK(CATCH_JSON_ERROR(
+              meta_tree::ListData(meta, this->instance_name(), pattern, regex,
+                                  limit, sub_tree_group)));
           return callback(status, sub_tree_group);
         } else {
           LOG(ERROR) << status.ToString();
@@ -325,12 +326,13 @@ Status VineyardServer::CreateData(
 
   // update meta into json
   meta_service_ptr_->RequestToBulkUpdate(
-      [id, decorated_tree](const Status& status, const json& meta,
-                           std::vector<IMetaService::op_t>& ops,
-                           InstanceID& computed_instance_id) {
+      [this, id, decorated_tree](const Status& status, const json& meta,
+                                 std::vector<IMetaService::op_t>& ops,
+                                 InstanceID& computed_instance_id) {
         if (status.ok()) {
-          return CATCH_JSON_ERROR(meta_tree::PutDataOps(
-              meta, id, decorated_tree, ops, computed_instance_id));
+          return CATCH_JSON_ERROR(
+              meta_tree::PutDataOps(meta, this->instance_name(), id,
+                                    decorated_tree, ops, computed_instance_id));
         } else {
           LOG(ERROR) << status.ToString();
           return status;
@@ -343,19 +345,19 @@ Status VineyardServer::CreateData(
 Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
   RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be persisted");
-  auto self(shared_from_this());
   meta_service_ptr_->RequestToPersist(
-      [self, id](const Status& status, const json& meta,
+      [this, id](const Status& status, const json& meta,
                  std::vector<IMetaService::op_t>& ops) {
         if (status.ok()) {
-          auto status = CATCH_JSON_ERROR(meta_tree::PersistOps(meta, id, ops));
-          if (self->spec_["sync_crds"].get<bool>() && status.ok() &&
+          auto status = CATCH_JSON_ERROR(
+              meta_tree::PersistOps(meta, this->instance_name(), id, ops));
+          if (this->spec_["sync_crds"].get<bool>() && status.ok() &&
               !ops.empty()) {
             json tree;
-            VINEYARD_SUPPRESS(
-                CATCH_JSON_ERROR(meta_tree::GetData(meta, id, tree)));
+            VINEYARD_SUPPRESS(CATCH_JSON_ERROR(
+                meta_tree::GetData(meta, this->instance_name(), id, tree)));
             if (tree.is_object() && !tree.empty()) {
-              auto kube = std::make_shared<Kubectl>(self->GetMetaContext());
+              auto kube = std::make_shared<Kubectl>(this->GetMetaContext());
               kube->ApplyObject(meta["instances"], tree);
               kube->Finish();
             }
@@ -623,27 +625,34 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
 
             ObjectID result_id = VYObjectIDFromString(line);
 
-            // associate the signature
-            self->meta_service_ptr_->RequestToBulkUpdate(
-                [object_id, result_id](const Status& status, const json& meta,
-                                       std::vector<IMetaService::op_t>& ops,
-                                       InstanceID&) {
+            // associate the signature.
+            //
+            // Note: here we assume the object been migrated is a member of
+            // global object. The assumption. is not always holds, but we have
+            // no way (or too hard) to decide if an object is a member of global
+            // object.
+            //
+            self->meta_service_ptr_->RequestToPersist(
+                [self, object_id, result_id](
+                    const Status& status, const json& meta,
+                    std::vector<IMetaService::op_t>& ops) {
                   // get signature
                   json tree;
-                  VINEYARD_SUPPRESS(CATCH_JSON_ERROR(
-                      meta_tree::GetData(meta, object_id, tree)));
+                  VINEYARD_SUPPRESS(CATCH_JSON_ERROR(meta_tree::GetData(
+                      meta, self->instance_name(), object_id, tree)));
                   Signature sig = tree["signature"].get<Signature>();
-                  VLOG(2) << "original " << ObjectIDToString(object_id)
+                  VLOG(2) << "migrate: original " << ObjectIDToString(object_id)
                           << " -> " << SignatureToString(sig);
                   // put signature
                   ops.emplace_back(IMetaService::op_t::Put(
-                      "/signatures/" + SignatureToString(sig),
+                      "/signatures/" + self->instance_name() + "/" +
+                          SignatureToString(sig),
                       ObjectIDToString(result_id)));
-                  VLOG(2) << "becomes " << ObjectIDToString(object_id) << " -> "
-                          << SignatureToString(sig);
+                  VLOG(2) << "migrate: becomes " << ObjectIDToString(object_id)
+                          << " -> " << SignatureToString(sig);
                   return Status::OK();
                 },
-                [callback, result_id](const Status& status, InstanceID const&) {
+                [callback, result_id](const Status& status) {
                   return callback(Status::OK(), result_id);
                 });
           } else {

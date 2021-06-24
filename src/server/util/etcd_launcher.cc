@@ -140,6 +140,11 @@ Status EtcdLauncher::LaunchEtcdServer(
   args.emplace_back("--initial-advertise-peer-urls");
   args.emplace_back(peer_endpoint);
 
+  if (VLOG_IS_ON(10)) {
+    args.emplace_back("--log-level");
+    args.emplace_back("debug");
+  }
+
   auto env = boost::this_process::environment();
   std::error_code ec;
   etcd_proc = std::make_unique<boost::process::child>(

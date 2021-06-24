@@ -17,6 +17,7 @@ limitations under the License.
 #define PYBIND_11_UTILS_H__
 
 #include <functional>
+#include <sstream>
 
 #include "pybind11/pybind11.h"
 

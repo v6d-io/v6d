@@ -88,8 +88,9 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     // handle registered callbacks
     while (!registered_callbacks_.empty()) {
       auto iter = registered_callbacks_.front();
-      if (iter.first > (unsigned) resp.index())
+      if (iter.first > static_cast<unsigned>(resp.index())) {
         break;
+      }
       ctx_.post(boost::bind(iter.second, status, ops, resp.index()));
       registered_callbacks_.pop();
     }

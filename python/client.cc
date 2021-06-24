@@ -14,6 +14,7 @@ limitations under the License.
 */
 
 #include <memory>
+#include <sstream>
 
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"

@@ -149,7 +149,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status ProcessDeferred(const json& meta);
 
   inline InstanceID instance_id() { return instance_id_; }
-  inline void set_instance_id(InstanceID id) { instance_id_ = id; }
+  inline std::string instance_name() { return instance_name_; }
+  inline void set_instance_id(InstanceID id) {
+    instance_id_ = id;
+    instance_name_ = "i" + std::to_string(instance_id_);
+  }
 
   inline std::string const& hostname() { return hostname_; }
   inline void set_hostname(std::string const& hostname) {
@@ -214,6 +218,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::atomic_bool stopped_;  // avoid invoke Stop() twice.
 
   InstanceID instance_id_;
+  std::string instance_name_;
   std::string hostname_;
   std::string nodename_;
 };

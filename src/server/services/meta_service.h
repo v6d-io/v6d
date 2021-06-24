@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_SERVER_SERVICES_META_SERVICE_H_
 
 #include <chrono>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
@@ -263,6 +264,14 @@ class IMetaService {
       std::vector<ObjectID> processed_delete_set;
       findDeleteSet(object_ids, processed_delete_set, force, deep);
 
+#ifndef NDEBUG
+      if (VLOG_IS_ON(10)) {
+        for (auto const& item : processed_delete_set) {
+          VLOG(10) << "deleting object: " << ObjectIDToString(item);
+        }
+      }
+#endif
+
       auto s = callback_after_ready(Status::OK(), meta_, processed_delete_set,
                                     ops, sync_remote);
       if (!s.ok()) {
@@ -343,6 +352,10 @@ class IMetaService {
     });
   }
 
+  void IncRef(std::string const& instance_name, std::string const& key,
+              std::string const& value, const bool from_remote);
+  void CloneRef(ObjectID const target, ObjectID const mirror);
+
  private:
   inline void registerToEtcd() {
     RequestToPersist(
@@ -367,20 +380,23 @@ class IMetaService {
                 !tree["next_instance_id"].is_null()) {
               rank = tree["next_instance_id"].get<InstanceID>();
             }
-            instances_list_.emplace(rank);
-            std::string key = "/instances/i" + std::to_string(rank) + "/";
-            ops.emplace_back(op_t::Put(key + "hostid", self_host_id));
-            ops.emplace_back(op_t::Put(key + "hostname", hostname));
-            ops.emplace_back(op_t::Put(key + "nodename", nodename));
-            ops.emplace_back(op_t::Put(key + "rpc_endpoint",
-                                       this->server_ptr_->RPCEndpoint()));
-            ops.emplace_back(
-                op_t::Put(key + "ipc_socket", this->server_ptr_->IPCSocket()));
-            ops.emplace_back(op_t::Put(key + "timestamp", timestamp));
-            ops.emplace_back(op_t::Put("/next_instance_id", rank + 1));
+
             this->server_ptr_->set_instance_id(rank);
             this->server_ptr_->set_hostname(hostname);
             this->server_ptr_->set_nodename(nodename);
+
+            instances_list_.emplace(rank);
+            std::string key =
+                "/instances/" + this->server_ptr_->instance_name();
+            ops.emplace_back(op_t::Put(key + "/hostid", self_host_id));
+            ops.emplace_back(op_t::Put(key + "/hostname", hostname));
+            ops.emplace_back(op_t::Put(key + "/nodename", nodename));
+            ops.emplace_back(op_t::Put(key + "/rpc_endpoint",
+                                       this->server_ptr_->RPCEndpoint()));
+            ops.emplace_back(
+                op_t::Put(key + "/ipc_socket", this->server_ptr_->IPCSocket()));
+            ops.emplace_back(op_t::Put(key + "/timestamp", timestamp));
+            ops.emplace_back(op_t::Put("/next_instance_id", rank + 1));
             LOG(INFO) << "Decide to set rank as " << rank;
             return status;
           } else {
@@ -420,8 +436,7 @@ class IMetaService {
         [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
           if (status.ok()) {
             ops.emplace_back(op_t::Put(
-                "/instances/i" + std::to_string(server_ptr_->instance_id()) +
-                    "/" + "timestamp",
+                "/instances/" + server_ptr_->instance_name() + "/timestamp",
                 GetTimestamp()));
             return status;
           } else {
@@ -563,8 +578,6 @@ class IMetaService {
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
 
-  void incRef(std::string const& key, std::string const& value,
-              const bool from_remote);
   void printDepsGraph();
 
   json meta_;
@@ -594,76 +607,10 @@ class IMetaService {
                             const std::map<ObjectID, int32_t>& depthes,
                             std::vector<ObjectID>& delete_objects);
 
-  inline void putVal(const kv_t& kv, bool const from_remote) {
-    // don't crash the server for any reason (any potential garbage value)
-    auto upsert_to_meta = [&]() {
-      json value = json::parse(kv.value);
-      if (value.is_string()) {
-        incRef(kv.key, value.get_ref<std::string const&>(), from_remote);
-      } else if (value.is_object() && !value.empty()) {
-        for (auto const& item : json::iterator_wrapper(value)) {
-          if (item.value().is_string()) {
-            incRef(kv.key, item.value().get_ref<std::string const&>(),
-                   from_remote);
-          }
-        }
-      }
-      meta_[json::json_pointer(kv.key)] = value;
-      return Status::OK();
-    };
-
-    // update signatures
-    if (boost::algorithm::starts_with(kv.key, "/signatures/")) {
-      auto json_path = json::json_pointer(kv.key);
-      if (!from_remote || !meta_.contains(json_path)) {
-        VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
-      }
-      return;
-    }
-
-    // update names
-    if (boost::algorithm::starts_with(kv.key, "/names/")) {
-      auto json_path = json::json_pointer(kv.key);
-      if (meta_.contains(json_path)) {
-        LOG(INFO) << "Warning: name got overwritten: " << kv.key;
-      }
-      VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
-      return;
-    }
-
-    // update ordinary data
-    VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
-  }
-
-  inline void delVal(std::string const& key) {
-    auto path = json::json_pointer(key);
-    if (meta_.contains(path)) {
-      auto ppath = path.parent_pointer();
-      meta_[ppath].erase(path.back());
-      if (meta_[ppath].empty()) {
-        meta_[ppath.parent_pointer()].erase(ppath.back());
-      }
-    }
-  }
-
-  inline void delVal(const kv_t& kv) { delVal(kv.key); }
-
-  inline void delVal(ObjectID const& target, std::set<ObjectID>& blobs) {
-    if (target == InvalidObjectID()) {
-      return;
-    }
-    auto targetkey = json::json_pointer("/data/" + VYObjectIDToString(target));
-    if (deleteable(target)) {
-      // if deletable blob: delete blob
-      if (IsBlob(target)) {
-        blobs.emplace(target);
-      }
-      delVal(targetkey);
-    } else if (target != InvalidObjectID()) {
-      // mark as transient
-      meta_[targetkey]["transient"] = true;
-    }
-  }
+  void putVal(const kv_t& kv, bool const from_remote);
+  void delVal(std::string const& key);
+  void delVal(const kv_t& kv);
+  void delVal(ObjectID const& target, std::set<ObjectID>& blobs);
 
   template <class RangeT>
   void metaUpdate(const RangeT& ops, bool const from_remote) {
@@ -690,8 +637,7 @@ class IMetaService {
       }
 
       // update instance status
-      if (boost::algorithm::starts_with(op.kv.key,
-                                        "/instances" + std::string("/"))) {
+      if (boost::algorithm::starts_with(op.kv.key, "/instances/")) {
         instanceUpdate(op);
       }
 
@@ -762,6 +708,15 @@ class IMetaService {
       // 2. traverse to find the delete set
       std::vector<ObjectID> processed_delete_set;
       findDeleteSet(object_ids, processed_delete_set, false, false);
+
+#ifndef NDEBUG
+      if (VLOG_IS_ON(10)) {
+        for (auto const& item : processed_delete_set) {
+          VLOG(10) << "deleting object (in metaupdate): "
+                   << ObjectIDToString(item);
+        }
+      }
+#endif
 
       // 3. execute delete for every object
       for (auto const target : processed_delete_set) {
