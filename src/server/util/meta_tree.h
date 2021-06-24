@@ -33,21 +33,25 @@ enum class NodeType {
   InvalidType = 15,
 };
 
-Status GetData(const json& tree, const ObjectID id, json& sub_tree,
+Status GetData(const json& tree, const std::string& instance_name,
+               const ObjectID id, json& sub_tree,
                InstanceID const& current_instance_id = UnspecifiedInstanceID());
-Status GetData(const json& tree, const std::string& name, json& sub_tree,
+Status GetData(const json& tree, const std::string& instance_name,
+               const std::string& name, json& sub_tree,
                InstanceID const& current_instance_id = UnspecifiedInstanceID());
-Status ListData(const json& tree, const std::string& pattern, bool const regex,
+Status ListData(const json& tree, const std::string& instance_name,
+                const std::string& pattern, bool const regex,
                 size_t const limit, json& tree_group);
 Status IfPersist(const json& tree, const ObjectID id, bool& persist);
 Status Exists(const json& tree, const ObjectID id, bool& exists);
 
-Status PutDataOps(const json& tree, const ObjectID id, const json& sub_tree,
+Status PutDataOps(const json& tree, const std::string& instance_name,
+                  const ObjectID id, const json& sub_tree,
                   std::vector<IMetaService::op_t>& ops,
                   InstanceID& computed_instance_id);
 
-Status PersistOps(const json& tree, const ObjectID id,
-                  std::vector<IMetaService::op_t>& ops);
+Status PersistOps(const json& tree, const std::string& instance_name,
+                  const ObjectID id, std::vector<IMetaService::op_t>& ops);
 
 Status DelDataOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops, bool& sync_remote);
@@ -68,8 +72,11 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
 Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
                         std::vector<ObjectID>& objects);
 
-Status DecodeObjectID(const json& tree, const std::string& value,
-                      ObjectID& object_id);
+Status DecodeObjectID(const json& tree, const std::string& instance_name,
+                      const std::string& value, ObjectID& object_id);
+
+bool HasEquivalent(const json& tree, ObjectID const object_id,
+                   ObjectID& equivalent);
 
 }  // namespace meta_tree
 

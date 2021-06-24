@@ -300,6 +300,7 @@ def run_python_tests(etcd_endpoints, with_migration):
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
         start_time = time.time()
         subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               '--log-cli-level', 'DEBUG',
                                'python/vineyard/core',
                                'python/vineyard/data',
                                'python/vineyard/shared_memory',
@@ -324,6 +325,7 @@ def run_python_deploy_tests(etcd_endpoints, with_migration):
         vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
         start_time = time.time()
         subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               '--log-cli-level', 'DEBUG',
                                'python/vineyard/deploy/tests',
                                '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets] + extra_args,
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -338,6 +340,7 @@ def run_io_adaptor_tests(etcd_endpoints, with_migration):
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
         start_time = time.time()
         subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               '--log-cli-level', 'DEBUG',
                                'modules/io/python/drivers/io/tests',
                                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
@@ -363,6 +366,7 @@ def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
         rpc_socket_port = instances[0][1]
         start_time = time.time()
         subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               '--log-cli-level', 'DEBUG',
                                'modules/io/python/drivers/io/tests/test_migrate_stream.py',
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                                '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets] + extra_args,
