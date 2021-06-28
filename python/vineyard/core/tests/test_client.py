@@ -25,6 +25,28 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
+def test_metadata(vineyard_client):
+    xid = vineyard_client.put(1.2345)
+    yid = vineyard_client.put(2.3456)
+    meta = vineyard.ObjectMeta()
+    meta['typename'] = 'vineyard::Pair'
+    meta.add_member('first_', xid)
+    meta.add_member('second_', yid)
+    meta.set_global(True)
+    rid = vineyard_client.create_metadata(meta)
+    vineyard_client.persist(rid)
+
+    def go(meta):
+        for k, v in meta.items():
+            if isinstance(v, vineyard.ObjectMeta):
+                go(v)
+            else:
+                print('k-v in meta: ', k, v)
+
+    meta = vineyard_client.get_meta(rid)
+    go(meta)
+
+
 def test_persist(vineyard_client):
     xid = vineyard_client.put(1.2345)
     yid = vineyard_client.put(2.3456)
