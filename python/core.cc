@@ -160,18 +160,22 @@ void bind_core(py::module& mod) {
       .def(
           "__iter__",
           [](const ObjectMeta& meta) {
-            std::function<py::object(ObjectMeta::const_iterator&)> fn =
-                [](ObjectMeta::const_iterator& iter) {
+            std::function<py::object(std::true_type,
+                                     ObjectMeta::const_iterator&)>
+                fn = [](std::true_type, ObjectMeta::const_iterator& iter) {
                   return py::cast(iter.key());
                 };
-            return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
+            return py::make_iterator_fmap(meta.begin(), meta.end(), fn,
+                                          std::true_type{});
           },
           py::keep_alive<0, 1>())
       .def(
           "items",
           [](const ObjectMeta& meta) {
-            std::function<py::object(ObjectMeta::const_iterator&)> fn =
-                [&meta](ObjectMeta::const_iterator& iter) -> py::object {
+            std::function<py::object(const ObjectMeta&,
+                                     ObjectMeta::const_iterator&)>
+                fn = [](const ObjectMeta& meta,
+                        ObjectMeta::const_iterator& iter) -> py::object {
               if (iter.value().is_object()) {
                 return py::cast(std::make_pair(
                     iter.key(), py::cast(meta.GetMemberMeta(iter.key()))));
@@ -180,7 +184,8 @@ void bind_core(py::module& mod) {
                     std::make_pair(iter.key(), json_to_python(iter.value())));
               }
             };
-            return py::make_iterator_fmap(meta.begin(), meta.end(), fn);
+            return py::make_iterator_fmap(meta.begin(), meta.end(), fn,
+                                          std::cref(meta));
           },
           py::keep_alive<0, 1>())
       .def("__repr__",
