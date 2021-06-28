@@ -42,8 +42,8 @@ RUN export DEBIAN_FRONTEND="noninteractive" && \
         unzip \
         wget && \
     cd /tmp && \
-    wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
-    apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
+    wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
+    apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
     apt update && \
     apt install -y libarrow-dev=1.0.1-1 libarrow-python-dev=1.0.1-1 && \
     rm -rf /tmp/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \

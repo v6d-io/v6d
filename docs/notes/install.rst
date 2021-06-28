@@ -88,13 +88,13 @@ Vineyard has been fully tested on Ubuntu 20.04. The dependencies can be installe
                        python3-pip \
                        wget
 
-Then install the apache-arrow:
+Then install the apache-arrow (see also `https://arrow.apache.org/install <https://arrow.apache.org/install/>`_):
 
 .. code:: shell
 
-    wget https://bintray.com/apache/arrow/download_file?file_path=ubuntu%2Fapache-arrow-archive-keyring-latest-disco.deb \
-        -O /tmp/apache-arrow-archive-keyring-latest-disco.deb
-    apt install -y /tmp/apache-arrow-archive-keyring-latest-disco.deb
+    wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb \
+        -O /tmp/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+    apt install -y -V /tmp/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
     apt update -y
     apt install -y libarrow-dev
 
@@ -110,8 +110,7 @@ Vineyard has been tests on MacOS as well, the dependencies can be installed usin
 Install from source
 -------------------
 
-Vineyard is open source on Github: `https://github.com/v6d-io/v6d
-<https://github.com/v6d-io/v6d>`_.
+Vineyard is open source on Github: `https://github.com/v6d-io/v6d <https://github.com/v6d-io/v6d>`_.
 You can obtain the source code using ``git``:
 
 .. code:: console
