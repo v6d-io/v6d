@@ -45,6 +45,9 @@ def test_metadata(vineyard_client):
 
     meta = vineyard_client.get_meta(rid)
     go(meta)
+    go(meta)
+    go(meta)
+    go(meta)
 
 
 def test_persist(vineyard_client):
