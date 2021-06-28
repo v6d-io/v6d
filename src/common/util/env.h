@@ -29,17 +29,6 @@ has the following license header originally:
 #include <sys/types.h>
 #include <unistd.h>
 
-#if defined(__unix__) || defined(__unix) || defined(unix) || \
-    (defined(__APPLE__) && defined(__MACH__))
-#include <sys/resource.h>
-#if defined(__APPLE__) && defined(__MACH__)
-#include <mach/mach.h>
-#elif defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-#include <stdio.h>
-#endif
-#endif
-
 #include <string>
 
 namespace vineyard {
@@ -78,86 +67,25 @@ inline int get_pid() { return static_cast<int>(getpid()); }
 /**
  * @brief Returns the current resident set size (physical memory use) measured
  * in bytes.
- *
- * c.f.: https://stackoverflow.com/a/14927379/5080177
  */
-inline size_t get_rss() {
-#if defined(__APPLE__) && defined(__MACH__)
-  /* OSX ------------------------------------------------------ */
-  struct mach_task_basic_info info;
-  mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
-  if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t) &info,
-                &infoCount) != KERN_SUCCESS)
-    return (size_t) 0L; /* Can't access? */
-  return (size_t) info.resident_size;
-#elif defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-  /* Linux ---------------------------------------------------- */
-  int64_t rss = 0L;
-  FILE* fp = NULL;
-  if ((fp = fopen("/proc/self/statm", "r")) == NULL)
-    return (size_t) 0L; /* Can't open? */
-  if (fscanf(fp, "%*s%ld", &rss) != 1) {
-    fclose(fp);
-    return (size_t) 0L; /* Can't read? */
-  }
-  fclose(fp);
-  return (size_t) rss * (size_t) sysconf(_SC_PAGESIZE);
-#else
-  /* Unknown OS ----------------------------------------------- */
-  return 0;
-#endif
-}
+size_t get_rss();
 
 /**
  * @brief Returns the peak (maximum so far) resident set size (physical
  * memory use) measured in bytes.
- *
- * c.f.: https://stackoverflow.com/a/14927379/5080177
  */
-inline size_t get_shared_rss() {
-#if defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-  /* Linux ---------------------------------------------------- */
-  int64_t shared_rss = 0L;
-  FILE* fp = NULL;
-  if ((fp = fopen("/proc/self/statm", "r")) == NULL)
-    return (size_t) 0L; /* Can't open? */
-  if (fscanf(fp, "%*s%*s%ld", &shared_rss) != 1) {
-    fclose(fp);
-    return (size_t) 0L; /* Can't read? */
-  }
-  fclose(fp);
-  return (size_t) shared_rss * (size_t) sysconf(_SC_PAGESIZE);
-#else
-  /* Unknown OS ----------------------------------------------- */
-  return 0;
-#endif
-}
+size_t get_shared_rss();
 
 /**
  * @brief Returns the peak (maximum so far) resident set size (physical
  * memory use) measured in bytes.
- *
- * c.f.: https://stackoverflow.com/a/14927379/5080177
  */
-inline size_t get_peek_rss() {
-#if defined(__unix__) || defined(__unix) || defined(unix) || \
-    (defined(__APPLE__) && defined(__MACH__))
-  /* BSD, Linux, and OSX -------------------------------------- */
-  struct rusage rusage;
-  getrusage(RUSAGE_SELF, &rusage);
-#if defined(__APPLE__) && defined(__MACH__)
-  return (size_t) rusage.ru_maxrss;
-#else
-  return (size_t)(rusage.ru_maxrss * 1024L);
-#endif
+size_t get_peek_rss();
 
-#else
-  /* Unknown OS ----------------------------------------------- */
-  return 0;
-#endif
-}
+/**
+ * @brief Return the size limitation of available shared memory.
+ */
+int64_t get_maximum_shared_memory();
 
 }  // namespace vineyard
 

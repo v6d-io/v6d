@@ -31,17 +31,9 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 
 #include <stdio.h>
 
-#include "glog/logging.h"
+#include "common/util/env.h"
+#include "common/util/logging.h"
 #include "server/memory/malloc.h"
-
-#ifdef __linux__
-#ifndef SHMMAX_SYS_FILE
-#define SHMMAX_SYS_FILE "/proc/sys/kernel/shmmax"
-#endif
-#else
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#endif
 
 #if defined(WITH_DLMALLOC)
 #include "server/memory/dlmalloc.h"
@@ -61,25 +53,10 @@ BulkAllocator::Allocator BulkAllocator::allocator_{};
 #endif
 
 void* BulkAllocator::Init(const size_t size) {
-#ifdef __linux__
-  int64_t shmmax = 0;
-  FILE* shmmax_file = fopen(SHMMAX_SYS_FILE, "r");
-  if (!shmmax_file) {
-    LOG(WARNING) << "'SHMMAX_SYS_FILE' not found!";
-  }
-  if (fscanf(shmmax_file, "%" PRId64, &shmmax) != 1) {
-    LOG(WARNING) << "Failed to open shmmax from 'SHMMAX_SYS_FILE'!";
-  }
-  fclose(shmmax_file);
-#else
-  int64_t shmmax = 0;
-  size_t len = sizeof(shmmax);
-  if (-1 == sysctlbyname("kern.sysv.shmmax", &shmmax, &len, NULL, 0)) {
-    LOG(WARNING) << "Failed to read shmmax from 'kern.sysv.shmmax'!";
-  }
-#endif
+  int64_t shmmax = get_maximum_shared_memory();
   if (shmmax < static_cast<float>(size)) {
-    LOG(WARNING) << "'size' is greater than the maximum shared memory size";
+    LOG(WARNING) << "'size' is greater than the maximum shared memory size ("
+                 << shmmax << ")";
   }
 #if defined(WITH_DLMALLOC)
   return Allocator::Init(size);
