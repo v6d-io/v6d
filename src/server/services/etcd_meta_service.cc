@@ -241,6 +241,7 @@ void EtcdMetaService::startDaemonWatch(
     const std::string& prefix, unsigned since_rev,
     callback_t<const std::vector<op_t>&, unsigned> callback) {
   try {
+    this->handled_rev_.store(since_rev);
     this->watcher_.reset(new etcd::Watcher(
         *etcd_, prefix_ + prefix, since_rev + 1,
         EtcdWatchHandler(server_ptr_->GetMetaContext(), callback, prefix_,
