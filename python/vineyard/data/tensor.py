@@ -33,6 +33,12 @@ from vineyard._C import ObjectMeta
 from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype
 
 
+class ndarray(np.ndarray):
+    ''' To enable dynamic attribute on numpy.ndarray.
+    '''
+    pass
+
+
 def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor<%s>' % normalize_cpptype(value.dtype)
@@ -63,7 +69,8 @@ def numpy_ndarray_resolver(obj):
         return np.zeros(shape, dtype=value_type)
     c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
     # TODO: revise the memory copy of asfortranarray
-    return (c_array if order == 'C' else np.asfortranarray(c_array))
+    array = (c_array if order == 'C' else np.asfortranarray(c_array))
+    return array.view(ndarray)
 
 
 def bsr_matrix_builder(client, value, builder, **kw):
