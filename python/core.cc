@@ -154,6 +154,10 @@ void bind_core(py::module& mod) {
              self->AddMember(key, member);
            })
       .def("add_member",
+           [](ObjectMeta* self, std::string const& key, ObjectMeta const &member) {
+             self->AddMember(key, member);
+           })
+      .def("add_member",
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
       .def("reset", [](ObjectMeta& meta) { meta.Reset(); })
