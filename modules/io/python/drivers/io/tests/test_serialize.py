@@ -53,9 +53,9 @@ def global_obj(vineyard_ipc_socket):
     meta.add_member('__elements_-2', o3)
     meta.add_member('__elements_-3', o4)
     meta['__elements_-size'] = 4
-    tupid = client1.create_metadata(meta)
-    client1.persist(tupid)
-    return tupid
+    tup = client1.create_metadata(meta)
+    client1.persist(tup)
+    return tup.id
 
 
 def test_seriarialize_round_trip(vineyard_ipc_socket, vineyard_endpoint, global_obj):

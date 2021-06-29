@@ -156,9 +156,9 @@ class ParallelStreamLauncher(ScriptLauncher):
         for idx, partition_id in enumerate(partial_ids):
             meta.add_member("stream_%d" % idx, partition_id)
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
-        ret_id = vineyard_rpc_client.create_metadata(meta)
-        vineyard_rpc_client.persist(ret_id)
-        return ret_id
+        ret_meta = vineyard_rpc_client.create_metadata(meta)
+        vineyard_rpc_client.persist(ret_meta.id)
+        return ret_meta.id
 
     def wait_all(self, func=None, **kwargs):
         results = []
@@ -479,9 +479,9 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
             else:
                 new_meta[key] = value
         vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
-        ret_id = vineyard_rpc_client.create_metadata(new_meta)
-        vineyard_rpc_client.persist(ret_id)
-        return ret_id
+        ret_meta = vineyard_rpc_client.create_metadata(new_meta)
+        vineyard_rpc_client.persist(ret_meta)
+        return ret_meta.id
 
     return launcher.wait_all(func=func)
 

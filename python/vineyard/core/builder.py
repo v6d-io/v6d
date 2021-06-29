@@ -54,6 +54,12 @@ class BuilderContext():
               builder that serialization the python value, the parameter will be serialized
               and be put into a blob.
         '''
+
+        # if the python value comes from a vineyard object, we choose to just reuse it.
+        base = getattr(value, '__vineyard_ref', None)
+        if base:
+            return base.meta
+
         for ty in type(value).__mro__:
             if ty in self.__factory:
                 builder_func_sig = inspect.getfullargspec(self.__factory[ty])

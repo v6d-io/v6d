@@ -106,10 +106,10 @@ void bind_client(py::module& mod) {
   py::class_<ClientBase, std::shared_ptr<ClientBase>>(mod, "ClientBase")
       .def(
           "create_metadata",
-          [](ClientBase* self, ObjectMeta& metadata) -> ObjectIDWrapper {
+          [](ClientBase* self, ObjectMeta& metadata) -> ObjectMeta& {
             ObjectID object_id;
             throw_on_error(self->CreateMetaData(metadata, object_id));
-            return object_id;
+            return metadata;
           },
           "metadata"_a)
       .def(
@@ -131,11 +131,31 @@ void bind_client(py::module& mod) {
           },
           "object_ids"_a, py::arg("force") = false, py::arg("deep") = true)
       .def(
+          "delete",
+          [](ClientBase* self, const ObjectMeta &meta,
+             const bool force, const bool deep) {
+            throw_on_error(self->DelData(meta.GetId(), force, deep));
+          },
+          "object_meta"_a, py::arg("force") = false, py::arg("deep") = true)
+      .def(
+          "delete",
+          [](ClientBase* self, const Object *object,
+             const bool force, const bool deep) {
+            throw_on_error(self->DelData(object->id(), force, deep));
+          },
+          "object"_a, py::arg("force") = false, py::arg("deep") = true)
+      .def(
           "persist",
           [](ClientBase* self, const ObjectIDWrapper object_id) {
             throw_on_error(self->Persist(object_id));
           },
           "object_id"_a)
+      .def(
+          "persist",
+          [](ClientBase* self, const ObjectMeta & meta) {
+            throw_on_error(self->Persist(meta.GetId()));
+          },
+          "object_meta"_a)
       .def(
           "persist",
           [](ClientBase* self, const Object* object) {
@@ -173,6 +193,34 @@ void bind_client(py::module& mod) {
             throw_on_error(self->PutName(object_id, name));
           },
           "object_id"_a, "name"_a)
+      .def(
+          "put_name",
+          [](ClientBase* self, const ObjectMeta &meta,
+             std::string const& name) {
+            throw_on_error(self->PutName(meta.GetId(), name));
+          },
+          "object_meta"_a, "name"_a)
+      .def(
+          "put_name",
+          [](ClientBase* self, const ObjectMeta &meta,
+             ObjectNameWrapper const& name) {
+            throw_on_error(self->PutName(meta.GetId(), name));
+          },
+          "object_meta"_a, "name"_a)
+      .def(
+          "put_name",
+          [](ClientBase* self, const Object* object,
+             std::string const& name) {
+            throw_on_error(self->PutName(object->id(), name));
+          },
+          "object"_a, "name"_a)
+      .def(
+          "put_name",
+          [](ClientBase* self, const Object* object,
+             ObjectNameWrapper const& name) {
+            throw_on_error(self->PutName(object->id(), name));
+          },
+          "object"_a, "name"_a)
       .def(
           "get_name",
           [](ClientBase* self, std::string const& name,
