@@ -30,13 +30,10 @@ if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
 
 from vineyard._C import ObjectMeta
-from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype
+from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype, wrap_type
 
-
-class ndarray(np.ndarray):
-    ''' To enable dynamic attribute on numpy.ndarray.
-    '''
-    pass
+# Enable dynamic attribute on numpy.ndarray.
+ndarray_wrapped = wrap_type(np.ndarray)
 
 
 def numpy_ndarray_builder(client, value, **kw):
@@ -70,7 +67,7 @@ def numpy_ndarray_resolver(obj):
     c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
     # TODO: revise the memory copy of asfortranarray
     array = (c_array if order == 'C' else np.asfortranarray(c_array))
-    return array.view(ndarray)
+    return array.view(ndarray_wrapped)
 
 
 def bsr_matrix_builder(client, value, builder, **kw):

@@ -128,6 +128,11 @@ jobs:
 
       - name: Setup SSH environment
         run: |
+          # avoid access node by DNS hostnames
+          r=`cat /etc/hosts | grep $(hostname) || true`
+          if [ -z "${r}" ];then export hn=$(hostname); sudo -E bash -c 'echo "127.0.0.1 ${hn}" >> /etc/hosts'; fi
+          cat /etc/hosts
+
           # setup SSH server to allow login without password
           cat > sshd_config <<EOF
             SyslogFacility AUTHPRIV
