@@ -34,7 +34,7 @@ namespace vineyard {
 // Wrap ObjectID to makes pybind11 work.
 struct ObjectIDWrapper {
   ObjectIDWrapper() : internal_id(InvalidObjectID()) {}
-  explicit ObjectIDWrapper(ObjectID id) : internal_id(id) {}
+  ObjectIDWrapper(ObjectID id) : internal_id(id) {}  // NOLINT(runtime/explicit)
   explicit ObjectIDWrapper(std::string const& id)
       : internal_id(VYObjectIDFromString(id)) {}
   explicit ObjectIDWrapper(const char* id)
