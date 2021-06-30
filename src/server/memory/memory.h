@@ -43,6 +43,8 @@ namespace vineyard {
 
 class BulkStore {
  public:
+  ~BulkStore();
+
   Status PreAllocate(const size_t size);
 
   Status Create(const size_t size, ObjectID& object_id,
