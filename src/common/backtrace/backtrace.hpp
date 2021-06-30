@@ -93,13 +93,19 @@ struct backtrace_info {
     }
     int status = -4;
     size_t buffer_length = demangled_size;
-    demangled_name.reset(abi::__cxa_demangle(symbol, demangled_name.release(),
-                                             &buffer_length, &status));
+    char* reuse_buffer = demangled_name.release();
+    demangled_name.reset(
+        abi::__cxa_demangle(symbol, reuse_buffer, &buffer_length, &status));
     if (status == 0) {
-      demangled_size =
-          buffer_length > demangled_size ? buffer_length : demangled_size;
+      // n.b.: leave a space for the trailing `\n`.
+      demangled_size = (buffer_length - 1) > demangled_size
+                           ? (buffer_length - 1)
+                           : demangled_size;
       return demangled_name.get();
     } else {
+      // when failed, it is resetted to NULL, but there indeed a buffer that
+      // can be reused.
+      demangled_name.reset(reuse_buffer);
       return symbol;
     }
   }
