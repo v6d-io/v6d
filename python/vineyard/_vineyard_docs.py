@@ -412,7 +412,7 @@ Parameters:
         :class:`ObjectID`.
     force: bool
         Forcedly delete an object means the member will be recursively deleted even if the
-        member object is also refereed by others. The default value is :code:`True`.
+        member object is also referred by others. The default value is :code:`True`.
     deep: bool
         Deeply delete an object means we will deleting the members recursively. The default
         value is :code:`True`.
