@@ -88,8 +88,7 @@ def put(client, value, builder=None, **kw):
         value:
             The python value that will be put to vineyard. Supported python value types are
             decided by modules that registered to vineyard. By default, python value can be
-            put to vineyard after serialized as a bytes buffer using pickle, or pyarrow, when
-            apache-arrow is installed.
+            put to vineyard after serialized as a bytes buffer using pickle.
         builder:
             When putting python value to vineyard, an optional *builder* can be specified to
             tell vineyard how to construct the corresponding vineyard :class:`Object`. If not
@@ -102,7 +101,12 @@ def put(client, value, builder=None, **kw):
     '''
     if builder is not None:
         return builder(client, value, **kw)
-    return default_builder_context.run(client, value, **kw)
+    meta = default_builder_context.run(client, value, **kw)
+
+    # the builders is expected to return an :class:`ObjectMeta`, or an :class:`Object` (in
+    # the `bytes_builder` and `memoryview` builder).
+    if meta:
+        return meta.id
 
 
 setattr(IPCClient, 'put', put)
