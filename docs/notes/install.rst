@@ -126,7 +126,7 @@ Then you do a out-of-source build using CMake:
     mkdir build
     cd build
     cmake ..
-    make -j
+    make -j$(nproc)
     make install  # optionally
 
 You will see vineyard server binary under the ``bin`` directory, and static or shared linked
