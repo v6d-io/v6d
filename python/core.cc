@@ -394,10 +394,13 @@ void bind_core(py::module& mod) {
       .def(
           "copy",
           [](BlobWriter* self, size_t offset, py::bytes bs) {
-            // FIXME: avoid this explicit copy
-            std::string ss = static_cast<std::string>(bs);
-            VINEYARD_ASSERT(offset + ss.size() <= self->size());
-            std::memcpy(self->data() + offset, ss.c_str(), ss.size());
+            char *buffer = nullptr;
+            ssize_t length = 0;
+            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
+              py::pybind11_fail("Unable to extract bytes contents!");
+            }
+            VINEYARD_ASSERT(offset + length <= self->size());
+            std::memcpy(self->data() + offset, buffer, length);
           },
           "offset"_a, "bytes"_a)
       .def_property_readonly("address",
