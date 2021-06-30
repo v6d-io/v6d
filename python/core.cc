@@ -28,10 +28,10 @@ limitations under the License.
 #include "common/util/status.h"
 #pragma GCC visibility pop
 
-#include "pybind11_utils.h"  // NOLINT(build/include)
+#include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;
-using namespace py::literals;  // NOLINT(build/namespaces)
+using namespace py::literals;  // NOLINT(build/namespaces_literals)
 
 namespace vineyard {
 
@@ -147,9 +147,8 @@ void bind_core(py::module& mod) {
              self->AddMember(key, member);
            })
       .def("__setitem__",
-           [](ObjectMeta* self, std::string const& key, ObjectMeta const& member) {
-             self->AddMember(key, member);
-           })
+           [](ObjectMeta* self, std::string const& key,
+              ObjectMeta const& member) { self->AddMember(key, member); })
       .def("__setitem__",
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
@@ -158,9 +157,8 @@ void bind_core(py::module& mod) {
              self->AddMember(key, member);
            })
       .def("add_member",
-           [](ObjectMeta* self, std::string const& key, ObjectMeta const &member) {
-             self->AddMember(key, member);
-           })
+           [](ObjectMeta* self, std::string const& key,
+              ObjectMeta const& member) { self->AddMember(key, member); })
       .def("add_member",
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })

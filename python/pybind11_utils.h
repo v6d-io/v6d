@@ -13,11 +13,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef PYBIND_11_UTILS_H__
-#define PYBIND_11_UTILS_H__
+#ifndef PYTHON_PYBIND11_UTILS_H_
+#define PYTHON_PYBIND11_UTILS_H_
 
 #include <functional>
 #include <sstream>
+#include <string>
+#include <utility>
 
 #include "pybind11/pybind11.h"
 
@@ -32,7 +34,7 @@ namespace vineyard {
 // Wrap ObjectID to makes pybind11 work.
 struct ObjectIDWrapper {
   ObjectIDWrapper() : internal_id(InvalidObjectID()) {}
-  ObjectIDWrapper(ObjectID id) : internal_id(id) {}
+  explicit ObjectIDWrapper(ObjectID id) : internal_id(id) {}
   explicit ObjectIDWrapper(std::string const& id)
       : internal_id(VYObjectIDFromString(id)) {}
   explicit ObjectIDWrapper(const char* id)
@@ -119,4 +121,4 @@ pybind11::object json_to_python(json const& value);
 
 }  // namespace vineyard
 
-#endif  // PYBIND_11_UTILS_H__
+#endif  // PYTHON_PYBIND11_UTILS_H_

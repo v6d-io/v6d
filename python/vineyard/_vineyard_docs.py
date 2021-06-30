@@ -284,8 +284,7 @@ Parameters:
         The name of the member object.
     object: :class:`Object`, :class:`ObjectID` or :class:`ObjectMeta`
         The reference to the member object or the object id of the member object.
-'''
-)
+''')
 
 add_doc(
     ObjectID, r'''
