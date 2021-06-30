@@ -128,6 +128,13 @@ static void recycle_arena(const uintptr_t base, const size_t size,
 
 std::set<ObjectID> BulkStore::Arena::spans{};
 
+BulkStore::~BulkStore() {
+  for (auto iter = objects_.begin(); iter != objects_.end(); iter++) {
+    auto& object = iter->first;
+    VINEYARD_DISCARD(Delete(object));
+  }
+}
+
 Status BulkStore::PreAllocate(const size_t size) {
   BulkAllocator::SetFootprintLimit(size);
   void* pointer = BulkAllocator::Init(size);
