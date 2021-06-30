@@ -260,7 +260,7 @@ Parameters:
         +  When the value is a list of str, int or float, it will be first dumpped as string
            using :code:`json.dumps`.
 
-.. method:: __setitem__(self, key: str, object) -> None
+.. method:: __setitem__(self, key: str, ObjectID, Object or ObjectMeta) -> None
     :noindex:
 
 Add a member object.
@@ -268,9 +268,24 @@ Add a member object.
 Parameters:
     key: str
         The name of the member object.
-    object: :class:`Object` or :class:`ObjectID`
+    object: :class:`Object`, :class:`ObjectID` or :class:`ObjectMeta`
         The reference to the member object or the object id of the member object.
 ''')
+
+add_doc(
+    ObjectMeta.add_member, r'''
+.. method:: add_member(self, key: str, ObjectID, Object or ObjectMeta) -> None
+    :noindex:
+
+Add a member object.
+
+Parameters:
+    key: str
+        The name of the member object.
+    object: :class:`Object`, :class:`ObjectID` or :class:`ObjectMeta`
+        The reference to the member object or the object id of the member object.
+'''
+)
 
 add_doc(
     ObjectID, r'''
