@@ -28,10 +28,10 @@ limitations under the License.
 #include "common/util/status.h"
 #pragma GCC visibility pop
 
-#include "pybind11_utils.h"  // NOLINT(build/include)
+#include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;
-using namespace py::literals;  // NOLINT(build/namespaces)
+using namespace py::literals;  // NOLINT(build/namespaces_literals)
 
 namespace vineyard {
 
@@ -148,15 +148,17 @@ void bind_core(py::module& mod) {
            })
       .def("__setitem__",
            [](ObjectMeta* self, std::string const& key,
+              ObjectMeta const& member) { self->AddMember(key, member); })
+      .def("__setitem__",
+           [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
       .def("add_member",
            [](ObjectMeta* self, std::string const& key, Object const* member) {
              self->AddMember(key, member);
            })
       .def("add_member",
-           [](ObjectMeta* self, std::string const& key, ObjectMeta const &member) {
-             self->AddMember(key, member);
-           })
+           [](ObjectMeta* self, std::string const& key,
+              ObjectMeta const& member) { self->AddMember(key, member); })
       .def("add_member",
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
@@ -394,7 +396,7 @@ void bind_core(py::module& mod) {
       .def(
           "copy",
           [](BlobWriter* self, size_t offset, py::bytes bs) {
-            char *buffer = nullptr;
+            char* buffer = nullptr;
             ssize_t length = 0;
             if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
               py::pybind11_fail("Unable to extract bytes contents!");

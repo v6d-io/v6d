@@ -73,7 +73,7 @@ add_doc(
     exception.
 
     In rare cases, user may be not sure about if the IPC socket or RPC endpoint
-    is avaiable, i.e., the varaible might be :code:`None`. In such cases this method
+    is available, i.e., the variable might be :code:`None`. In such cases this method
     can accept a `None` as arguments, and do resolution as described above.
 
     Raises:
@@ -85,7 +85,7 @@ add_doc(
 :class:`ObjectMeta` is the type for metadata of an :class:`Object`.
 The :class:`ObjectMeta` can be treat as a *dict-like* type. If the the metadata if
 the metadata obtained from vineyard, the metadata is readonly. Otherwise *key-value*
-attributes or object members could be assoicated with the metadata to construct a
+attributes or object members could be associated with the metadata to construct a
 new vineyard object.
 
 We can inspect the *key-value* attributes and members of an :class:`ObjectMeta`:
@@ -228,7 +228,7 @@ add_doc(
     :noindex:
 
 Get member object from metadata, return None if the given key is not presented, and raise exception
-RuntimeError if the given key is associcated with a plain metadata, rather than member object.
+RuntimeError if the given key is associated with a plain metadata, rather than member object.
 
 Parameters:
     key: str
@@ -260,7 +260,7 @@ Parameters:
         +  When the value is a list of str, int or float, it will be first dumpped as string
            using :code:`json.dumps`.
 
-.. method:: __setitem__(self, key: str, object) -> None
+.. method:: __setitem__(self, key: str, ObjectID, Object or ObjectMeta) -> None
     :noindex:
 
 Add a member object.
@@ -268,7 +268,21 @@ Add a member object.
 Parameters:
     key: str
         The name of the member object.
-    object: :class:`Object` or :class:`ObjectID`
+    object: :class:`Object`, :class:`ObjectID` or :class:`ObjectMeta`
+        The reference to the member object or the object id of the member object.
+''')
+
+add_doc(
+    ObjectMeta.add_member, r'''
+.. method:: add_member(self, key: str, ObjectID, Object or ObjectMeta) -> None
+    :noindex:
+
+Add a member object.
+
+Parameters:
+    key: str
+        The name of the member object.
+    object: :class:`Object`, :class:`ObjectID` or :class:`ObjectMeta`
         The reference to the member object or the object id of the member object.
 ''')
 
@@ -372,7 +386,7 @@ Base class for vineyard object builders.
 
 add_doc(
     ClientBase.create_metadata, r'''
-.. method:: create_metadata(metadata: ObjectMeta) -> None
+.. method:: create_metadata(metadata: ObjectMeta) -> ObjectMeta
     :noindex:
 
 Create metadata in vineyardd.
@@ -380,6 +394,9 @@ Create metadata in vineyardd.
 Parameters:
     metadata: ObjectMeta
         The metadata that will be created on vineyardd.
+
+Returns:
+    The result created metadata.
 ''')
 
 add_doc(
@@ -394,14 +411,30 @@ Parameters:
         Objects that will be deleted. The :code:`object_id` can be a single :class:`ObjectID`, or a list of
         :class:`ObjectID`.
     force: bool
-        Forcely delete an object means the member will be recursively deleted even if the
-        member object is also refered by others. The default value is :code:`True`.
+        Forcedly delete an object means the member will be recursively deleted even if the
+        member object is also referred by others. The default value is :code:`True`.
     deep: bool
         Deeply delete an object means we will deleting the members recursively. The default
         value is :code:`True`.
 
         Note that when deleting objects which have *direct* blob members, the
         processing on those blobs yields a "deep" behavior.
+
+.. method:: delete(object_meta: ObjectMeta, force: bool = false, deep: bool = true) -> None
+    :noindex:
+
+Delete the specific vineyard object.
+
+Parameters:
+    object_meta: The corresponding object meta to delete.
+
+.. method:: delete(object: Object, force: bool = false, deep: bool = true) -> None
+    :noindex:
+
+Delete the specific vineyard object.
+
+Parameters:
+    object: The corresponding object meta to delete.
 ''')
 
 add_doc(
@@ -409,11 +442,20 @@ add_doc(
 .. method:: persist(object_id: ObjectID) -> None
     :noindex:
 
-Persist the object of the given object id. After persisting, the object will be visiable by clients that
+Persist the object of the given object id. After persisting, the object will be visible by clients that
 connect to other vineyard server instances.
 
 Parameters:
     object_id: ObjectID
+        The object that will be persist.
+
+.. method:: persist(object_meta: ObjectMeta) -> None
+    :noindex:
+
+Persist the given object.
+
+Parameters:
+    object_meta: ObjectMeta
         The object that will be persist.
 
 .. method:: persist(object: Object) -> None
@@ -458,10 +500,11 @@ Returns:
 
 add_doc(
     ClientBase.put_name, r'''
-.. method:: put_name(object_id: ObjectID, name: str or ObjectName) -> None
+.. method:: put_name(object: ObjectID or ObjectMeta or Object,
+                     name: str or ObjectName) -> None
     :noindex:
 
-Associate the given object id with a name. An :class:`ObjectID` can be assoicated with more
+Associate the given object id with a name. An :class:`ObjectID` can be associated with more
 than one names.
 
 Parameters:
@@ -484,7 +527,7 @@ Parameters:
         until the name been registered.
 
 Return:
-    ObjectID: The assoicated object id with the name.
+    ObjectID: The associated object id with the name.
 ''')
 
 add_doc(
@@ -492,7 +535,7 @@ add_doc(
 .. method:: drop_name(name: str or ObjectName) -> None
     :noindex:
 
-Remove the assoication of the given name.
+Remove the association of the given name.
 
 Parameters:
     name: str
@@ -516,7 +559,7 @@ The instance id of the connected vineyard server.
 
 add_doc(
     ClientBase.meta, r'''
-The metadata information of the vineyard server. The value is a  nested dict, the frist-level
+The metadata information of the vineyard server. The value is a  nested dict, the first-level
 key is the instance id, and the second-level key is the cluster metadata fields.
 
 .. code:: python

@@ -567,10 +567,12 @@ endif()
 
 file(GLOB_RECURSE FILES_NEED_FORMAT "src/*.cc" "src/*.h" "src/*.hpp" "src/*.vineyard-mod"
                                     "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
+                                    "python/*.cc" "python/*.h"
                                     "test/*.cc"
 )
 file(GLOB_RECURSE FILES_NEED_LINT "src/*.cc" "src/*.h" "src/*.hpp"
                                   "modules/*.cc" "modules/*.h"
+                                  "python/*.cc" "python/*.h"
                                   "test/*.cc"
 )
 

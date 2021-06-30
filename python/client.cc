@@ -26,10 +26,10 @@ limitations under the License.
 #include "common/util/status.h"
 #pragma GCC visibility pop
 
-#include "pybind11_utils.h"  // NOLINT(build/include)
+#include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;
-using namespace py::literals;  // NOLINT(build/namespaces)
+using namespace py::literals;  // NOLINT(build/namespaces_literals)
 
 namespace vineyard {
 
@@ -106,10 +106,10 @@ void bind_client(py::module& mod) {
   py::class_<ClientBase, std::shared_ptr<ClientBase>>(mod, "ClientBase")
       .def(
           "create_metadata",
-          [](ClientBase* self, ObjectMeta& metadata) -> ObjectIDWrapper {
+          [](ClientBase* self, ObjectMeta& metadata) -> ObjectMeta& {
             ObjectID object_id;
             throw_on_error(self->CreateMetaData(metadata, object_id));
-            return object_id;
+            return metadata;
           },
           "metadata"_a)
       .def(
@@ -131,11 +131,31 @@ void bind_client(py::module& mod) {
           },
           "object_ids"_a, py::arg("force") = false, py::arg("deep") = true)
       .def(
+          "delete",
+          [](ClientBase* self, const ObjectMeta& meta, const bool force,
+             const bool deep) {
+            throw_on_error(self->DelData(meta.GetId(), force, deep));
+          },
+          "object_meta"_a, py::arg("force") = false, py::arg("deep") = true)
+      .def(
+          "delete",
+          [](ClientBase* self, const Object* object, const bool force,
+             const bool deep) {
+            throw_on_error(self->DelData(object->id(), force, deep));
+          },
+          "object"_a, py::arg("force") = false, py::arg("deep") = true)
+      .def(
           "persist",
           [](ClientBase* self, const ObjectIDWrapper object_id) {
             throw_on_error(self->Persist(object_id));
           },
           "object_id"_a)
+      .def(
+          "persist",
+          [](ClientBase* self, const ObjectMeta& meta) {
+            throw_on_error(self->Persist(meta.GetId()));
+          },
+          "object_meta"_a)
       .def(
           "persist",
           [](ClientBase* self, const Object* object) {
@@ -174,6 +194,33 @@ void bind_client(py::module& mod) {
           },
           "object_id"_a, "name"_a)
       .def(
+          "put_name",
+          [](ClientBase* self, const ObjectMeta& meta,
+             std::string const& name) {
+            throw_on_error(self->PutName(meta.GetId(), name));
+          },
+          "object_meta"_a, "name"_a)
+      .def(
+          "put_name",
+          [](ClientBase* self, const ObjectMeta& meta,
+             ObjectNameWrapper const& name) {
+            throw_on_error(self->PutName(meta.GetId(), name));
+          },
+          "object_meta"_a, "name"_a)
+      .def(
+          "put_name",
+          [](ClientBase* self, const Object* object, std::string const& name) {
+            throw_on_error(self->PutName(object->id(), name));
+          },
+          "object"_a, "name"_a)
+      .def(
+          "put_name",
+          [](ClientBase* self, const Object* object,
+             ObjectNameWrapper const& name) {
+            throw_on_error(self->PutName(object->id(), name));
+          },
+          "object"_a, "name"_a)
+      .def(
           "get_name",
           [](ClientBase* self, std::string const& name,
              const bool wait) -> ObjectIDWrapper {
@@ -203,11 +250,10 @@ void bind_client(py::module& mod) {
             throw_on_error(self->DropName(name));
           },
           "name"_a)
-      .def(
-          "sync_meta",
-          [](ClientBase *self) -> void {
-            VINEYARD_DISCARD(self->SyncMetaData());
-          })
+      .def("sync_meta",
+           [](ClientBase* self) -> void {
+             VINEYARD_DISCARD(self->SyncMetaData());
+           })
       .def(
           "migrate",
           [](ClientBase* self, const ObjectID object_id) -> ObjectIDWrapper {
@@ -358,28 +404,35 @@ void bind_client(py::module& mod) {
           "object_ids"_a, py::arg("sync_remote") = false)
       .def("list_objects", &Client::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5)
-      .def("allocated_size", [](Client *self, const ObjectID id) -> size_t {
-          size_t size = 0;
-          throw_on_error(self->AllocatedSize(id, size));
-          return size;
-      }, "target"_a)
-      .def("allocated_size", [](Client *self, const Object *target) -> size_t {
-          size_t size = 0;
-          if (target) {
-            throw_on_error(self->AllocatedSize(target->id(), size));
-          }
-          return size;
-      }, "target"_a)
+      .def(
+          "allocated_size",
+          [](Client* self, const ObjectID id) -> size_t {
+            size_t size = 0;
+            throw_on_error(self->AllocatedSize(id, size));
+            return size;
+          },
+          "target"_a)
+      .def(
+          "allocated_size",
+          [](Client* self, const Object* target) -> size_t {
+            size_t size = 0;
+            if (target) {
+              throw_on_error(self->AllocatedSize(target->id(), size));
+            }
+            return size;
+          },
+          "target"_a)
       .def("close",
            [](Client* self) {
              return ClientManager<Client>::GetManager()->Disconnect(
                  self->IPCSocket());
            })
-      .def("fork", [](Client *self) {
-        std::shared_ptr<Client> client(new Client());
-        throw_on_error(self->Fork(*client));
-        return client;
-      })
+      .def("fork",
+           [](Client* self) {
+             std::shared_ptr<Client> client(new Client());
+             throw_on_error(self->Fork(*client));
+             return client;
+           })
       .def("__enter__", [](Client* self) { return self; })
       .def("__exit__", [](Client* self, py::object, py::object, py::object) {
         // DO NOTHING
@@ -436,12 +489,14 @@ void bind_client(py::module& mod) {
              return ClientManager<RPCClient>::GetManager()->Disconnect(
                  self->RPCEndpoint());
            })
-      .def("fork", [](Client *self) {
-        std::shared_ptr<Client> client(new Client());
-        throw_on_error(self->Fork(*client));
-        return client;
-      })
-      .def_property_readonly("remote_instance_id", &RPCClient::remote_instance_id)
+      .def("fork",
+           [](Client* self) {
+             std::shared_ptr<Client> client(new Client());
+             throw_on_error(self->Fork(*client));
+             return client;
+           })
+      .def_property_readonly("remote_instance_id",
+                             &RPCClient::remote_instance_id)
       .def("__enter__", [](RPCClient* self) { return self; })
       .def("__exit__", [](RPCClient* self, py::object, py::object, py::object) {
         // DO NOTHING

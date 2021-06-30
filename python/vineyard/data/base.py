@@ -54,13 +54,13 @@ def string_builder(client, value, **kwargs):
 def bytes_builder(client, value, **kwargs):
     buffer = client.create_blob(len(value))
     buffer.copy(0, value)
-    return buffer.seal(client).id
+    return buffer.seal(client)
 
 
 def memoryview_builder(client, value, **kwargs):
     buffer = client.create_blob(len(value))
     buffer.copy(0, bytes(value))
-    return buffer.seal(client).id
+    return buffer.seal(client)
 
 
 def tuple_builder(client, value, builder, **kwargs):

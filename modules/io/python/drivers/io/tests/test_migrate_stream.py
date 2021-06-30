@@ -59,13 +59,13 @@ def test_migrate_stream(vineyard_ipc_sockets, vineyard_endpoint, test_dataset, t
     meta.set_global(True)
     meta['size_'] = 1
     meta.add_member("stream_0", new_stream)
-    ret_id = client2.create_metadata(meta)
-    client2.persist(ret_id)
+    ret_meta = client2.create_metadata(meta)
+    client2.persist(ret_meta)
 
     # output the global stream
     vineyard.io.open(
         "file://%s/p2p-31.out" % test_dataset_tmp,
-        ret_id,
+        ret_meta.id,
         mode="w",
         vineyard_ipc_socket=vineyard_ipc_sockets[1],
         vineyard_endpoint=vineyard_endpoint,

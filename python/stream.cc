@@ -28,10 +28,10 @@ limitations under the License.
 #include "client/client.h"
 #pragma GCC visibility pop
 
-#include "pybind11_utils.h"  // NOLINT(build/include)
+#include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;
-using namespace py::literals;  // NOLINT(build/namespaces)
+using namespace py::literals;  // NOLINT(build/namespaces_literals)
 
 namespace vineyard {
 
@@ -45,8 +45,8 @@ void bind_stream(py::module& mod) {
             std::unique_ptr<arrow::MutableBuffer> chunk = nullptr;
             throw_on_error(self->GetNext(size, chunk));
             auto chunk_ptr = chunk.release();
-            return py::memoryview::from_memory(
-                chunk_ptr->mutable_data(), chunk_ptr->size(), false);
+            return py::memoryview::from_memory(chunk_ptr->mutable_data(),
+                                               chunk_ptr->size(), false);
           },
           "size"_a)
       .def("finish",
@@ -62,7 +62,7 @@ void bind_stream(py::module& mod) {
         throw_on_error(self->GetNext(chunk));
         auto chunk_ptr = chunk.release();
         return py::memoryview::from_memory(
-            const_cast<uint8_t *>(chunk_ptr->data()), chunk_ptr->size(), true);
+            const_cast<uint8_t*>(chunk_ptr->data()), chunk_ptr->size(), true);
       });
 
   // ByteStream
@@ -123,8 +123,8 @@ void bind_stream(py::module& mod) {
             std::unique_ptr<arrow::MutableBuffer> chunk = nullptr;
             throw_on_error(self->GetNext(size, chunk));
             auto chunk_ptr = chunk.release();
-            return py::memoryview::from_memory(
-                chunk_ptr->mutable_data(), chunk_ptr->size(), false);
+            return py::memoryview::from_memory(chunk_ptr->mutable_data(),
+                                               chunk_ptr->size(), false);
           },
           "size"_a)
       .def("finish",
@@ -140,7 +140,7 @@ void bind_stream(py::module& mod) {
         throw_on_error(self->GetNext(chunk));
         auto chunk_ptr = chunk.release();
         return py::memoryview::from_memory(
-            const_cast<uint8_t *>(chunk_ptr->data()), chunk_ptr->size(), true);
+            const_cast<uint8_t*>(chunk_ptr->data()), chunk_ptr->size(), true);
       });
 
   // DataFrameStream

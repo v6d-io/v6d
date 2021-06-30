@@ -83,10 +83,10 @@ def test_add_remote_placeholder(vineyard_ipc_sockets):
     meta.add_member('__elements_-2', o3)
     meta.add_member('__elements_-3', o4)
     meta['__elements_-size'] = 4
-    tupid = client1.create_metadata(meta)
-    client1.persist(tupid)
+    tup = client1.create_metadata(meta)
+    client1.persist(tup)
 
-    meta = client2.get_meta(tupid, True)
+    meta = client2.get_meta(tup.id, True)
     assert meta['__elements_-size'] == 4
 
 

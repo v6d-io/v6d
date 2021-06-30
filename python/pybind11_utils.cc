@@ -13,15 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "pybind11_utils.h"  // NOLINT(build/include)
+#include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 #include <cstdlib>
 #include <cstring>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 #include "pybind11/pybind11.h"
 
 namespace py = pybind11;
-using namespace py::literals;  // NOLINT(build/namespaces)
+using namespace py::literals;  // NOLINT(build/namespaces_literals)
 
 namespace vineyard {
 
@@ -49,7 +52,8 @@ static PyObject* vineyard_add_doc(PyObject* /* unused */, PyObject* args) {
   }
 
   if (Py_TYPE(obj) == &PyCFunction_Type) {
-    PyCFunctionObject* f = (PyCFunctionObject*) obj;
+    PyCFunctionObject* f =
+        (PyCFunctionObject*) obj;  // NOLINT(readability/casting)
     if (f->m_ml->ml_doc && f->m_ml->ml_doc[0]) {
       return PyErr_Format(PyExc_RuntimeError,
                           "function '%s' already has a docstring",
@@ -58,8 +62,9 @@ static PyObject* vineyard_add_doc(PyObject* /* unused */, PyObject* args) {
     // copy the doc string since pybind11 will release the doc unconditionally.
     f->m_ml->ml_doc = strndup(doc_str, doc_len);
   } else if (Py_TYPE(obj) == &PyInstanceMethod_Type) {
+    PyObject* fobj = PyInstanceMethod_GET_FUNCTION(obj);
     PyCFunctionObject* f =
-        (PyCFunctionObject*) (PyInstanceMethod_GET_FUNCTION(obj));
+        (PyCFunctionObject*) fobj;  // NOLINT(readability/casting)
     if (f->m_ml->ml_doc && f->m_ml->ml_doc[0]) {
       return PyErr_Format(PyExc_RuntimeError,
                           "function '%s' already has a docstring",
@@ -68,7 +73,8 @@ static PyObject* vineyard_add_doc(PyObject* /* unused */, PyObject* args) {
     // copy the doc string since pybind11 will release the doc unconditionally.
     f->m_ml->ml_doc = strndup(doc_str, doc_len);
   } else if (strcmp(Py_TYPE(obj)->tp_name, "method_descriptor") == 0) {
-    PyMethodDescrObject* m = (PyMethodDescrObject*) obj;
+    PyMethodDescrObject* m =
+        (PyMethodDescrObject*) obj;  // NOLINT(readability/casting)
     if (m->d_method->ml_doc && m->d_method->ml_doc[0]) {
       return PyErr_Format(PyExc_RuntimeError,
                           "method '%s' already has a docstring",
@@ -77,7 +83,8 @@ static PyObject* vineyard_add_doc(PyObject* /* unused */, PyObject* args) {
     // copy the doc string since pybind11 will release the doc unconditionally.
     m->d_method->ml_doc = strndup(doc_str, doc_len);
   } else if (strcmp(Py_TYPE(obj)->tp_name, "getset_descriptor") == 0) {
-    PyGetSetDescrObject* m = (PyGetSetDescrObject*) obj;
+    PyGetSetDescrObject* m =
+        (PyGetSetDescrObject*) obj;  // NOLINT(readability/casting)
     if (m->d_getset->doc && m->d_getset->doc[0]) {
       return PyErr_Format(PyExc_RuntimeError,
                           "attribute '%s' already has a docstring",
@@ -88,7 +95,7 @@ static PyObject* vineyard_add_doc(PyObject* /* unused */, PyObject* args) {
     // copy the doc string since pybind11 will release the doc unconditionally.
     m->d_getset->doc = const_cast<char*>(strndup(doc_str, doc_len));
   } else if (Py_TYPE(obj) == &PyType_Type) {
-    PyTypeObject* t = (PyTypeObject*) obj;
+    PyTypeObject* t = (PyTypeObject*) obj;  // NOLINT(readability/casting)
     if (t->tp_doc && t->tp_doc[0]) {
       return PyErr_Format(PyExc_RuntimeError,
                           "Type '%s' already has a docstring", t->tp_name);
@@ -123,46 +130,46 @@ void bind_utils(py::module& mod) {
   PyModule_AddFunctions(mod.ptr(), vineyard_utils_methods);
 }
 
-py::object json_to_python(json const &value) {
+py::object json_to_python(json const& value) {
   switch (value.type()) {
-    case json::value_t::null: {
-      return py::none();
+  case json::value_t::null: {
+    return py::none();
+  }
+  case json::value_t::object: {
+    std::unordered_map<std::string, py::object> result;
+    for (auto const& element : json::iterator_wrapper(value)) {
+      result[element.key()] = json_to_python(element.value());
     }
-    case json::value_t::object: {
-      std::unordered_map<std::string, py::object> result;
-      for (auto const &element: json::iterator_wrapper(value)) {
-        result[element.key()] = json_to_python(element.value());
-      }
-      return py::cast(std::move(result));
+    return py::cast(std::move(result));
+  }
+  case json::value_t::array: {
+    py::list result;
+    for (auto const& element : value) {
+      result.append(json_to_python(element));
     }
-    case json::value_t::array: {
-      py::list result;
-      for (auto const &element: value) {
-        result.append(json_to_python(element));
-      }
-      return std::move(result);
-    }
-    case json::value_t::string: {
-      return py::cast(value.get_ref<std::string const &>());
-    }
-    case json::value_t::boolean: {
-      return py::cast(value.get<bool>());
-    }
-    case json::value_t::number_integer: {
-      return py::cast(value.get<int64_t>());
-    }
-    case json::value_t::number_unsigned: {
-      return py::cast(value.get<uint64_t>());
-    }
-    case json::value_t::number_float: {
-      return py::cast(value.get<double>());
-    }
-    case json::value_t::binary: {
-      return py::cast(value.get_ref<std::string const &>());
-    }
-    default: {
-      return py::none();
-    }
+    return std::move(result);
+  }
+  case json::value_t::string: {
+    return py::cast(value.get_ref<std::string const&>());
+  }
+  case json::value_t::boolean: {
+    return py::cast(value.get<bool>());
+  }
+  case json::value_t::number_integer: {
+    return py::cast(value.get<int64_t>());
+  }
+  case json::value_t::number_unsigned: {
+    return py::cast(value.get<uint64_t>());
+  }
+  case json::value_t::number_float: {
+    return py::cast(value.get<double>());
+  }
+  case json::value_t::binary: {
+    return py::cast(value.get_ref<std::string const&>());
+  }
+  default: {
+    return py::none();
+  }
   }
 }
 

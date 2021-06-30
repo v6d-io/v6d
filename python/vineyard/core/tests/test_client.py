@@ -33,8 +33,8 @@ def test_metadata(vineyard_client):
     meta.add_member('first_', xid)
     meta.add_member('second_', yid)
     meta.set_global(True)
-    rid = vineyard_client.create_metadata(meta)
-    vineyard_client.persist(rid)
+    rmeta = vineyard_client.create_metadata(meta)
+    vineyard_client.persist(rmeta)
 
     def go(meta):
         for k, v in meta.items():
@@ -43,7 +43,7 @@ def test_metadata(vineyard_client):
             else:
                 print('k-v in meta: ', k, v)
 
-    meta = vineyard_client.get_meta(rid)
+    meta = vineyard_client.get_meta(rmeta.id)
     go(meta)
     go(meta)
     go(meta)
@@ -58,8 +58,8 @@ def test_persist(vineyard_client):
     meta.add_member('first_', xid)
     meta.add_member('second_', yid)
     meta.set_global(True)
-    rid = vineyard_client.create_metadata(meta)
-    vineyard_client.persist(rid)
+    rmeta = vineyard_client.create_metadata(meta)
+    vineyard_client.persist(rmeta)
 
 
 def test_persist_multiref(vineyard_client):
@@ -69,5 +69,5 @@ def test_persist_multiref(vineyard_client):
     meta.add_member('first_', xid)
     meta.add_member('second_', xid)
     meta.set_global(True)
-    rid = vineyard_client.create_metadata(meta)
-    vineyard_client.persist(rid)
+    rmeta = vineyard_client.create_metadata(meta)
+    vineyard_client.persist(rmeta)
