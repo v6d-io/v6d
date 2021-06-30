@@ -35,7 +35,7 @@ You can do an out-of-source build using CMake:
     mkdir build
     cd build
     cmake ..
-    make -j
+    make -j$(nproc)
 
 The vineyardd target will be generated under the `bin` directory.
 
