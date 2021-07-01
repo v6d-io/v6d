@@ -129,9 +129,14 @@ static void recycle_arena(const uintptr_t base, const size_t size,
 std::set<ObjectID> BulkStore::Arena::spans{};
 
 BulkStore::~BulkStore() {
+  std::vector<ObjectID> object_ids;
+  object_ids.reserve(objects_.size());
   for (auto iter = objects_.begin(); iter != objects_.end(); iter++) {
-    auto& object = iter->first;
-    VINEYARD_DISCARD(Delete(object));
+    object_ids.emplace_back(iter->first);
+  }
+  for (auto const& item : object_ids) {
+    LOG(INFO) << "deleting... " << ObjectIDToString(item) << " --- " << item;
+    VINEYARD_DISCARD(Delete(item));
   }
 }
 
@@ -228,7 +233,10 @@ Status BulkStore::Get(const std::vector<ObjectID>& ids,
 }
 
 Status BulkStore::Delete(const ObjectID& object_id) {
-  if (object_id == EmptyBlobID()) {
+  // see also: BulkStore::PreAllocate().
+  if (object_id == EmptyBlobID() ||
+      object_id == GenerateBlobID(reinterpret_cast<void*>(
+                       std::numeric_limits<uintptr_t>::max()))) {
     return Status::OK();
   }
   object_map_t::const_accessor accessor;
