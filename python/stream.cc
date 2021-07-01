@@ -25,6 +25,7 @@ limitations under the License.
 #pragma GCC visibility push(default)
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/dataframe_stream.h"
+#include "basic/stream/object_stream.h"
 #include "client/client.h"
 #pragma GCC visibility pop
 
@@ -187,6 +188,79 @@ void bind_stream(py::module& mod) {
            })
       .def("set_params",
            [](DataframeStreamBuilder* self,
+              std::unordered_map<std::string, std::string> const& params) {
+             for (auto const& kv : params) {
+               self->SetParam(kv.first, kv.second);
+             }
+           });
+
+  // ObjectStreamWriter
+  py::class_<ObjectStreamWriter, std::unique_ptr<ObjectStreamWriter>>(
+      mod, "ObjectStreamWriter")
+      .def(
+          "put_next",
+          [](ObjectStreamWriter* self, const ObjectIDWrapper object_id) {
+            throw_on_error(self->PutNext(object_id));
+          },
+          "object_id"_a)
+      .def("finish",
+           [](ObjectStreamWriter* self) { throw_on_error(self->Finish()); })
+      .def("abort",
+           [](ObjectStreamWriter* self) { throw_on_error(self->Abort()); });
+
+  // ObjectStreamReader
+  py::class_<ObjectStreamReader, std::unique_ptr<ObjectStreamReader>>(
+      mod, "ObjectStreamReader")
+      .def("get_next", [](ObjectStreamReader* self) -> ObjectIDWrapper {
+        ObjectID object_id;
+        throw_on_error(self->GetNext(object_id));
+        return object_id;
+      });
+
+  // ObjectStream
+  py::class_<ObjectStream, std::shared_ptr<ObjectStream>, Object>(
+      mod, "ObjectStream")
+      .def(
+          "open_reader",
+          [](ObjectStream* self,
+             Client& client) -> std::unique_ptr<ObjectStreamReader> {
+            std::unique_ptr<ObjectStreamReader> reader = nullptr;
+            throw_on_error(self->OpenReader(client, reader));
+            return reader;
+          },
+          "client"_a)
+      .def(
+          "open_writer",
+          [](ObjectStream* self,
+             Client& client) -> std::unique_ptr<ObjectStreamWriter> {
+            std::unique_ptr<ObjectStreamWriter> writer = nullptr;
+            throw_on_error(self->OpenWriter(client, writer));
+            return writer;
+          },
+          "client"_a)
+      .def("__getitem__",
+           [](ObjectStream* self, std::string const& key) {
+             return self->GetParams().at(key);
+           })
+      .def_property_readonly(
+          "params", [](ObjectStream* self) { return self->GetParams(); });
+
+  // ObjectStreamBuilder
+  py::class_<ObjectStreamBuilder, std::shared_ptr<ObjectStreamBuilder>,
+             ObjectBuilder>(mod, "ObjectStreamBuilder")
+      .def(py::init<Client&>())
+      .def("__setitem__",
+           [](ObjectStreamBuilder* self, std::string const& key,
+              std::string const& value) { self->SetParam(key, value); })
+      .def("set_params",
+           [](ObjectStreamBuilder* self,
+              std::map<std::string, std::string> const& params) {
+             for (auto const& kv : params) {
+               self->SetParam(kv.first, kv.second);
+             }
+           })
+      .def("set_params",
+           [](ObjectStreamBuilder* self,
               std::unordered_map<std::string, std::string> const& params) {
              for (auto const& kv : params) {
                self->SetParam(kv.first, kv.second);

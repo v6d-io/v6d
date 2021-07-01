@@ -20,6 +20,7 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "common/util/boost.h"
@@ -797,6 +798,163 @@ Status VineyardServer::ProcessDeferred(const json& meta) {
       ++iter;
     }
   }
+  return Status::OK();
+}
+
+// manage a pool of streams.
+Status VineyardServer::CreateObjectStream(ObjectID const stream_id) {
+  if (object_streams_.find(stream_id) != object_streams_.end()) {
+    return Status::ObjectExists();
+  }
+  object_streams_.emplace(stream_id, std::make_shared<ObjectStreamHolder>());
+  return Status::OK();
+}
+
+Status VineyardServer::OpenObjectStream(ObjectID const stream_id,
+                                        int64_t const mode) {
+  if (object_streams_.find(stream_id) == object_streams_.end()) {
+    return Status::ObjectNotExists("stream cannot be open: " +
+                                   ObjectIDToString(stream_id));
+  }
+  if (object_streams_[stream_id]->open_mark & mode) {
+    return Status::StreamOpened();
+  }
+  object_streams_[stream_id]->open_mark |= mode;
+  return Status::OK();
+}
+
+// for producer: store the object id at the index
+Status VineyardServer::PutObjectStreamObject(ObjectID const stream_id,
+                                             ObjectID const next_object,
+                                             std::string const index) {
+  if (object_streams_.find(stream_id) == object_streams_.end()) {
+    return Status::ObjectNotExists("failed to find stream");
+  }
+
+  auto stream = object_streams_.at(stream_id);
+
+  if (stream->finished || stream->failed) {
+    return Status::InvalidStreamState("stream finished or failed");
+  }
+  if (stream->ready_objects_.find(index) != stream->ready_objects_.end()) {
+    return Status::InvalidStreamState(
+        "stream already had an object with index: " + index);
+  }
+
+  stream->ready_objects_.emplace(index, next_object);
+  stream->put_count++;
+  // check the pending reader
+  if (stream->reader_) {
+    std::string str_index = stream->reader_.get().first;
+    if (stream->ready_objects_.find(str_index) !=
+        stream->ready_objects_.end()) {
+      VINEYARD_SUPPRESS(stream->reader_.get().second(
+          Status::OK(), stream->ready_objects_[str_index]));
+      stream->reader_ = boost::none;
+    }
+  }
+
+  return Status::OK();
+}
+
+// for consumer: return the object id at the index
+Status VineyardServer::GetObjectStreamObject(
+    ObjectID const stream_id, std::string const index,
+    callback_t<const ObjectID> callback) {
+  if (object_streams_.find(stream_id) == object_streams_.end()) {
+    return callback(Status::ObjectNotExists("failed to find stream"),
+                    InvalidObjectID());
+  }
+  auto stream = object_streams_.at(stream_id);
+
+  if (stream->reader_) {
+    return callback(
+        Status::InvalidStreamState("unsatisfied stream reading exists"),
+        InvalidObjectID());
+  }
+  if (stream->failed) {
+    return callback(Status::StreamFailed(), InvalidObjectID());
+  }
+  if (stream->finished && stream->put_count == stream->get_count) {
+    return callback(Status::StreamDrained(), InvalidObjectID());
+  }
+
+  stream->get_count++;
+  // if object at index does not exist, save callback as pending reader
+  if (stream->ready_objects_.find(index) == stream->ready_objects_.end()) {
+    stream->reader_ =
+        std::pair<std::string, callback_t<ObjectID>>(index, callback);
+    return Status::OK();
+  }
+
+  return callback(Status::OK(), stream->ready_objects_[index]);
+}
+
+// for producer: finish or abort the stream
+Status VineyardServer::StopObjectStream(ObjectID const stream_id, bool failed) {
+  if (object_streams_.find(stream_id) == object_streams_.end()) {
+    return Status::ObjectNotExists("failed to stop stream: " +
+                                   ObjectIDToString(stream_id));
+  }
+  auto stream = object_streams_.at(stream_id);
+  // the stream is still running
+  if (stream->finished || stream->failed) {
+    return Status::InvalidStreamState("Stream already stoped");
+  }
+  // stop
+  if (failed) {
+    stream->failed = true;
+  } else {
+    stream->finished = true;
+  }
+  // wake up the pending reader
+  if (stream->reader_) {
+    auto str_index = stream->reader_.get().first;
+    auto callback = stream->reader_.get().second;
+    if (stream->failed) {
+      VINEYARD_SUPPRESS(callback(Status::StreamFailed(), InvalidObjectID()));
+      stream->reader_ = boost::none;
+    } else if (stream->ready_objects_.find(str_index) ==
+               stream->ready_objects_.end()) {
+      // get_count might be greater than put_count by 1 since the getter does
+      // not know the ending index
+      if (stream->put_count <= stream->get_count) {
+        VINEYARD_SUPPRESS(callback(Status::StreamDrained(), InvalidObjectID()));
+        stream->reader_ = boost::none;
+      } else {
+        return Status::InvalidStreamState("Invalid index: " +
+                                          stream->reader_.get().first);
+      }
+    } else {
+      VINEYARD_SUPPRESS(
+          callback(Status::OK(), stream->ready_objects_[str_index]));
+    }
+  }
+  return Status::OK();
+}
+
+Status VineyardServer::PersistObjectStream(ObjectID const stream_id,
+                                           json const tree, json& new_tree) {
+  new_tree = tree;
+  if (object_streams_.find(stream_id) == object_streams_.end()) {
+    return Status::ObjectNotExists("failed to find stream: " +
+                                   ObjectIDToString(stream_id));
+  }
+  auto stream = object_streams_.at(stream_id);
+  if (!stream->finished) {
+    return Status::InvalidStreamState("Stream not finished");
+  }
+
+  std::string k;
+  for (auto it = stream->ready_objects_.begin();
+       it != stream->ready_objects_.end(); ++it) {
+    k = "_osi_" + it->first;
+    if (new_tree.contains(k)) {
+      return Status::InvalidStreamState("Metadata already has key: " + k);
+    }
+    new_tree[k] = VYObjectIDToString(it->second);
+  }
+
   return Status::OK();
 }
 

@@ -22,6 +22,8 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "boost/asio.hpp"
@@ -41,6 +43,22 @@ class IMetaService;
 
 class IPCServer;
 class RPCServer;
+
+/**
+ * @brief ObjectStreamHolder aims to maintain all ObjectIDs with indices
+ * for a single stream.
+ * "ObjectStream" is a special kind of "Object" in vineyard, which
+ * represents a series of objects with indices.
+ * The most common ObjectStream is a sequential stream which indeed is
+ * a queue of objects.
+ * Moreover, an ObjectStream can be persisted into an Object when finished.
+ */
+struct ObjectStreamHolder {
+  std::unordered_map<std::string, ObjectID> ready_objects_;
+  boost::optional<std::pair<std::string, callback_t<ObjectID>>> reader_;
+  bool failed{false}, finished{false};
+  int64_t open_mark{0}, put_count{0}, get_count{0};
+};
 
 /**
  * @brief DeferredReq aims to defer a socket request such that the request
@@ -148,6 +166,23 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status ProcessDeferred(const json& meta);
 
+  Status CreateObjectStream(const ObjectID object_id);
+
+  Status OpenObjectStream(const ObjectID object_id, int64_t const mode);
+
+  Status PutObjectStreamObject(ObjectID const stream_id,
+                               ObjectID const next_object,
+                               std::string const index);
+
+  Status GetObjectStreamObject(ObjectID const stream_id,
+                               std::string const index,
+                               callback_t<const ObjectID> callback);
+
+  Status StopObjectStream(ObjectID const stream_id, bool failed);
+
+  Status PersistObjectStream(ObjectID const stream_id, json const tree,
+                             json& new_tree);
+
   inline InstanceID instance_id() { return instance_id_; }
   inline std::string instance_name() { return instance_name_; }
   inline void set_instance_id(InstanceID id) {
@@ -200,6 +235,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::unique_ptr<RPCServer> rpc_server_ptr_;
 
   std::list<DeferredReq> deferred_;
+
+  std::unordered_map<ObjectID, std::shared_ptr<ObjectStreamHolder>>
+      object_streams_;
 
   std::shared_ptr<BulkStore> bulk_store_;
   std::shared_ptr<StreamStore> stream_store_;

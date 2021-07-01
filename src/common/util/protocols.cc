@@ -74,6 +74,18 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::PullNextStreamChunkRequest;
   } else if (str_type == "stop_stream_request") {
     return CommandType::StopStreamRequest;
+  } else if (str_type == "create_object_stream_request") {
+    return CommandType::CreateObjectStreamRequest;
+  } else if (str_type == "open_object_stream_request") {
+    return CommandType::OpenObjectStreamRequest;
+  } else if (str_type == "get_object_stream_object_request") {
+    return CommandType::GetObjectStreamObjectRequest;
+  } else if (str_type == "put_object_stream_object_request") {
+    return CommandType::PutObjectStreamObjectRequest;
+  } else if (str_type == "stop_object_stream_request") {
+    return CommandType::StopObjectStreamRequest;
+  } else if (str_type == "persist_object_stream_request") {
+    return CommandType::PersistObjectStreamRequest;
   } else if (str_type == "put_name_request") {
     return CommandType::PutNameRequest;
   } else if (str_type == "get_name_request") {
@@ -978,6 +990,202 @@ void WriteFinalizeArenaReply(std::string& msg) {
 
 Status ReadFinalizeArenaReply(const json& root) {
   CHECK_IPC_ERROR(root, "finalize_arena_reply");
+  return Status::OK();
+}
+
+void WriteCreateObjectStreamRequest(const ObjectID& object_id,
+                                    std::string& msg) {
+  json root;
+  root["type"] = "create_object_stream_request";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateObjectStreamRequest(const json& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"] == "create_object_stream_request");
+  object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteCreateObjectStreamReply(std::string& msg) {
+  json root;
+  root["type"] = "create_object_stream_reply";
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateObjectStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, "create_object_stream_reply");
+  return Status::OK();
+}
+
+void WriteOpenObjectStreamRequest(const ObjectID& object_id,
+                                  const int64_t& mode, std::string& msg) {
+  json root;
+  root["type"] = "open_object_stream_request";
+  root["object_id"] = object_id;
+  root["mode"] = mode;
+
+  encode_msg(root, msg);
+}
+
+Status ReadOpenObjectStreamRequest(const json& root, ObjectID& object_id,
+                                   int64_t& mode) {
+  RETURN_ON_ASSERT(root["type"] == "open_object_stream_request");
+  object_id = root["object_id"].get<ObjectID>();
+  mode = root["mode"].get<int64_t>();
+  return Status::OK();
+}
+
+void WriteOpenObjectStreamReply(std::string& msg) {
+  json root;
+  root["type"] = "open_object_stream_reply";
+
+  encode_msg(root, msg);
+}
+
+Status ReadOpenObjectStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, "open_object_stream_reply");
+  return Status::OK();
+}
+
+void WriteGetObjectStreamObjectRequest(const ObjectID stream_id,
+                                       const std::vector<int> index,
+                                       std::string& msg) {
+  json root;
+  root["type"] = "get_object_stream_object_request";
+  root["id"] = stream_id;
+  std::string str_index;
+  for (size_t i = 0; i < index.size(); ++i) {
+    str_index += std::to_string(index[i]) + ",";
+  }
+  root["index"] = str_index;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetObjectStreamObjectRequest(const json& root, ObjectID& stream_id,
+                                        std::string& str_index) {
+  RETURN_ON_ASSERT(root["type"] == "get_object_stream_object_request");
+  stream_id = root["id"].get<ObjectID>();
+  str_index = root["index"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteGetObjectStreamObjectReply(const ObjectID object_id,
+                                     std::string& msg) {
+  json root;
+  root["type"] = "get_object_stream_object_reply";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetObjectStreamObjectReply(const json& root, ObjectID& object_id) {
+  CHECK_IPC_ERROR(root, "get_object_stream_object_reply");
+  object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WritePutObjectStreamObjectRequest(const ObjectID stream_id,
+                                       const ObjectID next_object,
+                                       const std::vector<int> index,
+                                       std::string& msg) {
+  json root;
+  root["type"] = "put_object_stream_object_request";
+  root["id"] = stream_id;
+  root["next_object"] = next_object;
+  std::string str_index;
+  for (size_t i = 0; i < index.size(); ++i) {
+    str_index += std::to_string(index[i]) + ",";
+  }
+  root["index"] = str_index;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPutObjectStreamObjectRequest(const json& root, ObjectID& stream_id,
+                                        ObjectID& next_object,
+                                        std::string& str_index) {
+  RETURN_ON_ASSERT(root["type"] == "put_object_stream_object_request");
+  stream_id = root["id"].get<ObjectID>();
+  next_object = root["next_object"].get<ObjectID>();
+  str_index = root["index"].get<std::string>();
+  return Status::OK();
+}
+
+void WritePutObjectStreamObjectReply(std::string& msg) {
+  json root;
+  root["type"] = "put_object_stream_object_reply";
+
+  encode_msg(root, msg);
+}
+
+Status ReadPutObjectStreamObjectReply(const json& root) {
+  CHECK_IPC_ERROR(root, "put_object_stream_object_reply");
+  return Status::OK();
+}
+
+void WriteStopObjectStreamRequest(const ObjectID stream_id, const bool failed,
+                                  std::string& msg) {
+  json root;
+  root["type"] = "stop_object_stream_request";
+  root["id"] = stream_id;
+  root["failed"] = failed;
+
+  encode_msg(root, msg);
+}
+
+Status ReadStopObjectStreamRequest(const json& root, ObjectID& stream_id,
+                                   bool& failed) {
+  RETURN_ON_ASSERT(root["type"] == "stop_object_stream_request");
+  stream_id = root["id"].get<ObjectID>();
+  failed = root["failed"].get<bool>();
+  return Status::OK();
+}
+
+void WriteStopObjectStreamReply(std::string& msg) {
+  json root;
+  root["type"] = "stop_object_stream_reply";
+
+  encode_msg(root, msg);
+}
+
+Status ReadStopObjectStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, "stop_object_stream_reply");
+  return Status::OK();
+}
+
+void WritePersistObjectStreamRequest(const ObjectID stream_id, const json& meta,
+                                     std::string& msg) {
+  json root;
+  root["type"] = "persist_object_stream_request";
+  root["id"] = stream_id;
+  root["meta"] = meta;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPersistObjectStreamRequest(const json& root, ObjectID& stream_id,
+                                      json& meta) {
+  RETURN_ON_ASSERT(root["type"] == "persist_object_stream_request");
+  stream_id = root["id"].get<ObjectID>();
+  meta = root["meta"];
+  return Status::OK();
+}
+
+void WritePersistObjectStreamReply(const ObjectID object_id, std::string& msg) {
+  json root;
+  root["type"] = "persist_object_stream_reply";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPersistObjectStreamReply(const json& root, ObjectID& object_id) {
+  CHECK_IPC_ERROR(root, "persist_object_stream_reply");
+  object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
 

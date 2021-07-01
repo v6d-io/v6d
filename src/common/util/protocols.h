@@ -65,6 +65,12 @@ enum class CommandType {
   DropBufferRequest = 32,
   MakeArenaRequest = 33,
   FinalizeArenaRequest = 34,
+  CreateObjectStreamRequest = 35,
+  OpenObjectStreamRequest = 36,
+  GetObjectStreamObjectRequest = 37,
+  PutObjectStreamObjectRequest = 38,
+  StopObjectStreamRequest = 39,
+  PersistObjectStreamRequest = 40,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -298,6 +304,70 @@ Status ReadStopStreamRequest(const json& root, ObjectID& stream_id,
 void WriteStopStreamReply(std::string& msg);
 
 Status ReadStopStreamReply(const json& root);
+
+void WriteCreateObjectStreamRequest(const ObjectID& object_id,
+                                    std::string& msg);
+
+Status ReadCreateObjectStreamRequest(const json& root, ObjectID& object_id);
+
+void WriteCreateObjectStreamReply(std::string& msg);
+
+Status ReadCreateObjectStreamReply(const json& root);
+
+void WriteOpenObjectStreamRequest(const ObjectID& object_id,
+                                  const int64_t& mode, std::string& msg);
+
+Status ReadOpenObjectStreamRequest(const json& root, ObjectID& object_id,
+                                   int64_t& mode);
+
+void WriteOpenObjectStreamReply(std::string& msg);
+
+Status ReadOpenObjectStreamReply(const json& root);
+
+void WriteGetObjectStreamObjectRequest(const ObjectID stream_id,
+                                       const std::vector<int> index,
+                                       std::string& msg);
+
+Status ReadGetObjectStreamObjectRequest(const json& root, ObjectID& stream_id,
+                                        std::string& str_index);
+
+void WriteGetObjectStreamObjectReply(const ObjectID object_id,
+                                     std::string& msg);
+
+Status ReadGetObjectStreamObjectReply(const json& root, ObjectID& object_id);
+
+void WritePutObjectStreamObjectRequest(const ObjectID stream_id,
+                                       const ObjectID next_object,
+                                       const std::vector<int> index,
+                                       std::string& msg);
+
+Status ReadPutObjectStreamObjectRequest(const json& root, ObjectID& stream_id,
+                                        ObjectID& next_object,
+                                        std::string& str_index);
+
+void WritePutObjectStreamObjectReply(std::string& msg);
+
+Status ReadPutObjectStreamObjectReply(const json& root);
+
+void WriteStopObjectStreamRequest(const ObjectID stream_id, const bool failed,
+                                  std::string& msg);
+
+Status ReadStopObjectStreamRequest(const json& root, ObjectID& stream_id,
+                                   bool& failed);
+
+void WriteStopObjectStreamReply(std::string& msg);
+
+Status ReadStopObjectStreamReply(const json& root);
+
+void WritePersistObjectStreamRequest(const ObjectID stream_id, const json& meta,
+                                     std::string& msg);
+
+Status ReadPersistObjectStreamRequest(const json& root, ObjectID& stream_id,
+                                      json& meta);
+
+void WritePersistObjectStreamReply(const ObjectID object_id, std::string& msg);
+
+Status ReadPersistObjectStreamReply(const json& root, ObjectID& object_id);
 
 void WriteShallowCopyRequest(const ObjectID id, std::string& msg);
 
