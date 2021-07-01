@@ -31,6 +31,7 @@ limitations under the License.
 #include "arrow/result.h"
 #include "arrow/status.h"
 #include "arrow/util/config.h"
+#include "arrow/util/uri.h"
 
 #include "boost/algorithm/string.hpp"
 #include "glog/logging.h"
@@ -94,7 +95,38 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
 
   // process locations
   location_ = location_.substr(0, arg_pos);
-  fs_ = arrow::fs::FileSystemFromUriOrPath(location_, &location_).ValueOrDie();
+  size_t i = 0;
+  for (i = 0; i < location_.size(); ++i) {
+    if (location_[i] < 0 || location_[i] > 127) {
+      break;
+    }
+  }
+  auto encoded_location =
+      location_.substr(0, i) + arrow::internal::UriEscape(location_.substr(i));
+  fs_ = arrow::fs::FileSystemFromUriOrPath(encoded_location, &location_)
+            .ValueOrDie();
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 3000000
+  location_ = arrow::internal::UriUnescape(location_);
+#else
+  // Refered https://stackoverflow.com/questions/154536/encode-decode-urls-in-c
+  auto urlDecode = [](std::string& src) -> std::string {
+    std::string ret;
+    char ch;
+    size_t i, ii;
+    for (i = 0; i < src.length(); i++) {
+      if (src[i] == '%') {
+        sscanf(src.substr(i + 1, 2).c_str(), "%x", &ii);
+        ch = static_cast<char>(ii);
+        ret += ch;
+        i = i + 2;
+      } else {
+        ret += src[i];
+      }
+    }
+    return ret;
+  };
+  location_ = urlDecode(location_);
+#endif
 }
 
 LocalIOAdaptor::~LocalIOAdaptor() {
