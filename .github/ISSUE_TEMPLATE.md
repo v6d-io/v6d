@@ -25,11 +25,11 @@ If is is a **bug report**, to help us reproducing this bug, please provide infor
 
 If it is a **feature request**, please provides a clear and concise description of what you want to happen:
 
-1. What is the problem:
-2. The behaviour that you expect to work:
+### What is the problem:
+
+### The behaviour that you expect to work:
 
 Additional context
 ------------------
 
 Add any other context about the problem here.
-

@@ -135,7 +135,6 @@ BulkStore::~BulkStore() {
     object_ids.emplace_back(iter->first);
   }
   for (auto const& item : object_ids) {
-    LOG(INFO) << "deleting... " << ObjectIDToString(item) << " --- " << item;
     VINEYARD_DISCARD(Delete(item));
   }
 }

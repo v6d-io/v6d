@@ -92,7 +92,7 @@ We can inspect the *key-value* attributes and members of an :class:`ObjectMeta`:
 
 .. code:: python
 
-    >>> meta = vineyard.get_meta(hashmap_id)
+    >>> meta = client.get_meta(hashmap_id)
     >>> meta
     ObjectMeta {
         "id": "0000347aebe92dd0",
