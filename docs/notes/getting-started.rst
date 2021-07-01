@@ -40,7 +40,7 @@ Getting and putting Python object
 .. code:: python
 
      >>> import numpy as np
-     >>> import vineyard.array
+     >>> import vineyard.data.tensor
      >>> arr = np.arange(8)
      >>> arr_id = client.put(arr)
      >>> arr_id
@@ -62,7 +62,7 @@ Creating a dataframe
 .. code:: python
 
      >>> import numpy as np
-     >>> import vineyard.dataframe
+     >>> import vineyard.data.dataframe
      >>> df = pd.DataFrame({'u': [0, 0, 1, 2, 2, 3],
      >>>                    'v': [1, 2, 3, 3, 4, 4],
      >>>                    'weight': [1.5, 3.2, 4.7, 0.3, 0.8, 2.5]})
@@ -84,7 +84,7 @@ Creating a dataframe
      2  1  3     4.7
      3  2  3     0.3
      4  2  4     0.8
-     5  3  4     2.5     
+     5  3  4     2.5
 
 We first build the vineyard dataframe object from pandas dataframe variable ``df``,
 then to further understand the ``client.get()`` method, we use ``client.get_object()``
