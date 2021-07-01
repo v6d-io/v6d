@@ -234,7 +234,7 @@ memory mapping.
 
     >>> payload = b"Hello, World!"
     >>> blob_id = client.put(payload)
-    >>> blob = client.get(blob_id)
+    >>> blob = client.get_object(blob_id)
     >>> print(blob.typename, blob.size, blob)
 
 
