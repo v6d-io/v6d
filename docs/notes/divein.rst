@@ -262,7 +262,7 @@ listening to ipc_socket ``/var/run/vineyard.sock2``.
 
     >>> import numpy as np
     >>> import vineyard
-    >>> import vineyard.array
+    >>> import vineyard.data.tensor
      
     >>> # build the first array in the first vineyard instance
     >>> client1 = vineyard.connect('/var/run/vineyard.sock1')
