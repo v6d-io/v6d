@@ -44,15 +44,29 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
     const std::string& location, Client* client) {
   size_t arg_pos = location.find_first_of('#');
   std::string location_to_parse = location.substr(0, arg_pos);
+  size_t i = 0;
+  for (i = 0; i < location_to_parse.size(); ++i) {
+    if (location_to_parse[i] < 0 || location_to_parse[i] > 127) {
+      break;
+    }
+  }
+  // If there are non-ascii charaters, we shall pre-encode the location,
+  // as the arrow::internal::Uri will fail.
+  auto encoded_location =
+      location_to_parse.substr(0, i) +
+      arrow::internal::UriEscape(location_to_parse.substr(i));
   arrow::internal::Uri uri;
   {
-    auto s = uri.Parse(location_to_parse);
-    if (!s.ok()) {
+    auto s = uri.Parse(encoded_location);
+    if (!s.ok()) {  // Assume it's a local file
       // defaulting to local file system: resolve to abs path first
       char resolved_path[PATH_MAX];
       realpath(location_to_parse.c_str(), resolved_path);
+      // Note we should not encode the leading '/' if there is one,
+      // cause arrow::internal::Uri requires the path must be an absolute path.
       location_to_parse = std::string(resolved_path);
-      auto s = uri.Parse("file://" + location_to_parse);
+      auto s = uri.Parse(
+          "file:///" + arrow::internal::UriEscape(location_to_parse.substr(1)));
       if (!s.ok()) {
         LOG(ERROR) << "Failed to detect the scheme of given location "
                    << location;
