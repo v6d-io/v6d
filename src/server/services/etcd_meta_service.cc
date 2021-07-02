@@ -219,8 +219,8 @@ void EtcdMetaService::requestUpdates(
   etcd_->head().then([this, since_rev, prefix,
                       callback](pplx::task<etcd::Response> resp_task) {
     auto resp = resp_task.get();
-    if (since_rev < static_cast<unsigned>(resp.index()) &&
-        since_rev + 1 > this->handled_rev_.load()) {
+    auto head_rev = static_cast<unsigned>(resp.index());
+    if (since_rev < head_rev && head_rev + 1 > this->handled_rev_.load()) {
       if (this->watcher_) {
         VLOG(10) << "request updates: since: " << since_rev
                  << " current: " << resp.index()
@@ -229,7 +229,7 @@ void EtcdMetaService::requestUpdates(
           std::lock_guard<std::mutex> scope_lock(
               this->registered_callbacks_mutex_);
           this->registered_callbacks_.emplace(
-              std::make_pair(static_cast<unsigned>(resp.index()), callback));
+              std::make_pair(head_rev, callback));
         }
       } else {
         etcd_->watch(prefix_ + prefix, since_rev + 1, true)
