@@ -115,7 +115,7 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
     size_t i, ii;
     for (i = 0; i < src.length(); i++) {
       if (src[i] == '%') {
-        sscanf(src.substr(i + 1, 2).c_str(), "%x", &ii);
+        sscanf(src.substr(i + 1, 2).c_str(), "%lx", &ii);
         ch = static_cast<char>(ii);
         ret += ch;
         i = i + 2;

@@ -201,6 +201,9 @@ inline boost::leaf::result<ObjectID> ConstructFragmentGroup(
     MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,
               comm_spec.comm());
   }
+
+  MPI_Barrier(comm_spec.comm());
+  VINEYARD_DISCARD(client.SyncMetaData());
   return group_object_id;
 }
 

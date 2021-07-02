@@ -79,6 +79,11 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   // Ref: https://www.boost.org/doc/libs/1_75_0/doc/html/boost_asio/reference/
   //      io_context__strand.html#boost_asio.reference.io_context__strand.orde
   //      r_of_handler_invocation
+
+#ifndef NDEBUG
+  static unsigned processed = 0;
+#endif
+
   auto status = Status::EtcdError(resp.error_code(), resp.error_message());
   ctx_.post(boost::bind(callback_, status, ops, resp.index()));
   {
@@ -88,6 +93,10 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     // handle registered callbacks
     while (!registered_callbacks_.empty()) {
       auto iter = registered_callbacks_.front();
+#ifndef NDEBUG
+      VINEYARD_ASSERT(iter.first >= processed);
+      processed = iter.first;
+#endif
       if (iter.first > static_cast<unsigned>(resp.index())) {
         break;
       }
@@ -210,7 +219,7 @@ void EtcdMetaService::requestUpdates(
   etcd_->head().then([this, since_rev, prefix,
                       callback](pplx::task<etcd::Response> resp_task) {
     auto resp = resp_task.get();
-    if (since_rev < (unsigned) resp.index() &&
+    if (since_rev < static_cast<unsigned>(resp.index()) &&
         since_rev + 1 > this->handled_rev_.load()) {
       if (this->watcher_) {
         VLOG(10) << "request updates: since: " << since_rev
@@ -220,7 +229,7 @@ void EtcdMetaService::requestUpdates(
           std::lock_guard<std::mutex> scope_lock(
               this->registered_callbacks_mutex_);
           this->registered_callbacks_.emplace(
-              std::make_pair(since_rev + 1, callback));
+              std::make_pair(static_cast<unsigned>(resp.index()), callback));
         }
       } else {
         etcd_->watch(prefix_ + prefix, since_rev + 1, true)
