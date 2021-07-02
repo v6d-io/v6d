@@ -233,7 +233,7 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
     vineyard_ipc_sockets = \
             generate_vineyard_ipc_sockets(vineyard_ipc_sockets, num_proc)
 
-    def job1(rs, client):
+    def job1(rs, state, client):
         try:
             o = client.get_object(client.put(1))
             # client.persist(o.id)
@@ -242,14 +242,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job2(rs, client):
+    def job2(rs, state, client):
         try:
             o = client.get_object(client.put(1.23456))
             # client.persist(o.id)
@@ -258,14 +260,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job3(rs, client):
+    def job3(rs, state, client):
         try:
             o = client.get_object(client.put('xxxxabcd'))
             # client.persist(o.id)
@@ -274,14 +278,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job4(rs, client):
+    def job4(rs, state, client):
         try:
             o = client.get_object(client.put((1, 1.2345)))
             # client.persist(o.id)
@@ -290,14 +296,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job5(rs, client):
+    def job5(rs, state, client):
         try:
             o = client.get_object(client.put((1, 1.2345, 'xxxxabcd')))
             # client.persist(o.id)
@@ -306,7 +314,9 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
