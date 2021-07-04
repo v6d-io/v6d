@@ -231,36 +231,32 @@ void EtcdMetaService::requestUpdates(
                       callback](pplx::task<etcd::Response> resp_task) {
     auto resp = resp_task.get();
     auto head_rev = static_cast<unsigned>(resp.index());
-    VLOG(10) << "request updates: since: " << since_rev
-             << ", head: " << resp.index()
-             << ", handled: " << this->handled_rev_.load();
-    if (since_rev < head_rev && head_rev > this->handled_rev_.load()) {
-      if (this->watcher_) {
-        {
-          std::lock_guard<std::mutex> scope_lock(
-              this->registered_callbacks_mutex_);
-          this->registered_callbacks_.emplace(
-              std::make_pair(head_rev, callback));
-        }
-      } else {
-        etcd_->watch(prefix_ + prefix, since_rev + 1, true)
-            .then(EtcdWatchHandler(
-                server_ptr_->GetMetaContext(),
-                [callback](
-                    Status const& status, const std::vector<op_t>& ops,
-                    unsigned rev,
-                    callback_t<unsigned> callback_after_update) -> Status {
-                  auto s = callback(status, ops, rev);
-                  return callback_after_update(s, rev);
-                },
-                prefix_, prefix_ + meta_sync_lock_, this->registered_callbacks_,
-                this->handled_rev_, this->registered_callbacks_mutex_));
+    {
+      std::lock_guard<std::mutex> scope_lock(this->registered_callbacks_mutex_);
+      auto handled_rev = this->handled_rev_.load();
+      if (head_rev <= handled_rev) {
+        server_ptr_->GetMetaContext().post(
+            boost::bind(callback, Status::OK(), std::vector<op_t>{},
+                        this->handled_rev_.load()));
+        return;
       }
-    } else {
-      server_ptr_->GetMetaContext().post(
-          boost::bind(callback, Status::OK(), std::vector<op_t>(),
-                      this->handled_rev_.load()));
+      if (/* head_rev > handled_rev && */ this->watcher_) {
+        this->registered_callbacks_.emplace(std::make_pair(head_rev, callback));
+        return;
+      }
     }
+    LOG(INFO) << "failed: trigger a watch?...";
+    etcd_->watch(prefix_ + prefix, since_rev + 1, true)
+        .then(EtcdWatchHandler(
+            server_ptr_->GetMetaContext(),
+            [callback](Status const& status, const std::vector<op_t>& ops,
+                       unsigned rev,
+                       callback_t<unsigned> callback_after_update) -> Status {
+              auto s = callback(status, ops, rev);
+              return callback_after_update(s, rev);
+            },
+            prefix_, prefix_ + meta_sync_lock_, this->registered_callbacks_,
+            this->handled_rev_, this->registered_callbacks_mutex_));
   });
 }
 
