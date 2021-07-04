@@ -410,8 +410,8 @@ class IMetaService {
             LOG(INFO) << "start background etcd watch, since " << rev_;
             this->startDaemonWatch(
                 "", rev_,
-                boost::bind(&IMetaService::daemonWatchHandler, this, _1, _2,
-                            _3));
+                boost::bind(&IMetaService::daemonWatchHandler, this, _1, _2, _3,
+                            _4));
             // start heartbeat
             VINEYARD_DISCARD(this->startHeartbeat(Status::OK()));
             // mark meta service as ready
@@ -573,7 +573,8 @@ class IMetaService {
 
   virtual void startDaemonWatch(
       const std::string& prefix, unsigned since_rev,
-      callback_t<const std::vector<op_t>&, unsigned> callback) = 0;
+      callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
+          callback) = 0;
 
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
@@ -769,7 +770,8 @@ class IMetaService {
   }
 
   Status daemonWatchHandler(const Status& status, const std::vector<op_t>& ops,
-                            unsigned rev) {
+                            unsigned rev,
+                            callback_t<unsigned> callback_after_update) {
     // Guarantee: all kvs inside a txn reaches the client at the same time,
     // which is guaranteed by the implementation of etcd.
     //
@@ -777,24 +779,25 @@ class IMetaService {
     // for one type of change.
     if (!status.ok()) {
       LOG(ERROR) << "Error in daemon watching: " << status.ToString();
-      return status;
+      return callback_after_update(status, rev);
     }
     if (ops.empty()) {
-      return Status::OK();
+      return callback_after_update(Status::OK(), rev);
     }
     // process events grouped by revision
     size_t idx = 0;
     std::vector<op_t> op_batch;
     while (idx < ops.size()) {
-      unsigned index = ops[idx].kv.rev;
-      while (idx < ops.size() && ops[idx].kv.rev == index) {
+      unsigned head_index = ops[idx].kv.rev;
+      while (idx < ops.size() && ops[idx].kv.rev == head_index) {
         op_batch.emplace_back(ops[idx]);
         idx += 1;
       }
       metaUpdate(op_batch, true);
       op_batch.clear();
+      rev_ = head_index;
     }
-    return Status::OK();
+    return callback_after_update(Status::OK(), rev);
   }
 
   std::unique_ptr<asio::steady_timer> heartbeat_timer_;
