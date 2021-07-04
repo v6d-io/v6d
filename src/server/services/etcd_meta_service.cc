@@ -93,28 +93,28 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   }
 
   // NB: update the `handled_rev_` after we have truely applied the update ops.
-  ctx_.post(boost::bind(callback_, status, ops, head_rev,
-                        [this](Status const&, unsigned rev) -> Status {
-                          handled_rev_.store(rev);
-                          return Status::OK();
-                        }));
-  {
-    std::lock_guard<std::mutex> scope_lock(registered_callbacks_mutex_);
+  ctx_.post(boost::bind(
+      callback_, status, ops, head_rev,
+      [this, status](Status const&, unsigned rev) -> Status {
+        std::lock_guard<std::mutex> scope_lock(registered_callbacks_mutex_);
+        handled_rev_.store(rev);
 
-    // handle registered callbacks
-    while (!registered_callbacks_.empty()) {
-      auto iter = registered_callbacks_.front();
+        // handle registered callbacks
+        while (!registered_callbacks_.empty()) {
+          auto iter = registered_callbacks_.front();
 #ifndef NDEBUG
-      VINEYARD_ASSERT(iter.first >= processed);
-      processed = iter.first;
+          VINEYARD_ASSERT(iter.first >= processed);
+          processed = iter.first;
 #endif
-      if (iter.first > head_rev) {
-        break;
-      }
-      ctx_.post(boost::bind(iter.second, status, ops, head_rev));
-      registered_callbacks_.pop();
-    }
-  }
+          if (iter.first > rev) {
+            break;
+          }
+          ctx_.post(boost::bind(iter.second, status,
+                                std::vector<EtcdMetaService::op_t>{}, rev));
+          registered_callbacks_.pop();
+        }
+        return Status::OK();
+      }));
 }
 
 void EtcdMetaService::requestLock(
