@@ -23,6 +23,7 @@ import random
 import time
 import multiprocessing
 import threading
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
@@ -232,7 +233,7 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
     vineyard_ipc_sockets = \
             generate_vineyard_ipc_sockets(vineyard_ipc_sockets, num_proc)
 
-    def job1(rs, client):
+    def job1(rs, state, client):
         try:
             o = client.get_object(client.put(1))
             # client.persist(o.id)
@@ -241,14 +242,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job2(rs, client):
+    def job2(rs, state, client):
         try:
             o = client.get_object(client.put(1.23456))
             # client.persist(o.id)
@@ -257,14 +260,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job3(rs, client):
+    def job3(rs, state, client):
         try:
             o = client.get_object(client.put('xxxxabcd'))
             # client.persist(o.id)
@@ -273,14 +278,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job4(rs, client):
+    def job4(rs, state, client):
         try:
             o = client.get_object(client.put((1, 1.2345)))
             # client.persist(o.id)
@@ -289,14 +296,16 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def job5(rs, client):
+    def job5(rs, state, client):
         try:
             o = client.get_object(client.put((1, 1.2345, 'xxxxabcd')))
             # client.persist(o.id)
@@ -305,25 +314,31 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             else:
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
-            print('failed: %s' % e, flush=True)
+            print('failed with %r: %s' % (o, e), flush=True)
+            traceback.print_exc()
+            state.value = -1
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
         finally:
             print('job finished', flush=True)
 
-    def start_requests(rs, ipc_socket):
+    def start_requests(rs, state, ipc_socket):
         jobs = [job1, job2, job3, job4, job5]
         client = vineyard.connect(ipc_socket).fork()
 
         for _ in range(job_per_proc):
+            if state.value != 0:
+                break
             job = random.choice(jobs)
-            job(rs, client)
+            job(rs, state, client)
 
-    procs, rs = [], multiprocessing.Queue()
+    ctx = multiprocessing.get_context(method='fork')
+    procs, rs, state = [], ctx.Queue(), ctx.Value('i', 0)
     for sock in vineyard_ipc_sockets:
-        proc = multiprocessing.Process(target=start_requests, args=(
+        proc = ctx.Process(target=start_requests, args=(
             rs,
+            state,
             sock,
         ))
         proc.start()
@@ -416,3 +431,135 @@ def test_concurrent_persist(vineyard_ipc_sockets):
             rs.append(future.result())
         if not all(rs):
             pytest.fail("Failed to execute tests ...")
+
+
+def test_concurrent_meta_sync(vineyard_ipc_sockets):
+    num_proc = 8
+    job_per_proc = 128
+
+    def job1(rs, state, job_per_proc, vineyard_ipc_sockets):
+        sock1, sock2 = random.choices(vineyard_ipc_sockets, k=2)
+        client0 = vineyard.connect(sock1).fork()
+        client1 = vineyard.connect(sock2).fork()
+        for _ in range(job_per_proc):
+            if state.value != 0:
+                break
+            o = client0.put(1)
+            client0.persist(o)
+            try:
+                client1.sync_meta()
+                client1.get_meta(o)
+                client1.delete(o)
+            except Exception as e:  # pylint: disable=broad-except
+                print('failed: with %r: %s' % (o, e), flush=True)
+                traceback.print_exc()
+                state.value = -1
+                rs.put((False, 'failed: %s' % e))
+                return
+        rs.put((True, ''))
+
+    def job2(rs, state, job_per_proc, vineyard_ipc_sockets):
+        sock1, sock2 = random.choices(vineyard_ipc_sockets, k=2)
+        client0 = vineyard.connect(sock1).fork()
+        client1 = vineyard.connect(sock2).fork()
+        for _ in range(job_per_proc):
+            if state.value != 0:
+                break
+            o = client0.put(1.23456)
+            client0.persist(o)
+            try:
+                client1.sync_meta()
+                client1.get_meta(o)
+                client1.delete(o)
+            except Exception as e:  # pylint: disable=broad-except
+                print('failed: with %r: %s' % (o, e), flush=True)
+                traceback.print_exc()
+                state.value = -1
+                rs.put((False, 'failed: %s' % e))
+                return
+        rs.put((True, ''))
+
+    def job3(rs, state, job_per_proc, vineyard_ipc_sockets):
+        sock1, sock2 = random.choices(vineyard_ipc_sockets, k=2)
+        client0 = vineyard.connect(sock1).fork()
+        client1 = vineyard.connect(sock2).fork()
+        for _ in range(job_per_proc):
+            if state.value != 0:
+                break
+            o = client0.put('xxxxabcd')
+            client0.persist(o)
+            try:
+                client1.sync_meta()
+                client1.get_meta(o)
+                client1.delete(o)
+            except Exception as e:  # pylint: disable=broad-except
+                print('failed: with %r: %s' % (o, e), flush=True)
+                traceback.print_exc()
+                state.value = -1
+                rs.put((False, 'failed: %s' % e))
+                return
+        rs.put((True, ''))
+
+    def job4(rs, state, job_per_proc, vineyard_ipc_sockets):
+        sock1, sock2 = random.choices(vineyard_ipc_sockets, k=2)
+        client0 = vineyard.connect(sock1).fork()
+        client1 = vineyard.connect(sock2).fork()
+        for _ in range(job_per_proc):
+            if state.value != 0:
+                break
+            o = client0.put((1, 1.2345))
+            client0.persist(o)
+            try:
+                client1.sync_meta()
+                client1.get_meta(o)
+                client1.delete(o)
+            except Exception as e:  # pylint: disable=broad-except
+                print('failed: with %r: %s' % (o, e), flush=True)
+                traceback.print_exc()
+                state.value = -1
+                rs.put((False, 'failed: %s' % e))
+                return
+        rs.put((True, ''))
+
+    def job5(rs, state, job_per_proc, vineyard_ipc_sockets):
+        sock1, sock2 = random.choices(vineyard_ipc_sockets, k=2)
+        client0 = vineyard.connect(sock1).fork()
+        client1 = vineyard.connect(sock2).fork()
+        for _ in range(job_per_proc):
+            if state.value != 0:
+                break
+            o = client0.put((1, 1.2345, 'xxxxabcd'))
+            client0.persist(o)
+            try:
+                client1.sync_meta()
+                client1.get_meta(o)
+                client1.delete(o)
+            except Exception as e:  # pylint: disable=broad-except
+                print('failed: with %r: %s' % (o, e), flush=True)
+                traceback.print_exc()
+                state.value = -1
+                rs.put((False, 'failed: %s' % e))
+                return
+        rs.put((True, ''))
+
+    def start_requests(rs, state, job_per_proc, vineyard_ipc_sockets):
+        jobs = [job1, job2, job3, job4, job5]
+        job = random.choice(jobs)
+        job(rs, state, job_per_proc, vineyard_ipc_sockets)
+
+    ctx = multiprocessing.get_context(method='fork')
+    procs, rs, state = [], ctx.Queue(), ctx.Value('i', 0)
+    for _ in range(num_proc):
+        proc = ctx.Process(target=start_requests, args=(
+            rs,
+            state,
+            job_per_proc,
+            vineyard_ipc_sockets,
+        ))
+        proc.start()
+        procs.append(proc)
+
+    for _ in range(num_proc):
+        r, message = rs.get(block=True)
+        if not r:
+            pytest.fail(message)

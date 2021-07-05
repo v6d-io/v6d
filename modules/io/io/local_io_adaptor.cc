@@ -112,8 +112,8 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
   auto urlDecode = [](std::string& src) -> std::string {
     std::string ret;
     char ch;
-    size_t i, ii;
-    for (i = 0; i < src.length(); i++) {
+    int i = -1, ii = -1;
+    for (i = 0; i < static_cast<int>(src.length()); i++) {
       if (src[i] == '%') {
         sscanf(src.substr(i + 1, 2).c_str(), "%x", &ii);
         ch = static_cast<char>(ii);

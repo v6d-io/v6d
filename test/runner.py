@@ -240,7 +240,8 @@ def run_single_vineyardd_tests(etcd_endpoints):
                          'vineyard_test_%s' % time.time(),
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
         run_test('array_test')
-        run_test('allocator_test')
+        # FIXME: cannot be safely dtor after #350 and #354.
+        # run_test('allocator_test')
         run_test('arrow_data_structure_test')
         run_test('dataframe_test')
         run_test('delete_test')

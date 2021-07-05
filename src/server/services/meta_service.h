@@ -194,9 +194,7 @@ class IMetaService {
                   if (s.ok()) {
                     if (ops.empty()) {
                       unsigned rev_after_unlock = 0;
-                      if (lock->Release(rev_after_unlock).ok()) {
-                        rev_ = rev_after_unlock;
-                      }
+                      VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                       return callback_after_finish(Status::OK());
                     }
                     // apply changes locally before committing to etcd
@@ -207,17 +205,13 @@ class IMetaService {
                                  const Status& status, unsigned rev) {
                           // update rev_ to the revision after unlock.
                           unsigned rev_after_unlock = 0;
-                          if (lock->Release(rev_after_unlock).ok()) {
-                            rev_ = rev_after_unlock;
-                          }
+                          VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                           return callback_after_finish(status);
                         });
                     return Status::OK();
                   } else {
                     unsigned rev_after_unlock = 0;
-                    if (lock->Release(rev_after_unlock).ok()) {
-                      rev_ = rev_after_unlock;
-                    }
+                    VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                     return callback_after_finish(s);  // propogate the error
                   }
                 });
@@ -297,15 +291,12 @@ class IMetaService {
            callback_after_finish](const Status& status,
                                   std::shared_ptr<ILock> lock) {
             if (status.ok()) {
-              rev_ = lock->GetRev();
               // commit to etcd
               this->commitUpdates(ops, [this, callback_after_finish, lock](
                                            const Status& status, unsigned rev) {
                 // update rev_ to the revision after unlock.
                 unsigned rev_after_unlock = 0;
-                if (lock->Release(rev_after_unlock).ok()) {
-                  rev_ = rev_after_unlock;
-                }
+                VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                 return callback_after_finish(status);
               });
               return Status::OK();
@@ -410,8 +401,8 @@ class IMetaService {
             LOG(INFO) << "start background etcd watch, since " << rev_;
             this->startDaemonWatch(
                 "", rev_,
-                boost::bind(&IMetaService::daemonWatchHandler, this, _1, _2,
-                            _3));
+                boost::bind(&IMetaService::daemonWatchHandler, this, _1, _2, _3,
+                            _4));
             // start heartbeat
             VINEYARD_DISCARD(this->startHeartbeat(Status::OK()));
             // mark meta service as ready
@@ -573,7 +564,8 @@ class IMetaService {
 
   virtual void startDaemonWatch(
       const std::string& prefix, unsigned since_rev,
-      callback_t<const std::vector<op_t>&, unsigned> callback) = 0;
+      callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
+          callback) = 0;
 
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
@@ -623,6 +615,11 @@ class IMetaService {
     // group-by all changes
     for (const op_t& op : ops) {
       if (op.kv.rev != 0 && op.kv.rev <= rev_) {
+#ifndef NDEBUG
+        if (from_remote && op.kv.rev <= rev_) {
+          LOG(WARNING) << "skip updates: " << op.ToString();
+        }
+#endif
         // revision resolution: means this revision has already been updated
         // the revision value 0 means local update ops.
         continue;
@@ -642,7 +639,9 @@ class IMetaService {
       }
 
 #ifndef NDEBUG
-      VLOG(10) << "update op in meta tree: " << op.ToString();
+      if (from_remote) {
+        VLOG(11) << "update op in meta tree: " << op.ToString();
+      }
 #endif
 
       if (boost::algorithm::starts_with(op.kv.key, "/signatures/")) {
@@ -769,7 +768,8 @@ class IMetaService {
   }
 
   Status daemonWatchHandler(const Status& status, const std::vector<op_t>& ops,
-                            unsigned rev) {
+                            unsigned rev,
+                            callback_t<unsigned> callback_after_update) {
     // Guarantee: all kvs inside a txn reaches the client at the same time,
     // which is guaranteed by the implementation of etcd.
     //
@@ -777,24 +777,25 @@ class IMetaService {
     // for one type of change.
     if (!status.ok()) {
       LOG(ERROR) << "Error in daemon watching: " << status.ToString();
-      return status;
+      return callback_after_update(status, rev);
     }
     if (ops.empty()) {
-      return Status::OK();
+      return callback_after_update(Status::OK(), rev);
     }
     // process events grouped by revision
     size_t idx = 0;
     std::vector<op_t> op_batch;
     while (idx < ops.size()) {
-      unsigned index = ops[idx].kv.rev;
-      while (idx < ops.size() && ops[idx].kv.rev == index) {
+      unsigned head_index = ops[idx].kv.rev;
+      while (idx < ops.size() && ops[idx].kv.rev == head_index) {
         op_batch.emplace_back(ops[idx]);
         idx += 1;
       }
       metaUpdate(op_batch, true);
       op_batch.clear();
+      rev_ = head_index;
     }
-    return Status::OK();
+    return callback_after_update(Status::OK(), rev);
   }
 
   std::unique_ptr<asio::steady_timer> heartbeat_timer_;

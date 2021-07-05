@@ -45,7 +45,9 @@ class EtcdWatchHandler {
 #else
       asio::io_service& ctx,
 #endif
-      callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback,
+      callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                 callback_t<unsigned>>
+          callback,
       std::string const& prefix, std::string const& filter_prefix,
       registered_callback_type& registered_callbacks,
       std::atomic<unsigned>& handled_rev,
@@ -68,7 +70,9 @@ class EtcdWatchHandler {
 #else
   asio::io_service& ctx_;
 #endif
-  const callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback_;
+  const callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                   callback_t<unsigned>>
+      callback_;
   std::string const prefix_, filter_prefix_;
 
   registered_callback_type& registered_callbacks_;
@@ -140,11 +144,13 @@ class EtcdMetaService : public IMetaService {
 
   void startDaemonWatch(
       const std::string& prefix, unsigned since_rev,
-      callback_t<const std::vector<op_t>&, unsigned> callback) override;
+      callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
+          callback) override;
 
   void retryDaeminWatch(
       const std::string& prefix, unsigned since_rev,
-      callback_t<const std::vector<op_t>&, unsigned> callback);
+      callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
+          callback);
 
   Status probe() override {
     if (EtcdLauncher::probeEtcdServer(etcd_, prefix_)) {

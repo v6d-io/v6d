@@ -39,6 +39,13 @@ void EtcdWatchHandler::operator()(pplx::task<etcd::Response> const& resp_task) {
 void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   VLOG(10) << "etcd watch use " << resp.duration().count()
            << " microseconds, event size = " << resp.events().size();
+
+  // NB: the head rev is not the latest rev in those events.
+  unsigned head_rev = static_cast<unsigned>(resp.index());
+  if (resp.error_code() == 0 && !resp.events().empty()) {
+    head_rev = resp.events().back().kv().modified_index();
+  }
+
   std::vector<EtcdMetaService::op_t> ops;
   ops.reserve(resp.events().size());
   for (auto const& event : resp.events()) {
@@ -79,22 +86,36 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   // Ref: https://www.boost.org/doc/libs/1_75_0/doc/html/boost_asio/reference/
   //      io_context__strand.html#boost_asio.reference.io_context__strand.orde
   //      r_of_handler_invocation
-  auto status = Status::EtcdError(resp.error_code(), resp.error_message());
-  ctx_.post(boost::bind(callback_, status, ops, resp.index()));
-  {
-    std::lock_guard<std::mutex> scope_lock(registered_callbacks_mutex_);
-    handled_rev_.store(static_cast<unsigned>(resp.index()));
 
-    // handle registered callbacks
-    while (!registered_callbacks_.empty()) {
-      auto iter = registered_callbacks_.front();
-      if (iter.first > static_cast<unsigned>(resp.index())) {
-        break;
-      }
-      ctx_.post(boost::bind(iter.second, status, ops, resp.index()));
-      registered_callbacks_.pop();
-    }
-  }
+#ifndef NDEBUG
+  static unsigned processed = 0;
+#endif
+
+  auto status = Status::EtcdError(resp.error_code(), resp.error_message());
+
+  // NB: update the `handled_rev_` after we have truely applied the update ops.
+  ctx_.post(boost::bind(
+      callback_, status, ops, head_rev,
+      [this, status](Status const&, unsigned rev) -> Status {
+        std::lock_guard<std::mutex> scope_lock(registered_callbacks_mutex_);
+        handled_rev_.store(rev);
+
+        // handle registered callbacks
+        while (!registered_callbacks_.empty()) {
+          auto iter = registered_callbacks_.front();
+#ifndef NDEBUG
+          VINEYARD_ASSERT(iter.first >= processed);
+          processed = iter.first;
+#endif
+          if (iter.first > rev) {
+            break;
+          }
+          ctx_.post(boost::bind(iter.second, status,
+                                std::vector<EtcdMetaService::op_t>{}, rev));
+          registered_callbacks_.pop();
+        }
+        return Status::OK();
+      }));
 }
 
 void EtcdMetaService::requestLock(
@@ -210,36 +231,39 @@ void EtcdMetaService::requestUpdates(
   etcd_->head().then([this, since_rev, prefix,
                       callback](pplx::task<etcd::Response> resp_task) {
     auto resp = resp_task.get();
-    if (since_rev < (unsigned) resp.index() &&
-        since_rev + 1 > this->handled_rev_.load()) {
-      if (this->watcher_) {
-        VLOG(10) << "request updates: since: " << since_rev
-                 << " current: " << resp.index()
-                 << " handled: " << this->handled_rev_.load();
-        {
-          std::lock_guard<std::mutex> scope_lock(
-              this->registered_callbacks_mutex_);
-          this->registered_callbacks_.emplace(
-              std::make_pair(since_rev + 1, callback));
-        }
-      } else {
-        etcd_->watch(prefix_ + prefix, since_rev + 1, true)
-            .then(EtcdWatchHandler(
-                server_ptr_->GetMetaContext(), callback, prefix_,
-                prefix_ + meta_sync_lock_, this->registered_callbacks_,
-                this->handled_rev_, this->registered_callbacks_mutex_));
+    auto head_rev = static_cast<unsigned>(resp.index());
+    {
+      std::lock_guard<std::mutex> scope_lock(this->registered_callbacks_mutex_);
+      auto handled_rev = this->handled_rev_.load();
+      if (head_rev <= handled_rev) {
+        server_ptr_->GetMetaContext().post(
+            boost::bind(callback, Status::OK(), std::vector<op_t>{},
+                        this->handled_rev_.load()));
+        return;
       }
-    } else {
-      server_ptr_->GetMetaContext().post(
-          boost::bind(callback, Status::OK(), std::vector<op_t>(),
-                      this->handled_rev_.load()));
+      if (/* head_rev > handled_rev && */ this->watcher_) {
+        this->registered_callbacks_.emplace(std::make_pair(head_rev, callback));
+        return;
+      }
     }
+    etcd_->watch(prefix_ + prefix, since_rev + 1, true)
+        .then(EtcdWatchHandler(
+            server_ptr_->GetMetaContext(),
+            [callback](Status const& status, const std::vector<op_t>& ops,
+                       unsigned rev,
+                       callback_t<unsigned> callback_after_update) -> Status {
+              auto s = callback(status, ops, rev);
+              return callback_after_update(s, rev);
+            },
+            prefix_, prefix_ + meta_sync_lock_, this->registered_callbacks_,
+            this->handled_rev_, this->registered_callbacks_mutex_));
   });
 }
 
 void EtcdMetaService::startDaemonWatch(
     const std::string& prefix, unsigned since_rev,
-    callback_t<const std::vector<op_t>&, unsigned> callback) {
+    callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
+        callback) {
   try {
     this->handled_rev_.store(since_rev);
     this->watcher_.reset(new etcd::Watcher(
@@ -262,7 +286,8 @@ void EtcdMetaService::startDaemonWatch(
 
 void EtcdMetaService::retryDaeminWatch(
     const std::string& prefix, unsigned since_rev,
-    callback_t<const std::vector<op_t>&, unsigned> callback) {
+    callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
+        callback) {
   backoff_timer_.reset(new asio::steady_timer(
       server_ptr_->GetMetaContext(), std::chrono::seconds(BACKOFF_RETRY_TIME)));
   backoff_timer_->async_wait([this, prefix, since_rev, callback](
