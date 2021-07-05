@@ -103,6 +103,18 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doStopStream(const json& root);
 
+  bool doCreateObjectStream(const json& root);
+
+  bool doOpenObjectStream(const json& root);
+
+  bool doGetObjectStreamObject(const json& root);
+
+  bool doPutObjectStreamObject(const json& root);
+
+  bool doStopObjectStream(const json& root);
+
+  bool doPersistObjectStream(const json& root);
+
   bool doPutName(const json& root);
 
   bool doGetName(const json& root);

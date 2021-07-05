@@ -221,6 +221,79 @@ Status Client::StopStream(ObjectID const id, const bool failed) {
   return Status::OK();
 }
 
+Status Client::CreateObjectStream(const ObjectID& id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteCreateObjectStreamRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadCreateObjectStreamReply(message_in));
+  return Status::OK();
+}
+
+Status Client::OpenObjectStream(const ObjectID& id, OpenStreamMode mode) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteOpenObjectStreamRequest(id, static_cast<int64_t>(mode), message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadOpenObjectStreamReply(message_in));
+  return Status::OK();
+}
+
+Status Client::GetObjectStreamObject(ObjectID const id,
+                                     std::vector<int> const index,
+                                     ObjectID& object_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteGetObjectStreamObjectRequest(id, index, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  Payload object;
+  RETURN_ON_ERROR(ReadGetObjectStreamObjectReply(message_in, object_id));
+  return Status::OK();
+}
+
+Status Client::PutObjectStreamObject(ObjectID const id,
+                                     ObjectID const object_id,
+                                     std::vector<int> const index) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WritePutObjectStreamObjectRequest(id, object_id, index, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  Payload object;
+  RETURN_ON_ERROR(ReadPutObjectStreamObjectReply(message_in));
+  return Status::OK();
+}
+
+Status Client::StopObjectStream(ObjectID const id, const bool failed) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteStopObjectStreamRequest(id, failed, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadStopObjectStreamReply(message_in));
+  return Status::OK();
+}
+
+Status Client::PersistObjectStream(ObjectID const id, const json& meta,
+                                   ObjectID& object_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WritePersistObjectStreamRequest(id, meta, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadPersistObjectStreamReply(message_in, object_id));
+  return Status::OK();
+}
+
 std::shared_ptr<Object> Client::GetObject(const ObjectID id) {
   ObjectMeta meta;
   VINEYARD_CHECK_OK(this->GetMetaData(id, meta, true));

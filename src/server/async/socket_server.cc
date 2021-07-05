@@ -214,6 +214,24 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::StopStreamRequest: {
     return doStopStream(root);
   }
+  case CommandType::CreateObjectStreamRequest: {
+    return doCreateObjectStream(root);
+  }
+  case CommandType::OpenObjectStreamRequest: {
+    return doOpenObjectStream(root);
+  }
+  case CommandType::GetObjectStreamObjectRequest: {
+    return doGetObjectStreamObject(root);
+  }
+  case CommandType::PutObjectStreamObjectRequest: {
+    return doPutObjectStreamObject(root);
+  }
+  case CommandType::StopObjectStreamRequest: {
+    return doStopObjectStream(root);
+  }
+  case CommandType::PersistObjectStreamRequest: {
+    return doPersistObjectStream(root);
+  }
   case CommandType::PutNameRequest: {
     return doPutName(root);
   }
@@ -683,6 +701,117 @@ bool SocketConnection::doStopStream(const json& root) {
   std::string message_out;
   WriteStopStreamReply(message_out);
   this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doCreateObjectStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadCreateObjectStreamRequest(root, stream_id));
+  auto status = server_ptr_->CreateObjectStream(stream_id);
+  std::string message_out;
+  if (status.ok()) {
+    WriteCreateObjectStreamReply(message_out);
+  } else {
+    LOG(ERROR) << status.ToString();
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doOpenObjectStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  int64_t mode;
+  TRY_READ_REQUEST(ReadOpenObjectStreamRequest(root, stream_id, mode));
+  auto status = server_ptr_->OpenObjectStream(stream_id, mode);
+  std::string message_out;
+  if (status.ok()) {
+    WriteOpenObjectStreamReply(message_out);
+  } else {
+    LOG(ERROR) << status.ToString();
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doPutObjectStreamObject(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id, next_object;
+  std::string index;
+  TRY_READ_REQUEST(
+      ReadPutObjectStreamObjectRequest(root, stream_id, next_object, index));
+  auto status =
+      server_ptr_->PutObjectStreamObject(stream_id, next_object, index);
+  std::string message_out;
+  if (status.ok()) {
+    WritePutObjectStreamObjectReply(message_out);
+  } else {
+    LOG(ERROR) << status.ToString();
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doGetObjectStreamObject(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  std::string index;
+  TRY_READ_REQUEST(ReadGetObjectStreamObjectRequest(root, stream_id, index));
+  RESPONSE_ON_ERROR(server_ptr_->GetObjectStreamObject(
+      stream_id, index,
+      [self](const Status& status, const ObjectID next_object) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteGetObjectStreamObjectReply(next_object, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doStopObjectStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  bool failed;
+  TRY_READ_REQUEST(ReadStopObjectStreamRequest(root, stream_id, failed));
+  // NB: don't erase the metadata from meta_service, since there's may
+  // reader listen on this stream.
+  RESPONSE_ON_ERROR(server_ptr_->StopObjectStream(stream_id, failed));
+  std::string message_out;
+  WriteStopObjectStreamReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doPersistObjectStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  json tree, new_tree;
+  TRY_READ_REQUEST(ReadPersistObjectStreamRequest(root, stream_id, tree));
+  RESPONSE_ON_ERROR(
+      server_ptr_->PersistObjectStream(stream_id, tree, new_tree));
+  RESPONSE_ON_ERROR(server_ptr_->CreateData(
+      new_tree,
+      [self](const Status& status, const ObjectID id, const Signature signature,
+             const InstanceID instance_id) {
+        std::string message_out;
+        if (status.ok()) {
+          WritePersistObjectStreamReply(id, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
   return false;
 }
 

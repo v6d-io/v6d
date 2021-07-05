@@ -288,6 +288,78 @@ class Client : public ClientBase {
   Status StopStream(ObjectID const id, bool failed);
 
   /**
+   * @brief Allocate an object stream on vineyard. The metadata of parameter
+   * `id` must has already been created on vineyard.
+   *
+   * @param id The id of metadata that will be used to create stream.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
+  Status CreateObjectStream(const ObjectID& id);
+
+  /**
+   * @brief open an object stream on vineyard. Failed if the stream is already
+   * opened on the given mode.
+   *
+   * @param id The id of stream to mark.
+   * @param mode The mode, OpenStreamMode::read or OpenStreamMode::write.
+   *
+   * @return Status that indicates whether the open action has succeeded.
+   */
+  Status OpenObjectStream(const ObjectID& id, OpenStreamMode mode);
+
+  /**
+   * @brief get the object_id at a certain index. It will wait until the object
+   * at the index is put into the server if it's not present.
+   *
+   * @param id The id of the object stream.
+   * @param index The given index.
+   * @param object_id The returned ObjectID at the given index.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetObjectStreamObject(ObjectID const id, std::vector<int> const index,
+                               ObjectID& object_id);
+
+  /**
+   * @brief put the object_id at a certain index. It will return an error
+   * if the given index is already associated with an object.
+   *
+   * @param id The id of the object stream.
+   * @param object_id The ObjectID to be associated with the index.
+   * @param index The given index.
+   *
+   * @return Status that indicates whether the put action has succeeded.
+   */
+  Status PutObjectStreamObject(ObjectID const id, ObjectID const object_id,
+                               std::vector<int> const index);
+
+  /**
+   * @brief Stop an object stream, mark it as finished or aborted.
+   *
+   * @param id The id of the stream.
+   * @param failed Whether the stream is stoped at a successful state. True
+   * means the stream has been exited normally, otherwise false.
+   *
+   * @return Status that indicates whether the request has succeeded.
+   */
+  Status StopObjectStream(ObjectID const id, const bool failed);
+
+  /**
+   * @brief Persist an object stream into an object.
+   * Each object at a certain index will be recorded under the key '_osi_' +
+   * index
+   *
+   * @param id The id of the stream.
+   * @param meta The original metadata of the stream.
+   * @param object_id The id of the persisted object.
+   *
+   * @return Status that indicates whether the request has succeeded.
+   */
+  Status PersistObjectStream(ObjectID const id, const json& meta,
+                             ObjectID& object_id);
+
+  /**
    * @brief Get an object from vineyard. The ObjectFactory will be used to
    * resolve the constructor of the object.
    *

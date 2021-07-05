@@ -1,0 +1,171 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_STREAM_OBJECT_STREAM_MOD_H_
+#define MODULES_BASIC_STREAM_OBJECT_STREAM_MOD_H_
+
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "arrow/builder.h"
+#include "arrow/status.h"
+
+#include "basic/ds/arrow_utils.h"
+#include "basic/stream/stream_utils.h"
+#include "client/client.h"
+#include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "common/util/uuid.h"
+
+namespace vineyard {
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
+class Client;
+
+class __attribute__((annotate("no-vineyard"))) ObjectStreamWriter {
+ public:
+  const size_t MaximumChunkSize() const { return -1; }
+
+  Status PutObject(ObjectID const object_id, const std::vector<int>& index) {
+    return client_.PutObjectStreamObject(id_, object_id, index);
+  }
+
+  Status PutNext(ObjectID const object_id) {
+    // the default index is sequantial
+    ++index_;
+    return client_.PutObjectStreamObject(id_, object_id, {index_});
+  }
+
+  Status Abort() {
+    if (stoped_) {
+      return Status::OK();
+    }
+    stoped_ = true;
+    return client_.StopObjectStream(id_, true);
+  }
+
+  Status Finish() {
+    if (stoped_) {
+      return Status::OK();
+    }
+    stoped_ = true;
+    return client_.StopObjectStream(id_, false);
+  }
+
+  Status PersistToObject(ObjectID& object_id) {
+    if (!stoped_) {
+      RETURN_ON_ERROR(Finish());
+    }
+    return client_.PersistObjectStream(id_, meta_.MetaData(), object_id);
+  }
+
+  ObjectStreamWriter(Client& client, ObjectID const& id, ObjectMeta const& meta)
+      : client_(client), id_(id), meta_(meta), stoped_(false), index_(0) {}
+
+ private:
+  Client& client_;
+  ObjectID id_;
+  ObjectMeta meta_;
+  bool stoped_;  // an optimization: avoid repeated idempotent requests.
+  int index_;
+
+  friend class Client;
+};
+
+class __attribute__((annotate("no-vineyard"))) ObjectStreamReader {
+ public:
+  Status GetObject(ObjectID& object_id, const std::vector<int>& index) {
+    return client_.GetObjectStreamObject(id_, index, object_id);
+  }
+
+  Status GetNext(ObjectID& object_id) {
+    // the default index is sequential
+    ++index_;
+    return client_.GetObjectStreamObject(id_, {index_}, object_id);
+  }
+
+  ObjectStreamReader(Client& client, ObjectID const& id, ObjectMeta const& meta)
+      : client_(client), id_(id), meta_(meta), index_(0){};
+
+ private:
+  Client& client_;
+  ObjectID id_;
+  ObjectMeta meta_;
+  int index_;
+
+  friend class Client;
+};
+
+class ObjectStreamBaseBuilder;
+
+/**
+ * @brief The object stream which represents a sequence of local objects
+ *
+ */
+class ObjectStream : public Registered<ObjectStream> {
+ public:
+  /**
+   * @brief Open a reader to consume object IDs from the object stream
+   *
+   * @param client The client connected to the vineyard server
+   * @param The unique pointer to the reader
+   */
+  Status OpenReader(Client& client,
+                    std::unique_ptr<ObjectStreamReader>& reader) {
+    RETURN_ON_ERROR(client.OpenObjectStream(id_, OpenStreamMode::read));
+    reader = std::unique_ptr<ObjectStreamReader>(
+        new ObjectStreamReader(client, id_, meta_));
+    return Status::OK();
+  }
+
+  /**
+   * @brief Open a writer to put object IDs to the object stream
+   *
+   * @param client The client connected to the vineyard server
+   * @param The unique pointer to the writer
+   */
+  Status OpenWriter(Client& client,
+                    std::unique_ptr<ObjectStreamWriter>& writer) {
+    RETURN_ON_ERROR(client.OpenObjectStream(id_, OpenStreamMode::write));
+    writer = std::unique_ptr<ObjectStreamWriter>(
+        new ObjectStreamWriter(client, id_, meta_));
+    return Status::OK();
+  }
+
+  std::unordered_map<std::string, std::string> GetParams() { return params_; }
+
+ private:
+  __attribute__((annotate("codegen")))
+  std::unordered_map<std::string, std::string>
+      params_;
+
+  friend class Client;
+  friend class ObjectStreamBaseBuilder;
+  friend class ObjectStreamBuilder;
+};
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_STREAM_OBJECT_STREAM_MOD_H_
