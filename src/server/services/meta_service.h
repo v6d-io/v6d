@@ -194,9 +194,7 @@ class IMetaService {
                   if (s.ok()) {
                     if (ops.empty()) {
                       unsigned rev_after_unlock = 0;
-                      if (lock->Release(rev_after_unlock).ok()) {
-                        rev_ = rev_after_unlock;
-                      }
+                      VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                       return callback_after_finish(Status::OK());
                     }
                     // apply changes locally before committing to etcd
@@ -207,17 +205,13 @@ class IMetaService {
                                  const Status& status, unsigned rev) {
                           // update rev_ to the revision after unlock.
                           unsigned rev_after_unlock = 0;
-                          if (lock->Release(rev_after_unlock).ok()) {
-                            rev_ = rev_after_unlock;
-                          }
+                          VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                           return callback_after_finish(status);
                         });
                     return Status::OK();
                   } else {
                     unsigned rev_after_unlock = 0;
-                    if (lock->Release(rev_after_unlock).ok()) {
-                      rev_ = rev_after_unlock;
-                    }
+                    VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                     return callback_after_finish(s);  // propogate the error
                   }
                 });
@@ -297,15 +291,12 @@ class IMetaService {
            callback_after_finish](const Status& status,
                                   std::shared_ptr<ILock> lock) {
             if (status.ok()) {
-              rev_ = lock->GetRev();
               // commit to etcd
               this->commitUpdates(ops, [this, callback_after_finish, lock](
                                            const Status& status, unsigned rev) {
                 // update rev_ to the revision after unlock.
                 unsigned rev_after_unlock = 0;
-                if (lock->Release(rev_after_unlock).ok()) {
-                  rev_ = rev_after_unlock;
-                }
+                VINEYARD_DISCARD(lock->Release(rev_after_unlock));
                 return callback_after_finish(status);
               });
               return Status::OK();

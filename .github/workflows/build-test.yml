@@ -309,7 +309,6 @@ jobs:
             ulimit -c unlimited
 
             export VINEYARD_DEV=TRUE
-            export GLOG_v=11
 
             export VINEYARD_DATA_DIR=`pwd`/gstest
             export VINEYARD_HOME=`pwd`/build/bin
@@ -326,7 +325,6 @@ jobs:
           ulimit -c unlimited
 
           export VINEYARD_DEV=TRUE
-          export GLOG_v=11
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export VINEYARD_HOME=`pwd`/build/bin
