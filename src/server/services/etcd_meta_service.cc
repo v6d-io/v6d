@@ -39,6 +39,13 @@ void EtcdWatchHandler::operator()(pplx::task<etcd::Response> const& resp_task) {
 void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   VLOG(10) << "etcd watch use " << resp.duration().count()
            << " microseconds, event size = " << resp.events().size();
+
+  // NB: the head rev is not the latest rev in those events.
+  unsigned head_rev = static_cast<unsigned>(resp.index());
+  if (resp.error_code() == 0 && !resp.events().empty()) {
+    head_rev = resp.events().back().kv().modified_index();
+  }
+
   std::vector<EtcdMetaService::op_t> ops;
   ops.reserve(resp.events().size());
   for (auto const& event : resp.events()) {
@@ -85,12 +92,6 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
 #endif
 
   auto status = Status::EtcdError(resp.error_code(), resp.error_message());
-
-  // NB: the head rev is not the latest rev in those events.
-  unsigned head_rev = static_cast<unsigned>(resp.index());
-  if (resp.error_code() == 0 && !ops.empty()) {
-    head_rev = ops.back().kv.rev;
-  }
 
   // NB: update the `handled_rev_` after we have truely applied the update ops.
   ctx_.post(boost::bind(
