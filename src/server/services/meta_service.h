@@ -617,7 +617,7 @@ class IMetaService {
       if (op.kv.rev != 0 && op.kv.rev <= rev_) {
 #ifndef NDEBUG
         if (from_remote && op.kv.rev <= rev_) {
-          LOG(WARN) << "skip updates: " << op.ToString();
+          LOG(WARNING) << "skip updates: " << op.ToString();
         }
 #endif
         // revision resolution: means this revision has already been updated
