@@ -245,7 +245,6 @@ void EtcdMetaService::requestUpdates(
         return;
       }
     }
-    LOG(INFO) << "failed: trigger a watch?...";
     etcd_->watch(prefix_ + prefix, since_rev + 1, true)
         .then(EtcdWatchHandler(
             server_ptr_->GetMetaContext(),

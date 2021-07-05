@@ -615,6 +615,11 @@ class IMetaService {
     // group-by all changes
     for (const op_t& op : ops) {
       if (op.kv.rev != 0 && op.kv.rev <= rev_) {
+#ifndef NDEBUG
+        if (from_remote && op.kv.rev <= rev_) {
+          LOG(WARN) << "skip updates: " << op.ToString();
+        }
+#endif
         // revision resolution: means this revision has already been updated
         // the revision value 0 means local update ops.
         continue;
@@ -634,7 +639,9 @@ class IMetaService {
       }
 
 #ifndef NDEBUG
-      VLOG(10) << "update op in meta tree: " << op.ToString();
+      if (from_remote) {
+        VLOG(11) << "update op in meta tree: " << op.ToString();
+      }
 #endif
 
       if (boost::algorithm::starts_with(op.kv.key, "/signatures/")) {

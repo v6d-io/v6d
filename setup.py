@@ -113,7 +113,7 @@ setup(
         'numpy',
         'pandas<1.0.0; python_version<"3.6"',
         'pandas<1.2.0; python_version<"3.7"',
-        'pandas>=1.0.0; python_version>="3.7"',
+        'pandas>=1.0.0,<1.3.0; python_version>="3.7"',
         'pickle5; python_version<="3.7"',
         'pyarrow',
         'setuptools',
