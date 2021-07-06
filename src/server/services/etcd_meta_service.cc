@@ -102,7 +102,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
 
                           // handle registered callbacks
                           while (!this->registered_callbacks_.empty()) {
-                            auto iter = this->registered_callbacks_.front();
+                            auto iter = this->registered_callbacks_.top();
 #ifndef NDEBUG
                             VINEYARD_ASSERT(iter.first >= processed);
                             processed = iter.first;
