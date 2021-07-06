@@ -132,19 +132,26 @@ class IMetaService {
     LOG(INFO) << "meta service is starting ...";
     RETURN_ON_ERROR(this->preStart());
     RETURN_ON_ERROR(this->probe());
-    requestValues("",
-                  [this](const Status& status, const json& meta, unsigned rev) {
-                    if (status.ok()) {
-                      this->registerToEtcd();
-                    } else {
-                      Status s = status;
-                      s << "Failed to get initial value";
-                      // Abort: since the probe has succeeded but the etcd
-                      // doesn't work, we have no idea about what happened.
-                      s.Abort();
-                    }
-                    return status;
-                  });
+    requestValues("", [this](const Status& status, const json& meta,
+                             unsigned rev) {
+      if (status.ok()) {
+        // start the watcher.
+        LOG(INFO) << "start background etcd watch, since " << rev_;
+        this->startDaemonWatch("", rev_,
+                               boost::bind(&IMetaService::daemonWatchHandler,
+                                           this, _1, _2, _3, _4));
+
+        // register self info.
+        this->registerToEtcd();
+      } else {
+        Status s = status;
+        s << "Failed to get initial value";
+        // Abort: since the probe has succeeded but the etcd
+        // doesn't work, we have no idea about what happened.
+        s.Abort();
+      }
+      return status;
+    });
     return Status::OK();
   }
 
@@ -201,8 +208,8 @@ class IMetaService {
                     this->metaUpdate(ops, false);
                     // commit to etcd
                     this->commitUpdates(
-                        ops, [this, callback_after_finish, lock](
-                                 const Status& status, unsigned rev) {
+                        ops, [callback_after_finish, lock](const Status& status,
+                                                           unsigned rev) {
                           // update rev_ to the revision after unlock.
                           unsigned rev_after_unlock = 0;
                           VINEYARD_DISCARD(lock->Release(rev_after_unlock));
@@ -292,7 +299,7 @@ class IMetaService {
                                   std::shared_ptr<ILock> lock) {
             if (status.ok()) {
               // commit to etcd
-              this->commitUpdates(ops, [this, callback_after_finish, lock](
+              this->commitUpdates(ops, [callback_after_finish, lock](
                                            const Status& status, unsigned rev) {
                 // update rev_ to the revision after unlock.
                 unsigned rev_after_unlock = 0;
@@ -397,12 +404,6 @@ class IMetaService {
         },
         [&](const Status& status) {
           if (status.ok()) {
-            // start the watcher.
-            LOG(INFO) << "start background etcd watch, since " << rev_;
-            this->startDaemonWatch(
-                "", rev_,
-                boost::bind(&IMetaService::daemonWatchHandler, this, _1, _2, _3,
-                            _4));
             // start heartbeat
             VINEYARD_DISCARD(this->startHeartbeat(Status::OK()));
             // mark meta service as ready
