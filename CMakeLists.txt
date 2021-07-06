@@ -423,6 +423,12 @@ if(BUILD_VINEYARD_SERVER)
     else()
         message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
     endif()
+
+    # sanitizer
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_options(vineyardd PRIVATE -fsanitize=address)
+        add_target_link_options(vineyardd PRIVATE OPTIONS -fsanitize=address)
+    endif()
 endif()
 
 # build vineyard-client
