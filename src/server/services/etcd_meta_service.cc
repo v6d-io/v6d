@@ -94,28 +94,29 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   auto status = Status::EtcdError(resp.error_code(), resp.error_message());
 
   // NB: update the `handled_rev_` after we have truely applied the update ops.
-  ctx_.post(boost::bind(
-      callback_, status, ops, head_rev,
-      [this, status](Status const&, unsigned rev) -> Status {
-        std::lock_guard<std::mutex> scope_lock(registered_callbacks_mutex_);
-        handled_rev_.store(rev);
+  ctx_.post(boost::bind(callback_, status, ops, head_rev,
+                        [this, status](Status const&, unsigned rev) -> Status {
+                          std::lock_guard<std::mutex> scope_lock(
+                              this->registered_callbacks_mutex_);
+                          this->handled_rev_.store(rev);
 
-        // handle registered callbacks
-        while (!registered_callbacks_.empty()) {
-          auto iter = registered_callbacks_.front();
+                          // handle registered callbacks
+                          while (!this->registered_callbacks_.empty()) {
+                            auto iter = this->registered_callbacks_.front();
 #ifndef NDEBUG
-          VINEYARD_ASSERT(iter.first >= processed);
-          processed = iter.first;
+                            VINEYARD_ASSERT(iter.first >= processed);
+                            processed = iter.first;
 #endif
-          if (iter.first > rev) {
-            break;
-          }
-          ctx_.post(boost::bind(iter.second, status,
+                            if (iter.first > rev) {
+                              break;
+                            }
+                            this->ctx_.post(boost::bind(
+                                iter.second, status,
                                 std::vector<EtcdMetaService::op_t>{}, rev));
-          registered_callbacks_.pop();
-        }
-        return Status::OK();
-      }));
+                            this->registered_callbacks_.pop();
+                          }
+                          return Status::OK();
+                        }));
 }
 
 void EtcdMetaService::requestLock(
@@ -226,9 +227,9 @@ void EtcdMetaService::requestAll(
 }
 
 void EtcdMetaService::requestUpdates(
-    const std::string& prefix, unsigned since_rev,
+    const std::string& prefix, unsigned,
     callback_t<const std::vector<op_t>&, unsigned> callback) {
-  etcd_->head().then([this, since_rev, prefix,
+  etcd_->head().then([this, prefix,
                       callback](pplx::task<etcd::Response> resp_task) {
     auto resp = resp_task.get();
     auto head_rev = static_cast<unsigned>(resp.index());
@@ -241,22 +242,10 @@ void EtcdMetaService::requestUpdates(
                         this->handled_rev_.load()));
         return;
       }
-      if (/* head_rev > handled_rev && */ this->watcher_) {
-        this->registered_callbacks_.emplace(std::make_pair(head_rev, callback));
-        return;
-      }
+      // We still choose to wait event there's no watchers, as if the watcher
+      // fails, a explict watch action will fail as well.
+      this->registered_callbacks_.emplace(std::make_pair(head_rev, callback));
     }
-    etcd_->watch(prefix_ + prefix, since_rev + 1, true)
-        .then(EtcdWatchHandler(
-            server_ptr_->GetMetaContext(),
-            [callback](Status const& status, const std::vector<op_t>& ops,
-                       unsigned rev,
-                       callback_t<unsigned> callback_after_update) -> Status {
-              auto s = callback(status, ops, rev);
-              return callback_after_update(s, rev);
-            },
-            prefix_, prefix_ + meta_sync_lock_, this->registered_callbacks_,
-            this->handled_rev_, this->registered_callbacks_mutex_));
   });
 }
 
@@ -266,38 +255,41 @@ void EtcdMetaService::startDaemonWatch(
         callback) {
   try {
     this->handled_rev_.store(since_rev);
+    if (!handler_) {
+      handler_.reset(new EtcdWatchHandler(
+          server_ptr_->GetMetaContext(), callback, prefix_,
+          prefix_ + meta_sync_lock_, this->registered_callbacks_,
+          this->handled_rev_, this->registered_callbacks_mutex_));
+    }
     this->watcher_.reset(new etcd::Watcher(
-        *etcd_, prefix_ + prefix, since_rev + 1,
-        EtcdWatchHandler(server_ptr_->GetMetaContext(), callback, prefix_,
-                         prefix_ + meta_sync_lock_, this->registered_callbacks_,
-                         this->handled_rev_, this->registered_callbacks_mutex_),
-        true));
-    this->watcher_->Wait([this, prefix, callback](bool cancalled) {
-      if (cancalled) {
-        return;
-      }
-      this->retryDaeminWatch(prefix, this->rev_, callback);
-    });
+        *etcd_, prefix_ + prefix, since_rev + 1, std::ref(*handler_), true)),
+        this->watcher_->Wait([this, prefix, callback](bool cancalled) {
+          if (cancalled) {
+            return;
+          }
+          this->retryDaeminWatch(prefix, callback);
+        });
   } catch (std::runtime_error& e) {
     LOG(ERROR) << "Failed to create daemon etcd watcher: " << e.what();
-    this->retryDaeminWatch(prefix, since_rev, callback);
+    this->watcher_.reset();
+    this->retryDaeminWatch(prefix, callback);
   }
 }
 
 void EtcdMetaService::retryDaeminWatch(
-    const std::string& prefix, unsigned since_rev,
+    const std::string& prefix,
     callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
         callback) {
   backoff_timer_.reset(new asio::steady_timer(
       server_ptr_->GetMetaContext(), std::chrono::seconds(BACKOFF_RETRY_TIME)));
-  backoff_timer_->async_wait([this, prefix, since_rev, callback](
+  backoff_timer_->async_wait([this, prefix, callback](
                                  const boost::system::error_code& error) {
     if (error) {
       LOG(ERROR) << "backoff timer error: " << error << ", " << error.message();
     }
     // retry
     LOG(INFO) << "retrying to connect etcd...";
-    this->startDaemonWatch(prefix, since_rev, callback);
+    this->startDaemonWatch(prefix, handled_rev_.load(), callback);
   });
 }
 

@@ -148,7 +148,7 @@ class EtcdMetaService : public IMetaService {
           callback) override;
 
   void retryDaeminWatch(
-      const std::string& prefix, unsigned since_rev,
+      const std::string& prefix,
       callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
           callback);
 
@@ -169,6 +169,7 @@ class EtcdMetaService : public IMetaService {
 
   std::unique_ptr<etcd::Client> etcd_;
   std::shared_ptr<etcd::Watcher> watcher_;
+  std::shared_ptr<EtcdWatchHandler> handler_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
   std::unique_ptr<boost::process::child> etcd_proc_;
 
