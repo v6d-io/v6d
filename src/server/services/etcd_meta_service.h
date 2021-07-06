@@ -30,8 +30,22 @@ limitations under the License.
 #include "server/util/etcd_launcher.h"
 
 namespace vineyard {
-using registered_callback_type = std::queue<std::pair<
-    unsigned, callback_t<const std::vector<IMetaService::op_t>&, unsigned>>>;
+
+namespace detail {
+template <typename T>
+struct greater_on_tuple_fst {
+  bool operator()(T const& left, T const& right) const noexcept {
+    return left.first > right.first;
+  }
+};
+}  // namespace detail
+
+using callback_task_t =
+    std::pair<unsigned,
+              callback_t<const std::vector<IMetaService::op_t>&, unsigned>>;
+using callback_task_queue_t =
+    std::priority_queue<callback_task_t, std::vector<callback_task_t>,
+                        detail::greater_on_tuple_fst<callback_task_t>>;
 
 /**
  * @brief EtcdWatchHandler manages the watch on etcd
@@ -49,7 +63,7 @@ class EtcdWatchHandler {
                  callback_t<unsigned>>
           callback,
       std::string const& prefix, std::string const& filter_prefix,
-      registered_callback_type& registered_callbacks,
+      callback_task_queue_t& registered_callbacks,
       std::atomic<unsigned>& handled_rev,
       std::mutex& registered_callbacks_mutex)
       : ctx_(ctx),
@@ -75,7 +89,7 @@ class EtcdWatchHandler {
       callback_;
   std::string const prefix_, filter_prefix_;
 
-  registered_callback_type& registered_callbacks_;
+  callback_task_queue_t& registered_callbacks_;
   std::atomic<unsigned>& handled_rev_;
   std::mutex& registered_callbacks_mutex_;
 };
@@ -173,7 +187,7 @@ class EtcdMetaService : public IMetaService {
   std::unique_ptr<asio::steady_timer> backoff_timer_;
   std::unique_ptr<boost::process::child> etcd_proc_;
 
-  registered_callback_type registered_callbacks_;
+  callback_task_queue_t registered_callbacks_;
   std::atomic<unsigned> handled_rev_;
   std::mutex registered_callbacks_mutex_;
 
