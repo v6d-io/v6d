@@ -67,8 +67,7 @@ values = [
 ]
 
 
-@pytest.mark.parametrize("block_size, value", values)
-def test_bytes_io_roundtrip(block_size, value):
+def read_and_build(block_size, value):
     reader = PickledReader(value)
     bs, nlen = [], 0
     while True:
@@ -86,7 +85,12 @@ def test_bytes_io_roundtrip(block_size, value):
     assert writer.value is None
     writer.close()
     assert writer.value is not None
-    target = writer.value
+    return writer.value
+
+
+@pytest.mark.parametrize("block_size, value", values)
+def test_bytes_io_roundtrip(block_size, value):
+    target = read_and_build(block_size, value)
 
     # compare values
     if isinstance(value, np.ndarray):
@@ -103,3 +107,107 @@ def test_bytes_io_roundtrip(block_size, value):
         pd.testing.assert_series_equal(target, value)
     else:
         assert target == value
+
+
+def test_bytes_io_numpy_ndarray(vineyard_client):
+    arr = np.random.rand(4, 5, 6)
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+
+def test_bytes_io_empty_ndarray(vineyard_client):
+    arr = np.ones(())
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+    arr = np.ones((0, 1))
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+    arr = np.ones((0, 1, 2))
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+    arr = np.ones((0, 1, 2, 3))
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+    arr = np.zeros((), dtype='int')
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+    arr = np.zeros((0, 1), dtype='int')
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+    arr = np.zeros((0, 1, 2), dtype='int')
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+    arr = np.zeros((0, 1, 2, 3), dtype='int')
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_allclose(arr, target)
+
+
+def test_bytes_io_str_ndarray(vineyard_client):
+    arr = np.array(['', 'x', 'yz', 'uvw'])
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_equal(arr, target)
+
+
+def test_object_ndarray(vineyard_client):
+    arr = np.array([1, 'x', 3.14, (1, 4)], dtype=object)
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_equal(arr, target)
+
+    arr = np.ones((), dtype='object')
+    object_id = vineyard_client.put(arr)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    np.testing.assert_equal(arr, target)
+
+
+def test_bytes_io_tensor_order(vineyard_client):
+    arr = np.asfortranarray(np.random.rand(10, 7))
+    object_id = vineyard_client.put(arr)
+    res = read_and_build(b1m, vineyard_client.get(object_id))
+    assert res.flags['C_CONTIGUOUS'] == arr.flags['C_CONTIGUOUS']
+    assert res.flags['F_CONTIGUOUS'] == arr.flags['F_CONTIGUOUS']
+
+
+def test_bytes_io_pandas_dataframe(vineyard_client):
+    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8]})
+    object_id = vineyard_client.put(df)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    pd.testing.assert_frame_equal(df, target)
+
+
+def test_bytes_io_pandas_dataframe_int_columns(vineyard_client):
+    df = pd.DataFrame({1: [1, 2, 3, 4], 2: [5, 6, 7, 8]})
+    object_id = vineyard_client.put(df)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    pd.testing.assert_frame_equal(df, target)
+
+
+def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client):
+    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]})
+    object_id = vineyard_client.put(df)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    pd.testing.assert_frame_equal(df, target)
+
+
+def test_bytes_io_pandas_series(vineyard_client):
+    s = pd.Series([1, 3, 5, np.nan, 6, 8], name='foo')
+    object_id = vineyard_client.put(s)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    pd.testing.assert_series_equal(s, target)

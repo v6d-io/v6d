@@ -19,7 +19,11 @@
 import json
 import numpy as np
 import pandas as pd
-from pandas.core.internals.blocks import Block
+try:
+    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
+except:
+    BlockPlacement = None
+    from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import SingleBlockManager
 
 from vineyard._C import ObjectMeta
@@ -40,7 +44,11 @@ def pandas_series_resolver(obj, resolver):
     name = from_json(meta['name'])
     index = resolver.run(obj.member('index_'))
     np_value = resolver.run(obj.member('value_'))
-    block = Block(np_value, slice(0, len(np_value), 1), ndim=1)
+    if BlockPlacement:
+        placement = BlockPlacement(slice(0, len(np_value), 1))
+    else:
+        placement = slice(0, len(np_value), 1)
+    block = Block(np_value, placement, ndim=1)
     return pd.Series(SingleBlockManager(block, index), name=name)
 
 

@@ -18,7 +18,11 @@
 
 import numpy as np
 import pandas as pd
-from pandas.core.internals.blocks import Block
+try:
+    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
+except:
+    BlockPlacement = None
+    from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import BlockManager
 
 from vineyard._C import ObjectMeta
@@ -54,12 +58,17 @@ def pandas_dataframe_resolver(obj, resolver):
         np_value = resolver.run(obj.member('__values_-value-%d' % idx))
         index_size = len(np_value)
         # ndim: 1 for SingleBlockManager/Series, 2 for BlockManager/DataFrame
-        blocks.append(Block(np.expand_dims(np_value, 0), slice(idx, idx + 1, 1), ndim=2))
+        if BlockPlacement:
+            placement = BlockPlacement(slice(idx, idx + 1, 1))
+        else:
+            placement = slice(idx, idx + 1, 1)
+        values = np.expand_dims(np_value, 0)
+        blocks.append(Block(values, placement, ndim=2))
     if 'index_' in meta:
         index = resolver.run(obj.member('index_'))
     else:
         index = np.arange(index_size)
-    return pd.DataFrame(BlockManager(blocks, [columns, index]))
+    return pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
 
 
 def pandas_sparse_array_builder(client, value, builder, **kw):

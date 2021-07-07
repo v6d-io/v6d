@@ -27,17 +27,6 @@ if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
 
 
-def wrap_type(ty):
-    class T(ty):
-        pass
-
-    T.__module__ = ty.__module__
-    T.__name__ = ty.__name__
-    T.__qualname__ = ty.__qualname__
-    T.__doc__ = ty.__doc__
-    return T
-
-
 def normalize_dtype(dtype, dtype_meta=None):
     ''' Normalize a descriptive C++ type to numpy.dtype.
     '''
