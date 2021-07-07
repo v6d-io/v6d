@@ -22,7 +22,6 @@ try:
     from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
 except:
     BlockPlacement = None
-    NDArrayBacked = None
     from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import BlockManager
 
@@ -60,11 +59,11 @@ def pandas_dataframe_resolver(obj, resolver):
         index_size = len(np_value)
         # ndim: 1 for SingleBlockManager/Series, 2 for BlockManager/DataFrame
         if BlockPlacement:
-            palcement = BlockPlacement(slice(idx, idx + 1, 1))
+            placement = BlockPlacement(slice(idx, idx + 1, 1))
         else:
-            palcement = slice(idx, idx + 1, 1)
+            placement = slice(idx, idx + 1, 1)
         values = np.expand_dims(np_value, 0)
-        blocks.append(Block(values, palcement, ndim=2))
+        blocks.append(Block(values, placement, ndim=2))
     if 'index_' in meta:
         index = resolver.run(obj.member('index_'))
     else:

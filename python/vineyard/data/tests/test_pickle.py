@@ -204,3 +204,10 @@ def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client):
     object_id = vineyard_client.put(df)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     pd.testing.assert_frame_equal(df, target)
+
+
+def test_bytes_io_pandas_series(vineyard_client):
+    s = pd.Series([1, 3, 5, np.nan, 6, 8], name='foo')
+    object_id = vineyard_client.put(s)
+    target = read_and_build(b1m, vineyard_client.get(object_id))
+    pd.testing.assert_series_equal(s, target)
