@@ -63,8 +63,8 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
       char resolved_path[PATH_MAX];
       char* res = realpath(location_to_parse.c_str(), resolved_path);
       if (!res) {
-        LOG(ERROR) << "Failed to resolve realpath of " << location_to_parse;
-        return nullptr;
+        VLOG(2) << "Warning: failed to resolve realpath of "
+                << location_to_parse;
       }
       // Note we should not encode the leading '/' if there is one,
       // cause arrow::internal::Uri requires the path must be an absolute path.
