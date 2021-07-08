@@ -61,7 +61,11 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
     if (!s.ok()) {  // Assume it's a local file
       // defaulting to local file system: resolve to abs path first
       char resolved_path[PATH_MAX];
-      realpath(location_to_parse.c_str(), resolved_path);
+      char* res = realpath(location_to_parse.c_str(), resolved_path);
+      if (!res) {
+        VLOG(2) << "Warning: failed to resolve realpath of "
+                << location_to_parse;
+      }
       // Note we should not encode the leading '/' if there is one,
       // cause arrow::internal::Uri requires the path must be an absolute path.
       location_to_parse = std::string(resolved_path);
