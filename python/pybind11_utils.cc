@@ -160,8 +160,8 @@ py::object from_json(const json& j) {
       obj.append(from_json(el));
     }
     return std::move(obj);
-  } else  // Object
-  {
+  } else {
+    // Object
     py::dict obj;
     for (json::const_iterator it = j.cbegin(); it != j.cend(); ++it) {
       obj[py::str(it.key())] = from_json(it.value());
