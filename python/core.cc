@@ -25,6 +25,7 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
 #include "client/rpc_client.h"
+#include "common/util/json.h"
 #include "common/util/status.h"
 #pragma GCC visibility pop
 
@@ -71,7 +72,7 @@ void bind_core(py::module& mod) {
               throw py::key_error("key '" + key + "' does not exist");
             }
             if (!iter->is_object()) {
-              return json_to_python(*iter);
+              return detail::from_json(*iter);
             } else {
               return py::cast(self->GetMemberMeta(key));
             }
@@ -87,7 +88,7 @@ void bind_core(py::module& mod) {
               return default_value;
             }
             if (!iter->is_object()) {
-              return json_to_python(*iter);
+              return detail::from_json(*iter);
             } else {
               return py::cast(self->GetMemberMeta(key));
             }
@@ -186,8 +187,8 @@ void bind_core(py::module& mod) {
                 return py::cast(std::make_pair(
                     iter.key(), py::cast(meta.GetMemberMeta(iter.key()))));
               } else {
-                return py::cast(
-                    std::make_pair(iter.key(), json_to_python(iter.value())));
+                return py::cast(std::make_pair(
+                    iter.key(), detail::from_json(iter.value())));
               }
             };
             return py::make_iterator_fmap(meta.begin(), meta.end(), fn,
@@ -199,14 +200,28 @@ void bind_core(py::module& mod) {
              thread_local std::stringstream ss;
              return meta->MetaData().dump(4);
            })
-      .def("__str__", [](const ObjectMeta* meta) {
-        thread_local std::stringstream ss;
-        ss.str("");
-        ss.clear();
-        ss << "ObjectMeta ";
-        ss << meta->MetaData().dump(4);
-        return ss.str();
-      });
+      .def("__str__",
+           [](const ObjectMeta* meta) {
+             thread_local std::stringstream ss;
+             ss.str("");
+             ss.clear();
+             ss << "ObjectMeta ";
+             ss << meta->MetaData().dump(4);
+             return ss.str();
+           })
+      .def(py::pickle(
+          [](const ObjectMeta& meta) {  // __getstate__
+            return py::make_tuple(detail::from_json(meta.MetaData()));
+          },
+          [](py::tuple const& tup) -> ObjectMeta {  // __setstate__
+            if (tup.size() != 1) {
+              throw std::runtime_error(
+                  "Invalid state, cannot be pickled as ObjectID!");
+            }
+            ObjectMeta meta;
+            meta.SetMetaData(nullptr, detail::to_json(tup[0]));
+            return meta;
+          }));
 
   // ObjectIDWrapper
   py::class_<ObjectIDWrapper>(mod, "ObjectID")

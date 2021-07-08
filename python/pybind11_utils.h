@@ -29,6 +29,8 @@ limitations under the License.
 #include "common/util/uuid.h"
 #pragma GCC visibility pop
 
+namespace py = pybind11;
+
 namespace vineyard {
 
 // Wrap ObjectID to makes pybind11 work.
@@ -117,7 +119,10 @@ namespace vineyard {
 
 void throw_on_error(Status const& status);
 
-pybind11::object json_to_python(json const& value);
+namespace detail {
+py::object from_json(const json& value);
+json to_json(const py::handle& obj);
+}  // namespace detail
 
 }  // namespace vineyard
 

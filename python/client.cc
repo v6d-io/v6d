@@ -22,7 +22,10 @@ limitations under the License.
 #pragma GCC visibility push(default)
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "client/ds/object_meta.h"
 #include "client/rpc_client.h"
+#include "common/util/json.h"
 #include "common/util/status.h"
 #pragma GCC visibility pop
 
@@ -285,7 +288,7 @@ void bind_client(py::module& mod) {
               std::unordered_map<std::string, py::object> element;
               if (!kv.second.empty()) {
                 for (auto const& elem : json::iterator_wrapper(kv.second)) {
-                  element[elem.key()] = json_to_python(elem.value());
+                  element[elem.key()] = detail::from_json(elem.value());
                 }
               }
               meta_to_return.emplace(kv.first, std::move(element));
