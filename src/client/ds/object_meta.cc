@@ -74,7 +74,11 @@ bool const ObjectMeta::IsLocal() const {
     // it is a newly created metadata
     return true;
   } else {
-    return client_->instance_id() == instance_id.get<InstanceID>();
+    if (client_) {
+      return client_->instance_id() == instance_id.get<InstanceID>();
+    } else {
+      return false;
+    }
   }
 }
 
@@ -204,7 +208,7 @@ const std::shared_ptr<BufferSet>& ObjectMeta::GetBufferSet() const {
 }
 
 void ObjectMeta::findAllBlobs(const json& tree) {
-  if (tree.empty()) {
+  if (tree.empty() && client_ != nullptr) {
     return;
   }
   ObjectID member_id =

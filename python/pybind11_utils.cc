@@ -23,6 +23,10 @@ limitations under the License.
 
 #include "pybind11/pybind11.h"
 
+#pragma GCC visibility push(default)
+#include "common/util/json.h"
+#pragma GCC visibility pop
+
 namespace py = pybind11;
 using namespace py::literals;  // NOLINT(build/namespaces_literals)
 
@@ -130,47 +134,102 @@ void bind_utils(py::module& mod) {
   PyModule_AddFunctions(mod.ptr(), vineyard_utils_methods);
 }
 
-py::object json_to_python(json const& value) {
-  switch (value.type()) {
-  case json::value_t::null: {
+namespace detail {
+
+/**
+ * Cast nlohmann::json to python object.
+ *
+ * Refer to https://github.com/pybind/pybind11_json
+ */
+py::object from_json(const json& j) {
+  if (j.is_null()) {
     return py::none();
-  }
-  case json::value_t::object: {
-    std::unordered_map<std::string, py::object> result;
-    for (auto const& element : json::iterator_wrapper(value)) {
-      result[element.key()] = json_to_python(element.value());
+  } else if (j.is_boolean()) {
+    return py::bool_(j.get<bool>());
+  } else if (j.is_number_integer()) {
+    return py::int_(j.get<json::number_integer_t>());
+  } else if (j.is_number_unsigned()) {
+    return py::int_(j.get<json::number_unsigned_t>());
+  } else if (j.is_number_float()) {
+    return py::float_(j.get<double>());
+  } else if (j.is_string()) {
+    return py::str(j.get<std::string>());
+  } else if (j.is_array()) {
+    py::list obj;
+    for (const auto& el : j) {
+      obj.append(from_json(el));
     }
-    return py::cast(std::move(result));
-  }
-  case json::value_t::array: {
-    py::list result;
-    for (auto const& element : value) {
-      result.append(json_to_python(element));
+    return std::move(obj);
+  } else {
+    // Object
+    py::dict obj;
+    for (json::const_iterator it = j.cbegin(); it != j.cend(); ++it) {
+      obj[py::str(it.key())] = from_json(it.value());
     }
-    return std::move(result);
-  }
-  case json::value_t::string: {
-    return py::cast(value.get_ref<std::string const&>());
-  }
-  case json::value_t::boolean: {
-    return py::cast(value.get<bool>());
-  }
-  case json::value_t::number_integer: {
-    return py::cast(value.get<int64_t>());
-  }
-  case json::value_t::number_unsigned: {
-    return py::cast(value.get<uint64_t>());
-  }
-  case json::value_t::number_float: {
-    return py::cast(value.get<double>());
-  }
-  case json::value_t::binary: {
-    return py::cast(value.get_ref<std::string const&>());
-  }
-  default: {
-    return py::none();
-  }
+    return std::move(obj);
   }
 }
+
+/**
+ * Cast python object to nlohmann::json.
+ *
+ * Refer to https://github.com/pybind/pybind11_json
+ */
+json to_json(const py::handle& obj) {
+  if (obj.ptr() == nullptr || obj.is_none()) {
+    return nullptr;
+  }
+  if (py::isinstance<py::bool_>(obj)) {
+    return obj.cast<bool>();
+  }
+  if (py::isinstance<py::int_>(obj)) {
+    try {
+      json::number_integer_t s = obj.cast<json::number_integer_t>();
+      if (py::int_(s).equal(obj)) {
+        return s;
+      }
+    } catch (...) {}
+    try {
+      json::number_unsigned_t u = obj.cast<json::number_unsigned_t>();
+      if (py::int_(u).equal(obj)) {
+        return u;
+      }
+    } catch (...) {}
+    throw std::runtime_error(
+        "to_json received an integer out of range for both "
+        "json::number_integer_t and json::number_unsigned_t type: " +
+        py::repr(obj).cast<std::string>());
+  }
+  if (py::isinstance<py::float_>(obj)) {
+    return obj.cast<double>();
+  }
+  if (py::isinstance<py::bytes>(obj)) {
+    py::module base64 = py::module::import("base64");
+    return base64.attr("b64encode")(obj)
+        .attr("decode")("utf-8")
+        .cast<std::string>();
+  }
+  if (py::isinstance<py::str>(obj)) {
+    return obj.cast<std::string>();
+  }
+  if (py::isinstance<py::tuple>(obj) || py::isinstance<py::list>(obj)) {
+    auto out = json::array();
+    for (const py::handle value : obj) {
+      out.push_back(to_json(value));
+    }
+    return out;
+  }
+  if (py::isinstance<py::dict>(obj)) {
+    auto out = json::object();
+    for (const py::handle key : obj) {
+      out[py::str(key).cast<std::string>()] = to_json(obj[key]);
+    }
+    return out;
+  }
+  throw std::runtime_error("to_json not implemented for this type of object: " +
+                           py::repr(obj).cast<std::string>());
+}
+
+}  // namespace detail
 
 }  // namespace vineyard
