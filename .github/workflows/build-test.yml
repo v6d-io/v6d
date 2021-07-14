@@ -267,16 +267,16 @@ jobs:
           popd
 
           # build & install vineyard for python
-          rm -rf build
+          rm -rf build/lib.* build/bdist.*
           python3 setup.py bdist_wheel
 
           # build & install vineyard-ml
-          rm -rf build
+          rm -rf build/lib.* build/bdist.*
           python3 setup_ml.py bdist_wheel
 
           # build & install vineyard-io
           pushd modules/io
-          rm -rf build
+          rm -rf build/lib.* build/bdist.*
           python3 setup.py bdist_wheel
           sudo pip3 install dist/*.whl -U
           popd
