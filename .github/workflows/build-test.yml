@@ -231,7 +231,7 @@ jobs:
         run: |
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
-          yapf --in-place --recursive setup.py python/ modules/io/setup.py modules/io/python
+          yapf --in-place --recursive setup.py setup_ml.py python/ modules/io/setup.py modules/io/python
           GIT_DIFF=$(git diff --ignore-submodules)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -241,7 +241,7 @@ jobs:
               echo "|"
               echo "|Run: "
               echo "|"
-              echo "|    yapf --in-place --recursive setup.py python/ modules/io/setup.py modules/io/python"
+              echo "|    yapf --in-place --recursive setup.py setup_ml.py python/ modules/io/setup.py modules/io/python"
               echo "|"
               echo "| to fix this error."
               echo "|"
@@ -267,14 +267,24 @@ jobs:
           popd
 
           # build & install vineyard for python
-
+          rm -rf build
           python3 setup.py bdist_wheel
-          sudo pip3 install dist/*.whl -U
+
+          # build & install vineyard-ml
+          rm -rf build
+          python3 setup_ml.py bdist_wheel
 
           # build & install vineyard-io
+          pushd modules/io
+          rm -rf build
+          python3 setup.py bdist_wheel
+          sudo pip3 install dist/*.whl -U
+          popd
+
+          # install python packages
+          sudo pip3 install dist/*.whl -U
 
           pushd modules/io
-          python3 setup.py bdist_wheel
           sudo pip3 install dist/*.whl -U
           popd
 
@@ -365,7 +375,19 @@ jobs:
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
 
-      - name: Upload wheels to tagged release
+      - name: Upload vineyard contrib wheels to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/vineyard_*.whl
+          file_glob: true
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard-ml ${{ steps.tag.outputs.TAG }}"
+
+      - name: Upload vineyard-io wheels to tagged release
         uses: svenstaro/upload-release-action@v2
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         with:
