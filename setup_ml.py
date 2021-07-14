@@ -19,48 +19,35 @@
 import os
 import textwrap
 
-from setuptools import setup, Extension, find_packages
-from setuptools.command.build_ext import build_ext
-from setuptools.dist import Distribution
+from setuptools import setup, find_packages
+from setuptools.command.install import install
 from wheel.bdist_wheel import bdist_wheel
 
 
-class CopyCMakeExtension(Extension):
-    def __init__(self, name):
-        super(CopyCMakeExtension, self).__init__(name, sources=[])
-
-
-class CopyCMakeBin(build_ext):
-    def run(self):
-        for ext in self.extensions:
-            self.build_extension(ext)
-
-    def build_extension(self, ext):
-        build_py = self.get_finalized_command('build_py')
-        package_dir = os.path.abspath(build_py.get_package_dir(''))
-        bin_path = os.path.join(package_dir, self.get_ext_filename(ext.name))
-        target_path = self.get_ext_fullpath(ext.name)
-        self.copy_file(bin_path, target_path)
-
-
-class bdist_wheel_injected(bdist_wheel):
+class bdist_wheel_plat(bdist_wheel):
     def finalize_options(self):
-        super(bdist_wheel_injected, self).finalize_options()
+        bdist_wheel.finalize_options(self)
         self.root_is_pure = False
 
+    def get_tag(self):
+        self.root_is_pure = True
+        tag = bdist_wheel.get_tag(self)
+        self.root_is_pure = False
+        return tag
 
-class BinDistribution(Distribution):
-    ''' Always forces a binary package with platform name.
-    '''
-    def has_ext_modules(self):
-        return True
+
+class install_plat(install):
+    def finalize_options(self):
+        self.install_lib = self.install_platlib
+        install.finalize_options(self)
 
 
-def find_core_packages(root):
+def find_ml_packages(root):
     pkgs = []
     for pkg in find_packages(root):
-        if 'contrib' not in pkg or pkg.endswith('.contrib'):
+        if 'contrib.ml' in pkg:
             pkgs.append(pkg)
+    print(pkgs)
     return pkgs
 
 
@@ -81,69 +68,23 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 setup(
-    name='vineyard',
+    name='vineyard-ml',
     author='The vineyard team',
     author_email='developers@v6d.io',
-    description='An in-memory immutable data manager',
+    description='Vineyard integration with machine learning frameworks',
     long_description=long_description,
     long_description_content_type='text/x-rst',
     url='https://v6d.io',
-    package_dir={'': 'python'},
-    packages=find_core_packages('python'),
-    package_data={
-        'vineyard': [
-            "vineyardd",
-            "**/*.yaml",
-            "**/*.yaml.tpl",
-            "**/**/*.sh",
-        ],
-    },
-    ext_modules=[
-        CopyCMakeExtension('vineyard._C'),
-    ],
+    package_dir={'vineyard.contrib.ml': 'python/vineyard/contrib/ml'},
+    packages=find_ml_packages('python'),
     cmdclass={
-        'build_ext': CopyCMakeBin,
-        'bdist_wheel': bdist_wheel_injected,
+        'bdist_wheel': bdist_wheel_plat,
+        "install": install_plat
     },
-    distclass=BinDistribution,
     zip_safe=False,
-    entry_points={
-        'cli': ['vineyard-codegen=vineyard.cli:main'],
-        'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
-    },
-    setup_requires=[
-        'libclang',
-        'parsec',
-        'setuptools',
-        'wheel',
-    ],
     install_requires=[
-        'numpy',
-        'pandas<1.0.0; python_version<"3.6"',
-        'pandas<1.2.0; python_version<"3.7"',
-        'pandas>=1.0.0; python_version>="3.7"',
-        'pickle5; python_version<="3.7"',
-        'pyarrow',
-        'setuptools',
-        'shared-memory38; python_version<="3.7"',
-        'sortedcontainers',
+        'vineyard',
     ],
-    extras_require={
-        'dev': [
-            'breathe',
-            'libclang',
-            'parsec',
-            'pytest',
-            'pytest-benchmark',
-            'pytest-datafiles',
-            'sphinx>=3.0.2',
-            'sphinx_rtd_theme',
-            'docutils==0.16',
-        ],
-        "kubernetes": [
-            "kubernetes",
-        ],
-    },
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
