@@ -278,7 +278,6 @@ jobs:
           pushd modules/io
           rm -rf build/lib.* build/bdist.*
           python3 setup.py bdist_wheel
-          sudo pip3 install dist/*.whl -U
           popd
 
           # install python packages
