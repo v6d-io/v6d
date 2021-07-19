@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+"""vineyard-ctl: A command line tool for vineyard."""
+
 from argparse import ArgumentParser
 import sys
 
@@ -23,23 +25,41 @@ import vineyard
 
 
 def vineyard_argument_parser():
-    parser = ArgumentParser(add_help=True)
-    parser.add_argument('--ipc_socket')
-    parser.add_argument('--rpc_host')
-    parser.add_argument('--rpc_port', type=int)
-    parser.add_argument('--rpc_endpoint')
-    cmd_parsers = parser.add_subparsers(title='commands', dest='cmd')
+    """Utility to create a command line Argument Parser."""
+    parser = ArgumentParser(prog='vineyard-ctl',
+                            usage='%(prog)s [options]',
+                            description='vineyard-ctl: A command line tool for vineyard',
+                            allow_abbrev=False)
 
-    ls_opt = cmd_parsers.add_parser('ls', parents=[parser], add_help=False, help='List objects')
-    ls_opt.add_argument('--limit', default=5, type=int)
+    connection_group = parser.add_mutually_exclusive_group(required=True)
+    connection_group.add_argument('--ipc_socket', help='Socket location of connected vineyard server')
+    connection_group.add_argument('--rpc_host', help='RPC HOST of the connected vineyard server')
+    connection_group.add_argument('--rpc_port', type=int, help='RPC PORT of the connected vineyard server')
+    connection_group.add_argument('--rpc_endpoint', help='RPC endpoint of the connected vineyard server')
 
-    get_opt = cmd_parsers.add_parser('get', parents=[parser], add_help=False, help='Get object')
-    get_opt.add_argument('--object_id')
+    cmd_parser = parser.add_subparsers(title='commands', dest='cmd')
 
-    del_opt = cmd_parsers.add_parser('del', parents=[parser], add_help=False, help='Delete object')
-    del_opt.add_argument('--object_id')
-    del_opt.add_argument('--recursive', default=False, type=bool)
-    del_opt.add_argument('--force', default=False, type=bool)
+    ls_opt = cmd_parser.add_parser('ls', add_help=False, help='List vineyard objects')
+    ls_opt.add_argument('--pattern',
+                        default='*',
+                        type=str,
+                        help='The pattern string that will be matched against the object’s typename')
+    ls_opt.add_argument('--regex',
+                        action='store_true',
+                        help='The pattern string will be considered as a regex expression')
+    ls_opt.add_argument('--limit', default=5, type=int, help='The limit to list')
+
+    get_opt = cmd_parser.add_parser('get', add_help=False, help='Get a vineyard object')
+    get_opt.add_argument('--object_id', required=True, help='ID of the object to be fetched')
+
+    del_opt = cmd_parser.add_parser('del', add_help=False, help='Delete a vineyard object')
+    del_opt.add_argument('--object_id', required=True, help='ID of the object to be deleted')
+    del_opt.add_argument('--force',
+                         action='store_true',
+                         help='Recursively delete even if the member object is also referred by others')
+    del_opt.add_argument('--deep',
+                         action='store_true',
+                         help='Deeply delete an object means we will deleting the members recursively')
 
     return parser
 
@@ -48,14 +68,13 @@ optparser = vineyard_argument_parser()
 
 
 def exit_with_help():
+    """Utility to exit the program with help message in case of any error."""
     optparser.print_help(sys.stderr)
     sys.exit(-1)
 
 
-__vineyard_client = None
-
-
 def connect_vineyard(args):
+    """Utility to create a vineyard client using an IPC or RPC socket."""
     if args.ipc_socket is not None:
         client = vineyard.connect(args.ipc_socket)
         # force use rpc client in cli tools
@@ -67,47 +86,62 @@ def connect_vineyard(args):
     else:
         exit_with_help()
 
-    global __vineyard_client
-    __vineyard_client = client
     return client
 
 
 def as_object_id(object_id):
+    """Utility to convert object_id to an integer if possible else convert to a vineyard.ObjectID."""
     try:
         return int(object_id)
     except ValueError:
         return vineyard.ObjectID.wrap(object_id)
 
 
-def ls(client, limit):
-    objects = client.list(limit=limit)
-    print(objects)
+def list_obj(client, pattern, regex, limit):
+    """Utility to list vineyard objects."""
+    try:
+        objects = client.list_objects(pattern=pattern, regex=regex, limit=limit)
+        print(f"List of your vineyard objects:\n{objects}")
+    except BaseException as exc:
+        raise Exception(f'The following error was encountered while listing vineyard objects:\n{exc}') from exc
 
 
 def get(client, object_id):
-    if object_id is None:
-        exit_with_help()
-    value = client.get(as_object_id(object_id))
-    print(value)
+    """Utility to fetch a vineyard object based on object_id."""
+    try:
+        value = client.get_object(as_object_id(object_id))
+        print(f"The vineyard object you requested:\n{value}")
+    except BaseException as exc:
+        raise Exception(('The following error was encountered while fetching ' +
+                         f'the vineyard object({object_id}):\n{exc}')) from exc
 
 
-def delete(client, object_id, recursive):
-    if object_id is None:
-        exit_with_help()
-    client.delete(as_object_id(object_id), deep=recursive)
+def delete_obj(client, object_id, force, deep):
+    """Utility to delete a vineyard object based on object_id."""
+    try:
+        client.delete(object_id=as_object_id(object_id), force=force, deep=deep)
+        print(f'The vineyard object({object_id}) was deleted successfully')
+    except BaseException as exc:
+        raise Exception(('The following error was encountered while deleting ' +
+                         f'the vineyard object({object_id}):\n{exc}')) from exc
 
 
 def main():
+    """Main function for vineyard-ctl."""
     args = optparser.parse_args()
     if args.cmd is None:
-        exit_with_help()
+        return exit_with_help()
+
     client = connect_vineyard(args)
+
     if args.cmd == 'ls':
-        return ls(client, args.limit)
-    elif args.cmd == 'get':
+        return list_obj(client, args.pattern, args.regex, args.limit)
+    if args.cmd == 'get':
         return get(client, args.object_id)
-    elif args.cmd == 'del':
-        return delete(client, args.object_id, args.recursive)
+    if args.cmd == 'del':
+        return delete_obj(client, args.object_id, args.force, args.deep)
+
+    return exit_with_help()
 
 
 if __name__ == "__main__":
