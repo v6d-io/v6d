@@ -47,10 +47,10 @@ RPCServer::~RPCServer() {
 }
 
 void RPCServer::Start() {
+  vs_ptr_->RPCReady();
   SocketServer::Start();
   LOG(INFO) << "Vineyard will listen on 0.0.0.0:"
             << rpc_spec_["port"].get<uint32_t>() << " for RPC";
-  vs_ptr_->RPCReady();
 }
 
 #if BOOST_VERSION >= 106600

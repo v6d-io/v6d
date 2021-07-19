@@ -41,9 +41,9 @@ IPCServer::~IPCServer() {
 }
 
 void IPCServer::Start() {
+  vs_ptr_->IPCReady();
   SocketServer::Start();
   LOG(INFO) << "Vineyard will listen on " << ipc_spec_["socket"] << " for IPC";
-  vs_ptr_->IPCReady();
 }
 
 #if BOOST_VERSION >= 106600

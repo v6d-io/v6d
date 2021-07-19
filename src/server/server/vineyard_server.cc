@@ -36,18 +36,16 @@ limitations under the License.
 namespace vineyard {
 
 #ifndef ENSURE_VINEYARDD_READY
-#define ENSURE_VINEYARDD_READY()                                      \
-  do {                                                                \
-    if (!((ready_ & kMeta) && (ready_ & kIPC) && (ready_ & kBulk))) { \
-      std::stringstream ss;                                           \
-      ss << "{";                                                      \
-      ss << "meta: " << (ready_ & kMeta) << ", ";                     \
-      ss << "ipc: " << (ready_ & kIPC) << ", ";                       \
-      ss << "rpc: " << (ready_ & kRPC) << ", ";                       \
-      ss << "bulk store: " << (ready_ & kBulk);                       \
-      ss << "}";                                                      \
-      return Status::VineyardServerNotReady(ss.str());                \
-    }                                                                 \
+#define ENSURE_VINEYARDD_READY()                       \
+  do {                                                 \
+    if (!((ready_ & kMeta) && (ready_ & kBulk))) {     \
+      std::stringstream ss;                            \
+      ss << "{";                                       \
+      ss << "meta: " << (ready_ & kMeta) << ", ";      \
+      ss << "bulk store: " << (ready_ & kBulk);        \
+      ss << "}";                                       \
+      return Status::VineyardServerNotReady(ss.str()); \
+    }                                                  \
   } while (0)
 #endif  // ENSURE_VINEYARDD_READY
 
