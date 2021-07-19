@@ -12,12 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 pub mod client;
+pub mod ds;
 pub mod ipc_client;
 pub mod rpc_client;
-pub mod ds;
-
 
 pub use self::ds::blob::Blob;
 pub use self::ds::blob::BlobWriter;

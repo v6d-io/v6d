@@ -12,18 +12,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use super::ObjectMeta;
-
 
 pub trait Client {
     fn connect(&self, socket: &str) -> bool;
-    
+
     fn disconnect(&self);
 
     fn connected(&self) -> bool;
 
     fn get_meta_data(&self, object_id: u64, sync_remote: bool) -> ObjectMeta;
 }
-
-

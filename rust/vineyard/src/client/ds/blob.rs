@@ -13,10 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-pub struct Blob {
+pub struct Blob {}
 
-}
-
-pub struct BlobWriter {
-
-}
+pub struct BlobWriter {}

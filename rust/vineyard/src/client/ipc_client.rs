@@ -12,23 +12,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use super::client::Client;
 use super::ObjectMeta;
 
 #[derive(Debug)]
-pub struct IPCClient {
-
-}
+pub struct IPCClient {}
 
 impl Client for IPCClient {
     fn connect(&self, socket: &str) -> bool {
         true
     }
 
-    fn disconnect(&self) {
-
-    }
+    fn disconnect(&self) {}
 
     fn connected(&self) -> bool {
         true

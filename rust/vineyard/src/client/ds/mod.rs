@@ -12,8 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 pub mod blob;
+pub mod object;
 pub mod object_factory;
 pub mod object_meta;
-pub mod object;
