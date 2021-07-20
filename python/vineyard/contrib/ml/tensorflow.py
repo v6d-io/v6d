@@ -40,10 +40,8 @@ def tf_tensor_builder(client, value, **kw):
     data = value
     data = value.batch(len(value))
     for i in data:
-        meta.add_member('buffer_data_',
-                        build_numpy_buffer(client, i[0].numpy()))
-        meta.add_member('buffer_label_',
-                        build_numpy_buffer(client, i[1].numpy()))
+        meta.add_member('buffer_data_', build_numpy_buffer(client, i[0].numpy()))
+        meta.add_member('buffer_label_', build_numpy_buffer(client, i[1].numpy()))
         meta['data_shape_'] = to_json(i[0].numpy().shape)
         meta['label_shape_'] = to_json(i[1].numpy().shape)
         meta['data_type_'] = i[0].numpy().dtype.name
@@ -94,12 +92,9 @@ def tf_tensor_resolver(obj):
     data_name = meta['data_type_']
     label_name = meta['label_type_']
     data_type = normalize_dtype(data_name, meta.get('value_type_meta_', None))
-    label_type = normalize_dtype(label_name, meta.get('value_type_meta_',
-                                                      None))
-    data = np.frombuffer(memoryview(obj.member('buffer_data_')),
-                         dtype=data_type).reshape(data_shape)
-    label = np.frombuffer(memoryview(obj.member('buffer_label_')),
-                          dtype=label_type).reshape(label_shape)
+    label_type = normalize_dtype(label_name, meta.get('value_type_meta_', None))
+    data = np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape)
+    label = np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape)
     data = tf.data.Dataset.from_tensor_slices((data, label))
     return data
 
