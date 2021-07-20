@@ -16,11 +16,12 @@
 # limitations under the License.
 #
 
+
 from vineyard._C import ObjectMeta
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
 import pandas as pd
-
+import pyarrow as pa
 try:
     from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
 except:
@@ -49,20 +50,6 @@ def tf_tensor_builder(client, value, **kw):
         meta['label_type_meta_'] = i[1].numpy().dtype.str
     return client.create_metadata(meta)
 
-def tf_tensor_resolver(obj):
-    meta = obj.meta
-    num = from_json(meta['num'])
-    data_shape = from_json(meta['data_shape_'])
-    label_shape = from_json(meta['label_shape_'])
-    data_name = meta['data_type_']
-    label_name = meta['label_type_']
-    data_type = normalize_dtype(data_name, meta.get('value_type_meta_', None))
-    label_type = normalize_dtype(label_name, meta.get('value_type_meta_', None))
-    data = np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape)
-    label = np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape)
-    data = tf.data.Dataset.from_tensor_slices((data, label))
-    return data
-
 def tf_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
@@ -86,6 +73,27 @@ def tf_dataframe_builder(client, value, builder, **kw):
     meta['row_batch_index_'] = kw.get('row_batch_index', 0)
     print(meta)
     return client.create_metadata(meta)
+
+def tf_builder(client, value, builder, **kw):
+    for x,y in value.take(1):
+        if type(x) is dict:
+            return tf_dataframe_builder(client, value, builder, **kw)
+        else:
+            return tf_tensor_builder(client, value, **kw)
+
+def tf_tensor_resolver(obj):
+    meta = obj.meta
+    num = from_json(meta['num'])
+    data_shape = from_json(meta['data_shape_'])
+    label_shape = from_json(meta['label_shape_'])
+    data_name = meta['data_type_']
+    label_name = meta['label_type_']
+    data_type = normalize_dtype(data_name, meta.get('value_type_meta_', None))
+    label_type = normalize_dtype(label_name, meta.get('value_type_meta_', None))
+    data = np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape)
+    label = np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape)
+    data = tf.data.Dataset.from_tensor_slices((data, label))
+    return data
 
 def tf_dataframe_resolver(obj, resolver):
     meta = obj.meta
@@ -112,10 +120,32 @@ def tf_dataframe_resolver(obj, resolver):
     labels = df.pop('target')
     return tf.data.Dataset.from_tensor_slices((dict(df),labels))
 
+def tf_recordBatch_resolver(obj, resolver):
+    meta = obj.meta
+    schema = resolver.run(obj.member('schema_'))
+    columns = []
+    for idx in range(int(meta['__columns_-size'])):
+        columns.append(resolver.run(obj.member('__columns_-%d' % idx)))
+    arrow = pa.RecordBatch.from_arrays(columns, schema=schema).to_pandas()
+    labels = arrow.pop('target')
+    return tf.data.Dataset.from_tensor_slices((dict(arrow), labels))
+
+def tf_table_resolver(obj, resolver):
+    meta = obj.meta
+    batches = []
+    for idx in range(int(meta['__batches_-size'])):
+        batches.append(resolver.run(obj.member('__batches_-%d' % idx)))
+    arrow = pa.Table.from_batches(batches).to_pandas()
+    labels = arrow.pop('target')
+    return tf.data.Dataset.from_tensor_slices((dict(arrow), labels))
+
 
 def register_tf_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
-        builder_ctx.register(tf.data.Dataset, tf_tensor_builder)
+        builder_ctx.register(tf.data.Dataset, tf_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', tf_tensor_resolver)
+        resolver_ctx.register('vineyard::DataFrame', tf_dataframe_resolver)
+        resolver_ctx.register('vineyard::RecordBatch', tf_recordBatch_resolver)
+        resolver_ctx.register('vineyard::Table', tf_table_resolver)
