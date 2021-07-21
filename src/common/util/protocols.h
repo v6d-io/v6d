@@ -33,6 +33,7 @@ limitations under the License.
 namespace vineyard {
 
 enum class CommandType {
+  DebugCommand = -1,
   NullCommand = 0,
   ExitRequest = 1,
   ExitReply = 2,
@@ -328,6 +329,14 @@ Status ReadFinalizeArenaRequest(const json& root, int& fd,
 void WriteFinalizeArenaReply(std::string& msg);
 
 Status ReadFinalizeArenaReply(const json& root);
+
+void WriteDebugRequest(const json& debug, std::string& msg);
+
+Status ReadDebugRequest(const json& root, json& debug);
+
+void WriteDebugReply(const json& result, std::string& msg);
+
+Status ReadDebugReply(const json& root, json& result);
 
 }  // namespace vineyard
 

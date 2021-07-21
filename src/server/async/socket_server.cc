@@ -238,6 +238,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::FinalizeArenaRequest: {
     return doFinalizeArena(root);
   }
+  case CommandType::DebugCommand: {
+    return doDebug(root);
+  }
   case CommandType::ExitRequest: {
     return true;
   }
@@ -859,6 +862,14 @@ bool SocketConnection::doFinalizeArena(const json& root) {
       server_ptr_->GetBulkStore()->FinalizeArena(fd, offsets, sizes));
   WriteFinalizeArenaReply(message_out);
 
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doDebug(const json& root) {
+  std::string message_out;
+  json result;
+  WriteDebugReply(result, message_out);
   this->doWrite(message_out);
   return false;
 }

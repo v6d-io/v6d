@@ -299,6 +299,12 @@ void bind_client(py::module& mod) {
             throw_on_error(self->InstanceStatus(status));
             return status;
           })
+      .def("debug",
+           [](ClientBase* self, py::dict debug) {
+             json result;
+             throw_on_error(self->Debug(detail::to_json(debug), result));
+             return detail::from_json(result);
+           })
       .def_property_readonly("ipc_socket", &ClientBase::IPCSocket)
       .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint)
       .def_property_readonly("version", &ClientBase::Version);

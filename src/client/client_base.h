@@ -356,6 +356,16 @@ class ClientBase {
    */
   const std::string& Version() const { return server_version_; }
 
+  /**
+   * @brief Issue a debug request.
+   *
+   * @param debug The payload that will be sent to the debug handler.
+   * @param result The result that returned by the debug handler.
+   *
+   * @return Status that indicates whether the debug action succeeds.
+   */
+  Status Debug(const json& debug, json& tree);
+
  protected:
   Status doWrite(const std::string& message_out);
 
