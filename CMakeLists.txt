@@ -492,7 +492,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     add_target_link_options(_C PRIVATE
                             OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
     )
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(BUILD_VINEYARD_PYPI_PACKAGES AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(_C PRIVATE -static)
         add_target_link_options(_C PRIVATE OPTIONS -static)
     else()

@@ -385,6 +385,17 @@ Status ClientBase::Instances(std::vector<InstanceID>& instances) {
   return Status::OK();
 }
 
+Status ClientBase::Debug(const json& debug, json& result) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteDebugRequest(debug, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDebugReply(message_in, result));
+  return Status::OK();
+}
+
 InstanceStatus::InstanceStatus(const json& tree)
     : instance_id(tree["instance_id"].get<InstanceID>()),
       deployment(tree["deployment"].get_ref<const std::string&>()),
