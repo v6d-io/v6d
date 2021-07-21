@@ -209,12 +209,14 @@ class ObjectBuilder : public ObjectBase {
  * @brief Register a type as vineyard Object type by inherits Registered.
  */
 template <typename T>
-class Registered : public Object {
+class __attribute__((visibility("default"))) Registered : public Object {
  protected:
-  Registered() { FORCE_INSTANTIATE(registered); }
+  __attribute__((visibility("default"))) Registered() {
+    FORCE_INSTANTIATE(registered);
+  }
 
  private:
-  static const bool registered;
+  __attribute__((visibility("default"))) static const bool registered;
 };
 
 template <typename T>
@@ -227,10 +229,12 @@ const bool Registered<T>::registered = ObjectFactory::Register<T>();
 template <typename T>
 class BareRegistered {
  protected:
-  BareRegistered() { FORCE_INSTANTIATE(registered); }
+  __attribute__((visibility("default"))) BareRegistered() {
+    FORCE_INSTANTIATE(registered);
+  }
 
  private:
-  static const bool registered;
+  __attribute__((visibility("default"))) static const bool registered;
 };
 
 template <typename T>
