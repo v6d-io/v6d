@@ -40,7 +40,7 @@ inline void FORCE_INSTANTIATE(T) {}
  * @brief ObjectFactory is responsible for type registration at the
  * initialization time.
  */
-class ObjectFactory {
+class __attribute__((visibility("default"))) ObjectFactory {
  public:
   using object_initializer_t = std::shared_ptr<Object> (*)();
 
@@ -53,7 +53,7 @@ class ObjectFactory {
    * resolution.
    */
   template <typename T>
-  static bool Register() {
+  static bool __attribute__((visibility("default"))) Register() {
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
     known_types.emplace(type_name<T>(),
@@ -66,19 +66,22 @@ class ObjectFactory {
    *
    * @param type_name The type to be instantiated.
    */
-  static std::shared_ptr<Object> Create(std::string const& type_name);
+  static std::shared_ptr<Object> __attribute__((visibility("default")))
+  Create(std::string const& type_name);
 
   /**
    * @brief Expose the internal registered types.
    *
    * @return A map of type name to that type's static constructor.
    */
-  static const std::unordered_map<std::string, object_initializer_t>&
+  static const std::unordered_map<
+      std::string, object_initializer_t>& __attribute__((visibility("default")))
   FactoryRef();
 
  private:
   // https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
-  static std::unordered_map<std::string, object_initializer_t>& getKnownTypes();
+  static std::unordered_map<std::string, object_initializer_t>& __attribute__((
+      visibility("default"))) getKnownTypes();
 };
 
 }  // namespace vineyard
