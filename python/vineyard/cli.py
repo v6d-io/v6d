@@ -61,6 +61,43 @@ def vineyard_argument_parser():
                          action='store_true',
                          help='Deeply delete an object means we will deleting the members recursively')
 
+    stat_opt = cmd_parser.add_parser('stat', add_help=False, help='Get the status of connected vineyard server')
+    stat_opt.add_argument('--instance_id',
+                          dest='properties',
+                          action='append_const',
+                          const='instance_id',
+                          help='Instance ID of vineyardd that the client is connected to')
+    stat_opt.add_argument('--deployment',
+                          dest='properties',
+                          action='append_const',
+                          const='deployment',
+                          help='The deployment mode of the connected vineyardd cluster')
+    stat_opt.add_argument('--memory_usage',
+                          dest='properties',
+                          action='append_const',
+                          const='memory_usage',
+                          help='Memory usage (in bytes) of current vineyardd instance')
+    stat_opt.add_argument('--memory_limit',
+                          dest='properties',
+                          action='append_const',
+                          const='memory_limit',
+                          help='Memory limit (in bytes) of current vineyardd instance')
+    stat_opt.add_argument('--deferred_requests',
+                          dest='properties',
+                          action='append_const',
+                          const='deferred_requests',
+                          help='Number of waiting requests of current vineyardd instance')
+    stat_opt.add_argument('--ipc_connections',
+                          dest='properties',
+                          action='append_const',
+                          const='ipc_connections',
+                          help='Number of alive IPC connections on the current vineyardd instance')
+    stat_opt.add_argument('--rpc_connections',
+                          dest='properties',
+                          action='append_const',
+                          const='rpc_connections',
+                          help='Number of alive RPC connections on the current vineyardd instance')
+
     return parser
 
 
@@ -126,6 +163,17 @@ def delete_obj(client, object_id, force, deep):
                          f'the vineyard object({object_id}):\n{exc}')) from exc
 
 
+def status(client, properties):
+    """Utility to print the status of connected vineyard server."""
+    stat = client.status
+    if properties is None:
+        print(stat)
+    else:
+        print('InstanceStatus:')
+        for prop in properties:
+            print(f'    {prop}: {getattr(stat, prop)}')
+
+
 def main():
     """Main function for vineyard-ctl."""
     args = optparser.parse_args()
@@ -140,6 +188,8 @@ def main():
         return get(client, args.object_id)
     if args.cmd == 'del':
         return delete_obj(client, args.object_id, args.force, args.deep)
+    if args.cmd == 'stat':
+        return status(client, args.properties)
 
     return exit_with_help()
 
