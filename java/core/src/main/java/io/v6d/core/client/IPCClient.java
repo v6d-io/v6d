@@ -17,6 +17,7 @@ package io.v6d.core.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
 import io.v6d.core.ObjectMeta;
@@ -41,11 +42,13 @@ public class IPCClient extends Client {
 
     public IPCClient() throws VineyardException {
         mapper_ = new ObjectMapper();
+        mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
         this.Connect(System.getenv("VINEYARD_IPC_SOCKET"));
     }
 
     public IPCClient(String ipc_socket) throws VineyardException {
         mapper_ = new ObjectMapper();
+        mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
         this.Connect(ipc_socket);
     }
 
@@ -103,8 +106,8 @@ public class IPCClient extends Client {
 
     @SneakyThrows(IOException.class)
     private void doWrite(String content) {
-        writer_.writeLong((long) content.length());
-        writer_.writeChars(content);
+        writer_.writeLong(content.length());
+        writer_.writeBytes(content);
         writer_.flush();
     }
 
@@ -116,7 +119,7 @@ public class IPCClient extends Client {
     @SneakyThrows(IOException.class)
     private byte[] doRead() {
         int length = (int) reader_.readLong(); // n.b.: the server writes a size_t (long)
-        byte[] content = new byte[(int) length];
+        byte[] content = new byte[length];
         reader_.read(content, 0, length);
         return content;
     }
