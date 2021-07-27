@@ -13,24 +13,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package vineyard
 
 import (
+	"net"
 	"testing"
-
-	"gotest.tools/v3/assert"
 )
 
-func TestObjectID(t *testing.T) {
-	var s string = ObjectIDToString(1234)
-	var o, _ = ObjectIDFromString(s)
-	assert.Equal(t, s, "o00000000000004d2")
-	assert.Equal(t, o, uint64(1234))
+// need root permission to run
+func TestConnectIPCSocketRetry(t *testing.T) {
+	var pathname string = "/var/run/vineyard.sock"
+	conn := new(net.UnixConn)
+	err := ConnectIPCSocketRetry(pathname, &conn)
+	if err != nil {
+		t.Fatal("Connect to IPC socket failed", err.Error())
+	}
+	conn.Close()
 }
 
-func TestSignature(t *testing.T) {
-	var s string = SignatureToString(1234)
-	var o, _ = SignatureFromString(s)
-	assert.Equal(t, s, "s00000000000004d2")
-	assert.Equal(t, o, uint64(1234))
+func TestConnectRPCSocketRetry(t *testing.T) {
+	var host string = "127.0.0.1"
+	var port uint16 = 9600
+	var conn net.Conn
+	err := ConnectRPCSocketRetry(host, port, &conn)
+	if err != nil {
+		t.Fatal("Connect to IPC socket failed", err.Error())
+	}
+	conn.Close()
 }

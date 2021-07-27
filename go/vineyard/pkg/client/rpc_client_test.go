@@ -13,24 +13,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package vineyard
 
-import (
-	"testing"
+import "testing"
 
-	"gotest.tools/v3/assert"
-)
-
-func TestObjectID(t *testing.T) {
-	var s string = ObjectIDToString(1234)
-	var o, _ = ObjectIDFromString(s)
-	assert.Equal(t, s, "o00000000000004d2")
-	assert.Equal(t, o, uint64(1234))
-}
-
-func TestSignature(t *testing.T) {
-	var s string = SignatureToString(1234)
-	var o, _ = SignatureFromString(s)
-	assert.Equal(t, s, "s00000000000004d2")
-	assert.Equal(t, o, uint64(1234))
+func TestRPCServer_Connect(t *testing.T) {
+	ipcAddr := "0.0.0.0:9600"
+	var rpcServer RPCServer
+	err := rpcServer.Connect(ipcAddr)
+	if err != nil {
+		t.Error("conect to rpc server failed", err.Error())
+	}
+	err = rpcServer.Disconnect()
+	if err != nil {
+		t.Error("discconect rpc server failed", err.Error())
+	}
 }
