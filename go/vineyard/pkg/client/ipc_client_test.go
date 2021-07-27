@@ -16,8 +16,9 @@ limitations under the License.
 package vineyard
 
 import (
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 	"testing"
+
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
 func TestIPCServer_Connect(t *testing.T) {

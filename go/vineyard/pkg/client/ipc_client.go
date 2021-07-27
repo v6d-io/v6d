@@ -17,8 +17,9 @@ package vineyard
 
 import (
 	"encoding/json"
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 	"net"
+
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
 type IPCClient struct {
@@ -72,7 +73,7 @@ func (i *IPCClient) Connect(ipcSocket string) error {
 	return nil
 }
 
-func (i *IPCClient) CreateBlob(size int, ) {
+func (i *IPCClient) CreateBlob(size int) {
 	if i.connected == false {
 		return
 	}

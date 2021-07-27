@@ -18,8 +18,9 @@ package vineyard
 import (
 	"encoding/json"
 	"errors"
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 	"net"
+
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
 type ClientBase struct {

@@ -17,10 +17,11 @@ package vineyard
 
 import (
 	"encoding/json"
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
 type RPCClient struct {
