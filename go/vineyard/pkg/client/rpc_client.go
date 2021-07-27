@@ -14,3 +14,70 @@ limitations under the License.
 */
 
 package vineyard
+
+import (
+	"encoding/json"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+	"net"
+	"strconv"
+	"strings"
+)
+
+type RPCServer struct {
+	ClientBase
+	connected        bool
+	ipcSocket        string
+	conn             *net.UnixConn
+	instanceID       int
+	remoteInstanceID int
+	rpcEndpoint      string
+}
+
+func (r *RPCServer) Connect(rpcEndpoint string) error {
+	if r.connected || r.rpcEndpoint == rpcEndpoint {
+		return nil
+	}
+	r.rpcEndpoint = rpcEndpoint
+
+	str := strings.Split(rpcEndpoint, ":")
+	host := str[0]
+	port := str[1]
+	if port == "" {
+		port = "9600"
+	}
+	var conn net.Conn
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return err
+	}
+	err = ConnectRPCSocketRetry(host, uint16(portNum), &conn)
+	if err != nil {
+		return err
+	}
+
+	r.ClientBase.conn = conn
+	var messageOut string
+	common.WriteRegisterRequest(&messageOut)
+	if err := r.DoWrite(messageOut); err != nil {
+		return err
+	}
+	var messageIn string
+	err = r.DoRead(&messageIn)
+	if err != nil {
+		return err
+	}
+	var registerReply common.RegisterReply
+	err = json.Unmarshal([]byte(messageIn), &registerReply)
+	if err != nil {
+		return err
+	}
+
+	r.connected = true
+	r.ipcSocket = registerReply.IPCSocket
+	r.remoteInstanceID = registerReply.InstanceID
+	// TODO: compatible server check
+
+	// r.instanceID = registerReply.InstanceID
+	// fmt.Println(messageIn)
+	return nil
+}

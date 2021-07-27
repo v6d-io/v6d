@@ -14,3 +14,60 @@ limitations under the License.
 */
 
 package vineyard
+
+import (
+	"encoding/json"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+	"net"
+)
+
+type IPCServer struct {
+	ClientBase
+	connected     bool
+	ipcSocket     string
+	conn          *net.UnixConn
+	instanceID    int
+	serverVersion string
+	rpcEndpoint   string
+}
+
+// Connect to IPCServer steps as follows
+// 1. using unix socket connecct to vineyead server
+// 2. sending register request to server and get response from server
+// Note: you should send message's length first to server, then send message
+func (i *IPCServer) Connect(ipcSocket string) error {
+	if i.connected || i.ipcSocket == ipcSocket {
+		return nil
+	}
+	i.ipcSocket = ipcSocket
+	i.conn = new(net.UnixConn)
+	if err := ConnectIPCSocketRetry(i.ipcSocket, &i.conn); err != nil {
+		return err
+	}
+	i.ClientBase.conn = i.conn
+	var messageOut string
+	common.WriteRegisterRequest(&messageOut)
+	if err := i.DoWrite(messageOut); err != nil {
+		return err
+	}
+	var messageIn string
+	err := i.DoRead(&messageIn)
+	if err != nil {
+		return err
+	}
+	var registerReply common.RegisterReply
+	err = json.Unmarshal([]byte(messageIn), &registerReply)
+	if err != nil {
+		return err
+	}
+	i.instanceID = registerReply.InstanceID
+	if registerReply.Version == "" {
+		i.serverVersion = common.DEFAULT_SERVER_VERSION
+	} else {
+		i.serverVersion = registerReply.Version
+	}
+	i.connected = true
+	i.rpcEndpoint = registerReply.RPCEndpoint
+	// TODO: compatible server check
+	return nil
+}
