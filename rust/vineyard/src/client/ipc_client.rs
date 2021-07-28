@@ -12,15 +12,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+use std::env;
+use std::io::{self, ErrorKind};
+
 use super::client::Client;
+use super::ObjectID;
 use super::ObjectMeta;
+
 
 #[derive(Debug)]
 pub struct IPCClient {}
 
 impl Client for IPCClient {
-    fn connect(&self, socket: &str) -> bool {
-        true
+    fn connect(&self, socket: &str) -> Result<u64, io::Error> {
+        panic!("")
     }
 
     fn disconnect(&self) {}
@@ -29,8 +35,14 @@ impl Client for IPCClient {
         true
     }
 
-    fn get_meta_data(&self, object_id: u64, sync_remote: bool) -> ObjectMeta {
-        ObjectMeta {}
+    fn get_meta_data(&self, 
+        object_id: ObjectID, 
+        sync_remote: bool
+    ) -> Result<ObjectMeta, io::Error>{
+        Ok(ObjectMeta {
+            client: None,
+            meta: String::new(),
+        })
     }
 }
 

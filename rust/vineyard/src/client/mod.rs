@@ -25,3 +25,5 @@ pub use self::ds::object_factory::ObjectFactory;
 pub use self::ds::object_meta::ObjectMeta;
 
 pub use self::ds::object::Object;
+
+pub use self::ds::ObjectID;
