@@ -15,6 +15,8 @@ limitations under the License.
 
 use std::env;
 use std::io::{self, ErrorKind};
+use std::os::unix::net::UnixStream;
+use std::io::prelude::*;
 
 use super::client::Client;
 use super::ObjectID;
@@ -26,6 +28,9 @@ pub struct IPCClient {}
 
 impl Client for IPCClient {
     fn connect(&self, socket: &str) -> Result<u64, io::Error> {
+        // TODO: Create a socket
+        // Write a request  ( You need to start the vineyardd server on the same socket)
+        // Read the reply
         panic!("")
     }
 
@@ -45,6 +50,7 @@ impl Client for IPCClient {
         })
     }
 }
+// TODO: Test the connect
 
 #[cfg(test)]
 mod tests {
