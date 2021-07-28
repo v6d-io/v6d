@@ -16,3 +16,10 @@ pub mod blob;
 pub mod object;
 pub mod object_factory;
 pub mod object_meta;
+
+pub use super::client::Client;
+pub use super::ipc_client::IPCClient;
+pub use super::rpc_client::RPCClient;
+
+
+pub type ObjectID = u64;
