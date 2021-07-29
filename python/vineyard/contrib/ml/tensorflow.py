@@ -30,6 +30,7 @@ except:
 from pandas.core.internals.managers import BlockManager
 import numpy as np
 import tensorflow as tf
+import vineyard
 
 
 def tf_tensor_builder(client, value, **kw):
@@ -82,6 +83,16 @@ def tf_builder(client, value, builder, **kw):
             return tf_dataframe_builder(client, value, builder, **kw)
         else:
             return tf_tensor_builder(client, value, **kw)
+
+
+def tf_create_global_tensor(client, value, builder, **kw):
+    # TODO
+    pass
+
+
+def tf_create_global_dataframe(client, value, builder, **kw):
+    # TODO
+    pass
 
 
 def tf_tensor_resolver(obj):
@@ -145,6 +156,34 @@ def tf_table_resolver(obj, resolver):
     return tf.data.Dataset.from_tensor_slices((dict(arrow), labels))
 
 
+def tf_global_tensor_resolver(obj, **kw):
+    meta = obj.meta
+    endpoint = kw.get('endpoint')
+    client = vineyard.connect(endpoint)
+    num = from_json(meta['num'])
+    partition_index = from_json(meta['partition_index_'])
+    data = []
+    for i in range(partition_index):
+        loc = meta[f'partition_{i}']
+        if loc.islocal:
+            data.append(client.get(loc.id))
+    return data
+
+
+def tf_global_dataframe_resolver(obj, **kw):
+    meta = obj.meta
+    endpoint = kw.get('endpoint')
+    client = vineyard.connect(endpoint)
+    num = from_json(meta['num'])
+    partition_index = from_json(meta['partition_index_'])
+    data = []
+    for i in range(partition_index):
+        loc = meta[f'partition_{i}']
+        if loc.islocal:
+            data.append(client.get(loc.id))
+    return data
+
+
 def register_tf_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(tf.data.Dataset, tf_builder)
@@ -154,3 +193,5 @@ def register_tf_types(builder_ctx, resolver_ctx):
         resolver_ctx.register('vineyard::DataFrame', tf_dataframe_resolver)
         resolver_ctx.register('vineyard::RecordBatch', tf_recordBatch_resolver)
         resolver_ctx.register('vineyard::Table', tf_table_resolver)
+        resolver_ctx.register('vineyard::GlobalTensor', tf_global_tensor_resolver)
+        resolver_ctx.register('vineyard::GlobalDataFrame', tf_global_dataframe_resolver)
