@@ -13,18 +13,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::io::{self, ErrorKind};
+use std::env;
+use std::io::{self, ErrorKind, Error};
+use std::os::unix::net::UnixStream;
+use std::io::prelude::*;
+use std::path::Path;
 
 use super::client::Client;
 use super::ObjectID;
+use super::InstanceID;
 use super::ObjectMeta;
 
 #[derive(Debug)]
-pub struct RPCClient {}
+pub struct RPCClient {
+    connected: bool,
+    ipc_socket: String,
+    rpc_endpoint: String,
+    vinyard_conn: i64,
+    instance_id: InstanceID,
+    server_version: String,
+}
 
 impl Client for RPCClient {
-    fn connect(&self, socket: &str) -> Result<u64, io::Error> {
-        panic!("")
+    fn connect(&mut self, socket: &str) -> Result<(), Error> {
+        panic!("");
     }
 
     fn disconnect(&self) {}
@@ -36,7 +48,7 @@ impl Client for RPCClient {
     fn get_meta_data(&self, 
         object_id: ObjectID, 
         sync_remote: bool
-    ) -> Result<ObjectMeta, io::Error>{
+    ) -> Result<ObjectMeta, Error>{
         Ok(ObjectMeta {
             client: None,
             meta: String::new(),

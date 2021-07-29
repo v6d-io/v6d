@@ -14,7 +14,7 @@ limitations under the License.
 */
 
 use std::rc::Rc;
-use std::io::{self, ErrorKind};
+use std::io::{self, Error, ErrorKind};
 
 use super::Client;
 use super::blob::Blob;
@@ -24,7 +24,7 @@ use super::ObjectID;
 
 
 pub trait ObjectBase {
-    fn build(client:Box<dyn Client>) -> Result<Blob, io::Error>; // TODO: Confirm types
+    fn build(client:Box<dyn Client>) -> Result<Blob, Error>;
     fn seal(client:Box<dyn Client>) -> Rc<Object>;
 }
 
@@ -36,7 +36,7 @@ pub struct Object {
 
 
 impl ObjectBase for Object{
-    fn build(client:Box<dyn Client>) -> Result<Blob, io::Error>{
+    fn build(client:Box<dyn Client>) -> Result<Blob, Error>{
         panic!("")
 
     }
@@ -55,7 +55,7 @@ pub struct ObjectBuilder {
 }
 
 impl ObjectBase for ObjectBuilder{
-    fn build(client:Box<dyn Client>) -> Result<Blob, io::Error>{
+    fn build(client:Box<dyn Client>) -> Result<Blob, Error>{
         panic!("")
 
     }

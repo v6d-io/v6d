@@ -21,5 +21,5 @@ pub use super::client::Client;
 pub use super::ipc_client::IPCClient;
 pub use super::rpc_client::RPCClient;
 
-
-pub type ObjectID = u64;
+pub use crate::common::util::ObjectID;
+pub use crate::common::util::InstanceID;

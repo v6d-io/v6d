@@ -15,7 +15,8 @@ limitations under the License.
 
 use super::ObjectID;
 use super::ObjectMeta;
-use std::io::{self, ErrorKind};
+use std::io::{self, ErrorKind, Error};
+use std::os::unix::net::UnixStream;
 
 pub trait Client {
 
@@ -23,9 +24,9 @@ pub trait Client {
     // Parameters: ipc_socket – Location of the UNIX domain socket.
     // Returns: Status that indicates whether the connect has succeeded.
     fn connect(
-        &self, 
+        &mut self, 
         socket: &str
-    ) -> Result<u64, io::Error>; // TODO: Check result types
+    ) -> Result<(), Error>; // TODO: Check result types
 
     // Disconnect this client.
     fn disconnect(&self);
@@ -45,5 +46,5 @@ pub trait Client {
         &self, 
         object_id: ObjectID, 
         sync_remote: bool,
-    ) -> Result<ObjectMeta, std::io::Error>;
+    ) -> Result<ObjectMeta, Error>;
 }
