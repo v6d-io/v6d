@@ -325,7 +325,7 @@ jobs:
 
             rm -rf default.etcd
             rm -rf /dev/shm/etcd*
-            python3 test/runner.py --with-python --with-migration
+            python3 test/runner.py --with-python --with-migration --with-contrib-ml
 
       - name: Run Python Tests
         if: ${{ github.event_name == 'pull_request' }}
