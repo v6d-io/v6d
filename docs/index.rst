@@ -21,6 +21,7 @@ Contents
    notes/install.rst
    notes/getting-started.rst
    notes/divein.rst
+   notes/ml.rst
 
 Reference
 ---------
