@@ -45,3 +45,12 @@ def test_resolver_context(vineyard_client):
     result = vineyard_client.get(o)
     assert result == value
     assert result != 'faked tuple'
+
+    with resolver_context({'vineyard::Tuple': fake_tuple_resolver}) as ctx:
+        result = vineyard_client.get(o)
+        assert result != value
+        assert result == 'faked tuple'
+
+    result = vineyard_client.get(o)
+    assert result == value
+    assert result != 'faked tuple'
