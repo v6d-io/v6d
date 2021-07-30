@@ -67,7 +67,7 @@ def pandas_dataframe_resolver(obj, resolver):
     if 'index_' in meta:
         index = resolver.run(obj.member('index_'))
     else:
-        index = np.arange(index_size)
+        index = pd.RangeIndex(index_size)
     return pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
 
 

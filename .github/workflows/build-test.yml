@@ -341,7 +341,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-python --with-migration
+          python3 test/runner.py --with-python --with-migration --with-contrib-ml
 
       - name: Setup tmate session
         if: false

@@ -84,6 +84,8 @@ setup(
     zip_safe=False,
     install_requires=[
         'vineyard',
+        'tensorflow',
+        'xgboost',
     ],
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
