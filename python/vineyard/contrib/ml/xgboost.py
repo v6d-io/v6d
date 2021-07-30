@@ -19,6 +19,7 @@
 from vineyard._C import ObjectMeta
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 from vineyard.data import tensor, dataframe, arrow
+from vineyard.core.resolver import resolver_context
 
 import pandas as pd
 import pyarrow as pa
@@ -44,34 +45,15 @@ def xgb_tensor_resolver(obj):
 
 
 def xgb_dataframe_resolver(obj, resolver, **kw):
-    meta = obj.meta
-    columns = from_json(meta['columns_'])
-    if not columns:
-        return pd.DataFrame()
-    # ensure zero-copy
-    blocks = []
-    index_size = 0
-    for idx, name in enumerate(columns):
-        np_value = tensor.numpy_ndarray_resolver(obj.member('__values_-value-%d' % idx))
-        index_size = len(np_value)
-        # ndim: 1 for SingleBlockManager/Series, 2 for BlockManager/DataFrame
-        if BlockPlacement:
-            placement = BlockPlacement(slice(idx, idx + 1, 1))
-        else:
-            placement = slice(idx, idx + 1, 1)
-        values = np.expand_dims(np_value, 0)
-        blocks.append(Block(values, placement, ndim=2))
-    # FIXME: will be fixed after we implement `resolver_context`, to avoid the
-    # index being resolved as a `DMatrix`.
-    index = pd.RangeIndex(index_size)
-    df = pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
-    if 'label' in kw:
-        label = df.pop(kw['label'])
-        # data column can only be specified if label column is specified
-        if 'data' in kw:
-            df = np.stack(df[kw['data']].values)
-        return xgb.DMatrix(df, label)
-    return xgb.DMatrix(df)
+    with resolver_context({'vineyard::Tensor': tensor.numpy_ndarray_resolver}) as ctx:
+        df = dataframe.pandas_dataframe_resolver(obj, ctx)
+        if 'label' in kw:
+            label = df.pop(kw['label'])
+            # data column can only be specified if label column is specified
+            if 'data' in kw:
+                df = np.stack(df[kw['data']].values)
+            return xgb.DMatrix(df, label)
+        return xgb.DMatrix(df)
 
 
 def xgb_recordBatch_resolver(obj, resolver, **kw):
@@ -85,18 +67,14 @@ def xgb_recordBatch_resolver(obj, resolver, **kw):
 
 
 def xgb_table_resolver(obj, resolver, **kw):
-    meta = obj.meta
-    batch_num = int(meta['batch_num_'])
-    batches = []
-    for idx in range(int(meta['__batches_-size'])):
-        batches.append(arrow.record_batch_resolver(obj.member('__batches_-%d' % idx), resolver))
-    tb = pa.Table.from_batches(batches)
-    # FIXME to_pandas is not zero_copy guaranteed
-    df = tb.to_pandas()
-    if 'label' in kw:
-        label = df.pop(kw['label'])
-        return xgb.DMatrix(df, label)
-    return xgb.DMatrix(df)
+    with resolver_context({'vineyard::RecordBatch': arrow.record_batch_resolver}) as ctx:
+        tb = arrow.table_resolver(obj, ctx)
+        # FIXME to_pandas is not zero_copy guaranteed
+        df = tb.to_pandas()
+        if 'label' in kw:
+            label = df.pop(kw['label'])
+            return xgb.DMatrix(df, label)
+        return xgb.DMatrix(df)
 
 
 def register_xgb_types(builder_ctx, resolver_ctx):
