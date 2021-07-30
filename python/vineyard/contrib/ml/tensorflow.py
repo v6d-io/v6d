@@ -167,7 +167,10 @@ def tf_global_tensor_resolver(obj, **kw):
         loc = meta[f'partition_{i}']
         if loc.islocal:
             data.append(client.get(loc.id))
-    return data
+    tfData = data[0]
+    for i in range(1, len(data)):
+        tfData = tfData.concatenate(data[i])
+    return tfData
 
 
 def tf_global_dataframe_resolver(obj, **kw):
@@ -181,7 +184,10 @@ def tf_global_dataframe_resolver(obj, **kw):
         loc = meta[f'partition_{i}']
         if loc.islocal:
             data.append(client.get(loc.id))
-    return data
+    tfData = data[0]
+    for i in range(1, len(data)):
+        tfData = tfData.concatenate(data[i])
+    return tfData
 
 
 def register_tf_types(builder_ctx, resolver_ctx):
