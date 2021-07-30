@@ -73,7 +73,7 @@ class BuilderContext():
 
     def extend(self, builders=None):
         builder = BuilderContext()
-        builder.__factory = copy.copy(builder.__factory)
+        builder.__factory = copy.copy(self.__factory)
         if builders:
             builder.__factory.update(builders)
         return builder
