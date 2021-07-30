@@ -17,7 +17,9 @@
 #
 
 from collections import defaultdict
+import contextlib
 import functools
+import threading
 
 from sortedcontainers import SortedDict
 
@@ -40,8 +42,38 @@ class DriverContext():
                 setattr(obj, meth_name, meth)
         return obj
 
+    def extend(self, drivers=None):
+        driver = DriverContext()
+        driver.__factory.update(((k, v.copy()) for k, v in self.__factory.items()))
+        if drivers:
+            driver.__factory.update(drivers)
+        return driver
+
 
 default_driver_context = DriverContext()
+
+_driver_context_local = threading.local()
+_driver_context_local.default_driver = default_driver_context
+
+
+def get_current_drivers():
+    default_driver = getattr(_driver_context_local, 'default_driver', None)
+    if not default_driver:
+        default_driver = default_driver_context.extend()
+    return default_driver
+
+
+@contextlib.contextmanager
+def driver_context(drivers=None, base=None):
+    current_driver = get_current_drivers()
+    try:
+        drivers = drivers or dict()
+        base = base or current_driver
+        local_driver = base.extend(drivers)
+        _driver_context_local.default_driver = local_driver
+        yield local_driver
+    finally:
+        _driver_context_local.default_driver = current_driver
 
 
 def repartition(g):
@@ -104,4 +136,10 @@ def registerize(func):
     return wrap
 
 
-__all__ = ['default_driver_context', 'register_builtin_drivers', 'registerize']
+__all__ = [
+    'default_driver_context',
+    'register_builtin_drivers',
+    'driver_context',
+    'get_current_drivers',
+    'registerize',
+]

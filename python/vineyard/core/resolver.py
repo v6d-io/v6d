@@ -16,12 +16,15 @@
 # limitations under the License.
 #
 
+import contextlib
 import inspect
+import threading
+
 from sortedcontainers import SortedDict
 
 from vineyard._C import IPCClient, RPCClient, ObjectID, Object
 from vineyard.core.utils import find_most_precise_match
-from vineyard.core.driver import default_driver_context
+from vineyard.core.driver import default_driver_context, get_current_drivers
 
 
 class ResolverContext():
@@ -41,8 +44,38 @@ class ResolverContext():
             return resolver(obj, **kw)
         return None
 
+    def extend(self, resolvers=None):
+        resolver = ResolverContext()
+        resolver.__factory = self.__factory.copy()
+        if resolvers:
+            resolver.__factory.update(resolvers)
+        return resolver
+
 
 default_resolver_context = ResolverContext()
+
+_resolver_context_local = threading.local()
+_resolver_context_local.default_resolver = default_resolver_context
+
+
+def get_current_resolvers():
+    default_resolver = getattr(_resolver_context_local, 'default_resolver', None)
+    if not default_resolver:
+        default_resolver = default_resolver_context.extend()
+    return default_resolver
+
+
+@contextlib.contextmanager
+def resolver_context(resolvers=None, base=None):
+    current_resolver = get_current_resolvers()
+    try:
+        resolvers = resolvers or dict()
+        base = base or current_resolver
+        local_resolver = base.extend(resolvers)
+        _resolver_context_local.default_resolver = local_resolver
+        yield local_resolver
+    finally:
+        _resolver_context_local.default_resolver = current_resolver
 
 
 def get(client, object_id, resolver=None, **kw):
@@ -81,7 +114,7 @@ def get(client, object_id, resolver=None, **kw):
     if resolver is not None:
         value = resolver(obj, **kw)
     else:
-        value = default_resolver_context.run(obj, **kw)
+        value = get_current_resolvers().run(obj, **kw)
     if value is None:
         # if the obj has been resolved by pybind types, and there's no proper resolver, it
         # shouldn't be an error
@@ -98,7 +131,7 @@ def get(client, object_id, resolver=None, **kw):
         pass
 
     # register methods
-    default_driver_context.resolve(value, obj.typename)
+    get_current_drivers().resolve(value, obj.typename)
 
     # return value
     return value
@@ -107,4 +140,8 @@ def get(client, object_id, resolver=None, **kw):
 setattr(IPCClient, 'get', get)
 setattr(RPCClient, 'get', get)
 
-__all__ = ['default_resolver_context']
+__all__ = [
+    'default_resolver_context',
+    'resolver_context',
+    'get_current_resolvers',
+]
