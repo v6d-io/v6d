@@ -17,9 +17,9 @@
 #
 
 from vineyard._C import ObjectMeta
+from vineyard.core.resolver import resolver_context
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 from vineyard.data import tensor, dataframe, arrow
-from vineyard.core.resolver import resolver_context
 
 import pandas as pd
 import pyarrow as pa
