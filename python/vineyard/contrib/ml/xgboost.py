@@ -61,7 +61,10 @@ def xgb_dataframe_resolver(obj, resolver, **kw):
             placement = slice(idx, idx + 1, 1)
         values = np.expand_dims(np_value, 0)
         blocks.append(Block(values, placement, ndim=2))
-    index = np.arange(index_size)
+    if 'index_' in meta:
+        index = resolver.run(obj.member('index_'))
+    else:
+        index = pd.RangeIndex(index_size)
     df = pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
     if 'label' in kw:
         label = df.pop(kw['label'])
