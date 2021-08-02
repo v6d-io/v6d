@@ -1,5 +1,5 @@
-Getting Started
-===============
+Machine Learning with Vineyard
+==============================
 
 TensorFlow
 ----------
