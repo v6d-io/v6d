@@ -30,6 +30,9 @@ class DriverContext():
     def __init__(self):
         self.__factory = defaultdict(SortedDict)
 
+    def __str__(self) -> str:
+        return str(self.__factory)
+
     def register(self, typename_prefix, meth, func):
         self.__factory[meth][typename_prefix] = func
 

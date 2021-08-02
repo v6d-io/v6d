@@ -24,9 +24,17 @@ import pytest
 
 import vineyard
 from vineyard.core import default_builder_context, default_resolver_context
+from vineyard.core.builder import builder_context
+from vineyard.core.resolver import resolver_context
 from vineyard.contrib.ml.xgboost import register_xgb_types
 
-register_xgb_types(default_builder_context, default_resolver_context)
+
+@pytest.fixture(scope="module", autouse=True)
+def vineyard_for_xgboost():
+    with builder_context() as builder:
+        with resolver_context() as resolver:
+            register_xgb_types(builder, resolver)
+            yield builder, resolver
 
 
 def test_numpy_ndarray(vineyard_client):
