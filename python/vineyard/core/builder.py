@@ -28,6 +28,9 @@ class BuilderContext():
     def __init__(self):
         self.__factory = dict()
 
+    def __str__(self) -> str:
+        return str(self.__factory)
+
     def register(self, type_id, builder):
         ''' Register a Python type to the builder context.
 

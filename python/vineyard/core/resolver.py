@@ -31,6 +31,9 @@ class ResolverContext():
     def __init__(self):
         self.__factory = SortedDict()
 
+    def __str__(self) -> str:
+        return str(self.__factory)
+
     def register(self, typename_prefix, resolver):
         self.__factory[typename_prefix] = resolver
 
