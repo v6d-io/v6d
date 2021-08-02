@@ -22,8 +22,6 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
 from vineyard.contrib.ml.xgboost import register_xgb_types
