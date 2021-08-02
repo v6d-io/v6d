@@ -29,6 +29,7 @@ Reference
 .. toctree::
    :maxdepth: 6
 
+   notes/ctl.rst
    notes/cpp_api.rst
    notes/python_api.rst
 
