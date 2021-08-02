@@ -18,7 +18,7 @@
 
 """vineyard-ctl: A command line tool for vineyard."""
 
-from argparse import ArgumentParser
+import argparse
 import sys
 import os
 import json
@@ -26,13 +26,46 @@ import pandas as pd
 
 import vineyard
 
+examples = """
+Some examples on how to use vineyard-ctl:
+
+1. Connect to a vineyard server
+    >>> vineyard-ctl --ipc_socket /var/run/vineyard.sock
+
+2. List vineyard objects
+    >>> vineyard-ctl ls --limit 6
+
+3. Query a vineyard object
+    >>> vineyard-ctl query --object_id 00002ec13bc81226
+
+4. Print first n lines of a vineyard object
+    >>> vineyard-ctl head --object_id 00002ec13bc81226 --limit 3
+
+5. Copy a vineyard object
+    >>> vineyard-ctl copy --object_id 00002ec13bc81226 --shallow
+
+6. Delete a vineyard object
+    >>> vineyard-ctl del --object_id 00002ec13bc81226
+
+7. Get the status of connected vineyard server
+    >>> vineyard-ctl stat
+
+8. Put a python value to vineyard
+    >>> vineyard-ctl put --file example_csv_file.csv
+
+9. Edit configuration file
+    >>> vineyard-ctl config --ipc_socket_value /var/run/vineyard.sock
+"""
+
 
 def vineyard_argument_parser():
     """Utility to create a command line Argument Parser."""
-    parser = ArgumentParser(prog='vineyard-ctl',
-                            usage='%(prog)s [options]',
-                            description='vineyard-ctl: A command line tool for vineyard',
-                            allow_abbrev=False)
+    parser = argparse.ArgumentParser(prog='vineyard-ctl',
+                                     usage='%(prog)s [options]',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description='vineyard-ctl: A command line tool for vineyard',
+                                     allow_abbrev=False,
+                                     epilog=examples)
     parser.add_argument('--version', action='version', version=f'{parser.prog} v{vineyard.__version__}')
     parser.add_argument('--ipc_socket', help='Socket location of connected vineyard server')
     parser.add_argument('--rpc_host', help='RPC HOST of the connected vineyard server')
@@ -41,7 +74,10 @@ def vineyard_argument_parser():
 
     cmd_parser = parser.add_subparsers(title='commands', dest='cmd')
 
-    ls_opt = cmd_parser.add_parser('ls', help='List vineyard objects')
+    ls_opt = cmd_parser.add_parser('ls',
+                                   formatter_class=argparse.RawDescriptionHelpFormatter,
+                                   description='Description: List vineyard objects',
+                                   epilog='Example:\n\n>>> vineyard-ctl ls --pattern * --regex --limit 8')
     ls_opt.add_argument('--pattern',
                         default='*',
                         type=str,
@@ -51,19 +87,41 @@ def vineyard_argument_parser():
                         help='The pattern string will be considered as a regex expression')
     ls_opt.add_argument('--limit', default=5, type=int, help='The limit to list')
 
-    query_opt = cmd_parser.add_parser('query', help='Get a vineyard object')
+    query_opt = cmd_parser.add_parser('query',
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      description='Description: Query a vineyard object',
+                                      epilog=('Example:\n\n>>> vineyard-ctl query --object_id ' +
+                                              '00002ec13bc81226 --meta json --metric typename'))
     query_opt.add_argument('--object_id', required=True, help='ID of the object to be fetched')
     query_opt.add_argument('--meta', choices=['simple', 'json'], help='Metadata of the object')
     query_opt.add_argument('--metric', choices=['nbytes', 'signature', 'typename'], help='Metric data of the object')
     query_opt.add_argument('--exists', action='store_true', help='Check if the object exists or not')
-    query_opt.add_argument('--copy', action='store_true', help='Copy the object')
-    query_opt.add_argument('--head', action='store_true', help='Get the head of the object')
     query_opt.add_argument('--stdout', action='store_true', help='Get object to stdout')
     query_opt.add_argument('--output_file', type=str, help='Get object to file')
     query_opt.add_argument('--tree', action='store_true', help='Get object lineage in tree-like style')
 
-    del_opt = cmd_parser.add_parser('del', help='Delete a vineyard object')
-    del_opt.add_argument('--object_id', required=True, help='ID of the object to be deleted')
+    head_opt = cmd_parser.add_parser('head',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description='Description: Print first n(limit) lines of a vineyard object',
+                                     epilog='Example:\n\n>>> vineyard-ctl head --object_id 00002ec13bc81226 --limit 3')
+    head_opt.add_argument('--object_id', required=True, help='ID of the object to be printed')
+    head_opt.add_argument('--limit', type=int, default=5, help='Number of lines of the object to be printed')
+
+    copy_opt = cmd_parser.add_parser('copy',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description='Description: Copy a vineyard object',
+                                     epilog='Example:\n\n>>> vineyard-ctl copy --object_id 00002ec13bc81226 --shallow')
+    copy_opt.add_argument('--object_id', required=True, help='ID of the object to be copied')
+    copy_opt.add_argument('--shallow', action='store_true', help='Get a shallow copy of the object')
+    copy_opt.add_argument('--deep', action='store_true', help='Get a deep copy of the object')
+
+    del_opt = cmd_parser.add_parser('del',
+                                    formatter_class=argparse.RawDescriptionHelpFormatter,
+                                    description='Description: Delete a vineyard object',
+                                    epilog='Example:\n\n>>> vineyard-ctl del --object_id 00002ec13bc81226 --force')
+    del_opt_group = del_opt.add_mutually_exclusive_group(required=True)
+    del_opt_group.add_argument('--object_id', help='ID of the object to be deleted')
+    del_opt_group.add_argument('--regex_pattern', help='Delete all the objects that match the regex pattern')
     del_opt.add_argument('--force',
                          action='store_true',
                          help='Recursively delete even if the member object is also referred by others')
@@ -71,7 +129,10 @@ def vineyard_argument_parser():
                          action='store_true',
                          help='Deeply delete an object means we will deleting the members recursively')
 
-    stat_opt = cmd_parser.add_parser('stat', help='Get the status of connected vineyard server')
+    stat_opt = cmd_parser.add_parser('stat',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description='Description: Get the status of connected vineyard server',
+                                     epilog='Example:\n\n>>> vineyard-ctl stat')
     stat_opt.add_argument('--instance_id',
                           dest='properties',
                           action='append_const',
@@ -108,13 +169,23 @@ def vineyard_argument_parser():
                           const='rpc_connections',
                           help='Number of alive RPC connections on the current vineyardd instance')
 
-    put_opt = cmd_parser.add_parser('put', help='Put python value to vineyard')
+    put_opt = cmd_parser.add_parser('put',
+                                    formatter_class=argparse.RawDescriptionHelpFormatter,
+                                    description='Description: Put a python value to vineyard',
+                                    epilog='Example:\n\n>>> vineyard-ctl put --file example_csv_file.csv --sep ,')
 
     put_opt_group = put_opt.add_mutually_exclusive_group(required=True)
     put_opt_group.add_argument('--value', help='The python value you want to put to the vineyard server')
     put_opt_group.add_argument('--file', help='The file you want to put to the vineyard server as a pandas dataframe')
+    put_opt_group.add_argument('--sep', default=',', help='Delimiter used in the file')
+    put_opt_group.add_argument('--delimiter', default=',', help='Delimiter used in the file')
+    put_opt_group.add_argument('--header', type=int, default=0, help='Row number to use as the column names')
 
-    config_opt = cmd_parser.add_parser('config', help='Edit configuration file')
+    config_opt = cmd_parser.add_parser('config',
+                                       formatter_class=argparse.RawDescriptionHelpFormatter,
+                                       description='Description: Edit configuration file',
+                                       epilog=('Example:\n\n>>> vineyard-ctl config --ipc_socket_value ' +
+                                               '/var/run/vineyard.sock'))
     config_opt.add_argument('--ipc_socket_value', help='The ipc_socket value to enter in the config file')
     config_opt.add_argument('--rpc_host_value', help='The rpc_host value to enter in the config file')
     config_opt.add_argument('--rpc_port_value', help='The rpc_port value to enter in the config file')
@@ -161,7 +232,7 @@ def connect_via_config_file():
             rpc_port = None
         rpc_endpoint = sockets[3].split(':')[1][:-1]
     except BaseException as exc:
-        raise Exception(f'The config file is either not present or not formatted correctly.\n{exc}') from exc
+        raise Exception('The config file is either not present or not formatted correctly.') from exc
     if ipc_socket:
         client = vineyard.connect(ipc_socket)
         # force use rpc client in cli tools
@@ -184,13 +255,13 @@ def as_object_id(object_id):
         return vineyard.ObjectID.wrap(object_id)
 
 
-def list_obj(client, args):
+def list_object(client, args):
     """Utility to list vineyard objects."""
     try:
         objects = client.list_objects(pattern=args.pattern, regex=args.regex, limit=args.limit)
         print(f"List of your vineyard objects:\n{objects}")
     except BaseException as exc:
-        raise Exception(f'The following error was encountered while listing vineyard objects:\n{exc}') from exc
+        raise Exception('The following error was encountered while listing vineyard objects:') from exc
 
 
 def query(client, args):
@@ -202,7 +273,7 @@ def query(client, args):
         if args.exists:
             print(f"The object with object_id({args.object_id}) doesn't exists")
         raise Exception(('The following error was encountered while fetching ' +
-                         f'the vineyard object({args.object_id}):\n{exc}')) from exc
+                         f'the vineyard object({args.object_id}):')) from exc
 
     if args.exists:
         print(f'The object with object_id({args.object_id}) exists')
@@ -221,14 +292,29 @@ def query(client, args):
         print(f'{args.metric}: {getattr(value, args.metric)}')
 
 
-def delete_obj(client, args):
+def delete_object(client, args):
     """Utility to delete a vineyard object based on object_id."""
-    try:
-        client.delete(object_id=as_object_id(args.object_id), force=args.force, deep=args.deep)
-        print(f'The vineyard object({args.object_id}) was deleted successfully')
-    except BaseException as exc:
-        raise Exception(('The following error was encountered while deleting ' +
-                         f'the vineyard object({args.object_id}):\n{exc}')) from exc
+    if args.object_id is not None:
+        try:
+            client.delete(object_id=as_object_id(args.object_id), force=args.force, deep=args.deep)
+            print(f'The vineyard object({args.object_id}) was deleted successfully')
+        except BaseException as exc:
+            raise Exception(('The following error was encountered while deleting ' +
+                             f'the vineyard object({args.object_id}):')) from exc
+    elif args.regex_pattern is not None:
+        try:
+            objects = client.list_objects(pattern=args.regex_pattern, regex=True, limit=5)
+        except BaseException as exc:
+            raise Exception('The following error was encountered while listing vineyard objects:') from exc
+        for obj in objects:
+            try:
+                client.delete(object_id=as_object_id(obj.id), force=args.force, deep=args.deep)
+                print(f'The vineyard object({obj.id}) was deleted successfully')
+            except BaseException as exc:
+                raise Exception(('The following error was encountered while deleting ' +
+                                 f'the vineyard object({obj.id}):')) from exc
+    else:
+        exit_with_help()
 
 
 def status(client, args):
@@ -250,16 +336,40 @@ def put_object(client, args):
             client.put(value)
             print(f'{value} was successfully put to vineyard server')
         except BaseException as exc:
-            raise Exception(('The following error was encountered while putting ' +
-                             f'{args.value} to vineyard server:\n{exc}')) from exc
+            raise Exception(
+                (f'The following error was encountered while putting {args.value} to vineyard server:')) from exc
     elif args.file is not None:
         try:
-            value = pd.read_csv(args.file)
+            value = pd.read_csv(args.file, sep=args.sep, delimiter=args.delimiter, header=args.header)
             client.put(value)
             print(f'{value} was successfully put to vineyard server')
         except BaseException as exc:
             raise Exception(('The following error was encountered while putting ' +
-                             f'{args.file} as pandas dataframe to vineyard server:\n{exc}')) from exc
+                             f'{args.file} as pandas dataframe to vineyard server:')) from exc
+
+
+def head(client, args):
+    """Utility to print the first n lines of a vineyard object."""
+    try:
+        value = client.get(as_object_id(args.object_id))
+        if isinstance(value, pd.DataFrame):
+            print(value.head(args.limit))
+        else:
+            print("'head' is currently supported for a pandas dataframe only.")
+    except BaseException as exc:
+        raise Exception(('The following error was encountered while fetching ' +
+                         f'the vineyard object({args.object_id}):')) from exc
+
+
+def copy(client, args):
+    """Utility to copy a vineyard object."""
+    if args.shallow:
+        object_id = client.shallow_copy(as_object_id(args.object_id))
+        print(f'The object({args.object_id}) was succesfully copied to {object_id}')
+    elif args.deep:
+        print('Deep Copy is currently not supported.')
+    else:
+        exit_with_help()
 
 
 def config(args):
@@ -290,15 +400,19 @@ def main():
     client = connect_vineyard(args)
 
     if args.cmd == 'ls':
-        return list_obj(client, args)
+        return list_object(client, args)
     if args.cmd == 'query':
         return query(client, args)
     if args.cmd == 'del':
-        return delete_obj(client, args)
+        return delete_object(client, args)
     if args.cmd == 'stat':
         return status(client, args)
     if args.cmd == 'put':
         return put_object(client, args)
+    if args.cmd == 'head':
+        return head(client, args)
+    if args.cmd == 'copy':
+        return copy(client, args)
 
     return exit_with_help()
 
