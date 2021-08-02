@@ -59,6 +59,8 @@ _resolver_context_local.default_resolver = default_resolver_context
 
 
 def get_current_resolvers():
+    ''' Obtain current resolver context.
+    '''
     default_resolver = getattr(_resolver_context_local, 'default_resolver', None)
     if not default_resolver:
         default_resolver = default_resolver_context.extend()
@@ -67,6 +69,48 @@ def get_current_resolvers():
 
 @contextlib.contextmanager
 def resolver_context(resolvers=None, base=None):
+    ''' Open a new context for register resolvers, without populting outside global
+        environment.
+
+        The :code:`resolver_context` can be useful when users have more than more resolver
+        for a certain type, e.g., the :code:`vineyard::Tensor` object can be resolved as
+        :code:`numpy.ndarray` or :code:`xgboost::DMatrix`. We could have
+
+        .. code:: python
+
+            def numpy_resolver(obj):
+                ...
+
+            default_resolver_context.register('vineyard::Tensor', numpy_resolver)
+
+        and
+
+        .. code:: python
+
+            def xgboost_resolver(obj):
+                ...
+
+            default_resolver_context.register('vineyard::Tensor', xgboost_resolver)
+
+        Obviously there's a conflict, and the stackable :code:`resolver_context` could
+        help there,
+
+        .. code:: python
+
+            with resolver_context({'vineyard::Tensor', xgboost_resolver}):
+                ...
+
+        Assuming the default context resolves :code:`vineyard::Tensor` to :code:`numpy.ndarray`,
+        inside the :code:`with resolver_context` the :code:`vineyard::Tensor` will be resolved
+        to :code:`xgboost::DMatrix`, and after exiting the context the global environment
+        will be restored back as default.
+
+        The :code:`with resolver_context` is nestable as well.
+
+        See Also:
+            builder_context
+            driver_context
+    '''
     current_resolver = get_current_resolvers()
     try:
         resolvers = resolvers or dict()

@@ -57,6 +57,8 @@ _driver_context_local.default_driver = default_driver_context
 
 
 def get_current_drivers():
+    ''' Obtain current driver context.
+    '''
     default_driver = getattr(_driver_context_local, 'default_driver', None)
     if not default_driver:
         default_driver = default_driver_context.extend()
@@ -65,6 +67,13 @@ def get_current_drivers():
 
 @contextlib.contextmanager
 def driver_context(drivers=None, base=None):
+    ''' Open a new context for register drivers, without populting outside global
+        environment.
+
+        See Also:
+            builder_context
+            resolver_context
+    '''
     current_driver = get_current_drivers()
     try:
         drivers = drivers or dict()

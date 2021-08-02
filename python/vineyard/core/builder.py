@@ -86,6 +86,8 @@ _builder_context_local.default_builder = default_builder_context
 
 
 def get_current_builders():
+    ''' Obtain the current builder context.
+    '''
     default_builder = getattr(_builder_context_local, 'default_builder', None)
     if not default_builder:
         default_builder = default_builder_context.extend()
@@ -94,6 +96,13 @@ def get_current_builders():
 
 @contextlib.contextmanager
 def builder_context(builders=None, base=None):
+    ''' Open a new context for register builders, without populting outside global
+        environment.
+
+        See Also:
+            resolver_context
+            driver_context
+    '''
     current_builder = get_current_builders()
     try:
         builders = builders or dict()

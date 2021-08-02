@@ -61,6 +61,27 @@ Primitives
 
 .. _shared-memory:
 
+Resolvers and Builders
+----------------------
+
+.. autoclass:: vineyard.core.resolver.ResolverContext
+    :members:
+
+.. autofunction:: vineyard.core.resolver.get_current_resolvers
+.. autofunction:: vineyard.core.resolver.resolver_context
+
+.. autoclass:: vineyard.core.builder.BuilderContext
+    :members:
+
+.. autofunction:: vineyard.core.builder.get_current_builders
+.. autofunction:: vineyard.core.builder.builder_context
+
+.. autoclass:: vineyard.core.driver.DriverContext
+    :members:
+
+.. autofunction:: vineyard.core.driver.get_current_drivers
+.. autofunction:: vineyard.core.driver.driver_context
+
 Shared Memory
 -------------
 
