@@ -30,7 +30,6 @@ except:
 from pandas.core.internals.managers import BlockManager
 import numpy as np
 import tensorflow as tf
-import vineyard
 
 
 def tf_tensor_builder(client, value, **kw):
@@ -156,7 +155,7 @@ def tf_table_resolver(obj, resolver):
     return tf.data.Dataset.from_tensor_slices((dict(arrow), labels))
 
 
-def tf_global_tensor_resolver(obj, **kw):
+def tf_global_tensor_resolver(obj, resolver, **kw):
     meta = obj.meta
     endpoint = kw.get('endpoint')
     client = vineyard.connect(endpoint)
@@ -164,24 +163,26 @@ def tf_global_tensor_resolver(obj, **kw):
     partition_index = from_json(meta['partition_index_'])
     data = []
     for i in range(partition_index):
-        loc = meta[f'partition_{i}']
-        if loc.islocal:
-            data.append(client.get(loc.id))
-    return data
+        if meta[f'partition_{i}'].islocal:
+            data.append(resolver.run(obj.member(f'partition_{i}')))
+    tfData = data[0]
+    for i in range(1, len(data)):
+        tfData = tfData.concatenate(data[i])
+    return tfData
 
 
-def tf_global_dataframe_resolver(obj, **kw):
+def tf_global_dataframe_resolver(obj, resolver, **kw):
     meta = obj.meta
-    endpoint = kw.get('endpoint')
-    client = vineyard.connect(endpoint)
     num = from_json(meta['num'])
     partition_index = from_json(meta['partition_index_'])
     data = []
     for i in range(partition_index):
-        loc = meta[f'partition_{i}']
-        if loc.islocal:
-            data.append(client.get(loc.id))
-    return data
+        if meta[f'partition_{i}'].islocal:
+            data.append(resolver.run(obj.member(f'partition_{i}')))
+    tfData = data[0]
+    for i in range(1, len(data)):
+        tfData = tfData.concatenate(data[i])
+    return tfData
 
 
 def register_tf_types(builder_ctx, resolver_ctx):
