@@ -20,7 +20,8 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value, json};
+use serde_json::{Value, json};
+use serde_json::Result as JsonResult;
 
 use super::client::Client;
 use super::ObjectID;
@@ -28,7 +29,7 @@ use super::InstanceID;
 use super::ObjectMeta;
 use crate::common::util::protocol::*;
 
-pub static SOCKET_PATH: &'static str = "/tmp/sock";
+pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
 
 
 #[derive(Debug)]
@@ -36,60 +37,69 @@ pub struct IPCClient {
     connected: bool,
     ipc_socket: String,
     rpc_endpoint: String,
-    vinyard_conn: i64,
+    vineyard_conn: i64,
     instance_id: InstanceID,
     server_version: String,
 }
 
+// Question: Should these functions be added into Client trait?
 // fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<u64> {
-pub fn connect_ipc_socket(pathname: &String) -> Result<UnixStream> {
+pub fn connect_ipc_socket(pathname: &String, vineyard_conn: i64) -> Result<UnixStream, Error> {
     let socket = Path::new(pathname);
     let mut stream = match UnixStream::connect(&socket) {
-        Err(_) => panic!("Server is not running."),
+        Err(_) => panic!("The server is not running."),
         Ok(stream) => stream,
     };
     Ok(stream)
 }
 
-fn do_write(message_out: &String) -> Result<u64> {
-    let args: Vec<String> = env::args().map(|x| x.to_string()).collect();
-    panic!();
+fn do_write(stream: &mut UnixStream, message_out: &String) -> Result<(), Error> {
+    match stream.write(message_out.as_bytes()) {
+        Err(_) => panic!("Couldn't send message."),
+        Ok(_) => {Ok(())},
+    }
 }
 
-fn do_read(root: &json) -> Result<u64> {
-    panic!();
+// TODO
+// fn send_message(vineyard_conn: i64, message_out: &String) -> Result<(), Error> {}
+
+fn do_read(stream: &mut UnixStream, message_in: &mut String) -> Result<(), Error> {
+    match stream.read_to_string(message_in) {
+        Err(_) => panic!("Couldn't receive message."),
+        Ok(_) => {Ok(())},
+    }
+    
 }
 
 impl Client for IPCClient {
 
     // Connect to vineyardd using the given UNIX domain socket `ipc_socket`
-    fn connect(&mut self, socket: &str) -> Result<()> {
-        // TODO: Create a socket
-        // Write a request  ( You need to start the vineyardd server on the same socket)
-        // Read the reply
-
-        // Error when they have connected while assigning different sockets 
-        RETURN_ON_ASSERT(!self.connected || socket == self.ipc_socket);
+    fn connect(&mut self, socket: &str) -> Result<(), Error> {
+        
+        // Panic when they have connected while assigning different sockets 
+        let ipc_socket = String::from(socket);
+        RETURN_ON_ASSERT(!self.connected || ipc_socket == self.ipc_socket);
         if self.connected {
             return Ok(());
-        }else{ //not connected yet
-            self.ipc_socket = socket.to_string();
-            //connect_ipc_socket(socket, self.vinyard_conn).unwrap();
-            let stream = connect_ipc_socket(&socket.to_string()).unwrap();
+        }else{ // If not connected yet
+            // Connect to an ipc socket
+            self.ipc_socket = ipc_socket;
+            let mut stream = connect_ipc_socket(
+                &self.ipc_socket, 
+                self.vineyard_conn)
+                .unwrap();
 
-            // let message_out: String = write_register_request();
-            // do_write(&message_out).unwrap();
+            // Write a request  ( You need to start the vineyardd server on the same socket)
+            let message_out: String = write_register_request();
+            do_write(&mut stream, &message_out).unwrap();
 
-            // let message_in = json!();
-            // do_read(&message_in).unwrap();
+            // Read the reply
+            let mut message_in = String::new();
+            do_read(&mut stream, &mut message_in).unwrap();
 
-            // let ipc_socket_value: String;
-            // let rpc_endpoint_value: String;
-            // read_register_reply().unwrap();
-            // self.rpc_endpoint = rpc_endpoint_value;
-            // self.connect = true;
+            // TODO： Read register reply
 
-            // compatable server
+            // TODO： Compatable server
 
             return Ok(());
             
@@ -106,7 +116,7 @@ impl Client for IPCClient {
     fn get_meta_data(&self, 
         object_id: ObjectID, 
         sync_remote: bool
-    ) -> Result<ObjectMeta>{
+    ) -> Result<ObjectMeta, Error>{
         // Ok(ObjectMeta {
         //     client: None,
         //     meta: String::new(),
@@ -120,10 +130,10 @@ impl Client for IPCClient {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn it_works() {
-    //     assert_eq!(2 + 2, 4);
-    // }
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
 
     #[test]
     fn ipc_connect(){
@@ -131,7 +141,7 @@ mod tests {
             connected: false,
             ipc_socket: String::new(),
             rpc_endpoint: String::new(),
-            vinyard_conn: 0,
+            vineyard_conn: 0,
             instance_id: 0,
             server_version: String::new(),
         };

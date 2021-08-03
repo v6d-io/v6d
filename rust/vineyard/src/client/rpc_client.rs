@@ -19,10 +19,15 @@ use std::os::unix::net::UnixStream;
 use std::io::prelude::*;
 use std::path::Path;
 
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
+use serde_json::Result as JsonResult;
+
 use super::client::Client;
 use super::ObjectID;
 use super::InstanceID;
 use super::ObjectMeta;
+use crate::common::util::protocol::*;
 
 #[derive(Debug)]
 pub struct RPCClient {
