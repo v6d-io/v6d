@@ -150,15 +150,14 @@ def tf_table_resolver(obj, resolver):
     batches = []
     for idx in range(int(meta['__batches_-size'])):
         batches.append(resolver.run(obj.member('__batches_-%d' % idx)))
-    arrow = pa.Table.from_batches(batches).to_pandas()
-    labels = arrow.pop('target')
-    return tf.data.Dataset.from_tensor_slices((dict(arrow), labels))
+    tfData = batches[0]
+    for i in range(1, len(batches)):
+        tfData = tfData.concatenate(batches[i])
+    return tfData
 
 
 def tf_global_tensor_resolver(obj, resolver, **kw):
     meta = obj.meta
-    endpoint = kw.get('endpoint')
-    client = vineyard.connect(endpoint)
     num = from_json(meta['num'])
     partition_index = from_json(meta['partition_index_'])
     data = []
