@@ -54,8 +54,9 @@ pub fn connect_ipc_socket(pathname: &String, vineyard_conn: i64) -> Result<UnixS
 }
 
 fn do_write(stream: &mut UnixStream, message_out: &String) -> Result<(), Error> {
-    match stream.write(message_out.as_bytes()) {
-        Err(_) => panic!("Couldn't send message."),
+    //let message_out = b"blabla";
+    match stream.write_all(message_out.as_bytes()) { 
+        Err(error) => panic!("Couldn't send message because of:{}.", error),
         Ok(_) => {Ok(())},
     }
 }
@@ -65,7 +66,7 @@ fn do_write(stream: &mut UnixStream, message_out: &String) -> Result<(), Error> 
 
 fn do_read(stream: &mut UnixStream, message_in: &mut String) -> Result<(), Error> {
     match stream.read_to_string(message_in) {
-        Err(_) => panic!("Couldn't receive message."),
+        Err(error) => panic!("Couldn't receive message because of：{}.", error),
         Ok(_) => {Ok(())},
     }
     
@@ -91,11 +92,16 @@ impl Client for IPCClient {
 
             // Write a request  ( You need to start the vineyardd server on the same socket)
             let message_out: String = write_register_request();
+            //let message_out: String = String::from("blabla");
             do_write(&mut stream, &message_out).unwrap();
+            //stream.write(b"blabla")?;
 
             // Read the reply
             let mut message_in = String::new();
             do_read(&mut stream, &mut message_in).unwrap();
+            //stream.read_to_string(&mut message_in)?;
+            println!("{}",message_in);
+            println!("hey");
 
             // TODO： Read register reply
 
