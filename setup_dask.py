@@ -42,10 +42,10 @@ class install_plat(install):
         install.finalize_options(self)
 
 
-def find_ml_packages(root):
+def find_dask_packages(root):
     pkgs = []
     for pkg in find_packages(root):
-        if 'contrib.ml' in pkg:
+        if 'contrib.dask' in pkg:
             pkgs.append(pkg)
     print(pkgs)
     return pkgs
@@ -68,21 +68,21 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 setup(
-    name='vineyard-ml',
+    name='vineyard-dask',
     author='The vineyard team',
     author_email='developers@v6d.io',
-    description='Vineyard integration with machine learning frameworks',
+    description='Vineyard integration with dask',
     long_description=long_description,
     long_description_content_type='text/x-rst',
     url='https://v6d.io',
-    package_dir={'vineyard.contrib.ml': 'python/vineyard/contrib/ml'},
-    packages=find_ml_packages('python'),
+    package_dir={'vineyard.contrib.dask': 'python/vineyard/contrib/dask'},
+    packages=find_dask_packages('python'),
     cmdclass={
         'bdist_wheel': bdist_wheel_plat,
         "install": install_plat
     },
     zip_safe=False,
-    install_requires=['vineyard', 'tensorflow', 'xgboost'],
+    install_requires=['vineyard', 'dask[complete]'],
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
