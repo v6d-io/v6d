@@ -274,6 +274,10 @@ jobs:
           rm -rf build/lib.* build/bdist.*
           python3 setup_ml.py bdist_wheel
 
+          # build & install vineyard-dask
+          rm -rf build/lib.* build/bdist.*
+          python3 setup_dask.py bdist_wheel
+
           # build & install vineyard-io
           pushd modules/io
           rm -rf build/lib.* build/bdist.*
@@ -325,7 +329,7 @@ jobs:
 
             rm -rf default.etcd
             rm -rf /dev/shm/etcd*
-            python3 test/runner.py --with-python --with-migration --with-contrib-ml
+            python3 test/runner.py --with-python --with-migration --with-contrib
 
       - name: Run Python Tests
         if: ${{ github.event_name == 'pull_request' }}
@@ -341,7 +345,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-python --with-migration --with-contrib-ml
+          python3 test/runner.py --with-python --with-migration --with-contrib
 
       - name: Setup tmate session
         if: false

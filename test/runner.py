@@ -324,6 +324,25 @@ def run_python_contrib_ml_tests(etcd_endpoints):
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
         print('running python contrib ml tests use %s seconds' % (time.time() - start_time), flush=True)
 
+def run_python_contrib_dask_tests(etcd_endpoints):
+    ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
+    instance_size = 4
+    etcd_prefix = 'vineyard_test_%s' % time.time()
+    with start_multiple_vineyardd(etcd_endpoints,
+                                  etcd_prefix,
+                                  default_ipc_socket=ipc_socket_tpl,
+                                  instance_size=instance_size,
+                                  nowait=True) as instances:
+        vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
+        start_time = time.time()
+        subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               '--log-cli-level', 'DEBUG',
+                               'python/vineyard/contrib/dask',
+                               '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+        print('running python contrib dask tests use %s seconds' % (time.time() - start_time), flush=True)
+
+
 def run_python_deploy_tests(etcd_endpoints, with_migration):
     ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
     instance_size = 4
@@ -398,8 +417,8 @@ def parse_sys_args():
                             help='Whether to run IO adaptors tests')
     arg_parser.add_argument('--with-migration', action='store_true', default=False,
                             help='Whether to run object migration tests')
-    arg_parser.add_argument('--with-contrib-ml', action='store_true', default=False,
-                            help="Whether to run python contrib ml tests")
+    arg_parser.add_argument('--with-contrib', action='store_true', default=False,
+                            help="Whether to run python contrib tests")
     return arg_parser, arg_parser.parse_args()
 
 
@@ -420,9 +439,12 @@ def main():
             run_python_tests(etcd_endpoints, args.with_migration)
         with start_etcd() as (_, etcd_endpoints):
             run_python_deploy_tests(etcd_endpoints, args.with_migration)
-        if args.with_contrib_ml:
+        if args.with_contrib:
             with start_etcd() as (_, etcd_endpoints):
                 run_python_contrib_ml_tests(etcd_endpoints)
+            with start_etcd() as (_, etcd_endpoints):
+                run_python_contrib_dask_tests(etcd_endpoints)
+
 
     if args.with_io:
         with start_etcd() as (_, etcd_endpoints):

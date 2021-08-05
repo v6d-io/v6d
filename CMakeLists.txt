@@ -609,6 +609,7 @@ add_custom_target(vineyard_cpplint
 add_custom_target(python_install
         COMMAND python3 setup.py install
         COMMAND python3 setup_ml.py install
+        COMMAND python3 setup_dask.py install
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         VERBATIM)
 
