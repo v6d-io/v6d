@@ -46,8 +46,8 @@ def test_torch_tensor(vineyard_client):
     dtrain = vineyard_client.get(object_id)
     xdata, ydata = dataset[0]
     xdtrain, ydtrain = dtrain[0]
-    assert xdata.shape == ydata.shape
-    assert xdtrain.shape == ydtrain.shape
+    assert xdata.shape == xdtrain.shape
+    assert ydata.shape == ydtrain.shape
 
 
 def test_torch_dataframe(vineyard_client):
