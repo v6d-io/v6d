@@ -231,7 +231,7 @@ jobs:
         run: |
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
-          yapf --in-place --recursive setup.py setup_ml.py python/ modules/io/setup.py modules/io/python
+          python3 setup.py lint --inplace=true
           GIT_DIFF=$(git diff --ignore-submodules)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -241,7 +241,7 @@ jobs:
               echo "|"
               echo "|Run: "
               echo "|"
-              echo "|    yapf --in-place --recursive setup.py setup_ml.py python/ modules/io/setup.py modules/io/python"
+              echo "|    python3 setup.py lint --inplace=true"
               echo "|"
               echo "| to fix this error."
               echo "|"
