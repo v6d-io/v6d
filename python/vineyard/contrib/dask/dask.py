@@ -25,21 +25,58 @@ from vineyard._C import ObjectMeta
 
 import dask.array as da
 import dask.dataframe as dd
+import numpy as np
+import pandas as pd
 
 
 def dask_array_builder(client, value, builder, **kw):
-    # TODO: build dask.array to vineyard::GlobalTensor
-    pass
+    def put_partition(v, block_id=None):
+        client = vineyard.connect()
+        obj_id = client.put(v, partition_index=block_id)
+        client.persist(obj_id)
+        return np.array([[int(obj_id)]])
+
+    _ = Client(kw['dask_scheduler'])  #enforce distributed scheduling
+    ids = value.map_blocks(put_partition, dtype=int).compute().flatten()
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::GlobalTensor'
+    meta.set_global(True)
+    meta['partitions_-size'] = len(ids)
+
+    for i, obj_id in enumerate(ids):
+        meta.add_member('partitions_-%d' % i, vineyard.ObjectID(obj_id))
+
+    gtensor_meta = client.create_metadata(meta)
+    client.persist(gtensor_meta)
+    return gtensor_meta
 
 
 def dask_dataframe_builder(client, value, builder, **kw):
-    # TODO: build dask.dataframe to vineyard::GlobalDataFrame
-    pass
+    def put_partition(v, partition_info=None):
+        client = vineyard.connect()
+        obj_id = client.put(v, partition_index=(partition_info['number'], 0))
+        client.persist(obj_id)
+        return pd.DataFrame([{'no': partition_info['number'], 'id': int(obj_id)}])
+
+    _ = Client(kw['dask_scheduler'])  #enforce distributed scheduling
+    res = value.map_partitions(put_partition, meta={'no': int, 'id': int}).compute()
+    res = res.set_index('no')
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::GlobalDataFrame'
+    meta.set_global(True)
+    meta['partitions_-size'] = len(res)
+
+    for i in range(len(res)):
+        meta.add_member('partitions_-%d' % i, vineyard.ObjectID(res.loc[i]))
+
+    gdf_meta = client.create_metadata(meta)
+    client.persist(gdf_meta)
+    return gdf_meta
 
 
 def dask_array_resolver(obj, resolver, **kw):
-    def get_partition(socket, obj_id):
-        client = vineyard.connect(socket)
+    def get_partition(obj_id):
+        client = vineyard.connect()
         np_value = client.get(obj_id)
         return da.from_array(np_value)
 
@@ -63,10 +100,7 @@ def dask_array_resolver(obj, resolver, **kw):
             # we require the 1-on-1 alignment of vineyard instances and dask workers.
             # vineyard_sockets maps vineyard instance_ids into ipc_sockets, while
             # dask_workers maps vineyard instance_ids into names of dask workers.
-            dask_client.submit(get_partition,
-                               kw['vineyard_sockets'][instance_id],
-                               ts.meta.id,
-                               workers={kw['dask_workers'][instance_id]}))
+            dask_client.submit(get_partition, ts.meta.id, workers={kw['dask_workers'][instance_id]}))
 
     arrays = dask_client.gather(futures)
     if with_index:
@@ -86,8 +120,8 @@ def dask_array_resolver(obj, resolver, **kw):
 
 
 def dask_dataframe_resolver(obj, resolver, **kw):
-    def get_partition(socket, obj_id):
-        client = vineyard.connect(socket)
+    def get_partition(obj_id):
+        client = vineyard.connect()
         df = client.get(obj_id)
         return dd.from_pandas(df, npartitions=1)
 
@@ -102,10 +136,7 @@ def dask_dataframe_resolver(obj, resolver, **kw):
             # we require the 1-on-1 alignment of vineyard instances and dask workers.
             # vineyard_sockets maps vineyard instance_ids into ipc_sockets, while
             # dask_workers maps vineyard instance_ids into names of dask workers.
-            dask_client.submit(get_partition,
-                               kw['vineyard_sockets'][instance_id],
-                               df.meta.id,
-                               workers={kw['dask_workers'][instance_id]}))
+            dask_client.submit(get_partition, df.meta.id, workers={kw['dask_workers'][instance_id]}))
 
     dfs = dask_client.gather(futures)
     return dd.concat(dfs, axis=0)
@@ -113,8 +144,8 @@ def dask_dataframe_resolver(obj, resolver, **kw):
 
 def register_dask_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
-        builder_ctx.register(dask.array, dask_array_builder)
-        builder_ctx.register(dask.dataframe, dask_dataframe_builder)
+        builder_ctx.register(dask.array.Array, dask_array_builder)
+        builder_ctx.register(dask.dataframe.DataFrame, dask_dataframe_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::GlobalTensor', dask_array_resolver)
