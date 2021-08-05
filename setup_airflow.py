@@ -47,7 +47,6 @@ def find_airflow_packages(root):
     for pkg in find_packages(root):
         if 'contrib.airflow' in pkg:
             pkgs.append(pkg)
-    print(pkgs)
     return pkgs
 
 

@@ -47,7 +47,6 @@ def find_dask_packages(root):
     for pkg in find_packages(root):
         if 'contrib.dask' in pkg:
             pkgs.append(pkg)
-    print(pkgs)
     return pkgs
 
 
@@ -82,7 +81,10 @@ setup(
         "install": install_plat
     },
     zip_safe=False,
-    install_requires=['vineyard', 'dask[complete]'],
+    install_requires=[
+        'vineyard',
+        'dask[complete]'
+    ],
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[

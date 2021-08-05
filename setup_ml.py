@@ -47,7 +47,6 @@ def find_ml_packages(root):
     for pkg in find_packages(root):
         if 'contrib.ml' in pkg:
             pkgs.append(pkg)
-    print(pkgs)
     return pkgs
 
 
@@ -82,7 +81,11 @@ setup(
         "install": install_plat
     },
     zip_safe=False,
-    install_requires=['vineyard', 'tensorflow', 'xgboost'],
+    install_requires=[
+        'vineyard',
+        'tensorflow',
+        'xgboost'
+    ],
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[

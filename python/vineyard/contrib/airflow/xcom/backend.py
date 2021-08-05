@@ -19,6 +19,7 @@
 import logging
 from typing import Any
 
+from airflow.configuration import conf
 from airflow.models.xcom import BaseXCom
 from airflow.utils.session import provide_session
 import pendulum
@@ -27,6 +28,15 @@ from sqlalchemy.orm import Session, reconstructor
 import vineyard
 
 logger = logging.getLogger('vineyard')
+
+
+def _resolve_vineyard_xcom_options():
+    options = {}
+    if conf.has_option('vineyard', 'persist'):
+        options['persist'] = conf.getboolean('vineyard', 'persist')
+    else:
+        options['persist'] = False
+    return options
 
 
 class VineyardXCom(BaseXCom):
@@ -41,6 +51,9 @@ class VineyardXCom(BaseXCom):
         USER astro
         ENV AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
     """
+
+    __options = _resolve_vineyard_xcom_options()
+
     @reconstructor
     def init_on_load(self):
         """
@@ -132,14 +145,51 @@ class VineyardXCom(BaseXCom):
     @staticmethod
     def serialize_value(value: Any):
         client = vineyard.connect()
-        value_id = repr(client.put(value))
-        logger.debug("serialize_value: %s -> %s", value, value_id)
-        return BaseXCom.serialize_value(value_id)
+        value_id = client.put(value)
+        if VineyardXCom.__options['persist']:
+            client.persist(value_id)
+        logger.debug("serialize_value: %s -> %r", value, value_id)
+        return BaseXCom.serialize_value(repr(value_id))
 
     @staticmethod
     def deserialize_value(result: "XCom") -> Any:
         value = BaseXCom.deserialize_value(result)
-        client = vineyard.connect()
-        vineyard_value = client.get(vineyard.ObjectID(value))
+        vineyard_value = VineyardXCom.post_resolve_value(result, value)
         logger.debug("deserialize_value: %s ->  %s -> %s", result, value, vineyard_value)
         return vineyard_value
+
+    @staticmethod
+    @provide_session
+    def post_resolve_value(result: "XCom", value: Any, session: Session = None) -> Any:
+        ''' The :code:`post_resolve_value` runs before the return the value to the
+            operators to prepare necessary input data for the task.
+
+            The post resolution will fill-up the occurrence if remote objects by
+            of :code:`VineyardObjectRef` with the actual (remote) value by triggering
+            a migration.
+
+            It will also record the migrated xcom value into the db as well to make
+            sure it can be dropped properly.
+        '''
+        client = vineyard.connect()
+        object_id = vineyard.ObjectID(value)
+
+        meta = client.get_meta(object_id)
+        if meta.islocal:
+            return client.get(object_id)
+
+        # migration
+        logger.debug('start migration: %r')
+        target_id = client.migrate(object_id)
+        logger.debug('finish migration: %r -> %r', object_id, target_id)
+
+        # TODO: should we record the replicated XCom into the db ?
+        # session.add(VineyardXCom(...))
+        # session.commit()
+
+        return client.get(target_id)
+
+
+__all__ = [
+    'VineyardXCom',
+]
