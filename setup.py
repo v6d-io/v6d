@@ -71,7 +71,7 @@ class FormatAndLint(Command):
         self.inplace = False
 
     def finalize_options(self):
-        if self.inplace or self.inplace == "True" or self.inplace == "true":
+        if self.inplace in ['true', 'True', '1', 't'] or self.inplace:
             self.inplace = True
         else:
             self.inplace = False

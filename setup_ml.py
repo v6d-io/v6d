@@ -47,7 +47,6 @@ def find_ml_packages(root):
     for pkg in find_packages(root):
         if 'contrib.ml' in pkg:
             pkgs.append(pkg)
-    print(pkgs)
     return pkgs
 
 
