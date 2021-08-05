@@ -28,8 +28,12 @@ from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
 from vineyard.contrib.dask.dask import register_dask_types
 
+import dask.array as da
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
+
+from dask.distributed import Client
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -95,18 +99,16 @@ def launch_dask_cluster(vineyard_ipc_sockets, host, port):
         stack.enter_context(proc)
         scheduler = f'tcp://{host}:{port}'
         clients = []
-        sockets = {}
         workers = {}
         for sock in vineyard_ipc_sockets:
             client = vineyard.connect(sock)
             worker_name = 'dask_worker_%d' % client.instance_id
-            sockets[client.instance_id] = sock
             workers[client.instance_id] = worker_name
             # launch a worker with corresponding name for each vineyard instance
-            proc = start_program('dask-worker', scheduler, '--name', worker_name)
+            proc = start_program('dask-worker', scheduler, '--name', worker_name, VINEYARD_IPC_SOCKET=sock)
             stack.enter_context(proc)
             clients.append(client)
-        yield clients, sockets, scheduler, workers
+        yield clients, scheduler, workers
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -115,8 +117,25 @@ def dask_info(vineyard_ipc_sockets):
         yield r
 
 
+def test_dask_array_builder(dask_info):
+    clients, dask_scheduler, _ = dask_info
+    arr = da.ones((1024, 1024), chunks=(256, 256))
+    obj_id = clients[0].put(arr, dask_scheduler=dask_scheduler)
+    meta = clients[0].get_meta(obj_id)
+    assert meta['partitions_-size'] == 16
+
+
+def test_dask_dataframe_builder(dask_info):
+    clients, dask_scheduler, _ = dask_info
+    arr = da.ones((1024, 2), chunks=(256, 2))
+    df = dd.from_dask_array(arr, columns=['a', 'b'])
+    obj_id = clients[0].put(df, dask_scheduler=dask_scheduler)
+    meta = clients[0].get_meta(obj_id)
+    assert meta['partitions_-size'] == 4
+
+
 def test_dask_array_resolver(dask_info):
-    clients, vineyard_sockets, dask_scheduler, dask_workers = dask_info
+    clients, dask_scheduler, dask_workers = dask_info
     num = len(clients)
 
     meta = vineyard.ObjectMeta()
@@ -132,15 +151,12 @@ def test_dask_array_resolver(dask_info):
 
     gtensor = clients[0].create_metadata(meta)
     clients[0].persist(gtensor)
-    darr = clients[0].get(gtensor.id,
-                          vineyard_sockets=vineyard_sockets,
-                          dask_scheduler=dask_scheduler,
-                          dask_workers=dask_workers)
+    darr = clients[0].get(gtensor.id, dask_scheduler=dask_scheduler, dask_workers=dask_workers)
     assert darr.sum().sum().compute() == 0
 
 
 def test_dask_dataframe_resolver(dask_info):
-    clients, vineyard_sockets, dask_scheduler, dask_workers = dask_info
+    clients, dask_scheduler, dask_workers = dask_info
     num = len(clients)
 
     meta = vineyard.ObjectMeta()
@@ -155,8 +171,22 @@ def test_dask_dataframe_resolver(dask_info):
 
     gdf = clients[0].create_metadata(meta)
     clients[0].persist(gdf)
-    ddf = clients[0].get(gdf.id,
-                         vineyard_sockets=vineyard_sockets,
-                         dask_scheduler=dask_scheduler,
-                         dask_workers=dask_workers)
+    ddf = clients[0].get(gdf.id, dask_scheduler=dask_scheduler, dask_workers=dask_workers)
     assert ddf.sum().sum().compute() == 60
+
+
+def test_dask_array_roundtrip(dask_info):
+    clients, dask_scheduler, dask_workers = dask_info
+    arr = da.ones((1024, 1024), chunks=(256, 256))
+    obj_id = clients[0].put(arr, dask_scheduler=dask_scheduler)
+    arr1 = clients[0].get(obj_id, dask_scheduler=dask_scheduler, dask_workers=dask_workers)
+    np.testing.assert_allclose(arr1.compute(), np.ones((1024, 1024)))
+
+
+def test_dask_dataframe_roundtrip(dask_info):
+    clients, dask_scheduler, dask_workers = dask_info
+    arr = da.ones((1024, 2), chunks=(256, 2))
+    df = dd.from_dask_array(arr, columns=['a', 'b'])
+    obj_id = clients[0].put(df, dask_scheduler=dask_scheduler)
+    df1 = clients[0].get(obj_id, dask_scheduler=dask_scheduler, dask_workers=dask_workers)
+    pd.testing.assert_frame_equal(df1.compute(), pd.DataFrame({'a': np.ones(1024), 'b': np.ones(1024)}))
