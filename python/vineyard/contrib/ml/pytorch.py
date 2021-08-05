@@ -30,7 +30,7 @@ except:
 from pandas.core.internals.managers import BlockManager
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, ConcatDataset
 
 
 def torch_tensor_builder(client, value, **kw):
@@ -55,11 +55,13 @@ def torch_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
     cols = kw.get('cols')
+    target = kw.get('target')
+    meta['target'] = to_json(target)
     meta['columns_'] = to_json(cols)
     for i in range(len(cols)):
         ls = []
         for x, y in value:
-            if cols[i] == 'target':
+            if cols[i] == target:
                 ls.append(y.numpy())
             else:
                 ls.append(x[i].numpy())
@@ -70,6 +72,26 @@ def torch_dataframe_builder(client, value, builder, **kw):
     meta['partition_index_column_'] = kw.get('partition_index', [0, 0])[1]
     meta['row_batch_index_'] = kw.get('row_batch_index', 0)
     return client.create_metadata(meta)
+
+
+def torch_builder(client, value, builder, **kw):
+    typename = kw.get('typename')
+    if typename == 'Tensor':
+        return torch_tensor_builder(client, value, **kw)
+    elif typename == 'Dataframe':
+        return torch_dataframe_builder(client, value, builder, **kw)
+    else:
+        raise TypeError("Only Tensor and Dataframe type supported")
+
+
+def torch_create_global_tensor(client, value, builder, **kw):
+    # TODO
+    pass
+
+
+def torch_create_global_dataframe(client, value, builder, **kw):
+    # TODO
+    pass
 
 
 def torch_tensor_resolver(obj):
@@ -83,12 +105,12 @@ def torch_tensor_resolver(obj):
     data = torch.from_numpy(np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape))
     label = torch.from_numpy(
         np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape))
-    dataset = torch.utils.data.TensorDataset(data, label)
-    return dataset
+    return torch.utils.data.TensorDataset(data, label)
 
 
 def torch_dataframe_resolver(obj, resolver):
     meta = obj.meta
+    target = from_json(meta['target'])
     columns = from_json(meta['columns_'])
     if not columns:
         return pd.DataFrame()
@@ -106,11 +128,11 @@ def torch_dataframe_resolver(obj, resolver):
     if 'index_' in meta:
         index = resolver.run(obj.member('index_'))
     else:
-        index = np.arange(index_size)
+        index = pd.RangeIndex(index_size)
     df = pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
-    target = torch.tensor(df['target'].values.astype(np.float32))
-    ds = torch.tensor(df.drop('target', axis=1).values.astype(np.float32))
-    return torch.utils.data.TensorDataset(ds, target)
+    label = torch.tensor(df[target].values.astype(np.float32))
+    ds = torch.tensor(df.drop(target, axis=1).values.astype(np.float32))
+    return torch.utils.data.TensorDataset(ds, label)
 
 
 def torch_recordBatch_resolver(obj, resolver):
@@ -130,19 +152,39 @@ def torch_table_resolver(obj, resolver):
     batches = []
     for idx in range(int(meta['__batches_-size'])):
         batches.append(resolver.run(obj.member('__batches_-%d' % idx)))
-    arrow = pa.Table.from_batches(batches).to_pandas()
-    target = torch.tensor(arrow['target'].values)
-    ds = torch.tensor(arrow.drop('target', axis=1).values)
-    return torch.utils.data.TensorDataset(ds, target)
+    return ConcatDataset(batches)
 
 
-def register_tensor_types(builder_ctx, resolver_ctx):
+def torch_global_tensor_resolver(obj, resolver, **kw):
+    meta = obj.meta
+    num = from_json(meta['num'])
+    partition_index = from_json(meta['partition_index_'])
+    data = []
+    for i in range(partition_index):
+        if meta[f'partition_{i}'].islocal:
+            data.append(resolver.run(obj.member(f'partition_{i}')))
+    return ConcatDataset(data)
+
+
+def torch_global_dataframe_resolver(obj, resolver, **kw):
+    meta = obj.meta
+    num = from_json(meta['num'])
+    partition_index = from_json(meta['partition_index_'])
+    data = []
+    for i in range(partition_index):
+        if meta[f'partition_{i}'].islocal:
+            data.append(resolver.run(obj.member(f'partition_{i}')))
+    return ConcatDataset(data)
+
+
+def register_torch_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
-        builder_ctx.register(Dataset, torch_tensor_builder)
-        builder_ctx.register(Dataset, torch_dataframe_builder)
+        builder_ctx.register(Dataset, torch_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', torch_tensor_resolver)
         resolver_ctx.register('vineyard::DataFrame', torch_dataframe_resolver)
         resolver_ctx.register('vineyard::RecordBatch', torch_recordBatch_resolver)
         resolver_ctx.register('vineyard::Table', torch_table_resolver)
+        resolver_ctx.register('vineyard::GlobalTensor', torch_global_tensor_resolver)
+        resolver_ctx.register('vineyard::GlobalDataFrame', torch_global_dataframe_resolver)
