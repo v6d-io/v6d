@@ -174,6 +174,7 @@ def get(client, object_id, resolver=None, **kw):
     # associate a reference to the base C++ object
     try:
         setattr(value, '__vineyard_ref', obj)
+        setattr(value, '__vineyard_client', client)
     except AttributeError:
         pass
 
