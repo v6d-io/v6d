@@ -67,8 +67,8 @@ def test_torch_dataframe(vineyard_client):
     label = torch.tensor(df['c'].values.astype(np.float32))
     data = torch.tensor(df.drop('c', axis=1).values.astype(np.float32))
     dataset = torch.utils.data.TensorDataset(data, label)
-    object_id = vineyard_client.put(dataset, typename='Dataframe', cols=['a', 'b', 'c'], target='c')
-    dtrain = vineyard_client.get(object_id)
+    object_id = vineyard_client.put(dataset, typename='Dataframe', cols=['a', 'b', 'c'], label='c')
+    dtrain = vineyard_client.get(object_id, label='c')
     assert len(dtrain) == 4
     assert list(dtrain[0][0].size())[0] == 2
 
@@ -77,7 +77,7 @@ def test_tf_record_batch(vineyard_client):
     arrays = [pa.array([1, 2, 3, 4]), pa.array([3.0, 4.0, 5.0, 6.0]), pa.array([0, 1, 0, 1])]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])
     object_id = vineyard_client.put(batch)
-    dtrain = vineyard_client.get(object_id)
+    dtrain = vineyard_client.get(object_id, label='target')
     assert len(dtrain) == 4
     assert list(dtrain[0][0].size())[0] == 2
 
@@ -88,6 +88,6 @@ def test_tf_table(vineyard_client):
     batches = [batch] * 4
     table = pa.Table.from_batches(batches)
     object_id = vineyard_client.put(table)
-    dtrain = vineyard_client.get(object_id)
+    dtrain = vineyard_client.get(object_id, label='target')
     assert len(dtrain) == 8
     assert list(dtrain[0][0].size())[0] == 2

@@ -17,7 +17,9 @@
 #
 
 from vineyard._C import ObjectMeta
+from vineyard.core.resolver import resolver_context
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
+from vineyard.data import arrow
 
 import pandas as pd
 import pyarrow as pa
@@ -55,13 +57,13 @@ def torch_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
     cols = kw.get('cols')
-    target = kw.get('target')
-    meta['target'] = to_json(target)
+    label = kw.get('label')
+    meta['label'] = to_json(label)
     meta['columns_'] = to_json(cols)
     for i in range(len(cols)):
         ls = []
         for x, y in value:
-            if cols[i] == target:
+            if cols[i] == label:
                 ls.append(y.numpy())
             else:
                 ls.append(x[i].numpy())
@@ -108,9 +110,12 @@ def torch_tensor_resolver(obj):
     return torch.utils.data.TensorDataset(data, label)
 
 
-def torch_dataframe_resolver(obj, resolver):
+def torch_dataframe_resolver(obj, resolver, **kw):
     meta = obj.meta
-    target = from_json(meta['target'])
+    if kw.get('label') == None:
+        label = from_json(meta['label'])
+    else:
+        label = kw.get('label')
     columns = from_json(meta['columns_'])
     if not columns:
         return pd.DataFrame()
@@ -130,50 +135,57 @@ def torch_dataframe_resolver(obj, resolver):
     else:
         index = pd.RangeIndex(index_size)
     df = pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
-    label = torch.tensor(df[target].values.astype(np.float32))
-    ds = torch.tensor(df.drop(target, axis=1).values.astype(np.float32))
-    return torch.utils.data.TensorDataset(ds, label)
+    y = torch.tensor(df[label].values.astype(np.float32))
+    x = torch.tensor(df.drop(label, axis=1).values.astype(np.float32))
+    return torch.utils.data.TensorDataset(x, y)
 
 
-def torch_recordBatch_resolver(obj, resolver):
+def torch_recordBatch_resolver(obj, resolver, **kw):
     meta = obj.meta
     schema = resolver.run(obj.member('schema_'))
+    if kw.get('label') == None:
+        raise ValueError("Label not defined")
+    else:
+        label = kw.get('label')
     columns = []
     for idx in range(int(meta['__columns_-size'])):
         columns.append(resolver.run(obj.member('__columns_-%d' % idx)))
-    arrow = pa.RecordBatch.from_arrays(columns, schema=schema).to_pandas()
-    target = torch.tensor(arrow['target'].values)
-    ds = torch.tensor(arrow.drop('target', axis=1).values)
-    return torch.utils.data.TensorDataset(ds, target)
+    df = pa.RecordBatch.from_arrays(columns, schema=schema).to_pandas()
+    y = torch.tensor(df[label].values)
+    x = torch.tensor(df.drop(label, axis=1).values)
+    return torch.utils.data.TensorDataset(x, y)
 
 
-def torch_table_resolver(obj, resolver):
-    meta = obj.meta
-    batches = []
-    for idx in range(int(meta['__batches_-size'])):
-        batches.append(resolver.run(obj.member('__batches_-%d' % idx)))
-    return ConcatDataset(batches)
+def torch_table_resolver(obj, resolver, **kw):
+    with resolver_context({'vineyard::RecordBatch': arrow.record_batch_resolver}) as ctx:
+        table = arrow.table_resolver(obj, ctx)
+        df = table.to_pandas()
+        if kw.get('label') == None:
+            raise ValueError("Label not defined")
+        else:
+            label = kw.get('label')
+        y = torch.tensor(df[label].values)
+        x = torch.tensor(df.drop(label, axis=1).values)
+        return torch.utils.data.TensorDataset(x, y)
 
 
 def torch_global_tensor_resolver(obj, resolver, **kw):
     meta = obj.meta
-    num = from_json(meta['num'])
-    partition_index = from_json(meta['partition_index_'])
+    num = int(meta['partitions_-size'])
     data = []
-    for i in range(partition_index):
-        if meta[f'partition_{i}'].islocal:
-            data.append(resolver.run(obj.member(f'partition_{i}')))
+    for i in range(num):
+        if meta[f'partitions_{i}'].islocal:
+            data.append(resolver.run(obj.member(f'partitions_{i}')))
     return ConcatDataset(data)
 
 
 def torch_global_dataframe_resolver(obj, resolver, **kw):
     meta = obj.meta
-    num = from_json(meta['num'])
-    partition_index = from_json(meta['partition_index_'])
+    num = int(meta['partitions_-size'])
     data = []
-    for i in range(partition_index):
-        if meta[f'partition_{i}'].islocal:
-            data.append(resolver.run(obj.member(f'partition_{i}')))
+    for i in range(num):
+        if meta[f'partitions_{i}'].islocal:
+            data.append(resolver.run(obj.member(f'partitions_{i}')))
     return ConcatDataset(data)
 
 
