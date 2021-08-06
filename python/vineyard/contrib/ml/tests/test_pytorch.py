@@ -17,6 +17,7 @@
 #
 
 import numpy as np
+from numpy import random
 from numpy.lib.type_check import typename
 import pandas as pd
 
@@ -24,6 +25,7 @@ import pyarrow as pa
 import pytest
 
 import torch
+from torch.utils.data import Dataset
 
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
@@ -37,11 +39,20 @@ def vineyard_for_pytorch():
             register_torch_types(builder, resolver)
             yield builder, resolver
 
+class TestData(Dataset):
+    def __init__(self, num):
+        self.num = num
+        self.ds = [(np.random.rand(2,3), np.random.rand(2,3)) for i in range(num)]
+
+    def __len__(self):
+        return self.num
+
+    def __getitem__(self, idx):
+        return self.ds[idx]
+
 
 def test_torch_tensor(vineyard_client):
-    data = torch.FloatTensor([np.random.rand(2, 3) for i in range(10)])
-    label = torch.FloatTensor([np.random.rand(2, 3) for i in range(10)])
-    dataset = torch.utils.data.TensorDataset(data, label)
+    dataset = TestData(5)
     object_id = vineyard_client.put(dataset, typename='Tensor')
     dtrain = vineyard_client.get(object_id)
     xdata, ydata = dataset[0]
