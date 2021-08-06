@@ -267,27 +267,27 @@ jobs:
           popd
 
           # not used anymore
-          rm -rf build/
+          rm -rf build/lib*
 
           # build & install vineyard for python
-          rm -rf build/
+          rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
 
           # build & install airflow-provider-vineyard
-          rm -rf build/
+          rm -rf build/lib* build/bdist.*
           python3 setup_airflow.py bdist_wheel
 
           # build & install vineyard-dask
-          rm -rf build/
+          rm -rf build/lib* build/bdist.*
           python3 setup_dask.py bdist_wheel
 
           # build & install vineyard-ml
-          rm -rf build/
+          rm -rf build/lib* build/bdist.*
           python3 setup_ml.py bdist_wheel
 
           # build & install vineyard-io
           pushd modules/io
-          rm -rf build/
+          rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
           popd
 
