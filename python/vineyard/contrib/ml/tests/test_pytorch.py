@@ -39,10 +39,11 @@ def vineyard_for_pytorch():
             register_torch_types(builder, resolver)
             yield builder, resolver
 
+
 class TestData(Dataset):
     def __init__(self, num):
         self.num = num
-        self.ds = [(np.random.rand(2,3), np.random.rand(2,3)) for i in range(num)]
+        self.ds = [(np.random.rand(2, 3), np.random.rand(2, 3)) for i in range(num)]
 
     def __len__(self):
         return self.num
