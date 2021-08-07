@@ -191,6 +191,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                                std::function<bool()> alive,
                                callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();
+  double startTime = GetCurrentTime();
   meta_service_ptr_->RequestToGetData(
       sync_remote, [this, ids, wait, alive, callback](const Status& status,
                                                       const json& meta) {
@@ -261,6 +262,9 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
           return status;
         }
       });
+  double endTime = GetCurrentTime();
+  LOG_SUMMARY("data_request_latency", "get", endTime - startTime);
+  LOG_COUNTER("data_requests_total", "get");
   return Status::OK();
 }
 
@@ -290,6 +294,7 @@ Status VineyardServer::CreateData(
     const json& tree,
     callback_t<const ObjectID, const Signature, const InstanceID> callback) {
   ENSURE_VINEYARDD_READY();
+  double startTime = GetCurrentTime();
 #if !defined(NDEBUG)
   if (VLOG_IS_ON(10)) {
     VLOG(10) << "Got request from client to create data:";
@@ -337,6 +342,9 @@ Status VineyardServer::CreateData(
         }
       },
       boost::bind(callback, _1, id, signature, _2));
+  double endTime = GetCurrentTime();
+  LOG_SUMMARY("data_request_latency", "create",  endTime - startTime);
+  LOG_COUNTER("data_requests_total", "create");
   return Status::OK();
 }
 
