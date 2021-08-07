@@ -20,6 +20,18 @@ limitations under the License.
 
 namespace vineyard {
 namespace logging = google;
+#ifndef LOG_COUNTER
+#define LOG_COUNTER(metric_name, label)                           \
+  LOG_EVERY_N(INFO, 1) << getenv("USER") << " " << (label) << " " \
+                       << (metric_name) << " " << logging::COUNTER;
+#endif
+
+#ifndef LOG_SUMMARY
+#define LOG_SUMMARY(metric_name, label, metric_val)                            \
+  LOG(INFO) << getenv("USER") << " " << (label) << " " << (metric_name) << " " \
+            << (metric_val) *1000 << "ms";
+#endif
+
 }  // namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_LOGGING_H_
