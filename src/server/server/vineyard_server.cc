@@ -343,7 +343,7 @@ Status VineyardServer::CreateData(
       },
       boost::bind(callback, _1, id, signature, _2));
   double endTime = GetCurrentTime();
-  LOG_SUMMARY("data_request_latency", "create",  endTime - startTime);
+  LOG_SUMMARY("data_request_latency", "create", endTime - startTime);
   LOG_COUNTER("data_requests_total", "create");
   return Status::OK();
 }
