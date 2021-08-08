@@ -257,6 +257,7 @@ jobs:
         run: |
           # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
 
           pushd build
           make -j`nproc`
@@ -308,6 +309,8 @@ jobs:
 
       - name: Run Tests
         run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
@@ -324,6 +327,8 @@ jobs:
         uses: sighingnow/action-tmate@master
         with:
           script-to-run: |
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
             # enable coredump for debugging
             ulimit -c unlimited
 
@@ -339,6 +344,8 @@ jobs:
       - name: Run Python Tests
         if: ${{ github.event_name == 'pull_request' }}
         run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
           # enable coredump for debugging
           ulimit -c unlimited
 
@@ -357,6 +364,8 @@ jobs:
 
       - name: Run IO Tests
         run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
           export VINEYARD_DEV=TRUE
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
