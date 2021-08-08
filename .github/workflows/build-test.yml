@@ -257,6 +257,7 @@ jobs:
         run: |
           # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
 
           pushd build
           make -j`nproc`
@@ -266,21 +267,28 @@ jobs:
           sudo make install
           popd
 
+          # not used anymore
+          rm -rf build/lib*
+
           # build & install vineyard for python
-          rm -rf build/lib.* build/bdist.*
+          rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
 
-          # build & install vineyard-ml
-          rm -rf build/lib.* build/bdist.*
-          python3 setup_ml.py bdist_wheel
+          # build & install airflow-provider-vineyard
+          rm -rf build/lib* build/bdist.*
+          python3 setup_airflow.py bdist_wheel
 
           # build & install vineyard-dask
-          rm -rf build/lib.* build/bdist.*
+          rm -rf build/lib* build/bdist.*
           python3 setup_dask.py bdist_wheel
+
+          # build & install vineyard-ml
+          rm -rf build/lib* build/bdist.*
+          python3 setup_ml.py bdist_wheel
 
           # build & install vineyard-io
           pushd modules/io
-          rm -rf build/lib.* build/bdist.*
+          rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
           popd
 
@@ -301,8 +309,9 @@ jobs:
 
       - name: Run Tests
         run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
           export VINEYARD_DATA_DIR=`pwd`/gstest
-          export VINEYARD_HOME=`pwd`/build/bin
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
@@ -318,13 +327,14 @@ jobs:
         uses: sighingnow/action-tmate@master
         with:
           script-to-run: |
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
             # enable coredump for debugging
             ulimit -c unlimited
 
             export VINEYARD_DEV=TRUE
 
             export VINEYARD_DATA_DIR=`pwd`/gstest
-            export VINEYARD_HOME=`pwd`/build/bin
             export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
             rm -rf default.etcd
@@ -334,13 +344,14 @@ jobs:
       - name: Run Python Tests
         if: ${{ github.event_name == 'pull_request' }}
         run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
           # enable coredump for debugging
           ulimit -c unlimited
 
           export VINEYARD_DEV=TRUE
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
-          export VINEYARD_HOME=`pwd`/build/bin
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
@@ -353,10 +364,11 @@ jobs:
 
       - name: Run IO Tests
         run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
           export VINEYARD_DEV=TRUE
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
-          export VINEYARD_HOME=`pwd`/build/bin
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
