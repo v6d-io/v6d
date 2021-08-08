@@ -83,6 +83,11 @@ int main(int argc, char* argv[]) {
   }
   vineyard::flags::HandleCommandLineHelpFlags();
 
+  // tweak other flags, specially alias
+  if (vineyard::FLAGS_metrics) {
+    vineyard::FLAGS_prometheus = true;
+  }
+
   LOG(INFO) << "Hello vineyard!";
 
   // Ignore SIGPIPE signals to avoid killing the server when writting to a lost
