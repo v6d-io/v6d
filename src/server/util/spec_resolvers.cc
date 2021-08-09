@@ -22,6 +22,8 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "server/util/spec_resolvers.h"
 
+namespace vineyard {
+
 // meta data
 DEFINE_string(deployment, "local", "deployment mode: local, distributed");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
@@ -41,7 +43,11 @@ DEFINE_int32(rpc_socket_port, 9600, "port to listen in rpc server");
 // Kubernetes
 DEFINE_bool(sync_crds, false, "Synchronize CRDs when persisting objects");
 
-namespace vineyard {
+// Whether to print metrics for prometheus or not.
+DEFINE_bool(prometheus, false,
+            "Whether to print metrics for prometheus or not");
+DEFINE_bool(metrics, false,
+            "Alias for --prometheus, and takes precedence over --prometheus");
 
 const Resolver& Resolver::get(std::string name) {
   static auto server_resolver = ServerSpecResolver();

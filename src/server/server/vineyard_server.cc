@@ -31,6 +31,7 @@ limitations under the License.
 #include "server/services/meta_service.h"
 #include "server/util/kubectl.h"
 #include "server/util/meta_tree.h"
+#include "server/util/metrics.h"
 #include "server/util/proc.h"
 
 namespace vineyard {
