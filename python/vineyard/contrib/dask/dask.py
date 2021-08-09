@@ -16,17 +16,19 @@
 # limitations under the License.
 #
 
-import dask
 import json
-import vineyard
 
-from dask.distributed import Client
-from vineyard._C import ObjectMeta
-
-import dask.array as da
-import dask.dataframe as dd
 import numpy as np
 import pandas as pd
+
+import dask
+import dask.array as da
+import dask.dataframe as dd
+from dask.distributed import Client
+
+import vineyard
+from vineyard.data.dataframe import make_global_dataframe
+from vineyard.data.tensor import make_global_tensor
 
 
 def dask_array_builder(client, value, builder, **kw):
@@ -37,18 +39,8 @@ def dask_array_builder(client, value, builder, **kw):
         return np.array([[int(obj_id)]])
 
     _ = Client(kw['dask_scheduler'])  #enforce distributed scheduling
-    ids = value.map_blocks(put_partition, dtype=int).compute().flatten()
-    meta = ObjectMeta()
-    meta['typename'] = 'vineyard::GlobalTensor'
-    meta.set_global(True)
-    meta['partitions_-size'] = len(ids)
-
-    for i, obj_id in enumerate(ids):
-        meta.add_member('partitions_-%d' % i, vineyard.ObjectID(obj_id))
-
-    gtensor_meta = client.create_metadata(meta)
-    client.persist(gtensor_meta)
-    return gtensor_meta
+    blocks = value.map_blocks(put_partition, dtype=int).compute().flatten()
+    return make_global_tensor(client, blocks)
 
 
 def dask_dataframe_builder(client, value, builder, **kw):
@@ -61,17 +53,8 @@ def dask_dataframe_builder(client, value, builder, **kw):
     _ = Client(kw['dask_scheduler'])  #enforce distributed scheduling
     res = value.map_partitions(put_partition, meta={'no': int, 'id': int}).compute()
     res = res.set_index('no')
-    meta = ObjectMeta()
-    meta['typename'] = 'vineyard::GlobalDataFrame'
-    meta.set_global(True)
-    meta['partitions_-size'] = len(res)
-
-    for i in range(len(res)):
-        meta.add_member('partitions_-%d' % i, vineyard.ObjectID(res.loc[i]))
-
-    gdf_meta = client.create_metadata(meta)
-    client.persist(gdf_meta)
-    return gdf_meta
+    blocks = [res.loc[i] for i in range(len(res))]
+    return make_global_dataframe(client, blocks)
 
 
 def dask_array_resolver(obj, resolver, **kw):

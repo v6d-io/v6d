@@ -16,22 +16,11 @@
 # limitations under the License.
 #
 
-from vineyard._C import ObjectMeta
-from vineyard.core.resolver import resolver_context
-from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
-from vineyard.data import tensor, dataframe, arrow
-
-import pandas as pd
-import pyarrow as pa
-try:
-    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
-except:
-    BlockPlacement = None
-    from pandas.core.internals.blocks import Block
-
-from pandas.core.internals.managers import BlockManager
 import numpy as np
 import xgboost as xgb
+
+from vineyard.core.resolver import resolver_context
+from vineyard.data import tensor, dataframe, arrow
 
 
 def xgb_builder(client, value, builder, **kw):

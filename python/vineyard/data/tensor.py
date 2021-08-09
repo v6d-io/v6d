@@ -29,7 +29,7 @@ import pickle
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
 
-from vineyard._C import ObjectMeta
+from vineyard._C import Object, ObjectID, ObjectMeta
 from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype
 
 
@@ -224,6 +224,25 @@ def lil_matrix_builder(client, value, builder, **kw):
 def lil_matrix_resolver(obj):
     # FIXME
     raise NotImplementedError('sp.sparse.lil_matirx is not supported')
+
+
+def make_global_tensor(client, blocks, extra_meta=None):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::GlobalTensor'
+    meta.set_global(True)
+    meta['partitions_-size'] = len(blocks)
+    if extra_meta:
+        for k, v in extra_meta.items():
+            meta[k] = v
+
+    for idx, block in enumerate(blocks):
+        if not isinstance(block, (ObjectMeta, ObjectID, Object)):
+            block = ObjectID(block)
+        meta.add_member('partitions_-%d' % idx, block)
+
+    gtensor_meta = client.create_metadata(meta)
+    client.persist(gtensor_meta)
+    return gtensor_meta
 
 
 def register_tensor_types(builder_ctx, resolver_ctx):

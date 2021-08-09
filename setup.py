@@ -18,7 +18,6 @@
 
 import os
 import subprocess
-import sys
 import textwrap
 
 from distutils.cmd import Command
