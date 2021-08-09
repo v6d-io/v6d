@@ -34,9 +34,10 @@ namespace vineyard {
 #endif
 
 #ifndef REGISTER_PYBIND_EXCEPTION
-#define REGISTER_PYBIND_EXCEPTION(mod, name) \
-  py::register_exception<name##Exception>(   \
-      mod, VINEYARD_STRINGIFY(name) "Exception")
+#define REGISTER_PYBIND_EXCEPTION(mod, name)     \
+  py::register_exception<name##Exception>(       \
+      mod, VINEYARD_STRINGIFY(name) "Exception", \
+      pybind11::detail::get_exception_object<VineyardException>())
 #endif
 
 #ifndef THROW_ON_ERROR_OF
@@ -45,6 +46,7 @@ namespace vineyard {
     throw name##Exception(status.ToString())
 #endif
 
+DEFINE_PYBIND_EXCEPTION(Vineyard);
 DEFINE_PYBIND_EXCEPTION(Invalid);
 DEFINE_PYBIND_EXCEPTION(KeyError);
 DEFINE_PYBIND_EXCEPTION(TypeError);
@@ -76,6 +78,8 @@ DEFINE_PYBIND_EXCEPTION(UserInputError);
 DEFINE_PYBIND_EXCEPTION(UnknownError);
 
 void bind_error(py::module& mod) {
+  py::register_exception<VineyardException>(mod, "VineyardException",
+                                            PyExc_RuntimeError);
   REGISTER_PYBIND_EXCEPTION(mod, Invalid);
   REGISTER_PYBIND_EXCEPTION(mod, KeyError);
   REGISTER_PYBIND_EXCEPTION(mod, TypeError);
