@@ -48,12 +48,12 @@ def tf_dataframe_builder(client, value, builder, **kw):
     meta['typename'] = 'vineyard::DataFrame'
     for feat, labels in value.take(1):
         cols = list(feat.keys())
-    cols.append('target')
+    cols.append('label')
     meta['columns_'] = to_json(cols)
     for i in range(len(cols)):
         ls = []
         for feat, labels in value.take(len(value)):
-            if cols[i] == 'target':
+            if cols[i] == 'label':
                 ls.append(labels.numpy())
             else:
                 ls.append(feat[cols[i]].numpy())
@@ -102,7 +102,7 @@ def tf_tensor_resolver(obj):
 def tf_dataframe_resolver(obj, **kw):
     with resolver_context(base=default_resolver_context) as resolver:
         df = resolver(obj, **kw)
-    labels = df.pop('target')
+    labels = df.pop('label')
     return tf.data.Dataset.from_tensor_slices((dict(df), labels))
 
 
@@ -110,7 +110,7 @@ def tf_record_batch_resolver(obj, **kw):
     with resolver_context(base=default_resolver_context) as resolver:
         records = resolver(obj, **kw)
     records = records.to_pandas()
-    labels = records.pop('target')
+    labels = records.pop('label')
     return tf.data.Dataset.from_tensor_slices((dict(records), labels))
 
 
