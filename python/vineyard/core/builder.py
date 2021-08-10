@@ -74,6 +74,9 @@ class BuilderContext():
                 return self.__factory[ty](client, value, **kw)
         raise RuntimeError('Unknown type to build as vineyard object')
 
+    def __call__(self, client, value, **kw):
+        return self.run(client, value, **kw)
+
     def extend(self, builders=None):
         builder = BuilderContext()
         builder.__factory = copy.copy(self.__factory)
