@@ -1,4 +1,4 @@
-vineyard-cli
+Vineyard Cli
 ============
 
 **vineyard-ctl**: A command-line tool for **vineyard**.
