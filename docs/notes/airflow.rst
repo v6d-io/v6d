@@ -110,7 +110,20 @@ follows:
 When it Comes to Distributed Deployment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Airflow supports executing tasks on a set of workers to parallelize the
+processing of complex workflows. In a distributed deployment (with the
+:code:`CeleryExecutor`), two tasks that shares intermediate data might
+be scheduled to different workers, and a remote data accessing is needed.
 
+Vineyards supports migration for arbitrary objects. In the XCom backend,
+when the IPC client meets remote objects, it first trigger a migration
+action to move the objects to local to make sure the input data is ready
+before executing the tasks.
+
+The migration of objects is transparent to users and relieves the burden
+of thinking about of complex data operations and movement then the data
+scientists can focus on the computation logic when developing a big data
+applications on Airflow.
 
 Running Vineyard + Airflow
 --------------------------
