@@ -50,21 +50,11 @@ def find_airflow_packages(root):
     return pkgs
 
 
-with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'), encoding='utf-8', mode='r') as fp:
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'python', 'vineyard', 'contrib', 'airflow',
+                       'README.rst'),
+          encoding='utf-8',
+          mode='r') as fp:
     long_description = fp.read()
-
-    # Github doesn't respect "align: center", and pypi disables `.. raw`.
-    replacement = textwrap.dedent('''
-        .. image:: https://v6d.io/_static/vineyard_logo.png
-           :target: https://v6d.io
-           :align: center
-           :alt: vineyard
-           :width: 397px
-
-        vineyard: an in-memory immutable data manager
-        ---------------------------------------------
-        ''')
-    long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 setup(
     name='airflow-provider-vineyard',
