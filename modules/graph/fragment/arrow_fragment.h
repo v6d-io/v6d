@@ -370,13 +370,13 @@ class ArrowFragment
   }
 
   template <typename DATA_T>
-  property_graph_utils::VertexDataColumn<DATA_T, vertex_t> vertex_data_column(
+  property_graph_utils::VertexDataColumn<DATA_T, vid_t> vertex_data_column(
       label_id_t label, prop_id_t prop) const {
     if (vertex_tables_[label]->num_rows() == 0) {
-      return property_graph_utils::VertexDataColumn<DATA_T, vertex_t>(
+      return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
           InnerVertices(label));
     } else {
-      return property_graph_utils::VertexDataColumn<DATA_T, vertex_t>(
+      return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
           InnerVertices(label), vertex_tables_[label]->column(prop)->chunk(0));
     }
   }
