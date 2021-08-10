@@ -70,7 +70,7 @@ def test_tf_dataframe(vineyard_client):
 
 def test_tf_record_batch(vineyard_client):
     arrays = [pa.array([1, 2, 3, 4]), pa.array([3.0, 4.0, 5.0, 6.0]), pa.array([0, 1, 0, 1])]
-    batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])
+    batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'label'])
     object_id = vineyard_client.put(batch)
     dtrain = vineyard_client.get(object_id)
     for x, y in dtrain.take(1):
@@ -81,7 +81,7 @@ def test_tf_record_batch(vineyard_client):
 
 def test_tf_table(vineyard_client):
     arrays = [pa.array([1, 2]), pa.array([0, 1]), pa.array([0.1, 0.2])]
-    batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])
+    batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'label'])
     batches = [batch] * 4
     table = pa.Table.from_batches(batches)
     object_id = vineyard_client.put(table)
