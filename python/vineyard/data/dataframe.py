@@ -25,7 +25,7 @@ except:
     from pandas.core.internals.blocks import Block
 from pandas.core.internals.managers import BlockManager
 
-from vineyard._C import ObjectMeta
+from vineyard._C import Object, ObjectID, ObjectMeta
 from .utils import from_json, to_json, normalize_dtype
 
 
@@ -92,6 +92,25 @@ def pandas_sparse_array_resolver(obj, resolver):
     sp_index = sp_index_type(sp_index_size, sp_index_array)
     sp_values = resolver.run(obj.member('sp_values'))
     return pd.arrays.SparseArray(sp_values, sparse_index=sp_index, dtype=value_type)
+
+
+def make_global_dataframe(client, blocks, extra_meta=None):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::GlobalDataFrame'
+    meta.set_global(True)
+    meta['partitions_-size'] = len(blocks)
+    if extra_meta:
+        for k, v in extra_meta.items():
+            meta[k] = v
+
+    for idx, block in enumerate(blocks):
+        if not isinstance(block, (ObjectMeta, ObjectID, Object)):
+            block = ObjectID(block)
+        meta.add_member('partitions_-%d' % idx, block)
+
+    gtensor_meta = client.create_metadata(meta)
+    client.persist(gtensor_meta)
+    return gtensor_meta
 
 
 def register_dataframe_types(builder_ctx, resolver_ctx):

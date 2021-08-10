@@ -16,18 +16,4 @@
 # limitations under the License.
 #
 
-import pytest
-
-
-def pytest_addoption(parser):
-    parser.addoption(
-        "--vineyard-ipc-sockets",
-        action="store",
-        default='/tmp/vineyard.sock',
-        help='Location of vineyard IPC sockets, seperated by ","',
-    )
-
-
-@pytest.fixture(scope='session')
-def vineyard_ipc_sockets(request):
-    return request.config.option.vineyard_ipc_sockets.split(',')
+from vineyard.conftest import vineyard_ipc_sockets

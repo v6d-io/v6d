@@ -70,7 +70,7 @@ setup(
     name='vineyard-dask',
     author='The vineyard team',
     author_email='developers@v6d.io',
-    description='Vineyard integration with dask',
+    description='Vineyard integration with Dask',
     long_description=long_description,
     long_description_content_type='text/x-rst',
     url='https://v6d.io',

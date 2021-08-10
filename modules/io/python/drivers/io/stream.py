@@ -20,6 +20,7 @@ import base64
 import json
 import logging
 import os
+from vineyard.data.dataframe import make_global_dataframe
 
 import vineyard.io
 from vineyard.launcher.script import ScriptLauncher
@@ -178,26 +179,19 @@ class ParallelStreamLauncher(ScriptLauncher):
         name = kwargs.pop("name", None)
         if name is None:
             raise ValueError("Name of the global dataframe is not provided")
-        meta = vineyard.ObjectMeta()
-        meta['typename'] = 'vineyard::GlobalDataFrame'
-        meta.set_global(True)
-        meta['partition_shape_row_'] = len(results)
-        meta['partition_shape_column_'] = 1
 
-        partition_size = 0
-        partial_id_matrix = []
+        chunks = []
         for row in results:
-            partial_id_matrix.append([vineyard.ObjectID(ret_id) for ret_id in row])
-        for partial_id_list in partial_id_matrix:
-            for partial_id in partial_id_list:
-                meta.add_member('partitions_-%d' % partition_size, partial_id)
-                partition_size += 1
-        meta['partitions_-size'] = partition_size
+            for chunk in row:
+                chunks.append(chunk)
 
-        meta['nbytes'] = 0  # FIXME
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
-        gdf = vineyard_rpc_client.create_metadata(meta)
-        vineyard_rpc_client.persist(gdf)
+        extra_meta = {
+            'partition_shape_row_': len(results),
+            'partition_shape_column_': 1,
+            'nbytes': 0,  # FIXME
+        }
+        gdf = make_global_dataframe(vineyard_rpc_client, chunks, extra_meta)
         vineyard_rpc_client.put_name(gdf, name)
 
 
