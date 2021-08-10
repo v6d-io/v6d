@@ -24,7 +24,7 @@ from sortedcontainers import SortedDict
 
 from vineyard._C import IPCClient, RPCClient, ObjectID, Object
 from vineyard.core.utils import find_most_precise_match
-from vineyard.core.driver import default_driver_context, get_current_drivers
+from vineyard.core.driver import get_current_drivers
 
 
 class ResolverContext():
@@ -40,12 +40,36 @@ class ResolverContext():
     def run(self, obj, **kw):
         typename = obj.meta.typename
         prefix, resolver = find_most_precise_match(typename, self.__factory)
+        vineyard_client = kw.pop('__vineyard_client', None)
         if prefix:
             resolver_func_sig = inspect.getfullargspec(resolver)
             if 'resolver' in resolver_func_sig.args or resolver_func_sig.varkw is not None:
                 kw['resolver'] = self
-            return resolver(obj, **kw)
+            value = resolver(obj, **kw)
+            if value is None:
+                # if the obj has been resolved by pybind types, and there's no proper resolver, it
+                # shouldn't be an error
+                if type(obj) is not Object:
+                    return obj
+
+                raise RuntimeError('Unable to construct the object: no proper resolver found: typename is %s' %
+                                   obj.meta.typename)
+
+            # associate a reference to the base C++ object
+            try:
+                setattr(value, '__vineyard_ref', obj)
+                setattr(value, '__vineyard_client', vineyard_client)
+
+                # register methods
+                get_current_drivers().resolve(value, obj.typename)
+            except AttributeError:
+                pass
+
+            return value
         return None
+
+    def __call__(self, obj, **kw):
+        return self.run(obj, **kw)
 
     def extend(self, resolvers=None):
         resolver = ResolverContext()
@@ -158,31 +182,9 @@ def get(client, object_id, resolver=None, **kw):
     meta = obj.meta
     if not meta.islocal and not meta.isglobal:
         raise ValueError("Not a local object: for remote object, you can only get its metadata")
-    if resolver is not None:
-        value = resolver(obj, **kw)
-    else:
-        value = get_current_resolvers().run(obj, **kw)
-    if value is None:
-        # if the obj has been resolved by pybind types, and there's no proper resolver, it
-        # shouldn't be an error
-        if type(obj) is not Object:
-            return obj
-
-        raise RuntimeError('Unable to construct the object: no proper resolver found: typename is %s' %
-                           obj.meta.typename)
-
-    # associate a reference to the base C++ object
-    try:
-        setattr(value, '__vineyard_ref', obj)
-        setattr(value, '__vineyard_client', client)
-    except AttributeError:
-        pass
-
-    # register methods
-    get_current_drivers().resolve(value, obj.typename)
-
-    # return value
-    return value
+    if resolver is None:
+        resolver = get_current_resolvers()
+    return resolver(obj, __vineyard_client=client, **kw)
 
 
 setattr(IPCClient, 'get', get)
