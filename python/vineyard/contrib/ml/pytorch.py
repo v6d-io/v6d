@@ -132,6 +132,7 @@ def torch_table_resolver(obj, **kw):
         ds = torch.tensor(table.drop(kw['label'], axis=1).values)
         return torch.utils.data.TensorDataset(ds, target)
 
+
 def torch_global_tensor_resolver(obj, resolver, **kw):
     meta = obj.meta
     num = int(meta['partitions_-size'])
@@ -150,6 +151,7 @@ def torch_global_dataframe_resolver(obj, resolver, **kw):
         if meta[f'partitions_{i}'].islocal:
             data.append(resolver.run(obj.member(f'partitions_{i}')))
     return ConcatDataset(data)
+
 
 def register_torch_types(builder_ctx, resolver_ctx):
 

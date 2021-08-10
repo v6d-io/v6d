@@ -48,12 +48,12 @@ def tf_dataframe_builder(client, value, builder, **kw):
     meta['typename'] = 'vineyard::DataFrame'
     for feat, labels in value.take(1):
         cols = list(feat.keys())
-    cols.append('target')
+    cols.append('label')
     meta['columns_'] = to_json(cols)
     for i in range(len(cols)):
         ls = []
         for feat, labels in value.take(len(value)):
-            if cols[i] == 'target':
+            if cols[i] == 'label':
                 ls.append(labels.numpy())
             else:
                 ls.append(feat[cols[i]].numpy())
