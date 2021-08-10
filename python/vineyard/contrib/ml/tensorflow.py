@@ -117,9 +117,8 @@ def tf_record_batch_resolver(obj, **kw):
 def tf_table_resolver(obj, resolver):
     meta = obj.meta
     batches = []
-    with resolver_context(base=default_resolver_context) as resolver:
-        for idx in range(int(meta['__batches_-size'])):
-            batches.append(resolver(obj.member('__batches_-%d' % idx)))
+    for idx in range(int(meta['__batches_-size'])):
+        batches.append(resolver(obj.member('__batches_-%d' % idx)))
     tf_data = batches[0]
     for i in range(1, len(batches)):
         tf_data = tf_data.concatenate(batches[i])

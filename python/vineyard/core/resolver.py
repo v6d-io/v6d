@@ -43,9 +43,14 @@ class ResolverContext():
         vineyard_client = kw.pop('__vineyard_client', None)
         if prefix:
             resolver_func_sig = inspect.getfullargspec(resolver)
-            if 'resolver' in resolver_func_sig.args or resolver_func_sig.varkw is not None:
-                kw['resolver'] = self
-            value = resolver(obj, **kw)
+            if resolver_func_sig.varkw is not None:
+                value = resolver(obj, resolver=self, **kw)
+            else:
+                # don't pass the `**kw`.
+                if 'resolver' in resolver_func_sig.args:
+                    value = resolver(obj, resolver=self)
+                else:
+                    value = resolver(obj)
             if value is None:
                 # if the obj has been resolved by pybind types, and there's no proper resolver, it
                 # shouldn't be an error
