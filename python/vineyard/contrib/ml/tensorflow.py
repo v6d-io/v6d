@@ -16,20 +16,12 @@
 # limitations under the License.
 #
 
-from vineyard._C import ObjectMeta
-from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
-
-import pandas as pd
-import pyarrow as pa
-try:
-    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
-except:
-    BlockPlacement = None
-    from pandas.core.internals.blocks import Block
-
-from pandas.core.internals.managers import BlockManager
 import numpy as np
 import tensorflow as tf
+
+from vineyard._C import ObjectMeta
+from vineyard.core.resolver import resolver_context, default_resolver_context
+from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
 
 def tf_tensor_builder(client, value, **kw):
@@ -54,7 +46,6 @@ def tf_tensor_builder(client, value, **kw):
 def tf_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
-    print(len(value))
     for feat, labels in value.take(1):
         cols = list(feat.keys())
     cols.append('target')
@@ -72,7 +63,6 @@ def tf_dataframe_builder(client, value, builder, **kw):
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
     meta['partition_index_column_'] = kw.get('partition_index', [0, 0])[1]
     meta['row_batch_index_'] = kw.get('row_batch_index', 0)
-    print(meta)
     return client.create_metadata(meta)
 
 
@@ -109,51 +99,30 @@ def tf_tensor_resolver(obj):
     return data
 
 
-def tf_dataframe_resolver(obj, resolver):
-    meta = obj.meta
-    columns = from_json(meta['columns_'])
-    if not columns:
-        return pd.DataFrame()
-    blocks = []
-    index_size = 0
-    for idx, name in enumerate(columns):
-        np_value = resolver.run(obj.member('__values_-value-%d' % idx))
-        index_size = len(np_value)
-        if BlockPlacement:
-            placement = BlockPlacement(slice(idx, idx + 1, 1))
-        else:
-            placement = slice(idx, idx + 1, 1)
-        values = np.expand_dims(np_value, 0)
-        blocks.append(Block(values, placement, ndim=2))
-    if 'index_' in meta:
-        index = resolver.run(obj.member('index_'))
-    else:
-        index = pd.RangeIndex(index_size)
-    df = pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
+def tf_dataframe_resolver(obj, **kw):
+    with resolver_context(base=default_resolver_context) as resolver:
+        df = resolver(obj, **kw)
     labels = df.pop('target')
     return tf.data.Dataset.from_tensor_slices((dict(df), labels))
 
 
-def tf_recordBatch_resolver(obj, resolver):
-    meta = obj.meta
-    schema = resolver.run(obj.member('schema_'))
-    columns = []
-    for idx in range(int(meta['__columns_-size'])):
-        columns.append(resolver.run(obj.member('__columns_-%d' % idx)))
-    arrow = pa.RecordBatch.from_arrays(columns, schema=schema).to_pandas()
-    labels = arrow.pop('label')
-    return tf.data.Dataset.from_tensor_slices((dict(arrow), labels))
+def tf_record_batch_resolver(obj, **kw):
+    with resolver_context(base=default_resolver_context) as resolver:
+        records = resolver(obj, **kw)
+    records = records.to_pandas()
+    labels = records.pop('label')
+    return tf.data.Dataset.from_tensor_slices((dict(records), labels))
 
 
 def tf_table_resolver(obj, resolver):
     meta = obj.meta
     batches = []
     for idx in range(int(meta['__batches_-size'])):
-        batches.append(resolver.run(obj.member('__batches_-%d' % idx)))
-    tfData = batches[0]
+        batches.append(resolver(obj.member('__batches_-%d' % idx)))
+    tf_data = batches[0]
     for i in range(1, len(batches)):
-        tfData = tfData.concatenate(batches[i])
-    return tfData
+        tf_data = tf_data.concatenate(batches[i])
+    return tf_data
 
 
 def tf_global_tensor_resolver(obj, resolver, **kw):
@@ -164,10 +133,10 @@ def tf_global_tensor_resolver(obj, resolver, **kw):
     for i in range(partition_index):
         if meta[f'partition_{i}'].islocal:
             data.append(resolver.run(obj.member(f'partition_{i}')))
-    tfData = data[0]
+    tf_data = data[0]
     for i in range(1, len(data)):
-        tfData = tfData.concatenate(data[i])
-    return tfData
+        tf_data = tf_data.concatenate(data[i])
+    return tf_data
 
 
 def tf_global_dataframe_resolver(obj, resolver, **kw):
@@ -178,10 +147,10 @@ def tf_global_dataframe_resolver(obj, resolver, **kw):
     for i in range(partition_index):
         if meta[f'partition_{i}'].islocal:
             data.append(resolver.run(obj.member(f'partition_{i}')))
-    tfData = data[0]
+    tf_data = data[0]
     for i in range(1, len(data)):
-        tfData = tfData.concatenate(data[i])
-    return tfData
+        tf_data = tf_data.concatenate(data[i])
+    return tf_data
 
 
 def register_tf_types(builder_ctx, resolver_ctx):
@@ -191,7 +160,7 @@ def register_tf_types(builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', tf_tensor_resolver)
         resolver_ctx.register('vineyard::DataFrame', tf_dataframe_resolver)
-        resolver_ctx.register('vineyard::RecordBatch', tf_recordBatch_resolver)
+        resolver_ctx.register('vineyard::RecordBatch', tf_record_batch_resolver)
         resolver_ctx.register('vineyard::Table', tf_table_resolver)
         resolver_ctx.register('vineyard::GlobalTensor', tf_global_tensor_resolver)
         resolver_ctx.register('vineyard::GlobalDataFrame', tf_global_dataframe_resolver)
