@@ -141,13 +141,21 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   try {
     root = json::parse(message_in);
   } catch (std::out_of_range const& err) {
+#ifndef NDEBUG
+    LOG(ERROR) << "json: " << err.what() << " when parsing" << message_in;
+#else
     LOG(ERROR) << "json: " << err.what();
+#endif
     std::string message_out;
     WriteErrorReply(Status::Invalid(err.what()), message_out);
     this->doWrite(message_out);
     return false;
   } catch (json::exception const& err) {
+#ifndef NDEBUG
+    LOG(ERROR) << "json: " << err.what() << " when parsing" << message_in;
+#else
     LOG(ERROR) << "json: " << err.what();
+#endif
     std::string message_out;
     WriteErrorReply(Status::Invalid(err.what()), message_out);
     this->doWrite(message_out);

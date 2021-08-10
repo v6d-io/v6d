@@ -24,6 +24,10 @@ from vineyard._C import ObjectMeta
 from vineyard.core.resolver import resolver_context, default_resolver_context
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
+from vineyard._C import ObjectMeta
+from vineyard.core.resolver import resolver_context, default_resolver_context
+from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
+
 
 def torch_tensor_builder(client, value, **kw):
     meta = ObjectMeta()
@@ -148,6 +152,7 @@ def torch_global_dataframe_resolver(obj, resolver, **kw):
     return ConcatDataset(data)
 
 def register_torch_types(builder_ctx, resolver_ctx):
+
     if builder_ctx is not None:
         builder_ctx.register(Dataset, torch_builder)
 

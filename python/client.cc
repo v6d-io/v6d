@@ -333,7 +333,26 @@ void bind_client(py::module& mod) {
       .def_property_readonly(
           "rpc_connections",
           [](InstanceStatus* status) { return status->rpc_connections; })
-      .def("__repr__", [](InstanceStatus* status) { return "InstanceStatus"; })
+      .def("__repr__",
+           [](InstanceStatus* status) {
+             std::stringstream ss;
+             ss << "{" << std::endl;
+             ss << "    instance_id: " << status->instance_id << ","
+                << std::endl;
+             ss << "    deployment: " << status->deployment << "," << std::endl;
+             ss << "    memory_usage: " << status->memory_usage << ","
+                << std::endl;
+             ss << "    memory_limit: " << status->memory_limit << ","
+                << std::endl;
+             ss << "    deferred_requests: " << status->deferred_requests << ","
+                << std::endl;
+             ss << "    ipc_connections: " << status->ipc_connections << ","
+                << std::endl;
+             ss << "    rpc_connections: " << status->rpc_connections
+                << std::endl;
+             ss << "}";
+             return ss.str();
+           })
       .def("__str__", [](InstanceStatus* status) {
         std::stringstream ss;
         ss << "InstanceStatus:" << std::endl;

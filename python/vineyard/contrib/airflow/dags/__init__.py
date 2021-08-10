@@ -15,5 +15,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from vineyard.conftest import vineyard_ipc_sockets

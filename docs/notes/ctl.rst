@@ -1,4 +1,4 @@
-vineyard-cli
+Vineyard Cli
 ============
 
 **vineyard-ctl**: A command-line tool for **vineyard**.
@@ -14,6 +14,7 @@ Supported Commands
 + :code:`stat`
 + :code:`put`
 + :code:`config`
++ :code:`migrate`
 
 Connect to a vineyard server
 ----------------------------
@@ -186,3 +187,24 @@ Example:
 .. code:: shell
 
     vineyard-ctl config --ipc_socket_value /var/run/vineyard.sock
+
+migrate
+-------
+
+Migrate a vineyard object.
+
+Options:
+
++ :code:`ipc_socket_value`: The ipc_socket value for the second client.
++ :code:`rpc_host_value`: The rpc_host value for the second client.
++ :code:`rpc_port_value`: The rpc_port value for the second client.
++ :code:`rpc_endpoint_value`: The rpc_endpoint value for the second client.
++ :code:`object_id`: ID of the object to be migrated.
++ :code:`local`: Migrate the vineyard object local to local.
++ :code:`remote`: Migrate the vineyard object remote to local.
+
+Example:
+
+.. code:: shell
+
+    vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --remote

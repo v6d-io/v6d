@@ -26,7 +26,7 @@ import pandas as pd
 
 import vineyard
 
-examples = """
+EXAMPLES = """
 Some examples on how to use vineyard-ctl:
 
 1. Connect to a vineyard server
@@ -55,6 +55,9 @@ Some examples on how to use vineyard-ctl:
 
 9. Edit configuration file
     >>> vineyard-ctl config --ipc_socket_value /var/run/vineyard.sock
+
+10. Migrate a vineyard object
+    >>> vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --local
 """
 
 
@@ -65,7 +68,7 @@ def vineyard_argument_parser():
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='vineyard-ctl: A command line tool for vineyard',
                                      allow_abbrev=False,
-                                     epilog=examples)
+                                     epilog=EXAMPLES)
     parser.add_argument('--version', action='version', version=f'{parser.prog} v{vineyard.__version__}')
     parser.add_argument('--ipc_socket', help='Socket location of connected vineyard server')
     parser.add_argument('--rpc_host', help='RPC HOST of the connected vineyard server')
@@ -122,6 +125,7 @@ def vineyard_argument_parser():
     del_opt_group = del_opt.add_mutually_exclusive_group(required=True)
     del_opt_group.add_argument('--object_id', help='ID of the object to be deleted')
     del_opt_group.add_argument('--regex_pattern', help='Delete all the objects that match the regex pattern')
+
     del_opt.add_argument('--force',
                          action='store_true',
                          help='Recursively delete even if the member object is also referred by others')
@@ -177,9 +181,10 @@ def vineyard_argument_parser():
     put_opt_group = put_opt.add_mutually_exclusive_group(required=True)
     put_opt_group.add_argument('--value', help='The python value you want to put to the vineyard server')
     put_opt_group.add_argument('--file', help='The file you want to put to the vineyard server as a pandas dataframe')
-    put_opt_group.add_argument('--sep', default=',', help='Delimiter used in the file')
-    put_opt_group.add_argument('--delimiter', default=',', help='Delimiter used in the file')
-    put_opt_group.add_argument('--header', type=int, default=0, help='Row number to use as the column names')
+
+    put_opt.add_argument('--sep', default=',', help='Delimiter used in the file')
+    put_opt.add_argument('--delimiter', default=',', help='Delimiter used in the file')
+    put_opt.add_argument('--header', type=int, default=0, help='Row number to use as the column names')
 
     config_opt = cmd_parser.add_parser('config',
                                        formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -190,6 +195,25 @@ def vineyard_argument_parser():
     config_opt.add_argument('--rpc_host_value', help='The rpc_host value to enter in the config file')
     config_opt.add_argument('--rpc_port_value', help='The rpc_port value to enter in the config file')
     config_opt.add_argument('--rpc_endpoint_value', help='The rpc_endpoint value to enter in the config file')
+
+    migrate_opt = cmd_parser.add_parser('migrate',
+                                        formatter_class=argparse.RawDescriptionHelpFormatter,
+                                        description='Description: Migrate a vineyard object',
+                                        epilog=('Example:\n\n>>> vineyard-ctl migrate --ipc_socket_value ' +
+                                                '/tmp/vineyard.sock --object_id 00002ec13bc81226 --remote'))
+    migrate_opt.add_argument('--ipc_socket_value', help='The ipc_socket value for the second client')
+    migrate_opt.add_argument('--rpc_host_value', help='The rpc_host value for the second client')
+    migrate_opt.add_argument('--rpc_port_value', help='The rpc_port value for the second client')
+    migrate_opt.add_argument('--rpc_endpoint_value', help='The rpc_endpoint value for the second client')
+    migrate_opt.add_argument('--object_id', required=True, help='ID of the object to be migrated')
+
+    migration_choice_group = migrate_opt.add_mutually_exclusive_group(required=True)
+    migration_choice_group.add_argument('--local',
+                                        action='store_true',
+                                        help='Migrate the vineyard object local to local')
+    migration_choice_group.add_argument('--remote',
+                                        action='store_true',
+                                        help='Migrate the vineyard object remote to local')
 
     return parser
 
@@ -228,7 +252,7 @@ def connect_via_config_file():
         rpc_host = sockets[1].split(':')[1][:-1]
         try:
             rpc_port = int(sockets[2].split(':')[1][:-1])
-        except:
+        except ValueError:
             rpc_port = None
         rpc_endpoint = sockets[3].split(':')[1][:-1]
     except BaseException as exc:
@@ -372,6 +396,35 @@ def copy(client, args):
         exit_with_help()
 
 
+def migrate_object(client, args):
+    """Utility to migrate a vineyard object."""
+    client1 = client
+
+    if args.ipc_socket_value is not None:
+        client2 = vineyard.connect(args.ipc_socket_value)
+        # force use rpc client in cli tools
+        client2 = vineyard.connect(*client.rpc_endpoint.split(':'))
+    elif args.rpc_endpoint_value is not None:
+        client2 = vineyard.connect(*args.rpc_endpoint_value.split(':'))
+    elif args.rpc_host_value is not None and args.rpc_port_value is not None:
+        client2 = vineyard.connect(args.rpc_host_value, args.rpc_port_value)
+    else:
+        raise Exception("You neither provided an IPC value nor a RPC value for the second client")
+
+    object_id = as_object_id(args.object_id)
+
+    try:
+        if args.local:
+            return_object_id = client1.migrate(object_id)
+        if args.remote:
+            return_object_id = client2.migrate(object_id)
+        print(f'The vineyard object({args.object_id}) was migrateed successfully')
+        print(f'Returned object ID - {return_object_id}')
+    except BaseException as exc:
+        raise Exception(('The following error was encountered while migrating ' +
+                         f'the vineyard object({args.object_id}):')) from exc
+
+
 def config(args):
     """Utility to edit the config file."""
     with open(os.path.expanduser('~/.vineyard/config')) as config_file:
@@ -413,6 +466,8 @@ def main():
         return head(client, args)
     if args.cmd == 'copy':
         return copy(client, args)
+    if args.cmd == 'migrate':
+        return migrate_object(client, args)
 
     return exit_with_help()
 

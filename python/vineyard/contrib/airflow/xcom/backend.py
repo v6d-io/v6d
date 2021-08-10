@@ -17,6 +17,7 @@
 #
 
 import logging
+import os
 from typing import Any
 
 from airflow.configuration import conf
@@ -36,6 +37,15 @@ def _resolve_vineyard_xcom_options():
         options['persist'] = conf.getboolean('vineyard', 'persist')
     else:
         options['persist'] = False
+    if conf.has_option('vineyard', 'ipc_socket'):
+        options['ipc_socket'] = conf.get('vineyard', 'ipc_socket')
+    else:
+        if 'VINEYARD_IPC_SOCKET' in os.environ:
+            options['ipc_socket'] = os.environ['VINEYARD_IPC_SOCKET']
+        else:
+            raise RuntimeError("Failed to find vineyard IPC socket configuration, " +
+                               "please configure it using the environment variable " +
+                               "$VINEYARD_IPC_SOCKET, or via airfow's vineyard.ipc_socket configuration.")
     return options
 
 
@@ -43,13 +53,10 @@ class VineyardXCom(BaseXCom):
     """
     Custom Backend Serving to use Vineyard.
 
-    Setup in your airflow Dockerfile with the following lines: ::
+    Setup your airflow environment by specifying the following
+    environment varable:
 
-        FROM quay.io/astronomer/ap-airflow:2.0.2-1-buster-onbuild
-        USER root
-        RUN pip uninstall astronomer-airflow-version-check -y
-        USER astro
-        ENV AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
+        export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
     """
 
     __options = _resolve_vineyard_xcom_options()
@@ -82,7 +89,7 @@ class VineyardXCom(BaseXCom):
         if targets:
             logger.info("Drop duplicates from vineyard: %s", targets)
             try:
-                client = vineyard.connect()
+                client = vineyard.connect(VineyardXCom.__options['ipc_socket'])
                 client.delete(targets)
             except Exception as e:
                 logger.error('Failed to drop duplicates from vineyard: %s', e)
@@ -110,7 +117,7 @@ class VineyardXCom(BaseXCom):
             session.delete(xcom)
         logger.info("Drop from vineyard: %s", targets)
         try:
-            client = vineyard.connect()
+            client = vineyard.connect(VineyardXCom.__options['ipc_socket'])
             client.delete(targets)
         except Exception as e:
             logger.error('Failed to drop from vineyard: %s', e)
@@ -136,7 +143,7 @@ class VineyardXCom(BaseXCom):
         if targets:
             logger.info("Drop from vineyard: %s", targets)
             try:
-                client = vineyard.connect()
+                client = vineyard.connect(VineyardXCom.__options['ipc_socket'])
                 client.delete(targets)
             except Exception as e:
                 logger.error('Failed to drop from vineyard: %s', e)
@@ -144,7 +151,7 @@ class VineyardXCom(BaseXCom):
 
     @staticmethod
     def serialize_value(value: Any):
-        client = vineyard.connect()
+        client = vineyard.connect(VineyardXCom.__options['ipc_socket'])
         value_id = client.put(value)
         if VineyardXCom.__options['persist']:
             client.persist(value_id)
@@ -171,7 +178,7 @@ class VineyardXCom(BaseXCom):
             It will also record the migrated xcom value into the db as well to make
             sure it can be dropped properly.
         '''
-        client = vineyard.connect()
+        client = vineyard.connect(VineyardXCom.__options['ipc_socket'])
         object_id = vineyard.ObjectID(value)
 
         meta = client.get_meta(object_id)
