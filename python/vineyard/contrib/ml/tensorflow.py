@@ -141,7 +141,7 @@ def tf_recordBatch_resolver(obj, resolver):
     for idx in range(int(meta['__columns_-size'])):
         columns.append(resolver.run(obj.member('__columns_-%d' % idx)))
     arrow = pa.RecordBatch.from_arrays(columns, schema=schema).to_pandas()
-    labels = arrow.pop('target')
+    labels = arrow.pop('label')
     return tf.data.Dataset.from_tensor_slices((dict(arrow), labels))
 
 
