@@ -202,9 +202,10 @@ class ArrowFragment
   static constexpr grape::LoadStrategy load_strategy =
       grape::LoadStrategy::kBothOutIn;
 
-  static std::shared_ptr<vineyard::Object> Create() __attribute__((used)) {
+  static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<vineyard::Object>(
-        std::make_shared<ArrowFragment<oid_t, vid_t>>());
+        std::unique_ptr<ArrowFragment<oid_t, vid_t>>{
+            new ArrowFragment<oid_t, vid_t>()});
   }
 
  public:

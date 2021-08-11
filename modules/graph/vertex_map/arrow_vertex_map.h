@@ -60,9 +60,10 @@ class ArrowVertexMap
   ArrowVertexMap() {}
   ~ArrowVertexMap() {}
 
-  static std::shared_ptr<vineyard::Object> Create() __attribute__((used)) {
+  static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<vineyard::Object>(
-        std::make_shared<ArrowVertexMap<OID_T, VID_T>>());
+        std::unique_ptr<ArrowVertexMap<OID_T, VID_T>>{
+            new ArrowVertexMap<OID_T, VID_T>()});
   }
 
   void Construct(const vineyard::ObjectMeta& meta) {
@@ -321,9 +322,10 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   ArrowVertexMap() {}
   ~ArrowVertexMap() {}
 
-  static std::shared_ptr<vineyard::Object> Create() __attribute__((used)) {
+  static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<vineyard::Object>(
-        std::make_shared<ArrowVertexMap<oid_t, vid_t>>());
+        std::unique_ptr<ArrowVertexMap<oid_t, vid_t>>{
+            new ArrowVertexMap<oid_t, vid_t>()});
   }
 
   void Construct(const vineyard::ObjectMeta& meta) {
