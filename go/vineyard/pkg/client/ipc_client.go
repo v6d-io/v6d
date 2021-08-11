@@ -21,7 +21,7 @@ import (
 	"net"
 )
 
-type IPCServer struct {
+type IPCClient struct {
 	ClientBase
 	connected     bool
 	ipcSocket     string
@@ -31,11 +31,11 @@ type IPCServer struct {
 	rpcEndpoint   string
 }
 
-// Connect to IPCServer steps as follows
+// Connect to IPCClient steps as follows
 // 1. using unix socket connecct to vineyead server
 // 2. sending register request to server and get response from server
 // Note: you should send message's length first to server, then send message
-func (i *IPCServer) Connect(ipcSocket string) error {
+func (i *IPCClient) Connect(ipcSocket string) error {
 	if i.connected || i.ipcSocket == ipcSocket {
 		return nil
 	}
@@ -70,4 +70,12 @@ func (i *IPCServer) Connect(ipcSocket string) error {
 	i.rpcEndpoint = registerReply.RPCEndpoint
 	// TODO: compatible server check
 	return nil
+}
+
+func (i *IPCClient) CreateBlob(size int, ) {
+	if i.connected == false {
+		return
+	}
+	//var id common.ObjectID = common.InvalidObjectID()
+
 }
