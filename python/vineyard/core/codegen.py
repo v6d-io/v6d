@@ -323,15 +323,19 @@ def generate_template_type(name, ts):
 
 create_tpl = '''
 {class_header}
-std::shared_ptr<Object> {class_name_elaborated}::Create() {{
-    return std::static_pointer_cast<Object>(std::make_shared<{class_name_elaborated}>());
+std::unique_ptr<Object> {class_name_elaborated}::Create() {{
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<{class_name_elaborated}>{{
+            new {class_name_elaborated}()}});
 }}
 '''
 
 create_meth_tpl = '''
   public:
-    static std::shared_ptr<Object> Create() __attribute__((used)) {{
-        return std::static_pointer_cast<Object>(std::make_shared<{class_name_elaborated}>());
+    static std::unique_ptr<Object> Create() __attribute__((used)) {{
+        return std::static_pointer_cast<Object>(
+            std::unique_ptr<{class_name_elaborated}>{{
+                new {class_name_elaborated}()}});
     }}
 '''
 

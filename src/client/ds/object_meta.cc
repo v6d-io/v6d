@@ -141,7 +141,7 @@ std::shared_ptr<Object> ObjectMeta::GetMember(const std::string& name) const {
   ObjectMeta meta = this->GetMemberMeta(name);
   auto object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
-    object = std::shared_ptr<Object>(new Object());
+    object = std::unique_ptr<Object>(new Object());
   }
   object->Construct(meta);
   return object;
