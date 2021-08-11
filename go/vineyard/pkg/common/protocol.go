@@ -24,6 +24,12 @@ const (
 	REGISTER_REPLY         = "register_reply"
 	EXIT_REQUEST           = "exit_request"
 	PERSIST_REQUEST        = "persist_request"
+	PUT_NAME_REQUEST       = "put_name_request"
+	PUT_NAME_REPLY         = "put_name_reply"
+	GET_NAME_REQUEST       = "get_name_request"
+	GET_NAME_REPLY         = "get_name_reply"
+	DROP_NAME_REQUEST      = "drop_name_request"
+	DROP_NAME_REPLY        = "drop_name_reply"
 	DEFAULT_SERVER_VERSION = "0.0.0"
 )
 
@@ -45,8 +51,46 @@ type ExitRequest struct {
 }
 
 type PersistRequest struct {
+	Type string   `json:"type"`
+	ID   ObjectID `json:"id"`
+}
+
+type PersisReply struct {
 	Type string `json:"type"`
-	ID   int    `json:"id"`
+	Code int    `json:"code"`
+}
+
+type PutNameRequest struct {
+	Type        string   `json:"type"`
+	ReqObjectID ObjectID `json:"object_id"`
+	Name        string   `json:"name"`
+}
+
+type GetNameRequest struct {
+	Type string `json:"type"`
+	Name string `json:"name"`
+	Wait bool   `json:"wait"`
+}
+
+type PutNameReply struct {
+	Type string `json:"type"`
+	Code int    `json:"code"`
+}
+
+type GetNameReply struct {
+	Type        string   `json:"type"`
+	Code        int      `json:"code"`
+	RepObjectID ObjectID `json:"object_id"`
+}
+
+type DropNameRequest struct {
+	Type string `json:"type"`
+	Name string `json:"name"`
+}
+
+type DropNameReply struct {
+	Type string `json:"type"`
+	Code int    `json:"code"`
 }
 
 func encodeMsg(data interface{}, msg *string) error {
@@ -73,10 +117,36 @@ func WriteExitRequest(msg *string) {
 	encodeMsg(exit, msg)
 }
 
-func WritePersistRequest(id int, msg *string) {
+func WritePersistRequest(id ObjectID, msg *string) {
 	var persist PersistRequest
 	persist.Type = PERSIST_REQUEST
 	persist.ID = id
 
 	encodeMsg(persist, msg)
+}
+
+func WritePutNameRequest(id ObjectID, name string, msg *string) {
+	var putNameReq PutNameRequest
+	putNameReq.Type = PUT_NAME_REQUEST
+	putNameReq.ReqObjectID = id
+	putNameReq.Name = name
+
+	encodeMsg(putNameReq, msg)
+}
+
+func WriteGetNameRequest(name string, wait bool, msg *string) {
+	var getNameReq GetNameRequest
+	getNameReq.Type = GET_NAME_REQUEST
+	getNameReq.Name = name
+	getNameReq.Wait = wait
+
+	encodeMsg(getNameReq, msg)
+}
+
+func WriteDropNameRequest(name string, msg *string) {
+	var dropNameReq DropNameRequest
+	dropNameReq.Type = DROP_NAME_REQUEST
+	dropNameReq.Name = name
+
+	encodeMsg(dropNameReq, msg)
 }

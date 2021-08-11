@@ -14,3 +14,55 @@ limitations under the License.
 */
 
 package common
+
+const (
+	KOK              = 0
+	KInvalid         = 1
+	KKeyError        = 2
+	KTypeError       = 3
+	KIOError         = 4
+	KEndOfFile       = 5
+	KNotImplemented  = 6
+	KAssertionFailed = 7
+	KUserInputError  = 8
+
+	KObjectExists    = 11
+	KObjectNotExists = 12
+	KObjectSealed    = 13
+	KObjectNotSealed = 14
+	KObjectIsBlob    = 15
+
+	KMetaTreeInvalid          = 21
+	KMetaTreeTypeInvalid      = 22
+	KMetaTreeTypeNotExists    = 23
+	KMetaTreeNameInvalid      = 24
+	KMetaTreeNameNotExists    = 25
+	KMetaTreeLinKInvalid      = 26
+	KMetaTreeSubtreeNotExists = 27
+
+	KVineyardServerNotReady = 31
+	KArrowError             = 32
+	KConnectionFailed       = 33
+	KConnectionError        = 34
+	KEtcdError              = 35
+
+	KNotEnoughMemory    = 41
+	KStreamDrained      = 42
+	KStreamFailed       = 43
+	KInvalidStreamState = 44
+	KStreamOpened       = 45
+
+	KGlobalObjectInvalid = 51
+
+	KUnKnownError = 255
+)
+
+type ReplyError struct {
+	Code int
+	Type string
+	Err  error
+}
+
+func (r *ReplyError) Error() string {
+	return "code:" + string(r.Code) + " type:" + r.Type + " :" + r.Err.Error()
+}

@@ -23,7 +23,7 @@ import (
 	"strings"
 )
 
-type RPCServer struct {
+type RPCClient struct {
 	ClientBase
 	connected        bool
 	ipcSocket        string
@@ -33,7 +33,7 @@ type RPCServer struct {
 	rpcEndpoint      string
 }
 
-func (r *RPCServer) Connect(rpcEndpoint string) error {
+func (r *RPCClient) Connect(rpcEndpoint string) error {
 	if r.connected || r.rpcEndpoint == rpcEndpoint {
 		return nil
 	}

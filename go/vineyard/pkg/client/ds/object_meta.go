@@ -14,3 +14,7 @@ limitations under the License.
 */
 
 package vineyard
+
+type ObjectMeta struct {
+
+}
