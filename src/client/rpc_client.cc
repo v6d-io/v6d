@@ -121,7 +121,7 @@ std::shared_ptr<Object> RPCClient::GetObject(const ObjectID id) {
   VINEYARD_ASSERT(!meta.MetaData().empty());
   auto object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
-    object = std::shared_ptr<Object>(new Object());
+    object = std::unique_ptr<Object>(new Object());
   }
   object->Construct(meta);
   return object;
@@ -134,7 +134,7 @@ Status RPCClient::GetObject(const ObjectID id,
   RETURN_ON_ASSERT(!meta.MetaData().empty());
   object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
-    object = std::shared_ptr<Object>(new Object());
+    object = std::unique_ptr<Object>(new Object());
   }
   object->Construct(meta);
   return Status::OK();
@@ -151,10 +151,10 @@ std::vector<std::shared_ptr<Object>> RPCClient::GetObjects(
   for (auto const& meta : metas) {
     auto object = ObjectFactory::Create(meta.GetTypeName());
     if (object == nullptr) {
-      object = std::shared_ptr<Object>(new Object());
+      object = std::unique_ptr<Object>(new Object());
     }
     object->Construct(meta);
-    objects.emplace_back(object);
+    objects.emplace_back(std::shared_ptr<Object>(object.release()));
   }
   return objects;
 }
@@ -172,10 +172,10 @@ std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
     meta.SetMetaData(this, kv.second);
     auto object = ObjectFactory::Create(meta.GetTypeName());
     if (object == nullptr) {
-      object = std::shared_ptr<Object>(new Object());
+      object = std::unique_ptr<Object>(new Object());
     }
     object->Construct(meta);
-    objects.emplace_back(object);
+    objects.emplace_back(std::shared_ptr<Object>(object.release()));
   }
   return objects;
 }
