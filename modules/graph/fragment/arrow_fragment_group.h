@@ -33,9 +33,9 @@ class ArrowFragmentGroupBuilder;
 
 class ArrowFragmentGroup : public Registered<ArrowFragmentGroup>, GlobalObject {
  public:
-  static std::shared_ptr<vineyard::Object> Create() __attribute__((used)) {
+  static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(
-        std::make_shared<ArrowFragmentGroup>());
+        std::unique_ptr<ArrowFragmentGroup>{new ArrowFragmentGroup()});
   }
   fid_t total_frag_num() const { return total_frag_num_; }
   property_graph_types::LABEL_ID_TYPE vertex_label_num() const {
