@@ -19,7 +19,7 @@ import "testing"
 
 func TestRPCServer_Connect(t *testing.T) {
 	ipcAddr := "0.0.0.0:9600"
-	var rpcServer RPCServer
+	var rpcServer RPCClient
 	err := rpcServer.Connect(ipcAddr)
 	if err != nil {
 		t.Error("conect to rpc server failed", err.Error())

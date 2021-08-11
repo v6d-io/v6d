@@ -14,3 +14,44 @@ limitations under the License.
 */
 
 package vineyard
+
+import (
+	"errors"
+	"fmt"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+	//x	"github.com/apache/arrow/go/arrow"
+)
+
+type Blob struct {
+	id int
+	size int
+	buffer []byte
+}
+
+func (b *Blob) Size() int {
+	return b.size
+}
+
+func (b *Blob) Data() ([]byte, error) {
+	if b.size > 0 && len(b.buffer) == 0 {
+		return nil, errors.New(fmt.Sprintf("The object might be a (partially) remote object " +
+		                    	"and the payload data is not locally available: %d", b.id))
+	}
+	return b.buffer, nil
+}
+
+type BufferSet struct {
+	//buffer arrow.
+}
+
+func (b *BufferSet) EmplaceBuffer(id common.ObjectID) {
+
+}
+
+type BlobWriter struct {
+
+}
+
+
+
+

@@ -18,6 +18,7 @@ package common
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 type ObjectID = uint64
@@ -56,4 +57,9 @@ type InstanceID = uint64
 
 func UnspecifiedInstanceID() InstanceID {
 	return 0xffffffffffffffff
+}
+
+func GenerateObjectID() ObjectID {
+	// TODO: check c++ version's rdtsc instead of time.Now() in golang
+	return ObjectID(0x7FFFFFFFFFFFFFFF & time.Now().Unix())
 }
