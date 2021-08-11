@@ -3,82 +3,50 @@
 
 from argparse import ArgumentParser
 import contextlib
+import importlib
 import os
 import platform
-import shutil
 import socket
 import subprocess
-import sys
 import time
+
 
 VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.%s.sock' % time.time()
 
 
+find_executable_generic = None
+start_program_generic = None
+find_port = None
+
+
+def prepare_runner_environment():
+    utils = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'python', 'vineyard', 'deploy', 'utils.py')
+    spec = importlib.util.spec_from_file_location("vineyard._contrib", utils)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    global find_executable_generic
+    global start_program_generic
+    global find_port
+    find_executable_generic = getattr(mod, 'find_executable')
+    start_program_generic = getattr(mod, 'start_program')
+    find_port = getattr(mod, 'find_port')
+
+
+prepare_runner_environment()
+
+
 def find_executable(name):
-    ''' Use executable in local build directory first.
-    '''
-    default_builder_dir = os.path.join(os.path.dirname(
-        os.path.abspath(__file__)), '..', 'build', 'bin')
+    default_builder_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'build', 'bin')
     binary_dir = os.environ.get('VINEYARD_EXECUTABLE_DIR', default_builder_dir)
-    exe = os.path.join(binary_dir, name)
-    if os.path.isfile(exe) and os.access(exe, os.R_OK):
-        return exe
-    exe = shutil.which(name)
-    if exe is not None:
-        return exe
-    raise RuntimeError('Unable to find program %s' % name)
+    return find_executable_generic(name, search_paths=[binary_dir])
 
 
-def find_port_probe(start=2048, end=20480):
-    ''' Find an available port in range [start, end)
-    '''
-    for port in range(start, end, 2):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('localhost', port)) != 0:
-                yield port
-
-
-ipc_port_finder = find_port_probe()
-
-
-def find_port():
-    return next(ipc_port_finder)
-
-
-@contextlib.contextmanager
-def start_program(name, *args, verbose=False, nowait=False, **kwargs):
-    env, cmdargs = os.environ.copy(), list(args)
-    for k, v in kwargs.items():
-        if k[0].isupper():
-            env[k] = str(v)
-        else:
-            cmdargs.append('--%s' % k)
-            cmdargs.append(str(v))
-
-    try:
-        prog = find_executable(name)
-        print('Starting %s...' % prog, flush=True)
-        if verbose:
-            out, err = sys.stdout, sys.stderr
-        else:
-            out, err = subprocess.PIPE, subprocess.PIPE
-        proc = subprocess.Popen([prog] + cmdargs,
-                                env=env, stdout=out, stderr=err)
-        if not nowait:
-            time.sleep(1)
-        rc = proc.poll()
-        if rc is not None:
-            raise RuntimeError('Failed to launch program %s' % name)
-        yield proc
-    finally:
-        print('Terminating %s' % prog, flush=True)
-        if proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(60)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
+def start_program(*args, **kwargs):
+    default_builder_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'build', 'bin')
+    binary_dir = os.environ.get('VINEYARD_EXECUTABLE_DIR', default_builder_dir)
+    print('binary_dir = ', binary_dir)
+    return start_program_generic(*args, search_paths=[binary_dir], **kwargs)
 
 
 @contextlib.contextmanager
@@ -235,8 +203,10 @@ def run_invalid_client_test(host, port):
     send_garbage_bytes(b'\xFF' * 100000)
 
 
-def run_single_vineyardd_tests(etcd_endpoints):
-    with start_vineyardd(etcd_endpoints,
+def run_single_vineyardd_tests():
+    etcd_port = find_port()
+    [find_port() for _ in range(10)]  # skip some ports
+    with start_vineyardd('http://localhost:%d' % etcd_port,
                          'vineyard_test_%s' % time.time(),
                          default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
         run_test('array_test')
@@ -309,6 +279,38 @@ def run_python_tests(etcd_endpoints, with_migration):
                                '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
                                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
         print('running python tests use %s seconds' % (time.time() - start_time), flush=True)
+
+def run_python_contrib_ml_tests(etcd_endpoints):
+    etcd_prefix = 'vineyard_test_%s' % time.time()
+    with start_vineyardd(etcd_endpoints,
+                         etcd_prefix,
+                         default_ipc_socket=VINEYARD_CI_IPC_SOCKET) as (_, rpc_socket_port):
+        start_time = time.time()
+        subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               '--log-cli-level', 'DEBUG',
+                               'python/vineyard/contrib/ml',
+                               '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
+                               '--vineyard-endpoint=localhost:%s' % rpc_socket_port],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+        print('running python contrib ml tests use %s seconds' % (time.time() - start_time), flush=True)
+
+def run_python_contrib_dask_tests(etcd_endpoints):
+    ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
+    instance_size = 4
+    etcd_prefix = 'vineyard_test_%s' % time.time()
+    with start_multiple_vineyardd(etcd_endpoints,
+                                  etcd_prefix,
+                                  default_ipc_socket=ipc_socket_tpl,
+                                  instance_size=instance_size,
+                                  nowait=True) as instances:
+        vineyard_ipc_sockets = ','.join(['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)])
+        start_time = time.time()
+        subprocess.check_call(['pytest', '-s', '-vvv', '--durations=0',
+                               '--log-cli-level', 'DEBUG',
+                               'python/vineyard/contrib/dask',
+                               '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets],
+                               cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+        print('running python contrib dask tests use %s seconds' % (time.time() - start_time), flush=True)
 
 
 def run_python_deploy_tests(etcd_endpoints, with_migration):
@@ -385,6 +387,8 @@ def parse_sys_args():
                             help='Whether to run IO adaptors tests')
     arg_parser.add_argument('--with-migration', action='store_true', default=False,
                             help='Whether to run object migration tests')
+    arg_parser.add_argument('--with-contrib', action='store_true', default=False,
+                            help="Whether to run python contrib tests")
     return arg_parser, arg_parser.parse_args()
 
 
@@ -396,7 +400,7 @@ def main():
         exit(1)
 
     if args.with_cpp:
-        run_single_vineyardd_tests('http://localhost:%d' % find_port())
+        run_single_vineyardd_tests()
         with start_etcd() as (_, etcd_endpoints):
             run_scale_in_out_tests(etcd_endpoints, instance_size=4)
 
@@ -405,12 +409,19 @@ def main():
             run_python_tests(etcd_endpoints, args.with_migration)
         with start_etcd() as (_, etcd_endpoints):
             run_python_deploy_tests(etcd_endpoints, args.with_migration)
+        if args.with_contrib:
+            with start_etcd() as (_, etcd_endpoints):
+                run_python_contrib_ml_tests(etcd_endpoints)
+            with start_etcd() as (_, etcd_endpoints):
+                run_python_contrib_dask_tests(etcd_endpoints)
+
 
     if args.with_io:
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_tests(etcd_endpoints, args.with_migration)
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_distributed_tests(etcd_endpoints, args.with_migration)
+
 
 
 if __name__ == '__main__':

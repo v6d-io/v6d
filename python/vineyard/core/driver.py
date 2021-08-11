@@ -16,8 +16,10 @@
 # limitations under the License.
 #
 
-from collections import defaultdict
+import contextlib
+import copy
 import functools
+import threading
 
 from sortedcontainers import SortedDict
 
@@ -26,31 +28,78 @@ from .utils import find_most_precise_match
 
 class DriverContext():
     def __init__(self):
-        self.__factory = defaultdict(SortedDict)
+        self.__factory = SortedDict(dict)
+
+    def __str__(self) -> str:
+        return str(self.__factory)
 
     def register(self, typename_prefix, meth, func):
-        self.__factory[meth][typename_prefix] = func
+        if typename_prefix not in self.__factory:
+            self.__factory[typename_prefix] = dict()
+        self.__factory[typename_prefix][meth] = func
 
     def resolve(self, obj, typename):
-        for meth_name, methods in self.__factory.items():
-            prefix, method = find_most_precise_match(typename, methods)
-            if prefix is not None:
-                meth = functools.partial(method, obj)
+        prefix, methods = find_most_precise_match(typename, self.__factory)
+        if prefix:
+            for meth, func in methods.items():
                 # if shouldn't failed, since it has already been wrapped in during resolving
-                setattr(obj, meth_name, meth)
+                setattr(obj, meth, functools.partial(func, obj))
         return obj
+
+    def __call__(self, obj, typename):
+        return self.resolve(obj, typename)
+
+    def extend(self, drivers=None):
+        driver = DriverContext()
+        driver.__factory.update(((k, copy.copy(v)) for k, v in self.__factory.items()))
+        if drivers:
+            for ty, methods in drivers.items():
+                if ty not in self.__factory:
+                    driver.__factory[ty] = dict()
+                driver.__factory[ty].update(methods)
+        return driver
 
 
 default_driver_context = DriverContext()
 
+_driver_context_local = threading.local()
+_driver_context_local.default_driver = default_driver_context
 
-def repartition(g):
-    raise NotImplementedError('No repartition method implementation yet')
+
+def get_current_drivers():
+    ''' Obtain current driver context.
+    '''
+    default_driver = getattr(_driver_context_local, 'default_driver', None)
+    if not default_driver:
+        default_driver = default_driver_context.extend()
+    return default_driver
+
+
+@contextlib.contextmanager
+def driver_context(drivers=None, base=None):
+    ''' Open a new context for register drivers, without populting outside global
+        environment.
+
+        See Also:
+            builder_context
+            resolver_context
+    '''
+    current_driver = get_current_drivers()
+    try:
+        drivers = drivers or dict()
+        base = base or current_driver
+        local_driver = base.extend(drivers)
+        _driver_context_local.default_driver = local_driver
+        yield local_driver
+    finally:
+        _driver_context_local.default_driver = current_driver
 
 
 def register_builtin_drivers(ctx):
     assert isinstance(ctx, DriverContext)
-    ctx.register('vineyard::Graph', 'repartition', repartition)
+
+    # TODO
+    # there's no builtin drivers yet.
 
 
 def registerize(func):
@@ -104,4 +153,10 @@ def registerize(func):
     return wrap
 
 
-__all__ = ['default_driver_context', 'register_builtin_drivers', 'registerize']
+__all__ = [
+    'default_driver_context',
+    'register_builtin_drivers',
+    'driver_context',
+    'get_current_drivers',
+    'registerize',
+]

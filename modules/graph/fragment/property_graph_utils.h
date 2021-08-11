@@ -179,7 +179,8 @@ class VertexDataColumn {
             vineyard::ConvertToArrowType<DATA_T>::TypeValue())) {
       data_ =
           std::dynamic_pointer_cast<
-              typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array) -
+              typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array)
+              ->raw_values() -
           static_cast<ptrdiff_t>(range.begin().GetValue());
     } else {
       data_ = NULL;

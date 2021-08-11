@@ -12,30 +12,32 @@
 
 .. include:: ../README.rst
 
-Contents
---------
-
 .. toctree::
    :maxdepth: 2
+   :caption: Contents
 
    notes/install.rst
    notes/getting-started.rst
    notes/divein.rst
 
-Reference
----------
-
 .. toctree::
    :maxdepth: 6
+   :caption: API Reference
 
+   notes/ctl.rst
    notes/cpp_api.rst
    notes/python_api.rst
 
-Development
------------
+.. toctree::
+   :maxdepth: 6
+   :caption: Third-party Integration
+
+   notes/airflow.rst
+   notes/ml.rst
 
 .. toctree::
    :maxdepth: 6
+   :caption: Development
 
    notes/faq.rst
    notes/troubleshooting.rst

@@ -1,0 +1,5 @@
+groups:
+  - name: request
+    rules:
+      - record: operation:data_request_latency:avg
+        expr: avg by (operation) (data_request_latency_sum)/(data_request_latency_count)
