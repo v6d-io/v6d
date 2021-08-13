@@ -137,3 +137,70 @@ with the label tag. Here it is important to mention the label tag.
 XGBoost
 -------
 
+Vineyard support resolving ``XGBoost::DMatrix`` from various kinds of vineyard data types.
+
+From Vineyard::Tensor
+^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+     >>> arr = np.random.rand(4, 5)
+     >>> vin_tensor_id = vineyard_client.put(arr)
+     >>> dmatrix = vineyard_client.get(vin_tensor_id)
+
+The ``dmatrix`` will be a ``DMatrix`` instance with the same shape ``(4, 5)`` resolved from the ``Vineyard::Tensor``
+object with the id ``vin_tensor_id``.
+
+From Vineyard::DataFrame
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+     >>> df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
+     >>> vin_df_id = vineyard_client.put(df)
+     >>> dmatrix = vineyard_client.get(vin_df_id, label='a')
+
+The ``dmatrix`` will be a ``DMatrix`` instance with shape of ``(4, 2)`` and ``feature_names`` of ``['b', 'c']``.
+While the label of ``dmatrix`` is the values of column ``a``.
+
+Sometimes the dataframe is a complex data structure and only ``one`` column will be used as the ``features``.
+We support this case by providing the ``data`` kwarg.
+
+.. code:: python
+
+     >>> df = pd.DataFrame({'a': [1, 2, 3, 4], 
+     >>>                    'b': [[5, 1.0, 4], [6, 2.0, 3], [7, 3.0, 2], [8, 9.0, 1]]})
+     >>> vin_df_id = vineyard_client.put(df)
+     >>> dmatrix = vineyard_client.get(vin_df_id, data='b', label='a')
+
+The ``dmatrix`` will have the shape of ``(4, 3)`` corresponding to the values of column ``b``.
+While the label is the values of column ``a``.
+
+From Vineyard::RecordBatch
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+     >>> import pyarrow as pa
+     >>> arrays = [pa.array([1, 2, 3, 4]), pa.array([3.0, 4.0, 5.0, 6.0]), pa.array([0, 1, 0, 1])]
+     >>> batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])
+     >>> vin_rb_id = vineyard_client.put(batch)
+     >>> dmatrix = vineyard_client.get(vin_rb_id, label='target')
+
+The ``dmatrix`` will have the shape of ``(4, 2)`` and ``feature_names`` of ``['f0', 'f1']``.
+While the label is the values of column ``target``.
+
+From Vineyard::Table
+^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+     >>> arrays = [pa.array([1, 2]), pa.array([0, 1]), pa.array([0.1, 0.2])]
+     >>> batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'label', 'f2'])
+     >>> batches = [batch] * 3
+     >>> table = pa.Table.from_batches(batches)
+     >>> vin_tab_id = vineyard_client.put(table)
+     >>> dmatrix = vineyard_client.get(vin_tab_id, label='label')
+
+The ``dmatrix`` will have the shape of ``(6, 2)`` and ``feature_names`` of ``['f0', 'f2']``.
+While the label is the values of column ``label``.
