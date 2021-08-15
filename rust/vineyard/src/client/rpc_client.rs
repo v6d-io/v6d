@@ -126,6 +126,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn rpc_connect() {
         let rpc_client = &mut RPCClient {
             connected: false,

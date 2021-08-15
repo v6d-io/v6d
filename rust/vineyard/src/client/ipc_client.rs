@@ -130,6 +130,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn ipc_connect() {
         let ipc_client = &mut IPCClient {
             connected: false,
