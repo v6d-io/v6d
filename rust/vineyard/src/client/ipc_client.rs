@@ -45,7 +45,7 @@ pub struct IPCClient {
 pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<UnixStream, Error> {
     let socket = Path::new(pathname);
     let mut stream = match UnixStream::connect(&socket) {
-        Err(_) => panic!("The server is not running."),
+        Err(error) => panic!("The server is not running because: {}.", error),
         Ok(stream) => stream,
     };
     Ok(stream)
@@ -53,7 +53,7 @@ pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<UnixStrea
 
 fn do_write(stream: &mut UnixStream, message_out: &String) -> Result<(), Error> {
     match stream.write_all(message_out.as_bytes()) {
-        Err(error) => panic!("Couldn't send message because of:{}.", error),
+        Err(error) => panic!("Couldn't send message because: {}.", error),
         Ok(_) => Ok(()),
     }
 }
@@ -63,7 +63,7 @@ fn do_write(stream: &mut UnixStream, message_out: &String) -> Result<(), Error> 
 
 fn do_read(stream: &mut UnixStream, message_in: &mut String) -> Result<(), Error> {
     match stream.read_to_string(message_in) {
-        Err(error) => panic!("Couldn't receive message because of：{}.", error),
+        Err(error) => panic!("Couldn't receive message because: {}.", error),
         Ok(_) => Ok(()),
     }
 }
@@ -73,7 +73,7 @@ impl Client for IPCClient {
     fn connect(&mut self, conn_input: conn_input) -> Result<(), Error> {
         let socket = match conn_input{
             ipc_conn_input(socket) => socket,
-            _ => panic!("Insuitable type of connect input."),
+            _ => panic!("Unsuitable type of connect input."),
         };
         let ipc_socket: String = String::from(socket);
         // Panic when they have connected while assigning different ipc_socket

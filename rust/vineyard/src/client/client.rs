@@ -19,7 +19,7 @@ use std::os::unix::net::UnixStream;
 
 pub enum conn_input<'a, 'b>{
     ipc_conn_input(&'a str), // socket
-    rpc_conn_input(&'b str, u32), // host, port
+    rpc_conn_input(&'b str, u16), // host, port 
 }
 
 pub trait Client {
