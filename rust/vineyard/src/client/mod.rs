@@ -28,5 +28,5 @@ pub use self::ds::object_meta::ObjectMeta;
 
 pub use self::ds::object::Object;
 
-pub use crate::common::util::ObjectID;
 pub use crate::common::util::InstanceID;
+pub use crate::common::util::ObjectID;
