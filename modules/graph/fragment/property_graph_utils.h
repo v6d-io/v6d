@@ -686,6 +686,9 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
     if (res->Equals(arrow::date32())) {
       res = arrow::int32();
     }
+    if (res->Equals(arrow::date64())) {
+      res = arrow::int64();
+    }
     if (res->Equals(arrow::timestamp(arrow::TimeUnit::SECOND))) {
       res = arrow::int64();
     }

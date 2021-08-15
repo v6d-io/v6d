@@ -34,6 +34,10 @@ AnyType ParseAnyType(const std::string& type_name) {
     return AnyType::Double;
   } else if (type_name == "string") {
     return AnyType::String;
+  } else if (type_name == "date32") {
+    return AnyType::Date32;
+  } else if (type_name == "date64") {
+    return AnyType::Date64;
   } else {
     return AnyType::Undefined;
   }
@@ -55,6 +59,10 @@ std::string GetAnyTypeName(AnyType type) {
     return "double";
   case AnyType::String:
     return "string";
+  case AnyType::Date32:
+    return "date32";
+  case AnyType::Date64:
+    return "date64";
   default:
     return "undefined";
   }
@@ -71,6 +79,10 @@ IdType ParseIdType(const std::string& type_name) {
     return IdType::UInt64;
   } else if (type_name == "string") {
     return IdType::String;
+  } else if (type_name == "date32") {
+    return IdType::Date32;
+  } else if (type_name == "date64") {
+    return IdType::Date64;
   } else {
     return IdType::Undefined;
   }
@@ -88,6 +100,10 @@ std::string GetIdTypeName(IdType type) {
     return "uint64";
   case IdType::String:
     return "string";
+  case IdType::Date32:
+    return "date32"; 
+  case IdType::Date64:
+    return "date64"; 
   default:
     return "undefined";
   }
