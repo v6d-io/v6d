@@ -12,8 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#[allow(clippy::module_inception)]
 pub mod client;
 pub mod ds;
 pub mod ipc_client;
@@ -28,5 +26,4 @@ pub use self::ds::object_meta::ObjectMeta;
 
 pub use self::ds::object::Object;
 
-pub use crate::common::util::InstanceID;
-pub use crate::common::util::ObjectID;
+pub use self::ds::ObjectID;

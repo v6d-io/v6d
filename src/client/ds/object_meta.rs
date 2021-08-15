@@ -12,16 +12,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 use super::{Client, IPCClient};
 
+
 pub struct ObjectMeta {
-    pub client: Option<Box<dyn Client>>,
+    pub client: Option<Box<dyn Client>>, 
     pub meta: String, // TODO: json
+
 }
 
-impl ObjectMeta {
-    fn new() -> ObjectMeta {
-        ObjectMeta {
+impl ObjectMeta{
+    
+    fn new() -> ObjectMeta{
+        ObjectMeta{
             client: None,
             meta: String::new(),
         }
@@ -31,9 +35,9 @@ impl ObjectMeta {
         self.client = Some(client);
     }
 
-    fn get_client(&self) -> &Box<dyn Client> {
-        match &self.client {
-            Some(client) => &client,
+    fn get_client(&self) -> &Box<dyn Client>{
+        match &self.client{
+            Some(client)=> &client,
             None => panic!("The object has no client"),
         }
     }
@@ -50,8 +54,8 @@ impl ObjectMeta {
 
     // fn set_type_name() {}
 
-    // fn get_type_name() {}
-
+    // fn get_type_name() {}  
+    
     // fn set_n_bytes() {}
 
     // fn get_n_bytes() {}
@@ -77,4 +81,10 @@ impl ObjectMeta {
     // fn get_buffer() {}
 
     // fn set_buffer() {}
+
+    
+    
+
+
 }
+

@@ -12,21 +12,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+pub mod blob;
+pub mod object;
+pub mod object_factory;
+pub mod object_meta;
 
-#[allow(clippy::module_inception)]
-pub mod client;
-pub mod ds;
-pub mod ipc_client;
-pub mod rpc_client;
+pub use crate::client::client::Client;
+pub use crate::client::ipc_client::IPCClient;
+pub use crate::client::rpc_client::RPCClient;
 
-pub use self::ds::blob::Blob;
-pub use self::ds::blob::BlobWriter;
-
-pub use self::ds::object_factory::ObjectFactory;
-
-pub use self::ds::object_meta::ObjectMeta;
-
-pub use self::ds::object::Object;
-
-pub use crate::common::util::InstanceID;
-pub use crate::common::util::ObjectID;
+pub type ObjectID = u64;

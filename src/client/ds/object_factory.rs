@@ -13,20 +13,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#[allow(clippy::module_inception)]
-pub mod client;
-pub mod ds;
-pub mod ipc_client;
-pub mod rpc_client;
+use std::rc::Rc;
+use super::object::Object;
 
-pub use self::ds::blob::Blob;
-pub use self::ds::blob::BlobWriter;
+#[derive(Debug)]
+pub struct ObjectFactory {
 
-pub use self::ds::object_factory::ObjectFactory;
+} // No attributes?
 
-pub use self::ds::object_meta::ObjectMeta;
+impl ObjectFactory {
 
-pub use self::ds::object::Object;
+    fn register() {}
 
-pub use crate::common::util::InstanceID;
-pub use crate::common::util::ObjectID;
+    fn create() {}
+
+    fn factory_ref() {}
+
+
+}

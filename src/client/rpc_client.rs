@@ -13,20 +13,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#[allow(clippy::module_inception)]
-pub mod client;
-pub mod ds;
-pub mod ipc_client;
-pub mod rpc_client;
+use std::io::{self, ErrorKind};
 
-pub use self::ds::blob::Blob;
-pub use self::ds::blob::BlobWriter;
+use super::client::Client;
+use super::ObjectID;
+use super::ObjectMeta;
 
-pub use self::ds::object_factory::ObjectFactory;
+#[derive(Debug)]
+pub struct RPCClient {}
 
-pub use self::ds::object_meta::ObjectMeta;
+impl Client for RPCClient {
+    fn connect(&self, socket: &str) -> Result<u64, io::Error> {
+        panic!("")
+    }
 
-pub use self::ds::object::Object;
+    fn disconnect(&self) {}
 
-pub use crate::common::util::InstanceID;
-pub use crate::common::util::ObjectID;
+    fn connected(&self) -> bool {
+        true
+    }
+
+    fn get_meta_data(&self, 
+        object_id: ObjectID, 
+        sync_remote: bool
+    ) -> Result<ObjectMeta, io::Error>{
+        Ok(ObjectMeta {
+            client: None,
+            meta: String::new(),
+        })
+    }
+}
