@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::client::Client;
 use super::client::conn_input::{self, ipc_conn_input};
+use super::client::Client;
 use super::InstanceID;
 use super::ObjectID;
 use super::ObjectMeta;
@@ -71,7 +71,7 @@ fn do_read(stream: &mut UnixStream, message_in: &mut String) -> Result<(), Error
 impl Client for IPCClient {
     // Connect to vineyardd using the given UNIX domain socket `ipc_socket`
     fn connect(&mut self, conn_input: conn_input) -> Result<(), Error> {
-        let socket = match conn_input{
+        let socket = match conn_input {
             ipc_conn_input(socket) => socket,
             _ => panic!("Unsuitable type of connect input."),
         };

@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::client::Client;
 use super::client::conn_input::{self, rpc_conn_input};
+use super::client::Client;
 use super::InstanceID;
 use super::ObjectID;
 use super::ObjectMeta;
@@ -41,17 +41,18 @@ pub struct RPCClient {
 
 // Question: the port is u16 from the material I saw while u32 in C++
 pub fn connect_rpc_socket(host: &String, port: u16, socket_fd: i64) -> Result<TcpStream, Error> {
-    let mut stream = match TcpStream::connect(&host[..]) { //"0.0.0.0:9600"
+    let mut stream = match TcpStream::connect(&host[..]) {
+        //"0.0.0.0:9600"
         Err(error) => panic!("The server is not running because: {}", error),
         Ok(stream) => stream,
     };
     assert_eq!(
         stream.peer_addr().unwrap(),
-        SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 9600)));
+        SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 9600))
+    );
 
     Ok(stream)
 }
-
 
 fn do_write(stream: &mut TcpStream, message_out: &String) -> Result<(), Error> {
     match stream.write_all(message_out.as_bytes()) {
@@ -67,12 +68,11 @@ fn do_read(stream: &mut TcpStream, message_in: &mut String) -> Result<(), Error>
     }
 }
 
-
 impl Client for RPCClient {
     fn connect(&mut self, conn_input: conn_input) -> Result<(), Error> {
-        let (host, port) = match conn_input{
+        let (host, port) = match conn_input {
             rpc_conn_input(host, port) => (host, port),
-            _ => panic!("Unsuitable type of connect input."), 
+            _ => panic!("Unsuitable type of connect input."),
         };
         let rpc_host: String = String::from(host);
         let rpc_endpoint: String = format!("{}:{}", host, port.to_string());
@@ -83,7 +83,8 @@ impl Client for RPCClient {
             return Ok(());
         } else {
             self.rpc_endpoint = rpc_endpoint;
-            let mut stream = connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn).unwrap();
+            let mut stream =
+                connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn).unwrap();
 
             // Write a request  ( You need to start the vineyardd server on the same socket)
             let message_out: String = write_register_request();
@@ -102,7 +103,6 @@ impl Client for RPCClient {
 
             return Ok(());
         };
-        
     }
 
     fn disconnect(&self) {}
@@ -119,8 +119,6 @@ impl Client for RPCClient {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,6 +133,6 @@ mod tests {
             instance_id: 0,
             server_version: String::new(),
         };
-        rpc_client.connect(rpc_conn_input("0.0.0.0",9600));
+        rpc_client.connect(rpc_conn_input("0.0.0.0", 9600));
     }
 }
