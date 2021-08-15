@@ -1,3 +1,4 @@
+use super::object::Object;
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use std::rc::Rc;
-use super::object::Object;
 
 #[derive(Debug)]
-pub struct ObjectFactory {
-
-} // No attributes?
+pub struct ObjectFactory {} // No attributes?
 
 impl ObjectFactory {
-
     fn register() {}
 
     fn create() {}
 
     fn factory_ref() {}
-
-
 }
