@@ -1,11 +1,8 @@
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,26 +69,15 @@ void* Jemalloc::Init(void* space, const size_t size) {
 
   // create arenas
   size_t arena_index_size = sizeof(arena_index_);
-  if (auto ret = vineyard_je_mallctl("arenas.create", &arena_index_,
-                                     &arena_index_size, nullptr, 0)) {
+  if (auto ret =
+          vineyard_je_mallctl("arenas.create", &arena_index_, &arena_index_size,
+                              &extent_hooks_, sizeof(extent_hooks_))) {
     int err = std::exchange(errno, ret);
     PLOG(ERROR) << "Failed to create arena";
     errno = err;
     return nullptr;
   }
   LOG(INFO) << "arena index = " << arena_index_;
-
-  // set extent hooks
-  std::ostringstream hooks_key;
-  hooks_key << "arena." << std::to_string(arena_index_) << ".extent_hooks";
-  size_t len = sizeof(extent_hooks_);
-  if (auto ret = vineyard_je_mallctl(hooks_key.str().c_str(), &extent_hooks_,
-                                     &len, nullptr, 0)) {
-    int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to create arena";
-    errno = err;
-    return nullptr;
-  }
 
   // set muzzy decay time to -1 to prevent jemalloc freeing the memory to the
   // pool, but leave dirty decay time untouched to still give the memory back
