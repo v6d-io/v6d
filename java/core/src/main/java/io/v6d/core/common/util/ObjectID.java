@@ -14,6 +14,8 @@ limitations under the License.
 */
 package io.v6d.core.common.util;
 
+import java.util.Objects;
+
 /** Vineyard ObjectID definition. */
 public class ObjectID {
     public static ObjectID InvalidObjectID = new ObjectID(-1L);
@@ -39,5 +41,10 @@ public class ObjectID {
     @Override
     public boolean equals(Object other) {
         return this.id == ((ObjectID) other).id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

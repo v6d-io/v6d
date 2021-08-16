@@ -16,31 +16,36 @@ package io.v6d.core.client;
 
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
+import io.v6d.core.common.util.VineyardException;
 
-/** Vineyard IPC client.s */
+/** Vineyard IPC client. */
 public abstract class Client {
     protected String ipc_socket;
     protected String rpc_endpoint;
 
-    public abstract ObjectID CreateMetaData(ObjectMeta metadata);
+    public abstract ObjectID createMetaData(ObjectMeta metadata) throws VineyardException;
 
-    public ObjectMeta GetMetaData(ObjectID id) {
-        return this.GetMetaData(id, false);
+    public ObjectMeta getMetaData(ObjectID id) throws VineyardException {
+        return this.getMetaData(id, false);
     }
 
-    public abstract ObjectMeta GetMetaData(ObjectID id, boolean sync_remote);
+    public ObjectMeta getMetaData(ObjectID id, boolean sync_remote) throws VineyardException {
+        return this.getMetaData(id, sync_remote, false);
+    }
 
-    public boolean Connected() {
+    public abstract ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait) throws VineyardException;
+
+    public boolean connected() {
         return false;
     }
 
-    public void Disconnect() {}
+    public void disconnect() {}
 
-    public String IPCSocket() {
+    public String getIPCSocket() {
         return ipc_socket;
     }
 
-    public String RPCEndpoint() {
+    public String getRPCEndpoint() {
         return rpc_endpoint;
     }
 }

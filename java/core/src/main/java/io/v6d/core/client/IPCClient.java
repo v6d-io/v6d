@@ -26,6 +26,7 @@ import io.v6d.core.common.util.Protocol.*;
 import io.v6d.core.common.util.VineyardException;
 import java.io.*;
 import java.nio.channels.Channels;
+
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 import lombok.*;
@@ -43,35 +44,52 @@ public class IPCClient extends Client {
     public IPCClient() throws VineyardException {
         mapper_ = new ObjectMapper();
         mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
-        this.Connect(System.getenv("VINEYARD_IPC_SOCKET"));
+        this.connect(System.getenv("VINEYARD_IPC_SOCKET"));
     }
 
     public IPCClient(String ipc_socket) throws VineyardException {
         mapper_ = new ObjectMapper();
         mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
-        this.Connect(ipc_socket);
+        this.connect(ipc_socket);
     }
 
-    private synchronized void Connect(String ipc_socket) throws VineyardException {
+    private synchronized void connect(String ipc_socket) throws VineyardException {
         connectIPCSocketWithRetry(ipc_socket);
-        var root = mapper_.createObjectNode();
-        var req = new RegisterRequest();
+        val root = mapper_.createObjectNode();
+        val req = new RegisterRequest();
         req.Put(root);
         this.doWrite(root);
-        var reply = new RegisterReply();
+        val reply = new RegisterReply();
         reply.Get(this.doReadJson());
         this.ipc_socket = ipc_socket;
         this.rpc_endpoint = reply.getRpc_endpoint();
     }
 
     @Override
-    public ObjectID CreateMetaData(ObjectMeta metadata) {
-        return null;
+    public ObjectID createMetaData(ObjectMeta metadata) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        val req = new CreateDataRequest();
+        req.Put(root, metadata.metadata());
+        this.doWrite(root);
+        val reply = new CreateDataReply();
+        reply.Get(this.doReadJson());
+        return reply.getId();
     }
 
     @Override
-    public ObjectMeta GetMetaData(ObjectID id, boolean sync_remote) {
-        return null;
+    public ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        val req = new GetDataRequest();
+        req.Put(root, id, sync_remote, wait);
+        this.doWrite(root);
+        val reply = new GetDataReply();
+        reply.Get(this.doReadJson());
+        val contents = reply.getContents();
+        if (contents.size() != 1) {
+            throw new VineyardException.ObjectNotExists("Failed to read get_data reply, size is " + contents.size());
+        }
+        ObjectMeta meta = ObjectMeta.fromMeta(contents.get(id));
+        return meta;
     }
 
     private void connectIPCSocket(UnixSocketAddress address) throws VineyardException.IOError {
@@ -87,7 +105,7 @@ public class IPCClient extends Client {
     @SneakyThrows(InterruptedException.class)
     private void connectIPCSocketWithRetry(String pathname)
             throws VineyardException.ConnectionFailed {
-        UnixSocketAddress address = new UnixSocketAddress(new File(pathname).getAbsolutePath());
+        val address = new UnixSocketAddress(new File(pathname).getAbsolutePath());
         int num_retries = NUM_CONNECT_ATTEMPTS;
         while (num_retries > 0) {
             try {
@@ -118,14 +136,14 @@ public class IPCClient extends Client {
     @SneakyThrows(IOException.class)
     private byte[] doRead() {
         int length = (int) reader_.readLong(); // n.b.: the server writes a size_t (long)
-        byte[] content = new byte[length];
+        val content = new byte[length];
         reader_.read(content, 0, length);
         return content;
     }
 
     @SneakyThrows(IOException.class)
     private JsonNode doReadJson() {
-        byte[] content = doRead();
+        val content = doRead();
         return mapper_.readTree(content);
     }
 }

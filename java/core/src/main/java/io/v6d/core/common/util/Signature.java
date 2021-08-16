@@ -14,6 +14,8 @@ limitations under the License.
 */
 package io.v6d.core.common.util;
 
+import java.util.Objects;
+
 /** Vineyard Signature definition. */
 public class Signature {
     public static Signature InvalidSignature = new Signature(-1L);
@@ -39,5 +41,10 @@ public class Signature {
     @Override
     public boolean equals(Object other) {
         return this.id == ((Signature) other).id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

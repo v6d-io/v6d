@@ -15,6 +15,7 @@ limitations under the License.
 package io.v6d.core.client;
 
 import io.v6d.core.client.IPCClient;
+import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 import lombok.*;
 import org.junit.Test;
@@ -23,6 +24,9 @@ import org.junit.Test;
 public class IPCClientTest {
     @Test
     public void connect() throws VineyardException {
-       var client = new IPCClient();
+       val client = new IPCClient();
+       val meta = client.getMetaData(ObjectID.fromString("o000046b523f6a53a"));
+
+       System.out.println(meta);
     }
 }

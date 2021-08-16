@@ -14,6 +14,8 @@ limitations under the License.
 */
 package io.v6d.core.common.util;
 
+import java.util.Objects;
+
 /** Vineyard InstanceID definition. */
 public class InstanceID {
     public static InstanceID UnspecifiedInstanceID = new InstanceID(-1L);
@@ -39,5 +41,10 @@ public class InstanceID {
     @Override
     public boolean equals(Object other) {
         return this.id == ((InstanceID) other).id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

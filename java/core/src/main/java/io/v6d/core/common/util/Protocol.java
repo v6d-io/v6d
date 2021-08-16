@@ -15,9 +15,17 @@ limitations under the License.
 package io.v6d.core.common.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
+import lombok.*;
 
 public class Protocol {
     public abstract static class Request {
@@ -80,6 +88,94 @@ public class Protocol {
             this.rpc_endpoint = root.get("rpc_endpoint").asText();
             this.instance_id = new InstanceID(root.get("instance_id").asLong());
             this.version = root.get("version").asText("0.0.0");
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper =  false)
+    public static class CreateDataRequest extends Request {
+        private JsonNode content;
+
+        public void Put(ObjectNode root, ObjectNode content) {
+            root.put("type", "create_data_request");
+            root.put("content", content);
+        }
+
+        @Override
+        public void Get(JsonNode root) throws VineyardException {
+            check(root, "create_data_request");
+            content = root.get("content");
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class CreateDataReply extends Reply {
+        private ObjectID id;
+        private Signature signature;
+        private InstanceID instance_id;
+
+        public void Put(ObjectNode root, ObjectID id, Signature signature, InstanceID instance_id) {
+            root.put("type", "create_data_reply");
+            root.put("id", id.Value());
+            root.put("signature", signature.Value());
+            root.put("instance_id", instance_id.Value());
+        }
+
+        @Override
+        public void Get(JsonNode root) throws VineyardException {
+            check(root, "create_data_reply");
+            this.id = new ObjectID(root.get("id").asLong());
+            this.signature = new Signature(root.get("signature").asLong());
+            this.instance_id = new InstanceID(root.get("instance_id").asLong());
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper =  false)
+    public static class GetDataRequest extends Request {
+        private ObjectID id;
+        private boolean sync_remote;
+        private boolean wait;
+
+        public void Put(ObjectNode root, ObjectID id, boolean sync_remote, boolean wait) {
+            root.put("type", "get_data_request");
+            ObjectMapper mapper = new ObjectMapper();
+            val ids = mapper.createArrayNode();
+            ids.add(id.Value());
+            root.put("id", ids);
+            root.put("sync_remote", sync_remote);
+            root.put("wait", wait);
+        }
+
+        @Override
+        public void Get(JsonNode root) throws VineyardException {
+            check(root, "get_data_request");
+            this.id = new ObjectID(root.get("id").asLong());
+            this.sync_remote = root.get("sync_remote").asBoolean();
+            this.wait = root.get("wait").asBoolean();
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class GetDataReply extends Reply {
+        private Map<ObjectID, ObjectNode> contents;
+
+        public void Put(ObjectNode root, JsonNode content) {
+            root.put("type", "get_data_reply");
+            root.put("content", content);
+        }
+
+        @Override
+        public void Get(JsonNode root) throws VineyardException {
+            check(root, "get_data_reply");
+            this.contents = new HashMap<>();
+            val fields = root.get("content").fields();
+            while (fields.hasNext()) {
+                val field = fields.next();
+                this.contents.put(ObjectID.fromString(field.getKey()), (ObjectNode) field.getValue());
+            }
         }
     }
 }
