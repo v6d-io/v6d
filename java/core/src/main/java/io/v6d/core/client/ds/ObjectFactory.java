@@ -14,4 +14,53 @@ limitations under the License.
 */
 package io.v6d.core.client.ds;
 
-public class ObjectFactory {}
+import java.util.HashMap;
+import java.util.Map;
+
+public class ObjectFactory {
+    public static abstract class Resolver {
+        public abstract Object resolve(ObjectMeta metadata);
+    }
+
+    public static abstract class FFIResolver {
+        public Object resolve(ObjectMeta metadata) {
+            return resolve(new ObjectMetaForeign(metadata).construct());
+        }
+
+        public abstract Object resolve(long address);
+    }
+
+    private Map<String, Resolver> resolvers;
+
+    private volatile ObjectFactory factory = null;
+
+    public ObjectFactory getFactory() {
+        ObjectFactory localFactory = factory;
+        if (localFactory == null) {
+            synchronized (this) {
+                localFactory = factory;
+                if (localFactory == null) {
+                    factory = localFactory = new ObjectFactory();
+                }
+            }
+        }
+        return localFactory;
+    }
+
+    private ObjectFactory() {
+        this.resolvers = new HashMap<>();
+    }
+
+    public void register(String typename, Resolver resolver) {
+        this.resolvers.put(typename, resolver);
+    }
+
+    public Object resolve(String typename, ObjectMeta metadata) {
+        if (resolvers.containsKey(typename)) {
+            return resolvers.get(typename).resolve(metadata);
+        } else {
+            throw new RuntimeException("Failed to find resolver for typename " + typename);
+        }
+    }
+}
+

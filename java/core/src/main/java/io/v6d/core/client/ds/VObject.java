@@ -12,17 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package io.v6d.core.client;
+package io.v6d.core.client.ds;
 
-import io.v6d.core.client.IPCClient;
-import io.v6d.core.common.util.VineyardException;
-import lombok.*;
-import org.junit.Test;
-
-/** Unit test for IPC client. */
-public class IPCClientTest {
-    @Test
-    public void connect() throws VineyardException {
-       var client = new IPCClient();
-    }
-}
+/**
+ * Vineyard Object.
+ */
+public abstract class VObject {}

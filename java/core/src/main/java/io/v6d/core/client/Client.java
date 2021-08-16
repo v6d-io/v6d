@@ -14,7 +14,7 @@ limitations under the License.
 */
 package io.v6d.core.client;
 
-import io.v6d.core.ObjectMeta;
+import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
 
 /** Vineyard IPC client.s */

@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
-import io.v6d.core.ObjectMeta;
+import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Protocol.*;
 import io.v6d.core.common.util.VineyardException;
@@ -94,10 +94,9 @@ public class IPCClient extends Client {
                 connectIPCSocket(address);
                 break;
             } catch (VineyardException.IOError e) {
-                e.printStackTrace();
                 Thread.sleep(CONNECT_TIMEOUT_MS);
             }
-            num_retries += 1;
+            num_retries -= 1;
         }
         if (reader_ == null || writer_ == null) {
             throw new VineyardException.ConnectionFailed();

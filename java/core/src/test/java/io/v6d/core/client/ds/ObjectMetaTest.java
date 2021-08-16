@@ -12,6 +12,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package io.v6d.core;
+package io.v6d.core.client.ds;
 
-public class Blob {}
+import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.client.ds.ObjectMetaForeign;
+import io.v6d.core.common.util.VineyardException;
+import lombok.*;
+import org.junit.Test;
+
+/** Unit test for IPC client. */
+public class ObjectMetaTest {
+    @Test
+    public void connect() throws VineyardException {
+        ObjectMeta meta = new ObjectMeta();
+        ObjectMetaForeign foreign = new ObjectMetaForeign(meta);
+        System.out.println(foreign.construct());
+    }
+}
