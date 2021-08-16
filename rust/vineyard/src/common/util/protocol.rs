@@ -79,9 +79,9 @@ pub fn CHECK_IPC_ERROR(tree: &Value, root_type: &str) {
     RETURN_ON_ASSERT(tree["type"].as_str().unwrap() == root_type);
 }
 
-// Question: use unsafe extern "C" fn strtoull?
-pub fn objectid_from_string(s: String) -> ObjectID {
-    0
+// TODO: Rust parse check
+pub fn object_id_from_string(s: String) -> ObjectID {
+    s.parse::<ObjectID>().unwrap()
 }
 
 // Convert JSON Value to a String
@@ -90,13 +90,13 @@ pub fn encode_msg(msg: Value) -> String {
     ret
 }
 
-// Write functions: Derive and write JSON message to a String
+// Write functions: Derive the JSON message and write it to a String
 pub fn write_register_request() -> String {
-    let msg = json!({"type": "register_request", "version": "0.2.6" });
+    let msg = json!({"type": "register_request", "version": "0.2.6"});
     encode_msg(msg)
 }
 
-// Read functions: Read JSON root to variants of ipc instance
+// Read functions: Read the JSON root to variants of ipc instance
 pub fn read_register_request(root: Value) -> Result<String, Error> {
     RETURN_ON_ASSERT(root["type"] == "register_request");
     Ok(root["version"].as_str().unwrap_or("0.0.0").to_string())
@@ -211,7 +211,7 @@ pub fn read_get_unordered_data_reply(root: Value) -> Result<HashMap<ObjectID, Va
     let content_group = &root["content"];
     let mut key: usize = 0;
     for kv in content_group.as_array().unwrap().into_iter() {
-        content.insert(objectid_from_string(key.to_string()), kv.clone());
+        content.insert(object_id_from_string(key.to_string()), kv.clone());
         key += 1;
     }
     Ok(content)
@@ -346,6 +346,84 @@ pub fn read_get_buffer_reply(root: Value) -> Result<HashMap<ObjectID, Payload>, 
     }
     Ok(objects)
 }
+
+pub fn write_put_name_request(object_id: ObjectID, name: String) -> String {
+    let msg = json!({"type": "put_name_request", "object_id": object_id, "name": name});
+    encode_msg(msg)
+}
+
+pub fn read_put_name_request(root: Value) -> Result<(ObjectID, String), Error> {
+    RETURN_ON_ASSERT(root["type"] == "put_name_request");
+    let object_id = root["object_id"].as_u64().unwrap() as ObjectID;
+    let name = root["name"].as_str().unwrap().to_string();
+    Ok((object_id, name))
+}
+
+pub fn write_put_name_reply() -> String {
+    let msg = json!({"type": "put_name_reply"});
+    encode_msg(msg)
+}
+
+pub fn read_put_name_reply(root: Value) -> Result<(), Error> {
+    CHECK_IPC_ERROR(&root, "put_name_reply");
+    Ok(())
+}
+
+pub fn write_get_name_request(name: String, wait: bool) -> String {
+    let msg = json!({"type": "get_name_request", "name": name, "wait": wait});
+    encode_msg(msg)
+}
+
+pub fn read_get_name_request(root: Value) -> Result<(String, bool), Error> {
+    RETURN_ON_ASSERT(root["type"] == "get_name_request");
+    let name = root["name"].as_str().unwrap().to_string();
+    let wait = root["wait"].as_bool().unwrap();
+    Ok((name, wait))
+}
+
+pub fn write_get_name_reply(object_id: ObjectID) -> String {
+    let msg = json!({"type": "get_name_reply", "object_id": object_id});
+    encode_msg(msg)
+}
+
+pub fn read_get_name_reply(root: Value) -> Result<ObjectID, Error> {
+    CHECK_IPC_ERROR(&root, "get_name_reply");
+    let object_id = root["object_id"].as_u64().unwrap() as ObjectID;
+    Ok(object_id)
+}
+
+pub fn write_drop_name_request(name: String) -> String {
+    let msg = json!({"type": "drop_name_request", "name": name});
+    encode_msg(msg)
+}
+
+pub fn read_drop_name_request(root: Value) -> Result<String, Error> {
+    RETURN_ON_ASSERT(root["type"] == "drop_name_request");
+    let name = root["name"].as_str().unwrap().to_string();
+    Ok(name)
+}
+
+pub fn write_drop_name_reply() -> String {
+    let msg = json!({"type": "drop_name_reply"});
+    encode_msg(msg)
+}
+
+pub fn read_drop_name_reply(root: Value) -> Result<(), Error> {
+    CHECK_IPC_ERROR(&root, "drop_name_reply");
+    Ok(())
+}
+
+// // Write functions: Derive the JSON message and write it to a String
+// pub fn write_register_request() -> String {
+//     let msg = json!({"type": "register_request", "version": "0.2.6" });
+//     encode_msg(msg)
+// }
+
+// // Read functions: Read the JSON root to variants of ipc instance
+// pub fn read_register_request(root: Value) -> Result<String, Error> {
+//     RETURN_ON_ASSERT(root["type"] == "register_request");
+//     Ok(root["version"].as_str().unwrap_or("0.0.0").to_string())
+// }
 
 #[cfg(test)]
 mod tests {

@@ -125,11 +125,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-
-    #[test]
     #[ignore]
     fn ipc_connect() {
         let ipc_client = &mut IPCClient {
