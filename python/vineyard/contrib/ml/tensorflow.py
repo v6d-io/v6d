@@ -102,7 +102,7 @@ def tf_tensor_resolver(obj):
 def tf_dataframe_resolver(obj, **kw):
     with resolver_context(base=default_resolver_context) as resolver:
         df = resolver(obj, **kw)
-    labels = df.pop(kw['label'])
+    labels = df.pop(kw.get('label', 'label'))
     if 'data' in kw:
         return tf.data.Dataset.from_tensor_slices((np.stack(df[kw['data']], axis=0), labels))
     return tf.data.Dataset.from_tensor_slices((dict(df), labels))
