@@ -432,7 +432,7 @@ Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
   std::vector<Payload> payloads;
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
   for (auto const& item : payloads) {
-    uint8_t *shared = nullptr;
+    uint8_t* shared = nullptr;
     if (item.data_size > 0) {
       VINEYARD_CHECK_OK(
           mmapToClient(item.store_fd, item.map_size, true, true, &shared));
