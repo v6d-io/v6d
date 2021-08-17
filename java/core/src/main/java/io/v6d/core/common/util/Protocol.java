@@ -1,30 +1,27 @@
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.v6d.core.common.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.v6d.core.common.memory.Payload;
+import java.util.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.util.*;
-
-import lombok.*;
+import lombok.val;
 
 public class Protocol {
     public abstract static class Request {
@@ -91,7 +88,7 @@ public class Protocol {
     }
 
     @Data
-    @EqualsAndHashCode(callSuper =  false)
+    @EqualsAndHashCode(callSuper = false)
     public static class CreateDataRequest extends Request {
         private JsonNode content;
 
@@ -131,7 +128,7 @@ public class Protocol {
     }
 
     @Data
-    @EqualsAndHashCode(callSuper =  false)
+    @EqualsAndHashCode(callSuper = false)
     public static class GetDataRequest extends Request {
         private ObjectID id;
         private boolean sync_remote;
@@ -173,19 +170,20 @@ public class Protocol {
             val fields = root.get("content").fields();
             while (fields.hasNext()) {
                 val field = fields.next();
-                this.contents.put(ObjectID.fromString(field.getKey()), (ObjectNode) field.getValue());
+                this.contents.put(
+                        ObjectID.fromString(field.getKey()), (ObjectNode) field.getValue());
             }
         }
     }
 
-    @EqualsAndHashCode(callSuper =  false)
+    @EqualsAndHashCode(callSuper = false)
     public static class GetBuffersRequest extends Request {
         private List<ObjectID> ids;
 
         public void Put(ObjectNode root, List<ObjectID> ids) {
             root.put("type", "get_buffers_request");
             int index = 0;
-            for (val id: ids) {
+            for (val id : ids) {
                 root.put(String.valueOf(index++), id.Value());
             }
             root.put("num", ids.size());
@@ -194,7 +192,7 @@ public class Protocol {
         public void Put(ObjectNode root, Set<ObjectID> ids) {
             root.put("type", "get_buffers_request");
             int index = 0;
-            for (val id: ids) {
+            for (val id : ids) {
                 root.put(String.valueOf(index++), id.Value());
             }
             root.put("num", ids.size());
@@ -214,12 +212,12 @@ public class Protocol {
     @Data
     @EqualsAndHashCode(callSuper = false)
     public static class GetBuffersReply extends Reply {
-        private Map<ObjectID, Payload> payloads;
+        private List<Payload> payloads;
 
         public void Put(ObjectNode root, List<Payload> objects) {
             root.put("type", "get_buffers_reply");
             int index = 0;
-            for (val payload: objects) {
+            for (val payload : objects) {
                 root.putPOJO(String.valueOf(index), payload);
             }
             root.put("num", objects.size());
@@ -227,13 +225,11 @@ public class Protocol {
 
         @Override
         public void Get(JsonNode root) throws VineyardException {
-            check(root, "get_data_reply");
-            this.payloads = new HashMap<>();
-            val fields = root.get("content").fields();
-            while (fields.hasNext()) {
-                val field = fields.next();
-                val payload = Payload.fromJson(field.getValue());
-                this.payloads.put(payload.getObjectID(), payload);
+            check(root, "get_buffers_reply");
+            this.payloads = new ArrayList<>();
+            for (int index = 0; index < root.get("num").asInt(); ++index) {
+                val payload = Payload.fromJson(root.get(String.valueOf(index)));
+                this.payloads.add(payload);
             }
         }
     }

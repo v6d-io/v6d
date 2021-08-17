@@ -14,6 +14,11 @@ limitations under the License.
 */
 #include "io_v6d_core_common_memory_ffi_Fling.h"
 
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/mman.h>
+
 #include "vineyard/common/memory/fling.h"
 
 /*
@@ -34,4 +39,22 @@ JNIEXPORT jint JNICALL Java_io_v6d_core_common_memory_ffi_Fling_sendFD
 JNIEXPORT jint JNICALL Java_io_v6d_core_common_memory_ffi_Fling_recvFD
   (JNIEnv *, jclass, jint conn) {
   return recv_fd(conn);
+}
+
+/*
+ * Class:     io_v6d_core_common_memory_ffi_Fling
+ * Method:    mapSharedMem
+ * Signature: (IJZZ)J
+ */
+JNIEXPORT jlong JNICALL Java_io_v6d_core_common_memory_ffi_Fling_mapSharedMem
+  (JNIEnv *, jclass, jint fd, jlong map_size, jboolean readonly, jboolean realign) {
+  size_t length = map_size;
+  if (realign == JNI_TRUE) {
+    length -= sizeof(size_t);
+  }
+  void *pointer = mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (pointer == MAP_FAILED) {
+    fprintf(stderr, "mmap failed: errno = %d: %s\n", errno, strerror(errno));
+  }
+  return reinterpret_cast<jlong>(pointer);
 }

@@ -1,16 +1,16 @@
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.v6d.core.common.memory;
 
@@ -18,29 +18,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.v6d.core.common.util.ObjectID;
+import java.io.IOException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
 
-import java.io.IOException;
-
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class Payload {
-    @JsonProperty
-    private ObjectID objectID;
-    @JsonProperty
-    private int storeFD;
-    @JsonProperty
-    private int arenaFD;
-    @JsonProperty
-    private long dataOffset;
-    @JsonProperty
-    private long dataSize;
-    @JsonProperty
-    private long mapSize;
-    @JsonProperty
-    private long pointer;  // uint8_t *
+    @JsonProperty private ObjectID objectID;
+    @JsonProperty private int storeFD;
+    @JsonProperty private int arenaFD;
+    @JsonProperty private long dataOffset;
+    @JsonProperty private long dataSize;
+    @JsonProperty private long mapSize;
+    @JsonProperty private long pointer; // uint8_t *
 
     private Payload() {
         this.objectID = ObjectID.EmptyBlobID;
@@ -57,7 +49,14 @@ public class Payload {
         return new Payload();
     }
 
-    public Payload(ObjectID objectID, int storeFD, int arenaFD, long dataOffset, long dataSize, long mapSize, long pointer) {
+    public Payload(
+            ObjectID objectID,
+            int storeFD,
+            int arenaFD,
+            long dataOffset,
+            long dataSize,
+            long mapSize,
+            long pointer) {
         this.objectID = objectID;
         this.storeFD = storeFD;
         this.arenaFD = arenaFD;
@@ -67,7 +66,13 @@ public class Payload {
         this.pointer = pointer;
     }
 
-    public Payload(ObjectID objectID, int storeFD, long dataOffset, long dataSize, long mapSize, long pointer) {
+    public Payload(
+            ObjectID objectID,
+            int storeFD,
+            long dataOffset,
+            long dataSize,
+            long mapSize,
+            long pointer) {
         this.objectID = objectID;
         this.storeFD = storeFD;
         this.arenaFD = -1;

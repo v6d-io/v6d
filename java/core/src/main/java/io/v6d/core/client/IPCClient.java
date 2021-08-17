@@ -1,17 +1,17 @@
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.v6d.core.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,38 +22,43 @@ import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
 import io.v6d.core.client.ds.Buffer;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.memory.ffi.Fling;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Protocol.*;
 import io.v6d.core.common.util.VineyardException;
 import java.io.*;
 import java.nio.channels.Channels;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
-import lombok.*;
+import lombok.SneakyThrows;
+import lombok.val;
 
 /** Vineyard IPC client. */
 public class IPCClient extends Client {
+    private final int NUM_CONNECT_ATTEMPTS = 10;
+    private final long CONNECT_TIMEOUT_MS = 1000;
+
     private UnixSocketChannel channel_;
     private LittleEndianDataOutputStream writer_;
     private LittleEndianDataInputStream reader_;
     private ObjectMapper mapper_;
 
-    private final int NUM_CONNECT_ATTEMPTS = 10;
-    private final long CONNECT_TIMEOUT_MS = 1000;
+    private Map<Integer, Long> mmap_table;
 
     public IPCClient() throws VineyardException {
         mapper_ = new ObjectMapper();
         mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
+        mmap_table = new HashMap<>();
         this.connect(System.getenv("VINEYARD_IPC_SOCKET"));
     }
 
     public IPCClient(String ipc_socket) throws VineyardException {
         mapper_ = new ObjectMapper();
         mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
+        mmap_table = new HashMap<>();
         this.connect(ipc_socket);
     }
 
@@ -82,7 +87,8 @@ public class IPCClient extends Client {
     }
 
     @Override
-    public ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait) throws VineyardException {
+    public ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
+            throws VineyardException {
         val root = mapper_.createObjectNode();
         val req = new GetDataRequest();
         req.Put(root, id, sync_remote, wait);
@@ -91,12 +97,20 @@ public class IPCClient extends Client {
         reply.Get(this.doReadJson());
         val contents = reply.getContents();
         if (contents.size() != 1) {
-            throw new VineyardException.ObjectNotExists("Failed to read get_data reply, size is " + contents.size());
+            throw new VineyardException.ObjectNotExists(
+                    "Failed to read get_data reply, size is " + contents.size());
         }
-        ObjectMeta meta = ObjectMeta.fromMeta(contents.get(id), this.instanceID);
 
-
-
+        val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceID);
+        val buffers = this.getBuffers(meta.getBuffers().allBufferIds());
+        for (val blob : meta.getBuffers().allBufferIds()) {
+            System.out.println("blob: " + blob);
+        }
+        for (val blob : meta.getBuffers().allBufferIds()) {
+            if (buffers.containsKey(blob)) {
+                meta.setBuffer(blob, buffers.get(blob));
+            }
+        }
         return meta;
     }
 
@@ -143,16 +157,36 @@ public class IPCClient extends Client {
         this.doWrite(root);
         val reply = new GetBuffersReply();
         reply.Get(this.doReadJson());
-        Map<ObjectID, Buffer> buffers = new TreeMap<>();
-        for (val item: reply.getPayloads().entrySet()) {
-            val payload = item.getValue();
+        Map<ObjectID, Buffer> buffers = new HashMap<>();
+        for (val payload : reply.getPayloads()) {
             val buffer = new Buffer();
             if (payload.getDataSize() > 0) {
-
+                long pointer = this.mmap(payload.getStoreFD(), payload.getMapSize(), true, true);
+                buffer.setPointer(pointer + payload.getDataOffset());
+                buffer.setSize(payload.getDataSize());
             }
-            buffers.put(item.getKey(), buffer);
+            buffers.put(payload.getObjectID(), buffer);
         }
         return buffers;
+    }
+
+    private long mmap(int fd, long mapSize, boolean readonly, boolean realign)
+            throws VineyardException {
+        if (mmap_table.containsKey(fd)) {
+            return mmap_table.get(fd);
+        }
+        int client_fd = Fling.recvFD(-1);
+        long pointer = Fling.mapSharedMem(client_fd, mapSize, readonly, realign);
+        if (pointer == -1) {
+            throw new VineyardException.UnknownError("mmap failed for fd " + fd);
+        }
+        mmap_table.put(fd, pointer);
+        return pointer;
+    }
+
+    private long unmap(int fd) {
+        // TODO
+        return -1;
     }
 
     @SneakyThrows(JsonProcessingException.class)
