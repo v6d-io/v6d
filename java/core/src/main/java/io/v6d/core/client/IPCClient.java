@@ -175,7 +175,7 @@ public class IPCClient extends Client {
         if (mmap_table.containsKey(fd)) {
             return mmap_table.get(fd);
         }
-        int client_fd = Fling.recvFD(-1);
+        int client_fd = Fling.recvFD(this.channel_.getFD());
         long pointer = Fling.mapSharedMem(client_fd, mapSize, readonly, realign);
         if (pointer == -1) {
             throw new VineyardException.UnknownError("mmap failed for fd " + fd);

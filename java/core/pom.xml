@@ -16,58 +16,66 @@
   <name>vineyard-core</name>
   <url>https://v6d.io</url>
 
+  <properties>
+    <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
+    <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
+    <dependency.lombok.version>1.18.20</dependency.lombok.version>
+    <dependency.guava.version>30.1.1-jre</dependency.guava.version>
+    <dependency.native-lib-loader.version>2.3.5</dependency.native-lib-loader.version>
+    <dependency.jackson.version>2.12.4</dependency.jackson.version>
+  </properties>
+
   <dependencies>
     <dependency>
         <groupId>com.github.jnr</groupId>
         <artifactId>jnr-posix</artifactId>
-        <version>3.1.7</version>
+        <version>${dependency.jnr-posix.version}</version>
     </dependency>
 
     <dependency>
         <groupId>com.github.jnr</groupId>
         <artifactId>jnr-unixsocket</artifactId>
-        <version>0.38.8</version>
+        <version>${dependency.jnr-unixsocket.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
-      <version>2.12.4</version>
+      <version>${dependency.jackson.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-      <version>2.12.4</version>
+      <version>${dependency.jackson.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.12.4</version>
+      <version>${dependency.jackson.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.20</version>
+      <version>${dependency.lombok.version}</version>
       <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>30.1.1-jre</version>
+      <version>${dependency.guava.version}</version>
     </dependency>
     <dependency>
       <groupId>org.scijava</groupId>
       <artifactId>native-lib-loader</artifactId>
-      <version>2.3.5</version>
+      <version>${dependency.native-lib-loader.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
