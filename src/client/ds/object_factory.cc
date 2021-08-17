@@ -32,6 +32,10 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name) {
   }
 }
 
+std::unique_ptr<Object> ObjectFactory::Create(ObjectMeta const& metadata) {
+  return ObjectFactory::Create(metadata.GetTypeName(), metadata);
+}
+
 std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name,
                                               ObjectMeta const& metadata) {
   auto& known_types = getKnownTypes();

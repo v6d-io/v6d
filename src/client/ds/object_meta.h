@@ -491,6 +491,20 @@ class ObjectMeta {
 
   void SetMetaData(ClientBase* client, const json& meta);
 
+  /**
+   * Construct object metadata from unsafe sources.
+   */
+  static std::unique_ptr<ObjectMeta> Unsafe(std::string meta, size_t nobjects,
+                                            ObjectID* objects,
+                                            uintptr_t* pointers, size_t* sizes);
+
+  /**
+   * Construct object metadata from unsafe sources.
+   */
+  static std::unique_ptr<ObjectMeta> Unsafe(json meta, size_t nobjects,
+                                            ObjectID* objects,
+                                            uintptr_t* pointers, size_t* sizes);
+
   using const_iterator =
       nlohmann::detail::iteration_proxy_value<json::const_iterator>;
   const_iterator begin() const { return json::iterator_wrapper(meta_).begin(); }

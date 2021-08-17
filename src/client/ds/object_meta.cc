@@ -203,18 +203,44 @@ void ObjectMeta::SetMetaData(ClientBase* client, const json& meta) {
   findAllBlobs(meta_);
 }
 
+std::unique_ptr<ObjectMeta> ObjectMeta::Unsafe(std::string meta,
+                                               size_t nobjects,
+                                               ObjectID* objects,
+                                               uintptr_t* pointers,
+                                               size_t* sizes) {
+  try {
+    return ObjectMeta::Unsafe(json::parse(meta), nobjects, objects, pointers,
+                              sizes);
+  } catch (std::exception const&) { return nullptr; }
+}
+
+std::unique_ptr<ObjectMeta> ObjectMeta::Unsafe(json meta, size_t nobjects,
+                                               ObjectID* objects,
+                                               uintptr_t* pointers,
+                                               size_t* sizes) {
+  std::unique_ptr<ObjectMeta> metadata(new ObjectMeta());
+  metadata->SetMetaData(nullptr, meta);
+  for (size_t index = 0; index < nobjects; ++index) {
+    auto buffer = std::make_shared<arrow::Buffer>(
+        reinterpret_cast<const uint8_t*>(pointers[index]), sizes[index]);
+    metadata->SetBuffer(objects[index], buffer);
+  }
+  return metadata;
+}
+
 const std::shared_ptr<BufferSet>& ObjectMeta::GetBufferSet() const {
   return buffer_set_;
 }
 
 void ObjectMeta::findAllBlobs(const json& tree) {
-  if (tree.empty() && client_ != nullptr) {
+  if (tree.empty()) {
     return;
   }
   ObjectID member_id =
       VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
   if (IsBlob(member_id)) {
-    if (tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
+    if (client_ == nullptr /* traverse to account blobs */ ||
+        tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
       VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
     }
   } else {
