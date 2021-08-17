@@ -16,6 +16,8 @@
   <name>vineyard-core</name>
   <url>https://v6d.io</url>
 
+  <packaging>jar</packaging>
+
   <dependencies>
     <dependency>
         <groupId>com.github.jnr</groupId>
@@ -127,15 +129,25 @@
         <artifactId>native-maven-plugin</artifactId>
         <version>1.0-alpha-11</version>
         <extensions>true</extensions>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+              <goal>link</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
           <compilerProvider>generic-classic</compilerProvider>
           <compilerExecutable>g++</compilerExecutable>
           <linkerExecutable>g++</linkerExecutable>
           <sources>
             <source>
-              <directory>${project.basedir}/src/main/cpp</directory>
+              <directory>${project.basedir}/src/main/cpp/ffi</directory>
               <fileNames>
-                <fileName>io_v6d_core_client_ds_ObjectMetaForeign.cc</fileName>
+                <fileName>fling.cc</fileName>
+                <fileName>object_meta.cc</fileName>
               </fileNames>
             </source>
             <source>
@@ -156,12 +168,13 @@
             <linkerStartOption>-L ${JAVA_HOME}/lib/</linkerStartOption>
           </linkerStartOptions>
           <linkerEndOptions>
+            <linkerEndOption>-lvineyard_client</linkerEndOption>
             <linkerEndOption>-shared</linkerEndOption>
             <linkerEndOption>-fPIC</linkerEndOption>
           </linkerEndOptions>
           <linkerOutputDirectory>${project.build.directory}/classes</linkerOutputDirectory>
           <linkerFinalName>lib${project.build.finalName}</linkerFinalName>
-          <linkerFinalNameExt>dylib</linkerFinalNameExt>
+          <linkerFinalNameExt>${native.library.ext}</linkerFinalNameExt>
         </configuration>
       </plugin>
       <plugin>

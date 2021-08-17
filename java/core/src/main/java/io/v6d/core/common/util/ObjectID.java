@@ -14,37 +14,38 @@ limitations under the License.
 */
 package io.v6d.core.common.util;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
 import java.util.Objects;
 
 /** Vineyard ObjectID definition. */
+@EqualsAndHashCode(callSuper = false)
 public class ObjectID {
-    public static ObjectID InvalidObjectID = new ObjectID(-1L);
     private long id = -1L;
+
+    public static ObjectID InvalidObjectID = new ObjectID(-1L);
+
+    public static ObjectID EmptyBlobID = new ObjectID(0x8000000000000000L);
 
     public ObjectID(long id) {
         this.id = id;
-    }
-
-    public long Value() {
-        return this.id;
     }
 
     public static ObjectID fromString(String id) {
         return new ObjectID(Long.parseUnsignedLong(id.substring(1), 16));
     }
 
+    public long Value() {
+        return this.id;
+    }
+
+    public boolean isBlob() {
+        return (this.id & 0x8000000000000000L) == 0L;
+    }
+
     @Override
     public String toString() {
         return String.format("o%016x", id);
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        return this.id == ((ObjectID) other).id;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
     }
 }

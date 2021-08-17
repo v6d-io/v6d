@@ -23,6 +23,33 @@
     <module>core</module>
   </modules>
 
+  <profiles>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <property>
+          <name>platform</name>
+          <value>linux</value>
+        </property>
+      </activation>
+      <properties>
+        <native.library.ext>so</native.library.ext>
+      </properties>
+    </profile>
+    <profile>
+      <id>macosx</id>
+      <activation>
+        <property>
+          <name>platform</name>
+          <value>macosx</value>
+        </property>
+      </activation>
+      <properties>
+        <native.library.ext>dylib</native.library.ext>
+      </properties>
+    </profile>
+  </profiles>
+
   <build>
     <pluginManagement> <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>

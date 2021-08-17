@@ -14,18 +14,16 @@ limitations under the License.
 */
 package io.v6d.core.client.ds;
 
-import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.core.client.ds.ObjectMetaForeign;
+import io.v6d.core.client.ds.ffi.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
-import lombok.*;
 import org.junit.Test;
 
 /** Unit test for IPC client. */
 public class ObjectMetaTest {
     @Test
     public void connect() throws VineyardException {
-        ObjectMeta meta = new ObjectMeta();
-        ObjectMetaForeign foreign = new ObjectMetaForeign(meta);
+        io.v6d.core.client.ds.ObjectMeta meta = io.v6d.core.client.ds.ObjectMeta.fromMeta(null);
+        ObjectMeta foreign = new ObjectMeta(meta);
         System.out.println(foreign.construct());
     }
 }

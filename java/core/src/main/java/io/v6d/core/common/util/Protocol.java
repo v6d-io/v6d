@@ -18,12 +18,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.v6d.core.common.memory.Payload;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 import lombok.*;
 
@@ -175,6 +174,66 @@ public class Protocol {
             while (fields.hasNext()) {
                 val field = fields.next();
                 this.contents.put(ObjectID.fromString(field.getKey()), (ObjectNode) field.getValue());
+            }
+        }
+    }
+
+    @EqualsAndHashCode(callSuper =  false)
+    public static class GetBuffersRequest extends Request {
+        private List<ObjectID> ids;
+
+        public void Put(ObjectNode root, List<ObjectID> ids) {
+            root.put("type", "get_buffers_request");
+            int index = 0;
+            for (val id: ids) {
+                root.put(String.valueOf(index++), id.Value());
+            }
+            root.put("num", ids.size());
+        }
+
+        public void Put(ObjectNode root, Set<ObjectID> ids) {
+            root.put("type", "get_buffers_request");
+            int index = 0;
+            for (val id: ids) {
+                root.put(String.valueOf(index++), id.Value());
+            }
+            root.put("num", ids.size());
+        }
+
+        @Override
+        public void Get(JsonNode root) throws VineyardException {
+            check(root, "get_data_request");
+            this.ids = new ArrayList<>();
+            int num = root.get("num").asInt();
+            for (int index = 0; index < num; ++index) {
+                this.ids.add(new ObjectID(root.get(String.valueOf(index)).asInt()));
+            }
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class GetBuffersReply extends Reply {
+        private Map<ObjectID, Payload> payloads;
+
+        public void Put(ObjectNode root, List<Payload> objects) {
+            root.put("type", "get_buffers_reply");
+            int index = 0;
+            for (val payload: objects) {
+                root.putPOJO(String.valueOf(index), payload);
+            }
+            root.put("num", objects.size());
+        }
+
+        @Override
+        public void Get(JsonNode root) throws VineyardException {
+            check(root, "get_data_reply");
+            this.payloads = new HashMap<>();
+            val fields = root.get("content").fields();
+            while (fields.hasNext()) {
+                val field = fields.next();
+                val payload = Payload.fromJson(field.getValue());
+                this.payloads.put(payload.getObjectID(), payload);
             }
         }
     }

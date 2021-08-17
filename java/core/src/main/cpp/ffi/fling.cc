@@ -12,12 +12,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package io.v6d.core.client.ds;
+#include "io_v6d_core_common_memory_ffi_Fling.h"
 
-import io.v6d.core.common.util.ObjectID;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+#include "vineyard/common/memory/fling.h"
 
-public class Blob {
+/*
+ * Class:     io_v6d_core_common_memory_ffi_Fling
+ * Method:    sendFD
+ * Signature: (II)I
+ */
+JNIEXPORT jint JNICALL Java_io_v6d_core_common_memory_ffi_Fling_sendFD
+  (JNIEnv *, jclass, jint conn, jint fd) {
+  return send_fd(conn, fd);
+}
 
+/*
+ * Class:     io_v6d_core_common_memory_ffi_Fling
+ * Method:    recvFD
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_io_v6d_core_common_memory_ffi_Fling_recvFD
+  (JNIEnv *, jclass, jint conn) {
+  return recv_fd(conn);
 }

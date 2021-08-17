@@ -14,17 +14,19 @@ limitations under the License.
 */
 package io.v6d.core.client.ds;
 
+import io.v6d.core.client.ds.ffi.ObjectMeta;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class ObjectFactory {
     public static abstract class Resolver {
-        public abstract Object resolve(ObjectMeta metadata);
+        public abstract Object resolve(io.v6d.core.client.ds.ObjectMeta metadata);
     }
 
     public static abstract class FFIResolver {
-        public Object resolve(ObjectMeta metadata) {
-            return resolve(new ObjectMetaForeign(metadata).construct());
+        public Object resolve(io.v6d.core.client.ds.ObjectMeta metadata) {
+            return resolve(new ObjectMeta(metadata).construct());
         }
 
         public abstract Object resolve(long address);
@@ -55,7 +57,7 @@ public class ObjectFactory {
         this.resolvers.put(typename, resolver);
     }
 
-    public Object resolve(String typename, ObjectMeta metadata) {
+    public Object resolve(String typename, io.v6d.core.client.ds.ObjectMeta metadata) {
         if (resolvers.containsKey(typename)) {
             return resolvers.get(typename).resolve(metadata);
         } else {

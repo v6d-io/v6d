@@ -15,6 +15,7 @@ limitations under the License.
 package io.v6d.core.client;
 
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 
@@ -22,6 +23,7 @@ import io.v6d.core.common.util.VineyardException;
 public abstract class Client {
     protected String ipc_socket;
     protected String rpc_endpoint;
+    protected InstanceID instanceID;
 
     public abstract ObjectID createMetaData(ObjectMeta metadata) throws VineyardException;
 
@@ -42,10 +44,14 @@ public abstract class Client {
     public void disconnect() {}
 
     public String getIPCSocket() {
-        return ipc_socket;
+        return this.ipc_socket;
     }
 
     public String getRPCEndpoint() {
-        return rpc_endpoint;
+        return this.rpc_endpoint;
+    }
+
+    public InstanceID getInstanceID() {
+        return this.instanceID;
     }
 }

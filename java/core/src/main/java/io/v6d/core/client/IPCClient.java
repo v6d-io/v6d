@@ -20,12 +20,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
+import io.v6d.core.client.ds.Buffer;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Protocol.*;
 import io.v6d.core.common.util.VineyardException;
 import java.io.*;
 import java.nio.channels.Channels;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
@@ -63,6 +67,7 @@ public class IPCClient extends Client {
         reply.Get(this.doReadJson());
         this.ipc_socket = ipc_socket;
         this.rpc_endpoint = reply.getRpc_endpoint();
+        this.instanceID = reply.getInstance_id();
     }
 
     @Override
@@ -88,7 +93,10 @@ public class IPCClient extends Client {
         if (contents.size() != 1) {
             throw new VineyardException.ObjectNotExists("Failed to read get_data reply, size is " + contents.size());
         }
-        ObjectMeta meta = ObjectMeta.fromMeta(contents.get(id));
+        ObjectMeta meta = ObjectMeta.fromMeta(contents.get(id), this.instanceID);
+
+
+
         return meta;
     }
 
@@ -126,6 +134,25 @@ public class IPCClient extends Client {
         writer_.writeLong(content.length());
         writer_.writeBytes(content);
         writer_.flush();
+    }
+
+    private Map<ObjectID, Buffer> getBuffers(Set<ObjectID> ids) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        val req = new GetBuffersRequest();
+        req.Put(root, ids);
+        this.doWrite(root);
+        val reply = new GetBuffersReply();
+        reply.Get(this.doReadJson());
+        Map<ObjectID, Buffer> buffers = new TreeMap<>();
+        for (val item: reply.getPayloads().entrySet()) {
+            val payload = item.getValue();
+            val buffer = new Buffer();
+            if (payload.getDataSize() > 0) {
+
+            }
+            buffers.put(item.getKey(), buffer);
+        }
+        return buffers;
     }
 
     @SneakyThrows(JsonProcessingException.class)

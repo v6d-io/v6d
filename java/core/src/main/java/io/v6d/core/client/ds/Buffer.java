@@ -14,28 +14,26 @@
  */
 package io.v6d.core.client.ds;
 
-import java.io.*;
-import org.scijava.nativelib.NativeLoader;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-public class ObjectMetaForeign {
-    private ObjectMeta metadata;
+@Data
+@EqualsAndHashCode(callSuper = false)
+public class Buffer {
+    private long pointer;
+    private long size;
 
-    static {
-        try {
-            NativeLoader.loadLibrary("vineyard-core");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        // NarSystem.loadLibrary();
+    public Buffer() {
+        this.pointer = 0;
+        this.size = 0;
     }
 
-    public ObjectMetaForeign(ObjectMeta metadata) {
-        this.metadata = metadata;
+    public Buffer(long pointer, long size) {
+        this.pointer = pointer;
+        this.size = size;
     }
 
-    public long construct() {
-        return constructNative("meta", new long[]{1,2,3,4});
+    public boolean isNull() {
+        return this.size == 0;
     }
-
-    private native long constructNative(String meta, long [] blobs);
 }

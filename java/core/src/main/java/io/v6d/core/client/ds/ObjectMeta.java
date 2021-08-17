@@ -20,21 +20,30 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Signature;
+import io.v6d.core.common.util.VineyardException;
 import lombok.*;
 
 public class ObjectMeta {
     private ObjectMapper mapper;
     private ObjectNode meta;
+    private InstanceID instanceID;
+    private BufferSet buffers;
 
-    public ObjectMeta() {
+    private ObjectMeta() {
         mapper = new ObjectMapper();
         meta = mapper.createObjectNode();
     }
 
-    public static ObjectMeta fromMeta(ObjectNode meta) {
+    public static ObjectMeta fromMeta(ObjectNode meta, InstanceID instanceID) throws VineyardException {
         val metadata = new ObjectMeta();
         metadata.meta = meta;
+        metadata.instanceID = instanceID;
+        metadata.findAllBuffers(meta);
         return metadata;
+    }
+
+    public void reset() {
+        this.meta = mapper.createObjectNode();
     }
 
     public ObjectNode metadata() {
@@ -98,5 +107,25 @@ public class ObjectMeta {
         return "ObjectMeta{" +
                 "meta=" + meta +
                 '}';
+    }
+
+    private void findAllBuffers(ObjectNode meta) throws VineyardException {
+        if (meta.isEmpty()) {
+            return;
+        }
+        ObjectID member = ObjectID.fromString(meta.get("id").asText());
+        if (member.isBlob()) {
+            if (meta.get("instance_id").asLong() == this.instanceID.Value()) {
+                this.buffers.emplace(member);
+            }
+        } else {
+            val fields = meta.fields();
+            while (fields.hasNext()) {
+                val item = fields.next().getValue();
+                if (item.isObject()) {
+                    this.findAllBuffers((ObjectNode) item);
+                }
+            }
+        }
     }
 }

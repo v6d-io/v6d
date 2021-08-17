@@ -12,12 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package io.v6d.core.client.ds;
+#include "io_v6d_core_client_ds_ffi_ObjectMeta.h"
 
-import io.v6d.core.common.util.ObjectID;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
-public class Blob {
-
+JNIEXPORT jlong JNICALL Java_io_v6d_core_client_ds_ffi_ObjectMeta_constructNative
+  (JNIEnv *, jobject, jstring, jlongArray) {
+  return 0xf0f0f0f0;
 }
