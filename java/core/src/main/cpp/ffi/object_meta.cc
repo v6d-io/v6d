@@ -22,8 +22,6 @@ limitations under the License.
 #include "vineyard/client/ds/object_meta.h"
 #include "vineyard/client/ds/object_factory.h"
 
-#include "vineyard/basic/ds/array.h"
-
 /*
  * Class:     io_v6d_core_client_ds_ffi_ObjectMeta
  * Method:    constructNative
@@ -32,9 +30,6 @@ limitations under the License.
 JNIEXPORT jlong JNICALL Java_io_v6d_core_client_ds_ffi_ObjectMeta_constructNative
   (JNIEnv *env, jobject, jstring meta, jlongArray objects, jlongArray pointers, jlongArray sizes) {
     jboolean isCopy = JNI_FALSE;
-
-    auto arr = vineyard::Array<double>::Create();
-    fprintf(stderr, "arr: %p\n", arr.get());
 
     jsize length = env->GetStringUTFLength(meta);
     const char *chars = env->GetStringUTFChars(meta, &isCopy);
