@@ -12,7 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.common.util;
+package io.v6d.core.common.memory.ffi;
 
-/** Unit test for vineyard IPC protocol. */
-public class ProtocolTest {}
+import io.v6d.core.FFI;
+
+public class Fling {
+    static {
+        FFI.loadNativeLibrary();
+    }
+
+    public static native int sendFD(int socket, int fd);
+
+    public static native int recvFD(int socket);
+
+    public static native long mapSharedMem(int fd, long mapSize, boolean readonly, boolean realign);
+}

@@ -12,7 +12,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.common.util;
+package io.v6d.core.client.ds;
 
-/** Unit test for vineyard IPC protocol. */
-public class ProtocolTest {}
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@EqualsAndHashCode(callSuper = false)
+public class Buffer {
+    private long pointer;
+    private long size;
+
+    public Buffer() {
+        this.pointer = 0;
+        this.size = 0;
+    }
+
+    public Buffer(long pointer, long size) {
+        this.pointer = pointer;
+        this.size = size;
+    }
+
+    public boolean isNull() {
+        return this.size == 0;
+    }
+}

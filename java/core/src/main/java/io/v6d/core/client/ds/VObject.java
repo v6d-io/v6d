@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.common.util;
+package io.v6d.core.client.ds;
 
-/** Unit test for vineyard IPC protocol. */
-public class ProtocolTest {}
+/** Vineyard Object. */
+public abstract class VObject {}

@@ -4,157 +4,188 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>io.v6d</groupId>
+    <artifactId>vineyard</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+
   <groupId>io.v6d.core</groupId>
   <artifactId>vineyard-core</artifactId>
-  <version>1.0-SNAPSHOT</version>
 
   <name>vineyard-core</name>
   <url>https://v6d.io</url>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
+    <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
+    <dependency.lombok.version>1.18.20</dependency.lombok.version>
+    <dependency.guava.version>30.1.1-jre</dependency.guava.version>
+    <dependency.native-lib-loader.version>2.3.5</dependency.native-lib-loader.version>
+    <dependency.jackson.version>2.12.4</dependency.jackson.version>
   </properties>
 
   <dependencies>
     <dependency>
         <groupId>com.github.jnr</groupId>
         <artifactId>jnr-posix</artifactId>
-        <version>3.1.7</version>
+        <version>${dependency.jnr-posix.version}</version>
     </dependency>
 
     <dependency>
         <groupId>com.github.jnr</groupId>
         <artifactId>jnr-unixsocket</artifactId>
-        <version>0.38.8</version>
+        <version>${dependency.jnr-unixsocket.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
-      <version>2.12.4</version>
+      <version>${dependency.jackson.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-      <version>2.12.4</version>
+      <version>${dependency.jackson.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.12.4</version>
+      <version>${dependency.jackson.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.20</version>
+      <version>${dependency.lombok.version}</version>
       <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>30.1.1-jre</version>
+      <version>${dependency.guava.version}</version>
     </dependency>
-
+    <dependency>
+      <groupId>org.scijava</groupId>
+      <artifactId>native-lib-loader</artifactId>
+      <version>${dependency.native-lib-loader.version}</version>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
-      <plugins>
-        <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.1.0</version>
-        </plugin>
-        <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>2.5.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.8.2</version>
-        </plugin>
-        <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
-        <plugin>
-          <artifactId>maven-site-plugin</artifactId>
-          <version>3.7.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-project-info-reports-plugin</artifactId>
-          <version>3.0.0</version>
-        </plugin>
-
-        <plugin>
-          <groupId>com.diffplug.spotless</groupId>
-          <artifactId>spotless-maven-plugin</artifactId>
-          <version>2.4.1</version>
-          <configuration>
-            <formats>
-              <!-- you can define as many formats as you want, each is independent -->
-              <format>
-                <!-- define the files to apply to -->
-                <includes>
-                  <include>*.md</include>
-                  <include>.gitignore</include>
-                </includes>
-                <!-- define the steps to apply to those files -->
-                <trimTrailingWhitespace/>
-                <endWithNewline/>
-                <indent>
-                  <tabs>true</tabs>
-                  <spacesPerTab>4</spacesPerTab>
-                </indent>
-              </format>
-            </formats>
-            <!-- define a language-specific format -->
-            <java>
-              <!-- no need to specify files, inferred automatically, but you can if you want -->
-
-              <!-- apply a specific flavor of google-java-format -->
-              <googleJavaFormat>
-                <version>1.10.0</version>
-                <style>AOSP</style>
-              </googleJavaFormat>
-
-              <!-- make sure every file has the following copyright header.
-                optionally, Spotless can set copyright years by digging
-                through git history (see "license" section below) -->
-              <licenseHeader>
-                <!-- <content>/* (C)$YEAR */</content> or <file>${basedir}/license-header</file> -->
-                <file>${basedir}/apache-2.0.txt</file>
-              </licenseHeader>
-            </java>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
+    <plugins>
+      <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.1.0</version>
+      </plugin>
+      <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.2</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+        <configuration>
+          <compilerArgs>
+            <arg>-h</arg>
+            <arg>${project.build.directory}/jni/javah-include</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.1</version>
+        <configuration>
+          <argLine>-Djava.library.path=${project.build.directory}/classes</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.0.2</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>2.5.2</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>2.8.2</version>
+      </plugin>
+      <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
+      <plugin>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.7.1</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>3.0.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <version>1.0-alpha-11</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+              <goal>link</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <compilerProvider>generic-classic</compilerProvider>
+          <compilerExecutable>g++</compilerExecutable>
+          <linkerExecutable>g++</linkerExecutable>
+          <sources>
+            <source>
+              <directory>${project.basedir}/src/main/cpp/ffi</directory>
+              <fileNames>
+                <fileName>fling.cc</fileName>
+                <fileName>object_meta.cc</fileName>
+              </fileNames>
+            </source>
+            <source>
+              <directory>${project.build.directory}/jni/javah-include</directory>
+            </source>
+          </sources>
+          <compilerStartOptions>
+            <compilerStartOption>-I ${JAVA_HOME}/include</compilerStartOption>
+            <compilerStartOption>-I ${JAVA_HOME}/include/linux</compilerStartOption>
+            <compilerStartOption>-I ${JAVA_HOME}/include/darwin</compilerStartOption>
+            <compilerStartOption>-I /usr/local/include</compilerStartOption>
+            <compilerStartOption>-I /usr/local/include/vineyard</compilerStartOption>
+            <compilerStartOption>-I ${project.build.directory}/jni/javah-include</compilerStartOption>
+          </compilerStartOptions>
+          <compilerEndOptions>
+            <compilerEndOption>-fPIC</compilerEndOption>
+            <compilerEndOption>-std=gnu++11</compilerEndOption>
+          </compilerEndOptions>
+          <linkerStartOptions>
+            <linkerStartOption>-L ${JAVA_HOME}/lib/</linkerStartOption>
+          </linkerStartOptions>
+          <linkerEndOptions>
+            <linkerEndOption>-lvineyard_client</linkerEndOption>
+            <linkerEndOption>-lglog</linkerEndOption>
+            <linkerEndOption>-shared</linkerEndOption>
+            <linkerEndOption>-fPIC</linkerEndOption>
+          </linkerEndOptions>
+          <linkerOutputDirectory>${project.build.directory}/classes</linkerOutputDirectory>
+          <linkerFinalName>lib${project.build.finalName}</linkerFinalName>
+          <linkerFinalNameExt>${native.library.ext}</linkerFinalNameExt>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
 </project>

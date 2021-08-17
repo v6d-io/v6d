@@ -12,7 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.common.util;
+package io.v6d.core.client.ds;
 
-/** Unit test for vineyard IPC protocol. */
-public class ProtocolTest {}
+import io.v6d.core.common.util.VineyardException;
+import org.junit.Test;
+
+/** Unit test for Object metadata. */
+public class ObjectMetaTest {
+    @Test
+    public void connect() throws VineyardException {}
+}
