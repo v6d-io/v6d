@@ -330,14 +330,13 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersReply(const json& root,
-                           std::map<ObjectID, Payload>& objects) {
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
     Payload object;
     object.FromJSON(tree);
-    objects.emplace(object.object_id, object);
+    objects.emplace_back(object);
   }
   return Status::OK();
 }

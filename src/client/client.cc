@@ -180,13 +180,13 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   RETURN_ON_ERROR(ReadGetNextStreamChunkReply(message_in, object));
   RETURN_ON_ASSERT(size == static_cast<size_t>(object.data_size),
                    "The size of returned chunk doesn't match");
-  uint8_t* mmapped_ptr = nullptr;
+  uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (object.data_size > 0) {
     RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, false, true,
                                  &mmapped_ptr));
+    dist = mmapped_ptr + object.data_offset;
   }
-  blob.reset(new arrow::MutableBuffer(mmapped_ptr + object.data_offset,
-                                      object.data_size));
+  blob.reset(new arrow::MutableBuffer(dist, object.data_size));
   return Status::OK();
 }
 
@@ -200,13 +200,13 @@ Status Client::PullNextStreamChunk(ObjectID const id,
   RETURN_ON_ERROR(doRead(message_in));
   Payload object;
   RETURN_ON_ERROR(ReadPullNextStreamChunkReply(message_in, object));
-  uint8_t* mmapped_ptr = nullptr;
+  uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (object.data_size > 0) {
     RETURN_ON_ERROR(mmapToClient(object.store_fd, object.map_size, true, true,
                                  &mmapped_ptr));
+    dist = mmapped_ptr + object.data_offset;
   }
-  blob.reset(
-      new arrow::Buffer(mmapped_ptr + object.data_offset, object.data_size));
+  blob.reset(new arrow::Buffer(dist, object.data_size));
   return Status::OK();
 }
 
@@ -368,13 +368,13 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload));
   RETURN_ON_ASSERT(static_cast<size_t>(payload.data_size) == size);
 
-  uint8_t* shared = nullptr;
+  uint8_t *shared = nullptr, *dist = nullptr;
   if (payload.data_size > 0) {
     RETURN_ON_ERROR(
         mmapToClient(payload.store_fd, payload.map_size, false, true, &shared));
+    dist = shared + payload.data_offset;
   }
-  buffer = std::make_shared<arrow::MutableBuffer>(shared + payload.data_offset,
-                                                  payload.data_size);
+  buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
   return Status::OK();
 }
 
@@ -402,18 +402,18 @@ Status Client::GetBuffers(
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  std::map<ObjectID, Payload> payloads;
+  std::vector<Payload> payloads;
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
   for (auto const& item : payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
-    uint8_t* shared = nullptr;
-    if (item.second.data_size > 0) {
-      VINEYARD_CHECK_OK(mmapToClient(item.second.store_fd, item.second.map_size,
-                                     true, true, &shared));
+    uint8_t *shared = nullptr, *dist = nullptr;
+    if (item.data_size > 0) {
+      VINEYARD_CHECK_OK(
+          mmapToClient(item.store_fd, item.map_size, true, true, &shared));
+      dist = shared + item.data_offset;
     }
-    buffer = std::make_shared<arrow::Buffer>(shared + item.second.data_offset,
-                                             item.second.data_size);
-    buffers.emplace(item.first, buffer);
+    buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
+    buffers.emplace(item.object_id, buffer);
   }
   return Status::OK();
 }
@@ -429,10 +429,15 @@ Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  std::map<ObjectID, Payload> payloads;
+  std::vector<Payload> payloads;
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
   for (auto const& item : payloads) {
-    sizes.emplace(item.first, item.second.data_size);
+    uint8_t* shared = nullptr;
+    if (item.data_size > 0) {
+      VINEYARD_CHECK_OK(
+          mmapToClient(item.store_fd, item.map_size, true, true, &shared));
+    }
+    sizes.emplace(item.object_id, item.data_size);
   }
   return Status::OK();
 }

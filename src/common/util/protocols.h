@@ -194,8 +194,7 @@ Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids);
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           std::string& msg);
 
-Status ReadGetBuffersReply(const json& root,
-                           std::map<ObjectID, Payload>& objects);
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   std::string& msg);
