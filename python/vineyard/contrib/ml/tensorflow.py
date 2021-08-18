@@ -102,7 +102,9 @@ def tf_tensor_resolver(obj):
 def tf_dataframe_resolver(obj, **kw):
     with resolver_context(base=default_resolver_context) as resolver:
         df = resolver(obj, **kw)
-    labels = df.pop('label')
+    labels = df.pop(kw['label'])
+    if 'data' in kw:
+        return tf.data.Dataset.from_tensor_slices((np.stack(df[kw['data']], axis=0), labels))
     return tf.data.Dataset.from_tensor_slices((dict(df), labels))
 
 
@@ -127,12 +129,11 @@ def tf_table_resolver(obj, resolver):
 
 def tf_global_tensor_resolver(obj, resolver, **kw):
     meta = obj.meta
-    num = from_json(meta['num'])
-    partition_index = from_json(meta['partition_index_'])
+    num = int(meta['partitions_-size'])
     data = []
-    for i in range(partition_index):
-        if meta[f'partition_{i}'].islocal:
-            data.append(resolver.run(obj.member(f'partition_{i}')))
+    for i in range(num):
+        if meta[f'partitions_-{i}'].islocal:
+            data.append(resolver.run(obj.member(f'partitions_-{i}')))
     tf_data = data[0]
     for i in range(1, len(data)):
         tf_data = tf_data.concatenate(data[i])
@@ -141,12 +142,11 @@ def tf_global_tensor_resolver(obj, resolver, **kw):
 
 def tf_global_dataframe_resolver(obj, resolver, **kw):
     meta = obj.meta
-    num = from_json(meta['num'])
-    partition_index = from_json(meta['partition_index_'])
+    num = int(meta['partitions_-size'])
     data = []
-    for i in range(partition_index):
-        if meta[f'partition_{i}'].islocal:
-            data.append(resolver.run(obj.member(f'partition_{i}')))
+    for i in range(num):
+        if meta[f'partitions_-{i}'].islocal:
+            data.append(resolver(obj.member(f'partitions_-{i}'), **kw))
     tf_data = data[0]
     for i in range(1, len(data)):
         tf_data = tf_data.concatenate(data[i])

@@ -33,6 +33,7 @@
    :caption: Third-party Integration
 
    notes/airflow.rst
+   notes/dask.rst
    notes/ml.rst
 
 .. toctree::
