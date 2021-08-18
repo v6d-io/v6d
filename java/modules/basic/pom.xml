@@ -56,7 +56,6 @@
     <dependency>
       <groupId>io.v6d.core</groupId>
       <artifactId>vineyard-core</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
 
     <dependency>
