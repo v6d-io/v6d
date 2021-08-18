@@ -25,6 +25,13 @@ from vineyard.core.resolver import resolver_context, default_resolver_context
 from vineyard._C import ObjectMeta
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
+from pandas.core.internals.managers import BlockManager
+try:
+    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
+except:
+    BlockPlacement = None
+    from pandas.core.internals.blocks import Block
+
 
 def mxnet_tensor_builder(client, value, **kw):
     meta = ObjectMeta()
@@ -84,13 +91,34 @@ def mxnet_tensor_resolver(obj, resolver, **kw):
     return mx.gluon.data.ArrayDataset((data, label))
 
 
-def mxnet_dataframe_resolver(obj, **kw):
-    with resolver_context(base=default_resolver_context) as resolver:
-        df = resolver(obj, **kw)
-    if 'label' in kw:
-        target = df[kw['label']].values.astype(np.float32)
-        data = df.drop(kw['label'], axis=1).values.astype(np.float32)
-        return mx.gluon.data.ArrayDataset((data, target))
+def mxnet_dataframe_resolver(obj, resolver, **kw):
+    meta = obj.meta
+    if kw.get('label') == None:
+        label = from_json(meta['label'])
+    else:
+        label = kw.get('label')
+    columns = from_json(meta['columns_'])
+    if not columns:
+        return pd.DataFrame()
+    blocks = []
+    index_size = 0
+    for idx, name in enumerate(columns):
+        np_value = np.frombuffer(memoryview(obj.member('__values_-value-%d' % idx).member("buffer_")), dtype=np.float32)
+        index_size = len(np_value)
+        if BlockPlacement:
+            placement = BlockPlacement(slice(idx, idx + 1, 1))
+        else:
+            placement = slice(idx, idx + 1, 1)
+        values = np.expand_dims(np_value, 0)
+        blocks.append(Block(values, placement, ndim=2))
+    if 'index_' in meta:
+        index = resolver.run(obj.member('index_'))
+    else:
+        index = pd.RangeIndex(index_size)
+    df = pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
+    target = df[label].values.astype(np.float32)
+    data = df.drop(label, axis=1).values.astype(np.float32)
+    return mx.gluon.data.ArrayDataset((data, target))
 
 
 def mxnet_record_batch_resolver(obj, **kw):
