@@ -55,7 +55,7 @@ def test_mx_dataframe(vineyard_client):
     label = df['c'].values.astype(np.float32)
     data = df.drop('c', axis=1).values.astype(np.float32)
     dataset = mx.gluon.data.ArrayDataset((data, label))
-    object_id = vineyard_client.put(dataset, typename="Tensor", cols=['a', 'b', 'c'], label='c')
+    object_id = vineyard_client.put(dataset, typename="DataFrame", cols=['a', 'b', 'c'], label='c')
     dtrain = vineyard_client.get(object_id, label='c')
     assert len(dtrain[0]) == 4
     assert dataset[0].shape == dtrain[0].shape
