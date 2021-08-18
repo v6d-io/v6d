@@ -61,6 +61,10 @@ public class ObjectMeta {
         buffers.emplace(id, buffer);
     }
 
+    public Buffer getBuffer(ObjectID id) {
+        return this.buffers.get(id);
+    }
+
     public ObjectNode metadata() {
         return this.meta;
     }
@@ -124,7 +128,14 @@ public class ObjectMeta {
 
     @Override
     public String toString() {
-        return "ObjectMeta{" + "meta=" + meta + '}';
+        return "ObjectMeta{"
+                + "meta="
+                + meta
+                + ", instanceID="
+                + instanceID
+                + ", buffers="
+                + buffers
+                + '}';
     }
 
     private void findAllBuffers(ObjectNode meta) throws VineyardException {

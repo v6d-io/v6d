@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.v6d</groupId>
+    <artifactId>vineyard</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+
+  <groupId>io.v6d.modules</groupId>
+  <artifactId>vineyard-modules</artifactId>
+
+  <name>vineyard-modules</name>
+  <url>https://v6d.io</url>
+
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>basic</module>
+  </modules>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.v6d.core</groupId>
+      <artifactId>vineyard-core</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

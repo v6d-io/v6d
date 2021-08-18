@@ -16,12 +16,10 @@ package io.v6d.core.common.memory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.v6d.core.common.util.ObjectID;
-import java.io.IOException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.SneakyThrows;
+import lombok.val;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -82,9 +80,13 @@ public class Payload {
         this.pointer = pointer;
     }
 
-    @SneakyThrows(IOException.class)
     public static Payload fromJson(JsonNode root) {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.readerFor(Payload.class).readValue(root);
+        val payload = new Payload();
+        payload.objectID = new ObjectID(root.get("object_id").asLong());
+        payload.storeFD = root.get("store_fd").asInt();
+        payload.dataOffset = root.get("data_offset").asLong();
+        payload.dataSize = root.get("data_size").asLong();
+        payload.mapSize = root.get("map_size").asLong();
+        return payload;
     }
 }

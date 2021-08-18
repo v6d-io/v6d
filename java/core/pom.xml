@@ -19,7 +19,6 @@
   <properties>
     <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
     <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
-    <dependency.lombok.version>1.18.20</dependency.lombok.version>
     <dependency.guava.version>30.1.1-jre</dependency.guava.version>
     <dependency.native-lib-loader.version>2.3.5</dependency.native-lib-loader.version>
     <dependency.jackson.version>2.12.4</dependency.jackson.version>
@@ -59,7 +58,6 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>${dependency.lombok.version}</version>
       <scope>provided</scope>
     </dependency>
 
