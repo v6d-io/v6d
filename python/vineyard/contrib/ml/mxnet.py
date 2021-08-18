@@ -20,9 +20,8 @@ import mxnet as mx
 
 import numpy as np
 import pandas as pd
-from vineyard.core import default_builder_context, default_resolver_context
+from vineyard.core.resolver import resolver_context, default_resolver_context
 
-import vineyard
 from vineyard._C import ObjectMeta
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
@@ -99,8 +98,8 @@ def mxnet_record_batch_resolver(obj, **kw):
         records = resolver(obj, **kw)
     records = records.to_pandas()
     if 'label' in kw:
-        target = df[kw['label']].values.astype(np.float32)
-        data = df.drop(kw['label'], axis=1).values.astype(np.float32)
+        target = records[kw['label']].values.astype(np.float32)
+        data = records.drop(kw['label'], axis=1).values.astype(np.float32)
         return mx.gluon.data.ArrayDataset((data, target))
 
 
@@ -109,8 +108,8 @@ def mxnet_table_resolver(obj, **kw):
         table = resolver(obj, **kw)
     table = table.to_pandas()
     if 'label' in kw:
-        target = df[kw['label']].values.astype(np.float32)
-        data = df.drop(kw['label'], axis=1).values.astype(np.float32)
+        target = table[kw['label']].values.astype(np.float32)
+        data = table.drop(kw['label'], axis=1).values.astype(np.float32)
         return mx.gluon.data.ArrayDataset((data, target))
 
 
