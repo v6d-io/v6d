@@ -22,18 +22,13 @@
     <module>basic</module>
   </modules>
 
-  <dependencies>
-    <dependency>
-      <groupId>io.v6d.core</groupId>
-      <artifactId>vineyard-core</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.1</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.v6d.core</groupId>
+        <artifactId>vineyard-core</artifactId>
+        <version>${project.parent.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 </project>
