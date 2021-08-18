@@ -30,12 +30,14 @@ from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
 from vineyard.contrib.ml.mxnet import register_torch_types
 
+
 @pytest.fixture(scope="module", autouse=True)
 def vineyard_for_mxnet():
     with builder_context() as builder:
         with resolver_context() as resolver:
             register_torch_types(builder, resolver)
             yield builder, resolver
+
 
 def test_mx_tensor(vineyard_client):
     data = [np.random.rand(2, 3) for i in range(10)]
@@ -47,6 +49,7 @@ def test_mx_tensor(vineyard_client):
     assert dataset[0][0].shape == dtrain[0][0].shape
     assert dataset[1][0].shape == dtrain[1][0].shape
 
+
 def test_mx_dataframe(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     label = df['c'].values.astype(np.float32)
@@ -57,6 +60,7 @@ def test_mx_dataframe(vineyard_client):
     assert len(dtrain[0]) == 4
     assert dataset[0].shape == dtrain[0].shape
     assert dataset[1].shape == dtrain[1].shape
+
 
 def test_mx_record_batch(vineyard_client):
     arrays = [pa.array([1, 2, 3, 4]), pa.array([3.0, 4.0, 5.0, 6.0]), pa.array([0, 1, 0, 1])]

@@ -26,12 +26,13 @@ import vineyard
 from vineyard._C import ObjectMeta
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
+
 def mxnet_tensor_builder(client, value, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor'
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
     data = mx.gluon.data.DataLoader(value, batch_size=len(value))
-    for x,y in data:
+    for x, y in data:
         meta.add_member('buffer_data_', build_numpy_buffer(client, x.asnumpy()))
         meta.add_member('buffer_label_', build_numpy_buffer(client, y.asnumpy()))
         meta['data_shape_'] = to_json(x.asnumpy().shape)
@@ -42,6 +43,7 @@ def mxnet_tensor_builder(client, value, **kw):
         meta['label_type_meta_'] = y.asnumpy().dtype.str
     return client.create_metadata(meta)
 
+
 def mxnet_dataframe_builder(client, value, builder, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::DataFrame'
@@ -49,11 +51,11 @@ def mxnet_dataframe_builder(client, value, builder, **kw):
     label = kw.get('label')
     meta['label'] = to_json(label)
     meta['columns_'] = to_json(cols)
-    meta['__values_-key-%d' % (len(cols)-1)] = to_json(label)
-    meta.add_member('__values_-value-%d' % (len(cols)-1), builder.run(client, value[1]))
-    for i in range(len(cols)-1):
+    meta['__values_-key-%d' % (len(cols) - 1)] = to_json(label)
+    meta.add_member('__values_-value-%d' % (len(cols) - 1), builder.run(client, value[1]))
+    for i in range(len(cols) - 1):
         meta['__values_-key-%d' % i] = to_json(cols[i])
-        meta.add_member('__values_-value-%d' % i, builder.run(client, value[0][:,i]))
+        meta.add_member('__values_-value-%d' % i, builder.run(client, value[0][:, i]))
     meta['__values_-size'] = len(cols)
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
     meta['partition_index_column_'] = kw.get('partition_index', [0, 0])[1]
@@ -61,12 +63,14 @@ def mxnet_dataframe_builder(client, value, builder, **kw):
     print(meta)
     return client.create_metadata(meta)
 
+
 def mxnet_builder(client, value, builder, **kw):
     typename = kw.get('typename')
     if typename == 'Tensor':
         return mxnet_tensor_builder(client, value, **kw)
     elif typename == 'DataFrame':
         return mxnet_dataframe_builder(client, value, builder, **kw)
+
 
 def mxnet_tensor_resolver(obj, resolver, **kw):
     meta = obj.meta
@@ -80,6 +84,7 @@ def mxnet_tensor_resolver(obj, resolver, **kw):
     label = np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape)
     return mx.gluon.data.ArrayDataset((data, label))
 
+
 def mxnet_dataframe_resolver(obj, **kw):
     with resolver_context(base=default_resolver_context) as resolver:
         df = resolver(obj, **kw)
@@ -87,6 +92,7 @@ def mxnet_dataframe_resolver(obj, **kw):
         target = df[kw['label']].values.astype(np.float32)
         data = df.drop(kw['label'], axis=1).values.astype(np.float32)
         return mx.gluon.data.ArrayDataset((data, target))
+
 
 def mxnet_record_batch_resolver(obj, **kw):
     with resolver_context(base=default_resolver_context) as resolver:
