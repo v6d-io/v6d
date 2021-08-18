@@ -1,20 +1,18 @@
 Dask on Vineyard
-===================
+================
 
 The integration with Dask allows dask.array and dask.dataframe to be persisted on and loaded from Vineyard.
-In the following, we demonstrate that, with Vineyard, it is much easier to implement the example that employs 
+In the following, we demonstrate that, with Vineyard, it is much easier to implement the example that employs
 dask for data preprocessing and tensorflow for distributed learning,
 which was previously shown in the blog_.
 
-.. _blog: http://matthewrocklin.com/blog/work/2017/02/11/dask-tensorflow
-
-
 The Deployment
 --------------
+
 .. image:: ../images/dask-tf.jpg
    :alt: Dask Tensorflow Workflow
 
-As shown in the figure above, we only use two machines for the distributed tasks 
+As shown in the figure above, we only use two machines for the distributed tasks
 as the purpose of demonstration.
 The vineyard damon processes are launched on both machines, so as the dask workers.
 The dask scheduler is launched in the first machine, and we also run the
@@ -26,9 +24,9 @@ For the detail of how to set up the config, please refer to documentation_.
 
 .. _documentation: https://www.tensorflow.org/tutorials/distribute/multi_worker_with_keras
 
-
 Preprocessing in Dask
 ---------------------
+
 In this step, we load the mnist data and duplicate it to simulate the parallel processing as same as the blog_.
 
 .. code:: python
@@ -56,11 +54,12 @@ In this step, we load the mnist data and duplicate it to simulate the parallel p
 
             return gdf_id
 
-Here the returned **gdf_id** is the ObjectID of a **vineyard::GlobalDataFrame** 
+Here the returned **gdf_id** is the ObjectID of a **vineyard::GlobalDataFrame**
 which consists of 20 partitions (10 partitions on each machine).
 
 Training in Tensorflow
 ----------------------
+
 In this step, we use the preprocessed data **gdf_id** to train a model distributedly
 in keras of Tensorflow.
 
@@ -111,5 +110,5 @@ by mulitple workers to the resolver_context. Then we can get the **tf.data.Datas
 method. Note that we should specify the column names for the data and label which were set in the last step.
 
 
-
+.. _blog: http://matthewrocklin.com/blog/work/2017/02/11/dask-tensorflow
 
