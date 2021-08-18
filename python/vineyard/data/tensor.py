@@ -66,7 +66,7 @@ def numpy_ndarray_resolver(obj):
         view = memoryview(obj.member('buffer_'))
         return pickle.loads(view, fix_imports=True)
 
-    value_type = normalize_dtype(value_name, meta.get('value_type_', None))
+    value_type = normalize_dtype(value_name, meta.get('value_type_meta_', None))
     shape = from_json(meta['shape_'])
     if 'order_' in meta:
         order = from_json(meta['order_'])
