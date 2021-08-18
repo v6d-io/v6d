@@ -140,7 +140,7 @@ def mxnet_global_dataframe_resolver(obj, resolver, **kw):
     return mx.gluon.data.ArrayDataset((data, label))
 
 
-def register_tensor_types(builder_ctx, resolver_ctx):
+def register_mxnet_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(mx.gluon.data.ArrayDataset, mxnet_builder)
 

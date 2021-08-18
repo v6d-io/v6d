@@ -28,14 +28,14 @@ import mxnet as mx
 
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
-from vineyard.contrib.ml.mxnet import register_torch_types
+from vineyard.contrib.ml.mxnet import register_mxnet_types
 
 
 @pytest.fixture(scope="module", autouse=True)
 def vineyard_for_mxnet():
     with builder_context() as builder:
         with resolver_context() as resolver:
-            register_torch_types(builder, resolver)
+            register_mxnet_types(builder, resolver)
             yield builder, resolver
 
 
