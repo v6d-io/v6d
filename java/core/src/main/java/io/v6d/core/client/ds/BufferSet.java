@@ -70,4 +70,9 @@ public class BufferSet {
     public Buffer get(ObjectID id) {
         return this.buffers.getOrDefault(id, null);
     }
+
+    @Override
+    public String toString() {
+        return "BufferSet{" + "buffer_ids=" + buffer_ids + ", buffers=" + buffers + '}';
+    }
 }

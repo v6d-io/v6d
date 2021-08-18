@@ -38,7 +38,7 @@ public class ObjectID {
     }
 
     public boolean isBlob() {
-        return (this.id & 0x8000000000000000L) == 1L;
+        return (this.id & 0x8000000000000000L) != 0L;
     }
 
     @Override
