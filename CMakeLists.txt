@@ -5,6 +5,8 @@ set(VINEYARD_MINOR_VERSION 2)
 set(VINEYARD_PATCH_VERSION 6)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
+message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
+
 if(POLICY CMP0025)
   cmake_policy(SET CMP0025 NEW)
 endif()
@@ -43,9 +45,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(ProcessorCount)
 ProcessorCount(N)
-
-add_definitions(-DVINEYARD_VERSION=${VINEYARD_VERSION})
-message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
 
 set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -623,13 +622,20 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
 )
 
 # for python's setup.cfg
-configure_file(setup.cfg.in "${PROJECT_SOURCE_DIR}/setup.cfg" @ONLY)
-configure_file(python/vineyard/version.py.in "${PROJECT_SOURCE_DIR}/python/vineyard/version.py" @ONLY)
+configure_file("${PROJECT_SOURCE_DIR}/setup.cfg.in"
+               "${PROJECT_SOURCE_DIR}/setup.cfg" @ONLY
+)
+configure_file("${PROJECT_SOURCE_DIR}/python/vineyard/version.py.in"
+               "${PROJECT_SOURCE_DIR}/python/vineyard/version.py" @ONLY
+)
+configure_file("${PROJECT_SOURCE_DIR}/src/common/util/config.h.in"
+               "${PROJECT_SOURCE_DIR}/src/common/util/config.h" @ONLY
+)
 
-configure_file(vineyard-config.in.cmake
+configure_file("${PROJECT_SOURCE_DIR}/vineyard-config.in.cmake"
                "${PROJECT_BINARY_DIR}/vineyard-config.cmake" @ONLY
 )
-configure_file(vineyard-config-version.in.cmake
+configure_file("${PROJECT_SOURCE_DIR}/vineyard-config-version.in.cmake"
                "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake" @ONLY
 )
 # install vineyard-codegen script.
