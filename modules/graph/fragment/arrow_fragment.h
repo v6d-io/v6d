@@ -525,6 +525,15 @@ class ArrowFragment
     return vm_ptr_->GetGid(label, internal_oid_t(oid), gid);
   }
 
+  inline bool Oid2Gid(label_id_t label, const oid_t& oid, vertex_t& v) const {
+    vid_t gid;
+    if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
+      v.SetValue(gid);
+      return true;
+    }
+    return false;
+  }
+
   inline bool InnerVertexGid2Vertex(const vid_t& gid, vertex_t& v) const {
     v.SetValue(vid_parser_.GetLid(gid));
     return true;

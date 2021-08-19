@@ -52,6 +52,10 @@ JNIEXPORT jlong JNICALL Java_io_v6d_core_client_ds_ffi_ObjectMeta_constructNativ
     if (metadata == nullptr) {
         return reinterpret_cast<jlong>(nullptr);
     }
+
+    // make sure the "PostConstruct" been invoked
+    metadata->ForceLocal();
+
     auto object = vineyard::ObjectFactory::Create(metadata->GetTypeName(), *metadata);
     fprintf(stderr, "resolved FFI objects: %p\n", object.get());
 
