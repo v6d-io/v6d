@@ -85,9 +85,7 @@ bool const ObjectMeta::IsLocal() const {
   }
 }
 
-void ObjectMeta::ForceLocal() const {
-  this->force_local_ = true;
-}
+void ObjectMeta::ForceLocal() const { this->force_local_ = true; }
 
 bool const ObjectMeta::Haskey(std::string const& key) const {
   return meta_.contains(key);
