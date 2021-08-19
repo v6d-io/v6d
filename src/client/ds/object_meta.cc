@@ -69,6 +69,9 @@ InstanceID const ObjectMeta::GetInstanceId() const {
 }
 
 bool const ObjectMeta::IsLocal() const {
+  if (this->force_local_) {
+    return true;
+  }
   auto instance_id = meta_["instance_id"];
   if (instance_id.is_null()) {
     // it is a newly created metadata
@@ -81,6 +84,8 @@ bool const ObjectMeta::IsLocal() const {
     }
   }
 }
+
+void ObjectMeta::ForceLocal() const { this->force_local_ = true; }
 
 bool const ObjectMeta::Haskey(std::string const& key) const {
   return meta_.contains(key);
@@ -160,6 +165,9 @@ ObjectMeta ObjectMeta::GetMemberMeta(const std::string& name) const {
     if (iter != all_blobs.end()) {
       ret.SetBuffer(blob.first, iter->second);
     }
+  }
+  if (this->force_local_) {
+    ret.ForceLocal();
   }
   return ret;
 }

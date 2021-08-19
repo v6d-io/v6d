@@ -16,8 +16,12 @@ package io.v6d.core.client.ds;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ObjectFactory {
+    private Logger logger = LoggerFactory.getLogger(ObjectFactory.class);
+
     public abstract static class Resolver {
         public abstract Object resolve(ObjectMeta metadata);
     }
@@ -56,10 +60,12 @@ public class ObjectFactory {
     }
 
     public void register(String typename, Resolver resolver) {
+        logger.debug("register resolver for type: {}", typename);
         this.resolvers.put(typename, resolver);
     }
 
     public Object resolve(ObjectMeta metadata) {
+        logger.debug("run resolver on type: {}", metadata.typename());
         return this.resolve(metadata.typename(), metadata);
     }
 

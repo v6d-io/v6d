@@ -129,6 +129,12 @@ class ObjectMeta {
   bool const IsLocal() const;
 
   /**
+   * @brief Mark the metadata as a "local" metadata to make sure the construct
+   * process proceed.
+   */
+  void ForceLocal() const;
+
+  /**
    * @brief Whether specific `key` exists in this metadata.
    */
   bool const Haskey(std::string const& key) const;
@@ -529,6 +535,9 @@ class ObjectMeta {
   // incomplete: whether the metadata has incomplete member, introduced by
   // `AddMember(name, member_id)`.
   bool incomplete_ = false;
+
+  // force local: make it as a local metadata even when no client associated.
+  mutable bool force_local_ = false;
 
   friend class ClientBase;
   friend class Client;
