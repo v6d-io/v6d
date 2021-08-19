@@ -430,6 +430,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn read_register_reply_test() {
         let msg = json!({
             "type": "register_reply",

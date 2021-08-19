@@ -15,7 +15,7 @@ limitations under the License.
 use std::env;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream, TcpListener};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -55,17 +55,23 @@ pub fn connect_rpc_socket(host: &String, port: u16, socket_fd: i64) -> Result<Tc
 }
 
 fn do_write(stream: &mut TcpStream, message_out: &String) -> Result<(), Error> {
-    match stream.write_all(message_out.as_bytes()) {
+    println!("{:?}", &message_out.as_bytes());
+    println!("{:?}", &message_out.as_bytes()[0..5]);
+    println!("{:?}", &vec![1,2,3]);
+    match stream.write(&message_out.as_bytes()) {
         Err(error) => panic!("Couldn't send message because: {}.", error),
         Ok(_) => Ok(()),
     }
 }
 
 fn do_read(stream: &mut TcpStream, message_in: &mut String) -> Result<(), Error> {
+    //let mut buf = vec![0; 16];
     match stream.read_to_string(message_in) {
         Err(error) => panic!("Couldn't receive message because: {}.", error),
-        Ok(_) => Ok(()),
+        Ok(_) => {Ok(())}
     }
+    
+    
 }
 
 impl Client for RPCClient {
@@ -86,7 +92,7 @@ impl Client for RPCClient {
             let mut stream =
                 connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn).unwrap();
 
-            // Write a request  ( You need to start the vineyardd server on the same socket)
+            // Write a request
             let message_out: String = write_register_request();
             do_write(&mut stream, &message_out).unwrap();
 
@@ -97,7 +103,9 @@ impl Client for RPCClient {
             println!("{}", message_in);
             println!("-----There should be content between here!-----");
 
-            // TODO： Read register reply
+            // // Read register reply
+            // let message_in: Value = serde_json::from_str(&message_in).expect("JSON was not well-formatted");
+            // let reg_rep: RegisterReply = read_register_reply(message_in).unwrap();
 
             // TODO： Compatable server
 
@@ -117,6 +125,7 @@ impl Client for RPCClient {
             meta: String::new(),
         })
     }
+    
 }
 
 #[cfg(test)]
@@ -124,7 +133,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
+    //#[ignore]
     fn rpc_connect() {
         let rpc_client = &mut RPCClient {
             connected: false,
@@ -136,4 +145,47 @@ mod tests {
         };
         rpc_client.connect(rpc_conn_input("0.0.0.0", 9600));
     }
+
+    #[test]
+    #[ignore]
+    fn small_test() -> std::io::Result<()> {
+
+        let mut stream = TcpStream::connect("0.0.0.0:9600").unwrap(); //0.0.0.0:9600
+        let _bytes_written = stream.write_all(b"Hello").unwrap();
+        stream.flush()?;
+
+        // use std::time::Duration;
+        // stream.set_read_timeout(Some(Duration::new(5, 0))).unwrap();
+        
+        let mut buf = String::new(); //vec![0;16] 
+        stream.read_to_string(&mut buf).unwrap();
+        println!("{}", buf);
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn small_http_test() -> std::io::Result<()> {
+        let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+        for stream in listener.incoming() {
+            let stream = stream.unwrap();
+    
+            handle_connection(stream);
+        }
+
+        Ok(())
+    }
+
+    fn handle_connection(mut stream: TcpStream) {
+        let mut buffer = [0; 1024];
+    
+        stream.read(&mut buffer).unwrap();
+        //println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
+
+        let response = "HTTP/1.1 200 OK\r\n\r\n";
+        stream.write(response.as_bytes()).unwrap();
+        stream.flush().unwrap();
+    }
+
 }
