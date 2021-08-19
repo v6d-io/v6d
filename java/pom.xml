@@ -56,6 +56,7 @@
       </activation>
       <properties>
         <native.library.ext>so</native.library.ext>
+        <native.library.path>linux_64</native.library.path>
       </properties>
     </profile>
     <profile>
@@ -67,6 +68,7 @@
       </activation>
       <properties>
         <native.library.ext>dylib</native.library.ext>
+        <native.library.path>osx_64</native.library.path>
       </properties>
     </profile>
   </profiles>
@@ -117,6 +119,10 @@
         </plugin>
         <plugin>
           <artifactId>maven-project-info-reports-plugin</artifactId>
+          <version>3.0.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
           <version>3.0.0</version>
         </plugin>
         <plugin>

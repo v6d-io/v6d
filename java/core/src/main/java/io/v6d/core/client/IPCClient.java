@@ -98,7 +98,7 @@ public class IPCClient extends Client {
         val contents = reply.getContents();
         if (contents.size() != 1) {
             throw new VineyardException.ObjectNotExists(
-                    "Failed to read get_data reply, size is " + contents.size());
+                    "Failed to read get_data_reply, size is " + contents.size());
         }
 
         val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceID);
@@ -143,13 +143,6 @@ public class IPCClient extends Client {
         }
     }
 
-    @SneakyThrows(IOException.class)
-    private void doWrite(String content) {
-        writer_.writeLong(content.length());
-        writer_.writeBytes(content);
-        writer_.flush();
-    }
-
     private Map<ObjectID, Buffer> getBuffers(Set<ObjectID> ids) throws VineyardException {
         val root = mapper_.createObjectNode();
         val req = new GetBuffersRequest();
@@ -189,6 +182,13 @@ public class IPCClient extends Client {
         return -1;
     }
 
+    @SneakyThrows(IOException.class)
+    private void doWrite(String content) {
+        writer_.writeLong(content.length());
+        writer_.writeBytes(content);
+        writer_.flush();
+    }
+
     @SneakyThrows(JsonProcessingException.class)
     private void doWrite(JsonNode node) {
         this.doWrite(mapper_.writeValueAsString(node));
@@ -198,13 +198,17 @@ public class IPCClient extends Client {
     private byte[] doRead() {
         int length = (int) reader_.readLong(); // n.b.: the server writes a size_t (long)
         val content = new byte[length];
-        reader_.read(content, 0, length);
+        int done = 0, remaining = length;
+        while (done < length) {
+            int batch = reader_.read(content, done, remaining);
+            done += batch;
+            remaining -= batch;
+        }
         return content;
     }
 
     @SneakyThrows(IOException.class)
     private JsonNode doReadJson() {
-        val content = doRead();
-        return mapper_.readTree(content);
+        return mapper_.readTree(doRead());
     }
 }

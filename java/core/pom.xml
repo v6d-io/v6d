@@ -104,7 +104,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.1</version>
         <configuration>
-          <argLine>-Djava.library.path=${project.build.directory}/classes</argLine>
+          <argLine>-Djava.library.path=${project.build.directory}/classes/${native.library.path}</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -127,6 +127,24 @@
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
         <version>3.0.0</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>generate-sources</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <mkdir dir="${project.build.directory}/classes/${native.library.path}"/>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -168,7 +186,7 @@
           </compilerStartOptions>
           <compilerEndOptions>
             <compilerEndOption>-fPIC</compilerEndOption>
-            <compilerEndOption>-std=gnu++11</compilerEndOption>
+            <compilerEndOption>-std=c++14</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-L ${JAVA_HOME}/lib/</linkerStartOption>
@@ -181,7 +199,7 @@
             <linkerEndOption>-shared</linkerEndOption>
             <linkerEndOption>-fPIC</linkerEndOption>
           </linkerEndOptions>
-          <linkerOutputDirectory>${project.build.directory}/classes</linkerOutputDirectory>
+          <linkerOutputDirectory>${project.build.directory}/classes/${native.library.path}</linkerOutputDirectory>
           <linkerFinalName>lib${project.build.finalName}</linkerFinalName>
           <linkerFinalNameExt>${native.library.ext}</linkerFinalNameExt>
         </configuration>
