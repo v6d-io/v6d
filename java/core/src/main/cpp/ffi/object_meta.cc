@@ -64,9 +64,8 @@ JNIEXPORT jlong JNICALL Java_io_v6d_core_client_ds_ffi_ObjectMeta_constructNativ
     env->ReleaseLongArrayElements(pointers, pointer_elements, JNI_ABORT);
     env->ReleaseLongArrayElements(sizes, size_elements, JNI_ABORT);
 
-    // FIXME: there's a memory leak for foreign object meta, as there's a coredump
-    // in the release of internal `std::shared_ptr`.
-    metadata.release();
+    // release the metadata that not be used anymore.
+    metadata.reset();
 
     return reinterpret_cast<jlong>(object.release());
 }

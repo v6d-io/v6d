@@ -50,7 +50,10 @@ class Object;
 class ObjectMeta {
  public:
   ObjectMeta();
-  ~ObjectMeta() {}
+  ~ObjectMeta();
+
+  ObjectMeta(const ObjectMeta&);
+  ObjectMeta& operator=(ObjectMeta const& other);
 
   /**
    * @brief Associate the client with the metadata.
@@ -530,7 +533,7 @@ class ObjectMeta {
   ClientBase* client_ = nullptr;
   json meta_;
   // associated blobs
-  std::shared_ptr<BufferSet> buffer_set_;
+  std::shared_ptr<BufferSet> buffer_set_ = nullptr;
 
   // incomplete: whether the metadata has incomplete member, introduced by
   // `AddMember(name, member_id)`.

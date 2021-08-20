@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "client/client.h"
 
+#include <sys/mman.h>
+
 #include <limits>
 #include <map>
 #include <mutex>
@@ -32,6 +34,59 @@ limitations under the License.
 #include "common/util/protocols.h"
 
 namespace vineyard {
+
+MmapEntry::MmapEntry(int fd, int64_t map_size, bool readonly, bool realign)
+    : fd_(fd), ro_pointer_(nullptr), rw_pointer_(nullptr), length_(0) {
+  // fake_mmap in malloc.h leaves a gap between memory segments, to make
+  // map_size page-aligned again.
+  if (realign) {
+    length_ = map_size - sizeof(size_t);
+  } else {
+    length_ = map_size;
+  }
+}
+
+MmapEntry::~MmapEntry() {
+  if (ro_pointer_) {
+    int r = munmap(ro_pointer_, length_);
+    if (r != 0) {
+      LOG(ERROR) << "munmap returned " << r << ", errno = " << errno << ": "
+                 << strerror(errno);
+    }
+  }
+  if (rw_pointer_) {
+    int r = munmap(rw_pointer_, length_);
+    if (r != 0) {
+      LOG(ERROR) << "munmap returned " << r << ", errno = " << errno << ": "
+                 << strerror(errno);
+    }
+  }
+  close(fd_);
+}
+
+uint8_t* MmapEntry::map_readonly() {
+  if (!ro_pointer_) {
+    ro_pointer_ = reinterpret_cast<uint8_t*>(
+        mmap(NULL, length_, PROT_READ, MAP_SHARED, fd_, 0));
+    if (ro_pointer_ == MAP_FAILED) {
+      LOG(ERROR) << "mmap failed: errno = " << errno << ": " << strerror(errno);
+      ro_pointer_ = nullptr;
+    }
+  }
+  return ro_pointer_;
+}
+
+uint8_t* MmapEntry::map_readwrite() {
+  if (!rw_pointer_) {
+    rw_pointer_ = reinterpret_cast<uint8_t*>(
+        mmap(NULL, length_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0));
+    if (rw_pointer_ == MAP_FAILED) {
+      LOG(ERROR) << "mmap failed: errno = " << errno << ": " << strerror(errno);
+      rw_pointer_ = nullptr;
+    }
+  }
+  return rw_pointer_;
+}
 
 Status Client::Connect() {
   if (const char* env_p = std::getenv("VINEYARD_IPC_SOCKET")) {
