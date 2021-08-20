@@ -22,6 +22,25 @@ namespace vineyard {
 
 ObjectMeta::ObjectMeta() : buffer_set_(std::make_shared<BufferSet>()) {}
 
+ObjectMeta::~ObjectMeta() {}
+
+ObjectMeta::ObjectMeta(const ObjectMeta& other) {
+  this->client_ = other.client_;
+  this->meta_ = other.meta_;
+  this->buffer_set_ = other.buffer_set_;
+  this->incomplete_ = other.incomplete_;
+  this->force_local_ = other.force_local_;
+}
+
+ObjectMeta& ObjectMeta::operator=(ObjectMeta const& other) {
+  this->client_ = other.client_;
+  this->meta_ = other.meta_;
+  this->buffer_set_ = other.buffer_set_;
+  this->incomplete_ = other.incomplete_;
+  this->force_local_ = other.force_local_;
+  return *this;
+}
+
 void ObjectMeta::SetClient(ClientBase* client) { this->client_ = client; }
 
 ClientBase* ObjectMeta::GetClient() const { return client_; }

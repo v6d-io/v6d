@@ -17,21 +17,23 @@ package io.v6d.core;
 import java.io.IOException;
 import lombok.SneakyThrows;
 import org.scijava.nativelib.NativeLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FFI {
+    private static Logger logger = LoggerFactory.getLogger(FFI.class);
+
     public static final String JNI_LIBRARY_NAME = "vineyard-core";
-    public static final String JNI_LIBRARY_DEFAULT_VERSION = "1.0-SNAPSHOT";
+    public static final String JNI_LIBRARY_DEFAULT_VERSION = "0.1-SNAPSHOT";
 
     private static volatile Boolean loaded = null;
 
     @SneakyThrows(IOException.class)
     public static void loadNativeLibrary() {
-        Boolean localLoaded = loaded;
-        if (localLoaded == null) {
+        if (loaded == null) {
             synchronized (FFI.class) {
-                localLoaded = loaded;
-                if (localLoaded == null) {
-                    localLoaded = loaded = true;
+                if (loaded == null) {
+                    loaded = true;
                     try {
                         NativeLoader.loadLibrary(FFI.JNI_LIBRARY_NAME);
                     } catch (IOException e) {
