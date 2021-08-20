@@ -139,7 +139,7 @@ The global tensor in Vineyard will consists of 8 partitions, each with 400 data 
 
         imgs = [da.from_delayed(delayed(get_images)(i,8), shape=(400, 244, 244, 3), dtype='float') for i in range(8)]
         imgs = da.concatenate(imgs, axis=0)
-        res = imgs.map_blocks(func, chunks=(400,100352), drop_axis=[2,3], dtype=float)
+        res = imgs.map_blocks(featurize, chunks=(400,100352), drop_axis=[2,3], dtype=float)
         global_tensor_id = clients[0].put(res, dask_scheduler=dask_scheduler)
 
 
