@@ -233,6 +233,7 @@ def run_single_vineyardd_tests():
         run_test('server_status_test')
         run_test('signature_test')
         run_test('shallow_copy_test')
+        run_test('deep_copy_test')
         run_test('stream_test')
         run_test('tensor_test')
         run_test('tuple_test')

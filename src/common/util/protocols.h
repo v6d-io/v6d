@@ -59,13 +59,14 @@ enum class CommandType {
   IfPersistRequest = 25,
   InstanceStatusRequest = 26,
   ShallowCopyRequest = 27,
-  OpenStreamRequest = 28,
-  MigrateObjectRequest = 29,
-  CreateRemoteBufferRequest = 30,
-  GetRemoteBuffersRequest = 31,
-  DropBufferRequest = 32,
-  MakeArenaRequest = 33,
-  FinalizeArenaRequest = 34,
+  DeepCopyRequest = 28,
+  OpenStreamRequest = 29,
+  MigrateObjectRequest = 30,
+  CreateRemoteBufferRequest = 31,
+  GetRemoteBuffersRequest = 32,
+  DropBufferRequest = 33,
+  MakeArenaRequest = 34,
+  FinalizeArenaRequest = 35,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -306,6 +307,17 @@ Status ReadShallowCopyRequest(const json& root, ObjectID& id);
 void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
 
 Status ReadShallowCopyReply(const json& root, ObjectID& target_id);
+
+void WriteDeepCopyRequest(const ObjectID object_id, std::string const& peer,
+                          std::string const& peer_rpc_endpoint,
+                          std::string& msg);
+
+Status ReadDeepCopyRequest(const json& root, ObjectID& object_id,
+                           std::string& peer, std::string& peer_rpc_endpoint);
+
+void WriteDeepCopyReply(const ObjectID& object_id, std::string& msg);
+
+Status ReadDeepCopyReply(const json& root, ObjectID& object_id);
 
 void WriteMakeArenaRequest(const size_t size, std::string& msg);
 

@@ -222,6 +222,17 @@ class ClientBase {
   Status ShallowCopy(const ObjectID id, ObjectID& target_id);
 
   /**
+   * @brief Make a deep copy on the given object.
+   *
+   * @param id The object id to deep copy.
+   * @param target_id The result object id will be stored in `target_id` as
+   * return value.
+   *
+   * @return Status that indicates whether the deep copy has succeeded.
+   */
+  Status DeepCopy(const ObjectID id, ObjectID& target_id);
+
+  /**
    * @brief Vineyard support associating a user-specific name with an object.
    * PutName registers a name entry in vineyard server. An object can be
    * assoiciated with more than one names.
@@ -382,6 +393,10 @@ class ClientBase {
                            bool const local, bool const is_stream,
                            std::string const& peer,
                            std::string const& peer_rpc_endpoint);
+
+  Status deepCopyImpl(const ObjectID object_id, ObjectID& target_id,
+                      std::string const& peer,
+                      std::string const& peer_rpc_endpoint);
 
   mutable bool connected_;
   std::string ipc_socket_;
