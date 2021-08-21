@@ -7,6 +7,7 @@ use std::io::{self, Error, ErrorKind};
 use std::ptr;
 
 use super::{InstanceID, ObjectID};
+use crate::client::client::Client;
 
 enum CommandType {
     RegisterRequest,
@@ -79,8 +80,16 @@ pub fn CHECK_IPC_ERROR(tree: &Value, root_type: &str) {
     RETURN_ON_ASSERT(tree["type"].as_str().unwrap() == root_type);
 }
 
+pub fn ENSURE_CONNECTED<T: Client>(client: &mut T) -> Result<(), Error> {
+    if !client.connected(){
+        panic!("Client is not connected.");
+    }
+    // TODO: mutex
+    Ok(())
+}
+
 // TODO: Rust parse check
-pub fn object_id_from_string(s: String) -> ObjectID {
+pub fn object_id_from_string(s: &String) -> ObjectID {
     s.parse::<ObjectID>().unwrap()
 }
 
@@ -103,8 +112,8 @@ pub fn read_register_request(root: Value) -> Result<String, Error> {
 }
 
 pub fn write_register_reply(
-    ipc_socket: String,
-    rpc_endpoint: String,
+    ipc_socket: &String,
+    rpc_endpoint: &String,
     instance_id: InstanceID,
 ) -> String {
     let msg = json!({
@@ -117,11 +126,12 @@ pub fn write_register_reply(
     encode_msg(msg)
 }
 
+#[derive(Debug)]
 pub struct RegisterReply {
-    ipc_socket: String,
-    rpc_endpoint: String,
-    instance_id: InstanceID,
-    version: String,
+    pub ipc_socket: String,
+    pub rpc_endpoint: String,
+    pub instance_id: InstanceID,
+    pub version: String,
 }
 
 pub fn read_register_reply(root: Value) -> Result<RegisterReply, Error> {
@@ -211,13 +221,13 @@ pub fn read_get_unordered_data_reply(root: Value) -> Result<HashMap<ObjectID, Va
     let content_group = &root["content"];
     let mut key: usize = 0;
     for kv in content_group.as_array().unwrap().into_iter() {
-        content.insert(object_id_from_string(key.to_string()), kv.clone());
+        content.insert(object_id_from_string(&key.to_string()), kv.clone());
         key += 1;
     }
     Ok(content)
 }
 
-pub fn write_list_data_request(pattern: String, regex: bool, limit: usize) -> String {
+pub fn write_list_data_request(pattern: &String, regex: bool, limit: usize) -> String {
     let msg = json!({
         "type": "list_data_request",
         "pattern": pattern,
@@ -347,7 +357,7 @@ pub fn read_get_buffer_reply(root: Value) -> Result<HashMap<ObjectID, Payload>, 
     Ok(objects)
 }
 
-pub fn write_put_name_request(object_id: ObjectID, name: String) -> String {
+pub fn write_put_name_request(object_id: ObjectID, name: &String) -> String {
     let msg = json!({"type": "put_name_request", "object_id": object_id, "name": name});
     encode_msg(msg)
 }
@@ -369,7 +379,7 @@ pub fn read_put_name_reply(root: Value) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn write_get_name_request(name: String, wait: bool) -> String {
+pub fn write_get_name_request(name: &String, wait: bool) -> String {
     let msg = json!({"type": "get_name_request", "name": name, "wait": wait});
     encode_msg(msg)
 }
@@ -392,7 +402,7 @@ pub fn read_get_name_reply(root: Value) -> Result<ObjectID, Error> {
     Ok(object_id)
 }
 
-pub fn write_drop_name_request(name: String) -> String {
+pub fn write_drop_name_request(name: &String) -> String {
     let msg = json!({"type": "drop_name_request", "name": name});
     encode_msg(msg)
 }
@@ -413,17 +423,6 @@ pub fn read_drop_name_reply(root: Value) -> Result<(), Error> {
     Ok(())
 }
 
-// // Write functions: Derive the JSON message and write it to a String
-// pub fn write_register_request() -> String {
-//     let msg = json!({"type": "register_request", "version": "0.2.6" });
-//     encode_msg(msg)
-// }
-
-// // Read functions: Read the JSON root to variants of ipc instance
-// pub fn read_register_request(root: Value) -> Result<String, Error> {
-//     RETURN_ON_ASSERT(root["type"] == "register_request");
-//     Ok(root["version"].as_str().unwrap_or("0.0.0").to_string())
-// }
 
 #[cfg(test)]
 mod tests {

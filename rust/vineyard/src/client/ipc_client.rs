@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::env;
+use std::mem;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
 use std::os::unix::net::UnixStream;
@@ -45,31 +46,62 @@ pub struct IPCClient {
 pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<UnixStream, Error> {
     let socket = Path::new(pathname);
     let mut stream = match UnixStream::connect(&socket) {
-        Err(error) => panic!("The server is not running because: {}.", error),
+        Err(e) => panic!("The server is not running because: {}.", e),
         Ok(stream) => stream,
     };
     Ok(stream)
 }
 
-fn do_write(stream: &mut UnixStream, message_out: &String) -> Result<(), Error> {
-    match stream.write_all(message_out.as_bytes()) {
-        Err(error) => panic!("Couldn't send message because: {}.", error),
-        Ok(_) => Ok(()),
-    }
+fn do_write(stream: &mut UnixStream, message_out: &String) -> io::Result<()> {
+    send_message(stream, message_out.as_str())?;
+    Ok(())
 }
 
-// TODO
-// fn send_message(vineyard_conn: i64, message_out: &String) -> Result<(), Error> {}
-
-fn do_read(stream: &mut UnixStream, message_in: &mut String) -> Result<(), Error> {
-    match stream.read_to_string(message_in) {
-        Err(error) => panic!("Couldn't receive message because: {}.", error),
-        Ok(_) => Ok(()),
-    }
+fn do_read(stream: &mut UnixStream, message_in: &mut String) -> io::Result<()> {
+    *message_in = recv_message(stream)?;
+    Ok(())
 }
+
+fn send_bytes(stream: &mut UnixStream, data: &[u8], length: usize) -> io::Result<()> {
+    let mut remaining = length;
+    let mut offset = 0;
+    while remaining > 0 {
+        let n = stream.write(&data[offset..])?;
+        remaining -= n;
+        offset += n;
+    }
+    Ok(())
+}
+
+fn send_message(stream: &mut UnixStream, message: &str) -> io::Result<()> {
+    let len = message.len();
+    let bytes = len.to_le_bytes();
+    send_bytes(stream, &bytes, mem::size_of::<usize>())?;
+    send_bytes(stream, message.as_bytes(), len)?;
+    Ok(())
+}
+
+fn recv_bytes(stream: &mut UnixStream, data: &mut [u8], length: usize) -> io::Result<()> {
+    let mut remaining = length;
+    let mut offset = 0;
+    while remaining > 0 {
+        let n = stream.read(&mut data[offset..])?;
+        remaining -= n;
+        offset += n;
+    }
+    Ok(())
+}
+fn recv_message(stream: &mut UnixStream) -> io::Result<String> {
+    let mut size_buf = [0u8; mem::size_of::<usize>()];
+    recv_bytes(stream, &mut size_buf, mem::size_of::<usize>())?;
+    let size = usize::from_le_bytes(size_buf);
+    let mut message_buf = vec![0u8; size];
+    recv_bytes(stream, message_buf.as_mut_slice(), size)?;
+    Ok(String::from_utf8(message_buf).unwrap())
+}
+
 
 impl Client for IPCClient {
-    // Connect to vineyardd using the given UNIX domain socket `ipc_socket`
     fn connect(&mut self, conn_input: conn_input) -> Result<(), Error> {
         let socket = match conn_input {
             ipc_conn_input(socket) => socket,
@@ -81,52 +113,55 @@ impl Client for IPCClient {
         if self.connected {
             return Ok(());
         } else {
-            // If not connected yet
-            // Connect to an ipc socket
             self.ipc_socket = ipc_socket;
             let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn).unwrap();
 
-            // Write a request  ( You need to start the vineyardd server on the same socket)
             let message_out: String = write_register_request();
-            do_write(&mut stream, &message_out).unwrap();
+            if let Err(e) = do_write(&mut stream, &message_out){
+                self.connected = false; 
+                return Err(e);
+            }
 
-            // Read the reply
             let mut message_in = String::new();
             do_read(&mut stream, &mut message_in).unwrap();
-            println!("{}", message_in);
-            println!("hey");
 
-            // TODO： Read register reply
+            let message_in: Value = serde_json::from_str(&message_in).expect("JSON was not well-formatted");
+            let register_reply: RegisterReply = read_register_reply(message_in).unwrap();
+            //println!("Register reply:\n{:?}\n", register_reply);
+
+            self.instance_id = register_reply.instance_id;
+            self.server_version = register_reply.version;
+            self.rpc_endpoint = register_reply.rpc_endpoint;
+            self.connected = true;
 
             // TODO： Compatable server
 
-            return Ok(());
+            Ok(())
         }
     }
 
     fn disconnect(&self) {}
 
-    fn connected(&self) -> bool {
-        true
+    fn connected(&mut self) -> bool {
+        // if self.connected && recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1
+        // Question: recv function in sys/socket.h?
+        self.connected
     }
 
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> Result<ObjectMeta, Error> {
-        // Ok(ObjectMeta {
-        //     client: None,
-        //     meta: String::new(),
-        // })
         panic!();
     }
 }
-// TODO: Test the connect
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
+    //#[ignore]
     fn ipc_connect() {
+        let print = true;
         let ipc_client = &mut IPCClient {
             connected: false,
             ipc_socket: String::new(),
@@ -135,6 +170,8 @@ mod tests {
             instance_id: 0,
             server_version: String::new(),
         };
+        if print {println!("Ipc client:\n {:?}\n", ipc_client)}
         ipc_client.connect(ipc_conn_input(SOCKET_PATH));
+        if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
     }
 }
