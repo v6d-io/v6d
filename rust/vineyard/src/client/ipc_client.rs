@@ -23,11 +23,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::client::conn_input::{self, ipc_conn_input};
+use super::rust_io::*;
 use super::client::Client;
-use super::InstanceID;
-use super::ObjectID;
-use super::ObjectMeta;
+use super::client::ConnInputKind::{self, IPCConnInput};
+use super::client::StreamKind::{self, IPCStream};
+use super::{InstanceID, ObjectID, ObjectMeta};
 use crate::common::util::protocol::*;
 
 pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
@@ -42,69 +42,11 @@ pub struct IPCClient {
     server_version: String,
 }
 
-// socket_fd is used to assign vineyard_conn
-pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<UnixStream, Error> {
-    let socket = Path::new(pathname);
-    let mut stream = match UnixStream::connect(&socket) {
-        Err(e) => panic!("The server is not running because: {}.", e),
-        Ok(stream) => stream,
-    };
-    Ok(stream)
-}
-
-fn do_write(stream: &mut UnixStream, message_out: &String) -> io::Result<()> {
-    send_message(stream, message_out.as_str())?;
-    Ok(())
-}
-
-fn do_read(stream: &mut UnixStream, message_in: &mut String) -> io::Result<()> {
-    *message_in = recv_message(stream)?;
-    Ok(())
-}
-
-fn send_bytes(stream: &mut UnixStream, data: &[u8], length: usize) -> io::Result<()> {
-    let mut remaining = length;
-    let mut offset = 0;
-    while remaining > 0 {
-        let n = stream.write(&data[offset..])?;
-        remaining -= n;
-        offset += n;
-    }
-    Ok(())
-}
-
-fn send_message(stream: &mut UnixStream, message: &str) -> io::Result<()> {
-    let len = message.len();
-    let bytes = len.to_le_bytes();
-    send_bytes(stream, &bytes, mem::size_of::<usize>())?;
-    send_bytes(stream, message.as_bytes(), len)?;
-    Ok(())
-}
-
-fn recv_bytes(stream: &mut UnixStream, data: &mut [u8], length: usize) -> io::Result<()> {
-    let mut remaining = length;
-    let mut offset = 0;
-    while remaining > 0 {
-        let n = stream.read(&mut data[offset..])?;
-        remaining -= n;
-        offset += n;
-    }
-    Ok(())
-}
-fn recv_message(stream: &mut UnixStream) -> io::Result<String> {
-    let mut size_buf = [0u8; mem::size_of::<usize>()];
-    recv_bytes(stream, &mut size_buf, mem::size_of::<usize>())?;
-    let size = usize::from_le_bytes(size_buf);
-    let mut message_buf = vec![0u8; size];
-    recv_bytes(stream, message_buf.as_mut_slice(), size)?;
-    Ok(String::from_utf8(message_buf).unwrap())
-}
-
 
 impl Client for IPCClient {
-    fn connect(&mut self, conn_input: conn_input) -> Result<(), Error> {
+    fn connect(&mut self, conn_input: ConnInputKind) -> Result<(), Error> {
         let socket = match conn_input {
-            ipc_conn_input(socket) => socket,
+            IPCConnInput(socket) => socket,
             _ => panic!("Unsuitable type of connect input."),
         };
         let ipc_socket: String = String::from(socket);
@@ -115,18 +57,19 @@ impl Client for IPCClient {
         } else {
             self.ipc_socket = ipc_socket;
             let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn).unwrap();
+            let mut ipc_stream = IPCStream(stream);
 
             let message_out: String = write_register_request();
-            if let Err(e) = do_write(&mut stream, &message_out){
+            if let Err(e) = do_write(&mut ipc_stream, &message_out){
                 self.connected = false; 
                 return Err(e);
             }
 
             let mut message_in = String::new();
-            do_read(&mut stream, &mut message_in).unwrap();
+            do_read(&mut ipc_stream, &mut message_in)?;
 
             let message_in: Value = serde_json::from_str(&message_in).expect("JSON was not well-formatted");
-            let register_reply: RegisterReply = read_register_reply(message_in).unwrap();
+            let register_reply: RegisterReply = read_register_reply(message_in)?;
             //println!("Register reply:\n{:?}\n", register_reply);
 
             self.instance_id = register_reply.instance_id;
@@ -171,7 +114,7 @@ mod tests {
             server_version: String::new(),
         };
         if print {println!("Ipc client:\n {:?}\n", ipc_client)}
-        ipc_client.connect(ipc_conn_input(SOCKET_PATH));
+        ipc_client.connect(IPCConnInput(SOCKET_PATH));
         if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
     }
 }

@@ -16,19 +16,21 @@ use std::env;
 use std::mem;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream, TcpListener};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::client::conn_input::{self, rpc_conn_input};
+use super::rust_io::*;
 use super::client::Client;
-use super::InstanceID;
-use super::ObjectID;
-use super::ObjectMeta;
+use super::client::ConnInputKind::{self, RPCConnInput};
+use super::client::StreamKind::{self, RPCStream};
+use super::{InstanceID, ObjectID, ObjectMeta};
 use crate::common::util::protocol::*;
+
+
 
 #[derive(Debug)]
 pub struct RPCClient {
@@ -41,72 +43,15 @@ pub struct RPCClient {
     remote_instance_id: InstanceID,
 }
 
-// Question: the port is u16 from the material I saw while u32 in C++
-pub fn connect_rpc_socket(host: &String, port: u16, socket_fd: i64) -> io::Result<TcpStream> {
-    let mut stream = match TcpStream::connect(&host[..]) {
-        Err(e) => panic!("The server is not running because: {}", e),
-        Ok(stream) => stream,
-    };
-    Ok(stream)
-}
-
-fn do_write(stream: &mut TcpStream, message_out: &String) -> io::Result<()> {
-    send_message(stream, message_out.as_str())?;
-    Ok(())
-}
-
-fn do_read(stream: &mut TcpStream, message_in: &mut String) -> io::Result<()> {
-    *message_in = recv_message(stream)?;
-    Ok(())
-}
-
-fn send_bytes(stream: &mut TcpStream, data: &[u8], length: usize) -> io::Result<()> {
-    let mut remaining = length;
-    let mut offset = 0;
-    while remaining > 0 {
-        let n = stream.write(&data[offset..])?;
-        remaining -= n;
-        offset += n;
-    }
-    Ok(())
-}
-
-fn send_message(stream: &mut TcpStream, message: &str) -> io::Result<()> {
-    let len = message.len();
-    let bytes = len.to_le_bytes();
-    send_bytes(stream, &bytes, mem::size_of::<usize>())?;
-    send_bytes(stream, message.as_bytes(), len)?;
-    Ok(())
-}
-
-fn recv_bytes(stream: &mut TcpStream, data: &mut [u8], length: usize) -> io::Result<()> {
-    let mut remaining = length;
-    let mut offset = 0;
-    while remaining > 0 {
-        let n = stream.read(&mut data[offset..])?;
-        remaining -= n;
-        offset += n;
-    }
-    Ok(())
-}
-fn recv_message(stream: &mut TcpStream) -> io::Result<String> {
-    let mut size_buf = [0u8; mem::size_of::<usize>()];
-    recv_bytes(stream, &mut size_buf, mem::size_of::<usize>())?;
-    let size = usize::from_le_bytes(size_buf);
-    let mut message_buf = vec![0u8; size];
-    recv_bytes(stream, message_buf.as_mut_slice(), size)?;
-    Ok(String::from_utf8(message_buf).unwrap())
-}
-
 
 impl Client for RPCClient {
-    fn connect(&mut self, conn_input: conn_input) -> Result<(), Error> {
+    fn connect(&mut self, conn_input: ConnInputKind) -> Result<(), Error> {
         let (host, port) = match conn_input {
-            rpc_conn_input(host, port) => (host, port),
+            RPCConnInput(host, port) => (host, port),
             _ => panic!("Unsuitable type of connect input."),
         };
-        let rpc_host: String = String::from(host);
-        let rpc_endpoint: String = format!("{}:{}", host, port.to_string());
+        let rpc_host = String::from(host);
+        let rpc_endpoint = format!("{}:{}", host, port.to_string());
 
         // Panic when they have connected while assigning different rpc_endpoint
         RETURN_ON_ASSERT(!self.connected || rpc_endpoint == self.rpc_endpoint);
@@ -116,18 +61,19 @@ impl Client for RPCClient {
             self.rpc_endpoint = rpc_endpoint;
             let mut stream =
                 connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn).unwrap();
+            let mut rpc_stream = RPCStream(stream);
 
             let message_out: String = write_register_request();
-            if let Err(e) = do_write(&mut stream, &message_out){
+            if let Err(e) = do_write(&mut rpc_stream, &message_out){
                 self.connected = false; 
                 return Err(e);
             }
 
             let mut message_in = String::new();
-            do_read(&mut stream, &mut message_in).unwrap();
+            do_read(&mut rpc_stream, &mut message_in)?;
 
             let message_in: Value = serde_json::from_str(&message_in).expect("JSON was not well-formatted");
-            let register_reply: RegisterReply = read_register_reply(message_in).unwrap();
+            let register_reply: RegisterReply = read_register_reply(message_in)?;
             //println!("Register reply:\n{:?}\n ", register_reply);
 
             self.remote_instance_id = register_reply.instance_id;
@@ -174,51 +120,8 @@ mod tests {
             remote_instance_id: 0,
         };
         if print {println!("Rpc client:\n {:?}\n", rpc_client)}
-        rpc_client.connect(rpc_conn_input("0.0.0.0", 9600));
+        rpc_client.connect(RPCConnInput("0.0.0.0", 9600));
         if print {println!("Rpc client after connect:\n {:?}\n ", rpc_client)}
-    }
-
-
-    #[test]
-    #[ignore]
-    fn small_test() -> std::io::Result<()> {
-
-        let mut stream = TcpStream::connect("0.0.0.0:9600").unwrap(); //0.0.0.0:9600
-        let _bytes_written = stream.write_all(b"Hello").unwrap();
-        stream.flush()?;
-
-        // use std::time::Duration;
-        // stream.set_read_timeout(Some(Duration::new(5, 0))).unwrap();
-        
-        let mut buf = String::new(); //vec![0;16] 
-        stream.read_to_string(&mut buf).unwrap();
-        println!("{}", buf);
-
-        Ok(())
-    }
-
-    #[test]
-    #[ignore]
-    fn small_http_test() -> std::io::Result<()> {
-        let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
-        for stream in listener.incoming() {
-            let stream = stream.unwrap();
-    
-            handle_connection(stream);
-        }
-
-        Ok(())
-    }
-
-    fn handle_connection(mut stream: TcpStream) {
-        let mut buffer = [0; 1024];
-    
-        stream.read(&mut buffer).unwrap();
-        //println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
-
-        let response = "HTTP/1.1 200 OK\r\n\r\n";
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
     }
 
 }

@@ -80,12 +80,11 @@ pub fn CHECK_IPC_ERROR(tree: &Value, root_type: &str) {
     RETURN_ON_ASSERT(tree["type"].as_str().unwrap() == root_type);
 }
 
-pub fn ENSURE_CONNECTED<T: Client>(client: &mut T) -> Result<(), Error> {
-    if !client.connected(){
-        panic!("Client is not connected.");
+pub fn ENSURE_CONNECTED(b: bool) {
+    if !b {
+        panic!()
     }
-    // TODO: mutex
-    Ok(())
+    // Question. TODO: mutex
 }
 
 // TODO: Rust parse check

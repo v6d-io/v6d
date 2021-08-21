@@ -18,6 +18,7 @@ pub mod client;
 pub mod ds;
 pub mod ipc_client;
 pub mod rpc_client;
+pub mod rust_io;
 
 pub use self::ds::blob::Blob;
 pub use self::ds::blob::BlobWriter;

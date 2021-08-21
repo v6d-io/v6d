@@ -12,18 +12,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use super::ObjectID;
-use super::ObjectMeta;
+
 use std::io::{self, Error, ErrorKind};
 use std::os::unix::net::UnixStream;
+use std::net::TcpStream;
 
-pub enum conn_input<'a, 'b> {
-    ipc_conn_input(&'a str),      // socket
-    rpc_conn_input(&'b str, u16), // host, port
+use super::ObjectID;
+use super::ObjectMeta;
+use crate::common::util::protocol::*;
+
+pub enum ConnInputKind<'a, 'b> {
+    IPCConnInput(&'a str),      // socket
+    RPCConnInput(&'b str, u16), // host, port
+}
+
+pub enum StreamKind{
+    IPCStream(UnixStream),
+    RPCStream(TcpStream),
 }
 
 pub trait Client {
-    fn connect(&mut self, conn_input: conn_input) -> io::Result<()>;
+    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()>;
 
     // Disconnect this client.
     fn disconnect(&self);
@@ -32,4 +41,15 @@ pub trait Client {
 
     // Obtain multiple metadatas from vineyard server.
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>;
+
+    fn put_name(&mut self, stream: StreamKind, id: ObjectID, name: &String) -> io::Result<()>{
+        // ENSURE_CONNECTED(self.connected());
+        // let message_out = write_put_name_request(id, name);
+        // do_write(&mut stream, &message_out)?;
+        // let mut message_in = String::new();
+        // do_read(&mut stream, &mut message_in)?;
+
+
+        Ok(())
+    }
 }
