@@ -46,20 +46,23 @@ pub fn connect_rpc_socket(host: &String, port: u16, socket_fd: i64) -> io::Resul
     Ok(stream)
 }
 
-pub fn do_write(stream_kind: &mut StreamKind, message_out: &String) -> io::Result<()> {
-    match stream_kind {
-        StreamKind::IPCStream(stream) => ipc_io::send_message(stream, message_out.as_str())?,
-        StreamKind::RPCStream(stream) => rpc_io::send_message(stream, message_out.as_str())?,
+pub fn do_write(stream: &mut StreamKind, message_out: &String) -> io::Result<()> {
+    match stream {
+        StreamKind::IPCStream(ipc_stream) => {
+            ipc_io::send_message(ipc_stream, message_out.as_str())?
+        },
+        StreamKind::RPCStream(rpc_stream) => {
+            rpc_io::send_message(rpc_stream, message_out.as_str())?
+        },
     }
     Ok(())
 }
 
-pub fn do_read(stream_kind: &mut StreamKind, message_in: &mut String) -> io::Result<()> {
-    match stream_kind {
-        StreamKind::IPCStream(stream) => *message_in = ipc_io::recv_message(stream)?,
-        StreamKind::RPCStream(stream) => *message_in = rpc_io::recv_message(stream)?,
+pub fn do_read(stream: &mut StreamKind, message_in: &mut String) -> io::Result<()> {
+    match stream {
+        StreamKind::IPCStream(ipc_stream) => *message_in = ipc_io::recv_message(ipc_stream)?,
+        StreamKind::RPCStream(rpc_stream) => *message_in = rpc_io::recv_message(rpc_stream)?,
     }
-    
     Ok(())
 }
 

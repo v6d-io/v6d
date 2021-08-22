@@ -17,8 +17,13 @@ use std::io::{self, Error, ErrorKind};
 use std::os::unix::net::UnixStream;
 use std::net::TcpStream;
 
+use serde::{Deserialize, Serialize};
+use serde_json::Result as JsonResult;
+use serde_json::{json, Value};
+
 use super::ObjectID;
 use super::ObjectMeta;
+use super::rust_io::*;
 use crate::common::util::protocol::*;
 
 pub enum ConnInputKind<'a, 'b> {
@@ -32,7 +37,7 @@ pub enum StreamKind{
 }
 
 pub trait Client {
-    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()>;
+    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<StreamKind>;
 
     // Disconnect this client.
     fn disconnect(&self);
@@ -42,13 +47,14 @@ pub trait Client {
     // Obtain multiple metadatas from vineyard server.
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>;
 
-    fn put_name(&mut self, stream: StreamKind, id: ObjectID, name: &String) -> io::Result<()>{
-        // ENSURE_CONNECTED(self.connected());
-        // let message_out = write_put_name_request(id, name);
-        // do_write(&mut stream, &message_out)?;
-        // let mut message_in = String::new();
-        // do_read(&mut stream, &mut message_in)?;
-
+    fn put_name(&mut self, stream: &mut StreamKind, id: ObjectID, name: &String) -> io::Result<()>{
+        ENSURE_CONNECTED(self.connected());
+        let message_out = write_put_name_request(id, name);
+        do_write(stream, &message_out)?;
+        let mut message_in = String::new();
+        do_read(stream, &mut message_in)?;
+        let message_in: Value = serde_json::from_str(&message_in)?;
+        read_put_name_reply(message_in)?;
 
         Ok(())
     }

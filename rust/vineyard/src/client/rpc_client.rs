@@ -45,7 +45,7 @@ pub struct RPCClient {
 
 
 impl Client for RPCClient {
-    fn connect(&mut self, conn_input: ConnInputKind) -> Result<(), Error> {
+    fn connect(&mut self, conn_input: ConnInputKind) -> Result<StreamKind, Error> {
         let (host, port) = match conn_input {
             RPCConnInput(host, port) => (host, port),
             _ => panic!("Unsuitable type of connect input."),
@@ -56,7 +56,8 @@ impl Client for RPCClient {
         // Panic when they have connected while assigning different rpc_endpoint
         RETURN_ON_ASSERT(!self.connected || rpc_endpoint == self.rpc_endpoint);
         if self.connected {
-            return Ok(());
+            //return Ok(());
+            return panic!();
         } else {
             self.rpc_endpoint = rpc_endpoint;
             let mut stream =
@@ -83,7 +84,7 @@ impl Client for RPCClient {
 
             // TODO： Compatable server
 
-            Ok(())
+            Ok(rpc_stream)
         }
     }
 
@@ -107,7 +108,7 @@ mod tests {
     use super::*;
 
     #[test]
-    //#[ignore]
+    #[ignore]
     fn rpc_connect() {
         let print = true;
         let rpc_client = &mut RPCClient {

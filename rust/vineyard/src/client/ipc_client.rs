@@ -44,7 +44,7 @@ pub struct IPCClient {
 
 
 impl Client for IPCClient {
-    fn connect(&mut self, conn_input: ConnInputKind) -> Result<(), Error> {
+    fn connect(&mut self, conn_input: ConnInputKind) -> Result<StreamKind, Error> {
         let socket = match conn_input {
             IPCConnInput(socket) => socket,
             _ => panic!("Unsuitable type of connect input."),
@@ -53,7 +53,8 @@ impl Client for IPCClient {
         // Panic when they have connected while assigning different ipc_socket
         RETURN_ON_ASSERT(!self.connected || ipc_socket == self.ipc_socket);
         if self.connected {
-            return Ok(());
+            //return Ok(());
+            return panic!();
         } else {
             self.ipc_socket = ipc_socket;
             let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn).unwrap();
@@ -79,7 +80,7 @@ impl Client for IPCClient {
 
             // TODO： Compatable server
 
-            Ok(())
+            Ok(ipc_stream)
         }
     }
 
@@ -102,7 +103,7 @@ mod tests {
     use super::*;
 
     #[test]
-    //#[ignore]
+    #[ignore]
     fn ipc_connect() {
         let print = true;
         let ipc_client = &mut IPCClient {
@@ -117,4 +118,25 @@ mod tests {
         ipc_client.connect(IPCConnInput(SOCKET_PATH));
         if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
     }
+
+    #[test]
+    //#[ignore]
+    fn ipc_put_name() {
+        let print = false;
+        let ipc_client = &mut IPCClient {
+            connected: false,
+            ipc_socket: String::new(),
+            rpc_endpoint: String::new(),
+            vineyard_conn: 0,
+            instance_id: 0,
+            server_version: String::new(),
+        };
+        if print {println!("Ipc client:\n {:?}\n", ipc_client)}
+        let mut ipc_stream = ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
+        let id = 1 as ObjectID;
+        let name = String::from("test_1");
+        ipc_client.put_name(&mut ipc_stream, id, &name);
+        if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
+    }
+
 }
