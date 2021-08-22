@@ -40,11 +40,25 @@ pub struct IPCClient {
     vineyard_conn: i64,
     instance_id: InstanceID,
     server_version: String,
+    stream: Option<StreamKind>,
 }
 
+impl IPCClient {
+    fn new_default() -> IPCClient {
+        IPCClient {
+            connected: false,
+            ipc_socket: String::new(),
+            rpc_endpoint: String::new(),
+            vineyard_conn: 0,
+            instance_id: 0,
+            server_version: String::new(),
+            stream : None as Option<StreamKind>,
+        }
+    }
+}
 
 impl Client for IPCClient {
-    fn connect(&mut self, conn_input: ConnInputKind) -> Result<StreamKind, Error> {
+    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()> {
         let socket = match conn_input {
             IPCConnInput(socket) => socket,
             _ => panic!("Unsuitable type of connect input."),
@@ -53,8 +67,7 @@ impl Client for IPCClient {
         // Panic when they have connected while assigning different ipc_socket
         RETURN_ON_ASSERT(!self.connected || ipc_socket == self.ipc_socket);
         if self.connected {
-            //return Ok(());
-            return panic!();
+            return Ok(());
         } else {
             self.ipc_socket = ipc_socket;
             let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn).unwrap();
@@ -76,24 +89,30 @@ impl Client for IPCClient {
             self.instance_id = register_reply.instance_id;
             self.server_version = register_reply.version;
             self.rpc_endpoint = register_reply.rpc_endpoint;
+            self.stream = Some(ipc_stream);
             self.connected = true;
 
             // TODO： Compatable server
 
-            Ok(ipc_stream)
+            Ok(())
         }
     }
 
     fn disconnect(&self) {}
 
     fn connected(&mut self) -> bool {
-        // if self.connected && recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1
-        // Question: recv function in sys/socket.h?
         self.connected
     }
 
-    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> Result<ObjectMeta, Error> {
+    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>{
         panic!();
+    }
+
+    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
+        match &mut self.stream{
+            Some(stream) => return Ok(&mut *stream),
+            None => panic!(),
+        }
     }
 }
 
@@ -103,17 +122,10 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
-    fn ipc_connect() {
+    //#[ignore]
+    fn test_ipc_connect() {
         let print = true;
-        let ipc_client = &mut IPCClient {
-            connected: false,
-            ipc_socket: String::new(),
-            rpc_endpoint: String::new(),
-            vineyard_conn: 0,
-            instance_id: 0,
-            server_version: String::new(),
-        };
+        let ipc_client = &mut IPCClient::new_default();
         if print {println!("Ipc client:\n {:?}\n", ipc_client)}
         ipc_client.connect(IPCConnInput(SOCKET_PATH));
         if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
@@ -121,21 +133,32 @@ mod tests {
 
     #[test]
     //#[ignore]
-    fn ipc_put_name() {
+    fn test_ipc_put_and_get_name() {
         let print = false;
-        let ipc_client = &mut IPCClient {
-            connected: false,
-            ipc_socket: String::new(),
-            rpc_endpoint: String::new(),
-            vineyard_conn: 0,
-            instance_id: 0,
-            server_version: String::new(),
-        };
+        let ipc_client = &mut IPCClient::new_default();
         if print {println!("Ipc client:\n {:?}\n", ipc_client)}
-        let mut ipc_stream = ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
+        ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
+        let id1 = 1 as ObjectID;
+        let name = String::from("put&get_test_name");
+        ipc_client.put_name(id1, &name);
+        let id2 = ipc_client.get_name(&name, false).unwrap();
+        assert_eq!(id1, id2);
+        if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
+    }
+
+    #[test]
+    #[should_panic]
+    //#[ignore]
+    fn test_ipc_drop_name() {
+        let print = false;
+        let ipc_client = &mut IPCClient::new_default();
+        if print {println!("Ipc client:\n {:?}\n", ipc_client)}
+        ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
         let id = 1 as ObjectID;
-        let name = String::from("test_1");
-        ipc_client.put_name(&mut ipc_stream, id, &name);
+        let name = String::from("drop_test_name");
+        ipc_client.put_name(id, &name);
+        ipc_client.drop_name(&name);
+        let id = ipc_client.get_name(&name, false).unwrap();
         if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
     }
 

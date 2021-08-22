@@ -41,11 +41,26 @@ pub struct RPCClient {
     instance_id: InstanceID,
     server_version: String,
     remote_instance_id: InstanceID,
+    stream: Option<StreamKind>,
 }
 
+impl RPCClient {
+    fn new_default() -> RPCClient {
+        RPCClient {
+            connected: false,
+            ipc_socket: String::new(),
+            rpc_endpoint: String::new(),
+            vineyard_conn: 0,
+            instance_id: 0,
+            server_version: String::new(),
+            remote_instance_id: 0,
+            stream: None as Option<StreamKind>,
+        }
+    }
+}
 
 impl Client for RPCClient {
-    fn connect(&mut self, conn_input: ConnInputKind) -> Result<StreamKind, Error> {
+    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()> {
         let (host, port) = match conn_input {
             RPCConnInput(host, port) => (host, port),
             _ => panic!("Unsuitable type of connect input."),
@@ -56,8 +71,7 @@ impl Client for RPCClient {
         // Panic when they have connected while assigning different rpc_endpoint
         RETURN_ON_ASSERT(!self.connected || rpc_endpoint == self.rpc_endpoint);
         if self.connected {
-            //return Ok(());
-            return panic!();
+            return Ok(());
         } else {
             self.rpc_endpoint = rpc_endpoint;
             let mut stream =
@@ -80,11 +94,12 @@ impl Client for RPCClient {
             self.remote_instance_id = register_reply.instance_id;
             self.server_version = register_reply.version;
             self.ipc_socket = register_reply.ipc_socket;
+            self.stream = Some(rpc_stream);
             self.connected = true;
 
             // TODO： Compatable server
 
-            Ok(rpc_stream)
+            Ok(())
         }
     }
 
@@ -94,13 +109,19 @@ impl Client for RPCClient {
         self.connected
     }
 
-    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> Result<ObjectMeta, Error> {
+    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>{
         Ok(ObjectMeta {
             client: None,
             meta: String::new(),
         })
     }
     
+    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
+        match &mut self.stream{
+            Some(stream) => return Ok(&mut *stream),
+            None => panic!(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -108,18 +129,10 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
-    fn rpc_connect() {
+    //#[ignore]
+    fn test_rpc_connect() {
         let print = true;
-        let rpc_client = &mut RPCClient {
-            connected: false,
-            ipc_socket: String::new(),
-            rpc_endpoint: String::new(),
-            vineyard_conn: 0,
-            instance_id: 0,
-            server_version: String::new(),
-            remote_instance_id: 0,
-        };
+        let rpc_client = &mut RPCClient::new_default();
         if print {println!("Rpc client:\n {:?}\n", rpc_client)}
         rpc_client.connect(RPCConnInput("0.0.0.0", 9600));
         if print {println!("Rpc client after connect:\n {:?}\n ", rpc_client)}

@@ -361,19 +361,7 @@ pub fn write_put_name_request(object_id: ObjectID, name: &String) -> String {
     encode_msg(msg)
 }
 
-pub fn read_put_name_request(root: Value) -> Result<(ObjectID, String), Error> {
-    RETURN_ON_ASSERT(root["type"] == "put_name_request");
-    let object_id = root["object_id"].as_u64().unwrap() as ObjectID;
-    let name = root["name"].as_str().unwrap().to_string();
-    Ok((object_id, name))
-}
-
-pub fn write_put_name_reply() -> String {
-    let msg = json!({"type": "put_name_reply"});
-    encode_msg(msg)
-}
-
-pub fn read_put_name_reply(root: Value) -> Result<(), Error> {
+pub fn read_put_name_reply(root: Value) -> io::Result<()> {
     CHECK_IPC_ERROR(&root, "put_name_reply");
     Ok(())
 }
@@ -383,19 +371,7 @@ pub fn write_get_name_request(name: &String, wait: bool) -> String {
     encode_msg(msg)
 }
 
-pub fn read_get_name_request(root: Value) -> Result<(String, bool), Error> {
-    RETURN_ON_ASSERT(root["type"] == "get_name_request");
-    let name = root["name"].as_str().unwrap().to_string();
-    let wait = root["wait"].as_bool().unwrap();
-    Ok((name, wait))
-}
-
-pub fn write_get_name_reply(object_id: ObjectID) -> String {
-    let msg = json!({"type": "get_name_reply", "object_id": object_id});
-    encode_msg(msg)
-}
-
-pub fn read_get_name_reply(root: Value) -> Result<ObjectID, Error> {
+pub fn read_get_name_reply(root: Value) -> io::Result<ObjectID> {
     CHECK_IPC_ERROR(&root, "get_name_reply");
     let object_id = root["object_id"].as_u64().unwrap() as ObjectID;
     Ok(object_id)
@@ -403,21 +379,11 @@ pub fn read_get_name_reply(root: Value) -> Result<ObjectID, Error> {
 
 pub fn write_drop_name_request(name: &String) -> String {
     let msg = json!({"type": "drop_name_request", "name": name});
+    println!{"{:?}", msg};
     encode_msg(msg)
 }
 
-pub fn read_drop_name_request(root: Value) -> Result<String, Error> {
-    RETURN_ON_ASSERT(root["type"] == "drop_name_request");
-    let name = root["name"].as_str().unwrap().to_string();
-    Ok(name)
-}
-
-pub fn write_drop_name_reply() -> String {
-    let msg = json!({"type": "drop_name_reply"});
-    encode_msg(msg)
-}
-
-pub fn read_drop_name_reply(root: Value) -> Result<(), Error> {
+pub fn read_drop_name_reply(root: Value) -> io::Result<()> {
     CHECK_IPC_ERROR(&root, "drop_name_reply");
     Ok(())
 }
@@ -429,7 +395,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn read_register_reply_test() {
+    fn test_print_read_register_reply() {
         let msg = json!({
             "type": "register_reply",
             "ipc_socket": "some_ipc_socket",

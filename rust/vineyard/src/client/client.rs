@@ -26,29 +26,36 @@ use super::ObjectMeta;
 use super::rust_io::*;
 use crate::common::util::protocol::*;
 
+#[derive(Debug)]
 pub enum ConnInputKind<'a, 'b> {
     IPCConnInput(&'a str),      // socket
     RPCConnInput(&'b str, u16), // host, port
 }
 
+#[derive(Debug)]
 pub enum StreamKind{
     IPCStream(UnixStream),
     RPCStream(TcpStream),
 }
 
 pub trait Client {
-    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<StreamKind>;
+    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()>;
 
     // Disconnect this client.
     fn disconnect(&self);
 
+    // Question: recv function in sys/socket.h?
+    // if self.connected && recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1
     fn connected(&mut self) -> bool;
 
     // Obtain multiple metadatas from vineyard server.
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>;
 
-    fn put_name(&mut self, stream: &mut StreamKind, id: ObjectID, name: &String) -> io::Result<()>{
+    fn get_stream(&mut self) -> io::Result<&mut StreamKind>;
+
+    fn put_name(&mut self, id: ObjectID, name: &String) -> io::Result<()> {
         ENSURE_CONNECTED(self.connected());
+        let stream = self.get_stream()?;
         let message_out = write_put_name_request(id, name);
         do_write(stream, &message_out)?;
         let mut message_in = String::new();
@@ -58,4 +65,31 @@ pub trait Client {
 
         Ok(())
     }
+
+    fn get_name(&mut self, name: &String, wait: bool) -> io::Result<ObjectID> {
+        ENSURE_CONNECTED(self.connected());
+        let stream = self.get_stream()?;
+        let message_out = write_get_name_request(name, wait);
+        do_write(stream, &message_out)?;
+        let mut message_in = String::new();
+        do_read(stream, &mut message_in)?;
+        let message_in: Value = serde_json::from_str(&message_in)?;
+        let id = read_get_name_reply(message_in)?;
+
+        Ok(id)
+    }
+
+    fn drop_name(&mut self, name: &String) -> io::Result<()> {
+        ENSURE_CONNECTED(self.connected());
+        let stream = self.get_stream()?;
+        let message_out = write_drop_name_request(name);
+        do_write(stream, &message_out)?;
+        let mut message_in = String::new();
+        do_read(stream, &mut message_in)?;
+        let message_in: Value = serde_json::from_str(&message_in)?;
+        read_drop_name_reply(message_in)?;
+
+        Ok(())
+    }
+
 }
