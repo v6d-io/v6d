@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::env;
-use std::mem;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
+use std::mem;
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
@@ -23,10 +23,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::rust_io::*;
 use super::client::Client;
 use super::client::ConnInputKind::{self, IPCConnInput};
 use super::client::StreamKind::{self, IPCStream};
+use super::rust_io::*;
 use super::{InstanceID, ObjectID, ObjectMeta};
 use crate::common::util::protocol::*;
 
@@ -44,7 +44,7 @@ pub struct IPCClient {
 }
 
 impl Default for IPCClient {
-    fn default() -> Self { 
+    fn default() -> Self {
         IPCClient {
             connected: false,
             ipc_socket: String::new(),
@@ -52,7 +52,7 @@ impl Default for IPCClient {
             vineyard_conn: 0,
             instance_id: 0,
             server_version: String::new(),
-            stream : None as Option<StreamKind>,
+            stream: None as Option<StreamKind>,
         }
     }
 }
@@ -70,19 +70,20 @@ impl Client for IPCClient {
             return Ok(());
         } else {
             self.ipc_socket = ipc_socket;
-            let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn)?;
+            let stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn)?;
             let mut ipc_stream = IPCStream(stream);
 
             let message_out: String = write_register_request();
-            if let Err(e) = do_write(&mut ipc_stream, &message_out){
-                self.connected = false; 
+            if let Err(e) = do_write(&mut ipc_stream, &message_out) {
+                self.connected = false;
                 return Err(e);
             }
 
             let mut message_in = String::new();
             do_read(&mut ipc_stream, &mut message_in)?;
 
-            let message_in: Value = serde_json::from_str(&message_in).expect("JSON was not well-formatted");
+            let message_in: Value =
+                serde_json::from_str(&message_in).expect("JSON was not well-formatted");
             let register_reply: RegisterReply = read_register_reply(message_in)?;
             //println!("Register reply:\n{:?}\n", register_reply);
 
@@ -104,62 +105,58 @@ impl Client for IPCClient {
         self.connected
     }
 
-    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>{
+    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta> {
         panic!();
     }
 
     fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
-        match &mut self.stream{
+        match &mut self.stream {
             Some(stream) => return Ok(&mut *stream),
             None => panic!(),
         }
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
+    //#[ignore]
     fn test_ipc_connect() {
         let print = true;
         let ipc_client = &mut IPCClient::default();
-        if print {println!("Ipc client:\n {:?}\n", ipc_client)}
+        if print {
+            println!("Ipc client:\n {:?}\n", ipc_client)
+        }
         ipc_client.connect(IPCConnInput(SOCKET_PATH));
-        if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
+        if print {
+            println!("Ipc client after connect:\n {:?}\n", ipc_client)
+        }
     }
 
     #[test]
     //#[ignore]
     fn test_ipc_put_and_get_name() {
-        let print = true;
         let ipc_client = &mut IPCClient::default();
-        if print {println!("Ipc client:\n {:?}\n", ipc_client)}
         ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
         let id1 = 1 as ObjectID;
         let name = String::from("put&get_test_name");
         ipc_client.put_name(id1, &name);
         let id2 = ipc_client.get_name(&name, false).unwrap();
         assert_eq!(id1, id2);
-        if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
     }
 
     #[test]
     #[should_panic]
     //#[ignore]
     fn test_ipc_drop_name() {
-        let print = false;
         let ipc_client = &mut IPCClient::default();
-        if print {println!("Ipc client:\n {:?}\n", ipc_client)}
         ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
         let id = 1 as ObjectID;
         let name = String::from("drop_test_name");
         ipc_client.put_name(id, &name);
         ipc_client.drop_name(&name);
         let id = ipc_client.get_name(&name, false).unwrap();
-        if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
     }
-
 }

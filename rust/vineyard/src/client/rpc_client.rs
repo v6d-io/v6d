@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::env;
-use std::mem;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
+use std::mem;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
 use std::path::Path;
 
@@ -23,14 +23,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::rust_io::*;
 use super::client::Client;
 use super::client::ConnInputKind::{self, RPCConnInput};
 use super::client::StreamKind::{self, RPCStream};
+use super::rust_io::*;
 use super::{InstanceID, ObjectID, ObjectMeta};
 use crate::common::util::protocol::*;
-
-
 
 #[derive(Debug)]
 pub struct RPCClient {
@@ -74,20 +72,20 @@ impl Client for RPCClient {
             return Ok(());
         } else {
             self.rpc_endpoint = rpc_endpoint;
-            let mut stream =
-                connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn)?;
+            let stream = connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn)?;
             let mut rpc_stream = RPCStream(stream);
 
             let message_out: String = write_register_request();
-            if let Err(e) = do_write(&mut rpc_stream, &message_out){
-                self.connected = false; 
+            if let Err(e) = do_write(&mut rpc_stream, &message_out) {
+                self.connected = false;
                 return Err(e);
             }
 
             let mut message_in = String::new();
             do_read(&mut rpc_stream, &mut message_in)?;
 
-            let message_in: Value = serde_json::from_str(&message_in).expect("JSON was not well-formatted");
+            let message_in: Value =
+                serde_json::from_str(&message_in).expect("JSON was not well-formatted");
             let register_reply: RegisterReply = read_register_reply(message_in)?;
             //println!("Register reply:\n{:?}\n ", register_reply);
 
@@ -109,15 +107,15 @@ impl Client for RPCClient {
         self.connected
     }
 
-    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>{
+    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta> {
         Ok(ObjectMeta {
             client: None,
             meta: String::new(),
         })
     }
-    
+
     fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
-        match &mut self.stream{
+        match &mut self.stream {
             Some(stream) => return Ok(&mut *stream),
             None => panic!(),
         }
@@ -129,13 +127,16 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
+    //#[ignore]
     fn test_rpc_connect() {
         let print = true;
         let rpc_client = &mut RPCClient::default();
-        if print {println!("Rpc client:\n {:?}\n", rpc_client)}
+        if print {
+            println!("Rpc client:\n {:?}\n", rpc_client)
+        }
         rpc_client.connect(RPCConnInput("0.0.0.0", 9600));
-        if print {println!("Rpc client after connect:\n {:?}\n ", rpc_client)}
+        if print {
+            println!("Rpc client after connect:\n {:?}\n ", rpc_client)
+        }
     }
-
 }

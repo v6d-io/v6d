@@ -13,24 +13,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::env;
-use std::mem;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
-use std::os::unix::net::UnixStream;
+use std::mem;
 use std::net::TcpStream;
+use std::os::unix::net::UnixStream;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::client::{ConnInputKind, StreamKind, Client};
+use super::client::{Client, ConnInputKind, StreamKind};
 use super::{InstanceID, ObjectID, ObjectMeta};
 
 // socket_fd is used to assign vineyard_conn
-pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<UnixStream, Error> {
+pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> io::Result<UnixStream> {
     let socket = Path::new(pathname);
-    let mut stream = match UnixStream::connect(&socket) {
+    let stream = match UnixStream::connect(&socket) {
         Err(e) => panic!("The server is not running because: {}.", e),
         Ok(stream) => stream,
     };
@@ -39,7 +39,7 @@ pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<UnixStrea
 
 // Question: the port is u16 from the material I saw while u32 in C++
 pub fn connect_rpc_socket(host: &String, port: u16, socket_fd: i64) -> io::Result<TcpStream> {
-    let mut stream = match TcpStream::connect(&host[..]) {
+    let stream = match TcpStream::connect(&host[..]) {
         Err(e) => panic!("The server is not running because: {}", e),
         Ok(stream) => stream,
     };
@@ -50,10 +50,10 @@ pub fn do_write(stream: &mut StreamKind, message_out: &String) -> io::Result<()>
     match stream {
         StreamKind::IPCStream(ipc_stream) => {
             ipc_io::send_message(ipc_stream, message_out.as_str())?
-        },
+        }
         StreamKind::RPCStream(rpc_stream) => {
             rpc_io::send_message(rpc_stream, message_out.as_str())?
-        },
+        }
     }
     Ok(())
 }
@@ -66,12 +66,8 @@ pub fn do_read(stream: &mut StreamKind, message_in: &mut String) -> io::Result<(
     Ok(())
 }
 
-
 mod ipc_io {
-    use std::io::prelude::*;
-    use std::io;
-    use std::mem;
-    use std::os::unix::net::UnixStream;
+    use super::*;
 
     pub fn send_bytes(stream: &mut UnixStream, data: &[u8], length: usize) -> io::Result<()> {
         let mut remaining = length;
@@ -113,13 +109,9 @@ mod ipc_io {
     }
 }
 
-
 mod rpc_io {
-    use std::io::prelude::*;
-    use std::io;
-    use std::mem;
-    use std::net::TcpStream;
-    
+    use super::*;
+
     pub fn send_bytes(stream: &mut TcpStream, data: &[u8], length: usize) -> io::Result<()> {
         let mut remaining = length;
         let mut offset = 0;

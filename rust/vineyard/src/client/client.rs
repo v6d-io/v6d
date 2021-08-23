@@ -12,18 +12,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use std::io::{self, Error, ErrorKind};
-use std::os::unix::net::UnixStream;
 use std::net::TcpStream;
+use std::os::unix::net::UnixStream;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
+use super::rust_io::*;
 use super::ObjectID;
 use super::ObjectMeta;
-use super::rust_io::*;
 use crate::common::util::protocol::*;
 
 #[derive(Debug)]
@@ -33,7 +32,7 @@ pub enum ConnInputKind<'a, 'b> {
 }
 
 #[derive(Debug)]
-pub enum StreamKind{
+pub enum StreamKind {
     IPCStream(UnixStream),
     RPCStream(TcpStream),
 }
@@ -88,5 +87,4 @@ pub trait Client {
         read_drop_name_reply(message_in)?;
         Ok(())
     }
-
 }

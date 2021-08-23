@@ -277,7 +277,6 @@ pub fn read_drop_name_reply(root: Value) -> io::Result<()> {
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
