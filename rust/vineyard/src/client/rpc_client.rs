@@ -109,10 +109,7 @@ impl Client for RPCClient {
     }
 
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta> {
-        Ok(ObjectMeta {
-            client: None,
-            meta: String::new(),
-        })
+        Ok(ObjectMeta::default())
     }
 
     fn get_stream(&mut self) -> io::Result<&mut StreamKind> {

@@ -16,3 +16,5 @@ limitations under the License.
 pub struct Blob {}
 
 pub struct BlobWriter {}
+
+pub struct BufferSet {}
