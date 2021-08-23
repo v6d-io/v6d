@@ -2,7 +2,7 @@ Dask on Vineyard
 ================
 
 The integration with Dask allows dask.array and dask.dataframe to be persisted on and loaded from Vineyard.
-In the following, we demonstrate that, with Vineyard, it is much easier to implement the example that employs
+In the following, we first demonstrate that, with Vineyard, it is much easier to implement the example that employs
 dask for data preprocessing and tensorflow for distributed learning,
 which was previously shown in the blog_.
 
@@ -109,6 +109,40 @@ To use the preprocessed data, we register the resolvers that can resolve a **vin
 by mulitple workers to the resolver_context. Then we can get the **tf.data.Dataset** directly from vineyard by the **get**
 method. Note that we should specify the column names for the data and label which were set in the last step.
 
+Transfer Learning
+-----------------
+
+After the simple example above, now we demonstrate how the dask-vineyard integration can be leveraged in transfer learning.
+In a nutshell, transfer learning takes a pre-trained deep learning model to compute features for downstream models.
+Moreover, it's better to persist the features in memory, so that the fine-tuning of the downstream models
+will neither recompute the features nor incur too much I/O costs to read the features from disk again and again.
+In the following, we refer to the featurization_ example. We load the tf_flowers_ data as a **dask.array**;
+then use the pre-trained **ResNet50** model to generate the features; and finally save them in Vineyard.
+The global tensor in Vineyard will consists of 8 partitions, each with 400 data slots.
+
+.. code:: python
+
+        def get_images(idx, num):
+            paths = list(Path("flower_photos").rglob("*.jpg"))[idx::num]
+            data = []
+            for p in paths:
+                with open(p,'rb') as f:
+                  img = Image.open(io.BytesIO(f.read())).resize([224, 224])
+                  arr = preprocess_input(img_to_array(img))
+                  data.append(arr)
+            return np.array(data)
+
+        def featurize(v, block_id=None):
+            model = ResNet50(include_top=False)
+            preds = model.predict(np.stack(v))
+            return preds.reshape(400, 100352)
+
+        imgs = [da.from_delayed(delayed(get_images)(i,8), shape=(400, 244, 244, 3), dtype='float') for i in range(8)]
+        imgs = da.concatenate(imgs, axis=0)
+        res = imgs.map_blocks(featurize, chunks=(400,100352), drop_axis=[2,3], dtype=float)
+        global_tensor_id = vineyard.connect().put(res, dask_scheduler=dask_scheduler)
+
 
 .. _blog: http://matthewrocklin.com/blog/work/2017/02/11/dask-tensorflow
-
+.. _featurization: https://docs.databricks.com/_static/notebooks/deep-learning/deep-learning-transfer-learning-keras.html
+.. _tf_flowers: https://www.tensorflow.org/datasets/catalog/tf_flowers
