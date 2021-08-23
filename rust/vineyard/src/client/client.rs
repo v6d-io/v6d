@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use std::io::{self, Error, ErrorKind};
 use std::net::TcpStream;
 use std::os::unix::net::UnixStream;
@@ -88,5 +87,4 @@ pub trait Client {
         read_drop_name_reply(message_in)?;
         Ok(())
     }
-
 }

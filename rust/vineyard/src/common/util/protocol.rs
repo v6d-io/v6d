@@ -9,14 +9,6 @@ use std::ptr;
 use super::{InstanceID, ObjectID};
 use crate::client::client::Client;
 
-
-enum CommandType {
-    RegisterRequest,
-    RegisterReply,
-    ExitRequest,
-    ExitReply,
-}
-
 #[derive(Debug)]
 pub struct Payload {
     object_id: ObjectID,
