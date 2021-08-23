@@ -379,7 +379,6 @@ pub fn read_get_name_reply(root: Value) -> io::Result<ObjectID> {
 
 pub fn write_drop_name_request(name: &String) -> String {
     let msg = json!({"type": "drop_name_request", "name": name});
-    println!{"{:?}", msg};
     encode_msg(msg)
 }
 

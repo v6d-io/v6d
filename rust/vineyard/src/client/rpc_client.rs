@@ -44,8 +44,8 @@ pub struct RPCClient {
     stream: Option<StreamKind>,
 }
 
-impl RPCClient {
-    fn new_default() -> RPCClient {
+impl Default for RPCClient {
+    fn default() -> Self {
         RPCClient {
             connected: false,
             ipc_socket: String::new(),
@@ -75,7 +75,7 @@ impl Client for RPCClient {
         } else {
             self.rpc_endpoint = rpc_endpoint;
             let mut stream =
-                connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn).unwrap();
+                connect_rpc_socket(&self.rpc_endpoint, port, self.vineyard_conn)?;
             let mut rpc_stream = RPCStream(stream);
 
             let message_out: String = write_register_request();
@@ -129,10 +129,10 @@ mod tests {
     use super::*;
 
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_rpc_connect() {
         let print = true;
-        let rpc_client = &mut RPCClient::new_default();
+        let rpc_client = &mut RPCClient::default();
         if print {println!("Rpc client:\n {:?}\n", rpc_client)}
         rpc_client.connect(RPCConnInput("0.0.0.0", 9600));
         if print {println!("Rpc client after connect:\n {:?}\n ", rpc_client)}

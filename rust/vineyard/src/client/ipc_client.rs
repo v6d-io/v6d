@@ -43,8 +43,8 @@ pub struct IPCClient {
     stream: Option<StreamKind>,
 }
 
-impl IPCClient {
-    fn new_default() -> IPCClient {
+impl Default for IPCClient {
+    fn default() -> Self { 
         IPCClient {
             connected: false,
             ipc_socket: String::new(),
@@ -70,7 +70,7 @@ impl Client for IPCClient {
             return Ok(());
         } else {
             self.ipc_socket = ipc_socket;
-            let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn).unwrap();
+            let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn)?;
             let mut ipc_stream = IPCStream(stream);
 
             let message_out: String = write_register_request();
@@ -122,10 +122,10 @@ mod tests {
     use super::*;
 
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_ipc_connect() {
         let print = true;
-        let ipc_client = &mut IPCClient::new_default();
+        let ipc_client = &mut IPCClient::default();
         if print {println!("Ipc client:\n {:?}\n", ipc_client)}
         ipc_client.connect(IPCConnInput(SOCKET_PATH));
         if print {println!("Ipc client after connect:\n {:?}\n", ipc_client)}
@@ -134,8 +134,8 @@ mod tests {
     #[test]
     //#[ignore]
     fn test_ipc_put_and_get_name() {
-        let print = false;
-        let ipc_client = &mut IPCClient::new_default();
+        let print = true;
+        let ipc_client = &mut IPCClient::default();
         if print {println!("Ipc client:\n {:?}\n", ipc_client)}
         ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
         let id1 = 1 as ObjectID;
@@ -151,7 +151,7 @@ mod tests {
     //#[ignore]
     fn test_ipc_drop_name() {
         let print = false;
-        let ipc_client = &mut IPCClient::new_default();
+        let ipc_client = &mut IPCClient::default();
         if print {println!("Ipc client:\n {:?}\n", ipc_client)}
         ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
         let id = 1 as ObjectID;
