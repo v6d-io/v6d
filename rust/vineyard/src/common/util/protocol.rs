@@ -104,27 +104,6 @@ pub fn write_register_request() -> String {
     encode_msg(msg)
 }
 
-// Read functions: Read the JSON root to variants of ipc instance
-pub fn read_register_request(root: Value) -> Result<String, Error> {
-    RETURN_ON_ASSERT(root["type"] == "register_request");
-    Ok(root["version"].as_str().unwrap_or("0.0.0").to_string())
-}
-
-pub fn write_register_reply(
-    ipc_socket: &String,
-    rpc_endpoint: &String,
-    instance_id: InstanceID,
-) -> String {
-    let msg = json!({
-        "type": "register_reply",
-        "ipc_socket": ipc_socket,
-        "rpc_endpoint": rpc_endpoint,
-        "instance_id": instance_id,
-        "version": "0.2.6"
-    });
-    encode_msg(msg)
-}
-
 #[derive(Debug)]
 pub struct RegisterReply {
     pub ipc_socket: String,
@@ -133,6 +112,7 @@ pub struct RegisterReply {
     pub version: String,
 }
 
+// Read functions: Read the JSON root to variants of ipc instance
 pub fn read_register_reply(root: Value) -> Result<RegisterReply, Error> {
     CHECK_IPC_ERROR(&root, "register_reply");
     let ipc_socket = root["ipc_socket"].as_str().unwrap().to_string();
@@ -170,30 +150,6 @@ pub fn write_get_vec_data_request(ids: Vec<ObjectID>, sync_remote: bool, wait: b
         "sync_remote": sync_remote,
         "wait": wait
     });
-    encode_msg(msg)
-}
-
-pub struct GetDataRequest {
-    ids: Vec<Value>,
-    sync_remote: bool,
-    wait: bool,
-}
-
-pub fn read_get_data_request(root: Value) -> Result<GetDataRequest, Error> {
-    RETURN_ON_ASSERT(root["type"] == "get_data_request");
-    let ids: Vec<Value> = root["id"].as_array().unwrap().to_vec();
-    let sync_remote: bool = root["sync_remote"].as_bool().unwrap_or(false);
-    let wait: bool = root["wait"].as_bool().unwrap_or(false);
-    let ret = GetDataRequest {
-        ids,
-        sync_remote,
-        wait,
-    };
-    Ok(ret)
-}
-
-pub fn write_get_data_reply(content: Value) -> String {
-    let msg = json!({"type": "get_data_reply", "content": content});
     encode_msg(msg)
 }
 
@@ -236,39 +192,8 @@ pub fn write_list_data_request(pattern: &String, regex: bool, limit: usize) -> S
     encode_msg(msg)
 }
 
-pub struct ListDataRequest {
-    pattern: String,
-    regex: bool,
-    limit: usize,
-}
-
-pub fn read_list_data_request(root: Value) -> Result<ListDataRequest, Error> {
-    RETURN_ON_ASSERT(root["type"] == "list_data_request");
-    let pattern = root["pattern"].as_str().unwrap().to_string();
-    let regex: bool = root["regex"].as_bool().unwrap_or(false);
-    let limit = root["limit"].as_u64().unwrap() as usize;
-    let ret = ListDataRequest {
-        pattern,
-        regex,
-        limit,
-    };
-    Ok(ret)
-}
-
 pub fn write_create_buffer_request(size: usize) -> String {
     let msg = json!({"type": "create_buffer_request", "size": size});
-    encode_msg(msg)
-}
-
-pub fn read_create_buffer_request(root: Value) -> Result<usize, Error> {
-    RETURN_ON_ASSERT(root["type"] == "create_buffer_request");
-    let size = root["size"].as_u64().unwrap() as usize;
-    Ok(size)
-}
-
-pub fn write_create_buffer_reply(id: ObjectID, object: Payload) -> String {
-    let tree: Value = object.to_json();
-    let msg = json!({"type": "create_buffer_reply", "id": id, "created": tree});
     encode_msg(msg)
 }
 
@@ -284,12 +209,6 @@ pub fn read_create_buffer_reply(root: Value) -> Result<(ObjectID, Payload), Erro
 pub fn write_create_remote_buffer_request(size: usize) -> String {
     let msg = json!({"type": "create_remote_buffer_request", "size": size});
     encode_msg(msg)
-}
-
-pub fn read_create_remote_buffer_request(root: Value) -> Result<usize, Error> {
-    RETURN_ON_ASSERT(root["type"] == "create_remote_buffer_request");
-    let size = root["size"].as_u64().unwrap() as usize;
-    Ok(size)
 }
 
 pub fn write_get_buffer_request(ids: HashSet<ObjectID>) -> String {
@@ -309,35 +228,6 @@ pub fn write_get_buffer_request(ids: HashSet<ObjectID>) -> String {
     map.insert(
         String::from("num"),
         Value::Number(serde_json::Number::from(ids.len())),
-    );
-    let msg = Value::Object(map);
-    encode_msg(msg)
-}
-
-pub fn read_get_buffer_request(root: Value) -> Result<Vec<ObjectID>, Error> {
-    RETURN_ON_ASSERT(root["type"] == "get_buffers_request");
-    let mut ids: Vec<ObjectID> = Vec::new();
-    let num: usize = root["size"].as_u64().unwrap() as usize;
-    for idx in 0..num {
-        ids.push(root[idx.to_string()].as_u64().unwrap() as ObjectID)
-    }
-    Ok(ids)
-}
-
-pub fn write_get_buffer_reply(objects: Vec<Box<Payload>>) -> String {
-    let mut map = Map::new();
-    let num: usize = objects.len();
-    for idx in 0..num {
-        let tree: Value = objects[idx].to_json();
-        map.insert(idx.to_string(), tree);
-    }
-    map.insert(
-        String::from("type"),
-        Value::String("get_buffers_reply".to_string()),
-    );
-    map.insert(
-        String::from("num"),
-        Value::Number(serde_json::Number::from(objects.len())),
     );
     let msg = Value::Object(map);
     encode_msg(msg)

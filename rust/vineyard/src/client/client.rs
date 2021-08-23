@@ -62,7 +62,6 @@ pub trait Client {
         do_read(stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         read_put_name_reply(message_in)?;
-
         Ok(())
     }
 
@@ -75,7 +74,6 @@ pub trait Client {
         do_read(stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         let id = read_get_name_reply(message_in)?;
-
         Ok(id)
     }
 
@@ -88,7 +86,6 @@ pub trait Client {
         do_read(stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         read_drop_name_reply(message_in)?;
-
         Ok(())
     }
 
