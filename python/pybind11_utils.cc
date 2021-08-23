@@ -21,11 +21,9 @@ limitations under the License.
 #include <unordered_map>
 #include <utility>
 
-#include "pybind11/pybind11.h"
-
-#pragma GCC visibility push(default)
 #include "common/util/json.h"
-#pragma GCC visibility pop
+
+#include "pybind11/pybind11.h"
 
 namespace py = pybind11;
 using namespace py::literals;  // NOLINT(build/namespaces_literals)

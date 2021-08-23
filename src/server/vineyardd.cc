@@ -28,6 +28,7 @@ limitations under the License.
 #include "common/util/env.h"
 #include "common/util/flags.h"
 #include "common/util/logging.h"
+#include "common/util/version.h"
 #include "server/server/vineyard_server.h"
 #include "server/util/spec_resolvers.h"
 
@@ -74,12 +75,18 @@ int main(int argc, char* argv[]) {
   vineyard::logging::InstallFailureSignalHandler();
 
   vineyard::flags::SetUsageMessage("Usage: vineyardd [options]");
+  vineyard::flags::SetVersionString(vineyard::vineyard_version());
   vineyard::flags::ParseCommandLineNonHelpFlags(&argc, &argv, false);
   if (FLAGS_help) {
     FLAGS_help = false;
     FLAGS_helpmatch = "vineyard";
   }
   vineyard::flags::HandleCommandLineHelpFlags();
+
+  // tweak other flags, specially alias
+  if (vineyard::FLAGS_metrics) {
+    vineyard::FLAGS_prometheus = true;
+  }
 
   LOG(INFO) << "Hello vineyard!";
 

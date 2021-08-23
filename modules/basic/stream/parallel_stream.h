@@ -28,8 +28,9 @@ class ParallelStreamBuilder;
 
 class ParallelStream : public Registered<ParallelStream>, GlobalObject {
  public:
-  static std::shared_ptr<Object> Create() __attribute__((used)) {
-    return std::static_pointer_cast<Object>(std::make_shared<ParallelStream>());
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<ParallelStream>{new ParallelStream()});
   }
 
   void Construct(const ObjectMeta& meta) override {

@@ -33,6 +33,7 @@ limitations under the License.
 namespace vineyard {
 
 enum class CommandType {
+  DebugCommand = -1,
   NullCommand = 0,
   ExitRequest = 1,
   ExitReply = 2,
@@ -193,8 +194,7 @@ Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids);
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           std::string& msg);
 
-Status ReadGetBuffersReply(const json& root,
-                           std::map<ObjectID, Payload>& objects);
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   std::string& msg);
@@ -328,6 +328,14 @@ Status ReadFinalizeArenaRequest(const json& root, int& fd,
 void WriteFinalizeArenaReply(std::string& msg);
 
 Status ReadFinalizeArenaReply(const json& root);
+
+void WriteDebugRequest(const json& debug, std::string& msg);
+
+Status ReadDebugRequest(const json& root, json& debug);
+
+void WriteDebugReply(const json& result, std::string& msg);
+
+Status ReadDebugReply(const json& root, json& result);
 
 }  // namespace vineyard
 

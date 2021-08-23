@@ -346,6 +346,40 @@ Finally, we register the builder and resolver for automatic building and resolvi
     >>> builder_ctx.register(pa.NumericArray, numeric_array_builder)
     >>> resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
 
+There are cases where we have more than one resolvers or builders for a certain type,
+e.g., the :code:`vineyard::Tensor` object can be resolved as :code:`numpy.ndarray` or
+:code:`xgboost::DMatrix`. We could have
+
+.. code:: python
+
+    def numpy_resolver(obj):
+        ...
+
+    default_resolver_context.register('vineyard::Tensor', numpy_resolver)
+
+and
+
+.. code:: python
+
+    def xgboost_resolver(obj):
+        ...
+
+    default_resolver_context.register('vineyard::Tensor', xgboost_resolver)
+
+at the same time. The stackable :code:`resolver_context` could help there,
+
+.. code:: python
+
+    with resolver_context({'vineyard::Tensor', xgboost_resolver}):
+        ...
+
+Assuming the default context resolves :code:`vineyard::Tensor` to :code:`numpy.ndarray`,
+inside the :code:`with resolver_context` the :code:`vineyard::Tensor` will be resolved
+to :code:`xgboost::DMatrix`, and after exiting the context the global environment
+will be restored back as default.
+
+The :code:`with resolver_context` is nestable as well.
+
 .. _divein-driver-label:
 
 Driver

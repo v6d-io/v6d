@@ -100,6 +100,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::MakeArenaRequest;
   } else if (str_type == "finalize_arena_request") {
     return CommandType::FinalizeArenaRequest;
+  } else if (str_type == "debug_command") {
+    return CommandType::DebugCommand;
   } else {
     return CommandType::NullCommand;
   }
@@ -328,14 +330,13 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersReply(const json& root,
-                           std::map<ObjectID, Payload>& objects) {
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
     Payload object;
     object.FromJSON(tree);
-    objects.emplace(object.object_id, object);
+    objects.emplace_back(object);
   }
   return Status::OK();
 }
@@ -978,6 +979,32 @@ void WriteFinalizeArenaReply(std::string& msg) {
 
 Status ReadFinalizeArenaReply(const json& root) {
   CHECK_IPC_ERROR(root, "finalize_arena_reply");
+  return Status::OK();
+}
+
+void WriteDebugRequest(const json& debug, std::string& msg) {
+  json root;
+  root["type"] = "debug_command";
+  root["debug"] = debug;
+  encode_msg(root, msg);
+}
+
+Status ReadDebugRequest(const json& root, json& debug) {
+  RETURN_ON_ASSERT(root["type"] == "debug_command");
+  debug = root["debug"];
+  return Status::OK();
+}
+
+void WriteDebugReply(const json& result, std::string& msg) {
+  json root;
+  root["type"] = "debug_reply";
+  root["result"] = result;
+  encode_msg(root, msg);
+}
+
+Status ReadDebugReply(const json& root, json& result) {
+  CHECK_IPC_ERROR(root, "debug_reply");
+  result = root["result"];
   return Status::OK();
 }
 

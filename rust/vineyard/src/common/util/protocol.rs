@@ -9,6 +9,7 @@ use std::ptr;
 use super::{InstanceID, ObjectID};
 use crate::client::client::Client;
 
+
 enum CommandType {
     RegisterRequest,
     RegisterReply,
@@ -177,6 +178,7 @@ pub fn read_get_unordered_data_reply(root: Value) -> Result<HashMap<ObjectID, Va
     let mut key: usize = 0;
     for kv in content_group.as_array().unwrap().into_iter() {
         content.insert(object_id_from_string(&key.to_string()), kv.clone());
+
         key += 1;
     }
     Ok(content)

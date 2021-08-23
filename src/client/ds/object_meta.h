@@ -50,7 +50,10 @@ class Object;
 class ObjectMeta {
  public:
   ObjectMeta();
-  ~ObjectMeta() {}
+  ~ObjectMeta();
+
+  ObjectMeta(const ObjectMeta&);
+  ObjectMeta& operator=(ObjectMeta const& other);
 
   /**
    * @brief Associate the client with the metadata.
@@ -127,6 +130,12 @@ class ObjectMeta {
    * @brief Whether the object meta is the metadata of a local object.
    */
   bool const IsLocal() const;
+
+  /**
+   * @brief Mark the metadata as a "local" metadata to make sure the construct
+   * process proceed.
+   */
+  void ForceLocal() const;
 
   /**
    * @brief Whether specific `key` exists in this metadata.
@@ -491,6 +500,20 @@ class ObjectMeta {
 
   void SetMetaData(ClientBase* client, const json& meta);
 
+  /**
+   * Construct object metadata from unsafe sources.
+   */
+  static std::unique_ptr<ObjectMeta> Unsafe(std::string meta, size_t nobjects,
+                                            ObjectID* objects,
+                                            uintptr_t* pointers, size_t* sizes);
+
+  /**
+   * Construct object metadata from unsafe sources.
+   */
+  static std::unique_ptr<ObjectMeta> Unsafe(json meta, size_t nobjects,
+                                            ObjectID* objects,
+                                            uintptr_t* pointers, size_t* sizes);
+
   using const_iterator =
       nlohmann::detail::iteration_proxy_value<json::const_iterator>;
   const_iterator begin() const { return json::iterator_wrapper(meta_).begin(); }
@@ -510,11 +533,14 @@ class ObjectMeta {
   ClientBase* client_ = nullptr;
   json meta_;
   // associated blobs
-  std::shared_ptr<BufferSet> buffer_set_;
+  std::shared_ptr<BufferSet> buffer_set_ = nullptr;
 
   // incomplete: whether the metadata has incomplete member, introduced by
   // `AddMember(name, member_id)`.
   bool incomplete_ = false;
+
+  // force local: make it as a local metadata even when no client associated.
+  mutable bool force_local_ = false;
 
   friend class ClientBase;
   friend class Client;

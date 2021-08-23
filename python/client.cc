@@ -16,10 +16,6 @@ limitations under the License.
 #include <memory>
 #include <sstream>
 
-#include "pybind11/pybind11.h"
-#include "pybind11/stl.h"
-
-#pragma GCC visibility push(default)
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
@@ -27,8 +23,9 @@ limitations under the License.
 #include "client/rpc_client.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
-#pragma GCC visibility pop
 
+#include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
 #include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;
@@ -302,6 +299,12 @@ void bind_client(py::module& mod) {
             throw_on_error(self->InstanceStatus(status));
             return status;
           })
+      .def("debug",
+           [](ClientBase* self, py::dict debug) {
+             json result;
+             throw_on_error(self->Debug(detail::to_json(debug), result));
+             return detail::from_json(result);
+           })
       .def_property_readonly("ipc_socket", &ClientBase::IPCSocket)
       .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint)
       .def_property_readonly("version", &ClientBase::Version);
@@ -330,7 +333,26 @@ void bind_client(py::module& mod) {
       .def_property_readonly(
           "rpc_connections",
           [](InstanceStatus* status) { return status->rpc_connections; })
-      .def("__repr__", [](InstanceStatus* status) { return "InstanceStatus"; })
+      .def("__repr__",
+           [](InstanceStatus* status) {
+             std::stringstream ss;
+             ss << "{" << std::endl;
+             ss << "    instance_id: " << status->instance_id << ","
+                << std::endl;
+             ss << "    deployment: " << status->deployment << "," << std::endl;
+             ss << "    memory_usage: " << status->memory_usage << ","
+                << std::endl;
+             ss << "    memory_limit: " << status->memory_limit << ","
+                << std::endl;
+             ss << "    deferred_requests: " << status->deferred_requests << ","
+                << std::endl;
+             ss << "    ipc_connections: " << status->ipc_connections << ","
+                << std::endl;
+             ss << "    rpc_connections: " << status->rpc_connections
+                << std::endl;
+             ss << "}";
+             return ss.str();
+           })
       .def("__str__", [](InstanceStatus* status) {
         std::stringstream ss;
         ss << "InstanceStatus:" << std::endl;

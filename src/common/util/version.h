@@ -19,18 +19,12 @@ limitations under the License.
 #include <limits>
 #include <string>
 
+#include "common/util/config.h"
 #include "common/util/macros.h"
 
 namespace vineyard {
 
-#ifndef VINEYARD_VERSION
-#define VINEYARD_VERSION 0.0.0  // default version number: can match everything
-#endif
-
-inline const char* vineyard_version() {
-  static const char* __version = VINEYARD_TO_STRING(VINEYARD_VERSION);
-  return __version;
-}
+inline const char* vineyard_version() { return VINEYARD_VERSION_STRING; }
 
 inline const bool parse_version(const char* version, int& major, int& minor,
                                 int& patch) {

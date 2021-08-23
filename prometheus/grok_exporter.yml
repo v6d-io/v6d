@@ -1,0 +1,36 @@
+global:
+  config_version: 3
+input:
+  type: file
+  path: /tmp/vineyard.*.log.INFO.*
+  readall: false
+  fail_on_missing_logfile: true
+imports:
+grok_patterns:
+  - 'BASE10NUM (?<![0-9.+-])(?>[+-]?(?:(?:[0-9]+(?:\.[0-9]+)?)|(?:\.[0-9]+)))'
+  - 'NUMBER (?:%{BASE10NUM})'
+  - 'USERNAME [a-zA-Z0-9._-]+'
+  - 'LABEL [a-zA-Z]+'
+metrics:
+  - type: counter
+    name: data_requests_total
+    help: number of GetData or CreateData requests
+    match: '%{USERNAME:user} %{LABEL:op} data_requests_total %{NUMBER:val}'
+    value: '{{.val}}'
+    labels:
+      user: '{{.user}}'
+      operation: '{{.op}}'
+  - type: summary
+    name: data_request_latency
+    help: Data request duration seconds.
+    match: '%{USERNAME:user} %{LABEL:op} data_request_latency %{NUMBER:val}ms'
+    value: '{{.val}}'
+    quantiles: {0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
+    labels:
+      user: '{{.user}}'
+      operation: '{{.op}}'
+server:
+  protocol: http
+  host: localhost
+  port: 9144
+  path: /metrics

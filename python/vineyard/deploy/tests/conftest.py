@@ -18,40 +18,16 @@
 
 import pytest
 
-import vineyard
+from vineyard.conftest import vineyard_ipc_sockets, vineyard_endpoints
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--vineyard-ipc-sockets",
-        action="store",
-        default='/tmp/vineyard.sock',
-        help='Location of vineyard IPC sockets, seperated by ","',
-    )
-
-    parser.addoption(
-        "--vineyard-endpoints",
-        action="store",
-        default='127.0.0.1:9600',
-        help='Address of vineyard RPC endpoints, seperated by ","',
-    )
-
     parser.addoption(
         '--with-migration',
         action='store_true',
         default=False,
         help='Test with object migration enabled',
     )
-
-
-@pytest.fixture(scope='session')
-def vineyard_ipc_sockets(request):
-    return request.config.option.vineyard_ipc_sockets.split(',')
-
-
-@pytest.fixture(scope='session')
-def vineyard_endpoints(request):
-    return request.config.option.vineyard_endpoint.split(',')
 
 
 @pytest.fixture(scope='session')

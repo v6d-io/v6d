@@ -21,13 +21,11 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "pybind11/pybind11.h"
-
-#pragma GCC visibility push(default)
 #include "common/util/json.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
-#pragma GCC visibility pop
+
+#include "pybind11/pybind11.h"
 
 namespace py = pybind11;
 
