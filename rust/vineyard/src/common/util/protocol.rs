@@ -7,13 +7,7 @@ use std::io::{self, Error, ErrorKind};
 use std::ptr;
 
 use super::{InstanceID, ObjectID};
-
-enum CommandType {
-    RegisterRequest,
-    RegisterReply,
-    ExitRequest,
-    ExitReply,
-}
+use crate::client::client::Client;
 
 #[derive(Debug)]
 pub struct Payload {
@@ -79,9 +73,16 @@ pub fn CHECK_IPC_ERROR(tree: &Value, root_type: &str) {
     RETURN_ON_ASSERT(tree["type"].as_str().unwrap() == root_type);
 }
 
-// Question: use unsafe extern "C" fn strtoull?
-pub fn objectid_from_string(s: String) -> ObjectID {
-    0
+pub fn ENSURE_CONNECTED(b: bool) {
+    if !b {
+        panic!()
+    }
+    // Question. TODO: mutex
+}
+
+// TODO: Rust parse check
+pub fn object_id_from_string(s: &String) -> ObjectID {
+    s.parse::<ObjectID>().unwrap()
 }
 
 // Convert JSON Value to a String
@@ -90,40 +91,21 @@ pub fn encode_msg(msg: Value) -> String {
     ret
 }
 
-// Write functions: Derive and write JSON message to a String
+// Write functions: Derive the JSON message and write it to a String
 pub fn write_register_request() -> String {
-    let msg = json!({"type": "register_request", "version": "0.2.6" });
+    let msg = json!({"type": "register_request", "version": "0.2.6"});
     encode_msg(msg)
 }
 
-// Read functions: Read JSON root to variants of ipc instance
-pub fn read_register_request(root: Value) -> Result<String, Error> {
-    RETURN_ON_ASSERT(root["type"] == "register_request");
-    Ok(root["version"].as_str().unwrap_or("0.0.0").to_string())
-}
-
-pub fn write_register_reply(
-    ipc_socket: String,
-    rpc_endpoint: String,
-    instance_id: InstanceID,
-) -> String {
-    let msg = json!({
-        "type": "register_reply",
-        "ipc_socket": ipc_socket,
-        "rpc_endpoint": rpc_endpoint,
-        "instance_id": instance_id,
-        "version": "0.2.6"
-    });
-    encode_msg(msg)
-}
-
+#[derive(Debug)]
 pub struct RegisterReply {
-    ipc_socket: String,
-    rpc_endpoint: String,
-    instance_id: InstanceID,
-    version: String,
+    pub ipc_socket: String,
+    pub rpc_endpoint: String,
+    pub instance_id: InstanceID,
+    pub version: String,
 }
 
+// Read functions: Read the JSON root to variants of ipc instance
 pub fn read_register_reply(root: Value) -> Result<RegisterReply, Error> {
     CHECK_IPC_ERROR(&root, "register_reply");
     let ipc_socket = root["ipc_socket"].as_str().unwrap().to_string();
@@ -164,30 +146,6 @@ pub fn write_get_vec_data_request(ids: Vec<ObjectID>, sync_remote: bool, wait: b
     encode_msg(msg)
 }
 
-pub struct GetDataRequest {
-    ids: Vec<Value>,
-    sync_remote: bool,
-    wait: bool,
-}
-
-pub fn read_get_data_request(root: Value) -> Result<GetDataRequest, Error> {
-    RETURN_ON_ASSERT(root["type"] == "get_data_request");
-    let ids: Vec<Value> = root["id"].as_array().unwrap().to_vec();
-    let sync_remote: bool = root["sync_remote"].as_bool().unwrap_or(false);
-    let wait: bool = root["wait"].as_bool().unwrap_or(false);
-    let ret = GetDataRequest {
-        ids,
-        sync_remote,
-        wait,
-    };
-    Ok(ret)
-}
-
-pub fn write_get_data_reply(content: Value) -> String {
-    let msg = json!({"type": "get_data_reply", "content": content});
-    encode_msg(msg)
-}
-
 pub fn read_get_data_reply(root: Value) -> Result<Value, Error> {
     CHECK_IPC_ERROR(&root, "get_data_reply");
     let content_group = &root["content"];
@@ -211,13 +169,14 @@ pub fn read_get_unordered_data_reply(root: Value) -> Result<HashMap<ObjectID, Va
     let content_group = &root["content"];
     let mut key: usize = 0;
     for kv in content_group.as_array().unwrap().into_iter() {
-        content.insert(objectid_from_string(key.to_string()), kv.clone());
+        content.insert(object_id_from_string(&key.to_string()), kv.clone());
+
         key += 1;
     }
     Ok(content)
 }
 
-pub fn write_list_data_request(pattern: String, regex: bool, limit: usize) -> String {
+pub fn write_list_data_request(pattern: &String, regex: bool, limit: usize) -> String {
     let msg = json!({
         "type": "list_data_request",
         "pattern": pattern,
@@ -227,39 +186,8 @@ pub fn write_list_data_request(pattern: String, regex: bool, limit: usize) -> St
     encode_msg(msg)
 }
 
-pub struct ListDataRequest {
-    pattern: String,
-    regex: bool,
-    limit: usize,
-}
-
-pub fn read_list_data_request(root: Value) -> Result<ListDataRequest, Error> {
-    RETURN_ON_ASSERT(root["type"] == "list_data_request");
-    let pattern = root["pattern"].as_str().unwrap().to_string();
-    let regex: bool = root["regex"].as_bool().unwrap_or(false);
-    let limit = root["limit"].as_u64().unwrap() as usize;
-    let ret = ListDataRequest {
-        pattern,
-        regex,
-        limit,
-    };
-    Ok(ret)
-}
-
 pub fn write_create_buffer_request(size: usize) -> String {
     let msg = json!({"type": "create_buffer_request", "size": size});
-    encode_msg(msg)
-}
-
-pub fn read_create_buffer_request(root: Value) -> Result<usize, Error> {
-    RETURN_ON_ASSERT(root["type"] == "create_buffer_request");
-    let size = root["size"].as_u64().unwrap() as usize;
-    Ok(size)
-}
-
-pub fn write_create_buffer_reply(id: ObjectID, object: Payload) -> String {
-    let tree: Value = object.to_json();
-    let msg = json!({"type": "create_buffer_reply", "id": id, "created": tree});
     encode_msg(msg)
 }
 
@@ -275,12 +203,6 @@ pub fn read_create_buffer_reply(root: Value) -> Result<(ObjectID, Payload), Erro
 pub fn write_create_remote_buffer_request(size: usize) -> String {
     let msg = json!({"type": "create_remote_buffer_request", "size": size});
     encode_msg(msg)
-}
-
-pub fn read_create_remote_buffer_request(root: Value) -> Result<usize, Error> {
-    RETURN_ON_ASSERT(root["type"] == "create_remote_buffer_request");
-    let size = root["size"].as_u64().unwrap() as usize;
-    Ok(size)
 }
 
 pub fn write_get_buffer_request(ids: HashSet<ObjectID>) -> String {
@@ -305,35 +227,6 @@ pub fn write_get_buffer_request(ids: HashSet<ObjectID>) -> String {
     encode_msg(msg)
 }
 
-pub fn read_get_buffer_request(root: Value) -> Result<Vec<ObjectID>, Error> {
-    RETURN_ON_ASSERT(root["type"] == "get_buffers_request");
-    let mut ids: Vec<ObjectID> = Vec::new();
-    let num: usize = root["size"].as_u64().unwrap() as usize;
-    for idx in 0..num {
-        ids.push(root[idx.to_string()].as_u64().unwrap() as ObjectID)
-    }
-    Ok(ids)
-}
-
-pub fn write_get_buffer_reply(objects: Vec<Box<Payload>>) -> String {
-    let mut map = Map::new();
-    let num: usize = objects.len();
-    for idx in 0..num {
-        let tree: Value = objects[idx].to_json();
-        map.insert(idx.to_string(), tree);
-    }
-    map.insert(
-        String::from("type"),
-        Value::String("get_buffers_reply".to_string()),
-    );
-    map.insert(
-        String::from("num"),
-        Value::Number(serde_json::Number::from(objects.len())),
-    );
-    let msg = Value::Object(map);
-    encode_msg(msg)
-}
-
 pub fn read_get_buffer_reply(root: Value) -> Result<HashMap<ObjectID, Payload>, Error> {
     CHECK_IPC_ERROR(&root, "get_buffers_reply");
     let mut objects: HashMap<ObjectID, Payload> = HashMap::new();
@@ -347,12 +240,44 @@ pub fn read_get_buffer_reply(root: Value) -> Result<HashMap<ObjectID, Payload>, 
     Ok(objects)
 }
 
+pub fn write_put_name_request(object_id: ObjectID, name: &String) -> String {
+    let msg = json!({"type": "put_name_request", "object_id": object_id, "name": name});
+    encode_msg(msg)
+}
+
+pub fn read_put_name_reply(root: Value) -> io::Result<()> {
+    CHECK_IPC_ERROR(&root, "put_name_reply");
+    Ok(())
+}
+
+pub fn write_get_name_request(name: &String, wait: bool) -> String {
+    let msg = json!({"type": "get_name_request", "name": name, "wait": wait});
+    encode_msg(msg)
+}
+
+pub fn read_get_name_reply(root: Value) -> io::Result<ObjectID> {
+    CHECK_IPC_ERROR(&root, "get_name_reply");
+    let object_id = root["object_id"].as_u64().unwrap() as ObjectID;
+    Ok(object_id)
+}
+
+pub fn write_drop_name_request(name: &String) -> String {
+    let msg = json!({"type": "drop_name_request", "name": name});
+    encode_msg(msg)
+}
+
+pub fn read_drop_name_reply(root: Value) -> io::Result<()> {
+    CHECK_IPC_ERROR(&root, "drop_name_reply");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn read_register_reply_test() {
+    #[ignore]
+    fn test_print_read_register_reply() {
         let msg = json!({
             "type": "register_reply",
             "ipc_socket": "some_ipc_socket",

@@ -15,6 +15,7 @@ limitations under the License.
 use std::env;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
+use std::mem;
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
@@ -22,11 +23,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::client::conn_input::{self, ipc_conn_input};
 use super::client::Client;
-use super::InstanceID;
-use super::ObjectID;
-use super::ObjectMeta;
+use super::client::ConnInputKind::{self, IPCConnInput};
+use super::client::StreamKind::{self, IPCStream};
+use super::rust_io::*;
+use super::{InstanceID, ObjectID, ObjectMeta};
+
 use crate::common::util::protocol::*;
 
 pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
@@ -39,40 +41,28 @@ pub struct IPCClient {
     vineyard_conn: i64,
     instance_id: InstanceID,
     server_version: String,
+    stream: Option<StreamKind>,
 }
 
-// socket_fd is used to assign vineyard_conn
-pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> Result<UnixStream, Error> {
-    let socket = Path::new(pathname);
-    let mut stream = match UnixStream::connect(&socket) {
-        Err(error) => panic!("The server is not running because: {}.", error),
-        Ok(stream) => stream,
-    };
-    Ok(stream)
-}
-
-fn do_write(stream: &mut UnixStream, message_out: &String) -> Result<(), Error> {
-    match stream.write_all(message_out.as_bytes()) {
-        Err(error) => panic!("Couldn't send message because: {}.", error),
-        Ok(_) => Ok(()),
-    }
-}
-
-// TODO
-// fn send_message(vineyard_conn: i64, message_out: &String) -> Result<(), Error> {}
-
-fn do_read(stream: &mut UnixStream, message_in: &mut String) -> Result<(), Error> {
-    match stream.read_to_string(message_in) {
-        Err(error) => panic!("Couldn't receive message because: {}.", error),
-        Ok(_) => Ok(()),
+impl Default for IPCClient {
+    fn default() -> Self {
+        IPCClient {
+            connected: false,
+            ipc_socket: String::new(),
+            rpc_endpoint: String::new(),
+            vineyard_conn: 0,
+            instance_id: 0,
+            server_version: String::new(),
+            stream: None as Option<StreamKind>,
+        }
     }
 }
 
 impl Client for IPCClient {
-    // Connect to vineyardd using the given UNIX domain socket `ipc_socket`
-    fn connect(&mut self, conn_input: conn_input) -> Result<(), Error> {
+    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()> {
         let socket = match conn_input {
-            ipc_conn_input(socket) => socket,
+            IPCConnInput(socket) => socket,
+
             _ => panic!("Unsuitable type of connect input."),
         };
         let ipc_socket: String = String::from(socket);
@@ -81,41 +71,51 @@ impl Client for IPCClient {
         if self.connected {
             return Ok(());
         } else {
-            // If not connected yet
-            // Connect to an ipc socket
             self.ipc_socket = ipc_socket;
-            let mut stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn).unwrap();
+            let stream = connect_ipc_socket(&self.ipc_socket, self.vineyard_conn)?;
+            let mut ipc_stream = IPCStream(stream);
 
-            // Write a request  ( You need to start the vineyardd server on the same socket)
             let message_out: String = write_register_request();
-            do_write(&mut stream, &message_out).unwrap();
+            if let Err(e) = do_write(&mut ipc_stream, &message_out) {
+                self.connected = false;
+                return Err(e);
+            }
 
-            // Read the reply
             let mut message_in = String::new();
-            do_read(&mut stream, &mut message_in).unwrap();
-            println!("{}", message_in);
-            println!("hey");
+            do_read(&mut ipc_stream, &mut message_in)?;
 
-            // TODO： Read register reply
+            let message_in: Value =
+                serde_json::from_str(&message_in).expect("JSON was not well-formatted");
+            let register_reply: RegisterReply = read_register_reply(message_in)?;
+            //println!("Register reply:\n{:?}\n", register_reply);
+
+            self.instance_id = register_reply.instance_id;
+            self.server_version = register_reply.version;
+            self.rpc_endpoint = register_reply.rpc_endpoint;
+            self.stream = Some(ipc_stream);
+            self.connected = true;
 
             // TODO： Compatable server
 
-            return Ok(());
+            Ok(())
         }
     }
 
     fn disconnect(&self) {}
 
-    fn connected(&self) -> bool {
-        true
+    fn connected(&mut self) -> bool {
+        self.connected
     }
 
-    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> Result<ObjectMeta, Error> {
-        // Ok(ObjectMeta {
-        //     client: None,
-        //     meta: String::new(),
-        // })
+    fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta> {
         panic!();
+    }
+
+    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
+        match &mut self.stream {
+            Some(stream) => return Ok(&mut *stream),
+            None => panic!(),
+        }
     }
 }
 // TODO: Test the connect
@@ -125,21 +125,41 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    #[ignore]
+    fn test_ipc_connect() {
+        let print = true;
+        let ipc_client = &mut IPCClient::default();
+        if print {
+            println!("Ipc client:\n {:?}\n", ipc_client)
+        }
+        ipc_client.connect(IPCConnInput(SOCKET_PATH));
+        if print {
+            println!("Ipc client after connect:\n {:?}\n", ipc_client)
+        }
     }
 
     #[test]
     #[ignore]
-    fn ipc_connect() {
-        let ipc_client = &mut IPCClient {
-            connected: false,
-            ipc_socket: String::new(),
-            rpc_endpoint: String::new(),
-            vineyard_conn: 0,
-            instance_id: 0,
-            server_version: String::new(),
-        };
-        ipc_client.connect(ipc_conn_input(SOCKET_PATH));
+    fn test_ipc_put_and_get_name() {
+        let ipc_client = &mut IPCClient::default();
+        ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
+        let id1 = 1 as ObjectID;
+        let name = String::from("put&get_test_name");
+        ipc_client.put_name(id1, &name);
+        let id2 = ipc_client.get_name(&name, false).unwrap();
+        assert_eq!(id1, id2);
+    }
+
+    #[test]
+    #[should_panic]
+    #[ignore]
+    fn test_ipc_drop_name() {
+        let ipc_client = &mut IPCClient::default();
+        ipc_client.connect(IPCConnInput(SOCKET_PATH)).unwrap();
+        let id = 1 as ObjectID;
+        let name = String::from("drop_test_name");
+        ipc_client.put_name(id, &name);
+        ipc_client.drop_name(&name);
+        let id = ipc_client.get_name(&name, false).unwrap();
     }
 }
