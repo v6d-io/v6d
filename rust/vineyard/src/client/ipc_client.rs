@@ -1,28 +1,14 @@
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-<<<<<<< HEAD
-use super::client::Client;
-use super::ObjectMeta;
-
-#[derive(Debug)]
-pub struct IPCClient {}
-
-impl Client for IPCClient {
-    fn connect(&self, socket: &str) -> bool {
-        true
-=======
 use std::env;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
@@ -108,19 +94,10 @@ impl Client for IPCClient {
 
             Ok(())
         }
->>>>>>> 4a085ee... Formatted for the 2nd pr
     }
 
     fn disconnect(&self) {}
 
-<<<<<<< HEAD
-    fn connected(&self) -> bool {
-        true
-    }
-
-    fn get_meta_data(&self, object_id: u64, sync_remote: bool) -> ObjectMeta {
-        ObjectMeta {}
-=======
     fn connected(&mut self) -> bool {
         self.connected
     }
@@ -134,17 +111,11 @@ impl Client for IPCClient {
             Some(stream) => return Ok(&mut *stream),
             None => panic!(),
         }
->>>>>>> 4a085ee... Formatted for the 2nd pr
     }
 }
 
 #[cfg(test)]
 mod tests {
-<<<<<<< HEAD
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-=======
     use super::*;
 
     #[test]
@@ -184,6 +155,5 @@ mod tests {
         ipc_client.put_name(id, &name);
         ipc_client.drop_name(&name);
         let id = ipc_client.get_name(&name, false).unwrap();
->>>>>>> 4a085ee... Formatted for the 2nd pr
     }
 }

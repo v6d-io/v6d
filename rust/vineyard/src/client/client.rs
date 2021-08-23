@@ -1,20 +1,14 @@
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-<<<<<<< HEAD
-use super::ObjectMeta;
-=======
 use std::io::{self, Error, ErrorKind};
 use std::net::TcpStream;
 use std::os::unix::net::UnixStream;
@@ -39,18 +33,13 @@ pub enum StreamKind {
     IPCStream(UnixStream),
     RPCStream(TcpStream),
 }
->>>>>>> 4a085ee... Formatted for the 2nd pr
 
 pub trait Client {
-    fn connect(&self, socket: &str) -> bool;
+    fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()>;
 
+    // Disconnect this client.
     fn disconnect(&self);
 
-<<<<<<< HEAD
-    fn connected(&self) -> bool;
-
-    fn get_meta_data(&self, object_id: u64, sync_remote: bool) -> ObjectMeta;
-=======
     // Question: recv function in sys/socket.h?
     // if self.connected && recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1
     fn connected(&mut self) -> bool;
@@ -95,5 +84,4 @@ pub trait Client {
         read_drop_name_reply(message_in)?;
         Ok(())
     }
->>>>>>> 4a085ee... Formatted for the 2nd pr
 }
