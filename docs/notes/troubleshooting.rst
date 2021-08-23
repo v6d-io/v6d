@@ -42,9 +42,9 @@ could helps you when error occurs.
 
   Besides, you may also meet strange crashes or runtime exceptions if you have
   :code:`import` pyarrow before vineyard, you could try to adjust the import order
-  by :code:`import vineyard` before :code:`import pyarrow`. And please export environment
-  variable :code:`VINEYARD_DEV=TRUE` if you have encountered any shared library related
-  issue.
+  by :code:`import vineyard` before :code:`import pyarrow`. And please export
+  environment variable :code:`VINEYARD_DEV=TRUE` if you have encountered any
+  shared library related issue.
 
 3. *Resource of etcd pod when deploying on Kubernetes*
 
@@ -68,3 +68,19 @@ could helps you when error occurs.
   .. code:: console
 
       cmake .. -DBUILD_VINEYARD_GRAPH=OFF
+
+5. *bind: Permission denied error when launching vineyardd*
+
+  VIneyard server listens on a UNIX-domain socket to establish IPC connections
+  and sharing memory with clients. By default, the UNIX-domain socket is located
+  at :code:`/var/run/vineyard.sock`, where the root permission is usually required.
+
+  To launching vineyardd, you could either
+
+  + run :code:`vineyardd` command with :code:`sudo`,
+  + or, specify a location for UNIX-domain socket where root permission is not
+    required via the :code:`--socket` command line arguments, e.g.,
+
+    .. code:: bash
+
+       vineyardd --socket=/tmp/vineyard.sock

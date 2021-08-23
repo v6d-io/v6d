@@ -202,9 +202,10 @@ class ArrowFragment
   static constexpr grape::LoadStrategy load_strategy =
       grape::LoadStrategy::kBothOutIn;
 
-  static std::shared_ptr<vineyard::Object> Create() __attribute__((used)) {
+  static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<vineyard::Object>(
-        std::make_shared<ArrowFragment<oid_t, vid_t>>());
+        std::unique_ptr<ArrowFragment<oid_t, vid_t>>{
+            new ArrowFragment<oid_t, vid_t>()});
   }
 
  public:
@@ -370,13 +371,13 @@ class ArrowFragment
   }
 
   template <typename DATA_T>
-  property_graph_utils::VertexDataColumn<DATA_T, vertex_t> vertex_data_column(
+  property_graph_utils::VertexDataColumn<DATA_T, vid_t> vertex_data_column(
       label_id_t label, prop_id_t prop) const {
     if (vertex_tables_[label]->num_rows() == 0) {
-      return property_graph_utils::VertexDataColumn<DATA_T, vertex_t>(
+      return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
           InnerVertices(label));
     } else {
-      return property_graph_utils::VertexDataColumn<DATA_T, vertex_t>(
+      return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
           InnerVertices(label), vertex_tables_[label]->column(prop)->chunk(0));
     }
   }
@@ -522,6 +523,15 @@ class ArrowFragment
 
   inline bool Oid2Gid(label_id_t label, const oid_t& oid, vid_t& gid) const {
     return vm_ptr_->GetGid(label, internal_oid_t(oid), gid);
+  }
+
+  inline bool Oid2Gid(label_id_t label, const oid_t& oid, vertex_t& v) const {
+    vid_t gid;
+    if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
+      v.SetValue(gid);
+      return true;
+    }
+    return false;
   }
 
   inline bool InnerVertexGid2Vertex(const vid_t& gid, vertex_t& v) const {

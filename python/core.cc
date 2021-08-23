@@ -16,10 +16,6 @@ limitations under the License.
 #include <functional>
 #include <memory>
 
-#include "pybind11/pybind11.h"
-#include "pybind11/stl.h"
-
-#pragma GCC visibility push(default)
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
@@ -27,8 +23,9 @@ limitations under the License.
 #include "client/rpc_client.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
-#pragma GCC visibility pop
 
+#include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
 #include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;

@@ -17,12 +17,16 @@
 #
 
 import os
+import subprocess
 import textwrap
 
+from distutils.cmd import Command
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 from setuptools.dist import Distribution
 from wheel.bdist_wheel import bdist_wheel
+
+repo_root = os.path.dirname(os.path.abspath(__file__))
 
 
 class CopyCMakeExtension(Extension):
@@ -54,6 +58,41 @@ class BinDistribution(Distribution):
     '''
     def has_ext_modules(self):
         return True
+
+
+class FormatAndLint(Command):
+    description = "format and lint code"
+    user_options = []
+
+    user_options = [("inplace=", "i", "Run code formatter and linter inplace")]
+
+    def initialize_options(self):
+        self.inplace = False
+
+    def finalize_options(self):
+        if self.inplace in ['true', 'True', '1', 't'] or self.inplace:
+            self.inplace = True
+        else:
+            self.inplace = False
+
+    def run(self):
+        if self.inplace:
+            mode = "--in-place"
+        else:
+            mode = "--diff"
+        subprocess.check_call([
+            "yapf",
+            mode,
+            "--recursive",
+            "isort",
+            "setup.py",
+            "setup_ml.py",
+            "setup_airflow.py",
+            "python/",
+            "modules/io/setup.py",
+            "modules/io/python",
+        ],
+                              cwd=repo_root)
 
 
 def find_core_packages(root):
@@ -104,6 +143,7 @@ setup(
     cmdclass={
         'build_ext': CopyCMakeBin,
         'bdist_wheel': bdist_wheel_injected,
+        "lint": FormatAndLint,
     },
     distclass=BinDistribution,
     zip_safe=False,

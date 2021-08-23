@@ -126,9 +126,9 @@ class GlobalDataFrameBaseBuilder;
  */
 class GlobalDataFrame : public Registered<GlobalDataFrame>, GlobalObject {
  public:
-  static std::shared_ptr<Object> Create() __attribute__((used)) {
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(
-        std::make_shared<GlobalDataFrame>());
+        std::unique_ptr<GlobalDataFrame>{new GlobalDataFrame()});
   }
 
   void Construct(const ObjectMeta& meta) override;

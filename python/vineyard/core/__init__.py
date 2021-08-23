@@ -16,6 +16,6 @@
 # limitations under the License.
 #
 
-from .builder import default_builder_context
-from .driver import default_driver_context
-from .resolver import default_resolver_context
+from .builder import default_builder_context, builder_context
+from .driver import default_driver_context, driver_context
+from .resolver import default_resolver_context, resolver_context

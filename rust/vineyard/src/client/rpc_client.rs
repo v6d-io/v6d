@@ -16,6 +16,7 @@ use std::env;
 use std::io::prelude::*;
 use std::io::{self, Error, ErrorKind};
 use std::mem;
+
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
 use std::path::Path;
 
@@ -66,6 +67,7 @@ impl Client for RPCClient {
         let rpc_host = String::from(host);
         let rpc_endpoint = format!("{}:{}", host, port.to_string());
 
+
         // Panic when they have connected while assigning different rpc_endpoint
         RETURN_ON_ASSERT(!self.connected || rpc_endpoint == self.rpc_endpoint);
         if self.connected {
@@ -99,6 +101,7 @@ impl Client for RPCClient {
 
             Ok(())
         }
+
     }
 
     fn disconnect(&self) {}

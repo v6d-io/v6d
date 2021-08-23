@@ -125,6 +125,9 @@ struct NbrUnit {
   }
 };
 
+template <typename VID_T>
+using NbrUnitDefault = NbrUnit<VID_T, property_graph_types::EID_TYPE>;
+
 template <typename DATA_T, typename NBR_T>
 class EdgeDataColumn {
  public:
@@ -170,6 +173,9 @@ class EdgeDataColumn<std::string, NBR_T> {
 };
 
 template <typename DATA_T, typename VID_T>
+using EdgeDataColumnDefault = EdgeDataColumn<DATA_T, NbrUnitDefault<VID_T>>;
+
+template <typename DATA_T, typename VID_T>
 class VertexDataColumn {
  public:
   VertexDataColumn(grape::VertexRange<VID_T> range,
@@ -179,7 +185,8 @@ class VertexDataColumn {
             vineyard::ConvertToArrowType<DATA_T>::TypeValue())) {
       data_ =
           std::dynamic_pointer_cast<
-              typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array) -
+              typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array)
+              ->raw_values() -
           static_cast<ptrdiff_t>(range.begin().GetValue());
     } else {
       data_ = NULL;
@@ -329,6 +336,9 @@ struct Nbr {
   const void** edata_arrays_;
 };
 
+template <typename VID_T>
+using NbrDefault = Nbr<VID_T, property_graph_types::EID_TYPE>;
+
 template <typename VID_T, typename EID_T>
 struct OffsetNbr {
  private:
@@ -459,6 +469,9 @@ class RawAdjList {
   const NbrUnit<VID_T, EID_T>* end_;
 };
 
+template <typename VID_T>
+using RawAdjListDefault = RawAdjList<VID_T, property_graph_types::EID_TYPE>;
+
 template <typename VID_T, typename EID_T>
 class AdjList {
  public:
@@ -492,6 +505,9 @@ class AdjList {
   const NbrUnit<VID_T, EID_T>* end_;
   const void** edata_arrays_;
 };
+
+template <typename VID_T>
+using AdjListDefault = AdjList<VID_T, property_graph_types::EID_TYPE>;
 
 /**
  * OffsetAdjList will offset the outer vertices' lid, makes it between "ivnum"

@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.v6d</groupId>
+    <artifactId>vineyard</artifactId>
+    <version>0.1-SNAPSHOT</version>
+  </parent>
+
+  <groupId>io.v6d.core</groupId>
+  <artifactId>vineyard-core</artifactId>
+
+  <name>vineyard-core</name>
+  <url>https://v6d.io</url>
+
+  <properties>
+    <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
+    <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
+    <dependency.guava.version>30.1.1-jre</dependency.guava.version>
+    <dependency.native-lib-loader.version>2.3.5</dependency.native-lib-loader.version>
+    <dependency.jackson.version>2.12.4</dependency.jackson.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+        <groupId>com.github.jnr</groupId>
+        <artifactId>jnr-posix</artifactId>
+        <version>${dependency.jnr-posix.version}</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.github.jnr</groupId>
+        <artifactId>jnr-unixsocket</artifactId>
+        <version>${dependency.jnr-unixsocket.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${dependency.jackson.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${dependency.jackson.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${dependency.jackson.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${dependency.guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scijava</groupId>
+      <artifactId>native-lib-loader</artifactId>
+      <version>${dependency.native-lib-loader.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+      </plugin>
+      <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <compilerArgs>
+            <arg>-h</arg>
+            <arg>${project.build.directory}/jni/javah-include</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>-Djava.library.path=${project.build.directory}/classes/${native.library.path}</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-install-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+      </plugin>
+      <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
+      <plugin>
+        <artifactId>maven-site-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-sources</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <mkdir dir="${project.build.directory}/classes/${native.library.path}"/>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <version>1.0-alpha-11</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+              <goal>link</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <compilerProvider>generic-classic</compilerProvider>
+          <compilerExecutable>g++</compilerExecutable>
+          <linkerExecutable>g++</linkerExecutable>
+          <sources>
+            <source>
+              <directory>${project.basedir}/src/main/cpp/ffi</directory>
+              <fileNames>
+                <fileName>fling.cc</fileName>
+                <fileName>object_meta.cc</fileName>
+              </fileNames>
+            </source>
+            <source>
+              <directory>${project.build.directory}/jni/javah-include</directory>
+            </source>
+          </sources>
+          <compilerStartOptions>
+            <compilerStartOption>-I ${JAVA_HOME}/include</compilerStartOption>
+            <compilerStartOption>-I ${JAVA_HOME}/include/linux</compilerStartOption>
+            <compilerStartOption>-I ${JAVA_HOME}/include/darwin</compilerStartOption>
+            <compilerStartOption>-I /usr/local/include</compilerStartOption>
+            <compilerStartOption>-I /usr/local/include/vineyard</compilerStartOption>
+            <compilerStartOption>-I ${project.build.directory}/jni/javah-include</compilerStartOption>
+          </compilerStartOptions>
+          <compilerEndOptions>
+            <compilerEndOption>-fPIC</compilerEndOption>
+            <compilerEndOption>-std=c++14</compilerEndOption>
+          </compilerEndOptions>
+          <linkerStartOptions>
+            <linkerStartOption>-L ${JAVA_HOME}/lib/</linkerStartOption>
+            <linkerStartOption>-L /usr/lib/</linkerStartOption>
+            <linkerStartOption>-L /usr/local/lib/</linkerStartOption>
+          </linkerStartOptions>
+          <linkerEndOptions>
+            <linkerEndOption>-lvineyard_client</linkerEndOption>
+            <linkerEndOption>-lglog</linkerEndOption>
+            <linkerEndOption>-shared</linkerEndOption>
+            <linkerEndOption>-fPIC</linkerEndOption>
+          </linkerEndOptions>
+          <linkerOutputDirectory>${project.build.directory}/classes/${native.library.path}</linkerOutputDirectory>
+          <linkerFinalName>lib${project.build.finalName}</linkerFinalName>
+          <linkerFinalNameExt>${native.library.ext}</linkerFinalNameExt>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>Linux</name>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <configuration>
+              <linkerMiddleOptions>
+                <linkerMiddleOption>-L /usr/lib64/</linkerMiddleOption>
+                <linkerMiddleOption>-L /usr/local/lib64/</linkerMiddleOption>
+              </linkerMiddleOptions>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>macosx</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <configuration>
+              <linkerMiddleOptions>
+                <linkerMiddleOption>-Wl,-rpath,/usr/lib</linkerMiddleOption>
+                <linkerMiddleOption>-Wl,-rpath,/usr/local/lib</linkerMiddleOption>
+              </linkerMiddleOptions>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

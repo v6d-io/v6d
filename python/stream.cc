@@ -18,16 +18,13 @@ limitations under the License.
 #include <memory>
 #include <unordered_map>
 
-#include "pybind11/pybind11.h"
-#include "pybind11/pytypes.h"
-#include "pybind11/stl.h"
-
-#pragma GCC visibility push(default)
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/dataframe_stream.h"
 #include "client/client.h"
-#pragma GCC visibility pop
 
+#include "pybind11/pybind11.h"
+#include "pybind11/pytypes.h"
+#include "pybind11/stl.h"
 #include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;

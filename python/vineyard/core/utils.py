@@ -29,9 +29,10 @@ def find_most_precise_match(typename, candidates):
             List of candidates to match with, the first element is prefix, and the second
             entry is the candidate item, e.g., resolver or driver method.
     '''
-    for prefix, candidate in candidates.items():
-        if typename.startswith(prefix):
-            return prefix, candidate
+    if candidates:
+        for prefix, candidate in candidates.items():
+            if typename.startswith(prefix):
+                return prefix, candidate
     return None, None
 
 

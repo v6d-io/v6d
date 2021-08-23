@@ -18,9 +18,15 @@ limitations under the License.
 
 #include <string>
 
+#include "gflags/gflags.h"
+
 #include "common/util/json.h"
 
 namespace vineyard {
+
+// Whether to print metrics for prometheus or not, default value is false.
+DECLARE_bool(prometheus);
+DECLARE_bool(metrics);
 
 /**
  * @brief Resolver is the base class of different kinds of

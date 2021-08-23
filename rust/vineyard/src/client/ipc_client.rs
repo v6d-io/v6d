@@ -28,6 +28,7 @@ use super::client::ConnInputKind::{self, IPCConnInput};
 use super::client::StreamKind::{self, IPCStream};
 use super::rust_io::*;
 use super::{InstanceID, ObjectID, ObjectMeta};
+
 use crate::common::util::protocol::*;
 
 pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
@@ -58,9 +59,11 @@ impl Default for IPCClient {
 }
 
 impl Client for IPCClient {
+
     fn connect(&mut self, conn_input: ConnInputKind) -> io::Result<()> {
         let socket = match conn_input {
             IPCConnInput(socket) => socket,
+
             _ => panic!("Unsuitable type of connect input."),
         };
         let ipc_socket: String = String::from(socket);
@@ -96,6 +99,7 @@ impl Client for IPCClient {
             // TODO： Compatable server
 
             Ok(())
+
         }
     }
 
@@ -116,6 +120,7 @@ impl Client for IPCClient {
         }
     }
 }
+// TODO: Test the connect
 
 #[cfg(test)]
 mod tests {
@@ -158,5 +163,19 @@ mod tests {
         ipc_client.put_name(id, &name);
         ipc_client.drop_name(&name);
         let id = ipc_client.get_name(&name, false).unwrap();
+    }
+
+    #[test]
+    #[ignore]
+    fn ipc_connect() {
+        let ipc_client = &mut IPCClient {
+            connected: false,
+            ipc_socket: String::new(),
+            rpc_endpoint: String::new(),
+            vineyard_conn: 0,
+            instance_id: 0,
+            server_version: String::new(),
+        };
+        ipc_client.connect(ipc_conn_input(SOCKET_PATH));
     }
 }

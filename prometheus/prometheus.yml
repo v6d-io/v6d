@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+  external_labels:
+    monitor: 'vineyardd-monitor'
+
+rule_files:
+  - './prometheus.rules.yml'
+
+scrape_configs:
+  - job_name: "vineyardd"
+    static_configs:
+      - targets: ["localhost:9144"]

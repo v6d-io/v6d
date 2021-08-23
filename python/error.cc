@@ -16,12 +16,9 @@ limitations under the License.
 #include <functional>
 #include <stdexcept>
 
-#include "pybind11/pybind11.h"
-
-#pragma GCC visibility push(default)
 #include "common/util/status.h"
-#pragma GCC visibility pop
 
+#include "pybind11/pybind11.h"
 #include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;

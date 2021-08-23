@@ -36,6 +36,30 @@ def pytest_addoption(parser):
         help='Address of vineyard RPC endpoint',
     )
 
+    parser.addoption(
+        "--vineyard-ipc-sockets",
+        action="store",
+        default='/tmp/vineyard.sock',
+        help='Location of vineyard IPC sockets, seperated by ","',
+    )
+
+    parser.addoption(
+        "--vineyard-endpoints",
+        action="store",
+        default='127.0.0.1:9600',
+        help='Address of vineyard RPC endpoints, seperated by ","',
+    )
+
+
+@pytest.fixture(scope='session')
+def vineyard_ipc_sockets(request):
+    return request.config.option.vineyard_ipc_sockets.split(',')
+
+
+@pytest.fixture(scope='session')
+def vineyard_endpoints(request):
+    return request.config.option.vineyard_endpoint.split(',')
+
 
 @pytest.fixture(scope='session')
 def vineyard_ipc_socket(request):

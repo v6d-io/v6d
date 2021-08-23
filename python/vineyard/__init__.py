@@ -98,7 +98,8 @@ from . import io
 from . import launcher
 from . import shared_memory
 
-from .core import default_builder_context, default_resolver_context, default_driver_context
+from .core import default_builder_context, default_resolver_context, default_driver_context, \
+    builder_context, resolver_context, driver_context
 from .data import register_builtin_types
 from .data.graph import Graph
 

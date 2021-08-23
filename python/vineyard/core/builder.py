@@ -16,7 +16,10 @@
 # limitations under the License.
 #
 
+import copy
+import contextlib
 import inspect
+import threading
 
 from vineyard._C import IPCClient, RPCClient
 
@@ -24,6 +27,9 @@ from vineyard._C import IPCClient, RPCClient
 class BuilderContext():
     def __init__(self):
         self.__factory = dict()
+
+    def __str__(self) -> str:
+        return str(self.__factory)
 
     def register(self, type_id, builder):
         ''' Register a Python type to the builder context.
@@ -68,8 +74,50 @@ class BuilderContext():
                 return self.__factory[ty](client, value, **kw)
         raise RuntimeError('Unknown type to build as vineyard object')
 
+    def __call__(self, client, value, **kw):
+        return self.run(client, value, **kw)
+
+    def extend(self, builders=None):
+        builder = BuilderContext()
+        builder.__factory = copy.copy(self.__factory)
+        if builders:
+            builder.__factory.update(builders)
+        return builder
+
 
 default_builder_context = BuilderContext()
+
+_builder_context_local = threading.local()
+_builder_context_local.default_builder = default_builder_context
+
+
+def get_current_builders():
+    ''' Obtain the current builder context.
+    '''
+    default_builder = getattr(_builder_context_local, 'default_builder', None)
+    if not default_builder:
+        default_builder = default_builder_context.extend()
+    return default_builder
+
+
+@contextlib.contextmanager
+def builder_context(builders=None, base=None):
+    ''' Open a new context for register builders, without populting outside global
+        environment.
+
+        See Also:
+            resolver_context
+            driver_context
+    '''
+    current_builder = get_current_builders()
+    try:
+        builders = builders or dict()
+        base = base or current_builder
+        local_builder = base.extend(builders)
+        _builder_context_local.default_builder = local_builder
+        yield local_builder
+    finally:
+        _builder_context_local.default_builder = current_builder
 
 
 def put(client, value, builder=None, **kw):
@@ -101,7 +149,8 @@ def put(client, value, builder=None, **kw):
     '''
     if builder is not None:
         return builder(client, value, **kw)
-    meta = default_builder_context.run(client, value, **kw)
+
+    meta = get_current_builders().run(client, value, **kw)
 
     # the builders is expected to return an :class:`ObjectMeta`, or an :class:`Object` (in
     # the `bytes_builder` and `memoryview` builder).
@@ -112,4 +161,8 @@ def put(client, value, builder=None, **kw):
 setattr(IPCClient, 'put', put)
 setattr(RPCClient, 'put', put)
 
-__all__ = ['default_builder_context']
+__all__ = [
+    'default_builder_context',
+    'builder_context',
+    'get_current_builders',
+]

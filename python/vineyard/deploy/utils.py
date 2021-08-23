@@ -23,6 +23,7 @@ import pkg_resources
 import shutil
 import socket
 import subprocess
+import sys
 import textwrap
 import time
 
@@ -34,6 +35,55 @@ def ssh_base_cmd(host):
         'ssh', host, '--', 'shopt', '-s', 'huponexit', '2>/dev/null', '||', 'setopt', 'HUP', '2>/dev/null', '||',
         'true;'
     ]
+
+
+def find_executable(name, search_paths=None):
+    ''' Use executable in local build directory first.
+    '''
+    if search_paths:
+        for path in search_paths:
+            exe = os.path.join(path, name)
+            if os.path.isfile(exe) and os.access(exe, os.R_OK):
+                return exe
+    exe = shutil.which(name)
+    if exe is not None:
+        return exe
+    raise RuntimeError('Unable to find program %s' % name)
+
+
+@contextlib.contextmanager
+def start_program(name, *args, verbose=False, nowait=False, search_paths=None, **kwargs):
+    env, cmdargs = os.environ.copy(), list(args)
+    for k, v in kwargs.items():
+        if k[0].isupper():
+            env[k] = str(v)
+        else:
+            cmdargs.append('--%s' % k)
+            cmdargs.append(str(v))
+
+    try:
+        prog = find_executable(name, search_paths=search_paths)
+        print('Starting %s... with %s' % (prog, ' '.join(cmdargs)), flush=True)
+        if verbose:
+            out, err = sys.stdout, sys.stderr
+        else:
+            out, err = subprocess.PIPE, subprocess.PIPE
+        proc = subprocess.Popen([prog] + cmdargs, env=env, stdout=out, stderr=err)
+        if not nowait:
+            time.sleep(1)
+        rc = proc.poll()
+        if rc is not None:
+            raise RuntimeError('Failed to launch program %s' % name)
+        yield proc
+    finally:
+        print('Terminating %s' % prog, flush=True)
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(60)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
 
 
 def find_port_probe(start=2048, end=20480):
@@ -129,7 +179,7 @@ def start_etcd(host=None, etcd_executable=None):
 
         rc = proc.poll()
         while rc is None:
-            if check_socket(socket) and check_socket(('0.0.0.0', rpc_socket_port)):
+            if check_socket(('0.0.0.0', client_port)):
                 break
             time.sleep(1)
             rc = proc.poll()
