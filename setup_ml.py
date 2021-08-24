@@ -81,7 +81,7 @@ setup(
         "install": install_plat
     },
     zip_safe=False,
-    install_requires=['vineyard', 'tensorflow', 'xgboost', 'torch'],
+    install_requires=['vineyard', 'tensorflow', 'xgboost', 'torch', 'mxnet'],
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
