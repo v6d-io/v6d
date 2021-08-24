@@ -17,9 +17,8 @@ pub mod object;
 pub mod object_factory;
 pub mod object_meta;
 
-pub use super::client::Client;
+pub use super::client::{Client, ClientKind};
 pub use super::ipc_client::IPCClient;
 pub use super::rpc_client::RPCClient;
 
-pub use crate::common::util::InstanceID;
-pub use crate::common::util::ObjectID;
+pub use crate::common::util::uuid::{ObjectID, InstanceID, Signature};

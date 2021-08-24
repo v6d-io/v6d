@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::{self, Error, ErrorKind};
 use std::ptr;
 
-use super::{InstanceID, ObjectID};
+use super::uuid::{InstanceID, ObjectID, Signature};
 use crate::client::client::Client;
 
 #[derive(Debug)]

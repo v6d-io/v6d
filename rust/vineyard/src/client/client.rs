@@ -24,6 +24,8 @@ use serde_json::{json, Value};
 use super::rust_io::*;
 use super::ObjectID;
 use super::ObjectMeta;
+use super::ipc_client::IPCClient;
+use super::rpc_client::RPCClient;
 use crate::common::util::protocol::*;
 
 #[derive(Debug)]
@@ -36,6 +38,12 @@ pub enum ConnInputKind<'a, 'b> {
 pub enum StreamKind {
     IPCStream(UnixStream),
     RPCStream(TcpStream),
+}
+
+#[derive(Debug)]
+pub enum ClientKind {
+    IPCClient(IPCClient),
+    RPCClient(RPCClient),
 }
 
 pub trait Client {

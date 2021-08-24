@@ -13,22 +13,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::ops;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use crate::client::Object;
-
-use super::{Client, IPCClient};
+use super::{ObjectID, InstanceID, Signature};
+use super::{Client, ClientKind};
 use super::blob::BufferSet;
+use super::object::Object;
 
 pub struct ObjectMeta {
-    client: Option<Rc<dyn Client>>, // Question: Rc or Box or raw
+    client: Weak<ClientKind>, // Since W<T> doesn't have T:?Sized for Weak<dyn Client>  
     meta: Value,
-    buffer_set: Option<Rc<BufferSet>>, // Question: or Rc<Option<BufferSet>>
+    buffer_set: Rc<BufferSet>, 
     incomplete: bool,
     force_local: bool,
 }
@@ -36,9 +36,9 @@ pub struct ObjectMeta {
 impl Default for ObjectMeta {
     fn default() -> Self {
         ObjectMeta {
-            client: None,
+            client: Weak::new(),
             meta: json!({}),
-            buffer_set: None,
+            buffer_set: Rc::new(BufferSet{}),
             incomplete: false,
             force_local: false,
         }
@@ -48,34 +48,41 @@ impl Default for ObjectMeta {
 impl ObjectMeta {
     fn from(other: &ObjectMeta) -> ObjectMeta {
         ObjectMeta {
-            client: Some(Rc::clone(&other.client.as_ref().unwrap())),
+            client: other.client.clone(),
             meta: other.meta.clone(),
-            buffer_set: Some(Rc::clone(&other.buffer_set.as_ref().unwrap())),
+            buffer_set: Rc::clone(&other.buffer_set),
             incomplete: other.incomplete,
             force_local: other.force_local,
         }
     }
 
-    fn set_client(&mut self, client: Rc<dyn Client>) {
-        self.client = Some(client);
+    fn set_client(&mut self, client: Weak<ClientKind>) {
+        self.client = client;
     }
 
-    fn get_client(&self) -> &Rc<dyn Client> {
-        match &self.client {
-            Some(client) => &client,
-            None => panic!("The object has no client"),
-        }
+    fn get_client(&self) -> Weak<ClientKind> {
+        self.client.clone()
     }
 
-    // fn set_id() {}
+    fn set_id(&mut self, id: ObjectID) {
+        self.meta = serde_json::from_str(&id.to_string()).unwrap();
+    }
 
-    // fn get_id() {}
+    fn get_id(&self) -> ObjectID {
+        self.meta["id"].as_u64().unwrap()
+    }
 
-    // fn get_signature() {}
+    fn get_signature(&self) -> Signature {
+        self.meta["signature"].as_u64().unwrap()
+    }
 
-    // fn set_global() {}
+    fn reset_signature() {
 
-    // fn is_global() {}
+    }
+
+    fn set_global() {}
+
+    fn is_global() {}
 
     // fn set_type_name() {}
 
