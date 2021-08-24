@@ -682,7 +682,9 @@ bool SocketConnection::doPullNextStreamChunk(const json& root) {
                 return Status::OK();
               });
         } else {
-          LOG(ERROR) << status.ToString();
+          if (!status.IsStreamDrained()) {
+            LOG(ERROR) << status.ToString();
+          }
           WriteErrorReply(status, message_out);
           self->doWrite(message_out);
         }
