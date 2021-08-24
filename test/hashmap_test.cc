@@ -13,20 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "basic/ds/hashmap.h"
-
 #include <memory>
 #include <string>
 #include <thread>
 
-#include "flat_hash_map/flat_hash_map.hpp"
-#include "glog/logging.h"
-
 #include "arrow/util/io_util.h"
 #include "arrow/util/logging.h"
+
 #include "basic/ds/array.h"
+#include "basic/ds/hashmap.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
+#include "common/util/logging.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
