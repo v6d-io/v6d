@@ -391,7 +391,8 @@ def copy(client, args):
         object_id = client.shallow_copy(as_object_id(args.object_id))
         print(f'The object({args.object_id}) was succesfully copied to {object_id}')
     elif args.deep:
-        print('Deep Copy is currently not supported.')
+        object_id = client.deep_copy(as_object_id(args.object_id))
+        print(f'The object({args.object_id}) was succesfully copied to {object_id}')
     else:
         exit_with_help()
 
