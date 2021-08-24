@@ -22,8 +22,7 @@ use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
 use super::rust_io::*;
-use super::ObjectID;
-use super::ObjectMeta;
+use super::{InstanceID, ObjectID, ObjectMeta};
 use super::ipc_client::IPCClient;
 use super::rpc_client::RPCClient;
 use crate::common::util::protocol::*;
@@ -96,5 +95,7 @@ pub trait Client {
         read_drop_name_reply(message_in)?;
         Ok(())
     }
+
+    fn instance_id(&self) -> InstanceID;
 
 }

@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::{self, Error, ErrorKind};
 use std::ptr;
 
-use super::uuid::{InstanceID, ObjectID, Signature};
+use super::uuid::*;
 use crate::client::client::Client;
 
 #[derive(Debug)]
@@ -78,11 +78,6 @@ pub fn ENSURE_CONNECTED(b: bool) {
         panic!()
     }
     // Question. TODO: mutex
-}
-
-// TODO: Rust parse check
-pub fn object_id_from_string(s: &String) -> ObjectID {
-    s.parse::<ObjectID>().unwrap()
 }
 
 // Convert JSON Value to a String

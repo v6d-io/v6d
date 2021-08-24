@@ -118,6 +118,10 @@ impl Client for RPCClient {
             None => panic!(),
         }
     }
+
+    fn instance_id(&self) -> InstanceID {
+        self.instance_id
+    }
 }
 
 #[cfg(test)]

@@ -20,13 +20,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::{ObjectID, InstanceID, Signature};
+use super::uuid::*;
 use super::{Client, ClientKind};
 use super::blob::BufferSet;
 use super::object::Object;
 
 pub struct ObjectMeta {
-    client: Weak<ClientKind>, // Since W<T> doesn't have T:?Sized for Weak<dyn Client>  
+    client: Weak<ClientKind>, // Question: Since W<T> doesn't have T:?Sized for Weak<dyn Client>  
     meta: Value,
     buffer_set: Rc<BufferSet>, 
     incomplete: bool,
@@ -76,41 +76,151 @@ impl ObjectMeta {
         self.meta["signature"].as_u64().unwrap()
     }
 
-    fn reset_signature() {
+    fn reset_signature(&mut self) {
+        self.reset_key(&String::from("signature"));
+    }
+
+    fn set_global(&mut self, global: bool) {
+        self.meta.as_object_mut().unwrap().insert(
+            String::from("global"), serde_json::Value::Bool(global)
+        );
+    }
+
+    fn is_global(&self) -> bool {
+        self.meta["global"].as_bool().unwrap()
+    }
+
+    fn set_type_name(&mut self, type_name: &String) {
+        self.meta.as_object_mut().unwrap().insert(
+            String::from("typename"), serde_json::Value::String(type_name.clone())
+        );
+    }
+
+    fn get_type_name(&self) -> String {
+        self.meta["typename"].as_str().unwrap().to_string()
+    }
+
+    fn set_nbytes(&mut self, nbytes: usize) {
+        self.meta.as_object_mut().unwrap().insert(
+            String::from("nbytes"), serde_json::Value::from(nbytes)
+        );
+    }
+
+    fn get_nbytes(&self) -> usize {
+        match self.meta["nbytes"].is_null() {
+            true => return 0,
+            false => self.meta["nbytes"].as_u64().unwrap() as usize,
+        }
+    }
+
+    fn get_instance_id(&self) -> InstanceID {
+        self.meta["instance_id"].as_u64().unwrap() as InstanceID
+    }
+
+    fn is_local(&self) -> bool {
+        if self.force_local {
+            return true;
+        }
+        if self.meta["instance_id"].is_null() {
+            return true;
+        }else {
+            if self.client.weak_count()!=0 { // Question: is it correct?
+                let instance_id = match self.client.upgrade().unwrap().as_ref(){
+                    ClientKind::IPCClient(client) => client.instance_id(),
+                    ClientKind::RPCClient(client) => client.instance_id(),
+                };
+                return instance_id == self.meta["instance_id"].as_u64().unwrap() as InstanceID;
+            }else {
+                return false;
+            }
+        }
+    }
+
+    fn force_local(&mut self) {
+        self.force_local = true;
+    }
+
+    fn has_key(&self, key: &String) -> bool {
+        self.meta.as_object().unwrap().contains_key(key)
+    }
+
+    fn reset_key(&mut self, key: &String) {
+        if self.meta.as_object_mut().unwrap().contains_key(key){
+            self.meta.as_object_mut().unwrap().remove(key);
+        }
+    }
+
+    // Question: clone or reference?
+    // A bunch of functions. Which to implement?
+    // Function name?
+    fn add_key_value_string(&mut self, key: &String, value: &String) { 
+        self.meta.as_object_mut().unwrap().insert(
+            key.clone(), serde_json::Value::String(value.clone())
+        );
+    }
+
+    fn add_key_value_json(&mut self, key: &String, value: &Value) {
+        self.meta.as_object_mut().unwrap().insert(
+            key.clone(), value.clone()
+        );
+    }
+
+    fn get_key_value(&self, key: &String) -> Value {
+        json!({})
+    }
+
+    fn add_member(&mut self) {}
+
+    fn get_member(&self, name: &String) {
+        let meta = self.get_member_meta(name);
+    }
+
+    // Question: VINEYARD_ASSERT?
+    fn get_member_meta(&self, name: &String) {
+        let child_meta = &self.meta[name.as_str()];
 
     }
 
-    fn set_global() {}
+    fn get_buffer(&self) {}
 
-    fn is_global() {}
+    fn set_buffer(&mut self) {}
 
-    // fn set_type_name() {}
+    fn reset() {}
 
-    // fn get_type_name() {}
+    fn print_meta() {}
 
-    // fn set_n_bytes() {}
+    fn incomplete() {}
+    
+    fn meta_data() {}
 
-    // fn get_n_bytes() {}
+    fn mut_meta_data() {}
 
-    // fn get_instance_id() {}
+    fn set_meta_data(&mut self, client: ClientKind, meta: Value) {
+        self.client = Rc::<ClientKind>::downgrade(&Rc::new(client));
+        self.meta = meta; // Question: move or ref?
+        self.find_all_blobs();
+    }
 
-    // fn is_local() {}
+    // Question: fn unsafe()
 
-    // fn has_key() {}
+    fn find_all_blobs(&self) {
+        let tree = &self.meta;
+        if tree.is_null(){
+            return;
+        }
+        let member_id = object_id_from_string(&tree["id"].as_str().unwrap().to_string());
+        if is_blob(member_id) {
 
-    // fn reset_key() {}
+        }else {
+            
+        }
 
-    // fn add_key_value() {}
+    }
 
-    // fn get_key_value() {}
+    fn set_instance_id() {}
 
-    // fn add_member() {}
+    fn set_signature() {}
 
-    // fn get_member() {}
 
-    // fn get_member_meta() {}
 
-    // fn get_buffer() {}
-
-    // fn set_buffer() {}
 }

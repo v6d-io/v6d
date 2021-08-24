@@ -19,7 +19,7 @@ use super::blob::Blob;
 use super::object_meta::ObjectMeta;
 use super::Client;
 
-use super::ObjectID;
+use super::uuid::ObjectID;
 
 pub trait ObjectBase {
     fn build(client: Box<dyn Client>) -> Result<Blob, Error>;

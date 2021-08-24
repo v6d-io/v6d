@@ -21,4 +21,4 @@ pub use super::client::{Client, ClientKind};
 pub use super::ipc_client::IPCClient;
 pub use super::rpc_client::RPCClient;
 
-pub use crate::common::util::uuid::{ObjectID, InstanceID, Signature};
+pub use crate::common::util::uuid;

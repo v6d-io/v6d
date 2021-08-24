@@ -117,6 +117,10 @@ impl Client for IPCClient {
             None => panic!(),
         }
     }
+
+    fn instance_id(&self) -> InstanceID {
+        self.instance_id
+    }
 }
 // TODO: Test the connect
 
