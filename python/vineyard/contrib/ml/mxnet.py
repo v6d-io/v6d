@@ -19,18 +19,10 @@
 import mxnet as mx
 
 import numpy as np
-import pandas as pd
-from vineyard.core.resolver import resolver_context, default_resolver_context
 
 from vineyard._C import ObjectMeta
+from vineyard.core.resolver import resolver_context, default_resolver_context
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
-
-from pandas.core.internals.managers import BlockManager
-try:
-    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
-except:
-    BlockPlacement = None
-    from pandas.core.internals.blocks import Block
 
 
 def mxnet_tensor_builder(client, value, **kw):
