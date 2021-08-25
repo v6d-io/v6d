@@ -7,6 +7,7 @@ use std::io::{self, Error, ErrorKind};
 use std::ptr;
 
 use super::uuid::*;
+use super::status::*;
 use crate::client::client::Client;
 
 #[derive(Debug)]
@@ -56,12 +57,6 @@ impl Payload {
         self.data_size = tree["data_size"].as_i64().unwrap();
         self.map_size = tree["map_size"].as_i64().unwrap();
         self.pointer = ptr::null(); //  nullptr
-    }
-}
-
-pub fn RETURN_ON_ASSERT(b: bool) {
-    if !b {
-        panic!()
     }
 }
 

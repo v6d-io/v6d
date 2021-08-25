@@ -24,7 +24,9 @@ use super::uuid::*;
 use super::{Client, ClientKind};
 use super::blob::BufferSet;
 use super::object::Object;
+use super::object_factory::ObjectFactory;
 
+#[derive(Debug)]
 pub struct ObjectMeta {
     client: Weak<ClientKind>, // Question: Since W<T> doesn't have T:?Sized for Weak<dyn Client>  
     meta: Value,
@@ -173,12 +175,13 @@ impl ObjectMeta {
 
     fn get_member(&self, name: &String) {
         let meta = self.get_member_meta(name);
+        let object = ObjectFactory::create(&meta);
     }
 
     // Question: VINEYARD_ASSERT?
-    fn get_member_meta(&self, name: &String) {
+    fn get_member_meta(&self, name: &String) -> ObjectMeta {
         let child_meta = &self.meta[name.as_str()];
-
+        ObjectMeta::default()
     }
 
     fn get_buffer(&self) {}
@@ -217,10 +220,16 @@ impl ObjectMeta {
 
     }
 
-    fn set_instance_id() {}
+    fn set_instance_id(&mut self, instance_id: InstanceID) {
+        self.meta.as_object_mut().unwrap().insert(
+            String::from("instance_id"), serde_json::Value::from(instance_id)
+        );
+    }
 
-    fn set_signature() {}
-
-
+    fn set_signature(&mut self, signature: Signature) {
+        self.meta.as_object_mut().unwrap().insert(
+            String::from("signature"), serde_json::Value::from(signature)
+        );
+    }
 
 }

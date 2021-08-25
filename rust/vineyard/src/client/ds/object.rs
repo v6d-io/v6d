@@ -26,9 +26,10 @@ pub trait ObjectBase {
     fn seal(client: Box<dyn Client>) -> Rc<Object>;
 }
 
+#[derive(Debug)]
 pub struct Object {
-    meta: ObjectMeta,
-    id: ObjectID,
+    pub meta: ObjectMeta,
+    pub id: ObjectID,
 }
 
 impl ObjectBase for Object {

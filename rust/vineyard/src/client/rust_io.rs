@@ -25,7 +25,7 @@ use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
 use super::client::{Client, ConnInputKind, StreamKind};
-use super::{InstanceID, ObjectID, ObjectMeta};
+use super::uuid::{InstanceID, ObjectID};
 
 // socket_fd is used to assign vineyard_conn
 pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> io::Result<UnixStream> {

@@ -13,8 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#[derive(Debug)]
 pub struct Blob {}
 
+#[derive(Debug)]
 pub struct BlobWriter {}
 
+#[derive(Debug)]
 pub struct BufferSet {}

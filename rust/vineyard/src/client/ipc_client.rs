@@ -27,9 +27,11 @@ use super::client::Client;
 use super::client::ConnInputKind::{self, IPCConnInput};
 use super::client::StreamKind::{self, IPCStream};
 use super::rust_io::*;
-use super::{InstanceID, ObjectID, ObjectMeta};
+use super::ObjectMeta;
 
-use crate::common::util::protocol::*;
+use super::uuid::{InstanceID, ObjectID};
+use super::protocol::*;
+use super::status::*;
 
 pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
 

@@ -28,8 +28,11 @@ use super::client::Client;
 use super::client::ConnInputKind::{self, RPCConnInput};
 use super::client::StreamKind::{self, RPCStream};
 use super::rust_io::*;
-use super::{InstanceID, ObjectID, ObjectMeta};
-use crate::common::util::protocol::*;
+use super::ObjectMeta;
+
+use super::uuid::{InstanceID, ObjectID};
+use super::protocol::*;
+use super::status::*;
 
 #[derive(Debug)]
 pub struct RPCClient {

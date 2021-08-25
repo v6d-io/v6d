@@ -13,4 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use super::object_meta::ObjectMeta;
+use super::object::Object;
+
 pub struct ObjectFactory {}
+
+impl ObjectFactory {
+    pub fn create(metadata: &ObjectMeta) -> Box<Object> {
+        Box::new(
+            Object{
+                meta: ObjectMeta::default(),
+                id: 0,
+            }
+        )
+    }
+}
