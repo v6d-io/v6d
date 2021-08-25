@@ -20,15 +20,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::uuid::*;
 use super::{Client, ClientKind};
 use super::blob::BufferSet;
 use super::object::Object;
 use super::object_factory::ObjectFactory;
 
-#[derive(Debug)]
+use super::uuid::*;
+use super::status::*;
+
+#[derive(Debug, Clone)]
 pub struct ObjectMeta {
-    client: Weak<ClientKind>, // Question: Since W<T> doesn't have T:?Sized for Weak<dyn Client>  
+    client: Weak<ClientKind>, // Question: Weak<dyn Client>  
     meta: Value,
     buffer_set: Rc<BufferSet>, 
     incomplete: bool,
@@ -40,7 +42,7 @@ impl Default for ObjectMeta {
         ObjectMeta {
             client: Weak::new(),
             meta: json!({}),
-            buffer_set: Rc::new(BufferSet{}),
+            buffer_set: Rc::new(BufferSet::default()), // Question: empty struct?
             incomplete: false,
             force_local: false,
         }
@@ -48,7 +50,7 @@ impl Default for ObjectMeta {
 }
 
 impl ObjectMeta {
-    fn from(other: &ObjectMeta) -> ObjectMeta {
+    pub fn from(other: &ObjectMeta) -> ObjectMeta {
         ObjectMeta {
             client: other.client.clone(),
             meta: other.meta.clone(),
@@ -58,68 +60,68 @@ impl ObjectMeta {
         }
     }
 
-    fn set_client(&mut self, client: Weak<ClientKind>) {
+    pub fn set_client(&mut self, client: Weak<ClientKind>) {
         self.client = client;
     }
 
-    fn get_client(&self) -> Weak<ClientKind> {
+    pub fn get_client(&self) -> Weak<ClientKind> {
         self.client.clone()
     }
 
-    fn set_id(&mut self, id: ObjectID) {
+    pub fn set_id(&mut self, id: ObjectID) {
         self.meta = serde_json::from_str(&id.to_string()).unwrap();
     }
 
-    fn get_id(&self) -> ObjectID {
-        self.meta["id"].as_u64().unwrap()
+    pub fn get_id(&self) -> ObjectID {
+        self.meta["id"].as_u64().unwrap() as ObjectID
     }
 
-    fn get_signature(&self) -> Signature {
-        self.meta["signature"].as_u64().unwrap()
+    pub fn get_signature(&self) -> Signature {
+        self.meta["signature"].as_u64().unwrap() as Signature
     }
 
-    fn reset_signature(&mut self) {
+    pub fn reset_signature(&mut self) {
         self.reset_key(&String::from("signature"));
     }
 
-    fn set_global(&mut self, global: bool) {
+    pub fn set_global(&mut self, global: bool) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("global"), serde_json::Value::Bool(global)
         );
     }
 
-    fn is_global(&self) -> bool {
+    pub fn is_global(&self) -> bool {
         self.meta["global"].as_bool().unwrap()
     }
 
-    fn set_type_name(&mut self, type_name: &String) {
+    pub fn set_type_name(&mut self, type_name: &String) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("typename"), serde_json::Value::String(type_name.clone())
         );
     }
 
-    fn get_type_name(&self) -> String {
+    pub fn get_type_name(&self) -> String {
         self.meta["typename"].as_str().unwrap().to_string()
     }
 
-    fn set_nbytes(&mut self, nbytes: usize) {
+    pub fn set_nbytes(&mut self, nbytes: usize) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("nbytes"), serde_json::Value::from(nbytes)
         );
     }
 
-    fn get_nbytes(&self) -> usize {
+    pub fn get_nbytes(&self) -> usize {
         match self.meta["nbytes"].is_null() {
             true => return 0,
             false => self.meta["nbytes"].as_u64().unwrap() as usize,
         }
     }
 
-    fn get_instance_id(&self) -> InstanceID {
+    pub fn get_instance_id(&self) -> InstanceID {
         self.meta["instance_id"].as_u64().unwrap() as InstanceID
     }
 
-    fn is_local(&self) -> bool {
+    pub fn is_local(&self) -> bool {
         if self.force_local {
             return true;
         }
@@ -138,15 +140,15 @@ impl ObjectMeta {
         }
     }
 
-    fn force_local(&mut self) {
+    pub fn force_local(&mut self) {
         self.force_local = true;
     }
 
-    fn has_key(&self, key: &String) -> bool {
+    pub fn has_key(&self, key: &String) -> bool {
         self.meta.as_object().unwrap().contains_key(key)
     }
 
-    fn reset_key(&mut self, key: &String) {
+    pub fn reset_key(&mut self, key: &String) {
         if self.meta.as_object_mut().unwrap().contains_key(key){
             self.meta.as_object_mut().unwrap().remove(key);
         }
@@ -155,58 +157,74 @@ impl ObjectMeta {
     // Question: clone or reference?
     // A bunch of functions. Which to implement?
     // Function name?
-    fn add_key_value_string(&mut self, key: &String, value: &String) { 
+    pub fn add_key_value_string(&mut self, key: &String, value: &String) { 
         self.meta.as_object_mut().unwrap().insert(
             key.clone(), serde_json::Value::String(value.clone())
         );
     }
 
-    fn add_key_value_json(&mut self, key: &String, value: &Value) {
+    pub fn add_key_value_json(&mut self, key: &String, value: &Value) {
         self.meta.as_object_mut().unwrap().insert(
             key.clone(), value.clone()
         );
     }
 
-    fn get_key_value(&self, key: &String) -> Value {
+    pub fn get_key_value(&self, key: &String) -> Value {
         json!({})
     }
 
-    fn add_member(&mut self) {}
+    pub fn add_member(&mut self) {}
 
-    fn get_member(&self, name: &String) {
-        let meta = self.get_member_meta(name);
-        let object = ObjectFactory::create(&meta);
+
+    pub fn get_member(&self, name: &String) -> Rc<Object> {
+        let meta = self.get_member_meta(name); //TODO
+        let object = match ObjectFactory::create(&meta.get_type_name()) {
+            Err(_) => { // Question: std::unique_ptr<Object>(new Object());
+                let mut object = Box::new(Object::default());
+                object.construct(meta);
+                return Rc::new(*object);
+            }, 
+            Ok(mut object) => {
+                object.construct(meta);
+                return Rc::new(*object);
+            }
+        };
+        
     }
 
-    // Question: VINEYARD_ASSERT?
-    fn get_member_meta(&self, name: &String) -> ObjectMeta {
+    pub fn get_member_meta(&self, name: &String) -> ObjectMeta {
+        let ret = ObjectMeta::default();
         let child_meta = &self.meta[name.as_str()];
-        ObjectMeta::default()
+        VINEYARD_ASSERT(!child_meta.is_null());
+        ret.set_meta_data(Rc::clone(&self.client.upgrade().unwrap()), &child_meta);
+        let all_blobs = self.buffer_set.all_buffers();
+
+        ret
     }
 
-    fn get_buffer(&self) {}
+    pub fn get_buffer(&self) {}
 
-    fn set_buffer(&mut self) {}
+    pub fn set_buffer(&mut self) {}
 
-    fn reset() {}
+    pub fn reset() {}
 
-    fn print_meta() {}
+    pub fn print_meta() {}
 
-    fn incomplete() {}
+    pub fn incomplete() {}
     
-    fn meta_data() {}
+    pub fn meta_data() {}
 
-    fn mut_meta_data() {}
+    pub fn mut_meta_data() {}
 
-    fn set_meta_data(&mut self, client: ClientKind, meta: Value) {
+    pub fn set_meta_data(&mut self, client: ClientKind, meta: &Value) {
         self.client = Rc::<ClientKind>::downgrade(&Rc::new(client));
-        self.meta = meta; // Question: move or ref?
+        self.meta = meta.clone(); // Question: move or ref?
         self.find_all_blobs();
     }
 
     // Question: fn unsafe()
 
-    fn find_all_blobs(&self) {
+    pub fn find_all_blobs(&self) {
         let tree = &self.meta;
         if tree.is_null(){
             return;
@@ -220,13 +238,13 @@ impl ObjectMeta {
 
     }
 
-    fn set_instance_id(&mut self, instance_id: InstanceID) {
+    pub fn set_instance_id(&mut self, instance_id: InstanceID) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("instance_id"), serde_json::Value::from(instance_id)
         );
     }
 
-    fn set_signature(&mut self, signature: Signature) {
+    pub fn set_signature(&mut self, signature: Signature) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("signature"), serde_json::Value::from(signature)
         );

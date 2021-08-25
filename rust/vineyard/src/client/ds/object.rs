@@ -18,7 +18,6 @@ use std::rc::Rc;
 use super::blob::Blob;
 use super::object_meta::ObjectMeta;
 use super::Client;
-
 use super::uuid::ObjectID;
 
 pub trait ObjectBase {
@@ -30,6 +29,22 @@ pub trait ObjectBase {
 pub struct Object {
     pub meta: ObjectMeta,
     pub id: ObjectID,
+}
+
+impl Default for Object {
+    fn default() -> Object {
+        Object{
+            meta: ObjectMeta::default(),
+            id: 0,
+        }
+    }
+}
+
+impl Object {
+    pub fn construct(&mut self, meta: ObjectMeta) {
+        self.id = meta.get_id();
+        self.meta = meta;
+    }
 }
 
 impl ObjectBase for Object {
