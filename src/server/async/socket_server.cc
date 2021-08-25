@@ -900,11 +900,11 @@ void SocketConnection::doWrite(const std::string& buf) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(to_send));
-  if (!write_in_progress) {
-    doAsyncWrite();
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(to_send));
   }
+  doAsyncWrite();
 }
 
 void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
@@ -915,19 +915,19 @@ void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(to_send));
-  if (!write_in_progress) {
-    doAsyncWrite(callback);
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(to_send));
   }
+  doAsyncWrite(callback);
 }
 
 void SocketConnection::doWrite(std::string&& buf) {
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(buf));
-  if (!write_in_progress) {
-    doAsyncWrite();
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(buf));
   }
+  doAsyncWrite();
 }
 
 void SocketConnection::doStop() {
@@ -938,43 +938,58 @@ void SocketConnection::doStop() {
 }
 
 void SocketConnection::doAsyncWrite() {
-  auto self(shared_from_this());
-  asio::async_write(socket_,
-                    boost::asio::buffer(write_msgs_.front().data(),
-                                        write_msgs_.front().length()),
-                    [this, self](boost::system::error_code ec, std::size_t) {
-                      if (!ec) {
-                        write_msgs_.pop_front();
-                        if (!write_msgs_.empty()) {
-                          doAsyncWrite();
-                        }
-                      } else {
-                        doStop();
-                      }
-                    });
-}
-
-void SocketConnection::doAsyncWrite(callback_t<> callback) {
+  std::shared_ptr<std::string> payload = nullptr;
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    if (!write_msgs_.empty()) {
+      payload.reset(new std::string());
+      payload->swap(write_msgs_.front());
+      write_msgs_.pop_front();
+    }
+  }
+  if (payload == nullptr) {
+    return;
+  }
   auto self(shared_from_this());
   asio::async_write(
-      socket_,
-      boost::asio::buffer(write_msgs_.front().data(),
-                          write_msgs_.front().length()),
-      [this, self, callback](boost::system::error_code ec, std::size_t) {
+      socket_, boost::asio::buffer(payload->data(), payload->length()),
+      [this, self, payload](boost::system::error_code ec, std::size_t) {
         if (!ec) {
-          write_msgs_.pop_front();
-          if (!write_msgs_.empty()) {
-            doAsyncWrite(callback);
-          } else {
-            auto status = callback(Status::OK());
-            if (!status.ok()) {
-              doStop();
-            }
-          }
+          doAsyncWrite();
         } else {
           doStop();
         }
       });
+}
+
+void SocketConnection::doAsyncWrite(callback_t<> callback) {
+  std::shared_ptr<std::string> payload = nullptr;
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    if (!write_msgs_.empty()) {
+      payload.reset(new std::string());
+      payload->swap(write_msgs_.front());
+      write_msgs_.pop_front();
+    }
+  }
+  if (payload == nullptr) {
+    auto status = callback(Status::OK());
+    if (!status.ok()) {
+      doStop();
+    }
+    return;
+  }
+  auto self(shared_from_this());
+  asio::async_write(socket_,
+                    boost::asio::buffer(payload->data(), payload->length()),
+                    [this, self, payload, callback](
+                        boost::system::error_code ec, std::size_t) {
+                      if (!ec) {
+                        doAsyncWrite(callback);
+                      } else {
+                        doStop();
+                      }
+                    });
 }
 
 SocketServer::SocketServer(vs_ptr_t vs_ptr)
