@@ -25,31 +25,57 @@ use super::object_factory::ObjectFactory;
 #[derive(Debug)]
 pub struct Blob {}
 
+
+
 #[derive(Debug)]
 pub struct BlobWriter {}
+
+
 
 #[derive(Debug)]
 pub struct BufferSet {
     buffer_ids: HashSet<ObjectID>,
-    buffers: HashMap<ObjectID, Rc<Buffer>>,
+    buffers: HashMap<ObjectID, Rc<ArrowBuffer>>,
 }
 
 impl Default for BufferSet {
     fn default() -> BufferSet {
         BufferSet{
             buffer_ids: HashSet::new() as HashSet<ObjectID>,
-            buffers: HashMap::new() as HashMap<ObjectID, Rc<Buffer>>,
+            buffers: HashMap::new() as HashMap<ObjectID, Rc<ArrowBuffer>>,
         }
     }
 }
 
 impl BufferSet {
-    pub fn all_buffers(&self) -> &HashMap<ObjectID, Rc<Buffer>> {
+    pub fn all_buffers(&self) -> &HashMap<ObjectID, Rc<ArrowBuffer>> {
         &self.buffers
+    }
+
+    pub fn extend(&mut self, others: &BufferSet) {
+        for (key, value) in others.buffers.iter() {
+            self.buffers.insert(key.clone(), value.clone());
+        }
+    }
+
+    pub fn emplace_buffer() -> io::Result<Rc<ArrowBuffer>> { // TODO
+        panic!()
+        
+    }
+
+    pub fn contains(&self, id: ObjectID) -> bool {
+        if let None = self.buffers.get(&id) {
+            return false;
+        }
+        true
+    }
+
+    pub fn get(&self, id: ObjectID) -> io::Result<Rc<ArrowBuffer>> { // TODO
+        panic!()
     }
 }
 
 #[derive(Debug)]
-pub struct  Buffer {} // TODO. arrow/buffer: dependencies
+pub struct ArrowBuffer {} // TODO. arrow/buffer: dependencies
 
 // Mmap先不写

@@ -41,9 +41,9 @@ impl Default for Object {
 }
 
 impl Object {
-    pub fn construct(&mut self, meta: ObjectMeta) {
+    pub fn construct(&mut self, meta: &ObjectMeta) {
         self.id = meta.get_id();
-        self.meta = meta;
+        self.meta = meta.clone();
     }
 }
 
@@ -56,6 +56,8 @@ impl ObjectBase for Object {
         panic!("")
     }
 }
+
+
 
 #[derive(Debug)]
 pub struct ObjectBuilder {

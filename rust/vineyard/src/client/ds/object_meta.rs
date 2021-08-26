@@ -13,7 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use std::io;
 use std::rc::{Rc, Weak};
+use std::cell::RefCell;
 use std::ops;
 
 use serde::{Deserialize, Serialize};
@@ -28,12 +30,13 @@ use super::object_factory::ObjectFactory;
 use super::uuid::*;
 use super::status::*;
 
-// Question: Smart pointers
+use super::blob::ArrowBuffer; // TODO. arrow/buffer: dependencies
+
 #[derive(Debug, Clone)]
 pub struct ObjectMeta {
     client: Weak<ClientKind>, // Question: Weak<dyn Client>  
     meta: Value,
-    buffer_set: Rc<BufferSet>, 
+    buffer_set: Rc<RefCell<BufferSet>>, 
     incomplete: bool,
     force_local: bool,
 }
@@ -43,7 +46,7 @@ impl Default for ObjectMeta {
         ObjectMeta {
             client: Weak::new(), 
             meta: json!({}),
-            buffer_set: Rc::new(BufferSet::default()), // Question: empty struct?
+            buffer_set: Rc::new(RefCell::new(BufferSet::default())), 
             incomplete: false,
             force_local: false,
         }
@@ -66,7 +69,7 @@ impl ObjectMeta {
     }
 
     pub fn get_client(&self) -> Weak<ClientKind> {
-        self.client.clone() // Question
+        self.client.clone()
     }
 
     pub fn set_id(&mut self, id: ObjectID) {
@@ -155,9 +158,6 @@ impl ObjectMeta {
         }
     }
 
-    // Question: clone or reference?
-    // A bunch of functions. Which to implement?
-    // Function name?
     pub fn add_string_key_value(&mut self, key: &String, value: &String) { 
         self.meta.as_object_mut().unwrap().insert(
             key.clone(), serde_json::Value::String(value.clone())
@@ -170,23 +170,44 @@ impl ObjectMeta {
         );
     }
 
-    pub fn get_key_value(&self, key: &String) -> Value {
-        json!({})
+    pub fn get_key_value(&self, key: &String) -> &Value {
+        match self.meta.get(key) {
+            Some(value) => return value,
+            None => panic!("Invalid json value at key {}", key),
+        }
     }
 
-    pub fn add_member(&mut self) {}
+    pub fn add_member_with_meta(&mut self, name: &String, member: &ObjectMeta) {
+        VINEYARD_ASSERT(!self.meta.as_object().unwrap().contains_key(name));
+        self.meta.as_object_mut().unwrap().insert(
+            name.clone(), member.meta.clone()
+        );
+        self.buffer_set.borrow_mut().extend(&member.buffer_set.borrow());
+    }
 
+    pub fn add_member_with_object(&mut self, name: &String, member: &Object) {
+        self.add_member_with_meta(name, &member.meta);
+    }
+
+    pub fn add_member_with_id(&mut self, name: &String, member_id: ObjectID) {
+        VINEYARD_ASSERT(!self.meta.as_object().unwrap().contains_key(name));
+        let member_node = json!({"id": object_id_to_string(member_id)}); 
+        self.meta.as_object_mut().unwrap().insert(
+            name.clone(), member_node
+        );
+        self.incomplete = true;
+    }
 
     pub fn get_member(&self, name: &String) -> Rc<Object> {
         let meta = self.get_member_meta(name); //TODO
-        let object = match ObjectFactory::create(&meta.get_type_name()) {
-            Err(_) => { // Question: std::unique_ptr<Object>(new Object());
+        let object = match ObjectFactory::create(&meta.get_type_name()) { //TODO
+            Err(_) => { 
                 let mut object = Box::new(Object::default());
-                object.construct(meta);
+                object.construct(&meta);
                 return Rc::new(*object);
             }, 
             Ok(mut object) => {
-                object.construct(meta);
+                object.construct(&meta);
                 return Rc::new(*object);
             }
         };
@@ -194,56 +215,92 @@ impl ObjectMeta {
     }
 
     pub fn get_member_meta(&self, name: &String) -> ObjectMeta {
-        let ret = ObjectMeta::default();
+        let mut ret = ObjectMeta::default();
         let child_meta = &self.meta[name.as_str()];
         VINEYARD_ASSERT(!child_meta.is_null());
+        // TODO
         //ret.set_meta_data(Rc::clone(&self.client.upgrade().unwrap()), &child_meta);
-        let all_blobs = self.buffer_set.all_buffers();
+        let my_buffer_set = self.buffer_set.borrow();
+        let all_blobs = my_buffer_set.all_buffers();
+        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // Alert: memeroy?
+        for (key, _) in ret_blobs.iter() {
+            if let Some(value) = all_blobs.get(key) {
+                ret.set_buffer(*key, value);
+            }
+            if let true = self.force_local {
+                ret.force_local();
+            }
+        }
 
         ret
     }
 
-    pub fn get_buffer(&self) {}
+    pub fn get_buffer(&self, blob_id: ObjectID) -> io::Result<Rc<ArrowBuffer>>{
+        match self.buffer_set.borrow().get(blob_id) {
+            Ok(buffer) => return Ok(buffer),
+            Err(_) => panic!("The target blob {} doesn't exist.", object_id_to_string(blob_id))
+        }
+    }
 
-    pub fn set_buffer(&mut self) {}
+    pub fn set_buffer(&mut self, id: ObjectID, buffer: &Rc<ArrowBuffer>) {
+        VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
+        //TODO
+        //VINEYARD_CHECK_OK(self.buffer_set.borrow().emplace_buffer(id, buffer));
+    }
 
-    pub fn reset() {}
+    pub fn reset(&mut self) {
+        self.client = Weak::new();
+        self.meta = json!({});
+        self.buffer_set = Rc::new(RefCell::new(BufferSet::default()));
+        self.incomplete = false;
+    }
 
     pub fn print_meta() {}
 
-    pub fn incomplete() {}
+    pub fn incomplete(&self) -> bool {
+        self.incomplete
+    }
     
-    pub fn meta_data() {}
+    pub fn meta_data(&self) -> &Value {
+        &self.meta
+    }
 
-    pub fn mut_meta_data() {}
+    pub fn mut_meta_data(&mut self) -> &mut Value {
+        &mut self.meta
+    }
 
     pub fn set_meta_data(&mut self, client: ClientKind, meta: &Value) {
         self.client = Rc::<ClientKind>::downgrade(&Rc::new(client));
-        self.meta = meta.clone(); // Question: move or ref?
-        self.find_all_blobs();
+        self.meta = meta.clone(); 
+        self.find_all_blobs(); // TODO
     }
 
-    pub fn find_all_blobs(&self) {
+    pub fn get_buffer_set(&self) -> &Rc<RefCell<BufferSet>> {
+        &self.buffer_set
+    }
+
+
+    fn find_all_blobs(&self) {
         let tree = &self.meta;
         if tree.is_null(){
             return;
         }
         let member_id = object_id_from_string(&tree["id"].as_str().unwrap().to_string());
         if is_blob(member_id) {
-
+            // TODO
         }else {
             
         }
 
     }
 
-    pub fn set_instance_id(&mut self, instance_id: InstanceID) {
+    fn set_instance_id(&mut self, instance_id: InstanceID) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("instance_id"), serde_json::Value::from(instance_id)
         );
     }
 
-    pub fn set_signature(&mut self, signature: Signature) {
+    fn set_signature(&mut self, signature: Signature) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("signature"), serde_json::Value::from(signature)
         );

@@ -4,14 +4,6 @@ pub type ObjectID = u64;
 pub type InstanceID = u64;
 pub type Signature = u64;
 
-// TODO: Rust parse check
-pub fn object_id_from_string(s: &String) -> ObjectID {
-    s.parse::<ObjectID>().unwrap()
-}
-
-pub fn object_id_to_string(id: ObjectID) -> String {
-    String::new()
-}
 
 // pub fn get_blob_addr() {}
 
@@ -37,4 +29,16 @@ pub fn is_blob(id: ObjectID) -> bool {
         return false;
     }
     true
+}
+
+pub fn object_id_from_string(s: &String) -> ObjectID {
+    s[1..].parse::<ObjectID>().unwrap()
+}
+
+pub fn object_id_to_string(id: ObjectID) -> String {
+    format!("o{:x}", id)
+}
+
+pub fn signature_to_string(id: ObjectID) -> String {
+    format!("s{:x}", id)
 }
