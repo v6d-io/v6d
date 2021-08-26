@@ -23,7 +23,9 @@ limitations under the License.
 
 #include "common/memory/fling.h"
 #include "common/util/callback.h"
+#include "common/util/functions.h"
 #include "common/util/json.h"
+#include "server/util/metrics.h"
 
 namespace vineyard {
 
@@ -373,12 +375,13 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   int store_fd = object->store_fd;
   int data_size = object->data_size;
-  this->doWrite(message_out, [self, store_fd, data_size](const Status& status) {
+  this->doWrite(message_out, [this, self, store_fd, data_size](const Status& status) {
     if (data_size > 0 &&
         self->used_fds_.find(store_fd) == self->used_fds_.end()) {
       self->used_fds_.emplace(store_fd);
       send_fd(self->nativeHandle(), store_fd);
     }
+    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(), server_ptr_ ->GetBulkStore()-> Footprint());
     return Status::OK();
   });
   return false;
@@ -413,6 +416,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
           }
         }
         self->doWrite(message_out);
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(), server_ptr_ ->GetBulkStore()-> Footprint());
       });
   return false;
 }
@@ -429,6 +433,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
     WriteErrorReply(status, message_out);
   }
   this->doWrite(message_out);
+  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(), server_ptr_ ->GetBulkStore()-> Footprint());
   return false;
 }
 
@@ -436,11 +441,12 @@ bool SocketConnection::doGetData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool sync_remote = false, wait = false;
+  double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadGetDataRequest, root, ids, sync_remote, wait);
   json tree;
   RESPONSE_ON_ERROR(server_ptr_->GetData(
       ids, sync_remote, wait, [self]() { return self->running_.load(); },
-      [self](const Status& status, const json& tree) {
+      [self, startTime](const Status& status, const json& tree) {
         std::string message_out;
         if (status.ok()) {
           WriteGetDataReply(tree, message_out);
@@ -449,6 +455,9 @@ bool SocketConnection::doGetData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "get", (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "get");
         return Status::OK();
       }));
   return false;
@@ -478,9 +487,10 @@ bool SocketConnection::doListData(const json& root) {
 bool SocketConnection::doCreateData(const json& root) {
   auto self(shared_from_this());
   json tree;
+  double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadCreateDataRequest, root, tree);
   RESPONSE_ON_ERROR(server_ptr_->CreateData(
-      tree, [self](const Status& status, const ObjectID id,
+      tree, [tree, self, startTime](const Status& status, const ObjectID id,
                    const Signature signature, const InstanceID instance_id) {
         std::string message_out;
         if (status.ok()) {
@@ -490,6 +500,10 @@ bool SocketConnection::doCreateData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "create", (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "create");
+        LOG_SUMMARY("object", std::to_string(instance_id) + " " + tree.value("typename", json(nullptr)).dump(), 1);
         return Status::OK();
       }));
   return false;
@@ -574,9 +588,10 @@ bool SocketConnection::doDelData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool force, deep, fastpath;
+  double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, fastpath);
   RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, fastpath, [self](const Status& status) {
+      ids, force, deep, fastpath, [self, startTime](const Status& status) {
         std::string message_out;
         if (status.ok()) {
           WriteDelDataReply(message_out);
@@ -585,6 +600,9 @@ bool SocketConnection::doDelData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "delete", (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "delete");
         return Status::OK();
       }));
   return false;

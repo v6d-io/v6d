@@ -32,7 +32,7 @@ namespace vineyard {
 #define LOG_SUMMARY(metric_name, label, metric_val)                      \
   LOG_IF(INFO, FLAGS_prometheus)                                         \
       << getenv("USER") << " " << (label) << " " << (metric_name) << " " \
-      << (metric_val) *1000 << "ms";
+      << (metric_val);
 #endif
 
 }  // namespace vineyard
