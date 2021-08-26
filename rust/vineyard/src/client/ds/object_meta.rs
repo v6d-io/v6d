@@ -28,6 +28,7 @@ use super::object_factory::ObjectFactory;
 use super::uuid::*;
 use super::status::*;
 
+// Question: Smart pointers
 #[derive(Debug, Clone)]
 pub struct ObjectMeta {
     client: Weak<ClientKind>, // Question: Weak<dyn Client>  
@@ -40,7 +41,7 @@ pub struct ObjectMeta {
 impl Default for ObjectMeta {
     fn default() -> Self {
         ObjectMeta {
-            client: Weak::new(),
+            client: Weak::new(), 
             meta: json!({}),
             buffer_set: Rc::new(BufferSet::default()), // Question: empty struct?
             incomplete: false,
@@ -65,7 +66,7 @@ impl ObjectMeta {
     }
 
     pub fn get_client(&self) -> Weak<ClientKind> {
-        self.client.clone()
+        self.client.clone() // Question
     }
 
     pub fn set_id(&mut self, id: ObjectID) {
@@ -157,13 +158,13 @@ impl ObjectMeta {
     // Question: clone or reference?
     // A bunch of functions. Which to implement?
     // Function name?
-    pub fn add_key_value_string(&mut self, key: &String, value: &String) { 
+    pub fn add_string_key_value(&mut self, key: &String, value: &String) { 
         self.meta.as_object_mut().unwrap().insert(
             key.clone(), serde_json::Value::String(value.clone())
         );
     }
 
-    pub fn add_key_value_json(&mut self, key: &String, value: &Value) {
+    pub fn add_json_key_value(&mut self, key: &String, value: &Value) {
         self.meta.as_object_mut().unwrap().insert(
             key.clone(), value.clone()
         );
@@ -196,7 +197,7 @@ impl ObjectMeta {
         let ret = ObjectMeta::default();
         let child_meta = &self.meta[name.as_str()];
         VINEYARD_ASSERT(!child_meta.is_null());
-        ret.set_meta_data(Rc::clone(&self.client.upgrade().unwrap()), &child_meta);
+        //ret.set_meta_data(Rc::clone(&self.client.upgrade().unwrap()), &child_meta);
         let all_blobs = self.buffer_set.all_buffers();
 
         ret
@@ -221,8 +222,6 @@ impl ObjectMeta {
         self.meta = meta.clone(); // Question: move or ref?
         self.find_all_blobs();
     }
-
-    // Question: fn unsafe()
 
     pub fn find_all_blobs(&self) {
         let tree = &self.meta;

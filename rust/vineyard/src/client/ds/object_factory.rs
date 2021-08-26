@@ -14,6 +14,7 @@ limitations under the License.
 */
 
 use std::io;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use super::object_meta::ObjectMeta;
@@ -25,7 +26,7 @@ type ObjectInitializer = Box<Object>;
 
 impl ObjectFactory {
     pub fn create(type_name: &String) -> io::Result<Box<Object>> {
-        let known_types = ObjectFactory::get_known_types();
+        //let known_types = ObjectFactory::get_known_types();
 
 
         
@@ -33,8 +34,14 @@ impl ObjectFactory {
     }
 
     // Question: getKnownTypes?
-    pub fn get_known_types() -> HashMap<String, ObjectInitializer> {
-        let known_types: HashMap<String, ObjectInitializer> = HashMap::new();
-        known_types
-    }
+    // pub fn get_known_types() -> HashMap<String, ObjectInitializer> {
+    //     unsafe{
+    //         KNOWN_TYPES
+    //     }
+        
+    // }
 }
+
+// static mut KNOWN_TYPES: RefCell<HashMap<String, ObjectInitializer>> = RefCell::new(
+//     HashMap::new()
+// );

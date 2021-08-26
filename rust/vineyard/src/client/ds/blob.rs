@@ -44,10 +44,12 @@ impl Default for BufferSet {
 }
 
 impl BufferSet {
-    pub fn all_buffers(&self) -> HashMap<ObjectID, Rc<Buffer>> {
-        self.buffers
+    pub fn all_buffers(&self) -> &HashMap<ObjectID, Rc<Buffer>> {
+        &self.buffers
     }
 }
 
 #[derive(Debug)]
-pub struct  Buffer {} // TODO. arrow/buffer
+pub struct  Buffer {} // TODO. arrow/buffer: dependencies
+
+// Mmap先不写
