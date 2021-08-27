@@ -79,14 +79,12 @@ struct AnyTypeEnum<std::string> {
 };
 
 template <>
-struct AnyTypeEnum<arrow::Date32Type>
-{
+struct AnyTypeEnum<arrow::Date32Type> {
   static constexpr AnyType value = AnyType::Date32;
 };
 
 template <>
-struct AnyTypeEnum<arrow::Date64Type>
-{
+struct AnyTypeEnum<arrow::Date64Type> {
   static constexpr AnyType value = AnyType::Date64;
 };
 
@@ -131,12 +129,12 @@ struct IdTypeEnum<std::string> {
   static constexpr IdType value = IdType::String;
 };
 
-template<>
+template <>
 struct IdTypeEnum<arrow::Date32Type> {
   static constexpr IdType value = IdType::Date32;
 };
 
-template<>
+template <>
 struct IdTypeEnum<arrow::Date64Type> {
   static constexpr IdType value = IdType::Date64;
 };

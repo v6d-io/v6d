@@ -101,9 +101,9 @@ std::string GetIdTypeName(IdType type) {
   case IdType::String:
     return "string";
   case IdType::Date32:
-    return "date32"; 
+    return "date32";
   case IdType::Date64:
-    return "date64"; 
+    return "date64";
   default:
     return "undefined";
   }

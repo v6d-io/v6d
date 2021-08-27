@@ -40,10 +40,10 @@ TableAppender::TableAppender(std::shared_ptr<arrow::Schema> schema) {
       funcs_.push_back(AppendHelper<void>::append);
     } else if (type->id() == arrow::Type::TIMESTAMP) {
       funcs_.push_back(AppendHelper<arrow::TimestampType>::append);
-    } else if (type == arrow::date32()){
+    } else if (type == arrow::date32()) {
       funcs_.push_back(AppendHelper<arrow::date32>::append);
-    } else if (type == arrow::date64()){
-      funcs_.push_back(AppendHelper<arrow::date64>::append); 
+    } else if (type == arrow::date64()) {
+      funcs_.push_back(AppendHelper<arrow::date64>::append);
     } else {
       LOG(FATAL) << "Datatype [" << type->ToString() << "] not implemented...";
     }
