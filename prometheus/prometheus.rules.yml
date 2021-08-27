@@ -1,5 +1,13 @@
 groups:
   - name: request
     rules:
-      - record: operation:data_request_latency:avg
-        expr: avg by (operation) (data_request_latency_sum)/(data_request_latency_count)
+    - record: operation:data_request_latency:avg
+      expr: avg by (operation) (data_request_latency_sum)/(data_request_latency_count)
+    - alert: EtcdRequestsSlow
+      expr: etcd_request_duration_microseconds{quantile="0.5"} > 3000
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Etcd requests slow (operation {{ $labels.operation }})"
+        description: "Etcd requests slowing down, 50th percentile is over 3000 microseconds, \n  value = {{ $value }}, \n  user is {{ $labels.user }}"
