@@ -21,6 +21,8 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
+#include "arrow/type.h"
+
 #include "common/util/json.h"
 
 namespace vineyard {
@@ -34,6 +36,8 @@ enum class AnyType {
   Float = 5,
   Double = 6,
   String = 7,
+  Date32 = 8,
+  Date64 = 9,
 };
 
 template <typename T>
@@ -76,6 +80,16 @@ struct AnyTypeEnum<std::string> {
   static constexpr AnyType value = AnyType::String;
 };
 
+template <>
+struct AnyTypeEnum<arrow::Date32Type> {
+  static constexpr AnyType value = AnyType::Date32;
+};
+
+template <>
+struct AnyTypeEnum<arrow::Date64Type> {
+  static constexpr AnyType value = AnyType::Date64;
+};
+
 enum class IdType {
   Undefined = 0,
   Int32 = 1,
@@ -83,6 +97,8 @@ enum class IdType {
   UInt32 = 3,
   UInt64 = 4,
   String = 5,
+  Date32 = 6,
+  Date64 = 7,
 };
 
 template <typename T>
@@ -113,6 +129,16 @@ struct IdTypeEnum<uint64_t> {
 template <>
 struct IdTypeEnum<std::string> {
   static constexpr IdType value = IdType::String;
+};
+
+template <>
+struct IdTypeEnum<arrow::Date32Type> {
+  static constexpr IdType value = IdType::Date32;
+};
+
+template <>
+struct IdTypeEnum<arrow::Date64Type> {
+  static constexpr IdType value = IdType::Date64;
 };
 
 AnyType ParseAnyType(const std::string& type_name);
