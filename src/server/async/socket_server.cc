@@ -375,15 +375,17 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   int store_fd = object->store_fd;
   int data_size = object->data_size;
-  this->doWrite(message_out, [this, self, store_fd, data_size](const Status& status) {
-    if (data_size > 0 &&
-        self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-      self->used_fds_.emplace(store_fd);
-      send_fd(self->nativeHandle(), store_fd);
-    }
-    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(), server_ptr_ ->GetBulkStore()-> Footprint());
-    return Status::OK();
-  });
+  this->doWrite(
+      message_out, [this, self, store_fd, data_size](const Status& status) {
+        if (data_size > 0 &&
+            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+          self->used_fds_.emplace(store_fd);
+          send_fd(self->nativeHandle(), store_fd);
+        }
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                    server_ptr_->GetBulkStore()->Footprint());
+        return Status::OK();
+      });
   return false;
 }
 
@@ -416,7 +418,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
           }
         }
         self->doWrite(message_out);
-        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(), server_ptr_ ->GetBulkStore()-> Footprint());
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                    server_ptr_->GetBulkStore()->Footprint());
       });
   return false;
 }
@@ -433,7 +436,8 @@ bool SocketConnection::doDropBuffer(const json& root) {
     WriteErrorReply(status, message_out);
   }
   this->doWrite(message_out);
-  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(), server_ptr_ ->GetBulkStore()-> Footprint());
+  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+              server_ptr_->GetBulkStore()->Footprint());
   return false;
 }
 
@@ -456,7 +460,8 @@ bool SocketConnection::doGetData(const json& root) {
         }
         self->doWrite(message_out);
         double endTime = GetCurrentTime();
-        LOG_SUMMARY("data_request_duration_microseconds", "get", (endTime - startTime) * 1000000);
+        LOG_SUMMARY("data_request_duration_microseconds", "get",
+                    (endTime - startTime) * 1000000);
         LOG_COUNTER("data_requests_total", "get");
         return Status::OK();
       }));
@@ -491,7 +496,8 @@ bool SocketConnection::doCreateData(const json& root) {
   TRY_READ_REQUEST(ReadCreateDataRequest, root, tree);
   RESPONSE_ON_ERROR(server_ptr_->CreateData(
       tree, [tree, self, startTime](const Status& status, const ObjectID id,
-                   const Signature signature, const InstanceID instance_id) {
+                                    const Signature signature,
+                                    const InstanceID instance_id) {
         std::string message_out;
         if (status.ok()) {
           WriteCreateDataReply(id, signature, instance_id, message_out);
@@ -501,9 +507,13 @@ bool SocketConnection::doCreateData(const json& root) {
         }
         self->doWrite(message_out);
         double endTime = GetCurrentTime();
-        LOG_SUMMARY("data_request_duration_microseconds", "create", (endTime - startTime) * 1000000);
+        LOG_SUMMARY("data_request_duration_microseconds", "create",
+                    (endTime - startTime) * 1000000);
         LOG_COUNTER("data_requests_total", "create");
-        LOG_SUMMARY("object", std::to_string(instance_id) + " " + tree.value("typename", json(nullptr)).dump(), 1);
+        LOG_SUMMARY("object",
+                    std::to_string(instance_id) + " " +
+                        tree.value("typename", json(nullptr)).dump(),
+                    1);
         return Status::OK();
       }));
   return false;
@@ -601,7 +611,8 @@ bool SocketConnection::doDelData(const json& root) {
         }
         self->doWrite(message_out);
         double endTime = GetCurrentTime();
-        LOG_SUMMARY("data_request_duration_microseconds", "delete", (endTime - startTime) * 1000000);
+        LOG_SUMMARY("data_request_duration_microseconds", "delete",
+                    (endTime - startTime) * 1000000);
         LOG_COUNTER("data_requests_total", "delete");
         return Status::OK();
       }));

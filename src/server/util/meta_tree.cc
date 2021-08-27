@@ -446,7 +446,11 @@ Status DelDataOps(const json& tree, const std::string& name,
       ops.emplace_back(IMetaService::op_t::Del("/signatures/i" + instance_name +
                                                "/" + signature));
       // record deletion of object
-      LOG_SUMMARY("object",instance_name + " " + data.value("typename", json(nullptr)).dump().replace(1 , 2, "v"), -1);
+      LOG_SUMMARY(
+          "object",
+          instance_name + " " +
+              data.value("typename", json(nullptr)).dump().replace(1, 2, "v"),
+          -1);
       return Status::OK();
     }
   }

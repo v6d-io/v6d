@@ -29,10 +29,9 @@ namespace vineyard {
 #endif
 
 #ifndef LOG_SUMMARY
-#define LOG_SUMMARY(metric_name, label, metric_val)                      \
-  LOG_IF(INFO, FLAGS_prometheus)                                         \
-      << getenv("USER") << " " << (label) << " " << (metric_name) << " " \
-      << (metric_val);
+#define LOG_SUMMARY(metric_name, label, metric_val)                         \
+  LOG_IF(INFO, FLAGS_prometheus) << getenv("USER") << " " << (label) << " " \
+                                 << (metric_name) << " " << (metric_val);
 #endif
 
 }  // namespace vineyard
