@@ -46,6 +46,7 @@ DEFINE_string(
     "RPC endpoint of the peer vineyard server for fetching complete metadata");
 DEFINE_string(id, VYObjectIDToString(InvalidObjectID()),
               "Object to migrate to local");
+DEFINE_bool(local_copy, false, "Make a copy of blobs even on the same machine");
 
 static void find_blobs_on_remote_instance(const InstanceID remote_instance_id,
                                           const json& tree,
@@ -56,8 +57,12 @@ static void find_blobs_on_remote_instance(const InstanceID remote_instance_id,
   ObjectID member_id =
       VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
   if (IsBlob(member_id)) {
-    if (tree["instance_id"].get<InstanceID>() == remote_instance_id) {
+    if (FLAGS_local_copy) {
       blobs.emplace(member_id);
+    } else {
+      if (tree["instance_id"].get<InstanceID>() == remote_instance_id) {
+        blobs.emplace(member_id);
+      }
     }
   } else {
     for (auto& item : tree) {

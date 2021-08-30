@@ -214,6 +214,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::ShallowCopyRequest: {
     return doShallowCopy(root);
   }
+  case CommandType::DeepCopyRequest: {
+    return doDeepCopy(root);
+  }
   case CommandType::DelDataRequest: {
     return doDelData(root);
   }
@@ -586,6 +589,28 @@ bool SocketConnection::doShallowCopy(const json& root) {
           WriteShallowCopyReply(target, message_out);
         } else {
           LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doDeepCopy(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id;
+  std::string peer, peer_rpc_endpoint;
+  TRY_READ_REQUEST(ReadDeepCopyRequest, root, object_id, peer,
+                   peer_rpc_endpoint);
+  RESPONSE_ON_ERROR(server_ptr_->DeepCopy(
+      object_id, peer, peer_rpc_endpoint,
+      [self](const Status& status, const ObjectID& target) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteDeepCopyReply(target, message_out);
+        } else {
+          LOG(ERROR) << "Failed to Deep Copy object: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
