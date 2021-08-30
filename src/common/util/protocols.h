@@ -59,14 +59,14 @@ enum class CommandType {
   IfPersistRequest = 25,
   InstanceStatusRequest = 26,
   ShallowCopyRequest = 27,
-  DeepCopyRequest = 28,
-  OpenStreamRequest = 29,
-  MigrateObjectRequest = 30,
-  CreateRemoteBufferRequest = 31,
-  GetRemoteBuffersRequest = 32,
-  DropBufferRequest = 33,
-  MakeArenaRequest = 34,
-  FinalizeArenaRequest = 35,
+  OpenStreamRequest = 28,
+  MigrateObjectRequest = 29,
+  CreateRemoteBufferRequest = 30,
+  GetRemoteBuffersRequest = 31,
+  DropBufferRequest = 32,
+  MakeArenaRequest = 33,
+  FinalizeArenaRequest = 34,
+  DeepCopyRequest = 35,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
