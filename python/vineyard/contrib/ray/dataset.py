@@ -29,51 +29,13 @@ from ray.data.impl.remote_fn import cached_remote_fn
 import vineyard
 from vineyard.data.dataframe import make_global_dataframe
 
-from .actor import spread
+from .actor import spread, spread_and_get, spread_to_all_nodes
 
 
 def _block_to_vineyard(block: Block):
     client = vineyard.connect()
     block = BlockAccessor.for_block(block)
     return client.put(block.to_pandas())
-
-
-def _vineyard_tensor_to_block(client, object_id):
-    raise NotImplementedError
-
-
-def _vineyard_dataframe_to_block(client, object_id):
-    df = client.get(object_id)
-    block = pa.table(df)
-    return (block, BlockAccessor.for_block(block).get_metadata(input_files=None))
-
-
-def _vineyard_to_blocks(object_id):
-    client = vineyard.connect()
-    meta = client.get_meta(object_id)
-    if meta.typename == 'vineyard::DataFrame':
-        return [_vineyard_dataframe_to_block(client, object_id)]
-
-    if meta.typename == 'vineyard::GlobalDataFrame':
-        blocks = []
-        for index in range(int(meta['partitions_-size'])):
-            df = meta.get_number('partitions_-%d' % index)
-            if df.instance_id == client.instance_id:
-                blocks.append(_vineyard_dataframe_to_block(client, df.id))
-        return blocks
-
-    if meta.typename.starts('vineyard::Tensor'):
-        return [_vineyard_tensor_to_block(client, object_id)]
-
-    if meta.typename == 'vineyard::GlobalTensor':
-        blocks = []
-        for index in range(int(meta['partitions_-size'])):
-            df = meta.get_number('partitions_-%d' % index)
-            if df.instance_id == client.instance_id:
-                blocks.append(_vineyard_tensor_to_block(client, df.id))
-        return blocks
-
-    raise NotImplementedError("Not implemented: blocks from %s" % meta.typename)
 
 
 def to_vineyard(self):
@@ -83,14 +45,57 @@ def to_vineyard(self):
     return make_global_dataframe(client, blocks).id
 
 
+def _vineyard_to_block(object_id):
+    client = vineyard.connect()
+    df = client.get(object_id)
+    block = pa.table(df)
+    return (block, BlockAccessor.for_block(block).get_metadata(input_files=None))
+
+
+def _get_remote_chunks_map(object_id):
+    client = vineyard.connect()
+    meta = client.get_meta(object_id)
+    if meta.typename == "vineyard::DataFrame" or meta.typename.startswith("vineyard::Tensor"):
+        return {repr(object_id): meta.instance_id}
+
+    if meta.typename == "vineyard::GlobalDataFrame" or meta.typename == "vineyard::GlobalTensor":
+        mapping = dict()
+        for index in range(int(meta['partitions_-size'])):
+            item = meta['partitions_-%d' % index]
+            mapping[repr(item.id)] = item.instance_id
+        return mapping
+
+    raise NotImplementedError("Not implemented: blocks from %s" % meta.typename)
+
+
+def _get_vineyard_instance_id():
+    client = vineyard.connect()
+    return client.instance_id
+
+
 def from_vineyard(object_id):
-    vineyard_to_blocks = cached_remote_fn(_vineyard_to_blocks, num_cpus=0.1)
-    results = spread(vineyard_to_blocks, object_id)
-    blocks, metadata = [], []
-    for res in results:
-        blocks.extend(res[0])
-        metadata.extend(res[1])
-    return Dataset(BlockList(blocks, ray.get(metadata)))
+    vineyard_to_block = cached_remote_fn(_vineyard_to_block, num_cpus=0.1, num_returns=2)
+    get_vineyard_instance_id = cached_remote_fn(_get_vineyard_instance_id, num_cpus=0.1)
+    get_remote_chunks_map = cached_remote_fn(_get_remote_chunks_map, num_cpus=0.1)
+
+    chunks = ray.get(get_remote_chunks_map.remote(object_id))
+
+    with spread_to_all_nodes(get_vineyard_instance_id) as (nodes, pg):
+        instances = dict()  # instance_id -> placement group index
+        for index in range(nodes):
+            instance = ray.get(
+                get_vineyard_instance_id.options(placement_group=pg, placement_group_bundle_index=index).remote())
+            instances[instance] = index
+
+        blocks, metadatas = [], []
+        for object_id, location in chunks.items():
+            block, metadata = vineyard_to_block.options(placement_group=pg,
+                                                        placement_group_bundle_index=instances[location]).remote(
+                                                            vineyard.ObjectID(object_id))
+            blocks.append(block)
+            metadatas.append(metadata)
+
+        return Dataset(BlockList(blocks, ray.get(metadatas)))
 
 
 def __inject_to_dataset():
