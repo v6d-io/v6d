@@ -15,6 +15,7 @@ Supported Commands
 + :code:`put`
 + :code:`config`
 + :code:`migrate`
++ :code:`debug`
 
 Connect to a vineyard server
 ----------------------------
@@ -208,3 +209,18 @@ Example:
 .. code:: shell
 
     vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --remote
+
+debug
+------
+
+Issue a debug request.
+
+Options:
+
++ :code:`payload`: The payload that will be sent to the debug handler.
+
+Example:
+
+.. code:: shell
+
+    vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
