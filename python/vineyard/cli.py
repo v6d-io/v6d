@@ -58,6 +58,9 @@ Some examples on how to use vineyard-ctl:
 
 10. Migrate a vineyard object
     >>> vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --local
+
+11. Issue a debug request
+    >>> vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
 """
 
 
@@ -214,6 +217,13 @@ def vineyard_argument_parser():
     migration_choice_group.add_argument('--remote',
                                         action='store_true',
                                         help='Migrate the vineyard object remote to local')
+
+    debug_opt = cmd_parser.add_parser('debug',
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      description='Description: Issue a debug request',
+                                      epilog=('Example:\n\n>>> vineyard-ctl debug --payload ' +
+                                              '\'{"instance_status":[], "memory_size":[]}\''))
+    debug_opt.add_argument('--payload', type=json.loads, help='The payload that will be sent to the debug handler')
 
     return parser
 
@@ -426,6 +436,16 @@ def migrate_object(client, args):
                          f'the vineyard object({args.object_id}):')) from exc
 
 
+def debug(client, args):
+    """Utility to issue a debug request."""
+    try:
+        result = client.debug(args.payload)
+    except BaseException as exc:
+        raise Exception(('The following error was encountered during the debug' +
+                         f' request with payload, {args.payload}:')) from exc
+    print(f'The result returned by the debug handler:\n{result}')
+
+
 def config(args):
     """Utility to edit the config file."""
     with open(os.path.expanduser('~/.vineyard/config')) as config_file:
@@ -469,6 +489,8 @@ def main():
         return copy(client, args)
     if args.cmd == 'migrate':
         return migrate_object(client, args)
+    if args.cmd == 'debug':
+        return debug(client, args)
 
     return exit_with_help()
 
