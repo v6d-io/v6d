@@ -237,6 +237,7 @@ def run_single_vineyardd_tests():
         run_test('stream_test')
         run_test('tensor_test')
         run_test('tuple_test')
+        run_test('typename_test')
         run_test('version_test')
 
         run_invalid_client_test('127.0.0.1', rpc_socket_port)
