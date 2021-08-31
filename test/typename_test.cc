@@ -38,8 +38,6 @@ template <typename K, typename V>
 using TX = TXXXX<K, V>;
 
 int main(int, const char**) {
-  using namespace std;
-
   {
     const auto type = type_name<int32_t>();
     CHECK_EQ(type, "int");
