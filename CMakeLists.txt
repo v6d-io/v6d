@@ -565,9 +565,7 @@ if(BUILD_VINEYARD_TESTS)
             add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
         endif()
 
-        target_link_libraries(${T_NAME} PRIVATE
-                              vineyard_client vineyard_basic vineyard_io vineyard_graph
-        )
+        target_link_libraries(${T_NAME} PRIVATE ${VINEYARD_INSTALL_LIBS})
         if(ARROW_SHARED_LIB)
             target_link_libraries(${T_NAME} PRIVATE ${ARROW_SHARED_LIB})
         else()

@@ -18,6 +18,9 @@ limitations under the License.
 
 #include <string>
 
+#define __VINEYARD_GCC_VERSION \
+  (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+
 #include "ctti/detail/name_filters.hpp"
 #include "ctti/nameof.hpp"
 
@@ -38,13 +41,44 @@ inline const std::string typename_unpack_args() {
   return type_name<T>() + "," + typename_unpack_args<U, Args...>();
 }
 
+#if __VINEYARD_GCC_VERSION <= 50100
+#if defined(__clang__)
+#define __TYPENAME_FROM_FUNCTION_PREFIX \
+  "const std::string vineyard::detail::__typename_from_function() [T = "
+#define __TYPENAME_FROM_FUNCTION_SUFFIX "]"
+#elif defined(__GNUC__) && !defined(__clang__)
+#define __TYPENAME_FROM_FUNCTION_PREFIX \
+  "const string vineyard::detail::__typename_from_function() [with T = "
+#define __TYPENAME_FROM_FUNCTION_SUFFIX \
+  "; std::string = std::basic_string<char>]"
+#else
+#error "No support for this compiler."
+#endif
+
+#define __TYPENAME_FROM_FUNCTION_LEFT \
+  (sizeof(__TYPENAME_FROM_FUNCTION_PREFIX) - 1)
+
+template <typename T>
+inline const std::string __typename_from_function() {
+  std::string name = CTTI_PRETTY_FUNCTION;
+  return name.substr(__TYPENAME_FROM_FUNCTION_LEFT,
+                     name.length() - (__TYPENAME_FROM_FUNCTION_LEFT - 1) -
+                         sizeof(__TYPENAME_FROM_FUNCTION_SUFFIX));
+}
+#endif
+
 template <typename T>
 inline const std::string typename_impl(T const&) {
+#if __VINEYARD_GCC_VERSION > 50100
   return ctti::nameof<T>().cppstring();
+#else
+  return __typename_from_function<T>();
+#endif
 }
 
 template <template <typename...> class C, typename... Args>
 inline const std::string typename_impl(C<Args...> const&) {
+#if __VINEYARD_GCC_VERSION > 50100
   constexpr auto fullname = ctti::pretty_function::type<C<Args...>>();
   constexpr const char* index = ctti::detail::find(fullname, "<");
   if (index == fullname.end()) {
@@ -55,18 +89,27 @@ inline const std::string typename_impl(C<Args...> const&) {
   constexpr auto class_name =
       fullname(CTTI_VALUE_PRETTY_FUNCTION_LEFT - 1, index - fullname.begin());
   return class_name.cppstring() + "<" + typename_unpack_args<Args...>() + ">";
+#else
+  const auto fullname = __typename_from_function<C<Args...>>();
+  const auto index = fullname.find('<');
+  if (index == std::string::npos) {
+    return fullname;
+  }
+  const auto class_name = fullname.substr(0, index);
+  return class_name + "<" + typename_unpack_args<Args...>() + ">";
+#endif
 }
 
 }  // namespace detail
 
 template <typename T>
 inline const std::string type_name() {
-#ifdef __GNUC__
+#if (__GNUC__ >= 6) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnull-dereference"
 #endif
   return detail::typename_impl(*(static_cast<T*>(nullptr)));
-#ifdef __GNUC__
+#if (__GNUC__ >= 6) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 }
