@@ -244,6 +244,7 @@ We thank the following excellent opensource projects:
 
 - `apache-arrow <https://github.com/apache/arrow>`_, a cross-language development platform for in-memory analytics;
 - `boost-leaf <https://github.com/boostorg/leaf>`_, a C++ lightweight error augmentation framework;
+- `ctti <https://github.com/Manu343726/ctti>`_, a C++ compile-time type information library;
 - `dlmalloc <http://gee.cs.oswego.edu/dl/html/malloc.htmlp>`_, Doug Lea's memory allocator;
 - `etcd-cpp-apiv3 <https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3>`_, a C++ API for etcd's v3 client API;
 - `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation;
