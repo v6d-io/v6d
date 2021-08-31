@@ -156,6 +156,10 @@ macro(find_boost)
     add_compile_options(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 endmacro(find_boost)
 
+macro(find_ctti)
+    add_subdirectory(thirdparty/ctti)
+endmacro(find_ctti)
+
 macro(find_etcd_cpp_apiv3)
     if(USE_EXTERNAL_ETCD_LIBS)
         find_package(etcd-cpp-api QUIET)
@@ -271,6 +275,7 @@ endmacro(find_pthread)
 macro(find_common_libraries)
     find_apache_arrow()
     find_boost()
+    find_ctti()
     find_glog()
     find_gflags()
     find_jemalloc()
@@ -456,6 +461,16 @@ if(BUILD_VINEYARD_CLIENT)
     target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
     target_compile_options(vineyard_client PUBLIC -DWITH_JEMALLOC)
 
+    target_include_directories(vineyard_client PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    install(DIRECTORY thirdparty/ctti/include/ctti
+            DESTINATION include                 # target directory
+            FILES_MATCHING                      # install only matched files
+            PATTERN "*.hpp"                     # select C++ template header files
+    )
+
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)
         add_target_link_options(vineyard_client PRIVATE OPTIONS -Os)
@@ -566,6 +581,7 @@ if(BUILD_VINEYARD_TESTS)
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
 
+        target_compile_options(${T_NAME} PRIVATE "-std=c++17")
         if(${T_NAME} STREQUAL "delete_test" OR ${T_NAME} STREQUAL "rpc_delete_test")
             target_compile_options(${T_NAME} PRIVATE "-fno-access-control")
         endif()

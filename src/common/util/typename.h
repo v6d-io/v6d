@@ -17,38 +17,88 @@ limitations under the License.
 #define SRC_COMMON_UTIL_TYPENAME_H_
 
 #include <string>
-#include <typeinfo>
 
-#include "boost/core/demangle.hpp"
+#include "ctti/detail/name_filters.hpp"
+#include "ctti/nameof.hpp"
 
-// FIXME don't depends on boost, but currently we just needs the
-// backwards compatibility.
+namespace vineyard {
 
 template <typename T>
-std::string type_name() {
-  std::string name = boost::core::demangle(typeid(T).name());
+inline const std::string type_name();
 
-  // strip all spaces between `<`, `>` and `,`, to ensure consistency
-  std::string compact_name;
-  for (size_t idx = 0; idx < name.size(); ++idx) {
-    if (name[idx] != ' ') {
-      compact_name.append(1, name[idx]);
-    } else {
-      if (idx > 0 && idx < (name.size() - 1) && std::isalnum(name[idx - 1]) &&
-          std::isalnum(name[idx + 1])) {
-        compact_name.append(1, name[idx]);
-      }
-    }
-  }
+namespace detail {
 
-  // erase std::__1:: and std:: difference: to make the object can be get by
-  // clients that linked against different STL libraries.
-  const std::string marker = "std::__1::";
-  for (std::string::size_type p = compact_name.find(marker);
-       p != std::string::npos; p = compact_name.find(marker)) {
-    compact_name.replace(p, marker.size(), "std::");
-  }
-  return compact_name;
+template <typename Arg>
+inline const std::string typename_unpack_args() {
+  return type_name<Arg>();
 }
+
+template <typename T, typename U, typename... Args>
+inline const std::string typename_unpack_args() {
+  return type_name<T>() + "," + typename_unpack_args<U, Args...>();
+}
+
+template <typename T>
+inline const std::string typename_impl(T const&) {
+  return ctti::nameof<T>().cppstring();
+}
+
+template <template <typename...> class C, typename... Args>
+inline const std::string typename_impl(C<Args...> const&) {
+  constexpr auto fullname = ctti::pretty_function::type<C<Args...>>();
+  constexpr const char* index = ctti::detail::find(fullname, "<");
+  if (index == fullname.end()) {
+    return fullname(CTTI_VALUE_PRETTY_FUNCTION_LEFT - 1,
+                    fullname.end() - fullname.begin() - 1)
+        .cppstring();
+  }
+  constexpr auto class_name =
+      fullname(CTTI_VALUE_PRETTY_FUNCTION_LEFT - 1, index - fullname.begin());
+  return class_name.cppstring() + "<" + typename_unpack_args<Args...>() + ">";
+}
+
+}  // namespace detail
+
+template <typename T>
+inline const std::string type_name() {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
+#endif
+  return detail::typename_impl(*(static_cast<T*>(nullptr)));
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+}
+
+template <>
+inline const std::string type_name<std::string>() {
+  return "std::string";
+}
+
+template <>
+inline const std::string type_name<int32_t>() {
+  return "int";
+}
+
+template <>
+inline const std::string type_name<int64_t>() {
+  return "int64";
+}
+
+template <>
+inline const std::string type_name<uint32_t>() {
+  return "uint";
+}
+
+template <>
+inline const std::string type_name<uint64_t>() {
+  return "uint64";
+}
+
+}  // namespace vineyard
+
+// for backwards compatiblity.
+using vineyard::type_name;
 
 #endif  // SRC_COMMON_UTIL_TYPENAME_H_
