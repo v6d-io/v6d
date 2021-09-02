@@ -168,6 +168,7 @@ setup(
         'setuptools',
         'shared-memory38; python_version<="3.7"',
         'sortedcontainers',
+        'treelib',
     ],
     extras_require={
         'dev': [
