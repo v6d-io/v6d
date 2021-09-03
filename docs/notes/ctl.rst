@@ -74,6 +74,8 @@ Options:
 + :code:`stdout`: Get object to stdout.
 + :code:`output_file`: Get object to file.
 + :code:`tree`: Get object lineage in tree-like style.
++ :code:`memory_status`: Get the memory used by the vineyard object.
++ :code:`detail`: Get detailed memory used by the vineyard object.
 
 Example:
 
