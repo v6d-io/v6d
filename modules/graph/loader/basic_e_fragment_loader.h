@@ -191,9 +191,10 @@ class BasicEFragmentLoader {
         arrow::field("id", vineyard::ConvertToArrowType<oid_t>::TypeValue())};
     auto schema = std::make_shared<arrow::Schema>(schema_vector);
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
-      auto& oid_set = oids[v_label];
+      std::shared_ptr<oid_array_t> oid_array = nullptr;
       {
-        BOOST_LEAF_AUTO(oid_array, oid_set.ToArrowArray());
+        auto& oid_set = oids[v_label];
+        BOOST_LEAF_ASSIGN(oid_array, oid_set.ToArrowArray());
         std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
         auto v_table = arrow::Table::Make(schema, arrays);
 
@@ -202,10 +203,10 @@ class BasicEFragmentLoader {
 
         oid_set.Clear();
         BOOST_LEAF_CHECK(oid_set.BatchInsert(tmp_table->column(0)));
+        BOOST_LEAF_ASSIGN(oid_array, oid_set.ToArrowArray());
       }
 
       {
-        BOOST_LEAF_AUTO(oid_array, oid_set.ToArrowArray());
         std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
         auto v_table = arrow::Table::Make(schema, arrays);
 
