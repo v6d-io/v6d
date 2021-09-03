@@ -23,6 +23,7 @@ import sys
 import os
 import json
 import pandas as pd
+import treelib
 
 import vineyard
 
@@ -324,6 +325,11 @@ def query(client, args):
             print(f'Meta data of the object in JSON format:\n{json_meta}')
     if args.metric is not None:
         print(f'{args.metric}: {getattr(value, args.metric)}')
+    if args.tree is not None:
+        meta = client.get_meta(as_object_id(args.object_id))
+        tree = treelib.Tree()
+        get_tree(meta, tree)
+        tree.show(line_type="ascii-exr")
 
 
 def delete_object(client, args):
@@ -444,6 +450,20 @@ def debug(client, args):
         raise Exception(('The following error was encountered during the debug' +
                          f' request with payload, {args.payload}:')) from exc
     print(f'The result returned by the debug handler:\n{result}')
+
+
+def get_tree(meta, tree, parent=None):
+    """Utility to display object lineage in a tree like form."""
+    if parent is None:
+        parent = f'<{meta["typename"]}>:{meta["id"]}'
+        tree.create_node(parent, parent)
+    else:
+        new_parent = f'<{meta["typename"]}>:{meta["id"]}'
+        tree.create_node(new_parent, new_parent, parent=parent)
+        parent = new_parent
+    for key in meta:
+        if type(meta[key]) == vineyard._C.ObjectMeta:
+            get_tree(meta[key], tree, parent)
 
 
 def config(args):

@@ -73,6 +73,7 @@ Options:
 + :code:`exists`: Check if the object exists or not.
 + :code:`stdout`: Get object to stdout.
 + :code:`output_file`: Get object to file.
++ :code:`tree`: Get object lineage in tree-like style.
 
 Example:
 
