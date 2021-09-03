@@ -38,6 +38,12 @@
 
 .. toctree::
    :maxdepth: 6
+   :caption: Examples
+   
+   notes/distibuted_learning.rst
+
+.. toctree::
+   :maxdepth: 6
    :caption: Development
 
    notes/faq.rst
