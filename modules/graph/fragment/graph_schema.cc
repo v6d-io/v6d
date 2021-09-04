@@ -573,7 +573,7 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
     Entry new_entry = entry;
     std::fill(new_entry.valid_properties.begin(),
               new_entry.valid_properties.end(), 1);
-    new_entry.id += vertex_label_num;
+    new_entry.id |= (1 << (sizeof(LabelId) * 8 - 1));
     new_entry.mapping.resize(prop_names.size());
     new_entry.reverse_mapping.resize(prop_names.size());
     for (auto& prop : new_entry.props_) {
