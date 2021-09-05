@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use std::io::{self, Error, ErrorKind};
 use std::net::TcpStream;
 use std::os::unix::net::UnixStream;
@@ -21,14 +20,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::rust_io::*;
 use super::ipc_client::IPCClient;
 use super::rpc_client::RPCClient;
+use super::rust_io::*;
 use super::ObjectMeta;
 
-use super::uuid::{InstanceID, ObjectID};
 use super::protocol::*;
 use super::status::*;
+use super::uuid::{InstanceID, ObjectID};
 
 #[derive(Debug)]
 pub enum ConnInputKind<'a, 'b> {
@@ -40,12 +39,6 @@ pub enum ConnInputKind<'a, 'b> {
 pub enum StreamKind {
     IPCStream(UnixStream),
     RPCStream(TcpStream),
-}
-
-#[derive(Debug)]
-pub enum ClientKind {
-    IPCClient(IPCClient),
-    RPCClient(RPCClient),
 }
 
 pub trait Client {
@@ -100,5 +93,4 @@ pub trait Client {
     }
 
     fn instance_id(&self) -> InstanceID;
-
 }

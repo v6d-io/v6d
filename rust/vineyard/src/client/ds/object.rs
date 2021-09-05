@@ -17,8 +17,8 @@ use std::rc::Rc;
 
 use super::blob::Blob;
 use super::object_meta::ObjectMeta;
-use super::Client;
 use super::uuid::ObjectID;
+use super::Client;
 
 pub trait ObjectBase {
     fn build(client: Box<dyn Client>) -> Result<Blob, Error>;
@@ -33,7 +33,7 @@ pub struct Object {
 
 impl Default for Object {
     fn default() -> Object {
-        Object{
+        Object {
             meta: ObjectMeta::default(),
             id: 0,
         }
@@ -56,8 +56,6 @@ impl ObjectBase for Object {
         panic!("")
     }
 }
-
-
 
 #[derive(Debug)]
 pub struct ObjectBuilder {

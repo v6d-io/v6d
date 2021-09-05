@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use std::io;
 use std::rc::{Rc, Weak};
-use std::collections::{HashMap, HashSet};
 
-use super::uuid::*;
-use super::status::*;
 use super::object::Object;
 use super::object_factory::ObjectFactory;
+use super::status::*;
+use super::uuid::*;
 
 #[derive(Debug)]
 pub struct Blob {}
 
-
-
 #[derive(Debug)]
 pub struct BlobWriter {}
-
-
 
 #[derive(Debug)]
 pub struct BufferSet {
@@ -40,7 +35,7 @@ pub struct BufferSet {
 
 impl Default for BufferSet {
     fn default() -> BufferSet {
-        BufferSet{
+        BufferSet {
             buffer_ids: HashSet::new() as HashSet<ObjectID>,
             buffers: HashMap::new() as HashMap<ObjectID, Rc<ArrowBuffer>>,
         }
@@ -58,9 +53,18 @@ impl BufferSet {
         }
     }
 
-    pub fn emplace_buffer() -> io::Result<Rc<ArrowBuffer>> { // TODO
+    pub fn emplace_buffer_null(&self, id: ObjectID) -> io::Result<Rc<ArrowBuffer>> {
+        // TODO
         panic!()
-        
+    }
+
+    pub fn emplace_buffer(
+        &self,
+        id: ObjectID,
+        buffer: &Rc<ArrowBuffer>,
+    ) -> io::Result<Rc<ArrowBuffer>> {
+        // TODO
+        panic!()
     }
 
     pub fn contains(&self, id: ObjectID) -> bool {
@@ -70,7 +74,8 @@ impl BufferSet {
         true
     }
 
-    pub fn get(&self, id: ObjectID) -> io::Result<Rc<ArrowBuffer>> { // TODO
+    pub fn get(&self, id: ObjectID) -> io::Result<Rc<ArrowBuffer>> {
+        // TODO
         panic!()
     }
 }

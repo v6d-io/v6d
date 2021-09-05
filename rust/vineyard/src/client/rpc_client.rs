@@ -30,9 +30,9 @@ use super::client::StreamKind::{self, RPCStream};
 use super::rust_io::*;
 use super::ObjectMeta;
 
-use super::uuid::{InstanceID, ObjectID};
 use super::protocol::*;
 use super::status::*;
+use super::uuid::{InstanceID, ObjectID};
 
 #[derive(Debug)]
 pub struct RPCClient {

@@ -1,3 +1,3 @@
 pub mod protocol;
-pub mod uuid;
 pub mod status;
+pub mod uuid;

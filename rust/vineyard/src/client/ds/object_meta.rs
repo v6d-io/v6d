@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::fmt;
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,41 +14,45 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 use std::io;
-use std::rc::{Rc, Weak};
-use std::cell::RefCell;
 use std::ops;
+use std::rc::{Rc, Weak};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
-use super::{Client, ClientKind};
 use super::blob::BufferSet;
 use super::object::Object;
 use super::object_factory::ObjectFactory;
+use super::Client;
 
-use super::uuid::*;
 use super::status::*;
+use super::uuid::*;
 
 use super::blob::ArrowBuffer; // TODO. arrow/buffer: dependencies
 
 #[derive(Debug, Clone)]
 pub struct ObjectMeta {
-    client: Weak<ClientKind>, // Question: Weak<dyn Client>  
+    client: Option<Weak<dyn Client>>, // Question: Weak<dyn Client>
     meta: Value,
-    buffer_set: Rc<RefCell<BufferSet>>, 
+    buffer_set: Rc<RefCell<BufferSet>>,
     incomplete: bool,
     force_local: bool,
+}
+
+impl fmt::Debug for dyn Client {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Instance ID: {}\n", self.instance_id())
+    }
 }
 
 impl Default for ObjectMeta {
     fn default() -> Self {
         ObjectMeta {
-            client: Weak::new(), 
+            client: None,
             meta: json!({}),
-            buffer_set: Rc::new(RefCell::new(BufferSet::default())), 
+            buffer_set: Rc::new(RefCell::new(BufferSet::default())),
             incomplete: false,
             force_local: false,
         }
@@ -64,11 +70,11 @@ impl ObjectMeta {
         }
     }
 
-    pub fn set_client(&mut self, client: Weak<ClientKind>) {
+    pub fn set_client(&mut self, client: Option<Weak<dyn Client>>) {
         self.client = client;
     }
 
-    pub fn get_client(&self) -> Weak<ClientKind> {
+    pub fn get_client(&self) -> Option<Weak<dyn Client>> {
         self.client.clone()
     }
 
@@ -89,9 +95,10 @@ impl ObjectMeta {
     }
 
     pub fn set_global(&mut self, global: bool) {
-        self.meta.as_object_mut().unwrap().insert(
-            String::from("global"), serde_json::Value::Bool(global)
-        );
+        self.meta
+            .as_object_mut()
+            .unwrap()
+            .insert(String::from("global"), serde_json::Value::Bool(global));
     }
 
     pub fn is_global(&self) -> bool {
@@ -100,7 +107,8 @@ impl ObjectMeta {
 
     pub fn set_type_name(&mut self, type_name: &String) {
         self.meta.as_object_mut().unwrap().insert(
-            String::from("typename"), serde_json::Value::String(type_name.clone())
+            String::from("typename"),
+            serde_json::Value::String(type_name.clone()),
         );
     }
 
@@ -109,9 +117,10 @@ impl ObjectMeta {
     }
 
     pub fn set_nbytes(&mut self, nbytes: usize) {
-        self.meta.as_object_mut().unwrap().insert(
-            String::from("nbytes"), serde_json::Value::from(nbytes)
-        );
+        self.meta
+            .as_object_mut()
+            .unwrap()
+            .insert(String::from("nbytes"), serde_json::Value::from(nbytes));
     }
 
     pub fn get_nbytes(&self) -> usize {
@@ -131,15 +140,14 @@ impl ObjectMeta {
         }
         if self.meta["instance_id"].is_null() {
             return true;
-        }else {
-            if self.client.weak_count()!=0 { // Question: is it correct?
-                let instance_id = match self.client.upgrade().unwrap().as_ref(){
-                    ClientKind::IPCClient(client) => client.instance_id(),
-                    ClientKind::RPCClient(client) => client.instance_id(),
-                };
-                return instance_id == self.meta["instance_id"].as_u64().unwrap() as InstanceID;
-            }else {
-                return false;
+        } else {
+            match &self.client {
+                // Question: is it correct?
+                Some(client) => {
+                    let instance_id = client.upgrade().unwrap().as_ref().instance_id();
+                    return instance_id == self.meta["instance_id"].as_u64().unwrap() as InstanceID;
+                }
+                None => return false,
             }
         }
     }
@@ -153,21 +161,23 @@ impl ObjectMeta {
     }
 
     pub fn reset_key(&mut self, key: &String) {
-        if self.meta.as_object_mut().unwrap().contains_key(key){
+        if self.meta.as_object_mut().unwrap().contains_key(key) {
             self.meta.as_object_mut().unwrap().remove(key);
         }
     }
 
-    pub fn add_string_key_value(&mut self, key: &String, value: &String) { 
-        self.meta.as_object_mut().unwrap().insert(
-            key.clone(), serde_json::Value::String(value.clone())
-        );
+    pub fn add_string_key_value(&mut self, key: &String, value: &String) {
+        self.meta
+            .as_object_mut()
+            .unwrap()
+            .insert(key.clone(), serde_json::Value::String(value.clone()));
     }
 
     pub fn add_json_key_value(&mut self, key: &String, value: &Value) {
-        self.meta.as_object_mut().unwrap().insert(
-            key.clone(), value.clone()
-        );
+        self.meta
+            .as_object_mut()
+            .unwrap()
+            .insert(key.clone(), value.clone());
     }
 
     pub fn get_key_value(&self, key: &String) -> &Value {
@@ -179,10 +189,13 @@ impl ObjectMeta {
 
     pub fn add_member_with_meta(&mut self, name: &String, member: &ObjectMeta) {
         VINEYARD_ASSERT(!self.meta.as_object().unwrap().contains_key(name));
-        self.meta.as_object_mut().unwrap().insert(
-            name.clone(), member.meta.clone()
-        );
-        self.buffer_set.borrow_mut().extend(&member.buffer_set.borrow());
+        self.meta
+            .as_object_mut()
+            .unwrap()
+            .insert(name.clone(), member.meta.clone());
+        self.buffer_set
+            .borrow_mut()
+            .extend(&member.buffer_set.borrow());
     }
 
     pub fn add_member_with_object(&mut self, name: &String, member: &Object) {
@@ -191,38 +204,38 @@ impl ObjectMeta {
 
     pub fn add_member_with_id(&mut self, name: &String, member_id: ObjectID) {
         VINEYARD_ASSERT(!self.meta.as_object().unwrap().contains_key(name));
-        let member_node = json!({"id": object_id_to_string(member_id)}); 
-        self.meta.as_object_mut().unwrap().insert(
-            name.clone(), member_node
-        );
+        let member_node = json!({ "id": object_id_to_string(member_id) });
+        self.meta
+            .as_object_mut()
+            .unwrap()
+            .insert(name.clone(), member_node);
         self.incomplete = true;
     }
 
     pub fn get_member(&self, name: &String) -> Rc<Object> {
-        let meta = self.get_member_meta(name); //TODO
-        let object = match ObjectFactory::create(&meta.get_type_name()) { //TODO
-            Err(_) => { 
+        let meta = self.get_member_meta(name);
+        let object = match ObjectFactory::create(&meta.get_type_name()) {
+            //TODO
+            Err(_) => {
                 let mut object = Box::new(Object::default());
                 object.construct(&meta);
                 return Rc::new(*object);
-            }, 
+            }
             Ok(mut object) => {
                 object.construct(&meta);
                 return Rc::new(*object);
             }
         };
-        
     }
 
     pub fn get_member_meta(&self, name: &String) -> ObjectMeta {
         let mut ret = ObjectMeta::default();
         let child_meta = &self.meta[name.as_str()];
         VINEYARD_ASSERT(!child_meta.is_null());
-        // TODO
-        //ret.set_meta_data(Rc::clone(&self.client.upgrade().unwrap()), &child_meta);
-        let my_buffer_set = self.buffer_set.borrow();
-        let all_blobs = my_buffer_set.all_buffers();
-        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // Alert: memeroy?
+        ret.set_meta_data(self.client.as_ref().unwrap(), &child_meta);
+        let all_buffer_set = self.buffer_set.borrow();
+        let all_blobs = all_buffer_set.all_buffers();
+        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // Warning: memeroy?
         for (key, _) in ret_blobs.iter() {
             if let Some(value) = all_blobs.get(key) {
                 ret.set_buffer(*key, value);
@@ -235,21 +248,23 @@ impl ObjectMeta {
         ret
     }
 
-    pub fn get_buffer(&self, blob_id: ObjectID) -> io::Result<Rc<ArrowBuffer>>{
+    pub fn get_buffer(&self, blob_id: ObjectID) -> io::Result<Rc<ArrowBuffer>> {
         match self.buffer_set.borrow().get(blob_id) {
             Ok(buffer) => return Ok(buffer),
-            Err(_) => panic!("The target blob {} doesn't exist.", object_id_to_string(blob_id))
+            Err(_) => panic!(
+                "The target blob {} doesn't exist.",
+                object_id_to_string(blob_id)
+            ),
         }
     }
 
     pub fn set_buffer(&mut self, id: ObjectID, buffer: &Rc<ArrowBuffer>) {
         VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
-        //TODO
-        //VINEYARD_CHECK_OK(self.buffer_set.borrow().emplace_buffer(id, buffer));
+        VINEYARD_CHECK_OK(self.buffer_set.borrow().emplace_buffer(id, buffer)); // TODO
     }
 
     pub fn reset(&mut self) {
-        self.client = Weak::new();
+        self.client = None;
         self.meta = json!({});
         self.buffer_set = Rc::new(RefCell::new(BufferSet::default()));
         self.incomplete = false;
@@ -260,7 +275,7 @@ impl ObjectMeta {
     pub fn incomplete(&self) -> bool {
         self.incomplete
     }
-    
+
     pub fn meta_data(&self) -> &Value {
         &self.meta
     }
@@ -269,41 +284,59 @@ impl ObjectMeta {
         &mut self.meta
     }
 
-    pub fn set_meta_data(&mut self, client: ClientKind, meta: &Value) {
-        self.client = Rc::<ClientKind>::downgrade(&Rc::new(client));
-        self.meta = meta.clone(); 
-        self.find_all_blobs(); // TODO
+    pub fn set_meta_data(&mut self, client: &Weak<dyn Client>, meta: &Value) {
+        self.client = Some(client.clone());
+        self.meta = meta.clone();
+        self.find_all_blobs(&self.meta);
     }
 
     pub fn get_buffer_set(&self) -> &Rc<RefCell<BufferSet>> {
         &self.buffer_set
     }
 
-
-    fn find_all_blobs(&self) {
-        let tree = &self.meta;
-        if tree.is_null(){
+    // Check logic
+    pub fn find_all_blobs(&self, tree: &Value) {
+        if tree.is_null() {
             return;
         }
         let member_id = object_id_from_string(&tree["id"].as_str().unwrap().to_string());
         if is_blob(member_id) {
-            // TODO
-        }else {
-            
+            let instance_id = self
+                .client
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .instance_id();
+            let cond1: bool = instance_id == tree["instance_id"].as_u64().unwrap() as InstanceID;
+            let mut cond2: bool = false;
+            if let None = self.client {
+                cond2 = true;
+            }
+            if cond2 || cond1 {
+                // QUESTION // TODO
+                VINEYARD_CHECK_OK(self.buffer_set.borrow().emplace_buffer_null(member_id));
+            }
+        } else {
+            for item in tree.as_object().unwrap().values() {
+                if item.is_object() {
+                    self.find_all_blobs(item);
+                }
+            }
         }
-
     }
 
     fn set_instance_id(&mut self, instance_id: InstanceID) {
         self.meta.as_object_mut().unwrap().insert(
-            String::from("instance_id"), serde_json::Value::from(instance_id)
+            String::from("instance_id"),
+            serde_json::Value::from(instance_id),
         );
     }
 
     fn set_signature(&mut self, signature: Signature) {
         self.meta.as_object_mut().unwrap().insert(
-            String::from("signature"), serde_json::Value::from(signature)
+            String::from("signature"),
+            serde_json::Value::from(signature),
         );
     }
-
 }

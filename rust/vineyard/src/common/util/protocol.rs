@@ -6,8 +6,8 @@ use std::collections::{HashMap, HashSet};
 use std::io::{self, Error, ErrorKind};
 use std::ptr;
 
-use super::uuid::*;
 use super::status::*;
+use super::uuid::*;
 use crate::client::client::Client;
 
 #[derive(Debug)]
