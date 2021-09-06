@@ -41,6 +41,21 @@ class ScriptLauncher(Launcher):
         self._listen_err_thrd = None
         self._cmd = None
 
+        self._err_message = None
+        self._exit_code = None
+
+    @property
+    def command(self):
+        return self._cmd
+
+    @property
+    def error_message(self):
+        return self._err_message
+
+    @property
+    def exit_code(self):
+        return self._exit_code
+
     def run(self, *args, **kw):
         # FIXME run self._script on a set of host machines, the host is decided
         # by the arguments of the launcher in `__init__`, and those inputs object
@@ -75,7 +90,7 @@ class ScriptLauncher(Launcher):
         self._listen_out_thrd = threading.Thread(target=self.read_output, args=(self._proc.stdout, ))
         self._listen_out_thrd.daemon = True
         self._listen_out_thrd.start()
-        self.err_message = []
+        self._err_message = []
         self._listen_err_thrd = threading.Thread(target=self.read_err, args=(self._proc.stderr, ))
         self._listen_err_thrd.daemon = True
         self._listen_err_thrd.start()
@@ -106,7 +121,7 @@ class ScriptLauncher(Launcher):
         if r is not None:
             return r
         raise RuntimeError('Failed to launch job [%s], exited with %r: %s' %
-                           (self._cmd, self._proc.poll(), ''.join(self.err_message)))
+                           (self._cmd, self._proc.poll(), ''.join(self._err_message)))
 
     def read_output(self, stdout):
         while self._proc.poll() is None:
@@ -124,11 +139,12 @@ class ScriptLauncher(Launcher):
         while self._proc.poll() is None:
             line = stderr.readline()
             if line:
-                self.err_message.append(line)
-        self.err_message.extend(stderr.readlines())
+                self._err_message.append(line)
+        self._err_message.extend(stderr.readlines())
 
     def join(self):
-        if self._proc.wait():
+        self._exit_code = self._proc.wait()
+        if self._exit_code != 0:
             self._status = LauncherStatus.FAILED
         else:
             self._status = LauncherStatus.SUCCEED

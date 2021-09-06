@@ -22,13 +22,15 @@ import sys
 import traceback
 
 import fsspec
-import pyarrow as pa
 import vineyard
-from vineyard.io.byte import ByteStreamBuilder
 
-from vineyard.drivers.io import ossfs
+try:
+    from vineyard.drivers.io import ossfs
+except ImportError:
+    ossfs = None
 
-fsspec.register_implementation("oss", ossfs.OSSFileSystem)
+if ossfs:
+    fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
 
 def report_status(status, content):

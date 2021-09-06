@@ -29,10 +29,14 @@ import pyorc
 import vineyard
 from vineyard.io.dataframe import DataframeStreamBuilder
 
-from vineyard.drivers.io import ossfs
+try:
+    from vineyard.drivers.io import ossfs
+except ImportError:
+    ossfs = None
 
+if ossfs:
+    fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 fsspec.register_implementation("hive", fsspec.implementations.hdfs.PyArrowHDFS)
-fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
 
 def arrow_type(field):

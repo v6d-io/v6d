@@ -43,7 +43,6 @@
 
 import filecmp
 import pytest
-import configparser
 import glob
 import os
 from urllib.parse import urlparse

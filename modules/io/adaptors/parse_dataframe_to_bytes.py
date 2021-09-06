@@ -16,10 +16,8 @@
 # limitations under the License.
 #
 
-import io
 import json
 import sys
-from urllib.parse import urlparse
 
 import pyarrow as pa
 import vineyard

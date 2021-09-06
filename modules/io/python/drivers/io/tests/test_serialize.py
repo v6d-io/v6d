@@ -18,7 +18,6 @@
 
 import os
 import pytest
-import itertools
 import numpy as np
 
 import vineyard
