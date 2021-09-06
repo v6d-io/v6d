@@ -857,7 +857,7 @@ Status Exists(const json& tree, const ObjectID id, bool& exists) {
 }
 
 Status ShallowCopyOps(const json& tree, const ObjectID id,
-                      const ObjectID target,
+                      const json& extra_metadata, const ObjectID target,
                       std::vector<IMetaService::op_t>& ops, bool& transient) {
   std::string name = VYObjectIDToString(id);
   json tmp_tree;
@@ -865,6 +865,21 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
   RETURN_ON_ASSERT(
       tmp_tree.contains("transient") && tmp_tree["transient"].is_boolean(),
       "The 'transient' should a plain bool value");
+  RETURN_ON_ASSERT(extra_metadata.is_object(),
+                   "The 'extra_metadata' must be a dict");
+  for (auto const& item : json::iterator_wrapper(extra_metadata)) {
+    RETURN_ON_ASSERT(
+        item.value().is_primitive(),
+        "The value of items in 'extra_metadata' must be primitives");
+    if (item.value().is_string()) {
+      std::string encoded_value;
+      encode_value(NodeType::Value, item.value().get_ref<std::string const&>(),
+                   encoded_value);
+      tmp_tree[item.key()] = encoded_value;
+    } else {
+      tmp_tree[item.key()] = item.value();
+    }
+  }
   transient = tmp_tree["transient"].get<bool>();
   std::string key_prefix =
       "/data" + std::string("/") + VYObjectIDToString(target) + "/";

@@ -897,9 +897,21 @@ void WriteShallowCopyRequest(const ObjectID id, std::string& msg) {
   encode_msg(root, msg);
 }
 
-Status ReadShallowCopyRequest(const json& root, ObjectID& id) {
+void WriteShallowCopyRequest(const ObjectID id, json const& extra_metadata,
+                             std::string& msg) {
+  json root;
+  root["type"] = "shallow_copy_request";
+  root["id"] = id;
+  root["extra"] = extra_metadata;
+
+  encode_msg(root, msg);
+}
+
+Status ReadShallowCopyRequest(const json& root, ObjectID& id,
+                              json& extra_metadata) {
   RETURN_ON_ASSERT(root["type"] == "shallow_copy_request");
   id = root["id"].get<ObjectID>();
+  extra_metadata = root.value("extra", json::object());
   return Status::OK();
 }
 

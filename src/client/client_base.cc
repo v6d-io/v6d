@@ -188,6 +188,18 @@ Status ClientBase::ShallowCopy(const ObjectID id, ObjectID& target_id) {
   return Status::OK();
 }
 
+Status ClientBase::ShallowCopy(const ObjectID id, json const& extra_metadata,
+                               ObjectID& target_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteShallowCopyRequest(id, extra_metadata, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadShallowCopyReply(message_in, target_id));
+  return Status::OK();
+}
+
 Status ClientBase::DeepCopy(const ObjectID object_id, ObjectID& target_id) {
   ENSURE_CONNECTED(this);
 
