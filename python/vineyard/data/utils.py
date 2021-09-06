@@ -40,9 +40,11 @@ def normalize_dtype(dtype, dtype_meta=None):
         return np.dtype('int64')
     if dtype in ['u64', 'uint64', 'uint64_t']:
         return np.dtype('uint64')
-    if dtype in ['float', 'float32']:
+    if dtype in ['float32']:
+        return np.dtype('float32')
+    if dtype in ['float']:
         return np.dtype('float')
-    if dtype in [float, 'double', 'float64']:
+    if dtype in ['double', 'float64']:
         return np.dtype('double')
     if dtype.startswith('str'):
         return np.dtype(dtype_meta)

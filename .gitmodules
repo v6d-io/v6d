@@ -26,4 +26,8 @@
 	path = thirdparty/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
 	shallow = true
+[submodule "thirdparty/ctti"]
+	path = thirdparty/ctti
+	url = https://github.com/Manu343726/ctti.git
+	shallow = true
 

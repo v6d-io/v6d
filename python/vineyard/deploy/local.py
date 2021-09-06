@@ -75,6 +75,11 @@ def start_vineyardd(etcd_endpoints=None,
             The port that vineyard will use to privode RPC service.
         debug: bool
             Whether print debug logs.
+
+    Returns:
+        (proc, socket):
+            Yields a tuple with the subprocess as the first element and the UNIX-domain
+            IPC socket as the second element.
     '''
 
     if not vineyardd_path:

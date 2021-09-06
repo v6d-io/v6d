@@ -34,6 +34,7 @@ author = 'The Vineyard Authors'
 # ones.
 extensions = [
     'breathe',
+    'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
@@ -41,6 +42,7 @@ extensions = [
     'sphinx.ext.viewcode',
 ]
 
+# breathe
 breathe_projects = {
     'vineyard': os.path.abspath('./_build/doxygen/xml'),
 }
@@ -48,6 +50,9 @@ breathe_default_project = 'vineyard'
 breathe_debug_trace_directives = True
 breathe_debug_trace_doxygen_ids = True
 breathe_debug_trace_qualification = True
+
+# jupyter notebooks
+nbsphinx_execute = 'never'
 
 source_suffix = ['.rst', '.md']
 
@@ -57,7 +62,10 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = [
+    '_build',
+    '.ipynb_checkpoints',
+]
 
 # -- Options for HTML output -------------------------------------------------
 

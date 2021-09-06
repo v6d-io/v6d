@@ -85,7 +85,6 @@ impl Client for IPCClient {
 
             let mut message_in = String::new();
             do_read(&mut ipc_stream, &mut message_in)?;
-
             let message_in: Value =
                 serde_json::from_str(&message_in).expect("JSON was not well-formatted");
             let register_reply: RegisterReply = read_register_reply(message_in)?;
@@ -119,7 +118,6 @@ impl Client for IPCClient {
             None => panic!(),
         }
     }
-
     fn instance_id(&self) -> InstanceID {
         self.instance_id
     }

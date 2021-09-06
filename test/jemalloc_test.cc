@@ -23,7 +23,6 @@ limitations under the License.
 
 #include "arrow/status.h"
 #include "arrow/util/io_util.h"
-#include "glog/logging.h"
 
 #include "basic/ds/array.h"
 #include "client/allocator.h"
@@ -31,6 +30,7 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/memory/jemalloc.h"
 #include "common/util/env.h"
+#include "common/util/logging.h"
 
 int main(int argc, char** argv) {
   void* base = malloc(20 * 1024 * 1024);

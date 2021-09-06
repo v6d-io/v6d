@@ -23,6 +23,7 @@ import sys
 import os
 import json
 import pandas as pd
+import treelib
 
 import vineyard
 
@@ -58,6 +59,9 @@ Some examples on how to use vineyard-ctl:
 
 10. Migrate a vineyard object
     >>> vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --local
+
+11. Issue a debug request
+    >>> vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
 """
 
 
@@ -215,6 +219,13 @@ def vineyard_argument_parser():
                                         action='store_true',
                                         help='Migrate the vineyard object remote to local')
 
+    debug_opt = cmd_parser.add_parser('debug',
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      description='Description: Issue a debug request',
+                                      epilog=('Example:\n\n>>> vineyard-ctl debug --payload ' +
+                                              '\'{"instance_status":[], "memory_size":[]}\''))
+    debug_opt.add_argument('--payload', type=json.loads, help='The payload that will be sent to the debug handler')
+
     return parser
 
 
@@ -314,6 +325,11 @@ def query(client, args):
             print(f'Meta data of the object in JSON format:\n{json_meta}')
     if args.metric is not None:
         print(f'{args.metric}: {getattr(value, args.metric)}')
+    if args.tree is not None:
+        meta = client.get_meta(as_object_id(args.object_id))
+        tree = treelib.Tree()
+        get_tree(meta, tree)
+        tree.show(line_type="ascii-exr")
 
 
 def delete_object(client, args):
@@ -391,7 +407,8 @@ def copy(client, args):
         object_id = client.shallow_copy(as_object_id(args.object_id))
         print(f'The object({args.object_id}) was succesfully copied to {object_id}')
     elif args.deep:
-        print('Deep Copy is currently not supported.')
+        object_id = client.deep_copy(as_object_id(args.object_id))
+        print(f'The object({args.object_id}) was succesfully copied to {object_id}')
     else:
         exit_with_help()
 
@@ -423,6 +440,30 @@ def migrate_object(client, args):
     except BaseException as exc:
         raise Exception(('The following error was encountered while migrating ' +
                          f'the vineyard object({args.object_id}):')) from exc
+
+
+def debug(client, args):
+    """Utility to issue a debug request."""
+    try:
+        result = client.debug(args.payload)
+    except BaseException as exc:
+        raise Exception(('The following error was encountered during the debug' +
+                         f' request with payload, {args.payload}:')) from exc
+    print(f'The result returned by the debug handler:\n{result}')
+
+
+def get_tree(meta, tree, parent=None):
+    """Utility to display object lineage in a tree like form."""
+    if parent is None:
+        parent = f'<{meta["typename"]}>:{meta["id"]}'
+        tree.create_node(parent, parent)
+    else:
+        new_parent = f'<{meta["typename"]}>:{meta["id"]}'
+        tree.create_node(new_parent, new_parent, parent=parent)
+        parent = new_parent
+    for key in meta:
+        if type(meta[key]) == vineyard._C.ObjectMeta:
+            get_tree(meta[key], tree, parent)
 
 
 def config(args):
@@ -468,6 +509,8 @@ def main():
         return copy(client, args)
     if args.cmd == 'migrate':
         return migrate_object(client, args)
+    if args.cmd == 'debug':
+        return debug(client, args)
 
     return exit_with_help()
 

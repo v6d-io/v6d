@@ -23,7 +23,9 @@ limitations under the License.
 
 #include "common/memory/fling.h"
 #include "common/util/callback.h"
+#include "common/util/functions.h"
 #include "common/util/json.h"
+#include "server/util/metrics.h"
 
 namespace vineyard {
 
@@ -212,6 +214,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::ShallowCopyRequest: {
     return doShallowCopy(root);
   }
+  case CommandType::DeepCopyRequest: {
+    return doDeepCopy(root);
+  }
   case CommandType::DelDataRequest: {
     return doDelData(root);
   }
@@ -373,14 +378,17 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   int store_fd = object->store_fd;
   int data_size = object->data_size;
-  this->doWrite(message_out, [self, store_fd, data_size](const Status& status) {
-    if (data_size > 0 &&
-        self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-      self->used_fds_.emplace(store_fd);
-      send_fd(self->nativeHandle(), store_fd);
-    }
-    return Status::OK();
-  });
+  this->doWrite(
+      message_out, [this, self, store_fd, data_size](const Status& status) {
+        if (data_size > 0 &&
+            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+          self->used_fds_.emplace(store_fd);
+          send_fd(self->nativeHandle(), store_fd);
+        }
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                    server_ptr_->GetBulkStore()->Footprint());
+        return Status::OK();
+      });
   return false;
 }
 
@@ -413,6 +421,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
           }
         }
         self->doWrite(message_out);
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                    server_ptr_->GetBulkStore()->Footprint());
       });
   return false;
 }
@@ -429,6 +439,8 @@ bool SocketConnection::doDropBuffer(const json& root) {
     WriteErrorReply(status, message_out);
   }
   this->doWrite(message_out);
+  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+              server_ptr_->GetBulkStore()->Footprint());
   return false;
 }
 
@@ -436,11 +448,12 @@ bool SocketConnection::doGetData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool sync_remote = false, wait = false;
+  double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadGetDataRequest, root, ids, sync_remote, wait);
   json tree;
   RESPONSE_ON_ERROR(server_ptr_->GetData(
       ids, sync_remote, wait, [self]() { return self->running_.load(); },
-      [self](const Status& status, const json& tree) {
+      [self, startTime](const Status& status, const json& tree) {
         std::string message_out;
         if (status.ok()) {
           WriteGetDataReply(tree, message_out);
@@ -449,6 +462,10 @@ bool SocketConnection::doGetData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "get",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "get");
         return Status::OK();
       }));
   return false;
@@ -478,10 +495,12 @@ bool SocketConnection::doListData(const json& root) {
 bool SocketConnection::doCreateData(const json& root) {
   auto self(shared_from_this());
   json tree;
+  double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadCreateDataRequest, root, tree);
   RESPONSE_ON_ERROR(server_ptr_->CreateData(
-      tree, [self](const Status& status, const ObjectID id,
-                   const Signature signature, const InstanceID instance_id) {
+      tree, [tree, self, startTime](const Status& status, const ObjectID id,
+                                    const Signature signature,
+                                    const InstanceID instance_id) {
         std::string message_out;
         if (status.ok()) {
           WriteCreateDataReply(id, signature, instance_id, message_out);
@@ -490,6 +509,14 @@ bool SocketConnection::doCreateData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "create",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "create");
+        LOG_SUMMARY("object",
+                    std::to_string(instance_id) + " " +
+                        tree.value("typename", json(nullptr)).dump(),
+                    1);
         return Status::OK();
       }));
   return false;
@@ -554,9 +581,10 @@ bool SocketConnection::doExists(const json& root) {
 bool SocketConnection::doShallowCopy(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
-  TRY_READ_REQUEST(ReadShallowCopyRequest, root, id);
+  json extra_metadata;
+  TRY_READ_REQUEST(ReadShallowCopyRequest, root, id, extra_metadata);
   RESPONSE_ON_ERROR(server_ptr_->ShallowCopy(
-      id, [self](const Status& status, const ObjectID target) {
+      id, extra_metadata, [self](const Status& status, const ObjectID target) {
         std::string message_out;
         if (status.ok()) {
           WriteShallowCopyReply(target, message_out);
@@ -570,13 +598,36 @@ bool SocketConnection::doShallowCopy(const json& root) {
   return false;
 }
 
+bool SocketConnection::doDeepCopy(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id;
+  std::string peer, peer_rpc_endpoint;
+  TRY_READ_REQUEST(ReadDeepCopyRequest, root, object_id, peer,
+                   peer_rpc_endpoint);
+  RESPONSE_ON_ERROR(server_ptr_->DeepCopy(
+      object_id, peer, peer_rpc_endpoint,
+      [self](const Status& status, const ObjectID& target) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteDeepCopyReply(target, message_out);
+        } else {
+          LOG(ERROR) << "Failed to Deep Copy object: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doDelData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool force, deep, fastpath;
+  double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, fastpath);
   RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, fastpath, [self](const Status& status) {
+      ids, force, deep, fastpath, [self, startTime](const Status& status) {
         std::string message_out;
         if (status.ok()) {
           WriteDelDataReply(message_out);
@@ -585,6 +636,10 @@ bool SocketConnection::doDelData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "delete",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "delete");
         return Status::OK();
       }));
   return false;
@@ -682,7 +737,9 @@ bool SocketConnection::doPullNextStreamChunk(const json& root) {
                 return Status::OK();
               });
         } else {
-          LOG(ERROR) << status.ToString();
+          if (!status.IsStreamDrained()) {
+            LOG(ERROR) << status.ToString();
+          }
           WriteErrorReply(status, message_out);
           self->doWrite(message_out);
         }
@@ -898,11 +955,11 @@ void SocketConnection::doWrite(const std::string& buf) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(to_send));
-  if (!write_in_progress) {
-    doAsyncWrite();
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(to_send));
   }
+  doAsyncWrite();
 }
 
 void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
@@ -913,19 +970,19 @@ void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(to_send));
-  if (!write_in_progress) {
-    doAsyncWrite(callback);
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(to_send));
   }
+  doAsyncWrite(callback);
 }
 
 void SocketConnection::doWrite(std::string&& buf) {
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(buf));
-  if (!write_in_progress) {
-    doAsyncWrite();
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(buf));
   }
+  doAsyncWrite();
 }
 
 void SocketConnection::doStop() {
@@ -936,43 +993,58 @@ void SocketConnection::doStop() {
 }
 
 void SocketConnection::doAsyncWrite() {
-  auto self(shared_from_this());
-  asio::async_write(socket_,
-                    boost::asio::buffer(write_msgs_.front().data(),
-                                        write_msgs_.front().length()),
-                    [this, self](boost::system::error_code ec, std::size_t) {
-                      if (!ec) {
-                        write_msgs_.pop_front();
-                        if (!write_msgs_.empty()) {
-                          doAsyncWrite();
-                        }
-                      } else {
-                        doStop();
-                      }
-                    });
-}
-
-void SocketConnection::doAsyncWrite(callback_t<> callback) {
+  std::shared_ptr<std::string> payload = nullptr;
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    if (!write_msgs_.empty()) {
+      payload.reset(new std::string());
+      payload->swap(write_msgs_.front());
+      write_msgs_.pop_front();
+    }
+  }
+  if (payload == nullptr) {
+    return;
+  }
   auto self(shared_from_this());
   asio::async_write(
-      socket_,
-      boost::asio::buffer(write_msgs_.front().data(),
-                          write_msgs_.front().length()),
-      [this, self, callback](boost::system::error_code ec, std::size_t) {
+      socket_, boost::asio::buffer(payload->data(), payload->length()),
+      [this, self, payload](boost::system::error_code ec, std::size_t) {
         if (!ec) {
-          write_msgs_.pop_front();
-          if (!write_msgs_.empty()) {
-            doAsyncWrite(callback);
-          } else {
-            auto status = callback(Status::OK());
-            if (!status.ok()) {
-              doStop();
-            }
-          }
+          doAsyncWrite();
         } else {
           doStop();
         }
       });
+}
+
+void SocketConnection::doAsyncWrite(callback_t<> callback) {
+  std::shared_ptr<std::string> payload = nullptr;
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    if (!write_msgs_.empty()) {
+      payload.reset(new std::string());
+      payload->swap(write_msgs_.front());
+      write_msgs_.pop_front();
+    }
+  }
+  if (payload == nullptr) {
+    auto status = callback(Status::OK());
+    if (!status.ok()) {
+      doStop();
+    }
+    return;
+  }
+  auto self(shared_from_this());
+  asio::async_write(socket_,
+                    boost::asio::buffer(payload->data(), payload->length()),
+                    [this, self, payload, callback](
+                        boost::system::error_code ec, std::size_t) {
+                      if (!ec) {
+                        doAsyncWrite(callback);
+                      } else {
+                        doStop();
+                      }
+                    });
 }
 
 SocketServer::SocketServer(vs_ptr_t vs_ptr)

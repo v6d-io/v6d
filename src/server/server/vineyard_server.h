@@ -114,7 +114,12 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status Exists(const ObjectID id, callback_t<const bool> callback);
 
-  Status ShallowCopy(const ObjectID id, callback_t<const ObjectID> callback);
+  Status ShallowCopy(const ObjectID id, json const& extra_metadata,
+                     callback_t<const ObjectID> callback);
+
+  Status DeepCopy(const ObjectID id, const std::string& peer,
+                  const std::string& peer_rpc_endpoint,
+                  callback_t<const ObjectID&> callback);
 
   Status DelData(const std::vector<ObjectID>& id, const bool force,
                  const bool deep, const bool fastpath, callback_t<> callback);

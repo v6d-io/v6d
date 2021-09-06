@@ -87,7 +87,6 @@ impl Client for RPCClient {
 
             let mut message_in = String::new();
             do_read(&mut rpc_stream, &mut message_in)?;
-
             let message_in: Value =
                 serde_json::from_str(&message_in).expect("JSON was not well-formatted");
             let register_reply: RegisterReply = read_register_reply(message_in)?;
@@ -124,6 +123,13 @@ impl Client for RPCClient {
 
     fn instance_id(&self) -> InstanceID {
         self.instance_id
+    }
+
+    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
+        match &mut self.stream {
+            Some(stream) => return Ok(&mut *stream),
+            None => panic!(),
+        }
     }
 }
 

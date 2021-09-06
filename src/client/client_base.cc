@@ -188,6 +188,53 @@ Status ClientBase::ShallowCopy(const ObjectID id, ObjectID& target_id) {
   return Status::OK();
 }
 
+Status ClientBase::ShallowCopy(const ObjectID id, json const& extra_metadata,
+                               ObjectID& target_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteShallowCopyRequest(id, extra_metadata, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadShallowCopyReply(message_in, target_id));
+  return Status::OK();
+}
+
+Status ClientBase::DeepCopy(const ObjectID object_id, ObjectID& target_id) {
+  ENSURE_CONNECTED(this);
+
+  ObjectMeta meta;
+  RETURN_ON_ERROR(this->GetMetaData(object_id, meta, true));
+  VLOG(10) << "Deep copying: " << this->instance_id();
+
+  std::map<InstanceID, json> cluster;
+  RETURN_ON_ERROR(this->ClusterInfo(cluster));
+  auto selfhost =
+      cluster.at(this->instance_id())["hostname"].get_ref<std::string const&>();
+  auto selfEndpoint = cluster.at(meta.GetInstanceId())["rpc_endpoint"]
+                          .get_ref<std::string const&>();
+
+  auto receiver = std::async(std::launch::async, [&]() -> Status {
+    RETURN_ON_ERROR(
+        this->deepCopyImpl(object_id, target_id, selfhost, selfEndpoint));
+    return Status::OK();
+  });
+
+  return receiver.get();
+}
+
+Status ClientBase::deepCopyImpl(const ObjectID object_id, ObjectID& target_id,
+                                std::string const& peer,
+                                std::string const& peer_rpc_endpoint) {
+  std::string message_out;
+  WriteDeepCopyRequest(object_id, peer, peer_rpc_endpoint, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDeepCopyReply(message_in, target_id));
+  return Status::OK();
+}
+
 Status ClientBase::PutName(const ObjectID id, std::string const& name) {
   ENSURE_CONNECTED(this);
   std::string message_out;

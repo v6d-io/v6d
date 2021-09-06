@@ -11,24 +11,79 @@ grok_patterns:
   - 'NUMBER (?:%{BASE10NUM})'
   - 'USERNAME [a-zA-Z0-9._-]+'
   - 'LABEL [a-zA-Z]+'
+  - 'TYPENAME [a-zA-Z\:\<\>]+'
 metrics:
   - type: counter
     name: data_requests_total
-    help: number of GetData or CreateData requests
+    help: Number of GetData or CreateData requests
     match: '%{USERNAME:user} %{LABEL:op} data_requests_total %{NUMBER:val}'
     value: '{{.val}}'
     labels:
       user: '{{.user}}'
       operation: '{{.op}}'
   - type: summary
-    name: data_request_latency
-    help: Data request duration seconds.
-    match: '%{USERNAME:user} %{LABEL:op} data_request_latency %{NUMBER:val}ms'
+    name: data_request_duration_microseconds
+    help: Data request duration microseconds.
+    match: '%{USERNAME:user} %{LABEL:op} data_request_duration_microseconds %{NUMBER:val}'
     value: '{{.val}}'
     quantiles: {0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
     labels:
       user: '{{.user}}'
       operation: '{{.op}}'
+  - type: summary
+    name: etcd_request_duration_microseconds
+    help: etcd request duration microseconds.
+    match: '%{USERNAME:user} %{LABEL:op} etcd_request_duration_microseconds %{NUMBER:val}'
+    value: '{{.val}}'
+    quantiles: {0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
+    labels:
+      user: '{{.user}}'
+      operation: '{{.op}}'
+  - type: gauge
+    name: instances_total
+    help: Number of instances in the cluster
+    match: '%{USERNAME:user}  instances_total %{NUMBER:val}'
+    value: '{{.val}}'
+    cumulative: false
+    labels:
+      user: '{{.user}}'
+  - type: gauge
+    name: instances_memory_usage_bytes
+    help: Memory usage of each instance in bytes
+    match: '%{USERNAME:user} %{NUMBER:instance_id} instances_memory_usage_bytes %{NUMBER:val}'
+    value: '{{.val}}'
+    cumulative: false
+    labels:
+      user: '{{.user}}'
+      instance: '{{.instance_id}}'
+  - type: gauge
+    name: ipc_connection_total
+    help: Total number of ipc connections for each instance
+    match: '%{USERNAME:user} %{NUMBER:instance_id} ipc_connection_total %{NUMBER:val}'
+    value: '{{.val}}'
+    cumulative: true
+    labels:
+      user: '{{.user}}'
+      instance: '{{.instance_id}}'
+  - type: gauge
+    name: rpc_connection_total
+    help: Total number of rpc connections for each instance
+    match: '%{USERNAME:user} %{NUMBER:instance_id} rpc_connection_total %{NUMBER:val}'
+    value: '{{.val}}'
+    cumulative: true
+    labels:
+      user: '{{.user}}'
+      instance: '{{.instance_id}}'
+  - type: gauge
+    name: objects_total
+    help: Total number of objects each type
+    match: '%{USERNAME:user} %{NUMBER:instance_id} "%{TYPENAME:typename}" object %{NUMBER:val}'
+    value: '{{.val}}'
+    cumulative: true
+    labels:
+      user: '{{.user}}'
+      instance: '{{.instance_id}}'
+      type: '{{.typename}}'
 server:
   protocol: http
   host: localhost

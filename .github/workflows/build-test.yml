@@ -71,6 +71,7 @@ jobs:
                               libxml2-dev \
                               libz-dev \
                               lsb-release \
+                              pandoc \
                               protobuf-compiler-grpc \
                               python3-pip \
                               uuid-dev \
@@ -92,7 +93,8 @@ jobs:
           sudo pip3 install --no-binary pyarrow pyarrow==3.0.0
 
           # install python packages for codegen, and io adaptors
-          sudo pip3 install libclang parsec yapf==0.30.0 sphinx sphinx_rtd_theme docutils==0.16 breathe gcovr pytest hdfs3
+          sudo pip3 install -U Pygments>=2.4.1
+          sudo pip3 install libclang parsec yapf==0.30.0 sphinx sphinx_rtd_theme docutils==0.16 breathe nbsphinx gcovr pytest hdfs3
 
           # install clang-format
           sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
@@ -274,17 +276,10 @@ jobs:
           rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
 
-          # build & install airflow-provider-vineyard
-          rm -rf build/lib* build/bdist.*
-          python3 setup_airflow.py bdist_wheel
-
-          # build & install vineyard-dask
-          rm -rf build/lib* build/bdist.*
-          python3 setup_dask.py bdist_wheel
-
-          # build & install vineyard-ml
-          rm -rf build/lib* build/bdist.*
-          python3 setup_ml.py bdist_wheel
+          for pkg in airflow dask ml; do
+            rm -rf build/lib* build/bdist.*
+            python3 setup_${pkg}.py bdist_wheel
+          done
 
           # build & install vineyard-io
           pushd modules/io
@@ -400,7 +395,19 @@ jobs:
           tag: ${{ steps.tag.outputs.TAG }}
           prerelease: false
           overwrite: true
-          body: "vineyard-ml ${{ steps.tag.outputs.TAG }}"
+          body: "vineyard-contrib ${{ steps.tag.outputs.TAG }}"
+
+      - name: Upload vineyard contrib wheels to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/_vineyard*.whl
+          file_glob: true
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard-contrib ${{ steps.tag.outputs.TAG }}"
 
       - name: Upload vineyard-io wheels to tagged release
         uses: svenstaro/upload-release-action@v2

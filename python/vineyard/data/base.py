@@ -44,7 +44,7 @@ def double_builder(client, value, **kwargs):
 
 def string_builder(client, value, **kwargs):
     meta = ObjectMeta(**kwargs)
-    meta['typename'] = 'vineyard::Scalar<std::basic_string<char,std::char_traits<char>,std::allocator<char>>>'
+    meta['typename'] = 'vineyard::Scalar<std::string>'
     meta['value_'] = value
     meta['type_'] = getattr(type(value), '__name__')
     meta['nbytes'] = 0
@@ -93,7 +93,7 @@ def tuple_builder(client, value, builder, **kwargs):
 def scalar_resolver(obj):
     meta = obj.meta
     typename = obj.typename
-    if typename == 'vineyard::Scalar<std::basic_string<char,std::char_traits<char>,std::allocator<char>>>':
+    if typename == 'vineyard::Scalar<std::string>':
         return meta['value_']
     if typename == 'vineyard::Scalar<int>':
         return int(meta['value_'])

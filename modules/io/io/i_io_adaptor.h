@@ -79,6 +79,10 @@ class IIOAdaptor {
     return Status::OK();
   }
 
+  virtual Status WriteTable(std::shared_ptr<arrow::Table> table) {
+    return Status::OK();
+  }
+
   // dir or file related:
   virtual Status ListDirectory(const std::string& path,
                                std::vector<std::string>& files) = 0;

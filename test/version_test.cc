@@ -20,9 +20,9 @@ limitations under the License.
 #include "arrow/status.h"
 #include "arrow/util/io_util.h"
 #include "arrow/util/logging.h"
-#include "glog/logging.h"
 
 #include "client/client.h"
+#include "common/util/logging.h"
 #include "common/util/version.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
