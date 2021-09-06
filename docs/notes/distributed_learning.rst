@@ -32,21 +32,23 @@ The dataset includes 506,011 instances with 12 input features:
 10 numerical features and 2 categorical features.
 Each instance is categorized into 1 of 7 classes.
 
-The solution contains two steps:
+The solution contains three steps:
 
-1) preprocess the data in pandas to extract the 12 features and the label
+1. preprocess the data in pandas to extract the 12 features and the label
 
-2) define and train the model in keras
+2. store the preprocessed data in files
 
-3) the preprocessed data is stored in files
+3. define and train the model in keras
+
 
 Mapping the solution to distributed learning, we have:
 
-1) preprocess the data in dask.dataframe
+1. preprocess the data in dask.dataframe
 
-2) train the model in horovod.keras
+2. share the preprocessed data using Vineyard
 
-3) share the preprocessed data using Vineyard
+3. train the model in horovod.keras
+
 
 We will walk through the code as follows.
 
@@ -235,6 +237,7 @@ All the other parts of training procedure are the same as the single machine sol
 
 Conclusion
 ----------
+
 From this example, we can see that with the help of Vineyard, users can easily extend
 their single machine solutions to distributed learning using dedicated systems without
 worrying about the cross-system data sharing issues.
