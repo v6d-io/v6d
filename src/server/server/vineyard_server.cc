@@ -304,9 +304,10 @@ Status VineyardServer::CreateData(
   // validate typename
   auto type_name_node = tree.value("typename", json(nullptr));
   if (type_name_node.is_null() || !type_name_node.is_string()) {
-    RETURN_ON_ERROR(callback(Status::MetaTreeInvalid("No typename field"),
-                             InvalidObjectID(), InvalidSignature(),
-                             UnspecifiedInstanceID()));
+    VINEYARD_DISCARD(callback(Status::MetaTreeInvalid("No typename field"),
+                              InvalidObjectID(), InvalidSignature(),
+                              UnspecifiedInstanceID()));
+    return Status::OK();
   }
   std::string const& type = type_name_node.get_ref<std::string const&>();
 
@@ -778,7 +779,7 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         [self, callback, proc, stream_id](Status const& status,
                                           std::string const& line) {
           if (status.ok()) {
-            RETURN_ON_ERROR(callback(Status::OK(), stream_id));
+            VINEYARD_DISCARD(callback(Status::OK(), stream_id));
             if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration client exit abnormally");
             }
@@ -803,7 +804,7 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         [callback, proc](Status const& status, std::string const& line) {
           if (status.ok()) {
             ObjectID result_id = VYObjectIDFromString(line);
-            RETURN_ON_ERROR(callback(Status::OK(), result_id));
+            VINEYARD_DISCARD(callback(Status::OK(), result_id));
             if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration server exit abnormally");
             }
