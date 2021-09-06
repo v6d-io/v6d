@@ -28,8 +28,11 @@ use super::client::Client;
 use super::client::ConnInputKind::{self, RPCConnInput};
 use super::client::StreamKind::{self, RPCStream};
 use super::rust_io::*;
-use super::{InstanceID, ObjectID, ObjectMeta};
-use crate::common::util::protocol::*;
+use super::ObjectMeta;
+
+use super::protocol::*;
+use super::status::*;
+use super::uuid::{InstanceID, ObjectID};
 
 #[derive(Debug)]
 pub struct RPCClient {
@@ -84,7 +87,6 @@ impl Client for RPCClient {
 
             let mut message_in = String::new();
             do_read(&mut rpc_stream, &mut message_in)?;
-
             let message_in: Value =
                 serde_json::from_str(&message_in).expect("JSON was not well-formatted");
             let register_reply: RegisterReply = read_register_reply(message_in)?;
@@ -109,10 +111,7 @@ impl Client for RPCClient {
     }
 
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta> {
-        Ok(ObjectMeta {
-            client: None,
-            meta: String::new(),
-        })
+        Ok(ObjectMeta::default())
     }
 
     fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
@@ -120,6 +119,10 @@ impl Client for RPCClient {
             Some(stream) => return Ok(&mut *stream),
             None => panic!(),
         }
+    }
+
+    fn instance_id(&self) -> InstanceID {
+        self.instance_id
     }
 }
 

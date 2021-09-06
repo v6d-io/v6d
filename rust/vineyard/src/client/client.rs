@@ -20,10 +20,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
+use super::ipc_client::IPCClient;
+use super::rpc_client::RPCClient;
 use super::rust_io::*;
-use super::ObjectID;
 use super::ObjectMeta;
-use crate::common::util::protocol::*;
+
+use super::protocol::*;
+use super::status::*;
+use super::uuid::{InstanceID, ObjectID};
 
 #[derive(Debug)]
 pub enum ConnInputKind<'a, 'b> {
@@ -87,4 +91,6 @@ pub trait Client {
         read_drop_name_reply(message_in)?;
         Ok(())
     }
+
+    fn instance_id(&self) -> InstanceID;
 }

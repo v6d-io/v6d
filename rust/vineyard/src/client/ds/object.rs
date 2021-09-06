@@ -17,18 +17,34 @@ use std::rc::Rc;
 
 use super::blob::Blob;
 use super::object_meta::ObjectMeta;
+use super::uuid::ObjectID;
 use super::Client;
-
-use super::ObjectID;
 
 pub trait ObjectBase {
     fn build(client: Box<dyn Client>) -> Result<Blob, Error>;
     fn seal(client: Box<dyn Client>) -> Rc<Object>;
 }
 
+#[derive(Debug)]
 pub struct Object {
-    meta: ObjectMeta,
-    id: ObjectID,
+    pub meta: ObjectMeta,
+    pub id: ObjectID,
+}
+
+impl Default for Object {
+    fn default() -> Object {
+        Object {
+            meta: ObjectMeta::default(),
+            id: 0,
+        }
+    }
+}
+
+impl Object {
+    pub fn construct(&mut self, meta: &ObjectMeta) {
+        self.id = meta.get_id();
+        self.meta = meta.clone();
+    }
 }
 
 impl ObjectBase for Object {

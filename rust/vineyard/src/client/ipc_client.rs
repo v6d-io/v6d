@@ -27,9 +27,11 @@ use super::client::Client;
 use super::client::ConnInputKind::{self, IPCConnInput};
 use super::client::StreamKind::{self, IPCStream};
 use super::rust_io::*;
-use super::{InstanceID, ObjectID, ObjectMeta};
+use super::ObjectMeta;
 
-use crate::common::util::protocol::*;
+use super::protocol::*;
+use super::status::*;
+use super::uuid::{InstanceID, ObjectID};
 
 pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
 
@@ -83,7 +85,6 @@ impl Client for IPCClient {
 
             let mut message_in = String::new();
             do_read(&mut ipc_stream, &mut message_in)?;
-
             let message_in: Value =
                 serde_json::from_str(&message_in).expect("JSON was not well-formatted");
             let register_reply: RegisterReply = read_register_reply(message_in)?;
@@ -116,6 +117,9 @@ impl Client for IPCClient {
             Some(stream) => return Ok(&mut *stream),
             None => panic!(),
         }
+    }
+    fn instance_id(&self) -> InstanceID {
+        self.instance_id
     }
 }
 // TODO: Test the connect

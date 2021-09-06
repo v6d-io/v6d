@@ -6,7 +6,8 @@ use std::collections::{HashMap, HashSet};
 use std::io::{self, Error, ErrorKind};
 use std::ptr;
 
-use super::{InstanceID, ObjectID};
+use super::status::*;
+use super::uuid::*;
 use crate::client::client::Client;
 
 #[derive(Debug)]
@@ -59,12 +60,6 @@ impl Payload {
     }
 }
 
-pub fn RETURN_ON_ASSERT(b: bool) {
-    if !b {
-        panic!()
-    }
-}
-
 pub fn CHECK_IPC_ERROR(tree: &Value, root_type: &str) {
     if tree.as_object().unwrap().contains_key("code") {
         tree["code"].as_u64().unwrap_or(0);
@@ -78,11 +73,6 @@ pub fn ENSURE_CONNECTED(b: bool) {
         panic!()
     }
     // Question. TODO: mutex
-}
-
-// TODO: Rust parse check
-pub fn object_id_from_string(s: &String) -> ObjectID {
-    s.parse::<ObjectID>().unwrap()
 }
 
 // Convert JSON Value to a String
