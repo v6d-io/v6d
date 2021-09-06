@@ -77,8 +77,9 @@ jobs:
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install libclang parsec pyarrow yapf==0.30.0 \
-               sphinx==4.0.3 sphinx_rtd_theme docutils==0.16 breathe==4.30.0 nbsphinx pygments>=2.4.1 gcovr pytest hdfs3 \
+               sphinx==4.0.3 sphinx_rtd_theme docutils==0.16 breathe==4.30.0 nbsphinx gcovr pytest hdfs3 \
                numpy pandas pickle5 setuptools sortedcontainers
+          sudo pip3 install pygments>=2.4.1
 
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
