@@ -124,13 +124,6 @@ impl Client for RPCClient {
     fn instance_id(&self) -> InstanceID {
         self.instance_id
     }
-
-    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
-        match &mut self.stream {
-            Some(stream) => return Ok(&mut *stream),
-            None => panic!(),
-        }
-    }
 }
 
 #[cfg(test)]
