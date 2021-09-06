@@ -180,6 +180,20 @@ void bind_client(py::module& mod) {
           },
           "object_id"_a)
       .def(
+          "shallow_copy",
+          [](ClientBase* self, const ObjectIDWrapper object_id,
+             py::dict extra_metadata) -> ObjectIDWrapper {
+            ObjectID target_id;
+            json meta = detail::to_json(extra_metadata);
+            if (meta == json(nullptr)) {
+              throw_on_error(self->ShallowCopy(object_id, target_id));
+            } else {
+              throw_on_error(self->ShallowCopy(object_id, meta, target_id));
+            }
+            return target_id;
+          },
+          "object_id"_a, "extra_metadata"_a)
+      .def(
           "deep_copy",
           [](ClientBase* self,
              const ObjectIDWrapper object_id) -> ObjectIDWrapper {

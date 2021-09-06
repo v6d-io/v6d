@@ -302,7 +302,11 @@ Status ReadStopStreamReply(const json& root);
 
 void WriteShallowCopyRequest(const ObjectID id, std::string& msg);
 
-Status ReadShallowCopyRequest(const json& root, ObjectID& id);
+void WriteShallowCopyRequest(const ObjectID id, json const& extra_metadata,
+                             std::string& msg);
+
+Status ReadShallowCopyRequest(const json& root, ObjectID& id,
+                              json& extra_metadata);
 
 void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
 

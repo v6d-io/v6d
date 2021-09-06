@@ -429,16 +429,18 @@ Status VineyardServer::Exists(const ObjectID id,
 }
 
 Status VineyardServer::ShallowCopy(const ObjectID id,
+                                   const json& extra_metadata,
                                    callback_t<const ObjectID> callback) {
   ENSURE_VINEYARDD_READY();
   RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be shallow copied");
   ObjectID target_id = GenerateObjectID();
   meta_service_ptr_->RequestToShallowCopy(
-      [id, target_id](const Status& status, const json& meta,
-                      std::vector<IMetaService::op_t>& ops, bool& transient) {
+      [id, extra_metadata, target_id](const Status& status, const json& meta,
+                                      std::vector<IMetaService::op_t>& ops,
+                                      bool& transient) {
         if (status.ok()) {
-          return CATCH_JSON_ERROR(
-              meta_tree::ShallowCopyOps(meta, id, target_id, ops, transient));
+          return CATCH_JSON_ERROR(meta_tree::ShallowCopyOps(
+              meta, id, extra_metadata, target_id, ops, transient));
         } else {
           LOG(ERROR) << status.ToString();
           return status;

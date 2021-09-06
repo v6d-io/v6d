@@ -222,6 +222,21 @@ class ClientBase {
   Status ShallowCopy(const ObjectID id, ObjectID& target_id);
 
   /**
+   * @brief Make a shallow copy on the given object. A "shallow copy" means the
+   * result object has the same type with the source object and they shares all
+   * member objects.
+   *
+   * @param id The object id to shallow copy.
+   * @param extra_metadata Feed extra metadata when shallow copying.
+   * @param target_id The result object id will be stored in `target_id` as
+   * return value.
+   *
+   * @return Status that indicates whether the shallow copy has succeeded.
+   */
+  Status ShallowCopy(const ObjectID id, json const& extra_metadata,
+                     ObjectID& target_id);
+
+  /**
    * @brief Make a deep copy on the given object.
    *
    * @param id The object id to deep copy.

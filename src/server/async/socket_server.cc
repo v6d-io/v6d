@@ -581,9 +581,10 @@ bool SocketConnection::doExists(const json& root) {
 bool SocketConnection::doShallowCopy(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
-  TRY_READ_REQUEST(ReadShallowCopyRequest, root, id);
+  json extra_metadata;
+  TRY_READ_REQUEST(ReadShallowCopyRequest, root, id, extra_metadata);
   RESPONSE_ON_ERROR(server_ptr_->ShallowCopy(
-      id, [self](const Status& status, const ObjectID target) {
+      id, extra_metadata, [self](const Status& status, const ObjectID target) {
         std::string message_out;
         if (status.ok()) {
           WriteShallowCopyReply(target, message_out);
