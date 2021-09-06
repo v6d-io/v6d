@@ -64,6 +64,7 @@ jobs:
                               libxml2-dev \
                               libz-dev \
                               lsb-release \
+                              pandoc \
                               protobuf-compiler-grpc \
                               python3-pip \
                               uuid-dev \
