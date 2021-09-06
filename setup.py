@@ -174,6 +174,7 @@ setup(
         'dev': [
             'breathe',
             'libclang',
+            'nbsphinx',
             'parsec',
             'pytest',
             'pytest-benchmark',
