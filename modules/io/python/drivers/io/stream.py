@@ -23,12 +23,13 @@ import os
 from vineyard.data.dataframe import make_global_dataframe
 
 import vineyard.io
+from vineyard.launcher.launcher import LauncherStatus
 from vineyard.launcher.script import ScriptLauncher
+
+from vineyard.core.resolver import default_resolver_context
 
 logger = logging.getLogger("vineyard")
 base_path = os.path.abspath(os.path.dirname(__file__))
-
-from vineyard.core.resolver import default_resolver_context
 
 
 def parallel_stream_resolver(obj):
@@ -134,6 +135,15 @@ class ParallelStreamLauncher(ScriptLauncher):
     def join(self):
         for proc in self._procs:
             proc.join()
+
+        messages = []
+        for proc in self._procs:
+            if proc.status == LauncherStatus.FAILED and \
+                    (proc.exit_code is not None and proc.exit_code != 0):
+                messages.append("Failed to launch job [%s], exited with %r: %s" %
+                                (proc.command, proc.exit_code, ''.join(proc.error_message)))
+        if messages:
+            raise RuntimeError("Subprocesses failed with the following error: \n%s" % ('\n\n'.join(messages)))
 
     def dispose(self, desired=True):
         for proc in self._procs:

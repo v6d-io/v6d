@@ -19,10 +19,6 @@
 import filecmp
 import itertools
 import pytest
-import configparser
-import glob
-import os
-from urllib.parse import urlparse
 
 import vineyard
 import vineyard.io
