@@ -25,7 +25,7 @@ limitations under the License.
 
 #if defined(__VINEYARD_GCC_VERSION)
 #pragma GCC push_options
-#pragma GCC optimize ("O0")
+#pragma GCC optimize("O0")
 #endif
 #include "ctti/detail/name_filters.hpp"
 #include "ctti/nameof.hpp"
@@ -50,7 +50,8 @@ inline const std::string typename_unpack_args() {
   return type_name<T>() + "," + typename_unpack_args<U, Args...>();
 }
 
-#if defined(__VINEYARD_GCC_VERSION) && (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
+#if defined(__VINEYARD_GCC_VERSION) && \
+    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
 
 #if defined(__clang__)
 #define __TYPENAME_FROM_FUNCTION_PREFIX \
@@ -79,7 +80,8 @@ inline const std::string __typename_from_function() {
 
 template <typename T>
 inline const std::string typename_impl(T const&) {
-#if defined(__VINEYARD_GCC_VERSION) && (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
+#if defined(__VINEYARD_GCC_VERSION) && \
+    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
   return ctti::nameof<T>().cppstring();
 #else
   return __typename_from_function<T>();
@@ -88,7 +90,8 @@ inline const std::string typename_impl(T const&) {
 
 template <template <typename...> class C, typename... Args>
 inline const std::string typename_impl(C<Args...> const&) {
-#if defined(__VINEYARD_GCC_VERSION) && (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
+#if defined(__VINEYARD_GCC_VERSION) && \
+    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
   constexpr auto fullname = ctti::pretty_function::type<C<Args...>>();
   constexpr const char* index = ctti::detail::find(fullname, "<");
   if (index == fullname.end()) {
