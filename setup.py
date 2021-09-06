@@ -174,7 +174,9 @@ setup(
         'dev': [
             'breathe',
             'libclang',
+            'nbsphinx',
             'parsec',
+            'pygments>=2.4.1',
             'pytest',
             'pytest-benchmark',
             'pytest-datafiles',
