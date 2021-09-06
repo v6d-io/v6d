@@ -16,7 +16,7 @@ Requirements
 The following packages are needed to run Airflow on Vineyard,
 
 - airflow >= 2.1.0
-- vineyard >= 0.2.7
+- vineyard >= 0.2.8
 
 Configuration and Usage
 -----------------------
