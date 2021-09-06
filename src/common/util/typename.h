@@ -18,11 +18,20 @@ limitations under the License.
 
 #include <string>
 
+#if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
 #define __VINEYARD_GCC_VERSION \
   (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#endif
 
+#if defined(__VINEYARD_GCC_VERSION)
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+#endif
 #include "ctti/detail/name_filters.hpp"
 #include "ctti/nameof.hpp"
+#if defined(__VINEYARD_GCC_VERSION)
+#pragma GCC pop_options
+#endif
 
 namespace vineyard {
 
@@ -41,7 +50,9 @@ inline const std::string typename_unpack_args() {
   return type_name<T>() + "," + typename_unpack_args<U, Args...>();
 }
 
-#if __VINEYARD_GCC_VERSION <= 50100
+#if defined(__VINEYARD_GCC_VERSION) && \
+    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
+
 #if defined(__clang__)
 #define __TYPENAME_FROM_FUNCTION_PREFIX \
   "const std::string vineyard::detail::__typename_from_function() [T = "
@@ -69,7 +80,8 @@ inline const std::string __typename_from_function() {
 
 template <typename T>
 inline const std::string typename_impl(T const&) {
-#if __VINEYARD_GCC_VERSION > 50100
+#if defined(__VINEYARD_GCC_VERSION) && \
+    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
   return ctti::nameof<T>().cppstring();
 #else
   return __typename_from_function<T>();
@@ -78,7 +90,8 @@ inline const std::string typename_impl(T const&) {
 
 template <template <typename...> class C, typename... Args>
 inline const std::string typename_impl(C<Args...> const&) {
-#if __VINEYARD_GCC_VERSION > 50100
+#if defined(__VINEYARD_GCC_VERSION) && \
+    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
   constexpr auto fullname = ctti::pretty_function::type<C<Args...>>();
   constexpr const char* index = ctti::detail::find(fullname, "<");
   if (index == fullname.end()) {
