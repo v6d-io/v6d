@@ -16,6 +16,9 @@ limitations under the License.
 use std::io;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::Mutex;
+
+use lazy_static::lazy_static;
 
 use super::object::Object;
 use super::object_meta::ObjectMeta;
@@ -31,14 +34,12 @@ impl ObjectFactory {
         panic!()
     }
 
-    // pub fn get_known_types() -> HashMap<String, ObjectInitializer> {
-    //     unsafe{
-    //         println!("{:?}", KNOWN_TYPES);
-    //     }
-    //     panic!()
-    // }
+    pub fn get_known_types() -> HashMap<String, ObjectInitializer> {
+        
+        panic!()
+    }
 }
 
-// static mut KNOWN_TYPES: RefCell<HashMap<String, ObjectInitializer>> = RefCell::new(
-//     HashMap::new()
-// );
+lazy_static! {
+    static ref KNOWN_TYPES: Mutex<HashMap<u32, &'static str>> = Mutex::new(HashMap::new());
+}
