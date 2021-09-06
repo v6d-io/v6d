@@ -1,14 +1,12 @@
-use serde::{Deserialize, Serialize};
-use serde_json::Result as JsonResult;
-use serde_json::{json, Map, Value};
 
 use std::collections::{HashMap, HashSet};
-use std::io::{self, Error, ErrorKind};
+use std::io;
 use std::ptr;
+
+use serde_json::{json, Map, Value};
 
 use super::status::*;
 use super::uuid::*;
-use crate::client::client::Client;
 
 #[derive(Debug)]
 pub struct Payload {
@@ -96,7 +94,7 @@ pub struct RegisterReply {
 }
 
 // Read functions: Read the JSON root to variants of ipc instance
-pub fn read_register_reply(root: Value) -> Result<RegisterReply, Error> {
+pub fn read_register_reply(root: Value) -> io::Result<RegisterReply> {
     CHECK_IPC_ERROR(&root, "register_reply");
     let ipc_socket = root["ipc_socket"].as_str().unwrap().to_string();
     let rpc_endpoint = root["rpc_endpoint"].as_str().unwrap().to_string();
@@ -136,7 +134,7 @@ pub fn write_get_vec_data_request(ids: Vec<ObjectID>, sync_remote: bool, wait: b
     encode_msg(msg)
 }
 
-pub fn read_get_data_reply(root: Value) -> Result<Value, Error> {
+pub fn read_get_data_reply(root: Value) -> io::Result<Value> {
     CHECK_IPC_ERROR(&root, "get_data_reply");
     let content_group = &root["content"];
     if content_group.as_array().unwrap().len() != 1 {
@@ -153,7 +151,7 @@ pub fn read_get_data_reply(root: Value) -> Result<Value, Error> {
 }
 
 // Question: key value 0, 1, ...?
-pub fn read_get_unordered_data_reply(root: Value) -> Result<HashMap<ObjectID, Value>, Error> {
+pub fn read_get_unordered_data_reply(root: Value) -> io::Result<HashMap<ObjectID, Value>> {
     CHECK_IPC_ERROR(&root, "get_data_reply");
     let mut content: HashMap<ObjectID, Value> = HashMap::new();
     let content_group = &root["content"];
@@ -181,7 +179,7 @@ pub fn write_create_buffer_request(size: usize) -> String {
     encode_msg(msg)
 }
 
-pub fn read_create_buffer_reply(root: Value) -> Result<(ObjectID, Payload), Error> {
+pub fn read_create_buffer_reply(root: Value) -> io::Result<(ObjectID, Payload)> {
     CHECK_IPC_ERROR(&root, "create_buffer_reply");
     let tree: &Value = &root["created"];
     let id = root["id"].as_u64().unwrap() as ObjectID;
@@ -217,7 +215,7 @@ pub fn write_get_buffer_request(ids: HashSet<ObjectID>) -> String {
     encode_msg(msg)
 }
 
-pub fn read_get_buffer_reply(root: Value) -> Result<HashMap<ObjectID, Payload>, Error> {
+pub fn read_get_buffer_reply(root: Value) -> io::Result<HashMap<ObjectID, Payload>> {
     CHECK_IPC_ERROR(&root, "get_buffers_reply");
     let mut objects: HashMap<ObjectID, Payload> = HashMap::new();
     let num: usize = root["num"].as_u64().unwrap() as usize;

@@ -12,17 +12,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use std::env;
+
+use std::io;
 use std::io::prelude::*;
-use std::io::{self, Error, ErrorKind};
-use std::mem;
 
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
-use std::path::Path;
-
-use serde::{Deserialize, Serialize};
-use serde_json::Result as JsonResult;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use super::client::Client;
 use super::client::ConnInputKind::{self, RPCConnInput};

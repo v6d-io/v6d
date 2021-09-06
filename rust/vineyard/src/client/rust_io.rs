@@ -12,20 +12,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use std::env;
+
 use std::io::prelude::*;
-use std::io::{self, Error, ErrorKind};
+use std::io;
 use std::mem;
 use std::net::TcpStream;
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
-use serde::{Deserialize, Serialize};
-use serde_json::Result as JsonResult;
-use serde_json::{json, Value};
-
-use super::client::{Client, ConnInputKind, StreamKind};
-use super::uuid::{InstanceID, ObjectID};
+use super::client::StreamKind;
 
 // socket_fd is used to assign vineyard_conn
 pub fn connect_ipc_socket(pathname: &String, socket_fd: i64) -> io::Result<UnixStream> {

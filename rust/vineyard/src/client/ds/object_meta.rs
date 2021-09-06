@@ -18,7 +18,6 @@ use std::io;
 use std::ops;
 use std::rc::{Rc, Weak};
 
-use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
@@ -142,7 +141,6 @@ impl ObjectMeta {
             return true;
         } else {
             match &self.client {
-                // Question: is it correct?
                 Some(client) => {
                     let instance_id = client.upgrade().unwrap().as_ref().instance_id();
                     return instance_id == self.meta["instance_id"].as_u64().unwrap() as InstanceID;
@@ -214,11 +212,10 @@ impl ObjectMeta {
 
     pub fn get_member(&self, name: &String) -> Rc<Object> {
         let meta = self.get_member_meta(name);
-        let object = match ObjectFactory::create(&meta.get_type_name()) {
-            //TODO
+        let object = match ObjectFactory::create_by_type_name(&meta.get_type_name()) {//TODO
             Err(_) => {
                 let mut object = Box::new(Object::default());
-                object.construct(&meta);
+                object.construct(&meta); // TODO
                 return Rc::new(*object);
             }
             Ok(mut object) => {

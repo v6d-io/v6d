@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use std::io::{self, Error, ErrorKind};
+use std::io;
 use std::rc::Rc;
 
 use super::blob::Blob;
@@ -21,7 +21,7 @@ use super::uuid::ObjectID;
 use super::Client;
 
 pub trait ObjectBase {
-    fn build(client: Box<dyn Client>) -> Result<Blob, Error>;
+    fn build(client: Box<dyn Client>) -> io::Result<Blob>;
     fn seal(client: Box<dyn Client>) -> Rc<Object>;
 }
 
@@ -48,7 +48,7 @@ impl Object {
 }
 
 impl ObjectBase for Object {
-    fn build(client: Box<dyn Client>) -> Result<Blob, Error> {
+    fn build(client: Box<dyn Client>) -> io::Result<Blob> {
         panic!("")
     }
 
@@ -63,7 +63,7 @@ pub struct ObjectBuilder {
 }
 
 impl ObjectBase for ObjectBuilder {
-    fn build(client: Box<dyn Client>) -> Result<Blob, Error> {
+    fn build(client: Box<dyn Client>) -> io::Result<Blob> {
         panic!("")
     }
 
