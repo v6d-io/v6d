@@ -106,6 +106,8 @@ def vineyard_argument_parser():
     query_opt.add_argument('--stdout', action='store_true', help='Get object to stdout')
     query_opt.add_argument('--output_file', type=str, help='Get object to file')
     query_opt.add_argument('--tree', action='store_true', help='Get object lineage in tree-like style')
+    query_opt.add_argument('--memory_status', action='store_true', help='Get the memory used by the vineyard object')
+    query_opt.add_argument('--detail', action='store_true', help='Get detailed memory used by the vineyard object')
 
     head_opt = cmd_parser.add_parser('head',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -325,11 +327,20 @@ def query(client, args):
             print(f'Meta data of the object in JSON format:\n{json_meta}')
     if args.metric is not None:
         print(f'{args.metric}: {getattr(value, args.metric)}')
-    if args.tree is not None:
+    if args.tree:
         meta = client.get_meta(as_object_id(args.object_id))
         tree = treelib.Tree()
         get_tree(meta, tree)
         tree.show(line_type="ascii-exr")
+    if args.memory_status:
+        meta = client.get_meta(as_object_id(args.object_id))
+        if args.detail:
+            tree = treelib.Tree()
+            memory_dict = {}
+            get_tree(meta, tree, True, memory_dict)
+            tree.show(line_type="ascii-exr")
+            print(f'The object taking the maximum memory is:\n{max(memory_dict, key=lambda x: memory_dict[x])}')
+        print(f'The total memory used: {pretty_format_memory(get_memory_used(meta))}')
 
 
 def delete_object(client, args):
@@ -452,18 +463,43 @@ def debug(client, args):
     print(f'The result returned by the debug handler:\n{result}')
 
 
-def get_tree(meta, tree, parent=None):
+def get_tree(meta, tree, memory=False, memory_dict=None, parent=None):
     """Utility to display object lineage in a tree like form."""
-    if parent is None:
-        parent = f'<{meta["typename"]}>:{meta["id"]}'
-        tree.create_node(parent, parent)
-    else:
-        new_parent = f'<{meta["typename"]}>:{meta["id"]}'
-        tree.create_node(new_parent, new_parent, parent=parent)
-        parent = new_parent
+    node = f'{meta["typename"]} <{meta["id"]}>'
+    if memory:
+        memory_used = pretty_format_memory(meta["nbytes"])
+        node += f': {memory_used}'
+        memory_dict[node] = memory_used
+    tree.create_node(node, node, parent=parent)
+    parent = node
     for key in meta:
         if type(meta[key]) == vineyard._C.ObjectMeta:
-            get_tree(meta[key], tree, parent)
+            get_tree(meta[key], tree, memory, memory_dict, parent)
+
+
+def get_memory_used(meta):
+    """Utility to get the memory used by the vineyard object."""
+    total_bytes = 0
+    for key in meta:
+        if isinstance(meta[key], vineyard._C.ObjectMeta):
+            if str(meta[key]['typename']) == 'vineyard::Blob':
+                size = meta[key]['length']
+                total_bytes += size
+            else:
+                total_bytes += get_memory_used(meta[key])
+    return total_bytes
+
+
+def pretty_format_memory(nbytes):
+    """Utility to return memory with appropriate unit."""
+    if nbytes < (1 << 10):
+        return f'{nbytes} bytes'
+    elif (1 << 20) > nbytes > (1 << 10):
+        return f'{nbytes / (1 << 10)} KB'
+    elif (1 << 30) > nbytes > (1 << 20):
+        return f'{nbytes / (1 << 20)} MB'
+    else:
+        return f'{nbytes / (1 << 30)} GB'
 
 
 def config(args):
