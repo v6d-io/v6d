@@ -16,10 +16,11 @@ limitations under the License.
 use std::io;
 use std::rc::{Rc, Weak};
 
-use arrow::buffer;
+use arrow::buffer as arrow;
 
 use super::object::Object;
 use super::object_factory::ObjectFactory;
+use super::payload::Payload;
 use super::status::*;
 use super::uuid::*;
 
@@ -27,53 +28,79 @@ use super::uuid::*;
 pub struct Blob {
     id: ObjectID,
     size: usize,
-    buffer: Rc<buffer::Buffer>,
+    buffer: Rc<arrow::Buffer>,
 }
 
 #[derive(Debug)]
 pub struct BlobWriter {
     object_id: ObjectID,
-    //payload: Payload,
+    payload: Payload,
+    buffer: Rc<arrow::MutableBuffer>,
+    metadata: HashMap<String, String>,
 }
 
 #[derive(Debug)]
 pub struct BufferSet {
     buffer_ids: HashSet<ObjectID>,
-    buffers: HashMap<ObjectID, Rc<ArrowBuffer>>,
+    buffers: HashMap<ObjectID, Option<Rc<arrow::Buffer>>>, // Question
 }
 
 impl Default for BufferSet {
     fn default() -> BufferSet {
         BufferSet {
             buffer_ids: HashSet::new() as HashSet<ObjectID>,
-            buffers: HashMap::new() as HashMap<ObjectID, Rc<ArrowBuffer>>,
+            buffers: HashMap::new() as HashMap<ObjectID, Option<Rc<arrow::Buffer>>>,
         }
     }
 }
 
 impl BufferSet {
-    pub fn all_buffers(&self) -> &HashMap<ObjectID, Rc<ArrowBuffer>> {
+    pub fn all_buffers(&self) -> &HashMap<ObjectID, Option<Rc<arrow::Buffer>>> {
         &self.buffers
+    }
+
+    pub fn emplace_null_buffer(&mut self, id: ObjectID) -> io::Result<()> {
+        if let Some(buf) = self.buffers.get(&id) {
+            if let Some(_) = buf {
+                panic!(
+                    "Invalid internal state: the buffer shouldn't has been filled, id = {}",
+                    object_id_to_string(id)
+                );
+            }
+            
+        }
+        self.buffer_ids.insert(id);
+        self.buffers.insert(id, None);
+        Ok(())
+    }
+
+    pub fn emplace_buffer(
+        &mut self,
+        id: ObjectID,
+        buffer: Option<Rc<arrow::Buffer>>,
+    ) -> io::Result<()> {
+        match self.buffers.get(&id) {
+            None => panic!(
+                "Invalid internal state: no such buffer defined, id = {}",
+                object_id_to_string(id)
+            ),
+            Some(buf) => {
+                if let Some(_) = buf {
+                    panic!(
+                        "Invalid internal state: duplicated buffer, id = {}",
+                        object_id_to_string(id)
+                    );
+                }
+                self.buffers.insert(id, buffer);
+            },
+        }
+        Ok(())
     }
 
     pub fn extend(&mut self, others: &BufferSet) {
         for (key, value) in others.buffers.iter() {
             self.buffers.insert(key.clone(), value.clone());
         }
-    }
-
-    pub fn emplace_buffer_null(&self, id: ObjectID) -> io::Result<Rc<ArrowBuffer>> {
-        // TODO
-        panic!()
-    }
-
-    pub fn emplace_buffer(
-        &self,
-        id: ObjectID,
-        buffer: &Rc<ArrowBuffer>,
-    ) -> io::Result<Rc<ArrowBuffer>> {
-        // TODO
-        panic!()
     }
 
     pub fn contains(&self, id: ObjectID) -> bool {
@@ -83,13 +110,12 @@ impl BufferSet {
         true
     }
 
-    pub fn get(&self, id: ObjectID) -> io::Result<Rc<ArrowBuffer>> {
-        // TODO
-        panic!()
+    pub fn get(&self, id: ObjectID) -> Option<Rc<arrow::Buffer>> {
+        match self.buffers.get(&id) {
+            None => None,
+            Some(buf) => Some(Rc::clone(buf.as_ref().unwrap()))
+        }
     }
 }
-
-#[derive(Debug)]
-pub struct ArrowBuffer {} // TODO. arrow/buffer: dependencies
 
 // Mmap先不写

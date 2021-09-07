@@ -21,4 +21,5 @@ pub use super::client::Client;
 pub use super::ipc_client::IPCClient;
 pub use super::rpc_client::RPCClient;
 
+pub use crate::common::memory::payload;
 pub use crate::common::util::{protocol, status, uuid};
