@@ -99,7 +99,7 @@ impl BufferSet {
 
     pub fn extend(&mut self, others: &BufferSet) {
         for (key, value) in others.buffers.iter() {
-            self.buffers.insert(key.clone(), value.clone());
+            self.buffers.insert(key.clone(), Some(Rc::clone(value.as_ref().unwrap())));
         }
     }
 
@@ -117,5 +117,6 @@ impl BufferSet {
         }
     }
 }
+
 
 // Mmap先不写

@@ -33,14 +33,18 @@ impl ObjectFactory {
         panic!()
     }
 
-    pub fn get_known_types() -> Mutex<HashMap<String, ObjectInitializer>> {
-        panic!()
+    pub fn factory_ref() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>>{
+        return ObjectFactory::get_known_types();//TODO: convert to const
     }
+
+    fn get_known_types() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> {
+        lazy_static! {
+            static ref KNOWN_TYPES: Arc<Mutex<HashMap<&'static str, ObjectInitializer>>>
+                = Arc::new(Mutex::new(HashMap::new()));
+        }
+        &KNOWN_TYPES
+    }
+    
 }
 
-lazy_static! {
-    // static ref KNOWN_TYPES: Arc<Mutex<HashMap<&'static str, ObjectInitializer>>>
-    //     = Arc::new(Mutex::new(HashMap::new()));
-    // static ref KNOWN_TYPES1: HashMap<&'static str, ObjectInitializer>
-    //     = HashMap::new();
-}
+

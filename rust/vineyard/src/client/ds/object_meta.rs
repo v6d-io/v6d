@@ -39,6 +39,9 @@ pub struct ObjectMeta {
     force_local: bool,
 }
 
+
+unsafe impl Send for ObjectMeta{}
+
 impl fmt::Debug for dyn Client {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Instance ID: {}\n", self.instance_id())
