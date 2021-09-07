@@ -50,8 +50,7 @@ inline const std::string typename_unpack_args() {
   return type_name<T>() + "," + typename_unpack_args<U, Args...>();
 }
 
-#if defined(__VINEYARD_GCC_VERSION) && \
-    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
+#if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
 
 #if defined(__clang__)
 #define __TYPENAME_FROM_FUNCTION_PREFIX \
@@ -80,18 +79,24 @@ inline const std::string __typename_from_function() {
 
 template <typename T>
 inline const std::string typename_impl(T const&) {
-#if defined(__VINEYARD_GCC_VERSION) && \
-    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
-  return ctti::nameof<T>().cppstring();
-#else
+#if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
   return __typename_from_function<T>();
+#else
+  return ctti::nameof<T>().cppstring();
 #endif
 }
 
 template <template <typename...> class C, typename... Args>
 inline const std::string typename_impl(C<Args...> const&) {
-#if defined(__VINEYARD_GCC_VERSION) && \
-    (__VINEYARD_GCC_VERSION <= 50100 || __VINEYARD_GCC_VERSION >= 70200)
+#if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
+  const auto fullname = __typename_from_function<C<Args...>>();
+  const auto index = fullname.find('<');
+  if (index == std::string::npos) {
+    return fullname;
+  }
+  const auto class_name = fullname.substr(0, index);
+  return class_name + "<" + typename_unpack_args<Args...>() + ">";
+#else
   constexpr auto fullname = ctti::pretty_function::type<C<Args...>>();
   constexpr const char* index = ctti::detail::find(fullname, "<");
   if (index == fullname.end()) {
@@ -102,14 +107,6 @@ inline const std::string typename_impl(C<Args...> const&) {
   constexpr auto class_name =
       fullname(CTTI_VALUE_PRETTY_FUNCTION_LEFT - 1, index - fullname.begin());
   return class_name.cppstring() + "<" + typename_unpack_args<Args...>() + ">";
-#else
-  const auto fullname = __typename_from_function<C<Args...>>();
-  const auto index = fullname.find('<');
-  if (index == std::string::npos) {
-    return fullname;
-  }
-  const auto class_name = fullname.substr(0, index);
-  return class_name + "<" + typename_unpack_args<Args...>() + ">";
 #endif
 }
 
