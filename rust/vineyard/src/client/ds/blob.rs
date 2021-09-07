@@ -16,7 +16,7 @@ limitations under the License.
 use std::io;
 use std::rc::{Rc, Weak};
 
-use arrow;
+use arrow::buffer;
 
 use super::object::Object;
 use super::object_factory::ObjectFactory;
@@ -25,12 +25,16 @@ use super::uuid::*;
 
 #[derive(Debug)]
 pub struct Blob {
+    id: ObjectID,
     size: usize,
-    buffer: Rc<ArrowBuffer>,
+    buffer: Rc<buffer::Buffer>,
 }
 
 #[derive(Debug)]
-pub struct BlobWriter {}
+pub struct BlobWriter {
+    object_id: ObjectID,
+    //payload: Payload,
+}
 
 #[derive(Debug)]
 pub struct BufferSet {
