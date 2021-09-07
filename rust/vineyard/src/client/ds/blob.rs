@@ -16,13 +16,18 @@ limitations under the License.
 use std::io;
 use std::rc::{Rc, Weak};
 
+use arrow;
+
 use super::object::Object;
 use super::object_factory::ObjectFactory;
 use super::status::*;
 use super::uuid::*;
 
 #[derive(Debug)]
-pub struct Blob {}
+pub struct Blob {
+    size: usize,
+    buffer: Rc<ArrowBuffer>,
+}
 
 #[derive(Debug)]
 pub struct BlobWriter {}
