@@ -103,6 +103,27 @@ table in backend databases of Airflow.
 The example is adapted from the documentation of Airflow, see also
 `Tutorial on the Taskflow API`_.
 
+Run the tests
+-------------
+
+1. Start your vineyardd with the following command,
+
+    .. code:: bash
+
+        python3 -m vineyard.deploy
+
+2. Set airflow to use the vineyard XCom backend, and run tests with pytest,
+
+    .. code:: bash
+
+        export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
+
+        pytest -s -vvv python/vineyard/contrib/airflow/tests/test_python_dag.py
+        pytest -s -vvv python/vineyard/contrib/airflow/tests/test_pandas_dag.py
+
+
+The pandas test suite is not possible to run with the default XCom backend, vineyard
+enables airflow to exchange **complex** and **big** data without modify the DAG and tasks!
 
 .. _launching vineyard: https://v6d.io/notes/getting-started.html#starting-vineyard-server
 .. _Tutorial on the Taskflow API: https://airflow.apache.org/docs/apache-airflow/stable/tutorial_taskflow_api.html

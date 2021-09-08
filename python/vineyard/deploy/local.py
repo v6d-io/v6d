@@ -19,7 +19,6 @@
 import contextlib
 import logging
 import os
-import pkg_resources
 import shutil
 import subprocess
 import sys
