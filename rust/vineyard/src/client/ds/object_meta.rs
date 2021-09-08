@@ -215,10 +215,9 @@ impl ObjectMeta {
     pub fn get_member(&self, name: &String) -> Rc<Object> {
         let meta = self.get_member_meta(name);
         let object = match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
-            //TODO
             Err(_) => {
                 let mut object = Box::new(Object::default());
-                object.construct(&meta); // TODO
+                object.construct(&meta); 
                 return Rc::new(*object);
             }
             Ok(mut object) => {
@@ -260,7 +259,7 @@ impl ObjectMeta {
 
     pub fn set_buffer(&mut self, id: ObjectID, buffer: Option<Rc<arrow::Buffer>>) {
         VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
-        VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_buffer(id, buffer)); // TODO
+        VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_buffer(id, buffer));
     }
 
     pub fn reset(&mut self) {

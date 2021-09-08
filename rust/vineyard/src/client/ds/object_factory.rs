@@ -28,13 +28,38 @@ type ObjectInitializer = Box<Object>;
 
 impl ObjectFactory {
     pub fn create_by_type_name(type_name: &String) -> io::Result<Box<Object>> {
-        //let known_types = ObjectFactory::get_known_types();
-
-        panic!()
+        let known_types = ObjectFactory::get_known_types();
+        let known_types = &(**known_types).lock().unwrap();
+        let creator = known_types.get(&type_name as &str);
+        match creator {
+            None => panic!("Failed to create an instance due to the unknown typename: {}",
+            type_name),
+            Some(initialized_object) => Ok((*initialized_object).clone()),
+            // Question: (creator->second)()
+        }
     }
 
-    pub fn factory_ref() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>>{
-        return ObjectFactory::get_known_types();//TODO: convert to const
+    pub fn create_by_metadata(metadata: ObjectMeta) -> io::Result<Box<Object>> {
+        ObjectFactory::create(&metadata.get_type_name(), metadata)
+    }
+
+    pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<Object>> {
+        let known_types = ObjectFactory::get_known_types();
+        let known_types = &(**known_types).lock().unwrap();
+        let creator = known_types.get(&type_name as &str);
+        match creator {
+            None => panic!("Failed to create an instance due to the unknown typename: {}",
+            type_name),
+            Some(target) => {
+                let mut target = (*target).clone();
+                target.construct(&metadata);
+                return Ok(target);
+            }
+        }
+    }
+
+    pub fn factory_ref() -> &'static Mutex<HashMap<&'static str, ObjectInitializer>>{
+        return &**ObjectFactory::get_known_types();//Question: convert to const, clone or ref
     }
 
     fn get_known_types() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> {

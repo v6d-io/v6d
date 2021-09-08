@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::io;
-use std::ptr;
 
 use serde_json::{json, Map, Value};
 
