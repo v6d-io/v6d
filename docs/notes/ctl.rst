@@ -16,6 +16,7 @@ Supported Commands
 + :code:`config`
 + :code:`migrate`
 + :code:`debug`
++ :code:`start`
 
 Connect to a vineyard server
 ----------------------------
@@ -227,3 +228,26 @@ Example:
 .. code:: shell
 
     vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
+
+start
+-------
+
+Start vineyardd.
+
+Options:
+
++ :code:`local`: start a local vineyard cluster.
++ :code:`distributed`: start a local vineyard cluster in a distributed fashion.
++ :code:`hosts`: A list of machines to launch vineyard server.
++ :code:`etcd_endpoints`: Launching vineyard using specified etcd endpoints. If not specified, vineyard will launch its own etcd instance.
++ :code:`vineyardd_path`: Location of vineyard server program. If not specified, vineyard will use its own bundled vineyardd binary.
++ :code:`size`: The memory size limit for vineyard’s shared memory. The memory size can be a plain integer or as a fixed-point number using one of these suffixes: E, P, T, G, M, K. You can also use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
++ :code:`socket`: The UNIX domain socket socket path that vineyard server will listen on. When the socket parameter is None, a random path under temporary directory will be generated and used.
++ :code:`rpc_socket_port`: The port that vineyard will use to privode RPC service.
++ :code:`debug`: Whether print debug logs.
+
+Example:
+
+.. code:: shell
+
+    vineyard-ctl start --local
