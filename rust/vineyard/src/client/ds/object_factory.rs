@@ -32,8 +32,10 @@ impl ObjectFactory {
         let known_types = &(**known_types).lock().unwrap();
         let creator = known_types.get(&type_name as &str);
         match creator {
-            None => panic!("Failed to create an instance due to the unknown typename: {}",
-            type_name),
+            None => panic!(
+                "Failed to create an instance due to the unknown typename: {}",
+                type_name
+            ),
             Some(initialized_object) => Ok((*initialized_object).clone()),
             // Question: (creator->second)()
         }
@@ -48,8 +50,10 @@ impl ObjectFactory {
         let known_types = &(**known_types).lock().unwrap();
         let creator = known_types.get(&type_name as &str);
         match creator {
-            None => panic!("Failed to create an instance due to the unknown typename: {}",
-            type_name),
+            None => panic!(
+                "Failed to create an instance due to the unknown typename: {}",
+                type_name
+            ),
             Some(target) => {
                 let mut target = (*target).clone();
                 target.construct(&metadata);
@@ -58,18 +62,15 @@ impl ObjectFactory {
         }
     }
 
-    pub fn factory_ref() -> &'static Mutex<HashMap<&'static str, ObjectInitializer>>{
-        return &**ObjectFactory::get_known_types();//Question: convert to const, clone or ref
+    pub fn factory_ref() -> &'static Mutex<HashMap<&'static str, ObjectInitializer>> {
+        return &**ObjectFactory::get_known_types(); //Question: convert to const, clone or ref
     }
 
     fn get_known_types() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> {
         lazy_static! {
-            static ref KNOWN_TYPES: Arc<Mutex<HashMap<&'static str, ObjectInitializer>>>
-                = Arc::new(Mutex::new(HashMap::new()));
+            static ref KNOWN_TYPES: Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> =
+                Arc::new(Mutex::new(HashMap::new()));
         }
         &KNOWN_TYPES
     }
-    
 }
-
-

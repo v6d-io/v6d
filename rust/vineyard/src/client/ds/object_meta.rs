@@ -39,8 +39,7 @@ pub struct ObjectMeta {
     force_local: bool,
 }
 
-
-unsafe impl Send for ObjectMeta{}
+unsafe impl Send for ObjectMeta {}
 
 impl fmt::Debug for dyn Client {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -217,7 +216,7 @@ impl ObjectMeta {
         let object = match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
             Err(_) => {
                 let mut object = Box::new(Object::default());
-                object.construct(&meta); 
+                object.construct(&meta);
                 return Rc::new(*object);
             }
             Ok(mut object) => {

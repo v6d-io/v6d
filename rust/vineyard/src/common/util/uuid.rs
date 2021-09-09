@@ -40,3 +40,15 @@ pub fn object_id_to_string(id: ObjectID) -> String {
 pub fn signature_to_string(id: ObjectID) -> String {
     format!("s{:x}", id)
 }
+
+pub fn invalid_object_id() -> ObjectID {
+    ObjectID::MAX
+}
+
+pub fn invalid_signature() -> ObjectID {
+    Signature::MAX
+}
+
+pub fn unspecified_instance_id() -> InstanceID {
+    InstanceID::MAX
+}
