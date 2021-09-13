@@ -62,6 +62,9 @@ Some examples on how to use vineyard-ctl:
 
 11. Issue a debug request
     >>> vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
+
+12. Start vineyardd
+    >>> vineyard-ctl start --local
 """
 
 
@@ -227,6 +230,45 @@ def vineyard_argument_parser():
                                       epilog=('Example:\n\n>>> vineyard-ctl debug --payload ' +
                                               '\'{"instance_status":[], "memory_size":[]}\''))
     debug_opt.add_argument('--payload', type=json.loads, help='The payload that will be sent to the debug handler')
+
+    start_opt = cmd_parser.add_parser('start',
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      description='Description: Start vineyardd',
+                                      epilog='Example:\n\n>>> vineyard-ctl start --local')
+
+    start_opt_group = start_opt.add_mutually_exclusive_group(required=True)
+    start_opt_group.add_argument('--local', help='start a local vineyard cluster')
+    start_opt_group.add_argument('--distributed', help='start a local vineyard cluster in a distributed fashion')
+
+    start_opt.add_argument('--hosts', nargs='+', default=None, help='A list of machines to launch vineyard server')
+    start_opt.add_argument('--etcd_endpoints',
+                           type=str,
+                           default=None,
+                           help=('Launching vineyard using specified etcd endpoints. If not specified, vineyard ' +
+                                 'will launch its own etcd instance'))
+    start_opt.add_argument('--vineyardd_path',
+                           type=str,
+                           default=None,
+                           help=('Location of vineyard server program. If not specified, vineyard will ' +
+                                 'use its own bundled vineyardd binary'))
+    start_opt.add_argument('--size',
+                           type=str,
+                           default='256M',
+                           help=('The memory size limit for vineyard’s shared memory. The memory size can ' +
+                                 'be a plain integer or as a fixed-point number using one of these ' +
+                                 'suffixes: E, P, T, G, M, K. You can also use the power-of-two ' +
+                                 'equivalents: Ei, Pi, Ti, Gi, Mi, Ki.'))
+    start_opt.add_argument('--socket',
+                           type=str,
+                           default='/var/run/vineyard.sock',
+                           help=('The UNIX domain socket socket path that vineyard server will listen on. ' +
+                                 'When the socket parameter is None, a random path under temporary directory ' +
+                                 'will be generated and used.'))
+    start_opt.add_argument('--rpc_socket_port',
+                           type=int,
+                           default=9600,
+                           help='The port that vineyard will use to privode RPC service')
+    start_opt.add_argument('--debug', type=bool, default=False, help='Whether print debug logs')
 
     return parser
 
@@ -518,6 +560,25 @@ def config(args):
         config_file.writelines(sockets)
 
 
+def start_vineyardd(args):
+    """Utility to start vineyardd."""
+    if args.local:
+        vineyard.deploy.local.start_vineyardd(etcd_endpoints=args.etcd_endpoints,
+                                              vineyardd_path=args.vineyardd_path,
+                                              size=args.size,
+                                              socket=args.socket,
+                                              rpc_socket_port=args.rpc_socket_port,
+                                              debug=args.debug)
+    elif args.distributed:
+        vineyard.deploy.distributed.start_vineyardd(hosts=args.hosts,
+                                                    etcd_endpoints=args.etcd_endpoints,
+                                                    vineyardd_path=args.vineyardd_path,
+                                                    size=args.size,
+                                                    socket=args.socket,
+                                                    rpc_socket_port=args.rpc_socket_port,
+                                                    debug=args.debug)
+
+
 def main():
     """Main function for vineyard-ctl."""
     args = optparser.parse_args()
@@ -526,6 +587,8 @@ def main():
 
     if args.cmd == 'config':
         return config(args)
+    if args.cmd == 'start':
+        return start_vineyardd(args)
 
     client = connect_vineyard(args)
 
