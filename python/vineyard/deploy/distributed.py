@@ -113,7 +113,7 @@ def start_vineyardd(hosts=None,
             if rc is not None:
                 err = textwrap.indent(proc.stdout.read(), ' ' * 4)
                 raise RuntimeError('vineyardd exited unexpectedly with code %d: error is:\n%s' % (rc, err))
-        yield procs, socket
+        yield procs, socket, etcd_endpoints
     finally:
         logger.info('Distributed vineyardd being killed')
         for proc in procs:
