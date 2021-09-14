@@ -20,9 +20,7 @@ import vineyard
 
 
 def test_local_cluster():
-    client1 = vineyard.init(etcd_prefix='test')
-    client2 = vineyard.init(etcd_prefix='test')
-    client3 = vineyard.init(etcd_prefix='test')
+    client1, client2, client3 = vineyard.init(proc_num=3)
     assert client1 != client2
     assert client1 != client3
     assert client2 != client3
@@ -31,7 +29,6 @@ def test_local_cluster():
     meta2 = client2.get_meta(obj_id)
     meta3 = client3.get_meta(obj_id)
     assert str(meta2) == str(meta3)
-    vineyard.shutdown()
 
 
 def test_local_single():

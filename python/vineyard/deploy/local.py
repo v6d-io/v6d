@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import atexit
 import contextlib
 import logging
 import os
@@ -48,6 +49,8 @@ def start_vineyardd(etcd_endpoints=None,
         etcd_endpoint: str
             Launching vineyard using specified etcd endpoints. If not specified, vineyard
             will launch its own etcd instance.
+        etcd_prefix: str
+            Specify a common prefix to establish a local vineyard cluster.
         vineyardd_path: str
             Location of vineyard server program. If not specified, vineyard will use its
             own bundled vineyardd binary.
@@ -153,9 +156,9 @@ def start_vineyardd(etcd_endpoints=None,
             etcd_ctx.__exit__(None, None, None)  # pylint: disable=no-member
 
 
-def init(socket=None, etcd_prefix=None, **kw):
+def init(proc_num=1, socket=None, **kw):
     '''
-    help new users to launch a local vineyardd and get a client as easy as possible
+    Help new users to launch a local vineyardd and get a client as easy as possible
 
     In a clean enviroment, simply use:
     
@@ -165,55 +168,71 @@ def init(socket=None, etcd_prefix=None, **kw):
     
     it will launch a local vineyardd and return a connected client to the vineyardd.
 
-    If the user has already lauched a vineyardd with a **SOCKET**. She can either set VINEYARD_IPC_SOCKET
-    as the SOCKET, and then run vineyard.init(), or simply use:
+    If a vineyardd has been launched at **SOCKET**, pass the socket either by setting the
+    environment variable **VINEYARD_IPC_SOCKET** as the socket before head, or simply use:
     
     .. code::
     
         vineyard.init(socket=SOCKET)
 
-    Sometimes we want to setup a local vineyard cluster consists of multiple vineyard daemons.
-    We can give the same **etcd_prefix** to each call of init:
+    For the case to establish a local vineyard cluster consists of multiple vineyard daemons.
+    Use the **proc_num** parameter:
 
     .. code::
     
-        client1 = vineyard.init(etcd_prefix='test')
-        client2 = vineyard.init(etcd_prefix='test')
-        client3 = vineyard.init(etcd_prefix='test')
+        client1, client2, client3 = vineyard.init(proc_num=3)
     
-    We will have three vineyard daemons running locally as a cluster to mimic the distributed scenario.      
+    A socket prefix can also be provided if needed:
+
+    .. code::
+
+        client1, client2, client3 = vineyard.init(socket='/tmp/vineyard.sock', proc_num=3)
+
+    In this case, three vineyard daemons at **/tmp/vineyard.sock.0**, **/tmp/vineyard.sock.1**
+    and **/tmp/vineyard.sock.2** will be launched.
+
+    The init method can only be called once in a process, to get the established clients later
+    in the process, use **get_default_client**.
     '''
+    assert init.contexts == {}
+
     if socket is None:
         socket = os.environ.get('VINEYARD_IPC_SOCKET', None)
-    try:
-        client = connect(socket)
-    except:
-        logger.info("Vineyard daemon on %s is not initialized", socket)
-        if etcd_prefix is not None:
-            kw['etcd_prefix'] = etcd_prefix
-            kw['etcd_endpoints'] = init.etcd_endpoints.get(etcd_prefix, None)
-        ctx = start_vineyardd(socket=socket, **kw)
-        _, socket, etcd_endpoints = ctx.__enter__()
-        init.contexts[socket] = ctx
-        init.etcd_endpoints[etcd_prefix] = etcd_endpoints
-        client = connect(socket)
 
-    return client
+    etcd_endpoints = None
+    etcd_prefix = f'vineyard_init_at_{time.time()}'
+    for idx in range(proc_num):
+        ipc_socket = f'{socket}.{idx}' if socket else None
+        try:
+            client = connect(ipc_socket)
+        except:
+            logger.info("Vineyard daemon at %s is not initialized", ipc_socket)
+            ctx = start_vineyardd(socket=ipc_socket,
+                                  etcd_endpoints=etcd_endpoints,
+                                  etcd_prefix=etcd_prefix,
+                                  rpc=False,
+                                  **kw)
+            _, ipc_socket, etcd_endpoints = ctx.__enter__()
+            client = connect(ipc_socket)
+            init.contexts[ipc_socket] = (ctx, client)
+
+    return get_default_client()
 
 
-def shutdown(socket=None):
-    if socket is None:
-        for ctx in reversed(init.contexts.keys()):
-            init.contexts[ctx].__exit__(None, None, None)
-    else:
-        if socket in init.contexts:
-            init.contexts[socket].__exit__(None, None, None)
-            init.contexts.pop(socket)
-        else:
-            logger.warn("Vineyard daemon on %s has never been initialized", socket)
+def get_default_client():
+    if not init.contexts:
+        raise ValueError("Vineyard has not been initialized, use vineyard.init()")
+    clients = [init.contexts[k][1] for k in init.contexts]
+    return clients if len(clients) > 1 else clients[0]
+
+
+@atexit.register
+def shutdown():
+    for ctx in reversed(init.contexts.keys()):
+        init.contexts[ctx][0].__exit__(None, None, None)
+    init.contexts = {}
 
 
 init.contexts = {}
-init.etcd_endpoints = {}
 
 __all__ = ['start_vineyardd']

@@ -104,7 +104,6 @@ from .data import register_builtin_types
 from .data.graph import Graph
 from .deploy.local import init, shutdown
 
-
 logger = logging.getLogger('vineyard')
 
 
