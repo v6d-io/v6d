@@ -206,14 +206,14 @@ def init(num_instances=1, **kw):
 
 def get_default_client():
     if not __default_instance_contexts:
-        raise ValueError("Vineyard has not been initialized, use vineyard.init()")
+        raise ValueError("Vineyard has not been initialized, use vineyard.init() to launch vineyard instances")
     clients = [__default_instance_contexts[k][1] for k in __default_instance_contexts]
     return clients if len(clients) > 1 else clients[0]
 
 
 def get_default_socket():
     if not __default_instance_contexts:
-        raise ValueError("Vineyard has not been initialized, use vineyard.init() to launch vineyard daemons")
+        raise ValueError("Vineyard has not been initialized, use vineyard.init() to launch vineyard instances")
     sockets = __default_instance_contexts.keys()
     return sockets if len(sockets) > 1 else sockets[0]
 
