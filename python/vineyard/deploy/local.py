@@ -168,8 +168,8 @@ def init(proc_num=1, socket=None, **kw):
     
     it will launch a local vineyardd and return a connected client to the vineyardd.
 
-    If a vineyardd has been launched at **SOCKET**, pass the socket either by setting the
-    environment variable **VINEYARD_IPC_SOCKET** as the socket before head, or simply use:
+    If a specific **SOCKET** path is needed, pass the socket either by setting the
+    environment variable **VINEYARD_IPC_SOCKET** as the SOCKET before head, or simply use:
     
     .. code::
     
@@ -202,7 +202,10 @@ def init(proc_num=1, socket=None, **kw):
     etcd_endpoints = None
     etcd_prefix = f'vineyard_init_at_{time.time()}'
     for idx in range(proc_num):
-        ipc_socket = f'{socket}.{idx}' if socket else None
+        if proc_num > 1:
+            ipc_socket = f'{socket}.{idx}' if socket else None
+        else:
+            ipc_socket = socket
         try:
             client = connect(ipc_socket)
         except:
