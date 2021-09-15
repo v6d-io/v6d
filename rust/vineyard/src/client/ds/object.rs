@@ -41,19 +41,45 @@ impl Default for Object {
 }
 
 impl Object {
+    pub fn id(&self) -> ObjectID {
+        self.id
+    }
+
+    pub fn meta(&self) -> &ObjectMeta {
+        &self.meta
+    }
+    
+    pub fn nbytes(&self) -> usize {
+        self.meta.get_nbytes()
+    }
+
     pub fn construct(&mut self, meta: &ObjectMeta) {
         self.id = meta.get_id();
         self.meta = meta.clone();
     }
+
+    pub fn persist() {} // TODO
+
+    pub fn is_local(&self) -> bool {
+        self.meta.is_local()
+    }
+
+    pub fn is_persist(&self) -> bool { // TODO
+        false
+    }
+
+    pub fn is_global(&self) -> bool {
+        self.meta.is_global()
+    }
 }
 
 impl ObjectBase for Object {
-    fn build(client: Box<dyn Client>) -> io::Result<Blob> {
-        panic!("")
+    fn build(client: Box<dyn Client>) -> io::Result<()> {
+        Ok(())
     }
 
     fn seal(client: Box<dyn Client>) -> Rc<Object> {
-        panic!("")
+        panic!("") // Question: shared_from_this()
     }
 }
 
@@ -62,9 +88,20 @@ pub struct ObjectBuilder {
     sealed: bool,
 }
 
+impl ObjectBuilder {
+    pub fn sealed(&self) -> bool {
+        self.sealed
+    }
+
+    fn set_sealed(&mut self, sealed: bool) {
+        self.sealed = sealed;
+    }
+}
+
+
 impl ObjectBase for ObjectBuilder {
     fn build(client: Box<dyn Client>) -> io::Result<Blob> {
-        panic!("")
+        panic!("") // Question: override = 0
     }
 
     fn seal(client: Box<dyn Client>) -> Rc<Object> {
