@@ -161,28 +161,29 @@ __default_instance_contexts = {}
 
 def init(num_instances=1, **kw):
     '''
-    Help new users to launch a local vineyardd instance and get a client as easy as possible
+    Launching a local vineyardd instance and get a client as easy as possible
 
-    In a clean enviroment, simply use:
-    
-    .. code::
-    
+    In a clean environment, simply use:
+
+    .. code:: python
+
         vineyard.init()
-    
+
     It will launch a local vineyardd and return a connected client to the vineyardd.
-    It will also setup the environment variable **VINEYARD_IPC_SOCKET**.
+    It will also setup the environment variable :code:`VINEYARD_IPC_SOCKET`.
 
     For the case to establish a local vineyard cluster consists of multiple vineyardd instances.
-    Use the **num_instances** parameter:
+    Use the :code:`num_instances` parameter:
 
-    .. code::
+    .. code:: python
     
         client1, client2, client3 = vineyard.init(num_instances=3)
 
     In this case, three vineyardd instances will be launched.
 
-    The init method can only be called once in a process, to get the established sockets or clients later
-    in the process, use **get_default_socket** or **get_default_client** respectively.
+    The init method can only be called once in a process, to get the established sockets or
+    clients later in the process, use :code:`get_current_socket` or :code:`get_current_client`
+    respectively.
     '''
     assert __default_instance_contexts == {}
 
@@ -201,17 +202,29 @@ def init(num_instances=1, **kw):
         if not idx:
             os.environ['VINEYARD_IPC_SOCKET'] = ipc_socket
 
-    return get_default_client()
+    return get_current_client()
 
 
-def get_default_client():
+def get_current_client():
+    '''
+    Get current vineyard IPC clients established by :code:`vineyard.init()`.
+
+    Raises:
+        ValueError if vineyard is not initialized.
+    '''
     if not __default_instance_contexts:
         raise ValueError("Vineyard has not been initialized, use vineyard.init() to launch vineyard instances")
     clients = [__default_instance_contexts[k][1] for k in __default_instance_contexts]
     return clients if len(clients) > 1 else clients[0]
 
 
-def get_default_socket():
+def get_current_socket():
+    '''
+    Get current vineyard UNIX-domain socket established by :code:`vineyard.init()`.
+
+    Raises:
+        ValueError if vineyard is not initialized.
+    '''
     if not __default_instance_contexts:
         raise ValueError("Vineyard has not been initialized, use vineyard.init() to launch vineyard instances")
     sockets = __default_instance_contexts.keys()
@@ -219,18 +232,23 @@ def get_default_socket():
 
 
 def shutdown():
+    '''
+    Shutdown the vineyardd instances launched by previous :code:`vineyard.init()`.
+    '''
     global __default_instance_contexts
-    for ipc_socket in reversed(__default_instance_contexts):
-        __default_instance_contexts[ipc_socket][0].__exit__(None, None, None)
+    if __default_instance_contexts:
+        for ipc_socket in reversed(__default_instance_contexts):
+            __default_instance_contexts[ipc_socket][0].__exit__(None, None, None)
+        # NB. don't pop pre-existing env if we not launch
+        os.environ.pop('VINEYARD_IPC_SOCKET', None)
     __default_instance_contexts = {}
-    os.environ.pop('VINEYARD_IPC_SOCKET')
 
 
 @atexit.register
 def __shutdown_handler():
     try:
         shutdown()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
