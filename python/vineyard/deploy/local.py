@@ -248,7 +248,7 @@ def shutdown():
 def __shutdown_handler():
     try:
         shutdown()
-    except Exception:  # pylint: disable=board-except
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
