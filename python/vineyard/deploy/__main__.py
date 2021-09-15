@@ -29,7 +29,7 @@ def deploy_vineyardd(etcd_endpoints=None, size='256Mi', socket=None, rpc=True, r
                          size=size,
                          socket=socket,
                          rpc=rpc,
-                         rpc_socket_port=rpc_socket_port) as (_, socket):
+                         rpc_socket_port=rpc_socket_port) as (_, socket, _):
         logger.info("Vineyard server is listening %s ...", socket)
 
         try:

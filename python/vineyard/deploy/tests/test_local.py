@@ -37,6 +37,6 @@ def test_local_single():
     obj_id = client.put(1024)
     client1 = vineyard.connect()
     assert client1.get(obj_id) == 1024
-    client2 = vineyard.get_default_client()
+    client2 = vineyard.get_current_client()
     assert client == client2
     vineyard.shutdown()
