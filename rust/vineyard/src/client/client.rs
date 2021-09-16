@@ -14,6 +14,7 @@ limitations under the License.
 */
 use std::io;
 use std::io::prelude::*;
+use std::cell::{RefCell, RefMut};
 use std::net::TcpStream;
 use std::os::unix::net::UnixStream;
 
@@ -50,39 +51,39 @@ pub trait Client {
     // Obtain multiple metadatas from vineyard server.
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>;
 
-    fn get_stream(&mut self) -> io::Result<&mut StreamKind>;
+    fn get_stream(&self) -> io::Result<RefMut<'_, StreamKind>>;
 
-    fn put_name(&mut self, id: ObjectID, name: &String) -> io::Result<()> {
+    fn put_name(&self, id: ObjectID, name: &String) -> io::Result<()> {
         ENSURE_CONNECTED(self.connected());
-        let stream = self.get_stream()?;
+        let mut stream = self.get_stream()?;
         let message_out = write_put_name_request(id, name);
-        do_write(stream, &message_out)?;
+        do_write(&mut stream, &message_out)?;
         let mut message_in = String::new();
-        do_read(stream, &mut message_in)?;
+        do_read(&mut stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         read_put_name_reply(message_in)?;
         Ok(())
     }
 
-    fn get_name(&mut self, name: &String, wait: bool) -> io::Result<ObjectID> {
+    fn get_name(&self, name: &String, wait: bool) -> io::Result<ObjectID> {
         ENSURE_CONNECTED(self.connected());
-        let stream = self.get_stream()?;
+        let mut stream = self.get_stream()?;
         let message_out = write_get_name_request(name, wait);
-        do_write(stream, &message_out)?;
+        do_write(&mut stream, &message_out)?;
         let mut message_in = String::new();
-        do_read(stream, &mut message_in)?;
+        do_read(&mut stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         let id = read_get_name_reply(message_in)?;
         Ok(id)
     }
 
-    fn drop_name(&mut self, name: &String) -> io::Result<()> {
+    fn drop_name(&self, name: &String) -> io::Result<()> {
         ENSURE_CONNECTED(self.connected());
-        let stream = self.get_stream()?;
+        let mut stream = self.get_stream()?;
         let message_out = write_drop_name_request(name);
-        do_write(stream, &message_out)?;
+        do_write(&mut stream, &message_out)?;
         let mut message_in = String::new();
-        do_read(stream, &mut message_in)?;
+        do_read(&mut stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         read_drop_name_reply(message_in)?;
         Ok(())
@@ -90,25 +91,25 @@ pub trait Client {
 
     fn instance_id(&self) -> InstanceID;
 
-    fn persist(&mut self, id: ObjectID) -> io::Result<()> {
+    fn persist(&self, id: ObjectID) -> io::Result<()> {
         ENSURE_CONNECTED(self.connected());
-        let stream = self.get_stream()?;
+        let mut stream = self.get_stream()?;
         let message_out = write_persist_request(id);
-        do_write(stream, &message_out)?;
+        do_write(&mut stream, &message_out)?;
         let mut message_in = String::new();
-        do_read(stream, &mut message_in)?;
+        do_read(&mut stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         read_persist_reply(message_in)?;
         Ok(())
     }
 
-    fn if_persist(&mut self, id: ObjectID) -> io::Result<bool> {
+    fn if_persist(&self, id: ObjectID) -> io::Result<bool> {
         ENSURE_CONNECTED(self.connected());
-        let stream = self.get_stream()?;
+        let mut stream = self.get_stream()?;
         let message_out = write_if_persist_request(id);
-        do_write(stream, &message_out)?;
+        do_write(&mut stream, &message_out)?;
         let mut message_in = String::new();
-        do_read(stream, &mut message_in)?;
+        do_read(&mut stream, &mut message_in)?;
         let message_in: Value = serde_json::from_str(&message_in)?;
         let persist = read_if_persist_reply(message_in)?;
         Ok(persist)

@@ -15,6 +15,7 @@ limitations under the License.
 use std::io;
 use std::io::prelude::*;
 use std::rc::{Rc, Weak};
+use std::cell::{RefCell, RefMut};
 
 use serde_json::Value;
 
@@ -43,7 +44,7 @@ pub struct IPCClient {
     vineyard_conn: i64,
     instance_id: InstanceID,
     server_version: String,
-    stream: Option<StreamKind>,
+    stream: Option<RefCell<StreamKind>>,
 }
 
 impl Default for IPCClient {
@@ -55,7 +56,7 @@ impl Default for IPCClient {
             vineyard_conn: 0,
             instance_id: 0,
             server_version: String::new(),
-            stream: None as Option<StreamKind>,
+            stream: None as Option<RefCell<StreamKind>>,
         }
     }
 }
@@ -108,7 +109,7 @@ impl Client for IPCClient {
             self.instance_id = register_reply.instance_id;
             self.server_version = register_reply.version;
             self.rpc_endpoint = register_reply.rpc_endpoint;
-            self.stream = Some(ipc_stream);
+            self.stream = Some(RefCell::new(ipc_stream));
             self.connected = true;
 
             // TODO： Compatable server
@@ -127,9 +128,9 @@ impl Client for IPCClient {
         panic!();
     }
 
-    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
-        match &mut self.stream {
-            Some(stream) => return Ok(&mut *stream),
+    fn get_stream(&self) -> io::Result<RefMut<'_, StreamKind>> {
+        match &self.stream {
+            Some(stream) => return Ok(stream.borrow_mut()),
             None => panic!(),
         }
     }

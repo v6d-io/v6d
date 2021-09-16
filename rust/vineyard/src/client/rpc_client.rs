@@ -14,6 +14,7 @@ limitations under the License.
 */
 use std::io;
 use std::io::prelude::*;
+use std::cell::{RefCell, RefMut};
 
 use serde_json::Value;
 
@@ -36,7 +37,7 @@ pub struct RPCClient {
     instance_id: InstanceID,
     server_version: String,
     remote_instance_id: InstanceID,
-    stream: Option<StreamKind>,
+    stream: Option<RefCell<StreamKind>>,
 }
 
 impl Default for RPCClient {
@@ -49,7 +50,7 @@ impl Default for RPCClient {
             instance_id: 0,
             server_version: String::new(),
             remote_instance_id: 0,
-            stream: None as Option<StreamKind>,
+            stream: None as Option<RefCell<StreamKind>>,
         }
     }
 }
@@ -88,7 +89,7 @@ impl Client for RPCClient {
             self.remote_instance_id = register_reply.instance_id;
             self.server_version = register_reply.version;
             self.ipc_socket = register_reply.ipc_socket;
-            self.stream = Some(rpc_stream);
+            self.stream = Some(RefCell::new(rpc_stream));
             self.connected = true;
 
             // TODO： Compatable server
@@ -107,9 +108,9 @@ impl Client for RPCClient {
         Ok(ObjectMeta::default())
     }
 
-    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
-        match &mut self.stream {
-            Some(stream) => return Ok(&mut *stream),
+    fn get_stream(&self) -> io::Result<RefMut<'_, StreamKind>> {
+        match &self.stream {
+            Some(stream) => return Ok(stream.borrow_mut()),
             None => panic!(),
         }
     }
