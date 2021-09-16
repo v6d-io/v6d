@@ -1,5 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
+# PYTHON_ARGCOMPLETE_OK
 #
 # Copyright 2020-2021 Alibaba Group Holding Limited.
 #
@@ -24,6 +25,7 @@ import os
 import json
 import pandas as pd
 import treelib
+import argcomplete
 
 import vineyard
 
@@ -103,8 +105,14 @@ def vineyard_argument_parser():
                                       epilog=('Example:\n\n>>> vineyard-ctl query --object_id ' +
                                               '00002ec13bc81226 --meta json --metric typename'))
     query_opt.add_argument('--object_id', required=True, help='ID of the object to be fetched')
-    query_opt.add_argument('--meta', choices=['simple', 'json'], help='Metadata of the object')
-    query_opt.add_argument('--metric', choices=['nbytes', 'signature', 'typename'], help='Metric data of the object')
+    query_opt.add_argument('--meta',
+                           choices=['simple', 'json'],
+                           help='Metadata of the object').completer=\
+        argcomplete.completers.ChoicesCompleter(('simple', 'json'))
+    query_opt.add_argument('--metric',
+                           choices=['nbytes', 'signature', 'typename'],
+                           help='Metric data of the object').completer=\
+        argcomplete.completers.ChoicesCompleter(('nbytes', 'signature', 'typename'))
     query_opt.add_argument('--exists', action='store_true', help='Check if the object exists or not')
     query_opt.add_argument('--stdout', action='store_true', help='Get object to stdout')
     query_opt.add_argument('--output_file', type=str, help='Get object to file')
@@ -237,8 +245,10 @@ def vineyard_argument_parser():
                                       epilog='Example:\n\n>>> vineyard-ctl start --local')
 
     start_opt_group = start_opt.add_mutually_exclusive_group(required=True)
-    start_opt_group.add_argument('--local', help='start a local vineyard cluster')
-    start_opt_group.add_argument('--distributed', help='start a local vineyard cluster in a distributed fashion')
+    start_opt_group.add_argument('--local', action='store_true', help='start a local vineyard cluster')
+    start_opt_group.add_argument('--distributed',
+                                 action='store_true',
+                                 help='start a local vineyard cluster in a distributed fashion')
 
     start_opt.add_argument('--hosts', nargs='+', default=None, help='A list of machines to launch vineyard server')
     start_opt.add_argument('--etcd_endpoints',
@@ -270,6 +280,7 @@ def vineyard_argument_parser():
                            help='The port that vineyard will use to privode RPC service')
     start_opt.add_argument('--debug', type=bool, default=False, help='Whether print debug logs')
 
+    argcomplete.autocomplete(parser)
     return parser
 
 
@@ -301,7 +312,7 @@ def connect_vineyard(args):
 def connect_via_config_file():
     """Utility to create a vineyard client using an IPC or RPC socket from config file."""
     try:
-        with open(os.path.expanduser('~/.vineyard/config')) as config_file:
+        with open(os.path.expanduser('~/.vineyard/config'), encoding='UTF-8') as config_file:
             sockets = config_file.readlines()
         ipc_socket = sockets[0].split(':')[1][:-1]
         rpc_host = sockets[1].split(':')[1][:-1]
@@ -359,7 +370,7 @@ def query(client, args):
     if args.stdout:
         sys.stdout.write(str(value) + '\n')
     if args.output_file is not None:
-        with open(args.output_file, 'w') as output_file:
+        with open(args.output_file, 'w', encoding='UTF-8') as output_file:
             output_file.write(str(value))
     if args.meta is not None:
         if args.meta == 'simple':
@@ -515,7 +526,7 @@ def get_tree(meta, tree, memory=False, memory_dict=None, parent=None):
     tree.create_node(node, node, parent=parent)
     parent = node
     for key in meta:
-        if type(meta[key]) == vineyard._C.ObjectMeta:
+        if isinstance(meta[key], vineyard._C.ObjectMeta):
             get_tree(meta[key], tree, memory, memory_dict, parent)
 
 
@@ -536,19 +547,19 @@ def pretty_format_memory(nbytes):
     """Utility to return memory with appropriate unit."""
     if nbytes < (1 << 10):
         return f'{nbytes} bytes'
-    elif (1 << 20) > nbytes > (1 << 10):
+    if (1 << 20) > nbytes > (1 << 10):
         return f'{nbytes / (1 << 10)} KB'
-    elif (1 << 30) > nbytes > (1 << 20):
+    if (1 << 30) > nbytes > (1 << 20):
         return f'{nbytes / (1 << 20)} MB'
-    else:
+    if nbytes > (1 << 30):
         return f'{nbytes / (1 << 30)} GB'
 
 
 def config(args):
     """Utility to edit the config file."""
-    with open(os.path.expanduser('~/.vineyard/config')) as config_file:
+    with open(os.path.expanduser('~/.vineyard/config'), encoding='UTF-8') as config_file:
         sockets = config_file.readlines()
-    with open(os.path.expanduser('~/.vineyard/config'), 'w') as config_file:
+    with open(os.path.expanduser('~/.vineyard/config'), 'w', encoding='UTF-8') as config_file:
         if args.ipc_socket_value is not None:
             sockets[0] = f'ipc_socket:{args.ipc_socket_value}\n'
         if args.rpc_host_value is not None:

@@ -169,6 +169,7 @@ setup(
         'shared-memory38; python_version<="3.7"',
         'sortedcontainers',
         'treelib',
+        'argcomplete',
     ],
     extras_require={
         'dev': [
