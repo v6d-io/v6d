@@ -116,3 +116,4 @@ pub trait Client {
         let persist = read_if_persist_reply(message_in)?;
         Ok(persist)
     }
+}
