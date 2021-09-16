@@ -37,6 +37,7 @@ pub trait ObjectBase {
 pub struct Object {
     pub meta: ObjectMeta,
     pub id: ObjectID,
+
 }
 
 impl Default for Object {

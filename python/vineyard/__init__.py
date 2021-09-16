@@ -102,6 +102,7 @@ from .core import default_builder_context, default_resolver_context, default_dri
     builder_context, resolver_context, driver_context
 from .data import register_builtin_types
 from .data.graph import Graph
+from .deploy.local import init, shutdown, get_current_client, get_current_socket
 
 logger = logging.getLogger('vineyard')
 

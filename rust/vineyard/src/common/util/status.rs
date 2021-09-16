@@ -18,5 +18,6 @@ pub fn RETURN_ON_ASSERT(b: bool) {
     }
 }
 
+
 pub fn RETURN_ON_ERROR() { // Question
 }
