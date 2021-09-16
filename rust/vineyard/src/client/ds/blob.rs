@@ -21,30 +21,31 @@ use arrow::buffer as arrow;
 use super::object::Object;
 use super::object_factory::ObjectFactory;
 use super::object_meta::ObjectMeta;
-use super::IPCClient;
 use super::payload::Payload;
 use super::status::*;
 use super::uuid::*;
+use super::IPCClient;
 
 #[derive(Debug)]
 pub struct Blob {
     id: ObjectID,
     size: usize,
-    buffer: Option<Rc<arrow::Buffer>>, 
+    buffer: Option<Rc<arrow::Buffer>>,
 }
 
-impl Blob {
-    pub fn create() -> Blob {
-        // TODO default
+impl Default for Blob {
+    fn default() -> Self {
         Blob {
             id: invalid_object_id(),
             size: usize::MAX,
             buffer: None as Option<Rc<arrow::Buffer>>,
         }
     }
+}
 
+impl Blob {
     pub fn size(&self) -> usize {
-        self.allocated_size() 
+        self.allocated_size()
     }
 
     pub fn allocated_size(&self) -> usize {
@@ -54,17 +55,23 @@ impl Blob {
     pub fn data(&self) -> io::Result<String> {
         if self.size > 0 {
             match &self.buffer {
-                None => panic!("The object might be a (partially) remote object and the payload data 
-                is not locally available: {}", object_id_to_string(self.id)),
+                None => panic!(
+                    "The object might be a (partially) remote object and the payload data 
+                is not locally available: {}",
+                    object_id_to_string(self.id)
+                ),
                 Some(buf) => {
-                    if buf.len()==0 {
-                        panic!("The object might be a (partially) remote object and the payload data 
-                        is not locally available: {}", object_id_to_string(self.id));
+                    if buf.len() == 0 {
+                        panic!(
+                            "The object might be a (partially) remote object and the payload data 
+                        is not locally available: {}",
+                            object_id_to_string(self.id)
+                        );
                     }
                 }
             }
         }
-        //Ok(self.buffer.data()) 
+        //Ok(self.buffer.data())
         // Question: buffer.data() as_ptr()
         panic!()
     }
@@ -72,12 +79,18 @@ impl Blob {
     pub fn buffer(&self) -> io::Result<Rc<arrow::Buffer>> {
         if self.size > 0 {
             match &self.buffer {
-                None => panic!("The object might be a (partially) remote object and the payload data 
-                is not locally available: {}", object_id_to_string(self.id)),
+                None => panic!(
+                    "The object might be a (partially) remote object and the payload data 
+                is not locally available: {}",
+                    object_id_to_string(self.id)
+                ),
                 Some(buf) => {
-                    if buf.len()==0 {
-                        panic!("The object might be a (partially) remote object and the payload data 
-                        is not locally available: {}", object_id_to_string(self.id));
+                    if buf.len() == 0 {
+                        panic!(
+                            "The object might be a (partially) remote object and the payload data 
+                        is not locally available: {}",
+                            object_id_to_string(self.id)
+                        );
                     }
                 }
             }
@@ -88,17 +101,13 @@ impl Blob {
     pub fn construct(meta: &ObjectMeta) {
         let __type_name: Blob; // Question: type_name<Blob>()
     }
-
-
-
 }
-
 
 #[derive(Debug)]
 pub struct BlobWriter {
     object_id: ObjectID,
     payload: Payload,
-    buffer: Option<Rc<arrow::MutableBuffer>>, 
+    buffer: Option<Rc<arrow::MutableBuffer>>,
     metadata: HashMap<String, String>,
 }
 
@@ -110,7 +119,7 @@ impl BlobWriter {
     pub fn size(&self) -> usize {
         match &self.buffer {
             None => 0,
-            Some(buf) => buf.len()
+            Some(buf) => buf.len(),
         }
     }
 
@@ -123,21 +132,19 @@ impl BlobWriter {
         Rc::clone(&self.buffer.as_ref().unwrap())
     }
 
-    pub fn build(&self, client: IPCClient) -> io::Result<()>{
+    pub fn build(&self, client: IPCClient) -> io::Result<()> {
         Ok(())
     }
 
     pub fn add_key_value(&mut self, key: &String, value: &String) {
         self.metadata.insert(key.to_string(), value.to_string());
     }
-
 }
-
 
 #[derive(Debug)]
 pub struct BufferSet {
     buffer_ids: HashSet<ObjectID>,
-    buffers: HashMap<ObjectID, Option<Rc<arrow::Buffer>>>, 
+    buffers: HashMap<ObjectID, Option<Rc<arrow::Buffer>>>,
 }
 
 impl Default for BufferSet {

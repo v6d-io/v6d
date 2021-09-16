@@ -218,7 +218,6 @@ pub fn read_persist_reply(root: Value) -> io::Result<(())> {
     Ok(())
 }
 
-
 pub fn write_if_persist_request(id: ObjectID) -> String {
     let msg = json!({"type": "if_persist_request", "id": id});
     encode_msg(msg)
@@ -229,7 +228,6 @@ pub fn read_if_persist_reply(root: Value) -> io::Result<(bool)> {
     let persist = root["persist"].as_bool().unwrap_or(false);
     Ok(persist)
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -72,4 +72,31 @@ impl ObjectFactory {
         }
         &KNOWN_TYPES
     }
-}// TODO 测试
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_singleton() {
+        let KNOWN_TYPES = ObjectFactory::get_known_types();
+        println!(
+            "Length before insert: {}",
+            KNOWN_TYPES.lock().unwrap().len()
+        );
+        KNOWN_TYPES
+            .lock()
+            .unwrap()
+            .insert("1", Box::new(Object::default()));
+        KNOWN_TYPES
+            .lock()
+            .unwrap()
+            .insert("2", Box::new(Object::default()));
+        println!(
+            "Length after insert: {}",
+            ObjectFactory::get_known_types().lock().unwrap().len()
+        );
+    }
+}

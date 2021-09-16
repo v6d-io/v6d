@@ -15,16 +15,22 @@ limitations under the License.
 use std::io;
 use std::rc::Rc;
 
+use serde_json::json;
+
 use super::blob::Blob;
 use super::object_meta::ObjectMeta;
+use super::status::*;
 use super::uuid::ObjectID;
 use super::Client;
 use super::IPCClient;
-use super::status::*;
 
 pub trait ObjectBase {
-    fn build(client: &IPCClient) -> io::Result<()>;
-    fn seal(client: &IPCClient) -> Rc<Object>;
+    fn build(client: &IPCClient) -> io::Result<()> {
+        Ok(())
+    }
+    fn seal(client: &IPCClient) -> Rc<Object> {
+        panic!()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +56,7 @@ impl Object {
     pub fn meta(&self) -> &ObjectMeta {
         &self.meta
     }
-    
+
     pub fn nbytes(&self) -> usize {
         self.meta.get_nbytes()
     }
@@ -60,20 +66,30 @@ impl Object {
         self.meta = meta.clone();
     }
 
-    pub fn persist(&self, client: &mut dyn Client) -> io::Result<()>{
+    pub fn persist(&self, client: &mut dyn Client) -> io::Result<()> {
         client.persist(self.id)
-    } 
+    }
 
     pub fn is_local(&self) -> bool {
         self.meta.is_local()
     }
 
-    pub fn is_persist(&mut self) -> bool { 
-        let persist = !(self.meta.get_key_value(&"transient".to_string()).as_bool().unwrap());
-        // if (!persist) {
-        //     VINEYARD_CHECK_OK(self.meta.get_client().unwrap().upgrade().unwrap().if_persist(self.id));
-        // }
-        false
+    pub fn is_persist(&mut self) -> bool {
+        let persist = !(self
+            .meta
+            .get_key_value(&"transient".to_string())
+            .as_bool()
+            .unwrap());
+        if (!persist) {
+            let client = self.meta.get_client().unwrap().upgrade().unwrap();
+            VINEYARD_CHECK_OK(client.if_persist(self.id));
+            let persist = client.if_persist(self.id).unwrap();
+            if persist {
+                self.meta
+                    .add_json_key_value(&"transient".to_string(), &json!(false));
+            }
+        }
+        persist
     }
 
     pub fn is_global(&self) -> bool {
@@ -81,15 +97,7 @@ impl Object {
     }
 }
 
-impl ObjectBase for Object {
-    fn build(client: &IPCClient) -> io::Result<()> {
-        Ok(())
-    }
-
-    fn seal(client: &IPCClient) -> Rc<Object> {
-        panic!("") // Question: shared_from_this()
-    }
-}
+impl ObjectBase for Object {}
 
 #[derive(Debug)]
 pub struct ObjectBuilder {
@@ -106,13 +114,4 @@ impl ObjectBuilder {
     }
 }
 
-
-impl ObjectBase for ObjectBuilder {
-    fn build(client: &IPCClient) -> io::Result<(())> {
-        Ok(()) 
-    }
-
-    fn seal(client: &IPCClient) -> Rc<Object> {
-        panic!("") // Question: override = 0
-    }
-}
+impl ObjectBase for ObjectBuilder {}

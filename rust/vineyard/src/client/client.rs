@@ -1,3 +1,4 @@
+use std::cell::{RefCell, RefMut};
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +15,6 @@ limitations under the License.
 */
 use std::io;
 use std::io::prelude::*;
-use std::cell::{RefCell, RefMut};
 use std::net::TcpStream;
 use std::os::unix::net::UnixStream;
 

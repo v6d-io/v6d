@@ -1,3 +1,4 @@
+use std::cell::{RefCell, RefMut};
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +16,6 @@ limitations under the License.
 use std::io;
 use std::io::prelude::*;
 use std::rc::{Rc, Weak};
-use std::cell::{RefCell, RefMut};
 
 use serde_json::Value;
 
@@ -25,8 +25,8 @@ use super::client::Client;
 use super::client::ConnInputKind::{self, IPCConnInput};
 use super::client::StreamKind::{self, IPCStream};
 use super::rust_io::*;
-use super::ObjectMeta;
 use super::BlobWriter;
+use super::ObjectMeta;
 
 use super::protocol::*;
 use super::status::*;
@@ -71,7 +71,12 @@ impl IPCClient {
         panic!(); //TODO
     }
 
-    pub fn create_buffer(size: usize, id: ObjectID, payload: &mut Payload, buffer: Option<Rc<arrow::MutableBuffer>>) -> io::Result<()> {
+    pub fn create_buffer(
+        size: usize,
+        id: ObjectID,
+        payload: &mut Payload,
+        buffer: Option<Rc<arrow::MutableBuffer>>,
+    ) -> io::Result<()> {
         panic!(); //TODO
     }
 }

@@ -1,10 +1,10 @@
 use std::io;
 use std::mem;
 
-use super::IPCClient;
-use super::BlobWriter;
 use super::status::*;
 use super::uuid::*;
+use super::BlobWriter;
+use super::IPCClient;
 
 #[derive(Debug)]
 pub struct ArrayBuilder<T> {
