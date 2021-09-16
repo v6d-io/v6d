@@ -208,6 +208,29 @@ pub fn read_drop_name_reply(root: Value) -> io::Result<()> {
     Ok(())
 }
 
+pub fn write_persist_request(id: ObjectID) -> String {
+    let msg = json!({"type": "persist_request", "id": id});
+    encode_msg(msg)
+}
+
+pub fn read_persist_reply(root: Value) -> io::Result<(())> {
+    CHECK_IPC_ERROR(&root, "persist_reply");
+    Ok(())
+}
+
+
+pub fn write_if_persist_request(id: ObjectID) -> String {
+    let msg = json!({"type": "if_persist_request", "id": id});
+    encode_msg(msg)
+}
+
+pub fn read_if_persist_reply(root: Value) -> io::Result<(bool)> {
+    CHECK_IPC_ERROR(&root, "if_persist_reply");
+    let persist = root["persist"].as_bool().unwrap_or(false);
+    Ok(persist)
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -99,7 +99,7 @@ impl Client for RPCClient {
 
     fn disconnect(&self) {}
 
-    fn connected(&mut self) -> bool {
+    fn connected(&self) -> bool {
         self.connected
     }
 

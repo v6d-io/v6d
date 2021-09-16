@@ -21,7 +21,7 @@ use arrow::buffer as arrow;
 use super::object::Object;
 use super::object_factory::ObjectFactory;
 use super::object_meta::ObjectMeta;
-use super::Client;
+use super::IPCClient;
 use super::payload::Payload;
 use super::status::*;
 use super::uuid::*;
@@ -30,12 +30,12 @@ use super::uuid::*;
 pub struct Blob {
     id: ObjectID,
     size: usize,
-    buffer: Option<Rc<arrow::Buffer>>, // Question: do not have nullptr
+    buffer: Option<Rc<arrow::Buffer>>, 
 }
 
 impl Blob {
     pub fn create() -> Blob {
-        // Question: create or default
+        // TODO default
         Blob {
             id: invalid_object_id(),
             size: usize::MAX,
@@ -44,7 +44,7 @@ impl Blob {
     }
 
     pub fn size(&self) -> usize {
-        self.allocated_size() // Question: what's the difference between these two
+        self.allocated_size() 
     }
 
     pub fn allocated_size(&self) -> usize {
@@ -65,7 +65,7 @@ impl Blob {
             }
         }
         //Ok(self.buffer.data()) 
-        // Question: buffer.data()?
+        // Question: buffer.data() as_ptr()
         panic!()
     }
 
@@ -98,7 +98,7 @@ impl Blob {
 pub struct BlobWriter {
     object_id: ObjectID,
     payload: Payload,
-    buffer: Option<Rc<arrow::MutableBuffer>>, //Question
+    buffer: Option<Rc<arrow::MutableBuffer>>, 
     metadata: HashMap<String, String>,
 }
 
@@ -114,16 +114,17 @@ impl BlobWriter {
         }
     }
 
-    // pub fn data(&self) -> {
-        // Question
-    // }
+    pub fn data(&self) -> char {
+        0 as char
+        //TODO. Question
+    }
 
     pub fn buffer(&self) -> Rc<arrow::MutableBuffer> {
         Rc::clone(&self.buffer.as_ref().unwrap())
     }
 
-    pub fn Build(&self, client: &Client) -> io::Result<()>{
-        Ok(()) // Question
+    pub fn build(&self, client: IPCClient) -> io::Result<()>{
+        Ok(())
     }
 
     pub fn add_key_value(&mut self, key: &String, value: &String) {
@@ -136,7 +137,7 @@ impl BlobWriter {
 #[derive(Debug)]
 pub struct BufferSet {
     buffer_ids: HashSet<ObjectID>,
-    buffers: HashMap<ObjectID, Option<Rc<arrow::Buffer>>>, // Question: nullptr
+    buffers: HashMap<ObjectID, Option<Rc<arrow::Buffer>>>, 
 }
 
 impl Default for BufferSet {

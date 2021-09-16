@@ -37,7 +37,6 @@ impl ObjectFactory {
                 type_name
             ),
             Some(initialized_object) => Ok((*initialized_object).clone()),
-            // Question: (creator->second)()
         }
     }
 
@@ -63,7 +62,7 @@ impl ObjectFactory {
     }
 
     pub fn factory_ref() -> &'static Mutex<HashMap<&'static str, ObjectInitializer>> {
-        return &**ObjectFactory::get_known_types(); //Question: convert to const, clone or ref
+        return &**ObjectFactory::get_known_types();
     }
 
     fn get_known_types() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> {
@@ -73,4 +72,4 @@ impl ObjectFactory {
         }
         &KNOWN_TYPES
     }
-}
+}// TODO 测试

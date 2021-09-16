@@ -45,7 +45,7 @@ pub trait Client {
 
     // Question: recv function in sys/socket.h?
     // if self.connected && recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1
-    fn connected(&mut self) -> bool;
+    fn connected(&self) -> bool;
 
     // Obtain multiple metadatas from vineyard server.
     fn get_meta_data(&self, object_id: ObjectID, sync_remote: bool) -> io::Result<ObjectMeta>;
@@ -89,4 +89,28 @@ pub trait Client {
     }
 
     fn instance_id(&self) -> InstanceID;
+
+    fn persist(&mut self, id: ObjectID) -> io::Result<()> {
+        ENSURE_CONNECTED(self.connected());
+        let stream = self.get_stream()?;
+        let message_out = write_persist_request(id);
+        do_write(stream, &message_out)?;
+        let mut message_in = String::new();
+        do_read(stream, &mut message_in)?;
+        let message_in: Value = serde_json::from_str(&message_in)?;
+        read_persist_reply(message_in)?;
+        Ok(())
+    }
+
+    fn if_persist(&mut self, id: ObjectID) -> io::Result<bool> {
+        ENSURE_CONNECTED(self.connected());
+        let stream = self.get_stream()?;
+        let message_out = write_if_persist_request(id);
+        do_write(stream, &message_out)?;
+        let mut message_in = String::new();
+        do_read(stream, &mut message_in)?;
+        let message_in: Value = serde_json::from_str(&message_in)?;
+        let persist = read_if_persist_reply(message_in)?;
+        Ok(persist)
+    }
 }

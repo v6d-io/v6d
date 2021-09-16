@@ -17,3 +17,7 @@ pub fn RETURN_ON_ASSERT(b: bool) {
         panic!()
     }
 }
+
+pub fn RETURN_ON_ERROR() { // Question
+
+}

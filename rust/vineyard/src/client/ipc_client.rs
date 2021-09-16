@@ -14,18 +14,24 @@ limitations under the License.
 */
 use std::io;
 use std::io::prelude::*;
+use std::rc::{Rc, Weak};
 
 use serde_json::Value;
+
+use arrow::buffer as arrow;
 
 use super::client::Client;
 use super::client::ConnInputKind::{self, IPCConnInput};
 use super::client::StreamKind::{self, IPCStream};
 use super::rust_io::*;
 use super::ObjectMeta;
+use super::BlobWriter;
 
 use super::protocol::*;
 use super::status::*;
-use super::uuid::{InstanceID, ObjectID};
+use super::uuid::*;
+
+use super::payload::Payload;
 
 pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
 
@@ -51,6 +57,21 @@ impl Default for IPCClient {
             server_version: String::new(),
             stream: None as Option<StreamKind>,
         }
+    }
+}
+
+impl IPCClient {
+    pub fn create_blob(&mut self, size: usize, blob: Box<BlobWriter>) -> io::Result<()> {
+        ENSURE_CONNECTED(self.connected());
+        let object_id = invalid_object_id();
+        let mut object: Payload;
+        let buffer: Option<Rc<arrow::MutableBuffer>> = None;
+        //RETURN_ON_ERROR(create_buffer(size, object_id, object, buffer));
+        panic!(); //TODO
+    }
+
+    pub fn create_buffer(size: usize, id: ObjectID, payload: &mut Payload, buffer: Option<Rc<arrow::MutableBuffer>>) -> io::Result<()> {
+        panic!(); //TODO
     }
 }
 
@@ -98,7 +119,7 @@ impl Client for IPCClient {
 
     fn disconnect(&self) {}
 
-    fn connected(&mut self) -> bool {
+    fn connected(&self) -> bool {
         self.connected
     }
 
@@ -116,7 +137,6 @@ impl Client for IPCClient {
         self.instance_id
     }
 }
-// TODO: Test the connect
 
 #[cfg(test)]
 mod tests {

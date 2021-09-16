@@ -19,10 +19,12 @@ use super::blob::Blob;
 use super::object_meta::ObjectMeta;
 use super::uuid::ObjectID;
 use super::Client;
+use super::IPCClient;
+use super::status::*;
 
 pub trait ObjectBase {
-    fn build(client: Box<dyn Client>) -> io::Result<Blob>;
-    fn seal(client: Box<dyn Client>) -> Rc<Object>;
+    fn build(client: &IPCClient) -> io::Result<()>;
+    fn seal(client: &IPCClient) -> Rc<Object>;
 }
 
 #[derive(Debug, Clone)]
@@ -58,13 +60,19 @@ impl Object {
         self.meta = meta.clone();
     }
 
-    pub fn persist() {} // TODO
+    pub fn persist(&self, client: &mut dyn Client) -> io::Result<()>{
+        client.persist(self.id)
+    } 
 
     pub fn is_local(&self) -> bool {
         self.meta.is_local()
     }
 
-    pub fn is_persist(&self) -> bool { // TODO
+    pub fn is_persist(&mut self) -> bool { 
+        let persist = !(self.meta.get_key_value(&"transient".to_string()).as_bool().unwrap());
+        // if (!persist) {
+        //     VINEYARD_CHECK_OK(self.meta.get_client().unwrap().upgrade().unwrap().if_persist(self.id));
+        // }
         false
     }
 
@@ -74,11 +82,11 @@ impl Object {
 }
 
 impl ObjectBase for Object {
-    fn build(client: Box<dyn Client>) -> io::Result<()> {
+    fn build(client: &IPCClient) -> io::Result<()> {
         Ok(())
     }
 
-    fn seal(client: Box<dyn Client>) -> Rc<Object> {
+    fn seal(client: &IPCClient) -> Rc<Object> {
         panic!("") // Question: shared_from_this()
     }
 }
@@ -100,11 +108,11 @@ impl ObjectBuilder {
 
 
 impl ObjectBase for ObjectBuilder {
-    fn build(client: Box<dyn Client>) -> io::Result<Blob> {
-        panic!("") // Question: override = 0
+    fn build(client: &IPCClient) -> io::Result<(())> {
+        Ok(()) 
     }
 
-    fn seal(client: Box<dyn Client>) -> Rc<Object> {
-        panic!("")
+    fn seal(client: &IPCClient) -> Rc<Object> {
+        panic!("") // Question: override = 0
     }
 }
