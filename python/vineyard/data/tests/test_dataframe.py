@@ -90,3 +90,22 @@ def test_dataframe_with_sparse_array_mixed_columns(vineyard_client):
     sdf = df.astype(pd.SparseDtype("float", np.nan))
     object_id = vineyard_client.put(sdf)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
+def test_dataframe_reusing(vineyard_client):
+    nparr = np.ones(1000)
+    df = pd.DataFrame({"x": nparr})
+    df_id = vineyard_client.put(df)
+    df = vineyard_client.get(df_id)
+
+    df2 = pd.DataFrame(df)
+    df2["y"] = nparr
+    df2_id = vineyard_client.put(df2)
+    df2 = vineyard_client.get(df2_id)
+
+    ob = getattr(df._mgr.blocks[0].values, '__vineyard_ref', None)
+    ob2 = getattr(df2._mgr.blocks[0].values, '__vineyard_ref', None)
+
+    assert ob is not None
+    assert ob2 is not None
+    assert ob.id == ob2.id
