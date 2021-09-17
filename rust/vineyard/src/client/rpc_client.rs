@@ -1,3 +1,4 @@
+use std::cell::{RefCell, RefMut};
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use std::env;
+use std::io;
 use std::io::prelude::*;
-use std::io::{self, Error, ErrorKind};
-use std::mem;
 
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
-use std::path::Path;
-
-use serde::{Deserialize, Serialize};
-use serde_json::Result as JsonResult;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use super::client::Client;
 use super::client::ConnInputKind::{self, RPCConnInput};
@@ -43,7 +37,7 @@ pub struct RPCClient {
     instance_id: InstanceID,
     server_version: String,
     remote_instance_id: InstanceID,
-    stream: Option<StreamKind>,
+    stream: Option<RefCell<StreamKind>>,
 }
 
 impl Default for RPCClient {
@@ -56,7 +50,7 @@ impl Default for RPCClient {
             instance_id: 0,
             server_version: String::new(),
             remote_instance_id: 0,
-            stream: None as Option<StreamKind>,
+            stream: None as Option<RefCell<StreamKind>>,
         }
     }
 }
@@ -95,7 +89,7 @@ impl Client for RPCClient {
             self.remote_instance_id = register_reply.instance_id;
             self.server_version = register_reply.version;
             self.ipc_socket = register_reply.ipc_socket;
-            self.stream = Some(rpc_stream);
+            self.stream = Some(RefCell::new(rpc_stream));
             self.connected = true;
 
             // TODO： Compatable server
@@ -106,7 +100,7 @@ impl Client for RPCClient {
 
     fn disconnect(&self) {}
 
-    fn connected(&mut self) -> bool {
+    fn connected(&self) -> bool {
         self.connected
     }
 
@@ -114,9 +108,9 @@ impl Client for RPCClient {
         Ok(ObjectMeta::default())
     }
 
-    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
-        match &mut self.stream {
-            Some(stream) => return Ok(&mut *stream),
+    fn get_stream(&self) -> io::Result<RefMut<'_, StreamKind>> {
+        match &self.stream {
+            Some(stream) => return Ok(stream.borrow_mut()),
             None => panic!(),
         }
     }

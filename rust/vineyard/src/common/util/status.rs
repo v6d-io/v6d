@@ -7,13 +7,13 @@ pub fn VINEYARD_CHECK_OK<T>(status: io::Result<T>) {
 }
 
 pub fn VINEYARD_ASSERT(condition: bool) {
-    if !condition {
+    if (!condition) {
         panic!()
     }
 }
 
 pub fn RETURN_ON_ASSERT(b: bool) {
-    if !b {
-        panic!()
+    if (!b) {
+        panic!("On assert failed.");
     }
 }

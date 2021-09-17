@@ -1,64 +1,11 @@
-use serde::{Deserialize, Serialize};
-use serde_json::Result as JsonResult;
+use std::collections::{HashMap, HashSet};
+use std::io;
+
 use serde_json::{json, Map, Value};
 
-use std::collections::{HashMap, HashSet};
-use std::io::{self, Error, ErrorKind};
-use std::ptr;
-
+use super::payload::Payload;
 use super::status::*;
 use super::uuid::*;
-use crate::client::client::Client;
-
-#[derive(Debug)]
-pub struct Payload {
-    object_id: ObjectID,
-    store_fd: i32,
-    arena_fd: i32,
-    data_offset: isize,
-    data_size: i64,
-    map_size: i64,
-    pointer: *const u8, // TODO: Check if this is right for nullptr
-}
-
-impl Default for Payload {
-    fn default() -> Self {
-        Payload {
-            object_id: 0,
-            store_fd: -1,
-            arena_fd: -1,
-            data_offset: 0,
-            data_size: 0,
-            map_size: 0,
-            pointer: ptr::null(), // nullptr
-        }
-    }
-}
-
-impl Payload {
-    pub fn new() -> Payload {
-        let ret: Payload = Default::default();
-        ret
-    }
-
-    pub fn to_json(&self) -> Value {
-        json!({
-            "object_id": self.object_id, 
-            "store_fd": self.store_fd, 
-            "data_offset": self.data_offset, 
-            "data_size": self.data_size,
-            "map_size": self.map_size})
-    }
-
-    pub fn from_json(&mut self, tree: &Value) {
-        self.object_id = tree["object_id"].as_u64().unwrap() as InstanceID;
-        self.store_fd = tree["store_fd"].as_i64().unwrap() as i32;
-        self.data_offset = tree["data_offset"].as_i64().unwrap() as isize;
-        self.data_size = tree["data_size"].as_i64().unwrap();
-        self.map_size = tree["map_size"].as_i64().unwrap();
-        self.pointer = ptr::null(); //  nullptr
-    }
-}
 
 pub fn CHECK_IPC_ERROR(tree: &Value, root_type: &str) {
     if tree.as_object().unwrap().contains_key("code") {
@@ -96,7 +43,7 @@ pub struct RegisterReply {
 }
 
 // Read functions: Read the JSON root to variants of ipc instance
-pub fn read_register_reply(root: Value) -> Result<RegisterReply, Error> {
+pub fn read_register_reply(root: Value) -> io::Result<RegisterReply> {
     CHECK_IPC_ERROR(&root, "register_reply");
     let ipc_socket = root["ipc_socket"].as_str().unwrap().to_string();
     let rpc_endpoint = root["rpc_endpoint"].as_str().unwrap().to_string();
@@ -136,7 +83,7 @@ pub fn write_get_vec_data_request(ids: Vec<ObjectID>, sync_remote: bool, wait: b
     encode_msg(msg)
 }
 
-pub fn read_get_data_reply(root: Value) -> Result<Value, Error> {
+pub fn read_get_data_reply(root: Value) -> io::Result<Value> {
     CHECK_IPC_ERROR(&root, "get_data_reply");
     let content_group = &root["content"];
     if content_group.as_array().unwrap().len() != 1 {
@@ -153,7 +100,7 @@ pub fn read_get_data_reply(root: Value) -> Result<Value, Error> {
 }
 
 // Question: key value 0, 1, ...?
-pub fn read_get_unordered_data_reply(root: Value) -> Result<HashMap<ObjectID, Value>, Error> {
+pub fn read_get_unordered_data_reply(root: Value) -> io::Result<HashMap<ObjectID, Value>> {
     CHECK_IPC_ERROR(&root, "get_data_reply");
     let mut content: HashMap<ObjectID, Value> = HashMap::new();
     let content_group = &root["content"];
@@ -181,7 +128,7 @@ pub fn write_create_buffer_request(size: usize) -> String {
     encode_msg(msg)
 }
 
-pub fn read_create_buffer_reply(root: Value) -> Result<(ObjectID, Payload), Error> {
+pub fn read_create_buffer_reply(root: Value) -> io::Result<(ObjectID, Payload)> {
     CHECK_IPC_ERROR(&root, "create_buffer_reply");
     let tree: &Value = &root["created"];
     let id = root["id"].as_u64().unwrap() as ObjectID;
@@ -217,7 +164,7 @@ pub fn write_get_buffer_request(ids: HashSet<ObjectID>) -> String {
     encode_msg(msg)
 }
 
-pub fn read_get_buffer_reply(root: Value) -> Result<HashMap<ObjectID, Payload>, Error> {
+pub fn read_get_buffer_reply(root: Value) -> io::Result<HashMap<ObjectID, Payload>> {
     CHECK_IPC_ERROR(&root, "get_buffers_reply");
     let mut objects: HashMap<ObjectID, Payload> = HashMap::new();
     let num: usize = root["num"].as_u64().unwrap() as usize;
@@ -259,6 +206,27 @@ pub fn write_drop_name_request(name: &String) -> String {
 pub fn read_drop_name_reply(root: Value) -> io::Result<()> {
     CHECK_IPC_ERROR(&root, "drop_name_reply");
     Ok(())
+}
+
+pub fn write_persist_request(id: ObjectID) -> String {
+    let msg = json!({"type": "persist_request", "id": id});
+    encode_msg(msg)
+}
+
+pub fn read_persist_reply(root: Value) -> io::Result<(())> {
+    CHECK_IPC_ERROR(&root, "persist_reply");
+    Ok(())
+}
+
+pub fn write_if_persist_request(id: ObjectID) -> String {
+    let msg = json!({"type": "if_persist_request", "id": id});
+    encode_msg(msg)
+}
+
+pub fn read_if_persist_reply(root: Value) -> io::Result<(bool)> {
+    CHECK_IPC_ERROR(&root, "if_persist_reply");
+    let persist = root["persist"].as_bool().unwrap_or(false);
+    Ok(persist)
 }
 
 #[cfg(test)]

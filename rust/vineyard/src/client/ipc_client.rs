@@ -1,3 +1,4 @@
+use std::cell::{RefCell, RefMut};
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use std::env;
+use std::io;
 use std::io::prelude::*;
-use std::io::{self, Error, ErrorKind};
-use std::mem;
-use std::os::unix::net::UnixStream;
-use std::path::Path;
+use std::rc::{Rc, Weak};
 
-use serde::{Deserialize, Serialize};
-use serde_json::Result as JsonResult;
-use serde_json::{json, Value};
+use serde_json::Value;
+
+use arrow::buffer as arrow;
 
 use super::client::Client;
 use super::client::ConnInputKind::{self, IPCConnInput};
 use super::client::StreamKind::{self, IPCStream};
 use super::rust_io::*;
+use super::BlobWriter;
 use super::ObjectMeta;
 
 use super::protocol::*;
 use super::status::*;
-use super::uuid::{InstanceID, ObjectID};
+use super::uuid::*;
+
+use super::payload::Payload;
 
 pub static SOCKET_PATH: &'static str = "/tmp/vineyard.sock";
 
@@ -43,7 +44,7 @@ pub struct IPCClient {
     vineyard_conn: i64,
     instance_id: InstanceID,
     server_version: String,
-    stream: Option<StreamKind>,
+    stream: Option<RefCell<StreamKind>>,
 }
 
 impl Default for IPCClient {
@@ -55,8 +56,28 @@ impl Default for IPCClient {
             vineyard_conn: 0,
             instance_id: 0,
             server_version: String::new(),
-            stream: None as Option<StreamKind>,
+            stream: None as Option<RefCell<StreamKind>>,
         }
+    }
+}
+
+impl IPCClient {
+    pub fn create_blob(&mut self, size: usize, blob: Box<BlobWriter>) -> io::Result<()> {
+        ENSURE_CONNECTED(self.connected());
+        let object_id = invalid_object_id();
+        let mut object: Payload;
+        let buffer: Option<Rc<arrow::MutableBuffer>> = None;
+        //RETURN_ON_ERROR(create_buffer(size, object_id, object, buffer));
+        panic!(); //TODO
+    }
+
+    pub fn create_buffer(
+        size: usize,
+        id: ObjectID,
+        payload: &mut Payload,
+        buffer: Option<Rc<arrow::MutableBuffer>>,
+    ) -> io::Result<()> {
+        panic!(); //TODO
     }
 }
 
@@ -93,7 +114,7 @@ impl Client for IPCClient {
             self.instance_id = register_reply.instance_id;
             self.server_version = register_reply.version;
             self.rpc_endpoint = register_reply.rpc_endpoint;
-            self.stream = Some(ipc_stream);
+            self.stream = Some(RefCell::new(ipc_stream));
             self.connected = true;
 
             // TODO： Compatable server
@@ -104,7 +125,7 @@ impl Client for IPCClient {
 
     fn disconnect(&self) {}
 
-    fn connected(&mut self) -> bool {
+    fn connected(&self) -> bool {
         self.connected
     }
 
@@ -112,9 +133,9 @@ impl Client for IPCClient {
         panic!();
     }
 
-    fn get_stream(&mut self) -> io::Result<&mut StreamKind> {
-        match &mut self.stream {
-            Some(stream) => return Ok(&mut *stream),
+    fn get_stream(&self) -> io::Result<RefMut<'_, StreamKind>> {
+        match &self.stream {
+            Some(stream) => return Ok(stream.borrow_mut()),
             None => panic!(),
         }
     }
@@ -122,7 +143,6 @@ impl Client for IPCClient {
         self.instance_id
     }
 }
-// TODO: Test the connect
 
 #[cfg(test)]
 mod tests {

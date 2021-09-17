@@ -18,7 +18,7 @@ use std::io;
 use std::ops;
 use std::rc::{Rc, Weak};
 
-use serde::{Deserialize, Serialize};
+use arrow::buffer as arrow;
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
 
@@ -30,8 +30,6 @@ use super::Client;
 use super::status::*;
 use super::uuid::*;
 
-use super::blob::ArrowBuffer; // TODO. arrow/buffer: dependencies
-
 #[derive(Debug, Clone)]
 pub struct ObjectMeta {
     client: Option<Weak<dyn Client>>, // Question: Weak<dyn Client>
@@ -40,6 +38,8 @@ pub struct ObjectMeta {
     incomplete: bool,
     force_local: bool,
 }
+
+unsafe impl Send for ObjectMeta {}
 
 impl fmt::Debug for dyn Client {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -142,7 +142,6 @@ impl ObjectMeta {
             return true;
         } else {
             match &self.client {
-                // Question: is it correct?
                 Some(client) => {
                     let instance_id = client.upgrade().unwrap().as_ref().instance_id();
                     return instance_id == self.meta["instance_id"].as_u64().unwrap() as InstanceID;
@@ -214,8 +213,7 @@ impl ObjectMeta {
 
     pub fn get_member(&self, name: &String) -> Rc<Object> {
         let meta = self.get_member_meta(name);
-        let object = match ObjectFactory::create(&meta.get_type_name()) {
-            //TODO
+        let object = match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
             Err(_) => {
                 let mut object = Box::new(Object::default());
                 object.construct(&meta);
@@ -238,7 +236,7 @@ impl ObjectMeta {
         let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // Warning: memeroy?
         for (key, _) in ret_blobs.iter() {
             if let Some(value) = all_blobs.get(key) {
-                ret.set_buffer(*key, value);
+                ret.set_buffer(*key, value.clone());
             }
             if let true = self.force_local {
                 ret.force_local();
@@ -248,19 +246,19 @@ impl ObjectMeta {
         ret
     }
 
-    pub fn get_buffer(&self, blob_id: ObjectID) -> io::Result<Rc<ArrowBuffer>> {
+    pub fn get_buffer(&self, blob_id: ObjectID) -> io::Result<Rc<arrow::Buffer>> {
         match self.buffer_set.borrow().get(blob_id) {
-            Ok(buffer) => return Ok(buffer),
-            Err(_) => panic!(
+            Some(buffer) => return Ok(buffer),
+            None => panic!(
                 "The target blob {} doesn't exist.",
                 object_id_to_string(blob_id)
             ),
         }
     }
 
-    pub fn set_buffer(&mut self, id: ObjectID, buffer: &Rc<ArrowBuffer>) {
+    pub fn set_buffer(&mut self, id: ObjectID, buffer: Option<Rc<arrow::Buffer>>) {
         VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
-        VINEYARD_CHECK_OK(self.buffer_set.borrow().emplace_buffer(id, buffer)); // TODO
+        VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_buffer(id, buffer));
     }
 
     pub fn reset(&mut self) {
@@ -287,7 +285,7 @@ impl ObjectMeta {
     pub fn set_meta_data(&mut self, client: &Weak<dyn Client>, meta: &Value) {
         self.client = Some(client.clone());
         self.meta = meta.clone();
-        self.find_all_blobs(&self.meta);
+        self.find_all_blobs(&meta);
     }
 
     pub fn get_buffer_set(&self) -> &Rc<RefCell<BufferSet>> {
@@ -295,7 +293,7 @@ impl ObjectMeta {
     }
 
     // Check logic
-    pub fn find_all_blobs(&self, tree: &Value) {
+    pub fn find_all_blobs(&mut self, tree: &Value) {
         if tree.is_null() {
             return;
         }
@@ -315,7 +313,7 @@ impl ObjectMeta {
             }
             if cond2 || cond1 {
                 // QUESTION // TODO
-                VINEYARD_CHECK_OK(self.buffer_set.borrow().emplace_buffer_null(member_id));
+                VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_null_buffer(member_id));
             }
         } else {
             for item in tree.as_object().unwrap().values() {
