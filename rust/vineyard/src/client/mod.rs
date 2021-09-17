@@ -32,4 +32,3 @@ pub use self::ds::object::Object;
 pub use crate::common::util::{protocol, status, uuid};
 
 pub use crate::common::memory::payload;
-

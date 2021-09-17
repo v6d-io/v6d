@@ -1,20 +1,18 @@
 use std::collections::{HashMap, HashSet};
 use std::io;
 
-
 use serde_json::{json, Map, Value};
 
 use super::payload::Payload;
-use super::status;
+use super::status::*;
 use super::uuid::*;
-
 
 pub fn CHECK_IPC_ERROR(tree: &Value, root_type: &str) {
     if tree.as_object().unwrap().contains_key("code") {
         tree["code"].as_u64().unwrap_or(0);
         tree["message"].as_str().unwrap_or("");
     }
-    status::RETURN_ON_ASSERT(tree["type"].as_str().unwrap() == root_type);
+    RETURN_ON_ASSERT(tree["type"].as_str().unwrap() == root_type);
 }
 
 pub fn ENSURE_CONNECTED(b: bool) {

@@ -145,7 +145,6 @@ impl BlobWriter {
 pub struct BufferSet {
     buffer_ids: HashSet<ObjectID>,
     buffers: HashMap<ObjectID, Option<Rc<arrow::Buffer>>>,
-
 }
 
 impl Default for BufferSet {
@@ -153,7 +152,6 @@ impl Default for BufferSet {
         BufferSet {
             buffer_ids: HashSet::new() as HashSet<ObjectID>,
             buffers: HashMap::new() as HashMap<ObjectID, Option<Rc<arrow::Buffer>>>,
-
         }
     }
 }
@@ -205,7 +203,6 @@ impl BufferSet {
             self.buffers
                 .insert(key.clone(), Some(Rc::clone(value.as_ref().unwrap())));
         }
-
     }
 
     pub fn contains(&self, id: ObjectID) -> bool {

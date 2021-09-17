@@ -214,7 +214,6 @@ impl ObjectMeta {
     pub fn get_member(&self, name: &String) -> Rc<Object> {
         let meta = self.get_member_meta(name);
         let object = match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
-
             Err(_) => {
                 let mut object = Box::new(Object::default());
                 object.construct(&meta);
@@ -238,7 +237,6 @@ impl ObjectMeta {
         for (key, _) in ret_blobs.iter() {
             if let Some(value) = all_blobs.get(key) {
                 ret.set_buffer(*key, value.clone());
-
             }
             if let true = self.force_local {
                 ret.force_local();
@@ -252,7 +250,6 @@ impl ObjectMeta {
         match self.buffer_set.borrow().get(blob_id) {
             Some(buffer) => return Ok(buffer),
             None => panic!(
-
                 "The target blob {} doesn't exist.",
                 object_id_to_string(blob_id)
             ),
@@ -262,7 +259,6 @@ impl ObjectMeta {
     pub fn set_buffer(&mut self, id: ObjectID, buffer: Option<Rc<arrow::Buffer>>) {
         VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
         VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_buffer(id, buffer));
-
     }
 
     pub fn reset(&mut self) {
@@ -290,7 +286,6 @@ impl ObjectMeta {
         self.client = Some(client.clone());
         self.meta = meta.clone();
         self.find_all_blobs(&meta);
-
     }
 
     pub fn get_buffer_set(&self) -> &Rc<RefCell<BufferSet>> {
@@ -319,7 +314,6 @@ impl ObjectMeta {
             if cond2 || cond1 {
                 // QUESTION // TODO
                 VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_null_buffer(member_id));
-
             }
         } else {
             for item in tree.as_object().unwrap().values() {
