@@ -47,7 +47,7 @@ def pandas_dataframe_builder(client, value, builder, **kw):
             if vineyard_ref is not None:
                 setattr(value_columns[slices[0]], '__vineyard_ref', vineyard_ref)
         else:
-            for index, column_index in enumerate():
+            for index, column_index in enumerate(slices):
                 value_columns[column_index] = block.values[index]
 
     for index, name in enumerate(value.columns):
