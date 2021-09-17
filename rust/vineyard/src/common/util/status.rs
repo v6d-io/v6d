@@ -14,7 +14,7 @@ pub fn VINEYARD_ASSERT(condition: bool) {
 
 pub fn RETURN_ON_ASSERT(b: bool) {
     if !b {
-        panic!()
+        panic!();
     }
 }
 
