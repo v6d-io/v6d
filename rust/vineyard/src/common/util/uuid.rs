@@ -45,7 +45,7 @@ pub fn invalid_object_id() -> ObjectID {
     ObjectID::MAX
 }
 
-pub fn invalid_signature() -> ObjectID {
+pub fn invalid_signature() -> Signature {
     Signature::MAX
 }
 
