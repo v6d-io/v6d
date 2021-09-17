@@ -40,7 +40,10 @@ def pandas_dataframe_builder(client, value, builder, **kw):
     value_columns = [None] * len(value.columns)
     for block in value._mgr.blocks:
         slices = list(expand_slice(block.mgr_locs.indexer))
-        if len(slices) == 1:
+        if isinstance(block.values, pd.arrays.SparseArray):
+            assert len(slices) == 1
+            value_columns[slices[0]] = block.values
+        elif len(slices) == 1:
             value_columns[slices[0]] = block.values[0]
             vineyard_ref = getattr(block.values, '__vineyard_ref', None)
             # the block comes from vineyard
