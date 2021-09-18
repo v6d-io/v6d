@@ -114,10 +114,11 @@ class HashPartitioner<folly::dynamic> {
 
   inline fid_t GetPartitionId(const oid_t& oid) const {
     size_t hash_value;
-    if (oid.isString()) {
-      hash_value = std::hash<std::string>()(oid.getString());
+    if (oid.isArray() && oid.size == 2) {
+      // the oid is (label, id) format, just use id to get hash value.
+      hash_value = hash(oid[1]);
     } else {
-      hash_value = std::hash<folly::dynamic>()(oid);
+      hash_value = hash(oid);
     }
     return static_cast<fid_t>(static_cast<uint64_t>(hash_value) % fnum_);
   }
@@ -139,6 +140,14 @@ class HashPartitioner<folly::dynamic> {
   }
 
  private:
+  size_t hash(const oid_t& oid) const {
+    if (oid.isString()) {
+      return std::hash<std::string>()(oid.getString());
+    } else {
+      return std::hash<folly::dynamic>()(oid);
+    }
+  }
+
   fid_t fnum_;
 };
 #endif  // NETWORKX || EXPERIMENTAL_ON
