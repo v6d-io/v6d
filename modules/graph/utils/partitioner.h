@@ -114,7 +114,7 @@ class HashPartitioner<folly::dynamic> {
 
   inline fid_t GetPartitionId(const oid_t& oid) const {
     size_t hash_value;
-    if (oid.isArray() && oid.size == 2) {
+    if (oid.isArray() && oid.size() == 2) {
       // the oid is (label, id) format, just use id to get hash value.
       hash_value = hash(oid[1]);
     } else {
