@@ -32,9 +32,9 @@ use super::uuid::*;
 
 #[derive(Debug, Clone)]
 pub struct ObjectMeta {
-    client: Option<Weak<dyn Client>>, // Question: Weak<dyn Client>
+    client: Option<Weak<dyn Client>>,
     meta: Value,
-    buffer_set: Rc<RefCell<BufferSet>>,
+    pub buffer_set: Rc<RefCell<BufferSet>>,
     incomplete: bool,
     force_local: bool,
 }
@@ -233,10 +233,10 @@ impl ObjectMeta {
         ret.set_meta_data(self.client.as_ref().unwrap(), &child_meta);
         let all_buffer_set = self.buffer_set.borrow();
         let all_blobs = all_buffer_set.all_buffers();
-        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // Warning: memeroy?
+        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // Warning: memory?
         for (key, _) in ret_blobs.iter() {
             if let Some(value) = all_blobs.get(key) {
-                ret.set_buffer(*key, value.clone());
+                ret.set_buffer(*key, &value);
             }
             if let true = self.force_local {
                 ret.force_local();
@@ -246,17 +246,18 @@ impl ObjectMeta {
         ret
     }
 
-    pub fn get_buffer(&self, blob_id: ObjectID) -> io::Result<Rc<arrow::Buffer>> {
+    pub fn get_buffer(&self, blob_id: ObjectID) -> io::Result<Option<Rc<arrow::Buffer>>> {
         match self.buffer_set.borrow().get(blob_id) {
-            Some(buffer) => return Ok(buffer),
-            None => panic!(
+            Ok(buf) => return Ok(buf),
+            Err(_) => panic!(
                 "The target blob {} doesn't exist.",
                 object_id_to_string(blob_id)
             ),
         }
     }
 
-    pub fn set_buffer(&mut self, id: ObjectID, buffer: Option<Rc<arrow::Buffer>>) {
+    // Question: 参数类型有Rc的是不是一定得使用引用？
+    pub fn set_buffer(&mut self, id: ObjectID, buffer: &Option<Rc<arrow::Buffer>>) {
         VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
         VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_buffer(id, buffer));
     }
@@ -292,7 +293,7 @@ impl ObjectMeta {
         &self.buffer_set
     }
 
-    // Check logic
+    // TODO: Check logic
     pub fn find_all_blobs(&mut self, tree: &Value) {
         if tree.is_null() {
             return;
@@ -324,14 +325,14 @@ impl ObjectMeta {
         }
     }
 
-    fn set_instance_id(&mut self, instance_id: InstanceID) {
+    pub fn set_instance_id(&mut self, instance_id: InstanceID) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("instance_id"),
             serde_json::Value::from(instance_id),
         );
     }
 
-    fn set_signature(&mut self, signature: Signature) {
+    pub fn set_signature(&mut self, signature: Signature) {
         self.meta.as_object_mut().unwrap().insert(
             String::from("signature"),
             serde_json::Value::from(signature),
