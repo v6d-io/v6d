@@ -17,3 +17,11 @@ pub fn RETURN_ON_ASSERT(b: bool) {
         panic!("On assert failed.");
     }
 }
+
+
+// Question
+pub fn CHECK(condition: bool) {
+    if !condition {
+        panic!()
+    }
+}

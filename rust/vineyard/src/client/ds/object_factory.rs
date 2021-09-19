@@ -32,7 +32,8 @@ impl ObjectFactory {
         let typename = type_name::<T>();
         println!("Register data type: {}", typename);
         let KNOWN_TYPES = ObjectFactory::get_known_types();
-        KNOWN_TYPES.lock().unwrap().insert(typename, Box::new(Object::default()));// Question
+        KNOWN_TYPES.lock().unwrap().insert(typename, Box::new(Object::default()));
+        // Question: Casting T::Create to Object
         true
     }
 

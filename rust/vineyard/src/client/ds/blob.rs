@@ -21,6 +21,7 @@ use arrow::buffer as arrow;
 use lazy_static::lazy_static;
 use serde_json::json;
 
+use super::typename::type_name;
 use super::object::{Object, ObjectBase};
 use super::object_factory::ObjectFactory;
 use super::object_meta::ObjectMeta;
@@ -29,13 +30,6 @@ use super::status::*;
 use super::uuid::*;
 use super::Client;
 use super::IPCClient;
-
-// Question
-pub fn CHECK(condition: bool) {
-    if !condition {
-        panic!()
-    }
-}
 
 #[derive(Debug)]
 pub struct Blob {
@@ -108,8 +102,8 @@ impl Blob {
     }
 
     pub fn construct(&mut self, meta: &ObjectMeta) {
-        let __type_name: String = "blob".to_string(); // Question: type_name<Blob>()
-        CHECK(meta.get_type_name() == __type_name);
+        let __type_name: String = type_name::<Blob>().to_string(); // Question: type_name<Blob>()
+        CHECK(meta.get_type_name() == __type_name); // Question
         self.meta = meta.clone();
         self.id = meta.get_id();
         if let Some(_) = self.buffer {
@@ -147,7 +141,7 @@ impl Blob {
         empty_blob.size = 0;
         empty_blob.meta.set_id(empty_blob_id());
         empty_blob.meta.set_signature(empty_blob_id() as Signature);
-        empty_blob.meta.set_type_name(&"blob".to_string()); // Question: type_name<Blob>()
+        empty_blob.meta.set_type_name(&type_name::<Blob>().to_string()); // Question: type_name<Blob>()
         empty_blob
             .meta
             .add_json_key_value(&"length".to_string(), &json!(0));
@@ -220,11 +214,11 @@ pub struct BlobWriter {
 }
 
 impl ObjectBase for BlobWriter {
-    fn build(client: &IPCClient) -> io::Result<()> {
+    fn build(&mut self, client: &IPCClient) -> io::Result<()> {
         Ok(())
     }
 
-    fn seal(client: &IPCClient) -> Rc<Object> {
+    fn seal(&mut self, client: &IPCClient) -> Rc<Object> {
         panic!()
     } // TODO: mmap
 }

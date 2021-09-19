@@ -25,10 +25,10 @@ use super::Client;
 use super::IPCClient;
 
 pub trait ObjectBase {
-    fn build(client: &IPCClient) -> io::Result<()> {
+    fn build(&mut self, client: &IPCClient) -> io::Result<()> {
         Ok(())
     }
-    fn seal(client: &IPCClient) -> Rc<Object> {
+    fn seal(&mut self, client: &IPCClient) -> Rc<Object> {
         panic!()
     }
 }
@@ -38,6 +38,7 @@ pub struct Object {
     pub meta: ObjectMeta,
     pub id: ObjectID,
 }
+
 
 impl Default for Object {
     fn default() -> Object {
