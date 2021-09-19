@@ -21,12 +21,21 @@ use lazy_static::lazy_static;
 
 use super::object::Object;
 use super::object_meta::ObjectMeta;
+use super::typename::type_name;
 
 pub struct ObjectFactory {}
 
 type ObjectInitializer = Box<Object>;
 
 impl ObjectFactory {
+    pub fn register<T>() -> bool {
+        let typename = type_name::<T>();
+        println!("Register data type: {}", typename);
+        let KNOWN_TYPES = ObjectFactory::get_known_types();
+        KNOWN_TYPES.lock().unwrap().insert(typename, Box::new(Object::default()));// Question
+        true
+    }
+
     pub fn create_by_type_name(type_name: &String) -> io::Result<Box<Object>> {
         let known_types = ObjectFactory::get_known_types();
         let known_types = &(**known_types).lock().unwrap();

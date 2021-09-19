@@ -39,8 +39,8 @@ pub fn CHECK(condition: bool) {
 
 #[derive(Debug)]
 pub struct Blob {
-    id: ObjectID,     // Inherit from Object
-    meta: ObjectMeta, // Inherit from Object
+    id: ObjectID,     
+    meta: ObjectMeta, 
     size: usize,
     buffer: Option<Rc<arrow::Buffer>>,
 }
@@ -226,7 +226,7 @@ impl ObjectBase for BlobWriter {
 
     fn seal(client: &IPCClient) -> Rc<Object> {
         panic!()
-    } // TODO
+    } // TODO: mmap
 }
 
 impl BlobWriter {

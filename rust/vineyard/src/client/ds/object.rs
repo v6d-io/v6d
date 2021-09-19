@@ -115,3 +115,10 @@ impl ObjectBuilder {
 }
 
 impl ObjectBase for ObjectBuilder {}
+
+
+
+#[derive(Debug)]
+pub struct Registered {
+    registered: bool,
+}

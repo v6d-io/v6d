@@ -1,10 +1,21 @@
 use std::io;
 use std::mem;
+use std::rc::Rc;
 
 use super::status::*;
 use super::uuid::*;
-use super::BlobWriter;
+use super::{Blob, BlobWriter};
 use super::IPCClient;
+
+
+#[derive(Debug)]
+pub struct Array<T> {
+    buffer_writer: Box<BlobWriter>,
+    data: T,
+    size: usize,
+    buffer: Rc<Blob>
+}
+
 
 #[derive(Debug)]
 pub struct ArrayBuilder<T> {
