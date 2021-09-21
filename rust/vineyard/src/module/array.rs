@@ -11,7 +11,7 @@ use super::status::*;
 use super::uuid::*;
 use super::{Blob, BlobWriter};
 use super::IPCClient;
-use super::{ObjectBase, Object, ObjectBuilder};
+use super::{ObjectBase, Object, ObjectBuilder, Registered};
 use super::ObjectMeta;
 
 
@@ -21,18 +21,18 @@ pub struct Array<T> {
     pub id: ObjectID,
     registered: bool,
     size: usize,
-    buffer: Rc<Blob>,
+    buffer: Arc<Mutex<Blob>>, // Question: I change Rc into Arc for concurrency
     phantom: PhantomData<T>, // Question: if this is correct?
 }
 
-impl<T> Array<T> {
-    pub fn create() -> &'static Arc<Mutex<Object>> {
-        lazy_static! {
-            static ref SHARED_ARRAY: Arc<Mutex<Object>> =
-                Arc::new(Mutex::new(Object::default())); // Question: cast Array<T> to Object
-        }
-        &SHARED_ARRAY
-    }
+impl<T: Send> Array<T> {
+    // pub fn create() -> &'static Arc<Mutex<dyn Object>> {
+    //     lazy_static! {
+    //         static ref SHARED_ARRAY: Arc<Mutex<dyn Object>> =
+    //             Arc::new(Mutex::new(Object::default())); // Question: cast Array<T> to Object
+    //     }
+    //     &SHARED_ARRAY
+    // }
 
     pub fn construct(&mut self, meta: &ObjectMeta) {
         let __type_name: String = type_name::<Array<T>>().to_string();
@@ -57,6 +57,41 @@ impl<T> Array<T> {
 
     pub fn data(&self) -> *const u8 {
         self.buffer.data()
+    }
+}
+
+impl<T: Send> Registered for Array<T> {}
+
+impl<T: Send> Object for Array<T> {
+    fn meta(&self) -> &ObjectMeta {
+        &self.meta
+    }
+
+    fn id(&self) -> ObjectID{
+        self.id
+    }
+
+    fn set_id(&mut self, id: ObjectID) {
+        self.id = id;
+    }
+
+    fn set_meta(&mut self, meta: &ObjectMeta) {
+        self.meta = meta.clone();
+    }
+}
+
+impl<T: Send> ObjectBase for Array<T> {}
+
+impl<T: Send> Default for Array<T> {
+    fn default () -> Self {
+        Array {
+            meta: ObjectMeta::default(),
+            id: 0,
+            registered: false,
+            size: 0,
+            buffer: Rc::new(Blob::default()),
+            phantom: PhantomData,
+        }
     }
 }
 

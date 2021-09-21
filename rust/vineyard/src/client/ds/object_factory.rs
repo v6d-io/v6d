@@ -25,19 +25,19 @@ use super::typename::type_name;
 
 pub struct ObjectFactory {}
 
-type ObjectInitializer = Box<Object>;
+type ObjectInitializer = Box<dyn Object>;
 
 impl ObjectFactory {
     pub fn register<T>() -> bool {
         let typename = type_name::<T>();
         println!("Register data type: {}", typename);
         let KNOWN_TYPES = ObjectFactory::get_known_types();
-        KNOWN_TYPES.lock().unwrap().insert(typename, Box::new(Object::default()));
+        //KNOWN_TYPES.lock().unwrap().insert(typename, Box::new(Object::default()));
         // Question: Casting T::Create to Object
         true
     }
 
-    pub fn create_by_type_name(type_name: &String) -> io::Result<Box<Object>> {
+    pub fn create_by_type_name(type_name: &String) -> io::Result<Box<dyn Object>> {
         let known_types = ObjectFactory::get_known_types();
         let known_types = &(**known_types).lock().unwrap();
         let creator = known_types.get(&type_name as &str);
@@ -46,15 +46,15 @@ impl ObjectFactory {
                 "Failed to create an instance due to the unknown typename: {}",
                 type_name
             ),
-            Some(initialized_object) => Ok((*initialized_object).clone()),
+            Some(initialized_object) => panic!(), //Ok((*initialized_object).clone()),
         }
     }
 
-    pub fn create_by_metadata(metadata: ObjectMeta) -> io::Result<Box<Object>> {
+    pub fn create_by_metadata(metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
         ObjectFactory::create(&metadata.get_type_name(), metadata)
     }
 
-    pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<Object>> {
+    pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
         let known_types = ObjectFactory::get_known_types();
         let known_types = &(**known_types).lock().unwrap();
         let creator = known_types.get(&type_name as &str);
@@ -64,9 +64,10 @@ impl ObjectFactory {
                 type_name
             ),
             Some(target) => {
-                let mut target = (*target).clone();
-                target.construct(&metadata);
-                return Ok(target);
+                panic!()
+                // let mut target = (*target).clone();
+                // target.construct(&metadata);
+                // return Ok(target);
             }
         }
     }

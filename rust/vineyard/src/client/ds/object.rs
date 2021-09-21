@@ -33,72 +33,72 @@ pub trait ObjectBase {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Object {
-    pub meta: ObjectMeta,
-    pub id: ObjectID,
-}
+// #[derive(Debug, Clone)]
+// pub struct Object {
+//     pub meta: ObjectMeta,
+//     pub id: ObjectID,
+// }
 
 
-impl Default for Object {
-    fn default() -> Object {
-        Object {
-            meta: ObjectMeta::default(),
-            id: 0,
-        }
-    }
-}
+// impl Default for Object {
+//     fn default() -> Object {
+//         Object {
+//             meta: ObjectMeta::default(),
+//             id: 0,
+//         }
+//     }
+// }
 
-impl Object {
-    pub fn id(&self) -> ObjectID {
-        self.id
-    }
 
-    pub fn meta(&self) -> &ObjectMeta {
-        &self.meta
-    }
 
-    pub fn nbytes(&self) -> usize {
-        self.meta.get_nbytes()
-    }
+pub trait Object: Send + ObjectBase {
+    fn meta(&self) -> &ObjectMeta;
 
-    pub fn construct(&mut self, meta: &ObjectMeta) {
-        self.id = meta.get_id();
-        self.meta = meta.clone();
+    fn id(&self) -> ObjectID;
+
+    fn set_id(&mut self, id: ObjectID);
+
+    fn set_meta(&mut self, meta: &ObjectMeta);
+    
+    fn nbytes(&self) -> usize {
+        self.meta().get_nbytes()
     }
 
-    pub fn persist(&self, client: &mut dyn Client) -> io::Result<()> {
-        client.persist(self.id)
+    fn construct(&mut self, meta: &ObjectMeta) {
+        self.set_id(meta.get_id());
+        self.set_meta(meta);
     }
 
-    pub fn is_local(&self) -> bool {
-        self.meta.is_local()
+    fn persist(&self, client: &mut dyn Client) -> io::Result<()> {
+        client.persist(self.id())
     }
 
-    pub fn is_persist(&mut self) -> bool {
+    fn is_local(&self) -> bool {
+        self.meta().is_local()
+    }
+
+    fn is_persist(&mut self) -> bool {
         let persist = !(self
-            .meta
+            .meta()
             .get_key_value(&"transient".to_string())
             .as_bool()
             .unwrap());
         if (!persist) {
-            let client = self.meta.get_client().unwrap().upgrade().unwrap();
-            VINEYARD_CHECK_OK(client.if_persist(self.id));
-            let persist = client.if_persist(self.id).unwrap();
+            let client = self.meta().get_client().unwrap().upgrade().unwrap();
+            VINEYARD_CHECK_OK(client.if_persist(self.id()));
+            let persist = client.if_persist(self.id()).unwrap();
             if persist {
-                self.meta
+                self.meta()
                     .add_json_key_value(&"transient".to_string(), &json!(false));
             }
         }
         persist
     }
 
-    pub fn is_global(&self) -> bool {
-        self.meta.is_global()
+    fn is_global(&self) -> bool {
+        self.meta().is_global()
     }
 }
-
-impl ObjectBase for Object {}
 
 #[derive(Debug)]
 pub struct ObjectBuilder {
@@ -118,8 +118,6 @@ impl ObjectBuilder {
 impl ObjectBase for ObjectBuilder {}
 
 
-
-#[derive(Debug)]
-pub struct Registered {
-    registered: bool,
+pub trait Registered: Object {
+    fn registered() {}
 }

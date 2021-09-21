@@ -39,6 +39,9 @@ pub struct Blob {
     buffer: Option<Rc<arrow::Buffer>>,
 }
 
+unsafe impl Send for Blob {}
+
+
 impl Default for Blob {
     fn default() -> Self {
         Blob {

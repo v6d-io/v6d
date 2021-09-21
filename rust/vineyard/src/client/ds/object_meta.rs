@@ -198,7 +198,7 @@ impl ObjectMeta {
     }
 
     pub fn add_member_with_object(&mut self, name: &String, member: &Object) {
-        self.add_member_with_meta(name, &member.meta);
+        self.add_member_with_meta(name, member.meta());
     }
 
     pub fn add_member_with_id(&mut self, name: &String, member_id: ObjectID) {
@@ -211,19 +211,22 @@ impl ObjectMeta {
         self.incomplete = true;
     }
 
-    pub fn get_member(&self, name: &String) -> Rc<Object> {
+    pub fn get_member(&self, name: &String) -> Rc<dyn Object> {
         let meta = self.get_member_meta(name);
         let object = match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
             Err(_) => {
-                let mut object = Box::new(Object::default());
-                object.construct(&meta);
-                return Rc::new(*object);
+                panic!();
+                // let mut object = Box::new(Object::default());
+                // object.construct(&meta);
+                // return Rc::new(*object);
             }
             Ok(mut object) => {
                 object.construct(&meta);
-                return Rc::new(*object);
+                let ret: Rc<dyn Object> = Rc::new(*object);
+                return ret;
             }
         };
+        
     }
 
     pub fn get_member_meta(&self, name: &String) -> ObjectMeta {
