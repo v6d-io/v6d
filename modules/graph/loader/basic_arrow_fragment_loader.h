@@ -32,7 +32,6 @@ limitations under the License.
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/property_graph_types.h"
-#include "graph/loader/basic_e_fragment_loader.h"
 #include "graph/utils/partitioner.h"
 #include "graph/utils/table_shuffler.h"
 #include "graph/utils/table_shuffler_beta.h"

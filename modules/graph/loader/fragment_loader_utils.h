@@ -24,7 +24,7 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
-#include "graph/loader/basic_ev_fragment_loader.h"
+#include "graph/utils/table_shuffler_beta.h"
 
 namespace vineyard {
 
@@ -92,7 +92,7 @@ struct InputTable {
 };
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T>
-class BasicEFragmentLoader {
+class FragmentLoaderUtils {
   static constexpr int src_column = 0;
   static constexpr int dst_column = 1;
 
@@ -104,8 +104,8 @@ class BasicEFragmentLoader {
   using internal_oid_t = typename InternalType<oid_t>::type;
 
  public:
-  explicit BasicEFragmentLoader(const grape::CommSpec& comm_spec,
-                                const PARTITIONER_T& partitioner)
+  explicit FragmentLoaderUtils(const grape::CommSpec& comm_spec,
+                               const PARTITIONER_T& partitioner)
       : comm_spec_(comm_spec), partitioner_(partitioner) {}
 
   /**
