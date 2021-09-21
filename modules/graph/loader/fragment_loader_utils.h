@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_GRAPH_LOADER_BASIC_E_FRAGMENT_LOADER_H_
-#define MODULES_GRAPH_LOADER_BASIC_E_FRAGMENT_LOADER_H_
+#ifndef MODULES_GRAPH_LOADER_FRAGMENT_LOADER_UTILS_H_
+#define MODULES_GRAPH_LOADER_FRAGMENT_LOADER_UTILS_H_
 
 #include <algorithm>
 #include <map>
@@ -212,4 +212,4 @@ class FragmentLoaderUtils {
 
 }  // namespace vineyard
 
-#endif  // MODULES_GRAPH_LOADER_BASIC_E_FRAGMENT_LOADER_H_
+#endif  // MODULES_GRAPH_LOADER_FRAGMENT_LOADER_UTILS_H_
