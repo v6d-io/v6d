@@ -298,7 +298,7 @@ Status VineyardServer::CreateData(
   if (VLOG_IS_ON(10)) {
     VLOG(10) << "Got request from client to create data:";
     // NB: glog has limit on maximum lines.
-    std::cerr << id << " " << ObjectIDToString(id) << " " tree.dump(4)
+    std::cerr << id << " " << ObjectIDToString(id) << " " << tree.dump(4)
               << std::endl;
     VLOG(10) << "=========================================";
   }
