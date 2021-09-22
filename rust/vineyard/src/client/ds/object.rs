@@ -35,7 +35,7 @@ pub trait ObjectBase {
 }
 
 
-pub trait Object: Send + ObjectBase + DynClone {
+pub trait Object: ObjectBase + Send + DynClone {
     fn meta(&self) -> &ObjectMeta;
 
     fn meta_mut(&mut self) -> &mut ObjectMeta;
@@ -88,22 +88,10 @@ pub trait Object: Send + ObjectBase + DynClone {
 
 dyn_clone::clone_trait_object!(Object);
 
-#[derive(Debug)]
-pub struct ObjectBuilder {
-    sealed: bool,
+
+pub trait ObjectBuilder: ObjectBase {
+    
 }
-
-impl ObjectBuilder {
-    pub fn sealed(&self) -> bool {
-        self.sealed
-    }
-
-    fn set_sealed(&mut self, sealed: bool) {
-        self.sealed = sealed;
-    }
-}
-
-impl ObjectBase for ObjectBuilder {}
 
 
 pub trait Registered: Object {
