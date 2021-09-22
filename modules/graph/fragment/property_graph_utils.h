@@ -26,12 +26,13 @@ limitations under the License.
 
 #include "arrow/builder.h"
 #include "arrow/compute/api.h"
+#include "arrow/util/config.h"
 #include "arrow/util/key_value_metadata.h"
 #include "boost/leaf/all.hpp"
-#include "grape/utils/atomic_ops.h"
 
 #include "grape/serialization/in_archive.h"
 #include "grape/serialization/out_archive.h"
+#include "grape/utils/atomic_ops.h"
 #include "grape/utils/vertex_array.h"
 #include "grape/worker/comm_spec.h"
 

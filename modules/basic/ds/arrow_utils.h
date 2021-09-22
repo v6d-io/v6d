@@ -139,6 +139,30 @@ class PodArrayBuilder : public arrow::FixedSizeBinaryBuilder {
     return reinterpret_cast<T*>(
         arrow::FixedSizeBinaryBuilder::GetMutableValue(i));
   }
+
+  // the bahavior of `arrow::FixedSizeBinaryBuilder` has been changed in
+  // https://github.com/apache/arrow/commit/e990d177, and hopeful to be
+  // fixed in arrow 0.6.0.
+
+  arrow::Status Resize(int64_t capacity) override {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 5000000
+    return arrow::FixedSizeBinaryBuilder::Resize(capacity);
+#else
+    auto status = arrow::FixedSizeBinaryBuilder::Resize(capacity);
+    if (!status.ok()) {
+      return status;
+    }
+    return arrow::FixedSizeBinaryBuilder::AppendEmptyValues(capacity);
+#endif
+  }
+
+  arrow::Status Advance(int64_t elements) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 5000000
+    return arrow::FixedSizeBinaryBuilder::Advance(elements);
+#else
+    return arrow::Status::OK();
+#endif
+  }
 };
 
 /**

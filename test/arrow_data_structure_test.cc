@@ -143,6 +143,23 @@ int main(int argc, char** argv) {
     auto sliced_internal_array = r3->GetArray();
     CHECK(sliced_internal_array->Equals(a3));
 
+    arrow::FixedSizeBinaryBuilder b4(arrow::fixed_size_binary(sizeof(S)));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 5000000
+    CHECK_ARROW_ERROR(b4.Resize(10));
+#else
+    CHECK_ARROW_ERROR(b4.Resize(10));
+    CHECK_ARROW_ERROR(b4.AppendEmptyValues(10));
+#endif
+#if defined(ARROW_VERSION) && ARROW_VERSION < 5000000
+    CHECK_ARROW_ERROR(b4.Advance(10));
+#endif
+    std::shared_ptr<arrow::FixedSizeBinaryArray> a4;
+    CHECK_ARROW_ERROR(b4.Finish(&a4));
+
+    CHECK(a4->length() != 0);
+    CHECK(a4->values()->size() != 0);
+    CHECK_EQ(a4->values()->size(), a4->length() * sizeof(S));
+
     LOG(INFO) << "Passed binary array wrapper tests...";
   }
 
