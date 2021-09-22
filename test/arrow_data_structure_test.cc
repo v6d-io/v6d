@@ -156,8 +156,8 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::FixedSizeBinaryArray> a4;
     CHECK_ARROW_ERROR(b4.Finish(&a4));
 
-    CHECK(a4->length() != 0);
-    CHECK(a4->values()->size() != 0);
+    CHECK_NE(a4->length(), 0);
+    CHECK_NE(a4->values()->size(), 0);
     CHECK_EQ(a4->values()->size(), a4->length() * sizeof(S));
 
     LOG(INFO) << "Passed binary array wrapper tests...";
