@@ -175,6 +175,9 @@ class FixedSizeBinaryArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
   std::shared_ptr<arrow::FixedSizeBinaryArray> GetArray() { return array_; }
 
   Status Build(Client& client) override {
+    VINEYARD_ASSERT(array_->length() == 0 || array_->values()->size() != 0,
+                    "Invalid array values");
+
     std::unique_ptr<BlobWriter> buffer_writer;
     RETURN_ON_ERROR(client.CreateBlob(array_->values()->size(), buffer_writer));
     memcpy(buffer_writer->data(), array_->values()->data(),
