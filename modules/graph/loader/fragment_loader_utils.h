@@ -186,12 +186,12 @@ class FragmentLoaderUtils {
       {
         label_id_t label_id = vertex_label_to_index.at(label);
         auto& oid_set = oids[label_id];
-        oid_set.Clear();
         BOOST_LEAF_ASSIGN(oid_array, oid_set.ToArrowArray());
         std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
         auto v_table = arrow::Table::Make(schema, arrays);
         BOOST_LEAF_AUTO(tmp_table, beta::ShufflePropertyVertexTable(
                                        comm_spec_, partitioner_, v_table));
+        oid_set.Clear();
         BOOST_LEAF_CHECK(oid_set.BatchInsert(tmp_table->column(0)));
         BOOST_LEAF_ASSIGN(oid_array, oid_set.ToArrowArray());
       }
