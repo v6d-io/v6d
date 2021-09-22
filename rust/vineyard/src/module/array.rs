@@ -15,17 +15,17 @@ use super::{ObjectBase, Object, ObjectBuilder, Registered};
 use super::ObjectMeta;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Array<T> {
-    pub meta: ObjectMeta,
-    pub id: ObjectID,
+    meta: ObjectMeta,
+    id: ObjectID,
     registered: bool,
     size: usize,
-    buffer: Arc<Mutex<Blob>>, // Question: I change Rc into Arc for concurrency
+    buffer: Arc<Mutex<Blob>>, // Question: I changed Rc into Arc for Send trait
     phantom: PhantomData<T>, // Question: if this is correct?
 }
 
-impl<T: Send> Array<T> {
+impl<T: Send > Array<T> {
     // pub fn create() -> &'static Arc<Mutex<dyn Object>> {
     //     lazy_static! {
     //         static ref SHARED_ARRAY: Arc<Mutex<dyn Object>> =
@@ -56,16 +56,22 @@ impl<T: Send> Array<T> {
     }
 
     pub fn data(&self) -> *const u8 {
-        self.buffer.data()
+        self.buffer.lock().unwrap().data()
     }
 }
 
-impl<T: Send> Registered for Array<T> {}
+impl<T: Send + Clone> Registered for Array<T> {}
 
-impl<T: Send> Object for Array<T> {
+impl<T: Send + Clone> Object for Array<T> {
     fn meta(&self) -> &ObjectMeta {
         &self.meta
     }
+
+
+    fn meta_mut(&mut self) -> &mut ObjectMeta{
+        &mut self.meta
+    }
+
 
     fn id(&self) -> ObjectID{
         self.id
@@ -89,7 +95,7 @@ impl<T: Send> Default for Array<T> {
             id: 0,
             registered: false,
             size: 0,
-            buffer: Rc::new(Blob::default()),
+            buffer: Arc::new(Mutex::new(Blob::default())),
             phantom: PhantomData,
         }
     }

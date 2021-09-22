@@ -213,7 +213,7 @@ impl ObjectMeta {
 
     pub fn get_member(&self, name: &String) -> Rc<dyn Object> {
         let meta = self.get_member_meta(name);
-        let object = match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
+        match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
             Err(_) => {
                 panic!();
                 // let mut object = Box::new(Object::default());
@@ -221,9 +221,10 @@ impl ObjectMeta {
                 // return Rc::new(*object);
             }
             Ok(mut object) => {
-                object.construct(&meta);
-                let ret: Rc<dyn Object> = Rc::new(*object);
-                return ret;
+                panic!();
+                // object.construct(&meta);
+                // let ret: Rc<dyn Object> = Rc::new(*object);
+                // return ret;
             }
         };
         

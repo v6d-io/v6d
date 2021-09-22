@@ -16,6 +16,7 @@ use std::io;
 use std::rc::Rc;
 
 use serde_json::json;
+use dyn_clone::{clone_trait_object, DynClone};
 
 use super::blob::Blob;
 use super::object_meta::ObjectMeta;
@@ -33,26 +34,11 @@ pub trait ObjectBase {
     }
 }
 
-// #[derive(Debug, Clone)]
-// pub struct Object {
-//     pub meta: ObjectMeta,
-//     pub id: ObjectID,
-// }
 
-
-// impl Default for Object {
-//     fn default() -> Object {
-//         Object {
-//             meta: ObjectMeta::default(),
-//             id: 0,
-//         }
-//     }
-// }
-
-
-
-pub trait Object: Send + ObjectBase {
+pub trait Object: Send + ObjectBase + DynClone {
     fn meta(&self) -> &ObjectMeta;
+
+    fn meta_mut(&mut self) -> &mut ObjectMeta;
 
     fn id(&self) -> ObjectID;
 
@@ -88,7 +74,7 @@ pub trait Object: Send + ObjectBase {
             VINEYARD_CHECK_OK(client.if_persist(self.id()));
             let persist = client.if_persist(self.id()).unwrap();
             if persist {
-                self.meta()
+                self.meta_mut()
                     .add_json_key_value(&"transient".to_string(), &json!(false));
             }
         }
@@ -99,6 +85,8 @@ pub trait Object: Send + ObjectBase {
         self.meta().is_global()
     }
 }
+
+clone_trait_object!(Object);
 
 #[derive(Debug)]
 pub struct ObjectBuilder {
