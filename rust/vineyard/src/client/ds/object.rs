@@ -16,7 +16,7 @@ use std::io;
 use std::rc::Rc;
 
 use serde_json::json;
-use dyn_clone::{clone_trait_object, DynClone};
+use dyn_clone::DynClone;
 
 use super::blob::Blob;
 use super::object_meta::ObjectMeta;
@@ -86,7 +86,7 @@ pub trait Object: Send + ObjectBase + DynClone {
     }
 }
 
-clone_trait_object!(Object);
+dyn_clone::clone_trait_object!(Object);
 
 #[derive(Debug)]
 pub struct ObjectBuilder {

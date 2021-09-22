@@ -27,13 +27,19 @@ pub struct ObjectFactory {}
 
 type ObjectInitializer = Box<dyn Object>;
 
+pub trait Create {
+    fn create() -> &'static Arc<Mutex<Box<dyn Object>>>;
+}
+
+
 impl ObjectFactory {
-    pub fn register<T>() -> bool {
+    pub fn register<T: Create>() -> bool {
         let typename = type_name::<T>();
         println!("Register data type: {}", typename);
         let KNOWN_TYPES = ObjectFactory::get_known_types();
-        //KNOWN_TYPES.lock().unwrap().insert(typename, Box::new(Object::default()));
-        // Question: Casting T::Create to Object
+        let tmp: Box<dyn Object> = (*T::create().lock().unwrap()).clone();
+        KNOWN_TYPES.lock().unwrap().insert(typename, tmp);
+        // Question: T::create()
         true
     }
 
@@ -65,11 +71,10 @@ impl ObjectFactory {
                 type_name
             ),
             Some(target) => {
-                panic!()
                 // Question: Clone or modify the original one? 
-                // let mut target = (*target).clone();
-                // target.construct(&metadata);
-                // return Ok(Box::new(target));
+                let mut target = (*target).clone();
+                target.construct(&metadata);
+                return Ok(target);
             }
         }
     }

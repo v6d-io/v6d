@@ -10,6 +10,7 @@ use super::typename::type_name;
 use super::status::*;
 use super::uuid::*;
 use super::{Blob, BlobWriter};
+use super::Create;
 use super::IPCClient;
 use super::{ObjectBase, Object, ObjectBuilder, Registered};
 use super::ObjectMeta;
@@ -25,14 +26,30 @@ pub struct Array<T> {
     phantom: PhantomData<T>, // Question: if this is correct?
 }
 
-impl<T: Send > Array<T> {
-    // pub fn create() -> &'static Arc<Mutex<dyn Object>> {
-    //     lazy_static! {
-    //         static ref SHARED_ARRAY: Arc<Mutex<dyn Object>> =
-    //             Arc::new(Mutex::new(Object::default())); // Question: cast Array<T> to Object
-    //     }
-    //     &SHARED_ARRAY
-    // }
+impl<T> Create for Array<T> {
+    fn create() -> &'static Arc<Mutex<Box<dyn Object>>> {
+        lazy_static! {
+            static ref SHARED_ARRAY: Arc<Mutex<Box<dyn Object>>> =
+                Arc::new(Mutex::new(Box::new(Array::default() as Array<i32>))); // Question
+        }
+        &SHARED_ARRAY
+    }
+}
+
+impl<T> Default for Array<T> {
+    fn default() -> Array<T> {
+        Array{
+            meta: ObjectMeta::default(),
+            id: invalid_object_id(),
+            registered: false,
+            size: 0,
+            buffer: Arc::new(Mutex::new(Blob::default())), // Question: I changed Rc into Arc for Send trait
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T> Array<T> {
 
     pub fn construct(&mut self, meta: &ObjectMeta) {
         let __type_name: String = type_name::<Array<T>>().to_string();
@@ -40,9 +57,7 @@ impl<T: Send > Array<T> {
         self.meta = meta.clone();
         self.id = meta.get_id();
         self.size = meta.get_key_value(&"size_".to_string()).as_u64().unwrap() as usize;
-        //self.buffer = meta.get_member(&"buffer_".to_string()); 
-        // Question: cast Rc<Object> to Rc<Blob>
-        // std::dynamic_pointer_cast<Blob>(meta.GetMember("buffer_"));
+        //self.buffer = meta.get_member(&"buffer_".to_string()); // Question: Rc or Arc<Mutex>
     }
 
     pub fn operator(&self, loc: isize) -> *const u8 {
@@ -87,19 +102,6 @@ impl<T: Send + Clone> Object for Array<T> {
 }
 
 impl<T: Send> ObjectBase for Array<T> {}
-
-impl<T: Send> Default for Array<T> {
-    fn default () -> Self {
-        Array {
-            meta: ObjectMeta::default(),
-            id: 0,
-            registered: false,
-            size: 0,
-            buffer: Arc::new(Mutex::new(Blob::default())),
-            phantom: PhantomData,
-        }
-    }
-}
 
 pub trait ArrayBaseBuilder {}
 

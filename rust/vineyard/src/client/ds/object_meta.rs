@@ -216,15 +216,15 @@ impl ObjectMeta {
         match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
             Err(_) => {
                 panic!();
+                // Question: object = std::unique_ptr<Object>(new Object());
                 // let mut object = Box::new(Object::default());
                 // object.construct(&meta);
-                // return Rc::new(*object);
+                // return Rc::from(object);
+                
             }
             Ok(mut object) => {
-                panic!();
-                // object.construct(&meta);
-                // let ret: Rc<dyn Object> = Rc::new(*object);
-                // return ret;
+                object.construct(&meta);
+                return Rc::from(object);
             }
         };
         
