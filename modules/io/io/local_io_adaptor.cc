@@ -167,7 +167,7 @@ Status LocalIOAdaptor::Open(const char* mode) {
       RETURN_ON_ERROR(setPartialReadImpl());
     } else if (header_row_) {
       RETURN_ON_ERROR(ReadLine(header_line_));
-      header_line_ = trimBOM(std::move(header_line_));
+      header_line_ = trimBOM(header_line_);
       meta_.emplace("header_line", header_line_);
       ::boost::split(original_columns_, header_line_,
                      ::boost::is_any_of(std::string(1, delimiter_)));
@@ -221,7 +221,7 @@ Status LocalIOAdaptor::setPartialReadImpl() {
   if (header_row_) {
     RETURN_ON_ERROR(seek(0, kFileLocationBegin));
     RETURN_ON_ERROR(ReadLine(header_line_));
-    header_line_ = trimBOM(std::move(header_line_));
+    header_line_ = trimBOM(header_line_);
 
     meta_.emplace("header_line", header_line_);
     ::boost::split(original_columns_, header_line_,
@@ -235,7 +235,7 @@ Status LocalIOAdaptor::setPartialReadImpl() {
     std::string one_line;
     RETURN_ON_ERROR(seek(0, kFileLocationBegin));
     RETURN_ON_ERROR(ReadLine(one_line));
-    one_line = trimBOM(std::move(one_line));
+    one_line = trimBOM(one_line);
 
     meta_.emplace("header_line", one_line);
     std::vector<std::string> one_column;
