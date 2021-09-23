@@ -29,7 +29,7 @@ pub trait ObjectBase {
     fn build(&mut self, client: &IPCClient) -> io::Result<()> {
         Ok(())
     }
-    fn seal(&mut self, client: &IPCClient) -> Rc<Object> {
+    fn seal(&mut self, client: &IPCClient) -> Rc<dyn Object> {
         panic!()
     }
 }
@@ -89,8 +89,16 @@ dyn_clone::clone_trait_object!(Object);
 
 pub trait ObjectBuilder: ObjectBase {
     fn sealed(&self) -> bool;
+
+    fn set_sealed(&mut self, sealed: bool);
 }
 
 pub trait Registered: Object {
     fn registered() {}
+}
+
+pub fn ENSURE_NOT_SEALED(builder: &dyn ObjectBuilder) {
+    if builder.sealed() {
+        panic!("The builder has already been sealed");
+    }
 }

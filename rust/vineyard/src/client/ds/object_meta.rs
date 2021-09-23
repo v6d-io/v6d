@@ -215,11 +215,7 @@ impl ObjectMeta {
         let meta = self.get_member_meta(name);
         match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
             Err(_) => {
-                panic!();
-                // Question: object = std::unique_ptr<Object>(new Object());
-                // let mut object = Box::new(Object::default());
-                // object.construct(&meta);
-                // return Rc::from(object);
+                panic!("{} not found.", name);
             }
             Ok(mut object) => {
                 object.construct(&meta);
@@ -235,10 +231,10 @@ impl ObjectMeta {
         ret.set_meta_data(self.client.as_ref().unwrap(), &child_meta);
         let all_buffer_set = self.buffer_set.borrow();
         let all_blobs = all_buffer_set.all_buffers();
-        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // Warning: memory?
+        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // 去掉
         for (key, _) in ret_blobs.iter() {
             if let Some(value) = all_blobs.get(key) {
-                ret.set_buffer(*key, &value);
+                ret.set_buffer(*key, &value); // clone
             }
             if let true = self.force_local {
                 ret.force_local();
@@ -258,7 +254,6 @@ impl ObjectMeta {
         }
     }
 
-    // Question: 参数类型有Rc的是不是一定得使用引用？
     pub fn set_buffer(&mut self, id: ObjectID, buffer: &Option<Rc<arrow::Buffer>>) {
         VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
         VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_buffer(id, buffer));

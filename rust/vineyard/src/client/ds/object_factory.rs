@@ -38,7 +38,7 @@ impl ObjectFactory {
         let KNOWN_TYPES = ObjectFactory::get_known_types();
         let tmp: Box<dyn Object> = (*T::create().lock().unwrap()).clone();
         KNOWN_TYPES.lock().unwrap().insert(typename, tmp);
-        // Question: T::create()
+        // Question: T::create() 
         true
     }
 
@@ -53,6 +53,7 @@ impl ObjectFactory {
             ),
             Some(initialized_object) => Ok((*initialized_object).clone()),
             // Question: Add dyn_clone crate
+            // 应该是个closure
         }
     }
 
@@ -70,7 +71,7 @@ impl ObjectFactory {
                 type_name
             ),
             Some(target) => {
-                // Question: Clone or modify the original one?
+                // Question: 闭包返回一个新的实例
                 let mut target = (*target).clone();
                 target.construct(&metadata);
                 return Ok(target);

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::io;
 use std::marker::PhantomData;
 use std::mem;
@@ -14,6 +15,7 @@ use super::IPCClient;
 use super::ObjectMeta;
 use super::{Blob, BlobWriter};
 use super::{Object, ObjectBase, ObjectBuilder, Registered};
+use super::ENSURE_NOT_SEALED;
 
 #[derive(Debug, Clone)]
 pub struct Array<T> {
@@ -21,8 +23,8 @@ pub struct Array<T> {
     id: ObjectID,
     registered: bool,
     size: usize,
-    buffer: Rc<Blob>, // Question: unsafe Send
-    phantom: PhantomData<T>,  // Question: if this is correct?
+    buffer: Rc<Blob>,        // Question: unsafe Send // 不行用Arc
+    phantom: PhantomData<T>, // Question: if this is correct?
 }
 
 unsafe impl<T> Send for Array<T> {}
@@ -44,7 +46,7 @@ impl<T> Default for Array<T> {
             id: invalid_object_id(),
             registered: false,
             size: 0,
-            buffer: Rc::new(Blob::default()), 
+            buffer: Rc::new(Blob::default()),
             phantom: PhantomData,
         }
     }
@@ -57,9 +59,13 @@ impl<T> Array<T> {
         self.meta = meta.clone();
         self.id = meta.get_id();
         self.size = meta.get_key_value(&"size_".to_string()).as_u64().unwrap() as usize;
-        //self.buffer = meta.get_member(&"buffer_".to_string()); 
-        // Question: Rust do not support dynamic_pointer_cast; 
-        // how to ensure it returns a Blob
+        let member: &dyn Any = &meta.get_member(&"buffer_".to_string());
+        match member.downcast_ref::<Blob>() { // 去掉ref
+            Some(blob) => self.buffer = Rc::new((*blob).clone()),
+            None => panic!("The member isn't a Blob."),
+        };
+        //self.buffer = meta.get_member(&"buffer_".to_string());
+        // Question: how to ensure it returns a Blob; Use blob.clone() after downcasting
     }
 
     pub fn operator(&self, loc: isize) -> *const u8 {
@@ -101,11 +107,32 @@ impl<T: Send + Clone> Object for Array<T> {
 
 impl<T: Send> ObjectBase for Array<T> {}
 
+pub trait ArrayBaseBuilder: ObjectBuilder {
+    fn from(&mut self, client: &IPCClient) {}
 
+    fn from_array<T>(&mut self, value: &Array<T>) {
+        self.set_size(value.size);
+        let buf = Rc::clone(&value.buffer);
+        let buf: Rc<dyn ObjectBase> = buf;
+        self.set_buffer(&buf);
+    }
 
-pub trait ArrayBaseBuilder: ObjectBuilder {}
+    fn from_shared_array<T>(&mut self, value: &Rc<Array<T>>) {
+        self.from_array(&**value)
+    }
 
+    fn seal<T>(&mut self, client: &IPCClient) -> Rc<dyn Object> where Self: Sized {
+        ENSURE_NOT_SEALED(self);
+        let mut value: Array<T> = Array::default();
+        let value_nbytes: usize = 0;
+        value.meta.set_type_name(&type_name::<Array<T>>().to_string());
+        // if (std::is_base_of<GlobalObject, Array<T>>::value)
+        panic!();
+    }
 
+    fn set_size(&mut self, size: usize);
+    fn set_buffer(&mut self, buffer: &Rc<dyn ObjectBase>);
+}
 
 pub struct ArrayBuilder<T> {
     buffer: Rc<dyn ObjectBase>,
@@ -115,11 +142,23 @@ pub struct ArrayBuilder<T> {
     sealed: bool,
 }
 
-impl<T> ArrayBaseBuilder for ArrayBuilder<T> {}
+impl<T> ArrayBaseBuilder for ArrayBuilder<T> {
+    fn set_size(&mut self, size: usize) {
+        self.size = size;
+    }
+
+    fn set_buffer(&mut self, buffer: &Rc<dyn ObjectBase>) {
+        self.buffer = Rc::clone(buffer);
+    }
+}
 
 impl<T> ObjectBuilder for ArrayBuilder<T> {
     fn sealed(&self) -> bool {
         self.sealed
+    }
+
+    fn set_sealed(&mut self, sealed: bool) {
+        self.sealed = sealed;
     }
 }
 
@@ -142,12 +181,23 @@ pub struct ResizableArrayBuilder<T> {
     sealed: bool,
 }
 
+impl<T> ArrayBaseBuilder for ResizableArrayBuilder<T> {
+    fn set_size(&mut self, size: usize) {
+        self.size = size;
+    }
 
-impl<T> ArrayBaseBuilder for ResizableArrayBuilder<T> {}
+    fn set_buffer(&mut self, buffer: &Rc<dyn ObjectBase>) {
+        self.buffer = Rc::clone(buffer);
+    }
+}
 
 impl<T> ObjectBuilder for ResizableArrayBuilder<T> {
     fn sealed(&self) -> bool {
         self.sealed
+    }
+
+    fn set_sealed(&mut self, sealed: bool) {
+        self.sealed = sealed;
     }
 }
 

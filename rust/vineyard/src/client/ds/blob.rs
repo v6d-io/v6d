@@ -160,8 +160,7 @@ impl Blob {
     pub fn dump() {} // Question: VLOG(); VLOG_IS_ON()
 
     // Question: It will consume a client since IPCClient cannot implement clone
-    // trait(UnixStream). Where is Rc used for? (e.g. doesn't appear simultaneously
-    // in a client and a blob )
+    // trait(UnixStream).
     pub fn make_empty(client: IPCClient) -> Rc<Blob> {
         let mut empty_blob = Blob::default();
         empty_blob.id = empty_blob_id();
@@ -170,7 +169,7 @@ impl Blob {
         empty_blob.meta.set_signature(empty_blob_id() as Signature);
         empty_blob
             .meta
-            .set_type_name(&type_name::<Blob>().to_string()); // Question: type_name<Blob>()
+            .set_type_name(&type_name::<Blob>().to_string());
         empty_blob
             .meta
             .add_json_key_value(&"length".to_string(), &json!(0));
@@ -200,7 +199,7 @@ impl Blob {
         blob.size = size;
         blob.meta.set_id(object_id);
         blob.meta.set_signature(object_id as Signature);
-        blob.meta.set_type_name(&"blob".to_string()); // Question: type_name<Blob>()
+        blob.meta.set_type_name(&"blob".to_string());
         blob.meta
             .add_json_key_value(&"length".to_string(), &json!(size));
         blob.meta.set_nbytes(size);
@@ -208,6 +207,7 @@ impl Blob {
         // Question:
         // blob->buffer_ =
         // arrow::Buffer::Wrap(reinterpret_cast<const uint8_t*>(pointer), size);
+        // from_raw_parts() capacity=len
 
         VINEYARD_CHECK_OK(
             blob.meta
@@ -246,6 +246,10 @@ impl ObjectBuilder for BlobWriter {
     fn sealed(&self) -> bool {
         self.sealed
     }
+
+    fn set_sealed(&mut self, sealed: bool) {
+        self.sealed = sealed;
+    }
 }
 
 impl ObjectBase for BlobWriter {
@@ -253,7 +257,7 @@ impl ObjectBase for BlobWriter {
         Ok(())
     }
 
-    fn seal(&mut self, client: &IPCClient) -> Rc<Object> {
+    fn seal(&mut self, client: &IPCClient) -> Rc<dyn Object> {
         panic!()
     } // TODO: mmap
 }
