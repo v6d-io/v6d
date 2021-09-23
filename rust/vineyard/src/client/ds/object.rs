@@ -15,8 +15,8 @@ limitations under the License.
 use std::io;
 use std::rc::Rc;
 
-use serde_json::json;
 use dyn_clone::DynClone;
+use serde_json::json;
 
 use super::blob::Blob;
 use super::object_meta::ObjectMeta;
@@ -34,7 +34,6 @@ pub trait ObjectBase {
     }
 }
 
-
 pub trait Object: ObjectBase + Send + DynClone {
     fn meta(&self) -> &ObjectMeta;
 
@@ -45,7 +44,7 @@ pub trait Object: ObjectBase + Send + DynClone {
     fn set_id(&mut self, id: ObjectID);
 
     fn set_meta(&mut self, meta: &ObjectMeta);
-    
+
     fn nbytes(&self) -> usize {
         self.meta().get_nbytes()
     }
@@ -88,11 +87,9 @@ pub trait Object: ObjectBase + Send + DynClone {
 
 dyn_clone::clone_trait_object!(Object);
 
-
 pub trait ObjectBuilder: ObjectBase {
-    
+    fn sealed(&self) -> bool;
 }
-
 
 pub trait Registered: Object {
     fn registered() {}

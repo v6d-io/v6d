@@ -21,26 +21,25 @@ use arrow::buffer as arrow;
 use lazy_static::lazy_static;
 use serde_json::json;
 
-use super::typename::type_name;
-use super::object::{Object, ObjectBase};
+use super::object::{Object, ObjectBase, ObjectBuilder, Registered};
 use super::object_factory::ObjectFactory;
 use super::object_meta::ObjectMeta;
 use super::payload::Payload;
 use super::status::*;
+use super::typename::type_name;
 use super::uuid::*;
 use super::Client;
 use super::IPCClient;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Blob {
-    id: ObjectID,     
-    meta: ObjectMeta, 
+    id: ObjectID,
+    meta: ObjectMeta,
     size: usize,
     buffer: Option<Rc<arrow::Buffer>>,
 }
 
 unsafe impl Send for Blob {}
-
 
 impl Default for Blob {
     fn default() -> Self {
@@ -50,6 +49,30 @@ impl Default for Blob {
             size: usize::MAX,
             buffer: None as Option<Rc<arrow::Buffer>>,
         }
+    }
+}
+
+impl Registered for Blob {}
+
+impl Object for Blob {
+    fn meta(&self) -> &ObjectMeta {
+        &self.meta
+    }
+
+    fn meta_mut(&mut self) -> &mut ObjectMeta {
+        &mut self.meta
+    }
+
+    fn id(&self) -> ObjectID {
+        self.id
+    }
+
+    fn set_id(&mut self, id: ObjectID) {
+        self.id = id;
+    }
+
+    fn set_meta(&mut self, meta: &ObjectMeta) {
+        self.meta = meta.clone();
     }
 }
 
@@ -127,24 +150,27 @@ impl Blob {
             .as_str(),
         );
         if let None = self.buffer {
-            panic!(format!(
+            panic!(
                 "Invalid internal state: local blob found bit it is nullptr: {}",
                 object_id_to_string(meta.get_id())
-            ))
+            )
         }
     }
 
     pub fn dump() {} // Question: VLOG(); VLOG_IS_ON()
 
     // Question: It will consume a client since IPCClient cannot implement clone
-    // trait(UnixStream). Where is Rc used for? (e.g. not between a client and a blob )
+    // trait(UnixStream). Where is Rc used for? (e.g. doesn't appear simultaneously
+    // in a client and a blob )
     pub fn make_empty(client: IPCClient) -> Rc<Blob> {
         let mut empty_blob = Blob::default();
         empty_blob.id = empty_blob_id();
         empty_blob.size = 0;
         empty_blob.meta.set_id(empty_blob_id());
         empty_blob.meta.set_signature(empty_blob_id() as Signature);
-        empty_blob.meta.set_type_name(&type_name::<Blob>().to_string()); // Question: type_name<Blob>()
+        empty_blob
+            .meta
+            .set_type_name(&type_name::<Blob>().to_string()); // Question: type_name<Blob>()
         empty_blob
             .meta
             .add_json_key_value(&"length".to_string(), &json!(0));
@@ -214,6 +240,12 @@ pub struct BlobWriter {
     buffer: Option<Rc<arrow::MutableBuffer>>,
     metadata: HashMap<String, String>,
     sealed: bool,
+}
+
+impl ObjectBuilder for BlobWriter {
+    fn sealed(&self) -> bool {
+        self.sealed
+    }
 }
 
 impl ObjectBase for BlobWriter {

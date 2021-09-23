@@ -31,7 +31,6 @@ pub trait Create {
     fn create() -> &'static Arc<Mutex<Box<dyn Object>>>;
 }
 
-
 impl ObjectFactory {
     pub fn register<T: Create>() -> bool {
         let typename = type_name::<T>();
@@ -52,7 +51,7 @@ impl ObjectFactory {
                 "Failed to create an instance due to the unknown typename: {}",
                 type_name
             ),
-            Some(initialized_object) => Ok((*initialized_object).clone()), 
+            Some(initialized_object) => Ok((*initialized_object).clone()),
             // Question: Add dyn_clone crate
         }
     }
@@ -64,14 +63,14 @@ impl ObjectFactory {
     pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
         let known_types = ObjectFactory::get_known_types();
         let known_types = &(**known_types).lock().unwrap();
-        let mut creator = known_types.get(&type_name as &str);
+        let creator = known_types.get(&type_name as &str);
         match creator {
             None => panic!(
                 "Failed to create an instance due to the unknown typename: {}",
                 type_name
             ),
             Some(target) => {
-                // Question: Clone or modify the original one? 
+                // Question: Clone or modify the original one?
                 let mut target = (*target).clone();
                 target.construct(&metadata);
                 return Ok(target);

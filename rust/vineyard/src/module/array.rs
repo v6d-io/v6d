@@ -1,20 +1,19 @@
 use std::io;
+use std::marker::PhantomData;
 use std::mem;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use std::marker::PhantomData;
 
 use lazy_static::lazy_static;
 
-use super::typename::type_name;
 use super::status::*;
+use super::typename::type_name;
 use super::uuid::*;
-use super::{Blob, BlobWriter};
 use super::Create;
 use super::IPCClient;
-use super::{ObjectBase, Object, ObjectBuilder, Registered};
 use super::ObjectMeta;
-
+use super::{Blob, BlobWriter};
+use super::{Object, ObjectBase, ObjectBuilder, Registered};
 
 #[derive(Debug, Clone)]
 pub struct Array<T> {
@@ -22,9 +21,11 @@ pub struct Array<T> {
     id: ObjectID,
     registered: bool,
     size: usize,
-    buffer: Arc<Mutex<Blob>>, // Question: I changed Rc into Arc for Send trait
-    phantom: PhantomData<T>, // Question: if this is correct?
+    buffer: Rc<Blob>, // Question: unsafe Send
+    phantom: PhantomData<T>,  // Question: if this is correct?
 }
+
+unsafe impl<T> Send for Array<T> {}
 
 impl<T> Create for Array<T> {
     fn create() -> &'static Arc<Mutex<Box<dyn Object>>> {
@@ -38,32 +39,31 @@ impl<T> Create for Array<T> {
 
 impl<T> Default for Array<T> {
     fn default() -> Array<T> {
-        Array{
+        Array {
             meta: ObjectMeta::default(),
             id: invalid_object_id(),
             registered: false,
             size: 0,
-            buffer: Arc::new(Mutex::new(Blob::default())), // Question: I changed Rc into Arc for Send trait
+            buffer: Rc::new(Blob::default()), 
             phantom: PhantomData,
         }
     }
 }
 
 impl<T> Array<T> {
-
     pub fn construct(&mut self, meta: &ObjectMeta) {
         let __type_name: String = type_name::<Array<T>>().to_string();
         CHECK(meta.get_type_name() == __type_name);
         self.meta = meta.clone();
         self.id = meta.get_id();
         self.size = meta.get_key_value(&"size_".to_string()).as_u64().unwrap() as usize;
-        //self.buffer = meta.get_member(&"buffer_".to_string()); // Question: Rc or Arc<Mutex>
+        //self.buffer = meta.get_member(&"buffer_".to_string()); 
+        // Question: Rust do not support dynamic_pointer_cast; 
+        // how to ensure it returns a Blob
     }
 
     pub fn operator(&self, loc: isize) -> *const u8 {
-        unsafe{
-            self.data().offset(loc)
-        }
+        unsafe { self.data().offset(loc) }
     }
 
     pub fn size(&self) -> usize {
@@ -71,7 +71,7 @@ impl<T> Array<T> {
     }
 
     pub fn data(&self) -> *const u8 {
-        self.buffer.lock().unwrap().data()
+        self.buffer.data()
     }
 }
 
@@ -82,13 +82,11 @@ impl<T: Send + Clone> Object for Array<T> {
         &self.meta
     }
 
-
-    fn meta_mut(&mut self) -> &mut ObjectMeta{
+    fn meta_mut(&mut self) -> &mut ObjectMeta {
         &mut self.meta
     }
 
-
-    fn id(&self) -> ObjectID{
+    fn id(&self) -> ObjectID {
         self.id
     }
 
@@ -103,30 +101,54 @@ impl<T: Send + Clone> Object for Array<T> {
 
 impl<T: Send> ObjectBase for Array<T> {}
 
-pub trait ArrayBaseBuilder {}
+
+
+pub trait ArrayBaseBuilder: ObjectBuilder {}
+
+
 
 pub struct ArrayBuilder<T> {
     buffer: Rc<dyn ObjectBase>,
-    buffer_writer: Box<BlobWriter>, 
+    buffer_writer: Box<BlobWriter>,
     data: T,
     size: usize,
+    sealed: bool,
 }
 
+impl<T> ArrayBaseBuilder for ArrayBuilder<T> {}
 
-// impl<T> ArrayBuilder<T> {
-//     pub fn create(client: &impl Client, size: usize) -> ArrayBuilder<T> {
-//         VINEYARD_CHECK_OK(client.create_blob(size * mem::size_of<T>(), buffer_writer));
-//         ArrayBuilder{
-//             size: size,
-//             data: buffer_writer.data() //TODO
-//         }
-//     }
-// }
+impl<T> ObjectBuilder for ArrayBuilder<T> {
+    fn sealed(&self) -> bool {
+        self.sealed
+    }
+}
+
+impl<T> ObjectBase for ArrayBuilder<T> {}
+
+impl<T> ArrayBuilder<T> {
+    // pub fn from(client: &impl Client, size: usize) -> ArrayBuilder<T> {
+    //     VINEYARD_CHECK_OK(client.create_blob(size * mem::size_of<T>(), buffer_writer));
+    //     ArrayBuilder{
+    //         size: size,
+    //         data: buffer_writer.data() //TODO
+    //     }
+    // }
+}
 
 pub struct ResizableArrayBuilder<T> {
     size: usize,
     buffer: Rc<dyn ObjectBase>,
     vec: Vec<T>,
+    sealed: bool,
 }
 
 
+impl<T> ArrayBaseBuilder for ResizableArrayBuilder<T> {}
+
+impl<T> ObjectBuilder for ResizableArrayBuilder<T> {
+    fn sealed(&self) -> bool {
+        self.sealed
+    }
+}
+
+impl<T> ObjectBase for ResizableArrayBuilder<T> {}

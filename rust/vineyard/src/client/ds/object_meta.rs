@@ -220,14 +220,12 @@ impl ObjectMeta {
                 // let mut object = Box::new(Object::default());
                 // object.construct(&meta);
                 // return Rc::from(object);
-                
             }
             Ok(mut object) => {
                 object.construct(&meta);
                 return Rc::from(object);
             }
         };
-        
     }
 
     pub fn get_member_meta(&self, name: &String) -> ObjectMeta {

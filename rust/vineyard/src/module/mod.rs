@@ -6,11 +6,9 @@ pub use crate::client::ipc_client::IPCClient;
 pub use crate::client::rpc_client::RPCClient;
 
 pub use crate::client::ds::blob::{Blob, BlobWriter};
-pub use crate::client::ds::object_factory::{ObjectFactory, Create};
+pub use crate::client::ds::object::{Object, ObjectBase, ObjectBuilder, Registered};
+pub use crate::client::ds::object_factory::{Create, ObjectFactory};
 pub use crate::client::ds::object_meta::ObjectMeta;
-pub use crate::client::ds::object::{ObjectBase, Object, ObjectBuilder, Registered};
 
 pub use crate::common::memory::payload;
-pub use crate::common::util::{protocol, status, uuid, typename};
-
-
+pub use crate::common::util::{protocol, status, typename, uuid};

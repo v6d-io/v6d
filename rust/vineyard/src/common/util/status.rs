@@ -18,7 +18,6 @@ pub fn RETURN_ON_ASSERT(b: bool) {
     }
 }
 
-
 // Question
 pub fn CHECK(condition: bool) {
     if !condition {
