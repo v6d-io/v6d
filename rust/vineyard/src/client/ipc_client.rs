@@ -63,7 +63,6 @@ impl Default for IPCClient {
 
 impl IPCClient {
     pub fn create_blob(&mut self, size: usize, blob: Box<BlobWriter>) -> Result<(), bool> {
-
         ENSURE_CONNECTED(self.connected());
         let object_id = invalid_object_id();
         let mut object: Payload;
@@ -86,7 +85,6 @@ impl IPCClient {
         // TODO: Mmap
         panic!();
     }
-
 }
 
 impl Client for IPCClient {

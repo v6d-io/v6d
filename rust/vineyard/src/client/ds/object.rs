@@ -31,14 +31,12 @@ pub trait ObjectBase {
         Ok(())
     }
     fn seal(&mut self, client: &IPCClient) -> Rc<dyn Object> {
-
         panic!()
     }
 }
 
 pub trait Object: ObjectBase + Send + DynClone {
     fn meta(&self) -> &ObjectMeta;
-
 
     fn meta_mut(&mut self) -> &mut ObjectMeta;
 
@@ -103,8 +101,5 @@ pub trait Registered: Object {
 pub fn ENSURE_NOT_SEALED(builder: &dyn ObjectBuilder) {
     if builder.sealed() {
         panic!("The builder has already been sealed");
-
     }
 }
-
-impl ObjectBase for ObjectBuilder {}

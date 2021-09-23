@@ -81,13 +81,11 @@ impl Object for Blob {
 impl ObjectBase for Blob {}
 
 impl Blob {
-
     pub fn allocated_size(&self) -> usize {
         self.size
     }
 
     pub fn data(&self) -> *const u8 {
-
         if self.size > 0 {
             match &self.buffer {
                 None => panic!(
@@ -110,7 +108,6 @@ impl Blob {
     }
 
     pub fn buffer(&self) -> Rc<arrow::Buffer> {
-
         if self.size > 0 {
             match &self.buffer {
                 None => panic!(
@@ -235,7 +232,6 @@ impl Blob {
         blob.meta.set_client(Some(Rc::downgrade(&tmp)));
 
         Rc::new(blob)
-
     }
 }
 
@@ -293,7 +289,6 @@ impl BlobWriter {
             return Err(false); // Question: return Status::ObjectSealed();
         }
         return client.drop_buffer(self.object_id, self.payload.store_fd); // TODO: mmap
-
     }
 
     pub fn add_key_value(&mut self, key: &String, value: &String) {
@@ -301,7 +296,6 @@ impl BlobWriter {
     }
 
     pub fn dump() {} // Question: VLOG; VLOG_IS_ON
-
 }
 
 #[derive(Debug)]
@@ -342,7 +336,6 @@ impl BufferSet {
         &mut self,
         id: ObjectID,
         buffer: &Option<Rc<arrow::Buffer>>,
-
     ) -> io::Result<()> {
         match self.buffers.get(&id) {
             None => panic!(
@@ -357,7 +350,6 @@ impl BufferSet {
                     );
                 }
                 self.buffers.insert(id, buffer.clone());
-
             }
         }
         Ok(())
@@ -380,7 +372,6 @@ impl BufferSet {
         match self.buffers.get(&id) {
             None => Err(false),
             Some(buf) => Ok(buf.clone()),
-
         }
     }
 }
