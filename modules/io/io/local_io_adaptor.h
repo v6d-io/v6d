@@ -120,6 +120,8 @@ class LocalIOAdaptor : public IIOAdaptor {
   Status setPartialReadImpl();
   int64_t getDistanceToLineBreak(const int index);
 
+  std::string trimBOM(const std::string& line);
+
   std::string location_;
   char buff[LINESIZE];
   std::shared_ptr<arrow::fs::FileSystem> fs_;

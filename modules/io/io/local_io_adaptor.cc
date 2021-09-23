@@ -167,7 +167,7 @@ Status LocalIOAdaptor::Open(const char* mode) {
       RETURN_ON_ERROR(setPartialReadImpl());
     } else if (header_row_) {
       RETURN_ON_ERROR(ReadLine(header_line_));
-      ::boost::algorithm::trim(header_line_);
+      header_line_ = trimBOM(header_line_);
       meta_.emplace("header_line", header_line_);
       ::boost::split(original_columns_, header_line_,
                      ::boost::is_any_of(std::string(1, delimiter_)));
@@ -221,7 +221,8 @@ Status LocalIOAdaptor::setPartialReadImpl() {
   if (header_row_) {
     RETURN_ON_ERROR(seek(0, kFileLocationBegin));
     RETURN_ON_ERROR(ReadLine(header_line_));
-    ::boost::algorithm::trim(header_line_);
+    header_line_ = trimBOM(header_line_);
+
     meta_.emplace("header_line", header_line_);
     ::boost::split(original_columns_, header_line_,
                    ::boost::is_any_of(std::string(1, delimiter_)));
@@ -234,7 +235,8 @@ Status LocalIOAdaptor::setPartialReadImpl() {
     std::string one_line;
     RETURN_ON_ERROR(seek(0, kFileLocationBegin));
     RETURN_ON_ERROR(ReadLine(one_line));
-    ::boost::algorithm::trim(one_line);
+    one_line = trimBOM(one_line);
+
     meta_.emplace("header_line", one_line);
     std::vector<std::string> one_column;
     ::boost::split(one_column, one_line,
@@ -610,6 +612,16 @@ bool LocalIOAdaptor::IsExist(const std::string& path) {
   auto mfinfo = fs_->GetFileInfo(path);
   return mfinfo.ok() &&
          mfinfo.ValueUnsafe().type() != arrow::fs::FileType::NotFound;
+}
+
+std::string LocalIOAdaptor::trimBOM(const std::string& line) {
+  auto line_copy = line;
+  ::boost::algorithm::trim(line_copy);
+  if (line_copy.substr(0, 3) == "\xef\xbb\xbf") {
+    VLOG(2) << "Found the BOM, trimming it...";
+    line_copy = line_copy.substr(3);
+  }
+  return line_copy;
 }
 
 void LocalIOAdaptor::Init() {}
