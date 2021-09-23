@@ -1,3 +1,4 @@
+
 use std::any::Any;
 use std::io;
 use std::marker::PhantomData;
@@ -208,3 +209,4 @@ impl<T> ObjectBuilder for ResizableArrayBuilder<T> {
 }
 
 impl<T> ObjectBase for ResizableArrayBuilder<T> {}
+

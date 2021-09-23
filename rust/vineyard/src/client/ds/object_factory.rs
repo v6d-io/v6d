@@ -62,6 +62,7 @@ impl ObjectFactory {
     }
 
     pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
+
         let known_types = ObjectFactory::get_known_types();
         let known_types = &(**known_types).lock().unwrap();
         let creator = known_types.get(&type_name as &str);
@@ -72,6 +73,7 @@ impl ObjectFactory {
             ),
             Some(target) => {
                 // Question: 闭包返回一个新的实例
+
                 let mut target = (*target).clone();
                 target.construct(&metadata);
                 return Ok(target);

@@ -402,7 +402,7 @@ jobs:
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/_vineyard*.whl
+          file: dist/*_vineyard*.whl
           file_glob: true
           tag: ${{ steps.tag.outputs.TAG }}
           prerelease: false

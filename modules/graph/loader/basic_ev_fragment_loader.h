@@ -157,15 +157,13 @@ class BasicEVFragmentLoader {
       metadata->Append("retain_oid", std::to_string(retain_oid_));
       output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
     }
+    ObjectID new_vm_id = InvalidObjectID();
     if (vm_id == InvalidObjectID()) {
       BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
           client_, comm_spec_.fnum(), vertex_label_num_, oid_lists);
 
       auto vm = vm_builder.Seal(client_);
-
-      vm_ptr_ =
-          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
-              client_.GetObject(vm->id()));
+      new_vm_id = vm->id();
     } else {
       auto old_vm_ptr =
           std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
@@ -176,11 +174,15 @@ class BasicEVFragmentLoader {
       for (size_t i = 0; i < oid_lists.size(); ++i) {
         oid_lists_map[pre_label_num + i] = oid_lists[i];
       }
-      auto new_vm_id = old_vm_ptr->AddVertices(client_, oid_lists_map);
-      vm_ptr_ =
-          std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
-              client_.GetObject(new_vm_id));
+      // No new vertices.
+      if (oid_lists_map.empty()) {
+        new_vm_id = vm_id;
+      } else {
+        new_vm_id = old_vm_ptr->AddVertices(client_, oid_lists_map);
+      }
     }
+    vm_ptr_ = std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
+        client_.GetObject(new_vm_id));
 
     ordered_vertex_tables_.clear();
     return {};
@@ -391,6 +393,9 @@ class BasicEVFragmentLoader {
 
   boost::leaf::result<ObjectID> AddVerticesAndEdgesToFragment(
       std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
+    if (output_vertex_tables_.empty()) {
+      return AddEdgesToFragment(frag);
+    }
     int pre_vlabel_num = frag->schema().all_vertex_label_num();
     int pre_elabel_num = frag->schema().all_edge_label_num();
     std::map<label_id_t, std::shared_ptr<arrow::Table>> vertex_tables_map;

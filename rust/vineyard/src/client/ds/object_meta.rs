@@ -214,6 +214,7 @@ impl ObjectMeta {
     pub fn get_member(&self, name: &String) -> Rc<dyn Object> {
         let meta = self.get_member_meta(name);
         match ObjectFactory::create_by_type_name(&meta.get_type_name()) {
+
             Err(_) => {
                 panic!("{} not found.", name);
             }
@@ -235,6 +236,7 @@ impl ObjectMeta {
         for (key, _) in ret_blobs.iter() {
             if let Some(value) = all_blobs.get(key) {
                 ret.set_buffer(*key, &value); // clone
+
             }
             if let true = self.force_local {
                 ret.force_local();
@@ -248,6 +250,7 @@ impl ObjectMeta {
         match self.buffer_set.borrow().get(blob_id) {
             Ok(buf) => return Ok(buf),
             Err(_) => panic!(
+
                 "The target blob {} doesn't exist.",
                 object_id_to_string(blob_id)
             ),
@@ -255,6 +258,7 @@ impl ObjectMeta {
     }
 
     pub fn set_buffer(&mut self, id: ObjectID, buffer: &Option<Rc<arrow::Buffer>>) {
+
         VINEYARD_ASSERT(self.buffer_set.borrow().contains(id));
         VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_buffer(id, buffer));
     }
@@ -291,6 +295,7 @@ impl ObjectMeta {
     }
 
     // TODO: Check logic
+
     pub fn find_all_blobs(&mut self, tree: &Value) {
         if tree.is_null() {
             return;

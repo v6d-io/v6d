@@ -18,6 +18,26 @@ Supported Commands
 + :code:`debug`
 + :code:`start`
 
+Autocomplete
+------------
+
+Autocomplete for vineyard-ctl is only supported for the bash shell currently.
+
+Follow the following steps to enable autocomplete for vineyard-ctl on your system:
+
++ Install :code:`argcomplete` via :code:`pip3`: :code:`pip3 install argcomplete`.
++ Copy the :code:`python/vineyard/cli.py` file to :code:`/usr/local/bin`.
++ Add :code:`eval "$(register-python-argcomplete cli.py)"` to :code:`~/.bashrc`.
++ Run :code:`source /etc/profile`.
++ Run :code:`source ~/.bashrc`.
++ Run :code:`activate-global-python-argcomplete`
+
+That is it. You're good to go. Autocomplete will be enabled working for vineyard-ctl.
+
+Example:
+
+In the bash shell, type :code:`vineyard-ctl sta` and press :code:`tab`, it will autocomplete to :code:`vineyard-ctl start`
+
 Connect to a vineyard server
 ----------------------------
 

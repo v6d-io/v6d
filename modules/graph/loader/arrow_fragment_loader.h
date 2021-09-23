@@ -43,8 +43,8 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
-#include "graph/loader/basic_e_fragment_loader.h"
 #include "graph/loader/basic_ev_fragment_loader.h"
+#include "graph/loader/fragment_loader_utils.h"
 #include "graph/utils/error.h"
 #include "graph/utils/partitioner.h"
 #include "graph/utils/thread_group.h"
@@ -389,6 +389,9 @@ class ArrowFragmentLoader {
 #else
   using partitioner_t = SegmentedPartitioner<oid_t>;
 #endif
+  using vertex_table_info_t =
+      std::map<std::string, std::shared_ptr<arrow::Table>>;
+  using edge_table_info_t = std::vector<InputTable>;
 
  public:
   /**
@@ -409,8 +412,7 @@ class ArrowFragmentLoader {
         efiles_(efiles),
         vfiles_(vfiles),
         directed_(directed),
-        generate_eid_(generate_eid),
-        load_with_ve_(true) {}
+        generate_eid_(generate_eid) {}
 
   ArrowFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                       const std::vector<std::string>& efiles,
@@ -420,8 +422,7 @@ class ArrowFragmentLoader {
         efiles_(efiles),
         vfiles_(),
         directed_(directed),
-        generate_eid_(generate_eid),
-        load_with_ve_(false) {}
+        generate_eid_(generate_eid) {}
 
   ArrowFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                       const std::vector<ObjectID>& vstreams,
@@ -432,8 +433,7 @@ class ArrowFragmentLoader {
         v_streams_(vstreams),
         e_streams_(estreams),
         directed_(directed),
-        generate_eid_(generate_eid),
-        load_with_ve_(true) {}
+        generate_eid_(generate_eid) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
@@ -446,8 +446,7 @@ class ArrowFragmentLoader {
         partial_v_tables_(partial_v_tables),
         partial_e_tables_(partial_e_tables),
         directed_(directed),
-        generate_eid_(generate_eid),
-        load_with_ve_(true) {}
+        generate_eid_(generate_eid) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
@@ -459,8 +458,7 @@ class ArrowFragmentLoader {
         partial_v_tables_(),
         partial_e_tables_(partial_e_tables),
         directed_(directed),
-        generate_eid_(generate_eid),
-        load_with_ve_(false) {}
+        generate_eid_(generate_eid) {}
 
   ~ArrowFragmentLoader() = default;
 
@@ -527,104 +525,36 @@ class ArrowFragmentLoader {
                       "Error when processing input source");
     }
 
-    if (load_with_ve_) {
-      std::shared_ptr<BasicEVFragmentLoader<OID_T, VID_T, partitioner_t>>
-          basic_fragment_loader = std::make_shared<
-              BasicEVFragmentLoader<OID_T, VID_T, partitioner_t>>(
-              client_, comm_spec_, partitioner_, directed_, true,
-              generate_eid_);
+    std::shared_ptr<BasicEVFragmentLoader<OID_T, VID_T, partitioner_t>>
+        basic_fragment_loader = std::make_shared<
+            BasicEVFragmentLoader<OID_T, VID_T, partitioner_t>>(
+            client_, comm_spec_, partitioner_, directed_, true, generate_eid_);
 
-      for (auto table : partial_v_tables) {
-        auto meta = table->schema()->metadata();
-        if (meta == nullptr) {
-          RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                          "Metadata of input vertex files shouldn't be empty");
-        }
+    BOOST_LEAF_AUTO(v_e_tables,
+                    preprocessInputs(partial_v_tables, partial_e_tables));
 
-        int label_meta_index = meta->FindKey(LABEL_TAG);
-        if (label_meta_index == -1) {
-          RETURN_GS_ERROR(
-              ErrorCode::kInvalidValueError,
-              "Metadata of input vertex files should contain label name");
-        }
-        std::string label_name = meta->value(label_meta_index);
-        BOOST_LEAF_CHECK(
-            basic_fragment_loader->AddVertexTable(label_name, table));
-      }
+    auto vertex_tables_with_label = v_e_tables.first;
+    auto edge_tables_with_label = v_e_tables.second;
 
-      partial_v_tables.clear();
-
-      BOOST_LEAF_CHECK(basic_fragment_loader->ConstructVertices());
-
-      for (auto& table_vec : partial_e_tables) {
-        for (auto table : table_vec) {
-          auto meta = table->schema()->metadata();
-          int label_meta_index = meta->FindKey(LABEL_TAG);
-          std::string label_name = meta->value(label_meta_index);
-          int src_label_meta_index = meta->FindKey(SRC_LABEL_TAG);
-          std::string src_label_name = meta->value(src_label_meta_index);
-          int dst_label_meta_index = meta->FindKey(DST_LABEL_TAG);
-          std::string dst_label_name = meta->value(dst_label_meta_index);
-          BOOST_LEAF_CHECK(basic_fragment_loader->AddEdgeTable(
-              src_label_name, dst_label_name, label_name, table));
-        }
-      }
-
-      partial_e_tables.clear();
-
-      BOOST_LEAF_CHECK(basic_fragment_loader->ConstructEdges());
-
-      return basic_fragment_loader->ConstructFragment();
-    } else {
-      std::shared_ptr<BasicEFragmentLoader<OID_T, VID_T, partitioner_t>>
-          basic_fragment_loader = std::make_shared<
-              BasicEFragmentLoader<OID_T, VID_T, partitioner_t>>(
-              client_, comm_spec_, partitioner_, directed_, true,
-              generate_eid_);
-
-      for (auto& table_vec : partial_e_tables) {
-        for (auto table : table_vec) {
-          auto meta = table->schema()->metadata();
-          if (meta == nullptr) {
-            RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                            "Metadata of input edge files shouldn't be empty.");
-          }
-
-          int label_meta_index = meta->FindKey(LABEL_TAG);
-          if (label_meta_index == -1) {
-            RETURN_GS_ERROR(
-                ErrorCode::kInvalidValueError,
-                "Metadata of input edge files should contain label name");
-          }
-          std::string label_name = meta->value(label_meta_index);
-
-          int src_label_meta_index = meta->FindKey(SRC_LABEL_TAG);
-          if (src_label_meta_index == -1) {
-            RETURN_GS_ERROR(
-                ErrorCode::kInvalidValueError,
-                "Metadata of input edge files should contain src label name");
-          }
-          std::string src_label_name = meta->value(src_label_meta_index);
-
-          int dst_label_meta_index = meta->FindKey(DST_LABEL_TAG);
-          if (dst_label_meta_index == -1) {
-            RETURN_GS_ERROR(
-                ErrorCode::kInvalidValueError,
-                "Metadata of input edge files should contain dst label name");
-          }
-          std::string dst_label_name = meta->value(dst_label_meta_index);
-
-          BOOST_LEAF_CHECK(basic_fragment_loader->AddEdgeTable(
-              src_label_name, dst_label_name, label_name, table));
-        }
-      }
-
-      partial_e_tables.clear();
-
-      BOOST_LEAF_CHECK(basic_fragment_loader->ConstructEdges());
-
-      return basic_fragment_loader->ConstructFragment();
+    for (auto& pair : vertex_tables_with_label) {
+      BOOST_LEAF_CHECK(
+          basic_fragment_loader->AddVertexTable(pair.first, pair.second));
     }
+    BOOST_LEAF_CHECK(basic_fragment_loader->ConstructVertices());
+
+    partial_v_tables.clear();
+    vertex_tables_with_label.clear();
+
+    for (auto& table : edge_tables_with_label) {
+      BOOST_LEAF_CHECK(basic_fragment_loader->AddEdgeTable(
+          table.src_label, table.dst_label, table.edge_label, table.table));
+    }
+    partial_e_tables_.clear();
+    edge_tables_with_label.clear();
+
+    BOOST_LEAF_CHECK(basic_fragment_loader->ConstructEdges());
+
+    return basic_fragment_loader->ConstructFragment();
   }
 
   boost::leaf::result<ObjectID> LoadFragmentAsFragmentGroup() {
@@ -810,6 +740,78 @@ class ArrowFragmentLoader {
     return tables;
   }
 
+  boost::leaf::result<std::pair<vertex_table_info_t, edge_table_info_t>>
+  preprocessInputs(
+      const std::vector<std::shared_ptr<arrow::Table>>& v_tables,
+      const std::vector<std::vector<std::shared_ptr<arrow::Table>>>& e_tables,
+      const std::set<std::string>& previous_vertex_labels =
+          std::set<std::string>()) {
+    vertex_table_info_t vertex_tables_with_label;
+    edge_table_info_t edge_tables_with_label;
+    std::set<std::string> deduced_labels;
+    for (auto table : v_tables) {
+      auto meta = table->schema()->metadata();
+      if (meta == nullptr) {
+        RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                        "Metadata of input vertex files shouldn't be empty");
+      }
+
+      int label_meta_index = meta->FindKey(LABEL_TAG);
+      if (label_meta_index == -1) {
+        RETURN_GS_ERROR(
+            ErrorCode::kInvalidValueError,
+            "Metadata of input vertex files should contain label name");
+      }
+      std::string label_name = meta->value(label_meta_index);
+      vertex_tables_with_label[label_name] = table;
+    }
+
+    auto label_not_exists = [&](const std::string& label) {
+      return vertex_tables_with_label.find(label) ==
+                 vertex_tables_with_label.end() &&
+             previous_vertex_labels.find(label) == previous_vertex_labels.end();
+    };
+
+    for (auto& table_vec : e_tables) {
+      for (auto table : table_vec) {
+        auto meta = table->schema()->metadata();
+        int label_meta_index = meta->FindKey(LABEL_TAG);
+        std::string label_name = meta->value(label_meta_index);
+        int src_label_meta_index = meta->FindKey(SRC_LABEL_TAG);
+        std::string src_label_name = meta->value(src_label_meta_index);
+        int dst_label_meta_index = meta->FindKey(DST_LABEL_TAG);
+        std::string dst_label_name = meta->value(dst_label_meta_index);
+        edge_tables_with_label.emplace_back(src_label_name, dst_label_name,
+                                            label_name, table);
+        // Find vertex labels that need to be deduced, i.e. not assigned by user
+        // directly
+
+        if (label_not_exists(src_label_name)) {
+          deduced_labels.insert(src_label_name);
+        }
+        if (label_not_exists(dst_label_name)) {
+          deduced_labels.insert(dst_label_name);
+        }
+      }
+    }
+
+    if (!deduced_labels.empty()) {
+      FragmentLoaderUtils<OID_T, VID_T, partitioner_t> loader_utils(
+          comm_spec_, partitioner_);
+      BOOST_LEAF_AUTO(vertex_labels,
+                      loader_utils.GatherVertexLabels(edge_tables_with_label));
+      BOOST_LEAF_AUTO(vertex_label_to_index,
+                      loader_utils.GetVertexLabelToIndex(vertex_labels));
+      BOOST_LEAF_AUTO(v_tables_map, loader_utils.BuildVertexTableFromEdges(
+                                        edge_tables_with_label,
+                                        vertex_label_to_index, deduced_labels));
+      for (auto& pair : v_tables_map) {
+        vertex_tables_with_label[pair.first] = pair.second;
+      }
+    }
+    return std::make_pair(vertex_tables_with_label, edge_tables_with_label);
+  }
+
   Client& client_;
   grape::CommSpec comm_spec_;
   std::vector<std::string> efiles_, vfiles_;
@@ -823,7 +825,6 @@ class ArrowFragmentLoader {
 
   bool directed_;
   bool generate_eid_;
-  bool load_with_ve_;
 
   std::function<void(IIOAdaptor*)> io_deleter_ = [](IIOAdaptor* adaptor) {
     VINEYARD_CHECK_OK(adaptor->Close());
