@@ -38,7 +38,7 @@ impl ObjectFactory {
         let KNOWN_TYPES = ObjectFactory::get_known_types();
         let tmp: Box<dyn Object> = (*T::create().lock().unwrap()).clone();
         KNOWN_TYPES.lock().unwrap().insert(typename, tmp);
-        // Question: T::create() 
+        // Question: T::create()
         true
     }
 

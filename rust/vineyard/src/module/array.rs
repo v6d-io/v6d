@@ -13,9 +13,9 @@ use super::uuid::*;
 use super::Create;
 use super::IPCClient;
 use super::ObjectMeta;
+use super::ENSURE_NOT_SEALED;
 use super::{Blob, BlobWriter};
 use super::{Object, ObjectBase, ObjectBuilder, Registered};
-use super::ENSURE_NOT_SEALED;
 
 #[derive(Debug, Clone)]
 pub struct Array<T> {
@@ -60,7 +60,8 @@ impl<T> Array<T> {
         self.id = meta.get_id();
         self.size = meta.get_key_value(&"size_".to_string()).as_u64().unwrap() as usize;
         let member: &dyn Any = &meta.get_member(&"buffer_".to_string());
-        match member.downcast_ref::<Blob>() { // 去掉ref
+        match member.downcast_ref::<Blob>() {
+            // 去掉ref
             Some(blob) => self.buffer = Rc::new((*blob).clone()),
             None => panic!("The member isn't a Blob."),
         };
@@ -121,11 +122,16 @@ pub trait ArrayBaseBuilder: ObjectBuilder {
         self.from_array(&**value)
     }
 
-    fn seal<T>(&mut self, client: &IPCClient) -> Rc<dyn Object> where Self: Sized {
+    fn seal<T>(&mut self, client: &IPCClient) -> Rc<dyn Object>
+    where
+        Self: Sized,
+    {
         ENSURE_NOT_SEALED(self);
         let mut value: Array<T> = Array::default();
         let value_nbytes: usize = 0;
-        value.meta.set_type_name(&type_name::<Array<T>>().to_string());
+        value
+            .meta
+            .set_type_name(&type_name::<Array<T>>().to_string());
         // if (std::is_base_of<GlobalObject, Array<T>>::value)
         panic!();
     }
