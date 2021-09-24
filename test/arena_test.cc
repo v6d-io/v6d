@@ -81,10 +81,8 @@ unsigned requestArena() {
     }
     arena_index = empty_arenas.front();
     empty_arenas.pop_front();
-
   }
-  LOG(INFO) << "Arena " << arena_index <<
-            " requested for thread " << id;
+  LOG(INFO) << "Arena " << arena_index << " requested for thread " << id;
   {
     std::lock_guard<std::mutex> guard(thread_map_mutex);
     thread_arena_map[id] = arena_index;
@@ -95,7 +93,6 @@ unsigned requestArena() {
     LOG(ERROR) << "failed to bind arena " << arena_index << "for thread " << id;
     return -1;
   }
-
 
   return arena_index;
 }
@@ -212,8 +209,8 @@ unsigned arenaLookUp(void* ptr) {
 unsigned threadTotalAllocatedBytes() {
   uint64_t allocated;
   size_t sz = sizeof(allocated);
-  if (auto ret = vineyard_je_mallctl("thread.allocated", (void*) &allocated, &sz,
-                                NULL, 0)) {
+  if (auto ret = vineyard_je_mallctl("thread.allocated", (void*) &allocated,
+                                     &sz, NULL, 0)) {
     return -1;
   }
   return allocated;
@@ -222,8 +219,8 @@ unsigned threadTotalAllocatedBytes() {
 unsigned threadTotalDeallocatedBytes() {
   uint64_t deallocated;
   size_t sz = sizeof(deallocated);
-  if (auto ret = vineyard_je_mallctl("thread.deallocated", (void*) &deallocated, &sz,
-                                NULL, 0)) {
+  if (auto ret = vineyard_je_mallctl("thread.deallocated", (void*) &deallocated,
+                                     &sz, NULL, 0)) {
     return -1;
   }
   return deallocated;
@@ -270,7 +267,8 @@ void CreateArenaTask() {
  */
 void RequestArenaTask() {
   unsigned arena_index = requestArena();
-  if (arena_index == -1) return;
+  if (arena_index == -1)
+    return;
   returnArena(arena_index);
 }
 
@@ -283,7 +281,8 @@ void AllocateTask() {
   unsigned arena_index;
   if (thread_arena_map.find(id) == thread_arena_map.end()) {
     arena_index = requestArena();
-    if (arena_index == -1) return;
+    if (arena_index == -1)
+      return;
   } else {
     arena_index = thread_arena_map[id];
   }
@@ -415,7 +414,6 @@ int main(int argc, char** argv) {
     LOG(ERROR) << "Base test failed.";
     exit(-1);
   }
-
 
 #ifdef MULTITHREAD
   LOG(INFO) << NUM_ARENA << " arenas totally";
