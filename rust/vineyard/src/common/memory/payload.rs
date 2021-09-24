@@ -7,7 +7,8 @@ use super::uuid::*;
 #[derive(Debug)]
 pub struct Payload {
     pub object_id: ObjectID,
-    store_fd: i32,
+    pub store_fd: i32,
+
     arena_fd: i32,
     data_offset: isize,
     data_size: i64,

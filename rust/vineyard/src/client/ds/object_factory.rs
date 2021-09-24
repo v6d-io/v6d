@@ -21,13 +21,28 @@ use lazy_static::lazy_static;
 
 use super::object::Object;
 use super::object_meta::ObjectMeta;
+use super::typename::type_name;
 
 pub struct ObjectFactory {}
 
-type ObjectInitializer = Box<Object>;
+type ObjectInitializer = Box<dyn Object>;
+
+pub trait Create {
+    fn create() -> &'static Arc<Mutex<Box<dyn Object>>>;
+}
 
 impl ObjectFactory {
-    pub fn create_by_type_name(type_name: &String) -> io::Result<Box<Object>> {
+    pub fn register<T: Create>() -> bool {
+        let typename = type_name::<T>();
+        println!("Register data type: {}", typename);
+        let KNOWN_TYPES = ObjectFactory::get_known_types();
+        let tmp: Box<dyn Object> = (*T::create().lock().unwrap()).clone();
+        KNOWN_TYPES.lock().unwrap().insert(typename, tmp);
+        // Question: T::create()
+        true
+    }
+
+    pub fn create_by_type_name(type_name: &String) -> io::Result<Box<dyn Object>> {
         let known_types = ObjectFactory::get_known_types();
         let known_types = &(**known_types).lock().unwrap();
         let creator = known_types.get(&type_name as &str);
@@ -37,14 +52,16 @@ impl ObjectFactory {
                 type_name
             ),
             Some(initialized_object) => Ok((*initialized_object).clone()),
+            // Question: Add dyn_clone crate
+            // 应该是个closure
         }
     }
 
-    pub fn create_by_metadata(metadata: ObjectMeta) -> io::Result<Box<Object>> {
+    pub fn create_by_metadata(metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
         ObjectFactory::create(&metadata.get_type_name(), metadata)
     }
 
-    pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<Object>> {
+    pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
         let known_types = ObjectFactory::get_known_types();
         let known_types = &(**known_types).lock().unwrap();
         let creator = known_types.get(&type_name as &str);
@@ -54,6 +71,8 @@ impl ObjectFactory {
                 type_name
             ),
             Some(target) => {
+                // Question: 闭包返回一个新的实例
+
                 let mut target = (*target).clone();
                 target.construct(&metadata);
                 return Ok(target);
@@ -74,29 +93,29 @@ impl ObjectFactory {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[test]
-    #[ignore]
-    fn test_singleton() {
-        let KNOWN_TYPES = ObjectFactory::get_known_types();
-        println!(
-            "Length before insert: {}",
-            KNOWN_TYPES.lock().unwrap().len()
-        );
-        KNOWN_TYPES
-            .lock()
-            .unwrap()
-            .insert("1", Box::new(Object::default()));
-        KNOWN_TYPES
-            .lock()
-            .unwrap()
-            .insert("2", Box::new(Object::default()));
-        println!(
-            "Length after insert: {}",
-            ObjectFactory::get_known_types().lock().unwrap().len()
-        );
-    }
-}
+//     #[test]
+//     #[ignore]
+//     fn test_singleton() {
+//         let KNOWN_TYPES = ObjectFactory::get_known_types();
+//         println!(
+//             "Length before insert: {}",
+//             KNOWN_TYPES.lock().unwrap().len()
+//         );
+//         KNOWN_TYPES
+//             .lock()
+//             .unwrap()
+//             .insert("1", Box::new(Object::default()));
+//         KNOWN_TYPES
+//             .lock()
+//             .unwrap()
+//             .insert("2", Box::new(Object::default()));
+//         println!(
+//             "Length after insert: {}",
+//             ObjectFactory::get_known_types().lock().unwrap().len()
+//         );
+//     }
+// }

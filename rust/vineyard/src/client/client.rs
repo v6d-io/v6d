@@ -28,7 +28,7 @@ use super::ObjectMeta;
 use super::protocol::*;
 use super::uuid::{InstanceID, ObjectID};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConnInputKind<'a, 'b> {
     IPCConnInput(&'a str),      // socket
     RPCConnInput(&'b str, u16), // host, port
