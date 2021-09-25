@@ -114,9 +114,10 @@ void returnArena(unsigned arena_index) {
 unsigned doCreateArena(extent_hooks_t* hooks) {
   unsigned arena_index;
   size_t sz = sizeof(unsigned);
-  if (auto ret = vineyard_je_mallctl("arenas.create", &arena_index, &sz,
-                                     (void*) (hooks != NULL ? &hooks : NULL),
-                                     (hooks != NULL ? sizeof(hooks) : 0))) {
+  if (auto ret = vineyard_je_mallctl(
+          "arenas.create", &arena_index, &sz,
+          reinterpret_cast<void*>(hooks != NULL ? &hooks : NULL),
+          (hooks != NULL ? sizeof(hooks) : 0))) {
     LOG(ERROR) << "failed to create arena";
   }
   return arena_index;
@@ -209,8 +210,9 @@ unsigned arenaLookUp(void* ptr) {
 unsigned threadTotalAllocatedBytes() {
   uint64_t allocated;
   size_t sz = sizeof(allocated);
-  if (auto ret = vineyard_je_mallctl("thread.allocated", (void*) &allocated,
-                                     &sz, NULL, 0)) {
+  if (auto ret = vineyard_je_mallctl("thread.allocated",
+                                     reinterpret_cast<void*> & allocated, &sz,
+                                     NULL, 0)) {
     return -1;
   }
   return allocated;
@@ -219,8 +221,9 @@ unsigned threadTotalAllocatedBytes() {
 unsigned threadTotalDeallocatedBytes() {
   uint64_t deallocated;
   size_t sz = sizeof(deallocated);
-  if (auto ret = vineyard_je_mallctl("thread.deallocated", (void*) &deallocated,
-                                     &sz, NULL, 0)) {
+  if (auto ret = vineyard_je_mallctl("thread.deallocated",
+                                     reinterpret_cast<void*> & deallocated, &sz,
+                                     NULL, 0)) {
     return -1;
   }
   return deallocated;
