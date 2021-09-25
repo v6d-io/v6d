@@ -22,16 +22,17 @@ limitations under the License.
 namespace vineyard {
 
 #ifndef LOG_COUNTER
-#define LOG_COUNTER(metric_name, label) \
-  LOG_IF_EVERY_N(INFO, FLAGS_prometheus, 1)                              \
-      << (getenv("USER") ? getenv("USER") : "Vineyard") << " " << (label) << " " << (metric_name) << " " \
-      << logging::COUNTER;
+#define LOG_COUNTER(metric_name, label)                                   \
+  LOG_IF_EVERY_N(INFO, FLAGS_prometheus, 1)                               \
+      << (getenv("USER") ? getenv("USER") : "Vineyard") << " " << (label) \
+      << " " << (metric_name) << " " << logging::COUNTER;
 #endif
 
 #ifndef LOG_SUMMARY
-#define LOG_SUMMARY(metric_name, label, metric_val)                         \
-  LOG_IF(INFO, FLAGS_prometheus) << (getenv("USER") ? getenv("USER") : "Vineyard") << " " << (label) << " " \
-                                 << (metric_name) << " " << (metric_val);
+#define LOG_SUMMARY(metric_name, label, metric_val)                       \
+  LOG_IF(INFO, FLAGS_prometheus)                                          \
+      << (getenv("USER") ? getenv("USER") : "Vineyard") << " " << (label) \
+      << " " << (metric_name) << " " << (metric_val);
 #endif
 
 }  // namespace vineyard
