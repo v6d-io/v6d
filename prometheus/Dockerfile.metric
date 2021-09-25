@@ -1,0 +1,14 @@
+FROM ubuntu:20.04
+RUN apt-get update \
+  && apt-get install -y wget unzip\
+  && rm -rf /var/lib/apt/lists/* \
+  && wget https://github.com/fstab/grok_exporter/releases/download/v1.0.0.RC5/grok_exporter-1.0.0.RC5.linux-amd64.zip -O /tmp/grok_exporter-1.0.0.RC5.linux-amd64.zip \
+  && unzip /tmp/grok_exporter-1.0.0.RC5.linux-amd64.zip -d /grok_exporter \
+  && rm /tmp/grok_exporter-1.0.0.RC5.linux-amd64.zip \
+  && wget https://github.com/v6d-io/v6d/raw/main/prometheus/grok_exporter.yml -O /grok_exporter/grok_exporter-1.0.0.RC5.linux-amd64/grok_exporter.yml
+WORKDIR /grok_exporter/grok_exporter-1.0.0.RC5.linux-amd64/
+COPY grok_exporter.yml .
+ENTRYPOINT ["./grok_exporter"]
+CMD ["-config", "grok_exporter.yml", "-disable-exporter-metrics"]
+EXPOSE 9144/tcp
+
