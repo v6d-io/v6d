@@ -3,11 +3,15 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: libvineyard/vineyardd
+  repository: registry.cn-hongkong.aliyuncs.com/libvineyard/vineyardd
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tagPrefix: ""
-  tag: ""
+  tag: "ubuntu"
+
+metricImage:
+  repository: grok_exporter
+  pullPolicy: Never
 
 imagePullSecrets: []
 nameOverride: ""
@@ -55,6 +59,9 @@ vineyard:
   #   /var/run/vineyard-{{ .Release.Namespace }}-{{ include "vineyard.fullname" . }}
   hostPath: ""
 
+  # Whether to print metrics for prometheus or not.
+  metrics: True
+  
 serviceAccountName: ""
 
 tolerations: {}

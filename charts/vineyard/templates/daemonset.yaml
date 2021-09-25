@@ -57,6 +57,10 @@ spec:
               --size \
               {{ .Values.vineyard.sharedMemorySize }} \
           {{- end }}
+          {{- if .Values.vineyard.metrics }}
+              --metrics \
+              -log_dir /var/log/vineyard/ \
+          {{- end }} 
               --etcd_endpoint \
               http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379
           env:
@@ -83,6 +87,10 @@ spec:
           {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
+            - name: USER
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           ports:
             - name: ipc
               containerPort: 9600
@@ -103,7 +111,22 @@ spec:
             mountPath: /var/run
           - name: shm
             mountPath: /dev/shm
-
+          - name: log
+            mountPath: /var/log/vineyard
+    {{- if .Values.vineyard.metrics }}
+        - name: metrics
+          image : {{ .Values.metricImage.repository}}:latest
+          imagePullPolicy: {{ .Values.metricImage.pullPolicy }}
+          command: ["./grok_exporter"]
+          args: ["-config", "grok_exporter.yml", "-disable-exporter-metrics", "&"]
+          ports:
+            - name: exporter
+              containerPort: 9144
+              protocol: TCP
+          volumeMounts:
+          - name: log
+            mountPath: /var/log/vineyard
+    {{- end }}   
       volumes:
       {{- if eq .Values.vineyard.volumeType "hostPath" }}
       - name: run
@@ -120,6 +143,10 @@ spec:
           claimName: "{{ .Values.vineyard.persistVolumeClaimName }}"
       {{- end }}
       - name: shm
+        emptyDir:
+          medium: Memory
+      
+      - name: log
         emptyDir:
           medium: Memory
 
