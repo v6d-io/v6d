@@ -29,6 +29,7 @@ limitations under the License.
 #include "arrow/util/config.h"
 #include "arrow/util/key_value_metadata.h"
 #include "boost/algorithm/string.hpp"
+
 #include "grape/graph/adj_list.h"
 #include "grape/utils/vertex_array.h"
 

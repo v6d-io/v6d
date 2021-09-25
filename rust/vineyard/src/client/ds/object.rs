@@ -15,6 +15,8 @@ limitations under the License.
 use std::io;
 use std::rc::Rc;
 
+use dyn_clone::DynClone;
+
 use serde_json::json;
 
 use super::blob::Blob;
@@ -25,93 +27,79 @@ use super::Client;
 use super::IPCClient;
 
 pub trait ObjectBase {
-    fn build(client: &IPCClient) -> io::Result<()> {
+    fn build(&mut self, client: &IPCClient) -> io::Result<()> {
         Ok(())
     }
-    fn seal(client: &IPCClient) -> Rc<Object> {
+    fn seal(&mut self, client: &IPCClient) -> Rc<dyn Object> {
         panic!()
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Object {
-    pub meta: ObjectMeta,
-    pub id: ObjectID,
-}
+pub trait Object: ObjectBase + Send + DynClone {
+    fn meta(&self) -> &ObjectMeta;
 
-impl Default for Object {
-    fn default() -> Object {
-        Object {
-            meta: ObjectMeta::default(),
-            id: 0,
-        }
-    }
-}
+    fn meta_mut(&mut self) -> &mut ObjectMeta;
 
-impl Object {
-    pub fn id(&self) -> ObjectID {
-        self.id
+    fn id(&self) -> ObjectID;
+
+    fn set_id(&mut self, id: ObjectID);
+
+    fn set_meta(&mut self, meta: &ObjectMeta);
+
+    fn nbytes(&self) -> usize {
+        self.meta().get_nbytes()
     }
 
-    pub fn meta(&self) -> &ObjectMeta {
-        &self.meta
+    fn construct(&mut self, meta: &ObjectMeta) {
+        self.set_id(meta.get_id());
+        self.set_meta(meta);
     }
 
-    pub fn nbytes(&self) -> usize {
-        self.meta.get_nbytes()
+    fn persist(&self, client: &mut dyn Client) -> io::Result<()> {
+        client.persist(self.id())
     }
 
-    pub fn construct(&mut self, meta: &ObjectMeta) {
-        self.id = meta.get_id();
-        self.meta = meta.clone();
+    fn is_local(&self) -> bool {
+        self.meta().is_local()
     }
 
-    pub fn persist(&self, client: &mut dyn Client) -> io::Result<()> {
-        client.persist(self.id)
-    }
-
-    pub fn is_local(&self) -> bool {
-        self.meta.is_local()
-    }
-
-    pub fn is_persist(&mut self) -> bool {
+    fn is_persist(&mut self) -> bool {
         let persist = !(self
-            .meta
+            .meta()
             .get_key_value(&"transient".to_string())
             .as_bool()
             .unwrap());
         if (!persist) {
-            let client = self.meta.get_client().unwrap().upgrade().unwrap();
-            VINEYARD_CHECK_OK(client.if_persist(self.id));
-            let persist = client.if_persist(self.id).unwrap();
+            let client = self.meta().get_client().unwrap().upgrade().unwrap();
+            VINEYARD_CHECK_OK(client.if_persist(self.id()));
+            let persist = client.if_persist(self.id()).unwrap();
             if persist {
-                self.meta
+                self.meta_mut()
                     .add_json_key_value(&"transient".to_string(), &json!(false));
             }
         }
         persist
     }
 
-    pub fn is_global(&self) -> bool {
-        self.meta.is_global()
+    fn is_global(&self) -> bool {
+        self.meta().is_global()
     }
 }
 
-impl ObjectBase for Object {}
+dyn_clone::clone_trait_object!(Object);
 
-#[derive(Debug)]
-pub struct ObjectBuilder {
-    sealed: bool,
+pub trait ObjectBuilder: ObjectBase {
+    fn sealed(&self) -> bool;
+
+    fn set_sealed(&mut self, sealed: bool);
 }
 
-impl ObjectBuilder {
-    pub fn sealed(&self) -> bool {
-        self.sealed
-    }
-
-    fn set_sealed(&mut self, sealed: bool) {
-        self.sealed = sealed;
-    }
+pub trait Registered: Object {
+    fn registered() {}
 }
 
-impl ObjectBase for ObjectBuilder {}
+pub fn ENSURE_NOT_SEALED(builder: &dyn ObjectBuilder) {
+    if builder.sealed() {
+        panic!("The builder has already been sealed");
+    }
+}

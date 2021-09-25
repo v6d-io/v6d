@@ -293,11 +293,13 @@ Status VineyardServer::CreateData(
     const json& tree,
     callback_t<const ObjectID, const Signature, const InstanceID> callback) {
   ENSURE_VINEYARDD_READY();
+  ObjectID id = GenerateObjectID();
 #if !defined(NDEBUG)
   if (VLOG_IS_ON(10)) {
     VLOG(10) << "Got request from client to create data:";
     // NB: glog has limit on maximum lines.
-    std::cerr << tree.dump(4) << std::endl;
+    std::cerr << id << " " << ObjectIDToString(id) << " " << tree.dump(4)
+              << std::endl;
     VLOG(10) << "=========================================";
   }
 #endif
@@ -313,7 +315,6 @@ Status VineyardServer::CreateData(
 
   RETURN_ON_ASSERT(type != "vineyard::Blob", "Blob has no metadata");
 
-  ObjectID id = GenerateObjectID();
   // Check if instance_id information available
   RETURN_ON_ASSERT(tree.contains("instance_id"),
                    "The instance_id filed must be presented");
