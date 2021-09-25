@@ -10,7 +10,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// #if defined(WITH_JEMALLOC)
+#if defined(WITH_JEMALLOC)
 
 #include <sys/mman.h>
 
@@ -81,3 +81,5 @@ class ArenaAllocator {
 }  // namespace memory
 
 }  // namespace vineyard
+
+#endif  // WITH_JEMALLOC

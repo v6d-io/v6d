@@ -10,9 +10,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// #if defined(WITH_JEMALLOC)
+#if defined(WITH_JEMALLOC)
 
+#include "common/memory/jemalloc.h"
+#include "jemalloc/include/jemalloc/jemalloc.h"
 #include "common/memory/arena.h"
+#include "common/util/logging.h"
+
 #include <thread>
 
 namespace vineyard {
@@ -56,8 +60,8 @@ unsigned int ArenaAllocator::LookUp(void* ptr) {
 }
 
 void ArenaAllocator::Free(void* ptr, size_t) {
-  if (pointer) {
-    vineyard_je_dallocx(pointer, 0);
+  if (ptr) {
+    vineyard_je_dallocx(ptr, 0);
   }
 }
 
@@ -65,7 +69,7 @@ unsigned ArenaAllocator::ThreadTotalAllocatedBytes() {
   uint64_t allocated;
   size_t sz = sizeof(allocated);
   if (auto ret = vineyard_je_mallctl("thread.allocated",
-                                     reinterpret_cast<void*> & allocated, &sz,
+                                     reinterpret_cast<void*> (& allocated), &sz,
                                      NULL, 0)) {
     return -1;
   }
@@ -76,7 +80,7 @@ unsigned ArenaAllocator::ThreadTotalDeallocatedBytes() {
   uint64_t deallocated;
   size_t sz = sizeof(deallocated);
   if (auto ret = vineyard_je_mallctl("thread.deallocated",
-                                     reinterpret_cast<void*> & deallocated, &sz,
+                                     reinterpret_cast<void*> (& deallocated), &sz,
                                      NULL, 0)) {
     return -1;
   }
@@ -88,19 +92,19 @@ unsigned ArenaAllocator::requestArena() {
 
   unsigned arena_index;
   {
-    std::lock_guard<std::mutex> guard(arena_mutex);
-    if (empty_arenas.empty()) {
+    std::lock_guard<std::mutex> guard(arena_mutex_);
+    if (empty_arenas_.empty()) {
       LOG(ERROR) << "All arenas used.";
       // TODO: recycle arena here
       return -1;
     }
-    arena_index = empty_arenas.front();
-    empty_arenas.pop_front();
+    arena_index = empty_arenas_.front();
+    empty_arenas_.pop_front();
   }
   LOG(INFO) << "Arena " << arena_index << " requested for thread " << id;
   {
     std::lock_guard<std::mutex> guard(thread_map_mutex_);
-    thread_arena_map[id] = arena_index;
+    thread_arena_map_[id] = arena_index;
   }
 
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena_index,
@@ -115,14 +119,14 @@ unsigned ArenaAllocator::requestArena() {
 void ArenaAllocator::returnArena(unsigned arena_index) {
   std::thread::id id = std::this_thread::get_id();
   {
-    std::lock_guard<std::mutex> guard(arena_mutex);
-    empty_arenas.push_back(arena_index);
+    std::lock_guard<std::mutex> guard(arena_mutex_);
+    empty_arenas_.push_back(arena_index);
   }
 
   {
     std::lock_guard<std::mutex> guard(thread_map_mutex_);
-    if (thread_arena_map.find(id) != thread_arena_map.end())
-      thread_arena_map.erase(thread_arena_map.find(id));
+    if (thread_arena_map_.find(id) != thread_arena_map_.end())
+      thread_arena_map_.erase(thread_arena_map_.find(id));
   }
 }
 
@@ -206,3 +210,5 @@ void ArenaAllocator::preAllocateArena() {
 }  // namespace memory
 
 }  // namespace vineyard
+
+#endif  // WITH_JEMALLOC
