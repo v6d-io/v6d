@@ -18,6 +18,7 @@ pub mod client;
 pub mod ds;
 pub mod ipc_client;
 pub mod rpc_client;
+pub mod rust_io;
 
 pub use self::ds::blob::Blob;
 pub use self::ds::blob::BlobWriter;
@@ -27,3 +28,7 @@ pub use self::ds::object_factory::ObjectFactory;
 pub use self::ds::object_meta::ObjectMeta;
 
 pub use self::ds::object::Object;
+
+pub use crate::common::util::{protocol, status, uuid};
+
+pub use crate::common::memory::payload;

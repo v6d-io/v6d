@@ -51,6 +51,7 @@ def test_pandas_dataframe_specify_label(vineyard_client):
     assert dtrain.num_row() == 4
     arr = np.array([1, 2, 3, 4])
     assert np.allclose(arr, dtrain.get_label())
+    assert dtrain.feature_names == ['b', 'c']
 
 
 def test_pandas_dataframe_specify_data(vineyard_client):
@@ -72,6 +73,7 @@ def test_record_batch_xgb_resolver(vineyard_client):
     assert dtrain.num_row() == 4
     arr = np.array([0, 1, 0, 1])
     assert np.allclose(arr, dtrain.get_label())
+    assert dtrain.feature_names == ['f0', 'f1']
 
 
 def test_table_xgb_resolver(vineyard_client):
@@ -85,3 +87,4 @@ def test_table_xgb_resolver(vineyard_client):
     assert dtrain.num_row() == 6
     arr = np.array([0, 1, 0, 1, 0, 1])
     assert np.allclose(arr, dtrain.get_label())
+    assert dtrain.feature_names == ['f0', 'f2']

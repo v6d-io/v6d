@@ -34,6 +34,64 @@ using namespace py::literals;  // NOLINT(build/namespaces_literals)
 namespace vineyard {
 
 void bind_core(py::module& mod) {
+  // ObjectIDWrapper
+  py::class_<ObjectIDWrapper>(mod, "ObjectID")
+      .def(py::init<>())
+      .def(py::init<ObjectID>(), "id"_a)
+      .def(py::init<std::string const&>(), "id"_a)
+      .def("__int__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
+      .def("__repr__",
+           [](const ObjectIDWrapper& id) { return VYObjectIDToString(id); })
+      .def("__str__",
+           [](const ObjectIDWrapper& id) {
+             return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
+           })
+      .def("__hash__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
+      .def("__eq__", [](const ObjectIDWrapper& id,
+                        const ObjectIDWrapper& other) { return id == other; })
+      .def(py::pickle(
+          [](const ObjectIDWrapper& id) {  // __getstate__
+            return py::make_tuple(ObjectID(id));
+          },
+          [](py::tuple const& tup) {  // __setstate__
+            if (tup.size() != 1) {
+              throw std::runtime_error(
+                  "Invalid state, cannot be pickled as ObjectID!");
+            }
+            return ObjectIDWrapper{tup[0].cast<ObjectID>()};
+          }));
+
+  // ObjectNameWrapper
+  py::class_<ObjectNameWrapper>(mod, "ObjectName")
+      .def(py::init<std::string const&>(), "name"_a)
+      .def("__repr__",
+           [](const ObjectNameWrapper& name) {
+             return py::repr(py::cast(std::string(name)));
+           })
+      .def("__str__",
+           [](const ObjectNameWrapper& name) {
+             return py::str(py::cast(std::string(name)));
+           })
+      .def("__hash__",
+           [](const ObjectNameWrapper& name) {
+             return py::hash(py::cast(std::string(name)));
+           })
+      .def("__eq__",
+           [](const ObjectNameWrapper& name, const ObjectNameWrapper& other) {
+             return name == other;
+           })
+      .def(py::pickle(
+          [](const ObjectNameWrapper& name) {  // __getstate__
+            return py::make_tuple(py::cast(std::string(name)));
+          },
+          [](py::tuple const& tup) {  // __setstate__
+            if (tup.size() != 1) {
+              throw std::runtime_error(
+                  "Invalid state, cannot be pickled as ObjectName!");
+            }
+            return ObjectNameWrapper{tup[0].cast<std::string>()};
+          }));
+
   // ObjectMeta
   py::class_<ObjectMeta>(mod, "ObjectMeta")
       .def(py::init<>([](bool global_, py::args,
@@ -116,6 +174,16 @@ void bind_core(py::module& mod) {
       .def("__setitem__", [](ObjectMeta* self, std::string const& key,
                              double value) { self->AddKeyValue(key, value); })
       .def("__setitem__",
+           [](ObjectMeta* self, std::string const& key, Object const* member) {
+             self->AddMember(key, member);
+           })
+      .def("__setitem__",
+           [](ObjectMeta* self, std::string const& key,
+              ObjectMeta const& member) { self->AddMember(key, member); })
+      .def("__setitem__",
+           [](ObjectMeta* self, std::string const& key,
+              ObjectIDWrapper const member) { self->AddMember(key, member); })
+      .def("__setitem__",
            [](ObjectMeta* self, std::string const& key,
               std::vector<int32_t> const& value) {
              self->AddKeyValue(key, value);
@@ -140,16 +208,6 @@ void bind_core(py::module& mod) {
               std::vector<std::string> const& value) {
              self->AddKeyValue(key, value);
            })
-      .def("__setitem__",
-           [](ObjectMeta* self, std::string const& key, Object const* member) {
-             self->AddMember(key, member);
-           })
-      .def("__setitem__",
-           [](ObjectMeta* self, std::string const& key,
-              ObjectMeta const& member) { self->AddMember(key, member); })
-      .def("__setitem__",
-           [](ObjectMeta* self, std::string const& key,
-              ObjectIDWrapper const member) { self->AddMember(key, member); })
       .def("add_member",
            [](ObjectMeta* self, std::string const& key, Object const* member) {
              self->AddMember(key, member);
@@ -161,6 +219,9 @@ void bind_core(py::module& mod) {
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
       .def("reset", [](ObjectMeta& meta) { meta.Reset(); })
+      .def("reset_key",
+           [](ObjectMeta& meta, std::string const& key) { meta.ResetKey(key); })
+      .def("reset_signature", [](ObjectMeta& meta) { meta.ResetSignature(); })
       .def(
           "__iter__",
           [](const ObjectMeta& meta) {
@@ -218,64 +279,6 @@ void bind_core(py::module& mod) {
             ObjectMeta meta;
             meta.SetMetaData(nullptr, detail::to_json(tup[0]));
             return meta;
-          }));
-
-  // ObjectIDWrapper
-  py::class_<ObjectIDWrapper>(mod, "ObjectID")
-      .def(py::init<>())
-      .def(py::init<ObjectID>(), "id"_a)
-      .def(py::init<std::string const&>(), "id"_a)
-      .def("__int__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
-      .def("__repr__",
-           [](const ObjectIDWrapper& id) { return VYObjectIDToString(id); })
-      .def("__str__",
-           [](const ObjectIDWrapper& id) {
-             return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
-           })
-      .def("__hash__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
-      .def("__eq__", [](const ObjectIDWrapper& id,
-                        const ObjectIDWrapper& other) { return id == other; })
-      .def(py::pickle(
-          [](const ObjectIDWrapper& id) {  // __getstate__
-            return py::make_tuple(ObjectID(id));
-          },
-          [](py::tuple const& tup) {  // __setstate__
-            if (tup.size() != 1) {
-              throw std::runtime_error(
-                  "Invalid state, cannot be pickled as ObjectID!");
-            }
-            return ObjectIDWrapper{tup[0].cast<ObjectID>()};
-          }));
-
-  // ObjectNameWrapper
-  py::class_<ObjectNameWrapper>(mod, "ObjectName")
-      .def(py::init<std::string const&>(), "name"_a)
-      .def("__repr__",
-           [](const ObjectNameWrapper& name) {
-             return py::repr(py::cast(std::string(name)));
-           })
-      .def("__str__",
-           [](const ObjectNameWrapper& name) {
-             return py::str(py::cast(std::string(name)));
-           })
-      .def("__hash__",
-           [](const ObjectNameWrapper& name) {
-             return py::hash(py::cast(std::string(name)));
-           })
-      .def("__eq__",
-           [](const ObjectNameWrapper& name, const ObjectNameWrapper& other) {
-             return name == other;
-           })
-      .def(py::pickle(
-          [](const ObjectNameWrapper& name) {  // __getstate__
-            return py::make_tuple(py::cast(std::string(name)));
-          },
-          [](py::tuple const& tup) {  // __setstate__
-            if (tup.size() != 1) {
-              throw std::runtime_error(
-                  "Invalid state, cannot be pickled as ObjectName!");
-            }
-            return ObjectNameWrapper{tup[0].cast<std::string>()};
           }));
 
   // Object

@@ -496,6 +496,22 @@ Parameters:
 
 Returns:
     ObjectID: The object id of newly shallow-copied vineyard object.
+
+.. method:: shallow_copy(object_id: ObjectID, extra_metadata: dict) -> ObjectID
+    :noindex:
+
+Create a shallow copy of the given vineyard object, with extra metadata.
+
+Parameters:
+    object_id: ObjectID
+        The vineyard object that is requested to be shallow-copied.
+    extra_metadata: dict
+        Extra metadata to apply to the newly created object. The fields of extra
+        metadata must be primitive types, e.g., string, number, and cannot be
+        array or dict.
+
+Returns:
+    ObjectID: The object id of newly shallow-copied vineyard object.
 ''')
 
 add_doc(

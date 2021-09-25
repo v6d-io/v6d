@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 2.8)
 
 set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 2)
-set(VINEYARD_PATCH_VERSION 6)
+set(VINEYARD_PATCH_VERSION 12)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
+
+message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
 
 if(POLICY CMP0025)
   cmake_policy(SET CMP0025 NEW)
@@ -43,9 +45,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(ProcessorCount)
 ProcessorCount(N)
-
-add_definitions(-DVINEYARD_VERSION=${VINEYARD_VERSION})
-message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
 
 set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -97,6 +96,7 @@ check_cxx_compiler_flag(-Wno-class-memaccess W_NO_CLASS_MEMACCESS)
 check_cxx_compiler_flag(-Wno-deprecated-declarations W_NO_DEPRECATED_DECLARATIONS)
 check_cxx_compiler_flag(-Wno-defaulted-function-deleted W_NO_DEFAULTED_FUNCTION_DELETED)
 check_cxx_compiler_flag(-Wno-error=c++11-narrowing W_NO_ERROR_CXX11_NARROWING)
+check_cxx_compiler_flag(-Wno-format-truncation W_NO_FORMAT_TRUNCATION)
 if(W_NO_CLASS_MEMACCESS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-class-memaccess")
 endif()
@@ -108,6 +108,9 @@ if(W_NO_DEFAULTED_FUNCTION_DELETED)
 endif()
 if(W_NO_ERROR_CXX11_NARROWING)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=c++11-narrowing")
+endif()
+if(W_NO_FORMAT_TRUNCATION)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-truncation")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 if(BUILD_VINEYARD_COVERAGE)
@@ -156,6 +159,10 @@ macro(find_boost)
     # eliminate a lot of warnings for newer version of boost library.
     add_compile_options(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 endmacro(find_boost)
+
+macro(find_ctti)
+    add_subdirectory(thirdparty/ctti)
+endmacro(find_ctti)
 
 macro(find_etcd_cpp_apiv3)
     if(USE_EXTERNAL_ETCD_LIBS)
@@ -272,6 +279,7 @@ endmacro(find_pthread)
 macro(find_common_libraries)
     find_apache_arrow()
     find_boost()
+    find_ctti()
     find_glog()
     find_gflags()
     find_jemalloc()
@@ -457,6 +465,16 @@ if(BUILD_VINEYARD_CLIENT)
     target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
     target_compile_options(vineyard_client PUBLIC -DWITH_JEMALLOC)
 
+    target_include_directories(vineyard_client PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    install(DIRECTORY thirdparty/ctti/include/ctti
+            DESTINATION include                 # target directory
+            FILES_MATCHING                      # install only matched files
+            PATTERN "*.hpp"                     # select C++ template header files
+    )
+
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)
         add_target_link_options(vineyard_client PRIVATE OPTIONS -Os)
@@ -551,9 +569,7 @@ if(BUILD_VINEYARD_TESTS)
             add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
         endif()
 
-        target_link_libraries(${T_NAME} PRIVATE
-                              vineyard_client vineyard_basic vineyard_io vineyard_graph
-        )
+        target_link_libraries(${T_NAME} PRIVATE ${VINEYARD_INSTALL_LIBS})
         if(ARROW_SHARED_LIB)
             target_link_libraries(${T_NAME} PRIVATE ${ARROW_SHARED_LIB})
         else()
@@ -567,6 +583,7 @@ if(BUILD_VINEYARD_TESTS)
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
 
+        target_compile_options(${T_NAME} PRIVATE "-std=c++17")
         if(${T_NAME} STREQUAL "delete_test" OR ${T_NAME} STREQUAL "rpc_delete_test")
             target_compile_options(${T_NAME} PRIVATE "-fno-access-control")
         endif()
@@ -623,13 +640,20 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
 )
 
 # for python's setup.cfg
-configure_file(setup.cfg.in "${PROJECT_SOURCE_DIR}/setup.cfg" @ONLY)
-configure_file(python/vineyard/version.py.in "${PROJECT_SOURCE_DIR}/python/vineyard/version.py" @ONLY)
+configure_file("${PROJECT_SOURCE_DIR}/setup.cfg.in"
+               "${PROJECT_SOURCE_DIR}/setup.cfg" @ONLY
+)
+configure_file("${PROJECT_SOURCE_DIR}/python/vineyard/version.py.in"
+               "${PROJECT_SOURCE_DIR}/python/vineyard/version.py" @ONLY
+)
+configure_file("${PROJECT_SOURCE_DIR}/src/common/util/config.h.in"
+               "${PROJECT_SOURCE_DIR}/src/common/util/config.h" @ONLY
+)
 
-configure_file(vineyard-config.in.cmake
+configure_file("${PROJECT_SOURCE_DIR}/vineyard-config.in.cmake"
                "${PROJECT_BINARY_DIR}/vineyard-config.cmake" @ONLY
 )
-configure_file(vineyard-config-version.in.cmake
+configure_file("${PROJECT_SOURCE_DIR}/vineyard-config-version.in.cmake"
                "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake" @ONLY
 )
 # install vineyard-codegen script.

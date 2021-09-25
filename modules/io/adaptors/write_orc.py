@@ -19,14 +19,11 @@
 import base64
 import json
 import sys
-from typing import Dict
-from urllib.parse import urlparse
 
 import fsspec
 import pyarrow as pa
 import pyorc
 import vineyard
-from vineyard.io.dataframe import DataframeStreamBuilder
 
 
 def orc_type(field):

@@ -1,0 +1,4 @@
+# Vineyard modules
+
+*.vineyard-mod linguist-language=C++
+

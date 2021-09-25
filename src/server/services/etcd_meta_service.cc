@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "server/services/etcd_meta_service.h"
 
+#include <server/util/metrics.h>
 #include <chrono>
 #include <mutex>
 #include <string>
@@ -39,7 +40,6 @@ void EtcdWatchHandler::operator()(pplx::task<etcd::Response> const& resp_task) {
 void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   VLOG(10) << "etcd watch use " << resp.duration().count()
            << " microseconds, event size = " << resp.events().size();
-
   // NB: the head rev is not the latest rev in those events.
   unsigned head_rev = static_cast<unsigned>(resp.index());
   if (resp.error_code() == 0 && !resp.events().empty()) {
@@ -128,6 +128,8 @@ void EtcdMetaService::requestLock(
         auto const& resp = resp_task.get();
         VLOG(10) << "etcd lock use " << resp.duration().count()
                  << " microseconds";
+        LOG_SUMMARY("etcd_request_duration_microseconds", "lock",
+                    resp.duration().count());
         auto lock_key = resp.lock_key();
         auto lock_ptr = std::make_shared<EtcdLock>(
             [this, lock_key](const Status& status, unsigned& rev) {
@@ -169,6 +171,8 @@ void EtcdMetaService::commitUpdates(
     auto resp = etcd_->txn(tx).get();
     if (resp.is_ok()) {
       offset += 127;
+      LOG_SUMMARY("etcd_request_duration_microseconds", "txn",
+                  resp.duration().count());
     } else {
       auto status = Status::EtcdError(resp.error_code(), resp.error_message());
       server_ptr_->GetMetaContext().post(
@@ -190,6 +194,8 @@ void EtcdMetaService::commitUpdates(
     auto resp = resp_task.get();
     VLOG(10) << "etcd (last) txn use " << resp.duration().count()
              << " microseconds";
+    LOG_SUMMARY("etcd_request_duration_microseconds", "txn",
+                resp.duration().count());
     auto status = Status::EtcdError(resp.error_code(), resp.error_message());
     server_ptr_->GetMetaContext().post(
         boost::bind(callback_after_updated, status, resp.index()));
@@ -204,6 +210,8 @@ void EtcdMetaService::requestAll(
         auto resp = resp_task.get();
         VLOG(10) << "etcd ls use " << resp.duration().count()
                  << " microseconds for " << resp.keys().size() << " keys";
+        LOG_SUMMARY("etcd_request_duration_microseconds", "ls",
+                    resp.duration().count());
         std::vector<IMetaService::op_t> ops(resp.keys().size());
         for (size_t i = 0; i < resp.keys().size(); ++i) {
           if (resp.key(i).empty()) {
@@ -232,6 +240,8 @@ void EtcdMetaService::requestUpdates(
   etcd_->head().then([this, prefix,
                       callback](pplx::task<etcd::Response> resp_task) {
     auto resp = resp_task.get();
+    LOG_SUMMARY("etcd_request_duration_microseconds", "head",
+                resp.duration().count());
     auto head_rev = static_cast<unsigned>(resp.index());
     {
       std::lock_guard<std::mutex> scope_lock(this->registered_callbacks_mutex_);

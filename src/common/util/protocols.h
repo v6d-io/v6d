@@ -66,6 +66,7 @@ enum class CommandType {
   DropBufferRequest = 32,
   MakeArenaRequest = 33,
   FinalizeArenaRequest = 34,
+  DeepCopyRequest = 35,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -194,8 +195,7 @@ Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids);
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           std::string& msg);
 
-Status ReadGetBuffersReply(const json& root,
-                           std::map<ObjectID, Payload>& objects);
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   std::string& msg);
@@ -302,11 +302,26 @@ Status ReadStopStreamReply(const json& root);
 
 void WriteShallowCopyRequest(const ObjectID id, std::string& msg);
 
-Status ReadShallowCopyRequest(const json& root, ObjectID& id);
+void WriteShallowCopyRequest(const ObjectID id, json const& extra_metadata,
+                             std::string& msg);
+
+Status ReadShallowCopyRequest(const json& root, ObjectID& id,
+                              json& extra_metadata);
 
 void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
 
 Status ReadShallowCopyReply(const json& root, ObjectID& target_id);
+
+void WriteDeepCopyRequest(const ObjectID object_id, std::string const& peer,
+                          std::string const& peer_rpc_endpoint,
+                          std::string& msg);
+
+Status ReadDeepCopyRequest(const json& root, ObjectID& object_id,
+                           std::string& peer, std::string& peer_rpc_endpoint);
+
+void WriteDeepCopyReply(const ObjectID& object_id, std::string& msg);
+
+Status ReadDeepCopyReply(const json& root, ObjectID& object_id);
 
 void WriteMakeArenaRequest(const size_t size, std::string& msg);
 

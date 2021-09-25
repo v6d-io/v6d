@@ -16,10 +16,10 @@
 # limitations under the License.
 #
 
+import atexit
 import contextlib
 import logging
 import os
-import pkg_resources
 import shutil
 import subprocess
 import sys
@@ -29,12 +29,14 @@ import time
 
 from .etcd import start_etcd
 from .utils import find_vineyardd_path, check_socket
+from .._C import connect
 
 logger = logging.getLogger('vineyard')
 
 
 @contextlib.contextmanager
 def start_vineyardd(etcd_endpoints=None,
+                    etcd_prefix=None,
                     vineyardd_path=None,
                     size='256M',
                     socket=None,
@@ -47,6 +49,8 @@ def start_vineyardd(etcd_endpoints=None,
         etcd_endpoint: str
             Launching vineyard using specified etcd endpoints. If not specified, vineyard
             will launch its own etcd instance.
+        etcd_prefix: str
+            Specify a common prefix to establish a local vineyard cluster.
         vineyardd_path: str
             Location of vineyard server program. If not specified, vineyard will use its
             own bundled vineyardd binary.
@@ -75,6 +79,11 @@ def start_vineyardd(etcd_endpoints=None,
             The port that vineyard will use to privode RPC service.
         debug: bool
             Whether print debug logs.
+
+    Returns:
+        (proc, socket):
+            Yields a tuple with the subprocess as the first element and the UNIX-domain
+            IPC socket as the second element.
     '''
 
     if not vineyardd_path:
@@ -110,6 +119,9 @@ def start_vineyardd(etcd_endpoints=None,
     ]
     # yapf: enable
 
+    if etcd_prefix is not None:
+        command.extend(('--etcd_prefix', etcd_prefix))
+
     try:
         proc = subprocess.Popen(command,
                                 env=env,
@@ -130,7 +142,7 @@ def start_vineyardd(etcd_endpoints=None,
             raise RuntimeError('vineyardd exited unexpectedly with code %d, error is:\n%s' % (rc, err))
 
         logger.debug('vineyardd is ready.............')
-        yield proc, socket
+        yield proc, socket, etcd_endpoints
     finally:
         logger.debug('Local vineyardd being killed')
         if proc is not None and proc.poll() is None:
@@ -142,6 +154,102 @@ def start_vineyardd(etcd_endpoints=None,
             pass
         if etcd_ctx is not None:
             etcd_ctx.__exit__(None, None, None)  # pylint: disable=no-member
+
+
+__default_instance_contexts = {}
+
+
+def init(num_instances=1, **kw):
+    '''
+    Launching a local vineyardd instance and get a client as easy as possible
+
+    In a clean environment, simply use:
+
+    .. code:: python
+
+        vineyard.init()
+
+    It will launch a local vineyardd and return a connected client to the vineyardd.
+    It will also setup the environment variable :code:`VINEYARD_IPC_SOCKET`.
+
+    For the case to establish a local vineyard cluster consists of multiple vineyardd instances.
+    Use the :code:`num_instances` parameter:
+
+    .. code:: python
+    
+        client1, client2, client3 = vineyard.init(num_instances=3)
+
+    In this case, three vineyardd instances will be launched.
+
+    The init method can only be called once in a process, to get the established sockets or
+    clients later in the process, use :code:`get_current_socket` or :code:`get_current_client`
+    respectively.
+    '''
+    assert __default_instance_contexts == {}
+
+    if 'VINEYARD_IPC_SOCKET' in os.environ:
+        raise ValueError(
+            'VINEYARD_IPC_SOCKET has already been set: %s, which means there might be a vineyard daemon already running locally',
+            os.environ['VINEYARD_IPC_SOCKET'])
+
+    etcd_endpoints = None
+    etcd_prefix = f'vineyard_init_at_{time.time()}'
+    for idx in range(num_instances):
+        ctx = start_vineyardd(etcd_endpoints=etcd_endpoints, etcd_prefix=etcd_prefix, rpc=False, **kw)
+        _, ipc_socket, etcd_endpoints = ctx.__enter__()
+        client = connect(ipc_socket)
+        __default_instance_contexts[ipc_socket] = (ctx, client)
+        if not idx:
+            os.environ['VINEYARD_IPC_SOCKET'] = ipc_socket
+
+    return get_current_client()
+
+
+def get_current_client():
+    '''
+    Get current vineyard IPC clients established by :code:`vineyard.init()`.
+
+    Raises:
+        ValueError if vineyard is not initialized.
+    '''
+    if not __default_instance_contexts:
+        raise ValueError("Vineyard has not been initialized, use vineyard.init() to launch vineyard instances")
+    clients = [__default_instance_contexts[k][1] for k in __default_instance_contexts]
+    return clients if len(clients) > 1 else clients[0]
+
+
+def get_current_socket():
+    '''
+    Get current vineyard UNIX-domain socket established by :code:`vineyard.init()`.
+
+    Raises:
+        ValueError if vineyard is not initialized.
+    '''
+    if not __default_instance_contexts:
+        raise ValueError("Vineyard has not been initialized, use vineyard.init() to launch vineyard instances")
+    sockets = __default_instance_contexts.keys()
+    return sockets if len(sockets) > 1 else sockets[0]
+
+
+def shutdown():
+    '''
+    Shutdown the vineyardd instances launched by previous :code:`vineyard.init()`.
+    '''
+    global __default_instance_contexts
+    if __default_instance_contexts:
+        for ipc_socket in reversed(__default_instance_contexts):
+            __default_instance_contexts[ipc_socket][0].__exit__(None, None, None)
+        # NB. don't pop pre-existing env if we not launch
+        os.environ.pop('VINEYARD_IPC_SOCKET', None)
+    __default_instance_contexts = {}
+
+
+@atexit.register
+def __shutdown_handler():
+    try:
+        shutdown()
+    except Exception:  # pylint: disable=broad-except
+        pass
 
 
 __all__ = ['start_vineyardd']

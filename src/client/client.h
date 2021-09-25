@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef SRC_CLIENT_CLIENT_H_
 #define SRC_CLIENT_CLIENT_H_
 
-#include <sys/mman.h>
-
 #include <map>
 #include <memory>
 #include <set>
@@ -46,70 +44,23 @@ class BlobWriter;
  */
 class MmapEntry {
  public:
-  MmapEntry(int fd, int64_t map_size, bool readonly, bool realign = false)
-      : fd_(fd), ro_pointer_(nullptr), rw_pointer_(nullptr), length_(0) {
-    // fake_mmap in malloc.h leaves a gap between memory segments, to make
-    // map_size page-aligned again.
-    if (realign) {
-      length_ = map_size - sizeof(size_t);
-    } else {
-      length_ = map_size;
-    }
-  }
+  MmapEntry(int fd, int64_t map_size, bool readonly, bool realign = false);
 
-  ~MmapEntry() {
-    if (ro_pointer_) {
-      int r = munmap(ro_pointer_, length_);
-      if (r != 0) {
-        LOG(ERROR) << "munmap returned " << r << ", errno = " << errno << ": "
-                   << strerror(errno);
-      }
-    }
-    if (rw_pointer_) {
-      int r = munmap(rw_pointer_, length_);
-      if (r != 0) {
-        LOG(ERROR) << "munmap returned " << r << ", errno = " << errno << ": "
-                   << strerror(errno);
-      }
-    }
-    close(fd_);
-  }
+  ~MmapEntry();
 
   /**
    * @brief Map the shared memory represents by `fd_` as readonly memory.
    *
    * @returns A untyped pointer that points to the shared readonly memory.
    */
-  uint8_t* map_readonly() {
-    if (!ro_pointer_) {
-      ro_pointer_ = reinterpret_cast<uint8_t*>(
-          mmap(NULL, length_, PROT_READ, MAP_SHARED, fd_, 0));
-      if (ro_pointer_ == MAP_FAILED) {
-        LOG(ERROR) << "mmap failed: errno = " << errno << ": "
-                   << strerror(errno);
-        ro_pointer_ = nullptr;
-      }
-    }
-    return ro_pointer_;
-  }
+  uint8_t* map_readonly();
 
   /**
    * @brief Map the shared memory represents by `fd_` as writeable memory.
    *
    * @returns A untyped pointer that points to the shared writeable memory.
    */
-  uint8_t* map_readwrite() {
-    if (!rw_pointer_) {
-      rw_pointer_ = reinterpret_cast<uint8_t*>(
-          mmap(NULL, length_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0));
-      if (rw_pointer_ == MAP_FAILED) {
-        LOG(ERROR) << "mmap failed: errno = " << errno << ": "
-                   << strerror(errno);
-        rw_pointer_ = nullptr;
-      }
-    }
-    return rw_pointer_;
-  }
+  uint8_t* map_readwrite();
 
   int fd() { return fd_; }
 

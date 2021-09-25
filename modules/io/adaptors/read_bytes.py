@@ -29,9 +29,13 @@ from fsspec.utils import read_block
 from fsspec.core import split_protocol
 from vineyard.io.byte import ByteStreamBuilder
 
-from vineyard.drivers.io import ossfs
+try:
+    from vineyard.drivers.io import ossfs
+except ImportError:
+    ossfs = None
 
-fsspec.register_implementation("oss", ossfs.OSSFileSystem)
+if ossfs:
+    fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
 
 def report_status(status, content):

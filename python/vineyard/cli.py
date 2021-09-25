@@ -1,5 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
+# PYTHON_ARGCOMPLETE_OK
 #
 # Copyright 2020-2021 Alibaba Group Holding Limited.
 #
@@ -23,6 +24,8 @@ import sys
 import os
 import json
 import pandas as pd
+import treelib
+import argcomplete
 
 import vineyard
 
@@ -58,6 +61,12 @@ Some examples on how to use vineyard-ctl:
 
 10. Migrate a vineyard object
     >>> vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --local
+
+11. Issue a debug request
+    >>> vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
+
+12. Start vineyardd
+    >>> vineyard-ctl start --local
 """
 
 
@@ -96,12 +105,20 @@ def vineyard_argument_parser():
                                       epilog=('Example:\n\n>>> vineyard-ctl query --object_id ' +
                                               '00002ec13bc81226 --meta json --metric typename'))
     query_opt.add_argument('--object_id', required=True, help='ID of the object to be fetched')
-    query_opt.add_argument('--meta', choices=['simple', 'json'], help='Metadata of the object')
-    query_opt.add_argument('--metric', choices=['nbytes', 'signature', 'typename'], help='Metric data of the object')
+    query_opt.add_argument('--meta',
+                           choices=['simple', 'json'],
+                           help='Metadata of the object').completer=\
+        argcomplete.completers.ChoicesCompleter(('simple', 'json'))
+    query_opt.add_argument('--metric',
+                           choices=['nbytes', 'signature', 'typename'],
+                           help='Metric data of the object').completer=\
+        argcomplete.completers.ChoicesCompleter(('nbytes', 'signature', 'typename'))
     query_opt.add_argument('--exists', action='store_true', help='Check if the object exists or not')
     query_opt.add_argument('--stdout', action='store_true', help='Get object to stdout')
     query_opt.add_argument('--output_file', type=str, help='Get object to file')
     query_opt.add_argument('--tree', action='store_true', help='Get object lineage in tree-like style')
+    query_opt.add_argument('--memory_status', action='store_true', help='Get the memory used by the vineyard object')
+    query_opt.add_argument('--detail', action='store_true', help='Get detailed memory used by the vineyard object')
 
     head_opt = cmd_parser.add_parser('head',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -215,6 +232,55 @@ def vineyard_argument_parser():
                                         action='store_true',
                                         help='Migrate the vineyard object remote to local')
 
+    debug_opt = cmd_parser.add_parser('debug',
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      description='Description: Issue a debug request',
+                                      epilog=('Example:\n\n>>> vineyard-ctl debug --payload ' +
+                                              '\'{"instance_status":[], "memory_size":[]}\''))
+    debug_opt.add_argument('--payload', type=json.loads, help='The payload that will be sent to the debug handler')
+
+    start_opt = cmd_parser.add_parser('start',
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      description='Description: Start vineyardd',
+                                      epilog='Example:\n\n>>> vineyard-ctl start --local')
+
+    start_opt_group = start_opt.add_mutually_exclusive_group(required=True)
+    start_opt_group.add_argument('--local', action='store_true', help='start a local vineyard cluster')
+    start_opt_group.add_argument('--distributed',
+                                 action='store_true',
+                                 help='start a local vineyard cluster in a distributed fashion')
+
+    start_opt.add_argument('--hosts', nargs='+', default=None, help='A list of machines to launch vineyard server')
+    start_opt.add_argument('--etcd_endpoints',
+                           type=str,
+                           default=None,
+                           help=('Launching vineyard using specified etcd endpoints. If not specified, vineyard ' +
+                                 'will launch its own etcd instance'))
+    start_opt.add_argument('--vineyardd_path',
+                           type=str,
+                           default=None,
+                           help=('Location of vineyard server program. If not specified, vineyard will ' +
+                                 'use its own bundled vineyardd binary'))
+    start_opt.add_argument('--size',
+                           type=str,
+                           default='256M',
+                           help=('The memory size limit for vineyard’s shared memory. The memory size can ' +
+                                 'be a plain integer or as a fixed-point number using one of these ' +
+                                 'suffixes: E, P, T, G, M, K. You can also use the power-of-two ' +
+                                 'equivalents: Ei, Pi, Ti, Gi, Mi, Ki.'))
+    start_opt.add_argument('--socket',
+                           type=str,
+                           default='/var/run/vineyard.sock',
+                           help=('The UNIX domain socket socket path that vineyard server will listen on. ' +
+                                 'When the socket parameter is None, a random path under temporary directory ' +
+                                 'will be generated and used.'))
+    start_opt.add_argument('--rpc_socket_port',
+                           type=int,
+                           default=9600,
+                           help='The port that vineyard will use to privode RPC service')
+    start_opt.add_argument('--debug', type=bool, default=False, help='Whether print debug logs')
+
+    argcomplete.autocomplete(parser)
     return parser
 
 
@@ -246,7 +312,7 @@ def connect_vineyard(args):
 def connect_via_config_file():
     """Utility to create a vineyard client using an IPC or RPC socket from config file."""
     try:
-        with open(os.path.expanduser('~/.vineyard/config')) as config_file:
+        with open(os.path.expanduser('~/.vineyard/config'), encoding='UTF-8') as config_file:
             sockets = config_file.readlines()
         ipc_socket = sockets[0].split(':')[1][:-1]
         rpc_host = sockets[1].split(':')[1][:-1]
@@ -304,7 +370,7 @@ def query(client, args):
     if args.stdout:
         sys.stdout.write(str(value) + '\n')
     if args.output_file is not None:
-        with open(args.output_file, 'w') as output_file:
+        with open(args.output_file, 'w', encoding='UTF-8') as output_file:
             output_file.write(str(value))
     if args.meta is not None:
         if args.meta == 'simple':
@@ -314,6 +380,20 @@ def query(client, args):
             print(f'Meta data of the object in JSON format:\n{json_meta}')
     if args.metric is not None:
         print(f'{args.metric}: {getattr(value, args.metric)}')
+    if args.tree:
+        meta = client.get_meta(as_object_id(args.object_id))
+        tree = treelib.Tree()
+        get_tree(meta, tree)
+        tree.show(line_type="ascii-exr")
+    if args.memory_status:
+        meta = client.get_meta(as_object_id(args.object_id))
+        if args.detail:
+            tree = treelib.Tree()
+            memory_dict = {}
+            get_tree(meta, tree, True, memory_dict)
+            tree.show(line_type="ascii-exr")
+            print(f'The object taking the maximum memory is:\n{max(memory_dict, key=lambda x: memory_dict[x])}')
+        print(f'The total memory used: {pretty_format_memory(get_memory_used(meta))}')
 
 
 def delete_object(client, args):
@@ -391,7 +471,8 @@ def copy(client, args):
         object_id = client.shallow_copy(as_object_id(args.object_id))
         print(f'The object({args.object_id}) was succesfully copied to {object_id}')
     elif args.deep:
-        print('Deep Copy is currently not supported.')
+        object_id = client.deep_copy(as_object_id(args.object_id))
+        print(f'The object({args.object_id}) was succesfully copied to {object_id}')
     else:
         exit_with_help()
 
@@ -425,11 +506,60 @@ def migrate_object(client, args):
                          f'the vineyard object({args.object_id}):')) from exc
 
 
+def debug(client, args):
+    """Utility to issue a debug request."""
+    try:
+        result = client.debug(args.payload)
+    except BaseException as exc:
+        raise Exception(('The following error was encountered during the debug' +
+                         f' request with payload, {args.payload}:')) from exc
+    print(f'The result returned by the debug handler:\n{result}')
+
+
+def get_tree(meta, tree, memory=False, memory_dict=None, parent=None):
+    """Utility to display object lineage in a tree like form."""
+    node = f'{meta["typename"]} <{meta["id"]}>'
+    if memory:
+        memory_used = pretty_format_memory(meta["nbytes"])
+        node += f': {memory_used}'
+        memory_dict[node] = memory_used
+    tree.create_node(node, node, parent=parent)
+    parent = node
+    for key in meta:
+        if isinstance(meta[key], vineyard._C.ObjectMeta):
+            get_tree(meta[key], tree, memory, memory_dict, parent)
+
+
+def get_memory_used(meta):
+    """Utility to get the memory used by the vineyard object."""
+    total_bytes = 0
+    for key in meta:
+        if isinstance(meta[key], vineyard._C.ObjectMeta):
+            if str(meta[key]['typename']) == 'vineyard::Blob':
+                size = meta[key]['length']
+                total_bytes += size
+            else:
+                total_bytes += get_memory_used(meta[key])
+    return total_bytes
+
+
+def pretty_format_memory(nbytes):
+    """Utility to return memory with appropriate unit."""
+    if nbytes < (1 << 10):
+        return f'{nbytes} bytes'
+    if (1 << 20) > nbytes > (1 << 10):
+        return f'{nbytes / (1 << 10)} KB'
+    if (1 << 30) > nbytes > (1 << 20):
+        return f'{nbytes / (1 << 20)} MB'
+    if nbytes > (1 << 30):
+        return f'{nbytes / (1 << 30)} GB'
+
+
 def config(args):
     """Utility to edit the config file."""
-    with open(os.path.expanduser('~/.vineyard/config')) as config_file:
+    with open(os.path.expanduser('~/.vineyard/config'), encoding='UTF-8') as config_file:
         sockets = config_file.readlines()
-    with open(os.path.expanduser('~/.vineyard/config'), 'w') as config_file:
+    with open(os.path.expanduser('~/.vineyard/config'), 'w', encoding='UTF-8') as config_file:
         if args.ipc_socket_value is not None:
             sockets[0] = f'ipc_socket:{args.ipc_socket_value}\n'
         if args.rpc_host_value is not None:
@@ -441,6 +571,25 @@ def config(args):
         config_file.writelines(sockets)
 
 
+def start_vineyardd(args):
+    """Utility to start vineyardd."""
+    if args.local:
+        vineyard.deploy.local.start_vineyardd(etcd_endpoints=args.etcd_endpoints,
+                                              vineyardd_path=args.vineyardd_path,
+                                              size=args.size,
+                                              socket=args.socket,
+                                              rpc_socket_port=args.rpc_socket_port,
+                                              debug=args.debug)
+    elif args.distributed:
+        vineyard.deploy.distributed.start_vineyardd(hosts=args.hosts,
+                                                    etcd_endpoints=args.etcd_endpoints,
+                                                    vineyardd_path=args.vineyardd_path,
+                                                    size=args.size,
+                                                    socket=args.socket,
+                                                    rpc_socket_port=args.rpc_socket_port,
+                                                    debug=args.debug)
+
+
 def main():
     """Main function for vineyard-ctl."""
     args = optparser.parse_args()
@@ -449,6 +598,8 @@ def main():
 
     if args.cmd == 'config':
         return config(args)
+    if args.cmd == 'start':
+        return start_vineyardd(args)
 
     client = connect_vineyard(args)
 
@@ -468,6 +619,8 @@ def main():
         return copy(client, args)
     if args.cmd == 'migrate':
         return migrate_object(client, args)
+    if args.cmd == 'debug':
+        return debug(client, args)
 
     return exit_with_help()
 

@@ -26,7 +26,8 @@ except:
 from pandas.core.internals.managers import BlockManager
 
 from vineyard._C import Object, ObjectID, ObjectMeta
-from .utils import from_json, to_json, normalize_dtype
+from .utils import from_json, to_json, normalize_dtype, expand_slice
+from .tensor import ndarray
 
 
 def pandas_dataframe_builder(client, value, builder, **kw):
@@ -34,10 +35,27 @@ def pandas_dataframe_builder(client, value, builder, **kw):
     meta['typename'] = 'vineyard::DataFrame'
     meta['columns_'] = to_json(value.columns.values.tolist())
     meta.add_member('index_', builder.run(client, value.index))
-    for i, (name, column_value) in enumerate(value.iteritems()):
-        np_value = column_value.to_numpy(copy=False)
-        meta['__values_-key-%d' % i] = to_json(name)
-        meta.add_member('__values_-value-%d' % i, builder.run(client, np_value))
+
+    # accumulate columns
+    value_columns = [None] * len(value.columns)
+    for block in value._mgr.blocks:
+        slices = list(expand_slice(block.mgr_locs.indexer))
+        if isinstance(block.values, pd.arrays.SparseArray):
+            assert len(slices) == 1
+            value_columns[slices[0]] = block.values
+        elif len(slices) == 1:
+            value_columns[slices[0]] = block.values[0]
+            vineyard_ref = getattr(block.values, '__vineyard_ref', None)
+            # the block comes from vineyard
+            if vineyard_ref is not None:
+                setattr(value_columns[slices[0]], '__vineyard_ref', vineyard_ref)
+        else:
+            for index, column_index in enumerate(slices):
+                value_columns[column_index] = block.values[index]
+
+    for index, name in enumerate(value.columns):
+        meta['__values_-key-%d' % index] = to_json(name)
+        meta.add_member('__values_-value-%d' % index, builder.run(client, value_columns[index]))
     meta['nbytes'] = 0  # FIXME
     meta['__values_-size'] = len(value.columns)
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
@@ -62,7 +80,8 @@ def pandas_dataframe_resolver(obj, resolver):
             placement = BlockPlacement(slice(idx, idx + 1, 1))
         else:
             placement = slice(idx, idx + 1, 1)
-        values = np.expand_dims(np_value, 0)
+        values = np.expand_dims(np_value, 0).view(ndarray)
+        setattr(values, '__vineyard_ref', getattr(np_value, '__vineyard_ref', None))
         blocks.append(Block(values, placement, ndim=2))
     if 'index_' in meta:
         index = resolver.run(obj.member('index_'))

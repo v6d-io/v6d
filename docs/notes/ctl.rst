@@ -15,6 +15,28 @@ Supported Commands
 + :code:`put`
 + :code:`config`
 + :code:`migrate`
++ :code:`debug`
++ :code:`start`
+
+Autocomplete
+------------
+
+Autocomplete for vineyard-ctl is only supported for the bash shell currently.
+
+Follow the following steps to enable autocomplete for vineyard-ctl on your system:
+
++ Install :code:`argcomplete` via :code:`pip3`: :code:`pip3 install argcomplete`.
++ Copy the :code:`python/vineyard/cli.py` file to :code:`/usr/local/bin`.
++ Add :code:`eval "$(register-python-argcomplete cli.py)"` to :code:`~/.bashrc`.
++ Run :code:`source /etc/profile`.
++ Run :code:`source ~/.bashrc`.
++ Run :code:`activate-global-python-argcomplete`
+
+That is it. You're good to go. Autocomplete will be enabled working for vineyard-ctl.
+
+Example:
+
+In the bash shell, type :code:`vineyard-ctl sta` and press :code:`tab`, it will autocomplete to :code:`vineyard-ctl start`
 
 Connect to a vineyard server
 ----------------------------
@@ -72,6 +94,9 @@ Options:
 + :code:`exists`: Check if the object exists or not.
 + :code:`stdout`: Get object to stdout.
 + :code:`output_file`: Get object to file.
++ :code:`tree`: Get object lineage in tree-like style.
++ :code:`memory_status`: Get the memory used by the vineyard object.
++ :code:`detail`: Get detailed memory used by the vineyard object.
 
 Example:
 
@@ -208,3 +233,41 @@ Example:
 .. code:: shell
 
     vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --remote
+
+debug
+------
+
+Issue a debug request.
+
+Options:
+
++ :code:`payload`: The payload that will be sent to the debug handler.
+
+Example:
+
+.. code:: shell
+
+    vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
+
+start
+-------
+
+Start vineyardd.
+
+Options:
+
++ :code:`local`: start a local vineyard cluster.
++ :code:`distributed`: start a local vineyard cluster in a distributed fashion.
++ :code:`hosts`: A list of machines to launch vineyard server.
++ :code:`etcd_endpoints`: Launching vineyard using specified etcd endpoints. If not specified, vineyard will launch its own etcd instance.
++ :code:`vineyardd_path`: Location of vineyard server program. If not specified, vineyard will use its own bundled vineyardd binary.
++ :code:`size`: The memory size limit for vineyard’s shared memory. The memory size can be a plain integer or as a fixed-point number using one of these suffixes: E, P, T, G, M, K. You can also use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
++ :code:`socket`: The UNIX domain socket socket path that vineyard server will listen on. When the socket parameter is None, a random path under temporary directory will be generated and used.
++ :code:`rpc_socket_port`: The port that vineyard will use to privode RPC service.
++ :code:`debug`: Whether print debug logs.
+
+Example:
+
+.. code:: shell
+
+    vineyard-ctl start --local

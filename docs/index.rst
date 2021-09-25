@@ -33,7 +33,14 @@
    :caption: Third-party Integration
 
    notes/airflow.rst
+   notes/dask.rst
    notes/ml.rst
+
+.. toctree::
+   :maxdepth: 6
+   :caption: Examples
+
+   examples/distributed-learning
 
 .. toctree::
    :maxdepth: 6

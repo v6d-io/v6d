@@ -21,13 +21,13 @@ limitations under the License.
 #include "arrow/status.h"
 #include "arrow/util/io_util.h"
 #include "arrow/util/logging.h"
-#include "glog/logging.h"
 
 #include "basic/ds/array.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "client/rpc_client.h"
 #include "common/backtrace/backtrace.hpp"
+#include "common/util/logging.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 

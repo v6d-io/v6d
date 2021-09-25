@@ -40,9 +40,11 @@ def normalize_dtype(dtype, dtype_meta=None):
         return np.dtype('int64')
     if dtype in ['u64', 'uint64', 'uint64_t']:
         return np.dtype('uint64')
-    if dtype in ['float', 'float32']:
+    if dtype in ['float32']:
+        return np.dtype('float32')
+    if dtype in ['float']:
         return np.dtype('float')
-    if dtype in [float, 'double', 'float64']:
+    if dtype in ['double', 'float64']:
         return np.dtype('double')
     if dtype.startswith('str'):
         return np.dtype(dtype_meta)
@@ -106,4 +108,13 @@ def from_json(string):
     return json.loads(string)
 
 
-__all__ = ['normalize_dtype', 'normalize_cpptype', 'build_buffer', 'build_numpy_buffer', 'to_json', 'from_json']
+def expand_slice(indexer):
+    if isinstance(indexer, slice):
+        return range(indexer.start, indexer.stop, indexer.step)
+    else:
+        return indexer
+
+
+__all__ = [
+    'normalize_dtype', 'normalize_cpptype', 'build_buffer', 'build_numpy_buffer', 'to_json', 'from_json', 'expand_slice'
+]

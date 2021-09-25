@@ -12,6 +12,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package io.v6d.core;
 
-public class Blob {}
+#ifndef SRC_COMMON_UTIL_CONFIG_H_
+#define SRC_COMMON_UTIL_CONFIG_H_
+
+#define VINEYARD_VERSION_MAJOR 0
+#define VINEYARD_VERSION_MINOR 2
+#define VINEYARD_VERSION_PATCH 12
+
+#define VINEYARD_VERSION                                              \
+  ((VINEYARD_VERSION_MAJOR * 1000) + VINEYARD_VERSION_MINOR) * 1000 + \
+      VINEYARD_VERSION_PATCH
+#define VINEYARD_VERSION_STRING "0.2.12"
+
+#endif  // SRC_COMMON_UTIL_CONFIG_H_

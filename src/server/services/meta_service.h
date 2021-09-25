@@ -37,6 +37,7 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "common/util/status.h"
 #include "server/server/vineyard_server.h"
+#include "server/util/metrics.h"
 
 #define HEARTBEAT_TIME 60
 #define MAX_TIMEOUT_COUNT 3
@@ -765,6 +766,7 @@ class IMetaService {
       } else {
         LOG(ERROR) << "Unknown op type: " << op.ToString();
       }
+      LOG_SUMMARY("instances_total", "", instances_list_.size());
     }
   }
 

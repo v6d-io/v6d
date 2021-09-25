@@ -86,6 +86,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::InstanceStatusRequest;
   } else if (str_type == "shallow_copy_request") {
     return CommandType::ShallowCopyRequest;
+  } else if (str_type == "deep_copy_request") {
+    return CommandType::DeepCopyRequest;
   } else if (str_type == "open_stream_request") {
     return CommandType::OpenStreamRequest;
   } else if (str_type == "migrate_object_request") {
@@ -330,14 +332,13 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersReply(const json& root,
-                           std::map<ObjectID, Payload>& objects) {
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
     Payload object;
     object.FromJSON(tree);
-    objects.emplace(object.object_id, object);
+    objects.emplace_back(object);
   }
   return Status::OK();
 }
@@ -896,9 +897,21 @@ void WriteShallowCopyRequest(const ObjectID id, std::string& msg) {
   encode_msg(root, msg);
 }
 
-Status ReadShallowCopyRequest(const json& root, ObjectID& id) {
+void WriteShallowCopyRequest(const ObjectID id, json const& extra_metadata,
+                             std::string& msg) {
+  json root;
+  root["type"] = "shallow_copy_request";
+  root["id"] = id;
+  root["extra"] = extra_metadata;
+
+  encode_msg(root, msg);
+}
+
+Status ReadShallowCopyRequest(const json& root, ObjectID& id,
+                              json& extra_metadata) {
   RETURN_ON_ASSERT(root["type"] == "shallow_copy_request");
   id = root["id"].get<ObjectID>();
+  extra_metadata = root.value("extra", json::object());
   return Status::OK();
 }
 
@@ -913,6 +926,42 @@ void WriteShallowCopyReply(const ObjectID target_id, std::string& msg) {
 Status ReadShallowCopyReply(const json& root, ObjectID& target_id) {
   CHECK_IPC_ERROR(root, "shallow_copy_reply");
   target_id = root["target_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteDeepCopyRequest(const ObjectID object_id, const std::string& peer,
+                          std::string const& peer_rpc_endpoint,
+                          std::string& msg) {
+  json root;
+  root["type"] = "deep_copy_request";
+  root["object_id"] = object_id;
+  root["peer"] = peer;
+  root["peer_rpc_endpoint"] = peer_rpc_endpoint,
+
+  encode_msg(root, msg);
+}
+
+Status ReadDeepCopyRequest(const json& root, ObjectID& object_id,
+                           std::string& peer, std::string& peer_rpc_endpoint) {
+  RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
+                   "deep_copy_request");
+  object_id = root["object_id"].get<ObjectID>();
+  peer = root["peer"].get_ref<std::string const&>();
+  peer_rpc_endpoint = root["peer_rpc_endpoint"].get_ref<std::string const&>();
+  return Status::OK();
+}
+
+void WriteDeepCopyReply(const ObjectID& object_id, std::string& msg) {
+  json root;
+  root["type"] = "deep_copy_reply";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDeepCopyReply(const json& root, ObjectID& object_id) {
+  CHECK_IPC_ERROR(root, "deep_copy_reply");
+  object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
 

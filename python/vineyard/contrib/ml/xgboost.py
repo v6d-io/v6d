@@ -42,7 +42,7 @@ def xgb_dataframe_resolver(obj, **kw):
         if 'data' in kw:
             df = np.stack(df[kw['data']].values)
         return xgb.DMatrix(df, label)
-    return xgb.DMatrix(df)
+    return xgb.DMatrix(df, feature_names=df.columns)
 
 
 def xgb_recordBatch_resolver(obj, **kw):
@@ -52,8 +52,8 @@ def xgb_recordBatch_resolver(obj, **kw):
     df = rb.to_pandas()
     if 'label' in kw:
         label = df.pop(kw['label'])
-        return xgb.DMatrix(df, label)
-    return xgb.DMatrix(df)
+        return xgb.DMatrix(df, label, feature_names=df.columns)
+    return xgb.DMatrix(df, feature_names=df.columns)
 
 
 def xgb_table_resolver(obj, **kw):
@@ -64,8 +64,8 @@ def xgb_table_resolver(obj, **kw):
     df = tb.to_pandas()
     if 'label' in kw:
         label = df.pop(kw['label'])
-        return xgb.DMatrix(df, label)
-    return xgb.DMatrix(df)
+        return xgb.DMatrix(df, label, feature_names=df.columns)
+    return xgb.DMatrix(df, feature_names=df.columns)
 
 
 def register_xgb_types(builder_ctx, resolver_ctx):

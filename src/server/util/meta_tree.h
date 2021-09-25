@@ -66,7 +66,7 @@ Status DelDataOps(const json& tree, const std::string& name,
                   std::vector<IMetaService::op_t>& ops, bool& sync_remote);
 
 Status ShallowCopyOps(const json& tree, const ObjectID id,
-                      const ObjectID target,
+                      const json& extra_metadata, const ObjectID target,
                       std::vector<IMetaService::op_t>& ops, bool& transient);
 
 Status FilterAtInstance(const json& tree, const InstanceID& instance_id,

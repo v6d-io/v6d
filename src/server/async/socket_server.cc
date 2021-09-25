@@ -23,7 +23,9 @@ limitations under the License.
 
 #include "common/memory/fling.h"
 #include "common/util/callback.h"
+#include "common/util/functions.h"
 #include "common/util/json.h"
+#include "server/util/metrics.h"
 
 namespace vineyard {
 
@@ -105,16 +107,46 @@ void SocketConnection::doReadBody() {
                    });
 }
 
+#ifndef __REPORT_JSON_ERROR
+#ifndef NDEBUG
+#define __REPORT_JSON_ERROR(err, data) \
+  LOG(ERROR) << "json: " << err.what() << " when parsing" << data
+#else
+#define __REPORT_JSON_ERROR(err, data) LOG(ERROR) << "json: " << err.what()
+#endif  // NDEBUG
+#endif  // __REPORT_JSON_ERROR
+
+#ifndef TRY_READ_FROM_JSON
+#define TRY_READ_FROM_JSON(read_action, data)                  \
+  try {                                                        \
+    read_action;                                               \
+  } catch (std::out_of_range const& err) {                     \
+    __REPORT_JSON_ERROR(err, data);                            \
+    std::string message_out;                                   \
+    WriteErrorReply(Status::Invalid(err.what()), message_out); \
+    this->doWrite(message_out);                                \
+    return false;                                              \
+  } catch (json::exception const& err) {                       \
+    __REPORT_JSON_ERROR(err, data);                            \
+    std::string message_out;                                   \
+    WriteErrorReply(Status::Invalid(err.what()), message_out); \
+    this->doWrite(message_out);                                \
+    return false;                                              \
+  }
+
+#endif  // TRY_READ_FROM_JSON
+
 #ifndef TRY_READ_REQUEST
-#define TRY_READ_REQUEST(operation)                    \
-  do {                                                 \
-    auto read_status = (operation);                    \
-    if (!read_status.ok()) {                           \
-      std::string error_message_out;                   \
-      WriteErrorReply(read_status, error_message_out); \
-      self->doWrite(error_message_out);                \
-      return false;                                    \
-    }                                                  \
+#define TRY_READ_REQUEST(operation, data, ...)                             \
+  do {                                                                     \
+    Status read_status;                                                    \
+    TRY_READ_FROM_JSON(read_status = operation(data, ##__VA_ARGS__), data) \
+    if (!read_status.ok()) {                                               \
+      std::string error_message_out;                                       \
+      WriteErrorReply(read_status, error_message_out);                     \
+      self->doWrite(error_message_out);                                    \
+      return false;                                                        \
+    }                                                                      \
   } while (0)
 #endif  // TRY_READ_REQUEST
 
@@ -138,29 +170,7 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   std::istringstream is(message_in);
 
   // DON'T let vineyardd crash when the client is malicious.
-  try {
-    root = json::parse(message_in);
-  } catch (std::out_of_range const& err) {
-#ifndef NDEBUG
-    LOG(ERROR) << "json: " << err.what() << " when parsing" << message_in;
-#else
-    LOG(ERROR) << "json: " << err.what();
-#endif
-    std::string message_out;
-    WriteErrorReply(Status::Invalid(err.what()), message_out);
-    this->doWrite(message_out);
-    return false;
-  } catch (json::exception const& err) {
-#ifndef NDEBUG
-    LOG(ERROR) << "json: " << err.what() << " when parsing" << message_in;
-#else
-    LOG(ERROR) << "json: " << err.what();
-#endif
-    std::string message_out;
-    WriteErrorReply(Status::Invalid(err.what()), message_out);
-    this->doWrite(message_out);
-    return false;
-  }
+  TRY_READ_FROM_JSON(root = json::parse(message_in), message_in);
 
   std::string const& type = root["type"].get_ref<std::string const&>();
   CommandType cmd = ParseCommandType(type);
@@ -203,6 +213,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   }
   case CommandType::ShallowCopyRequest: {
     return doShallowCopy(root);
+  }
+  case CommandType::DeepCopyRequest: {
+    return doDeepCopy(root);
   }
   case CommandType::DelDataRequest: {
     return doDelData(root);
@@ -262,7 +275,7 @@ bool SocketConnection::processMessage(const std::string& message_in) {
 bool SocketConnection::doRegister(const json& root) {
   auto self(shared_from_this());
   std::string client_version, message_out;
-  TRY_READ_REQUEST(ReadRegisterRequest(root, client_version));
+  TRY_READ_REQUEST(ReadRegisterRequest, root, client_version);
   WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
                      server_ptr_->instance_id(), message_out);
   doWrite(message_out);
@@ -275,7 +288,7 @@ bool SocketConnection::doGetBuffers(const json& root) {
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetBuffersRequest(root, ids));
+  TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
   WriteGetBuffersReply(objects, message_out);
 
@@ -333,7 +346,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetBuffersRequest(root, ids));
+  TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
   WriteGetBuffersReply(objects, message_out);
 
@@ -357,7 +370,7 @@ bool SocketConnection::doCreateBuffer(const json& root) {
   std::shared_ptr<Payload> object;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadCreateBufferRequest(root, size));
+  TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
   ObjectID object_id;
   RESPONSE_ON_ERROR(
       server_ptr_->GetBulkStore()->Create(size, object_id, object));
@@ -365,14 +378,17 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   int store_fd = object->store_fd;
   int data_size = object->data_size;
-  this->doWrite(message_out, [self, store_fd, data_size](const Status& status) {
-    if (data_size > 0 &&
-        self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-      self->used_fds_.emplace(store_fd);
-      send_fd(self->nativeHandle(), store_fd);
-    }
-    return Status::OK();
-  });
+  this->doWrite(
+      message_out, [this, self, store_fd, data_size](const Status& status) {
+        if (data_size > 0 &&
+            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+          self->used_fds_.emplace(store_fd);
+          send_fd(self->nativeHandle(), store_fd);
+        }
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                    server_ptr_->GetBulkStore()->Footprint());
+        return Status::OK();
+      });
   return false;
 }
 
@@ -381,7 +397,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   size_t size;
   std::shared_ptr<Payload> object;
 
-  TRY_READ_REQUEST(ReadCreateBufferRequest(root, size));
+  TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
   ObjectID object_id;
   RESPONSE_ON_ERROR(
       server_ptr_->GetBulkStore()->Create(size, object_id, object));
@@ -405,6 +421,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
           }
         }
         self->doWrite(message_out);
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                    server_ptr_->GetBulkStore()->Footprint());
       });
   return false;
 }
@@ -412,7 +430,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
 bool SocketConnection::doDropBuffer(const json& root) {
   auto self(shared_from_this());
   ObjectID object_id = InvalidObjectID();
-  TRY_READ_REQUEST(ReadDropBufferRequest(root, object_id));
+  TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
   auto status = server_ptr_->GetBulkStore()->Delete(object_id);
   std::string message_out;
   if (status.ok()) {
@@ -421,6 +439,8 @@ bool SocketConnection::doDropBuffer(const json& root) {
     WriteErrorReply(status, message_out);
   }
   this->doWrite(message_out);
+  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+              server_ptr_->GetBulkStore()->Footprint());
   return false;
 }
 
@@ -428,11 +448,12 @@ bool SocketConnection::doGetData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool sync_remote = false, wait = false;
-  TRY_READ_REQUEST(ReadGetDataRequest(root, ids, sync_remote, wait));
+  double startTime = GetCurrentTime();
+  TRY_READ_REQUEST(ReadGetDataRequest, root, ids, sync_remote, wait);
   json tree;
   RESPONSE_ON_ERROR(server_ptr_->GetData(
       ids, sync_remote, wait, [self]() { return self->running_.load(); },
-      [self](const Status& status, const json& tree) {
+      [self, startTime](const Status& status, const json& tree) {
         std::string message_out;
         if (status.ok()) {
           WriteGetDataReply(tree, message_out);
@@ -441,6 +462,10 @@ bool SocketConnection::doGetData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "get",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "get");
         return Status::OK();
       }));
   return false;
@@ -451,7 +476,7 @@ bool SocketConnection::doListData(const json& root) {
   std::string pattern;
   bool regex;
   size_t limit;
-  TRY_READ_REQUEST(ReadListDataRequest(root, pattern, regex, limit));
+  TRY_READ_REQUEST(ReadListDataRequest, root, pattern, regex, limit);
   RESPONSE_ON_ERROR(server_ptr_->ListData(
       pattern, regex, limit, [self](const Status& status, const json& tree) {
         std::string message_out;
@@ -470,10 +495,12 @@ bool SocketConnection::doListData(const json& root) {
 bool SocketConnection::doCreateData(const json& root) {
   auto self(shared_from_this());
   json tree;
-  TRY_READ_REQUEST(ReadCreateDataRequest(root, tree));
+  double startTime = GetCurrentTime();
+  TRY_READ_REQUEST(ReadCreateDataRequest, root, tree);
   RESPONSE_ON_ERROR(server_ptr_->CreateData(
-      tree, [self](const Status& status, const ObjectID id,
-                   const Signature signature, const InstanceID instance_id) {
+      tree, [tree, self, startTime](const Status& status, const ObjectID id,
+                                    const Signature signature,
+                                    const InstanceID instance_id) {
         std::string message_out;
         if (status.ok()) {
           WriteCreateDataReply(id, signature, instance_id, message_out);
@@ -482,6 +509,14 @@ bool SocketConnection::doCreateData(const json& root) {
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "create",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "create");
+        LOG_SUMMARY("object",
+                    std::to_string(instance_id) + " " +
+                        tree.value("typename", json(nullptr)).dump(),
+                    1);
         return Status::OK();
       }));
   return false;
@@ -490,7 +525,7 @@ bool SocketConnection::doCreateData(const json& root) {
 bool SocketConnection::doPersist(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
-  TRY_READ_REQUEST(ReadPersistRequest(root, id));
+  TRY_READ_REQUEST(ReadPersistRequest, root, id);
   RESPONSE_ON_ERROR(server_ptr_->Persist(id, [self](const Status& status) {
     std::string message_out;
     if (status.ok()) {
@@ -508,7 +543,7 @@ bool SocketConnection::doPersist(const json& root) {
 bool SocketConnection::doIfPersist(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
-  TRY_READ_REQUEST(ReadIfPersistRequest(root, id));
+  TRY_READ_REQUEST(ReadIfPersistRequest, root, id);
   RESPONSE_ON_ERROR(server_ptr_->IfPersist(
       id, [self](const Status& status, bool const persist) {
         std::string message_out;
@@ -527,7 +562,7 @@ bool SocketConnection::doIfPersist(const json& root) {
 bool SocketConnection::doExists(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
-  TRY_READ_REQUEST(ReadExistsRequest(root, id));
+  TRY_READ_REQUEST(ReadExistsRequest, root, id);
   RESPONSE_ON_ERROR(
       server_ptr_->Exists(id, [self](const Status& status, bool const exists) {
         std::string message_out;
@@ -546,9 +581,10 @@ bool SocketConnection::doExists(const json& root) {
 bool SocketConnection::doShallowCopy(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
-  TRY_READ_REQUEST(ReadShallowCopyRequest(root, id));
+  json extra_metadata;
+  TRY_READ_REQUEST(ReadShallowCopyRequest, root, id, extra_metadata);
   RESPONSE_ON_ERROR(server_ptr_->ShallowCopy(
-      id, [self](const Status& status, const ObjectID target) {
+      id, extra_metadata, [self](const Status& status, const ObjectID target) {
         std::string message_out;
         if (status.ok()) {
           WriteShallowCopyReply(target, message_out);
@@ -562,18 +598,20 @@ bool SocketConnection::doShallowCopy(const json& root) {
   return false;
 }
 
-bool SocketConnection::doDelData(const json& root) {
+bool SocketConnection::doDeepCopy(const json& root) {
   auto self(shared_from_this());
-  std::vector<ObjectID> ids;
-  bool force, deep, fastpath;
-  TRY_READ_REQUEST(ReadDelDataRequest(root, ids, force, deep, fastpath));
-  RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, fastpath, [self](const Status& status) {
+  ObjectID object_id;
+  std::string peer, peer_rpc_endpoint;
+  TRY_READ_REQUEST(ReadDeepCopyRequest, root, object_id, peer,
+                   peer_rpc_endpoint);
+  RESPONSE_ON_ERROR(server_ptr_->DeepCopy(
+      object_id, peer, peer_rpc_endpoint,
+      [self](const Status& status, const ObjectID& target) {
         std::string message_out;
         if (status.ok()) {
-          WriteDelDataReply(message_out);
+          WriteDeepCopyReply(target, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          LOG(ERROR) << "Failed to Deep Copy object: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -582,10 +620,35 @@ bool SocketConnection::doDelData(const json& root) {
   return false;
 }
 
+bool SocketConnection::doDelData(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool force, deep, fastpath;
+  double startTime = GetCurrentTime();
+  TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, fastpath);
+  RESPONSE_ON_ERROR(server_ptr_->DelData(
+      ids, force, deep, fastpath, [self, startTime](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteDelDataReply(message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "delete",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "delete");
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doCreateStream(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
-  TRY_READ_REQUEST(ReadCreateStreamRequest(root, stream_id));
+  TRY_READ_REQUEST(ReadCreateStreamRequest, root, stream_id);
   auto status = server_ptr_->GetStreamStore()->Create(stream_id);
   std::string message_out;
   if (status.ok()) {
@@ -602,7 +665,7 @@ bool SocketConnection::doOpenStream(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
   int64_t mode;
-  TRY_READ_REQUEST(ReadOpenStreamRequest(root, stream_id, mode));
+  TRY_READ_REQUEST(ReadOpenStreamRequest, root, stream_id, mode);
   auto status = server_ptr_->GetStreamStore()->Open(stream_id, mode);
   std::string message_out;
   if (status.ok()) {
@@ -619,7 +682,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
   size_t size;
-  TRY_READ_REQUEST(ReadGetNextStreamChunkRequest(root, stream_id, size));
+  TRY_READ_REQUEST(ReadGetNextStreamChunkRequest, root, stream_id, size);
   RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Get(
       stream_id, size, [self](const Status& status, const ObjectID chunk) {
         std::string message_out;
@@ -652,7 +715,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
 bool SocketConnection::doPullNextStreamChunk(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
-  TRY_READ_REQUEST(ReadPullNextStreamChunkRequest(root, stream_id));
+  TRY_READ_REQUEST(ReadPullNextStreamChunkRequest, root, stream_id);
   this->associated_streams_.emplace(stream_id);
   RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Pull(
       stream_id, [self](const Status& status, const ObjectID chunk) {
@@ -674,7 +737,9 @@ bool SocketConnection::doPullNextStreamChunk(const json& root) {
                 return Status::OK();
               });
         } else {
-          LOG(ERROR) << status.ToString();
+          if (!status.IsStreamDrained()) {
+            LOG(ERROR) << status.ToString();
+          }
           WriteErrorReply(status, message_out);
           self->doWrite(message_out);
         }
@@ -687,7 +752,7 @@ bool SocketConnection::doStopStream(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
   bool failed;
-  TRY_READ_REQUEST(ReadStopStreamRequest(root, stream_id, failed));
+  TRY_READ_REQUEST(ReadStopStreamRequest, root, stream_id, failed);
   // NB: don't erase the metadata from meta_service, since there's may
   // reader listen on this stream.
   RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Stop(stream_id, failed));
@@ -701,7 +766,7 @@ bool SocketConnection::doPutName(const json& root) {
   auto self(shared_from_this());
   ObjectID object_id;
   std::string name;
-  TRY_READ_REQUEST(ReadPutNameRequest(root, object_id, name));
+  TRY_READ_REQUEST(ReadPutNameRequest, root, object_id, name);
   RESPONSE_ON_ERROR(
       server_ptr_->PutName(object_id, name, [self](const Status& status) {
         std::string message_out;
@@ -721,7 +786,7 @@ bool SocketConnection::doGetName(const json& root) {
   auto self(shared_from_this());
   std::string name;
   bool wait;
-  TRY_READ_REQUEST(ReadGetNameRequest(root, name, wait));
+  TRY_READ_REQUEST(ReadGetNameRequest, root, name, wait);
   RESPONSE_ON_ERROR(server_ptr_->GetName(
       name, wait, [self]() { return self->running_.load(); },
       [self](const Status& status, const ObjectID& object_id) {
@@ -741,7 +806,7 @@ bool SocketConnection::doGetName(const json& root) {
 bool SocketConnection::doDropName(const json& root) {
   auto self(shared_from_this());
   std::string name;
-  TRY_READ_REQUEST(ReadDropNameRequest(root, name));
+  TRY_READ_REQUEST(ReadDropNameRequest, root, name);
   RESPONSE_ON_ERROR(server_ptr_->DropName(name, [self](const Status& status) {
     std::string message_out;
     LOG(INFO) << "drop name callback: " << status;
@@ -763,8 +828,8 @@ bool SocketConnection::doMigrateObject(const json& root) {
   bool local;
   bool is_stream;
   std::string peer, peer_rpc_endpoint;
-  TRY_READ_REQUEST(ReadMigrateObjectRequest(root, object_id, local, is_stream,
-                                            peer, peer_rpc_endpoint));
+  TRY_READ_REQUEST(ReadMigrateObjectRequest, root, object_id, local, is_stream,
+                   peer, peer_rpc_endpoint);
   if (is_stream) {
     RESPONSE_ON_ERROR(server_ptr_->MigrateStream(
         object_id, local, peer, peer_rpc_endpoint,
@@ -800,7 +865,7 @@ bool SocketConnection::doMigrateObject(const json& root) {
 
 bool SocketConnection::doClusterMeta(const json& root) {
   auto self(shared_from_this());
-  TRY_READ_REQUEST(ReadClusterMetaRequest(root));
+  TRY_READ_REQUEST(ReadClusterMetaRequest, root);
   RESPONSE_ON_ERROR(
       server_ptr_->ClusterInfo([self](const Status& status, const json& tree) {
         std::string message_out;
@@ -818,7 +883,7 @@ bool SocketConnection::doClusterMeta(const json& root) {
 
 bool SocketConnection::doInstanceStatus(const json& root) {
   auto self(shared_from_this());
-  TRY_READ_REQUEST(ReadInstanceStatusRequest(root));
+  TRY_READ_REQUEST(ReadInstanceStatusRequest, root);
   RESPONSE_ON_ERROR(server_ptr_->InstanceStatus(
       [self](const Status& status, const json& tree) {
         std::string message_out;
@@ -839,7 +904,7 @@ bool SocketConnection::doMakeArena(const json& root) {
   size_t size;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadMakeArenaRequest(root, size));
+  TRY_READ_REQUEST(ReadMakeArenaRequest, root, size);
   if (size == std::numeric_limits<size_t>::max()) {
     size = server_ptr_->GetBulkStore()->FootprintLimit();
   }
@@ -865,7 +930,7 @@ bool SocketConnection::doFinalizeArena(const json& root) {
   std::vector<size_t> offsets, sizes;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadFinalizeArenaRequest(root, fd, offsets, sizes));
+  TRY_READ_REQUEST(ReadFinalizeArenaRequest, root, fd, offsets, sizes);
   RESPONSE_ON_ERROR(
       server_ptr_->GetBulkStore()->FinalizeArena(fd, offsets, sizes));
   WriteFinalizeArenaReply(message_out);
@@ -890,11 +955,11 @@ void SocketConnection::doWrite(const std::string& buf) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(to_send));
-  if (!write_in_progress) {
-    doAsyncWrite();
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(to_send));
   }
+  doAsyncWrite();
 }
 
 void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
@@ -905,19 +970,19 @@ void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(to_send));
-  if (!write_in_progress) {
-    doAsyncWrite(callback);
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(to_send));
   }
+  doAsyncWrite(callback);
 }
 
 void SocketConnection::doWrite(std::string&& buf) {
-  bool write_in_progress = !write_msgs_.empty();
-  write_msgs_.push_back(std::move(buf));
-  if (!write_in_progress) {
-    doAsyncWrite();
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    write_msgs_.push_back(std::move(buf));
   }
+  doAsyncWrite();
 }
 
 void SocketConnection::doStop() {
@@ -928,43 +993,58 @@ void SocketConnection::doStop() {
 }
 
 void SocketConnection::doAsyncWrite() {
-  auto self(shared_from_this());
-  asio::async_write(socket_,
-                    boost::asio::buffer(write_msgs_.front().data(),
-                                        write_msgs_.front().length()),
-                    [this, self](boost::system::error_code ec, std::size_t) {
-                      if (!ec) {
-                        write_msgs_.pop_front();
-                        if (!write_msgs_.empty()) {
-                          doAsyncWrite();
-                        }
-                      } else {
-                        doStop();
-                      }
-                    });
-}
-
-void SocketConnection::doAsyncWrite(callback_t<> callback) {
+  std::shared_ptr<std::string> payload = nullptr;
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    if (!write_msgs_.empty()) {
+      payload.reset(new std::string());
+      payload->swap(write_msgs_.front());
+      write_msgs_.pop_front();
+    }
+  }
+  if (payload == nullptr) {
+    return;
+  }
   auto self(shared_from_this());
   asio::async_write(
-      socket_,
-      boost::asio::buffer(write_msgs_.front().data(),
-                          write_msgs_.front().length()),
-      [this, self, callback](boost::system::error_code ec, std::size_t) {
+      socket_, boost::asio::buffer(payload->data(), payload->length()),
+      [this, self, payload](boost::system::error_code ec, std::size_t) {
         if (!ec) {
-          write_msgs_.pop_front();
-          if (!write_msgs_.empty()) {
-            doAsyncWrite(callback);
-          } else {
-            auto status = callback(Status::OK());
-            if (!status.ok()) {
-              doStop();
-            }
-          }
+          doAsyncWrite();
         } else {
           doStop();
         }
       });
+}
+
+void SocketConnection::doAsyncWrite(callback_t<> callback) {
+  std::shared_ptr<std::string> payload = nullptr;
+  {
+    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
+    if (!write_msgs_.empty()) {
+      payload.reset(new std::string());
+      payload->swap(write_msgs_.front());
+      write_msgs_.pop_front();
+    }
+  }
+  if (payload == nullptr) {
+    auto status = callback(Status::OK());
+    if (!status.ok()) {
+      doStop();
+    }
+    return;
+  }
+  auto self(shared_from_this());
+  asio::async_write(socket_,
+                    boost::asio::buffer(payload->data(), payload->length()),
+                    [this, self, payload, callback](
+                        boost::system::error_code ec, std::size_t) {
+                      if (!ec) {
+                        doAsyncWrite(callback);
+                      } else {
+                        doStop();
+                      }
+                    });
 }
 
 SocketServer::SocketServer(vs_ptr_t vs_ptr)

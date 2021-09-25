@@ -26,12 +26,13 @@ limitations under the License.
 
 #include "arrow/builder.h"
 #include "arrow/compute/api.h"
+#include "arrow/util/config.h"
 #include "arrow/util/key_value_metadata.h"
 #include "boost/leaf/all.hpp"
-#include "grape/utils/atomic_ops.h"
 
 #include "grape/serialization/in_archive.h"
 #include "grape/serialization/out_archive.h"
+#include "grape/utils/atomic_ops.h"
 #include "grape/utils/vertex_array.h"
 #include "grape/worker/comm_spec.h"
 
@@ -125,6 +126,9 @@ struct NbrUnit {
   }
 };
 
+template <typename VID_T>
+using NbrUnitDefault = NbrUnit<VID_T, property_graph_types::EID_TYPE>;
+
 template <typename DATA_T, typename NBR_T>
 class EdgeDataColumn {
  public:
@@ -168,6 +172,9 @@ class EdgeDataColumn<std::string, NBR_T> {
  private:
   std::shared_ptr<arrow::LargeStringArray> array_;
 };
+
+template <typename DATA_T, typename VID_T>
+using EdgeDataColumnDefault = EdgeDataColumn<DATA_T, NbrUnitDefault<VID_T>>;
 
 template <typename DATA_T, typename VID_T>
 class VertexDataColumn {
@@ -330,6 +337,9 @@ struct Nbr {
   const void** edata_arrays_;
 };
 
+template <typename VID_T>
+using NbrDefault = Nbr<VID_T, property_graph_types::EID_TYPE>;
+
 template <typename VID_T, typename EID_T>
 struct OffsetNbr {
  private:
@@ -460,6 +470,9 @@ class RawAdjList {
   const NbrUnit<VID_T, EID_T>* end_;
 };
 
+template <typename VID_T>
+using RawAdjListDefault = RawAdjList<VID_T, property_graph_types::EID_TYPE>;
+
 template <typename VID_T, typename EID_T>
 class AdjList {
  public:
@@ -493,6 +506,9 @@ class AdjList {
   const NbrUnit<VID_T, EID_T>* end_;
   const void** edata_arrays_;
 };
+
+template <typename VID_T>
+using AdjListDefault = AdjList<VID_T, property_graph_types::EID_TYPE>;
 
 /**
  * OffsetAdjList will offset the outer vertices' lid, makes it between "ivnum"
@@ -685,6 +701,9 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
     auto res = fields[i][0]->type();
     if (res->Equals(arrow::date32())) {
       res = arrow::int32();
+    }
+    if (res->Equals(arrow::date64())) {
+      res = arrow::int64();
     }
     if (res->Equals(arrow::timestamp(arrow::TimeUnit::SECOND))) {
       res = arrow::int64();

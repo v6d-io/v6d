@@ -16,8 +16,7 @@ limitations under the License.
 #include <bitset>
 #include <iostream>
 
-#include "glog/logging.h"
-
+#include "common/util/logging.h"
 #include "common/util/uuid.h"
 
 using vineyard::ObjectID;

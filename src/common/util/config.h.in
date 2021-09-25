@@ -12,6 +12,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package io.v6d.core.client.ds;
 
-public abstract class Object {}
+#ifndef SRC_COMMON_UTIL_CONFIG_H_
+#define SRC_COMMON_UTIL_CONFIG_H_
+
+#define VINEYARD_VERSION_MAJOR @VINEYARD_MAJOR_VERSION@
+#define VINEYARD_VERSION_MINOR @VINEYARD_MINOR_VERSION@
+#define VINEYARD_VERSION_PATCH @VINEYARD_PATCH_VERSION@
+
+#define VINEYARD_VERSION                                              \
+  ((VINEYARD_VERSION_MAJOR * 1000) + VINEYARD_VERSION_MINOR) * 1000 + \
+      VINEYARD_VERSION_PATCH
+#define VINEYARD_VERSION_STRING "@VINEYARD_VERSION@"
+
+#endif  // SRC_COMMON_UTIL_CONFIG_H_

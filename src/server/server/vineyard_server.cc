@@ -125,6 +125,7 @@ void VineyardServer::BackendReady() {
   try {
     if (ipc_server_ptr_) {
       ipc_server_ptr_->Start();
+      LOG_SUMMARY("ipc_connection_total", this->instance_id(), 1);
     }
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard IPC server: " << ex.what()
@@ -138,6 +139,7 @@ void VineyardServer::BackendReady() {
   try {
     if (rpc_server_ptr_) {
       rpc_server_ptr_->Start();
+      LOG_SUMMARY("rpc_connection_total", this->instance_id(), 1);
     } else {
       RPCReady();
     }
@@ -192,7 +194,6 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                                std::function<bool()> alive,
                                callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();
-  double startTime = GetCurrentTime();
   meta_service_ptr_->RequestToGetData(
       sync_remote, [this, ids, wait, alive, callback](const Status& status,
                                                       const json& meta) {
@@ -263,9 +264,6 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
           return status;
         }
       });
-  double endTime = GetCurrentTime();
-  LOG_SUMMARY("data_request_latency", "get", endTime - startTime);
-  LOG_COUNTER("data_requests_total", "get");
   return Status::OK();
 }
 
@@ -295,27 +293,28 @@ Status VineyardServer::CreateData(
     const json& tree,
     callback_t<const ObjectID, const Signature, const InstanceID> callback) {
   ENSURE_VINEYARDD_READY();
-  double startTime = GetCurrentTime();
+  ObjectID id = GenerateObjectID();
 #if !defined(NDEBUG)
   if (VLOG_IS_ON(10)) {
     VLOG(10) << "Got request from client to create data:";
     // NB: glog has limit on maximum lines.
-    std::cerr << tree.dump(4) << std::endl;
+    std::cerr << id << " " << ObjectIDToString(id) << " " << tree.dump(4)
+              << std::endl;
     VLOG(10) << "=========================================";
   }
 #endif
   // validate typename
   auto type_name_node = tree.value("typename", json(nullptr));
   if (type_name_node.is_null() || !type_name_node.is_string()) {
-    RETURN_ON_ERROR(callback(Status::MetaTreeInvalid("No typename field"),
-                             InvalidObjectID(), InvalidSignature(),
-                             UnspecifiedInstanceID()));
+    VINEYARD_DISCARD(callback(Status::MetaTreeInvalid("No typename field"),
+                              InvalidObjectID(), InvalidSignature(),
+                              UnspecifiedInstanceID()));
+    return Status::OK();
   }
   std::string const& type = type_name_node.get_ref<std::string const&>();
 
   RETURN_ON_ASSERT(type != "vineyard::Blob", "Blob has no metadata");
 
-  ObjectID id = GenerateObjectID();
   // Check if instance_id information available
   RETURN_ON_ASSERT(tree.contains("instance_id"),
                    "The instance_id filed must be presented");
@@ -343,9 +342,6 @@ Status VineyardServer::CreateData(
         }
       },
       boost::bind(callback, _1, id, signature, _2));
-  double endTime = GetCurrentTime();
-  LOG_SUMMARY("data_request_latency", "create", endTime - startTime);
-  LOG_COUNTER("data_requests_total", "create");
   return Status::OK();
 }
 
@@ -434,16 +430,18 @@ Status VineyardServer::Exists(const ObjectID id,
 }
 
 Status VineyardServer::ShallowCopy(const ObjectID id,
+                                   const json& extra_metadata,
                                    callback_t<const ObjectID> callback) {
   ENSURE_VINEYARDD_READY();
   RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be shallow copied");
   ObjectID target_id = GenerateObjectID();
   meta_service_ptr_->RequestToShallowCopy(
-      [id, target_id](const Status& status, const json& meta,
-                      std::vector<IMetaService::op_t>& ops, bool& transient) {
+      [id, extra_metadata, target_id](const Status& status, const json& meta,
+                                      std::vector<IMetaService::op_t>& ops,
+                                      bool& transient) {
         if (status.ok()) {
-          return CATCH_JSON_ERROR(
-              meta_tree::ShallowCopyOps(meta, id, target_id, ops, transient));
+          return CATCH_JSON_ERROR(meta_tree::ShallowCopyOps(
+              meta, id, extra_metadata, target_id, ops, transient));
         } else {
           LOG(ERROR) << status.ToString();
           return status;
@@ -452,6 +450,72 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
       [target_id, callback](const Status& status) {
         return callback(status, target_id);
       });
+  return Status::OK();
+}
+
+Status VineyardServer::DeepCopy(const ObjectID id, const std::string& peer,
+                                const std::string& peer_rpc_endpoint,
+                                callback_t<const ObjectID&> callback) {
+  ENSURE_VINEYARDD_READY();
+  RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be deep copied");
+  auto self(shared_from_this());
+  static const std::string migrate_process = "vineyard-migrate";
+
+  {
+    std::vector<std::string> args = {"--server",       "true",
+                                     "--ipc_socket",   IPCSocket(),
+                                     "--rpc_endpoint", peer_rpc_endpoint,
+                                     "--host",         "0.0.0.0",
+                                     "--local_copy",   "true"};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start(
+        migrate_process, args,
+        [callback, proc](Status const& status, std::string const& line) {
+          if (status.ok()) {
+            proc->Wait();
+            if (proc->ExitCode() != 0) {
+              return callback(
+                  Status::IOError("The migration server exit abnormally"),
+                  InvalidObjectID());
+            } else {
+              return Status::OK();
+            }
+          } else {
+            proc->Terminate();
+            return callback(status, InvalidObjectID());
+          }
+        });
+  }
+
+  {
+    std::vector<std::string> args = {"--client",       "true",
+                                     "--ipc_socket",   IPCSocket(),
+                                     "--rpc_endpoint", peer_rpc_endpoint,
+                                     "--host",         peer,
+                                     "--id",           VYObjectIDToString(id),
+                                     "--local_copy",   "true"};
+    auto proc = std::make_shared<Process>(context_);
+    proc->Start(
+        migrate_process, args,
+        [self, callback, proc](Status const& status, std::string const& line) {
+          if (status.ok()) {
+            proc->Wait();
+            if (proc->ExitCode() != 0) {
+              return callback(
+                  Status::IOError("The migration client exit abnormally"),
+                  InvalidObjectID());
+            }
+
+            ObjectID target_id = VYObjectIDFromString(line);
+            return callback(Status::OK(), target_id);
+          } else {
+            proc->Terminate();
+            return callback(status, InvalidObjectID());
+          }
+          return Status::OK();
+        });
+  }
+
   return Status::OK();
 }
 
@@ -718,7 +782,7 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         [self, callback, proc, stream_id](Status const& status,
                                           std::string const& line) {
           if (status.ok()) {
-            RETURN_ON_ERROR(callback(Status::OK(), stream_id));
+            VINEYARD_DISCARD(callback(Status::OK(), stream_id));
             if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration client exit abnormally");
             }
@@ -743,7 +807,7 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         [callback, proc](Status const& status, std::string const& line) {
           if (status.ok()) {
             ObjectID result_id = VYObjectIDFromString(line);
-            RETURN_ON_ERROR(callback(Status::OK(), result_id));
+            VINEYARD_DISCARD(callback(Status::OK(), result_id));
             if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration server exit abnormally");
             }

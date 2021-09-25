@@ -35,6 +35,9 @@ size_t Blob::size() const { return allocated_size(); }
 size_t Blob::allocated_size() const { return size_; }
 
 const char* Blob::data() const {
+  if (size_ == 0) {
+    return nullptr;
+  }
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
         "The object might be a (partially) remote object and the payload data "
@@ -199,13 +202,13 @@ void BlobWriter::Dump() const {
 std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   VINEYARD_ASSERT(!this->sealed(), "The blob writer has been already sealed.");
   // get blob and re-map
-  uint8_t* mmapped_ptr = nullptr;
+  uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (payload_.data_size > 0) {
     VINEYARD_CHECK_OK(client.mmapToClient(payload_.store_fd, payload_.map_size,
                                           false, true, &mmapped_ptr));
+    dist = mmapped_ptr + payload_.data_offset;
   }
-  auto buffer = arrow::Buffer::Wrap(mmapped_ptr + payload_.data_offset,
-                                    payload_.data_size);
+  auto buffer = arrow::Buffer::Wrap(dist, payload_.data_size);
 
   std::shared_ptr<Blob> blob(new Blob());
 
@@ -257,7 +260,6 @@ Status BufferSet::EmplaceBuffer(ObjectID const id,
       return Status::Invalid(
           "Invalid internal state: duplicated buffer, id = " +
           ObjectIDToString(id));
-
     } else {
       p->second = buffer;
       return Status::OK();

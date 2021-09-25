@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
     vineyard::FLAGS_prometheus = true;
   }
 
-  LOG(INFO) << "Hello vineyard!";
+  LOG(INFO) << "Hello vineyard v" << vineyard::vineyard_version() << "!";
 
   // Ignore SIGPIPE signals to avoid killing the server when writting to a lost
   // client connection.

@@ -55,6 +55,9 @@ class __attribute__((visibility("default"))) ObjectFactory {
    */
   template <typename T>
   static bool __attribute__((visibility("default"))) Register() {
+#ifndef NDEBUG
+    LOG(INFO) << "register data type: " << type_name<T>();
+#endif
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
     known_types.emplace(type_name<T>(),
@@ -73,6 +76,18 @@ class __attribute__((visibility("default"))) ObjectFactory {
   /**
    * @brief Initialize an instance by looking up the `type_name` in the factory,
    * and construct the object using the metadata.
+   *
+   * @param metadata The metadata used to construct the object.
+   */
+  static std::unique_ptr<Object> __attribute__((visibility("default")))
+  Create(ObjectMeta const& metadata);
+
+  /**
+   * @brief Initialize an instance by looking up the `type_name` in the factory,
+   * and construct the object using the metadata.
+   *
+   * We keep this variant with explicit `typename` for fine-grained controll of
+   * the resolver.
    *
    * @param type_name The type to be instantiated.
    * @param metadata The metadata used to construct the object.

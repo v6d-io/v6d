@@ -17,10 +17,9 @@ limitations under the License.
 #include <string>
 #include <thread>
 
-#include "glog/logging.h"
-
 #include "basic/ds/types.h"
 #include "common/util/json.h"
+#include "common/util/logging.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
