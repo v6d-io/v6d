@@ -25,7 +25,7 @@ use super::typename::type_name;
 
 pub struct ObjectFactory {}
 
-type ObjectInitializer = Box<dyn Object>;
+type ObjectInitializer = fn() -> Box<dyn Object>;
 
 pub trait Create {
     fn create() -> &'static Arc<Mutex<Box<dyn Object>>>;
@@ -36,9 +36,10 @@ impl ObjectFactory {
         let typename = type_name::<T>();
         println!("Register data type: {}", typename);
         let KNOWN_TYPES = ObjectFactory::get_known_types();
-        let tmp: Box<dyn Object> = (*T::create().lock().unwrap()).clone();
-        KNOWN_TYPES.lock().unwrap().insert(typename, tmp);
-        // Question: T::create()
+        let closure: ObjectInitializer = || {(*T::create().lock().unwrap()).clone()};
+        KNOWN_TYPES.lock().unwrap().insert(typename, closure);
+        // dyn_clone. Otherwise:
+        // cannot move out of dereference of `MutexGuard<'_, Box<dyn object::Object>>`
         true
     }
 
@@ -51,9 +52,7 @@ impl ObjectFactory {
                 "Failed to create an instance due to the unknown typename: {}",
                 type_name
             ),
-            Some(initialized_object) => Ok((*initialized_object).clone()),
-            // Question: Add dyn_clone crate
-            // 应该是个closure
+            Some(initialized_object) => Ok((*initialized_object)()),
         }
     }
 
@@ -73,7 +72,7 @@ impl ObjectFactory {
             Some(target) => {
                 // Question: 闭包返回一个新的实例
 
-                let mut target = (*target).clone();
+                let mut target = (*target)();
                 target.construct(&metadata);
                 return Ok(target);
             }
