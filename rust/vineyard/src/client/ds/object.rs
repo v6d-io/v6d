@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::io;
+use std::any::Any;
 use std::rc::Rc;
 
 use dyn_clone::DynClone;
@@ -35,7 +36,7 @@ pub trait ObjectBase {
     }
 }
 
-pub trait Object: ObjectBase + Send + DynClone {
+pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
     fn meta(&self) -> &ObjectMeta;
 
     fn meta_mut(&mut self) -> &mut ObjectMeta;
@@ -45,6 +46,10 @@ pub trait Object: ObjectBase + Send + DynClone {
     fn set_id(&mut self, id: ObjectID);
 
     fn set_meta(&mut self, meta: &ObjectMeta);
+
+    fn as_any (self: &'_ Self) -> &'_ dyn Any where Self : Sized + 'static {
+        self
+    }
 
     fn nbytes(&self) -> usize {
         self.meta().get_nbytes()

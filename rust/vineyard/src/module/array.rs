@@ -24,7 +24,7 @@ pub struct Array<T> {
     registered: bool,
     size: usize,
     buffer: Rc<Blob>,        // Question: unsafe Send // 不行用Arc
-    phantom: PhantomData<T>, // Question: if this is correct?
+    phantom: PhantomData<T>, 
 }
 
 unsafe impl<T> Send for Array<T> {}
@@ -82,9 +82,9 @@ impl<T> Array<T> {
     }
 }
 
-impl<T: Send + Clone> Registered for Array<T> {}
+impl<T: Send + Clone + std::fmt::Debug> Registered for Array<T> {}
 
-impl<T: Send + Clone> Object for Array<T> {
+impl<T: Send + Clone + std::fmt::Debug> Object for Array<T> {
     fn meta(&self) -> &ObjectMeta {
         &self.meta
     }

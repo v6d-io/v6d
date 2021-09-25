@@ -18,6 +18,7 @@ use std::io;
 use std::ops;
 use std::rc::{Rc, Weak};
 
+
 use arrow::buffer as arrow;
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
@@ -290,8 +291,6 @@ impl ObjectMeta {
         &self.buffer_set
     }
 
-    // TODO: Check logic
-
     pub fn find_all_blobs(&mut self, tree: &Value) {
         if tree.is_null() {
             return;
@@ -311,7 +310,6 @@ impl ObjectMeta {
                 cond2 = true;
             }
             if cond2 || cond1 {
-                // QUESTION // TODO
                 VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_null_buffer(member_id));
             }
         } else {
@@ -336,4 +334,5 @@ impl ObjectMeta {
             serde_json::Value::from(signature),
         );
     }
+
 }
