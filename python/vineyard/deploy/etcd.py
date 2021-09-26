@@ -72,8 +72,8 @@ def start_etcd(host=None, etcd_executable=None, data_dir=None):
     ]
     # yapf: enable
 
+    proc = None
     try:
-        proc = None
         if host is None:
             commands = []
         else:

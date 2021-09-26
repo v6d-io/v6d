@@ -61,6 +61,7 @@ def start_program(name, *args, verbose=False, nowait=False, search_paths=None, *
             cmdargs.append('--%s' % k)
             cmdargs.append(str(v))
 
+    proc = None
     try:
         prog = find_executable(name, search_paths=search_paths)
         print('Starting %s... with %s' % (prog, ' '.join(cmdargs)), flush=True)
@@ -77,7 +78,7 @@ def start_program(name, *args, verbose=False, nowait=False, search_paths=None, *
         yield proc
     finally:
         print('Terminating %s' % prog, flush=True)
-        if proc.poll() is None:
+        if proc is not None and proc.poll() is None:
             proc.terminate()
             try:
                 proc.wait(60)
@@ -114,27 +115,39 @@ def check_socket(address):
 __vineyardd_path = None
 
 
+def _check_executable(path):
+    if path and os.path.isfile(path) and os.access(path, os.R_OK | os.X_OK):
+        return path
+    return None
+
+
 def find_vineyardd_path():
     global __vineyardd_path
 
     if __vineyardd_path is not None:
         return __vineyardd_path
 
+    current_dir = os.path.dirname(__file__)
+
     # find vineyard in the package
     vineyardd_path = pkg_resources.resource_filename('vineyard', 'vineyardd')
-    if vineyardd_path:
-        if not (os.path.isfile(vineyardd_path) and os.access(vineyardd_path, os.R_OK)):
-            vineyardd_path = None
+    vineyardd_path = _check_executable(vineyardd_path)
 
     if vineyardd_path is None:
         vineyardd_path = shutil.which('vineyardd')
+        vineyardd_path = _check_executable(vineyardd_path)
 
     if vineyardd_path is None and 'VINEYARD_HOME' in os.environ:
         vineyardd_path = os.path.expandvars('$VINEYARD_HOME/vineyardd')
+        vineyardd_path = _check_executable(vineyardd_path)
 
-    if vineyardd_path is not None:
-        if not (os.path.isfile(vineyardd_path) and os.access(vineyardd_path, os.R_OK)):
-            vineyardd_path = None
+    if vineyardd_path is None:
+        vineyardd_path = os.path.join(current_dir, '..', 'vineyardd')
+        vineyardd_path = _check_executable(vineyardd_path)
+
+    if vineyardd_path is None:
+        vineyardd_path = os.path.join(current_dir, '..', '..', '..', 'build', 'bin', 'vineyardd')
+        vineyardd_path = _check_executable(vineyardd_path)
 
     __vineyardd_path = vineyardd_path
     return vineyardd_path
@@ -165,8 +178,8 @@ def start_etcd(host=None, etcd_executable=None):
     ]
     # yapf: enable
 
+    proc = None
     try:
-        proc = None
         if host is None:
             commands = []
         else:

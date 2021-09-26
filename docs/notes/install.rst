@@ -11,27 +11,6 @@ and can be easily installed with :code:`pip`:
 
     pip3 install vineyard
 
-Install etcd
-------------
-
-Start vineyard requires etcd (>= 3.3.0), a latest version of etcd can be downloaded via
-
-for Ubuntu or (Debian):
-
-.. code:: shell
-
-    wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz
-    tar zxvf etcd-v3.4.13-linux-amd64.tar.gz
-    export PATH=etcd-v3.4.13-linux-amd64:$PATH
-
-Or for MacOS:
-
-.. code:: shell
-
-    wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-darwin-amd64.zip
-    unzip etcd-v3.4.13-darwin-amd64.zip
-    export PATH=etcd-v3.4.13-darwin-amd64:$PATH
-
 Prepare dependencies
 --------------------
 

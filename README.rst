@@ -62,7 +62,7 @@ Vineyard is designed to solve these issues by providing:
 1. **In-memory** distributed data sharing in a **zero-copy** fashion to avoid
    introducing extra I/O costs by exploiting a shared memory manager derived from plasma.
 
-2. Built-in **out-of-box high-level** abstraction to share the distributed
+2. Built-in **out-of-the-box high-level** abstraction to share the distributed
    data with complex structures (e.g., distributed graphs)
    with nearly zero extra development cost, while the transformation costs are eliminated.
 
@@ -129,7 +129,7 @@ for example tensor could be `torch.tensor`, `tf.Tensor`, `mxnet.ndarray` etc., n
 mention that every `graph processing engine <https://github.com/alibaba/GraphScope>`_
 has its own graph structure representations.
 
-The variety of data abstractions makes the sharing hard. Vineyard provides out-of-box
+The variety of data abstractions makes the sharing hard. Vineyard provides out-of-the-box
 high-level data abstractions over in-memory blobs, by describing objects using hierarchical
 metadatas. Various computation systems can utilize the built-in high level data abstractions
 to exchange data with other systems in computation pipeline in a concise manner.
@@ -154,7 +154,7 @@ between systems such routines cannot be easily reused.
 
 Vineyard provides such common manipulate routines on immutable data as drivers.
 Besides sharing the high level data abstractions, vineyard extends the capability
-of data structures by drivers, enabling out-of-box reusable routines for the
+of data structures by drivers, enabling out-of-the-box reusable routines for the
 boilerplate part in computation jobs.
 
 Integrate with Kubernetes
