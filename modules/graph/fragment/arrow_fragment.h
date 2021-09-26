@@ -405,9 +405,8 @@ class ArrowFragment
                                     vid_t end) const {
     CHECK(start <= end && start <= ivnums_[label_id]);
     if (end <= ivnums_[label_id]) {
-      return vertex_range_t(
-          vid_parser_.GenerateId(0, label_id, start),
-          vid_parser_.GenerateId(0, label_id, end));
+      return vertex_range_t(vid_parser_.GenerateId(0, label_id, start),
+                            vid_parser_.GenerateId(0, label_id, end));
     } else {
       return vertex_range_t(
           vid_parser_.GenerateId(0, label_id, start),
