@@ -51,7 +51,7 @@ def find_airflow_packages(root):
 
 
 with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'python', 'vineyard', 'contrib', 'airflow',
-                       'README.rst'),
+                       'README.md'),
           encoding='utf-8',
           mode='r') as fp:
     long_description = fp.read()
@@ -62,7 +62,7 @@ setup(
     author_email='developers@v6d.io',
     description='Vineyard provider for apache-airflow',
     long_description=long_description,
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
     url='https://v6d.io',
     package_dir={'vineyard.contrib.airflow': 'python/vineyard/contrib/airflow'},
     packages=find_airflow_packages('python'),

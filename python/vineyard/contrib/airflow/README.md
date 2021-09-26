@@ -16,14 +16,12 @@ Requirements
 The following packages are needed to run Airflow on Vineyard,
 
 - airflow >= 2.1.0
-- vineyard >= 0.2.8
+- vineyard >= 0.2.12
 
 Configuration and Usage
 -----------------------
 
 1. Install required packages:
-
-    .. code:: bash
 
         pip3 install airflow-provider-vineyard
 
@@ -31,36 +29,26 @@ Configuration and Usage
 
     The vineyard server can be easier launched locally with the following command:
 
-    .. code:: bash
-
         vineyardd --socket=/tmp/vineyard.sock
 
-    See also our documentation about `launching vineyard`_.
+    See also our documentation about [launching vineyard][1].
 
 3. Configure Airflow to use the vineyard XCom backend by specifying the environment
     variable
-
-    .. code:: bash
 
         export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
 
     and configure the location of UNIX-domain IPC socket for vineyard client by
 
-    .. code:: bash
-
         export AIRFLOW__VINEYARD__IPC_SOCKET=/tmp/vineyard.sock
 
     or
-
-    .. code:: bash
 
         export VINEYARD_IPC_SOCKET=/tmp/vineyard.sock
 
 4. Launching your airflow scheduler and workers, and run the following DAG as example,
 
-
-    .. code:: python
-
+        ```python
         import numpy as np
         import pandas as pd
 
@@ -94,6 +82,7 @@ Configuration and Usage
             load(order_summary["total_order_value"])
 
         taskflow_etl_pandas_dag = taskflow_etl_pandas()
+        ```
 
 In above example, task :code:`extract` and task :code:`transform` shares a
 :code:`pandas.DataFrame` as the intermediate data, which is impossible as
@@ -101,20 +90,16 @@ it cannot be pickled and when the data is large, it cannot be fit into the
 table in backend databases of Airflow.
 
 The example is adapted from the documentation of Airflow, see also
-`Tutorial on the Taskflow API`_.
+[Tutorial on the Taskflow API][2].
 
 Run the tests
 -------------
 
 1. Start your vineyardd with the following command,
 
-    .. code:: bash
-
         python3 -m vineyard
 
 2. Set airflow to use the vineyard XCom backend, and run tests with pytest,
-
-    .. code:: bash
 
         export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
 
@@ -125,5 +110,5 @@ Run the tests
 The pandas test suite is not possible to run with the default XCom backend, vineyard
 enables airflow to exchange **complex** and **big** data without modify the DAG and tasks!
 
-.. _launching vineyard: https://v6d.io/notes/getting-started.html#starting-vineyard-server
-.. _Tutorial on the Taskflow API: https://airflow.apache.org/docs/apache-airflow/stable/tutorial_taskflow_api.html
+[1]: https://v6d.io/notes/getting-started.html#starting-vineyard-server
+[2]: https://airflow.apache.org/docs/apache-airflow/stable/tutorial_taskflow_api.html
