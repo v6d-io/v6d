@@ -211,7 +211,7 @@ unsigned threadTotalAllocatedBytes() {
   uint64_t allocated;
   size_t sz = sizeof(allocated);
   if (auto ret = vineyard_je_mallctl("thread.allocated",
-                                     reinterpret_cast<void*> & allocated, &sz,
+                                     reinterpret_cast<void*>(&allocated), &sz,
                                      NULL, 0)) {
     return -1;
   }
@@ -222,7 +222,7 @@ unsigned threadTotalDeallocatedBytes() {
   uint64_t deallocated;
   size_t sz = sizeof(deallocated);
   if (auto ret = vineyard_je_mallctl("thread.deallocated",
-                                     reinterpret_cast<void*> & deallocated, &sz,
+                                     reinterpret_cast<void*>(&deallocated), &sz,
                                      NULL, 0)) {
     return -1;
   }

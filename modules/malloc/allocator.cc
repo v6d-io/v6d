@@ -24,6 +24,8 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 
+#include "common/memory/arena.h"
+
 namespace vineyard {
 
 namespace detail {
@@ -37,6 +39,19 @@ static VineyardAllocator<void>& _DefaultAllocator() {
 static std::mutex allocator_mutex;
 
 }  // namespace detail
+
+}  // namespace vineyard
+
+namespace vineyard {
+
+namespace memory {
+
+static ArenaAllocator& _ArenaAllocator() {
+  static ArenaAllocator* default_allocator = new ArenaAllocator();
+  return *default_allocator;
+}
+
+}  // namespace memory
 
 }  // namespace vineyard
 
@@ -70,4 +85,12 @@ void vineyard_allocator_finalize(int renew) {
   } else {
     VINEYARD_CHECK_OK(default_allocator.Release());
   }
+}
+
+void* vineyard_arena_malloc(size_t size) {
+  return vineyard::memory::_ArenaAllocator().Allocate(size);
+}
+
+void vineyard_arena_free(void* ptr) {
+  vineyard::memory::_ArenaAllocator().Free(ptr, 0);
 }

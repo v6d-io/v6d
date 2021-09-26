@@ -12,10 +12,10 @@ limitations under the License.
 
 #if defined(WITH_JEMALLOC)
 
-#include "common/memory/jemalloc.h"
-#include "jemalloc/include/jemalloc/jemalloc.h"
 #include "common/memory/arena.h"
+#include "common/memory/jemalloc.h"
 #include "common/util/logging.h"
+#include "jemalloc/include/jemalloc/jemalloc.h"
 
 #include <thread>
 
@@ -33,6 +33,8 @@ ArenaAllocator::~ArenaAllocator() {
   if (extent_hooks_) {
     free(extent_hooks_);
   }
+
+  destroyAllArenas();
 }
 
 void* ArenaAllocator::Allocate(size_t size) {
@@ -46,6 +48,7 @@ void* ArenaAllocator::Allocate(size_t size) {
     arena_index = thread_arena_map_[id];
   }
 
+  // TODO: check flag
   return vineyard_je_mallocx(size, 0);
 }
 
@@ -69,7 +72,7 @@ unsigned ArenaAllocator::ThreadTotalAllocatedBytes() {
   uint64_t allocated;
   size_t sz = sizeof(allocated);
   if (auto ret = vineyard_je_mallctl("thread.allocated",
-                                     reinterpret_cast<void*> (& allocated), &sz,
+                                     reinterpret_cast<void*>(&allocated), &sz,
                                      NULL, 0)) {
     return -1;
   }
@@ -80,7 +83,7 @@ unsigned ArenaAllocator::ThreadTotalDeallocatedBytes() {
   uint64_t deallocated;
   size_t sz = sizeof(deallocated);
   if (auto ret = vineyard_je_mallctl("thread.deallocated",
-                                     reinterpret_cast<void*> (& deallocated), &sz,
+                                     reinterpret_cast<void*>(&deallocated), &sz,
                                      NULL, 0)) {
     return -1;
   }
