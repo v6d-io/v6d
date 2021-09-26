@@ -2,7 +2,7 @@ use std::io;
 
 pub fn VINEYARD_CHECK_OK<T>(status: io::Result<T>) {
     if let Err(_) = status {
-        println!("Error occurs")
+        panic!("Error occurs.")
     }
 }
 
@@ -18,9 +18,16 @@ pub fn RETURN_ON_ASSERT(b: bool) {
     }
 }
 
+pub fn RETURN_ON_ERROR<T>(status: io::Result<T>) {
+    if let Err(_) = status {
+        panic!("Error occurs.")
+    }
+}
+
 // Question
 pub fn CHECK(condition: bool) {
     if !condition {
         panic!()
     }
 }
+

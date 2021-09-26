@@ -18,7 +18,6 @@ use std::io;
 use std::ops;
 use std::rc::{Rc, Weak};
 
-
 use arrow::buffer as arrow;
 use serde_json::Result as JsonResult;
 use serde_json::{json, Value};
@@ -335,5 +334,4 @@ impl ObjectMeta {
             serde_json::Value::from(signature),
         );
     }
-
 }

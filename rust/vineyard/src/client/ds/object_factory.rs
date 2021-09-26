@@ -36,12 +36,12 @@ impl ObjectFactory {
         let typename = type_name::<T>();
         println!("Register data type: {}", typename);
         let KNOWN_TYPES = ObjectFactory::get_known_types();
-        let closure: ObjectInitializer = || {(T::create().lock().unwrap()).clone()};
+        let closure: ObjectInitializer = || (T::create().lock().unwrap()).clone();
         // 如果create返回不是引用的话：Arc::try_unwrap(*T::create()).unwrap().into_inner().unwrap()
         // dyn_clone. Otherwise:
         // cannot move out of dereference of `MutexGuard<'_, Box<dyn object::Object>>`
         KNOWN_TYPES.lock().unwrap().insert(typename, closure);
-        
+
         true
     }
 

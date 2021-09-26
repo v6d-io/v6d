@@ -1,9 +1,9 @@
 use std::any::Any;
+use std::cell::RefCell;
 use std::io;
 use std::marker::PhantomData;
 use std::mem;
 use std::rc::Rc;
-use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
@@ -17,7 +17,7 @@ use super::IPCClient;
 use super::ObjectMeta;
 use super::ENSURE_NOT_SEALED;
 use super::{Blob, BlobWriter};
-use super::{Object, ObjectBase, GlobalObject, ObjectBuilder, Registered};
+use super::{GlobalObject, Object, ObjectBase, ObjectBuilder, Registered};
 
 #[derive(Debug, Clone)]
 pub struct Array<T> {
@@ -25,15 +25,15 @@ pub struct Array<T> {
     id: ObjectID,
     registered: bool,
     size: usize,
-    buffer: Rc<Blob>,        // Question: unsafe Send // 不行用Arc
-    phantom: PhantomData<T>, 
+    buffer: Rc<Blob>, // Question: unsafe Send // 不行用Arc
+    phantom: PhantomData<T>,
 }
 
 unsafe impl<T> Send for Array<T> {}
 
-
 impl<T> Create for Array<T> {
-    fn create() -> &'static Arc<Mutex<Box<dyn Object>>> { // TODO: Drop reference
+    fn create() -> &'static Arc<Mutex<Box<dyn Object>>> {
+        // TODO: Drop reference
         lazy_static! {
             static ref SHARED_ARRAY: Arc<Mutex<Box<dyn Object>>> =
                 Arc::new(Mutex::new(Box::new(Array::default() as Array<i32>))); // FIXME
@@ -111,7 +111,6 @@ impl<T: Send + Clone + std::fmt::Debug> Object for Array<T> {
 
 impl<T: Send> ObjectBase for Array<T> {}
 
-
 pub trait ArrayBaseBuilder: ObjectBuilder {
     fn from(&mut self, client: &IPCClient) {}
 
@@ -141,7 +140,9 @@ pub trait ArrayBaseBuilder: ObjectBuilder {
             value.meta.set_global(true);
         }
         value.size = self.size();
-        value.meta.add_json_key_value(&"size_".to_string(), &json!(value.size));
+        value
+            .meta
+            .add_json_key_value(&"size_".to_string(), &json!(value.size));
         // Question: using __buffer__value_type = typename decltype(__value->buffer_)::element_type;
         // auto __value_buffer_ = std::dynamic_pointer_cast<__buffer__value_type>(
         //    buffer_->_Seal(client));
@@ -207,8 +208,6 @@ impl<T> ArrayBuilder<T> {
     pub fn size(&self) -> usize {
         self.size
     }
-
-
 }
 
 pub struct ResizableArrayBuilder<T> {
