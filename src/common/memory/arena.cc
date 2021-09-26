@@ -80,6 +80,10 @@ void ArenaAllocator::Free(void* ptr, size_t) {
   }
 }
 
+size_t ArenaAllocator::GetAllocatedSize(void* pointer) {
+  return vineyard_je_sallocx(pointer, 0);
+}
+
 unsigned ArenaAllocator::ThreadTotalAllocatedBytes() {
   uint64_t allocated;
   size_t sz = sizeof(allocated);

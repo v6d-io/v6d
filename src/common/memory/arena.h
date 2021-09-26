@@ -46,6 +46,8 @@ class ArenaAllocator {
 
   unsigned LookUp(void* ptr);
 
+  size_t GetAllocatedSize(void* pointer);
+
   unsigned ThreadTotalAllocatedBytes();
 
   unsigned ThreadTotalDeallocatedBytes();
