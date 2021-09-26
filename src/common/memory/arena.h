@@ -83,7 +83,7 @@ class ArenaAllocator {
 
   void resetAllArenas();
 
-  void preAllocateArena(void* space);
+  void preAllocateArena(void* space, const size_t size);
 
   static void* theAllocHook(extent_hooks_t* extent_hooks, void* new_addr,
                             size_t size, size_t alignment, bool* zero,

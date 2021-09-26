@@ -46,7 +46,7 @@ ArenaAllocator::~ArenaAllocator() {
 }
 
 void ArenaAllocator::Init(void* space, const size_t size) {
-  preAllocateArena(space);
+  preAllocateArena(space, size);
 }
 
 void* ArenaAllocator::Allocate(const size_t size, const size_t alignment) {
@@ -151,14 +151,26 @@ void ArenaAllocator::returnArena(unsigned arena_index) {
 
 unsigned ArenaAllocator::doCreateArena() {
   unsigned arena_index;
-  size_t sz = sizeof(unsigned);
+
+  size_t sz = sizeof(arena_index);
   if (auto ret = vineyard_je_mallctl(
           "arenas.create", &arena_index, &sz,
-          reinterpret_cast<void*>(extent_hooks_ != nullptr ? &extent_hooks_
-                                                           : nullptr),
-          (extent_hooks_ != nullptr ? sizeof(extent_hooks_) : 0))) {
+          nullptr, 0)) {
     int err = std::exchange(errno, ret);
     PLOG(ERROR) << "Failed to create arena";
+    errno = err;
+    return -1;
+  }
+
+  // set extent hooks
+  std::ostringstream hooks_key;
+  hooks_key << "arena." << std::to_string(arena_index) << ".extent_hooks";
+  size_t len = sizeof(extent_hooks_);
+  if (auto ret =
+      vineyard_je_mallctl(hooks_key.str().c_str(), &extent_hooks_, &len,
+                          nullptr, 0)) {
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to set extent hooks";
     errno = err;
     return -1;
   }
@@ -220,8 +232,9 @@ void ArenaAllocator::resetAllArenas() {
   LOG(INFO) << "Arenas reseted.";
 }
 
-void ArenaAllocator::preAllocateArena(void* space) {
+void ArenaAllocator::preAllocateArena(void* space, const size_t size) {
   int64_t shmmax = get_maximum_shared_memory();
+  LOG(INFO) << "Size of each arena " << shmmax;
   *extent_hooks_ = je_ehooks_default_extent_hooks;
   extent_hooks_->alloc = &theAllocHook;
   for (int i = 0; i < num_arenas_; i++) {
@@ -237,7 +250,7 @@ void ArenaAllocator::preAllocateArena(void* space) {
 
     arenas_[arena_index] = *arena;
     empty_arenas_[i] = arena_index;
-    LOG(INFO) << "Arena " << arena_index << " created";
+    LOG(INFO) << "Arena index " << arena_index << " created";
     // TODO: create TCACHE for each arena
   }
 }
