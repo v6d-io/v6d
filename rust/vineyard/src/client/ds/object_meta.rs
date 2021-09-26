@@ -232,8 +232,9 @@ impl ObjectMeta {
         ret.set_meta_data(self.client.as_ref().unwrap(), &child_meta);
         let all_buffer_set = self.buffer_set.borrow();
         let all_blobs = all_buffer_set.all_buffers();
-        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // 去掉
-        for (key, _) in ret_blobs.iter() {
+        // let ret_buffer_set = ret.buffer_set.borrow_mut();
+        // let ret_blobs = ret_buffer_set.all_buffers();//.clone(); // 去掉
+        for (key, _) in ret.buffer_set.clone().borrow_mut().all_buffers().iter() {
             if let Some(value) = all_blobs.get(key) {
                 ret.set_buffer(*key, &value); // clone
             }

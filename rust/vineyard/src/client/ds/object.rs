@@ -93,6 +93,8 @@ pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
 
 dyn_clone::clone_trait_object!(Object);
 
+pub trait GlobalObject {}
+
 pub trait ObjectBuilder: ObjectBase {
     fn sealed(&self) -> bool;
 

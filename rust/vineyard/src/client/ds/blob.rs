@@ -317,6 +317,10 @@ impl BufferSet {
         &self.buffers
     }
 
+    pub fn all_buffers_mut(&mut self) -> &mut HashMap<ObjectID, Option<Rc<arrow::Buffer>>> {
+        &mut self.buffers
+    }
+
     pub fn emplace_null_buffer(&mut self, id: ObjectID) -> io::Result<()> {
         if let Some(buf) = self.buffers.get(&id) {
             if let Some(_) = buf {
