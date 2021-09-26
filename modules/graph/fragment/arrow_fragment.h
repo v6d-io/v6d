@@ -401,6 +401,20 @@ class ArrowFragment
         vid_parser_.GenerateId(0, label_id, tvnums_[label_id]));
   }
 
+  vertex_range_t InnerVerticesSlice(label_id_t label_id, vid_t start,
+                                    vid_t end) const {
+    CHECK(start <= end && start <= ivnums_[label_id]);
+    if (end <= ivnums_[label_id]) {
+      return vertex_range_t(
+          vid_parser_.GenerateId(0, label_id, start),
+          vid_parser_.GenerateId(0, label_id, end));
+    } else {
+      return vertex_range_t(
+          vid_parser_.GenerateId(0, label_id, start),
+          vid_parser_.GenerateId(0, label_id, ivnums_[label_id]));
+    }
+  }
+
   inline vid_t GetVerticesNum(label_id_t label_id) const {
     return tvnums_[label_id];
   }
@@ -427,6 +441,19 @@ class ArrowFragment
   size_t GetTotalVerticesNum() const { return vm_ptr_->GetTotalNodesNum(); }
   size_t GetTotalVerticesNum(label_id_t label) const {
     return vm_ptr_->GetTotalNodesNum(label);
+  }
+
+  size_t GetEdgeNum() const {
+    size_t edge_num = 0;
+    for (label_id_t i = 0; i < vertex_label_num_; i++) {
+      for (label_id_t j = 0; j < edge_label_num_; j++) {
+        edge_num += oe_lists_.at(i).at(j)->length();
+        if (directed_) {
+          edge_num += ie_lists_.at(i).at(j)->length();
+        }
+      }
+    }
+    return edge_num;
   }
 
   template <typename T>
