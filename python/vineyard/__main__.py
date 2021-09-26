@@ -16,25 +16,7 @@
 # limitations under the License.
 #
 
-import subprocess
-import sys
-
-from .utils import find_vineyardd_path
-
-
-def deploy_vineyardd(args):
-    try:
-        vineyardd = find_vineyardd_path()
-        if vineyardd is None:
-            raise RuntimeError("Unable to vineyardd")
-        return subprocess.call([vineyardd] + args)
-    except KeyboardInterrupt:
-        return 0
-
-
-def main():
-    raise SystemExit(deploy_vineyardd(sys.argv[1:]))
-
+from .deploy.__main__ import main
 
 if __name__ == '__main__':
     main()

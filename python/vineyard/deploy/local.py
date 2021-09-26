@@ -122,6 +122,7 @@ def start_vineyardd(etcd_endpoints=None,
     if etcd_prefix is not None:
         command.extend(('--etcd_prefix', etcd_prefix))
 
+    proc = None
     try:
         proc = subprocess.Popen(command,
                                 env=env,

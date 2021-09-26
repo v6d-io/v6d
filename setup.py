@@ -159,6 +159,8 @@ setup(
         'wheel',
     ],
     install_requires=[
+        'argcomplete',
+        "etcd-distro",
         'numpy',
         'pandas<1.0.0; python_version<"3.6"',
         'pandas<1.2.0; python_version<"3.7"',
@@ -169,11 +171,11 @@ setup(
         'shared-memory38; python_version<="3.7"',
         'sortedcontainers',
         'treelib',
-        'argcomplete',
     ],
     extras_require={
         'dev': [
             'breathe',
+            'docutils==0.16',
             'libclang',
             'nbsphinx',
             'parsec',
@@ -183,7 +185,6 @@ setup(
             'pytest-datafiles',
             'sphinx>=3.0.2',
             'sphinx_rtd_theme',
-            'docutils==0.16',
         ],
         "kubernetes": [
             "kubernetes",
