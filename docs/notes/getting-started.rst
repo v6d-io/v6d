@@ -6,7 +6,7 @@ Starting vineyard server
 
 .. code:: console
      
-     $ vineyardd
+     $ python3 -m vineyard
 
 A vineyard daemon server will be launched on the underlying machine with default
 settings. The default ``socket`` is ``/var/run/vineyard.sock``, and it is
@@ -19,7 +19,7 @@ the same ``etcd_endpoint``. The default value of ``etcd_endpoint`` is
 ``http://127.0.0.1:2379``, and ``vineyard`` will launch the ``etcd_endpoint`` 
 in case the etcd servers are not started on the cluster.
 
-Use ``vineyardd --help`` for other parameter settings.
+Use ``python3 -m vineyard --help`` for other parameter settings.
 
 Connecting to vineyard
 ----------------------

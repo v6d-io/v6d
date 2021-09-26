@@ -83,4 +83,4 @@ could helps you when error occurs.
 
     .. code:: bash
 
-       vineyardd --socket=/tmp/vineyard.sock
+       python3 -m vineyard --socket=/tmp/vineyard.sock

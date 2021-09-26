@@ -97,8 +97,8 @@ def start_vineyardd(hosts=None,
     ]
     # yapf: enable
 
+    procs = []
     try:
-        procs = []
         for host in hosts:
             proc = subprocess.Popen(ssh_base_cmd(host) + command,
                                     env=env,

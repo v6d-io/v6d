@@ -110,7 +110,7 @@ Run the tests
 
     .. code:: bash
 
-        python3 -m vineyard.deploy
+        python3 -m vineyard
 
 2. Set airflow to use the vineyard XCom backend, and run tests with pytest,
 
