@@ -38,7 +38,9 @@ class ArenaAllocator {
 
   ~ArenaAllocator();
 
-  void* Allocate(size_t size);
+  void Init(void* space, const size_t size);
+
+  void* Allocate(const size_t size, const size_t alignment = Alignment);
 
   void Free(void* ptr, size_t);
 
@@ -47,6 +49,18 @@ class ArenaAllocator {
   unsigned ThreadTotalAllocatedBytes();
 
   unsigned ThreadTotalDeallocatedBytes();
+
+  static constexpr size_t Alignment = 1 * 1024 * 1024;  // 1MB
+
+  struct arena_t {
+    arena_t() {}
+    arena_t(uintptr_t base_pointer, uintptr_t base_end_pointer, uintptr_t pre_alloc)
+        : base_pointer_(base_pointer), base_end_pointer_(base_end_pointer),
+          pre_alloc_(pre_alloc) {}
+    uintptr_t base_pointer_ = reinterpret_cast<uintptr_t>(nullptr);
+    uintptr_t base_end_pointer_ = reinterpret_cast<uintptr_t>(nullptr);
+    uintptr_t pre_alloc_ = reinterpret_cast<uintptr_t>(nullptr);
+  };
 
  private:
   unsigned doCreateArena();
@@ -67,7 +81,11 @@ class ArenaAllocator {
 
   void resetAllArenas();
 
-  void preAllocateArena();
+  void preAllocateArena(void* space);
+
+  static void* theAllocHook(extent_hooks_t* extent_hooks, void* new_addr,
+                            size_t size, size_t alignment, bool* zero,
+                            bool* commit, unsigned arena_index);
 
  private:
   std::mutex arena_mutex_;
@@ -76,6 +94,7 @@ class ArenaAllocator {
   std::deque<unsigned> empty_arenas_;
   std::unordered_map<std::thread::id, unsigned> thread_arena_map_;
   extent_hooks_t* extent_hooks_ = nullptr;
+  static std::unordered_map<unsigned, arena_t> arenas_;
 };
 
 }  // namespace memory

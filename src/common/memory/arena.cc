@@ -16,17 +16,25 @@ limitations under the License.
 #include "common/memory/jemalloc.h"
 #include "common/util/logging.h"
 #include "jemalloc/include/jemalloc/jemalloc.h"
+#include "common/util/env.h"
+#define JEMALLOC_NO_DEMANGLE
+#include "jemalloc/include/jemalloc/jemalloc.h"
+#undef JEMALLOC_NO_DEMANGLE
 
 #include <thread>
+
+extern const extent_hooks_t je_ehooks_default_extent_hooks;
 
 namespace vineyard {
 
 namespace memory {
 
+std::unordered_map<unsigned, ArenaAllocator::arena_t> ArenaAllocator::arenas_;
+
 ArenaAllocator::ArenaAllocator()
     : num_arenas_(std::thread::hardware_concurrency()),
-      empty_arenas_(num_arenas_, 0) {
-  preAllocateArena();
+      empty_arenas_(num_arenas_, 0){
+  extent_hooks_ = static_cast<extent_hooks_t*>(malloc(sizeof(extent_hooks_t)));
 }
 
 ArenaAllocator::~ArenaAllocator() {
@@ -37,7 +45,11 @@ ArenaAllocator::~ArenaAllocator() {
   destroyAllArenas();
 }
 
-void* ArenaAllocator::Allocate(size_t size) {
+void ArenaAllocator::Init(void* space, const size_t size) {
+  preAllocateArena(space);
+}
+
+void* ArenaAllocator::Allocate(const size_t size, const size_t alignment) {
   std::thread::id id = std::this_thread::get_id();
   unsigned arena_index;
   if (thread_arena_map_.find(id) == thread_arena_map_.end()) {
@@ -49,7 +61,7 @@ void* ArenaAllocator::Allocate(size_t size) {
   }
 
   // TODO: check flag
-  return vineyard_je_mallocx(size, 0);
+  return vineyard_je_mallocx(std::max(size, alignment), 0);
 }
 
 unsigned int ArenaAllocator::LookUp(void* ptr) {
@@ -141,7 +153,10 @@ unsigned ArenaAllocator::doCreateArena() {
           reinterpret_cast<void*>(extent_hooks_ != nullptr ? &extent_hooks_
                                                            : nullptr),
           (extent_hooks_ != nullptr ? sizeof(extent_hooks_) : 0))) {
-    LOG(ERROR) << "failed to create arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to create arena";
+    errno = err;
+    return -1;
   }
   return arena_index;
 }
@@ -201,15 +216,40 @@ void ArenaAllocator::resetAllArenas() {
   LOG(INFO) << "Arenas reseted.";
 }
 
-void ArenaAllocator::preAllocateArena() {
+void ArenaAllocator::preAllocateArena(void* space) {
+  int64_t shmmax = get_maximum_shared_memory();
+  *extent_hooks_ = je_ehooks_default_extent_hooks;
+  extent_hooks_->alloc = &theAllocHook;
   for (int i = 0; i < num_arenas_; i++) {
     unsigned arena_index = doCreateArena();
+    if (arena_index == -1) {
+      return;
+    }
+
+    auto* arena = new arena_t(
+        reinterpret_cast<uintptr_t>(space) + i * shmmax,
+        reinterpret_cast<uintptr_t>(space) + (i + 1) * shmmax,
+        reinterpret_cast<uintptr_t>(space) + i * shmmax);
+
+    arenas_[arena_index] = *arena;
     empty_arenas_[i] = arena_index;
     LOG(INFO) << "Arena " << arena_index << " created";
     // TODO: create TCACHE for each arena
   }
 }
 
+void* ArenaAllocator::theAllocHook(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero, bool* commit, unsigned int arena_index) {
+  // align
+  arena_t& arena = arenas_[arena_index];
+  uintptr_t ret = (arena.pre_alloc_ + alignment - 1) & ~(alignment - 1);
+  if (ret + size > arena.base_end_pointer_) {
+    return nullptr;
+  }
+  arena.pre_alloc_ = ret + size;
+  // N.B. the shared memory is not pre-committed.
+  *commit = false;
+  return reinterpret_cast<void*>(ret);
+}
 }  // namespace memory
 
 }  // namespace vineyard
