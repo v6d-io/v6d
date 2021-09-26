@@ -20,13 +20,19 @@ import (
 	"errors"
 	"net"
 
+	vineyard "github.com/v6d-io/v6d/go/vineyard/pkg/client/ds"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
+type Signature = uint64
+
 type ClientBase struct {
 	// TODO: fix unify connection conn
-	conn      net.Conn
-	connected bool
+	conn       net.Conn
+	connected  bool
+	instanceID common.InstanceID
 }
 
 func (c *ClientBase) DoWrite(msgOut string) error {
@@ -146,4 +152,94 @@ func (c *ClientBase) DropName(name string) error {
 		return &common.ReplyError{Code: dropNameReply.Code, Type: dropNameReply.Type, Err: err}
 	}
 	return nil
+}
+
+func (c *ClientBase) GetData(id common.ObjectID, getDataReply *common.GetDataReply, syncRemote, wait bool) error {
+	if !c.connected {
+		return nil
+	}
+	var messageOut string
+	common.WriteGetDataRequest(id, syncRemote, wait, &messageOut)
+	if err := c.DoWrite(messageOut); err != nil {
+		return err
+	}
+	var messageIn string
+	if err := c.DoRead(&messageIn); err != nil {
+		return err
+	}
+	err := json.Unmarshal([]byte(messageIn), getDataReply)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ClientBase) SyncMetaData() error {
+	var getDataReply common.GetDataReply
+	return c.GetData(common.InvalidObjectID(), &getDataReply, true, false)
+}
+
+func (c *ClientBase) CreateData(tree interface{}, id *common.ObjectID, signature *Signature, instanceID *common.InstanceID) error {
+	if !c.connected {
+		return nil
+	}
+	var messageOut string
+	common.WriteCreateDataRequest(id, &messageOut)
+	if err := c.DoWrite(messageOut); err != nil {
+		return err
+	}
+	var messageIn string
+	if err := c.DoRead(&messageIn); err != nil {
+		return err
+	}
+	var createDataReply common.CreateDataReply
+	err := json.Unmarshal([]byte(messageIn), &createDataReply)
+	if err != nil {
+		return err
+	}
+	id = &createDataReply.ID
+	signature = &createDataReply.Signature
+	instanceID = &createDataReply.InstanceID
+	return nil
+}
+
+func (c *ClientBase) GetMetaData(id common.ObjectID, meta *vineyard.ObjectMeta, syncRemote bool) {
+	if !c.connected {
+		return
+	}
+	var getDataReply common.GetDataReply
+	err := c.GetData(id, &getDataReply, syncRemote, false)
+	if err != nil {
+		return
+	}
+	meta.Reset()
+	//meta.SetMetaData(*i, getDataReply) // TODO: how to set
+	// TODO
+	return
+}
+
+func (c *ClientBase) CreateMetaData(metaData *vineyard.ObjectMeta, id common.ObjectID) {
+	var instanceID common.InstanceID = c.instanceID
+	metaData.Init()
+	metaData.SetInstanceId(instanceID)
+	if !metaData.HasKey("nbytes") {
+		metaData.SetNBytes(0)
+	}
+	if metaData.InComplete() {
+		c.SyncMetaData() // TODO: check correctness
+	}
+	var signature Signature
+	err := c.CreateData(metaData.MetaData(), &id, &signature, &instanceID)
+	if err != nil {
+		metaData.SetId(id)
+		metaData.SetSignature(signature)
+		// metaData.SetClient(c) // TODO: fix type not match
+		metaData.SetInstanceId(instanceID)
+		if metaData.InComplete() {
+			var resultMeta vineyard.ObjectMeta
+			c.GetMetaData(id, &resultMeta, false)
+			metaData = &resultMeta
+		}
+	}
+	return
 }

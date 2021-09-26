@@ -30,6 +30,8 @@ const (
 	GET_NAME_REPLY         = "get_name_reply"
 	DROP_NAME_REQUEST      = "drop_name_request"
 	DROP_NAME_REPLY        = "drop_name_reply"
+	CREAT_BUFFER_REQUEST   = "create_buffer_request"
+	CREAT_DATA_REQUEST     = "create_data_request"
 	DEFAULT_SERVER_VERSION = "0.0.0"
 )
 
@@ -93,6 +95,49 @@ type DropNameReply struct {
 	Code int    `json:"code"`
 }
 
+type CreateBufferRequest struct {
+	Type string `json:"type"`
+	Size int    `json:"size"`
+}
+
+type CreateBufferReply struct {
+	Type    string        `json:"type"`
+	ID      ObjectID      `json:"id"`
+	Created CreatedBuffer `json:"created"`
+}
+
+type CreatedBuffer struct {
+	DataOffset int      `json:"data_offset"`
+	DataSize   int      `json:"data_size"`
+	MapSize    int      `json:"map_size"`
+	ID         ObjectID `json:"object_id"`
+	StoreFd    int      `json:"store_fd"`
+}
+
+type GetDataRequest struct {
+	Type       int      `json:"type"`
+	ID         ObjectID `json:"id"`
+	SyncRemote bool     `json:"sync_remote"`
+	Wait       bool     `json:"wait"`
+}
+
+type GetDataReply struct {
+	Type    string      `json:"type"`
+	Content interface{} `json:"content"`
+}
+
+type CreateDataRequest struct {
+	Type    string      `json:"type"`
+	Content interface{} `json:"content"`
+}
+
+type CreateDataReply struct {
+	Type       string   `json:"type"`
+	ID         ObjectID `json:"id"`
+	Signature  `json:"signature"`
+	InstanceID `json:"instance_id"`
+}
+
 func encodeMsg(data interface{}, msg *string) error {
 	msgBytes, err := json.Marshal(data)
 	if err != nil {
@@ -149,4 +194,29 @@ func WriteDropNameRequest(name string, msg *string) {
 	dropNameReq.Name = name
 
 	encodeMsg(dropNameReq, msg)
+}
+
+func WriteCreateBufferRequest(size int, msg *string) {
+	var createBufferReq CreateBufferRequest
+	createBufferReq.Type = CREAT_BUFFER_REQUEST
+	createBufferReq.Size = size
+
+	encodeMsg(createBufferReq, msg)
+}
+
+func WriteGetDataRequest(id ObjectID, syncRemote bool, wait bool, msg *string) {
+	var getDataReq GetDataRequest
+	getDataReq.ID = id
+	getDataReq.SyncRemote = syncRemote
+	getDataReq.Wait = wait
+
+	encodeMsg(getDataReq, msg)
+}
+
+func WriteCreateDataRequest(content interface{}, msg *string) {
+	var createDataReq CreateDataRequest
+	createDataReq.Type = CREAT_DATA_REQUEST
+	createDataReq.Content = content
+
+	encodeMsg(createDataReq, msg)
 }
