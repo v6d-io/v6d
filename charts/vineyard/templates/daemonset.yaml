@@ -147,8 +147,7 @@ spec:
           medium: Memory
       
       - name: log
-        emptyDir:
-          medium: Memory
+        emptyDir: {}
 
       {{- with .Values.nodeSelector }}
       nodeSelector:
