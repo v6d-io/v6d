@@ -38,11 +38,11 @@ class ArenaAllocator {
 
   ~ArenaAllocator();
 
-  void Init(void* space, const size_t size);
+  void* Init(void* space, const size_t size);
 
   void* Allocate(const size_t size, const size_t alignment = Alignment);
 
-  void Free(void* ptr, size_t);
+  void Free(void* ptr, size_t = 0);
 
   unsigned LookUp(void* ptr);
 

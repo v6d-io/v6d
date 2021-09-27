@@ -45,8 +45,9 @@ ArenaAllocator::~ArenaAllocator() {
   destroyAllArenas();
 }
 
-void ArenaAllocator::Init(void* space, const size_t size) {
+void* ArenaAllocator::Init(void* space, const size_t size) {
   preAllocateArena(space, size);
+  return space;
 }
 
 void* ArenaAllocator::Allocate(const size_t size, const size_t alignment) {
