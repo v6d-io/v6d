@@ -17,9 +17,13 @@
 #
 
 import numpy as np
-import nvidia.dali
-from nvidia.dali import pipeline_def
-import nvidia.dali.types as types
+
+try:
+    import nvidia.dali as dali
+    from nvidia.dali import pipeline_def
+    import nvidia.dali.types as types
+except ImportError:
+    dali = None
 
 from vineyard._C import ObjectMeta
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
@@ -29,15 +33,17 @@ device_id = 0
 batch_size = 2
 num_threads = 4
 
+if dali is not None:
 
-@pipeline_def
-def dali_pipe(data, label):
-    fdata = types.Constant(data)
-    flabel = types.Constant(label)
-    return fdata, flabel
+    @pipeline_def
+    def dali_pipe(data, label):
+        fdata = types.Constant(data)
+        flabel = types.Constant(label)
+        return fdata, flabel
 
 
 def dali_tensor_builder(client, value, **kw):
+    assert dali is not None, "Nvidia DALI is not available"
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor'
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
@@ -55,6 +61,7 @@ def dali_tensor_builder(client, value, **kw):
 
 
 def dali_tensor_resolver(obj, **kw):
+    assert dali is not None, "Nvidia DALI is not available"
     meta = obj.meta
     data_shape = from_json(meta['data_shape_'])
     label_shape = from_json(meta['label_shape_'])
@@ -71,7 +78,6 @@ def dali_tensor_resolver(obj, **kw):
 
 
 def register_dali_types(builder_ctx, resolver_ctx):
-
     if builder_ctx is not None:
         builder_ctx.register(nvidia.dali.backend.TensorListCPU, dali_tensor_builder)
 
