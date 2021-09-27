@@ -45,7 +45,7 @@ batch_size = 2
 num_threads = 4
 
 
-@pytest.mark.skip(dali is None, "nvidia-dali is not available")
+@pytest.mark.skip(dali is None, reason="nvidia-dali is not available")
 def test_dali_tensor(vineyard_client):
     @pipeline_def()
     def pipe():
