@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "client/allocator.h"
-
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -22,5 +20,6 @@ limitations under the License.
 
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/arena_allocator.h"
 
 namespace vineyard {}  // namespace vineyard

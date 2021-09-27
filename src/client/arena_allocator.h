@@ -37,7 +37,7 @@ struct VineyardArenaAllocator : public memory::ArenaAllocator {
   using pointer = T*;
   using const_pointer = const T*;
   using difference_type =
-  typename std::pointer_traits<pointer>::difference_type;
+      typename std::pointer_traits<pointer>::difference_type;
 
   explicit VineyardArenaAllocator(
       const size_t size = std::numeric_limits<size_t>::max())
@@ -46,7 +46,7 @@ struct VineyardArenaAllocator : public memory::ArenaAllocator {
   }
 
   VineyardArenaAllocator(Client& client,
-                    const size_t size = std::numeric_limits<size_t>::max())
+                         const size_t size = std::numeric_limits<size_t>::max())
       : client_(client) {
     VINEYARD_CHECK_OK(_initialize_arena(size));
   }
@@ -131,4 +131,4 @@ constexpr bool operator!=(const VineyardArenaAllocator<T>&,
 
 }  // namespace vineyard
 
-#endif  // SRC_CLIENT_ALLOCATOR_H_
+#endif  // SRC_CLIENT_ARENA_ALLOCATOR_H_

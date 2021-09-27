@@ -10,10 +10,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef SRC_COMMON_MEMORY_ARENA_H_
+#define SRC_COMMON_MEMORY_ARENA_H_
+
 #if defined(WITH_JEMALLOC)
 
 #include <sys/mman.h>
 
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -56,8 +60,10 @@ class ArenaAllocator {
 
   struct arena_t {
     arena_t() {}
-    arena_t(uintptr_t base_pointer, uintptr_t base_end_pointer, uintptr_t pre_alloc)
-        : base_pointer_(base_pointer), base_end_pointer_(base_end_pointer),
+    arena_t(uintptr_t base_pointer, uintptr_t base_end_pointer,
+            uintptr_t pre_alloc)
+        : base_pointer_(base_pointer),
+          base_end_pointer_(base_end_pointer),
           pre_alloc_(pre_alloc) {}
     uintptr_t base_pointer_ = reinterpret_cast<uintptr_t>(nullptr);
     uintptr_t base_end_pointer_ = reinterpret_cast<uintptr_t>(nullptr);
@@ -104,3 +110,5 @@ class ArenaAllocator {
 }  // namespace vineyard
 
 #endif  // WITH_JEMALLOC
+
+#endif  // SRC_COMMON_MEMORY_ARENA_H_

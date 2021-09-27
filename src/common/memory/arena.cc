@@ -12,16 +12,17 @@ limitations under the License.
 
 #if defined(WITH_JEMALLOC)
 
+#include <algorithm>
+#include <thread>
+
 #include "common/memory/arena.h"
 #include "common/memory/jemalloc.h"
-#include "common/util/logging.h"
-#include "jemalloc/include/jemalloc/jemalloc.h"
 #include "common/util/env.h"
+#include "common/util/logging.h"
+
 #define JEMALLOC_NO_DEMANGLE
 #include "jemalloc/include/jemalloc/jemalloc.h"
 #undef JEMALLOC_NO_DEMANGLE
-
-#include <thread>
 
 extern const extent_hooks_t je_ehooks_default_extent_hooks;
 
@@ -33,7 +34,7 @@ std::unordered_map<unsigned, ArenaAllocator::arena_t> ArenaAllocator::arenas_;
 
 ArenaAllocator::ArenaAllocator()
     : num_arenas_(std::thread::hardware_concurrency()),
-      empty_arenas_(num_arenas_, 0){
+      empty_arenas_(num_arenas_, 0) {
   extent_hooks_ = static_cast<extent_hooks_t*>(malloc(sizeof(extent_hooks_t)));
 }
 
@@ -53,8 +54,8 @@ void* ArenaAllocator::Init(void* space, const size_t size) {
 void* ArenaAllocator::Allocate(const size_t size, const size_t alignment) {
   std::thread::id id = std::this_thread::get_id();
   unsigned arena_index;
-  // Do not need lock here, as current thread is the only thread with thread id = id
-  // .find() would return a const iterator, which is thread safe
+  // Do not need lock here, as current thread is the only thread with thread id
+  // = id .find() would return a const iterator, which is thread safe
   if (thread_arena_map_.find(id) == thread_arena_map_.end()) {
     arena_index = requestArena();
     if (arena_index == -1)
@@ -73,7 +74,7 @@ unsigned int ArenaAllocator::LookUp(void* ptr) {
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena_index, &sz, &ptr,
                                      sizeof(ptr))) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "failed to lookup arena";;
+    PLOG(ERROR) << "failed to lookup arena";
     errno = err;
     return -1;
   }
@@ -141,7 +142,8 @@ unsigned ArenaAllocator::requestArena() {
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena_index,
                                      sizeof(arena_index))) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to bind arena " << arena_index << "for thread " << id;
+    PLOG(ERROR) << "Failed to bind arena " << arena_index << "for thread "
+                << id;
     errno = err;
     return -1;
   }
@@ -167,9 +169,8 @@ unsigned ArenaAllocator::doCreateArena() {
   unsigned arena_index;
 
   size_t sz = sizeof(arena_index);
-  if (auto ret = vineyard_je_mallctl(
-          "arenas.create", &arena_index, &sz,
-          nullptr, 0)) {
+  if (auto ret =
+          vineyard_je_mallctl("arenas.create", &arena_index, &sz, nullptr, 0)) {
     int err = std::exchange(errno, ret);
     PLOG(ERROR) << "Failed to create arena";
     errno = err;
@@ -180,9 +181,8 @@ unsigned ArenaAllocator::doCreateArena() {
   std::ostringstream hooks_key;
   hooks_key << "arena." << std::to_string(arena_index) << ".extent_hooks";
   size_t len = sizeof(extent_hooks_);
-  if (auto ret =
-      vineyard_je_mallctl(hooks_key.str().c_str(), &extent_hooks_, &len,
-                          nullptr, 0)) {
+  if (auto ret = vineyard_je_mallctl(hooks_key.str().c_str(), &extent_hooks_,
+                                     &len, nullptr, 0)) {
     int err = std::exchange(errno, ret);
     PLOG(ERROR) << "Failed to set extent hooks";
     errno = err;
@@ -265,10 +265,10 @@ void ArenaAllocator::preAllocateArena(void* space, const size_t size) {
       return;
     }
 
-    auto* arena = new arena_t(
-        reinterpret_cast<uintptr_t>(space) + i * shmmax,
-        reinterpret_cast<uintptr_t>(space) + (i + 1) * shmmax,
-        reinterpret_cast<uintptr_t>(space) + i * shmmax);
+    auto* arena =
+        new arena_t(reinterpret_cast<uintptr_t>(space) + i * shmmax,
+                    reinterpret_cast<uintptr_t>(space) + (i + 1) * shmmax,
+                    reinterpret_cast<uintptr_t>(space) + i * shmmax);
 
     arenas_[arena_index] = *arena;
     empty_arenas_[i] = arena_index;
@@ -277,7 +277,9 @@ void ArenaAllocator::preAllocateArena(void* space, const size_t size) {
   }
 }
 
-void* ArenaAllocator::theAllocHook(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero, bool* commit, unsigned int arena_index) {
+void* ArenaAllocator::theAllocHook(extent_hooks_t* extent_hooks, void* new_addr,
+                                   size_t size, size_t alignment, bool* zero,
+                                   bool* commit, unsigned int arena_index) {
   // align
   arena_t& arena = arenas_[arena_index];
   uintptr_t ret = (arena.pre_alloc_ + alignment - 1) & ~(alignment - 1);
