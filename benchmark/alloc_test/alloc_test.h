@@ -42,10 +42,6 @@
 
 #define FORCE_INLINE inline
 
-// referred from:
-//
-//	https://github.com/daanx/mimalloc-bench/blob/master/bench/alloc-test/allocator_tester.h
-
 class PRNG {
   uint64_t seedVal;
 

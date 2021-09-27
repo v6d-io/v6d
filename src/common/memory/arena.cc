@@ -69,7 +69,10 @@ unsigned int ArenaAllocator::LookUp(void* ptr) {
   size_t sz = sizeof(unsigned);
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena_index, &sz, &ptr,
                                      sizeof(ptr))) {
-    LOG(ERROR) << "failed to lookup arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to lookup arena";;
+    errno = err;
+    return -1;
   }
   return arena_index;
 }
@@ -90,6 +93,9 @@ unsigned ArenaAllocator::ThreadTotalAllocatedBytes() {
   if (auto ret = vineyard_je_mallctl("thread.allocated",
                                      reinterpret_cast<void*>(&allocated), &sz,
                                      NULL, 0)) {
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to get allocated bytes";
+    errno = err;
     return -1;
   }
   return allocated;
@@ -101,6 +107,9 @@ unsigned ArenaAllocator::ThreadTotalDeallocatedBytes() {
   if (auto ret = vineyard_je_mallctl("thread.deallocated",
                                      reinterpret_cast<void*>(&deallocated), &sz,
                                      NULL, 0)) {
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to get deallocated bytes";
+    errno = err;
     return -1;
   }
   return deallocated;
@@ -128,7 +137,9 @@ unsigned ArenaAllocator::requestArena() {
 
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena_index,
                                      sizeof(arena_index))) {
-    LOG(ERROR) << "failed to bind arena " << arena_index << "for thread " << id;
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to bind arena " << arena_index << "for thread " << id;
+    errno = err;
     return -1;
   }
 
@@ -184,13 +195,17 @@ int ArenaAllocator::doDestroyArena(unsigned arena_index) {
   miblen = sizeof(mib) / sizeof(size_t);
   if (auto ret =
           vineyard_je_mallctlnametomib("arena.0.destroy", mib, &miblen)) {
-    LOG(ERROR) << "Unexpected mallctlnametomib() failure";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to destroy arena " << arena_index;
+    errno = err;
     return -1;
   }
 
   mib[1] = arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
-    LOG(ERROR) << "failed to destroy arena " << arena_index;
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to destroy arena " << arena_index;
+    errno = err;
     return -1;
   }
   returnArena(arena_index);
@@ -203,13 +218,17 @@ int ArenaAllocator::doResetArena(unsigned arena_index) {
 
   miblen = sizeof(mib) / sizeof(size_t);
   if (auto ret = vineyard_je_mallctlnametomib("arena.0.reset", mib, &miblen)) {
-    LOG(ERROR) << "Unexpected mallctlnametomib() failure";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to reset arena " << arena_index;
+    errno = err;
     return -1;
   }
 
   mib[1] = (size_t) arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
-    LOG(ERROR) << "failed to destroy arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to reset arena " << arena_index;
+    errno = err;
     return -1;
   }
   return 0;
