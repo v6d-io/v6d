@@ -10,8 +10,11 @@ image:
   tag: ""
 
 metricImage:
-  repository: grok_exporter
+  repository: libvineyard/vineyardd-grok-exporter
   pullPolicy: Never
+  # Overrides the image tag whose default is the chart appVersion.
+  tagPrefix: ""
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""

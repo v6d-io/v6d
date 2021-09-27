@@ -1,0 +1,20 @@
+# target: libvineyard/vineyardd-grok-exporter:latest
+#
+FROM frolvlad/alpine-glibc:alpine-3.12
+
+RUN apk add --no-cache wget unzip \
+    && wget -q https://github.com/fstab/grok_exporter/releases/download/v1.0.0.RC5/grok_exporter-1.0.0.RC5.linux-amd64.zip \
+       -O /tmp/grok_exporter-1.0.0.RC5.linux-amd64.zip \
+    && unzip /tmp/grok_exporter-1.0.0.RC5.linux-amd64.zip -d /opt \
+    && rm /tmp/grok_exporter-1.0.0.RC5.linux-amd64.zip \
+    && mkdir -p /var/log/vineyard/
+
+COPY grok_exporter.yml /etc/grok_exporter.yml
+
+WORKDIR /opt/grok_exporter-1.0.0.RC5.linux-amd64/
+ENTRYPOINT ["./grok_exporter"]
+
+CMD ["-config", "/etc/grok_exporter.yml", "-disable-exporter-metrics"]
+
+EXPOSE 9144/tcp
+
