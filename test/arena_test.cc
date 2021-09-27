@@ -18,6 +18,7 @@ limitations under the License.
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <string>
 #include <thread>
@@ -90,7 +91,10 @@ unsigned requestArena() {
 
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena_index,
                                      sizeof(arena_index))) {
-    LOG(ERROR) << "failed to bind arena " << arena_index << "for thread " << id;
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to bind arena " << arena_index << "for thread "
+                << id;
+    errno = err;
     return -1;
   }
 
@@ -118,7 +122,9 @@ unsigned doCreateArena(extent_hooks_t* hooks) {
           "arenas.create", &arena_index, &sz,
           reinterpret_cast<void*>(hooks != NULL ? &hooks : NULL),
           (hooks != NULL ? sizeof(hooks) : 0))) {
-    LOG(ERROR) << "failed to create arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to create arena";
+    errno = err;
   }
   return arena_index;
 }
@@ -134,13 +140,17 @@ int doDestroyArena(unsigned arena_index) {
   miblen = sizeof(mib) / sizeof(size_t);
   if (auto ret =
           vineyard_je_mallctlnametomib("arena.0.destroy", mib, &miblen)) {
-    LOG(ERROR) << "Unexpected mallctlnametomib() failure";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Unexpected mallctlnametomib() failure";
+    errno = err;
     return -1;
   }
 
   mib[1] = arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
-    LOG(ERROR) << "failed to destroy arena " << arena_index;
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to destroy arena " << arena_index;
+    errno = err;
     return -1;
   }
   returnArena(arena_index);
@@ -153,13 +163,17 @@ int doResetArena(unsigned arena_index) {
 
   miblen = sizeof(mib) / sizeof(size_t);
   if (auto ret = vineyard_je_mallctlnametomib("arena.0.reset", mib, &miblen)) {
-    LOG(ERROR) << "Unexpected mallctlnametomib() failure";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Unexpected mallctlnametomib() failure";
+    errno = err;
     return -1;
   }
 
   mib[1] = (size_t) arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
-    LOG(ERROR) << "failed to destroy arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to destroy arena";
+    errno = err;
     return -1;
   }
   return 0;
@@ -184,15 +198,16 @@ void resetAllArenas(std::deque<unsigned>& arenas) {
 }
 
 void preAllocateArena(std::deque<unsigned>& arenas) {
-  for (int i = 0; i < NUM_ARENA; i++) {
-    unsigned arena1;
+  for (size_t i = 0; i < NUM_ARENA; i++) {
+    unsigned arena = -1;
     size_t sz = sizeof(unsigned);
-    if (auto ret =
-            vineyard_je_mallctl("arenas.create", &arena1, &sz, NULL, 0)) {
-      LOG(ERROR) << "failed to create arena";
+    if (auto ret = vineyard_je_mallctl("arenas.create", &arena, &sz, NULL, 0)) {
+      int err = std::exchange(errno, ret);
+      PLOG(ERROR) << "failed to create arena";
+      errno = err;
     }
-    arenas[i] = arena1;
-    LOG(INFO) << "Arena " << arena1 << " created";
+    arenas[i] = arena;
+    LOG(INFO) << "Arena " << arena << " created";
     // TODO: create TCACHE for each arena
   }
 }
@@ -202,7 +217,9 @@ unsigned arenaLookUp(void* ptr) {
   size_t sz = sizeof(unsigned);
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena_index, &sz, &ptr,
                                      sizeof(ptr))) {
+    int err = std::exchange(errno, ret);
     LOG(ERROR) << "failed to lookup arena";
+    errno = err;
   }
   return arena_index;
 }
@@ -213,6 +230,9 @@ unsigned threadTotalAllocatedBytes() {
   if (auto ret = vineyard_je_mallctl("thread.allocated",
                                      reinterpret_cast<void*>(&allocated), &sz,
                                      NULL, 0)) {
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to read thread.allocated";
+    errno = err;
     return -1;
   }
   return allocated;
@@ -224,6 +244,9 @@ unsigned threadTotalDeallocatedBytes() {
   if (auto ret = vineyard_je_mallctl("thread.deallocated",
                                      reinterpret_cast<void*>(&deallocated), &sz,
                                      NULL, 0)) {
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "Failed to read thread.deallocated";
+    errno = err;
     return -1;
   }
   return deallocated;
@@ -238,12 +261,16 @@ void CreateArenaTask() {
   unsigned arena1, arena2;
   size_t sz = sizeof(unsigned);
   if (auto ret = vineyard_je_mallctl("arenas.create", &arena1, &sz, NULL, 0)) {
-    LOG(ERROR) << "failed to create arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to create arena";
+    errno = err;
   }
   LOG(INFO) << "arena created for thread " << tid << ", index " << arena1;
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena1,
                                      sizeof(arena1))) {
-    LOG(ERROR) << "failed to bind arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to bind arena";
+    errno = err;
   }
 
   void* small = vineyard_je_mallocx(2 * MB, 0);
@@ -253,7 +280,9 @@ void CreateArenaTask() {
 
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena2, &sz, &small,
                                      sizeof(small))) {
-    LOG(ERROR) << "failed to lookup arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to lookup arena";
+    errno = err;
   }
 
   LOG(INFO) << "arena lookup for address" << small << ", index " << arena1;
@@ -269,9 +298,10 @@ void CreateArenaTask() {
  * each thread would request for an arena and bind themselves to it
  */
 void RequestArenaTask() {
-  unsigned arena_index = requestArena();
-  if (arena_index == -1)
+  int arena_index = requestArena();
+  if (arena_index == -1) {
     return;
+  }
   returnArena(arena_index);
 }
 
@@ -281,11 +311,12 @@ void RequestArenaTask() {
  */
 void AllocateTask() {
   std::thread::id id = std::this_thread::get_id();
-  unsigned arena_index;
+  int arena_index = -1;
   if (thread_arena_map.find(id) == thread_arena_map.end()) {
     arena_index = requestArena();
-    if (arena_index == -1)
+    if (arena_index == -1) {
       return;
+    }
   } else {
     arena_index = thread_arena_map[id];
   }
@@ -322,24 +353,30 @@ int BaseTest() {
   std::thread::id main_tid = std::this_thread::get_id();
   std::thread sub_thread(CreateArenaTask);
   if (auto ret = vineyard_je_mallctl("arenas.create", &arena1, &sz, NULL, 0)) {
-    LOG(ERROR) << "failed to create arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to create arena";
+    errno = err;
     return -1;
   }
   LOG(INFO) << "arena created for thread " << main_tid << ", index " << arena1;
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena1,
                                      sizeof(arena1))) {
-    LOG(ERROR) << "failed to bind arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to bind arena";
+    errno = err;
     return -1;
   }
   void* small = vineyard_je_mallocx(2 * MB, 0);
   if (small == nullptr) {
-    LOG(ERROR) << "Failed to allocate 2 MB";
+    PLOG(ERROR) << "Failed to allocate 2 MB";
     return -1;
   }
 
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena2, &sz, &small,
                                      sizeof(small))) {
-    LOG(ERROR) << "failed to lookup arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to lookup arena";
+    errno = err;
     return -1;
   }
 
@@ -356,12 +393,14 @@ int BaseTest() {
   arena2 = 0;
   void* ptr = vineyard_je_mallocx(2 * MB, MALLOCX_ARENA(50));
   if (ptr == nullptr) {
-    LOG(ERROR) << "Failed to allocate 2 MB";
+    PLOG(ERROR) << "Failed to allocate 2 MB";
     return -1;
   }
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena2, &sz, &ptr,
                                      sizeof(ptr))) {
-    LOG(ERROR) << "failed to lookup arena";
+    int err = std::exchange(errno, ret);
+    PLOG(ERROR) << "failed to lookup arena";
+    errno = err;
     return -1;
   }
 
@@ -413,7 +452,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "arena test starts...";
 
   LOG(INFO) << "Base test starts...";
-  if (auto ret = BaseTest()) {
+  if (BaseTest() == -1) {
     LOG(ERROR) << "Base test failed.";
     exit(-1);
   }
@@ -424,7 +463,7 @@ int main(int argc, char** argv) {
 
   /* Create new arena for each thread and allocate */
   LOG(INFO) << "***************Create arena test starts***************";
-  if (auto ret = CreateArenaTest()) {
+  if (CreateArenaTest() == -1) {
     LOG(ERROR) << "Create arena test failed.";
     exit(-1);
   }
@@ -432,14 +471,14 @@ int main(int argc, char** argv) {
 
   /* Request for arena in a fixed arena pool */
   LOG(INFO) << "***************Request arena test starts***************";
-  if (auto ret = RequestArenaTest()) {
+  if (RequestArenaTest() == -1) {
     LOG(ERROR) << "Request arena test failed.";
     exit(-1);
   }
 
   /* Allocate and free in requested arena */
   LOG(INFO) << "***************Allocate arena test starts***************";
-  if (auto ret = AllocateArenaTest()) {
+  if (AllocateArenaTest() == -1) {
     LOG(ERROR) << "Allocate arena test failed.";
     exit(-1);
   }

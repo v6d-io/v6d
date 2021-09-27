@@ -53,7 +53,7 @@ void* ArenaAllocator::Init(void* space, const size_t size) {
 
 void* ArenaAllocator::Allocate(const size_t size, const size_t alignment) {
   std::thread::id id = std::this_thread::get_id();
-  unsigned arena_index;
+  int arena_index = -1;
   // Do not need lock here, as current thread is the only thread with thread id
   // = id .find() would return a const iterator, which is thread safe
   if (thread_arena_map_.find(id) == thread_arena_map_.end()) {
@@ -68,8 +68,8 @@ void* ArenaAllocator::Allocate(const size_t size, const size_t alignment) {
   return vineyard_je_mallocx(std::max(size, alignment), 0);
 }
 
-unsigned int ArenaAllocator::LookUp(void* ptr) {
-  unsigned arena_index;
+int ArenaAllocator::LookUp(void* ptr) {
+  unsigned arena_index = -1;
   size_t sz = sizeof(unsigned);
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena_index, &sz, &ptr,
                                      sizeof(ptr))) {
@@ -119,10 +119,10 @@ unsigned ArenaAllocator::ThreadTotalDeallocatedBytes() {
   return deallocated;
 }
 
-unsigned ArenaAllocator::requestArena() {
+int ArenaAllocator::requestArena() {
   std::thread::id id = std::this_thread::get_id();
 
-  unsigned arena_index;
+  int arena_index;
   {
     std::lock_guard<std::mutex> guard(arena_mutex_);
     if (empty_arenas_.empty()) {
@@ -165,8 +165,8 @@ void ArenaAllocator::returnArena(unsigned arena_index) {
   }
 }
 
-unsigned ArenaAllocator::doCreateArena() {
-  unsigned arena_index;
+int ArenaAllocator::doCreateArena() {
+  int arena_index;
 
   size_t sz = sizeof(arena_index);
   if (auto ret =
@@ -260,7 +260,7 @@ void ArenaAllocator::preAllocateArena(void* space, const size_t size) {
   *extent_hooks_ = je_ehooks_default_extent_hooks;
   extent_hooks_->alloc = &theAllocHook;
   for (int i = 0; i < num_arenas_; i++) {
-    unsigned arena_index = doCreateArena();
+    int arena_index = doCreateArena();
     if (arena_index == -1) {
       return;
     }

@@ -18,8 +18,8 @@ limitations under the License.
 #include <mutex>
 #include <utility>
 
+#include "client/arena_allocator.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
-#include "client/arena_allocator.h"
 
 namespace vineyard {}  // namespace vineyard

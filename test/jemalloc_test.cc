@@ -28,8 +28,8 @@ limitations under the License.
 #include "client/allocator.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
-#include "common/memory/jemalloc.h"
 #include "common/memory/arena.h"
+#include "common/memory/jemalloc.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
 

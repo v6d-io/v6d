@@ -21,6 +21,7 @@ limitations under the License.
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <string>
 #include <thread>
@@ -48,7 +49,7 @@ class ArenaAllocator {
 
   void Free(void* ptr, size_t = 0);
 
-  unsigned LookUp(void* ptr);
+  int LookUp(void* ptr);
 
   size_t GetAllocatedSize(void* pointer);
 
@@ -71,9 +72,9 @@ class ArenaAllocator {
   };
 
  private:
-  unsigned doCreateArena();
+  int doCreateArena();
 
-  unsigned requestArena();
+  int requestArena();
 
   void returnArena(unsigned arena_index);
 
@@ -100,7 +101,7 @@ class ArenaAllocator {
   std::mutex thread_map_mutex_;
   int num_arenas_;
   std::deque<unsigned> empty_arenas_;
-  std::unordered_map<std::thread::id, unsigned> thread_arena_map_;
+  std::unordered_map<std::thread::id, int> thread_arena_map_;
   extent_hooks_t* extent_hooks_ = nullptr;
   static std::unordered_map<unsigned, arena_t> arenas_;
 };
