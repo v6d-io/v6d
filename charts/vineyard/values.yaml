@@ -9,6 +9,13 @@ image:
   tagPrefix: ""
   tag: ""
 
+metricImage:
+  repository: libvineyard/vineyardd-grok-exporter
+  pullPolicy: Never
+  # Overrides the image tag whose default is the chart appVersion.
+  tagPrefix: ""
+  tag: "latest"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
@@ -55,6 +62,9 @@ vineyard:
   #   /var/run/vineyard-{{ .Release.Namespace }}-{{ include "vineyard.fullname" . }}
   hostPath: ""
 
+  # Whether to print metrics for prometheus or not.
+  metrics: False
+  
 serviceAccountName: ""
 
 tolerations: {}
