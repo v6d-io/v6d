@@ -24,10 +24,6 @@ from vineyard._C import ObjectMeta
 from vineyard.core.resolver import resolver_context, default_resolver_context
 from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
 
-from vineyard._C import ObjectMeta
-from vineyard.core.resolver import resolver_context, default_resolver_context
-from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
-
 
 def torch_tensor_builder(client, value, **kw):
     meta = ObjectMeta()
