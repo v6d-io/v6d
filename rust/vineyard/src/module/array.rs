@@ -196,17 +196,53 @@ impl<T> ObjectBase for ArrayBuilder<T> {
     }
 }
 
-impl<T> ArrayBuilder<T> {
-    pub fn from(&mut self, client: &IPCClient, size: usize) -> ArrayBuilder<T> {
+impl<T: Clone> ArrayBuilder<T> {
+    pub fn from(&mut self, client: &IPCClient, size: usize) {
         ArrayBaseBuilder::from(self, client);
         self.size = size;
-        //VINEYARD_CHECK_OK(client.create_blob(size * mem::size_of<T>(), buffer_writer));
+        VINEYARD_CHECK_OK(client.create_blob(self.size * mem::size_of::<T>(), &self.buffer_writer));
+        let data = unsafe {
+            *self.buffer_writer.data()
+        };
+        //let data: T = data; // Question: Cannot coerce T to u8
+        //self.data = data;
+    }
 
-        panic!()
+    pub fn from_vec(&mut self, client: &IPCClient, vec: Vec<T>) {
+        self.from(client, vec.len());
+        let mut dest: *mut T = std::ptr::null_mut();
+        unsafe{
+            std::ptr::copy_nonoverlapping(vec.as_ptr(), dest, self.size*mem::size_of::<T>());
+        }
+        let data = unsafe{&*dest};
+        self.data = (*data).clone(); 
+        // Raw pointers don't move ownership. 
+        // Compiler cannot protect against bugs like use-after-free;
+    }
+
+    pub fn from_array(&mut self, client: &IPCClient, data: *const T, size: usize) {
+        self.from(client, size);
+        let mut dest: *mut T = std::ptr::null_mut();
+        unsafe{
+            std::ptr::copy_nonoverlapping(data, dest, self.size*mem::size_of::<T>());
+        }
+        let data = unsafe{&*dest};
+        self.data = (*data).clone(); 
     }
 
     pub fn size(&self) -> usize {
         self.size
+    }
+
+    // TODO: 
+    // T& operator[](size_t idx) { return data_[idx]; }
+
+    pub fn data_mut(&mut self) -> *mut T {
+        &mut self.data
+    }
+
+    pub fn data(&self) -> *const T {
+        &self.data
     }
 }
 
