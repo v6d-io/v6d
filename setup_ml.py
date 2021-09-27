@@ -82,6 +82,11 @@ setup(
     },
     zip_safe=False,
     install_requires=['vineyard', 'tensorflow', 'xgboost', 'torch', 'mxnet'],
+    extras_require={
+        'cuda': [
+            'nvidia-dali-cuda110',
+        ],
+    },
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
