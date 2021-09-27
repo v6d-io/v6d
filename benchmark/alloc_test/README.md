@@ -5,9 +5,7 @@ Referred from https://github.com/daanx/mimalloc-bench/blob/master/bench/alloc-te
 
 To run this benchmark, build with
 
- - g++ -std=c++11 bench_allocator.cpp -D WITH_JEMALLOC -I ../../src/ -I ../../modules
--I ../../thirdparty -I ../../thirdparty/ctti/include/ -lglog -lvineyard_client
--lvineyard_malloc -o alloc_test
+ - g++ -std=c++11 bench_allocator.cpp -D WITH_JEMALLOC -I ../../src/ -I ../../modules -I ../../thirdparty -I ../../thirdparty/ctti/include/ -lglog -lvineyard_client -lvineyard_malloc -o alloc_test
 
 Then run with
 

@@ -52,6 +52,8 @@ void ArenaAllocator::Init(void* space, const size_t size) {
 void* ArenaAllocator::Allocate(const size_t size, const size_t alignment) {
   std::thread::id id = std::this_thread::get_id();
   unsigned arena_index;
+  // Do not need lock here, as current thread is the only thread with thread id = id
+  // .find() would return a const iterator, which is thread safe
   if (thread_arena_map_.find(id) == thread_arena_map_.end()) {
     arena_index = requestArena();
     if (arena_index == -1)

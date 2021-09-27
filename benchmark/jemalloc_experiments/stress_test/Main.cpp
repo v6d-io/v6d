@@ -9,6 +9,7 @@
 #include "Distribution.h"
 #include "Mixer.h"
 
+
 DEFINE_int32(num_threads, 1, "number of threads to run");
 DEFINE_bool(print_malloc_stats, false, "print out malloc stats after running");
 DEFINE_string(distribution_file, "", "path to distribution file");
@@ -67,10 +68,10 @@ int main(int argc, char **argv) {
 
   if (FLAGS_print_malloc_stats) {
     if (vineyard_je_mallctl("thread.tcache.flush", NULL, NULL, NULL, 0)) {
-      std::cout << "je_mallctl failed. Exiting..." << std::endl;
+      LOG(INFO) << "je_mallctl failed. Exiting...";
     }
       vineyard_je_malloc_stats_print(NULL, NULL, NULL);
   }
 
-  std::cout << "Elapsed time: " << time << std::endl;
+  LOG(INFO) << "Elapsed time: " << time;
 }

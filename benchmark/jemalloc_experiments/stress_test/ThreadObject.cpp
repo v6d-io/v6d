@@ -55,7 +55,7 @@ void *ThreadObject::allocate(size_t sz) {
 #if defined(BENCH_SYSTEM)
     void *r = malloc(sz);
 #elif defined(BENCH_JEMALLOC)
-    void *r = vineyard_je_mallocx(sz, MALLOCX_TCACHE_NONE);;
+    void *r = vineyard_je_mallocx(sz, MALLOCX_TCACHE_NONE);
 #elif defined(BENCH_VINEYARD)
     void *r = vineyard_malloc(sz);
 #elif defined(BENCH_ARENA)
@@ -63,11 +63,8 @@ void *ThreadObject::allocate(size_t sz) {
 #else
     void *r = malloc(sz);
 #endif
-    // void *r = vineyard_je_mallocx(sz, MALLOCX_TCACHE_NONE);
-    // void *r = vineyard::_ArenaAllocator().Allocate(sz);
-    // void *r = vineyard_je_malloc(sz);
     if (r == nullptr) {
-      std::cout << "malloc failed." << std::endl;
+      LOG(ERROR) << "Malloc failed.";
       exit(1);
     }
     return r;

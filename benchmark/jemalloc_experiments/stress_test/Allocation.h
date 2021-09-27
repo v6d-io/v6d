@@ -1,13 +1,14 @@
 #include <vector>
 
 #include "malloc/allocator.h"
+#include "common/util/logging.h"
 
 // simple wrapper that pairs a group of allocated blocks with a lifetime
 
-#define BENCH_VINEYARD
+// #define BENCH_VINEYARD
 // #define BENCH_JEMALLOC
 // #define BENCH_SYSTEM
-// #define BENCH_ARENA
+#define BENCH_ARENA
 
 class Allocation {
 public:
