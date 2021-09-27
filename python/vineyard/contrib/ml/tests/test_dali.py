@@ -19,9 +19,12 @@
 import numpy as np
 import pytest
 
-import nvidia.dali
-from nvidia.dali import pipeline_def
-import nvidia.dali.types as types
+try:
+    import nvidia.dali as dali
+    from nvidia.dali import pipeline_def
+    import nvidia.dali.types as types
+except ImportError:
+    dali = None
 
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
@@ -42,6 +45,7 @@ batch_size = 2
 num_threads = 4
 
 
+@pytest.mark.skip(dali is None, "nvidia-dali is not available")
 def test_dali_tensor(vineyard_client):
     @pipeline_def()
     def pipe():
