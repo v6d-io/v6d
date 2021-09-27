@@ -29,19 +29,37 @@ namespace vineyard {
 
 constexpr int max_probe_retries = 15;
 
-bool validate_advertise_hostname(std::string const& hostname,
-                                 std::string const& port_string) {
+static bool validate_advertise_hostname(std::string& ipaddress,
+                                        std::string const& hostname) {
   struct addrinfo hints = {}, *addrs = nullptr;
+  memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
+  // hints.ai_protocol = IPPROTO_TCP;
+  hints.ai_flags |= AI_CANONNAME;
 
-  if (getaddrinfo(hostname.c_str(), port_string.c_str(), &hints, &addrs) != 0) {
+  if (getaddrinfo(hostname.c_str(), NULL, &hints, &addrs) != 0) {
     return false;
-  } else {
-    freeaddrinfo(addrs);
-    return true;
   }
+
+  struct addrinfo* addr = addrs;
+  // 16 should be ok, but we leave more buffer to keep it safer.
+  char ipaddr[32] = {'\0'};
+  // see also:
+  // https://gist.github.com/jirihnidek/bf7a2363e480491da72301b228b35d5d
+  while (addr != nullptr) {
+    if (addr->ai_family == AF_INET) {
+      inet_ntop(
+          addr->ai_family,
+          &(reinterpret_cast<struct sockaddr_in*>(addr->ai_addr))->sin_addr,
+          ipaddr, 32);
+      ipaddress = ipaddr;
+      break;
+    }
+    addr = addr->ai_next;
+  }
+  freeaddrinfo(addrs);
+  return true;
 }
 
 Status EtcdLauncher::LaunchEtcdServer(
@@ -98,17 +116,18 @@ Status EtcdLauncher::LaunchEtcdServer(
   std::string host_to_advertise;
   if (host_to_advertise.empty()) {
     for (auto const& h : local_hostnames_) {
-      if (h != "localhost" &&
-          validate_advertise_hostname(h, std::to_string(endpoint_port_))) {
-        host_to_advertise = h;
+      std::string ipaddress{};
+      if (h != "localhost" && validate_advertise_hostname(ipaddress, h)) {
+        host_to_advertise = ipaddress;
         break;
       }
     }
   }
   if (host_to_advertise.empty()) {
     for (auto const& h : local_ip_addresses_) {
+      std::string ipaddress{};
       if (h != "127.0.0.1" && h != "0.0.0.0" &&
-          validate_advertise_hostname(h, std::to_string(endpoint_port_))) {
+          validate_advertise_hostname(ipaddress, h)) {
         host_to_advertise = h;
         break;
       }
