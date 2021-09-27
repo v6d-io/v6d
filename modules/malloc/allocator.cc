@@ -21,6 +21,7 @@ limitations under the License.
 #include <utility>
 
 #include "client/allocator.h"
+#include "client/arena_allocator.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 
@@ -31,6 +32,12 @@ namespace detail {
 static VineyardAllocator<void>& _DefaultAllocator() {
   static VineyardAllocator<void>* default_allocator =
       new VineyardAllocator<void>{};
+  return *default_allocator;
+}
+
+static VineyardArenaAllocator<void>& _ArenaAllocator() {
+  static VineyardArenaAllocator<void>* default_allocator =
+      new VineyardArenaAllocator<void>{};
   return *default_allocator;
 }
 
@@ -70,4 +77,12 @@ void vineyard_allocator_finalize(int renew) {
   } else {
     VINEYARD_CHECK_OK(default_allocator.Release());
   }
+}
+
+void* vineyard_arena_malloc(size_t size) {
+  return vineyard::detail::_ArenaAllocator().Allocate(size);
+}
+
+void vineyard_arena_free(void* ptr) {
+  vineyard::detail::_ArenaAllocator().Free(ptr, 0);
 }

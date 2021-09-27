@@ -28,41 +28,44 @@ limitations under the License.
 #include "client/allocator.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
+#include "common/memory/arena.h"
 #include "common/memory/jemalloc.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
 
 int main(int argc, char** argv) {
   void* base = malloc(20 * 1024 * 1024);
-
-  auto jemalloc_allocator = vineyard::memory::Jemalloc();
-
-  void* space = jemalloc_allocator.Init(base, 20 * 1024 * 1024);
+#ifdef VINEYARD_BENCH
+  auto* jemalloc_allocator = new vineyard::memory::Jemalloc();
+#else
+  auto* jemalloc_allocator = new vineyard::memory::ArenaAllocator();
+#endif
+  void* space = jemalloc_allocator->Init(base, 20 * 1024 * 1024);
   if (nullptr == space) {
     LOG(INFO) << "init failed";
     return 0;
   }
 
-  void* p1 = jemalloc_allocator.Allocate(1 * 1024 * 1024);
+  void* p1 = jemalloc_allocator->Allocate(1 * 1024 * 1024);
 
-  LOG(INFO) << "p1 " << jemalloc_allocator.GetAllocatedSize(p1);
-  jemalloc_allocator.Free(p1);
+  LOG(INFO) << "p1 " << jemalloc_allocator->GetAllocatedSize(p1);
+  jemalloc_allocator->Free(p1);
 
-  void* p2 = jemalloc_allocator.Allocate(2 * 1024 * 1024);
-  LOG(INFO) << "p2 " << jemalloc_allocator.GetAllocatedSize(p2);
-  jemalloc_allocator.Free(p2);
+  void* p2 = jemalloc_allocator->Allocate(2 * 1024 * 1024);
+  LOG(INFO) << "p2 " << jemalloc_allocator->GetAllocatedSize(p2);
+  jemalloc_allocator->Free(p2);
 
-  void* p3 = jemalloc_allocator.Allocate(4 * 1024 * 1024);
-  LOG(INFO) << "p3 " << jemalloc_allocator.GetAllocatedSize(p3);
-  jemalloc_allocator.Free(p3);
+  void* p3 = jemalloc_allocator->Allocate(4 * 1024 * 1024);
+  LOG(INFO) << "p3 " << jemalloc_allocator->GetAllocatedSize(p3);
+  jemalloc_allocator->Free(p3);
 
-  void* p4 = jemalloc_allocator.Allocate(8 * 1024 * 1024);
-  LOG(INFO) << "p4 " << jemalloc_allocator.GetAllocatedSize(p4);
-  jemalloc_allocator.Free(p4);
+  void* p4 = jemalloc_allocator->Allocate(8 * 1024 * 1024);
+  LOG(INFO) << "p4 " << jemalloc_allocator->GetAllocatedSize(p4);
+  jemalloc_allocator->Free(p4);
 
-  void* p5 = jemalloc_allocator.Allocate(16 * 1024 * 1024);
-  LOG(INFO) << "p5 " << jemalloc_allocator.GetAllocatedSize(p5);
-  jemalloc_allocator.Free(p5);
+  void* p5 = jemalloc_allocator->Allocate(16 * 1024 * 1024);
+  LOG(INFO) << "p5 " << jemalloc_allocator->GetAllocatedSize(p5);
+  jemalloc_allocator->Free(p5);
 
   LOG(INFO) << "Passed jemalloc tests...";
 

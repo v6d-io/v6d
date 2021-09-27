@@ -33,6 +33,9 @@ void vineyard_free(void* pointer);
 void vineyard_freeze(void* pointer);
 void vineyard_allocator_finalize(int renew);
 
+void* vineyard_arena_malloc(size_t size);
+void vineyard_arena_free(void* ptr);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus
