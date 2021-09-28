@@ -481,7 +481,7 @@ if(BUILD_VINEYARD_CLIENT)
                                                  nlohmann_json::nlohmann_json
                                                  ${GLOG_LIBRARIES}
     )
-    if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
+    if(BUILD_VINEYARD_PYPI_PACKAGES)
         # required on mac, but cause problem on linux.
         target_link_libraries(vineyard_client PUBLIC ${GFLAGS_LIBRARIES})
     endif()
@@ -499,7 +499,7 @@ if(BUILD_VINEYARD_CLIENT)
         $<INSTALL_INTERFACE:include>
     )
 
-    if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
+    if(BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)
         add_target_link_options(vineyard_client PRIVATE OPTIONS -Os)
     endif()
