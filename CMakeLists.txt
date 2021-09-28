@@ -545,7 +545,6 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         DEPENDS _C vineyard_internal_registry
         COMMENT "Copying python extensions."
         VERBATIM)
-    endif()
 endif()
 
 add_custom_target(vineyard_tests)
