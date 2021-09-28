@@ -30,7 +30,7 @@ RUN cd /work/libvineyard && \
     cd build && \
     export PATH=$PATH:/opt/python/$python/bin && \
     pip install -U pip setuptools wheel && \
-    cmake .. -DBUILD_SHARED_LIBS=ON \
+    cmake .. -DBUILD_SHARED_LIBS=OFF \
              -DBUILD_VINEYARD_SERVER=OFF \
              -DBUILD_VINEYARD_CLIENT=ON \
              -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \

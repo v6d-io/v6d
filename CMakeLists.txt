@@ -198,6 +198,13 @@ macro(find_jemalloc)
     # ./configure --disable-shared --enable-static --disable-cxx --enable-stats --disable-initial-exec-tls --with-jemalloc-prefix=vineyard_je_
     #
     # see: https://github.com/jemalloc/jemalloc/issues/1237
+
+    # install jemalloc when building static libs
+    if(BUILD_SHARED_LIBS)
+        set(JEMALLOC_INSTALL_CMD echo "No need to install for jemalloc.")
+    else()
+        set(JEMALLOC_INSTALL_CMD echo "Installing jemalloc." && ${CMAKE_MAKE_PROGRAM} install)
+    endif()
     ExternalProject_Add(libjemalloc
         SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"
         BUILD_IN_SOURCE 1
@@ -210,8 +217,8 @@ macro(find_jemalloc)
             --enable-stats
             --disable-initial-exec-tls
             --with-jemalloc-prefix=vineyard_je_
-        BUILD_COMMAND ${MAKE}
-        INSTALL_COMMAND echo "No need to install for jemalloc."
+        BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
+        INSTALL_COMMAND ${JEMALLOC_INSTALL_CMD}
     )
 
     add_library(jemalloc STATIC IMPORTED)
