@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <dlfcn.h>
+
 #include "client/ds/object_factory.h"
 
 #include "client/ds/i_object.h"
@@ -58,9 +60,46 @@ ObjectFactory::FactoryRef() {
 
 std::unordered_map<std::string, ObjectFactory::object_initializer_t>&
 ObjectFactory::getKnownTypes() {
-  static std::unordered_map<std::string, object_initializer_t>* known_types =
-      new std::unordered_map<std::string, object_initializer_t>();
-  return *known_types;
+  if (__GetGlobalRegistry == nullptr) {
+    // load from the global scope
+    DVLOG(10) << "Looking up vineyard registry from the global scope";
+    __GetGlobalRegistry = reinterpret_cast<void* (*) ()>(
+        dlsym(RTLD_DEFAULT, "__GetGlobalVineyardRegistry"));
+
+    LOG(INFO) << "get env: " << getenv("LD_LIBRARY_PATH");
+
+    // load the shared library, then search from the global scope
+    if (__GetGlobalRegistry == nullptr) {
+      DVLOG(10) << "Loading the vineyard registry library";
+#if __APPLE__
+      __registry_handle = dlopen("libvineyard_internal_registry.dylib",
+                                 RTLD_GLOBAL | RTLD_LAZY);
+#else
+      __registry_handle =
+          dlopen("libvineyard_internal_registry.so", RTLD_GLOBAL | RTLD_LAZY);
+#endif
+    }
+    VINEYARD_ASSERT(__registry_handle != nullptr,
+                    "Failed to load the vineyard global registry registry: " +
+                        std::string(dlerror()));
+
+    // load from the global scope, again
+    DVLOG(10) << "Looking up vineyard registry from the global scope again";
+    __GetGlobalRegistry = reinterpret_cast<void* (*) ()>(
+        dlsym(RTLD_DEFAULT, "__GetGlobalVineyardRegistry"));
+  }
+  VINEYARD_ASSERT(__GetGlobalRegistry != nullptr,
+                  "Failed to load the vineyard global registry entries");
+
+  static std::unordered_map<std::string,
+                            object_initializer_t>* __internal__registry =
+      reinterpret_cast<std::unordered_map<std::string, object_initializer_t>*>(
+          __GetGlobalRegistry());
+
+  return *__internal__registry;
 }
+
+void* ObjectFactory::__registry_handle = nullptr;
+void* (*ObjectFactory::__GetGlobalRegistry)() = nullptr;
 
 }  // namespace vineyard

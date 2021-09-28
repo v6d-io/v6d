@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef SRC_CLIENT_DS_OBJECT_FACTORY_H_
 #define SRC_CLIENT_DS_OBJECT_FACTORY_H_
 
+#include <dlfcn.h>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -41,7 +43,7 @@ inline void FORCE_INSTANTIATE(T) {}
  * @brief ObjectFactory is responsible for type registration at the
  * initialization time.
  */
-class __attribute__((visibility("default"))) ObjectFactory {
+class ObjectFactory {
  public:
   using object_initializer_t = std::unique_ptr<Object> (*)();
 
@@ -54,10 +56,8 @@ class __attribute__((visibility("default"))) ObjectFactory {
    * resolution.
    */
   template <typename T>
-  static bool __attribute__((visibility("default"))) Register() {
-#ifndef NDEBUG
-    LOG(INFO) << "register data type: " << type_name<T>();
-#endif
+  static bool Register() {
+    DVLOG(10) << "register data type: " << type_name<T>();
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
     known_types.emplace(type_name<T>(),
@@ -70,8 +70,7 @@ class __attribute__((visibility("default"))) ObjectFactory {
    *
    * @param type_name The type to be instantiated.
    */
-  static std::unique_ptr<Object> __attribute__((visibility("default")))
-  Create(std::string const& type_name);
+  static std::unique_ptr<Object> Create(std::string const& type_name);
 
   /**
    * @brief Initialize an instance by looking up the `type_name` in the factory,
@@ -79,8 +78,7 @@ class __attribute__((visibility("default"))) ObjectFactory {
    *
    * @param metadata The metadata used to construct the object.
    */
-  static std::unique_ptr<Object> __attribute__((visibility("default")))
-  Create(ObjectMeta const& metadata);
+  static std::unique_ptr<Object> Create(ObjectMeta const& metadata);
 
   /**
    * @brief Initialize an instance by looking up the `type_name` in the factory,
@@ -92,25 +90,28 @@ class __attribute__((visibility("default"))) ObjectFactory {
    * @param type_name The type to be instantiated.
    * @param metadata The metadata used to construct the object.
    */
-  static std::unique_ptr<Object> __attribute__((visibility("default")))
-  Create(std::string const& type_name, ObjectMeta const& metadata);
+  static std::unique_ptr<Object> Create(std::string const& type_name,
+                                        ObjectMeta const& metadata);
 
   /**
    * @brief Expose the internal registered types.
    *
    * @return A map of type name to that type's static constructor.
    */
-  static const std::unordered_map<
-      std::string, object_initializer_t>& __attribute__((visibility("default")))
+  static const std::unordered_map<std::string, object_initializer_t>&
   FactoryRef();
 
  private:
   // https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
-  static std::unordered_map<std::string, object_initializer_t>& __attribute__((
-      visibility("default"))) getKnownTypes();
+  static std::unordered_map<std::string, object_initializer_t>& getKnownTypes();
+
+  static void* __registry_handle;
+  static void* (*__GetGlobalRegistry)();
 };
 
 }  // namespace vineyard
+
+extern "C" void* __GetGlobalVineyardRegistry();
 
 namespace std {
 

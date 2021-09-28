@@ -58,19 +58,21 @@
 #define VINEYARD_ASSERT_NO_VERBOSE(condition)                             \
   do {                                                                    \
     if (!(condition)) {                                                   \
-      VINEYARD_CHECK_OK(::vineyard::Status::AssertionFailed(#condition)); \
+      LOG(ERROR) << "Assertion failed in \"" #condition "\"";             \
+      throw std::runtime_error("Assertion failed in \"" #condition "\""); \
     }                                                                     \
   } while (0)
 #endif  // VINEYARD_ASSERT_NO_VERBOSE
 
 // check the condition, raise and runtime error, rather than `FATAL` when false
 #ifndef VINEYARD_ASSERT_VERBOSE
-#define VINEYARD_ASSERT_VERBOSE(condition, message)          \
-  do {                                                       \
-    if (!(condition)) {                                      \
-      VINEYARD_CHECK_OK(::vineyard::Status::AssertionFailed( \
-          std::string(#condition ": ") + message));          \
-    }                                                        \
+#define VINEYARD_ASSERT_VERBOSE(condition, message)                         \
+  do {                                                                      \
+    if (!(condition)) {                                                     \
+      LOG(ERROR) << "Assertion failed in \"" #condition "\": " << message;  \
+      throw std::runtime_error("Assertion failed in \"" #condition "\": " + \
+                               std::string(message));                       \
+    }                                                                       \
   } while (0)
 #endif  // VINEYARD_ASSERT_VERBOSE
 

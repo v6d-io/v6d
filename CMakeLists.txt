@@ -441,14 +441,30 @@ endif()
 
 # build vineyard-client
 if(BUILD_VINEYARD_CLIENT)
-    file(GLOB_RECURSE CLIENT_SRC_FILES "src/client/*.cc"
-                                    "src/common/memory/*.cc"
-                                    "src/common/util/*.cc"
+    # build vineyard registry library, it can only be a shared library, as a singleton.
+    add_library(vineyard_internal_registry SHARED "src/client/ds/factory/registry.cc")
+    target_link_libraries(vineyard_internal_registry PRIVATE ${CMAKE_DL_LIBS})
+    if(BUILD_VINEYARD_PYPI_PACKAGES)
+        target_compile_options(vineyard_internal_registry PRIVATE -Os)
+        add_target_link_options(vineyard_internal_registry PRIVATE OPTIONS -Os)
+        add_target_link_options(vineyard_internal_registry PRIVATE OPTIONS -Os)
+    endif()
+    install_vineyard_target(vineyard_internal_registry)
+    add_target_link_options(vineyard_internal_registry PRIVATE
+                            OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
+    )
+
+    # build the vineyard client library
+    file(GLOB CLIENT_SRC_FILES "src/client/*.cc"
+                               "src/client/ds/*.cc"
+                               "src/common/memory/*.cc"
+                               "src/common/util/*.cc"
     )
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
-    add_library(vineyard_client SHARED ${CLIENT_SRC_FILES})
-    target_link_libraries(vineyard_client PUBLIC Threads::Threads
+    add_library(vineyard_client ${CLIENT_SRC_FILES})
+    target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
+                                                 Threads::Threads
                                                  nlohmann_json::nlohmann_json
                                                  ${GLOG_LIBRARIES}
     )
@@ -510,6 +526,9 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     add_target_link_options(_C PRIVATE
                             OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
     )
+    if(NOT APPLE)
+        add_target_link_options(_C PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
+    endif()
     if(BUILD_VINEYARD_PYPI_PACKAGES AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(_C PRIVATE -static)
         add_target_link_options(_C PRIVATE OPTIONS -static)
@@ -518,12 +537,26 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         add_target_link_options(_C PRIVATE OPTIONS -Os)
     endif()
 
-    add_custom_target(vineyard_client_python
-        ALL
-        COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
-        DEPENDS _C
-        COMMENT "Copying python extensions."
-        VERBATIM)
+    if(APPLE)
+        add_custom_target(vineyard_client_python
+            ALL
+            COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
+            COMMAND cp "$<TARGET_FILE:vineyard_internal_registry>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
+            # COMMAND install_name_tool -change "@rpath/libvineyard_internal_registry.dylib"
+            #                                   "${PROJECT_SOURCE_DIR}/python/vineyard/libvineyard_internal_registry.dylib"
+            #                                   "${PROJECT_SOURCE_DIR}/python/vineyard/libvineyard_internal_registry.dylib"
+            DEPENDS _C vineyard_internal_registry
+            COMMENT "Copying python extensions."
+            VERBATIM)
+    else()
+        add_custom_target(vineyard_client_python
+            ALL
+            COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
+            COMMAND cp "$<TARGET_FILE:vineyard_internal_registry>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
+            DEPENDS _C vineyard_internal_registry
+            COMMENT "Copying python extensions."
+            VERBATIM)
+    endif()
 endif()
 
 add_custom_target(vineyard_tests)
