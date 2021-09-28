@@ -455,6 +455,11 @@ if(BUILD_VINEYARD_CLIENT)
     )
     set_target_properties(vineyard_internal_registry PROPERTIES CXX_VISIBILITY_PRESET "hidden")
 
+    target_include_directories(vineyard_internal_registry PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
+        $<INSTALL_INTERFACE:include>
+    )
+
     # build the vineyard client library
     file(GLOB CLIENT_SRC_FILES "src/client/*.cc"
                                "src/client/ds/*.cc"
@@ -486,11 +491,6 @@ if(BUILD_VINEYARD_CLIENT)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
         $<INSTALL_INTERFACE:include>
     )
-    install(DIRECTORY thirdparty/ctti/include/ctti
-            DESTINATION include                 # target directory
-            FILES_MATCHING                      # install only matched files
-            PATTERN "*.hpp"                     # select C++ template header files
-    )
 
     if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)
@@ -499,6 +499,12 @@ if(BUILD_VINEYARD_CLIENT)
     install_vineyard_target(vineyard_client)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/client")
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
+
+    install(DIRECTORY thirdparty/ctti/include/ctti
+            DESTINATION include                 # target directory
+            FILES_MATCHING                      # install only matched files
+            PATTERN "*.hpp"                     # select C++ template header files
+    )
 endif()
 
 include("cmake/GenerateVineyard.cmake")
