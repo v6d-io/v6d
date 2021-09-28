@@ -68,7 +68,8 @@ def _init_global_context():
     import sys
 
     if os.environ.get('VINEYARD_DEVELOP', None) is None:
-        from . import _C
+        with envvars({'LD_LIBRARY_PATH': os.path.dirname(__name__)}, append=True):
+            from . import _C
         return
 
     if not hasattr(_dl_flags, 'RTLD_GLOBAL') or not hasattr(_dl_flags, 'RTLD_LAZY'):
@@ -83,7 +84,8 @@ def _init_global_context():
 
         # import the extension module
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
-        from . import _C
+        with envvars({'LD_LIBRARY_PATH': os.path.dirname(__name__)}, append=True):
+            from . import _C
 
         # See Note [Import pyarrow before _C]
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
