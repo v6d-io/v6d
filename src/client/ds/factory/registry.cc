@@ -15,7 +15,8 @@ limitations under the License.
 
 #include "client/ds/object_factory.h"
 
-void* __GetGlobalVineyardRegistry() {
+extern "C" void* __attribute__((visibility("default")))
+__GetGlobalVineyardRegistry() {
   static std::unordered_map<
       std::string, vineyard::ObjectFactory::object_initializer_t>* known_types =
       new std::unordered_map<std::string,

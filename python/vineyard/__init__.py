@@ -67,8 +67,17 @@ def _init_global_context():
     import os as _dl_flags
     import sys
 
+    if sys.platform == 'linux':
+        registry = os.path.join(os.path.dirname(__file__), 'libvineyard_internal_registry.so')
+    elif sys.platform == 'darwin':
+        registry = os.path.join(os.path.dirname(__file__), 'libvineyard_internal_registry.dylib')
+    else:
+        raise RuntimeError("Unsupported platform: %s" % sys.platform)
+
+    ctx = {'__VINEYARD_INTERNAL_REGISTRY': registry}
+
     if os.environ.get('VINEYARD_DEVELOP', None) is None:
-        with envvars({'LD_LIBRARY_PATH': os.path.dirname(__name__)}, append=True):
+        with envvars(ctx, append=True):
             from . import _C
         return
 
@@ -84,7 +93,7 @@ def _init_global_context():
 
         # import the extension module
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
-        with envvars({'LD_LIBRARY_PATH': os.path.dirname(__name__)}, append=True):
+        with envvars(ctx, append=True):
             from . import _C
 
         # See Note [Import pyarrow before _C]

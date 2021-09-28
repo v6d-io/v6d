@@ -39,6 +39,8 @@ class ObjectMeta;
 template <typename T>
 inline void FORCE_INSTANTIATE(T) {}
 
+using vineyard_registry_getter_t = void* (*) ();
+
 /**
  * @brief ObjectFactory is responsible for type registration at the
  * initialization time.
@@ -106,12 +108,10 @@ class ObjectFactory {
   static std::unordered_map<std::string, object_initializer_t>& getKnownTypes();
 
   static void* __registry_handle;
-  static void* (*__GetGlobalRegistry)();
+  static vineyard_registry_getter_t __GetGlobalRegistry;
 };
 
 }  // namespace vineyard
-
-extern "C" void* __GetGlobalVineyardRegistry();
 
 namespace std {
 

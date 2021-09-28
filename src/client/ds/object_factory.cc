@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
+#include "common/util/env.h"
 
 namespace vineyard {
 
@@ -58,26 +59,44 @@ ObjectFactory::FactoryRef() {
   return getKnownTypes();
 }
 
+namespace detail {
+
+static void* __load_internal_registry() {
+  void* handle = nullptr;
+  auto lib = read_env("__VINEYARD_INTERNAL_REGISTRY");
+  if (!lib.empty()) {
+    handle = dlopen(lib.c_str(), RTLD_GLOBAL | RTLD_LAZY);
+  }
+  if (handle == nullptr) {
+#if __APPLE__
+    handle =
+        dlopen("libvineyard_internal_registry.dylib", RTLD_GLOBAL | RTLD_LAZY);
+#else
+    handle =
+        dlopen("libvineyard_internal_registry.so", RTLD_GLOBAL | RTLD_LAZY);
+#endif
+  }
+  return handle;
+}
+
+static vineyard_registry_getter_t __find_global_registry_entry() {
+  return reinterpret_cast<vineyard_registry_getter_t>(
+      dlsym(RTLD_DEFAULT, "__GetGlobalVineyardRegistry"));
+}
+
+}  // namespace detail
+
 std::unordered_map<std::string, ObjectFactory::object_initializer_t>&
 ObjectFactory::getKnownTypes() {
   if (__GetGlobalRegistry == nullptr) {
     // load from the global scope
     DVLOG(10) << "Looking up vineyard registry from the global scope";
-    __GetGlobalRegistry = reinterpret_cast<void* (*) ()>(
-        dlsym(RTLD_DEFAULT, "__GetGlobalVineyardRegistry"));
-
-    LOG(INFO) << "get env: " << getenv("LD_LIBRARY_PATH");
+    __GetGlobalRegistry = detail::__find_global_registry_entry();
 
     // load the shared library, then search from the global scope
     if (__GetGlobalRegistry == nullptr) {
       DVLOG(10) << "Loading the vineyard registry library";
-#if __APPLE__
-      __registry_handle = dlopen("libvineyard_internal_registry.dylib",
-                                 RTLD_GLOBAL | RTLD_LAZY);
-#else
-      __registry_handle =
-          dlopen("libvineyard_internal_registry.so", RTLD_GLOBAL | RTLD_LAZY);
-#endif
+      __registry_handle = detail::__load_internal_registry();
     }
     VINEYARD_ASSERT(__registry_handle != nullptr,
                     "Failed to load the vineyard global registry registry: " +
@@ -85,8 +104,7 @@ ObjectFactory::getKnownTypes() {
 
     // load from the global scope, again
     DVLOG(10) << "Looking up vineyard registry from the global scope again";
-    __GetGlobalRegistry = reinterpret_cast<void* (*) ()>(
-        dlsym(RTLD_DEFAULT, "__GetGlobalVineyardRegistry"));
+    __GetGlobalRegistry = detail::__find_global_registry_entry();
   }
   VINEYARD_ASSERT(__GetGlobalRegistry != nullptr,
                   "Failed to load the vineyard global registry entries");
@@ -100,6 +118,6 @@ ObjectFactory::getKnownTypes() {
 }
 
 void* ObjectFactory::__registry_handle = nullptr;
-void* (*ObjectFactory::__GetGlobalRegistry)() = nullptr;
+vineyard_registry_getter_t ObjectFactory::__GetGlobalRegistry = nullptr;
 
 }  // namespace vineyard

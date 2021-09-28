@@ -453,6 +453,7 @@ if(BUILD_VINEYARD_CLIENT)
     add_target_link_options(vineyard_internal_registry PRIVATE
                             OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
     )
+    set_target_properties(vineyard_internal_registry PROPERTIES CXX_VISIBILITY_PRESET "hidden")
 
     # build the vineyard client library
     file(GLOB CLIENT_SRC_FILES "src/client/*.cc"
@@ -526,7 +527,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     add_target_link_options(_C PRIVATE
                             OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
     )
-    if(NOT APPLE)
+    if(UNIX)
         add_target_link_options(_C PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
     endif()
     if(BUILD_VINEYARD_PYPI_PACKAGES AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -537,25 +538,13 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         add_target_link_options(_C PRIVATE OPTIONS -Os)
     endif()
 
-    if(APPLE)
-        add_custom_target(vineyard_client_python
-            ALL
-            COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
-            COMMAND cp "$<TARGET_FILE:vineyard_internal_registry>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
-            # COMMAND install_name_tool -change "@rpath/libvineyard_internal_registry.dylib"
-            #                                   "${PROJECT_SOURCE_DIR}/python/vineyard/libvineyard_internal_registry.dylib"
-            #                                   "${PROJECT_SOURCE_DIR}/python/vineyard/libvineyard_internal_registry.dylib"
-            DEPENDS _C vineyard_internal_registry
-            COMMENT "Copying python extensions."
-            VERBATIM)
-    else()
-        add_custom_target(vineyard_client_python
-            ALL
-            COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
-            COMMAND cp "$<TARGET_FILE:vineyard_internal_registry>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
-            DEPENDS _C vineyard_internal_registry
-            COMMENT "Copying python extensions."
-            VERBATIM)
+    add_custom_target(vineyard_client_python
+        ALL
+        COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
+        COMMAND cp "$<TARGET_FILE:vineyard_internal_registry>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
+        DEPENDS _C vineyard_internal_registry
+        COMMENT "Copying python extensions."
+        VERBATIM)
     endif()
 endif()
 
