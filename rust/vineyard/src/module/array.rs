@@ -20,7 +20,6 @@ use super::ENSURE_NOT_SEALED;
 use super::{Blob, BlobWriter};
 use super::{GlobalObject, Object, ObjectBase, ObjectBuilder, Registered};
 
-
 #[derive(Debug, Clone)]
 pub struct Array<T> {
     meta: ObjectMeta,
@@ -29,7 +28,6 @@ pub struct Array<T> {
     size: usize,
     buffer: Rc<Blob>, // Question: unsafe Send // 不行用Arc
     phantom: PhantomData<T>,
-
 }
 
 unsafe impl<T> Send for Array<T> {}
@@ -92,7 +90,6 @@ impl<T> Array<T> {
 impl<T: Send + Clone + std::fmt::Debug> Registered for Array<T> {}
 
 impl<T: Send + Clone + std::fmt::Debug> Object for Array<T> {
-
     fn meta(&self) -> &ObjectMeta {
         &self.meta
     }
@@ -212,7 +209,7 @@ impl<T: Clone> ArrayBuilder<T> {
 
     pub fn from_vec(&mut self, client: &IPCClient, vec: Vec<T>) {
         self.from(client, vec.len());
-        let mut dest: *mut T = std::ptr::null_mut();
+        let dest: *mut T = std::ptr::null_mut();
         unsafe {
             std::ptr::copy_nonoverlapping(vec.as_ptr(), dest, self.size * mem::size_of::<T>());
         }
@@ -224,7 +221,7 @@ impl<T: Clone> ArrayBuilder<T> {
 
     pub fn from_array(&mut self, client: &IPCClient, data: *const T, size: usize) {
         self.from(client, size);
-        let mut dest: *mut T = std::ptr::null_mut();
+        let dest: *mut T = std::ptr::null_mut();
         unsafe {
             std::ptr::copy_nonoverlapping(data, dest, self.size * mem::size_of::<T>());
         }

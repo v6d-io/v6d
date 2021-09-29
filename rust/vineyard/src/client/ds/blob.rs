@@ -18,12 +18,10 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
 use arrow::buffer as arrow;
-use lazy_static::lazy_static;
 use serde_json::json;
 
 use super::object::{Object, ObjectBase, ObjectBuilder, Registered};
 
-use super::object_factory::ObjectFactory;
 use super::object_meta::ObjectMeta;
 use super::payload::Payload;
 use super::status::*;
@@ -72,7 +70,6 @@ impl Object for Blob {
     fn set_id(&mut self, id: ObjectID) {
         self.id = id;
     }
-
 
     fn set_meta(&mut self, meta: &ObjectMeta) {
         self.meta = meta.clone();
@@ -163,7 +160,6 @@ impl Blob {
     pub fn dump() {} // Question: VLOG(); VLOG_IS_ON()
 
     pub fn make_empty(client: Rc<IPCClient>) -> Rc<Blob> {
-
         let mut empty_blob = Blob::default();
         empty_blob.id = empty_blob_id();
         empty_blob.size = 0;

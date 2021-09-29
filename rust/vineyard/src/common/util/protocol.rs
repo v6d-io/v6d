@@ -213,7 +213,7 @@ pub fn write_persist_request(id: ObjectID) -> String {
     encode_msg(msg)
 }
 
-pub fn read_persist_reply(root: Value) -> io::Result<(())> {
+pub fn read_persist_reply(root: Value) -> io::Result<()> {
     CHECK_IPC_ERROR(&root, "persist_reply");
     Ok(())
 }
@@ -223,7 +223,7 @@ pub fn write_if_persist_request(id: ObjectID) -> String {
     encode_msg(msg)
 }
 
-pub fn read_if_persist_reply(root: Value) -> io::Result<(bool)> {
+pub fn read_if_persist_reply(root: Value) -> io::Result<bool> {
     CHECK_IPC_ERROR(&root, "if_persist_reply");
     let persist = root["persist"].as_bool().unwrap_or(false);
     Ok(persist)

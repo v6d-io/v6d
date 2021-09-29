@@ -20,7 +20,6 @@ use dyn_clone::DynClone;
 
 use serde_json::json;
 
-use super::blob::Blob;
 use super::object_meta::ObjectMeta;
 use super::status::*;
 use super::uuid::ObjectID;
@@ -37,7 +36,6 @@ pub trait ObjectBase {
 }
 
 pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
-
     fn meta(&self) -> &ObjectMeta;
 
     fn meta_mut(&mut self) -> &mut ObjectMeta;
@@ -78,7 +76,7 @@ pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
             .get_key_value(&"transient".to_string())
             .as_bool()
             .unwrap());
-        if (!persist) {
+        if !persist {
             let client = self.meta().get_client().unwrap().upgrade().unwrap();
             VINEYARD_CHECK_OK(client.if_persist(self.id()));
             let persist = client.if_persist(self.id()).unwrap();

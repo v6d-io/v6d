@@ -15,7 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::io;
-use std::ops;
 use std::rc::{Rc, Weak};
 
 use arrow::buffer as arrow;
@@ -197,7 +196,7 @@ impl ObjectMeta {
             .extend(&member.buffer_set.borrow());
     }
 
-    pub fn add_member_with_object(&mut self, name: &String, member: &Object) {
+    pub fn add_member_with_object(&mut self, name: &String, member: &dyn Object) {
         self.add_member_with_meta(name, member.meta());
     }
 
@@ -234,7 +233,6 @@ impl ObjectMeta {
         // let ret_buffer_set = ret.buffer_set.borrow_mut();
         // let ret_blobs = ret_buffer_set.all_buffers();//.clone(); // 去掉
         for (key, _) in ret.buffer_set.clone().borrow_mut().all_buffers().iter() {
-
             if let Some(value) = all_blobs.get(key) {
                 ret.set_buffer(*key, &value); // clone
             }
