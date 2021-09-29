@@ -14,7 +14,7 @@
 
 FROM quay.io/pypa/manylinux2010_x86_64_centos6_no_vsyscall
 
-# target: libvineyard/vineyardd-alpine-builder
+# target: docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:20210929
 
 SHELL ["/bin/bash", "-c"]
 
@@ -98,9 +98,9 @@ RUN cd /tmp && \
 
 # install boost
 RUN cd /tmp && \
-    wget https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz && \
-    tar zxf boost_1_75_0.tar.gz && \
-    cd boost_1_75_0 && \
+    wget https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz && \
+    tar zxf boost_1_77_0.tar.gz && \
+    cd boost_1_77_0 && \
     ./bootstrap.sh && \
     ./b2 install -j`nproc` link=static runtime-link=static variant=release threading=multi \
         --with-atomic \
@@ -111,7 +111,7 @@ RUN cd /tmp && \
         --with-system \
         --with-thread && \
     cd /tmp && \
-    rm -rf boost_1_75_0.tar.gz boost_1_75_0
+    rm -rf boost_1_77_0.tar.gz boost_1_77_0
 
 # install gflags
 RUN cd /tmp && \
@@ -127,15 +127,15 @@ RUN cd /tmp && \
 
 # install glog
 RUN cd /tmp && \
-    wget https://github.com/google/glog/archive/v0.4.0.tar.gz -O glog-v0.4.0.tar.gz && \
-    tar zxf glog-v0.4.0.tar.gz && \
-    cd glog-0.4.0/ && \
+    wget https://github.com/google/glog/archive/v0.5.0.tar.gz -O glog-v0.5.0.tar.gz && \
+    tar zxf glog-v0.5.0.tar.gz && \
+    cd glog-0.5.0/ && \
     mkdir build && \
     cd build && \
     cmake .. -DBUILD_SHARED_LIBS=OFF && \
     make install -j`nproc` && \
     cd /tmp && \
-    rm -rf glog-v0.4.0.tar.gz glog-0.4.0
+    rm -rf glog-v0.5.0.tar.gz glog-0.5.0
 
 # install libz
 #

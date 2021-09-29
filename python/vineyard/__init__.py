@@ -16,16 +16,70 @@
 # limitations under the License.
 #
 
-from .version import __version__
-
+import contextlib
 import logging
 import os
 import traceback
+
+from .version import __version__
+
+
+@contextlib.contextmanager
+def envvars(key, value=None, append=False):
+    ''' Create a context with specified environment variables set.
+
+        It is useful for settting the :code`VINEYARD_IPC_SOCKET` environment
+        variable to obtain a proper default vineyard client.
+
+        This context macro can be used as
+
+        .. code:: python
+
+            with environment('KEY'):
+                # env :code:`KEY` will be set to None.
+
+            with environment('KEY', 'value'):
+                # env :code:`KEY` will be set as :code:`value`.
+
+            with environment({'KEY1': None, 'KEY2': 'value2'}):
+                # env :code:`KEY1` will be set as None and :code:`KEY2` will
+                # be set as :code:`value2`.
+    '''
+    items = key
+    if isinstance(key, str):
+        items = {key: value}
+    original_items = dict()
+    for k, v in items.items():
+        original_items[k] = os.environ.get(k, None)
+        if append and original_items[k] is not None:
+            os.environ[k] = original_items[k] + ':' + v
+        else:
+            os.environ[k] = v
+
+    yield os.environ
+
+    for k, v in original_items.items():
+        if v is not None:
+            os.environ[k] = v
 
 
 def _init_global_context():
     import os as _dl_flags
     import sys
+
+    if sys.platform == 'linux':
+        registry = os.path.join(os.path.dirname(__file__), 'libvineyard_internal_registry.so')
+    elif sys.platform == 'darwin':
+        registry = os.path.join(os.path.dirname(__file__), 'libvineyard_internal_registry.dylib')
+    else:
+        raise RuntimeError("Unsupported platform: %s" % sys.platform)
+
+    ctx = {'__VINEYARD_INTERNAL_REGISTRY': registry}
+
+    if os.environ.get('VINEYARD_DEVELOP', None) is None:
+        with envvars(ctx):  # n.b., no append
+            from . import _C
+        return
 
     if not hasattr(_dl_flags, 'RTLD_GLOBAL') or not hasattr(_dl_flags, 'RTLD_LAZY'):
         try:
@@ -39,7 +93,8 @@ def _init_global_context():
 
         # import the extension module
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
-        from . import _C
+        with envvars(ctx):  # n.b., no append
+            from . import _C
 
         # See Note [Import pyarrow before _C]
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
@@ -50,8 +105,7 @@ def _init_global_context():
         sys.setdlopenflags(old_flags)
 
 
-if os.environ.get('VINEYARD_DEV', None) is not None:
-    _init_global_context()
+_init_global_context()
 del _init_global_context
 
 
