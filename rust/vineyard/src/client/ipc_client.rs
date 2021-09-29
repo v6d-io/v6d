@@ -75,7 +75,7 @@ impl IPCClient {
         &mut self,
         size: usize,
         id: ObjectID,
-        payload: &mut Payload
+        payload: &mut Payload,
     ) -> io::Result<Option<Rc<arrow::MutableBuffer>>> {
         ENSURE_CONNECTED(self.connected());
         let mut stream = self.get_stream()?;
@@ -90,13 +90,13 @@ impl IPCClient {
         if (payload.data_size > 0) {
             RETURN_ON_ERROR(
                 //TODO: mmapToClient(payload.store_fd, payload.map_size, false, true, &shared)
-                Ok(())
+                Ok(()),
             );
         }
         //let buffer = std::make_shared<arrow::MutableBuffer>(shared + payload.data_offset,
         //    payload.data_size);
 
-        panic!(); 
+        panic!();
     }
 
     pub fn drop_buffer(&mut self, id: ObjectID, fd: i32) -> Result<(), bool> {

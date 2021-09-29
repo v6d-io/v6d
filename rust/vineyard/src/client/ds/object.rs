@@ -1,3 +1,4 @@
+use std::any::Any;
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::io;
-use std::any::Any;
 use std::rc::Rc;
 
 use dyn_clone::DynClone;
@@ -31,7 +31,7 @@ pub trait ObjectBase {
     fn build(&mut self, client: &IPCClient) -> io::Result<()> {
         Ok(())
     }
-    
+
     fn seal(&mut self, client: &IPCClient) -> Rc<dyn Object> {
         panic!()
     }
@@ -48,7 +48,10 @@ pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
 
     fn set_meta(&mut self, meta: &ObjectMeta);
 
-    fn as_any (self: &'_ Self) -> &'_ dyn Any where Self : Sized + 'static {
+    fn as_any(self: &'_ Self) -> &'_ dyn Any
+    where
+        Self: Sized + 'static,
+    {
         self
     }
 

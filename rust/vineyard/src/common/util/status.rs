@@ -30,4 +30,3 @@ pub fn CHECK(condition: bool) {
         panic!()
     }
 }
-
