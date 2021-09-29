@@ -73,6 +73,7 @@ jobs:
           mkdir -p build-dir
           cd build-dir
           cmake .. -DBUILD_SHARED_LIBS=OFF \
+                   -DWITH_GFLAGS=OFF \
                    -DBUILD_TESTING=OFF
           make install -j`nproc`
 
@@ -277,6 +278,7 @@ jobs:
           mkdir -p build-dir
           cd build-dir
           cmake .. -DBUILD_SHARED_LIBS=OFF \
+                   -DWITH_GFLAGS=OFF \
                    -DBUILD_TESTING=OFF
           make install -j`nproc`
 

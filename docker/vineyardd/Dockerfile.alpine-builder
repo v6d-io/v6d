@@ -98,9 +98,9 @@ RUN cd /tmp && \
 
 # install boost
 RUN cd /tmp && \
-    wget https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz && \
-    tar zxf boost_1_77_0.tar.gz && \
-    cd boost_1_77_0 && \
+    wget https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz && \
+    tar zxf boost_1_75_0.tar.gz && \
+    cd boost_1_75_0 && \
     ./bootstrap.sh && \
     ./b2 install -j`nproc` link=static runtime-link=static variant=release threading=multi \
         --with-atomic \
@@ -111,7 +111,7 @@ RUN cd /tmp && \
         --with-system \
         --with-thread && \
     cd /tmp && \
-    rm -rf boost_1_77_0.tar.gz boost_1_77_0
+    rm -rf boost_1_75_0.tar.gz boost_1_75_0
 
 # install gflags
 RUN cd /tmp && \
