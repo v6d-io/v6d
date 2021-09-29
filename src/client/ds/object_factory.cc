@@ -64,8 +64,9 @@ namespace detail {
 static void* __load_internal_registry(std::string& error_message) {
   void* handle = nullptr;
   auto lib = read_env("__VINEYARD_INTERNAL_REGISTRY");
+  int dlflags = RTLD_GLOBAL | RTLD_NOW;
   if (!lib.empty()) {
-    handle = dlopen(lib.c_str(), RTLD_GLOBAL | RTLD_NOW);
+    handle = dlopen(lib.c_str(), dlflags);
     if (handle == nullptr) {
       auto err = dlerror();
       if (err) {
@@ -80,9 +81,9 @@ static void* __load_internal_registry(std::string& error_message) {
   if (handle == nullptr) {
 #if __APPLE__
     handle =
-        dlopen("libvineyard_internal_registry.dylib", RTLD_GLOBAL | RTLD_NOW);
+        dlopen("libvineyard_internal_registry.dylib", dlflags);
 #else
-    handle = dlopen("libvineyard_internal_registry.so", RTLD_GLOBAL | RTLD_NOW);
+    handle = dlopen("libvineyard_internal_registry.so", dlflags);
 #endif
     if (handle == nullptr) {
       auto err = dlerror();
@@ -116,30 +117,30 @@ static vineyard_registry_getter_t __find_global_registry_entry(
   return ret;
 }
 
-}  // namespace detail
+static std::unordered_map<std::string,
+                            object_initializer_t>* __instantize__registry(vineyard_registry_handler_t &handler, vineyard_registry_getter_t &getter) {
+  if (!read_env("VINEYARD_USE_LOCAL_REGISTRY").empty()) {
+    return new std::unordered_map<std::string, object_initializer_t>();
+  }
 
-std::unordered_map<std::string, ObjectFactory::object_initializer_t>&
-ObjectFactory::getKnownTypes() {
-  std::string error_message{};
-
-  if (__GetGlobalRegistry == nullptr) {
+  if (getter == nullptr) {
     // load from the global scope
 #ifndef NDEBUG
     // See: Note [std::cerr instead of DVLOG()]
     std::cerr << "vineyard: looking up vineyard registry from the global scope"
               << std::endl;
 #endif
-    __GetGlobalRegistry = detail::__find_global_registry_entry(error_message);
+    getter = detail::__find_global_registry_entry(error_message);
 
     // load the shared library, then search from the global scope
-    if (__GetGlobalRegistry == nullptr) {
+    if (getter == nullptr) {
 #ifndef NDEBUG
       // See: Note [std::cerr instead of DVLOG()]
       std::cerr << "vineyard: loading the vineyard registry library"
                 << std::endl;
 #endif
-      __registry_handle = detail::__load_internal_registry(error_message);
-      VINEYARD_ASSERT(__registry_handle != nullptr,
+      handler = detail::__load_internal_registry(error_message);
+      VINEYARD_ASSERT(handler != nullptr,
                       "Failed to load the vineyard global registry registry: " +
                           error_message);
 
@@ -150,22 +151,28 @@ ObjectFactory::getKnownTypes() {
                    "scope again"
                 << std::endl;
 #endif
-      __GetGlobalRegistry = detail::__find_global_registry_entry(error_message);
+      getter = detail::__find_global_registry_entry(error_message);
     }
-  }
-  VINEYARD_ASSERT(
-      __GetGlobalRegistry != nullptr,
-      "Failed to load the vineyard global registry entries: " + error_message);
 
+    VINEYARD_ASSERT(
+        getter != nullptr,
+        "Failed to load the vineyard global registry entries: " + error_message);
+  }
+
+  return reinterpret_cast<std::unordered_map<std::string, object_initializer_t>*>(getter());
+}
+
+}  // namespace detail
+
+std::unordered_map<std::string, ObjectFactory::object_initializer_t>&
+ObjectFactory::getKnownTypes() {
   static std::unordered_map<std::string,
                             object_initializer_t>* __internal__registry =
-      reinterpret_cast<std::unordered_map<std::string, object_initializer_t>*>(
-          __GetGlobalRegistry());
-
+    detail::__instantize__registry(__registry_handle, __GetGlobalRegistry);
   return *__internal__registry;
 }
 
-void* ObjectFactory::__registry_handle = nullptr;
+vineyard_registry_handler_t ObjectFactory::__registry_handle = nullptr;
 vineyard_registry_getter_t ObjectFactory::__GetGlobalRegistry = nullptr;
 
 }  // namespace vineyard

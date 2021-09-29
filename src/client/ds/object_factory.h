@@ -48,6 +48,7 @@ class ObjectMeta;
 template <typename T>
 inline void FORCE_INSTANTIATE(T) {}
 
+using vineyard_registry_handler_t = void *;
 using vineyard_registry_getter_t = void* (*) ();
 
 /**
@@ -120,7 +121,7 @@ class ObjectFactory {
   // https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
   static std::unordered_map<std::string, object_initializer_t>& getKnownTypes();
 
-  static void* __registry_handle;
+  static vineyard_registry_handler_t __registry_handle;
   static vineyard_registry_getter_t __GetGlobalRegistry;
 };
 
