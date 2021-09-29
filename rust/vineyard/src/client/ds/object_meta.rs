@@ -234,6 +234,7 @@ impl ObjectMeta {
         // let ret_buffer_set = ret.buffer_set.borrow_mut();
         // let ret_blobs = ret_buffer_set.all_buffers();//.clone(); // 去掉
         for (key, _) in ret.buffer_set.clone().borrow_mut().all_buffers().iter() {
+
             if let Some(value) = all_blobs.get(key) {
                 ret.set_buffer(*key, &value); // clone
             }

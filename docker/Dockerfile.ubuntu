@@ -61,14 +61,6 @@ RUN cd /tmp && \
     pip3 install auditwheel && \
     sed -i 's/p.error/logger.warning/g' /usr/local/lib/python3.8/dist-packages/auditwheel/main_repair.py
 
-# install etcd
-RUN cd /tmp && \
-    wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz && \
-    tar zxvf etcd-v3.4.13-linux-amd64.tar.gz && \
-    mv etcd-v3.4.13-linux-amd64/etcd /usr/bin/ && \
-    mv etcd-v3.4.13-linux-amd64/etcdctl /usr/bin/ && \
-    rm -rf /tmp/etcd-v3.4.13-linux-amd64.tar.gz /tmp/etcd-v3.4.13-linux-amd64
-
 # install kubectl
 RUN cd /tmp && \
     wget https://dl.k8s.io/release/v1.19.0/bin/linux/amd64/kubectl && \

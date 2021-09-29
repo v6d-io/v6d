@@ -31,10 +31,6 @@
  *
  * -------------------------------------------------------------------------------*/
 
-// Referred from:
-//
-//	https://github.com/daanx/mimalloc-bench/blob/master/bench/alloc-test/allocator_tester.h
-
 #include <sys/mman.h>
 
 #include <time.h>
@@ -68,8 +64,9 @@
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 // #define BENCH_VINEYARD
-#define BENCH_JEMALLOC
+// #define BENCH_JEMALLOC
 // #define BENCH_SYSTEM
+#define BENCH_ARENA
 
 size_t GetMillisecondCount() {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -111,8 +108,11 @@ void bench() {
 #elif defined(BENCH_VINEYARD)
   baseBuff =
       reinterpret_cast<TestBin*>(vineyard_malloc(maxItems * sizeof(TestBin)));
+#elif defined(BENCH_ARENA)
+  baseBuff = reinterpret_cast<TestBin*>(
+      vineyard_arena_malloc(maxItems * sizeof(TestBin)));
 #else
-  baseBuff = reinterpret_cast<TestBin*>(vineyard_)
+  baseBuff = reinterpret_cast<TestBin*>(malloc(maxItems * sizeof(TestBin)));
 #endif
   assert(baseBuff);
   allocatedSz += maxItems * sizeof(TestBin);
@@ -130,8 +130,12 @@ void bench() {
         free(baseBuff[idx].ptr);
 #elif defined(BENCH_JEMALLOC)
         vineyard_je_free(baseBuff[idx].ptr);
-#else
+#elif defined(BENCH_VINEYARD)
         vineyard_free(baseBuff[idx].ptr);
+#elif defined(BENCH_ARENA)
+        vineyard_arena_free(baseBuff[idx].ptr);
+#else
+        free(baseBuff[idx].ptr);
 #endif
 
         baseBuff[idx].ptr = 0;
@@ -143,8 +147,13 @@ void bench() {
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(malloc(sz));
 #elif defined(BENCH_JEMALLOC)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_je_malloc(sz));
-#else
+#elif defined(BENCH_VINEYARD)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_malloc(sz));
+#elif defined(BENCH_ARENA)
+        baseBuff[idx].ptr =
+            reinterpret_cast<uint8_t*>(vineyard_arena_malloc(sz));
+#else
+        baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(malloc(sz));
 #endif
         memset(baseBuff[idx].ptr, (uint8_t) sz, sz);
       }

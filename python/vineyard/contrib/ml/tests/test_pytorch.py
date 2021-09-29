@@ -17,8 +17,6 @@
 #
 
 import numpy as np
-from numpy import random
-from numpy.lib.type_check import typename
 import pandas as pd
 
 import pyarrow as pa

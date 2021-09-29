@@ -77,12 +77,6 @@ jobs:
                               uuid-dev \
                               wget
 
-          # install etcd
-          wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz
-          tar zxvf etcd-v3.4.13-linux-amd64.tar.gz
-          sudo mv etcd-v3.4.13-linux-amd64/etcd /usr/local/bin/
-          sudo mv etcd-v3.4.13-linux-amd64/etcdctl /usr/local/bin/
-
           # install apache-arrow
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
@@ -327,7 +321,7 @@ jobs:
             # enable coredump for debugging
             ulimit -c unlimited
 
-            export VINEYARD_DEV=TRUE
+            export VINEYARD_DEVELOP=TRUE
 
             export VINEYARD_DATA_DIR=`pwd`/gstest
             export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
@@ -344,7 +338,7 @@ jobs:
           # enable coredump for debugging
           ulimit -c unlimited
 
-          export VINEYARD_DEV=TRUE
+          export VINEYARD_DEVELOP=TRUE
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
@@ -361,7 +355,7 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
 
-          export VINEYARD_DEV=TRUE
+          export VINEYARD_DEVELOP=TRUE
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"

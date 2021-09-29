@@ -8,6 +8,7 @@ pub use crate::client::rpc_client::RPCClient;
 pub use crate::client::ds::blob::{Blob, BlobWriter};
 pub use crate::client::ds::object::{
     GlobalObject, Object, ObjectBase, ObjectBuilder, Registered, ENSURE_NOT_SEALED,
+
 };
 pub use crate::client::ds::object_factory::{Create, ObjectFactory};
 pub use crate::client::ds::object_meta::ObjectMeta;

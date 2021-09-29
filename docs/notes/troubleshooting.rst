@@ -43,7 +43,7 @@ could helps you when error occurs.
   Besides, you may also meet strange crashes or runtime exceptions if you have
   :code:`import` pyarrow before vineyard, you could try to adjust the import order
   by :code:`import vineyard` before :code:`import pyarrow`. And please export
-  environment variable :code:`VINEYARD_DEV=TRUE` if you have encountered any
+  environment variable :code:`VINEYARD_DEVELOP=TRUE` if you have encountered any
   shared library related issue.
 
 3. *Resource of etcd pod when deploying on Kubernetes*
@@ -83,4 +83,4 @@ could helps you when error occurs.
 
     .. code:: bash
 
-       vineyardd --socket=/tmp/vineyard.sock
+       python3 -m vineyard --socket=/tmp/vineyard.sock

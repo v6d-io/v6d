@@ -67,12 +67,13 @@ jobs:
 
           echo "Installing glog ..."
           cd /tmp
-          curl -L https://github.com/google/glog/archive/v0.4.0.tar.gz --output glog-v0.4.0.tar.gz
-          tar zxf glog-v0.4.0.tar.gz
-          cd glog-0.4.0
+          curl -L https://github.com/google/glog/archive/v0.5.0.tar.gz --output glog-v0.5.0.tar.gz
+          tar zxf glog-v0.5.0.tar.gz
+          cd glog-0.5.0
           mkdir -p build-dir
           cd build-dir
           cmake .. -DBUILD_SHARED_LIBS=OFF \
+                   -DWITH_GFLAGS=OFF \
                    -DBUILD_TESTING=OFF
           make install -j`nproc`
 
@@ -271,12 +272,13 @@ jobs:
 
           echo "Installing glog ..."
           cd /tmp
-          curl -L https://github.com/google/glog/archive/v0.4.0.tar.gz --output glog-v0.4.0.tar.gz
-          tar zxf glog-v0.4.0.tar.gz
-          cd glog-0.4.0
+          curl -L https://github.com/google/glog/archive/v0.5.0.tar.gz --output glog-v0.5.0.tar.gz
+          tar zxf glog-v0.5.0.tar.gz
+          cd glog-0.5.0
           mkdir -p build-dir
           cd build-dir
           cmake .. -DBUILD_SHARED_LIBS=OFF \
+                   -DWITH_GFLAGS=OFF \
                    -DBUILD_TESTING=OFF
           make install -j`nproc`
 

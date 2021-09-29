@@ -73,6 +73,7 @@ impl Object for Blob {
         self.id = id;
     }
 
+
     fn set_meta(&mut self, meta: &ObjectMeta) {
         self.meta = meta.clone();
     }
@@ -162,6 +163,7 @@ impl Blob {
     pub fn dump() {} // Question: VLOG(); VLOG_IS_ON()
 
     pub fn make_empty(client: Rc<IPCClient>) -> Rc<Blob> {
+
         let mut empty_blob = Blob::default();
         empty_blob.id = empty_blob_id();
         empty_blob.size = 0;
@@ -183,6 +185,7 @@ impl Blob {
             .add_json_key_value(&"transient".to_string(), &json!(true));
         let tmp = Rc::clone(&client); // Needs clone trait here
         let tmp = tmp as Rc<dyn Client>;
+
         empty_blob.meta.set_client(Some(Rc::downgrade(&tmp)));
 
         Rc::new(empty_blob)

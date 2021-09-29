@@ -55,7 +55,7 @@ To address this issue, vineyard provides:
     and start to use the data for computation.
     
 
-2.  Built-in **out-of-box high-level** abstraction to share the distributed 
+2.  Built-in **out-of-the-box high-level** abstraction to share the distributed
     data with complex structures (e.g., distributed graphs) 
     with nearly zero extra development cost, while the transformation costs are eliminated.
 
@@ -250,8 +250,8 @@ these vineyard instances are launched distributively on each machine of the clus
 
 .. code:: console
 
-    $ vineyardd --socket /var/run/vineyard.sock1
-    $ vineyardd --socket /var/run/vineyard.sock2
+    $ python3 -m vineyard --socket /var/run/vineyard.sock1
+    $ python3 -m vineyard --socket /var/run/vineyard.sock2
 
 Then we can create a distributed pair of arrays in vineyard with the
 first array stored in the first vineyard instance which listens to ipc_socket

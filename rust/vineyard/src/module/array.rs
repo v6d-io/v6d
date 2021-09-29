@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::cell::RefCell;
+
 use std::io;
 use std::marker::PhantomData;
 use std::mem;
@@ -19,6 +20,7 @@ use super::ENSURE_NOT_SEALED;
 use super::{Blob, BlobWriter};
 use super::{GlobalObject, Object, ObjectBase, ObjectBuilder, Registered};
 
+
 #[derive(Debug, Clone)]
 pub struct Array<T> {
     meta: ObjectMeta,
@@ -27,6 +29,7 @@ pub struct Array<T> {
     size: usize,
     buffer: Rc<Blob>, // Question: unsafe Send // 不行用Arc
     phantom: PhantomData<T>,
+
 }
 
 unsafe impl<T> Send for Array<T> {}
@@ -37,6 +40,7 @@ impl<T> Create for Array<T> {
         lazy_static! {
             static ref SHARED_ARRAY: Arc<Mutex<Box<dyn Object>>> =
                 Arc::new(Mutex::new(Box::new(Array::default() as Array<i32>))); // FIXME
+
         }
         &SHARED_ARRAY
     }
@@ -88,6 +92,7 @@ impl<T> Array<T> {
 impl<T: Send + Clone + std::fmt::Debug> Registered for Array<T> {}
 
 impl<T: Send + Clone + std::fmt::Debug> Object for Array<T> {
+
     fn meta(&self) -> &ObjectMeta {
         &self.meta
     }
@@ -168,7 +173,6 @@ impl<T> ArrayBaseBuilder for ArrayBuilder<T> {
     fn size(&self) -> usize {
         self.size
     }
-
     fn set_size(&mut self, size: usize) {
         self.size = size;
     }

@@ -31,13 +31,13 @@ pub trait ObjectBase {
     fn build(&mut self, client: &IPCClient) -> io::Result<()> {
         Ok(())
     }
-
     fn seal(&mut self, client: &IPCClient) -> Rc<dyn Object> {
         panic!()
     }
 }
 
 pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
+
     fn meta(&self) -> &ObjectMeta;
 
     fn meta_mut(&mut self) -> &mut ObjectMeta;

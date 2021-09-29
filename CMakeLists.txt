@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 2)
-set(VINEYARD_PATCH_VERSION 12)
+set(VINEYARD_PATCH_VERSION 13)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
 message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
@@ -96,6 +96,7 @@ check_cxx_compiler_flag(-Wno-class-memaccess W_NO_CLASS_MEMACCESS)
 check_cxx_compiler_flag(-Wno-deprecated-declarations W_NO_DEPRECATED_DECLARATIONS)
 check_cxx_compiler_flag(-Wno-defaulted-function-deleted W_NO_DEFAULTED_FUNCTION_DELETED)
 check_cxx_compiler_flag(-Wno-error=c++11-narrowing W_NO_ERROR_CXX11_NARROWING)
+check_cxx_compiler_flag(-Wno-format-truncation W_NO_FORMAT_TRUNCATION)
 if(W_NO_CLASS_MEMACCESS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-class-memaccess")
 endif()
@@ -107,6 +108,9 @@ if(W_NO_DEFAULTED_FUNCTION_DELETED)
 endif()
 if(W_NO_ERROR_CXX11_NARROWING)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=c++11-narrowing")
+endif()
+if(W_NO_FORMAT_TRUNCATION)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-truncation")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 if(BUILD_VINEYARD_COVERAGE)
@@ -194,6 +198,13 @@ macro(find_jemalloc)
     # ./configure --disable-shared --enable-static --disable-cxx --enable-stats --disable-initial-exec-tls --with-jemalloc-prefix=vineyard_je_
     #
     # see: https://github.com/jemalloc/jemalloc/issues/1237
+
+    # install jemalloc when building static libs
+    if(BUILD_SHARED_LIBS)
+        set(JEMALLOC_INSTALL_CMD echo "No need to install for jemalloc.")
+    else()
+        set(JEMALLOC_INSTALL_CMD echo "Installing jemalloc." && ${CMAKE_MAKE_PROGRAM} install)
+    endif()
     ExternalProject_Add(libjemalloc
         SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"
         BUILD_IN_SOURCE 1
@@ -206,8 +217,8 @@ macro(find_jemalloc)
             --enable-stats
             --disable-initial-exec-tls
             --with-jemalloc-prefix=vineyard_je_
-        BUILD_COMMAND ${MAKE}
-        INSTALL_COMMAND echo "No need to install for jemalloc."
+        BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
+        INSTALL_COMMAND ${JEMALLOC_INSTALL_CMD}
     )
 
     add_library(jemalloc STATIC IMPORTED)
@@ -277,7 +288,6 @@ macro(find_common_libraries)
     find_boost()
     find_ctti()
     find_glog()
-    find_gflags()
     find_jemalloc()
     find_libunwind()
     find_pthread()
@@ -288,6 +298,10 @@ macro(find_common_libraries)
     include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
     include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 endmacro(find_common_libraries)
+
+if(NOT BUILD_VINEYARD_PYPI_PACKAGES)
+    find_gflags()
+endif()
 
 # find openssl first since apache-arrow may requires that (on MacOS, installed by brew)
 find_openssl_libraries(QUIET)
@@ -437,18 +451,40 @@ endif()
 
 # build vineyard-client
 if(BUILD_VINEYARD_CLIENT)
-    file(GLOB_RECURSE CLIENT_SRC_FILES "src/client/*.cc"
-                                    "src/common/memory/*.cc"
-                                    "src/common/util/*.cc"
+    # build vineyard registry library, it can only be a shared library, as a singleton.
+    add_library(vineyard_internal_registry SHARED "src/client/ds/factory/registry.cc")
+    target_link_libraries(vineyard_internal_registry PRIVATE ${CMAKE_DL_LIBS})
+    if(BUILD_VINEYARD_PYPI_PACKAGES)
+        target_compile_options(vineyard_internal_registry PRIVATE -Os)
+        add_target_link_options(vineyard_internal_registry PRIVATE OPTIONS -Os)
+        add_target_link_options(vineyard_internal_registry PRIVATE OPTIONS -Os)
+    endif()
+    install_vineyard_target(vineyard_internal_registry)
+    add_target_link_options(vineyard_internal_registry PRIVATE
+                            OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
+    )
+    set_target_properties(vineyard_internal_registry PROPERTIES CXX_VISIBILITY_PRESET "hidden")
+
+    target_include_directories(vineyard_internal_registry PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
+        $<INSTALL_INTERFACE:include>
+    )
+
+    # build the vineyard client library
+    file(GLOB CLIENT_SRC_FILES "src/client/*.cc"
+                               "src/client/ds/*.cc"
+                               "src/common/memory/*.cc"
+                               "src/common/util/*.cc"
     )
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
-    add_library(vineyard_client SHARED ${CLIENT_SRC_FILES})
-    target_link_libraries(vineyard_client PUBLIC Threads::Threads
+    add_library(vineyard_client ${CLIENT_SRC_FILES})
+    target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
+                                                 Threads::Threads
                                                  nlohmann_json::nlohmann_json
                                                  ${GLOG_LIBRARIES}
     )
-    if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
+    if(BUILD_VINEYARD_PYPI_PACKAGES)
         # required on mac, but cause problem on linux.
         target_link_libraries(vineyard_client PUBLIC ${GFLAGS_LIBRARIES})
     endif()
@@ -465,19 +501,20 @@ if(BUILD_VINEYARD_CLIENT)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
         $<INSTALL_INTERFACE:include>
     )
-    install(DIRECTORY thirdparty/ctti/include/ctti
-            DESTINATION include                 # target directory
-            FILES_MATCHING                      # install only matched files
-            PATTERN "*.hpp"                     # select C++ template header files
-    )
 
-    if(BUILD_SHARED_LIBS AND BUILD_VINEYARD_PYPI_PACKAGES)
+    if(BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)
         add_target_link_options(vineyard_client PRIVATE OPTIONS -Os)
     endif()
     install_vineyard_target(vineyard_client)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/client")
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
+
+    install(DIRECTORY thirdparty/ctti/include/ctti
+            DESTINATION include                 # target directory
+            FILES_MATCHING                      # install only matched files
+            PATTERN "*.hpp"                     # select C++ template header files
+    )
 endif()
 
 include("cmake/GenerateVineyard.cmake")
@@ -506,6 +543,9 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     add_target_link_options(_C PRIVATE
                             OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
     )
+    if(UNIX)
+        add_target_link_options(_C PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
+    endif()
     if(BUILD_VINEYARD_PYPI_PACKAGES AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(_C PRIVATE -static)
         add_target_link_options(_C PRIVATE OPTIONS -static)
@@ -517,7 +557,8 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     add_custom_target(vineyard_client_python
         ALL
         COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
-        DEPENDS _C
+        COMMAND cp "$<TARGET_FILE:vineyard_internal_registry>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
+        DEPENDS _C vineyard_internal_registry
         COMMENT "Copying python extensions."
         VERBATIM)
 endif()

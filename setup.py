@@ -18,11 +18,13 @@
 
 import os
 import subprocess
+import sys
 import textwrap
 
 from distutils.cmd import Command
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
+from setuptools.command.build_py import build_py
 from setuptools.dist import Distribution
 from wheel.bdist_wheel import bdist_wheel
 
@@ -34,7 +36,7 @@ class CopyCMakeExtension(Extension):
         super(CopyCMakeExtension, self).__init__(name, sources=[])
 
 
-class CopyCMakeBin(build_ext):
+class build_ext_with_precompiled(build_ext):
     def run(self):
         for ext in self.extensions:
             self.build_extension(ext)
@@ -47,9 +49,28 @@ class CopyCMakeBin(build_ext):
         self.copy_file(bin_path, target_path)
 
 
-class bdist_wheel_injected(bdist_wheel):
+class build_py_with_dependencies(build_py):
+    def _get_data_files(self):
+        """Add custom out-of-tree package data files."""
+        rs = super()._get_data_files()
+
+        package = 'vineyard'
+        src_dir = os.path.abspath(self.get_package_dir(package))
+        build_dir = os.path.join(self.build_lib, package)
+        if sys.platform == 'linux':
+            filenames = ['libvineyard_internal_registry.so']
+        elif sys.platform == 'darwin':
+            filenames = ['libvineyard_internal_registry.dylib']
+        else:
+            raise RuntimeError("Unsupported platform: %s" % sys.platform)
+
+        rs.append((package, src_dir, build_dir, filenames))
+        return rs
+
+
+class bdist_wheel_as_nonpure(bdist_wheel):
     def finalize_options(self):
-        super(bdist_wheel_injected, self).finalize_options()
+        super().finalize_options()
         self.root_is_pure = False
 
 
@@ -142,8 +163,9 @@ setup(
         CopyCMakeExtension('vineyard._C'),
     ],
     cmdclass={
-        'build_ext': CopyCMakeBin,
-        'bdist_wheel': bdist_wheel_injected,
+        'build_ext': build_ext_with_precompiled,
+        'build_py': build_py_with_dependencies,
+        'bdist_wheel': bdist_wheel_as_nonpure,
         "lint": FormatAndLint,
     },
     distclass=BinDistribution,
@@ -159,6 +181,8 @@ setup(
         'wheel',
     ],
     install_requires=[
+        'argcomplete',
+        "etcd-distro",
         'numpy',
         'pandas<1.0.0; python_version<"3.6"',
         'pandas<1.2.0; python_version<"3.7"',
@@ -169,11 +193,11 @@ setup(
         'shared-memory38; python_version<="3.7"',
         'sortedcontainers',
         'treelib',
-        'argcomplete',
     ],
     extras_require={
         'dev': [
             'breathe',
+            'docutils==0.16',
             'libclang',
             'nbsphinx',
             'parsec',
@@ -183,7 +207,6 @@ setup(
             'pytest-datafiles',
             'sphinx>=3.0.2',
             'sphinx_rtd_theme',
-            'docutils==0.16',
         ],
         "kubernetes": [
             "kubernetes",

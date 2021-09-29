@@ -85,12 +85,10 @@ static inline void recycle_resident_memory(const uintptr_t base, size_t left,
   static size_t page_size = system_page_size();
   uintptr_t aligned_left = align_up(base + left, page_size),
             aligned_right = align_down(base + right, page_size);
-#ifndef NDEBUG
-  VLOG(10) << "recycle memory: " << reinterpret_cast<void*>(base + left) << "("
-           << reinterpret_cast<void*>(aligned_left) << ") to "
-           << reinterpret_cast<void*>(base + right) << "("
-           << reinterpret_cast<void*>(aligned_right) << ")";
-#endif
+  DVLOG(10) << "recycle memory: " << reinterpret_cast<void*>(base + left) << "("
+            << reinterpret_cast<void*>(aligned_left) << ") to "
+            << reinterpret_cast<void*>(base + right) << "("
+            << reinterpret_cast<void*>(aligned_right) << ")";
   recycle_resident_memory(aligned_left, aligned_right);
 }
 
@@ -194,10 +192,8 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      map_size, offset);
   objects_.emplace(object_id, object);
-#ifndef NDEBUG
-  VLOG(10) << "after allocate: " << ObjectIDToString(object_id) << ": "
-           << Footprint() << "(" << FootprintLimit() << ")";
-#endif
+  DVLOG(10) << "after allocate: " << ObjectIDToString(object_id) << ": "
+            << Footprint() << "(" << FootprintLimit() << ")";
   return Status::OK();
 }
 
@@ -247,10 +243,8 @@ Status BulkStore::Delete(const ObjectID& object_id) {
   if (object->arena_fd == -1) {
     auto buff_size = object->data_size;
     BulkAllocator::Free(object->pointer, buff_size);
-#ifndef NDEBUG
-    VLOG(10) << "after free: " << ObjectIDToString(object_id) << ": "
-             << Footprint() << "(" << FootprintLimit() << ")";
-#endif
+    DVLOG(10) << "after free: " << ObjectIDToString(object_id) << ": "
+              << Footprint() << "(" << FootprintLimit() << ")";
   } else {
     static size_t page_size = memory::system_page_size();
     uintptr_t pointer = reinterpret_cast<uintptr_t>(object->pointer);
@@ -284,11 +278,9 @@ Status BulkStore::Delete(const ObjectID& object_id) {
       }
     }
     if (std::max(lower, lower_bound) < std::min(upper, upper_bound)) {
-#ifndef NDEBUG
-      VLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit()
-               << "), recycle: (" << std::max(lower, lower_bound) << ", "
-               << std::min(upper, upper_bound) << ")";
-#endif
+      DVLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit()
+                << "), recycle: (" << std::max(lower, lower_bound) << ", "
+                << std::min(upper, upper_bound) << ")";
       memory::recycle_resident_memory(std::max(lower, lower_bound),
                                       std::min(upper, upper_bound));
     }

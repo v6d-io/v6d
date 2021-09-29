@@ -27,6 +27,7 @@ pub struct ObjectFactory {}
 
 type ObjectInitializer = fn() -> Box<dyn Object>;
 
+
 pub trait Create {
     fn create() -> &'static Arc<Mutex<Box<dyn Object>>>;
 }
@@ -55,6 +56,7 @@ impl ObjectFactory {
                 type_name
             ),
             Some(initialized_object) => Ok((*initialized_object)()),
+
         }
     }
 
@@ -73,6 +75,7 @@ impl ObjectFactory {
             ),
             Some(target) => {
                 let mut target = (target)();
+
                 target.construct(&metadata);
                 return Ok(target);
             }

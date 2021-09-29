@@ -16,27 +16,25 @@
 # limitations under the License.
 #
 
-import logging
-import signal
+import subprocess
+import sys
 
-from .local import start_vineyardd
-
-logger = logging.getLogger('vineyard')
+from .utils import find_vineyardd_path
 
 
-def deploy_vineyardd(etcd_endpoints=None, size='256Mi', socket=None, rpc=True, rpc_socket_port=9600):
-    with start_vineyardd(etcd_endpoints=etcd_endpoints,
-                         size=size,
-                         socket=socket,
-                         rpc=rpc,
-                         rpc_socket_port=rpc_socket_port) as (_, socket, _):
-        logger.info("Vineyard server is listening %s ...", socket)
+def deploy_vineyardd(args):
+    try:
+        vineyardd = find_vineyardd_path()
+        if vineyardd is None:
+            raise RuntimeError("Unable to vineyardd")
+        return subprocess.call([vineyardd] + args)
+    except KeyboardInterrupt:
+        return 0
 
-        try:
-            signal.pause()
-        except KeyboardInterrupt:
-            logger.info("Vineyard exitting ...")
+
+def main():
+    raise SystemExit(deploy_vineyardd(sys.argv[1:]))
 
 
 if __name__ == '__main__':
-    deploy_vineyardd()
+    main()

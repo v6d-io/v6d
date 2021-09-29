@@ -16,6 +16,9 @@ limitations under the License.
 #ifndef SRC_CLIENT_DS_OBJECT_FACTORY_H_
 #define SRC_CLIENT_DS_OBJECT_FACTORY_H_
 
+#include <dlfcn.h>
+
+#include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -24,6 +27,14 @@ limitations under the License.
 #include "common/util/typename.h"
 
 namespace vineyard {
+
+/** Note [std::cerr instead of DVLOG()]
+ *
+ * In the object factory we use `std::cerr` instead of `DVLOG()` in glog for
+ * logging, as, the logging happens during initializing the shared library,
+ * (in the static field), at that stage the data structure of glog hasn't
+ * been initialized yet, leading to crash.
+ */
 
 class Client;
 class Object;
@@ -37,11 +48,14 @@ class ObjectMeta;
 template <typename T>
 inline void FORCE_INSTANTIATE(T) {}
 
+using vineyard_registry_handler_t = void*;
+using vineyard_registry_getter_t = void* (*) ();
+
 /**
  * @brief ObjectFactory is responsible for type registration at the
  * initialization time.
  */
-class __attribute__((visibility("default"))) ObjectFactory {
+class ObjectFactory {
  public:
   using object_initializer_t = std::unique_ptr<Object> (*)();
 
@@ -54,9 +68,11 @@ class __attribute__((visibility("default"))) ObjectFactory {
    * resolution.
    */
   template <typename T>
-  static bool __attribute__((visibility("default"))) Register() {
+  static bool Register() {
 #ifndef NDEBUG
-    LOG(INFO) << "register data type: " << type_name<T>();
+    // See: Note [std::cerr instead of DVLOG()]
+    std::cerr << "vineyard: register data type: " << type_name<T>()
+              << std::endl;
 #endif
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
@@ -70,8 +86,7 @@ class __attribute__((visibility("default"))) ObjectFactory {
    *
    * @param type_name The type to be instantiated.
    */
-  static std::unique_ptr<Object> __attribute__((visibility("default")))
-  Create(std::string const& type_name);
+  static std::unique_ptr<Object> Create(std::string const& type_name);
 
   /**
    * @brief Initialize an instance by looking up the `type_name` in the factory,
@@ -79,8 +94,7 @@ class __attribute__((visibility("default"))) ObjectFactory {
    *
    * @param metadata The metadata used to construct the object.
    */
-  static std::unique_ptr<Object> __attribute__((visibility("default")))
-  Create(ObjectMeta const& metadata);
+  static std::unique_ptr<Object> Create(ObjectMeta const& metadata);
 
   /**
    * @brief Initialize an instance by looking up the `type_name` in the factory,
@@ -92,22 +106,23 @@ class __attribute__((visibility("default"))) ObjectFactory {
    * @param type_name The type to be instantiated.
    * @param metadata The metadata used to construct the object.
    */
-  static std::unique_ptr<Object> __attribute__((visibility("default")))
-  Create(std::string const& type_name, ObjectMeta const& metadata);
+  static std::unique_ptr<Object> Create(std::string const& type_name,
+                                        ObjectMeta const& metadata);
 
   /**
    * @brief Expose the internal registered types.
    *
    * @return A map of type name to that type's static constructor.
    */
-  static const std::unordered_map<
-      std::string, object_initializer_t>& __attribute__((visibility("default")))
+  static const std::unordered_map<std::string, object_initializer_t>&
   FactoryRef();
 
  private:
   // https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
-  static std::unordered_map<std::string, object_initializer_t>& __attribute__((
-      visibility("default"))) getKnownTypes();
+  static std::unordered_map<std::string, object_initializer_t>& getKnownTypes();
+
+  static vineyard_registry_handler_t __registry_handle;
+  static vineyard_registry_getter_t __GetGlobalRegistry;
 };
 
 }  // namespace vineyard

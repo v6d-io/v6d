@@ -142,7 +142,7 @@ Users can try Airflow provider for Vineyard by the following steps:
 
     .. code:: bash
 
-        vineyardd --socket=/tmp/vineyard.sock
+        python -m vineyard --socket=/tmp/vineyard.sock
 
     See also our documentation about `launching vineyard`_.
 
