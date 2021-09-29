@@ -70,7 +70,8 @@ class ObjectFactory {
   static bool Register() {
 #ifndef NDEBUG
     // See: Note [std::cerr instead of DVLOG()]
-    std::cerr << "vineyard: register data type: " << type_name<T>() << std::endl;
+    std::cerr << "vineyard: register data type: " << type_name<T>()
+              << std::endl;
 #endif
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
