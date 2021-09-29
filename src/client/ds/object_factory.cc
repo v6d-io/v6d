@@ -120,7 +120,8 @@ static std::unordered_map<std::string, ObjectFactory::object_initializer_t>*
 __instantize__registry(vineyard_registry_handler_t& handler,
                        vineyard_registry_getter_t& getter) {
   if (!read_env("VINEYARD_USE_LOCAL_REGISTRY").empty()) {
-    return new std::unordered_map<std::string, ObjectFactory::object_initializer_t>();
+    return new std::unordered_map<std::string,
+                                  ObjectFactory::object_initializer_t>();
   }
 
   if (getter == nullptr) {
@@ -162,7 +163,8 @@ __instantize__registry(vineyard_registry_handler_t& handler,
   }
 
   return reinterpret_cast<
-      std::unordered_map<std::string, ObjectFactory::object_initializer_t>*>(getter());
+      std::unordered_map<std::string, ObjectFactory::object_initializer_t>*>(
+      getter());
 }
 
 }  // namespace detail
