@@ -43,7 +43,7 @@ RUN cd /work/libvineyard && \
              -DBUILD_VINEYARD_TESTS_ALL=OFF \
              -DBUILD_VINEYARD_COVERAGE=OFF \
              -DBUILD_VINEYARD_PROFILING=OFF \
-             -DCMAKE_BUILD_TYPE=Release \
+             -DCMAKE_BUILD_TYPE=Debug \
              -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
     make vineyard_client_python -j2 && \
     cd .. && \

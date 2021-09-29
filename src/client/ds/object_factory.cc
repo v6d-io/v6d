@@ -70,7 +70,7 @@ static void* __load_internal_registry(std::string& error_message) {
     if (handle == nullptr) {
       auto err = dlerror();
       if (err) {
-        error_message = dlerror();
+        error_message = err;
 #ifndef NDEBUG
         // See: Note [std::cerr instead of DVLOG()]
         std::cerr << "vineyard: error in loading: " << err << std::endl;
@@ -87,7 +87,7 @@ static void* __load_internal_registry(std::string& error_message) {
     if (handle == nullptr) {
       auto err = dlerror();
       if (err) {
-        error_message = dlerror();
+        error_message = err;
 #ifndef NDEBUG
         // See: Note [std::cerr instead of DVLOG()]
         std::cerr << "vineyard: error in loading from default: " << err
@@ -106,7 +106,7 @@ static vineyard_registry_getter_t __find_global_registry_entry(
   if (ret == nullptr) {
     auto err = dlerror();
     if (err) {
-      error_message = dlerror();
+      error_message = err;
 #ifndef NDEBUG
       // See: Note [std::cerr instead of DVLOG()]
       std::cerr << "vineyard: error in resolving: " << err << std::endl;
@@ -116,14 +116,16 @@ static vineyard_registry_getter_t __find_global_registry_entry(
   return ret;
 }
 
-static std::unordered_map<std::string, object_initializer_t>*
+static std::unordered_map<std::string, ObjectFactory::object_initializer_t>*
 __instantize__registry(vineyard_registry_handler_t& handler,
                        vineyard_registry_getter_t& getter) {
   if (!read_env("VINEYARD_USE_LOCAL_REGISTRY").empty()) {
-    return new std::unordered_map<std::string, object_initializer_t>();
+    return new std::unordered_map<std::string, ObjectFactory::object_initializer_t>();
   }
 
   if (getter == nullptr) {
+    std::string error_message;
+
     // load from the global scope
 #ifndef NDEBUG
     // See: Note [std::cerr instead of DVLOG()]
@@ -160,7 +162,7 @@ __instantize__registry(vineyard_registry_handler_t& handler,
   }
 
   return reinterpret_cast<
-      std::unordered_map<std::string, object_initializer_t>*>(getter());
+      std::unordered_map<std::string, ObjectFactory::object_initializer_t>*>(getter());
 }
 
 }  // namespace detail
