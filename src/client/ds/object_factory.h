@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <dlfcn.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -26,6 +27,14 @@ limitations under the License.
 #include "common/util/typename.h"
 
 namespace vineyard {
+
+/** Note [std::cerr instead of DVLOG()]
+ *
+ * In the object factory we use `std::cerr` instead of `DVLOG()` in glog for
+ * logging, as, the logging happens during initializing the shared library,
+ * (in the static field), at that stage the data structure of glog hasn't
+ * been initialized yet, leading to crash.
+ */
 
 class Client;
 class Object;
@@ -59,7 +68,10 @@ class ObjectFactory {
    */
   template <typename T>
   static bool Register() {
-    DVLOG(10) << "register data type: " << type_name<T>();
+#ifndef NDEBUG
+    // See: Note [std::cerr instead of DVLOG()]
+    std::cerr << "vineyard: register data type: " << type_name<T>() << std::endl;
+#endif
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
     known_types.emplace(type_name<T>(),

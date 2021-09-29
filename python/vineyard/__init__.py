@@ -77,7 +77,7 @@ def _init_global_context():
     ctx = {'__VINEYARD_INTERNAL_REGISTRY': registry}
 
     if os.environ.get('VINEYARD_DEVELOP', None) is None:
-        with envvars(ctx, append=True):
+        with envvars(ctx):  # n.b., no append
             from . import _C
         return
 
@@ -93,7 +93,7 @@ def _init_global_context():
 
         # import the extension module
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
-        with envvars(ctx, append=True):
+        with envvars(ctx):  # n.b., no append
             from . import _C
 
         # See Note [Import pyarrow before _C]

@@ -61,11 +61,21 @@ ObjectFactory::FactoryRef() {
 
 namespace detail {
 
-static void* __load_internal_registry() {
+static void* __load_internal_registry(std::string &error_message) {
   void* handle = nullptr;
   auto lib = read_env("__VINEYARD_INTERNAL_REGISTRY");
   if (!lib.empty()) {
     handle = dlopen(lib.c_str(), RTLD_GLOBAL | RTLD_NOW);
+    if (handle == nullptr) {
+      auto err = dlerror();
+      if (err) {
+        error_message = dlerror();
+#ifndef NDEBUG
+        // See: Note [std::cerr instead of DVLOG()]
+        std::cerr << "vineyard: error in loading: " << err << std::endl;
+#endif
+      }
+    }
   }
   if (handle == nullptr) {
 #if __APPLE__
@@ -74,38 +84,70 @@ static void* __load_internal_registry() {
 #else
     handle = dlopen("libvineyard_internal_registry.so", RTLD_GLOBAL | RTLD_NOW);
 #endif
+    if (handle == nullptr) {
+      auto err = dlerror();
+      if (err) {
+        error_message = dlerror();
+#ifndef NDEBUG
+        // See: Note [std::cerr instead of DVLOG()]
+        std::cerr << "vineyard: error in loading from default: " << err << std::endl;
+#endif
+      }
+    }
   }
   return handle;
 }
 
-static vineyard_registry_getter_t __find_global_registry_entry() {
-  return reinterpret_cast<vineyard_registry_getter_t>(
+static vineyard_registry_getter_t __find_global_registry_entry(std::string &error_message) {
+  auto ret = reinterpret_cast<vineyard_registry_getter_t>(
       dlsym(RTLD_DEFAULT, "__GetGlobalVineyardRegistry"));
+  if (ret == nullptr) {
+    auto err = dlerror();
+      if (err) {
+        error_message = dlerror();
+#ifndef NDEBUG
+        // See: Note [std::cerr instead of DVLOG()]
+        std::cerr << "vineyard: error in resolving: " << err << std::endl;
+#endif
+      }
+  }
+  return ret;
 }
 
 }  // namespace detail
 
 std::unordered_map<std::string, ObjectFactory::object_initializer_t>&
 ObjectFactory::getKnownTypes() {
+  std::string error_message{};
+
   if (__GetGlobalRegistry == nullptr) {
     // load from the global scope
-    DVLOG(10) << "Looking up vineyard registry from the global scope";
-    __GetGlobalRegistry = detail::__find_global_registry_entry();
+#ifndef NDEBUG
+    // See: Note [std::cerr instead of DVLOG()]
+    std::cerr << "vineyard: looking up vineyard registry from the global scope" << std::endl;
+#endif
+    __GetGlobalRegistry = detail::__find_global_registry_entry(error_message);
 
     // load the shared library, then search from the global scope
     if (__GetGlobalRegistry == nullptr) {
-      DVLOG(10) << "Loading the vineyard registry library";
-      __registry_handle = detail::__load_internal_registry();
+#ifndef NDEBUG
+      // See: Note [std::cerr instead of DVLOG()]
+      std::cerr << "vineyard: loading the vineyard registry library" << std::endl;
+#endif
+      __registry_handle = detail::__load_internal_registry(error_message);
       VINEYARD_ASSERT(__registry_handle != nullptr,
-                      "Failed to load the vineyard global registry registry");
+                      "Failed to load the vineyard global registry registry: " + error_message);
 
       // load from the global scope, again
-      DVLOG(10) << "Looking up vineyard registry from the global scope again";
-      __GetGlobalRegistry = detail::__find_global_registry_entry();
+#ifndef NDEBUG
+      // See: Note [std::cerr instead of DVLOG()]
+      std::cerr << "vineyard: looking up vineyard registry from the global scope again" << std::endl;
+#endif
+      __GetGlobalRegistry = detail::__find_global_registry_entry(error_message);
     }
   }
   VINEYARD_ASSERT(__GetGlobalRegistry != nullptr,
-                  "Failed to load the vineyard global registry entries");
+                  "Failed to load the vineyard global registry entries: " + error_message);
 
   static std::unordered_map<std::string,
                             object_initializer_t>* __internal__registry =

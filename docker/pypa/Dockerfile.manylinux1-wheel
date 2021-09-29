@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20201115
+FROM docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20210929
 
 # target: docker.pkg.github.com/v6d-io/v6d/vineyard-wheel
 
