@@ -48,7 +48,7 @@ class ObjectMeta;
 template <typename T>
 inline void FORCE_INSTANTIATE(T) {}
 
-using vineyard_registry_handler_t = void *;
+using vineyard_registry_handler_t = void*;
 using vineyard_registry_getter_t = void* (*) ();
 
 /**

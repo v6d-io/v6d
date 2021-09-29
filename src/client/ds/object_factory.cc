@@ -80,8 +80,7 @@ static void* __load_internal_registry(std::string& error_message) {
   }
   if (handle == nullptr) {
 #if __APPLE__
-    handle =
-        dlopen("libvineyard_internal_registry.dylib", dlflags);
+    handle = dlopen("libvineyard_internal_registry.dylib", dlflags);
 #else
     handle = dlopen("libvineyard_internal_registry.so", dlflags);
 #endif
@@ -117,8 +116,9 @@ static vineyard_registry_getter_t __find_global_registry_entry(
   return ret;
 }
 
-static std::unordered_map<std::string,
-                            object_initializer_t>* __instantize__registry(vineyard_registry_handler_t &handler, vineyard_registry_getter_t &getter) {
+static std::unordered_map<std::string, object_initializer_t>*
+__instantize__registry(vineyard_registry_handler_t& handler,
+                       vineyard_registry_getter_t& getter) {
   if (!read_env("VINEYARD_USE_LOCAL_REGISTRY").empty()) {
     return new std::unordered_map<std::string, object_initializer_t>();
   }
@@ -154,21 +154,22 @@ static std::unordered_map<std::string,
       getter = detail::__find_global_registry_entry(error_message);
     }
 
-    VINEYARD_ASSERT(
-        getter != nullptr,
-        "Failed to load the vineyard global registry entries: " + error_message);
+    VINEYARD_ASSERT(getter != nullptr,
+                    "Failed to load the vineyard global registry entries: " +
+                        error_message);
   }
 
-  return reinterpret_cast<std::unordered_map<std::string, object_initializer_t>*>(getter());
+  return reinterpret_cast<
+      std::unordered_map<std::string, object_initializer_t>*>(getter());
 }
 
 }  // namespace detail
 
 std::unordered_map<std::string, ObjectFactory::object_initializer_t>&
 ObjectFactory::getKnownTypes() {
-  static std::unordered_map<std::string,
-                            object_initializer_t>* __internal__registry =
-    detail::__instantize__registry(__registry_handle, __GetGlobalRegistry);
+  static std::unordered_map<std::string, object_initializer_t>*
+      __internal__registry = detail::__instantize__registry(
+          __registry_handle, __GetGlobalRegistry);
   return *__internal__registry;
 }
 
