@@ -20,9 +20,17 @@ import numpy as np
 import pandas as pd
 try:
     from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
-except:
+except ImportError:
     BlockPlacement = None
     from pandas.core.internals.blocks import Block
+try:
+    from pandas.core.indexes.base import ensure_index
+except ImportError:
+    try:
+        from pandas.core.indexes.base import _ensure_index as ensure_index
+    except ImportError:
+        from pandas.indexes.base import _ensure_index as ensure_index
+
 from pandas.core.internals.managers import BlockManager
 
 from vineyard._C import Object, ObjectID, ObjectMeta
@@ -87,7 +95,7 @@ def pandas_dataframe_resolver(obj, resolver):
         index = resolver.run(obj.member('index_'))
     else:
         index = pd.RangeIndex(index_size)
-    return pd.DataFrame(BlockManager(blocks, [pd.Index(columns), index]))
+    return pd.DataFrame(BlockManager(blocks, [ensure_index(columns), index]))
 
 
 def pandas_sparse_array_builder(client, value, builder, **kw):
