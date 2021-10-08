@@ -83,6 +83,14 @@ int main(int, const char**) {
         type_name<TX<int64_t, TXXXX<int64_t, T<int64_t, std::string>>>>();
     CHECK_EQ(type, "TXXXX<int64,TXXXX<int64,T<int64,std::string>>>");
   }
+  {
+    const auto type = type_name<std::hash<int>>();
+    CHECK_EQ(type, "std::hash<int>");
+  }
+  {
+    const auto type = type_name<std::equal_to<int64_t>>();
+    CHECK_EQ(type, "std::equal_to<int64>");
+  }
 
   LOG(INFO) << "Passed typename tests...";
 

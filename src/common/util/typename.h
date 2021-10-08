@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_TYPENAME_H_
 #define SRC_COMMON_UTIL_TYPENAME_H_
 
+#include <functional>
 #include <string>
 
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
@@ -113,41 +114,97 @@ inline const std::string typename_impl(C<Args...> const&) {
 }  // namespace detail
 
 template <typename T>
-inline const std::string type_name() {
+struct typename_t {
+  inline static const std::string name() {
 #if (__GNUC__ >= 6) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnull-dereference"
 #endif
-  return detail::typename_impl(*(static_cast<T*>(nullptr)));
+    return detail::typename_impl(*(static_cast<T*>(nullptr)));
 #if (__GNUC__ >= 6) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
+  }
+};
+
+template <typename T>
+inline const std::string type_name() {
+  return typename_t<T>::name();
 }
 
 template <>
-inline const std::string type_name<std::string>() {
-  return "std::string";
-}
+struct typename_t<std::string> {
+  inline static const std::string name() { return "std::string"; }
+};
 
 template <>
-inline const std::string type_name<int32_t>() {
-  return "int";
-}
+struct typename_t<int32_t> {
+  inline static const std::string name() { return "int"; }
+};
 
 template <>
-inline const std::string type_name<int64_t>() {
-  return "int64";
-}
+struct typename_t<int64_t> {
+  inline static const std::string name() { return "int64"; }
+};
 
 template <>
-inline const std::string type_name<uint32_t>() {
-  return "uint";
-}
+struct typename_t<uint32_t> {
+  inline static const std::string name() { return "uint"; }
+};
 
 template <>
-inline const std::string type_name<uint64_t>() {
-  return "uint64";
-}
+struct typename_t<uint64_t> {
+  inline static const std::string name() { return "uint64"; }
+};
+
+template <typename T>
+struct typename_t<std::hash<T>> {
+  inline static const std::string name() {
+    return "std::hash<" + type_name<T>() + ">";
+  }
+};
+
+template <typename T>
+struct typename_t<std::equal_to<T>> {
+  inline static const std::string name() {
+    return "std::equal_to<" + type_name<T>() + ">";
+  }
+};
+
+template <typename T>
+struct typename_t<std::not_equal_to<T>> {
+  inline static const std::string name() {
+    return "std::not_equal_to<" + type_name<T>() + ">";
+  }
+};
+
+template <typename T>
+struct typename_t<std::less<T>> {
+  inline static const std::string name() {
+    return "std::less<" + type_name<T>() + ">";
+  }
+};
+
+template <typename T>
+struct typename_t<std::less_equal<T>> {
+  inline static const std::string name() {
+    return "std::less_equal<" + type_name<T>() + ">";
+  }
+};
+
+template <typename T>
+struct typename_t<std::greater<T>> {
+  inline static const std::string name() {
+    return "std::greater<" + type_name<T>() + ">";
+  }
+};
+
+template <typename T>
+struct typename_t<std::greater_equal<T>> {
+  inline static const std::string name() {
+    return "std::greater_equal<" + type_name<T>() + ">";
+  }
+};
 
 }  // namespace vineyard
 
