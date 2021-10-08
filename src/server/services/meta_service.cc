@@ -21,12 +21,23 @@ limitations under the License.
 #include "glog/logging.h"
 
 #include "server/services/etcd_meta_service.h"
+#include "server/services/local_meta_service.h"
 #include "server/util/meta_tree.h"
 
 namespace vineyard {
 
-std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t ptr) {
-  return std::shared_ptr<IMetaService>(new EtcdMetaService(ptr));
+std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t server_ptr) {
+  std::string meta = server_ptr->GetSpec()["metastore_spec"]["meta"]
+                         .get_ref<const std::string&>();
+  VINEYARD_ASSERT(meta == "etcd" || meta == "local",
+                  "Invalid metastore: " + meta);
+  if (meta == "etcd") {
+    return std::shared_ptr<IMetaService>(new EtcdMetaService(server_ptr));
+  }
+  if (meta == "local") {
+    return std::shared_ptr<IMetaService>(new LocalMetaService(server_ptr));
+  }
+  return nullptr;
 }
 
 /** Note [Deleting objects and blobs]

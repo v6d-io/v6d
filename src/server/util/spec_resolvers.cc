@@ -24,26 +24,33 @@ limitations under the License.
 
 namespace vineyard {
 
-// meta data
+// deployment
 DEFINE_string(deployment, "local", "deployment mode: local, distributed");
+
+// meta data
+DEFINE_string(meta, "etcd", "Metadata storage, can be one of: etcd, local");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
+
 // share memory
 DEFINE_string(size, "256Mi",
               "shared memory size for vineyardd, the format could be 1024M, "
               "1024000, 1G, or 1Gi");
 DEFINE_int64(stream_threshold, 80,
              "memory threshold of streams (percentage of total memory)");
+
 // ipc
 DEFINE_string(socket, "/var/run/vineyard.sock", "IPC socket file location");
+
 // rpc
 DEFINE_bool(rpc, true, "Enable RPC service by default");
 DEFINE_int32(rpc_socket_port, 9600, "port to listen in rpc server");
+
 // Kubernetes
 DEFINE_bool(sync_crds, false, "Synchronize CRDs when persisting objects");
 
-// Whether to print metrics for prometheus or not.
+// metrics and prometheus
 DEFINE_bool(prometheus, false,
             "Whether to print metrics for prometheus or not");
 DEFINE_bool(metrics, false,
@@ -52,7 +59,7 @@ DEFINE_bool(metrics, false,
 const Resolver& Resolver::get(std::string name) {
   static auto server_resolver = ServerSpecResolver();
   static auto bulkstore_resolver = BulkstoreSpecResolver();
-  static auto etcd_resolver = EtcdSpecResolver();
+  static auto metastore_resolver = MetaStoreSpecResolver();
   static auto ipc_server_resolver = IpcSpecResolver();
   static auto rpc_server_resolver = RpcSpecResolver();
 
@@ -60,8 +67,8 @@ const Resolver& Resolver::get(std::string name) {
     return server_resolver;
   } else if (name == "bulkstore") {
     return bulkstore_resolver;
-  } else if (name == "etcd") {
-    return etcd_resolver;
+  } else if (name == "metastore") {
+    return metastore_resolver;
   } else if (name == "ipcserver") {
     return ipc_server_resolver;
   } else if (name == "rpcserver") {
@@ -71,10 +78,13 @@ const Resolver& Resolver::get(std::string name) {
   }
 }
 
-json EtcdSpecResolver::resolve() const {
+json MetaStoreSpecResolver::resolve() const {
   json spec;
-  // FIXME: get from flags or env
-  spec["prefix"] = FLAGS_etcd_prefix;
+  // resolve for meta
+  spec["meta"] = FLAGS_meta;
+
+  // resolve for etcd
+  spec["etcd_prefix"] = FLAGS_etcd_prefix;
   spec["etcd_endpoint"] = FLAGS_etcd_endpoint;
   spec["etcd_cmd"] = FLAGS_etcd_cmd;
   return spec;
@@ -149,7 +159,7 @@ json ServerSpecResolver::resolve() const {
   spec["deployment"] = FLAGS_deployment;
   spec["sync_crds"] =
       FLAGS_sync_crds || (read_env("VINEYARD_SYNC_CRDS") == "1");
-  spec["metastore_spec"] = Resolver::get("etcd").resolve();
+  spec["metastore_spec"] = Resolver::get("metastore").resolve();
   spec["bulkstore_spec"] = Resolver::get("bulkstore").resolve();
   spec["ipc_spec"] = Resolver::get("ipcserver").resolve();
   spec["rpc_spec"] = Resolver::get("rpcserver").resolve();
