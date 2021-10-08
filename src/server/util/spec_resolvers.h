@@ -40,10 +40,10 @@ class Resolver {
 };
 
 /**
- * @brief EtcdSpecResolver aims to resolve the etcd specification
+ * @brief MetaStoreSpecResolver aims to resolve the metastore specification
  *
  */
-class EtcdSpecResolver : public Resolver {
+class MetaStoreSpecResolver : public Resolver {
  public:
   json resolve() const;
 };
