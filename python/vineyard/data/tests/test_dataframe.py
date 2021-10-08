@@ -33,6 +33,13 @@ def test_pandas_dataframe(vineyard_client):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
+def test_pandas_dataframe_complex_columns(vineyard_client):
+    # see gh#533
+    df = pd.DataFrame([1, 2, 3, 4], columns=[['x']])
+    object_id = vineyard_client.put(df)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
 def test_pandas_dataframe_int_columns(vineyard_client):
     df = pd.DataFrame({1: [1, 2, 3, 4], 2: [5, 6, 7, 8]})
     object_id = vineyard_client.put(df)
