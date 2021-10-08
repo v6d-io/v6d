@@ -18,12 +18,10 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
 use arrow::buffer as arrow;
-use lazy_static::lazy_static;
 use serde_json::json;
 
 use super::object::{Object, ObjectBase, ObjectBuilder, Registered};
 
-use super::object_factory::ObjectFactory;
 use super::object_meta::ObjectMeta;
 use super::payload::Payload;
 use super::status::*;
@@ -161,9 +159,7 @@ impl Blob {
 
     pub fn dump() {} // Question: VLOG(); VLOG_IS_ON()
 
-    // Question: It will consume a client since IPCClient cannot implement clone
-    // trait(UnixStream).
-    pub fn make_empty(client: IPCClient) -> Rc<Blob> {
+    pub fn make_empty(client: Rc<IPCClient>) -> Rc<Blob> {
         let mut empty_blob = Blob::default();
         empty_blob.id = empty_blob_id();
         empty_blob.size = 0;
@@ -183,7 +179,9 @@ impl Blob {
         empty_blob
             .meta
             .add_json_key_value(&"transient".to_string(), &json!(true));
-        let tmp: Rc<dyn Client> = Rc::new(client); // Needs clone trait here
+        let tmp = Rc::clone(&client); // Needs clone trait here
+        let tmp = tmp as Rc<dyn Client>;
+
         empty_blob.meta.set_client(Some(Rc::downgrade(&tmp)));
 
         Rc::new(empty_blob)
@@ -316,6 +314,10 @@ impl Default for BufferSet {
 impl BufferSet {
     pub fn all_buffers(&self) -> &HashMap<ObjectID, Option<Rc<arrow::Buffer>>> {
         &self.buffers
+    }
+
+    pub fn all_buffers_mut(&mut self) -> &mut HashMap<ObjectID, Option<Rc<arrow::Buffer>>> {
+        &mut self.buffers
     }
 
     pub fn emplace_null_buffer(&mut self, id: ObjectID) -> io::Result<()> {

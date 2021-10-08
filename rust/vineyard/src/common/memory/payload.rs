@@ -1,5 +1,3 @@
-use std::ptr;
-
 use serde_json::{json, Value};
 
 use super::uuid::*;
@@ -11,7 +9,7 @@ pub struct Payload {
 
     arena_fd: i32,
     data_offset: isize,
-    data_size: i64,
+    pub data_size: i64,
     map_size: i64,
     pointer: *const u8, // TODO: Check if this is right for nullptr
 }
@@ -25,7 +23,7 @@ impl Default for Payload {
             data_offset: 0,
             data_size: 0,
             map_size: 0,
-            pointer: ptr::null(), // nullptr
+            pointer: std::ptr::null(), // nullptr
         }
     }
 }
@@ -51,6 +49,6 @@ impl Payload {
         self.data_offset = tree["data_offset"].as_i64().unwrap() as isize;
         self.data_size = tree["data_size"].as_i64().unwrap();
         self.map_size = tree["map_size"].as_i64().unwrap();
-        self.pointer = ptr::null(); //  nullptr
+        self.pointer = std::ptr::null(); //  nullptr
     }
 }

@@ -15,7 +15,7 @@ limitations under the License.
 */
 use std::io;
 use std::io::prelude::*;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 use serde_json::Value;
 
@@ -62,7 +62,7 @@ impl Default for IPCClient {
 }
 
 impl IPCClient {
-    pub fn create_blob(&mut self, size: usize, blob: Box<BlobWriter>) -> Result<(), bool> {
+    pub fn create_blob(&self, size: usize, blob: &Box<BlobWriter>) -> io::Result<()> {
         ENSURE_CONNECTED(self.connected());
         let object_id = invalid_object_id();
         let mut object: Payload;
@@ -72,12 +72,31 @@ impl IPCClient {
     }
 
     pub fn create_buffer(
+        &mut self,
         size: usize,
         id: ObjectID,
         payload: &mut Payload,
-        buffer: Option<Rc<arrow::MutableBuffer>>,
-    ) -> Result<(), bool> {
-        panic!(); //TODO
+    ) -> io::Result<Option<Rc<arrow::MutableBuffer>>> {
+        ENSURE_CONNECTED(self.connected());
+        let mut stream = self.get_stream()?;
+        let message_out = write_create_remote_buffer_request(size);
+        do_write(&mut stream, &message_out)?;
+        let mut message_in = String::new();
+        do_read(&mut stream, &mut message_in)?;
+        let message_in: Value = serde_json::from_str(&message_in)?;
+        let (id, payload) = read_create_buffer_reply(message_in)?;
+
+        let shared: *const u8 = std::ptr::null();
+        if payload.data_size > 0 {
+            RETURN_ON_ERROR(
+                //TODO: mmapToClient(payload.store_fd, payload.map_size, false, true, &shared)
+                Ok(()),
+            );
+        }
+        //let buffer = std::make_shared<arrow::MutableBuffer>(shared + payload.data_offset,
+        //    payload.data_size);
+
+        panic!();
     }
 
     pub fn drop_buffer(&mut self, id: ObjectID, fd: i32) -> Result<(), bool> {

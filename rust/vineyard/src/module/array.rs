@@ -1,4 +1,6 @@
 use std::any::Any;
+use std::cell::RefCell;
+
 use std::io;
 use std::marker::PhantomData;
 use std::mem;
@@ -6,6 +8,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
+use serde_json::json;
 
 use super::status::*;
 use super::typename::type_name;
@@ -15,7 +18,7 @@ use super::IPCClient;
 use super::ObjectMeta;
 use super::ENSURE_NOT_SEALED;
 use super::{Blob, BlobWriter};
-use super::{Object, ObjectBase, ObjectBuilder, Registered};
+use super::{GlobalObject, Object, ObjectBase, ObjectBuilder, Registered};
 
 #[derive(Debug, Clone)]
 pub struct Array<T> {
@@ -23,17 +26,19 @@ pub struct Array<T> {
     id: ObjectID,
     registered: bool,
     size: usize,
-    buffer: Rc<Blob>,        // Question: unsafe Send // 不行用Arc
-    phantom: PhantomData<T>, // Question: if this is correct?
+    buffer: Rc<Blob>, // Question: unsafe Send // 不行用Arc
+    phantom: PhantomData<T>,
 }
 
 unsafe impl<T> Send for Array<T> {}
 
 impl<T> Create for Array<T> {
     fn create() -> &'static Arc<Mutex<Box<dyn Object>>> {
+        // TODO: Drop reference
         lazy_static! {
             static ref SHARED_ARRAY: Arc<Mutex<Box<dyn Object>>> =
-                Arc::new(Mutex::new(Box::new(Array::default() as Array<i32>))); // Question
+                Arc::new(Mutex::new(Box::new(Array::default() as Array<i32>))); // FIXME
+
         }
         &SHARED_ARRAY
     }
@@ -82,9 +87,9 @@ impl<T> Array<T> {
     }
 }
 
-impl<T: Send + Clone> Registered for Array<T> {}
+impl<T: Send + Clone + std::fmt::Debug> Registered for Array<T> {}
 
-impl<T: Send + Clone> Object for Array<T> {
+impl<T: Send + Clone + std::fmt::Debug> Object for Array<T> {
     fn meta(&self) -> &ObjectMeta {
         &self.meta
     }
@@ -132,9 +137,22 @@ pub trait ArrayBaseBuilder: ObjectBuilder {
         value
             .meta
             .set_type_name(&type_name::<Array<T>>().to_string());
-        // if (std::is_base_of<GlobalObject, Array<T>>::value)
+        // if (std::is_base_of<GlobalObject, Array<T>>::value) TODO
+        if true {
+            value.meta.set_global(true);
+        }
+        value.size = self.size();
+        value
+            .meta
+            .add_json_key_value(&"size_".to_string(), &json!(value.size));
+        // Question: using __buffer__value_type = typename decltype(__value->buffer_)::element_type;
+        // auto __value_buffer_ = std::dynamic_pointer_cast<__buffer__value_type>(
+        //    buffer_->_Seal(client));
+
         panic!();
     }
+
+    fn size(&self) -> usize;
 
     fn set_size(&mut self, size: usize);
     fn set_buffer(&mut self, buffer: &Rc<dyn ObjectBase>);
@@ -149,6 +167,9 @@ pub struct ArrayBuilder<T> {
 }
 
 impl<T> ArrayBaseBuilder for ArrayBuilder<T> {
+    fn size(&self) -> usize {
+        self.size
+    }
     fn set_size(&mut self, size: usize) {
         self.size = size;
     }
@@ -168,16 +189,60 @@ impl<T> ObjectBuilder for ArrayBuilder<T> {
     }
 }
 
-impl<T> ObjectBase for ArrayBuilder<T> {}
+impl<T> ObjectBase for ArrayBuilder<T> {
+    fn build(&mut self, client: &IPCClient) -> io::Result<()> {
+        self.set_size(self.size);
+        //self.set_buffer(&Rc::from(self.buffer_writer));
+        Ok(())
+    }
+}
 
-impl<T> ArrayBuilder<T> {
-    // pub fn from(client: &impl Client, size: usize) -> ArrayBuilder<T> {
-    //     VINEYARD_CHECK_OK(client.create_blob(size * mem::size_of<T>(), buffer_writer));
-    //     ArrayBuilder{
-    //         size: size,
-    //         data: buffer_writer.data() //TODO
-    //     }
-    // }
+impl<T: Clone> ArrayBuilder<T> {
+    pub fn from(&mut self, client: &IPCClient, size: usize) {
+        ArrayBaseBuilder::from(self, client);
+        self.size = size;
+        VINEYARD_CHECK_OK(client.create_blob(self.size * mem::size_of::<T>(), &self.buffer_writer));
+        let data = unsafe { *self.buffer_writer.data() };
+        //let data: T = data; // Question: Cannot coerce T to u8
+        //self.data = data;
+    }
+
+    pub fn from_vec(&mut self, client: &IPCClient, vec: Vec<T>) {
+        self.from(client, vec.len());
+        let dest: *mut T = std::ptr::null_mut();
+        unsafe {
+            std::ptr::copy_nonoverlapping(vec.as_ptr(), dest, self.size * mem::size_of::<T>());
+        }
+        let data = unsafe { &*dest };
+        self.data = (*data).clone();
+        // Raw pointers don't move ownership.
+        // Compiler cannot protect against bugs like use-after-free;
+    }
+
+    pub fn from_array(&mut self, client: &IPCClient, data: *const T, size: usize) {
+        self.from(client, size);
+        let dest: *mut T = std::ptr::null_mut();
+        unsafe {
+            std::ptr::copy_nonoverlapping(data, dest, self.size * mem::size_of::<T>());
+        }
+        let data = unsafe { &*dest };
+        self.data = (*data).clone();
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    // TODO:
+    // T& operator[](size_t idx) { return data_[idx]; }
+
+    pub fn data_mut(&mut self) -> *mut T {
+        &mut self.data
+    }
+
+    pub fn data(&self) -> *const T {
+        &self.data
+    }
 }
 
 pub struct ResizableArrayBuilder<T> {
@@ -188,6 +253,10 @@ pub struct ResizableArrayBuilder<T> {
 }
 
 impl<T> ArrayBaseBuilder for ResizableArrayBuilder<T> {
+    fn size(&self) -> usize {
+        self.size
+    }
+
     fn set_size(&mut self, size: usize) {
         self.size = size;
     }

@@ -1,3 +1,4 @@
+use std::any::Any;
 /** Copyright 2020-2021 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +20,6 @@ use dyn_clone::DynClone;
 
 use serde_json::json;
 
-use super::blob::Blob;
 use super::object_meta::ObjectMeta;
 use super::status::*;
 use super::uuid::ObjectID;
@@ -35,7 +35,7 @@ pub trait ObjectBase {
     }
 }
 
-pub trait Object: ObjectBase + Send + DynClone {
+pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
     fn meta(&self) -> &ObjectMeta;
 
     fn meta_mut(&mut self) -> &mut ObjectMeta;
@@ -45,6 +45,13 @@ pub trait Object: ObjectBase + Send + DynClone {
     fn set_id(&mut self, id: ObjectID);
 
     fn set_meta(&mut self, meta: &ObjectMeta);
+
+    fn as_any(self: &'_ Self) -> &'_ dyn Any
+    where
+        Self: Sized + 'static,
+    {
+        self
+    }
 
     fn nbytes(&self) -> usize {
         self.meta().get_nbytes()
@@ -69,7 +76,7 @@ pub trait Object: ObjectBase + Send + DynClone {
             .get_key_value(&"transient".to_string())
             .as_bool()
             .unwrap());
-        if (!persist) {
+        if !persist {
             let client = self.meta().get_client().unwrap().upgrade().unwrap();
             VINEYARD_CHECK_OK(client.if_persist(self.id()));
             let persist = client.if_persist(self.id()).unwrap();
@@ -87,6 +94,8 @@ pub trait Object: ObjectBase + Send + DynClone {
 }
 
 dyn_clone::clone_trait_object!(Object);
+
+pub trait GlobalObject {}
 
 pub trait ObjectBuilder: ObjectBase {
     fn sealed(&self) -> bool;

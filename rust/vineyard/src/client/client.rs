@@ -20,8 +20,6 @@ use std::os::unix::net::UnixStream;
 
 use serde_json::Value;
 
-use super::ipc_client::IPCClient;
-use super::rpc_client::RPCClient;
 use super::rust_io::*;
 use super::ObjectMeta;
 

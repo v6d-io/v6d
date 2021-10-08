@@ -15,7 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::io;
-use std::ops;
 use std::rc::{Rc, Weak};
 
 use arrow::buffer as arrow;
@@ -197,7 +196,7 @@ impl ObjectMeta {
             .extend(&member.buffer_set.borrow());
     }
 
-    pub fn add_member_with_object(&mut self, name: &String, member: &Object) {
+    pub fn add_member_with_object(&mut self, name: &String, member: &dyn Object) {
         self.add_member_with_meta(name, member.meta());
     }
 
@@ -231,8 +230,9 @@ impl ObjectMeta {
         ret.set_meta_data(self.client.as_ref().unwrap(), &child_meta);
         let all_buffer_set = self.buffer_set.borrow();
         let all_blobs = all_buffer_set.all_buffers();
-        let ret_blobs = ret.buffer_set.borrow().all_buffers().clone(); // 去掉
-        for (key, _) in ret_blobs.iter() {
+        // let ret_buffer_set = ret.buffer_set.borrow_mut();
+        // let ret_blobs = ret_buffer_set.all_buffers();//.clone(); // 去掉
+        for (key, _) in ret.buffer_set.clone().borrow_mut().all_buffers().iter() {
             if let Some(value) = all_blobs.get(key) {
                 ret.set_buffer(*key, &value); // clone
             }
@@ -290,8 +290,6 @@ impl ObjectMeta {
         &self.buffer_set
     }
 
-    // TODO: Check logic
-
     pub fn find_all_blobs(&mut self, tree: &Value) {
         if tree.is_null() {
             return;
@@ -311,7 +309,6 @@ impl ObjectMeta {
                 cond2 = true;
             }
             if cond2 || cond1 {
-                // QUESTION // TODO
                 VINEYARD_CHECK_OK(self.buffer_set.borrow_mut().emplace_null_buffer(member_id));
             }
         } else {
