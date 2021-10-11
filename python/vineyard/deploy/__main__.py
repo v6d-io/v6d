@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import os
 import subprocess
 import sys
 
@@ -27,7 +28,10 @@ def deploy_vineyardd(args):
         vineyardd = find_vineyardd_path()
         if vineyardd is None:
             raise RuntimeError("Unable to vineyardd")
-        return subprocess.call([vineyardd] + args)
+        if os.name == 'nt':
+            return subprocess.call([vineyardd] + args)
+        else:
+            return os.execvp(vineyardd, [vineyardd] + args)
     except KeyboardInterrupt:
         return 0
 
