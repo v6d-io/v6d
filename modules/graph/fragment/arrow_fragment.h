@@ -314,6 +314,18 @@ class ArrowFragment
     vm_ptr_->Construct(meta.GetMemberMeta("vertex_map"));
 
     initPointers();
+
+    // init edge num
+    oenum_ = 0;
+    ienum_ = 0;
+    for (label_id_t i = 0; i < vertex_label_num_; i++) {
+      for (auto& v : InnerVertices(i)) {
+        for (label_id_t j = 0; j < edge_label_num_; j++) {
+          oenum_ += GetLocalOutDegree(v, j);
+          ienum_ += GetLocalInDegree(v, j);
+        }
+      }
+    }
   }
 
   fid_t fid() const { return fid_; }
@@ -442,18 +454,7 @@ class ArrowFragment
     return vm_ptr_->GetTotalNodesNum(label);
   }
 
-  size_t GetEdgeNum() const {
-    size_t edge_num = 0;
-    for (label_id_t i = 0; i < vertex_label_num_; i++) {
-      for (label_id_t j = 0; j < edge_label_num_; j++) {
-        edge_num += oe_lists_.at(i).at(j)->length();
-        if (directed_) {
-          edge_num += ie_lists_.at(i).at(j)->length();
-        }
-      }
-    }
-    return edge_num;
-  }
+  size_t GetEdgeNum() const { return directed_ ? oenum_ + ienum_ : oenum_; }
 
   template <typename T>
   T GetData(const vertex_t& v, prop_id_t prop_id) const {
@@ -2461,6 +2462,7 @@ class ArrowFragment
   bool directed_;
   label_id_t vertex_label_num_;
   label_id_t edge_label_num_;
+  size_t oenum_, ienum_;
 
   vineyard::Array<vid_t> ivnums_, ovnums_, tvnums_;
 
