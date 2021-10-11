@@ -23,6 +23,8 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "boost/algorithm/string.hpp"
+
 #include "common/util/env.h"
 
 namespace vineyard {
@@ -154,12 +156,21 @@ Status EtcdLauncher::LaunchEtcdServer(
   args.emplace_back("--initial-advertise-peer-urls");
   args.emplace_back(peer_endpoint);
 
-  if (VLOG_IS_ON(10)) {
-    args.emplace_back("--log-level");
-    args.emplace_back("debug");
-  }
-
   auto env = boost::this_process::environment();
+  // n.b., avoid using `[]` operator to update env, see boostorg/process#122.
+#ifndef NDEBUG
+  if (VLOG_IS_ON(100)) {
+    env.set("ETCD_LOG_LEVEL", "debug");
+  } else if (VLOG_IS_ON(10)) {
+    env.set("ETCD_LOG_LEVEL", "info");
+  } else {
+    env.set("ETCD_LOG_LEVEL", "warn");
+  }
+#else
+  env.set("ETCD_LOG_LEVEL", "error");
+#endif
+
+  DLOG(INFO) << "Launching etcd with: " << boost::algorithm::join(args, " ");
   std::error_code ec;
   etcd_proc = std::make_unique<boost::process::child>(
       etcd_cmd, boost::process::args(args), boost::process::std_out > stdout,
@@ -168,7 +179,7 @@ Status EtcdLauncher::LaunchEtcdServer(
     LOG(ERROR) << "Failed to launch etcd: " << ec.message();
     return Status::EtcdError("Failed to launch etcd: " + ec.message());
   } else {
-    LOG(INFO) << "etcd launched: pid = " << etcd_proc->id() << ", listen on "
+    LOG(INFO) << "Etcd launched: pid = " << etcd_proc->id() << ", listen on "
               << endpoint_port_;
 
     int retries = 0;

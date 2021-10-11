@@ -89,8 +89,9 @@ uint8_t* MmapEntry::map_readwrite() {
 }
 
 Status Client::Connect() {
-  if (const char* env_p = std::getenv("VINEYARD_IPC_SOCKET")) {
-    return Connect(std::string(env_p));
+  auto ep = read_env("VINEYARD_IPC_SOCKET");
+  if (!ep.empty()) {
+    return Connect(ep);
   }
   return Status::ConnectionError(
       "Environment variable VINEYARD_IPC_SOCKET does't exists");

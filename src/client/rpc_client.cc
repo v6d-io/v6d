@@ -25,13 +25,15 @@ limitations under the License.
 #include "client/io.h"
 #include "client/utils.h"
 #include "common/util/boost.h"
+#include "common/util/env.h"
 #include "common/util/protocols.h"
 
 namespace vineyard {
 
 Status RPCClient::Connect() {
-  if (const char* env_p = std::getenv("VINEYARD_RPC_ENDPOINT")) {
-    return Connect(std::string(env_p));
+  auto ep = read_env("VINEYARD_RPC_ENDPOINT");
+  if (!ep.empty()) {
+    return Connect(ep);
   }
   return Status::ConnectionError(
       "Environment variable VINEYARD_RPC_ENDPOINT does't exists");

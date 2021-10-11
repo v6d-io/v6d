@@ -21,6 +21,7 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
 #include "client/rpc_client.h"
+#include "common/util/env.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
 
@@ -553,10 +554,10 @@ void bind_client(py::module& mod) {
   mod.def(
          "connect",
          [](nullptr_t) -> py::object {
-           if (std::getenv("VINEYARD_IPC_SOCKET") != nullptr) {
+           if (!read_env("VINEYARD_IPC_SOCKET").empty()) {
              return py::cast(ClientManager<Client>::GetManager()->Connect());
            }
-           if (std::getenv("VINEYARD_RPC_ENDPOINT") != nullptr) {
+           if (!read_env("VINEYARD_RPC_ENDPOINT").empty()) {
              return py::cast(ClientManager<RPCClient>::GetManager()->Connect());
            }
            throw_on_error(Status::ConnectionFailed(

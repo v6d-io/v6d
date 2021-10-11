@@ -23,6 +23,7 @@ limitations under the License.
 #include <string>
 #include <unordered_map>
 
+#include "common/util/env.h"
 #include "common/util/logging.h"
 #include "common/util/typename.h"
 
@@ -70,9 +71,12 @@ class ObjectFactory {
   template <typename T>
   static bool Register() {
 #ifndef NDEBUG
-    // See: Note [std::cerr instead of DVLOG()]
-    std::cerr << "vineyard: register data type: " << type_name<T>()
-              << std::endl;
+    static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
+    if (__trace) {
+      // See: Note [std::cerr instead of DVLOG()]
+      std::cerr << "vineyard: register data type: " << type_name<T>()
+                << std::endl;
+    }
 #endif
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
