@@ -24,6 +24,7 @@ from vineyard._C import ObjectID, ObjectMeta
 from .tensor import ndarray
 from .utils import normalize_dtype
 
+
 def int_builder(client, value, **kwargs):
     meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Scalar<int>'
