@@ -20,9 +20,9 @@ import numpy as np
 import re
 
 import vineyard
-from vineyard._C import Object, ObjectID, ObjectMeta
+from vineyard._C import ObjectID, ObjectMeta
+from .tensor import ndarray
 from .utils import normalize_dtype
-
 
 def int_builder(client, value, **kwargs):
     meta = ObjectMeta(**kwargs)
@@ -123,7 +123,7 @@ def tuple_resolver(obj, resolver):
 def array_resolver(obj):
     typename = obj.typename
     value_type = normalize_dtype(re.match(r'vineyard::Array<([^>]+)>', typename).groups()[0])
-    return np.frombuffer(memoryview(obj.member("buffer_")), dtype=value_type)
+    return np.frombuffer(memoryview(obj.member("buffer_")), dtype=value_type).view(ndarray)
 
 
 def register_base_types(builder_ctx=None, resolver_ctx=None):

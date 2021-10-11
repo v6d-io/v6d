@@ -30,7 +30,7 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    printf("usage ./vector_test <ipc_socket>");
+    printf("usage ./array_test <ipc_socket>");
     return 1;
   }
   std::string ipc_socket = std::string(argv[1]);
@@ -44,8 +44,8 @@ int main(int argc, char** argv) {
   auto sealed_double_array =
       std::dynamic_pointer_cast<Array<double>>(builder.Seal(client));
 
-  LOG(INFO) << "successfully sealed...";
   ObjectID id = sealed_double_array->id();
+  LOG(INFO) << "successfully sealed, " << ObjectIDToString(id) << " ...";
 
   CHECK(!sealed_double_array->IsPersist());
   CHECK(sealed_double_array->IsLocal());

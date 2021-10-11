@@ -33,20 +33,29 @@ has the following license header originally:
 
 namespace vineyard {
 
-inline std::string read_env(const char* name) {
+inline std::string read_env(const char* name,
+                            std::string const& default_value) {
   if (const char* envp = std::getenv(name)) {
     return std::string(envp);
   }
-  return std::string{};
+  return default_value;
 }
 
+inline std::string read_env(std::string const& name,
+                            std::string const& default_value) {
+  return read_env(name.c_str(), default_value);
+}
+
+inline std::string read_env(const char* name) { return read_env(name, ""); }
+
 inline std::string read_env(std::string const& name) {
-  return read_env(name.c_str());
+  return read_env(name, "");
 }
 
 inline std::string get_hostname() {
-  if (const char* envp = std::getenv("MY_HOST_NAME")) {
-    return std::string(envp);
+  auto hname = read_env("MY_HOST_NAME");
+  if (!hname.empty()) {
+    return hname;
   } else {
     char hostname_value[MAXHOSTNAMELEN];
     gethostname(&hostname_value[0], MAXHOSTNAMELEN);
@@ -55,8 +64,9 @@ inline std::string get_hostname() {
 }
 
 inline std::string get_nodename() {
-  if (const char* envp = std::getenv("MY_NODE_NAME")) {
-    return std::string(envp);
+  auto hname = read_env("MY_NODE_NAME");
+  if (!hname.empty()) {
+    return hname;
   } else {
     return get_hostname();
   }
