@@ -157,16 +157,17 @@ Status EtcdLauncher::LaunchEtcdServer(
   args.emplace_back(peer_endpoint);
 
   auto env = boost::this_process::environment();
+  // n.b., avoid using `[]` operator to update env, see boostorg/process#122.
 #ifndef NDEBUG
   if (VLOG_IS_ON(100)) {
-    env["ETCD_LOG_LEVEL"] = "debug";
+    env.set("ETCD_LOG_LEVEL", "debug");
   } else if (VLOG_IS_ON(10)) {
-    env["ETCD_LOG_LEVEL"] = "info";
+    env.set("ETCD_LOG_LEVEL", "info");
   } else {
-    env["ETCD_LOG_LEVEL"] = "warn";
+    env.set("ETCD_LOG_LEVEL", "warn");
   }
 #else
-  env["ETCD_LOG_LEVEL"] = "error";
+  env.set("ETCD_LOG_LEVEL", "error");
 #endif
 
   DLOG(INFO) << "Launching etcd with: " << boost::algorithm::join(args, " ");
