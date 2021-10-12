@@ -151,7 +151,7 @@ int main(int argc, const char** argv) {
   }
 
   std::string ipc_socket = std::string(argv[1]);
-  ObjectID stream_id = VYObjectIDFromString(argv[2]);
+  ObjectID stream_id = ObjectIDFromString(argv[2]);
   int proc_num = std::stoi(argv[3]);
   int proc_index = std::stoi(argv[4]);
 
@@ -219,7 +219,7 @@ int main(int argc, const char** argv) {
   auto bs = std::dynamic_pointer_cast<DataframeStream>(dfbuilder.Seal(client));
   CHECK_AND_REPORT(client.Persist(bs->id()));
   LOG(INFO) << "Created dataframe stream " << bs->id() << " at " << proc_index;
-  ReportStatus("return", VYObjectIDToString(bs->id()));
+  ReportStatus("return", ObjectIDToString(bs->id()));
 
   std::unique_ptr<ByteStreamReader> reader;
   std::unique_ptr<DataframeStreamWriter> writer;

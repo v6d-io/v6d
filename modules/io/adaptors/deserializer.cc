@@ -56,7 +56,7 @@ Status deserialize_helper(
       if (member["typename"].get_ref<std::string const&>() ==
           type_name<Blob>()) {
         target.AddMember(kv.key(),
-                         blobs.at(VYObjectIDFromString(
+                         blobs.at(ObjectIDFromString(
                              member["id"].get_ref<std::string const&>())));
       } else {
         ObjectMeta sub_target;
@@ -156,7 +156,7 @@ int main(int argc, const char** argv) {
   }
 
   std::string ipc_socket = std::string(argv[1]);
-  ObjectID stream_id = VYObjectIDFromString(argv[2]);
+  ObjectID stream_id = ObjectIDFromString(argv[2]);
   int proc_num = std::stoi(argv[3]);
   int proc_index = std::stoi(argv[4]);
 

@@ -268,7 +268,7 @@ static bool is_meta_placeholder(const json& tree) {
 Status GetData(const json& tree, const std::string& instance_name,
                const ObjectID id, json& sub_tree,
                InstanceID const& current_instance_id) {
-  return GetData(tree, instance_name, VYObjectIDToString(id), sub_tree,
+  return GetData(tree, instance_name, ObjectIDToString(id), sub_tree,
                  current_instance_id);
 }
 
@@ -317,7 +317,7 @@ Status GetData(const json& tree, const std::string& instance_name,
       if (status.ok()) {
         sub_tree[item.key()] = sub_sub_tree;
       } else {
-        ObjectID sub_sub_tree_id = VYObjectIDFromString(sub_sub_tree_name);
+        ObjectID sub_sub_tree_id = ObjectIDFromString(sub_sub_tree_name);
         if (IsBlob(sub_sub_tree_id) && status.IsMetaTreeSubtreeNotExists()) {
           // make an empty blob
           sub_sub_tree["id"] = sub_sub_tree_name;
@@ -349,14 +349,6 @@ Status ListData(const json& tree, const std::string& instance_name,
 
   size_t found = 0;
 
-  std::regex regex_pattern;
-  if (regex) {
-    // pre-compile regex pattern, and for invalid regex pattern, return nothing.
-    try {
-      regex_pattern = std::regex(pattern);
-    } catch (std::regex_error const&) { return Status::OK(); }
-  }
-
   for (auto const& item : json::iterator_wrapper(tree["data"])) {
     if (found >= limit) {
       break;
@@ -370,16 +362,7 @@ Status ListData(const json& tree, const std::string& instance_name,
     RETURN_ON_ERROR(get_type(item.value(), type, true));
 
     // match type on pattern
-    bool matched = false;
-    if (regex) /* regex match */ {
-      std::cmatch __m;
-      matched = std::regex_match(type.c_str(), __m, regex_pattern);
-    } else /* wildcard match */ {
-      // https://www.man7.org/linux/man-pages/man3/fnmatch.3.html
-      matched = fnmatch(pattern.c_str(), type.c_str(), 0) == 0;
-    }
-
-    if (matched) {
+    if (MatchTypeName(regex, pattern, type)) {
       found += 1;
       json object_meta_tree;
       RETURN_ON_ERROR(
@@ -396,7 +379,7 @@ Status DelDataOps(const json& tree, const ObjectID id,
     ops.emplace_back(IMetaService::op_t::Del("/data/" + ObjectIDToString(id)));
     return Status::OK();
   }
-  return DelDataOps(tree, VYObjectIDToString(id), ops, sync_remote);
+  return DelDataOps(tree, ObjectIDToString(id), ops, sync_remote);
 }
 
 Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
@@ -814,7 +797,7 @@ Status PutDataOps(const json& tree, std::string const& instance_name,
                   InstanceID& computed_instance_id) {
   json diff;
   json signatures;
-  std::string name = VYObjectIDToString(id);
+  std::string name = ObjectIDToString(id);
   // recompute instance_id: check if it refers remote objects.
   Status status = diff_data_meta_tree(tree, name, sub_tree, diff, signatures,
                                       computed_instance_id);
@@ -844,14 +827,14 @@ Status PersistOps(const json& tree, const std::string& instance_name,
     return Status::OK();
   }
 
-  std::string name = VYObjectIDToString(id);
+  std::string name = ObjectIDToString(id);
   std::set<std::string> dedup;
   generate_persist_ops(diff, instance_name, name, ops, dedup);
   return Status::OK();
 }
 
 Status Exists(const json& tree, const ObjectID id, bool& exists) {
-  std::string name = VYObjectIDToString(id);
+  std::string name = ObjectIDToString(id);
   exists = has_sub_tree(tree, "/data", name);
   return Status::OK();
 }
@@ -859,7 +842,7 @@ Status Exists(const json& tree, const ObjectID id, bool& exists) {
 Status ShallowCopyOps(const json& tree, const ObjectID id,
                       const json& extra_metadata, const ObjectID target,
                       std::vector<IMetaService::op_t>& ops, bool& transient) {
-  std::string name = VYObjectIDToString(id);
+  std::string name = ObjectIDToString(id);
   json tmp_tree;
   RETURN_ON_ERROR(get_sub_tree(tree, "/data", name, tmp_tree));
   RETURN_ON_ASSERT(
@@ -882,7 +865,7 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
   }
   transient = tmp_tree["transient"].get<bool>();
   std::string key_prefix =
-      "/data" + std::string("/") + VYObjectIDToString(target) + "/";
+      "/data" + std::string("/") + ObjectIDToString(target) + "/";
   for (auto const& item : json::iterator_wrapper(tmp_tree)) {
     ops.emplace_back(
         IMetaService::op_t::Put(key_prefix + item.key(), item.value()));
@@ -891,7 +874,7 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
 }
 
 Status IfPersist(const json& tree, const ObjectID id, bool& persist) {
-  std::string name = VYObjectIDToString(id);
+  std::string name = ObjectIDToString(id);
   json tmp_tree;
   Status status = get_sub_tree(tree, "/data", name, tmp_tree);
   if (status.ok()) {
@@ -910,7 +893,7 @@ Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
       if (item.value().is_object() && !item.value().empty()) {
         if (item.value().contains("instance_id") &&
             item.value()["instance_id"].get<InstanceID>() == instance_id) {
-          objects.emplace_back(VYObjectIDFromString(item.key()));
+          objects.emplace_back(ObjectIDFromString(item.key()));
         }
       }
     }
@@ -930,9 +913,9 @@ Status DecodeObjectID(const json& tree, const std::string& instance_name,
         parse_link(link_value, type_of_value, name_of_value, instance_id);
     if (status.ok()) {
       if (name_of_value[0] == 'o') {
-        object_id = VYObjectIDFromString(name_of_value);
+        object_id = ObjectIDFromString(name_of_value);
       } else if (name_of_value[0] == 's') {
-        object_id = VYObjectIDFromString(
+        object_id = ObjectIDFromString(
             object_id_from_signature(tree, instance_name, name_of_value));
       } else {
         return Status::Invalid("Not a name or signature: " + name_of_value);
@@ -970,6 +953,24 @@ bool HasEquivalent(const json& tree, ObjectID const object_id,
     }
   }
   return false;
+}
+
+bool MatchTypeName(bool regex, std::string const& pattern,
+                   std::string const& type) {
+  // match type on pattern
+  if (regex) /* regex match */ {
+    // pre-compile regex pattern, and for invalid regex pattern, return nothing.
+    std::regex regex_pattern;
+    try {
+      regex_pattern = std::regex(pattern);
+    } catch (std::regex_error const&) { return false; }
+    // match
+    std::cmatch __m;
+    return std::regex_match(type.c_str(), __m, regex_pattern);
+  } else /* wildcard match */ {
+    // https://www.man7.org/linux/man-pages/man3/fnmatch.3.html
+    return fnmatch(pattern.c_str(), type.c_str(), 0) == 0;
+  }
 }
 
 }  // namespace meta_tree

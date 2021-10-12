@@ -701,7 +701,7 @@ class IMetaService {
         if (vs[0].empty()) {
           vs.erase(vs.begin());
         }
-        initial_delete_set.emplace(VYObjectIDFromString(vs[1]));
+        initial_delete_set.emplace(ObjectIDFromString(vs[1]));
       }
       std::vector<ObjectID> object_ids{initial_delete_set.begin(),
                                        initial_delete_set.end()};

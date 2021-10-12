@@ -99,7 +99,7 @@ void IMetaService::IncRef(std::string const& instance_name,
   }
   ObjectID key_obj, value_obj;
   if (meta_tree::DecodeObjectID(meta_, instance_name, value, value_obj).ok()) {
-    key_obj = VYObjectIDFromString(vs[1]);
+    key_obj = ObjectIDFromString(vs[1]);
     if (from_remote && IsBlob(value_obj)) {
       // don't put remote blob refs into deps graph, since two blobs may share
       // the same object id.
@@ -306,13 +306,13 @@ void IMetaService::printDepsGraph() {
   std::stringstream ss;
   ss << "object top -> down dependencies: " << std::endl;
   for (auto const& kv : subobjects_) {
-    ss << VYObjectIDToString(kv.first) << " -> "
-       << VYObjectIDToString(kv.second) << std::endl;
+    ss << ObjectIDToString(kv.first) << " -> " << ObjectIDToString(kv.second)
+       << std::endl;
   }
   ss << "object down <- top dependencies: " << std::endl;
   for (auto const& kv : supobjects_) {
-    ss << VYObjectIDToString(kv.first) << " <- "
-       << VYObjectIDToString(kv.second) << std::endl;
+    ss << ObjectIDToString(kv.first) << " <- " << ObjectIDToString(kv.second)
+       << std::endl;
   }
   VLOG(10) << "Depenencies graph on " << server_ptr_->instance_name() << ": \n"
            << ss.str();
@@ -394,7 +394,7 @@ void IMetaService::delVal(ObjectID const& target, std::set<ObjectID>& blobs) {
   if (target == InvalidObjectID()) {
     return;
   }
-  auto targetkey = json::json_pointer("/data/" + VYObjectIDToString(target));
+  auto targetkey = json::json_pointer("/data/" + ObjectIDToString(target));
   if (deleteable(target)) {
     // if deletable blob: delete blob
     if (IsBlob(target)) {

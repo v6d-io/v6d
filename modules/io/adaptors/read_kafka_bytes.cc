@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
   ByteStreamBuilder builder(client);
   auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
   CHECK_AND_REPORT(client.Persist(bstream->id()));
-  ReportStatus("return", VYObjectIDToString(bstream->id()));
+  ReportStatus("return", ObjectIDToString(bstream->id()));
 
   std::unique_ptr<ByteStreamWriter> writer;
   CHECK_AND_REPORT(bstream->OpenWriter(client, writer));

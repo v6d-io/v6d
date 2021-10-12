@@ -173,8 +173,8 @@ def init(num_instances=1, **kw):
     It will launch a local vineyardd and return a connected client to the vineyardd.
     It will also setup the environment variable :code:`VINEYARD_IPC_SOCKET`.
 
-    For the case to establish a local vineyard cluster consists of multiple vineyardd instances.
-    Use the :code:`num_instances` parameter:
+    For the case to establish a local vineyard cluster consists of multiple vineyardd
+    instances, using the :code:`num_instances` parameter:
 
     .. code:: python
     
@@ -182,16 +182,16 @@ def init(num_instances=1, **kw):
 
     In this case, three vineyardd instances will be launched.
 
-    The init method can only be called once in a process, to get the established sockets or
-    clients later in the process, use :code:`get_current_socket` or :code:`get_current_client`
-    respectively.
+    The init method can only be called once in a process, to get the established
+    sockets or clients later in the process, use :code:`get_current_socket` or
+    :code:`get_current_client` respectively.
     '''
     assert __default_instance_contexts == {}
 
     if 'VINEYARD_IPC_SOCKET' in os.environ:
-        raise ValueError(
-            'VINEYARD_IPC_SOCKET has already been set: %s, which means there might be a vineyard daemon already running locally',
-            os.environ['VINEYARD_IPC_SOCKET'])
+        raise ValueError("VINEYARD_IPC_SOCKET has already been set: %s, which "
+                         "means there might be a vineyard daemon already running "
+                         "locally" % os.environ['VINEYARD_IPC_SOCKET'])
 
     etcd_endpoints = None
     etcd_prefix = f'vineyard_init_at_{time.time()}'
@@ -200,7 +200,7 @@ def init(num_instances=1, **kw):
         _, ipc_socket, etcd_endpoints = ctx.__enter__()
         client = connect(ipc_socket)
         __default_instance_contexts[ipc_socket] = (ctx, client)
-        if not idx:
+        if idx == 0:
             os.environ['VINEYARD_IPC_SOCKET'] = ipc_socket
 
     return get_current_client()

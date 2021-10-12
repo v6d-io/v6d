@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # build cpprestsdk
+set(WERROR OFF CACHE BOOL "Treat warnings as errors")
 set(BUILD_TESTS OFF CACHE BOOL "Build tests.")
 set(BUILD_SAMPLES OFF CACHE BOOL "Build sample applications.")
 set(CPPREST_EXCLUDE_WEBSOCKETS ON CACHE BOOL "Exclude websockets functionality..")

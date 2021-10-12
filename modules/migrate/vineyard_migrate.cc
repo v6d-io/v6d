@@ -44,7 +44,7 @@ DEFINE_string(ipc_socket, "/tmp/vineyard/vineyard.sock",
 DEFINE_string(
     rpc_endpoint, "",
     "RPC endpoint of the peer vineyard server for fetching complete metadata");
-DEFINE_string(id, VYObjectIDToString(InvalidObjectID()),
+DEFINE_string(id, ObjectIDToString(InvalidObjectID()),
               "Object to migrate to local");
 DEFINE_bool(local_copy, false, "Make a copy of blobs even on the same machine");
 
@@ -55,7 +55,7 @@ static void find_blobs_on_remote_instance(const InstanceID remote_instance_id,
     return;
   }
   ObjectID member_id =
-      VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
+      ObjectIDFromString(tree["id"].get_ref<std::string const&>());
   if (IsBlob(member_id)) {
     if (FLAGS_local_copy) {
       blobs.emplace(member_id);
@@ -77,7 +77,7 @@ Status Serve(Client& client, asio::ip::tcp::socket&& socket) {
   while (true) {
     ObjectID blob_to_send = InvalidObjectID();
     asio::read(socket, asio::buffer(&blob_to_send, sizeof(ObjectID)));
-    VLOG(10) << "Receive object id " << VYObjectIDToString(blob_to_send);
+    VLOG(10) << "Receive object id " << ObjectIDToString(blob_to_send);
     if (blob_to_send == InvalidObjectID()) {
       LOG(INFO) << "The server finishes its job, exit normally";
       return Status::OK();
@@ -166,7 +166,7 @@ Status Work(Client& client, RPCClient& rpc_client,
                    "The remote server work as unexpectedly, abort");
   ObjectMeta metadata;
   RETURN_ON_ERROR(
-      rpc_client.GetMetaData(VYObjectIDFromString(FLAGS_id), metadata, true));
+      rpc_client.GetMetaData(ObjectIDFromString(FLAGS_id), metadata, true));
 
   // step 1: collect blob set
   std::set<ObjectID> remote_blobs;
@@ -178,7 +178,7 @@ Status Work(Client& client, RPCClient& rpc_client,
 
   // step 2: migrate blobs to local
   for (auto const& blob : remote_blobs) {
-    VLOG(10) << "Will migrate blob " << VYObjectIDToString(blob) << " to local";
+    VLOG(10) << "Will migrate blob " << ObjectIDToString(blob) << " to local";
     asio::write(socket, asio::buffer(&blob, sizeof(ObjectID)));
     size_t size_of_blob = std::numeric_limits<size_t>::max();
     asio::read(socket, asio::buffer(&size_of_blob, sizeof(size_t)));
@@ -206,7 +206,7 @@ Status Work(Client& client, RPCClient& rpc_client,
   }
 
   // print the result object id to stdout
-  std::cout << VYObjectIDToString(target.GetId()) << std::endl;
+  std::cout << ObjectIDToString(target.GetId()) << std::endl;
 
   return Status::OK();
 }

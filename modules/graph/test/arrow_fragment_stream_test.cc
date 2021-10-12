@@ -78,7 +78,7 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
     mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
 
     LOG(INFO) << "[worker-" << comm_spec.worker_id()
-              << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
+              << "] loaded graph to vineyard: " << ObjectIDToString(frag_id)
               << " ...";
   }
 }
@@ -97,17 +97,16 @@ int main(int argc, char** argv) {
   int edge_label_num = atoi(argv[index++]);
   std::vector<std::vector<ObjectID>> estreams;
   for (int i = 0; i < edge_label_num; ++i) {
-    LOG(INFO) << "edges: "
-              << VYObjectIDToString(VYObjectIDFromString(argv[index]));
-    estreams.push_back({VYObjectIDFromString(argv[index++])});
+    LOG(INFO) << "edges: " << ObjectIDToString(ObjectIDFromString(argv[index]));
+    estreams.push_back({ObjectIDFromString(argv[index++])});
   }
 
   int vertex_label_num = atoi(argv[index++]);
   std::vector<ObjectID> vstreams;
   for (int i = 0; i < vertex_label_num; ++i) {
     LOG(INFO) << "vertex: "
-              << VYObjectIDToString(VYObjectIDFromString(argv[index]));
-    vstreams.push_back(VYObjectIDFromString(argv[index++]));
+              << ObjectIDToString(ObjectIDFromString(argv[index]));
+    vstreams.push_back(ObjectIDFromString(argv[index++]));
   }
 
   int directed = 1;

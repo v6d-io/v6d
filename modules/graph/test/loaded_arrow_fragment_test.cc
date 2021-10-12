@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
 
-  ObjectID object_id = VYObjectIDFromString(object_id_str);
+  ObjectID object_id = ObjectIDFromString(object_id_str);
 
   std::shared_ptr<GraphType> graph =
       std::dynamic_pointer_cast<GraphType>(client.GetObject(object_id));

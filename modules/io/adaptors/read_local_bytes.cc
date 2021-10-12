@@ -58,7 +58,7 @@ int main(int argc, const char** argv) {
   auto lstream =
       std::dynamic_pointer_cast<ByteStream>(client.GetObject(bstream->id()));
   LOG(INFO) << "Local stream: " << proc << " " << lstream->id();
-  ReportStatus("return", VYObjectIDToString(lstream->id()));
+  ReportStatus("return", ObjectIDToString(lstream->id()));
 
   std::unique_ptr<ByteStreamWriter> writer;
   CHECK_AND_REPORT(lstream->OpenWriter(client, writer));

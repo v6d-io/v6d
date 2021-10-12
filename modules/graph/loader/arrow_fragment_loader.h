@@ -119,7 +119,7 @@ inline Status ReadRecordBatchesFromVineyard(
     int part_num) {
   auto source = client.GetObject(object_id);
   RETURN_ON_ASSERT(source != nullptr,
-                   "Object not exists: " + VYObjectIDToString(object_id));
+                   "Object not exists: " + ObjectIDToString(object_id));
   if (auto pstream = std::dynamic_pointer_cast<ParallelStream>(source)) {
     return ReadRecordBatchesFromVineyardStream(client, pstream, batches,
                                                part_id, part_num);
@@ -215,7 +215,7 @@ inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
                                     int part_id, int part_num) {
   auto source = client.GetObject(object_id);
   RETURN_ON_ASSERT(source != nullptr,
-                   "Object not exists: " + VYObjectIDToString(object_id));
+                   "Object not exists: " + ObjectIDToString(object_id));
   if (auto pstream = std::dynamic_pointer_cast<ParallelStream>(source)) {
     return ReadTableFromVineyardStream(client, pstream, table, part_id,
                                        part_num);
@@ -276,7 +276,7 @@ GatherETables(Client& client,
             .emplace_back(batch);
       }
     } else {
-      LOG(ERROR) << "Failed to read from stream " << VYObjectIDToString(estream)
+      LOG(ERROR) << "Failed to read from stream " << ObjectIDToString(estream)
                  << ": " << status.ToString();
     }
     return Status::OK();
@@ -340,7 +340,7 @@ GatherVTables(Client& client, const std::vector<ObjectID>& vstreams,
         grouped_batches[label].emplace_back(batch);
       }
     } else {
-      LOG(ERROR) << "Failed to read from stream " << VYObjectIDToString(vstream)
+      LOG(ERROR) << "Failed to read from stream " << ObjectIDToString(vstream)
                  << ": " << status.ToString();
     }
     return Status::OK();

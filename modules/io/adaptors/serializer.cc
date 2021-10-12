@@ -89,7 +89,7 @@ int main(int argc, const char** argv) {
   }
 
   std::string ipc_socket = std::string(argv[1]);
-  ObjectID object_id = VYObjectIDFromString(argv[2]);
+  ObjectID object_id = ObjectIDFromString(argv[2]);
 
   Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
@@ -98,7 +98,7 @@ int main(int argc, const char** argv) {
   ObjectID stream_id;
   auto st = Serialize(client, object_id, &stream_id);
   if (st.ok()) {
-    ReportStatus("return", VYObjectIDToString(stream_id));
+    ReportStatus("return", ObjectIDToString(stream_id));
     ReportStatus("exit", "");
   } else {
     ReportStatus("error", st.ToString());

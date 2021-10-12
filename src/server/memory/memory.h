@@ -43,6 +43,9 @@ namespace vineyard {
 
 class BulkStore {
  public:
+  using object_map_t =
+      tbb::concurrent_hash_map<ObjectID, std::shared_ptr<Payload>>;
+
   ~BulkStore();
 
   Status PreAllocate(const size_t size);
@@ -62,6 +65,8 @@ class BulkStore {
   Status Delete(const ObjectID& object_id);
 
   bool Exists(const ObjectID& object_id);
+
+  object_map_t const& List() const { return objects_; }
 
   size_t Footprint() const;
   size_t FootprintLimit() const;
@@ -83,8 +88,6 @@ class BulkStore {
 
   std::unordered_map<int /* fd */, Arena> arenas_;
 
-  using object_map_t =
-      tbb::concurrent_hash_map<ObjectID, std::shared_ptr<Payload>>;
   object_map_t objects_;
 };
 

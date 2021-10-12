@@ -41,10 +41,10 @@ void bind_core(py::module& mod) {
       .def(py::init<std::string const&>(), "id"_a)
       .def("__int__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
       .def("__repr__",
-           [](const ObjectIDWrapper& id) { return VYObjectIDToString(id); })
+           [](const ObjectIDWrapper& id) { return ObjectIDToString(id); })
       .def("__str__",
            [](const ObjectIDWrapper& id) {
-             return "ObjectID <\"" + VYObjectIDToString(id) + "\">";
+             return "ObjectID <\"" + ObjectIDToString(id) + "\">";
            })
       .def("__hash__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
       .def("__eq__", [](const ObjectIDWrapper& id,
@@ -304,11 +304,11 @@ void bind_core(py::module& mod) {
       .def_property_readonly("isglobal", &Object::IsGlobal)
       .def("__repr__",
            [](const Object* self) {
-             return "Object <\"" + VYObjectIDToString(self->id()) +
+             return "Object <\"" + ObjectIDToString(self->id()) +
                     "\": " + self->meta().GetTypeName() + ">";
            })
       .def("__str__", [](const Object* self) {
-        return "Object <\"" + VYObjectIDToString(self->id()) +
+        return "Object <\"" + ObjectIDToString(self->id()) +
                "\": " + self->meta().GetTypeName() + ">";
       });
 

@@ -133,7 +133,7 @@ void testDelete(Client& client) {
     CHECK(exists);
 
     LOG(INFO) << "delete global dataframe id: " << global_dataframe_id << ": "
-              << VYObjectIDToString(global_dataframe_id);
+              << ObjectIDToString(global_dataframe_id);
     VINEYARD_CHECK_OK(client.DelData(global_dataframe_id, false, true));
     VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
     CHECK(!exists);
@@ -170,7 +170,7 @@ void testDelete(Client& client) {
     CHECK(exists);
 
     LOG(INFO) << "delete dataframe chunk id: " << dataframe_id << ": "
-              << VYObjectIDToString(dataframe_id);
+              << ObjectIDToString(dataframe_id);
     VINEYARD_CHECK_OK(client.DelData(dataframe_id, false, true));
     VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
     CHECK(exists);
@@ -178,7 +178,7 @@ void testDelete(Client& client) {
     CHECK(exists);
 
     LOG(INFO) << "delete dataframe chunk id with deep: " << dataframe_id << ": "
-              << VYObjectIDToString(dataframe_id);
+              << ObjectIDToString(dataframe_id);
     VINEYARD_CHECK_OK(client.DelData(dataframe_id, true, true));
     VINEYARD_CHECK_OK(client.Exists(global_dataframe_id, exists));
     CHECK(!exists);

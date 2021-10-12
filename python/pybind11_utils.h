@@ -36,9 +36,9 @@ struct ObjectIDWrapper {
   ObjectIDWrapper() : internal_id(InvalidObjectID()) {}
   ObjectIDWrapper(ObjectID id) : internal_id(id) {}  // NOLINT(runtime/explicit)
   explicit ObjectIDWrapper(std::string const& id)
-      : internal_id(VYObjectIDFromString(id)) {}
+      : internal_id(ObjectIDFromString(id)) {}
   explicit ObjectIDWrapper(const char* id)
-      : internal_id(VYObjectIDFromString(id)) {}
+      : internal_id(ObjectIDFromString(id)) {}
   operator ObjectID() const { return internal_id; }
   bool operator==(ObjectIDWrapper const& other) const {
     return internal_id == other.internal_id;

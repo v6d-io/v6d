@@ -229,7 +229,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
               if (IsBlob(id)) {
                 std::shared_ptr<Payload> object;
                 if (this->bulk_store_->Get(id, object).ok()) {
-                  sub_tree["id"] = VYObjectIDToString(id);
+                  sub_tree["id"] = ObjectIDToString(id);
                   sub_tree["typename"] = "vineyard::Blob";
                   sub_tree["length"] = object->data_size;
                   sub_tree["nbytes"] = object->data_size;
@@ -248,7 +248,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
 #endif
               }
               if (sub_tree.is_object() && !sub_tree.empty()) {
-                sub_tree_group[VYObjectIDToString(id)] = sub_tree;
+                sub_tree_group[ObjectIDToString(id)] = sub_tree;
               }
             }
             return callback(Status::OK(), sub_tree_group);
@@ -280,6 +280,28 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
           VINEYARD_CHECK_OK(CATCH_JSON_ERROR(
               meta_tree::ListData(meta, this->instance_name(), pattern, regex,
                                   limit, sub_tree_group)));
+          size_t current = sub_tree_group.size();
+          if (current < limit &&
+              meta_tree::MatchTypeName(false, pattern, "vineyard::Blob")) {
+            // consider returns blob when not reach the limit
+            auto const& blobs = bulk_store_->List();
+            for (auto const& item : blobs) {
+              if (current >= limit) {
+                break;
+              }
+              std::string sub_tree_key = ObjectIDToString(item.first);
+              json sub_tree;
+              {
+                sub_tree["id"] = sub_tree_key;
+                sub_tree["typename"] = "vineyard::Blob";
+                sub_tree["length"] = item.second->data_size;
+                sub_tree["nbytes"] = item.second->data_size;
+                sub_tree["transient"] = true;
+                sub_tree["instance_id"] = this->instance_id();
+              }
+              sub_tree_group[sub_tree_key] = sub_tree;
+            }
+          }
           return callback(status, sub_tree_group);
         } else {
           LOG(ERROR) << status.ToString();
@@ -492,7 +514,7 @@ Status VineyardServer::DeepCopy(const ObjectID id, const std::string& peer,
                                      "--ipc_socket",   IPCSocket(),
                                      "--rpc_endpoint", peer_rpc_endpoint,
                                      "--host",         peer,
-                                     "--id",           VYObjectIDToString(id),
+                                     "--id",           ObjectIDToString(id),
                                      "--local_copy",   "true"};
     auto proc = std::make_shared<Process>(context_);
     proc->Start(
@@ -506,7 +528,7 @@ Status VineyardServer::DeepCopy(const ObjectID id, const std::string& peer,
                   InvalidObjectID());
             }
 
-            ObjectID target_id = VYObjectIDFromString(line);
+            ObjectID target_id = ObjectIDFromString(line);
             return callback(Status::OK(), target_id);
           } else {
             proc->Terminate();
@@ -680,7 +702,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
         "--ipc_socket",   IPCSocket(),
         "--rpc_endpoint", peer_rpc_endpoint,
         "--host",         peer,
-        "--id",           VYObjectIDToString(object_id)};
+        "--id",           ObjectIDToString(object_id)};
     auto proc = std::make_shared<Process>(context_);
     proc->Start(
         migrate_process, args,
@@ -694,7 +716,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
                   InvalidObjectID());
             }
 
-            ObjectID result_id = VYObjectIDFromString(line);
+            ObjectID result_id = ObjectIDFromString(line);
 
             // associate the signature.
             //
@@ -775,7 +797,7 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         "--ipc_socket",   IPCSocket(),
         "--rpc_endpoint", peer_rpc_endpoint,
         "--host",         peer,
-        "--id",           VYObjectIDToString(stream_id)};
+        "--id",           ObjectIDToString(stream_id)};
     auto proc = std::make_shared<Process>(context_);
     proc->Start(
         migrate_process, args,
@@ -800,13 +822,13 @@ Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
         "--ipc_socket",   IPCSocket(),
         "--rpc_endpoint", peer_rpc_endpoint,
         "--host",         "0.0.0.0",
-        "--id",           VYObjectIDToString(stream_id)};
+        "--id",           ObjectIDToString(stream_id)};
     auto proc = std::make_shared<Process>(context_);
     proc->Start(
         migrate_process, args,
         [callback, proc](Status const& status, std::string const& line) {
           if (status.ok()) {
-            ObjectID result_id = VYObjectIDFromString(line);
+            ObjectID result_id = ObjectIDFromString(line);
             VINEYARD_DISCARD(callback(Status::OK(), result_id));
             if (!proc->Running() && proc->ExitCode() != 0) {
               return Status::IOError("The migration server exit abnormally");
