@@ -300,6 +300,7 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
                 sub_tree["instance_id"] = this->instance_id();
               }
               sub_tree_group[sub_tree_key] = sub_tree;
+              current += 1;
             }
           }
           return callback(status, sub_tree_group);
