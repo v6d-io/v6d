@@ -97,9 +97,8 @@ int main(int argc, char** argv) {
     auto targets1 = rpc_client.ListObjects("vineyard::Array*");
     CHECK(!targets1.empty());
 
-    // blob cannot be fetched from metadata
     auto targets2 = rpc_client.ListObjects("vineyard::Blob*");
-    CHECK(targets2.empty());
+    CHECK(!targets2.empty());
 
     auto targets3 = rpc_client.ListObjects("vineyard::*");
     CHECK(!targets3.empty());

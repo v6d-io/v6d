@@ -76,14 +76,14 @@ void Blob::Construct(ObjectMeta const& meta) {
     if (this->buffer_ == nullptr) {
       throw std::runtime_error(
           "Invalid internal state: local blob found bit it is nullptr: " +
-          VYObjectIDToString(meta.GetId()));
+          ObjectIDToString(meta.GetId()));
     }
     this->size_ = this->buffer_->size();
   } else {
     throw std::runtime_error(
         "Invalid internal state: failed to construct local blob since payload "
         "is missing: " +
-        VYObjectIDToString(meta.GetId()));
+        ObjectIDToString(meta.GetId()));
   }
 }
 

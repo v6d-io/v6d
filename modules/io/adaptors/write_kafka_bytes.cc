@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   }
 
   std::string ipc_socket = std::string(argv[1]);
-  ObjectID stream_id = VYObjectIDFromString(argv[2]);
+  ObjectID stream_id = ObjectIDFromString(argv[2]);
   std::string kafka_address = "kafka://" + std::string(argv[3]);
   int proc_num = std::stoi(argv[4]);
   int proc_index = std::stoi(argv[5]);

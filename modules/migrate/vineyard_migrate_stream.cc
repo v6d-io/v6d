@@ -44,7 +44,7 @@ DEFINE_string(ipc_socket, "/tmp/vineyard/vineyard.sock",
 DEFINE_string(
     rpc_endpoint, "",
     "RPC endpoint of the peer vineyard server for fetching complete metadata");
-DEFINE_string(id, VYObjectIDToString(InvalidObjectID()),
+DEFINE_string(id, ObjectIDToString(InvalidObjectID()),
               "Object to migrate to local");
 
 Status Rebuild(Client& client, ObjectMeta const& metadata,
@@ -75,13 +75,13 @@ Status Serve(Client& client, RPCClient& rpc_client,
              asio::ip::tcp::socket&& socket) {
   ObjectMeta metadata;
   RETURN_ON_ERROR(
-      rpc_client.GetMetaData(VYObjectIDFromString(FLAGS_id), metadata, true));
+      rpc_client.GetMetaData(ObjectIDFromString(FLAGS_id), metadata, true));
 
   ObjectID target_id;
   RETURN_ON_ERROR(Rebuild(client, metadata, target_id));
 
   // print the result object id to stdout
-  std::cout << VYObjectIDToString(target_id) << std::endl;
+  std::cout << ObjectIDToString(target_id) << std::endl;
 
   while (true) {
     size_t buffer_size;
@@ -137,7 +137,7 @@ Status RunServer() {
 }
 
 Status Work(Client& client, asio::ip::tcp::socket& socket) {
-  ObjectID stream_id = VYObjectIDFromString(FLAGS_id);
+  ObjectID stream_id = ObjectIDFromString(FLAGS_id);
   RETURN_ON_ERROR(client.OpenStream(stream_id, OpenStreamMode::read));
   while (true) {
     std::unique_ptr<arrow::Buffer> buffer;

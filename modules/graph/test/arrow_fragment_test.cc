@@ -56,7 +56,7 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
     mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
 
     LOG(INFO) << "[worker-" << comm_spec.worker_id()
-              << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
+              << "] loaded graph to vineyard: " << ObjectIDToString(frag_id)
               << " ...";
   }
 }
@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
       std::shared_ptr<GraphType> graph =
           std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
       LOG(INFO) << "[frag-" << graph->fid()
-                << "]: " << VYObjectIDToString(fragment_id);
+                << "]: " << ObjectIDToString(fragment_id);
       traverse_graph(graph,
                      "./xx/output_graph_" + std::to_string(graph->fid()));
     }

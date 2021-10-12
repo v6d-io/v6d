@@ -46,11 +46,11 @@ void ObjectMeta::SetClient(ClientBase* client) { this->client_ = client; }
 ClientBase* ObjectMeta::GetClient() const { return client_; }
 
 void ObjectMeta::SetId(const ObjectID& id) {
-  meta_["id"] = VYObjectIDToString(id);
+  meta_["id"] = ObjectIDToString(id);
 }
 
 const ObjectID ObjectMeta::GetId() const {
-  return VYObjectIDFromString(meta_["id"].get_ref<std::string const&>());
+  return ObjectIDFromString(meta_["id"].get_ref<std::string const&>());
 }
 
 const Signature ObjectMeta::GetSignature() const {
@@ -155,7 +155,7 @@ void ObjectMeta::AddMember(const std::string& name,
 void ObjectMeta::AddMember(const std::string& name, const ObjectID member_id) {
   VINEYARD_ASSERT(!meta_.contains(name));
   json member_node;
-  member_node["id"] = VYObjectIDToString(member_id);
+  member_node["id"] = ObjectIDToString(member_id);
   meta_[name] = member_node;
   // mark the meta_ as incomplete
   incomplete_ = true;
@@ -264,7 +264,7 @@ void ObjectMeta::findAllBlobs(const json& tree) {
     return;
   }
   ObjectID member_id =
-      VYObjectIDFromString(tree["id"].get_ref<std::string const&>());
+      ObjectIDFromString(tree["id"].get_ref<std::string const&>());
   if (IsBlob(member_id)) {
     if (client_ == nullptr /* traverse to account blobs */ ||
         tree["instance_id"].get<InstanceID>() == client_->instance_id()) {

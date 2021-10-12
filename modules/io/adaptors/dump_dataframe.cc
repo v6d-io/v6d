@@ -30,7 +30,7 @@ int main(int argc, const char** argv) {
   }
 
   std::string ipc_socket = std::string(argv[1]);
-  ObjectID stream_id = VYObjectIDFromString(argv[2]);
+  ObjectID stream_id = ObjectIDFromString(argv[2]);
 
   Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));

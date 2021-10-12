@@ -118,7 +118,7 @@ void ObjectMigration::getBlobList(json& meta_tree) {
   if (instance_id != instance_id_)
     return;
   ObjectID id =
-      VYObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
+      ObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
   if (IsBlob(id) && blob_list_.find(id) == blob_list_.end()) {
     blob_list_.insert(id);
   }
@@ -209,8 +209,8 @@ ObjectID MigrationServer::createObject(json& meta_tree, Client& client,
   InstanceID instance_id = meta_tree["instance_id"].get<InstanceID>();
   for (auto& item : json::iterator_wrapper(meta_tree)) {
     if (item.value().is_object() && !item.value().empty()) {
-      ObjectID id = VYObjectIDFromString(
-          item.value()["id"].get_ref<std::string const&>());
+      ObjectID id =
+          ObjectIDFromString(item.value()["id"].get_ref<std::string const&>());
       if (object_id_map_.find(id) == object_id_map_.end()) {
         InstanceID child_instance_id =
             item.value()["instance_id"].get<InstanceID>();
@@ -248,7 +248,7 @@ ObjectID MigrationServer::createObject(json& meta_tree, Client& client,
     VINEYARD_CHECK_OK(client.GetMetaData(obj_id, new_meta));
     if (persist) {
       if (instance_id != UnspecifiedInstanceID()) {
-        std::string obj_name = VYObjectIDToString(obj_id) + "_" +
+        std::string obj_name = ObjectIDToString(obj_id) + "_" +
                                std::to_string(client.instance_id());
         VINEYARD_CHECK_OK(client.PutName(obj_id, obj_name));
       }

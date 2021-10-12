@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
   std::vector<ObjectID> object_id_list;
   boost::split(w_list, FLAGS_object_list, boost::is_any_of(" ,\t"));
   for (auto& str_id : w_list) {
-    object_id_list.emplace_back(VYObjectIDFromString(str_id));
+    object_id_list.emplace_back(ObjectIDFromString(str_id));
   }
   Client client;
   VINEYARD_CHECK_OK(client.Connect(FLAGS_ipc_socket));
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
   json instance_map_tree = json::parse(FLAGS_instance_map);
   std::unordered_map<InstanceID, InstanceID> instance_map;
   for (auto const& instance : json::iterator_wrapper(instance_map_tree)) {
-    InstanceID src_instance = VYObjectIDFromString(instance.key());
+    InstanceID src_instance = ObjectIDFromString(instance.key());
     InstanceID dst_instance =
         instance_map_tree[instance.key()].get<InstanceID>();
     instance_map.emplace(src_instance, dst_instance);

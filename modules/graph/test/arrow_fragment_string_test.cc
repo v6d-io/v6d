@@ -55,7 +55,7 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
     mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
 
     LOG(INFO) << "[worker-" << comm_spec.worker_id()
-              << "] loaded graph to vineyard: " << VYObjectIDToString(frag_id)
+              << "] loaded graph to vineyard: " << ObjectIDToString(frag_id)
               << " ...";
   }
 }

@@ -312,8 +312,8 @@ Status ClientBase::MigrateObject(const ObjectID object_id, ObjectID& result_id,
   auto receiver = std::async(std::launch::async, [&]() -> Status {
     RETURN_ON_ERROR(this->migrateObjectImpl(
         object_id, result_id, false, is_stream, otherHost, otherEndpoint));
-    VLOG(10) << "receive from migration: " << VYObjectIDToString(object_id)
-             << " -> " << VYObjectIDToString(result_id);
+    VLOG(10) << "receive from migration: " << ObjectIDToString(object_id)
+             << " -> " << ObjectIDToString(result_id);
     return Status::OK();
   });
 
