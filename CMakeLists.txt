@@ -20,6 +20,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
 option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" OFF)
+option(USE_ASAN "Using address sanitizer to check memory accessing" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
@@ -446,7 +447,7 @@ if(BUILD_VINEYARD_SERVER)
     endif()
 
     # sanitizer
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND USE_ASAN)
         target_compile_options(vineyardd PRIVATE -fsanitize=address)
         add_target_link_options(vineyardd PRIVATE OPTIONS -fsanitize=address)
     endif()
