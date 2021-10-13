@@ -172,6 +172,7 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Debug \
                    -DBUILD_SHARED_LIBS=ON \
+                   -DUSE_ASAN=ON \
                    -DWITH_ALLOCATOR=${{ matrix.malloc }} \
                    -DBUILD_VINEYARD_COVERAGE=ON \
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
