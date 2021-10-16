@@ -16,8 +16,9 @@ limitations under the License.
 package vineyard
 
 /*
-#include "test.h"
+//#include "test.h"
 #include "fling.h"
+#include <sys/mman.h>
 */
 import "C"
 import (
@@ -28,9 +29,12 @@ import (
 
 	"github.com/apache/arrow/go/arrow/memory"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/client/ds"
+
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+	"net"
+	"unsafe"
 )
 
 type IPCClient struct {
@@ -41,10 +45,25 @@ type IPCClient struct {
 	instanceID    int
 	serverVersion string
 	rpcEndpoint   string
-	mmapTable     map[int]MapEntry
+	mmapTable     map[int]MmapEntry
 }
 
-type MapEntry struct {
+type MmapEntry struct {
+	clientFd  int
+	mapSize   int64
+	readOnly  bool
+	realign   bool
+	roPointer unsafe.Pointer
+	rwPointer unsafe.Pointer
+}
+
+func (m *MmapEntry) MapReadOnly() {
+	m.roPointer = C.mmap(nil, C.ulong(m.mapSize), C.PROT_READ, C.MAP_SHARED, C.int(m.clientFd), 0)
+	// TODO: error fix
+}
+
+func (m *MmapEntry) MapReadWrite() {
+	m.rwPointer = C.mmap(nil, C.ulong(m.mapSize), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, C.int(m.clientFd), 0)
 }
 
 // Connect to IPCClient steps as follows
@@ -84,7 +103,7 @@ func (i *IPCClient) Connect(ipcSocket string) error {
 	}
 	i.connected = true
 	i.rpcEndpoint = registerReply.RPCEndpoint
-	i.mmapTable = make(map[int]MapEntry)
+	i.mmapTable = make(map[int]MmapEntry)
 	// TODO: compatible server check
 	return nil
 }
@@ -96,11 +115,11 @@ func (i *IPCClient) CreateBlob(size int, blob *ds.BlobWriter) {
 	var buffer memory.Buffer
 	var id common.ObjectID = common.InvalidObjectID()
 	var payload ds.Payload
-	i.CreateBuffer(size, id, &payload, &buffer)
+	i.CreateBuffer(size, &id, &payload, &buffer)
 	blob.Reset(id, payload, buffer)
 }
 
-func (i *IPCClient) CreateBuffer(size int, id common.ObjectID, payload *ds.Payload, buffer *memory.Buffer) error {
+func (i *IPCClient) CreateBuffer(size int, id *common.ObjectID, payload *ds.Payload, buffer *memory.Buffer) error {
 	if i.connected == false {
 		return errors.New("ipc client is not connected")
 	}
@@ -122,6 +141,7 @@ func (i *IPCClient) CreateBuffer(size int, id common.ObjectID, payload *ds.Paylo
 		fmt.Println("create buffer reply json failed")
 		return err
 	}
+	*id = createBufferReply.ID // TODO: check whether two id is same
 	payload.ID = createBufferReply.ID
 	payload.StoreFd = createBufferReply.Created.StoreFd
 	payload.DataOffset = createBufferReply.Created.DataOffset
@@ -132,15 +152,41 @@ func (i *IPCClient) CreateBuffer(size int, id common.ObjectID, payload *ds.Paylo
 		return errors.New("data size not match")
 	}
 
+	var shared *uint8
 	if payload.DataSize > 0 {
+		i.MmapToClient(payload.StoreFd, int64(payload.MapSize), false, true, &shared)
 		//i.MmapToClient()
 	}
+	//fmt.Println(shared[0:1])
+	//buffer := memory.NewBufferBytes(shared[])
 	return nil
 }
 
-func (i *IPCClient) MmapToClient(fd int, mapSize int64, readOnly bool, realign bool, ptr **uint8) {
-	//entry, ok := i.mmapTable[fd]
-	//if !ok {
-	//	clientFd := C.recv_fd(i.)
+func (i *IPCClient) MmapToClient(fd int, mapSize int64, readOnly bool, realign bool, ptr **uint8) error {
+	_, ok := i.mmapTable[fd]
+	if !ok {
+		file, err := i.conn.File()
+		if err != nil {
+			fmt.Println("Get connection file")
+			return err
+		}
+		clientFd := C.recv_fd(C.int(file.Fd()))
+		if clientFd <= 0 {
+			return errors.New("receive client fd error")
+		}
+		newEntry := MmapEntry{int(clientFd), mapSize, readOnly, realign, nil, nil}
+
+		if readOnly {
+			newEntry.MapReadOnly()
+		} else {
+			newEntry.MapReadWrite()
+		}
+		i.mmapTable[fd] = newEntry
+	}
+
+	// TODO: set entry to read only
+	//if readOnly {
+	//} else {
 	//}
+	return nil
 }

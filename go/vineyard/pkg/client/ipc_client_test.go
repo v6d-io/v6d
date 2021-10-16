@@ -163,7 +163,7 @@ func TestIPCClient_ArrowDataStructure(t *testing.T) {
 	array.Seal()
 	// TODO: how to get array's id
 
-	// ipcServer.Persist()
+	ipcClient.Persist(array.Id())
 }
 
 func TestJSON(t *testing.T) {

@@ -3,6 +3,7 @@ package ds
 import (
 	"fmt"
 	"github.com/apache/arrow/go/arrow/array"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
 type ObjectBuilder struct {
@@ -20,8 +21,9 @@ func (o *ObjectBuilder) SetSeal(seal bool) {
 type ArrayBuilder struct {
 	ArrayBaseBuilder
 
-	Array  *array.FixedSizeList
-	Client IIPCClient
+	Array      *array.FixedSizeList
+	Client     IIPCClient
+	blobWriter BlobWriter
 
 	length     int
 	nullCount  int
@@ -46,14 +48,18 @@ func (a *ArrayBuilder) Seal() {
 }
 
 func (a *ArrayBuilder) Build() error {
-	var blobWriter BlobWriter
+
 	//blobWriter
-	a.Client.CreateBlob(a.Array.Data().Len(), &blobWriter)
+	a.Client.CreateBlob(a.Array.Data().Len(), &a.blobWriter)
 
 	a.length = a.Array.Len()
 	a.nullCount = a.Array.NullN()
 	a.offset = a.Array.Offset()
-	a.buffer = blobWriter.Buf()
+	a.buffer = a.blobWriter.Buf()
 	// TODO: build null bit map
 	return nil
+}
+
+func (a *ArrayBuilder) Id() common.ObjectID {
+	return a.blobWriter.ID
 }
