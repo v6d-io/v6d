@@ -471,6 +471,10 @@ void bind_client(py::module& mod) {
             return size;
           },
           "target"_a)
+      .def("is_shared_memory",
+           [](Client* self, const uintptr_t target) {
+             return self->IsSharedMemory(target);
+           })
       .def("close",
            [](Client* self) {
              return ClientManager<Client>::GetManager()->Disconnect(

@@ -30,6 +30,8 @@ limitations under the License.
 
 namespace vineyard {
 
+RPCClient::~RPCClient() { Disconnect(); }
+
 Status RPCClient::Connect() {
   auto ep = read_env("VINEYARD_RPC_ENDPOINT");
   if (!ep.empty()) {
@@ -181,7 +183,5 @@ std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
   }
   return objects;
 }
-
-RPCClient::~RPCClient() { Disconnect(); }
 
 }  // namespace vineyard

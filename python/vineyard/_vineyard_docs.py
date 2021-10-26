@@ -745,6 +745,21 @@ Returns:
     int
 ''')
 
+add_doc(
+    IPCClient.is_shared_memory, r'''
+.. method:: allocated_size(target: ptr) -> bool
+    :noindex:
+
+Check if the address is on the shared memory region.
+
+Parameters:
+    target: address, in int format
+        The given address.
+
+Returns:
+    bool
+''')
+
 add_doc(IPCClient.close, r'''
 Close the client.
 ''')

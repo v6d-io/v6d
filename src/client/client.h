@@ -21,6 +21,7 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "arrow/buffer.h"
@@ -37,6 +38,8 @@ namespace vineyard {
 
 class Blob;
 class BlobWriter;
+
+namespace detail {
 
 /**
  * @brief MmapEntry represents a memory-mapped fd on the client side. The fd
@@ -73,6 +76,30 @@ class MmapEntry {
   size_t length_;
 };
 
+class SharedMemoryManager {
+ public:
+  explicit SharedMemoryManager(int vineyard_conn);
+
+  Status Mmap(int fd, int64_t map_size, bool readonly, bool realign,
+              uint8_t** ptr);
+
+  bool Exists(const uintptr_t target);
+
+  bool Exists(const void* target);
+
+ private:
+  // UNIX-domain socket
+  int vineyard_conn_ = -1;
+
+  // mmap table
+  std::unordered_map<int, std::unique_ptr<MmapEntry>> mmap_table_;
+
+  // sorted shm segments for fast "if exists" query
+  std::set<std::pair<uintptr_t, size_t>> segments_;
+};
+
+}  // namespace detail
+
 /**
  * @brief Vineyard's IPC Client connects to to UNIX domain socket of the
  *        vineyard server. Vineyard's IPC Client talks to vineyard server
@@ -80,6 +107,8 @@ class MmapEntry {
  */
 class Client : public ClientBase {
  public:
+  Client();
+
   ~Client() override;
 
   /**
@@ -335,6 +364,22 @@ class Client : public ClientBase {
                                                    size_t const limit = 5);
 
   /**
+   * Check if the given address belongs to the shared memory region.
+   *
+   * Return true if the address (client-side address) comes from the vineyard
+   * server.
+   */
+  bool IsSharedMemory(const void* target) const;
+
+  /**
+   * Check if the given address belongs to the shared memory region.
+   *
+   * Return true if the address (client-side address) comes from the vineyard
+   * server.
+   */
+  bool IsSharedMemory(const uintptr_t target) const;
+
+  /**
    * Get the allocated size for the given object.
    */
   Status AllocatedSize(const ObjectID id, size_t& size);
@@ -368,10 +413,7 @@ class Client : public ClientBase {
   Status DropBuffer(const ObjectID id, const int fd);
 
  private:
-  Status mmapToClient(int fd, int64_t map_size, bool readonly, bool realign,
-                      uint8_t** ptr);
-
-  std::unordered_map<int, std::unique_ptr<MmapEntry>> mmap_table_;
+  std::shared_ptr<detail::SharedMemoryManager> shm_;
 
  private:
   friend class Blob;
