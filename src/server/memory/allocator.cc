@@ -53,11 +53,18 @@ BulkAllocator::Allocator BulkAllocator::allocator_{};
 #endif
 
 void* BulkAllocator::Init(const size_t size) {
+#if __linux__
+  // Seems that mac os doesn't respect the sysctl configuration.
+  //
+  // Vineyard actually can use shared memory larger than the the sysctl result,
+  // we disable the warning on mac for less inaccurate warnings.
   int64_t shmmax = get_maximum_shared_memory();
   if (shmmax < static_cast<float>(size)) {
     LOG(WARNING) << "'size' is greater than the maximum shared memory size ("
                  << shmmax << ")";
   }
+#endif
+
 #if defined(WITH_DLMALLOC)
   return Allocator::Init(size);
 #endif
