@@ -204,8 +204,8 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   // get blob and re-map
   uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (payload_.data_size > 0) {
-    VINEYARD_CHECK_OK(client.mmapToClient(payload_.store_fd, payload_.map_size,
-                                          false, true, &mmapped_ptr));
+    VINEYARD_CHECK_OK(client.shm_->Mmap(payload_.store_fd, payload_.map_size,
+                                        false, true, &mmapped_ptr));
     dist = mmapped_ptr + payload_.data_offset;
   }
   auto buffer = arrow::Buffer::Wrap(dist, payload_.data_size);
