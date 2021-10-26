@@ -32,6 +32,8 @@ option(BUILD_VINEYARD_IO "Enable vineyard's IOAdaptor support" ON)
 option(BUILD_VINEYARD_GRAPH "Enable vineyard's graph data structures" ON)
 option(BUILD_VINEYARD_MALLOC "Build vineyard's implementation for client-side malloc" ON)
 option(BUILD_VINEYARD_MIGRATION "Enable vineyard's object migration support" ON)
+option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
+option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -142,7 +144,7 @@ else()
 endif()
 
 macro(find_apache_arrow)
-    # workaround for: https://issues.apache.org/jira/projects/ARROW/issues/ARROW-11836
+    # workaround for: https://issues.apache.org/jira/browse/ARROW-11836
     if(NOT BUILD_VINEYARD_PYPI_PACKAGES)
       find_package(Arrow QUIET)
     endif()
@@ -192,6 +194,16 @@ macro(find_etcd_cpp_apiv3)
         include("cmake/BuildEtcdCpp.cmake")
     endif()
 endmacro(find_etcd_cpp_apiv3)
+
+macro(find_fuse)
+    include("cmake/FindFUSE3.cmake")
+    if(BUILD_VINEYARD_FUSE_PARQUET)
+        if(NOT ARROW_PARQUET)
+            message(FATAL_ERROR "Parquet is not enabled in the installed arrow.")
+        endif()
+        find_package(Parquet REQUIRED HINTS ${Arrow_DIR})
+    endif()
+endmacro()
 
 macro(find_intel_tbb)
     set(TBB_TEST OFF CACHE BOOL "Disable tbb testing")
@@ -379,6 +391,14 @@ set(VINEYARD_INSTALL_LIBS)
 # resolve targets dependencies
 if(BUILD_VINEYARD_PYPI_PACKAGES)
     set(BUILD_VINEYARD_PYTHON_BINDINGS ON)
+endif()
+
+if(BUILD_VINEYARD_FUSE_PARQUET)
+    set(BUILD_VINEYARD_FUSE ON)
+endif()
+
+if(BUILD_VINEYARD_FUSE)
+    set(BUILD_VINEYARD_BASIC ON)
 endif()
 
 if(BUILD_VINEYARD_GRAPH)
@@ -595,6 +615,12 @@ if(BUILD_VINEYARD_MIGRATION)
     # don't includes vineyard_migrate to "VINEYARD_LIBRARIES"
 endif()
 
+if(BUILD_VINEYARD_FUSE)
+    find_fuse()
+    add_subdirectory(modules/fuse)
+    list(APPEND VINEYARD_INSTALL_LIBS vineyard_fuse)
+endif()
+
 if(BUILD_VINEYARD_TESTS)
     enable_testing()
     file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test"
@@ -706,8 +732,11 @@ install(PROGRAMS "${VINEYARD_CODEGEN_SCRIPT}"
 install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindArrow.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/FindFUSE3.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGFlags.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGlog.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/FindGperftools.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/FindLibUnwind.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindRdkafka.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/GenerateVineyard.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/DetermineImplicitIncludes.cmake"

@@ -52,8 +52,10 @@ jobs:
                               ccache \
                               cmake \
                               doxygen \
+                              fuse3 \
                               libboost-all-dev \
                               libcurl4-openssl-dev \
+                              libfuse3-dev \
                               libgflags-dev \
                               libgoogle-glog-dev \
                               libgmock-dev \
@@ -81,7 +83,7 @@ jobs:
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=3.0.0-1 libarrow-python-dev=3.0.0-1
+          sudo apt install -y libarrow-dev=3.0.0-1 libparquet-dev=3.0.0-1 libarrow-python-dev=3.0.0-1
 
           # install pyarrow from scratch
           sudo pip3 install --no-binary pyarrow pyarrow==3.0.0
@@ -180,6 +182,8 @@ jobs:
                    -DBUILD_VINEYARD_IO=ON \
                    -DBUILD_VINEYARD_IO_KAFKA=ON \
                    -DBUILD_VINEYARD_MIGRATION=ON \
+                   -DBUILD_VINEYARD_FUSE=ON \
+                   -DBUILD_VINEYARD_FUSE_PARQUET=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 
       - name: Cpp format and lint
