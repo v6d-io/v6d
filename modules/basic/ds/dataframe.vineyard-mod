@@ -88,7 +88,7 @@ class DataFrame : public Registered<DataFrame> {
   /**
    * @brief Get a RecordBatch view for the dataframe.
    */
-  const std::shared_ptr<arrow::RecordBatch> RecordBatchView() const;
+  const std::shared_ptr<arrow::RecordBatch> AsBatch(bool copy = false) const;
 
  private:
   __attribute__((annotate("codegen"))) size_t partition_index_row_;
