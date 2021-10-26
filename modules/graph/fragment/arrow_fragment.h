@@ -760,6 +760,20 @@ class ArrowFragment
     }                                                                         \
   } while (0)
 
+#define GENERATE_VEC_META_IF_NOT_EXIST(prefix, vec, label_num, start_num) \
+  do {                                                                    \
+    for (label_id_t i = 0; i < label_num; ++i) {                          \
+      auto name = generate_name_with_suffix(prefix, i + start_num);       \
+      if (vec[i] == nullptr) {                                            \
+        new_meta.AddMember(name, old_meta.GetMemberMeta(name));           \
+        nbytes += old_meta.GetMemberMeta(name).GetNBytes();               \
+      } else {                                                            \
+        new_meta.AddMember(name, vec[i]->meta());                         \
+        nbytes += vec[i]->nbytes();                                       \
+      }                                                                   \
+    }                                                                     \
+  } while (0)
+
   boost::leaf::result<ObjectID> AddVerticesAndEdges(
       Client& client,
       std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
@@ -995,17 +1009,20 @@ class ArrowFragment
     // Append extra ovgid_lists with origin ovgid_lists to make it complete
     for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
       vid_builder_t ovgid_list_builder;
-      if (i < vertex_label_num_) {
-        ovgid_list_builder.AppendValues(ovgid_lists_[i]->raw_values(),
-                                        ovgid_lists_[i]->length());
+      // If the ovgid have no new entries, leave it empty to indicate using the
+      // old ovgid when seal.
+      if (extra_ovgid_lists[i]->length() != 0) {
+        if (i < vertex_label_num_) {
+          ovgid_list_builder.AppendValues(ovgid_lists_[i]->raw_values(),
+                                          ovgid_lists_[i]->length());
+        }
+        ovgid_list_builder.AppendValues(extra_ovgid_lists[i]->raw_values(),
+                                        extra_ovgid_lists[i]->length());
       }
-      ovgid_list_builder.AppendValues(extra_ovgid_lists[i]->raw_values(),
-                                      extra_ovgid_lists[i]->length());
       ovgid_list_builder.Finish(&ovgid_lists[i]);
-    }
 
-    for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
-      ovnums[i] = ovgid_lists[i]->length();
+      ovnums[i] = i < vertex_label_num_ ? ovgid_lists_[i]->length() : 0;
+      ovnums[i] += extra_ovgid_lists[i]->length();
       tvnums[i] = ivnums[i] + ovnums[i];
     }
 
@@ -1291,20 +1308,31 @@ class ArrowFragment
     }
 
     // Extra ovgid, ovg2l
+    // If the map have no new entries, clear it to indicate using the old map
+    // when seal.
+    for (int i = 0; i < vertex_label_num_; ++i) {
+      if (ovg2l_maps_ptr_[i]->size() == ovg2l_maps[i].size()) {
+        ovg2l_maps[i].clear();
+      }
+    }
     for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
       auto fn = [this, i, &vy_ovgid_lists, &vy_ovg2l_maps, &ovgid_lists,
                  &ovg2l_maps](Client& client) {
-        vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(client,
-                                                                ovgid_lists[i]);
-        vy_ovgid_lists[i] =
-            std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
-                ovgid_list_builder.Seal(client));
+        if (i >= vertex_label_num_ || ovgid_lists[i]->length() != 0) {
+          vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(
+              client, ovgid_lists[i]);
+          vy_ovgid_lists[i] =
+              std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
+                  ovgid_list_builder.Seal(client));
+        }
 
-        vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
-            client, std::move(ovg2l_maps[i]));
-        vy_ovg2l_maps[i] =
-            std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
-                ovg2l_builder.Seal(client));
+        if (i >= vertex_label_num_ || !ovg2l_maps[i].empty()) {
+          vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
+              client, std::move(ovg2l_maps[i]));
+          vy_ovg2l_maps[i] =
+              std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
+                  ovg2l_builder.Seal(client));
+        }
         return Status::OK();
       };
       tg.AddTask(fn, std::ref(client));
@@ -1361,8 +1389,11 @@ class ArrowFragment
                       vertex_label_num_);
     GENERATE_VEC_META("edge_tables", vy_edge_tables, extra_edge_label_num,
                       edge_label_num_);
-    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, total_vertex_label_num, 0);
-    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, total_vertex_label_num, 0);
+
+    GENERATE_VEC_META_IF_NOT_EXIST("ovgid_lists", vy_ovgid_lists,
+                                   total_vertex_label_num, 0);
+    GENERATE_VEC_META_IF_NOT_EXIST("ovg2l_maps", vy_ovg2l_maps,
+                                   total_vertex_label_num, 0);
 
     for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
       for (label_id_t j = 0; j < total_edge_label_num; ++j) {
@@ -1745,19 +1776,22 @@ class ArrowFragment
                                 ovg2l_maps, extra_ovgid_lists);
     extra_ovgids.clear();
 
+    std::vector<vid_t> ovnums(vertex_label_num_), tvnums(vertex_label_num_);
     std::vector<std::shared_ptr<vid_array_t>> ovgid_lists(vertex_label_num_);
     // Append extra ovgid_lists with origin ovgid_lists to make it complete
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       vid_builder_t ovgid_list_builder;
-      ovgid_list_builder.AppendValues(ovgid_lists_[i]->raw_values(),
-                                      ovgid_lists_[i]->length());
-      ovgid_list_builder.AppendValues(extra_ovgid_lists[i]->raw_values(),
-                                      extra_ovgid_lists[i]->length());
+      // If the ovgid have no new entries, leave it empty to indicate using the
+      // old ovgid when seal.
+      if (extra_ovgid_lists[i]->length() != 0) {
+        ovgid_list_builder.AppendValues(ovgid_lists_[i]->raw_values(),
+                                        ovgid_lists_[i]->length());
+        ovgid_list_builder.AppendValues(extra_ovgid_lists[i]->raw_values(),
+                                        extra_ovgid_lists[i]->length());
+      }
       ovgid_list_builder.Finish(&ovgid_lists[i]);
-    }
-    std::vector<vid_t> ovnums(vertex_label_num_), tvnums(vertex_label_num_);
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      ovnums[i] = ovgid_lists[i]->length();
+
+      ovnums[i] = ovgid_lists_[i]->length() + extra_ovgid_lists[i]->length();
       tvnums[i] = ivnums_[i] + ovnums[i];
     }
 
@@ -1947,20 +1981,31 @@ class ArrowFragment
       tg.AddTask(fn, std::ref(client));
     }
 
+    // If the map have no new entries, clear it to indicate using the old map
+    // when seal.
+    for (int i = 0; i < vertex_label_num_; ++i) {
+      if (ovg2l_maps_ptr_[i]->size() == ovg2l_maps[i].size()) {
+        ovg2l_maps[i].clear();
+      }
+    }
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       auto fn = [this, i, &vy_ovgid_lists, &vy_ovg2l_maps, &ovgid_lists,
                  &ovg2l_maps](Client& client) {
-        vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(client,
-                                                                ovgid_lists[i]);
-        vy_ovgid_lists[i] =
-            std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
-                ovgid_list_builder.Seal(client));
+        if (ovgid_lists[i]->length() != 0) {
+          vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(
+              client, ovgid_lists[i]);
+          vy_ovgid_lists[i] =
+              std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
+                  ovgid_list_builder.Seal(client));
+        }
 
-        vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
-            client, std::move(ovg2l_maps[i]));
-        vy_ovg2l_maps[i] =
-            std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
-                ovg2l_builder.Seal(client));
+        if (!ovg2l_maps[i].empty()) {
+          vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
+              client, std::move(ovg2l_maps[i]));
+          vy_ovg2l_maps[i] =
+              std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
+                  ovg2l_builder.Seal(client));
+        }
         return Status::OK();
       };
       tg.AddTask(fn, std::ref(client));
@@ -2045,8 +2090,10 @@ class ArrowFragment
 
     GENERATE_VEC_META("edge_tables", vy_edge_tables, extra_edge_label_num,
                       edge_label_num_);
-    GENERATE_VEC_META("ovgid_lists", vy_ovgid_lists, vertex_label_num_, 0);
-    GENERATE_VEC_META("ovg2l_maps", vy_ovg2l_maps, vertex_label_num_, 0);
+    GENERATE_VEC_META_IF_NOT_EXIST("ovgid_lists", vy_ovgid_lists,
+                                   vertex_label_num_, 0);
+    GENERATE_VEC_META_IF_NOT_EXIST("ovg2l_maps", vy_ovg2l_maps,
+                                   vertex_label_num_, 0);
     if (directed_) {
       GENERATE_VEC_VEC_META("ie_lists", vy_ie_lists, vertex_label_num_,
                             extra_edge_label_num, 0, edge_label_num_);
