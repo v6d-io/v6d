@@ -42,7 +42,7 @@ const std::pair<size_t, size_t> DataFrame::shape() const {
   }
 }
 
-const std::shared_ptr<arrow::RecordBatch> DataFrame::RecordBatchView() const {
+const std::shared_ptr<arrow::RecordBatch> DataFrame::AsBatch(bool copy) const {
   size_t num_columns = this->Columns().size();
   int64_t num_rows = 0;
   std::vector<std::shared_ptr<arrow::Array>> columns(num_columns);
@@ -57,6 +57,7 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::RecordBatchView() const {
       field_name = json_to_string(cname);
     }
     auto df_col = this->Column(cname);
+    num_rows = df_col->shape()[0];
 
     if (auto tensor = std::dynamic_pointer_cast<Tensor<int32_t>>(df_col)) {
       num_rows = tensor->shape()[0];
@@ -77,14 +78,19 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::RecordBatchView() const {
     }
 
     std::shared_ptr<arrow::Buffer> copied_buffer;
+    if (copy) {
 #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(
-        df_col->buffer()->Copy(0, df_col->buffer()->size(), &copied_buffer));
+      CHECK_ARROW_ERROR(
+          df_col->buffer()->Copy(0, df_col->buffer()->size(), &copied_buffer));
 #else
-    CHECK_ARROW_ERROR_AND_ASSIGN(
-        copied_buffer,
-        df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
+      CHECK_ARROW_ERROR_AND_ASSIGN(
+          copied_buffer,
+          df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
 #endif
+    } else {
+      copied_buffer = df_col->buffer();
+    }
+
     columns[i] = arrow::MakeArray(arrow::ArrayData::Make(
         FromAnyType(df_col->value_type()), num_rows, {nullptr, copied_buffer}));
     fields[i] = std::make_shared<arrow::Field>(

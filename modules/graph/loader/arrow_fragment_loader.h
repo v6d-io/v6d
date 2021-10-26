@@ -108,7 +108,7 @@ inline Status ReadRecordBatchesFromVineyardDataFrame(
   int start_to_read = part_id * split_size;
   int end_to_read = std::min(local_chunks.size(), (part_id + 1) * split_size);
   for (int idx = start_to_read; idx != end_to_read; ++idx) {
-    batches.emplace_back(local_chunks[idx]->RecordBatchView());
+    batches.emplace_back(local_chunks[idx]->AsBatch(true));
   }
   return Status::OK();
 }
@@ -197,7 +197,7 @@ inline Status ReadTableFromVineyardDataFrame(
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
   batches.reserve(end_to_read - start_to_read);
   for (int idx = start_to_read; idx != end_to_read; ++idx) {
-    batches.emplace_back(local_chunks[idx]->RecordBatchView());
+    batches.emplace_back(local_chunks[idx]->AsBatch(true));
   }
   if (batches.empty()) {
     table = nullptr;

@@ -65,16 +65,16 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
     return client_.StopStream(id_, false);
   }
 
-  Status WriteTable(std::shared_ptr<arrow::Table>& table) {
+  Status WriteTable(std::shared_ptr<arrow::Table> table) {
     std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
     RETURN_ON_ERROR(TableToRecordBatches(table, &batches));
-    for (auto batch : batches) {
+    for (auto const& batch : batches) {
       RETURN_ON_ERROR(WriteBatch(batch));
     }
     return Status::OK();
   }
 
-  Status WriteBatch(std::shared_ptr<arrow::RecordBatch>& batch) {
+  Status WriteBatch(std::shared_ptr<arrow::RecordBatch> batch) {
     size_t size = 0;
     RETURN_ON_ERROR(GetRecordBatchStreamSize(*batch, &size));
     std::unique_ptr<arrow::MutableBuffer> buffer;
@@ -97,40 +97,8 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
     return Status::OK();
   }
 
-  Status WriteDataframe(std::shared_ptr<DataFrame>& df) {
-    size_t num_columns = df->Columns().size();
-    int64_t num_rows = 0;
-    std::vector<std::shared_ptr<arrow::Array>> columns(num_columns);
-    std::vector<std::shared_ptr<arrow::Field>> fields(num_columns);
-    for (size_t i = 0; i < num_columns; ++i) {
-      // cast to arrow::Array
-      auto cname = df->Columns()[i];
-      std::string field_name;
-      if (cname.is_string()) {
-        field_name = cname.get_ref<std::string const&>();
-      } else {
-        field_name = json_to_string(cname);
-      }
-      auto df_col = df->Column(cname);
-      num_rows = df_col->shape()[0];
-      std::shared_ptr<arrow::Buffer> copied_buffer;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      RETURN_ON_ARROW_ERROR(
-          df_col->buffer()->Copy(0, df_col->buffer()->size(), &copied_buffer));
-#else
-      RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-          copied_buffer,
-          df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
-#endif
-      columns[i] = arrow::MakeArray(
-          arrow::ArrayData::Make(FromAnyType(df_col->value_type()), num_rows,
-                                 {nullptr, copied_buffer}));
-      fields[i] = std::make_shared<arrow::Field>(
-          field_name, FromAnyType(df_col->value_type()));
-    }
-    auto batch =
-        arrow::RecordBatch::Make(arrow::schema(fields), num_rows, columns);
-    return WriteBatch(batch);
+  Status WriteDataframe(std::shared_ptr<DataFrame> df) {
+    return WriteBatch(df->AsBatch());
   }
 
   DataframeStreamWriter(Client& client, ObjectID const& id,
