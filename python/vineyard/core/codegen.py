@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import copy
 import itertools
 import logging
 import os
@@ -176,6 +177,7 @@ def dump_ast(node, indent, saw, base_indent=4, include_refs=False):
         # FIXME: print opcode or literal
 
         print(tpl.format(indent=' ' * indent, kind=k.name, name=name, type_name=type_name))
+
     saw.add(node.hash)
     if include_refs:
         if node.referenced is not None and node.referenced.hash not in saw:
@@ -245,7 +247,7 @@ def filter_the_module(root, filepath):
     return children
 
 
-def traverse(node, to_reflect, to_include):
+def traverse(node, to_reflect, to_include, namespaces=None):
     ''' Traverse the AST tree.
     '''
     if node.kind in [CursorKind.CLASS_DECL, CursorKind.CLASS_TEMPLATE, CursorKind.STRUCT_DECL]:
@@ -253,14 +255,20 @@ def traverse(node, to_reflect, to_include):
         if check_if_class_definition(node):
             attr = check_serialize_attribute(node)
             if attr is None or 'no-vineyard' not in attr:
-                to_reflect.append(('vineyard', node))
+                to_reflect.append(('vineyard', namespaces, node))
 
     if node.kind == CursorKind.INCLUSION_DIRECTIVE:
         to_include.append(node)
 
     if node.kind in [CursorKind.TRANSLATION_UNIT, CursorKind.NAMESPACE]:
+        if node.kind == CursorKind.NAMESPACE:
+            if namespaces is None:
+                namespaces = []
+            else:
+                namespaces = copy.copy(namespaces)
+            namespaces.append(node.spelling)
         for child in node.get_children():
-            traverse(child, to_reflect, to_include)
+            traverse(child, to_reflect, to_include, namespaces=namespaces)
 
 
 def find_fields(definition):
@@ -1206,7 +1214,7 @@ def codegen(root_directory,
         code_injections = []
         code_blocks = []
 
-        for _kind, node in to_reflect:
+        for _kind, namespaces, node in to_reflect:
             fields, using_alias, first_mmeber_offset, has_post_ctor = find_fields(node)
             name, ts = check_class(node)
 
@@ -1229,7 +1237,7 @@ def codegen(root_directory,
 
             base_builder = generate_base_builder(fields, using_alias_values, header_elaborated, name, name_elaborated,
                                                  has_post_ctor)
-            code_blocks.append(base_builder)
+            code_blocks.append((namespaces, base_builder))
 
         fp.write('#ifndef %s\n' % macro_guard)
         fp.write('#define %s\n\n' % macro_guard)
@@ -1242,15 +1250,21 @@ def codegen(root_directory,
             offset = next_offset
         fp.write(content[offset:])
 
-        # FIXME fix the hard-coded namespace
-        namespace = 'vineyard'
+        for namespaces, block in code_blocks:
+            if namespaces is not None:
+                fp.write('\n\n')
+                for ns in namespaces:
+                    fp.write('namespace %s {\n' % ns)
 
-        fp.write('\n\nnamespace %s {\n\n' % namespace)
-
-        for block in code_blocks:
+            # print the code block
             fp.write(block)
 
-        fp.write('\n}  // namespace %s\n\n' % namespace)
+            if namespaces is not None:
+                fp.write('\n\n')
+                for ns in namespaces:
+                    fp.write('}  // namespace %s\n' % ns)
+                fp.write('\n\n')
+
         fp.write('#endif // %s\n' % macro_guard)
 
 
