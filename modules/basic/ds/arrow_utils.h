@@ -31,6 +31,7 @@ limitations under the License.
 #include "arrow/ipc/writer.h"
 #include "arrow/table.h"
 #include "arrow/table_builder.h"
+#include "arrow/type.h"
 #include "arrow/util/config.h"
 #include "glog/logging.h"
 
@@ -208,6 +209,8 @@ Status DeserializeTable(std::shared_ptr<arrow::Buffer> buffer,
 struct EmptyTableBuilder {
   static Status Build(const std::shared_ptr<arrow::Schema>& schema,
                       std::shared_ptr<arrow::Table>& table);
+
+  static std::shared_ptr<arrow::Schema> EmptySchema();
 };
 
 /**
