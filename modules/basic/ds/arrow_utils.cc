@@ -259,6 +259,11 @@ Status EmptyTableBuilder::Build(const std::shared_ptr<arrow::Schema>& schema,
   return Status::OK();
 }
 
+std::shared_ptr<arrow::Schema> EmptyTableBuilder::EmptySchema() {
+  return std::shared_ptr<arrow::Schema>(
+      new arrow::Schema({}, arrow::Endianness::Native));
+}
+
 std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
     const std::string& name) {
   if (name == "bool") {
