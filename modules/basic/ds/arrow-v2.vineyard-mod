@@ -1,0 +1,318 @@
+/** Copyright 2020-2021 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifndef MODULES_BASIC_DS_ARROW_MOD_H_
+#define MODULES_BASIC_DS_ARROW_MOD_H_
+
+#include <iostream>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "arrow/io/memory.h"
+#include "arrow/ipc/reader.h"
+#include "arrow/ipc/writer.h"
+#include "arrow/record_batch.h"
+#include "arrow/table.h"
+#include "arrow/type.h"
+#include "arrow/util/config.h"
+#include "arrow/util/vector.h"
+
+#include "basic/ds/arrow_utils.h"
+#include "client/client.h"
+#include "client/ds/blob.h"
+
+namespace vineyard {
+
+namespace v2 {
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
+/// The arrays in vineyard is a wrapper of arrow arrays, in order to
+/// Simplify the Build and Construct process.
+
+template <typename T>
+class NumericArrayBaseBuilder;
+
+template <typename T>
+class NumericArray : public ConvertToArrowType<T>::ArrayType,
+                     public Registered<NumericArray<T>> {
+ public:
+  using ArrayType = typename ConvertToArrowType<T>::ArrayType;
+
+  NumericArray() : ConvertToArrowType<T>::ArrayType() {}
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->SetData(arrow::ArrayData::Make(
+        ConvertToArrowType<T>::TypeValue(), length_,
+        {null_bitmap_->Buffer(), buffer_->Buffer()}, null_count_, offset_));
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
+      null_bitmap_;
+
+  friend class Client;
+  friend class NumericArrayBaseBuilder<T>;
+};
+
+class BooleanArrayBaseBuilder;
+
+class BooleanArray : public ConvertToArrowType<bool>::ArrayType,
+                     public Registered<BooleanArray> {
+ public:
+  using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
+
+  BooleanArray() : ConvertToArrowType<bool>::ArrayType() {}
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->SetData(arrow::ArrayData::Make(
+        ConvertToArrowType<bool>::TypeValue(), length_,
+        {null_bitmap_->Buffer(), buffer_->Buffer()}, null_count_, offset_));
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
+      null_bitmap_;
+
+  friend class Client;
+  friend class BooleanArrayBaseBuilder;
+};
+
+/// Binary array
+
+template <typename ArrayType>
+class BaseBinaryArrayBaseBuilder;
+
+template <typename ArrayType>
+class BaseBinaryArray : public ArrayType,
+                        public Registered<BaseBinaryArray<ArrayType>> {
+ public:
+  BaseBinaryArray() : ArrayType() {}
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->SetData(arrow::ArrayData::Make(
+        arrow::binary(), length_,
+        {null_bitmap_->Buffer(), buffer_offsets_->Buffer(),
+         buffer_data_->Buffer()},
+        null_count_, offset_));
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_data_,
+      buffer_offsets_, null_bitmap_;
+
+  friend class Client;
+  friend class BaseBinaryArrayBaseBuilder<ArrayType>;
+};
+
+/*
+using BinaryArray = BaseBinaryArray<arrow::BinaryArray>;
+using LargeBinaryArray = BaseBinaryArray<arrow::LargeBinaryArray>;
+using StringArray = BaseBinaryArray<arrow::StringArray>;
+using LargeStringArray = BaseBinaryArray<arrow::LargeStringArray>;
+*/
+
+class FixedSizeBinaryArrayBaseBuilder;
+
+class FixedSizeBinaryArray : public arrow::FixedSizeBinaryArray,
+                             public Registered<FixedSizeBinaryArray> {
+ public:
+  FixedSizeBinaryArray()
+      : arrow::FixedSizeBinaryArray(arrow::fixed_size_binary(0), 0, nullptr) {}
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->SetData(arrow::ArrayData::Make(
+        arrow::fixed_size_binary(this->byte_width_), length_,
+        {null_bitmap_->Buffer(), buffer_->Buffer()}, null_count_, offset_));
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) int32_t byte_width_;
+  __attribute__((annotate("codegen"))) size_t length_;
+  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
+      null_bitmap_;
+
+  friend class Client;
+  friend class FixedSizeBinaryArrayBaseBuilder;
+};
+
+/// Null array
+
+class NullArrayBaseBuilder;
+
+class NullArray : public arrow::NullArray, public Registered<NullArray> {
+ public:
+  using ArrayType = arrow::NullArray;
+
+  NullArray() : arrow::NullArray(0) {}
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    this->arrow::Array::SetData(
+        arrow::ArrayData::Make(arrow::null(), length_, {nullptr}, length_));
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t length_;
+
+  friend class Client;
+  friend class NullArrayBaseBuilder;
+};
+
+class SchemaProxyBaseBuilder;
+
+class SchemaProxy : public Registered<SchemaProxy> {
+ public:
+  SchemaProxy() {}
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    arrow::io::BufferReader reader(this->buffer_->Buffer());
+#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
+    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &this->schema_));
+#else
+    CHECK_ARROW_ERROR_AND_ASSIGN(this->schema_,
+                                 arrow::ipc::ReadSchema(&reader, nullptr));
+#endif
+  }
+
+  std::shared_ptr<arrow::Schema> const& schema() const { return schema_; }
+
+ private:
+  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_;
+
+  std::shared_ptr<arrow::Schema> schema_;
+
+  friend class Client;
+  friend class SchemaProxyBaseBuilder;
+};
+
+class RecordBatchBaseBuilder;
+
+class RecordBatch : public arrow::RecordBatch, public Registered<RecordBatch> {
+ public:
+  RecordBatch()
+      : arrow::RecordBatch(EmptyTableBuilder::EmptySchema(), int64_t{0}) {}
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    for (size_t idx = 0; idx < columns_.size(); ++idx) {
+      auto array = std::dynamic_pointer_cast<arrow::Array>(columns_[idx]);
+      boxed_columns_.emplace_back(array);
+      boxed_data_columns_.emplace_back(array->data());
+    }
+    schema_ = batch_schema_.schema();
+    num_rows_ = row_num_;
+  }
+
+  // n.b.: refer to `arrow::SimpleRecordBatch` in record_batch.cc.
+
+  const std::vector<std::shared_ptr<arrow::Array>>& columns() const override {
+    return boxed_columns_;
+  }
+
+  std::shared_ptr<arrow::Array> column(int i) const override {
+    return boxed_columns_.at(i);
+  }
+
+  std::shared_ptr<arrow::ArrayData> column_data(int i) const override {
+    return boxed_data_columns_.at(i);
+  }
+
+  const arrow::ArrayDataVector& column_data() const override {
+    return boxed_data_columns_;
+  }
+
+  arrow::Result<std::shared_ptr<arrow::RecordBatch>> AddColumn(
+      int i, const std::shared_ptr<arrow::Field>& field,
+      const std::shared_ptr<arrow::Array>& column) const override {
+    ARROW_ASSIGN_OR_RAISE(auto new_schema, schema_->AddField(i, field));
+    return arrow::RecordBatch::Make(
+        std::move(new_schema), num_rows_,
+        arrow::internal::AddVectorElement(boxed_data_columns_, i,
+                                          column->data()));
+  }
+
+  arrow::Result<std::shared_ptr<arrow::RecordBatch>> SetColumn(
+      int i, const std::shared_ptr<arrow::Field>& field,
+      const std::shared_ptr<arrow::Array>& column) const override {
+    ARROW_ASSIGN_OR_RAISE(auto new_schema, schema_->SetField(i, field));
+    return arrow::RecordBatch::Make(
+        std::move(new_schema), num_rows_,
+        arrow::internal::ReplaceVectorElement(boxed_data_columns_, i,
+                                              column->data()));
+  }
+
+  arrow::Result<std::shared_ptr<arrow::RecordBatch>> RemoveColumn(
+      int i) const override {
+    ARROW_ASSIGN_OR_RAISE(auto new_schema, schema_->RemoveField(i));
+    return arrow::RecordBatch::Make(
+        std::move(new_schema), num_rows_,
+        arrow::internal::DeleteVectorElement(boxed_data_columns_, i));
+  }
+
+  std::shared_ptr<arrow::RecordBatch> ReplaceSchemaMetadata(
+      const std::shared_ptr<const arrow::KeyValueMetadata>& metadata)
+      const override {
+    auto new_schema = schema_->WithMetadata(metadata);
+    return arrow::RecordBatch::Make(std::move(new_schema), num_rows_,
+                                    boxed_data_columns_);
+  }
+
+  std::shared_ptr<arrow::RecordBatch> Slice(int64_t offset,
+                                            int64_t length) const override {
+    std::vector<std::shared_ptr<arrow::Array>> arrays;
+    arrays.reserve(num_columns());
+    for (const auto& field : boxed_columns_) {
+      arrays.emplace_back(field->Slice(offset, length));
+    }
+    int64_t num_rows = std::min(num_rows_ - offset, length);
+    return arrow::RecordBatch::Make(schema_, num_rows, std::move(arrays));
+  }
+
+ private:
+  __attribute__((annotate("codegen"))) size_t column_num_ = 0;
+  __attribute__((annotate("codegen"))) size_t row_num_ = 0;
+  __attribute__((annotate("codegen:SchemaProxy"))) SchemaProxy batch_schema_;
+  __attribute__((annotate("codegen:[Object*]")))
+  std::vector<std::shared_ptr<Object>>
+      columns_;
+
+  // Caching casted boxed array data
+  mutable std::vector<std::shared_ptr<arrow::Array>> boxed_columns_;
+  mutable std::vector<std::shared_ptr<arrow::ArrayData>> boxed_data_columns_;
+
+  friend class Client;
+  friend class RecordBatchBaseBuilder;
+};
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+}  // namespace v2
+
+}  // namespace vineyard
+
+#endif  // MODULES_BASIC_DS_ARROW_MOD_H_
