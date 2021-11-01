@@ -84,6 +84,7 @@ void SocketConnection::doReadBody() {
     //
     // We don't revise the structure of protocol, for backwards compatible, as
     // we already released wheel packages on pypi.
+    VLOG(10) << "invalid message header value: " << read_msg_header_;
     doStop();
     return;
   }
