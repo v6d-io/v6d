@@ -1045,7 +1045,7 @@ boost::leaf::result<void> generate_directed_csr(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>& edges,
     std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
-    bool& existed_parallel_edge) {
+    bool& is_multigraph) {
   std::vector<std::vector<int>> degree(vertex_label_num);
   std::vector<int64_t> actual_edge_num(vertex_label_num, 0);
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
@@ -1166,8 +1166,8 @@ boost::leaf::result<void> generate_directed_csr(
           concurrency);
     }
 
-    if (!existed_parallel_edge) {
-      for (int v_label = 0; v_label != vertex_label_num && !existed_parallel_edge; ++v_label) {
+    if (!is_multigraph) {
+      for (int v_label = 0; v_label != vertex_label_num && !is_multigraph; ++v_label) {
         auto& builder = edge_builders[v_label];
         auto tvnum = tvnums[v_label];
         const int64_t* offsets_ptr = edge_offsets[v_label]->raw_values();
@@ -1180,15 +1180,15 @@ boost::leaf::result<void> generate_directed_csr(
                                 return lhs.vid == rhs.vid;
                               });
             if (loc != end) {
-              existed_parallel_edge = true;
+              is_multigraph = true;
               break;
             }
           }
         } else {
           parallel_for(
             static_cast<VID_T>(0), tvnum,
-            [offsets_ptr, &builder, &existed_parallel_edge](VID_T i) {
-              if (!existed_parallel_edge) {
+            [offsets_ptr, &builder, &is_multigraph](VID_T i) {
+              if (!is_multigraph) {
                 nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
                 nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
                 nbr_unit_t* loc = std::adjacent_find(begin, end,
@@ -1196,7 +1196,7 @@ boost::leaf::result<void> generate_directed_csr(
                                 return lhs.vid == rhs.vid;
                               });
                 if (loc != end) {
-                  __sync_or_and_fetch(&existed_parallel_edge, true);
+                  __sync_or_and_fetch(&is_multigraph, true);
                 }
               }
             },
@@ -1221,7 +1221,7 @@ boost::leaf::result<void> generate_undirected_csr(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>& edges,
     std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
-    bool& existed_parallel_edge) {
+    bool& is_multigraph) {
   std::vector<std::vector<int>> degree(vertex_label_num);
   std::vector<int64_t> actual_edge_num(vertex_label_num, 0);
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
@@ -1371,8 +1371,8 @@ boost::leaf::result<void> generate_undirected_csr(
           concurrency);
     }
 
-    if (!existed_parallel_edge) {
-      for (int v_label = 0; v_label != vertex_label_num && !existed_parallel_edge; ++v_label) {
+    if (!is_multigraph) {
+      for (int v_label = 0; v_label != vertex_label_num && !is_multigraph; ++v_label) {
         auto& builder = edge_builders[v_label];
         auto tvnum = tvnums[v_label];
         const int64_t* offsets_ptr = edge_offsets[v_label]->raw_values();
@@ -1385,15 +1385,15 @@ boost::leaf::result<void> generate_undirected_csr(
                                 return lhs.vid == rhs.vid;
                               });
             if (loc != end) {
-              existed_parallel_edge = true;
+              is_multigraph = true;
               break;
             }
           }
         } else {
           parallel_for(
             static_cast<VID_T>(0), tvnum,
-            [offsets_ptr, &builder, &existed_parallel_edge](VID_T i) {
-              if (!existed_parallel_edge) {
+            [offsets_ptr, &builder, &is_multigraph](VID_T i) {
+              if (!is_multigraph) {
                 nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
                 nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
                 nbr_unit_t* loc = std::adjacent_find(begin, end,
@@ -1401,7 +1401,7 @@ boost::leaf::result<void> generate_undirected_csr(
                                 return lhs.vid == rhs.vid;
                               });
                 if (loc != end) {
-                  __sync_or_and_fetch(&existed_parallel_edge, true);
+                  __sync_or_and_fetch(&is_multigraph, true);
                 }
               }
             },
