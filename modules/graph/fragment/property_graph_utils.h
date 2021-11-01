@@ -1198,7 +1198,8 @@ boost::leaf::result<void> generate_directed_csr(
                         return lhs.vid == rhs.vid;
                       });
                   if (loc != end) {
-                    __sync_or_and_fetch(&is_multigraph, true);
+                    __sync_or_and_fetch(
+                        reinterpret_cast<unsigned char*>(&is_multigraph), 1);
                   }
                 }
               },
@@ -1405,7 +1406,8 @@ boost::leaf::result<void> generate_undirected_csr(
                         return lhs.vid == rhs.vid;
                       });
                   if (loc != end) {
-                    __sync_or_and_fetch(&is_multigraph, true);
+                    __sync_or_and_fetch(
+                        reinterpret_cast<unsigned char*>(&is_multigraph), 1);
                   }
                 }
               },
