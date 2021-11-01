@@ -273,8 +273,7 @@ class ArrowFragment
     this->fid_ = meta.GetKeyValue<fid_t>("fid");
     this->fnum_ = meta.GetKeyValue<fid_t>("fnum");
     this->directed_ = (meta.GetKeyValue<int>("directed") != 0);
-    this->is_multigraph_ =
-        (meta.GetKeyValue<int>("is_multigraph") != 0);
+    this->is_multigraph_ = (meta.GetKeyValue<int>("is_multigraph") != 0);
     this->vertex_label_num_ = meta.GetKeyValue<label_id_t>("vertex_label_num");
     this->edge_label_num_ = meta.GetKeyValue<label_id_t>("edge_label_num");
 
@@ -1172,8 +1171,7 @@ class ArrowFragment
     new_meta.AddKeyValue("fid", fid_);
     new_meta.AddKeyValue("fnum", fnum_);
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
-    new_meta.AddKeyValue("is_multigraph",
-                         static_cast<int>(is_multigraph_));
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
     new_meta.AddKeyValue("vertex_label_num", total_vertex_label_num);
@@ -1893,8 +1891,7 @@ class ArrowFragment
     new_meta.AddKeyValue("fid", fid_);
     new_meta.AddKeyValue("fnum", fnum_);
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
-    new_meta.AddKeyValue("is_multigraph",
-                         static_cast<int>(is_multigraph_));
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
     new_meta.AddKeyValue("vertex_label_num", vertex_label_num_);
@@ -2532,9 +2529,7 @@ class ArrowFragmentBuilder : public vineyard::ObjectBuilder {
   void set_fid(fid_t fid) { fid_ = fid; }
   void set_fnum(fid_t fnum) { fnum_ = fnum; }
   void set_directed(bool directed) { directed_ = directed; }
-  void set_is_multigraph(bool is_multigraph) {
-    is_multigraph_ = is_multigraph;
-  }
+  void set_is_multigraph(bool is_multigraph) { is_multigraph_ = is_multigraph; }
 
   void set_label_num(label_id_t vertex_label_num, label_id_t edge_label_num) {
     vertex_label_num_ = vertex_label_num;
@@ -2719,8 +2714,7 @@ class ArrowFragmentBuilder : public vineyard::ObjectBuilder {
     frag->meta_.AddKeyValue("fid", fid_);
     frag->meta_.AddKeyValue("fnum", fnum_);
     frag->meta_.AddKeyValue("directed", static_cast<int>(directed_));
-    frag->meta_.AddKeyValue("is_multigraph",
-                            static_cast<int>(is_multigraph_));
+    frag->meta_.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     frag->meta_.AddKeyValue("vertex_label_num", vertex_label_num_);
     frag->meta_.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     frag->meta_.AddKeyValue("vid_type", TypeName<vid_t>::Get());
