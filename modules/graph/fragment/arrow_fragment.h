@@ -2141,6 +2141,7 @@ class ArrowFragment
     new_meta.AddKeyValue("fid", fid_);
     new_meta.AddKeyValue("fnum", fnum_);
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multgraph_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
     new_meta.AddKeyValue("vertex_label_num", vertex_label_num_);
@@ -2246,6 +2247,7 @@ class ArrowFragment
     new_meta.AddKeyValue("fid", fid_);
     new_meta.AddKeyValue("fnum", fnum_);
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
     new_meta.AddKeyValue("vertex_label_num", vertex_label_num_);
