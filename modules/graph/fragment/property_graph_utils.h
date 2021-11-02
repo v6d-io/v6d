@@ -310,7 +310,7 @@ struct Nbr {
 
   inline Nbr operator++(int) const {
     Nbr ret(*this);
-    ++ret;
+    ++(*this);
     return ret;
   }
 
@@ -321,7 +321,7 @@ struct Nbr {
 
   inline Nbr operator--(int) const {
     Nbr ret(*this);
-    --ret;
+    --(*this);
     return ret;
   }
 
@@ -1044,7 +1044,8 @@ boost::leaf::result<void> generate_directed_csr(
         typename vineyard::ConvertToArrowType<VID_T>::ArrayType>& dst_list,
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets) {
+    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    bool& is_multigraph) {
   std::vector<std::vector<int>> degree(vertex_label_num);
   std::vector<int64_t> actual_edge_num(vertex_label_num, 0);
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
@@ -1164,6 +1165,49 @@ boost::leaf::result<void> generate_directed_csr(
           },
           concurrency);
     }
+
+    if (!is_multigraph) {
+      for (int v_label = 0; v_label != vertex_label_num && !is_multigraph;
+           ++v_label) {
+        auto& builder = edge_builders[v_label];
+        auto tvnum = tvnums[v_label];
+        const int64_t* offsets_ptr = edge_offsets[v_label]->raw_values();
+        if (concurrency == 1) {
+          for (VID_T i = 0; i < tvnum; ++i) {
+            nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+            nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+            nbr_unit_t* loc = std::adjacent_find(
+                begin, end, [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                  return lhs.vid == rhs.vid;
+                });
+            if (loc != end) {
+              is_multigraph = true;
+              break;
+            }
+          }
+        } else {
+          parallel_for(
+              static_cast<VID_T>(0), tvnum,
+              [offsets_ptr, &builder, &is_multigraph](VID_T i) {
+                if (!is_multigraph) {
+                  nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+                  nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+                  nbr_unit_t* loc = std::adjacent_find(
+                      begin, end,
+                      [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                        return lhs.vid == rhs.vid;
+                      });
+                  if (loc != end) {
+                    __sync_or_and_fetch(
+                        reinterpret_cast<unsigned char*>(&is_multigraph), 1);
+                  }
+                }
+              },
+              concurrency);
+        }
+      }
+    }
+
     ARROW_OK_OR_RAISE(edge_builders[v_label].Advance(actual_edge_num[v_label]));
     ARROW_OK_OR_RAISE(edge_builders[v_label].Finish(&edges[v_label]));
   }
@@ -1179,7 +1223,8 @@ boost::leaf::result<void> generate_undirected_csr(
         typename vineyard::ConvertToArrowType<VID_T>::ArrayType>& dst_list,
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets) {
+    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    bool& is_multigraph) {
   std::vector<std::vector<int>> degree(vertex_label_num);
   std::vector<int64_t> actual_edge_num(vertex_label_num, 0);
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
@@ -1327,6 +1372,48 @@ boost::leaf::result<void> generate_undirected_csr(
                       });
           },
           concurrency);
+    }
+
+    if (!is_multigraph) {
+      for (int v_label = 0; v_label != vertex_label_num && !is_multigraph;
+           ++v_label) {
+        auto& builder = edge_builders[v_label];
+        auto tvnum = tvnums[v_label];
+        const int64_t* offsets_ptr = edge_offsets[v_label]->raw_values();
+        if (concurrency == 1) {
+          for (VID_T i = 0; i < tvnum; ++i) {
+            nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+            nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+            nbr_unit_t* loc = std::adjacent_find(
+                begin, end, [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                  return lhs.vid == rhs.vid;
+                });
+            if (loc != end) {
+              is_multigraph = true;
+              break;
+            }
+          }
+        } else {
+          parallel_for(
+              static_cast<VID_T>(0), tvnum,
+              [offsets_ptr, &builder, &is_multigraph](VID_T i) {
+                if (!is_multigraph) {
+                  nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
+                  nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
+                  nbr_unit_t* loc = std::adjacent_find(
+                      begin, end,
+                      [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                        return lhs.vid == rhs.vid;
+                      });
+                  if (loc != end) {
+                    __sync_or_and_fetch(
+                        reinterpret_cast<unsigned char*>(&is_multigraph), 1);
+                  }
+                }
+              },
+              concurrency);
+        }
+      }
     }
     ARROW_OK_OR_RAISE(edge_builders[v_label].Advance(actual_edge_num[v_label]));
     ARROW_OK_OR_RAISE(edge_builders[v_label].Finish(&edges[v_label]));

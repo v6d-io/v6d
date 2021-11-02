@@ -273,6 +273,7 @@ class ArrowFragment
     this->fid_ = meta.GetKeyValue<fid_t>("fid");
     this->fnum_ = meta.GetKeyValue<fid_t>("fnum");
     this->directed_ = (meta.GetKeyValue<int>("directed") != 0);
+    this->is_multigraph_ = (meta.GetKeyValue<int>("is_multigraph") != 0);
     this->vertex_label_num_ = meta.GetKeyValue<label_id_t>("vertex_label_num");
     this->edge_label_num_ = meta.GetKeyValue<label_id_t>("edge_label_num");
 
@@ -1152,16 +1153,16 @@ class ArrowFragment
           generate_directed_csr<vid_t, eid_t>(
               vid_parser_, edge_src[cur_label_index], edge_dst[cur_label_index],
               tvnums, total_vertex_label_num, concurrency, sub_oe_lists,
-              sub_oe_offset_lists);
+              sub_oe_offset_lists, is_multigraph_);
           generate_directed_csr<vid_t, eid_t>(
               vid_parser_, edge_dst[cur_label_index], edge_src[cur_label_index],
               tvnums, total_vertex_label_num, concurrency, sub_ie_lists,
-              sub_ie_offset_lists);
+              sub_ie_offset_lists, is_multigraph_);
         } else {
           generate_undirected_csr<vid_t, eid_t>(
               vid_parser_, edge_src[cur_label_index], edge_dst[cur_label_index],
               tvnums, total_vertex_label_num, concurrency, sub_oe_lists,
-              sub_oe_offset_lists);
+              sub_oe_offset_lists, is_multigraph_);
         }
       }
 
@@ -1187,6 +1188,7 @@ class ArrowFragment
     new_meta.AddKeyValue("fid", fid_);
     new_meta.AddKeyValue("fnum", fnum_);
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
     new_meta.AddKeyValue("vertex_label_num", total_vertex_label_num);
@@ -1467,6 +1469,7 @@ class ArrowFragment
     new_meta.AddKeyValue("fid", fid_);
     new_meta.AddKeyValue("fnum", fnum_);
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
     new_meta.AddKeyValue("vertex_label_num", total_vertex_label_num);
@@ -1892,14 +1895,17 @@ class ArrowFragment
       if (directed_) {
         generate_directed_csr<vid_t, eid_t>(
             vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums,
-            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists);
+            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists,
+            is_multigraph_);
         generate_directed_csr<vid_t, eid_t>(
             vid_parser_, edge_dst[e_label], edge_src[e_label], tvnums,
-            vertex_label_num_, concurrency, sub_ie_lists, sub_ie_offset_lists);
+            vertex_label_num_, concurrency, sub_ie_lists, sub_ie_offset_lists,
+            is_multigraph_);
       } else {
         generate_undirected_csr<vid_t, eid_t>(
             vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums,
-            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists);
+            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists,
+            is_multigraph_);
       }
 
       for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -1919,6 +1925,7 @@ class ArrowFragment
     new_meta.AddKeyValue("fid", fid_);
     new_meta.AddKeyValue("fnum", fnum_);
     new_meta.AddKeyValue("directed", static_cast<int>(directed_));
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
     new_meta.AddKeyValue("vertex_label_num", vertex_label_num_);
@@ -2507,6 +2514,7 @@ class ArrowFragment
 
   fid_t fid_, fnum_;
   bool directed_;
+  bool is_multigraph_;
   label_id_t vertex_label_num_;
   label_id_t edge_label_num_;
   size_t oenum_, ienum_;
@@ -2568,6 +2576,7 @@ class ArrowFragmentBuilder : public vineyard::ObjectBuilder {
   void set_fid(fid_t fid) { fid_ = fid; }
   void set_fnum(fid_t fnum) { fnum_ = fnum; }
   void set_directed(bool directed) { directed_ = directed; }
+  void set_is_multigraph(bool is_multigraph) { is_multigraph_ = is_multigraph; }
 
   void set_label_num(label_id_t vertex_label_num, label_id_t edge_label_num) {
     vertex_label_num_ = vertex_label_num;
@@ -2752,6 +2761,7 @@ class ArrowFragmentBuilder : public vineyard::ObjectBuilder {
     frag->meta_.AddKeyValue("fid", fid_);
     frag->meta_.AddKeyValue("fnum", fnum_);
     frag->meta_.AddKeyValue("directed", static_cast<int>(directed_));
+    frag->meta_.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
     frag->meta_.AddKeyValue("vertex_label_num", vertex_label_num_);
     frag->meta_.AddKeyValue("oid_type", TypeName<oid_t>::Get());
     frag->meta_.AddKeyValue("vid_type", TypeName<vid_t>::Get());
@@ -2845,6 +2855,7 @@ class ArrowFragmentBuilder : public vineyard::ObjectBuilder {
  private:
   fid_t fid_, fnum_;
   bool directed_;
+  bool is_multigraph_;
   label_id_t vertex_label_num_;
   label_id_t edge_label_num_;
 
@@ -2885,6 +2896,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     this->set_fid(fid_);
     this->set_fnum(fnum_);
     this->set_directed(directed_);
+    this->set_is_multigraph(is_multigraph_);
     this->set_label_num(vertex_label_num_, edge_label_num_);
     this->set_property_graph_schema(schema_);
 
@@ -2993,6 +3005,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     fid_ = fid;
     fnum_ = fnum;
     directed_ = directed;
+    is_multigraph_ = false;
     vertex_label_num_ = vertex_tables.size();
     edge_label_num_ = edge_tables.size();
 
@@ -3125,17 +3138,21 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
           vertex_label_num_);
       std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
           vertex_label_num_);
+      bool is_multigraph = false;
       if (directed_) {
         generate_directed_csr<vid_t, eid_t>(
             vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums_,
-            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists);
+            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists,
+            is_multigraph_);
         generate_directed_csr<vid_t, eid_t>(
             vid_parser_, edge_dst[e_label], edge_src[e_label], tvnums_,
-            vertex_label_num_, concurrency, sub_ie_lists, sub_ie_offset_lists);
+            vertex_label_num_, concurrency, sub_ie_lists, sub_ie_offset_lists,
+            is_multigraph_);
       } else {
         generate_undirected_csr<vid_t, eid_t>(
             vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums_,
-            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists);
+            vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists,
+            is_multigraph_);
       }
 
       for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -3152,6 +3169,7 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
 
   fid_t fid_, fnum_;
   bool directed_;
+  bool is_multigraph_;
   label_id_t vertex_label_num_;
   label_id_t edge_label_num_;
 
