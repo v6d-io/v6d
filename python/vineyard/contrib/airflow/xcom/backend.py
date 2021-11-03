@@ -18,6 +18,7 @@
 
 import logging
 import os
+import sys
 from typing import Any
 
 from airflow.configuration import conf
@@ -49,7 +50,18 @@ def _resolve_vineyard_xcom_options():
     return options
 
 
-class VineyardXCom(BaseXCom):
+class __VineyardXComMeta:
+    def __init__(cls, *args, **kwargs):
+        cls.__options = None
+
+    @property
+    def options(cls):
+        if cls.__options is None:
+            cls.__options = _resolve_vineyard_xcom_options()
+        return cls.__options
+
+
+class VineyardXCom(BaseXCom, metaclass=__VineyardXComMeta):
     """
     Custom Backend Serving to use Vineyard.
 
@@ -58,16 +70,6 @@ class VineyardXCom(BaseXCom):
 
         export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
     """
-
-    __options = None
-
-    @classmethod
-    @property
-    def options(cls):
-        if cls.__options is None:
-            cls.__options = _resolve_vineyard_xcom_options()
-        return cls.__options
-
     @reconstructor
     def init_on_load(self):
         """
