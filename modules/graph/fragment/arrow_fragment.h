@@ -3140,7 +3140,6 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
           vertex_label_num_);
       std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
           vertex_label_num_);
-      bool is_multigraph = false;
       if (directed_) {
         generate_directed_csr<vid_t, eid_t>(
             vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums_,
