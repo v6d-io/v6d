@@ -92,7 +92,7 @@ def find_port_probe(start=2048, end=20480):
     ''' Find an available port in range [start, end)
     '''
     for port in range(start, end):
-        if port not in [conn.laddr.port for conn in psutil.net_connections() if conn.status == "LISTEN"]:
+        if port not in [conn.laddr.port for conn in psutil.net_connections()]:
             yield port
 
 
