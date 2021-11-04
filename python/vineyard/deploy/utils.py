@@ -92,8 +92,13 @@ def find_port_probe(start=2048, end=20480):
     ''' Find an available port in range [start, end)
     '''
     for port in range(start, end):
-        if port not in [conn.laddr.port for conn in psutil.net_connections()]:
-            yield port
+        try:
+            if port not in [conn.laddr.port for conn in psutil.net_connections()]:
+                yield port
+        except psutil.AccessDenied:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                if s.connect_ex(('localhost', port)) != 0:
+                    yield port
 
 
 ipc_port_finder = find_port_probe()
