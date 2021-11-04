@@ -20,6 +20,7 @@ import contextlib
 import logging
 import os
 import pkg_resources
+import psutil
 import shutil
 import socket
 import subprocess
@@ -91,9 +92,8 @@ def find_port_probe(start=2048, end=20480):
     ''' Find an available port in range [start, end)
     '''
     for port in range(start, end):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('localhost', port)) != 0:
-                yield port
+        if port not in [conn.laddr.port for conn in psutil.net_connections() if conn.status == "LISTEN"]:
+            yield port
 
 
 ipc_port_finder = find_port_probe()
