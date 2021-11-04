@@ -37,18 +37,18 @@ limitations under the License.
 namespace vineyard {
 
 template <typename T>
-inline const std::string type_name();
+inline const std::string __type_name();
 
 namespace detail {
 
 template <typename Arg>
 inline const std::string typename_unpack_args() {
-  return type_name<Arg>();
+  return __type_name<Arg>();
 }
 
 template <typename T, typename U, typename... Args>
 inline const std::string typename_unpack_args() {
-  return type_name<T>() + "," + typename_unpack_args<U, Args...>();
+  return __type_name<T>() + "," + typename_unpack_args<U, Args...>();
 }
 
 #if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
@@ -128,8 +128,22 @@ struct typename_t {
 };
 
 template <typename T>
-inline const std::string type_name() {
+inline const std::string __type_name() {
   return typename_t<T>::name();
+}
+
+template <typename T>
+inline const std::string type_name() {
+  std::string name = __type_name<T>();
+  // drop the `std::__1::` namespace for libc++
+  // erase std::__1:: and std:: difference: to make the object can be get by
+  // clients that linked against different STL libraries.
+  const std::string marker = "std::__1::";
+  for (std::string::size_type p = name.find(marker); p != std::string::npos;
+       p = name.find(marker)) {
+    name.replace(p, marker.size(), "std::");
+  }
+  return name;
 }
 
 template <>
@@ -155,55 +169,6 @@ struct typename_t<uint32_t> {
 template <>
 struct typename_t<uint64_t> {
   inline static const std::string name() { return "uint64"; }
-};
-
-template <typename T>
-struct typename_t<std::hash<T>> {
-  inline static const std::string name() {
-    return "std::hash<" + type_name<T>() + ">";
-  }
-};
-
-template <typename T>
-struct typename_t<std::equal_to<T>> {
-  inline static const std::string name() {
-    return "std::equal_to<" + type_name<T>() + ">";
-  }
-};
-
-template <typename T>
-struct typename_t<std::not_equal_to<T>> {
-  inline static const std::string name() {
-    return "std::not_equal_to<" + type_name<T>() + ">";
-  }
-};
-
-template <typename T>
-struct typename_t<std::less<T>> {
-  inline static const std::string name() {
-    return "std::less<" + type_name<T>() + ">";
-  }
-};
-
-template <typename T>
-struct typename_t<std::less_equal<T>> {
-  inline static const std::string name() {
-    return "std::less_equal<" + type_name<T>() + ">";
-  }
-};
-
-template <typename T>
-struct typename_t<std::greater<T>> {
-  inline static const std::string name() {
-    return "std::greater<" + type_name<T>() + ">";
-  }
-};
-
-template <typename T>
-struct typename_t<std::greater_equal<T>> {
-  inline static const std::string name() {
-    return "std::greater_equal<" + type_name<T>() + ">";
-  }
 };
 
 }  // namespace vineyard

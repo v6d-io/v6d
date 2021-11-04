@@ -64,6 +64,21 @@ int main(int, const char**) {
              "vineyard::Hashmap<int64,double,std::hash<int64>,std::equal_to<"
              "int64>>");
   }
+
+  {
+    const auto type = type_name<Array<Hashmap<int64_t, double>::Entry>>();
+    CHECK_EQ(type,
+             "vineyard::Array<ska::detailv3::sherwood_v3_entry<std::pair<int64,"
+             "double>>>");
+  }
+
+  {
+    const auto type = type_name<Array<Hashmap<int64_t, uint64_t>::Entry>>();
+    CHECK_EQ(type,
+             "vineyard::Array<ska::detailv3::sherwood_v3_entry<std::pair<int64,"
+             "uint64>>>");
+  }
+
   {
     const auto type = type_name<my_hashmap<int64_t, double>>();
     CHECK_EQ(type,
