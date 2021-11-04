@@ -188,6 +188,7 @@ setup(
         'pandas<1.2.0; python_version<"3.7"',
         'pandas>=1.0.0; python_version>="3.7"',
         'pickle5; python_version<="3.7"',
+        'psutil',
         'pyarrow',
         'setuptools',
         'shared-memory38; python_version<="3.7"',
