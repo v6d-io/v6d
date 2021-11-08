@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_SERVER_SERVICES_META_SERVICE_H_
 
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -365,8 +366,14 @@ class IMetaService {
             int64_t timestamp = GetTimestamp();
 
             instances_list_.clear();
+#if defined(__x86_64__)
             uint64_t self_host_id = static_cast<uint64_t>(gethostid()) |
                                     static_cast<uint64_t>(__rdtsc());
+#else
+            uint64_t self_host_id =
+                static_cast<uint64_t>(gethostid()) |
+                static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
+#endif
             if (tree.contains("instances") && !tree["instances"].is_null()) {
               for (auto& instance : json::iterator_wrapper(tree["instances"])) {
                 auto id = static_cast<InstanceID>(

@@ -16,9 +16,12 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_UUID_H_
 #define SRC_COMMON_UTIL_UUID_H_
 
+#if defined(__x86_64__)
 #include <immintrin.h>
 #include <x86intrin.h>
+#endif
 
+#include <cstdlib>
 #include <limits>
 #include <string>
 
@@ -64,11 +67,21 @@ inline ObjectID GenerateBlobID(const uintptr_t ptr) {
 constexpr inline ObjectID EmptyBlobID() { return 0x8000000000000000UL; }
 
 inline ObjectID GenerateObjectID() {
+#if defined(__x86_64__)
   return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
+#else
+  return 0x7FFFFFFFFFFFFFFFUL &
+         static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
+#endif
 }
 
 inline ObjectID GenerateSignature() {
+#if defined(__x86_64__)
   return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
+#else
+  return 0x7FFFFFFFFFFFFFFFUL &
+         static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
+#endif
 }
 
 inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
