@@ -99,6 +99,19 @@ def test_dataframe_with_sparse_array_mixed_columns(vineyard_client):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
+def test_dataframe_with_datetime(vineyard_client):
+    # GH-575
+    dates = [
+        pd.Timestamp("2012-05-01"),
+        pd.Timestamp("2012-05-02"),
+        pd.Timestamp("2012-05-03"),
+    ]
+    pd.DataFrame(pd.Series(dates))
+    df = pd.DataFrame(pd.Series(dates))
+    object_id = vineyard_client.put(df)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
 def test_dataframe_reusing(vineyard_client):
     nparr = np.ones(1000)
     df = pd.DataFrame({"x": nparr})
