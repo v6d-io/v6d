@@ -31,6 +31,19 @@ except ImportError:
     except ImportError:
         from pandas.indexes.base import _ensure_index as ensure_index
 
+try:
+    from pandas.core.internals.blocks import DatetimeLikeBlock
+except ImportError:
+    try:
+        from pandas.core.internals.blocks import DatetimeBlock as DatetimeLikeBlock
+    except ImportError:
+        from pandas.core.internals import DatetimeBlock as DatetimeLikeBlock
+
+try:
+    from pandas.core.arrays.datetimes import DatetimeArray
+except ImportError:
+    DatetimeArray = None
+
 from pandas.core.internals.managers import BlockManager
 
 from vineyard._C import Object, ObjectID, ObjectMeta
@@ -88,9 +101,15 @@ def pandas_dataframe_resolver(obj, resolver):
             placement = BlockPlacement(slice(idx, idx + 1, 1))
         else:
             placement = slice(idx, idx + 1, 1)
-        values = np.expand_dims(np_value, 0).view(ndarray)
-        setattr(values, '__vineyard_ref', getattr(np_value, '__vineyard_ref', None))
-        blocks.append(Block(values, placement, ndim=2))
+        if DatetimeArray is not None and isinstance(np_value, DatetimeArray):
+            values = np_value.reshape(1, -1)
+            setattr(values, '__vineyard_ref', getattr(np_value, '__vineyard_ref', None))
+            block = DatetimeLikeBlock(values, placement, ndim=2)
+        else:
+            values = np.expand_dims(np_value, 0).view(ndarray)
+            setattr(values, '__vineyard_ref', getattr(np_value, '__vineyard_ref', None))
+            block = Block(values, placement, ndim=2)
+        blocks.append(block)
     if 'index_' in meta:
         index = resolver.run(obj.member('index_'))
     else:
