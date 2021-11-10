@@ -22,6 +22,8 @@
     <dependency.lombok.version>1.18.20</dependency.lombok.version>
     <dependency.logback.version>1.2.5</dependency.logback.version>
     <dependency.slf4j.version>1.7.32</dependency.slf4j.version>
+    <dependency.commons-lang.version>3.12.0</dependency.commons-lang.version>
+    <dependency.guava.version>31.0.1-jre</dependency.guava.version>
   </properties>
 
   <modules>
@@ -36,6 +38,16 @@
         <artifactId>lombok</artifactId>
         <version>${dependency.lombok.version}</version>
         <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${dependency.commons-lang.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${dependency.guava.version}</version>
       </dependency>
 
       <dependency>

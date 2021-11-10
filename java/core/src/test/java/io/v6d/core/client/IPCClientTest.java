@@ -16,6 +16,7 @@ package io.v6d.core.client;
 
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.util.Env;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 import lombok.val;
@@ -33,7 +34,7 @@ class TupleResolver extends ObjectFactory.Resolver {
 class DoubleArrayResolver extends ObjectFactory.FFIResolver {
 
     @Override
-    public Object resolve(long address) {
+    public Object resolve(ObjectMeta metadata, long address) {
         return "address is: " + address;
     }
 }
@@ -50,9 +51,8 @@ public class IPCClientTest {
     @Test
     public void connect() throws VineyardException {
         val client = new IPCClient();
-        val meta = client.getMetaData(ObjectID.fromString("o00008fcd1dd22830"));
-        System.out.println("meta = " + meta);
+        val meta =
+                client.getMetaData(ObjectID.fromString(Env.getEnvOrNull("TEST_TARGET_OBJECT_ID")));
         val object = ObjectFactory.getFactory().resolve(meta);
-        System.out.println("object = " + object);
     }
 }

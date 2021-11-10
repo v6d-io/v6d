@@ -4,11 +4,14 @@
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{16} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %F:%L - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <root level="info">
+    <logger name="io.v6d.modules.basic" level="DEBUG"/>
+    <logger name="io.v6d.core" level="DEBUG"/>
+
+    <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>

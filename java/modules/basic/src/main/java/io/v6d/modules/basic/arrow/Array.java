@@ -12,9 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.client;
+package io.v6d.modules.basic.arrow;
 
-/** Vineyard RPC client. */
-public class RPCClient {
-    public static void main(String[] args) {}
+import org.apache.arrow.vector.FieldVector;
+
+public abstract class Array {
+    public abstract FieldVector getArray();
 }

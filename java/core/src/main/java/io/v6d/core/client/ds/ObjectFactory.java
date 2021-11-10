@@ -32,10 +32,10 @@ public class ObjectFactory {
             if (address == 0) {
                 return null;
             }
-            return resolve(address);
+            return resolve(metadata, address);
         }
 
-        public abstract Object resolve(long address);
+        public abstract Object resolve(ObjectMeta metadata, long address);
     }
 
     private Map<String, Resolver> resolvers;

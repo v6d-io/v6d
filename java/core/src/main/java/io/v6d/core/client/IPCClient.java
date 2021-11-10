@@ -35,9 +35,13 @@ import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Vineyard IPC client. */
 public class IPCClient extends Client {
+    private static final Logger logger = LoggerFactory.getLogger(IPCClient.class);
+
     private final int NUM_CONNECT_ATTEMPTS = 10;
     private final long CONNECT_TIMEOUT_MS = 1000;
 
@@ -104,7 +108,7 @@ public class IPCClient extends Client {
         val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceID);
         val buffers = this.getBuffers(meta.getBuffers().allBufferIds());
         for (val blob : meta.getBuffers().allBufferIds()) {
-            System.out.println("blob: " + blob);
+            logger.debug("received blob: {}", blob);
         }
         for (val blob : meta.getBuffers().allBufferIds()) {
             if (buffers.containsKey(blob)) {

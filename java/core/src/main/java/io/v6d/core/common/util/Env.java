@@ -12,17 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic;
+package io.v6d.core.common.util;
 
-import static org.junit.Assert.assertTrue;
+public class Env {
+    public static String getEnv(String key) {
+        return System.getenv(key);
+    }
 
-import org.junit.Test;
+    public static String getEnvOrNull(String key) {
+        return getEnvOr(key, null);
+    }
 
-/** Unit test for simple App. */
-public class ArrayTest {
-    /** Rigorous Test :-) */
-    @Test
-    public void shouldAnswerWithTrue() {
-        assertTrue(true);
+    public static String getEnvOrEmpty(String key) {
+        return getEnvOr(key, "");
+    }
+
+    public static String getEnvOr(String key, String value) {
+        return System.getenv().getOrDefault(key, value);
     }
 }

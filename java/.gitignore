@@ -2,6 +2,7 @@ target/
 *.iml
 .classpath
 .project
+.factorypath
 .settings/
 hs_err_pid*.log
 
