@@ -12,16 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic;
+package io.v6d.modules.basic.arrow;
 
-import io.v6d.core.client.ds.ObjectFactory;
+import org.apache.arrow.memory.RootAllocator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/** Hello world! */
-public class Array {}
+public final class Arrow {
+    public static final RootAllocator default_allocator = new RootAllocator();
+    public static final Logger logger = LoggerFactory.getLogger(Arrow.class);
 
-class DoubleArrayResolver extends ObjectFactory.FFIResolver {
-    @Override
-    public Object resolve(long address) {
-        return null;
+    public static void instantiate() {
+        Buffer.instantiate();
+        DoubleArray.instantiate();
+        FloatArray.instantiate();
+        Int32Array.instantiate();
+        Int64Array.instantiate();
+        RecordBatch.instantiate();
+        Schema.instantiate();
     }
 }

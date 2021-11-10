@@ -22,10 +22,15 @@ import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Signature;
 import io.v6d.core.common.util.VineyardException;
+import java.util.HashMap;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ObjectMeta {
+    private static final Logger logger = LoggerFactory.getLogger(ObjectMeta.class);
+
     private ObjectMapper mapper;
     private ObjectNode meta;
     private InstanceID instanceID;
@@ -63,6 +68,31 @@ public class ObjectMeta {
 
     public Buffer getBuffer(ObjectID id) {
         return this.buffers.get(id);
+    }
+
+    @SneakyThrows(VineyardException.class)
+    public ObjectMeta getMemberMeta(String name) {
+        logger.debug("get member meta: {} from {}", name, this);
+        if (!this.meta.has(name)) {
+            throw new VineyardException.AssertionFailed(
+                    "Failed to get member: " + name + ", no such member");
+        }
+        if (!this.meta.get(name).isObject()) {
+            throw new VineyardException.AssertionFailed(
+                    "Failed to get member: " + name + ", member field is not object");
+        }
+        val ret = ObjectMeta.fromMeta((ObjectNode) this.meta.get(name), this.instanceID);
+        val all_blobs = buffers.allBuffers();
+        val blobs_to_fill = new HashMap<ObjectID, Buffer>();
+        for (val blob : ret.buffers.allBuffers().entrySet()) {
+            if (all_blobs.containsKey(blob.getKey())) {
+                blobs_to_fill.put(blob.getKey(), all_blobs.get(blob.getKey()));
+            }
+        }
+        for (val blob : blobs_to_fill.entrySet()) {
+            ret.setBuffer(blob.getKey(), blob.getValue());
+        }
+        return ret;
     }
 
     public ObjectNode metadata() {

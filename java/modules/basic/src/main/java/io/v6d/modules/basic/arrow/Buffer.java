@@ -20,10 +20,32 @@ import lombok.val;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.ReferenceManager;
 
-public class BufferResolver extends ObjectFactory.Resolver {
+public class Buffer {
+    private ObjectMeta metadata;
+    private ArrowBuf buffer;
+
+    public static void instantiate() {
+        ObjectFactory.getFactory().register("vineyard::Blob", new BufferResolver());
+    }
+
+    public Buffer(ObjectMeta metadata, long address, long length) {
+        this.metadata = metadata;
+        this.buffer = new ArrowBuf(ReferenceManager.NO_OP, null /* not needed */, length, address);
+    }
+
+    public ArrowBuf getBuffer() {
+        return buffer;
+    }
+
+    public long length() {
+        return this.buffer.capacity();
+    }
+}
+
+class BufferResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta metadata) {
         val buffer = metadata.getBuffer(metadata.id());
-        return new ArrowBuf(ReferenceManager.NO_OP, null, buffer.getSize(), buffer.getPointer());
+        return new Buffer(metadata, buffer.getPointer(), buffer.getSize());
     }
 }
