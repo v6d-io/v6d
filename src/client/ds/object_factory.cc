@@ -119,11 +119,6 @@ static vineyard_registry_getter_t __find_global_registry_entry(
 static std::unordered_map<std::string, ObjectFactory::object_initializer_t>*
 __instantize__registry(vineyard_registry_handler_t& handler,
                        vineyard_registry_getter_t& getter) {
-  if (!read_env("VINEYARD_USE_LOCAL_REGISTRY").empty()) {
-    return new std::unordered_map<std::string,
-                                  ObjectFactory::object_initializer_t>();
-  }
-
   if (getter == nullptr) {
     std::string error_message;
 
@@ -162,9 +157,22 @@ __instantize__registry(vineyard_registry_handler_t& handler,
                         error_message);
   }
 
-  return reinterpret_cast<
+  auto registry = reinterpret_cast<
       std::unordered_map<std::string, ObjectFactory::object_initializer_t>*>(
       getter());
+
+  if (!read_env("VINEYARD_USE_LOCAL_REGISTRY").empty()) {
+#ifndef NDEBUG
+    for (auto const& item : *registry) {
+      std::cerr << "vineyard: borrowing constructor: " << item.first
+                << std::endl;
+    }
+#endif
+    return new std::unordered_map<std::string,
+                                  ObjectFactory::object_initializer_t>(
+        *registry);
+  }
+  return registry;
 }
 
 }  // namespace detail
