@@ -61,6 +61,8 @@ def envvars(key, value=None, append=False):
     for k, v in original_items.items():
         if v is not None:
             os.environ[k] = v
+        else:
+            del os.environ[k]
 
 
 def _init_global_context():

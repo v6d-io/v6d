@@ -70,18 +70,17 @@ class ObjectFactory {
    */
   template <typename T>
   static bool Register() {
+    const std::string name = type_name<T>();
 #ifndef NDEBUG
     static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
     if (__trace) {
       // See: Note [std::cerr instead of DVLOG()]
-      std::cerr << "vineyard: register data type: " << type_name<T>()
-                << std::endl;
+      std::cerr << "vineyard: register data type: " << name << std::endl;
     }
 #endif
     auto& known_types = getKnownTypes();
     // the explicit `static_cast` is used to help overloading resolution.
-    known_types.emplace(type_name<T>(),
-                        static_cast<object_initializer_t>(&T::Create));
+    known_types[name] = static_cast<object_initializer_t>(&T::Create);
     return true;
   }
 
