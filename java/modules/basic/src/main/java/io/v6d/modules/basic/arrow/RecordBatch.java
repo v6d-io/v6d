@@ -27,6 +27,11 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 /** Hello world! */
 public class RecordBatch extends VectorSchemaRoot {
     public static void instantiate() {
+        Schema.instantiate();
+        Int32Array.instantiate();
+        Int64Array.instantiate();
+        FloatArray.instantiate();
+        DoubleArray.instantiate();
         ObjectFactory.getFactory().register("vineyard::RecordBatch", new RecordBatchResolver());
     }
 

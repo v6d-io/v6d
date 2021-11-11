@@ -12,17 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic.arrow;
+package io.v6d.modules.basic.array;
 
-import org.apache.arrow.memory.RootAllocator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public final class Arrow {
-    public static final RootAllocator default_allocator = new RootAllocator();
-    public static final Logger logger = LoggerFactory.getLogger(Arrow.class);
-
-    public static void instantiate() {
-        RecordBatch.instantiate();
-    }
-}
+public class Array {}

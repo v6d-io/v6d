@@ -30,7 +30,12 @@ import org.apache.arrow.vector.types.pojo.Field;
 /** Hello world! */
 public class Schema extends org.apache.arrow.vector.types.pojo.Schema {
     public static void instantiate() {
+        Buffer.instantiate();
         ObjectFactory.getFactory().register("vineyard::SchemaProxy", new SchemaResolver());
+    }
+
+    public Schema(List<Field> fields) {
+        super(Collections2.immutableListCopy(fields));
     }
 
     public Schema(List<Field> fields, Map<String, String> metadata) {
