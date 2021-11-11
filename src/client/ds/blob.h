@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_CLIENT_DS_BLOB_H_
 #define SRC_CLIENT_DS_BLOB_H_
 
+#include <limits>
 #include <map>
 #include <memory>
 #include <set>
@@ -120,7 +121,11 @@ class Blob : public Registered<Blob> {
   /**
    * The default constructor is only used in BlobWriter.
    */
-  Blob();
+  Blob() {
+    this->id_ = InvalidObjectID();
+    this->size_ = std::numeric_limits<size_t>::max();
+    this->buffer_ = nullptr;
+  }
 
   const std::shared_ptr<arrow::Buffer>& BufferUnsafe() const;
 

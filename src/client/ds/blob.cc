@@ -24,12 +24,6 @@ limitations under the License.
 
 namespace vineyard {
 
-Blob::Blob() {
-  this->id_ = InvalidObjectID();
-  this->size_ = std::numeric_limits<size_t>::max();
-  this->buffer_ = nullptr;
-}
-
 size_t Blob::size() const { return allocated_size(); }
 
 size_t Blob::allocated_size() const { return size_; }
