@@ -18,11 +18,11 @@ limitations under the License.
 
 #define VINEYARD_VERSION_MAJOR 0
 #define VINEYARD_VERSION_MINOR 3
-#define VINEYARD_VERSION_PATCH 8
+#define VINEYARD_VERSION_PATCH 9
 
 #define VINEYARD_VERSION                                              \
   ((VINEYARD_VERSION_MAJOR * 1000) + VINEYARD_VERSION_MINOR) * 1000 + \
       VINEYARD_VERSION_PATCH
-#define VINEYARD_VERSION_STRING "0.3.8"
+#define VINEYARD_VERSION_STRING "0.3.9"
 
 #endif  // SRC_COMMON_UTIL_CONFIG_H_
