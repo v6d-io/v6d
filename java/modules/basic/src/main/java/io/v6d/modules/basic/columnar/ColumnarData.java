@@ -1,0 +1,500 @@
+/** Copyright 2020-2021 Alibaba Group Holding Limited.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.v6d.modules.basic.columnar;
+
+/**
+ * The implementation is heavily referred from spark, see also
+ *
+ * <p>https://github.com/apache/spark/blob/master/sql/catalyst/src/main/java/org/apache/spark/sql/vectorized/ArrowColumnVector.java
+ *
+ * <p>The original file has the following copyright header:
+ *
+ * <p>* Licensed to the Apache Software Foundation (ASF) under one or more * contributor license
+ * agreements. See the NOTICE file distributed with * this work for additional information regarding
+ * copyright ownership. * The ASF licenses this file to You under the Apache License, Version 2.0 *
+ * (the "License"); you may not use this file except in compliance with * the License. You may
+ * obtain a copy of the License at * * http://www.apache.org/licenses/LICENSE-2.0 * * Unless
+ * required by applicable law or agreed to in writing, software * distributed under the License is
+ * distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. * See the License for the specific language governing permissions and * limitations
+ * under the License.
+ */
+import java.math.BigDecimal;
+import org.apache.arrow.vector.BigIntVector;
+import org.apache.arrow.vector.BitVector;
+import org.apache.arrow.vector.DateDayVector;
+import org.apache.arrow.vector.DecimalVector;
+import org.apache.arrow.vector.Float4Vector;
+import org.apache.arrow.vector.Float8Vector;
+import org.apache.arrow.vector.IntVector;
+import org.apache.arrow.vector.IntervalDayVector;
+import org.apache.arrow.vector.IntervalYearVector;
+import org.apache.arrow.vector.NullVector;
+import org.apache.arrow.vector.SmallIntVector;
+import org.apache.arrow.vector.TimeStampMicroTZVector;
+import org.apache.arrow.vector.TimeStampMicroVector;
+import org.apache.arrow.vector.TinyIntVector;
+import org.apache.arrow.vector.ValueVector;
+import org.apache.arrow.vector.VarBinaryVector;
+import org.apache.arrow.vector.VarCharVector;
+import org.apache.arrow.vector.holders.NullableIntervalDayHolder;
+import org.apache.arrow.vector.holders.NullableVarCharHolder;
+import org.apache.arrow.vector.util.Text;
+
+/** A visitor for arrow arrays. */
+public class ColumnarData {
+    private final ArrowVectorAccessor accessor;
+
+    public ColumnarData(ValueVector vector) {
+        if (vector instanceof BitVector) {
+            accessor = new BooleanAccessor((BitVector) vector);
+        } else if (vector instanceof TinyIntVector) {
+            accessor = new ByteAccessor((TinyIntVector) vector);
+        } else if (vector instanceof SmallIntVector) {
+            accessor = new ShortAccessor((SmallIntVector) vector);
+        } else if (vector instanceof IntVector) {
+            accessor = new IntAccessor((IntVector) vector);
+        } else if (vector instanceof BigIntVector) {
+            accessor = new LongAccessor((BigIntVector) vector);
+        } else if (vector instanceof Float4Vector) {
+            accessor = new FloatAccessor((Float4Vector) vector);
+        } else if (vector instanceof Float8Vector) {
+            accessor = new DoubleAccessor((Float8Vector) vector);
+        } else if (vector instanceof DecimalVector) {
+            accessor = new DecimalAccessor((DecimalVector) vector);
+        } else if (vector instanceof VarCharVector) {
+            accessor = new StringAccessor((VarCharVector) vector);
+        } else if (vector instanceof VarBinaryVector) {
+            accessor = new BinaryAccessor((VarBinaryVector) vector);
+        } else if (vector instanceof DateDayVector) {
+            accessor = new DateAccessor((DateDayVector) vector);
+        } else if (vector instanceof TimeStampMicroTZVector) {
+            accessor = new TimestampAccessor((TimeStampMicroTZVector) vector);
+        } else if (vector instanceof TimeStampMicroVector) {
+            accessor = new TimestampNTZAccessor((TimeStampMicroVector) vector);
+        } else if (vector instanceof NullVector) {
+            accessor = new NullAccessor((NullVector) vector);
+        } else if (vector instanceof IntervalYearVector) {
+            accessor = new IntervalYearAccessor((IntervalYearVector) vector);
+        } else if (vector instanceof IntervalDayVector) {
+            accessor = new IntervalDayAccessor((IntervalDayVector) vector);
+        } else {
+            throw new UnsupportedOperationException(
+                    "array type is not supported yet: " + vector.getClass());
+        }
+    }
+
+    public boolean hasNull() {
+        return accessor.getNullCount() > 0;
+    }
+
+    public int nullCount() {
+        return accessor.getNullCount();
+    }
+
+    public int valueCount() {
+        return accessor.getValueCount();
+    }
+
+    public void close() {
+        accessor.close();
+    }
+
+    public boolean isNullAt(int rowId) {
+        return accessor.isNullAt(rowId);
+    }
+
+    public boolean getBoolean(int rowId) {
+        return accessor.getBoolean(rowId);
+    }
+
+    public byte getByte(int rowId) {
+        return accessor.getByte(rowId);
+    }
+
+    public short getShort(int rowId) {
+        return accessor.getShort(rowId);
+    }
+
+    public int getInt(int rowId) {
+        return accessor.getInt(rowId);
+    }
+
+    public long getLong(int rowId) {
+        return accessor.getLong(rowId);
+    }
+
+    public float getFloat(int rowId) {
+        return accessor.getFloat(rowId);
+    }
+
+    public double getDouble(int rowId) {
+        return accessor.getDouble(rowId);
+    }
+
+    public BigDecimal getDecimal(int rowId, int precision, int scale) {
+        if (isNullAt(rowId)) {
+            return null;
+        }
+        return accessor.getDecimal(rowId, precision, scale);
+    }
+
+    public Text getUTF8String(int rowId) {
+        if (isNullAt(rowId)) {
+            return null;
+        }
+        return accessor.getUTF8String(rowId);
+    }
+
+    public byte[] getBinary(int rowId) {
+        if (isNullAt(rowId)) {
+            return null;
+        }
+        return accessor.getBinary(rowId);
+    }
+
+    private abstract static class ArrowVectorAccessor {
+        private final ValueVector vector;
+
+        ArrowVectorAccessor(ValueVector vector) {
+            this.vector = vector;
+        }
+
+        final boolean isNullAt(int rowId) {
+            return vector.isNull(rowId);
+        }
+
+        final int getNullCount() {
+            return vector.getNullCount();
+        }
+
+        final int getValueCount() {
+            return vector.getValueCount();
+        }
+
+        final void close() {
+            vector.close();
+        }
+
+        boolean getBoolean(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        byte getByte(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        short getShort(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        int getInt(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        long getLong(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        float getFloat(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        double getDouble(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        BigDecimal getDecimal(int rowId, int precision, int scale) {
+            throw new UnsupportedOperationException();
+        }
+
+        // FIXME: avoid the underlying copy
+        Text getUTF8String(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        byte[] getBinary(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static class BooleanAccessor extends ArrowVectorAccessor {
+
+        private final BitVector accessor;
+
+        BooleanAccessor(BitVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final boolean getBoolean(int rowId) {
+            return accessor.get(rowId) == 1;
+        }
+    }
+
+    private static class ByteAccessor extends ArrowVectorAccessor {
+
+        private final TinyIntVector accessor;
+
+        ByteAccessor(TinyIntVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final byte getByte(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class ShortAccessor extends ArrowVectorAccessor {
+
+        private final SmallIntVector accessor;
+
+        ShortAccessor(SmallIntVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final short getShort(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class IntAccessor extends ArrowVectorAccessor {
+
+        private final IntVector accessor;
+
+        IntAccessor(IntVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final int getInt(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class LongAccessor extends ArrowVectorAccessor {
+
+        private final BigIntVector accessor;
+
+        LongAccessor(BigIntVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class FloatAccessor extends ArrowVectorAccessor {
+
+        private final Float4Vector accessor;
+
+        FloatAccessor(Float4Vector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final float getFloat(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class DoubleAccessor extends ArrowVectorAccessor {
+
+        private final Float8Vector accessor;
+
+        DoubleAccessor(Float8Vector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final double getDouble(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class DecimalAccessor extends ArrowVectorAccessor {
+
+        private final DecimalVector accessor;
+
+        DecimalAccessor(DecimalVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final BigDecimal getDecimal(int rowId, int precision, int scale) {
+            return accessor.getObject(rowId);
+        }
+    }
+
+    private static class StringAccessor extends ArrowVectorAccessor {
+
+        private final VarCharVector accessor;
+        private final NullableVarCharHolder stringResult = new NullableVarCharHolder();
+
+        StringAccessor(VarCharVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final Text getUTF8String(int rowId) {
+            return accessor.getObject(rowId);
+        }
+    }
+
+    private static class BinaryAccessor extends ArrowVectorAccessor {
+
+        private final VarBinaryVector accessor;
+
+        BinaryAccessor(VarBinaryVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final byte[] getBinary(int rowId) {
+            return accessor.getObject(rowId);
+        }
+    }
+
+    private static class DateAccessor extends ArrowVectorAccessor {
+
+        private final DateDayVector accessor;
+
+        DateAccessor(DateDayVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final int getInt(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampMicroTZVector accessor;
+
+        TimestampAccessor(TimeStampMicroTZVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampNTZAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampMicroVector accessor;
+
+        TimestampNTZAccessor(TimeStampMicroVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class NullAccessor extends ArrowVectorAccessor {
+
+        NullAccessor(NullVector vector) {
+            super(vector);
+        }
+    }
+
+    private static class IntervalYearAccessor extends ArrowVectorAccessor {
+
+        private final IntervalYearVector accessor;
+
+        IntervalYearAccessor(IntervalYearVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        int getInt(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class IntervalDayAccessor extends ArrowVectorAccessor {
+
+        private final IntervalDayVector accessor;
+        private final NullableIntervalDayHolder intervalDayHolder = new NullableIntervalDayHolder();
+
+        IntervalDayAccessor(IntervalDayVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        long getLong(int rowId) {
+            accessor.get(rowId, intervalDayHolder);
+            return Math.addExact(
+                    Math.multiplyExact(intervalDayHolder.days, DateTimeConstants.MICROS_PER_DAY),
+                    intervalDayHolder.milliseconds * DateTimeConstants.MICROS_PER_MILLIS);
+        }
+    }
+
+    // refer from spark:
+    // https://github.com/apache/spark/blob/master/common/unsafe/src/main/java/org/apache/spark/sql/catalyst/util/DateTimeConstants.java
+    private class DateTimeConstants {
+        public static final int MONTHS_PER_YEAR = 12;
+
+        public static final byte DAYS_PER_WEEK = 7;
+
+        public static final long HOURS_PER_DAY = 24L;
+
+        public static final long MINUTES_PER_HOUR = 60L;
+
+        public static final long SECONDS_PER_MINUTE = 60L;
+        public static final long SECONDS_PER_HOUR = MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+        public static final long SECONDS_PER_DAY = HOURS_PER_DAY * SECONDS_PER_HOUR;
+
+        public static final long MILLIS_PER_SECOND = 1000L;
+        public static final long MILLIS_PER_MINUTE = SECONDS_PER_MINUTE * MILLIS_PER_SECOND;
+        public static final long MILLIS_PER_HOUR = MINUTES_PER_HOUR * MILLIS_PER_MINUTE;
+        public static final long MILLIS_PER_DAY = HOURS_PER_DAY * MILLIS_PER_HOUR;
+
+        public static final long MICROS_PER_MILLIS = 1000L;
+        public static final long MICROS_PER_SECOND = MILLIS_PER_SECOND * MICROS_PER_MILLIS;
+        public static final long MICROS_PER_MINUTE = SECONDS_PER_MINUTE * MICROS_PER_SECOND;
+        public static final long MICROS_PER_HOUR = MINUTES_PER_HOUR * MICROS_PER_MINUTE;
+        public static final long MICROS_PER_DAY = HOURS_PER_DAY * MICROS_PER_HOUR;
+
+        public static final long NANOS_PER_MICROS = 1000L;
+        public static final long NANOS_PER_MILLIS = MICROS_PER_MILLIS * NANOS_PER_MICROS;
+        public static final long NANOS_PER_SECOND = MILLIS_PER_SECOND * NANOS_PER_MILLIS;
+    }
+}
