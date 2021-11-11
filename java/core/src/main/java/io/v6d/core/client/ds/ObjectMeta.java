@@ -15,14 +15,18 @@
 package io.v6d.core.client.ds;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Signature;
 import io.v6d.core.common.util.VineyardException;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.slf4j.Logger;
@@ -95,6 +99,10 @@ public class ObjectMeta {
         return ret;
     }
 
+    public Object getMember(String name) {
+        return ObjectFactory.getFactory().resolve(getMemberMeta(name));
+    }
+
     public ObjectNode metadata() {
         return this.meta;
     }
@@ -152,8 +160,28 @@ public class ObjectMeta {
         return this.meta.get(key).asBoolean();
     }
 
+    @SneakyThrows(IOException.class)
+    public <T> List<T> getListValue(String key) {
+        val value = getValue(key);
+        assert value.isArray();
+        val reader = mapper.readerFor(new TypeReference<List<T>>() {});
+        return reader.readValue(value);
+    }
+
     public JsonNode getValue(String key) {
         return this.meta.get(key);
+    }
+
+    public ObjectNode getDictValue(String key) {
+        val value = getValue(key);
+        assert value.isObject();
+        return (ObjectNode) value;
+    }
+
+    public ArrayNode getArrayValue(String key) {
+        val value = getValue(key);
+        assert value.isObject();
+        return (ArrayNode) value;
     }
 
     @Override
