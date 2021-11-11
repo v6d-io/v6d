@@ -162,15 +162,8 @@ __instantize__registry(vineyard_registry_handler_t& handler,
       getter());
 
   if (!read_env("VINEYARD_USE_LOCAL_REGISTRY").empty()) {
-#ifndef NDEBUG
-    for (auto const& item : *registry) {
-      std::cerr << "vineyard: borrowing constructor: " << item.first
-                << std::endl;
-    }
-#endif
     return new std::unordered_map<std::string,
-                                  ObjectFactory::object_initializer_t>(
-        *registry);
+                                  ObjectFactory::object_initializer_t>();
   }
   return registry;
 }
