@@ -347,7 +347,7 @@ jobs:
           # run build
           mkdir -p build
           cd build
-          cmake .. -DBUILD_SHARED_LIBS=ON \
+          cmake .. -DBUILD_SHARED_LIBS=OFF \
                    -DBUILD_VINEYARD_SERVER=OFF \
                    -DBUILD_VINEYARD_CLIENT=ON \
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
