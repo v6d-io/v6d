@@ -31,8 +31,8 @@ namespace vineyard {
 
 struct backtrace_info {
  public:
-  static void backtrace(std::ostream& _out,
-                        bool const compact = false) noexcept {
+  static void backtrace(std::ostream& _out, bool const compact = false,
+                        const size_t indention = 0) noexcept {
 #ifdef WITH_LIBUNWIND
     char symbol[1024];
     unw_cursor_t cursor;
@@ -59,6 +59,9 @@ struct backtrace_info {
       }
       unw_word_t sp = 0;
       unw_get_reg(&cursor, UNW_REG_SP, &sp);
+      for (size_t idx = 0; idx < indention; ++idx) {
+        _out << ' ';
+      }
       print_reg(_out, ip);
       _out << ": (SP:";
       print_reg(_out, sp);

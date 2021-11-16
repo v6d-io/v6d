@@ -46,27 +46,41 @@ std::unique_ptr<std::remove_pointer_t<std::terminate_handler>,
 [[noreturn]] void backtrace_on_terminate() noexcept {
   std::set_terminate(
       terminate_handler.release());  // to avoid infinite looping if any
-  backtrace_info::backtrace(std::clog);
   if (std::exception_ptr ep = std::current_exception()) {
     try {
       std::rethrow_exception(ep);
     } catch (std::exception const& e) {
-      std::clog << "backtrace: unhandled exception std::exception:what(): "
-                << e.what() << std::endl;
+      std::clog << std::endl
+                << "Unhandled exception:" << std::endl
+                << "  "
+                << "std::exception:what(): " << e.what() << std::endl
+                << std::endl;
     } catch (...) {
       if (std::type_info* et = abi::__cxa_current_exception_type()) {
         std::unique_ptr<char, decltype(std::free)&> demangled_name{nullptr,
                                                                    std::free};
         size_t demangled_size = 0;
-        std::clog << "backtrace: unhandled exception type: "
+        std::clog << std::endl
+                  << "Unhandled exception:" << std::endl
+                  << "  "
+                  << "exception type: "
                   << backtrace_info::get_demangled_name(
                          et->name(), demangled_name, demangled_size)
+                  << std::endl
                   << std::endl;
       } else {
-        std::clog << "backtrace: unhandled unknown exception" << std::endl;
+        std::clog << std::endl
+                  << "Unhandled exception:" << std::endl
+                  << "  "
+                  << "unknown exception type" << std::endl
+                  << std::endl;
       }
     }
   }
+#ifdef WITH_LIBUNWIND
+  std::clog << "backtrace:" << std::endl;
+  backtrace_info::backtrace(std::clog, true, 2);
+#endif
   std::_Exit(EXIT_FAILURE);
 }
 
