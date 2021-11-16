@@ -138,7 +138,6 @@ class IMetaService {
                              unsigned rev) {
       if (status.ok()) {
         // start the watcher.
-        LOG(INFO) << "start background etcd watch, since " << rev_;
         this->startDaemonWatch("", rev_,
                                boost::bind(&IMetaService::daemonWatchHandler,
                                            this, _1, _2, _3, _4));

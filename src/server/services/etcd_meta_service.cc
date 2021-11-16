@@ -263,6 +263,7 @@ void EtcdMetaService::startDaemonWatch(
     const std::string& prefix, unsigned since_rev,
     callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
         callback) {
+  LOG(INFO) << "start background etcd watch, since " << rev_;
   try {
     this->handled_rev_.store(since_rev);
     if (!handler_) {
