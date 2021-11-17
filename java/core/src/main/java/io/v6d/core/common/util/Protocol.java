@@ -73,7 +73,7 @@ public class Protocol {
             root.put("type", "register_reply");
             root.put("ipc_socket", ipc_socket);
             root.put("rpc_endpoint", rpc_endpoint);
-            root.put("instance_id", instance_id.Value());
+            root.put("instance_id", instance_id.value());
             root.put("version", "0.0.0"); // FIXME
         }
 
@@ -113,9 +113,9 @@ public class Protocol {
 
         public void Put(ObjectNode root, ObjectID id, Signature signature, InstanceID instance_id) {
             root.put("type", "create_data_reply");
-            root.put("id", id.Value());
+            root.put("id", id.value());
             root.put("signature", signature.Value());
-            root.put("instance_id", instance_id.Value());
+            root.put("instance_id", instance_id.value());
         }
 
         @Override
@@ -138,7 +138,7 @@ public class Protocol {
             root.put("type", "get_data_request");
             ObjectMapper mapper = new ObjectMapper();
             val ids = mapper.createArrayNode();
-            ids.add(id.Value());
+            ids.add(id.value());
             root.put("id", ids);
             root.put("sync_remote", sync_remote);
             root.put("wait", wait);
@@ -184,7 +184,7 @@ public class Protocol {
             root.put("type", "get_buffers_request");
             int index = 0;
             for (val id : ids) {
-                root.put(String.valueOf(index++), id.Value());
+                root.put(String.valueOf(index++), id.value());
             }
             root.put("num", ids.size());
         }
@@ -193,7 +193,7 @@ public class Protocol {
             root.put("type", "get_buffers_request");
             int index = 0;
             for (val id : ids) {
-                root.put(String.valueOf(index++), id.Value());
+                root.put(String.valueOf(index++), id.value());
             }
             root.put("num", ids.size());
         }

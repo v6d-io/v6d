@@ -23,9 +23,9 @@ import io.v6d.core.common.util.VineyardException;
 public abstract class Client {
     protected String ipc_socket;
     protected String rpc_endpoint;
-    protected InstanceID instanceID;
+    protected InstanceID instanceId;
 
-    public abstract ObjectID createMetaData(ObjectMeta metadata) throws VineyardException;
+    public abstract ObjectMeta createMetaData(ObjectMeta metadata) throws VineyardException;
 
     public ObjectMeta getMetaData(ObjectID id) throws VineyardException {
         return this.getMetaData(id, false);
@@ -52,7 +52,7 @@ public abstract class Client {
         return this.rpc_endpoint;
     }
 
-    public InstanceID getInstanceID() {
-        return this.instanceID;
+    public InstanceID getInstanceId() {
+        return this.instanceId;
     }
 }

@@ -76,18 +76,30 @@ public class IPCClient extends Client {
         reply.Get(this.doReadJson());
         this.ipc_socket = ipc_socket;
         this.rpc_endpoint = reply.getRpc_endpoint();
-        this.instanceID = reply.getInstance_id();
+        this.instanceId = reply.getInstance_id();
     }
 
     @Override
-    public ObjectID createMetaData(ObjectMeta metadata) throws VineyardException {
+    public ObjectMeta createMetaData(ObjectMeta meta) throws VineyardException {
+        meta.setInstanceId(this.instanceId);
+        meta.setTransient();
+        if (!meta.hasMeta("nbytes")) {
+            meta.setNBytes(0);
+        }
         val root = mapper_.createObjectNode();
         val req = new CreateDataRequest();
-        req.Put(root, metadata.metadata());
+        req.Put(root, meta.metadata());
         this.doWrite(root);
         val reply = new CreateDataReply();
         reply.Get(this.doReadJson());
-        return reply.getId();
+        if (meta.isIncomplete()) {
+            return getMetaData(reply.getId());
+        } else {
+            meta.setId(reply.getId());
+            meta.setSignature(reply.getSignature());
+            meta.setInstanceId(instanceId);
+            return meta;
+        }
     }
 
     @Override
@@ -105,7 +117,7 @@ public class IPCClient extends Client {
                     "Failed to read get_data_reply, size is " + contents.size());
         }
 
-        val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceID);
+        val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceId);
         val buffers = this.getBuffers(meta.getBuffers().allBufferIds());
         for (val blob : meta.getBuffers().allBufferIds()) {
             logger.debug("received blob: {}", blob);

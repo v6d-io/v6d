@@ -14,6 +14,9 @@
  */
 package io.v6d.core.client.ds;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+import static java.util.Objects.requireNonNull;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +28,7 @@ import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Signature;
 import io.v6d.core.common.util.VineyardException;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import lombok.SneakyThrows;
@@ -37,22 +41,32 @@ public class ObjectMeta {
 
     private ObjectMapper mapper;
     private ObjectNode meta;
-    private InstanceID instanceID;
+    private InstanceID instanceId;
     private BufferSet buffers;
+    private boolean incomplete;
 
     private ObjectMeta() {
         mapper = new ObjectMapper();
         meta = mapper.createObjectNode();
+        instanceId = InstanceID.UnspecifiedInstanceID;
         buffers = new BufferSet();
+        incomplete = false;
+
+        this.setLocal();
+        this.setTransient();
     }
 
-    public static ObjectMeta fromMeta(ObjectNode meta, InstanceID instanceID)
+    public static ObjectMeta fromMeta(ObjectNode meta, InstanceID instanceId)
             throws VineyardException {
         val metadata = new ObjectMeta();
-        metadata.meta = meta;
-        metadata.instanceID = instanceID;
+        metadata.meta = requireNonNull(meta, "meta is null");
+        metadata.instanceId = instanceId;
         metadata.findAllBuffers(meta);
         return metadata;
+    }
+
+    public static ObjectMeta empty() {
+        return new ObjectMeta();
     }
 
     public BufferSet getBuffers() {
@@ -61,6 +75,13 @@ public class ObjectMeta {
 
     public void reset() {
         this.meta = mapper.createObjectNode();
+    }
+
+    public void replace(final ObjectMeta meta) {
+        this.meta = meta.meta;
+        this.instanceId = meta.getInstanceId();
+        this.buffers = meta.getBuffers();
+        this.incomplete = false;
     }
 
     public void setBuffer(ObjectID id, Buffer buffer) throws VineyardException {
@@ -74,6 +95,14 @@ public class ObjectMeta {
         return this.buffers.get(id);
     }
 
+    public Buffer getBufferChecked(ObjectID id) {
+        val buffer = this.buffers.get(id);
+        if (buffer == null) {
+            throw new NullPointerException("buffer not found for " + id.toString());
+        }
+        return buffer;
+    }
+
     @SneakyThrows(VineyardException.class)
     public ObjectMeta getMemberMeta(String name) {
         logger.debug("get member meta: {} from {}", name, this);
@@ -85,7 +114,7 @@ public class ObjectMeta {
             throw new VineyardException.AssertionFailed(
                     "Failed to get member: " + name + ", member field is not object");
         }
-        val ret = ObjectMeta.fromMeta((ObjectNode) this.meta.get(name), this.instanceID);
+        val ret = ObjectMeta.fromMeta((ObjectNode) this.meta.get(name), this.instanceId);
         val all_blobs = buffers.allBuffers();
         val blobs_to_fill = new HashMap<ObjectID, Buffer>();
         for (val blob : ret.buffers.allBuffers().entrySet()) {
@@ -99,8 +128,24 @@ public class ObjectMeta {
         return ret;
     }
 
+    public void addMemberMeta(String name, ObjectMeta meta) {
+        this.meta.set(name, meta.metadata());
+        this.buffers.extend(meta.buffers);
+    }
+
     public Object getMember(String name) {
         return ObjectFactory.getFactory().resolve(getMemberMeta(name));
+    }
+
+    public void addMember(String name, Object value) {
+        this.addMemberMeta(name, value.getMeta());
+    }
+
+    public void addMember(String name, ObjectID objectID) {
+        val placeholder = mapper.createObjectNode();
+        placeholder.put("id", objectID.toString());
+        this.meta.set(name, placeholder);
+        incomplete = true;
     }
 
     public ObjectNode metadata() {
@@ -112,70 +157,169 @@ public class ObjectMeta {
         return mapper.writeValueAsString(this.meta);
     }
 
-    public ObjectID id() {
+    public boolean isIncomplete() {
+        return this.incomplete;
+    }
+
+    public ObjectID getId() {
         return ObjectID.fromString(this.getStringValue("id"));
     }
 
-    public Signature signature() {
+    public void setId(ObjectID id) {
+        this.meta.put("id", id.toString());
+    }
+
+    public Signature getSignature() {
         return new Signature(this.getLongValue("signature"));
     }
 
-    public InstanceID instance_id() {
+    public void setSignature(Signature signature) {
+        this.meta.put("signature", signature.Value());
+    }
+
+    public InstanceID getInstanceId() {
         return new InstanceID(this.getLongValue("instance_id"));
+    }
+
+    public void setInstanceId(final InstanceID instanceId) {
+        this.instanceId = instanceId;
+        this.meta.put("instance_id", instanceId.value());
     }
 
     public boolean isGlobal() {
         return this.getBooleanValue("global");
     }
 
-    public String typename() {
+    public void setGlobal() {
+        this.setGlobal(true);
+    }
+
+    public void setLocal() {
+        this.setGlobal(false);
+    }
+
+    public void setGlobal(boolean global) {
+        this.meta.put("global", global);
+    }
+
+    public boolean isPersist() {
+        return !this.getBooleanValue("transient");
+    }
+
+    public void setTransient() {
+        this.setTransient(true);
+    }
+
+    public void setPersist() {
+        this.setTransient(false);
+    }
+
+    public void setTransient(boolean transient_) {
+        this.meta.put("transient", transient_);
+    }
+
+    public String getTypename() {
         return this.getStringValue("typename");
     }
 
-    public long nbytes() {
+    public void setTypename(final String typename) {
+        this.meta.put("typename", typename);
+    }
+
+    public long getNBytes() {
         return this.getLongValue("nbytes");
+    }
+
+    public void setNBytes(long nbytes) {
+        this.meta.put("nbytes", nbytes);
     }
 
     public String getStringValue(String key) {
         return this.meta.get(key).asText();
     }
 
+    public void setStringValue(String key, String value) {
+        this.meta.put(key, value);
+    }
+
     public int getIntValue(String key) {
-        return this.meta.get(key).asInt();
+        return this.meta.get(key).intValue();
+    }
+
+    public void setIntValue(String key, int value) {
+        this.meta.put(key, value);
     }
 
     public long getLongValue(String key) {
-        return this.meta.get(key).asLong();
+        return this.meta.get(key).longValue();
+    }
+
+    public void setLongValue(String key, long value) {
+        this.meta.put(key, value);
     }
 
     public float getFloatValue(String key) {
-        return (float) this.meta.get(key).asDouble();
+        return (float) this.meta.get(key).floatValue();
+    }
+
+    public void setFloatValue(String key, float value) {
+        this.meta.put(key, value);
     }
 
     public double getDoubleValue(String key) {
-        return this.meta.get(key).asDouble();
+        return this.meta.get(key).doubleValue();
+    }
+
+    public void setDoubleValue(String key, double value) {
+        this.meta.put(key, value);
     }
 
     public boolean getBooleanValue(String key) {
-        return this.meta.get(key).asBoolean();
+        return this.meta.get(key).booleanValue();
+    }
+
+    public void setBooleanValue(String key, boolean value) {
+        this.meta.put(key, value);
     }
 
     @SneakyThrows(IOException.class)
-    public <T> List<T> getListValue(String key) {
+    public <T> Collection<T> getListValue(String key) {
         val value = getValue(key);
         assert value.isArray();
         val reader = mapper.readerFor(new TypeReference<List<T>>() {});
         return reader.readValue(value);
     }
 
+    @SneakyThrows
+    public <T> void setListValue(String key, Collection<T> values) {
+        val array = this.meta.putArray(key);
+        for (val value : values) {
+            array.add(mapper.valueToTree(value));
+        }
+    }
+
     public JsonNode getValue(String key) {
         return this.meta.get(key);
     }
 
+    public void setValue(String key, JsonNode value) {
+        this.meta.set(key, value);
+    }
+
+    public void setValue(String key, java.lang.Object value) {
+        this.meta.set(key, mapper.valueToTree(value));
+    }
+
     public ObjectNode getDictValue(String key) {
+        // FIXME
         val value = getValue(key);
         assert value.isObject();
         return (ObjectNode) value;
+    }
+
+    public void setDictNode(String key, ObjectNode values) {
+        // FIXME
+        this.meta.set(key, values);
     }
 
     public ArrayNode getArrayValue(String key) {
@@ -184,16 +328,29 @@ public class ObjectMeta {
         return (ArrayNode) value;
     }
 
+    public void setArrayNode(String key, ArrayNode values) {
+        this.meta.set(key, values);
+    }
+
+    public boolean has(String key) {
+        return this.meta.has(key);
+    }
+
+    public boolean hasMeta(String key) {
+        return this.meta.has(key) && !this.meta.get(key).isObject();
+    }
+
+    public boolean hasMember(String key) {
+        return this.meta.has(key) && this.meta.get(key).isObject();
+    }
+
     @Override
     public String toString() {
-        return "ObjectMeta{"
-                + "meta="
-                + meta
-                + ", instanceID="
-                + instanceID
-                + ", buffers="
-                + buffers
-                + '}';
+        return toStringHelper(this)
+                .add("instance_id", instanceId)
+                .add("meta", meta)
+                .add("buffers", buffers)
+                .toString();
     }
 
     private void findAllBuffers(ObjectNode meta) throws VineyardException {
@@ -202,7 +359,7 @@ public class ObjectMeta {
         }
         ObjectID member = ObjectID.fromString(meta.get("id").asText());
         if (member.isBlob()) {
-            if (meta.get("instance_id").asLong() == this.instanceID.Value()) {
+            if (meta.get("instance_id").asLong() == this.instanceId.value()) {
                 this.buffers.emplace(member);
             }
         } else {

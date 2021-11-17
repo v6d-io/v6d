@@ -14,8 +14,10 @@
  */
 package io.v6d.modules.basic.arrow;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.v6d.modules.basic.arrow.Arrow.logger;
 
+import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.util.SchemaSerializer;
@@ -28,28 +30,54 @@ import org.apache.arrow.util.Collections2;
 import org.apache.arrow.vector.types.pojo.Field;
 
 /** Hello world! */
-public class Schema extends org.apache.arrow.vector.types.pojo.Schema {
+public class Schema extends Object {
+    private final org.apache.arrow.vector.types.pojo.Schema schema;
+
     public static void instantiate() {
         Buffer.instantiate();
         ObjectFactory.getFactory().register("vineyard::SchemaProxy", new SchemaResolver());
     }
 
-    public Schema(List<Field> fields) {
-        super(Collections2.immutableListCopy(fields));
+    public Schema(final ObjectMeta meta, org.apache.arrow.vector.types.pojo.Schema schema) {
+        super(meta);
+        this.schema = schema;
     }
 
-    public Schema(List<Field> fields, Map<String, String> metadata) {
-        super(Collections2.immutableListCopy(fields), Collections2.immutableMapCopy(metadata));
+    public Schema(final ObjectMeta meta, List<Field> fields) {
+        super(meta);
+        this.schema =
+                new org.apache.arrow.vector.types.pojo.Schema(
+                        Collections2.immutableListCopy(fields));
+    }
+
+    public Schema(final ObjectMeta meta, List<Field> fields, Map<String, String> metadata) {
+        super(meta);
+        this.schema =
+                new org.apache.arrow.vector.types.pojo.Schema(
+                        Collections2.immutableListCopy(fields),
+                        Collections2.immutableMapCopy(metadata));
+    }
+
+    public org.apache.arrow.vector.types.pojo.Schema getSchema() {
+        return schema;
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper(this)
+                .add("object", super.toString())
+                .add("schema", schema)
+                .toString();
     }
 }
 
 class SchemaResolver extends ObjectFactory.Resolver {
     @Override
     @SneakyThrows(IOException.class)
-    public Object resolve(ObjectMeta meta) {
+    public Object resolve(final ObjectMeta meta) {
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
         val schema = SchemaSerializer.deserialize(buffer.getBuffer(), Arrow.default_allocator);
         logger.debug("arrow schema is: {}", schema);
-        return new Schema(schema.getFields(), schema.getCustomMetadata());
+        return new Schema(meta, schema);
     }
 }

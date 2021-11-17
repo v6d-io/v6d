@@ -12,21 +12,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic.arrow;
+package io.v6d.modules.basic.scalar;
 
 import io.v6d.core.client.ds.Object;
+import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.modules.basic.columnar.ColumnarData;
-import org.apache.arrow.vector.FieldVector;
 
-public abstract class Array extends Object {
-    public Array(ObjectMeta meta) {
-        super(meta);
+public class FloatValue extends Object {
+    private final float value;
+
+    public static void instantiate() {
+        ObjectFactory.getFactory().register("vineyard::Scalar<float>", new FloatValueResolver());
     }
 
-    public abstract FieldVector getArray();
+    public FloatValue(final ObjectMeta meta, final float value) {
+        super(meta);
+        this.value = value;
+    }
 
-    public ColumnarData columnar() {
-        return new ColumnarData(getArray());
+    public float getValue() {
+        return value;
+    }
+}
+
+class FloatValueResolver extends ObjectFactory.Resolver {
+
+    @Override
+    public Object resolve(ObjectMeta meta) {
+        return new FloatValue(meta, meta.getFloatValue("value_"));
     }
 }

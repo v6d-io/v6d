@@ -12,21 +12,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic.arrow;
+package io.v6d.modules.basic.scalar;
 
 import io.v6d.core.client.ds.Object;
+import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.modules.basic.columnar.ColumnarData;
-import org.apache.arrow.vector.FieldVector;
 
-public abstract class Array extends Object {
-    public Array(ObjectMeta meta) {
-        super(meta);
+public class BooleanValue extends Object {
+    private final boolean value;
+
+    public static void instantiate() {
+        ObjectFactory.getFactory()
+                .register("vineyard::Scalar<std::string>", new BooleanValueResolver());
     }
 
-    public abstract FieldVector getArray();
+    public BooleanValue(final ObjectMeta meta, boolean value) {
+        super(meta);
+        this.value = value;
+    }
 
-    public ColumnarData columnar() {
-        return new ColumnarData(getArray());
+    public boolean getValue() {
+        return value;
+    }
+}
+
+class BooleanValueResolver extends ObjectFactory.Resolver {
+
+    @Override
+    public Object resolve(ObjectMeta meta) {
+        return new BooleanValue(meta, meta.getBooleanValue("value_"));
     }
 }

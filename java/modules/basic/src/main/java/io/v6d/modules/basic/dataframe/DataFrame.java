@@ -16,9 +16,9 @@ package io.v6d.modules.basic.dataframe;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
+import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.modules.basic.arrow.Schema;
 import io.v6d.modules.basic.tensor.Tensor;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +28,9 @@ import lombok.*;
 import org.apache.arrow.util.Collections2;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.arrow.vector.types.pojo.Schema;
 
-public class DataFrame {
+public class DataFrame extends Object {
     private int rowCount;
     private int columnCount;
     private List<JsonNode> columns;
@@ -41,10 +42,12 @@ public class DataFrame {
     }
 
     public DataFrame(
+            final ObjectMeta meta,
             int rowCount,
             int columnCount,
             final List<JsonNode> columns,
             final List<Tensor> values) {
+        super(meta);
         this.rowCount = rowCount;
         this.columnCount = columnCount;
         this.columns = columns;
@@ -72,13 +75,13 @@ public class DataFrame {
     }
 
     public ValueVector valueArray(int index) {
-        return values.get(index).array();
+        return values.get(index).getArray();
     }
 
     public Schema schema() {
         List<Field> fields = new ArrayList<>();
         for (int index = 0; index < columnCount; ++index) {
-            val field = values.get(index).array().getField();
+            val field = values.get(index).getArray().getField();
             val name = columns.get(index).asText();
             fields.add(
                     new Field(
@@ -92,7 +95,7 @@ public class DataFrame {
 
 class DataFrameResolver extends ObjectFactory.Resolver {
     @Override
-    public Object resolve(ObjectMeta meta) {
+    public Object resolve(final ObjectMeta meta) {
         val rowCount = meta.getIntValue("partition_index_row_");
         val columnCount = meta.getIntValue("partition_index_column_");
         val columns = ImmutableList.copyOf(meta.getArrayValue("columns_"));
@@ -100,6 +103,6 @@ class DataFrameResolver extends ObjectFactory.Resolver {
                 IntStream.range(0, columnCount)
                         .mapToObj(index -> (Tensor) meta.getMember("__values_-value-" + index))
                         .collect(Collectors.toList());
-        return new DataFrame(rowCount, columnCount, columns, values);
+        return new DataFrame(meta, rowCount, columnCount, columns, values);
     }
 }

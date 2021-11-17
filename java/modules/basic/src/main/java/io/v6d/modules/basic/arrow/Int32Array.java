@@ -16,6 +16,7 @@ package io.v6d.modules.basic.arrow;
 
 import static io.v6d.modules.basic.arrow.Arrow.logger;
 
+import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
@@ -33,7 +34,8 @@ public class Int32Array extends Array {
                 .register("vineyard::NumericArray<int>", new DoubleArrayResolver());
     }
 
-    public Int32Array(Buffer buffer, long length) {
+    public Int32Array(ObjectMeta meta, Buffer buffer, long length) {
+        super(meta);
         this.array = new IntVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
                 new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
@@ -54,6 +56,6 @@ class Int32ArrayResolver extends ObjectFactory.Resolver {
     public Object resolve(ObjectMeta meta) {
         logger.debug("double array resolver: from metadata {}", meta);
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new Int32Array(buffer, meta.getLongValue("length_"));
+        return new Int32Array(meta, buffer, meta.getLongValue("length_"));
     }
 }

@@ -31,7 +31,7 @@ public class InstanceID {
         return new InstanceID(Long.parseUnsignedLong(id.substring(1), 16));
     }
 
-    public long Value() {
+    public long value() {
         return this.id;
     }
 

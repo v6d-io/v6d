@@ -14,22 +14,22 @@
  */
 package io.v6d.modules.basic.arrow;
 
+import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import lombok.val;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.ReferenceManager;
 
-public class Buffer {
-    private ObjectMeta metadata;
+public class Buffer extends Object {
     private ArrowBuf buffer;
 
     public static void instantiate() {
         ObjectFactory.getFactory().register("vineyard::Blob", new BufferResolver());
     }
 
-    public Buffer(ObjectMeta metadata, long address, long length) {
-        this.metadata = metadata;
+    public Buffer(final ObjectMeta metadata, long address, long length) {
+        super(metadata);
         this.buffer = new ArrowBuf(ReferenceManager.NO_OP, null /* not needed */, length, address);
     }
 
@@ -44,8 +44,8 @@ public class Buffer {
 
 class BufferResolver extends ObjectFactory.Resolver {
     @Override
-    public Object resolve(ObjectMeta metadata) {
-        val buffer = metadata.getBuffer(metadata.id());
+    public Object resolve(final ObjectMeta metadata) {
+        val buffer = metadata.getBuffer(metadata.getId());
         return new Buffer(metadata, buffer.getPointer(), buffer.getSize());
     }
 }
