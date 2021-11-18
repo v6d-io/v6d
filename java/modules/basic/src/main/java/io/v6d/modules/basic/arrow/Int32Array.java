@@ -14,8 +14,7 @@
  */
 package io.v6d.modules.basic.arrow;
 
-import static io.v6d.modules.basic.arrow.Arrow.logger;
-
+import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -31,7 +30,7 @@ public class Int32Array extends Array {
 
     public static void instantiate() {
         ObjectFactory.getFactory()
-                .register("vineyard::NumericArray<int>", new DoubleArrayResolver());
+                .register("vineyard::NumericArray<int>", new Int32ArrayResolver());
     }
 
     public Int32Array(ObjectMeta meta, Buffer buffer, long length) {
@@ -49,12 +48,28 @@ public class Int32Array extends Array {
     public FieldVector getArray() {
         return this.array;
     }
+
+    @Override
+    public boolean equals(java.lang.Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Int32Array that = (Int32Array) o;
+        return Objects.equal(array, that.array);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(array);
+    }
 }
 
 class Int32ArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        logger.debug("double array resolver: from metadata {}", meta);
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
         return new Int32Array(meta, buffer, meta.getLongValue("length_"));
     }

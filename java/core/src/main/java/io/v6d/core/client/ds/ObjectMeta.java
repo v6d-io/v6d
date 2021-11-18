@@ -91,6 +91,10 @@ public class ObjectMeta {
         buffers.emplace(id, buffer);
     }
 
+    public void setBufferUnchecked(ObjectID id, Buffer buffer) throws VineyardException {
+        buffers.emplaceUnchecked(id, buffer);
+    }
+
     public Buffer getBuffer(ObjectID id) {
         return this.buffers.get(id);
     }
@@ -139,6 +143,10 @@ public class ObjectMeta {
 
     public void addMember(String name, Object value) {
         this.addMemberMeta(name, value.getMeta());
+    }
+
+    public void addMember(String name, ObjectMeta value) {
+        this.addMemberMeta(name, value);
     }
 
     public void addMember(String name, ObjectID objectID) {
@@ -238,7 +246,7 @@ public class ObjectMeta {
         return this.meta.get(key).asText();
     }
 
-    public void setStringValue(String key, String value) {
+    public void setValue(String key, String value) {
         this.meta.put(key, value);
     }
 
@@ -246,7 +254,7 @@ public class ObjectMeta {
         return this.meta.get(key).intValue();
     }
 
-    public void setIntValue(String key, int value) {
+    public void setValue(String key, int value) {
         this.meta.put(key, value);
     }
 
@@ -254,7 +262,7 @@ public class ObjectMeta {
         return this.meta.get(key).longValue();
     }
 
-    public void setLongValue(String key, long value) {
+    public void setValue(String key, long value) {
         this.meta.put(key, value);
     }
 
@@ -262,7 +270,7 @@ public class ObjectMeta {
         return (float) this.meta.get(key).floatValue();
     }
 
-    public void setFloatValue(String key, float value) {
+    public void setValue(String key, float value) {
         this.meta.put(key, value);
     }
 
@@ -270,7 +278,7 @@ public class ObjectMeta {
         return this.meta.get(key).doubleValue();
     }
 
-    public void setDoubleValue(String key, double value) {
+    public void setValue(String key, double value) {
         this.meta.put(key, value);
     }
 
@@ -278,7 +286,7 @@ public class ObjectMeta {
         return this.meta.get(key).booleanValue();
     }
 
-    public void setBooleanValue(String key, boolean value) {
+    public void setValue(String key, boolean value) {
         this.meta.put(key, value);
     }
 
@@ -304,10 +312,6 @@ public class ObjectMeta {
 
     public void setValue(String key, JsonNode value) {
         this.meta.set(key, value);
-    }
-
-    public void setValue(String key, java.lang.Object value) {
-        this.meta.set(key, mapper.valueToTree(value));
     }
 
     public ObjectNode getDictValue(String key) {

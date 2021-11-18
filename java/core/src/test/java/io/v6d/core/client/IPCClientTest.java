@@ -62,8 +62,8 @@ class StringObjectBuilder implements ObjectBuilder {
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::Scalar<std::string>");
 
-        meta.setStringValue("type_", "str");
-        meta.setStringValue("value_", str);
+        meta.setValue("type_", "str");
+        meta.setValue("value_", str);
 
         return client.createMetaData(meta);
     }
@@ -71,25 +71,52 @@ class StringObjectBuilder implements ObjectBuilder {
     public String getStr() {
         return str;
     }
+
+    @Override
+    public String toString() {
+        return str;
+    }
 }
 
 /** Unit test for IPC client. */
 public class IPCClientTest {
+    private IPCClient client;
+
     @Before
-    public void prepareResolvers() {
+    public void prepareResolvers() throws VineyardException {
+        client = new IPCClient();
+
         val factory = ObjectFactory.getFactory();
         factory.register("vineyard::Scalar<std::string>", new SgtringObjectResolver());
     }
 
     @Test
-    public void connect() throws VineyardException {
+    public void testConnect() throws VineyardException {
         val client = new IPCClient();
+        System.out.println("client = " + client);
+    }
 
+    @Test
+    public void testCreateAndGetMetadata() throws VineyardException {
         val builder = new StringObjectBuilder("abcde");
         val result = builder.seal(client);
         val meta = client.getMetaData(result.getId());
         val value = (StringObject) ObjectFactory.getFactory().resolve(meta);
 
         assertEquals(builder.getStr(), value.getStr());
+    }
+
+    @Test
+    public void testListData() throws VineyardException {
+        val builder = new StringObjectBuilder("abcde");
+        val result = builder.seal(client);
+        val meta = client.getMetaData(result.getId());
+        val value = (StringObject) ObjectFactory.getFactory().resolve(meta);
+
+        val metadatas = client.listMetaData("vineyard::Scalar<std::string>", false, 1024);
+        assertFalse(metadatas.isEmpty());
+        for (val metadata : metadatas) {
+            assertEquals(metadata.getTypename(), "vineyard::Scalar<std::string>");
+        }
     }
 }

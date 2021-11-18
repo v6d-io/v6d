@@ -14,21 +14,25 @@
  */
 package io.v6d.core.client.ds;
 
+import io.v6d.core.common.util.ObjectID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class Buffer {
+    private ObjectID objectId;
     private long pointer;
     private long size;
 
     public Buffer() {
+        this.objectId = ObjectID.InvalidObjectID;
         this.pointer = 0;
         this.size = 0;
     }
 
-    public Buffer(long pointer, long size) {
+    public Buffer(ObjectID objectId, long pointer, long size) {
+        this.objectId = objectId;
         this.pointer = pointer;
         this.size = size;
     }

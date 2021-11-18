@@ -34,6 +34,11 @@ public class BooleanValue extends Object {
     public boolean getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
 }
 
 class BooleanValueResolver extends ObjectFactory.Resolver {

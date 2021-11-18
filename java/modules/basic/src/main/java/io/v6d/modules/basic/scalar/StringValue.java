@@ -34,6 +34,11 @@ public class StringValue extends Object {
     public String getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }
 
 class StringValueResolver extends ObjectFactory.Resolver {

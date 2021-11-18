@@ -36,8 +36,8 @@ public class FloatValueBuilder implements ObjectBuilder {
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::Scalar<float>");
 
-        meta.setStringValue("type_", "float");
-        meta.setFloatValue("value_", value);
+        meta.setValue("type_", "float");
+        meta.setValue("value_", value);
 
         return client.createMetaData(meta);
     }

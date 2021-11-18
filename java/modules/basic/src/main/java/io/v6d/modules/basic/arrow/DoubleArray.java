@@ -16,6 +16,7 @@ package io.v6d.modules.basic.arrow;
 
 import static io.v6d.modules.basic.arrow.Arrow.logger;
 
+import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -48,6 +49,23 @@ public class DoubleArray extends Array {
     @Override
     public FieldVector getArray() {
         return this.array;
+    }
+
+    @Override
+    public boolean equals(java.lang.Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        DoubleArray that = (DoubleArray) o;
+        return Objects.equal(array, that.array);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(array);
     }
 }
 

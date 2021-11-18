@@ -33,6 +33,11 @@ public class FloatValue extends Object {
     public float getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
 }
 
 class FloatValueResolver extends ObjectFactory.Resolver {

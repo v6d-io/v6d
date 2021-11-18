@@ -17,6 +17,7 @@ package io.v6d.modules.basic.arrow;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.v6d.modules.basic.arrow.Arrow.logger;
 
+import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -60,6 +61,23 @@ public class Schema extends Object {
 
     public org.apache.arrow.vector.types.pojo.Schema getSchema() {
         return schema;
+    }
+
+    @Override
+    public boolean equals(java.lang.Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Schema schema1 = (Schema) o;
+        return Objects.equal(schema, schema1.schema);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(schema);
     }
 
     @Override

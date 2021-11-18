@@ -57,6 +57,11 @@ public class BufferSet {
         this.buffers.put(id, buffer);
     }
 
+    public void emplaceUnchecked(ObjectID id, Buffer buffer) throws VineyardException {
+        this.buffer_ids.add(id);
+        this.buffers.put(id, buffer);
+    }
+
     public void extend(BufferSet other) {
         for (val item : other.buffers.entrySet()) {
             buffers.put(item.getKey(), item.getValue());

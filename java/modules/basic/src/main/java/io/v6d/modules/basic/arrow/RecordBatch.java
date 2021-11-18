@@ -14,8 +14,7 @@
  */
 package io.v6d.modules.basic.arrow;
 
-import static io.v6d.modules.basic.arrow.Arrow.logger;
-
+import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -46,6 +45,23 @@ public class RecordBatch extends Object {
     public VectorSchemaRoot getBatch() {
         return batch;
     }
+
+    @Override
+    public boolean equals(java.lang.Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        RecordBatch that = (RecordBatch) o;
+        return Objects.equal(batch, that.batch);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(batch);
+    }
 }
 
 class RecordBatchResolver extends ObjectFactory.Resolver {
@@ -54,9 +70,6 @@ class RecordBatchResolver extends ObjectFactory.Resolver {
         val schema = (Schema) new SchemaResolver().resolve(meta.getMemberMeta("schema_"));
         val ncol = meta.getIntValue("column_num_");
         val nrow = meta.getIntValue("row_num_");
-        logger.debug("batch: ncol = {}, nrow = {}", ncol, nrow);
-
-        logger.debug("meta = {}", meta);
 
         val vectors = new ArrayList<FieldVector>();
         for (int index = 0; index < meta.getIntValue("__columns_-size"); ++index) {

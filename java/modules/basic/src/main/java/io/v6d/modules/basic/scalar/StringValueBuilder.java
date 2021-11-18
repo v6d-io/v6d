@@ -36,8 +36,8 @@ public class StringValueBuilder implements ObjectBuilder {
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::Scalar<std::string>");
 
-        meta.setStringValue("type_", "str");
-        meta.setStringValue("value_", str);
+        meta.setValue("type_", "str");
+        meta.setValue("value_", str);
 
         return client.createMetaData(meta);
     }

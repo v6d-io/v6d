@@ -36,8 +36,8 @@ public class BooleanValueBuilder implements ObjectBuilder {
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::Scalar<std::bool>");
 
-        meta.setStringValue("type_", "bool");
-        meta.setBooleanValue("value_", value);
+        meta.setValue("type_", "bool");
+        meta.setValue("value_", value);
 
         return client.createMetaData(meta);
     }

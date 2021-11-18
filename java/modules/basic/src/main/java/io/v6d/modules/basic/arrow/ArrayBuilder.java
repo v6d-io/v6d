@@ -14,23 +14,14 @@
  */
 package io.v6d.modules.basic.arrow;
 
-import io.v6d.core.client.ds.Object;
-import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.modules.basic.columnar.ColumnarData;
+import io.v6d.core.client.ds.ObjectBuilder;
+import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import org.apache.arrow.vector.FieldVector;
 
-public abstract class Array extends Object {
-    public Array(ObjectMeta meta) {
-        super(meta);
-    }
-
+public interface ArrayBuilder extends ObjectBuilder {
     public abstract FieldVector getArray();
 
-    public int length() {
-        return this.getArray().getValueCount();
-    }
-
-    public ColumnarData columnar() {
-        return new ColumnarData(getArray());
+    public default ColumnarDataBuilder columnar() {
+        return new ColumnarDataBuilder(getArray());
     }
 }

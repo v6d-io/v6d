@@ -120,28 +120,56 @@ public class ColumnarDataBuilder {
         return accessor.getBoolean(rowId);
     }
 
+    public void setBoolean(int rowId, boolean value) {
+        accessor.setBoolean(rowId, value);
+    }
+
     public byte getByte(int rowId) {
         return accessor.getByte(rowId);
+    }
+
+    public void setByte(int rowId, byte value) {
+        accessor.setByte(rowId, value);
     }
 
     public short getShort(int rowId) {
         return accessor.getShort(rowId);
     }
 
+    public void setShort(int rowId, short value) {
+        accessor.setShort(rowId, value);
+    }
+
     public int getInt(int rowId) {
         return accessor.getInt(rowId);
+    }
+
+    public void setInt(int rowId, int value) {
+        accessor.setInt(rowId, value);
     }
 
     public long getLong(int rowId) {
         return accessor.getLong(rowId);
     }
 
+    public void setLong(int rowId, long value) {
+        accessor.setLong(rowId, value);
+    }
+
     public float getFloat(int rowId) {
         return accessor.getFloat(rowId);
     }
 
+    public void setFloat(int rowId, float value) {
+        accessor.setFloat(rowId, value);
+    }
+
     public double getDouble(int rowId) {
         return accessor.getDouble(rowId);
+    }
+
+    public void setDouble(int rowId, double value) {
+        accessor.setDouble(rowId, value);
     }
 
     public BigDecimal getDecimal(int rowId, int precision, int scale) {
@@ -151,6 +179,10 @@ public class ColumnarDataBuilder {
         return accessor.getDecimal(rowId, precision, scale);
     }
 
+    public void setDecimal(int rowId, BigDecimal value) {
+        accessor.setDecimal(rowId, value);
+    }
+
     public Text getUTF8String(int rowId) {
         if (isNullAt(rowId)) {
             return null;
@@ -158,11 +190,19 @@ public class ColumnarDataBuilder {
         return accessor.getUTF8String(rowId);
     }
 
+    public void setUTF8String(int rowId, Text value) {
+        accessor.setUTF8String(rowId, value);
+    }
+
     public byte[] getBinary(int rowId) {
         if (isNullAt(rowId)) {
             return null;
         }
         return accessor.getBinary(rowId);
+    }
+
+    public void setBinary(int rowId, byte[] value) {
+        accessor.setBinary(rowId, value);
     }
 
     private abstract static class ArrowVectorAccessor {
@@ -192,7 +232,15 @@ public class ColumnarDataBuilder {
             throw new UnsupportedOperationException();
         }
 
+        void setBoolean(int rowId, boolean value) {
+            throw new UnsupportedOperationException();
+        }
+
         byte getByte(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        void setByte(int rowId, byte value) {
             throw new UnsupportedOperationException();
         }
 
@@ -200,7 +248,15 @@ public class ColumnarDataBuilder {
             throw new UnsupportedOperationException();
         }
 
+        void setShort(int rowId, short value) {
+            throw new UnsupportedOperationException();
+        }
+
         int getInt(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        void setInt(int rowId, int value) {
             throw new UnsupportedOperationException();
         }
 
@@ -208,7 +264,15 @@ public class ColumnarDataBuilder {
             throw new UnsupportedOperationException();
         }
 
+        void setLong(int rowId, long value) {
+            throw new UnsupportedOperationException();
+        }
+
         float getFloat(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        void setFloat(int rowId, float value) {
             throw new UnsupportedOperationException();
         }
 
@@ -216,7 +280,15 @@ public class ColumnarDataBuilder {
             throw new UnsupportedOperationException();
         }
 
+        void setDouble(int rowId, double value) {
+            throw new UnsupportedOperationException();
+        }
+
         BigDecimal getDecimal(int rowId, int precision, int scale) {
+            throw new UnsupportedOperationException();
+        }
+
+        void setDecimal(int rowId, BigDecimal value) {
             throw new UnsupportedOperationException();
         }
 
@@ -225,7 +297,15 @@ public class ColumnarDataBuilder {
             throw new UnsupportedOperationException();
         }
 
+        void setUTF8String(int rowId, Text value) {
+            throw new UnsupportedOperationException();
+        }
+
         byte[] getBinary(int rowId) {
+            throw new UnsupportedOperationException();
+        }
+
+        void setBinary(int rowId, byte[] value) {
             throw new UnsupportedOperationException();
         }
     }
@@ -243,6 +323,11 @@ public class ColumnarDataBuilder {
         final boolean getBoolean(int rowId) {
             return accessor.get(rowId) == 1;
         }
+
+        @Override
+        void setBoolean(int rowId, boolean value) {
+            accessor.set(rowId, value ? 1 : 0);
+        }
     }
 
     private static class ByteAccessor extends ArrowVectorAccessor {
@@ -257,6 +342,11 @@ public class ColumnarDataBuilder {
         @Override
         final byte getByte(int rowId) {
             return accessor.get(rowId);
+        }
+
+        @Override
+        final void setByte(int rowId, byte value) {
+            accessor.set(rowId, value);
         }
     }
 
@@ -273,6 +363,11 @@ public class ColumnarDataBuilder {
         final short getShort(int rowId) {
             return accessor.get(rowId);
         }
+
+        @Override
+        final void setShort(int rowId, short value) {
+            accessor.set(rowId, value);
+        }
     }
 
     private static class IntAccessor extends ArrowVectorAccessor {
@@ -287,6 +382,11 @@ public class ColumnarDataBuilder {
         @Override
         final int getInt(int rowId) {
             return accessor.get(rowId);
+        }
+
+        @Override
+        final void setInt(int rowId, int value) {
+            accessor.set(rowId, value);
         }
     }
 
@@ -303,6 +403,11 @@ public class ColumnarDataBuilder {
         final long getLong(int rowId) {
             return accessor.get(rowId);
         }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
     }
 
     private static class FloatAccessor extends ArrowVectorAccessor {
@@ -317,6 +422,11 @@ public class ColumnarDataBuilder {
         @Override
         final float getFloat(int rowId) {
             return accessor.get(rowId);
+        }
+
+        @Override
+        final void setFloat(int rowId, float value) {
+            accessor.set(rowId, value);
         }
     }
 
@@ -333,6 +443,11 @@ public class ColumnarDataBuilder {
         final double getDouble(int rowId) {
             return accessor.get(rowId);
         }
+
+        @Override
+        final void setDouble(int rowId, double value) {
+            accessor.set(rowId, value);
+        }
     }
 
     private static class DecimalAccessor extends ArrowVectorAccessor {
@@ -347,6 +462,11 @@ public class ColumnarDataBuilder {
         @Override
         final BigDecimal getDecimal(int rowId, int precision, int scale) {
             return accessor.getObject(rowId);
+        }
+
+        @Override
+        final void setDecimal(int rowId, BigDecimal value) {
+            accessor.set(rowId, value);
         }
     }
 
@@ -364,6 +484,11 @@ public class ColumnarDataBuilder {
         final Text getUTF8String(int rowId) {
             return accessor.getObject(rowId);
         }
+
+        @Override
+        final void setUTF8String(int rowId, Text value) {
+            accessor.set(rowId, value);
+        }
     }
 
     private static class BinaryAccessor extends ArrowVectorAccessor {
@@ -378,6 +503,11 @@ public class ColumnarDataBuilder {
         @Override
         final byte[] getBinary(int rowId) {
             return accessor.getObject(rowId);
+        }
+
+        @Override
+        final void setBinary(int rowId, byte[] value) {
+            accessor.set(rowId, value);
         }
     }
 
@@ -394,6 +524,11 @@ public class ColumnarDataBuilder {
         final int getInt(int rowId) {
             return accessor.get(rowId);
         }
+
+        @Override
+        final void setInt(int rowId, int value) {
+            accessor.set(rowId, value);
+        }
     }
 
     private static class TimestampAccessor extends ArrowVectorAccessor {
@@ -408,6 +543,11 @@ public class ColumnarDataBuilder {
         @Override
         final long getLong(int rowId) {
             return accessor.get(rowId);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
         }
     }
 
@@ -424,10 +564,14 @@ public class ColumnarDataBuilder {
         final long getLong(int rowId) {
             return accessor.get(rowId);
         }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
     }
 
     private static class NullAccessor extends ArrowVectorAccessor {
-
         NullAccessor(NullVector vector) {
             super(vector);
         }
@@ -446,6 +590,11 @@ public class ColumnarDataBuilder {
         int getInt(int rowId) {
             return accessor.get(rowId);
         }
+
+        @Override
+        final void setInt(int rowId, int value) {
+            accessor.set(rowId, value);
+        }
     }
 
     private static class IntervalDayAccessor extends ArrowVectorAccessor {
@@ -460,10 +609,18 @@ public class ColumnarDataBuilder {
 
         @Override
         long getLong(int rowId) {
-            accessor.get(rowId, intervalDayHolder);
+            accessor.set(rowId, intervalDayHolder);
             return Math.addExact(
                     Math.multiplyExact(intervalDayHolder.days, DateTimeConstants.MICROS_PER_DAY),
                     intervalDayHolder.milliseconds * DateTimeConstants.MICROS_PER_MILLIS);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            intervalDayHolder.milliseconds =
+                    (int) Math.floorMod(value, DateTimeConstants.MICROS_PER_MILLIS);
+            intervalDayHolder.days = (int) Math.floorDiv(value, DateTimeConstants.MICROS_PER_DAY);
+            accessor.set(rowId, intervalDayHolder);
         }
     }
 
