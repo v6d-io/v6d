@@ -14,12 +14,14 @@
  */
 package io.v6d.modules.basic.tensor;
 
+import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.Buffer;
+import io.v6d.modules.basic.columnar.ColumnarData;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 import lombok.*;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.FieldVector;
@@ -29,9 +31,9 @@ import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.types.Types;
 
-public class Tensor {
+public class Tensor extends Object {
     private Buffer buffer;
-    private List<Integer> shape;
+    private Collection<Integer> shape;
     private Types.MinorType dtype;
     private FieldVector array;
 
@@ -42,7 +44,14 @@ public class Tensor {
         ObjectFactory.getFactory().register("vineyard::Tensor<double>", new DoubleTensorResolver());
     }
 
-    public Tensor(Buffer buffer, List<Integer> shape, Types.MinorType dtype, FieldVector array) {
+    public Tensor(
+            final ObjectMeta meta,
+            Buffer buffer,
+            Collection<Integer> shape,
+            Types.MinorType dtype,
+            FieldVector array) {
+        super(meta);
+
         this.buffer = buffer;
         this.shape = shape;
         this.dtype = dtype;
@@ -60,17 +69,21 @@ public class Tensor {
                 new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
     }
 
-    public FieldVector array() {
+    public FieldVector getArray() {
         return array;
+    }
+
+    public ColumnarData columnar() {
+        return new ColumnarData(getArray());
     }
 }
 
 abstract class TensorResolver extends ObjectFactory.Resolver {
     @Override
-    public Object resolve(ObjectMeta metadata) {
-        val buffer = (Buffer) metadata.getMember("buffer_");
-        val shape = metadata.<Integer>getListValue("shape_");
-        return new Tensor(buffer, shape, dtype(), array());
+    public Object resolve(final ObjectMeta meta) {
+        val buffer = (Buffer) meta.getMember("buffer_");
+        val shape = meta.<Integer>getListValue("shape_");
+        return new Tensor(meta, buffer, shape, dtype(), array());
     }
 
     protected abstract Types.MinorType dtype();

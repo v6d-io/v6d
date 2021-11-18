@@ -28,9 +28,12 @@ import io.v6d.core.common.util.Protocol.*;
 import io.v6d.core.common.util.VineyardException;
 import java.io.*;
 import java.nio.channels.Channels;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 import lombok.SneakyThrows;
@@ -69,43 +72,52 @@ public class IPCClient extends Client {
     private synchronized void connect(String ipc_socket) throws VineyardException {
         connectIPCSocketWithRetry(ipc_socket);
         val root = mapper_.createObjectNode();
-        val req = new RegisterRequest();
-        req.Put(root);
+        RegisterRequest.put(root);
         this.doWrite(root);
         val reply = new RegisterReply();
-        reply.Get(this.doReadJson());
+        reply.get(this.doReadJson());
         this.ipc_socket = ipc_socket;
         this.rpc_endpoint = reply.getRpc_endpoint();
-        this.instanceID = reply.getInstance_id();
+        this.instanceId = reply.getInstance_id();
     }
 
     @Override
-    public ObjectID createMetaData(ObjectMeta metadata) throws VineyardException {
+    public ObjectMeta createMetaData(ObjectMeta meta) throws VineyardException {
+        meta.setInstanceId(this.instanceId);
+        meta.setTransient();
+        if (!meta.hasMeta("nbytes")) {
+            meta.setNBytes(0);
+        }
         val root = mapper_.createObjectNode();
-        val req = new CreateDataRequest();
-        req.Put(root, metadata.metadata());
+        CreateDataRequest.put(root, meta.metadata());
         this.doWrite(root);
         val reply = new CreateDataReply();
-        reply.Get(this.doReadJson());
-        return reply.getId();
+        reply.get(this.doReadJson());
+        if (meta.isIncomplete()) {
+            return getMetaData(reply.getId());
+        } else {
+            meta.setId(reply.getId());
+            meta.setSignature(reply.getSignature());
+            meta.setInstanceId(instanceId);
+            return meta;
+        }
     }
 
     @Override
     public ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
             throws VineyardException {
         val root = mapper_.createObjectNode();
-        val req = new GetDataRequest();
-        req.Put(root, id, sync_remote, wait);
+        GetDataRequest.put(root, id, sync_remote, wait);
         this.doWrite(root);
         val reply = new GetDataReply();
-        reply.Get(this.doReadJson());
+        reply.get(this.doReadJson());
         val contents = reply.getContents();
         if (contents.size() != 1) {
             throw new VineyardException.ObjectNotExists(
                     "Failed to read get_data_reply, size is " + contents.size());
         }
 
-        val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceID);
+        val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceId);
         val buffers = this.getBuffers(meta.getBuffers().allBufferIds());
         for (val blob : meta.getBuffers().allBufferIds()) {
             logger.debug("received blob: {}", blob);
@@ -116,6 +128,63 @@ public class IPCClient extends Client {
             }
         }
         return meta;
+    }
+
+    @Override
+    public Collection<ObjectMeta> listMetaData(String pattern) throws VineyardException {
+        return listMetaData(pattern, false);
+    }
+
+    @Override
+    public Collection<ObjectMeta> listMetaData(String pattern, boolean regex)
+            throws VineyardException {
+        return listMetaData(pattern, regex, 5);
+    }
+
+    @Override
+    public Collection<ObjectMeta> listMetaData(String pattern, boolean regex, int limit)
+            throws VineyardException {
+        val root = mapper_.createObjectNode();
+        ListDataRequest.put(root, pattern, regex, limit);
+        this.doWrite(root);
+        val reply = new GetDataReply();
+        reply.get(this.doReadJson());
+        val contents = reply.getContents();
+
+        val metadatas = new ArrayList<ObjectMeta>();
+        val bufferIds = new TreeSet<ObjectID>();
+        for (val item : contents.entrySet()) {
+            val meta = ObjectMeta.fromMeta(item.getValue(), this.instanceId);
+            bufferIds.addAll(meta.getBuffers().allBufferIds());
+            metadatas.add(meta);
+        }
+
+        val buffers = this.getBuffers(bufferIds);
+        for (val meta : metadatas) {
+            for (val blob : meta.getBuffers().allBufferIds()) {
+                logger.debug("received blob: {}", blob);
+                if (buffers.containsKey(blob)) {
+                    meta.setBuffer(blob, buffers.get(blob));
+                }
+            }
+        }
+        return metadatas;
+    }
+
+    public Buffer createBuffer(long size) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        CreateBufferRequest.put(root, size);
+        this.doWrite(root);
+        val reply = new CreateBufferReply();
+        reply.get(this.doReadJson());
+
+        val payload = reply.getPayload();
+        long pointer = this.mmap(payload.getStoreFD(), payload.getMapSize(), true, true);
+        val buffer = new Buffer();
+        buffer.setObjectId(reply.getId());
+        buffer.setPointer(pointer + payload.getDataOffset());
+        buffer.setSize(reply.getPayload().getDataSize());
+        return buffer;
     }
 
     private void connectIPCSocket(UnixSocketAddress address) throws VineyardException.IOError {
@@ -149,16 +218,16 @@ public class IPCClient extends Client {
 
     private Map<ObjectID, Buffer> getBuffers(Set<ObjectID> ids) throws VineyardException {
         val root = mapper_.createObjectNode();
-        val req = new GetBuffersRequest();
-        req.Put(root, ids);
+        GetBuffersRequest.put(root, ids);
         this.doWrite(root);
         val reply = new GetBuffersReply();
-        reply.Get(this.doReadJson());
+        reply.get(this.doReadJson());
         Map<ObjectID, Buffer> buffers = new HashMap<>();
         for (val payload : reply.getPayloads()) {
             val buffer = new Buffer();
             if (payload.getDataSize() > 0) {
                 long pointer = this.mmap(payload.getStoreFD(), payload.getMapSize(), true, true);
+                buffer.setObjectId(payload.getObjectID());
                 buffer.setPointer(pointer + payload.getDataOffset());
                 buffer.setSize(payload.getDataSize());
             }

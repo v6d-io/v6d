@@ -33,7 +33,7 @@ public class ObjectID {
         return new ObjectID(Long.parseUnsignedLong(id.substring(1), 16));
     }
 
-    public long Value() {
+    public long value() {
         return this.id;
     }
 

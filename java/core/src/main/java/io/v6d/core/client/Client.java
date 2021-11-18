@@ -14,18 +14,21 @@
  */
 package io.v6d.core.client;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
+import java.util.Collection;
 
 /** Vineyard IPC client. */
 public abstract class Client {
     protected String ipc_socket;
     protected String rpc_endpoint;
-    protected InstanceID instanceID;
+    protected InstanceID instanceId;
 
-    public abstract ObjectID createMetaData(ObjectMeta metadata) throws VineyardException;
+    public abstract ObjectMeta createMetaData(ObjectMeta metadata) throws VineyardException;
 
     public ObjectMeta getMetaData(ObjectID id) throws VineyardException {
         return this.getMetaData(id, false);
@@ -36,6 +39,14 @@ public abstract class Client {
     }
 
     public abstract ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
+            throws VineyardException;
+
+    public abstract Collection<ObjectMeta> listMetaData(String pattern) throws VineyardException;
+
+    public abstract Collection<ObjectMeta> listMetaData(String pattern, boolean regex)
+            throws VineyardException;
+
+    public abstract Collection<ObjectMeta> listMetaData(String pattern, boolean regex, int limit)
             throws VineyardException;
 
     public boolean connected() {
@@ -52,7 +63,16 @@ public abstract class Client {
         return this.rpc_endpoint;
     }
 
-    public InstanceID getInstanceID() {
-        return this.instanceID;
+    public InstanceID getInstanceId() {
+        return this.instanceId;
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper(this)
+                .add("instance_id", instanceId)
+                .add("ipc_socket", ipc_socket)
+                .add("rpc_endpoint", rpc_endpoint)
+                .toString();
     }
 }

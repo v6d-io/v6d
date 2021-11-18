@@ -14,5 +14,4 @@
  */
 package io.v6d.core.client.ds;
 
-/** Vineyard Object. */
-public abstract class VObject {}
+public interface ObjectBuilder extends ObjectBase {}

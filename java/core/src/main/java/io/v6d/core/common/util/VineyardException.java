@@ -355,6 +355,12 @@ public abstract class VineyardException extends Exception {
         }
     }
 
+    public static void asserts(boolean condition, String message) throws VineyardException {
+        if (!condition) {
+            throw new VineyardException.AssertionFailed(message);
+        }
+    }
+
     public static void check(int code, String message) throws VineyardException {
         switch (code) {
             case 0:

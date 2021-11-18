@@ -14,10 +14,13 @@
  */
 package io.v6d.modules.basic.arrow.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.channels.Channels;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.ReadChannel;
+import org.apache.arrow.vector.ipc.WriteChannel;
 import org.apache.arrow.vector.ipc.message.MessageChannelReader;
 import org.apache.arrow.vector.ipc.message.MessageResult;
 import org.apache.arrow.vector.ipc.message.MessageSerializer;
@@ -37,5 +40,11 @@ public class SchemaSerializer {
             }
             return MessageSerializer.deserializeSchema(result.getMessage());
         }
+    }
+
+    public static byte[] serialize(Schema schema) throws IOException {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        MessageSerializer.serialize(new WriteChannel(Channels.newChannel(out)), schema);
+        return out.toByteArray();
     }
 }

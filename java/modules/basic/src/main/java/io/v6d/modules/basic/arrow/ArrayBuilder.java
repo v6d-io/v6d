@@ -12,31 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.common.util;
+package io.v6d.modules.basic.arrow;
 
-import lombok.EqualsAndHashCode;
+import io.v6d.core.client.ds.ObjectBuilder;
+import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
+import org.apache.arrow.vector.FieldVector;
 
-/** Vineyard InstanceID definition. */
-@EqualsAndHashCode(callSuper = false)
-public class InstanceID {
-    private long id = -1L;
+public interface ArrayBuilder extends ObjectBuilder {
+    public abstract FieldVector getArray();
 
-    public static InstanceID UnspecifiedInstanceID = new InstanceID(-1L);
-
-    public InstanceID(long id) {
-        this.id = id;
-    }
-
-    public static InstanceID fromString(String id) {
-        return new InstanceID(Long.parseUnsignedLong(id.substring(1), 16));
-    }
-
-    public long value() {
-        return this.id;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("o%016x", id);
+    public default ColumnarDataBuilder columnar() {
+        return new ColumnarDataBuilder(getArray());
     }
 }

@@ -23,11 +23,11 @@ public class ObjectFactory {
     private Logger logger = LoggerFactory.getLogger(ObjectFactory.class);
 
     public abstract static class Resolver {
-        public abstract Object resolve(ObjectMeta metadata);
+        public abstract Object resolve(final ObjectMeta metadata);
     }
 
     public abstract static class FFIResolver extends Resolver {
-        public Object resolve(ObjectMeta metadata) {
+        public Object resolve(final ObjectMeta metadata) {
             long address = new io.v6d.core.client.ds.ffi.ObjectMeta(metadata).resolve();
             if (address == 0) {
                 return null;
@@ -35,7 +35,7 @@ public class ObjectFactory {
             return resolve(metadata, address);
         }
 
-        public abstract Object resolve(ObjectMeta metadata, long address);
+        public abstract Object resolve(final ObjectMeta metadata, long address);
     }
 
     private Map<String, Resolver> resolvers;
@@ -64,12 +64,12 @@ public class ObjectFactory {
         this.resolvers.put(typename, resolver);
     }
 
-    public Object resolve(ObjectMeta metadata) {
-        logger.debug("run resolver on type: {}", metadata.typename());
-        return this.resolve(metadata.typename(), metadata);
+    public Object resolve(final ObjectMeta metadata) {
+        logger.debug("run resolver on type: {}", metadata.getTypename());
+        return this.resolve(metadata.getTypename(), metadata);
     }
 
-    public Object resolve(String typename, ObjectMeta metadata) {
+    public Object resolve(String typename, final ObjectMeta metadata) {
         if (resolvers.containsKey(typename)) {
             return resolvers.get(typename).resolve(metadata);
         } else {

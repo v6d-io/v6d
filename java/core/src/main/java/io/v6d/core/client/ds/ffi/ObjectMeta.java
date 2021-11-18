@@ -35,7 +35,7 @@ public class ObjectMeta {
         val sizes = new long[buffers.size()];
         int index = 0;
         for (val item : buffers.entrySet()) {
-            objects[index] = item.getKey().Value();
+            objects[index] = item.getKey().value();
             pointers[index] = item.getValue().getPointer();
             sizes[index] = item.getValue().getSize();
             index += 1;

@@ -14,45 +14,109 @@
  */
 package io.v6d.core.client;
 
+import static org.junit.Assert.*;
+
+import io.v6d.core.client.ds.Object;
+import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.core.common.util.Env;
-import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 import lombok.val;
 import org.junit.Before;
 import org.junit.Test;
 
-class TupleResolver extends ObjectFactory.Resolver {
+class StringObject extends Object {
+    private final String str;
 
-    @Override
-    public Object resolve(ObjectMeta metadata) {
-        return "tuple";
+    public StringObject(final ObjectMeta meta, String str) {
+        super(meta);
+        this.str = str;
+    }
+
+    public String getStr() {
+        return str;
     }
 }
 
-class DoubleArrayResolver extends ObjectFactory.FFIResolver {
+class SgtringObjectResolver extends ObjectFactory.Resolver {
 
     @Override
-    public Object resolve(ObjectMeta metadata, long address) {
-        return "address is: " + address;
+    public Object resolve(ObjectMeta meta) {
+        return new StringObject(meta, meta.getStringValue("value_"));
+    }
+}
+
+class StringObjectBuilder implements ObjectBuilder {
+    private final String str;
+
+    public StringObjectBuilder(final String str) {
+        this.str = str;
+    }
+
+    @Override
+    public void build(Client client) throws VineyardException {}
+
+    @Override
+    public ObjectMeta seal(Client client) throws VineyardException {
+        this.build(client);
+        val meta = ObjectMeta.empty();
+        meta.setTypename("vineyard::Scalar<std::string>");
+
+        meta.setValue("type_", "str");
+        meta.setValue("value_", str);
+
+        return client.createMetaData(meta);
+    }
+
+    public String getStr() {
+        return str;
+    }
+
+    @Override
+    public String toString() {
+        return str;
     }
 }
 
 /** Unit test for IPC client. */
 public class IPCClientTest {
+    private IPCClient client;
+
     @Before
-    public void prepareResolvers() {
+    public void prepareResolvers() throws VineyardException {
+        client = new IPCClient();
+
         val factory = ObjectFactory.getFactory();
-        factory.register("vineyard::Tuple", new TupleResolver());
-        factory.register("vineyard::Array<double>", new DoubleArrayResolver());
+        factory.register("vineyard::Scalar<std::string>", new SgtringObjectResolver());
     }
 
     @Test
-    public void connect() throws VineyardException {
+    public void testConnect() throws VineyardException {
         val client = new IPCClient();
-        val meta =
-                client.getMetaData(ObjectID.fromString(Env.getEnvOrNull("TEST_TARGET_OBJECT_ID")));
-        val object = ObjectFactory.getFactory().resolve(meta);
+        System.out.println("client = " + client);
+    }
+
+    @Test
+    public void testCreateAndGetMetadata() throws VineyardException {
+        val builder = new StringObjectBuilder("abcde");
+        val result = builder.seal(client);
+        val meta = client.getMetaData(result.getId());
+        val value = (StringObject) ObjectFactory.getFactory().resolve(meta);
+
+        assertEquals(builder.getStr(), value.getStr());
+    }
+
+    @Test
+    public void testListData() throws VineyardException {
+        val builder = new StringObjectBuilder("abcde");
+        val result = builder.seal(client);
+        val meta = client.getMetaData(result.getId());
+        val value = (StringObject) ObjectFactory.getFactory().resolve(meta);
+
+        val metadatas = client.listMetaData("vineyard::Scalar<std::string>", false, 1024);
+        assertFalse(metadatas.isEmpty());
+        for (val metadata : metadatas) {
+            assertEquals(metadata.getTypename(), "vineyard::Scalar<std::string>");
+        }
     }
 }

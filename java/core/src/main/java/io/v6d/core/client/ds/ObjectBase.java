@@ -12,25 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic.arrow;
+package io.v6d.core.client.ds;
 
-import io.v6d.core.client.ds.Object;
-import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.modules.basic.columnar.ColumnarData;
-import org.apache.arrow.vector.FieldVector;
+import io.v6d.core.client.Client;
+import io.v6d.core.common.util.VineyardException;
 
-public abstract class Array extends Object {
-    public Array(ObjectMeta meta) {
-        super(meta);
-    }
+/** Vineyard Object. */
+public interface ObjectBase {
+    public abstract void build(Client client) throws VineyardException;
 
-    public abstract FieldVector getArray();
-
-    public int length() {
-        return this.getArray().getValueCount();
-    }
-
-    public ColumnarData columnar() {
-        return new ColumnarData(getArray());
-    }
+    public abstract ObjectMeta seal(Client client) throws VineyardException;
 }

@@ -12,25 +12,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic.arrow;
+package io.v6d.modules.basic.scalar;
 
 import io.v6d.core.client.ds.Object;
+import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.modules.basic.columnar.ColumnarData;
-import org.apache.arrow.vector.FieldVector;
 
-public abstract class Array extends Object {
-    public Array(ObjectMeta meta) {
+public class StringValue extends Object {
+    private final String value;
+
+    public static void instantiate() {
+        ObjectFactory.getFactory()
+                .register("vineyard::Scalar<std::string>", new StringValueResolver());
+    }
+
+    public StringValue(final ObjectMeta meta, String value) {
         super(meta);
+        this.value = value;
     }
 
-    public abstract FieldVector getArray();
-
-    public int length() {
-        return this.getArray().getValueCount();
+    public String getValue() {
+        return value;
     }
 
-    public ColumnarData columnar() {
-        return new ColumnarData(getArray());
+    @Override
+    public String toString() {
+        return value;
+    }
+}
+
+class StringValueResolver extends ObjectFactory.Resolver {
+
+    @Override
+    public Object resolve(ObjectMeta meta) {
+        return new StringValue(meta, meta.getStringValue("value_"));
     }
 }

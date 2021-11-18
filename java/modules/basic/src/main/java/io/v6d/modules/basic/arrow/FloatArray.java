@@ -14,6 +14,8 @@
  */
 package io.v6d.modules.basic.arrow;
 
+import com.google.common.base.Objects;
+import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
@@ -31,7 +33,8 @@ public class FloatArray extends Array {
                 .register("vineyard::NumericArray<float>", new FloatArrayResolver());
     }
 
-    public FloatArray(Buffer buffer, long length) {
+    public FloatArray(final ObjectMeta meta, Buffer buffer, long length) {
+        super(meta);
         this.array = new Float4Vector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
                 new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
@@ -45,12 +48,29 @@ public class FloatArray extends Array {
     public FieldVector getArray() {
         return this.array;
     }
+
+    @Override
+    public boolean equals(java.lang.Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        FloatArray that = (FloatArray) o;
+        return Objects.equal(array, that.array);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(array);
+    }
 }
 
 class FloatArrayResolver extends ObjectFactory.Resolver {
     @Override
-    public Object resolve(ObjectMeta meta) {
+    public Object resolve(final ObjectMeta meta) {
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new FloatArray(buffer, meta.getLongValue("length_"));
+        return new FloatArray(meta, buffer, meta.getLongValue("length_"));
     }
 }
