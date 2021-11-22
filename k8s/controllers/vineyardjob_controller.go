@@ -23,10 +23,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/kubernetes/pkg/apis/core"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1 "k8s.io/api/apps/v1"
+	record "k8s.io/client-go/tools/record"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -40,11 +42,12 @@ type VineyardJobReconciler struct {
 	client.Client
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
+	Recorder  record.EventRecorder
 	Scheduler *schedulers.VineyardScheduler
 }
 
-//+kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardjobs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardjobs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardjobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardjobs/status,verbs=get;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -67,29 +70,17 @@ func (r *VineyardJobReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	target := types.NamespacedName{Namespace: job.Namespace, Name: job.Name}
-	if job.Spec.Kind == "pod" {
-		return r.reconcilePod(ctx, &job, target)
-	}
-	if job.Spec.Kind == "deployment" {
-		return r.reconcileDeployment(ctx, &job, target)
-	}
-	if job.Spec.Kind == "replicaset" {
-		return r.reconcileReplicaSet(ctx, &job, target)
-	}
-	if job.Spec.Kind == "statefulset" {
-		return r.reconcileStatefulSet(ctx, &job, target)
-	}
-
-	return ctrl.Result{}, fmt.Errorf("unknown workload kind: %s", job.Spec.Kind)
+	return r.reconcilePod(ctx, &job, target)
 }
 
 func (r *VineyardJobReconciler) reconcilePod(ctx context.Context, job *v1alpha1.VineyardJob, target types.NamespacedName) (ctrl.Result, error) {
 	log := r.Log.WithValues("vineyardjob", job.Name)
 
 	log.Info("start reconcilering pod ...")
+	r.Recorder.Event(job, core.EventTypeNormal, "Updated", "start reconcilering pods ...")
 
-	if job.Spec.Replica < 1 {
-		return ctrl.Result{}, fmt.Errorf("Invalid replica value for pod: %d", job.Spec.Replica)
+	if job.Spec.Replicas < 1 {
+		return ctrl.Result{}, fmt.Errorf("Invalid replica value for pod: %d", job.Spec.Replicas)
 	}
 
 	var pod corev1.Pod
@@ -105,18 +96,19 @@ func (r *VineyardJobReconciler) reconcilePod(ctx context.Context, job *v1alpha1.
 	}
 
 	log.Info("start creating pod for vineyardjob ...")
+	r.Recorder.Event(job, core.EventTypeNormal, "Created", "start creating pods ...")
 
 	placements, splits, err := r.Scheduler.ComputePlacementFor(ctx, job)
 	if err != nil {
-		placements = make([]string, job.Spec.Replica)
-		splits = make([][]string, job.Spec.Replica)
+		placements = make([]string, job.Spec.Replicas)
+		splits = make([][]string, job.Spec.Replicas)
 
 		nodes, err := r.Scheduler.GetAllNodes(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		for index := 0; index < job.Spec.Replica; index++ {
+		for index := 0; index < job.Spec.Replicas; index++ {
 			placements[index] = nodes[index%len(nodes)]
 		}
 
@@ -149,12 +141,18 @@ func (r *VineyardJobReconciler) reconcilePod(ctx context.Context, job *v1alpha1.
 				Name:        target.Name + "-" + strconv.Itoa(rank),
 				Namespace:   target.Namespace,
 			},
-			Spec: *job.Spec.Pod.DeepCopy(),
+			Spec: *job.Spec.Template.Spec.DeepCopy(),
+		}
+		for k, v := range job.Spec.Template.Annotations {
+			pod.Annotations[k] = v
 		}
 		for k, v := range job.Annotations {
 			pod.Annotations[k] = v
 		}
 		pod.Annotations["k8s.v6d.io/vineyardjob"] = job.Name
+		for k, v := range job.Spec.Template.Labels {
+			pod.Labels[k] = v
+		}
 		for k, v := range job.Labels {
 			pod.Labels[k] = v
 		}
@@ -170,13 +168,14 @@ func (r *VineyardJobReconciler) reconcilePod(ctx context.Context, job *v1alpha1.
 		return pod, nil
 	}
 
-	for rank := 0; rank < job.Spec.Replica; rank++ {
+	for rank := 0; rank < job.Spec.Replicas; rank++ {
 		podspec, err := makePodForJob(job, rank)
 		if err != nil {
-			log.Error(err, "failed to construct pod for job", "rank", rank, "spec", job.Spec.Pod)
+			log.Error(err, "failed to construct pod for job", "rank", rank, "spec", job.Spec.Template.Spec)
 			return ctrl.Result{Requeue: false}, err
 		}
-		log.Info("pod spec", "pod", podspec)
+		log.V(10).Info("pod spec", "pod", podspec)
+		r.Recorder.Eventf(job, core.EventTypeNormal, "Created", "start creating pod %s ...", podspec.Name)
 		if err := r.Create(ctx, podspec); err != nil {
 			log.Error(err, "failed to create pod for job", "rank", rank)
 			return ctrl.Result{Requeue: false}, err
@@ -185,174 +184,6 @@ func (r *VineyardJobReconciler) reconcilePod(ctx context.Context, job *v1alpha1.
 
 	// check status
 	go r.checkPodStatus(ctx, job, target, false)
-	return ctrl.Result{}, nil
-}
-
-func (r *VineyardJobReconciler) reconcileDeployment(ctx context.Context, job *v1alpha1.VineyardJob, target types.NamespacedName) (ctrl.Result, error) {
-	log := r.Log.WithValues("vineyardjob", job.Name)
-
-	log.Info("start reconcilering deployment ...")
-
-	var deployment appsv1.Deployment
-	if err := r.Get(ctx, target, &deployment); err == nil {
-		log.V(10).Info("deployment already exists, it might be a status update request")
-		if !r.ifDeploymentReady(&deployment) {
-			go r.checkDeploymentStatus(ctx, job, target, true)
-		}
-		return ctrl.Result{}, nil
-	}
-
-	log.Info("start creating deployment for vineyardjob ...")
-
-	makeDeploymentForJob := func(job *v1alpha1.VineyardJob) (*appsv1.Deployment, error) {
-		deployment := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      make(map[string]string),
-				Annotations: make(map[string]string),
-				Name:        job.Name,
-				Namespace:   job.Namespace,
-			},
-			Spec: *job.Spec.Deployment.DeepCopy(),
-		}
-		for k, v := range job.Annotations {
-			deployment.Annotations[k] = v
-		}
-		deployment.Annotations["k8s.v6d.io/vineyardjob"] = job.Name
-		for k, v := range job.Labels {
-			deployment.Labels[k] = v
-		}
-		if err := ctrl.SetControllerReference(job, deployment, r.Scheme); err != nil {
-			r.Log.Error(err, "failed to attach controller reference to deployment")
-			return nil, err
-		}
-		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: deployment.Labels}
-		deployment.Spec.Template.Labels = deployment.Labels
-		return deployment, nil
-	}
-
-	deploymentspec, err := makeDeploymentForJob(job)
-	if err != nil {
-		log.Error(err, "failed to construct deployment for job", "spec", job.Spec.Deployment)
-		return ctrl.Result{Requeue: false}, err
-	}
-	if err := r.Create(ctx, deploymentspec); err != nil {
-		log.Error(err, "failed to create deployment for job", "spec", deploymentspec.Spec)
-		return ctrl.Result{Requeue: false}, err
-	}
-
-	go r.checkDeploymentStatus(ctx, job, target, false)
-	return ctrl.Result{}, nil
-}
-
-func (r *VineyardJobReconciler) reconcileReplicaSet(ctx context.Context, job *v1alpha1.VineyardJob, target types.NamespacedName) (ctrl.Result, error) {
-	log := r.Log.WithValues("vineyardjob", job.Name)
-
-	log.Info("start reconcilering replicaset ...")
-
-	var replicaset appsv1.ReplicaSet
-	if err := r.Get(ctx, target, &replicaset); err == nil {
-		log.V(10).Info("replicaset already exists, it might be a status update request")
-		if !r.ifReplicaSetReady(&replicaset) {
-			go r.checkReplicaSetStatus(ctx, job, target, true)
-		}
-		return ctrl.Result{}, nil
-	}
-
-	log.Info("start creating replicaset for vineyardjob ...")
-
-	makeReplicaSetForJob := func(job *v1alpha1.VineyardJob) (*appsv1.ReplicaSet, error) {
-		replicaset := &appsv1.ReplicaSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      make(map[string]string),
-				Annotations: make(map[string]string),
-				Name:        job.Name,
-				Namespace:   job.Namespace,
-			},
-			Spec: *job.Spec.ReplicaSet.DeepCopy(),
-		}
-		for k, v := range job.Annotations {
-			replicaset.Annotations[k] = v
-		}
-		replicaset.Annotations["k8s.v6d.io/vineyardjob"] = job.Name
-		for k, v := range job.Labels {
-			replicaset.Labels[k] = v
-		}
-		if err := ctrl.SetControllerReference(job, replicaset, r.Scheme); err != nil {
-			r.Log.Error(err, "failed to attach controller reference to replicaset")
-			return nil, err
-		}
-		replicaset.Spec.Selector = &metav1.LabelSelector{MatchLabels: replicaset.Labels}
-		replicaset.Spec.Template.Labels = replicaset.Labels
-		return replicaset, nil
-	}
-
-	replicasetspec, err := makeReplicaSetForJob(job)
-	if err != nil {
-		log.Error(err, "failed to construct replicaset for job", "spec", job.Spec.Deployment)
-		return ctrl.Result{Requeue: false}, err
-	}
-	if err := r.Create(ctx, replicasetspec); err != nil {
-		log.Error(err, "failed to create replicaset for job", "spec", replicasetspec.Spec)
-		return ctrl.Result{Requeue: false}, err
-	}
-
-	go r.checkReplicaSetStatus(ctx, job, target, false)
-	return ctrl.Result{}, nil
-}
-
-func (r *VineyardJobReconciler) reconcileStatefulSet(ctx context.Context, job *v1alpha1.VineyardJob, target types.NamespacedName) (ctrl.Result, error) {
-	log := r.Log.WithValues("vineyardjob", job.Name)
-
-	log.Info("start reconcilering statefulset ...")
-
-	var statefulset appsv1.StatefulSet
-	if err := r.Get(ctx, target, &statefulset); err == nil {
-		log.V(10).Info("statefulset already exists, it might be a status update request")
-		if !r.ifStatefulSetReady(&statefulset) {
-			go r.checkStatefulSetStatus(ctx, job, target, true)
-		}
-		return ctrl.Result{}, nil
-	}
-
-	log.Info("start creating statefulset for vineyardjob ...")
-
-	makeStatefulSetForJob := func(job *v1alpha1.VineyardJob) (*appsv1.StatefulSet, error) {
-		statefulset := &appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      make(map[string]string),
-				Annotations: make(map[string]string),
-				Name:        job.Name,
-				Namespace:   job.Namespace,
-			},
-			Spec: *job.Spec.StatefulSet.DeepCopy(),
-		}
-		for k, v := range job.Annotations {
-			statefulset.Annotations[k] = v
-		}
-		statefulset.Annotations["k8s.v6d.io/vineyardjob"] = job.Name
-		for k, v := range job.Labels {
-			statefulset.Labels[k] = v
-		}
-		if err := ctrl.SetControllerReference(job, statefulset, r.Scheme); err != nil {
-			r.Log.Error(err, "failed to attach controller reference to statefulset")
-			return nil, err
-		}
-		statefulset.Spec.Selector = &metav1.LabelSelector{MatchLabels: statefulset.Labels}
-		statefulset.Spec.Template.Labels = statefulset.Labels
-		return statefulset, nil
-	}
-
-	statefulsetspec, err := makeStatefulSetForJob(job)
-	if err != nil {
-		log.Error(err, "failed to construct statefulset for job", "spec", job.Spec.StatefulSet)
-		return ctrl.Result{Requeue: false}, err
-	}
-	if err := r.Create(ctx, statefulsetspec); err != nil {
-		log.Error(err, "failed to create statefulset for job", "spec", statefulsetspec.Spec)
-		return ctrl.Result{Requeue: false}, err
-	}
-
-	go r.checkStatefulSetStatus(ctx, job, target, false)
 	return ctrl.Result{}, nil
 }
 
@@ -366,9 +197,9 @@ func (r *VineyardJobReconciler) checkPodStatus(ctx context.Context, job *v1alpha
 	r.waitForRefresh(delay)
 	log.Info("checking pod status ...")
 
-	job.Status.Replica = job.Spec.Replica
+	job.Status.Replicas = job.Spec.Replicas
 	job.Status.Ready = 0
-	job.Status.Hosts = make([]string, job.Spec.Replica)
+	job.Status.Hosts = make([]string, job.Spec.Replicas)
 
 	pods := &corev1.PodList{}
 	if err := r.List(ctx, pods, client.InNamespace(target.Namespace), client.MatchingLabels(map[string]string{"k8s.v6d.io/vineyardjob": job.Name})); err != nil {
@@ -380,114 +211,7 @@ func (r *VineyardJobReconciler) checkPodStatus(ctx context.Context, job *v1alpha
 			job.Status.Ready += 1
 		}
 	}
-	if err := r.Status().Update(ctx, job); err != nil {
-		log.Error(err, "failed to update the job status")
-	}
-}
-
-func (r *VineyardJobReconciler) ifDeploymentReady(deployment *appsv1.Deployment) bool {
-	return *deployment.Spec.Replicas == deployment.Status.ReadyReplicas
-}
-
-func (r *VineyardJobReconciler) checkDeploymentStatus(ctx context.Context, job *v1alpha1.VineyardJob, target types.NamespacedName, delay bool) {
-	log := r.Log.WithValues("vineyardjob", job.Name)
-
-	r.waitForRefresh(delay)
-	log.Info("checking deployment status ...")
-
-	var deployment appsv1.Deployment
-
-	if err := r.Get(ctx, target, &deployment); err != nil {
-		log.Info("failed to get status of deployment", "deployment", target)
-		return
-	}
-	job.Status.Replica = int(*deployment.Spec.Replicas)
-	job.Status.Ready = int(deployment.Status.ReadyReplicas)
-	if job.Status.Ready == job.Status.Replica {
-		job.Status.Hosts = make([]string, job.Status.Ready)
-		// for _, loc := range deployment.Status.
-		pods := &corev1.PodList{}
-		if err := r.List(ctx, pods, client.InNamespace(target.Namespace), client.MatchingLabels(deployment.Spec.Template.Labels)); err != nil {
-			log.Info("failed to list pods", "deployment", target)
-		}
-		for i, pod := range pods.Items {
-			job.Status.Hosts[i] = pod.Spec.NodeName
-		}
-	} else {
-		job.Status.Hosts = []string{}
-	}
-	if err := r.Status().Update(ctx, job); err != nil {
-		log.Error(err, "failed to update the job status")
-	}
-}
-
-func (r *VineyardJobReconciler) ifReplicaSetReady(replicaset *appsv1.ReplicaSet) bool {
-	return *replicaset.Spec.Replicas == replicaset.Status.ReadyReplicas
-}
-
-func (r *VineyardJobReconciler) checkReplicaSetStatus(ctx context.Context, job *v1alpha1.VineyardJob, target types.NamespacedName, delay bool) {
-	log := r.Log.WithValues("vineyardjob", job.Name)
-
-	r.waitForRefresh(delay)
-	log.Info("checking replicaset status ...")
-
-	var replicaset appsv1.ReplicaSet
-
-	if err := r.Get(ctx, target, &replicaset); err != nil {
-		log.Info("failed to get status of replicaset", "replicaset", target)
-		return
-	}
-	job.Status.Replica = int(*replicaset.Spec.Replicas)
-	job.Status.Ready = int(replicaset.Status.ReadyReplicas)
-	if job.Status.Ready == job.Status.Replica {
-		job.Status.Hosts = make([]string, job.Status.Ready)
-		// for _, loc := range replicaset.Status.
-		pods := &corev1.PodList{}
-		if err := r.List(ctx, pods, client.InNamespace(target.Namespace), client.MatchingLabels(replicaset.Spec.Template.Labels)); err != nil {
-			log.Info("failed to list pods", "replicaset", target)
-		}
-		for i, pod := range pods.Items {
-			job.Status.Hosts[i] = pod.Spec.NodeName
-		}
-	} else {
-		job.Status.Hosts = []string{}
-	}
-	if err := r.Status().Update(ctx, job); err != nil {
-		log.Error(err, "failed to update the job status")
-	}
-}
-
-func (r *VineyardJobReconciler) ifStatefulSetReady(statefulset *appsv1.StatefulSet) bool {
-	return *statefulset.Spec.Replicas == statefulset.Status.ReadyReplicas
-}
-
-func (r *VineyardJobReconciler) checkStatefulSetStatus(ctx context.Context, job *v1alpha1.VineyardJob, target types.NamespacedName, delay bool) {
-	log := r.Log.WithValues("vineyardjob", job.Name)
-
-	r.waitForRefresh(delay)
-	log.Info("checking statefulset status ...")
-
-	var statefulset appsv1.StatefulSet
-
-	if err := r.Get(ctx, target, &statefulset); err != nil {
-		log.Info("failed to get status of statefulset", "statefulset", target)
-		return
-	}
-	job.Status.Replica = int(*statefulset.Spec.Replicas)
-	job.Status.Ready = int(statefulset.Status.ReadyReplicas)
-	if job.Status.Ready == job.Status.Replica {
-		job.Status.Hosts = make([]string, job.Status.Ready)
-		// for _, loc := range statefulset.Status.
-		pods := &corev1.PodList{}
-		if err := r.List(ctx, pods, client.InNamespace(target.Namespace), client.MatchingLabels(statefulset.Spec.Template.Labels)); err != nil {
-			log.Info("failed to list pods", "statefulset", target)
-		}
-		for i, pod := range pods.Items {
-			job.Status.Hosts[i] = pod.Spec.NodeName
-		}
-	} else {
-		job.Status.Hosts = []string{}
-	}
+	r.Recorder.Eventf(job, core.EventTypeNormal, "Updated", "%d pods for job finished, expect %d ...", job.Status.Ready, job.Status.Replicas)
 	if err := r.Status().Update(ctx, job); err != nil {
 		log.Error(err, "failed to update the job status")
 	}

@@ -5,13 +5,16 @@ metadata:
   labels:
     app: busybox
 spec:
-  kind: pod
-  replica: 3
+  replicas: 3
 
   # workload is a pod
-  pod:
-    containers:
-    - name: hello
-      image: busybox
-      command: ['sh', '-c', 'echo "Hello, Kubernetes!" && tail -f /dev/null']
-    restartPolicy: OnFailure
+  template:
+    metadata:
+      labels:
+        pod-meta: abc
+    spec:
+      containers:
+      - name: hello
+        image: busybox
+        command: ['sh', '-c', 'echo "Hello, Kubernetes!" && tail -f /dev/null']
+      restartPolicy: OnFailure

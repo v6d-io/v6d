@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -236,7 +235,7 @@ func (sched *VineyardScheduler) ComputePlacementFor(ctx context.Context, job *v1
 	} else {
 		return nil, nil, fmt.Errorf("Failed to parse 'required' for job")
 	}
-	if value, err := sched.ParseReplica(job); err != nil {
+	if value, err := sched.ParseReplicas(job); err != nil {
 		return nil, nil, err
 	} else {
 		replica = value
@@ -244,7 +243,7 @@ func (sched *VineyardScheduler) ComputePlacementFor(ctx context.Context, job *v1
 	return sched.ComputePlacement(ctx, job.Namespace, requires, replica)
 }
 
-func (sched *VineyardScheduler) ParseReplica(job *v1alpha1.VineyardJob) (int, error) {
+func (sched *VineyardScheduler) ParseReplicas(job *v1alpha1.VineyardJob) (int, error) {
 	if value, ok := job.Labels[VineyardJobReplica]; ok {
 		if intvalue, err := strconv.Atoi(value); err != nil {
 			return -1, err
@@ -252,17 +251,5 @@ func (sched *VineyardScheduler) ParseReplica(job *v1alpha1.VineyardJob) (int, er
 			return intvalue, nil
 		}
 	}
-	return job.Spec.Replica, nil
-}
-
-func (sched *VineyardScheduler) ParseReplicaForDeployment(pod *appsv1.DeploymentSpec) int {
-	return -1
-}
-
-func (sched *VineyardScheduler) ComputeReplicaSetPlacement(ctx context.Context, pod *appsv1.DaemonSetSpec) ([]string, [][]string, error) {
-	return nil, nil, nil
-}
-
-func (sched *VineyardScheduler) ComputeStatefulSetPlacement(ctx context.Context, pod *appsv1.StatefulSet) ([]string, [][]string, error) {
-	return nil, nil, nil
+	return job.Spec.Replicas, nil
 }

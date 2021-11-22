@@ -16,7 +16,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,24 +28,8 @@ type VineyardJobSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Kind    string `json:"kind"` // can be pod, deployment, replicaset, and statefulset
-	Replica int    `json:"replica"`
-
-	// +nullable
-	// +optional
-	Pod corev1.PodSpec `json:"pod,omitempty"`
-
-	// +nullable
-	// +optional
-	Deployment appsv1.DeploymentSpec `json:"deployment,omitempty"`
-
-	// +nullable
-	// +optional
-	ReplicaSet appsv1.ReplicaSetSpec `json:"replicaset,omitempty"`
-
-	// +nullable
-	// +optional
-	StatefulSet appsv1.StatefulSetSpec `json:"statefulset,omitempty"`
+	Replicas int                    `json:"replicas,omitempty"`
+	Template corev1.PodTemplateSpec `json:"template,omitempty"`
 }
 
 // VineyardJobStatus defines the observed state of VineyardJob
@@ -54,16 +37,15 @@ type VineyardJobStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Replica int      `json:"replica,omitempty"`
-	Ready   int      `json:"ready,omitempty"`
-	Hosts   []string `json:"hosts,omitempty"`
+	Replicas int      `json:"replicas,omitempty"`
+	Ready    int      `json:"ready,omitempty"`
+	Hosts    []string `json:"hosts,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:categories=all,shortName=vineyardjob
-// +kubebuilder:printcolumn:name="kind",type=string,JSONPath=`.spec.kind`
-// +kubebuilder:printcolumn:name="replica",type=integer,JSONPath=`.status.replica`
+// +kubebuilder:printcolumn:name="replicas",type=integer,JSONPath=`.status.replicas`
 // +kubebuilder:printcolumn:name="ready",type=integer,JSONPath=`.status.ready`
 // +kubebuilder:printcolumn:name="hosts",type=string,JSONPath=`.status.hosts`
 // +genclient

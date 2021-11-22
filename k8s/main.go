@@ -81,6 +81,7 @@ func startManager(channel chan struct{}, metricsAddr string, enableLeaderElectio
 		Client:    mgr.GetClient(),
 		Log:       ctrl.Log.WithName("controllers").WithName("VineyardJob"),
 		Scheme:    mgr.GetScheme(),
+		Recorder:  mgr.GetEventRecorderFor("VineyardJob"),
 		Scheduler: schedulers.New(ctrl.Log.WithName("scheduler")),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VineyardJob")
