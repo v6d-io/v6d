@@ -1,26 +1,13 @@
 
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.3.0
+    controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
   name: globalobjects.k8s.v6d.io
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .spec.id
-    name: Id
-    type: string
-  - JSONPath: .spec.name
-    name: Name
-    type: string
-  - JSONPath: .spec.signature
-    name: Signature
-    type: string
-  - JSONPath: .spec.typename
-    name: Typename
-    type: string
   group: k8s.v6d.io
   names:
     categories:
@@ -32,56 +19,59 @@ spec:
     - gobject
     singular: globalobject
   scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: GlobalObject is the Schema for the globalobjects API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: GlobalObjectSpec defines the desired state of GlobalObject
-          properties:
-            id:
-              type: string
-            members:
-              items:
-                type: string
-              type: array
-            metadata:
-              type: string
-            name:
-              type: string
-            signature:
-              type: string
-            typename:
-              type: string
-          required:
-          - id
-          - members
-          - metadata
-          - signature
-          type: object
-        status:
-          description: GlobalObjectStatus defines the observed state of GlobalObject
-          type: object
-      type: object
-  version: v1alpha1
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.id
+      name: Id
+      type: string
+    - jsonPath: .spec.name
+      name: Name
+      type: string
+    - jsonPath: .spec.signature
+      name: Signature
+      type: string
+    - jsonPath: .spec.typename
+      name: Typename
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              id:
+                type: string
+              members:
+                items:
+                  type: string
+                type: array
+              metadata:
+                type: string
+              name:
+                type: string
+              signature:
+                type: string
+              typename:
+                type: string
+            required:
+            - id
+            - members
+            - metadata
+            - signature
+            type: object
+          status:
+            type: object
+        type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

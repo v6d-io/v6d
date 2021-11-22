@@ -34,6 +34,10 @@ func (c *FakeK8sV1alpha1) LocalObjects(namespace string) v1alpha1.LocalObjectInt
 	return &FakeLocalObjects{c, namespace}
 }
 
+func (c *FakeK8sV1alpha1) VineyardJobs(namespace string) v1alpha1.VineyardJobInterface {
+	return &FakeVineyardJobs{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeK8sV1alpha1) RESTClient() rest.Interface {

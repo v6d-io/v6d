@@ -26,6 +26,7 @@ type K8sV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	GlobalObjectsGetter
 	LocalObjectsGetter
+	VineyardJobsGetter
 }
 
 // K8sV1alpha1Client is used to interact with features provided by the k8s group.
@@ -39,6 +40,10 @@ func (c *K8sV1alpha1Client) GlobalObjects(namespace string) GlobalObjectInterfac
 
 func (c *K8sV1alpha1Client) LocalObjects(namespace string) LocalObjectInterface {
 	return newLocalObjects(c, namespace)
+}
+
+func (c *K8sV1alpha1Client) VineyardJobs(namespace string) VineyardJobInterface {
+	return newVineyardJobs(c, namespace)
 }
 
 // NewForConfig creates a new K8sV1alpha1Client for the given config.

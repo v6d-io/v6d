@@ -1,0 +1,17 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: VineyardJob
+metadata:
+  name: vineyardjob-sample
+  labels:
+    app: busybox
+spec:
+  kind: pod
+  replica: 3
+
+  # workload is a pod
+  pod:
+    containers:
+    - name: hello
+      image: busybox
+      command: ['sh', '-c', 'echo "Hello, Kubernetes!" && tail -f /dev/null']
+    restartPolicy: OnFailure

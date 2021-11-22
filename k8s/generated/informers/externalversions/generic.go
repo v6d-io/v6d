@@ -55,6 +55,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.K8s().V1alpha1().GlobalObjects().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("localobjects"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.K8s().V1alpha1().LocalObjects().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("vineyardjobs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.K8s().V1alpha1().VineyardJobs().Informer()}, nil
 
 	}
 

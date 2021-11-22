@@ -14,7 +14,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # Image URL to use all building/pushing image targets
 IMG ?= registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS ?= "crd:crdVersions=v1,maxDescLen=0"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -36,8 +36,7 @@ test: generate fmt vet manifests
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
-# Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
+run: generate fmt
 	go run ./main.go
 
 # Install CRDs into a cluster
@@ -62,6 +61,10 @@ predeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/environment | kubectl apply -f -
 
+unpredeploy: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/environment | kubectl delete -f -
+
 # dump the deployment configuration
 dry-run: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
@@ -72,6 +75,15 @@ dry-run: manifests kustomize
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./api/..." output:crd:artifacts:config=config/crd/bases
 
+	sed -i -r 's/- protocol//' config/crd/bases/k8s.v6d.io_vineyardjobs.yaml
+	sed -i -r 's/group: k8s.v6d.io/group: k8s.v6d.io\n  preserveUnknownFields: false/' config/crd/bases/k8s.v6d.io_vineyardjobs.yaml
+
+sample: predeploy
+	$(KUSTOMIZE) build config/samples | kubectl apply -f -
+
+unsample:
+	$(KUSTOMIZE) build config/samples | kubectl delete -f -
+
 # Go modules
 modules	= ./api/... \
 		  ./controllers/... \
@@ -79,22 +91,26 @@ modules	= ./api/... \
 
 # Run go fmt against code
 fmt:
-	go fmt ./main.go
+	go fmt main.go
 	go fmt $(modules)
+.PHONY: fmt
 
 # Run go vet against code
 vet:
-	go vet ./main.go
+	go vet main.go
 	go vet $(modules)
+.PHONY: vet
 
 # Generate code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..."
+.PHONY: generate
 
 # Vendor modules for code-generate
 vendor:
 	go mod tidy
 	go mod vendor
+.PHONY: vendor
 
 # Build the docker image
 docker-build:
@@ -113,7 +129,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
@@ -128,7 +144,7 @@ ifeq (, $(shell which kustomize))
 	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
+	go install sigs.k8s.io/kustomize/kustomize/v3@v3.10.0 ;\
 	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
 	}
 KUSTOMIZE=$(GOBIN)/kustomize

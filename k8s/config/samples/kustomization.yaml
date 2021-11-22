@@ -2,4 +2,5 @@
 resources:
 # - k8s_v1alpha1_localobject.yaml
 # - k8s_v1alpha1_globalobject.yaml
+- k8s_v1alpha1_vineyardjob.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

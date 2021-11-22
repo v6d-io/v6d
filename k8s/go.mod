@@ -1,24 +1,23 @@
 module github.com/v6d-io/v6d/k8s
 
-go 1.15
+go 1.16
 
 require (
-	github.com/go-logr/logr v0.2.1
-	github.com/go-logr/zapr v0.2.0 // indirect
-	github.com/onsi/ginkgo v1.12.1
-	github.com/onsi/gomega v1.10.1
-	k8s.io/api v0.19.11
-	k8s.io/apiextensions-apiserver v0.19.11 // indirect
-	k8s.io/apimachinery v0.19.11
-	k8s.io/client-go v0.19.11
+	github.com/go-logr/logr v0.4.0
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.15.0
+	k8s.io/api v0.20.2
+	k8s.io/apimachinery v0.20.2
+	k8s.io/client-go v0.20.2
 	k8s.io/code-generator v0.19.11
 	k8s.io/klog/v2 v2.2.0
 	k8s.io/kube-scheduler v0.19.11 // indirect
 	k8s.io/kubernetes v0.19.11
-	sigs.k8s.io/controller-runtime v0.6.4
+	sigs.k8s.io/controller-runtime v0.8.3
 )
 
 replace (
+	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.2
 	k8s.io/api => k8s.io/api v0.19.11
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.11
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.11
