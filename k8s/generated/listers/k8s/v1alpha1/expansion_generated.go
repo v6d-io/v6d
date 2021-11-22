@@ -31,3 +31,11 @@ type LocalObjectListerExpansion interface{}
 // LocalObjectNamespaceListerExpansion allows custom methods to be added to
 // LocalObjectNamespaceLister.
 type LocalObjectNamespaceListerExpansion interface{}
+
+// VineyardJobListerExpansion allows custom methods to be added to
+// VineyardJobLister.
+type VineyardJobListerExpansion interface{}
+
+// VineyardJobNamespaceListerExpansion allows custom methods to be added to
+// VineyardJobNamespaceLister.
+type VineyardJobNamespaceListerExpansion interface{}

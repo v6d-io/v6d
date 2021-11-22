@@ -1,14 +1,49 @@
 domain: v6d.io
-layout: go.kubebuilder.io/v2
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
 projectName: vineyard
 repo: github.com/v6d-io/v6d/k8s
 resources:
-- group: k8s
+- api:
+    crdVersion: v1beta1
+    namespaced: true
+  controller: true
+  domain: v6d.io
+  group: k8s
   kind: LocalObject
+  path: github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1
   version: v1alpha1
-- group: k8s
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1beta1
+- api:
+    crdVersion: v1beta1
+    namespaced: true
+  controller: true
+  domain: v6d.io
+  group: k8s
   kind: GlobalObject
+  path: github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1
   version: v1alpha1
-version: 3-alpha
-plugins:
-  go.sdk.operatorframework.io/v2-alpha: {}
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1beta1
+- api:
+    crdVersion: v1beta1
+    namespaced: true
+  controller: true
+  domain: v6d.io
+  group: k8s
+  kind: VineyardJob
+  path: github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1beta1
+version: "3"

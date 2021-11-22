@@ -26,6 +26,8 @@ type Interface interface {
 	GlobalObjects() GlobalObjectInformer
 	// LocalObjects returns a LocalObjectInformer.
 	LocalObjects() LocalObjectInformer
+	// VineyardJobs returns a VineyardJobInformer.
+	VineyardJobs() VineyardJobInformer
 }
 
 type version struct {
@@ -47,4 +49,9 @@ func (v *version) GlobalObjects() GlobalObjectInformer {
 // LocalObjects returns a LocalObjectInformer.
 func (v *version) LocalObjects() LocalObjectInformer {
 	return &localObjectInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// VineyardJobs returns a VineyardJobInformer.
+func (v *version) VineyardJobs() VineyardJobInformer {
+	return &vineyardJobInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

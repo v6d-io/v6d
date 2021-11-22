@@ -23,7 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
+	v1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
 )
 
 // GlobalObjectReconciler reconciles a GlobalObject object
@@ -36,8 +36,7 @@ type GlobalObjectReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=globalobjects,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=globalobjects/status,verbs=get;update;patch
 
-func (r *GlobalObjectReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *GlobalObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("globalobject", req.NamespacedName)
 
 	// your logic here
@@ -47,6 +46,6 @@ func (r *GlobalObjectReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 func (r *GlobalObjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&k8sv1alpha1.GlobalObject{}).
+		For(&v1alpha1.GlobalObject{}).
 		Complete(r)
 }
