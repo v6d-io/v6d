@@ -347,6 +347,25 @@ class Client : public ClientBase {
       const std::vector<ObjectID>& ids);
 
   /**
+   * @brief List object metadatas in vineyard, using the given typename
+   * patterns.
+   *
+   * @param pattern The pattern string that will be used to matched against
+   * objects' `typename`.
+   * @param regex Whether the pattern is a regular expression pattern. Default
+   * is false. When `regex` is false, the pattern will be treated as a glob
+   * pattern.
+   * @param limit The number limit for how many objects will be returned at
+   * most.
+   *
+   * @return A vector of object metadatas that listed from vineyard server.
+   */
+  std::vector<ObjectMeta> ListObjectMeta(std::string const& pattern,
+                                         const bool regex = false,
+                                         size_t const limit = 5,
+                                         bool nobuffer = false);
+
+  /**
    * @brief List objects in vineyard, using the given typename patterns.
    *
    * @param pattern The pattern string that will be used to matched against

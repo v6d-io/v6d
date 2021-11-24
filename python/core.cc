@@ -219,6 +219,7 @@ void bind_core(py::module& mod) {
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
       .def("reset", [](ObjectMeta& meta) { meta.Reset(); })
+      .def_property_readonly("memory_usage", &ObjectMeta::MemoryUsage)
       .def("reset_key",
            [](ObjectMeta& meta, std::string const& key) { meta.ResetKey(key); })
       .def("reset_signature", [](ObjectMeta& meta) { meta.ResetSignature(); })
@@ -296,6 +297,10 @@ void bind_core(py::module& mod) {
                                return object->meta().GetTypeName();
                              })
       .def("member",
+           [](Object const* self, std::string const& name) {
+             return self->meta().GetMember(name);
+           })
+      .def("__getitem__",
            [](Object const* self, std::string const& name) {
              return self->meta().GetMember(name);
            })

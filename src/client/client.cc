@@ -275,6 +275,47 @@ std::vector<std::shared_ptr<Object>> Client::GetObjects(
   return objects;
 }
 
+std::vector<ObjectMeta> Client::ListObjectMeta(std::string const& pattern,
+                                               const bool regex,
+                                               size_t const limit,
+                                               bool nobuffer) {
+  std::unordered_map<ObjectID, json> meta_trees;
+  VINEYARD_CHECK_OK(ListData(pattern, regex, limit, meta_trees));
+
+  std::vector<ObjectMeta> metas;
+  std::set<ObjectID> blob_ids;
+  metas.resize(meta_trees.size());
+  size_t cnt = 0;
+  for (auto const& kv : meta_trees) {
+    metas[cnt].SetMetaData(this, kv.second);
+    for (auto const& id : metas[cnt].GetBufferSet()->AllBufferIds()) {
+      blob_ids.emplace(id);
+    }
+    cnt += 1;
+  }
+
+  if (nobuffer) {
+    return metas;
+  }
+
+  // retrive blobs
+  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  VINEYARD_CHECK_OK(GetBuffers(blob_ids, buffers));
+
+  // construct objects
+  std::vector<std::shared_ptr<Object>> objects;
+  objects.reserve(metas.size());
+  for (auto& meta : metas) {
+    for (auto const id : meta.GetBufferSet()->AllBufferIds()) {
+      const auto& buffer = buffers.find(id);
+      if (buffer != buffers.end()) {
+        meta.SetBuffer(id, buffer->second);
+      }
+    }
+  }
+  return metas;
+}
+
 std::vector<std::shared_ptr<Object>> Client::ListObjects(
     std::string const& pattern, const bool regex, size_t const limit) {
   std::unordered_map<ObjectID, json> meta_trees;

@@ -216,6 +216,16 @@ void ObjectMeta::Reset() {
   incomplete_ = false;
 }
 
+size_t ObjectMeta::MemoryUsage() const {
+  size_t total_size = 0;
+  for (auto const& item : buffer_set_->AllBuffers()) {
+    if (item.second) {
+      total_size += item.second->size();
+    }
+  }
+  return total_size;
+}
+
 void ObjectMeta::PrintMeta() const { LOG(INFO) << meta_.dump(4); }
 
 const bool ObjectMeta::incomplete() const { return incomplete_; }

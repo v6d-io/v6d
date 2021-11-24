@@ -163,6 +163,23 @@ std::vector<std::shared_ptr<Object>> RPCClient::GetObjects(
   return objects;
 }
 
+std::vector<ObjectMeta> RPCClient::ListObjectMeta(std::string const& pattern,
+                                                  const bool regex,
+                                                  size_t const limit, bool) {
+  std::unordered_map<ObjectID, json> meta_trees;
+  VINEYARD_CHECK_OK(ListData(pattern, regex, limit, meta_trees));
+
+  // construct object metadatas
+  std::vector<ObjectMeta> objects;
+  objects.reserve(meta_trees.size());
+  for (auto const& kv : meta_trees) {
+    ObjectMeta meta;
+    meta.SetMetaData(this, kv.second);
+    objects.emplace_back(meta);
+  }
+  return objects;
+}
+
 std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
     std::string const& pattern, const bool regex, size_t const limit) {
   std::unordered_map<ObjectID, json> meta_trees;
