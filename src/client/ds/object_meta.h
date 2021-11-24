@@ -489,6 +489,11 @@ class ObjectMeta {
    */
   void Reset();
 
+  /**
+   * @brief Compute the memory usage of this object.
+   */
+  size_t MemoryUsage() const;
+
   void PrintMeta() const;
 
   const bool incomplete() const;

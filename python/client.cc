@@ -453,6 +453,9 @@ void bind_client(py::module& mod) {
           "object_ids"_a, py::arg("sync_remote") = false)
       .def("list_objects", &Client::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5)
+      .def("list_metadatas", &Client::ListObjectMeta, "pattern"_a,
+           py::arg("regex") = false, py::arg("limit") = 5,
+           py::arg("nobuffer") = false)
       .def(
           "allocated_size",
           [](Client* self, const ObjectID id) -> size_t {
@@ -537,6 +540,9 @@ void bind_client(py::module& mod) {
           "object_ids"_a)
       .def("list_objects", &RPCClient::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5)
+      .def("list_metadatas", &RPCClient::ListObjectMeta, "pattern"_a,
+           py::arg("regex") = false, py::arg("limit") = 5,
+           py::arg("nobuffer") = false)
       .def("close",
            [](RPCClient* self) {
              return ClientManager<RPCClient>::GetManager()->Disconnect(
