@@ -1,7 +1,7 @@
 C++ API Reference
 =================
 
-.. _python_cpp:
+.. _cpp-api:
 
 .. default-domain:: cpp
 
