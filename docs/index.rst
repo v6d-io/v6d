@@ -22,11 +22,10 @@
 
 .. toctree::
    :maxdepth: 6
-   :caption: API Reference
+   :caption: Tutorials
 
-   notes/ctl.rst
-   notes/cpp_api.rst
-   notes/python_api.rst
+   tutorials/adding-custom-datatypes-cpp.rst
+   tutorials/distributed-learning
 
 .. toctree::
    :maxdepth: 6
@@ -38,18 +37,20 @@
 
 .. toctree::
    :maxdepth: 6
-   :caption: Examples
-
-   examples/distributed-learning
-
-.. toctree::
-   :maxdepth: 6
    :caption: Development
 
    notes/faq.rst
    notes/troubleshooting.rst
    notes/roadmap.rst
    notes/contributing.rst
+
+.. toctree::
+   :maxdepth: 6
+   :caption: API Reference
+
+   notes/ctl.rst
+   notes/cpp-api.rst
+   notes/python-api.rst
 
 Indexes
 -------

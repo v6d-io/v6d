@@ -300,9 +300,10 @@ though ``client1`` created it, but we can't get the payload of the
 first element of the pair from ``client2``, since it is stored locally
 in the first vineyard instance.
 
-
 Builder and resolver
 ^^^^^^^^^^^^^^^^^^^^
+
+.. _divein-builder-resolver:
 
 As we shown above, vineyard allows users to register builders/resolvers to build/resolve
 vineyard objects from/to the data types in the client side based on the computation requirements.
@@ -380,10 +381,10 @@ will be restored back as default.
 
 The :code:`with resolver_context` is nestable as well.
 
-.. _divein-driver-label:
-
 Driver
 ^^^^^^
+
+.. _divein-driver-label:
 
 As we shown in the getting-started, the ``open`` function in vineyard can open a local file as a stream 
 for consuming, and we notice that the path of the local file is headed with the 
@@ -475,7 +476,7 @@ with codegen tools in vineyard, makes it possible for users to transplant their 
 structures into vineyard with only a few annotations.
 
 Data orchestration in a python notebook
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Using vineyard as the common data orchestration engine through the end-to-end
 big data processing, users can hold large-scale distributed data as variables
@@ -494,7 +495,7 @@ suitable to be utilized as a data cache to store mutable data that changes
 rapidly along the processing pipeline.
 
 NOT for instant remote data partition accessing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The partitions of a distributed data are stored distributedly in corresponding
 vineyard instances of the cluster. Only the client on the same machine can access

@@ -3,7 +3,7 @@ Python API Reference
 
 .. default-domain:: py
 
-.. _python_api:
+.. _python-api:
 
 .. contents::
     :local:
