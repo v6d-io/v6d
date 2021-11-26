@@ -50,13 +50,13 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   ops.reserve(resp.events().size());
   for (auto const& event : resp.events()) {
     std::string const& key = event.kv().key();
+    if (!boost::algorithm::starts_with(key, prefix_ + "/")) {
+      // ignore garbage values
+      continue;
+    }
     if (!filter_prefix_.empty() &&
         boost::algorithm::starts_with(key, filter_prefix_)) {
       // FIXME: for simplicity, we don't care the instance-lock related keys.
-      continue;
-    }
-    if (!boost::algorithm::starts_with(key, prefix_ + "/")) {
-      // ignore garbage values
       continue;
     }
     EtcdMetaService::op_t op;
@@ -272,8 +272,13 @@ void EtcdMetaService::startDaemonWatch(
           prefix_ + meta_sync_lock_, this->registered_callbacks_,
           this->handled_rev_, this->registered_callbacks_mutex_));
     }
-    this->watcher_.reset(new etcd::Watcher(
-        *etcd_, prefix_ + prefix, since_rev + 1, std::ref(*handler_), true)),
+    // Use "" as the prefix to watch, and filter out unused garbage values
+    // in the watch handlers.
+    //
+    // As we use `head()` to get latest revision, without prefix, use "" as
+    // the prefix would help us to get the true latest updates ASAP.
+    this->watcher_.reset(new etcd::Watcher(*etcd_, "", since_rev + 1,
+                                           std::ref(*handler_), true)),
         this->watcher_->Wait([this, prefix, callback](bool cancalled) {
           if (cancalled) {
             return;
