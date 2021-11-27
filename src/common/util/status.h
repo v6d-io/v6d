@@ -333,6 +333,11 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kMetaTreeTypeInvalid, "");
   }
 
+  /// Return an error if the "typename" field in metatree is invalid.
+  static Status MetaTreeTypeInvalid(std::string const& message) {
+    return Status(StatusCode::kMetaTreeTypeInvalid, message);
+  }
+
   /// Return an error if the "typename" field not exists in metatree.
   static Status MetaTreeTypeNotExists() {
     return Status(StatusCode::kMetaTreeTypeNotExists, "");
@@ -341,6 +346,11 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return an error if the "id" field in metatree is invalid.
   static Status MetaTreeNameInvalid() {
     return Status(StatusCode::kMetaTreeNameInvalid, "");
+  }
+
+  /// Return an error if the "id" field in metatree is invalid.
+  static Status MetaTreeNameInvalid(std::string const& message) {
+    return Status(StatusCode::kMetaTreeNameInvalid, message);
   }
 
   /// Return an error if the "id" field not exists in metatree.
@@ -352,6 +362,12 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// isn't.
   static Status MetaTreeLinkInvalid() {
     return Status(StatusCode::kMetaTreeLinkInvalid, "");
+  }
+
+  /// Return an error if a field in metatree is expected to be a _link_ but it
+  /// isn't.
+  static Status MetaTreeLinkInvalid(std::string const& message) {
+    return Status(StatusCode::kMetaTreeLinkInvalid, message);
   }
 
   /// Return an error when expected subtree doesn't exist in metatree.
@@ -483,6 +499,13 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return true iff the status indicates subtree not found in metatree.
   bool IsMetaTreeSubtreeNotExists() const {
     return code() == StatusCode::kMetaTreeSubtreeNotExists;
+  }
+  /// Return true iff the metadata tree contains unexpected invalid meta
+  bool IsMetaTreeInvalid() const {
+    return code() == StatusCode::kMetaTreeInvalid ||
+           code() == StatusCode::kMetaTreeNameInvalid ||
+           code() == StatusCode::kMetaTreeTypeInvalid ||
+           code() == StatusCode::kMetaTreeLinkInvalid;
   }
   /// Return true iff expected fields not found in metatree.
   bool IsMetaTreeElementNotExists() const {

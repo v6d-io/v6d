@@ -237,8 +237,11 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                   sub_tree["instance_id"] = this->instance_id();
                 }
               } else {
-                VINEYARD_SUPPRESS(CATCH_JSON_ERROR(meta_tree::GetData(
-                    meta, this->instance_name(), id, sub_tree, instance_id_)));
+                auto s = CATCH_JSON_ERROR(meta_tree::GetData(
+                    meta, this->instance_name(), id, sub_tree, instance_id_));
+                if (s.IsMetaTreeInvalid()) {
+                  LOG(WARNING) << "Found errors in metadata: " << s.ToString();
+                }
 #if !defined(NDEBUG)
                 if (VLOG_IS_ON(10)) {
                   VLOG(10) << "Got request response:";
@@ -615,8 +618,34 @@ Status VineyardServer::PutName(const ObjectID object_id,
           // TODO: do proper validation:
           // 1. global objects can have name, local ones cannot.
           // 2. the name-object_id mapping shouldn't be overwrite.
+
+          // blob cannot have name
+          if (IsBlob(object_id)) {
+            return Status::Invalid("blobs cannot have name");
+          }
+
+          bool exists = false;
+          VINEYARD_DISCARD(
+              CATCH_JSON_ERROR(meta_tree::Exists(meta, object_id, exists)));
+          if (!exists) {
+            return Status::ObjectNotExists("failed to put name: object " +
+                                           ObjectIDToString(object_id) +
+                                           " doesn't exist");
+          }
+
+          bool persist = false;
+          VINEYARD_DISCARD(
+              CATCH_JSON_ERROR(meta_tree::IfPersist(meta, object_id, persist)));
+          if (!persist) {
+            return Status::Invalid(
+                "transient objects cannot have name, please persist it first");
+          }
+
           ops.emplace_back(
               IMetaService::op_t::Put("/names/" + name, object_id));
+          ops.emplace_back(IMetaService::op_t::Put(
+              "/data/" + ObjectIDToString(object_id) + "/__name",
+              meta_tree::EncodeValue(name)));
           return Status::OK();
         } else {
           LOG(ERROR) << status.ToString();
@@ -675,8 +704,20 @@ Status VineyardServer::DropName(const std::string& name,
              std::vector<IMetaService::op_t>& ops) {
         if (status.ok()) {
           auto names = meta.value("names", json(nullptr));
-          if (names.is_object() && names.contains(name)) {
-            ops.emplace_back(IMetaService::op_t::Del("/names/" + name));
+          if (names.is_object()) {
+            auto iter = names.find(name);
+            if (iter != names.end()) {
+              ops.emplace_back(IMetaService::op_t::Del("/names/" + name));
+              auto object_id = iter->get<ObjectID>();
+              // delete the name in the object meta as well.
+              bool exists = false;
+              VINEYARD_DISCARD(
+                  CATCH_JSON_ERROR(meta_tree::Exists(meta, object_id, exists)));
+              if (exists) {
+                ops.emplace_back(IMetaService::op_t::Del(
+                    "/data/" + ObjectIDToString(object_id) + "/__name"));
+              }
+            }
           }
           return Status::OK();
         } else {

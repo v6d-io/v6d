@@ -243,7 +243,8 @@ macro(find_jemalloc)
     if(BUILD_SHARED_LIBS)
         set(JEMALLOC_INSTALL_CMD echo "No need to install for jemalloc.")
     else()
-        set(JEMALLOC_INSTALL_CMD echo "Installing jemalloc." && ${CMAKE_MAKE_PROGRAM} install)
+        # see also: https://github.com/jemalloc/jemalloc/issues/231
+        set(JEMALLOC_INSTALL_CMD echo "Installing jemalloc." && ${CMAKE_MAKE_PROGRAM} install_bin install_include install_lib)
     endif()
     ExternalProject_Add(libjemalloc
         SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"

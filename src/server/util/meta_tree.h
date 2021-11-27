@@ -81,6 +81,8 @@ bool HasEquivalent(const json& tree, ObjectID const object_id,
 bool MatchTypeName(bool regex, std::string const& pattern,
                    std::string const& type);
 
+std::string EncodeValue(std::string const&);
+
 }  // namespace meta_tree
 
 }  // namespace vineyard

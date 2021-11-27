@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "basic/ds/scalar.h"
 #include "client/client.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
@@ -28,7 +29,31 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
+  // put name on non-existing object id
   ObjectID id = GenerateObjectID();
+  CHECK(client.PutName(id, "test_name").IsObjectNotExists());
+
+  // blob cannot have name
+  CHECK(client.PutName(EmptyBlobID(), "test_name").IsInvalid());
+
+  // generate a valid object id
+  {
+    ScalarBuilder<int32_t> scalar_builder(client);
+    scalar_builder.SetValue(1234);
+
+    auto scalar =
+        std::dynamic_pointer_cast<Scalar<int32_t>>(scalar_builder.Seal(client));
+    id = scalar->id();
+
+    ObjectMeta meta;
+    VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+  }
+
+  // transient object cannot have name
+  CHECK(client.PutName(id, "test_name").IsInvalid());
+
+  VINEYARD_CHECK_OK(client.Persist(id));
+
   VINEYARD_CHECK_OK(client.PutName(id, "test_name"));
 
   ObjectID id2 = 0;
@@ -36,6 +61,12 @@ int main(int argc, char** argv) {
   CHECK_EQ(id, id2);
 
   LOG(INFO) << "check existing name success";
+
+  // meta should contains name
+  ObjectMeta meta;
+  VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+  CHECK(meta.Haskey("__name"));
+  CHECK_EQ(meta.GetKeyValue<std::string>("__name"), "test_name");
 
   ObjectID id3 = 0;
   auto status = client.GetName("test_name2", id3);
@@ -45,10 +76,13 @@ int main(int argc, char** argv) {
 
   VINEYARD_CHECK_OK(client.DropName("test_name"));
   ObjectID id4 = 0;
-  auto status1 = client.GetName("test_name", id4);
-  CHECK(status1.IsObjectNotExists());
+  CHECK(client.GetName("test_name", id4).IsObjectNotExists());
 
   LOG(INFO) << "check drop name success";
+
+  // meta shouldn't contains name anymore
+  VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+  CHECK(!meta.Haskey("__name"));
 
   LOG(INFO) << "Passed name test...";
 
