@@ -707,7 +707,14 @@ class IMetaService {
         if (vs[0].empty()) {
           vs.erase(vs.begin());
         }
-        initial_delete_set.emplace(ObjectIDFromString(vs[1]));
+        // `__name` is our injected properties, and will be erased during
+        // `DropName`.
+        if (vs.size() >= 3 && vs[2] == "__name") {
+          // move the key to `drop_others` to drop
+          drop_others.emplace_back(op);
+        } else {
+          initial_delete_set.emplace(ObjectIDFromString(vs[1]));
+        }
       }
       std::vector<ObjectID> object_ids{initial_delete_set.begin(),
                                        initial_delete_set.end()};

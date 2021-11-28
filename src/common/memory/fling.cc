@@ -68,7 +68,8 @@ int send_fd(int conn, int fd) {
     ssize_t r = sendmsg(conn, &msg, 0);
     if (r < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-        LOG(WARNING) << "looping in sending fd: " << strerror(errno);
+        LOG(WARNING) << "error occurred while looping in sending fd: "
+                     << strerror(errno);
         continue;
       } else if (errno == EMSGSIZE) {
         LOG(WARNING) << "Failed to send file descriptor"

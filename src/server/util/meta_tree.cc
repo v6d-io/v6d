@@ -100,7 +100,8 @@ static Status parse_link(const std::string& str, std::string& type,
     type.clear();
     name.clear();
     LOG(ERROR) << "meta tree link invalid: " << str;
-    return Status::MetaTreeLinkInvalid();
+    return Status::MetaTreeLinkInvalid(
+        "cannot find 'name' and 'type' from the link");
   }
   name = str.substr(0, l1);
   if (at != std::string::npos) {
@@ -112,7 +113,8 @@ static Status parse_link(const std::string& str, std::string& type,
     LOG(ERROR) << "meta tree link invalid: " << type << ", " << name;
     type.clear();
     name.clear();
-    return Status::MetaTreeLinkInvalid();
+    return Status::MetaTreeLinkInvalid(
+        "cannot find 'name' and 'type' from the link");
   }
   return Status::OK();
 }
@@ -148,7 +150,8 @@ static Status get_sub_tree(const json& tree, const std::string& prefix,
                            const std::string& name, json& sub_tree) {
   if (name.find('/') != std::string::npos) {
     LOG(ERROR) << "meta tree name invalid. " << name;
-    return Status::MetaTreeNameInvalid();
+    return Status::MetaTreeNameInvalid("metadata for '" + name +
+                                       "' cannot be found");
   }
   std::string path = prefix;
   if (!name.empty()) {
@@ -233,14 +236,15 @@ static Status get_type(const json& tree, std::string& type,
   }
   if (type_iter->is_object()) {
     LOG(ERROR) << "meta tree typename invalid. " << *type_iter;
-    return Status::MetaTreeTypeInvalid();
+    return Status::MetaTreeTypeInvalid("'typename' in metadata is invalid");
   }
   type = type_iter->get_ref<std::string const&>();
   if (decode) {
     NodeType node_type = NodeType::InvalidType;
     decode_value(type, node_type, type);
     if (node_type != NodeType::Value) {
-      return Status::MetaTreeTypeInvalid();
+      return Status::MetaTreeTypeInvalid(
+          "failed to decode 'typename' in metadata: " + type);
     }
   }
   return Status::OK();
@@ -333,7 +337,9 @@ Status GetData(const json& tree, const std::string& instance_name,
         }
       }
     } else {
-      return Status::MetaTreeTypeInvalid();
+      return Status::MetaTreeTypeInvalid("failed to decode field '" +
+                                         item.key() +
+                                         "' in metadata: " + item_value);
     }
   }
   sub_tree["id"] = name;
@@ -971,6 +977,12 @@ bool MatchTypeName(bool regex, std::string const& pattern,
     // https://www.man7.org/linux/man-pages/man3/fnmatch.3.html
     return fnmatch(pattern.c_str(), type.c_str(), 0) == 0;
   }
+}
+
+std::string EncodeValue(std::string const& value) {
+  std::string encoded_value;
+  encode_value(NodeType::Value, value, encoded_value);
+  return encoded_value;
 }
 
 }  // namespace meta_tree
