@@ -213,6 +213,7 @@ def run_single_vineyardd_tests():
         # FIXME: cannot be safely dtor after #350 and #354.
         # run_test('allocator_test')
         run_test('arrow_data_structure_test')
+        run_test('custom_vector_test')
         run_test('dataframe_test')
         run_test('delete_test')
         run_test('get_wait_test')

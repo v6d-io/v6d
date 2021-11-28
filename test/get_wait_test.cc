@@ -22,6 +22,7 @@ limitations under the License.
 #include "arrow/util/io_util.h"
 #include "arrow/util/logging.h"
 
+#include "basic/ds/scalar.h"
 #include "client/client.h"
 #include "common/util/logging.h"
 
@@ -38,11 +39,25 @@ int main(int argc, char** argv) {
 
   {
     // no wait
-    ObjectID id = GenerateObjectID();
-    std::thread th1([&ipc_socket, id]() {
+    std::thread th1([&ipc_socket]() {
       Client client;
       VINEYARD_CHECK_OK(client.Connect(ipc_socket));
       LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
+
+      // generate a valid object id
+      ObjectID id = GenerateObjectID();
+      {
+        ScalarBuilder<int32_t> scalar_builder(client);
+        scalar_builder.SetValue(1234);
+
+        auto scalar = std::dynamic_pointer_cast<Scalar<int32_t>>(
+            scalar_builder.Seal(client));
+        id = scalar->id();
+
+        ObjectMeta meta;
+        VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+        VINEYARD_CHECK_OK(client.Persist(id));
+      }
 
       std::this_thread::sleep_for(5s);
       VINEYARD_CHECK_OK(client.PutName(id, "xxx_get_wait_test_name1"));
@@ -67,17 +82,31 @@ int main(int argc, char** argv) {
   {
     // wait
     ObjectID id = GenerateObjectID();
-    std::thread th1([&ipc_socket, id]() {
+    std::thread th1([&ipc_socket, &id]() mutable {
       Client client;
       VINEYARD_CHECK_OK(client.Connect(ipc_socket));
       LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
+
+      // generate a valid object id
+      {
+        ScalarBuilder<int32_t> scalar_builder(client);
+        scalar_builder.SetValue(1234);
+
+        auto scalar = std::dynamic_pointer_cast<Scalar<int32_t>>(
+            scalar_builder.Seal(client));
+        id = scalar->id();
+
+        ObjectMeta meta;
+        VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+        VINEYARD_CHECK_OK(client.Persist(id));
+      }
 
       std::this_thread::sleep_for(5s);
       VINEYARD_CHECK_OK(client.PutName(id, "xxx_get_wait_test_name2"));
 
       client.Disconnect();
     });
-    std::thread th2([&ipc_socket, id]() {
+    std::thread th2([&ipc_socket, &id]() mutable {
       Client client;
       VINEYARD_CHECK_OK(client.Connect(ipc_socket));
       LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
