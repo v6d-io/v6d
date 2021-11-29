@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_SERVER_MEMORY_STREAM_STORE_H_
 
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <unordered_map>
 #include <utility>
@@ -85,6 +86,9 @@ class StreamStore {
 
  private:
   bool allocatable(std::shared_ptr<StreamHolder> stream, size_t size);
+
+  // protect the stream store
+  std::recursive_mutex mutex_;
 
   std::shared_ptr<BulkStore> store_;
   size_t threshold_;
