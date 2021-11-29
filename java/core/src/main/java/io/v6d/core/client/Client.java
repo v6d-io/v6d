@@ -16,6 +16,7 @@ package io.v6d.core.client;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
+import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.ObjectID;
@@ -48,6 +49,26 @@ public abstract class Client {
 
     public abstract Collection<ObjectMeta> listMetaData(String pattern, boolean regex, int limit)
             throws VineyardException;
+
+    public abstract void persist(ObjectID id) throws VineyardException;
+
+    public void persist(ObjectMeta meta) throws VineyardException {
+        this.persist(meta.getId());
+    }
+
+    public void persist(Object object) throws VineyardException {
+        this.persist(object.getId());
+    }
+
+    public abstract void putName(ObjectID id, String name) throws VineyardException;
+
+    public abstract ObjectID getName(String name, boolean wait) throws VineyardException;
+
+    public ObjectID getName(String name) throws VineyardException {
+        return getName(name, false);
+    }
+
+    public abstract void dropName(String name) throws VineyardException;
 
     public boolean connected() {
         return false;

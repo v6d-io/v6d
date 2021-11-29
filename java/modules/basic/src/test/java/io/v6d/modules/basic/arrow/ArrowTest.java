@@ -23,6 +23,7 @@ import io.v6d.core.common.util.VineyardException;
 import lombok.val;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
+import org.apache.arrow.vector.LargeVarCharVector;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,6 +36,28 @@ public class ArrowTest {
         client = new IPCClient();
 
         Arrow.instantiate();
+    }
+
+    @Test
+    public void testBooleanArray() throws VineyardException {
+        val builder = new BooleanArrayBuilder(client, 5);
+        builder.set(0, true);
+        builder.set(1, false);
+        builder.set(2, true);
+        builder.set(3, false);
+        builder.set(4, true);
+
+        val meta = builder.seal(client);
+        assertEquals(5, meta.getIntValue("length_"));
+        val array = (BooleanArray) ObjectFactory.getFactory().resolve(meta);
+        assertEquals(5, array.length());
+
+        val expected = builder.columnar();
+        val actual = array.columnar();
+        assertEquals(expected.valueCount(), actual.valueCount());
+        for (int index = 0; index < array.length(); ++index) {
+            assertEquals(expected.getBoolean(index), actual.getBoolean(index));
+        }
     }
 
     @Test
@@ -62,11 +85,35 @@ public class ArrowTest {
     }
 
     @Test
+    public void testStringArray() throws VineyardException {
+        val base = new LargeVarCharVector("", Arrow.default_allocator);
+        base.setSafe(0, "hello".getBytes(), 0, 5);
+        base.setSafe(1, " ".getBytes(), 0, 1);
+        base.setSafe(2, "world".getBytes(), 0, 5);
+        base.setValueCount(3); // nb. important
+
+        val builder = new StringArrayBuilder(client, base);
+        val meta = builder.seal(client);
+        assertEquals(3, meta.getIntValue("length_"));
+
+        val array =
+                (StringArray) ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
+        assertEquals(3, array.length());
+
+        val expected = builder.columnar();
+        val actual = array.columnar();
+        assertEquals(expected.valueCount(), actual.valueCount());
+        for (int index = 0; index < array.length(); ++index) {
+            assertEquals(expected.getUTF8String(index), actual.getUTF8String(index));
+        }
+    }
+
+    @Test
     public void testSchema() throws VineyardException {
         val builder = new SchemaBuilder();
-        builder.addField(Arrow.makePlainField("testa", Arrow.FieldType.Int));
-        builder.addField(Arrow.makePlainField("testb", Arrow.FieldType.Double));
-        builder.addField(Arrow.makePlainField("teststring", Arrow.FieldType.Double));
+        builder.addField(Arrow.makeField("testa", Arrow.FieldType.Int));
+        builder.addField(Arrow.makeField("testb", Arrow.FieldType.Double));
+        builder.addField(Arrow.makeField("teststring", Arrow.FieldType.Double));
         builder.addMetadata("kind", "testmeta");
         val meta = builder.seal(client);
 
@@ -84,8 +131,8 @@ public class ArrowTest {
     @Test
     public void testRecordBatch() throws VineyardException {
         val builder = new RecordBatchBuilder(client, 5);
-        builder.addField(Arrow.makePlainField("testa", Arrow.FieldType.Int));
-        builder.addField(Arrow.makePlainField("testb", Arrow.FieldType.Double));
+        builder.addField(Arrow.makeField("testa", Arrow.FieldType.Int));
+        builder.addField(Arrow.makeField("testb", Arrow.FieldType.Double));
         builder.addCustomMetadata("kind", "testbatch");
         builder.finishSchema(client);
 

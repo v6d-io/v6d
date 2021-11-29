@@ -171,6 +171,43 @@ public class IPCClient extends Client {
         return metadatas;
     }
 
+    @Override
+    public void persist(ObjectID id) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        PersistRequest.put(root, id);
+        this.doWrite(root);
+        val reply = new PersistReply();
+        reply.get(this.doReadJson());
+    }
+
+    @Override
+    public void putName(ObjectID id, String name) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        PutNameRequest.put(root, id, name);
+        this.doWrite(root);
+        val reply = new PutNameReply();
+        reply.get(this.doReadJson());
+    }
+
+    @Override
+    public ObjectID getName(String name, boolean wait) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        GetNameRequest.put(root, name, wait);
+        this.doWrite(root);
+        val reply = new GetNameReply();
+        reply.get(this.doReadJson());
+        return reply.getId();
+    }
+
+    @Override
+    public void dropName(String name) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        DropNameRequest.put(root, name);
+        this.doWrite(root);
+        val reply = new DropNameReply();
+        reply.get(this.doReadJson());
+    }
+
     public Buffer createBuffer(long size) throws VineyardException {
         val root = mapper_.createObjectNode();
         CreateBufferRequest.put(root, size);

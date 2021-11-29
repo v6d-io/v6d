@@ -29,8 +29,8 @@ public class FloatArrayBuilder implements ArrayBuilder {
     private Float4Vector array;
 
     public FloatArrayBuilder(IPCClient client, long length) throws VineyardException {
-        this.buffer = new BufferBuilder(client, length * 4);
         this.array = new Float4Vector("", Arrow.default_allocator);
+        this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
                 new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
     }
@@ -43,9 +43,12 @@ public class FloatArrayBuilder implements ArrayBuilder {
         this.build(client);
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::NumericArray<float>");
-        meta.setNBytes(array.getBufferSizeFor(1));
+        meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
+        meta.setValue("null_count_", 0);
+        meta.setValue("offset_", 0);
         meta.addMember("buffer_", buffer.seal(client));
+        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
         return client.createMetaData(meta);
     }
 

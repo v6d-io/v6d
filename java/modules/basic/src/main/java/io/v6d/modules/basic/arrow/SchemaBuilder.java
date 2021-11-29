@@ -47,6 +47,11 @@ public class SchemaBuilder implements ObjectBuilder {
         return builder;
     }
 
+    public static SchemaBuilder fromSchema(io.v6d.modules.basic.arrow.Schema schema) {
+        // FIXME: should be able to reusing
+        return fromSchema(schema.getSchema());
+    }
+
     public void addField(final Field field) {
         fields.add(field);
     }

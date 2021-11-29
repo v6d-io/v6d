@@ -19,10 +19,12 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.Buffer;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 import lombok.*;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.ReferenceManager;
+import org.apache.arrow.memory.util.MemoryUtil;
 
 public class BufferBuilder implements ObjectBuilder {
     private final Buffer buffer;
@@ -34,11 +36,34 @@ public class BufferBuilder implements ObjectBuilder {
                 new ArrowBuf(ReferenceManager.NO_OP, null, buffer.getSize(), buffer.getPointer());
     }
 
+    public BufferBuilder(IPCClient client, final ArrowBuf buffer) throws VineyardException {
+        this.buffer = client.createBuffer(buffer.capacity());
+        this.arrowBuf = buffer;
+        MemoryUtil.UNSAFE.copyMemory(
+                this.arrowBuf.memoryAddress(), this.buffer.getPointer(), this.arrowBuf.capacity());
+    }
+
     public static BufferBuilder fromByteArray(IPCClient client, byte[] bytes)
             throws VineyardException {
         val builder = new BufferBuilder(client, bytes.length);
         builder.arrowBuf.writeBytes(bytes);
         return builder;
+    }
+
+    @SneakyThrows(VineyardException.class)
+    public static ObjectMeta empty(Client client) {
+        val meta = ObjectMeta.empty();
+        meta.setId(ObjectID.EmptyBlobID); // blob's builder is a special case
+        meta.setInstanceId(client.getInstanceId());
+
+        meta.setTypename("vineyard::Blob");
+        meta.setNBytes(0);
+        meta.setValue("length", 0);
+
+        // to make resolving the returned object metadata possible
+        meta.setBufferUnchecked(ObjectID.EmptyBlobID, new Buffer(ObjectID.EmptyBlobID, 0, 0));
+
+        return meta; // n.b.: blob: no create meta action
     }
 
     @Override

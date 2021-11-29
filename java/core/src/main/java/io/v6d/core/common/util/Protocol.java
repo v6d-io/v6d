@@ -194,4 +194,77 @@ public class Protocol {
             root.put("limit", limit);
         }
     }
+
+    @Data
+    public static class PersistRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id) {
+            root.put("type", "persist_request");
+            root.put("id", id.value());
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class PersistReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "persist_reply");
+        }
+    }
+
+    @Data
+    public static class PutNameRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id, String name) {
+            root.put("type", "put_name_request");
+            root.put("object_id", id.value());
+            root.put("name", name);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class PutNameReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "put_name_reply");
+        }
+    }
+
+    @Data
+    public static class GetNameRequest extends Request {
+        public static void put(ObjectNode root, String name, boolean wait) {
+            root.put("type", "get_name_request");
+            root.put("name", name);
+            root.put("wait", wait);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class GetNameReply extends Reply {
+        private ObjectID id;
+
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "get_name_reply");
+            this.id = new ObjectID(root.get("object_id").longValue());
+        }
+    }
+
+    @Data
+    public static class DropNameRequest extends Request {
+        public static void put(ObjectNode root, String name) {
+            root.put("type", "drop_name_request");
+            root.put("name", name);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class DropNameReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "drop_name_reply");
+        }
+    }
 }

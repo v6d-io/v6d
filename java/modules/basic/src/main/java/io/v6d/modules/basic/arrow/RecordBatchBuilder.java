@@ -14,6 +14,8 @@
  */
 package io.v6d.modules.basic.arrow;
 
+import static java.util.Objects.requireNonNull;
+
 import io.v6d.core.client.Client;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
@@ -48,6 +50,15 @@ public class RecordBatchBuilder implements ObjectBuilder {
         this.rows = rows;
         schemaBuilder = SchemaBuilder.fromSchema(schema);
         this.finishSchema(client);
+    }
+
+    public RecordBatchBuilder(
+            final IPCClient client, final Schema schema, List<ColumnarDataBuilder> columnBuilders)
+            throws VineyardException {
+        this.schemaBuilder = SchemaBuilder.fromSchema(schema);
+        this.schemaMutable = false;
+
+        this.columnBuilders = requireNonNull(columnBuilders, "column builders is null");
     }
 
     public void addField(final Field field) throws VineyardException {
@@ -110,14 +121,20 @@ public class RecordBatchBuilder implements ObjectBuilder {
     }
 
     private ArrayBuilder arrayBuilderFor(IPCClient client, Field field) throws VineyardException {
-        if (field.getType() == Arrow.Type.Int) {
+        if (field.getType().equals(Arrow.Type.Boolean)) {
+            return new BooleanArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.Int)) {
             return new Int32ArrayBuilder(client, rows);
-        } else if (field.getType() == Arrow.Type.Int64) {
+        } else if (field.getType().equals(Arrow.Type.Int64)) {
             return new Int64ArrayBuilder(client, rows);
-        } else if (field.getType() == Arrow.Type.Float) {
+        } else if (field.getType().equals(Arrow.Type.Float)) {
             return new FloatArrayBuilder(client, rows);
-        } else if (field.getType() == Arrow.Type.Double) {
+        } else if (field.getType().equals(Arrow.Type.Double)) {
             return new DoubleArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.VarChar)) {
+            return new StringArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.Null)) {
+            return new NullArrayBuilder(client, rows);
         } else {
             throw new VineyardException.NotImplemented(
                     "array builder for type " + field.getType() + " is not supported");

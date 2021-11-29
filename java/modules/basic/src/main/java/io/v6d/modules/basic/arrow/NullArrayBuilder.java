@@ -18,21 +18,20 @@ import io.v6d.core.client.Client;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
-import java.util.Arrays;
 import lombok.*;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.Float8Vector;
-import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
+import org.apache.arrow.vector.NullVector;
 
-public class DoubleArrayBuilder implements ArrayBuilder {
-    private BufferBuilder buffer;
-    private Float8Vector array;
+public class NullArrayBuilder implements ArrayBuilder {
+    private final NullVector array;
 
-    public DoubleArrayBuilder(IPCClient client, long length) throws VineyardException {
-        this.array = new Float8Vector("", Arrow.default_allocator);
-        this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+    public NullArrayBuilder(IPCClient client, final NullVector vector) throws VineyardException {
+        this.array = vector;
+    }
+
+    public NullArrayBuilder(IPCClient client, long length) throws VineyardException {
+        this.array = new NullVector();
+        this.array.setValueCount((int) length);
     }
 
     @Override
@@ -42,12 +41,13 @@ public class DoubleArrayBuilder implements ArrayBuilder {
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
         val meta = ObjectMeta.empty();
-        meta.setTypename("vineyard::NumericArray<double>");
-        meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
+        meta.setTypename("vineyard::NullArray");
+        meta.setNBytes(0);
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", 0);
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_", buffer.seal(client));
+        meta.addMember("buffer_data_", BufferBuilder.empty(client));
+        meta.addMember("buffer_offsets_", BufferBuilder.empty(client));
         meta.addMember("null_bitmap_", BufferBuilder.empty(client));
         return client.createMetaData(meta);
     }
@@ -55,9 +55,5 @@ public class DoubleArrayBuilder implements ArrayBuilder {
     @Override
     public FieldVector getArray() {
         return this.array;
-    }
-
-    void set(int index, double value) {
-        this.array.set(index, value);
     }
 }

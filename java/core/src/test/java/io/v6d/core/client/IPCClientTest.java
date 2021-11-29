@@ -119,4 +119,36 @@ public class IPCClientTest {
             assertEquals(metadata.getTypename(), "vineyard::Scalar<std::string>");
         }
     }
+
+    @Test
+    public void testPersist() throws VineyardException {
+        val builder = new StringObjectBuilder("abcde");
+        val result = builder.seal(client);
+        assertFalse(result.isPersist());
+        client.persist(result);
+
+        val target = client.getMetaData(result.getId());
+        assertTrue(target.isPersist());
+    }
+
+    @Test
+    public void testNames() throws VineyardException {
+        val builder = new StringObjectBuilder("abcde");
+        val result = builder.seal(client);
+
+        VineyardException exp =
+                assertThrows(
+                        VineyardException.Invalid.class,
+                        () -> {
+                            client.putName(result.getId(), "test_name");
+                        });
+
+        client.persist(result);
+        client.putName(result.getId(), "test_name");
+
+        assertEquals(result.getId(), client.getName("test_name"));
+        val target = client.getMetaData(result.getId());
+        assertTrue(target.hasName());
+        assertEquals("test_name", target.getName());
+    }
 }
