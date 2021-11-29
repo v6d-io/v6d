@@ -14,36 +14,47 @@
  */
 package io.v6d.modules.basic.arrow;
 
+import static io.v6d.modules.basic.arrow.Arrow.logger;
+
 import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
-import lombok.val;
-import org.apache.arrow.vector.BigIntVector;
+import lombok.*;
 import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
+import org.apache.arrow.vector.util.Text;
 
 /** Hello world! */
-public class Int64Array extends Array {
-    private BigIntVector array;
+public class StringArray extends Array {
+    private LargeVarCharVector array;
 
     public static void instantiate() {
         ObjectFactory.getFactory()
-                .register("vineyard::NumericArray<int64>", new Int64ArrayResolver());
+                .register(
+                        "vineyard::BaseBinaryArray<arrow::LargeStringArray>",
+                        new LargeStringArrayResolver());
         ObjectFactory.getFactory()
-                .register("vineyard::NumericArray<uint64>", new Int64ArrayResolver());
+                .register("vineyard::LargeStringArray", new LargeStringArrayResolver());
     }
 
-    public Int64Array(final ObjectMeta meta, Buffer buffer, long length) {
+    public StringArray(final ObjectMeta meta, Buffer buffer, Buffer offset, long length) {
         super(meta);
-        this.array = new BigIntVector("", Arrow.default_allocator);
+        this.array = new LargeVarCharVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, 0),
+                Arrays.asList(null, offset.getBuffer(), buffer.getBuffer()));
+        this.array.setValueCount((int) length);
     }
 
-    public double get(int index) {
+    public byte[] get(int index) {
         return this.array.get(index);
+    }
+
+    public Text getObject(int index) {
+        return this.array.getObject(index);
     }
 
     @Override
@@ -59,7 +70,7 @@ public class Int64Array extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Int64Array that = (Int64Array) o;
+        StringArray that = (StringArray) o;
         return Objects.equal(array, that.array);
     }
 
@@ -69,10 +80,14 @@ public class Int64Array extends Array {
     }
 }
 
-class Int64ArrayResolver extends ObjectFactory.Resolver {
+class LargeStringArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new Int64Array(meta, buffer, meta.getLongValue("length_"));
+        logger.debug("large string array resolver: from metadata {}", meta);
+        val buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_data_"));
+        val offsets_buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
+        return new StringArray(meta, buffer, offsets_buffer, meta.getLongValue("length_"));
     }
 }

@@ -31,6 +31,8 @@ public class Int32Array extends Array {
     public static void instantiate() {
         ObjectFactory.getFactory()
                 .register("vineyard::NumericArray<int>", new Int32ArrayResolver());
+        ObjectFactory.getFactory()
+                .register("vineyard::NumericArray<uint>", new Int32ArrayResolver());
     }
 
     public Int32Array(ObjectMeta meta, Buffer buffer, long length) {

@@ -177,6 +177,14 @@ public class ObjectMeta {
         this.meta.put("id", id.toString());
     }
 
+    public boolean hasName() {
+        return this.meta.has("__name");
+    }
+
+    public String getName() {
+        return this.meta.get("__name").textValue();
+    }
+
     public Signature getSignature() {
         return new Signature(this.getLongValue("signature"));
     }
@@ -243,7 +251,7 @@ public class ObjectMeta {
     }
 
     public String getStringValue(String key) {
-        return this.meta.get(key).asText();
+        return this.meta.get(key).textValue();
     }
 
     public void setValue(String key, String value) {
@@ -357,11 +365,16 @@ public class ObjectMeta {
                 .toString();
     }
 
+    @SneakyThrows(JsonProcessingException.class)
+    public String toPrettyString() {
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(meta);
+    }
+
     private void findAllBuffers(ObjectNode meta) throws VineyardException {
         if (meta == null || meta.isEmpty()) {
             return;
         }
-        ObjectID member = ObjectID.fromString(meta.get("id").asText());
+        ObjectID member = ObjectID.fromString(meta.get("id").textValue());
         if (member.isBlob()) {
             if (meta.get("instance_id").asLong() == this.instanceId.value()) {
                 this.buffers.emplace(member);

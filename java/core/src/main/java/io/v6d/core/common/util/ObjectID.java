@@ -14,11 +14,12 @@
  */
 package io.v6d.core.common.util;
 
+import lombok.*;
 import lombok.EqualsAndHashCode;
 
 /** Vineyard ObjectID definition. */
 @EqualsAndHashCode(callSuper = false)
-public class ObjectID {
+public class ObjectID implements Comparable {
     private long id = -1L;
 
     public static ObjectID InvalidObjectID = new ObjectID(-1L);
@@ -44,5 +45,11 @@ public class ObjectID {
     @Override
     public String toString() {
         return String.format("o%016x", id);
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        val other = (ObjectID) o;
+        return (int) (this.id - other.id);
     }
 }

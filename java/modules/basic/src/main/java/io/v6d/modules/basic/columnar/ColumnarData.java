@@ -41,11 +41,17 @@ import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.IntervalDayVector;
 import org.apache.arrow.vector.IntervalYearVector;
+import org.apache.arrow.vector.LargeVarBinaryVector;
+import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.NullVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
 import org.apache.arrow.vector.TinyIntVector;
+import org.apache.arrow.vector.UInt1Vector;
+import org.apache.arrow.vector.UInt2Vector;
+import org.apache.arrow.vector.UInt4Vector;
+import org.apache.arrow.vector.UInt8Vector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
@@ -62,12 +68,20 @@ public class ColumnarData {
             accessor = new BooleanAccessor((BitVector) vector);
         } else if (vector instanceof TinyIntVector) {
             accessor = new ByteAccessor((TinyIntVector) vector);
+        } else if (vector instanceof UInt1Vector) {
+            accessor = new UByteAccessor((UInt1Vector) vector);
         } else if (vector instanceof SmallIntVector) {
             accessor = new ShortAccessor((SmallIntVector) vector);
+        } else if (vector instanceof UInt2Vector) {
+            accessor = new UShortAccessor((UInt2Vector) vector);
         } else if (vector instanceof IntVector) {
             accessor = new IntAccessor((IntVector) vector);
+        } else if (vector instanceof UInt4Vector) {
+            accessor = new UIntAccessor((UInt4Vector) vector);
         } else if (vector instanceof BigIntVector) {
             accessor = new LongAccessor((BigIntVector) vector);
+        } else if (vector instanceof UInt8Vector) {
+            accessor = new ULongAccessor((UInt8Vector) vector);
         } else if (vector instanceof Float4Vector) {
             accessor = new FloatAccessor((Float4Vector) vector);
         } else if (vector instanceof Float8Vector) {
@@ -76,8 +90,12 @@ public class ColumnarData {
             accessor = new DecimalAccessor((DecimalVector) vector);
         } else if (vector instanceof VarCharVector) {
             accessor = new StringAccessor((VarCharVector) vector);
+        } else if (vector instanceof LargeVarCharVector) {
+            accessor = new LargeStringAccessor((LargeVarCharVector) vector);
         } else if (vector instanceof VarBinaryVector) {
             accessor = new BinaryAccessor((VarBinaryVector) vector);
+        } else if (vector instanceof LargeVarBinaryVector) {
+            accessor = new LargeBinaryAccessor((LargeVarBinaryVector) vector);
         } else if (vector instanceof DateDayVector) {
             accessor = new DateAccessor((DateDayVector) vector);
         } else if (vector instanceof TimeStampMicroTZVector) {
@@ -94,6 +112,14 @@ public class ColumnarData {
             throw new UnsupportedOperationException(
                     "array type is not supported yet: " + vector.getClass());
         }
+    }
+
+    public ArrowVectorAccessor getAccessor() {
+        return accessor;
+    }
+
+    public ValueVector getVector() {
+        return accessor.getVector();
     }
 
     public boolean hasNull() {
@@ -114,6 +140,10 @@ public class ColumnarData {
 
     public boolean isNullAt(int rowId) {
         return accessor.isNullAt(rowId);
+    }
+
+    public Object getObject(int rowId) {
+        return accessor.getObject(rowId);
     }
 
     public boolean getBoolean(int rowId) {
@@ -172,6 +202,10 @@ public class ColumnarData {
             this.vector = vector;
         }
 
+        public final ValueVector getVector() {
+            return vector;
+        }
+
         final boolean isNullAt(int rowId) {
             return vector.isNull(rowId);
         }
@@ -186,6 +220,10 @@ public class ColumnarData {
 
         final void close() {
             vector.close();
+        }
+
+        Object getObject(int rowId) {
+            throw new UnsupportedOperationException();
         }
 
         boolean getBoolean(int rowId) {
@@ -240,6 +278,11 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getBoolean(rowId);
+        }
+
+        @Override
         final boolean getBoolean(int rowId) {
             return accessor.get(rowId) == 1;
         }
@@ -252,6 +295,31 @@ public class ColumnarData {
         ByteAccessor(TinyIntVector vector) {
             super(vector);
             this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getByte(rowId);
+        }
+
+        @Override
+        final byte getByte(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class UByteAccessor extends ArrowVectorAccessor {
+
+        private final UInt1Vector accessor;
+
+        UByteAccessor(UInt1Vector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getByte(rowId);
         }
 
         @Override
@@ -270,8 +338,33 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getShort(rowId);
+        }
+
+        @Override
         final short getShort(int rowId) {
             return accessor.get(rowId);
+        }
+    }
+
+    private static class UShortAccessor extends ArrowVectorAccessor {
+
+        private final UInt2Vector accessor;
+
+        UShortAccessor(UInt2Vector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getShort(rowId);
+        }
+
+        @Override
+        final short getShort(int rowId) {
+            return (short) accessor.get(rowId);
         }
     }
 
@@ -282,6 +375,31 @@ public class ColumnarData {
         IntAccessor(IntVector vector) {
             super(vector);
             this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getInt(rowId);
+        }
+
+        @Override
+        final int getInt(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class UIntAccessor extends ArrowVectorAccessor {
+
+        private final UInt4Vector accessor;
+
+        UIntAccessor(UInt4Vector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getInt(rowId);
         }
 
         @Override
@@ -300,6 +418,31 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class ULongAccessor extends ArrowVectorAccessor {
+
+        private final UInt8Vector accessor;
+
+        ULongAccessor(UInt8Vector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
         final long getLong(int rowId) {
             return accessor.get(rowId);
         }
@@ -312,6 +455,11 @@ public class ColumnarData {
         FloatAccessor(Float4Vector vector) {
             super(vector);
             this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getFloat(rowId);
         }
 
         @Override
@@ -330,6 +478,11 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getDouble(rowId);
+        }
+
+        @Override
         final double getDouble(int rowId) {
             return accessor.get(rowId);
         }
@@ -342,6 +495,11 @@ public class ColumnarData {
         DecimalAccessor(DecimalVector vector) {
             super(vector);
             this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getDecimal(rowId, 24, 8);
         }
 
         @Override
@@ -361,6 +519,32 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getUTF8String(rowId);
+        }
+
+        @Override
+        final Text getUTF8String(int rowId) {
+            return accessor.getObject(rowId);
+        }
+    }
+
+    private static class LargeStringAccessor extends ArrowVectorAccessor {
+
+        private final LargeVarCharVector accessor;
+        private final NullableVarCharHolder stringResult = new NullableVarCharHolder();
+
+        LargeStringAccessor(LargeVarCharVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getUTF8String(rowId);
+        }
+
+        @Override
         final Text getUTF8String(int rowId) {
             return accessor.getObject(rowId);
         }
@@ -373,6 +557,31 @@ public class ColumnarData {
         BinaryAccessor(VarBinaryVector vector) {
             super(vector);
             this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getBinary(rowId);
+        }
+
+        @Override
+        final byte[] getBinary(int rowId) {
+            return accessor.getObject(rowId);
+        }
+    }
+
+    private static class LargeBinaryAccessor extends ArrowVectorAccessor {
+
+        private final LargeVarBinaryVector accessor;
+
+        LargeBinaryAccessor(LargeVarBinaryVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getBinary(rowId);
         }
 
         @Override
@@ -391,6 +600,11 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getInt(rowId);
+        }
+
+        @Override
         final int getInt(int rowId) {
             return accessor.get(rowId);
         }
@@ -406,6 +620,11 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
         final long getLong(int rowId) {
             return accessor.get(rowId);
         }
@@ -418,6 +637,11 @@ public class ColumnarData {
         TimestampNTZAccessor(TimeStampMicroVector vector) {
             super(vector);
             this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
         }
 
         @Override
@@ -443,6 +667,11 @@ public class ColumnarData {
         }
 
         @Override
+        Object getObject(int rowId) {
+            return getInt(rowId);
+        }
+
+        @Override
         int getInt(int rowId) {
             return accessor.get(rowId);
         }
@@ -456,6 +685,11 @@ public class ColumnarData {
         IntervalDayAccessor(IntervalDayVector vector) {
             super(vector);
             this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
         }
 
         @Override

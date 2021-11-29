@@ -18,8 +18,9 @@ import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.val;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
@@ -30,10 +31,13 @@ public class RecordBatch extends Object {
 
     public static void instantiate() {
         Schema.instantiate();
+        BooleanArray.instantiate();
         Int32Array.instantiate();
         Int64Array.instantiate();
         FloatArray.instantiate();
         DoubleArray.instantiate();
+        StringArray.instantiate();
+        NullArray.instantiate();
         ObjectFactory.getFactory().register("vineyard::RecordBatch", new RecordBatchResolver());
     }
 
@@ -71,12 +75,15 @@ class RecordBatchResolver extends ObjectFactory.Resolver {
         val ncol = meta.getIntValue("column_num_");
         val nrow = meta.getIntValue("row_num_");
 
-        val vectors = new ArrayList<FieldVector>();
-        for (int index = 0; index < meta.getIntValue("__columns_-size"); ++index) {
-            val column = meta.getMemberMeta("__columns_-" + index);
-            val member = (Array) ObjectFactory.getFactory().resolve(column);
-            vectors.add(member.getArray());
-        }
+        val vectors =
+                IntStream.range(0, meta.getIntValue("__columns_-size"))
+                        .mapToObj(
+                                index -> {
+                                    val column = meta.getMemberMeta("__columns_-" + index);
+                                    return ((Array) ObjectFactory.getFactory().resolve(column))
+                                            .getArray();
+                                })
+                        .collect(Collectors.toList());
         return new RecordBatch(meta, schema, vectors, nrow);
     }
 }

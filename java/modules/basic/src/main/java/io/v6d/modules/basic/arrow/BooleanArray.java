@@ -14,30 +14,29 @@
  */
 package io.v6d.modules.basic.arrow;
 
+import static io.v6d.modules.basic.arrow.Arrow.logger;
+
 import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
-import lombok.val;
-import org.apache.arrow.vector.BigIntVector;
+import lombok.*;
+import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
 /** Hello world! */
-public class Int64Array extends Array {
-    private BigIntVector array;
+public class BooleanArray extends Array {
+    private BitVector array;
 
     public static void instantiate() {
-        ObjectFactory.getFactory()
-                .register("vineyard::NumericArray<int64>", new Int64ArrayResolver());
-        ObjectFactory.getFactory()
-                .register("vineyard::NumericArray<uint64>", new Int64ArrayResolver());
+        ObjectFactory.getFactory().register("vineyard::BooleanArray", new BooleanArrayResolver());
     }
 
-    public Int64Array(final ObjectMeta meta, Buffer buffer, long length) {
+    public BooleanArray(final ObjectMeta meta, Buffer buffer, long length) {
         super(meta);
-        this.array = new BigIntVector("", Arrow.default_allocator);
+        this.array = new BitVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
                 new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
     }
@@ -59,7 +58,7 @@ public class Int64Array extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Int64Array that = (Int64Array) o;
+        BooleanArray that = (BooleanArray) o;
         return Objects.equal(array, that.array);
     }
 
@@ -69,10 +68,11 @@ public class Int64Array extends Array {
     }
 }
 
-class Int64ArrayResolver extends ObjectFactory.Resolver {
+class BooleanArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
+        logger.debug("boolean array resolver: from metadata {}", meta);
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new Int64Array(meta, buffer, meta.getLongValue("length_"));
+        return new BooleanArray(meta, buffer, meta.getLongValue("length_"));
     }
 }

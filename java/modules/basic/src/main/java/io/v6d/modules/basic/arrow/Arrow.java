@@ -27,6 +27,7 @@ public final class Arrow {
     public static final Logger logger = LoggerFactory.getLogger(Arrow.class);
 
     public static class Type {
+        public static final ArrowType Null = new ArrowType.Null();
         public static final ArrowType Int = new ArrowType.Int(32, true);
         public static final ArrowType UInt = new ArrowType.Int(32, false);
         public static final ArrowType Int64 = new ArrowType.Int(64, true);
@@ -36,9 +37,13 @@ public final class Arrow {
         public static final ArrowType Double =
                 new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE);
         public static final ArrowType Boolean = new ArrowType.Bool();
+        public static final ArrowType VarChar = new ArrowType.LargeUtf8();
+        public static final ArrowType VarBinary = new ArrowType.LargeBinary();
     }
 
     public static class FieldType {
+        public static final org.apache.arrow.vector.types.pojo.FieldType Null =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Null, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType Int =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Arrow.Type.Int, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType UInt =
@@ -53,14 +58,25 @@ public final class Arrow {
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Double, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType Boolean =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Boolean, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType VarChar =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarChar, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType VarBinary =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarBinary, null);
     }
 
-    public static Field makePlainField(
+    public static Field makeField(
             String name, org.apache.arrow.vector.types.pojo.FieldType fieldType) {
         return new Field(name, fieldType, ImmutableList.of());
     }
 
+    public static Field makeField(String name, ArrowType type) {
+        return new Field(
+                name,
+                new org.apache.arrow.vector.types.pojo.FieldType(false, type, null),
+                ImmutableList.of());
+    }
+
     public static void instantiate() {
-        RecordBatch.instantiate();
+        Table.instantiate();
     }
 }
