@@ -42,8 +42,6 @@ public class Protocol {
         public abstract void get(JsonNode root) throws VineyardException;
     }
 
-    @Data
-    @EqualsAndHashCode(callSuper = false)
     public static class RegisterRequest extends Request {
         public static void put(ObjectNode root) {
             root.put("type", "register_request");
@@ -69,8 +67,6 @@ public class Protocol {
         }
     }
 
-    @Data
-    @EqualsAndHashCode(callSuper = false)
     public static class CreateDataRequest extends Request {
         public static void put(ObjectNode root, ObjectNode content) {
             root.put("type", "create_data_request");
@@ -94,8 +90,6 @@ public class Protocol {
         }
     }
 
-    @Data
-    @EqualsAndHashCode(callSuper = false)
     public static class GetDataRequest extends Request {
         public static void put(ObjectNode root, ObjectID id, boolean sync_remote, boolean wait) {
             root.put("type", "get_data_request");
@@ -126,7 +120,6 @@ public class Protocol {
         }
     }
 
-    @EqualsAndHashCode(callSuper = false)
     public static class CreateBufferRequest extends Request {
         public static void put(ObjectNode root, long size) {
             root.put("type", "create_buffer_request");
@@ -148,7 +141,6 @@ public class Protocol {
         }
     }
 
-    @EqualsAndHashCode(callSuper = false)
     public static class GetBuffersRequest extends Request {
         public static void put(ObjectNode root, List<ObjectID> ids) {
             root.put("type", "get_buffers_request");
@@ -185,7 +177,6 @@ public class Protocol {
         }
     }
 
-    @EqualsAndHashCode(callSuper = false)
     public static class ListDataRequest extends Request {
         public static void put(ObjectNode root, String pattern, boolean regex, int limit) {
             root.put("type", "list_data_request");
@@ -195,7 +186,6 @@ public class Protocol {
         }
     }
 
-    @Data
     public static class PersistRequest extends Request {
         public static void put(ObjectNode root, ObjectID id) {
             root.put("type", "persist_request");
@@ -212,7 +202,26 @@ public class Protocol {
         }
     }
 
+    public static class DeleteDataRequest extends Request {
+        public static void put(ObjectNode root, Collection<ObjectID> ids, boolean force, boolean deep, boolean fastpath) {
+            root.put("type", "del_data_request");
+            val array = root.putArray("id");
+            ids.forEach(id -> array.add(id.value()));
+            root.put("force", force);
+            root.put("deep", deep);
+            root.put("fastpath", fastpath);
+        }
+    }
+
     @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class DeleteDataReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "del_data_reply");
+        }
+    }
+
     public static class PutNameRequest extends Request {
         public static void put(ObjectNode root, ObjectID id, String name) {
             root.put("type", "put_name_request");
@@ -230,7 +239,6 @@ public class Protocol {
         }
     }
 
-    @Data
     public static class GetNameRequest extends Request {
         public static void put(ObjectNode root, String name, boolean wait) {
             root.put("type", "get_name_request");
@@ -251,7 +259,6 @@ public class Protocol {
         }
     }
 
-    @Data
     public static class DropNameRequest extends Request {
         public static void put(ObjectNode root, String name) {
             root.put("type", "drop_name_request");

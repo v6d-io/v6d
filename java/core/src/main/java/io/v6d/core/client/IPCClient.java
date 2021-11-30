@@ -181,6 +181,15 @@ public class IPCClient extends Client {
     }
 
     @Override
+    public void delete(Collection<ObjectID> ids, boolean force, boolean deep) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        DeleteDataRequest.put(root, ids, force, deep, false);
+        this.doWrite(root);
+        val reply = new DeleteDataReply();
+        reply.get(this.doReadJson());
+    }
+
+    @Override
     public void putName(ObjectID id, String name) throws VineyardException {
         val root = mapper_.createObjectNode();
         PutNameRequest.put(root, id, name);
