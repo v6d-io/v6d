@@ -5,15 +5,14 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.v6d</groupId>
-    <artifactId>vineyard</artifactId>
+    <groupId>io.v6d.modules</groupId>
+    <artifactId>vineyard-modules</artifactId>
     <version>0.1-SNAPSHOT</version>
   </parent>
 
-  <groupId>io.v6d.core</groupId>
-  <artifactId>vineyard-core</artifactId>
+  <artifactId>vineyard-foreign-resolver</artifactId>
 
-  <name>vineyard-core</name>
+  <name>vineyard-foreign-resolver</name>
   <url>https://v6d.io</url>
 
   <properties>
@@ -23,11 +22,6 @@
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-    </dependency>
-
     <dependency>
         <groupId>com.github.jnr</groupId>
         <artifactId>jnr-posix</artifactId>
@@ -39,18 +33,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
+      <groupId>org.scijava</groupId>
+      <artifactId>native-lib-loader</artifactId>
     </dependency>
 
     <dependency>
@@ -60,21 +44,8 @@
     </dependency>
 
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.scijava</groupId>
-      <artifactId>native-lib-loader</artifactId>
+      <groupId>io.v6d.core</groupId>
+      <artifactId>vineyard-core</artifactId>
     </dependency>
 
     <dependency>
@@ -172,8 +143,7 @@
             <source>
               <directory>${project.basedir}/src/main/cpp/ffi</directory>
               <fileNames>
-                <fileName>fling.cc</fileName>
-                <fileName>ffi.cc</fileName>
+                <fileName>object_meta.cc</fileName>
               </fileNames>
             </source>
             <source>
@@ -184,7 +154,8 @@
             <compilerStartOption>-I ${JAVA_HOME}/include</compilerStartOption>
             <compilerStartOption>-I ${JAVA_HOME}/include/linux</compilerStartOption>
             <compilerStartOption>-I ${JAVA_HOME}/include/darwin</compilerStartOption>
-            <compilerStartOption>-I ${project.basedir}/src/main/cpp/ffi</compilerStartOption>
+            <compilerStartOption>-I /usr/local/include</compilerStartOption>
+            <compilerStartOption>-I /usr/local/include/vineyard</compilerStartOption>
             <compilerStartOption>-I ${project.build.directory}/jni/javah-include</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
@@ -201,6 +172,8 @@
             <linkerStartOption>-L /usr/local/lib/</linkerStartOption>
           </linkerStartOptions>
           <linkerEndOptions>
+            <linkerEndOption>-lvineyard_client</linkerEndOption>
+            <linkerEndOption>-lglog</linkerEndOption>
             <linkerEndOption>-shared</linkerEndOption>
             <linkerEndOption>-fPIC</linkerEndOption>
           </linkerEndOptions>

@@ -157,10 +157,10 @@ public class IPCClientTest {
         val result = builder.seal(client);
 
         assertThrows(
-                        VineyardException.Invalid.class,
-                        () -> {
-                            client.putName(result.getId(), "test_name");
-                        });
+                VineyardException.Invalid.class,
+                () -> {
+                    client.putName(result.getId(), "test_name");
+                });
 
         client.persist(result);
         client.putName(result.getId(), "test_name");

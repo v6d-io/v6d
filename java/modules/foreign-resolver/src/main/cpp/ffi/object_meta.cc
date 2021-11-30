@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "io_v6d_core_client_ds_ffi_ObjectMeta.h"
+#include "io_v6d_contrib_ds_ffi_ObjectMeta.h"
 
 #include <string>
 #include <cstring>
@@ -27,7 +27,7 @@ limitations under the License.
  * Method:    constructNative
  * Signature: (Ljava/lang/String;[J[J)J
  */
-JNIEXPORT jlong JNICALL Java_io_v6d_core_client_ds_ffi_ObjectMeta_constructNative
+JNIEXPORT jlong JNICALL Java_io_v6d_contrib_ds_ffi_ObjectMeta_constructNative
   (JNIEnv *env, jobject, jstring meta, jlongArray objects, jlongArray pointers, jlongArray sizes) {
     jboolean isCopy = JNI_FALSE;
 

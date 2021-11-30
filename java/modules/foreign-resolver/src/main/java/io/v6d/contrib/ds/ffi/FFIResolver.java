@@ -12,9 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.contrib.graph;
+package io.v6d.contrib.ds.ffi;
 
-/** Hello world! */
-public class Graph {
-    public static void main(String[] args) {}
+import io.v6d.core.client.ds.Object;
+import io.v6d.core.client.ds.ObjectFactory;
+import io.v6d.core.client.ds.ObjectMeta;
+
+public abstract class FFIResolver extends ObjectFactory.Resolver {
+    public Object resolve(final ObjectMeta metadata) {
+        long address = new io.v6d.contrib.ds.ffi.ObjectMeta(metadata).resolve();
+        if (address == 0) {
+            return null;
+        }
+        return resolve(metadata, address);
+    }
+
+    public abstract Object resolve(final ObjectMeta metadata, long address);
 }

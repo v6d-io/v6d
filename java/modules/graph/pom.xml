@@ -4,9 +4,13 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.v6d.contrib</groupId>
+  <parent>
+    <groupId>io.v6d.modules</groupId>
+    <artifactId>vineyard-modules</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+
   <artifactId>vineyard-graph</artifactId>
-  <version>1.0-SNAPSHOT</version>
 
   <name>vineyard-graph</name>
   <url>https://v6d.io</url>
