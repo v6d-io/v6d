@@ -203,7 +203,12 @@ public class Protocol {
     }
 
     public static class DeleteDataRequest extends Request {
-        public static void put(ObjectNode root, Collection<ObjectID> ids, boolean force, boolean deep, boolean fastpath) {
+        public static void put(
+                ObjectNode root,
+                Collection<ObjectID> ids,
+                boolean force,
+                boolean deep,
+                boolean fastpath) {
             root.put("type", "del_data_request");
             val array = root.putArray("id");
             ids.forEach(id -> array.add(id.value()));

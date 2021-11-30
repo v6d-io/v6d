@@ -26,18 +26,6 @@ public class ObjectFactory {
         public abstract Object resolve(final ObjectMeta metadata);
     }
 
-    public abstract static class FFIResolver extends Resolver {
-        public Object resolve(final ObjectMeta metadata) {
-            long address = new io.v6d.core.client.ds.ffi.ObjectMeta(metadata).resolve();
-            if (address == 0) {
-                return null;
-            }
-            return resolve(metadata, address);
-        }
-
-        public abstract Object resolve(final ObjectMeta metadata, long address);
-    }
-
     private Map<String, Resolver> resolvers;
 
     private static volatile ObjectFactory factory = null;
