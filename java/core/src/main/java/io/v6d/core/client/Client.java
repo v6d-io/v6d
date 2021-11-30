@@ -60,6 +60,12 @@ public abstract class Client {
         this.persist(object.getId());
     }
 
+    public abstract void delete(Collection<ObjectID> ids, boolean force, boolean deep) throws VineyardException;
+
+    public void delete(Collection<ObjectID> ids) throws VineyardException {
+        this.delete(ids, false, true);
+    }
+
     public abstract void putName(ObjectID id, String name) throws VineyardException;
 
     public abstract ObjectID getName(String name, boolean wait) throws VineyardException;

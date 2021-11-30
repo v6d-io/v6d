@@ -73,7 +73,7 @@ public class TableBuilder implements ObjectBuilder {
 
         val meta = ObjectMeta.empty();
 
-        meta.setTypename("vineyard::RecordBatch");
+        meta.setTypename("vineyard::Table");
         meta.setValue("batch_num_", batches.size());
         meta.setValue("num_rows_", -1);
         meta.setValue("num_columns_", schemaBuilder.getFields().size());

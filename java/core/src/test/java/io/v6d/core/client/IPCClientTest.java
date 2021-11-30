@@ -16,6 +16,7 @@ package io.v6d.core.client;
 
 import static org.junit.Assert.*;
 
+import com.google.common.collect.ImmutableList;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectFactory;
@@ -132,12 +133,30 @@ public class IPCClientTest {
     }
 
     @Test
+    public void testDelete() throws VineyardException {
+        val builder = new StringObjectBuilder("abcde");
+        val result = builder.seal(client);
+
+        // `get` should be ok
+        client.getMetaData(result.getId());
+
+        // `delete` the object
+        client.delete(ImmutableList.of(result.getId()));
+
+        // `get` will throw error
+        assertThrows(
+                VineyardException.ObjectNotExists.class,
+                () -> {
+                    client.getMetaData(result.getId());
+                });
+    }
+
+    @Test
     public void testNames() throws VineyardException {
         val builder = new StringObjectBuilder("abcde");
         val result = builder.seal(client);
 
-        VineyardException exp =
-                assertThrows(
+        assertThrows(
                         VineyardException.Invalid.class,
                         () -> {
                             client.putName(result.getId(), "test_name");
