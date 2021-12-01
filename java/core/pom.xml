@@ -166,8 +166,6 @@
         </executions>
         <configuration>
           <compilerProvider>generic-classic</compilerProvider>
-          <compilerExecutable>/usr/local/opt/llvm/bin/clang++</compilerExecutable>
-          <linkerExecutable>/usr/local/opt/llvm/bin/clang++</linkerExecutable>
           <sources>
             <source>
               <directory>${project.basedir}/src/main/cpp/ffi</directory>
