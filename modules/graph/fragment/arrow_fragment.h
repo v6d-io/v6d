@@ -2367,6 +2367,117 @@ class ArrowFragment
     VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
     return ret;
   }
+
+  boost::leaf::result<vineyard::ObjectID> TransformDirection(
+      vineyard::Client& client) {
+    vineyard::ObjectMeta old_meta, new_meta;
+    VINEYARD_CHECK_OK(client.GetMetaData(this->id_, old_meta));
+
+    new_meta.SetTypeName(type_name<ArrowFragment<oid_t, vid_t>>());
+    new_meta.AddKeyValue("fid", fid_);
+    new_meta.AddKeyValue("fnum", fnum_);
+    new_meta.AddKeyValue("directed", static_cast<int>(!directed_));
+    new_meta.AddKeyValue("oid_type", TypeName<oid_t>::Get());
+    new_meta.AddKeyValue("vid_type", TypeName<vid_t>::Get());
+    new_meta.AddKeyValue("vertex_label_num", vertex_label_num_);
+    new_meta.AddKeyValue("edge_label_num", edge_label_num_);
+    new_meta.AddKeyValue("schema", schema_.ToJSONString());
+
+    size_t nbytes = 0;
+    new_meta.AddMember("ivnums", old_meta.GetMemberMeta("ivnums"));
+    nbytes += old_meta.GetMemberMeta("ivnums").GetNBytes();
+    new_meta.AddMember("ovnums", old_meta.GetMemberMeta("ovnums"));
+    nbytes += old_meta.GetMemberMeta("ovnums").GetNBytes();
+    new_meta.AddMember("tvnums", old_meta.GetMemberMeta("tvnums"));
+    nbytes += old_meta.GetMemberMeta("tvnums").GetNBytes();
+
+    ASSIGN_IDENTICAL_VEC_META("ovgid_lists", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("ovg2l_maps", vertex_label_num_);
+    ASSIGN_IDENTICAL_VEC_META("edge_tables", edge_label_num_);
+
+    GENERATE_TABLE_VEC_META("edge", 0, edge_label_num_, this->edge_tables_);
+
+    new_meta.AddMember("vertex_map", old_meta.GetMemberMeta("vertex_map"));
+
+    // If previous grpah is directed, then to_directed is false
+    bool to_directed = !directed_;
+
+    std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
+        oe_lists(vertex_label_num_);
+    std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+        oe_offsets_lists(vertex_label_num_);
+
+    std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
+        ie_lists(vertex_label_num_);
+    std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+        ie_offsets_lists(vertex_label_num_);
+
+    for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
+      oe_lists[v_label].resize(edge_label_num_);
+      oe_offsets_lists[v_label].resize(edge_label_num_);
+      if (to_directed) {
+        ie_lists[v_label].resize(edge_label_num_);
+        ie_offsets_lists[v_label].resize(edge_label_num_);
+      }
+    }
+
+    if (to_directed) {
+      for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+        for (label_id_t j = 0; j < edge_label_num_; ++j) {
+          std::string ie_name = generate_name_with_suffix("ie_lists", i, j);
+          std::string oe_name = generate_name_with_suffix("oe_lists", i, j);
+          std::string ie_offset_name =
+              generate_name_with_suffix("ie_offsets_lists", i, j);
+          std::string oe_offset_name =
+              generate_name_with_suffix("oe_offsets_lists", i, j);
+          new_meta.AddMember(ie_name, old_meta.GetMemberMeta(oe_name));
+          new_meta.AddMember(oe_name, old_meta.GetMemberMeta(oe_name));
+          new_meta.AddMember(ie_offset_name,
+                             old_meta.GetMemberMeta(oe_offset_name));
+          new_meta.AddMember(oe_offset_name,
+                             old_meta.GetMemberMeta(oe_offset_name));
+          nbytes += old_meta.GetMemberMeta(_name).GetNBytes();
+        }
+      }
+
+    } else {
+      directedCSR2Undirected(oe_lists, oe_offsets_lists);
+      std::vector<std::vector<std::shared_ptr<vineyard::FixedSizeBinaryArray>>>
+          vy_oe_lists(vertex_label_num_);
+      std::vector<std::vector<std::shared_ptr<vineyard::NumericArray<int64_t>>>>
+          vy_oe_offsets_lists(vertex_label_num_);
+
+      for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+        vy_oe_lists[i].resize(edge_label_num_);
+        vy_oe_offsets_lists[i].resize(edge_label_num_);
+        for (label_id_t j = 0; j < edge_label_num_; ++j) {
+          vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
+                                                           oe_lists[i][j]);
+          vy_oe_lists[i][j] =
+              std::dynamic_pointer_cast<vineyard::FixedSizeBinaryArray>(
+                  oe_builder.Seal(client));
+          vineyard::NumericArrayBuilder<int64_t> oeo_builder(
+              client, oe_offsets_lists[i][j]);
+          vy_oe_offsets_lists[i][j] =
+              std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+                  oeo_builder.Seal(client));
+        }
+      }
+      GENERATE_VEC_VEC_META("oe_lists", vy_oe_lists, vertex_label_num_,
+                            edge_label_num, 0, 0);
+      GENERATE_VEC_VEC_META("oe_offsets_lists", vy_oe_offsets_lists,
+                            vertex_label_num_, edge_label_num, 0, 0);
+    }
+
+    new_meta.AddKeyValue("is_multigraph", static_cast<int>(is_multigraph_));
+
+    new_meta.SetNBytes(nbytes);
+
+    vineyard::ObjectID ret;
+    VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+    return ret;
+  }
+
 #undef ASSIGN_IDENTICAL_VEC_META
 #undef ASSIGN_IDENTICAL_VEC_VEC_META
 #undef GENERATE_TABLE_VEC_META
@@ -2509,6 +2620,47 @@ class ArrowFragment
         fid_list_offset[0] = fid_list.data();
         for (vid_t i = 0; i < ivnum_; ++i) {
           fid_list_offset[i + 1] = fid_list_offset[i] + id_num[i];
+        }
+      }
+    }
+  }
+
+  void directedCSR2Undirected(
+      std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>&
+          oe_lists,
+      std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>&
+          oe_offsets_lists,
+      int concurrency) {
+    for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
+      for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+        const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
+        const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
+        const int64_t* ie_offset = ie_offsets_ptr_lists_[v_label][e_label];
+        const int64_t* oe_offset = oe_offsets_ptr_lists_[v_label][e_label];
+
+        // Merge edges from two array into one
+        vineyard::PodArrayBuilder<nbr_unit_t> edge_builders;
+        arrow::Int64Builder offset_builder;
+        offset_builder.Append(0);
+        for (int offset = 0; offset < tvnums_[v_label]; ++offset) {
+          for (int k = ie_offset[offset]; k < ie_offset[offset + 1]; ++k) {
+            edge_builder.Append(ie_[k]);
+          }
+          for (int k = oe_offset[offset]; k < oe_offset[offset + 1]; ++k) {
+            edge_builder.Append(oe_[k]);
+          }
+          offset_builder.Append(edge_builder.length());
+          offset_builder.Finish(&oe_offsets_lists[v_label][e_label]);
+
+          sort_edges_with_respect_to_vertex(edge_builder,
+                                            oe_offsets_lists[v_label][e_label],
+                                            tvnums_[v_label], concurrency);
+          if (!multigraph_) {
+            check_is_multigraph(edge_builder, e_offsets_lists[v_label][e_label],
+                                tvnums_[v_label], concurrency, is_multigraph_);
+          }
+
+          edge_builder.Finish(&oe_lists[v_label][e_label]);
         }
       }
     }
