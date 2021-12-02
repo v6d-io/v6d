@@ -172,7 +172,9 @@ class IMetaService {
       if (status.ok()) {
 #ifndef NDEBUG
         // debugging
-        printDepsGraph();
+        if (VLOG_IS_ON(10)) {
+          printDepsGraph();
+        }
 #endif
         this->metaUpdate(ops, false);
       } else {
@@ -748,7 +750,9 @@ class IMetaService {
 
 #ifndef NDEBUG
     // debugging
-    printDepsGraph();
+    if (VLOG_IS_ON(10)) {
+      printDepsGraph();
+    }
     for (auto const& id : blobs_to_delete) {
       LOG(INFO) << "blob to delete: " << ObjectIDToString(id);
     }

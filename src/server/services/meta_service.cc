@@ -303,9 +303,6 @@ void IMetaService::postProcessForDelete(
 }
 
 void IMetaService::printDepsGraph() {
-  if (!VLOG_IS_ON(100)) {
-    return;
-  }
   std::stringstream ss;
   ss << "object top -> down dependencies: " << std::endl;
   for (auto const& kv : subobjects_) {
@@ -317,8 +314,8 @@ void IMetaService::printDepsGraph() {
     ss << ObjectIDToString(kv.first) << " <- " << ObjectIDToString(kv.second)
        << std::endl;
   }
-  VLOG(100) << "Depenencies graph on " << server_ptr_->instance_name() << ": \n"
-            << ss.str();
+  VLOG(10) << "Depenencies graph on " << server_ptr_->instance_name() << ": \n"
+           << ss.str();
 }
 
 void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
