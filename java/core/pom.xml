@@ -166,6 +166,8 @@
         </executions>
         <configuration>
           <compilerProvider>generic-classic</compilerProvider>
+          <compilerExecutable>${env.CC}</compilerExecutable>
+          <linkerExecutable>${env.CC}</linkerExecutable>
           <sources>
             <source>
               <directory>${project.basedir}/src/main/cpp/ffi</directory>

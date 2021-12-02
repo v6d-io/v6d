@@ -14,8 +14,6 @@
  */
 package io.v6d.modules.basic.arrow;
 
-import static io.v6d.modules.basic.arrow.Arrow.logger;
-
 import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
@@ -65,7 +63,6 @@ public class NullArray extends Array {
 class NUllArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        logger.debug("null array resolver: from metadata {}", meta);
         return new NullArray(meta, meta.getLongValue("length_"));
     }
 }

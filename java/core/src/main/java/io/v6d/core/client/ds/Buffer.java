@@ -37,6 +37,10 @@ public class Buffer {
         this.size = size;
     }
 
+    public static Buffer empty() {
+        return new Buffer(ObjectID.EmptyBlobID, 0, 0);
+    }
+
     public boolean isNull() {
         return this.size == 0;
     }

@@ -25,28 +25,43 @@ import lombok.*;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.ReferenceManager;
 import org.apache.arrow.memory.util.MemoryUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BufferBuilder implements ObjectBuilder {
+    private Logger logger = LoggerFactory.getLogger(BufferBuilder.class);
+
     private final Buffer buffer;
     private final ArrowBuf arrowBuf;
 
     public BufferBuilder(IPCClient client, long size) throws VineyardException {
         this.buffer = client.createBuffer(size);
-        this.arrowBuf =
-                new ArrowBuf(ReferenceManager.NO_OP, null, buffer.getSize(), buffer.getPointer());
+        if (size == 0) {
+            this.arrowBuf = null;
+        } else {
+            this.arrowBuf =
+                    new ArrowBuf(
+                            ReferenceManager.NO_OP, null, buffer.getSize(), buffer.getPointer());
+        }
     }
 
     public BufferBuilder(IPCClient client, final ArrowBuf buffer) throws VineyardException {
         this.buffer = client.createBuffer(buffer.capacity());
         this.arrowBuf = buffer;
-        MemoryUtil.UNSAFE.copyMemory(
-                this.arrowBuf.memoryAddress(), this.buffer.getPointer(), this.arrowBuf.capacity());
+        if (buffer.capacity() > 0) {
+            MemoryUtil.UNSAFE.copyMemory(
+                    this.arrowBuf.memoryAddress(),
+                    this.buffer.getPointer(),
+                    this.arrowBuf.capacity());
+        }
     }
 
     public static BufferBuilder fromByteArray(IPCClient client, byte[] bytes)
             throws VineyardException {
         val builder = new BufferBuilder(client, bytes.length);
-        builder.arrowBuf.writeBytes(bytes);
+        if (bytes.length > 0) {
+            builder.arrowBuf.writeBytes(bytes);
+        }
         return builder;
     }
 
