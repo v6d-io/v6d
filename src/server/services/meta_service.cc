@@ -358,8 +358,7 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
 
   // update signatures
   if (boost::algorithm::starts_with(kv.key, "/signatures/")) {
-    auto json_path = json::json_pointer(kv.key);
-    if (!from_remote || !meta_.contains(json_path)) {
+    if (!from_remote || !meta_.contains(json::json_pointer(kv.key))) {
       VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
     }
     VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_sig_to_meta()));
@@ -368,8 +367,7 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
 
   // update names
   if (boost::algorithm::starts_with(kv.key, "/names/")) {
-    auto json_path = json::json_pointer(kv.key);
-    if (meta_.contains(json_path)) {
+    if (!from_remote && meta_.contains(json::json_pointer(kv.key))) {
       LOG(WARNING) << "Warning: name got overwritten: " << kv.key;
     }
     VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
