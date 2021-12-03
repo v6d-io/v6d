@@ -48,12 +48,10 @@ public class ObjectFactory {
     }
 
     public void register(String typename, Resolver resolver) {
-        logger.debug("register resolver for type: {}", typename);
         this.resolvers.put(typename, resolver);
     }
 
     public Object resolve(final ObjectMeta metadata) {
-        logger.debug("run resolver on type: {}", metadata.getTypename());
         return this.resolve(metadata.getTypename(), metadata);
     }
 

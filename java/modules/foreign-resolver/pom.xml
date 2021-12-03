@@ -137,6 +137,8 @@
         </executions>
         <configuration>
           <compilerProvider>generic-classic</compilerProvider>
+          <compilerExecutable>${env.CXX}</compilerExecutable>
+          <linkerExecutable>${env.CXX}</linkerExecutable>
           <sources>
             <source>
               <directory>${project.basedir}/src/main/cpp/ffi</directory>

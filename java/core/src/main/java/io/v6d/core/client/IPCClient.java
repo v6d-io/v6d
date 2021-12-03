@@ -120,9 +120,6 @@ public class IPCClient extends Client {
         val meta = ObjectMeta.fromMeta(contents.get(id), this.instanceId);
         val buffers = this.getBuffers(meta.getBuffers().allBufferIds());
         for (val blob : meta.getBuffers().allBufferIds()) {
-            logger.debug("received blob: {}", blob);
-        }
-        for (val blob : meta.getBuffers().allBufferIds()) {
             if (buffers.containsKey(blob)) {
                 meta.setBuffer(blob, buffers.get(blob));
             }
@@ -162,7 +159,6 @@ public class IPCClient extends Client {
         val buffers = this.getBuffers(bufferIds);
         for (val meta : metadatas) {
             for (val blob : meta.getBuffers().allBufferIds()) {
-                logger.debug("received blob: {}", blob);
                 if (buffers.containsKey(blob)) {
                     meta.setBuffer(blob, buffers.get(blob));
                 }
@@ -219,6 +215,9 @@ public class IPCClient extends Client {
     }
 
     public Buffer createBuffer(long size) throws VineyardException {
+        if (size == 0) {
+            return Buffer.empty();
+        }
         val root = mapper_.createObjectNode();
         CreateBufferRequest.put(root, size);
         this.doWrite(root);

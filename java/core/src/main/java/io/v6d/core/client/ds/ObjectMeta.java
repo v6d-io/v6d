@@ -109,7 +109,6 @@ public class ObjectMeta {
 
     @SneakyThrows(VineyardException.class)
     public ObjectMeta getMemberMeta(String name) {
-        logger.debug("get member meta: {} from {}", name, this);
         if (!this.meta.has(name)) {
             throw new VineyardException.AssertionFailed(
                     "Failed to get member: " + name + ", no such member");

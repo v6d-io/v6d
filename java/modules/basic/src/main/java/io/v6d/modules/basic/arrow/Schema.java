@@ -15,7 +15,6 @@
 package io.v6d.modules.basic.arrow;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static io.v6d.modules.basic.arrow.Arrow.logger;
 
 import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
@@ -95,7 +94,6 @@ class SchemaResolver extends ObjectFactory.Resolver {
     public Object resolve(final ObjectMeta meta) {
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
         val schema = SchemaSerializer.deserialize(buffer.getBuffer(), Arrow.default_allocator);
-        logger.debug("arrow schema is: {}", schema);
         return new Schema(meta, schema);
     }
 }

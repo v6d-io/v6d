@@ -14,7 +14,6 @@
  */
 package io.v6d.modules.basic.arrow;
 
-import static io.v6d.modules.basic.arrow.Arrow.logger;
 import static org.junit.Assert.assertEquals;
 
 import io.v6d.core.client.IPCClient;
@@ -39,7 +38,6 @@ public class BufferTest {
     public void testBlob() throws VineyardException {
         val builder = new BufferBuilder(client, 40);
         val meta = builder.seal(client);
-        logger.debug("metadata = {}", meta);
 
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta);
         assertEquals(40, buffer.length());
@@ -49,7 +47,6 @@ public class BufferTest {
     public void testGetBlob() throws VineyardException {
         val builder = new BufferBuilder(client, 40);
         val meta = builder.seal(client);
-        logger.debug("metadata = {}", meta);
 
         val buffer = (Buffer) ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
         assertEquals(40, buffer.length());
