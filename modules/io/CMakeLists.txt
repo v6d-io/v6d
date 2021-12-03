@@ -19,6 +19,7 @@ target_include_directories(vineyard_io PRIVATE ${MPI_CXX_INCLUDE_PATH}
 target_link_libraries(vineyard_io PUBLIC vineyard_client
                                          vineyard_basic
                                          ${ARROW_SHARED_LIB}
+                                         ${CMAKE_DL_LIBS}
 )
 target_link_libraries(vineyard_io PRIVATE ${GFLAGS_LIBRARIES})
 
