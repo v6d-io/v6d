@@ -1067,11 +1067,12 @@ void sort_edges_with_respect_to_vertex(
 }
 
 template <typename VID_T, typename EID_T>
-bool check_is_multigraph(
+void check_is_multigraph(
     vineyard::PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>&
         builder,
     std::shared_ptr<arrow::Int64Array> offsets, VID_T tvnum, int concurrency,
     bool& is_multigraph) {
+  using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
   const int64_t* offsets_ptr = offsets->raw_values();
   if (concurrency == 1) {
     for (VID_T i = 0; i < tvnum; ++i) {
