@@ -46,13 +46,18 @@ public class BufferBuilder implements ObjectBuilder {
     }
 
     public BufferBuilder(IPCClient client, final ArrowBuf buffer) throws VineyardException {
-        this.buffer = client.createBuffer(buffer.capacity());
+        this(client, buffer, buffer.capacity());
+        logger.warn(
+                "Construct buffer builder without explicit size is dangerous, will over commit the memory");
+    }
+
+    public BufferBuilder(IPCClient client, final ArrowBuf buffer, final long capacity)
+            throws VineyardException {
+        this.buffer = client.createBuffer(capacity);
         this.arrowBuf = buffer;
-        if (buffer.capacity() > 0) {
+        if (capacity > 0) {
             MemoryUtil.UNSAFE.copyMemory(
-                    this.arrowBuf.memoryAddress(),
-                    this.buffer.getPointer(),
-                    this.arrowBuf.capacity());
+                    this.arrowBuf.memoryAddress(), this.buffer.getPointer(), capacity);
         }
     }
 
