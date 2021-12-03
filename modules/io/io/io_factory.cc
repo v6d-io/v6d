@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "io/io/io_factory.h"
 
+#include <dlfcn.h>
+
 #include <limits.h>
 #include <stdlib.h>
 
@@ -27,11 +29,28 @@ limitations under the License.
 
 #include "arrow/status.h"
 #include "arrow/util/uri.h"
+#include "boost/algorithm/string.hpp"
 #include "glog/logging.h"
+
+#include "common/util/env.h"
 
 namespace vineyard {
 
-void IOFactory::Init() {}
+void IOFactory::Init() {
+  // load other io adaptors using dlopen
+  auto other_io_adaptors = read_env("VINEYARD_OTHER_IO_ADAPTORS");
+  std::vector<std::string> adaptors;
+  ::boost::split(adaptors, other_io_adaptors,
+                 ::boost::is_any_of(std::string(1, ':')));
+  for (auto const& adaptor : adaptors) {
+    if (!adaptor.empty()) {
+      if (dlopen(adaptor.c_str(), RTLD_GLOBAL | RTLD_NOW) == nullptr) {
+        LOG(WARNING) << "Failed to load io adaptors " << adaptor
+                     << ", reason = " << dlerror();
+      }
+    }
+  }
+}
 
 void IOFactory::Finalize() {}
 
