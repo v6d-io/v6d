@@ -41,11 +41,18 @@ public class StringArrayBuilder implements ArrayBuilder {
 
     @Override
     public void build(Client client) throws VineyardException {
-        // FIXME the builder is a IPCClient, but RPCClient should be able work as well
+        val offset_buffer_size = (this.array.getValueCount() + 1) * LargeVarCharVector.OFFSET_WIDTH;
+        val offset_buffer = this.array.getOffsetBuffer();
+
+        val data_buffer_size =
+                offset_buffer.getLong(
+                        ((long) this.array.getValueCount()) * LargeVarCharVector.OFFSET_WIDTH);
+        val data_buffer = this.array.getDataBuffer();
+
         this.data_buffer_builder =
-                new BufferBuilder((IPCClient) client, this.array.getDataBuffer());
+                new BufferBuilder((IPCClient) client, data_buffer, data_buffer_size);
         this.offset_buffer_builder =
-                new BufferBuilder((IPCClient) client, this.array.getOffsetBuffer());
+                new BufferBuilder((IPCClient) client, offset_buffer, offset_buffer_size);
     }
 
     @Override
