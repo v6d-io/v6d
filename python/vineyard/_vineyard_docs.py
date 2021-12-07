@@ -165,6 +165,10 @@ Parameters:
     global: bool, default is True
 ''')
 
+add_doc(ObjectMeta.memory_usage, r'''
+Get the total memory usage of buffers in this object meta.
+''')
+
 add_doc(
     ObjectMeta.__contains__, r'''
 .. method: __contains__(key: str) -> bool
