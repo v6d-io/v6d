@@ -55,17 +55,11 @@ def normalize_cpptype(dtype):
     if dtype.name == 'int32':
         return 'int'
     if dtype.name == 'uint32':
-        return 'unsigned int'
+        return 'uint32'
     if dtype.name == 'int64':
-        if platform.system() == 'Linux':
-            return 'long'
-        else:
-            return 'long long'
+        return 'int64'
     if dtype.name == 'uint64':
-        if platform.system() == 'Linux':
-            return 'unsigned long'
-        else:
-            return 'unsigned long long'
+        return 'uint64'
     if dtype.name == 'float32':
         return 'float'
     if dtype.name == 'float64':
