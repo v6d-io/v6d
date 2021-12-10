@@ -280,9 +280,12 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
                                               const json& meta) {
         if (status.ok()) {
           json sub_tree_group;
-          VINEYARD_CHECK_OK(CATCH_JSON_ERROR(
+          auto s = CATCH_JSON_ERROR(
               meta_tree::ListData(meta, this->instance_name(), pattern, regex,
-                                  limit, sub_tree_group)));
+                                  limit, sub_tree_group));
+          if (!s.ok()) {
+            return callback(s, sub_tree_group);
+          }
           size_t current = sub_tree_group.size();
           if (current < limit &&
               meta_tree::MatchTypeName(false, pattern, "vineyard::Blob")) {
@@ -309,7 +312,7 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
           return callback(status, sub_tree_group);
         } else {
           LOG(ERROR) << status.ToString();
-          return status;
+          return callback(status, json{});
         }
       });
   return Status::OK();

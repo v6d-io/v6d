@@ -358,6 +358,11 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kMetaTreeNameNotExists, "");
   }
 
+  /// Return an error if the "id" field not exists in metatree.
+  static Status MetaTreeNameNotExists(std::string const& message) {
+    return Status(StatusCode::kMetaTreeNameNotExists, message);
+  }
+
   /// Return an error if a field in metatree is expected to be a _link_ but it
   /// isn't.
   static Status MetaTreeLinkInvalid() {
