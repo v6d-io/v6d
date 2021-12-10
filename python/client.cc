@@ -617,6 +617,6 @@ void bind_client(py::module& mod) {
                 rpc_endpoint);
           },
           "(host, port)"_a);
-}
+}  // NOLINT(readability/fn_size)
 
 }  // namespace vineyard
