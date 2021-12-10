@@ -210,18 +210,20 @@ static Status get_name(const json& tree, std::string& name,
   // name: get the object id
   json::const_iterator name_iter = tree.find("id");
   if (name_iter == tree.end()) {
-    return Status::MetaTreeNameNotExists();
+    return Status::MetaTreeNameNotExists("in metadata: " + tree.dump(4));
   }
   if (name_iter->is_object()) {
     LOG(ERROR) << "meta tree id invalid. " << *name_iter;
-    return Status::MetaTreeNameInvalid();
+    return Status::MetaTreeNameInvalid("type of 'name' in metadata is wrong: " +
+                                       name_iter->dump(4));
   }
   name = name_iter->get_ref<std::string const&>();
   if (decode) {
     NodeType node_type = NodeType::InvalidType;
     decode_value(name, node_type, name);
     if (node_type != NodeType::Value) {
-      return Status::MetaTreeNameInvalid();
+      return Status::MetaTreeNameInvalid(
+          "value of 'name' in metadata is not of value type: " + name);
     }
   }
   return Status::OK();
@@ -232,7 +234,7 @@ static Status get_type(const json& tree, std::string& type,
   // type: get the typename
   json::const_iterator type_iter = tree.find("typename");
   if (type_iter == tree.end()) {
-    return Status::MetaTreeNameNotExists();
+    return Status::MetaTreeNameNotExists("in metadata: " + tree.dump(4));
   }
   if (type_iter->is_object()) {
     LOG(ERROR) << "meta tree typename invalid. " << *type_iter;
