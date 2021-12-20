@@ -24,11 +24,10 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include <boost/leaf/all.hpp>
-
 #include "arrow/buffer.h"
 #include "arrow/table.h"
 #include "arrow/util/config.h"
+#include "boost/leaf.hpp"
 
 #include "grape/communication/sync_comm.h"
 #include "grape/worker/comm_spec.h"

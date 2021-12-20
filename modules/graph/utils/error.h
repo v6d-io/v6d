@@ -21,7 +21,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "boost/leaf/all.hpp"
+#include "boost/leaf.hpp"
 
 #include "common/backtrace/backtrace.hpp"
 #include "graph/utils/mpi_utils.h"
@@ -118,6 +118,7 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
 #define TOKENPASTE(x, y) x##y
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
+#ifndef RETURN_GS_ERROR
 #define RETURN_GS_ERROR(code, msg)                                         \
   do {                                                                     \
     std::stringstream TOKENPASTE2(_ss, __LINE__);                          \
@@ -128,7 +129,9 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
             std::string(__FUNCTION__) + " -> " + (msg),                    \
         TOKENPASTE2(_ss, __LINE__).str()));                                \
   } while (0)
+#endif
 
+#ifndef BOOST_LEAF_ASSIGN
 #define BOOST_LEAF_ASSIGN(v, r)                                     \
   static_assert(::boost::leaf::is_result_type<                      \
                     typename std::decay<decltype(r)>::type>::value, \
@@ -137,6 +140,7 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
   if (!TOKENPASTE2(_leaf_r, __LINE__))                              \
     return TOKENPASTE2(_leaf_r, __LINE__).error();                  \
   v = TOKENPASTE2(_leaf_r, __LINE__).value()
+#endif
 
 inline GSError all_gather_error(const GSError& e,
                                 const grape::CommSpec& comm_spec) {

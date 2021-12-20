@@ -28,7 +28,7 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/api.h"
-#include "boost/leaf/all.hpp"
+#include "boost/leaf.hpp"
 
 #include "common/util/json.h"
 #include "graph/fragment/property_graph_types.h"

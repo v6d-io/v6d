@@ -28,7 +28,7 @@ limitations under the License.
 #include "arrow/compute/api.h"
 #include "arrow/util/config.h"
 #include "arrow/util/key_value_metadata.h"
-#include "boost/leaf/all.hpp"
+#include "boost/leaf.hpp"
 
 #include "grape/serialization/in_archive.h"
 #include "grape/serialization/out_archive.h"
