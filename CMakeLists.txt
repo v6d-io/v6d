@@ -408,6 +408,7 @@ macro(install_vineyard_headers header_path)
             PATTERN "*.h"                       # select header files
             PATTERN "*.hpp"                     # select C++ template header files
             PATTERN "*.vineyard-mod"            # select vineyard template files
+            PATTERN "*/thirdparty/*" EXCLUDE    # exclude thirdparty
     )
 endmacro()
 
