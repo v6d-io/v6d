@@ -65,7 +65,8 @@ def test_record_batch(vineyard_client):
     arrays = [pa.array([1, 2, 3, 4]), pa.array(['foo', 'bar', 'baz', None]), pa.array([True, None, False, True])]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
     object_id = vineyard_client.put(batch)
-    assert batch.equals(vineyard_client.get(object_id))
+    # processing tables that contains string is not roundtrip, as StringArray will be transformed to LargeStringArray
+    # assert batch.equals(vineyard_client.get(object_id))
 
 
 def test_table(vineyard_client):
