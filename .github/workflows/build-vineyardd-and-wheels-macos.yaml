@@ -14,7 +14,10 @@
 
 name: Build Packages for MacOS
 
-on: [push]
+on:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build-vineyardd:
@@ -154,10 +157,6 @@ jobs:
 
           make vineyardd -j`nproc`
           cp ./bin/vineyardd ../vineyardd
-
-      - name: Setup tmate session
-        if: true
-        uses: mxschmitt/action-tmate@v2
 
       - name: Package vineyardd artifact on MacOS
         run: |
