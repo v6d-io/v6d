@@ -16,12 +16,12 @@ FROM docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:20210929 as build
 
 # target: docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
 
-ADD . /work/libvineyard
+ADD . /work/v6d
 
 # FIXME It is still not clear why the first run of cmake will fail.
 
 # patch cpprestsdk to drop boost::regex dependency.
-RUN cd /work/libvineyard && \
+RUN cd /work/v6d && \
     sed -i 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake && \
     sed -i 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
 
@@ -32,9 +32,9 @@ RUN cd /tmp && \
     chmod +x wait-for-it.sh && \
     curl -LO https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz && \
     tar zxvf etcd-v3.4.13-linux-amd64.tar.gz && \
-    cd /work/libvineyard && \
-    mkdir -p /work/libvineyard/build && \
-    cd /work/libvineyard/build && \
+    cd /work/v6d && \
+    mkdir -p /work/v6d/build && \
+    cd /work/v6d/build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_SHARED_LIBS=OFF \
          -DUSE_STATIC_BOOST_LIBS=ON \
@@ -59,7 +59,7 @@ RUN apk add --no-cache bash
 COPY --from=builder /tmp/dumb-init_1.2.2_amd64 /usr/bin/dumb-init
 COPY --from=builder /tmp/wait-for-it.sh /usr/bin/wait-for-it.sh
 COPY --from=builder /tmp/etcd-v3.4.13-linux-amd64/etcd /usr/bin/etcd
-COPY --from=builder /work/libvineyard/build/bin/vineyardd /usr/local/bin/vineyardd
+COPY --from=builder /work/v6d/build/bin/vineyardd /usr/local/bin/vineyardd
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/usr/local/bin/vineyardd"]
