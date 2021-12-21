@@ -73,7 +73,7 @@ def fixed_size_binary_array_builder(client, array, builder):
 
 def string_array_builder(client, array, builder):
     meta = ObjectMeta()
-    meta['typename'] = 'vineyard::LargeStringArray'
+    meta['typename'] = 'vineyard::BaseBinaryArray<arrow::LargeStringArray>'
     meta['length_'] = len(array)
     meta['null_count_'] = array.null_count
     meta['offset_'] = array.offset
@@ -144,10 +144,29 @@ def boolean_array_builder(client, array, builder):
     return client.create_metadata(meta)
 
 
+def _resize_arrow_type(t):
+    if t == pa.string():
+        return pa.large_string()
+    if t == pa.utf8():
+        return pa.large_utf8()
+    if t == pa.binary():
+        return pa.large_binary()
+    if isinstance(t, pa.lib.ListType):
+        return pa.large_list(t.value_type)
+    return t
+
+
 def schema_proxy_builder(client, schema, builder):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::SchemaProxy'
-    serialized = schema.serialize()
+
+    # translate pa.StringArray, pa.ListArray, etc.
+    names = schema.names
+    types = [_resize_arrow_type(t) for t in schema.types]
+    fields = [pa.field(name, t) for name, t in zip(names, types)]
+    resized_schema = pa.schema(fields, schema.metadata)
+
+    serialized = resized_schema.serialize()
     meta.add_member('buffer_', buffer_builder(client, serialized, builder))
     meta['nbytes'] = len(serialized)
     return client.create_metadata(meta)
@@ -180,6 +199,21 @@ def table_builder(client, table, builder):
     for idx, batch in enumerate(batches):
         meta.add_member('__batches_-%d' % idx, record_batch_builder(client, batch, builder))
     meta['nbytes'] = table.nbytes
+    return client.create_metadata(meta)
+
+
+def table_from_recordbatches(client, schema, batches, num_rows, num_columns, builder):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::Table'
+    meta['num_rows_'] = num_rows
+    meta['num_columns_'] = num_columns
+    meta['batch_num_'] = len(batches)
+    meta['__batches_-size'] = len(batches)
+
+    meta.add_member('schema_', schema_proxy_builder(client, schema, builder))
+    for idx, batch in enumerate(batches):
+        meta.add_member('__batches_-%d' % idx, batch)
+    meta['nbytes'] = 0
     return client.create_metadata(meta)
 
 
@@ -268,7 +302,7 @@ def table_resolver(obj, resolver):
     meta = obj.meta
     batch_num = int(meta['batch_num_'])
     batches = []
-    for idx in range(int(meta['__batches_-size'])):
+    for idx in range(batch_num):
         batches.append(resolver.run(obj.member('__batches_-%d' % idx)))
     return pa.Table.from_batches(batches)
 
@@ -291,6 +325,7 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
         resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
         resolver_ctx.register('vineyard::FixedSizeBinaryArray', fixed_size_binary_array_resolver)
         resolver_ctx.register('vineyard::LargeStringArray', string_array_resolver)
+        resolver_ctx.register('vineyard::BaseBinaryArray<arrow::LargeStringArray>', string_array_resolver)
         resolver_ctx.register('vineyard::NullArray', null_array_resolver)
         resolver_ctx.register('vineyard::BooleanArray', boolean_array_resolver)
         resolver_ctx.register('vineyard::SchemaProxy', schema_proxy_resolver)

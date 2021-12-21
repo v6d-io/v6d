@@ -21,6 +21,7 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "common/util/typename.h"
 
+#include "basic/ds/arrow.h"
 #include "basic/ds/hashmap.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
@@ -105,6 +106,10 @@ int main(int, const char**) {
   {
     const auto type = type_name<std::equal_to<int64_t>>();
     CHECK_EQ(type, "std::equal_to<int64>");
+  }
+  {
+    const auto type = type_name<vineyard::LargeStringArray>();
+    CHECK_EQ(type, "vineyard::BaseBinaryArray<arrow::LargeStringArray>");
   }
 
   LOG(INFO) << "Passed typename tests...";
