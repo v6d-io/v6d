@@ -30,9 +30,9 @@ def find_most_precise_match(typename, candidates):
             entry is the candidate item, e.g., resolver or driver method.
     '''
     if candidates:
-        for prefix, candidate in candidates.items():
+        for prefix in reversed(candidates):  # requires further optimization
             if typename.startswith(prefix):
-                return prefix, candidate
+                return prefix, candidates[prefix]
     return None, None
 
 
