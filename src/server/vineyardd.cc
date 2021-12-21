@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
   vineyard::flags::ParseCommandLineNonHelpFlags(&argc, &argv, false);
   if (FLAGS_help) {
     FLAGS_help = false;
-    FLAGS_helpmatch = "vineyard";
+    FLAGS_helpmatch = "v6d";
   }
   vineyard::flags::HandleCommandLineHelpFlags();
 

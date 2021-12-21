@@ -23,9 +23,9 @@ FROM docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20210929
 #   - cp39-cp39
 ARG python
 
-ADD . /work/libvineyard
+ADD . /work/v6d
 
-RUN cd /work/libvineyard && \
+RUN cd /work/v6d && \
     mkdir build && \
     cd build && \
     export PATH=$PATH:/opt/python/$python/bin && \
@@ -48,12 +48,12 @@ RUN cd /work/libvineyard && \
     make vineyard_client_python -j2 && \
     cd .. && \
     /opt/python/$python/bin/python setup.py bdist_wheel && \
-    export LD_LIBRARY_PATH=/work/libvineyard/build/lib:$LD_LIBRARY_PATH && \
+    export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
     for pylibs in /opt/_internal/tools/lib/*; \
         do sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py; \
     done && \
     for wheel in `ls dist/*`; do auditwheel repair -w fixed_wheels $wheel; done && \
     cd /work && \
     mkdir -p fixed_wheels/ && \
-    mv /work/libvineyard/fixed_wheels/* /work/fixed_wheels/ && \
-    rm -rf /work/libvineyard
+    mv /work/v6d/fixed_wheels/* /work/fixed_wheels/ && \
+    rm -rf /work/v6d
