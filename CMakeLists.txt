@@ -675,7 +675,6 @@ if(BUILD_VINEYARD_TESTS)
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
 
-        target_compile_options(${T_NAME} PRIVATE "-std=c++17")
         if(${T_NAME} STREQUAL "delete_test" OR ${T_NAME} STREQUAL "rpc_delete_test")
             target_compile_options(${T_NAME} PRIVATE "-fno-access-control")
         endif()
