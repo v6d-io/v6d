@@ -571,15 +571,8 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
                           "python/error.cc"
                           "python/pybind11_utils.cc"
                           "python/vineyard.cc")
-    if(BUILD_VINEYARD_BASIC)
-        list(APPEND PYTHON_BIND_FILES "python/stream.cc")
-    endif()
     pybind11_add_module(_C MODULE ${PYTHON_BIND_FILES})
     target_link_libraries(_C PRIVATE vineyard_client)
-    if(BUILD_VINEYARD_BASIC)
-        target_link_libraries(_C PRIVATE vineyard_basic)
-        target_compile_options(_C PRIVATE -DBIND_STREAM)
-    endif()
     target_include_directories(_C PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                          thirdparty/pybind11/include)
     target_compile_options(_C PRIVATE -Wno-unused-value)
