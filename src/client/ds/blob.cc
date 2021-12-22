@@ -53,7 +53,9 @@ const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
 
 void Blob::Construct(ObjectMeta const& meta) {
   std::string __type_name = type_name<Blob>();
-  CHECK(meta.GetTypeName() == __type_name);
+  VINEYARD_ASSERT(meta.GetTypeName() == __type_name,
+                  "Expect typename '" + __type_name + "', but got '" +
+                      meta.GetTypeName() + "'");
   this->meta_ = meta;
   this->id_ = meta.GetId();
   if (this->buffer_ != nullptr) {
@@ -82,20 +84,20 @@ void Blob::Construct(ObjectMeta const& meta) {
 }
 
 void Blob::Dump() const {
-  if (VLOG_IS_ON(10)) {
-    std::stringstream ss;
-    ss << "size = " << size_ << ", buffer = ";
-    {
-      std::ios::fmtflags os_flags(std::cout.flags());
-      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
-      for (size_t idx = 0; idx < size_; ++idx) {
-        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
-           << static_cast<const uint32_t>(ptr[idx]);
-      }
-      std::cout.flags(os_flags);
+#ifndef NDEBUG
+  std::stringstream ss;
+  ss << "size = " << size_ << ", buffer = ";
+  {
+    std::ios::fmtflags os_flags(std::cout.flags());
+    auto ptr = reinterpret_cast<const uint8_t*>(this->data());
+    for (size_t idx = 0; idx < size_; ++idx) {
+      ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+         << static_cast<const uint32_t>(ptr[idx]);
     }
-    VLOG(10) << "buffer is " << ss.str();
+    std::cout.flags(os_flags);
   }
+  std::clog << "buffer is " << ss.str() << std::endl;
+#endif
 }
 
 std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
@@ -177,20 +179,20 @@ void BlobWriter::AddKeyValue(std::string const& key, std::string&& value) {
 }
 
 void BlobWriter::Dump() const {
-  if (VLOG_IS_ON(10)) {
-    std::stringstream ss;
-    ss << "size = " << size() << ", buffer = ";
-    {
-      std::ios::fmtflags os_flags(std::cout.flags());
-      auto ptr = reinterpret_cast<const uint8_t*>(this->data());
-      for (size_t idx = 0; idx < size(); ++idx) {
-        ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
-           << static_cast<const uint32_t>(ptr[idx]);
-      }
-      std::cout.flags(os_flags);
+#ifndef NDEBUG
+  std::stringstream ss;
+  ss << "size = " << size() << ", buffer = ";
+  {
+    std::ios::fmtflags os_flags(std::cout.flags());
+    auto ptr = reinterpret_cast<const uint8_t*>(this->data());
+    for (size_t idx = 0; idx < size(); ++idx) {
+      ss << std::setfill('0') << std::setw(2) << "\\x" << std::hex
+         << static_cast<const uint32_t>(ptr[idx]);
     }
-    VLOG(10) << "buffer is " << ss.str();
+    std::cout.flags(os_flags);
   }
+  std::clog << "buffer is " << ss.str() << std::endl;
+#endif
 }
 
 std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {

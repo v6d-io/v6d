@@ -3,6 +3,7 @@ add_library(vineyard_object_migration "object_migration.cc" "flags.cc" "protocol
 target_include_directories(vineyard_object_migration PUBLIC)
 target_link_libraries(vineyard_object_migration vineyard_client
                                                 ${ARROW_SHARED_LIB}
+                                                ${GLOG_LIBRARIES}
                                                 ${GFLAGS_LIBRARIES}
 )
 
@@ -14,6 +15,7 @@ add_executable(vineyard-copy "vineyard_copy.cc"
 )
 target_link_libraries(vineyard-copy vineyard_object_migration
                                     ${Boost_LIBRARIES}
+                                    ${GLOG_LIBRARIES}
                                     ${GFLAGS_LIBRARIES}
 )
 install_vineyard_target(vineyard-copy)
@@ -23,6 +25,7 @@ add_executable(vineyard-migrate "vineyard_migrate.cc")
 target_link_libraries(vineyard-migrate vineyard_client
                                        ${ARROW_SHARED_LIB}
                                        ${Boost_LIBRARIES}
+                                       ${GLOG_LIBRARIES}
                                        ${GFLAGS_LIBRARIES}
 )
 install_vineyard_target(vineyard-migrate)
@@ -32,6 +35,7 @@ add_executable(vineyard-migrate-stream "vineyard_migrate_stream.cc")
 target_link_libraries(vineyard-migrate-stream vineyard_client
                                               ${ARROW_SHARED_LIB}
                                               ${Boost_LIBRARIES}
+                                              ${GLOG_LIBRARIES}
                                               ${GFLAGS_LIBRARIES}
 )
 install_vineyard_target(vineyard-migrate-stream)

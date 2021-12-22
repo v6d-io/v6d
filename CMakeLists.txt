@@ -528,12 +528,7 @@ if(BUILD_VINEYARD_CLIENT)
     target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
                                                  Threads::Threads
                                                  nlohmann_json::nlohmann_json
-                                                 ${GLOG_LIBRARIES}
     )
-    if(NOT BUILD_VINEYARD_PYPI_PACKAGES)
-        # required on mac, but cause problem on linux.
-        target_link_libraries(vineyard_client PUBLIC ${GFLAGS_LIBRARIES})
-    endif()
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyard_client PUBLIC ${ARROW_SHARED_LIB})
     else()

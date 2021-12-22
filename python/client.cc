@@ -88,8 +88,7 @@ class ClientManager {
   void Disconnect(std::string const& ipc_socket) {
     std::lock_guard<std::mutex> guard{mtx_};
     auto iter = client_set_.find(ipc_socket);
-    CHECK(iter != client_set_.end());
-    if (iter->second.use_count() == 2) {
+    if (iter != client_set_.end() && iter->second.use_count() == 2) {
       // the python variable is the last reference, another reference
       // lies in the `client_set_`.
       iter->second->Disconnect();

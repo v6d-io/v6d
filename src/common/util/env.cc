@@ -19,7 +19,6 @@ limitations under the License.
 #endif
 
 #include "common/util/env.h"
-#include "common/util/logging.h"
 
 #if defined(__unix__) || defined(__unix) || defined(unix) || \
     (defined(__APPLE__) && defined(__MACH__))
@@ -40,6 +39,8 @@ limitations under the License.
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #endif
+
+#include <iostream>
 
 namespace vineyard {
 
@@ -137,16 +138,18 @@ int64_t get_maximum_shared_memory() {
 #ifdef __linux__
   FILE* shmmax_file = fopen(SHMMAX_SYS_FILE, "r");
   if (!shmmax_file) {
-    LOG(WARNING) << "'SHMMAX_SYS_FILE' not found!";
+    std::clog << "[warn] 'SHMMAX_SYS_FILE' not found!" << std::endl;
   }
   if (fscanf(shmmax_file, "%" PRId64, &shmmax) != 1) {
-    LOG(WARNING) << "Failed to open shmmax from 'SHMMAX_SYS_FILE'!";
+    std::clog << "[warn] Failed to open shmmax from 'SHMMAX_SYS_FILE'!"
+              << std::endl;
   }
   fclose(shmmax_file);
 #else
   size_t len = sizeof(shmmax);
   if (-1 == sysctlbyname("kern.sysv.shmmax", &shmmax, &len, NULL, 0)) {
-    LOG(WARNING) << "Failed to read shmmax from 'kern.sysv.shmmax'!";
+    std::clog << "[warn] Failed to read shmmax from 'kern.sysv.shmmax'!"
+              << std::endl;
   }
 #endif
   return shmmax;

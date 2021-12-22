@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "client/ds/object_meta.h"
 
+#include <iostream>
+
 #include "client/client.h"
 #include "client/ds/blob.h"
 
@@ -226,7 +228,7 @@ size_t ObjectMeta::MemoryUsage() const {
   return total_size;
 }
 
-void ObjectMeta::PrintMeta() const { LOG(INFO) << meta_.dump(4); }
+void ObjectMeta::PrintMeta() const { std::clog << meta_.dump(4) << std::endl; }
 
 const bool ObjectMeta::incomplete() const { return incomplete_; }
 

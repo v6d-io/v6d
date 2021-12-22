@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_JSON_H_
 #define SRC_COMMON_UTIL_JSON_H_
 
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -29,17 +30,17 @@ using json = nlohmann::json;
 // Any operation on meta_tree (json) shouldn't break down the vineyard server
 #ifndef CATCH_JSON_ERROR
 #if defined(NDEBUG)
-#define CATCH_JSON_ERROR(expr)                       \
-  [&]() {                                            \
-    try {                                            \
-      return (expr);                                 \
-    } catch (std::out_of_range const& err) {         \
-      LOG(ERROR) << "json: " << err.what();          \
-      return vineyard::Status::MetaTreeInvalid();    \
-    } catch (vineyard::json::exception const& err) { \
-      LOG(ERROR) << "json: " << err.what();          \
-      return vineyard::Status::MetaTreeInvalid();    \
-    }                                                \
+#define CATCH_JSON_ERROR(expr)                                  \
+  [&]() {                                                       \
+    try {                                                       \
+      return (expr);                                            \
+    } catch (std::out_of_range const& err) {                    \
+      std::clog << "[error] json: " << err.what() << std::endl; \
+      return vineyard::Status::MetaTreeInvalid();               \
+    } catch (vineyard::json::exception const& err) {            \
+      std::clog << "[error] json: " << err.what() << std::endl; \
+      return vineyard::Status::MetaTreeInvalid();               \
+    }                                                           \
   }()
 #else
 #define CATCH_JSON_ERROR(expr) expr

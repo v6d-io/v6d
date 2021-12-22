@@ -22,6 +22,7 @@ limitations under the License.
 #include "boost/filesystem/path.hpp"
 
 #include "common/util/json.h"
+#include "common/util/logging.h"
 
 namespace vineyard {
 

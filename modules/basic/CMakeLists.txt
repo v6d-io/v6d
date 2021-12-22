@@ -15,8 +15,9 @@ endif()
 file(GLOB_RECURSE BASIC_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "*.cc")
 
 add_library(vineyard_basic ${BASIC_SRC_FILES})
-target_link_libraries(vineyard_basic vineyard_client
-                                     ${ARROW_SHARED_LIB}
+target_link_libraries(vineyard_basic PUBLIC vineyard_client
+                                            ${ARROW_SHARED_LIB}
+                                            ${GLOG_LIBRARIES}
 )
 
 if(VINEYARD_MOD_SRCS)

@@ -13,6 +13,7 @@ limitations under the License.
 #if defined(WITH_JEMALLOC)
 
 #include <algorithm>
+#include <iostream>
 #include <string>
 
 #define JEMALLOC_NO_DEMANGLE
@@ -20,7 +21,6 @@ limitations under the License.
 #undef JEMALLOC_NO_DEMANGLE
 
 #include "common/memory/jemalloc.h"
-#include "common/util/logging.h"
 
 extern const extent_hooks_t je_ehooks_default_extent_hooks;
 
@@ -47,14 +47,15 @@ void* Jemalloc::Init(void* space, const size_t size) {
   if (auto ret = vineyard_je_mallctl("arenas.narenas", &narenas,
                                      &size_of_narenas, nullptr, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to get narenas";
+    std::clog << "[error] Failed to get narenas" << std::endl;
     errno = err;
     return nullptr;
   }
 
   arena_index_ = narenas;  // starts from 0
   if (arena_index_ >= MAXIMUM_ARENAS) {
-    LOG(ERROR) << "There can be " << MAXIMUM_ARENAS << " arenas at most";
+    std::clog << "[error] There can be " << MAXIMUM_ARENAS << " arenas at most"
+              << std::endl;
     return nullptr;
   }
 
@@ -73,11 +74,11 @@ void* Jemalloc::Init(void* space, const size_t size) {
           vineyard_je_mallctl("arenas.create", &arena_index_, &arena_index_size,
                               &extent_hooks_, sizeof(extent_hooks_))) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to create arena";
+    std::clog << "[error] Failed to create arena" << std::endl;
     errno = err;
     return nullptr;
   }
-  LOG(INFO) << "arena index = " << arena_index_;
+  std::clog << "arena index = " << arena_index_ << std::endl;
 
   // set muzzy decay time to -1 to prevent jemalloc freeing the memory to the
   // pool, but leave dirty decay time untouched to still give the memory back
@@ -89,7 +90,7 @@ void* Jemalloc::Init(void* space, const size_t size) {
   // nullptr,
   //                           &decay_ms, sizeof(decay_ms))) {
   //   int err = std::exchange(errno, ret);
-  //   PLOG(ERROR) << "Failed to set the dirty decay time";
+  //   std::clog << "Failed to set the dirty decay time" << std::endl;
   //   errno = err;
   //   return nullptr;
   // }
@@ -99,7 +100,7 @@ void* Jemalloc::Init(void* space, const size_t size) {
   if (auto ret = vineyard_je_mallctl(muzzy_decay_key.c_str(), nullptr, nullptr,
                                      &decay_ms, sizeof(decay_ms))) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to set the muzzy decay time";
+    std::clog << "[error] Failed to set the muzzy decay time" << std::endl;
     errno = err;
     return nullptr;
   }
@@ -127,7 +128,8 @@ void Jemalloc::Recycle(const bool /* unused currently */) {
   if (auto ret = vineyard_je_mallctl(decay_key.c_str(), nullptr, nullptr,
                                      nullptr, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to recycle arena " << arena_index_;
+    std::clog << "[error] Failed to recycle arena " << arena_index_
+              << std::endl;
     errno = err;
   }
 }
@@ -146,7 +148,7 @@ void Jemalloc::Traverse() {
   if (auto ret = vineyard_je_mallctl(traverse_key.c_str(), nullptr, nullptr,
                                      nullptr, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to traverse arena";
+    std::clog << "[error] Failed to traverse arena" << std::endl;
     errno = err;
   }
 }

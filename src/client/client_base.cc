@@ -16,6 +16,7 @@ limitations under the License.
 #include "client/client_base.h"
 
 #include <future>
+#include <iostream>
 #include <utility>
 
 #include "boost/range/combine.hpp"
@@ -205,7 +206,6 @@ Status ClientBase::DeepCopy(const ObjectID object_id, ObjectID& target_id) {
 
   ObjectMeta meta;
   RETURN_ON_ERROR(this->GetMetaData(object_id, meta, true));
-  VLOG(10) << "Deep copying: " << this->instance_id();
 
   std::map<InstanceID, json> cluster;
   RETURN_ON_ERROR(this->ClusterInfo(cluster));
@@ -281,8 +281,10 @@ Status ClientBase::MigrateObject(const ObjectID object_id, ObjectID& result_id,
   // query the object location info
   ObjectMeta meta;
   RETURN_ON_ERROR(this->GetMetaData(object_id, meta, true));
-  VLOG(10) << "migrate local: " << this->instance_id()
-           << ", remote: " << meta.GetInstanceId();
+#ifndef NDEBUG
+  std::clog << "migrate local: " << this->instance_id()
+            << ", remote: " << meta.GetInstanceId() << std::endl;
+#endif
   if (meta.GetInstanceId() == this->instance_id()) {
     result_id = object_id;
     return Status::OK();
@@ -312,8 +314,10 @@ Status ClientBase::MigrateObject(const ObjectID object_id, ObjectID& result_id,
   auto receiver = std::async(std::launch::async, [&]() -> Status {
     RETURN_ON_ERROR(this->migrateObjectImpl(
         object_id, result_id, false, is_stream, otherHost, otherEndpoint));
-    VLOG(10) << "receive from migration: " << ObjectIDToString(object_id)
-             << " -> " << ObjectIDToString(result_id);
+#ifndef NDEBUG
+    std::clog << "receive from migration: " << ObjectIDToString(object_id)
+              << " -> " << ObjectIDToString(result_id) << std::endl;
+#endif
     return Status::OK();
   });
 

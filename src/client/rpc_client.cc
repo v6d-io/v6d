@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "client/rpc_client.h"
 
+#include <iostream>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -76,10 +77,11 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
   connected_ = true;
 
   if (!compatible_server(server_version_)) {
-    LOG(ERROR) << "Warning: this version of vineyard client may be "
-                  "incompatible with connected server: "
-               << "client's version is " << vineyard_version()
-               << ", while the server's version is " << server_version_;
+    std::clog << "[warn] Warning: this version of vineyard client may be "
+                 "incompatible with connected server: "
+              << "client's version is " << vineyard_version()
+              << ", while the server's version is " << server_version_
+              << std::endl;
   }
 
   // RPC client doesn't have a concrete instance id, even the unspecified

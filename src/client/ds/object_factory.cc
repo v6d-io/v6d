@@ -13,9 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "client/ds/object_factory.h"
+
 #include <dlfcn.h>
 
-#include "client/ds/object_factory.h"
+#include <iostream>
 
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
@@ -27,8 +29,10 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name) {
   auto& known_types = getKnownTypes();
   auto creator = known_types.find(type_name);
   if (creator == known_types.end()) {
-    VLOG(11) << "Failed to create an instance due to the unknown typename: "
-             << type_name;
+#ifndef NDEBUG
+    std::clog << "Failed to create an instance due to the unknown typename: "
+              << type_name << std::endl;
+#endif
     return nullptr;
   } else {
     return (creator->second)();
@@ -44,8 +48,10 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name,
   auto& known_types = getKnownTypes();
   auto creator = known_types.find(type_name);
   if (creator == known_types.end()) {
-    VLOG(11) << "Failed to create an instance due to the unknown typename: "
-             << type_name;
+#ifndef NDEBUG
+    std::clog << "Failed to create an instance due to the unknown typename: "
+              << type_name << std::endl;
+#endif
     return nullptr;
   } else {
     auto target = (creator->second)();
@@ -73,7 +79,7 @@ static void* __load_internal_registry(std::string& error_message) {
         error_message = err;
 #ifndef NDEBUG
         // See: Note [std::cerr instead of DVLOG()]
-        std::cerr << "vineyard: error in loading: " << err << std::endl;
+        std::clog << "vineyard: error in loading: " << err << std::endl;
 #endif
       }
     }
@@ -89,8 +95,8 @@ static void* __load_internal_registry(std::string& error_message) {
       if (err) {
         error_message = err;
 #ifndef NDEBUG
-        // See: Note [std::cerr instead of DVLOG()]
-        std::cerr << "vineyard: error in loading from default: " << err
+        // See: Note [std::clog instead of DVLOG()]
+        std::clog << "vineyard: error in loading from default: " << err
                   << std::endl;
 #endif
       }
@@ -108,8 +114,8 @@ static vineyard_registry_getter_t __find_global_registry_entry(
     if (err) {
       error_message = err;
 #ifndef NDEBUG
-      // See: Note [std::cerr instead of DVLOG()]
-      std::cerr << "vineyard: error in resolving: " << err << std::endl;
+      // See: Note [std::clog instead of DVLOG()]
+      std::clog << "vineyard: error in resolving: " << err << std::endl;
 #endif
     }
   }
@@ -124,8 +130,8 @@ __instantize__registry(vineyard_registry_handler_t& handler,
 
     // load from the global scope
 #ifndef NDEBUG
-    // See: Note [std::cerr instead of DVLOG()]
-    std::cerr << "vineyard: looking up vineyard registry from the global scope"
+    // See: Note [std::clog instead of DVLOG()]
+    std::clog << "vineyard: looking up vineyard registry from the global scope"
               << std::endl;
 #endif
     getter = detail::__find_global_registry_entry(error_message);
@@ -133,8 +139,8 @@ __instantize__registry(vineyard_registry_handler_t& handler,
     // load the shared library, then search from the global scope
     if (getter == nullptr) {
 #ifndef NDEBUG
-      // See: Note [std::cerr instead of DVLOG()]
-      std::cerr << "vineyard: loading the vineyard registry library"
+      // See: Note [std::clog instead of DVLOG()]
+      std::clog << "vineyard: loading the vineyard registry library"
                 << std::endl;
 #endif
       handler = detail::__load_internal_registry(error_message);
@@ -144,8 +150,8 @@ __instantize__registry(vineyard_registry_handler_t& handler,
 
       // load from the global scope, again
 #ifndef NDEBUG
-      // See: Note [std::cerr instead of DVLOG()]
-      std::cerr << "vineyard: looking up vineyard registry from the global "
+      // See: Note [std::clog instead of DVLOG()]
+      std::clog << "vineyard: looking up vineyard registry from the global "
                    "scope again"
                 << std::endl;
 #endif
