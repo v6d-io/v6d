@@ -249,19 +249,21 @@ void bind_client(py::module& mod) {
           [](ClientBase* self, std::string const& name,
              const bool wait) -> ObjectIDWrapper {
             ObjectID object_id;
-            throw_on_error(self->GetName(name, object_id));
+            throw_on_error(self->GetName(name, object_id, wait));
             return object_id;
           },
-          "object_id"_a, py::arg("wait") = false)
+          "object_id"_a, py::arg("wait") = false,
+          py::call_guard<py::gil_scoped_release>())
       .def(
           "get_name",
           [](ClientBase* self, ObjectNameWrapper const& name,
              const bool wait) -> ObjectIDWrapper {
             ObjectID object_id;
-            throw_on_error(self->GetName(name, object_id));
+            throw_on_error(self->GetName(name, object_id, wait));
             return object_id;
           },
-          "object_id"_a, py::arg("wait") = false)
+          "object_id"_a, py::arg("wait") = false,
+          py::call_guard<py::gil_scoped_release>())
       .def(
           "drop_name",
           [](ClientBase* self, std::string const& name) {
