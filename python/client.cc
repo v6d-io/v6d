@@ -296,6 +296,8 @@ void bind_client(py::module& mod) {
             return target_id;
           },
           "object_id"_a)
+      .def("clear", [](ClientBase* self) { throw_on_error(self->Clear()); })
+      .def("reset", [](ClientBase* self) { throw_on_error(self->Clear()); })
       .def_property_readonly("connected", &Client::Connected)
       .def_property_readonly("instance_id", &Client::instance_id)
       .def_property_readonly(

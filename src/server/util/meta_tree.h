@@ -42,6 +42,7 @@ Status GetData(const json& tree, const std::string& instance_name,
 Status ListData(const json& tree, const std::string& instance_name,
                 const std::string& pattern, bool const regex,
                 size_t const limit, json& tree_group);
+Status ListAllData(const json& tree, std::vector<ObjectID>& objects);
 Status IfPersist(const json& tree, const ObjectID id, bool& persist);
 Status Exists(const json& tree, const ObjectID id, bool& exists);
 

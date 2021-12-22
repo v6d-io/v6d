@@ -260,6 +260,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::FinalizeArenaRequest: {
     return doFinalizeArena(root);
   }
+  case CommandType::ClearRequest: {
+    return doClear(root);
+  }
   case CommandType::DebugCommand: {
     return doDebug(root);
   }
@@ -937,6 +940,45 @@ bool SocketConnection::doFinalizeArena(const json& root) {
   WriteFinalizeArenaReply(message_out);
 
   this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doClear(const json& root) {
+  auto self(shared_from_this());
+  TRY_READ_REQUEST(ReadClearRequest, root);
+  // clear:
+  //    step 1: list
+  //    step 2: compute delete set
+  //    step 3: do delete
+  RESPONSE_ON_ERROR(server_ptr_->ListAllData(
+      [self](const Status& status, const std::vector<ObjectID>& objects) {
+        if (status.ok()) {
+          auto s = self->server_ptr_->DelData(
+              objects, true, true, false, [self](const Status& status) {
+                std::string message_out;
+                if (status.ok()) {
+                  WriteClearReply(message_out);
+                } else {
+                  LOG(ERROR) << status.ToString();
+                  WriteErrorReply(status, message_out);
+                }
+                self->doWrite(message_out);
+                return Status::OK();
+              });
+          if (!s.ok()) {
+            std::string message_out;
+            LOG(ERROR) << s.ToString();
+            WriteErrorReply(s, message_out);
+            self->doWrite(message_out);
+          }
+        } else {
+          std::string message_out;
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+          self->doWrite(message_out);
+        }
+        return Status::OK();
+      }));
   return false;
 }
 

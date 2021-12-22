@@ -102,6 +102,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::MakeArenaRequest;
   } else if (str_type == "finalize_arena_request") {
     return CommandType::FinalizeArenaRequest;
+  } else if (str_type == "clear_request") {
+    return CommandType::ClearRequest;
   } else if (str_type == "debug_command") {
     return CommandType::DebugCommand;
   } else {
@@ -1029,6 +1031,29 @@ void WriteFinalizeArenaReply(std::string& msg) {
 
 Status ReadFinalizeArenaReply(const json& root) {
   CHECK_IPC_ERROR(root, "finalize_arena_reply");
+  return Status::OK();
+}
+
+void WriteClearRequest(std::string& msg) {
+  json root;
+  root["type"] = "clear_request";
+
+  encode_msg(root, msg);
+}
+
+Status ReadClearRequest(const json& root) {
+  RETURN_ON_ASSERT(root["type"] == "clear_request");
+  return Status::OK();
+}
+
+void WriteClearReply(std::string& msg) {
+  json root;
+  root["type"] = "clear_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadClearReply(const json& root) {
+  CHECK_IPC_ERROR(root, "clear_reply");
   return Status::OK();
 }
 

@@ -318,6 +318,31 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
   return Status::OK();
 }
 
+Status VineyardServer::ListAllData(
+    callback_t<std::vector<ObjectID> const&> callback) {
+  ENSURE_VINEYARDD_READY();
+  meta_service_ptr_->RequestToGetData(
+      false,  // no need for sync from etcd
+      [this, callback](const Status& status, const json& meta) {
+        if (status.ok()) {
+          std::vector<ObjectID> objects;
+          auto s = CATCH_JSON_ERROR(meta_tree::ListAllData(meta, objects));
+          if (!s.ok()) {
+            return callback(s, objects);
+          }
+          auto const& blobs = bulk_store_->List();
+          for (auto const& item : blobs) {
+            objects.emplace_back(item.first);
+          }
+          return callback(status, objects);
+        } else {
+          LOG(ERROR) << status.ToString();
+          return callback(status, {});
+        }
+      });
+  return Status::OK();
+}
+
 Status VineyardServer::CreateData(
     const json& tree,
     callback_t<const ObjectID, const Signature, const InstanceID> callback) {

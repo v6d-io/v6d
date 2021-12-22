@@ -335,6 +335,16 @@ Status ClientBase::migrateObjectImpl(const ObjectID object_id,
   return Status::OK();
 }
 
+Status ClientBase::Clear() {
+  std::string message_out;
+  WriteClearRequest(message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadClearReply(message_in));
+  return Status::OK();
+}
+
 bool ClientBase::Connected() const {
   if (connected_ &&
       recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1) {

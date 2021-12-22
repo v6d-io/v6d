@@ -381,6 +381,21 @@ Status ListData(const json& tree, const std::string& instance_name,
   return Status::OK();
 }
 
+Status ListAllData(const json& tree, std::vector<ObjectID>& objects) {
+  if (!tree.contains("data")) {
+    return Status::OK();
+  }
+
+  for (auto const& item : json::iterator_wrapper(tree["data"])) {
+    if (!item.value().is_object() || item.value().empty()) {
+      LOG(INFO) << "Object meta shouldn't be empty";
+      return Status::MetaTreeInvalid();
+    }
+    objects.emplace_back(ObjectIDFromString(item.key()));
+  }
+  return Status::OK();
+}
+
 Status DelDataOps(const json& tree, const ObjectID id,
                   std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
   if (IsBlob(id)) {
