@@ -60,8 +60,14 @@ void* BulkAllocator::Init(const size_t size) {
   // we disable the warning on mac for less inaccurate warnings.
   int64_t shmmax = get_maximum_shared_memory();
   if (shmmax < static_cast<float>(size)) {
-    LOG(WARNING) << "'size' is greater than the maximum shared memory size ("
-                 << shmmax << ")";
+    LOG(WARNING)
+        << "The 'size' is greater than the maximum shared memory size ("
+        << shmmax << ")";
+    LOG(WARNING) << std::endl;
+    LOG(WARNING)
+        << "    If you are inside a Docker container, please pass the argument "
+           "'--shm-size' when 'docker run'.";
+    LOG(WARNING) << std::endl;
   }
 #endif
 
