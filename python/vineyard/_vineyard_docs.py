@@ -577,8 +577,7 @@ add_doc(
 Drop all objects that visible to the current instance in the vineyard cluster.
 ''')
 
-add_doc(
-    ClientBase.reset, r'''
+add_doc(ClientBase.reset, r'''
 .. method:: reset() -> None
     :noindex:
 
