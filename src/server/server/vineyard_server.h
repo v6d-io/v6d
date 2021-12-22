@@ -104,6 +104,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status ListData(std::string const& pattern, bool const regex,
                   size_t const limit, callback_t<const json&> callback);
 
+  Status ListAllData(callback_t<std::vector<ObjectID> const&> callback);
+
   Status CreateData(
       const json& tree,
       callback_t<const ObjectID, const Signature, const InstanceID> callback);

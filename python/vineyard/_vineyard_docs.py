@@ -569,6 +569,21 @@ add_doc(ClientBase.sync_meta, r'''
 Synchronize remote metadata to local immediately.
 ''')
 
+add_doc(
+    ClientBase.clear, r'''
+.. method:: clear() -> None
+    :noindex:
+
+Drop all objects that visible to the current instance in the vineyard cluster.
+''')
+
+add_doc(ClientBase.reset, r'''
+.. method:: reset() -> None
+    :noindex:
+
+Alias of :method:`ClientBase.clear`.
+''')
+
 add_doc(ClientBase.connected, r'''
 Whether the client instance has been connected to the vineyard server.
 ''')

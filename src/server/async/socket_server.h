@@ -121,6 +121,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doFinalizeArena(const json& root);
 
+  bool doClear(const json& root);
+
   bool doDebug(const json& root);
 
  private:

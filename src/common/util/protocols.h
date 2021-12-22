@@ -67,6 +67,7 @@ enum class CommandType {
   MakeArenaRequest = 33,
   FinalizeArenaRequest = 34,
   DeepCopyRequest = 35,
+  ClearRequest = 36,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -344,6 +345,14 @@ Status ReadFinalizeArenaRequest(const json& root, int& fd,
 void WriteFinalizeArenaReply(std::string& msg);
 
 Status ReadFinalizeArenaReply(const json& root);
+
+void WriteClearRequest(std::string& msg);
+
+Status ReadClearRequest(const json& root);
+
+void WriteClearReply(std::string& msg);
+
+Status ReadClearReply(const json& root);
 
 void WriteDebugRequest(const json& debug, std::string& msg);
 

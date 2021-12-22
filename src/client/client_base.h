@@ -308,6 +308,12 @@ class ClientBase {
   Status MigrateStream(const ObjectID object_id, ObjectID& result_id);
 
   /**
+   * @brief Clear all objects _that are visible to current instances_ in
+            the cluster.
+   */
+  Status Clear();
+
+  /**
    * @brief Check if the client still connects to the vineyard server.
    *
    * @return True when the connection is still alive, otherwise false.
