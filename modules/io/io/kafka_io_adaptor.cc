@@ -27,6 +27,8 @@ limitations under the License.
 #include "librdkafka/rdkafka.h"
 #include "librdkafka/rdkafkacpp.h"
 
+#include "common/util/logging.h"
+
 namespace vineyard {
 
 KafkaIOAdaptor::KafkaIOAdaptor(const std::string& location) {
