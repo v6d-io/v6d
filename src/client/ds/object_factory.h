@@ -24,14 +24,13 @@ limitations under the License.
 #include <unordered_map>
 
 #include "common/util/env.h"
-#include "common/util/logging.h"
 #include "common/util/typename.h"
 
 namespace vineyard {
 
-/** Note [std::cerr instead of DVLOG()]
+/** Note [std::clog instead of DVLOG()]
  *
- * In the object factory we use `std::cerr` instead of `DVLOG()` in glog for
+ * In the object factory we use `std::clog` instead of `DVLOG()` in glog for
  * logging, as, the logging happens during initializing the shared library,
  * (in the static field), at that stage the data structure of glog hasn't
  * been initialized yet, leading to crash.
@@ -75,7 +74,7 @@ class ObjectFactory {
     static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
     if (__trace) {
       // See: Note [std::cerr instead of DVLOG()]
-      std::cerr << "vineyard: register data type: " << name << std::endl;
+      std::clog << "vineyard: register data type: " << name << std::endl;
     }
 #endif
     auto& known_types = getKnownTypes();

@@ -35,7 +35,9 @@ class ParallelStream : public Registered<ParallelStream>, GlobalObject {
 
   void Construct(const ObjectMeta& meta) override {
     std::string __type_name = type_name<ParallelStream>();
-    CHECK(meta.GetTypeName() == __type_name);
+    VINEYARD_ASSERT(meta.GetTypeName() == __type_name,
+                    "Expect typename '" + __type_name + "', but got '" +
+                        meta.GetTypeName() + "'");
     this->meta_ = meta;
     this->id_ = meta.GetId();
 

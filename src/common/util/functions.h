@@ -18,13 +18,13 @@ limitations under the License.
 
 #include <sys/time.h>
 
+#include <iostream>
 #include <regex>
 #include <string>
 
 #include "boost/algorithm/string.hpp"
 
 #include "common/util/env.h"
-#include "common/util/logging.h"
 
 namespace vineyard {
 
@@ -40,7 +40,8 @@ inline std::string ExpandEnvironmentVariables(const std::string& text) {
     }
     return text_copy;
   } catch (std::exception& e) {
-    LOG(ERROR) << e.what();
+    std::clog << "[error] failed to expand environment variable: " << e.what()
+              << std::endl;
     return text;
   }
 }

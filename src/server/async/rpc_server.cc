@@ -21,6 +21,7 @@ limitations under the License.
 #include <utility>
 
 #include "common/util/json.h"
+#include "common/util/logging.h"
 
 namespace vineyard {
 

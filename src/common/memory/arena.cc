@@ -13,12 +13,13 @@ limitations under the License.
 #if defined(WITH_JEMALLOC)
 
 #include <algorithm>
+#include <iostream>
+#include <sstream>
 #include <thread>
 
 #include "common/memory/arena.h"
 #include "common/memory/jemalloc.h"
 #include "common/util/env.h"
-#include "common/util/logging.h"
 
 #define JEMALLOC_NO_DEMANGLE
 #include "jemalloc/include/jemalloc/jemalloc.h"
@@ -74,7 +75,7 @@ int ArenaAllocator::LookUp(void* ptr) {
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena_index, &sz, &ptr,
                                      sizeof(ptr))) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "failed to lookup arena";
+    std::clog << "failed to lookup arena" << std::endl;
     errno = err;
     return -1;
   }
@@ -98,7 +99,7 @@ unsigned ArenaAllocator::ThreadTotalAllocatedBytes() {
                                      reinterpret_cast<void*>(&allocated), &sz,
                                      NULL, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to get allocated bytes";
+    std::clog << "Failed to get allocated bytes" << std::endl;
     errno = err;
     return -1;
   }
@@ -112,7 +113,7 @@ unsigned ArenaAllocator::ThreadTotalDeallocatedBytes() {
                                      reinterpret_cast<void*>(&deallocated), &sz,
                                      NULL, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to get deallocated bytes";
+    std::clog << "Failed to get deallocated bytes" << std::endl;
     errno = err;
     return -1;
   }
@@ -126,14 +127,15 @@ int ArenaAllocator::requestArena() {
   {
     std::lock_guard<std::mutex> guard(arena_mutex_);
     if (empty_arenas_.empty()) {
-      LOG(ERROR) << "All arenas used.";
+      std::clog << "All arenas used." << std::endl;
       // TODO: recycle arena here
       return -1;
     }
     arena_index = empty_arenas_.front();
     empty_arenas_.pop_front();
   }
-  LOG(INFO) << "Arena " << arena_index << " requested for thread " << id;
+  std::clog << "Arena " << arena_index << " requested for thread " << id
+            << std::endl;
   {
     std::lock_guard<std::mutex> guard(thread_map_mutex_);
     thread_arena_map_[id] = arena_index;
@@ -142,8 +144,8 @@ int ArenaAllocator::requestArena() {
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena_index,
                                      sizeof(arena_index))) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to bind arena " << arena_index << "for thread "
-                << id;
+    std::clog << "Failed to bind arena " << arena_index << "for thread " << id
+              << std::endl;
     errno = err;
     return -1;
   }
@@ -172,7 +174,7 @@ int ArenaAllocator::doCreateArena() {
   if (auto ret =
           vineyard_je_mallctl("arenas.create", &arena_index, &sz, nullptr, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to create arena";
+    std::clog << "Failed to create arena" << std::endl;
     errno = err;
     return -1;
   }
@@ -184,7 +186,7 @@ int ArenaAllocator::doCreateArena() {
   if (auto ret = vineyard_je_mallctl(hooks_key.str().c_str(), &extent_hooks_,
                                      &len, nullptr, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to set extent hooks";
+    std::clog << "Failed to set extent hooks" << std::endl;
     errno = err;
     return -1;
   }
@@ -199,7 +201,7 @@ int ArenaAllocator::doDestroyArena(unsigned arena_index) {
   if (auto ret =
           vineyard_je_mallctlnametomib("arena.0.destroy", mib, &miblen)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to destroy arena " << arena_index;
+    std::clog << "Failed to destroy arena " << arena_index << std::endl;
     errno = err;
     return -1;
   }
@@ -207,7 +209,7 @@ int ArenaAllocator::doDestroyArena(unsigned arena_index) {
   mib[1] = arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to destroy arena " << arena_index;
+    std::clog << "Failed to destroy arena " << arena_index << std::endl;
     errno = err;
     return -1;
   }
@@ -222,7 +224,7 @@ int ArenaAllocator::doResetArena(unsigned arena_index) {
   miblen = sizeof(mib) / sizeof(size_t);
   if (auto ret = vineyard_je_mallctlnametomib("arena.0.reset", mib, &miblen)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to reset arena " << arena_index;
+    std::clog << "Failed to reset arena " << arena_index << std::endl;
     errno = err;
     return -1;
   }
@@ -230,7 +232,7 @@ int ArenaAllocator::doResetArena(unsigned arena_index) {
   mib[1] = (size_t) arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
     int err = std::exchange(errno, ret);
-    PLOG(ERROR) << "Failed to reset arena " << arena_index;
+    std::clog << "Failed to reset arena " << arena_index << std::endl;
     errno = err;
     return -1;
   }
@@ -243,7 +245,7 @@ void ArenaAllocator::destroyAllArenas() {
   }
   std::lock_guard<std::mutex> guard(arena_mutex_);
   empty_arenas_.clear();
-  LOG(INFO) << "Arenas destroyed.";
+  std::clog << "Arenas destroyed." << std::endl;
 }
 
 void ArenaAllocator::resetAllArenas() {
@@ -251,12 +253,12 @@ void ArenaAllocator::resetAllArenas() {
     doResetArena(index);
   }
 
-  LOG(INFO) << "Arenas reseted.";
+  std::clog << "Arenas reseted." << std::endl;
 }
 
 void ArenaAllocator::preAllocateArena(void* space, const size_t size) {
   int64_t shmmax = get_maximum_shared_memory();
-  LOG(INFO) << "Size of each arena " << shmmax;
+  std::clog << "Size of each arena " << shmmax << std::endl;
   *extent_hooks_ = je_ehooks_default_extent_hooks;
   extent_hooks_->alloc = &theAllocHook;
   for (int i = 0; i < num_arenas_; i++) {
@@ -272,7 +274,7 @@ void ArenaAllocator::preAllocateArena(void* space, const size_t size) {
 
     arenas_[arena_index] = *arena;
     empty_arenas_[i] = arena_index;
-    LOG(INFO) << "Arena index " << arena_index << " created";
+    std::clog << "Arena index " << arena_index << " created" << std::endl;
     // TODO: create TCACHE for each arena
   }
 }

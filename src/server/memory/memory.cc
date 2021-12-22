@@ -37,6 +37,7 @@
 #include <string>
 #include <vector>
 
+#include "common/util/logging.h"
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"
 

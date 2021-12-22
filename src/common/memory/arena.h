@@ -28,8 +28,6 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "common/util/logging.h"
-
 #include "common/memory/jemalloc.h"
 #include "jemalloc/include/jemalloc/jemalloc.h"
 

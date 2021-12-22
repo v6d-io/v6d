@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_CLIENT_DS_I_OBJECT_H_
 #define SRC_CLIENT_DS_I_OBJECT_H_
 
+#include <iostream>
 #include <memory>
 #include <type_traits>
 
@@ -244,13 +245,13 @@ const bool BareRegistered<T>::registered = ObjectFactory::Register<T>();
  * @brief Throws an exception if the builder has already been sealed.
  */
 #ifndef ENSURE_NOT_SEALED
-#define ENSURE_NOT_SEALED(builder)                         \
-  do {                                                     \
-    if (builder->sealed()) {                               \
-      LOG(ERROR) << "The builder has already been sealed"; \
-      VINEYARD_CHECK_OK(vineyard::Status::ObjectSealed(    \
-          "The builder has already been sealed"));         \
-    }                                                      \
+#define ENSURE_NOT_SEALED(builder)                                \
+  do {                                                            \
+    if (builder->sealed()) {                                      \
+      std::clog << "[error] The builder has already been sealed"; \
+      VINEYARD_CHECK_OK(vineyard::Status::ObjectSealed(           \
+          "The builder has already been sealed"));                \
+    }                                                             \
   } while (0)
 #endif  // ENSURE_NOT_SEALED
 

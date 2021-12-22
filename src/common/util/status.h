@@ -26,6 +26,7 @@
 
 #include <cstring>
 #include <iosfwd>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -34,22 +35,21 @@
 #include "arrow/status.h"
 #include "common/util/boost.h"
 #include "common/util/json.h"
-#include "common/util/logging.h"
 #include "common/util/macros.h"
 
 #define GET_MACRO(_1, _2, NAME, ...) NAME
 
 // raise a std::runtime_error (inherits std::exception), don't FATAL
 #ifndef VINEYARD_CHECK_OK
-#define VINEYARD_CHECK_OK(status)                                              \
-  do {                                                                         \
-    auto _ret = (status);                                                      \
-    if (!_ret.ok()) {                                                          \
-      LOG(ERROR) << "Check failed: " << _ret.ToString() << " in \"" << #status \
-                 << "\"";                                                      \
-      throw std::runtime_error("Check failed: " + _ret.ToString() +            \
-                               " in \"" #status "\"");                         \
-    }                                                                          \
+#define VINEYARD_CHECK_OK(status)                                          \
+  do {                                                                     \
+    auto _ret = (status);                                                  \
+    if (!_ret.ok()) {                                                      \
+      std::clog << "[error] Check failed: " << _ret.ToString() << " in \"" \
+                << #status << "\"" << std::endl;                           \
+      throw std::runtime_error("Check failed: " + _ret.ToString() +        \
+                               " in \"" #status "\"");                     \
+    }                                                                      \
   } while (0)
 #endif  // VINEYARD_CHECK_OK
 
@@ -58,7 +58,8 @@
 #define VINEYARD_ASSERT_NO_VERBOSE(condition)                             \
   do {                                                                    \
     if (!(condition)) {                                                   \
-      LOG(ERROR) << "Assertion failed in \"" #condition "\"";             \
+      std::clog << "[error] Assertion failed in \"" #condition "\""       \
+                << std::endl;                                             \
       throw std::runtime_error("Assertion failed in \"" #condition "\""); \
     }                                                                     \
   } while (0)
@@ -69,7 +70,8 @@
 #define VINEYARD_ASSERT_VERBOSE(condition, message)                         \
   do {                                                                      \
     if (!(condition)) {                                                     \
-      LOG(ERROR) << "Assertion failed in \"" #condition "\": " << message;  \
+      std::clog << "[error] Assertion failed in \"" #condition "\": "       \
+                << message << std::endl;                                    \
       throw std::runtime_error("Assertion failed in \"" #condition "\": " + \
                                std::string(message));                       \
     }                                                                       \
@@ -142,13 +144,13 @@
 
 // print the error message when failed, but never throw or abort.
 #ifndef VINEYARD_LOG_ERROR
-#define VINEYARD_LOG_ERROR(status)                                             \
-  do {                                                                         \
-    auto _ret = (status);                                                      \
-    if (!_ret.ok()) {                                                          \
-      LOG(ERROR) << "Check failed: " << _ret.ToString() << " in \"" << #status \
-                 << "\"";                                                      \
-    }                                                                          \
+#define VINEYARD_LOG_ERROR(status)                                         \
+  do {                                                                     \
+    auto _ret = (status);                                                  \
+    if (!_ret.ok()) {                                                      \
+      std::clog << "[error] Check failed: " << _ret.ToString() << " in \"" \
+                << #status << "\"" << std::endl;                           \
+    }                                                                      \
   } while (0)
 #endif  // VINEYARD_LOG_ERROR
 

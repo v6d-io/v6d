@@ -29,8 +29,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <unistd.h>
 
-#include "common/util/logging.h"
+#include <iostream>
 
 void init_msg(struct msghdr* msg, struct iovec* iov, char* buf,
               size_t buf_len) {
@@ -55,7 +56,7 @@ int send_fd(int conn, int fd) {
 
   struct cmsghdr* header = CMSG_FIRSTHDR(&msg);
   if (header == nullptr) {
-    LOG(ERROR) << "Error in init_msg: header is NULL";
+    std::clog << "[error] Error in init_msg: header is NULL" << std::endl;
     return -1;
   }
   header->cmsg_level = SOL_SOCKET;
@@ -68,13 +69,13 @@ int send_fd(int conn, int fd) {
     ssize_t r = sendmsg(conn, &msg, 0);
     if (r < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-        LOG(WARNING) << "error occurred while looping in sending fd: "
-                     << strerror(errno);
+        std::clog << "[warn] error occurred while looping in sending fd: "
+                  << strerror(errno) << std::endl;
         continue;
       } else if (errno == EMSGSIZE) {
-        LOG(WARNING) << "Failed to send file descriptor"
-                     << " (errno = EMSGSIZE, " << strerror(errno)
-                     << "), retrying...";
+        std::clog << "[warn] Failed to send file descriptor"
+                  << " (errno = EMSGSIZE, " << strerror(errno)
+                  << "), retrying..." << std::endl;
         // If we failed to send the file descriptor, loop until we have sent it
         // successfully. TODO(rkn): This is problematic for two reasons. First
         // of all, sending the file descriptor should just succeed without any
@@ -83,15 +84,14 @@ int send_fd(int conn, int fd) {
         // bulk store event loop which should never happen.
         continue;
       } else {
-        LOG(ERROR) << "Error in send_fd (errno = " << errno << ": "
-                   << strerror(errno) << ")";
+        std::clog << "[error] Error in send_fd (errno = " << errno << ": "
+                  << strerror(errno) << ")" << std::endl;
         return static_cast<int>(r);
       }
     } else if (r == 0) {
-      LOG(ERROR) << "Encountered unexpected EOF";
+      std::clog << "[error] Encountered unexpected EOF" << std::endl;
       return 0;
     } else {
-      CHECK_GT(r, 0);
       return static_cast<int>(r);
     }
   }
@@ -109,7 +109,8 @@ int recv_fd(int conn) {
       if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
         continue;
       } else {
-        LOG(ERROR) << "Error in recv_fd (errno = " << errno << ")";
+        std::clog << "[error] Error in recv_fd (errno = " << errno << ")"
+                  << std::endl;
         return -1;
       }
     } else {
@@ -143,7 +144,9 @@ int recv_fd(int conn) {
   if (oh_noes) {
     close(found_fd);
     errno = EBADMSG;
-    LOG(ERROR) << "Error in recv_fd: more than one fd received in message";
+    std::clog
+        << "[error] Error in recv_fd: more than one fd received in message"
+        << std::endl;
     return -1;
   }
 

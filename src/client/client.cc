@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <sys/mman.h>
 
+#include <iostream>
 #include <limits>
 #include <map>
 #include <mutex>
@@ -69,10 +70,11 @@ Status Client::Connect(const std::string& ipc_socket) {
   connected_ = true;
 
   if (!compatible_server(server_version_)) {
-    LOG(ERROR) << "Warning: this version of vineyard client may be "
-                  "incompatible with connected server: "
-               << "client's version is " << vineyard_version()
-               << ", while the server's version is " << server_version_;
+    std::clog << "[warn] Warning: this version of vineyard client may be "
+                 "incompatible with connected server: "
+              << "client's version is " << vineyard_version()
+              << ", while the server's version is " << server_version_
+              << std::endl;
   }
 
   shm_.reset(new detail::SharedMemoryManager(vineyard_conn_));
@@ -537,15 +539,15 @@ MmapEntry::~MmapEntry() {
   if (ro_pointer_) {
     int r = munmap(ro_pointer_, length_);
     if (r != 0) {
-      LOG(ERROR) << "munmap returned " << r << ", errno = " << errno << ": "
-                 << strerror(errno);
+      std::clog << "[error] munmap returned " << r << ", errno = " << errno
+                << ": " << strerror(errno) << std::endl;
     }
   }
   if (rw_pointer_) {
     int r = munmap(rw_pointer_, length_);
     if (r != 0) {
-      LOG(ERROR) << "munmap returned " << r << ", errno = " << errno << ": "
-                 << strerror(errno);
+      std::clog << "[error] munmap returned " << r << ", errno = " << errno
+                << ": " << strerror(errno) << std::endl;
     }
   }
   close(fd_);
@@ -556,7 +558,8 @@ uint8_t* MmapEntry::map_readonly() {
     ro_pointer_ = reinterpret_cast<uint8_t*>(
         mmap(NULL, length_, PROT_READ, MAP_SHARED, fd_, 0));
     if (ro_pointer_ == MAP_FAILED) {
-      LOG(ERROR) << "mmap failed: errno = " << errno << ": " << strerror(errno);
+      std::clog << "[error] mmap failed: errno = " << errno << ": "
+                << strerror(errno) << std::endl;
       ro_pointer_ = nullptr;
     }
   }
@@ -568,7 +571,8 @@ uint8_t* MmapEntry::map_readwrite() {
     rw_pointer_ = reinterpret_cast<uint8_t*>(
         mmap(NULL, length_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0));
     if (rw_pointer_ == MAP_FAILED) {
-      LOG(ERROR) << "mmap failed: errno = " << errno << ": " << strerror(errno);
+      std::clog << "[error] mmap failed: errno = " << errno << ": "
+                << strerror(errno) << std::endl;
       rw_pointer_ = nullptr;
     }
   }
@@ -611,13 +615,13 @@ bool SharedMemoryManager::Exists(const uintptr_t target) {
     return false;
   }
 #ifndef NDEBUG
-  VLOG(100) << "-------- Shared memory segments: ";
+  std::clog << "-------- Shared memory segments: " << std::endl;
   for (auto const& item : segments_) {
-    VLOG(100) << "[" << item.first << ", " << (item.first + item.second) << ")";
+    std::clog << "[" << item.first << ", " << (item.first + item.second) << ")"
+              << std::endl;
   }
 #endif
 
-  VLOG(100) << "Check address: " << target;
   auto loc = segments_.upper_bound(
       std::make_pair(target, std::numeric_limits<size_t>::max()));
   if (loc == segments_.begin()) {

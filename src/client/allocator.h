@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <stddef.h>
 
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <set>
@@ -68,7 +69,8 @@ struct VineyardAllocator : public memory::Jemalloc {
 
   std::shared_ptr<Blob> Freeze(T* ptr) {
     size_t allocated_size = Jemalloc::GetAllocatedSize(ptr);
-    VLOG(10) << "freeze the pointer " << ptr << " of size " << allocated_size;
+    std::clog << "freeze the pointer " << ptr << " of size " << allocated_size
+              << std::endl;
     offsets_.emplace_back(reinterpret_cast<uintptr_t>(ptr) - space_);
     sizes_.emplace_back(allocated_size);
     freezed_.emplace(reinterpret_cast<uintptr_t>(ptr));
@@ -78,8 +80,8 @@ struct VineyardAllocator : public memory::Jemalloc {
   }
 
   Status Release() {
-    VLOG(10) << "jemalloc arena finalized: of " << offsets_.size()
-             << " blocks are in use.";
+    std::clog << "jemalloc arena finalized: of " << offsets_.size()
+              << " blocks are in use." << std::endl;
     return client_.ReleaseArena(fd_, offsets_, sizes_);
   }
 
@@ -102,12 +104,12 @@ struct VineyardAllocator : public memory::Jemalloc {
   std::set<uintptr_t> freezed_;
 
   Status _initialize_arena(size_t size) {
-    VLOG(2) << "make arena: " << size;
+    std::clog << "make arena: " << size << std::endl;
     RETURN_ON_ERROR(
         client_.CreateArena(size, fd_, available_size_, base_, space_));
     Jemalloc::Init(reinterpret_cast<void*>(space_), available_size_);
-    VLOG(2) << "jemalloc arena initialized: " << available_size_ << ", at "
-            << reinterpret_cast<void*>(space_);
+    std::clog << "jemalloc arena initialized: " << available_size_ << ", at "
+              << reinterpret_cast<void*>(space_) << std::endl;
 
     // reset the context
     offsets_.clear();
