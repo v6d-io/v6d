@@ -21,6 +21,7 @@ limitations under the License.
 #include <thread>
 
 #include "common/util/env.h"
+#include "common/util/logging.h"
 #include "fuse/fused.h"
 
 /*
