@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "basic/ds/scalar.h"
 #include "client/client.h"
+#include "common/util/logging.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
