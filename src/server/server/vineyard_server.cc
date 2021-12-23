@@ -94,7 +94,8 @@ Status VineyardServer::Serve() {
   RETURN_ON_ERROR(bulk_store_->PreAllocate(
       spec_["bulkstore_spec"]["memory_size"].get<size_t>()));
   stream_store_ = std::make_shared<StreamStore>(
-      bulk_store_, spec_["bulkstore_spec"]["stream_threshold"].get<size_t>());
+      shared_from_this(), bulk_store_,
+      spec_["bulkstore_spec"]["stream_threshold"].get<size_t>());
   BulkReady();
 
   serve_status_ = Status::OK();

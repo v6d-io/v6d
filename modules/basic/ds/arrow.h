@@ -277,6 +277,9 @@ inline std::shared_ptr<ObjectBuilder> BuildSimpleArray(
               array)) {
     return BuildNumericArray<double>(client, arr);
   }
+  if (auto arr = std::dynamic_pointer_cast<arrow::BooleanArray>(array)) {
+    return std::make_shared<BooleanArrayBuilder>(client, arr);
+  }
   if (auto arr =
           std::dynamic_pointer_cast<arrow::FixedSizeBinaryArray>(array)) {
     return std::make_shared<FixedSizeBinaryArrayBuilder>(client, arr);

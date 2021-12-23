@@ -214,6 +214,70 @@ public class IPCClient extends Client {
         reply.get(this.doReadJson());
     }
 
+    @Override
+    public InstanceStatus instanceStatus() throws VineyardException {
+        val root = mapper_.createObjectNode();
+        InstanceStatusRequest.put(root);
+        this.doWrite(root);
+        val reply = new InstanceStatusReply();
+        reply.get(this.doReadJson());
+        return InstanceStatus.fromJson(reply.getStatus());
+    }
+
+    @Override
+    public void createStream(final ObjectID id) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        CreateStreamRequest.put(root, id);
+        this.doWrite(root);
+        val reply = new CreateStreamReply();
+        reply.get(this.doReadJson());
+    }
+
+    @Override
+    public void openStream(final ObjectID id, final char mode) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        VineyardException.asserts(
+                mode == 'r' || mode == 'w', "invalid mode to open stream: '" + mode + "'");
+        OpenStreamRequest.put(root, id, mode == 'r' ? 1 : 2);
+        this.doWrite(root);
+        val reply = new OpenStreamReply();
+        reply.get(this.doReadJson());
+    }
+
+    @Override
+    public void pushStreamChunk(final ObjectID id, final ObjectID chunk) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        PushNextStreamChunkRequest.put(root, id, chunk);
+        this.doWrite(root);
+        val reply = new PushNextStreamChunkReply();
+        reply.get(this.doReadJson());
+    }
+
+    @Override
+    public ObjectID pullStreamChunkID(final ObjectID id) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        PullNextStreamChunkRequest.put(root, id);
+        this.doWrite(root);
+        val reply = new PullNextStreamChunkReply();
+        reply.get(this.doReadJson());
+        return reply.getChunk();
+    }
+
+    @Override
+    public ObjectMeta pullStreamChunkMeta(final ObjectID id) throws VineyardException {
+        val chunk = this.pullStreamChunkID(id);
+        return this.getMetaData(chunk, false);
+    }
+
+    @Override
+    public void stopStream(final ObjectID id, boolean failed) throws VineyardException {
+        val root = mapper_.createObjectNode();
+        StopStreamRequest.put(root, id, failed);
+        this.doWrite(root);
+        val reply = new StopStreamReply();
+        reply.get(this.doReadJson());
+    }
+
     public Buffer createBuffer(long size) throws VineyardException {
         if (size == 0) {
             return Buffer.empty();

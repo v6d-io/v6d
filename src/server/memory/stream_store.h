@@ -27,6 +27,10 @@ limitations under the License.
 
 namespace vineyard {
 
+// forward declarations.
+class VineyardServer;
+using vs_ptr_t = std::shared_ptr<VineyardServer>;
+
 /**
  * @brief StreamHolder aims to maintain all chunks for a single stream.
  * "Stream" is a special kind of "Object" in vineyard, which represents
@@ -49,8 +53,9 @@ struct StreamHolder {
  */
 class StreamStore {
  public:
-  StreamStore(std::shared_ptr<BulkStore> store, size_t const stream_threshold)
-      : store_(store), threshold_(stream_threshold) {}
+  StreamStore(vs_ptr_t server, std::shared_ptr<BulkStore> store,
+              size_t const stream_threshold)
+      : server_(server), store_(store), threshold_(stream_threshold) {}
 
   Status Create(ObjectID const stream_id);
 
@@ -64,6 +69,13 @@ class StreamStore {
    */
   Status Get(ObjectID const stream_id, size_t const size,
              callback_t<const ObjectID> callback);
+
+  /**
+   * @brief This is called by the producer of the stream to emplace a chunk to
+   * the ready queue.
+   */
+  Status Push(ObjectID const stream_id, ObjectID const chunk,
+              callback_t<const ObjectID> callback);
 
   /**
    * @brief The consumer invokes this function to read current chunk
@@ -90,6 +102,7 @@ class StreamStore {
   // protect the stream store
   std::recursive_mutex mutex_;
 
+  vs_ptr_t server_;
   std::shared_ptr<BulkStore> store_;
   size_t threshold_;
   std::unordered_map<ObjectID, std::shared_ptr<StreamHolder>> streams_;

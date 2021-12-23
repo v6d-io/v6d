@@ -156,28 +156,6 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   return Status::OK();
 }
 
-Status Client::CreateStream(const ObjectID& id) {
-  ENSURE_CONNECTED(this);
-  std::string message_out;
-  WriteCreateStreamRequest(id, message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadCreateStreamReply(message_in));
-  return Status::OK();
-}
-
-Status Client::OpenStream(const ObjectID& id, OpenStreamMode mode) {
-  ENSURE_CONNECTED(this);
-  std::string message_out;
-  WriteOpenStreamRequest(id, static_cast<int64_t>(mode), message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadOpenStreamReply(message_in));
-  return Status::OK();
-}
-
 Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
                                   std::unique_ptr<arrow::MutableBuffer>& blob) {
   ENSURE_CONNECTED(this);
@@ -201,34 +179,17 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
 }
 
 Status Client::PullNextStreamChunk(ObjectID const id,
-                                   std::unique_ptr<arrow::Buffer>& blob) {
-  ENSURE_CONNECTED(this);
-  std::string message_out;
-  WritePullNextStreamChunkRequest(id, message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  Payload object;
-  RETURN_ON_ERROR(ReadPullNextStreamChunkReply(message_in, object));
-  uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
-  if (object.data_size > 0) {
-    RETURN_ON_ERROR(
-        shm_->Mmap(object.store_fd, object.map_size, true, true, &mmapped_ptr));
-    dist = mmapped_ptr + object.data_offset;
+                                   std::unique_ptr<arrow::Buffer>& chunk) {
+  std::shared_ptr<Object> buffer;
+  RETURN_ON_ERROR(ClientBase::PullNextStreamChunk(id, buffer));
+  if (auto casted = std::dynamic_pointer_cast<vineyard::Blob>(buffer)) {
+    chunk.reset(
+        new arrow::Buffer(reinterpret_cast<const uint8_t*>(casted->data()),
+                          casted->allocated_size()));
+    return Status::OK();
   }
-  blob.reset(new arrow::Buffer(dist, object.data_size));
-  return Status::OK();
-}
-
-Status Client::StopStream(ObjectID const id, const bool failed) {
-  ENSURE_CONNECTED(this);
-  std::string message_out;
-  WriteStopStreamRequest(id, failed, message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadStopStreamReply(message_in));
-  return Status::OK();
+  return Status::Invalid("Expect buffer, but got '" +
+                         buffer->meta().GetTypeName() + "'");
 }
 
 std::shared_ptr<Object> Client::GetObject(const ObjectID id) {

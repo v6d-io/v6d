@@ -101,6 +101,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doGetNextStreamChunk(const json& root);
 
+  bool doPushNextStreamChunk(const json& root);
+
   bool doPullNextStreamChunk(const json& root);
 
   bool doStopStream(const json& root);

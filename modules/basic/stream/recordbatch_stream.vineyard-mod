@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_BASIC_STREAM_DATAFRAME_STREAM_MOD_H_
-#define MODULES_BASIC_STREAM_DATAFRAME_STREAM_MOD_H_
+#ifndef MODULES_BASIC_STREAM_RECORDBATCH_STREAM_MOD_H_
+#define MODULES_BASIC_STREAM_RECORDBATCH_STREAM_MOD_H_
 
 #include <memory>
 #include <string>
@@ -24,6 +24,7 @@ limitations under the License.
 #include "arrow/util/config.h"
 #include "arrow/util/key_value_metadata.h"
 
+#include "basic/ds/arrow.vineyard.h"
 #include "basic/ds/dataframe.vineyard.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
@@ -39,12 +40,15 @@ namespace vineyard {
 
 class Client;
 
-class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
+class __attribute__((annotate("no-vineyard"))) RecordBatchStreamWriter {
  public:
   const size_t MaximumChunkSize() const { return -1; }
 
-  Status GetNext(size_t const size,
-                 std::unique_ptr<arrow::MutableBuffer>& buffer);
+  Status Push(std::shared_ptr<Object> const& chunk);
+
+  Status Push(ObjectMeta const& chunk);
+
+  Status Push(ObjectID const& chunk);
 
   Status Abort();
 
@@ -56,8 +60,8 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
 
   Status WriteDataframe(std::shared_ptr<DataFrame> df);
 
-  DataframeStreamWriter(Client& client, ObjectID const& id,
-                        ObjectMeta const& meta)
+  RecordBatchStreamWriter(Client& client, ObjectID const& id,
+                          ObjectMeta const& meta)
       : client_(client), id_(id), meta_(meta), stoped_(false) {}
 
  private:
@@ -69,9 +73,9 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
   friend class Client;
 };
 
-class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
+class __attribute__((annotate("no-vineyard"))) RecordBatchStreamReader {
  public:
-  Status GetNext(std::unique_ptr<arrow::Buffer>& buffer);
+  Status GetNext(std::shared_ptr<Object>& chunk);
 
   Status ReadRecordBatches(
       std::vector<std::shared_ptr<arrow::RecordBatch>>& batches);
@@ -82,7 +86,7 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
 
   Status GetHeaderLine(bool& header_row, std::string& header_line);
 
-  DataframeStreamReader(
+  RecordBatchStreamReader(
       Client& client, ObjectID const& id, ObjectMeta const& meta,
       std::unordered_map<std::string, std::string> const& params)
       : client_(client),
@@ -104,13 +108,13 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
   friend class Client;
 };
 
-class DataframeStream : public Registered<DataframeStream> {
+class RecordBatchStream : public Registered<RecordBatchStream> {
  public:
   Status OpenReader(Client& client,
-                    std::unique_ptr<DataframeStreamReader>& reader);
+                    std::unique_ptr<RecordBatchStreamReader>& reader);
 
   Status OpenWriter(Client& client,
-                    std::unique_ptr<DataframeStreamWriter>& writer);
+                    std::unique_ptr<RecordBatchStreamWriter>& writer);
 
   std::unordered_map<std::string, std::string> GetParams() { return params_; }
 
@@ -120,7 +124,7 @@ class DataframeStream : public Registered<DataframeStream> {
       params_;
 
   friend class Client;
-  friend class DataframeStreamBaseBuilder;
+  friend class RecordBatchStreamBaseBuilder;
 };
 
 #ifdef __GNUC__
@@ -129,4 +133,4 @@ class DataframeStream : public Registered<DataframeStream> {
 
 }  // namespace vineyard
 
-#endif  // MODULES_BASIC_STREAM_DATAFRAME_STREAM_MOD_H_
+#endif  // MODULES_BASIC_STREAM_RECORDBATCH_STREAM_MOD_H_

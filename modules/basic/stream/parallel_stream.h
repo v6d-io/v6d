@@ -33,19 +33,11 @@ class ParallelStream : public Registered<ParallelStream>, GlobalObject {
         std::unique_ptr<ParallelStream>{new ParallelStream()});
   }
 
-  void Construct(const ObjectMeta& meta) override {
-    std::string __type_name = type_name<ParallelStream>();
-    VINEYARD_ASSERT(meta.GetTypeName() == __type_name,
-                    "Expect typename '" + __type_name + "', but got '" +
-                        meta.GetTypeName() + "'");
-    this->meta_ = meta;
-    this->id_ = meta.GetId();
+  void Construct(const ObjectMeta& meta) override;
 
-    meta.GetKeyValue("size_", this->size_);
-    for (size_t idx = 0; idx < this->size_; ++idx) {
-      streams_.emplace_back(meta.GetMember("stream_" + std::to_string(idx)));
-    }
-  }
+  ObjectMeta GetStreamMeta(int index) { return streams_[index]->meta(); }
+
+  size_t GetStreamSize() { return size_; }
 
   template <typename T>
   std::shared_ptr<T> GetStream(int index) {
@@ -63,10 +55,6 @@ class ParallelStream : public Registered<ParallelStream>, GlobalObject {
     return local_streams;
   }
 
-  ObjectMeta GetStreamMeta(int index) { return streams_[index]->meta(); }
-
-  size_t GetStreamSize() { return size_; }
-
  private:
   size_t size_;
   std::vector<std::shared_ptr<Object>> streams_;
@@ -83,37 +71,11 @@ class ParallelStreamBuilder : public ObjectBuilder {
  public:
   explicit ParallelStreamBuilder(Client& client) {}
 
-  void AddStream(const ObjectID stream_id) { streams_.emplace_back(stream_id); }
+  void AddStream(const ObjectID stream_id);
 
-  Status Build(Client& client) override { return Status::OK(); }
+  Status Build(Client& client) override;
 
-  std::shared_ptr<Object> _Seal(Client& client) override {
-    // ensure the builder hasn't been sealed yet.
-    ENSURE_NOT_SEALED(this);
-
-    VINEYARD_CHECK_OK(this->Build(client));
-    auto __value = std::make_shared<ParallelStream>();
-
-    __value->meta_.SetTypeName(type_name<ParallelStream>());
-    __value->meta_.SetGlobal(true);
-
-    __value->size_ = streams_.size();
-    __value->meta_.AddKeyValue("size_", __value->size_);
-
-    for (size_t idx = 0; idx < streams_.size(); ++idx) {
-      __value->meta_.AddMember("stream_" + std::to_string(idx), streams_[idx]);
-    }
-    __value->meta_.SetNBytes(0);
-
-    VINEYARD_CHECK_OK(client.CreateMetaData(__value->meta_, __value->id_));
-    VINEYARD_CHECK_OK(client.GetMetaData(__value->id_, __value->meta_));
-
-    // mark the builder as sealed
-    VINEYARD_CHECK_OK(client.Persist(__value->id()));
-    this->set_sealed(true);
-
-    return std::static_pointer_cast<Object>(__value);
-  }
+  std::shared_ptr<Object> _Seal(Client& client) override;
 
  private:
   std::vector<ObjectID> streams_;

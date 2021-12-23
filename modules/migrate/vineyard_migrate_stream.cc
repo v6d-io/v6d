@@ -66,7 +66,7 @@ Status Rebuild(Client& client, ObjectMeta const& metadata,
   RETURN_ON_ERROR(client.CreateMetaData(target, target_id));
   RETURN_ON_ERROR(client.CreateStream(target_id));
   RETURN_ON_ERROR(client.Persist(target_id));
-  RETURN_ON_ERROR(client.OpenStream(target_id, OpenStreamMode::write));
+  RETURN_ON_ERROR(client.OpenStream(target_id, StreamOpenMode::write));
 
   return Status::OK();
 }
@@ -138,7 +138,7 @@ Status RunServer() {
 
 Status Work(Client& client, asio::ip::tcp::socket& socket) {
   ObjectID stream_id = ObjectIDFromString(FLAGS_id);
-  RETURN_ON_ERROR(client.OpenStream(stream_id, OpenStreamMode::read));
+  RETURN_ON_ERROR(client.OpenStream(stream_id, StreamOpenMode::read));
   while (true) {
     std::unique_ptr<arrow::Buffer> buffer;
     Status status = client.PullNextStreamChunk(stream_id, buffer);

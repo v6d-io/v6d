@@ -82,11 +82,11 @@ public class Payload {
 
     public static Payload fromJson(JsonNode root) {
         val payload = new Payload();
-        payload.objectID = new ObjectID(root.get("object_id").asLong());
-        payload.storeFD = root.get("store_fd").asInt();
-        payload.dataOffset = root.get("data_offset").asLong();
-        payload.dataSize = root.get("data_size").asLong();
-        payload.mapSize = root.get("map_size").asLong();
+        payload.objectID = new ObjectID(root.get("object_id").longValue());
+        payload.storeFD = root.get("store_fd").intValue();
+        payload.dataOffset = root.get("data_offset").longValue();
+        payload.dataSize = root.get("data_size").longValue();
+        payload.mapSize = root.get("map_size").longValue();
         return payload;
     }
 }

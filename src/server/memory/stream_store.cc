@@ -22,6 +22,7 @@ limitations under the License.
 #include "common/util/callback.h"
 #include "common/util/logging.h"
 #include "server/memory/memory.h"
+#include "server/server/vineyard_server.h"
 
 namespace vineyard {
 
@@ -66,7 +67,7 @@ Status StreamStore::Get(ObjectID const stream_id, size_t const size,
                         callback_t<const ObjectID> callback) {
   std::lock_guard<std::recursive_mutex> __guard(this->mutex_);
   if (streams_.find(stream_id) == streams_.end()) {
-    return callback(Status::ObjectNotExists("failed to pull from stream"),
+    return callback(Status::ObjectNotExists("failed to allocate from stream"),
                     InvalidObjectID());
   }
   auto stream = streams_.at(stream_id);
@@ -111,12 +112,47 @@ Status StreamStore::Get(ObjectID const stream_id, size_t const size,
   }
 }
 
+// for producer: return the next chunk to write, and make current chunk
+// available for consumer to read
+Status StreamStore::Push(ObjectID const stream_id, ObjectID const chunk,
+                         callback_t<const ObjectID> callback) {
+  std::lock_guard<std::recursive_mutex> __guard(this->mutex_);
+  if (streams_.find(stream_id) == streams_.end()) {
+    return callback(Status::ObjectNotExists("failed to push to stream"),
+                    InvalidObjectID());
+  }
+  auto stream = streams_.at(stream_id);
+
+  // precondition: there's no unsatistified writer, and still running
+  CHECK_STREAM_STATE(!stream->writer_);
+  CHECK_STREAM_STATE(!stream->drained && !stream->failed);
+
+  // seal current chunk
+  stream->ready_chunks_.push(chunk);
+
+  // weak up the pending reader
+  if (stream->reader_) {
+    // should be no reading chunk
+    CHECK_STREAM_STATE(!stream->current_reading_);
+    if (!stream->ready_chunks_.empty()) {
+      stream->current_reading_ = stream->ready_chunks_.front();
+      stream->ready_chunks_.pop();
+      VINEYARD_SUPPRESS(
+          stream->reader_.get()(Status::OK(), stream->current_reading_.get()));
+      stream->reader_ = boost::none;
+    }
+  }
+
+  // done
+  return callback(Status::OK(), InvalidObjectID());
+}
+
 // for consumer: read current chunk
 Status StreamStore::Pull(ObjectID const stream_id,
                          callback_t<const ObjectID> callback) {
   std::lock_guard<std::recursive_mutex> __guard(this->mutex_);
   if (streams_.find(stream_id) == streams_.end()) {
-    return callback(Status::ObjectNotExists("failed to put to stream"),
+    return callback(Status::ObjectNotExists("failed to pull from stream"),
                     InvalidObjectID());
   }
   auto stream = streams_.at(stream_id);
@@ -126,7 +162,20 @@ Status StreamStore::Pull(ObjectID const stream_id,
 
   // drop current reading
   if (stream->current_reading_) {
-    auto status = store_->Delete(stream->current_reading_.get());
+    auto target = stream->current_reading_.get();
+    Status status;
+    if (IsBlob(target)) {
+      status = store_->Delete(target);
+    } else {
+      status = server_->DelData(
+          {target}, false, true, false, [](Status const& status) {
+            if (!status.ok()) {
+              LOG(WARNING) << "failed to delete the stream chunk: "
+                           << status.ToString();
+            }
+            return Status::OK();
+          });
+    }
     if (!status.ok()) {
       return callback(status, InvalidObjectID());
     }
@@ -248,7 +297,21 @@ Status StreamStore::Drop(ObjectID const stream_id) {
   // drop all memory chunks in ready queue, but still keep the reading chunk
   // to avoid crash the reader
   while (!stream->ready_chunks_.empty()) {
-    RETURN_ON_ERROR(store_->Delete(stream->ready_chunks_.front()));
+    auto target = stream->ready_chunks_.front();
+    Status status;
+    if (IsBlob(target)) {
+      status = store_->Delete(target);
+    } else {
+      status = server_->DelData(
+          {target}, false, true, false, [](Status const& status) {
+            if (!status.ok()) {
+              LOG(WARNING) << "failed to delete the stream chunk: "
+                           << status.ToString();
+            }
+            return Status::OK();
+          });
+    }
+    VINEYARD_DISCARD(status);
     stream->ready_chunks_.pop();
   }
   return Status::OK();
