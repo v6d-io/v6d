@@ -230,6 +230,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::GetNextStreamChunkRequest: {
     return doGetNextStreamChunk(root);
   }
+  case CommandType::PushNextStreamChunkRequest: {
+    return doPushNextStreamChunk(root);
+  }
   case CommandType::PullNextStreamChunkRequest: {
     return doPullNextStreamChunk(root);
   }
@@ -716,6 +719,25 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
   return false;
 }
 
+bool SocketConnection::doPushNextStreamChunk(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id, chunk;
+  TRY_READ_REQUEST(ReadPushNextStreamChunkRequest, root, stream_id, chunk);
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Push(
+      stream_id, chunk, [self](const Status& status, const ObjectID) {
+        std::string message_out;
+        if (status.ok()) {
+          WritePushNextStreamChunkReply(message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doPullNextStreamChunk(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
@@ -725,28 +747,14 @@ bool SocketConnection::doPullNextStreamChunk(const json& root) {
       stream_id, [self](const Status& status, const ObjectID chunk) {
         std::string message_out;
         if (status.ok()) {
-          std::shared_ptr<Payload> object;
-          RETURN_ON_ERROR(
-              self->server_ptr_->GetBulkStore()->Get(chunk, object));
-          WritePullNextStreamChunkReply(object, message_out);
-          int store_fd = object->store_fd;
-          int data_size = object->data_size;
-          self->doWrite(
-              message_out, [self, store_fd, data_size](const Status& status) {
-                if (data_size > 0 &&
-                    self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                  self->used_fds_.emplace(store_fd);
-                  send_fd(self->nativeHandle(), store_fd);
-                }
-                return Status::OK();
-              });
+          WritePullNextStreamChunkReply(chunk, message_out);
         } else {
           if (!status.IsStreamDrained()) {
             LOG(ERROR) << status.ToString();
           }
           WriteErrorReply(status, message_out);
-          self->doWrite(message_out);
         }
+        self->doWrite(message_out);
         return Status::OK();
       }));
   return false;

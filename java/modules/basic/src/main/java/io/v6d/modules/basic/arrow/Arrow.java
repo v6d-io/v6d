@@ -15,6 +15,7 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.collect.ImmutableList;
+import io.v6d.modules.basic.stream.RecordBatchStream;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.pojo.ArrowType;
@@ -78,5 +79,6 @@ public final class Arrow {
 
     public static void instantiate() {
         Table.instantiate();
+        RecordBatchStream.instantiate();
     }
 }

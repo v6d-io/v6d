@@ -279,4 +279,108 @@ public class Protocol {
             check(root, "drop_name_reply");
         }
     }
+
+    public static class InstanceStatusRequest extends Request {
+        public static void put(ObjectNode root) {
+            root.put("type", "instance_status_request");
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class InstanceStatusReply extends Reply {
+        private ObjectNode status;
+
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "instance_status_reply");
+            this.status = (ObjectNode) root.get("meta");
+        }
+    }
+
+    public static class CreateStreamRequest extends Request {
+        public static void put(ObjectNode root, final ObjectID id) {
+            root.put("type", "create_stream_request");
+            root.put("object_id", id.value());
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class CreateStreamReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "create_stream_reply");
+        }
+    }
+
+    public static class OpenStreamRequest extends Request {
+        public static void put(ObjectNode root, final ObjectID id, final int mode) {
+            root.put("type", "open_stream_request");
+            root.put("object_id", id.value());
+            root.put("mode", mode);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class OpenStreamReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "open_stream_reply");
+        }
+    }
+
+    public static class PushNextStreamChunkRequest extends Request {
+        public static void put(ObjectNode root, final ObjectID id, final ObjectID chunk) {
+            root.put("type", "push_next_stream_chunk_request");
+            root.put("id", id.value());
+            root.put("chunk", chunk.value());
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class PushNextStreamChunkReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "push_next_stream_chunk_reply");
+        }
+    }
+
+    public static class PullNextStreamChunkRequest extends Request {
+        public static void put(ObjectNode root, final ObjectID id) {
+            root.put("type", "pull_next_stream_chunk_request");
+            root.put("id", id.value());
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class PullNextStreamChunkReply extends Reply {
+        private ObjectID chunk;
+
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "pull_next_stream_chunk_reply");
+            this.chunk = new ObjectID(root.get("chunk").longValue());
+        }
+    }
+
+    public static class StopStreamRequest extends Request {
+        public static void put(ObjectNode root, final ObjectID id, final boolean failed) {
+            root.put("type", "stop_stream_request");
+            root.put("id", id.value());
+            root.put("failed", failed);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class StopStreamReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "stop_stream_reply");
+        }
+    }
 }

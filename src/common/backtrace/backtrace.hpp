@@ -57,15 +57,17 @@ struct backtrace_info {
       if (ip == 0) {
         break;
       }
-      unw_word_t sp = 0;
-      unw_get_reg(&cursor, UNW_REG_SP, &sp);
       for (size_t idx = 0; idx < indention; ++idx) {
         _out << ' ';
       }
-      print_reg(_out, ip);
-      _out << ": (SP:";
-      print_reg(_out, sp);
-      _out << ") ";
+      if (!compact) {
+        unw_word_t sp = 0;
+        unw_get_reg(&cursor, UNW_REG_SP, &sp);
+        print_reg(_out, ip);
+        _out << ": (SP:";
+        print_reg(_out, sp);
+        _out << ") ";
+      }
       unw_word_t offset = 0;
       // `unw_get_proc_name` guarantees the result buffer is NULL terminated,
       // see
@@ -73,9 +75,8 @@ struct backtrace_info {
       // https://github.com/libunwind/libunwind/blob/master/src/mi/Gget_proc_name.c
       //
       if (unw_get_proc_name(&cursor, symbol, sizeof(symbol), &offset) == 0) {
-        _out << "("
-             << get_demangled_name(symbol, demangled_name, demangled_size)
-             << " + 0x" << offset << ")\n";
+        _out << get_demangled_name(symbol, demangled_name, demangled_size)
+             << " + 0x" << offset << "\n";
         if (!compact) {
           _out << "\n";
         }

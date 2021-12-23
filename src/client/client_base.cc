@@ -145,6 +145,81 @@ Status ClientBase::ListData(std::string const& pattern, bool const regex,
   return Status::OK();
 }
 
+Status ClientBase::CreateStream(const ObjectID& id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteCreateStreamRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadCreateStreamReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::OpenStream(const ObjectID& id, StreamOpenMode mode) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteOpenStreamRequest(id, static_cast<int64_t>(mode), message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadOpenStreamReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::PushNextStreamChunk(ObjectID const id,
+                                       ObjectID const chunk) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WritePushNextStreamChunkRequest(id, chunk, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadPushNextStreamChunkReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::PullNextStreamChunk(ObjectID const id, ObjectID& chunk) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WritePullNextStreamChunkRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadPullNextStreamChunkReply(message_in, chunk));
+  return Status::OK();
+}
+
+Status ClientBase::PullNextStreamChunk(ObjectID const id, ObjectMeta& chunk) {
+  ObjectID chunk_id = InvalidObjectID();
+  RETURN_ON_ERROR(this->PullNextStreamChunk(id, chunk_id));
+  return GetMetaData(chunk_id, chunk, false);
+}
+
+Status ClientBase::PullNextStreamChunk(ObjectID const id,
+                                       std::shared_ptr<Object>& chunk) {
+  ObjectMeta meta;
+  RETURN_ON_ERROR(this->PullNextStreamChunk(id, meta));
+  RETURN_ON_ASSERT(!meta.MetaData().empty());
+  chunk = ObjectFactory::Create(meta.GetTypeName());
+  if (chunk == nullptr) {
+    chunk = std::unique_ptr<Object>(new Object());
+  }
+  chunk->Construct(meta);
+  return Status::OK();
+}
+
+Status ClientBase::StopStream(ObjectID const id, const bool failed) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteStopStreamRequest(id, failed, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadStopStreamReply(message_in));
+  return Status::OK();
+}
+
 Status ClientBase::Persist(const ObjectID id) {
   ENSURE_CONNECTED(this);
   std::string message_out;

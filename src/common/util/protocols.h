@@ -68,6 +68,7 @@ enum class CommandType {
   FinalizeArenaRequest = 34,
   DeepCopyRequest = 35,
   ClearRequest = 36,
+  PushNextStreamChunkRequest = 37,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -281,15 +282,24 @@ void WriteGetNextStreamChunkReply(std::shared_ptr<Payload>& object,
 
 Status ReadGetNextStreamChunkReply(const json& root, Payload& object);
 
+void WritePushNextStreamChunkRequest(const ObjectID stream_id,
+                                     const ObjectID chunk, std::string& msg);
+
+Status ReadPushNextStreamChunkRequest(const json& root, ObjectID& stream_id,
+                                      ObjectID& chunk);
+
+void WritePushNextStreamChunkReply(std::string& msg);
+
+Status ReadPushNextStreamChunkReply(const json& root);
+
 void WritePullNextStreamChunkRequest(const ObjectID stream_id,
                                      std::string& msg);
 
 Status ReadPullNextStreamChunkRequest(const json& root, ObjectID& stream_id);
 
-void WritePullNextStreamChunkReply(std::shared_ptr<Payload>& object,
-                                   std::string& msg);
+void WritePullNextStreamChunkReply(ObjectID const chunk, std::string& msg);
 
-Status ReadPullNextStreamChunkReply(const json& root, Payload& object);
+Status ReadPullNextStreamChunkReply(const json& root, ObjectID& chunk);
 
 void WriteStopStreamRequest(const ObjectID stream_id, const bool failed,
                             std::string& msg);

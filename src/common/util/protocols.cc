@@ -70,6 +70,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::CreateStreamRequest;
   } else if (str_type == "get_next_stream_chunk_request") {
     return CommandType::GetNextStreamChunkRequest;
+  } else if (str_type == "push_next_stream_chunk_request") {
+    return CommandType::PushNextStreamChunkRequest;
   } else if (str_type == "pull_next_stream_chunk_request") {
     return CommandType::PullNextStreamChunkRequest;
   } else if (str_type == "stop_stream_request") {
@@ -829,6 +831,35 @@ Status ReadGetNextStreamChunkReply(const json& root, Payload& object) {
   return Status::OK();
 }
 
+void WritePushNextStreamChunkRequest(const ObjectID stream_id,
+                                     const ObjectID chunk, std::string& msg) {
+  json root;
+  root["type"] = "push_next_stream_chunk_request";
+  root["id"] = stream_id;
+  root["chunk"] = chunk;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPushNextStreamChunkRequest(const json& root, ObjectID& stream_id,
+                                      ObjectID& chunk) {
+  RETURN_ON_ASSERT(root["type"] == "push_next_stream_chunk_request");
+  stream_id = root["id"].get<ObjectID>();
+  chunk = root["chunk"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WritePushNextStreamChunkReply(std::string& msg) {
+  json root;
+  root["type"] = "push_next_stream_chunk_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadPushNextStreamChunkReply(const json& root) {
+  CHECK_IPC_ERROR(root, "push_next_stream_chunk_reply");
+  return Status::OK();
+}
+
 void WritePullNextStreamChunkRequest(const ObjectID stream_id,
                                      std::string& msg) {
   json root;
@@ -844,20 +875,17 @@ Status ReadPullNextStreamChunkRequest(const json& root, ObjectID& stream_id) {
   return Status::OK();
 }
 
-void WritePullNextStreamChunkReply(std::shared_ptr<Payload>& object,
-                                   std::string& msg) {
+void WritePullNextStreamChunkReply(ObjectID const chunk, std::string& msg) {
   json root;
   root["type"] = "pull_next_stream_chunk_reply";
-  json buffer_meta;
-  object->ToJSON(buffer_meta);
-  root["buffer"] = buffer_meta;
+  root["chunk"] = chunk;
 
   encode_msg(root, msg);
 }
 
-Status ReadPullNextStreamChunkReply(const json& root, Payload& object) {
+Status ReadPullNextStreamChunkReply(const json& root, ObjectID& chunk) {
   CHECK_IPC_ERROR(root, "pull_next_stream_chunk_reply");
-  object.FromJSON(root["buffer"]);
+  chunk = root["chunk"].get<ObjectID>();
   return Status::OK();
 }
 

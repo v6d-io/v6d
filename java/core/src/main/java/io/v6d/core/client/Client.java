@@ -77,6 +77,21 @@ public abstract class Client {
 
     public abstract void dropName(String name) throws VineyardException;
 
+    public abstract InstanceStatus instanceStatus() throws VineyardException;
+
+    public abstract void createStream(final ObjectID id) throws VineyardException;
+
+    public abstract void openStream(final ObjectID id, final char mode) throws VineyardException;
+
+    public abstract void pushStreamChunk(final ObjectID id, final ObjectID chunk)
+            throws VineyardException;
+
+    public abstract ObjectID pullStreamChunkID(final ObjectID id) throws VineyardException;
+
+    public abstract ObjectMeta pullStreamChunkMeta(final ObjectID id) throws VineyardException;
+
+    public abstract void stopStream(final ObjectID id, boolean failed) throws VineyardException;
+
     public boolean connected() {
         return false;
     }

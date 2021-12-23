@@ -145,6 +145,62 @@ void bind_client(py::module& mod) {
           },
           "object"_a, py::arg("force") = false, py::arg("deep") = true)
       .def(
+          "create_stream",
+          [](ClientBase* self, ObjectID const id) {
+            throw_on_error(self->CreateStream(id));
+          },
+          "stream"_a)
+      .def(
+          "open_stream",
+          [](ClientBase* self, ObjectID const id, std::string const& mode) {
+            if (mode == "r") {
+              throw_on_error(self->OpenStream(id, StreamOpenMode::read));
+            } else if (mode == "w") {
+              throw_on_error(self->OpenStream(id, StreamOpenMode::write));
+            } else {
+              throw_on_error(
+                  Status::AssertionFailed("Mode can only be 'r' or 'w'"));
+            }
+          },
+          "stream"_a, "mode"_a)
+      .def(
+          "push_chunk",
+          [](ClientBase* self, ObjectID const stream_id, ObjectID const chunk) {
+            throw_on_error(self->PushNextStreamChunk(stream_id, chunk));
+          },
+          "stream"_a, "chunk"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "next_chunk_id",
+          [](ClientBase* self, ObjectID const stream_id) -> ObjectID {
+            ObjectID id;
+            throw_on_error(self->PullNextStreamChunk(stream_id, id));
+            return id;
+          },
+          "stream"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "next_chunk_meta",
+          [](ClientBase* self, ObjectID const stream_id) -> ObjectMeta {
+            ObjectMeta meta;
+            throw_on_error(self->PullNextStreamChunk(stream_id, meta));
+            return meta;
+          },
+          "stream"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "next_chunk",
+          [](ClientBase* self,
+             ObjectID const stream_id) -> std::shared_ptr<Object> {
+            std::shared_ptr<Object> object;
+            throw_on_error(self->PullNextStreamChunk(stream_id, object));
+            return object;
+          },
+          "stream"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "stop_stream",
+          [](ClientBase* self, ObjectID const stream_id, bool failed) {
+            throw_on_error(self->StopStream(stream_id, failed));
+          },
+          "stream"_a, "failed"_a)
+      .def(
           "persist",
           [](ClientBase* self, const ObjectIDWrapper object_id) {
             throw_on_error(self->Persist(object_id));
@@ -459,6 +515,33 @@ void bind_client(py::module& mod) {
       .def("list_metadatas", &Client::ListObjectMeta, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5,
            py::arg("nobuffer") = false)
+      .def(
+          "new_buffer_chunk",
+          [](Client* self, ObjectID const stream_id,
+             size_t const size) -> py::memoryview {
+            std::unique_ptr<arrow::MutableBuffer> buffer;
+            throw_on_error(self->GetNextStreamChunk(stream_id, size, buffer));
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return py::memoryview::from_memory(buffer->mutable_data(),
+                                                 buffer->size(), false);
+            }
+          },
+          "stream"_a, "size"_a)
+      .def(
+          "next_buffer_chunk",
+          [](Client* self, ObjectID const stream_id) -> py::memoryview {
+            std::unique_ptr<arrow::Buffer> buffer;
+            throw_on_error(self->PullNextStreamChunk(stream_id, buffer));
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return py::memoryview::from_memory(
+                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
+            }
+          },
+          "stream"_a, py::call_guard<py::gil_scoped_release>())
       .def(
           "allocated_size",
           [](Client* self, const ObjectID id) -> size_t {
