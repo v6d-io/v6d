@@ -18,11 +18,10 @@ limitations under the License.
 #include <string>
 #include <thread>
 
-#include "common/util/logging.h"
-#include "common/util/typename.h"
-
 #include "basic/ds/arrow.h"
 #include "basic/ds/hashmap.h"
+#include "common/util/logging.h"
+#include "common/util/typename.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
