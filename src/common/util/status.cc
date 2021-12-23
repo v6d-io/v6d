@@ -27,6 +27,7 @@
 #include <string>
 
 #include "common/backtrace/backtrace.hpp"
+#include "common/util/env.h"
 
 namespace vineyard {
 
@@ -35,7 +36,9 @@ Status::Status(StatusCode code, const std::string& msg) {
   state_->code = code;
   state_->msg = msg;
 #ifndef NDEBUG
-  if (code != StatusCode::kOK) {
+  static std::string vineyard_error_with_traceback =
+      read_env("VINEYARD_ERROR_WITH_TRACEBACK");
+  if ((!vineyard_error_with_traceback.empty()) && code != StatusCode::kOK) {
     std::stringstream ss;
     vineyard::backtrace_info::backtrace(ss, true);
     backtrace_ = ss.str();
