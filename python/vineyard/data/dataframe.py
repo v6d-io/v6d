@@ -159,6 +159,23 @@ def make_global_dataframe(client, blocks, extra_meta=None):
     return gtensor_meta
 
 
+def global_dataframe_resolver(obj, resolver):
+    """Return a list of dataframes."""
+    meta = obj.meta
+    num = int(meta['partitions_-size'])
+
+    dataframes = []
+    orders = []
+    for i in range(num):
+        df = meta.get_member('partitions_-%d' % i)
+        if df.meta.islocal:
+            dataframes.append(resolver.run(df))
+            orders.append(df.meta["row_batch_index_"])
+    if orders != sorted(orders):
+        raise ValueError("Bad dataframe orders:", orders)
+    return dataframes
+
+
 def register_dataframe_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(pd.DataFrame, pandas_dataframe_builder)
@@ -167,3 +184,4 @@ def register_dataframe_types(builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::DataFrame', pandas_dataframe_resolver)
         resolver_ctx.register('vineyard::SparseArray', pandas_sparse_array_resolver)
+        resolver_ctx.register("vineyard::GlobalDataFrame", global_dataframe_resolver)

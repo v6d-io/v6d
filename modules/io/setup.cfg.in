@@ -7,7 +7,6 @@ install_requires =
     hdfs3
     oss2
     pyarrow
-    pyorc
     s3fs
     vineyard==@VINEYARD_VERSION@
 

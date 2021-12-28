@@ -17,6 +17,7 @@ limitations under the License.
 #define PYTHON_PYBIND11_UTILS_H_
 
 #include <functional>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -116,6 +117,23 @@ iterator make_iterator_fmap(Iterator first, Sentinel last, F functor, Arg arg,
 namespace vineyard {
 
 void throw_on_error(Status const& status);
+
+/**
+ * Copy a memoryview/buffer to a dst pointer.
+ *
+ * @size: capacity of the dst memory block.
+ */
+Status copy_memoryview(PyObject* src, void* dst, size_t const size,
+                       size_t const offset = 0);
+
+/**
+ * Copy a memoryview/buffer to a dst pointer.
+ *
+ * @size: capacity of the dst memoryview.
+ */
+Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
+                                     size_t const size,
+                                     size_t const offset = 0);
 
 namespace detail {
 py::object from_json(const json& value);

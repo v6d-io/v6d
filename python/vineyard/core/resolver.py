@@ -22,7 +22,7 @@ import threading
 
 from sortedcontainers import SortedDict
 
-from vineyard._C import IPCClient, RPCClient, ObjectID, Object
+from vineyard._C import IPCClient, RPCClient, ObjectID, Object, ObjectMeta
 from vineyard.core.utils import find_most_precise_match
 from vineyard.core.driver import get_current_drivers
 
@@ -57,8 +57,8 @@ class ResolverContext():
                 if type(obj) is not Object:
                     return obj
 
-                raise RuntimeError('Unable to construct the object: no proper resolver found: typename is %s' %
-                                   obj.meta.typename)
+                raise RuntimeError('Unable to construct the object using resolver: typename is %s, resolver is %s' %
+                                   (obj.meta.typename, resolver))
 
             # associate a reference to the base C++ object
             try:
@@ -71,7 +71,8 @@ class ResolverContext():
                 pass
 
             return value
-        return None
+        # keep it as it is
+        return obj
 
     def __call__(self, obj, **kw):
         return self.run(obj, **kw)

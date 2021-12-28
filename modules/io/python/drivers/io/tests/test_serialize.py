@@ -57,6 +57,7 @@ def global_obj(vineyard_ipc_socket):
     return tup.id
 
 
+@pytest.mark.skip("requires further refine")
 def test_seriarialize_round_trip(vineyard_ipc_socket, vineyard_endpoint, global_obj):
     vineyard.io.serialize('/tmp/seri-test',
                           global_obj,

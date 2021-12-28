@@ -129,7 +129,128 @@ static PyMethodDef vineyard_utils_methods[] = {
 };
 
 void bind_utils(py::module& mod) {
+  mod.def(
+      "memory_copy",
+      [](py::buffer const dst, size_t offset, py::buffer const src,
+         size_t const size) {
+        throw_on_error(
+            copy_memoryview_to_memoryview(src.ptr(), dst.ptr(), size, offset));
+      },
+      "dst"_a, "offset"_a, "src"_a, py::arg("size") = 0 /* not checked */);
+
   PyModule_AddFunctions(mod.ptr(), vineyard_utils_methods);
+}
+
+namespace detail {
+
+/**
+ * Intend to be used as a manager to PyBuffer that releases the buffer
+ * automatically when been destructed.
+ */
+class PyBufferGetter {
+ public:
+  explicit PyBufferGetter(PyObject* object) {
+    has_buffer_ =
+        PyObject_GetBuffer(object, &buffer_, PyBUF_ANY_CONTIGUOUS) == 0;
+  }
+
+  ~PyBufferGetter() {
+    if (has_buffer_) {
+      PyBuffer_Release(&buffer_);
+    }
+  }
+
+  bool has_buffer() const { return has_buffer_; }
+
+  uint8_t* data() const { return reinterpret_cast<uint8_t*>(buffer_.buf); }
+
+  Py_ssize_t size() const { return buffer_.len; }
+
+  bool readonly() const { return buffer_.readonly; }
+
+ private:
+  Py_buffer buffer_;
+  bool has_buffer_;
+};
+
+}  // namespace detail
+
+Status copy_memoryview(PyObject* src, void* dst, size_t const size,
+                       size_t const offset) {
+  detail::PyBufferGetter src_buffer(src);
+  if (!src_buffer.has_buffer()) {
+    return Status::AssertionFailed(
+        "Not a contiguous memoryview, please consider translate to `bytes` "
+        "first.");
+  }
+
+  // skip none buffers
+  if (src_buffer.data() == nullptr) {
+    return Status::OK();
+  }
+
+  // validate expected size first
+  if ((size != 0) && (src_buffer.size() + offset > size)) {
+    return Status::AssertionFailed("Expect a source buffer with size at most'" +
+                                   std::to_string(size - offset) +
+                                   "', but the buffer size is '" +
+                                   std::to_string(src_buffer.size()) + "'");
+  }
+
+  // memcpy
+  memcpy(reinterpret_cast<uint8_t*>(dst) + offset, src_buffer.data(),
+         src_buffer.size());
+  return Status::OK();
+}
+
+Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
+                                     size_t const size, size_t const offset) {
+  detail::PyBufferGetter src_buffer(src);
+  if (!src_buffer.has_buffer()) {
+    return Status::AssertionFailed(
+        "Not a contiguous memoryview, please consider translate to `bytes` "
+        "first.");
+  }
+
+  // skip none buffers
+  if (src_buffer.data() == nullptr) {
+    return Status::OK();
+  }
+
+  // validate expected size first
+  if ((size != 0) && (src_buffer.size() + offset > size)) {
+    return Status::AssertionFailed(
+        "Expect a source buffer with size at most '" +
+        std::to_string(size - offset) + "', but the buffer size is '" +
+        std::to_string(src_buffer.size()) + "'");
+  }
+
+  detail::PyBufferGetter dst_buffer(dst);
+
+  if (!dst_buffer.has_buffer()) {
+    return Status::AssertionFailed("Not a contiguous memoryview as the target");
+  }
+
+  if (dst_buffer.data() == nullptr) {
+    return Status::AssertionFailed("The destination buffer is a null buffer");
+  }
+
+  if (dst_buffer.readonly()) {
+    return Status::AssertionFailed(
+        "The destination buffer is a readonly buffer");
+  }
+
+  // validate expected size first
+  if ((size != 0) && (dst_buffer.size() < size)) {
+    return Status::AssertionFailed(
+        "Expect a destination buffer with size at least '" +
+        std::to_string(size) + "', but the buffer size is '" +
+        std::to_string(dst_buffer.size()) + "'");
+  }
+
+  // memcpy
+  memcpy(dst_buffer.data() + offset, src_buffer.data(), src_buffer.size());
+  return Status::OK();
 }
 
 namespace detail {

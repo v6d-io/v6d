@@ -23,25 +23,21 @@ from urllib.parse import urlparse
 
 import pyarrow as pa
 import vineyard
-from vineyard.io.dataframe import DataframeStreamBuilder
+from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.utils import report_exception, report_success
 
 
-def read_vineyard_dataframe(
-    vineyard_socket, path, storage_options, read_options, proc_num, proc_index
-):
+def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
-    builder = DataframeStreamBuilder(client)
+    params = dict()
     if storage_options:
         raise ValueError("Read vineyard current not support storage options")
-    builder["header_row"] = "1" if read_options.get("header_row", False) else "0"
-    builder["delimiter"] = bytes(read_options.get("delimiter", ","), "utf-8").decode(
-        "unicode_escape"
-    )
+    params["header_row"] = "1" if read_options.get("header_row", False) else "0"
+    params["delimiter"] = bytes(read_options.get("delimiter", ","), "utf-8").decode("unicode_escape")
 
-    stream = builder.seal(client)
-    client.persist(stream)
-    ret = {"type": "return", "content": repr(stream.id)}
-    print(json.dumps(ret), flush=True)
+    stream = DataFrameStream.new(client, params)
+    client.persist(stream.id)
+    report_success(stream.id)
 
     name = urlparse(path).netloc
     # the "name" part in URL can be a name, or an ObjectID for convenience.
@@ -51,23 +47,20 @@ def read_vineyard_dataframe(
         df_id = vineyard.ObjectID(name)
     dataframes = client.get(df_id)
 
-    writer = stream.open_writer(client)
-    for df in dataframes:
-        rb = pa.RecordBatch.from_pandas(df)
-        sink = pa.BufferOutputStream()
-        rb_writer = pa.ipc.new_stream(sink, rb.schema)
-        rb_writer.write_batch(rb)
-        rb_writer.close()
-        buf = sink.getvalue()
-        chunk = writer.next(buf.size)
-        buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
-        buf_writer.write(buf)
-        buf_writer.close()
+    writer: DataFrameStream.Writer = stream.open_writer(client)
 
-    writer.finish()
+    try:
+        for df in dataframes:
+            batch = pa.RecordBatch.from_pandas(df)
+            sink = pa.BufferOutputStream()
+            writer.write(batch)
+        writer.finish()
+    except Exception:
+        report_exception()
+        writer.fail()
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 7:
         print(
             "usage: ./read_vineyard_dataframe <ipc_socket> <vineyard_address> <storage_options> <read_options> <proc num> <proc index>"
@@ -75,14 +68,12 @@ if __name__ == "__main__":
         exit(1)
     ipc_socket = sys.argv[1]
     path = sys.argv[2]
-    storage_options = json.loads(
-        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
-    )
-    read_options = json.loads(
-        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
-    )
+    storage_options = json.loads(base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8"))
+    read_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
-    read_vineyard_dataframe(
-        ipc_socket, path, storage_options, read_options, proc_num, proc_index
-    )
+    read_vineyard_dataframe(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
+
+
+if __name__ == "__main__":
+    main()

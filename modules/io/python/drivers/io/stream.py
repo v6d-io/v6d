@@ -20,44 +20,14 @@ import base64
 import json
 import logging
 import os
-from vineyard.data.dataframe import make_global_dataframe
 
 import vineyard.io
+from vineyard.data.dataframe import make_global_dataframe
 from vineyard.launcher.launcher import LauncherStatus
 from vineyard.launcher.script import ScriptLauncher
 
-from vineyard.core.resolver import default_resolver_context
-
 logger = logging.getLogger("vineyard")
 base_path = os.path.abspath(os.path.dirname(__file__))
-
-
-def parallel_stream_resolver(obj):
-    """Return a list of *local* partial streams."""
-    meta = obj.meta
-    partition_size = int(meta["size_"])
-    return [meta.get_member("stream_%d" % i) for i in range(partition_size)]
-
-
-def global_dataframe_resolver(obj, resolver):
-    """Return a list of dataframes."""
-    meta = obj.meta
-    num = int(meta['partitions_-size'])
-
-    dataframes = []
-    orders = []
-    for i in range(num):
-        df = meta.get_member('partitions_-%d' % i)
-        if df.meta.islocal:
-            dataframes.append(resolver.run(df))
-            orders.append(df.meta["row_batch_index_"])
-    if orders != sorted(orders):
-        raise ValueError("Bad dataframe orders:", orders)
-    return dataframes
-
-
-default_resolver_context.register("vineyard::ParallelStream", parallel_stream_resolver)
-default_resolver_context.register("vineyard::GlobalDataFrame", global_dataframe_resolver)
 
 
 def _resolve_ssh_script(deployment="ssh"):
@@ -222,25 +192,6 @@ def parse_bytes_to_dataframe(vineyard_socket, byte_stream, *args, **kwargs):
     return launcher.wait()
 
 
-def read_kafka_bytes(path, vineyard_socket, *args, **kwargs):
-    """Read a bytes stream from a kafka topic."""
-    path = json.dumps(path)
-    deployment = kwargs.pop("deployment", "ssh")
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable("read_kafka_bytes"), vineyard_socket, path, *args, **kwargs)
-    return launcher.wait()
-
-
-def read_kafka_dataframe(path, vineyard_socket, *args, **kwargs):
-    stream = read_kafka_bytes(path, vineyard_socket, *args, **kwargs.copy())
-    return parse_bytes_to_dataframe(
-        vineyard_socket,
-        stream,
-        *args,
-        **kwargs.copy(),
-    )
-
-
 def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -316,8 +267,6 @@ vineyard.io.read.register("hive", read_dataframe)
 vineyard.io.read.register("s3", read_dataframe)
 vineyard.io.read.register("oss", read_dataframe)
 
-vineyard.io.read.register("kafka", read_kafka_bytes)
-vineyard.io.read.register("kafka", read_kafka_dataframe)
 vineyard.io.read.register("vineyard", read_vineyard_dataframe)
 
 
@@ -386,28 +335,6 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
         write_bytes(path, stream, vineyard_socket, storage_options, write_options, *args, **kwargs.copy())
 
 
-def write_kafka_bytes(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop("deployment", "ssh")
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(
-        get_executable("write_kafka_bytes"),
-        *((vineyard_socket, path, dataframe_stream) + args),
-        **kwargs,
-    )
-    launcher.join()
-
-
-def write_kafka_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
-    deployment = kwargs.pop("deployment", "ssh")
-    launcher = ParallelStreamLauncher(deployment)
-    launcher.run(
-        get_executable("write_kafka_dataframe"),
-        *((vineyard_socket, path, dataframe_stream) + args),
-        **kwargs,
-    )
-    launcher.join()
-
-
 def write_vineyard_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -426,8 +353,6 @@ vineyard.io.write.register("hdfs", write_dataframe)
 vineyard.io.write.register("s3", write_dataframe)
 vineyard.io.write.register("oss", write_dataframe)
 
-vineyard.io.write.register("kafka", write_kafka_bytes)
-vineyard.io.write.register("kafka", write_kafka_dataframe)
 vineyard.io.write.register("vineyard", write_vineyard_dataframe)
 
 

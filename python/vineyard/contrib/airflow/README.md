@@ -29,7 +29,7 @@ Configuration and Usage
 
     The vineyard server can be easier launched locally with the following command:
 
-        vineyardd --socket=/tmp/vineyard.sock
+        python3 -m vineyard --socket=/tmp/vineyard.sock
 
     See also our documentation about [launching vineyard][1].
 

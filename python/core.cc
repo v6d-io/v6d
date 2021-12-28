@@ -101,7 +101,7 @@ void bind_core(py::module& mod) {
              return meta;
            }),
            py::arg("global_") = false)
-      .def_property("__client", &ObjectMeta::GetClient, &ObjectMeta::SetClient)
+      .def_property("_client", &ObjectMeta::GetClient, &ObjectMeta::SetClient)
       .def_property(
           "id",
           [](ObjectMeta* self) -> ObjectIDWrapper { return self->GetId(); },
@@ -207,6 +207,14 @@ void bind_core(py::module& mod) {
            [](ObjectMeta* self, std::string const& key,
               std::vector<std::string> const& value) {
              self->AddKeyValue(key, value);
+           })
+      .def("__setitem__",
+           [](ObjectMeta* self, std::string const& key, py::list const& value) {
+             self->AddKeyValue(key, detail::to_json(value));
+           })
+      .def("__setitem__",
+           [](ObjectMeta* self, std::string const& key, py::dict const& value) {
+             self->AddKeyValue(key, detail::to_json(value));
            })
       .def("add_member",
            [](ObjectMeta* self, std::string const& key, Object const* member) {
@@ -415,13 +423,26 @@ void bind_core(py::module& mod) {
           "offset"_a, "address"_a, "size"_a)
       .def(
           "copy",
-          [](BlobWriter* self, size_t offset, py::bytes bs) {
+          [](BlobWriter* self, size_t offset, py::buffer const& buffer) {
+            throw_on_error(copy_memoryview(buffer.ptr(), self->data(),
+                                           self->size(), offset));
+          },
+          "offset"_a, "buffer"_a)
+      .def(
+          "copy",
+          [](BlobWriter* self, size_t offset, py::bytes const& bs) {
             char* buffer = nullptr;
             ssize_t length = 0;
             if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
               py::pybind11_fail("Unable to extract bytes contents!");
             }
-            VINEYARD_ASSERT(offset + length <= self->size());
+            if (offset + length > self->size()) {
+              throw_on_error(Status::AssertionFailed(
+                  "Expect a source buffer with size at most '" +
+                  std::to_string(self->size() - offset) +
+                  "', but the buffer size is '" + std::to_string(length) +
+                  "'"));
+            }
             std::memcpy(self->data() + offset, buffer, length);
           },
           "offset"_a, "bytes"_a)

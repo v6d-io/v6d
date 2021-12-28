@@ -18,63 +18,62 @@
 
 import json
 import sys
+import traceback
 
 import pyarrow as pa
 import vineyard
-from vineyard.io.byte import ByteStreamBuilder
+from vineyard.io.byte import ByteStream
+from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.utils import report_exception, report_success
 
 
 def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(
-            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
-        )
-    instream = streams[proc_index]
+        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+    instream: DataFrameStream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
-    header_row = instream.params.get("header_row", None) == "1"
+    generate_header_row = instream.params.get("header_row", None) == "1"
     delimiter = instream.params.get("delimiter", ",")
 
-    builder = ByteStreamBuilder(client)
-    stream = builder.seal(client)
-    client.persist(stream)
-    ret = {"type": "return"}
-    ret["content"] = repr(stream.id)
-    print(json.dumps(ret), flush=True)
+    stream = ByteStream.new(client, params=instream.params)
+    client.persist(stream.id)
+    report_success(stream.id)
 
     stream_writer = stream.open_writer(client)
-    first_write = header_row
-    while True:
-        try:
-            content = stream_reader.next()
-        except vineyard.StreamDrainedException:
-            stream_writer.finish()
-            break
-        buf_reader = pa.ipc.open_stream(pa.py_buffer(content))
+    first_write = generate_header_row
+
+    try:
         while True:
             try:
-                batch = buf_reader.read_next_batch()
-            except StopIteration:
+                batch = stream_reader.next()  # pa.RecordBatch
+            except (StopIteration, vineyard.StreamDrainedException):
+                stream_writer.finish()
                 break
             df = batch.to_pandas()
-            buf = df.to_csv(header=first_write, index=False, sep=delimiter).encode()
+            csv_content = df.to_csv(header=first_write, index=False, sep=delimiter).encode('utf-8')
+
+            # write to byte stream
             first_write = False
-            chunk = stream_writer.next(len(buf))
-            buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
-            buf_writer.write(buf)
-            buf_writer.close()
+            chunk = stream_writer.next(len(csv_content))
+            vineyard.memory_copy(chunk, 0, csv_content)
+    except Exception:
+        report_exception()
+        stream_writer.fail()
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 5:
-        print(
-            "usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>"
-        )
+        print("usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     proc_num = int(sys.argv[3])
     proc_index = int(sys.argv[4])
     parse_dataframe(ipc_socket, stream_id, proc_num, proc_index)
+
+
+if __name__ == "__main__":
+    main()

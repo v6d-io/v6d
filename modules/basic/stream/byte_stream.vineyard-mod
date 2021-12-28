@@ -68,7 +68,7 @@ class __attribute__((annotate("no-vineyard"))) ByteStreamWriter {
   bool stoped_;  // an optimization: avoid repeated idempotent requests.
 
   arrow::BufferBuilder builder_;
-  size_t buffer_size_limit_;
+  size_t buffer_size_limit_ = 1024 * 1024 * 256;  // 256Mi
 
   friend class Client;
 };

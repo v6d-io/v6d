@@ -21,50 +21,41 @@ import sys
 
 import pyarrow as pa
 import vineyard
-
-
-def print_vineyard_id(vineyard_id):
-    ret = {"type": "return", "content": repr(vineyard_id)}
-    print(json.dumps(ret))
+from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.utils import report_success
 
 
 def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(
-            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
-        )
-    instream = streams[proc_index]
+        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+    instream: DataFrameStream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
     idx = 0
     while True:
         try:
-            content = stream_reader.next()
+            batch = stream_reader.next()
         except:
             break
-        buf_reader = pa.ipc.open_stream(pa.py_buffer(content))
-        while True:
-            try:
-                batch = buf_reader.read_next_batch()
-            except StopIteration:
-                break
-            df = batch.to_pandas()
-            df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=idx)
-            client.persist(df_id)
-            idx += 1
-            print_vineyard_id(df_id)
+        df = batch.to_pandas()
+        df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=idx)
+        client.persist(df_id)
+        idx += 1
+        report_success(df_id)
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 5:
-        print(
-            "usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>"
-        )
+        print("usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     proc_num = int(sys.argv[3])
     proc_index = int(sys.argv[4])
     write_vineyard_dataframe(ipc_socket, stream_id, proc_num, proc_index)
+
+
+if __name__ == "__main__":
+    main()

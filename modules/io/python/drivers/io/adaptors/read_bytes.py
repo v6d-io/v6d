@@ -18,16 +18,21 @@
 
 import base64
 import json
+from urllib.parse import urlparse
 import sys
+import traceback
 from typing import Dict
 
 import fsspec
-import pyarrow as pa
-from urllib.parse import urlparse
-import vineyard
 from fsspec.utils import read_block
 from fsspec.core import split_protocol
-from vineyard.io.byte import ByteStreamBuilder
+
+import pyarrow as pa
+
+import vineyard
+from vineyard.io.byte import ByteStream
+from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.utils import report_error, report_exception, report_success
 
 try:
     from vineyard.drivers.io import ossfs
@@ -36,11 +41,6 @@ except ImportError:
 
 if ossfs:
     fsspec.register_implementation("oss", ossfs.OSSFileSystem)
-
-
-def report_status(status, content):
-    ret = {"type": status, "content": content}
-    print(json.dumps(ret), flush=True)
 
 
 def read_bytes(
@@ -66,7 +66,7 @@ def read_bytes(
         ValueError: If the stream is invalid.
     """
     client = vineyard.connect(vineyard_socket)
-    builder = ByteStreamBuilder(client)
+    params = dict()
 
     serialization_mode = read_options.pop('serialization_mode', False)
     if serialization_mode:
@@ -74,12 +74,12 @@ def read_bytes(
         try:
             fs = fsspec.filesystem(parsed.scheme)
         except ValueError as e:
-            report_status("error", str(e))
+            report_exception()
             raise
         meta_file = f"{path}_{proc_index}.meta"
         blob_file = f"{path}_{proc_index}"
         if not fs.exists(meta_file) or not fs.exists(blob_file):
-            report_status("error", f"Some serialization file cannot be found. Expected: {meta_file} and {blob_file}")
+            report_error(f"Some serialization file cannot be found. Expected: {meta_file} and {blob_file}")
             raise FileNotFoundError('{}, {}'.format(meta_file, blob_file))
         # Used for read bytes of serialized graph
         meta_file = fsspec.open(meta_file, mode="rb", **storage_options)
@@ -88,43 +88,46 @@ def read_bytes(
             meta = json.loads(meta)
         lengths = meta.pop("lengths")
         for k, v in meta.items():
-            builder[k] = v
-        stream = builder.seal(client)
-        client.persist(stream)
-        ret = {"type": "return", "content": repr(stream.id)}
-        print(json.dumps(ret), flush=True)
+            params[k] = v
+        stream = ByteStream.new(client, params=params)
+        client.persist(stream.id)
+        report_success(stream.id)
+
         writer = stream.open_writer(client)
-        of = fsspec.open(blob_file, mode="rb", **storage_options)
-        with of as f:
-            try:
-                total_size = f.size()
-            except TypeError:
-                total_size = f.size
-            assert total_size == sum(lengths), "Target file is corrupted"
-            for length in lengths:
-                buf = f.read(length)
-                chunk = writer.next(length)
-                buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
-                buf_writer.write(buf)
-                buf_writer.close()
-        writer.finish()
+
+        try:
+            of = fsspec.open(blob_file, mode="rb", **storage_options)
+            with of as f:
+                try:
+                    total_size = f.size()
+                except TypeError:
+                    total_size = f.size
+                assert total_size == sum(lengths), "Target file is corrupted"
+                for length in lengths:
+                    buffer = f.read(length)
+                    chunk = writer.next(length)
+                    vineyard.memory_copy(chunk, 0, buffer)
+            writer.finish()
+        except Exception as e:
+            report_exception()
+            writer.fail()
     else:
         # Used when reading tables from external storage.
         # Usually for load a property graph
         header_row = read_options.get("header_row", False)
         for k, v in read_options.items():
             if k in ("header_row", "include_all_columns"):
-                builder[k] = "1" if v else "0"
+                params[k] = "1" if v else "0"
             elif k == "delimiter":
-                builder[k] = bytes(v, "utf-8").decode("unicode_escape")
+                params[k] = bytes(v, "utf-8").decode("unicode_escape")
             else:
-                builder[k] = v
+                params[k] = v
 
         try:
             protocol = split_protocol(path)[0]
             fs = fsspec.filesystem(protocol, **storage_options)
-        except Exception as e:
-            report_status("error", f"Cannot initialize such filesystem for '{path}'")
+        except Exception:
+            report_error(f"Cannot initialize such filesystem for '{path}', exception is:\n{traceback.format_exc()}")
             raise
 
         if fs.isfile(path):
@@ -134,9 +137,8 @@ def read_bytes(
                 files = fs.glob(path + '*')
                 assert files, f"Cannot find such files: {path}"
             except:
-                report_status("error", f"Cannot find such files for '{path}'")
+                report_error(f"Cannot find such files for '{path}'")
                 raise
-
         ''' Note [Semantic of read_block with delimiter]:
 
         read_block(fp, begin, size, delimiter) will:
@@ -146,49 +148,53 @@ def read_bytes(
               Note that the returned size may exceed `size`.
         '''
 
+        stream, writer = None, None
         chunk_size = 1024 * 1024 * 4
-        for index, file_path in enumerate(files):
-            with fs.open(file_path, mode="rb") as f:
-                offset = 0
-                # Only process header line when processing first file
-                # And open the writer when processing first file
-                if index == 0:
-                    header_line = read_block(f, 0, 1, b'\n')
-                    builder["header_line"] = header_line.decode("unicode_escape")
-                    if header_row:
-                        offset = len(header_line)
-                    stream = builder.seal(client)
-                    client.persist(stream)
-                    ret = {"type": "return", "content": repr(stream.id)}
-                    print(json.dumps(ret), flush=True)
-                    writer = stream.open_writer(client)
 
-                try:
-                    total_size = f.size()
-                except TypeError:
-                    total_size = f.size
-                part_size = (total_size - offset) // proc_num
-                begin = part_size * proc_index + offset
-                end = min(begin + part_size, total_size)
+        try:
+            for index, file_path in enumerate(files):
+                with fs.open(file_path, mode="rb") as f:
+                    offset = 0
+                    # Only process header line when processing first file
+                    # And open the writer when processing first file
+                    if index == 0:
+                        header_line = read_block(f, 0, 1, b'\n')
+                        params["header_line"] = header_line.decode("unicode_escape")
+                        if header_row:
+                            offset = len(header_line)
+                        stream = ByteStream.new(client, params)
+                        client.persist(stream.id)
+                        report_success(stream.id)
+                        writer = stream.open_writer(client)
 
-                # See Note [Semantic of read_block with delimiter].
-                if index == 0 and proc_index == 0:
-                    begin -= int(header_row)
+                    try:
+                        total_size = f.size()
+                    except TypeError:
+                        total_size = f.size
+                    part_size = (total_size - offset) // proc_num
+                    begin = part_size * proc_index + offset
+                    end = min(begin + part_size, total_size)
 
-                while begin < end:
-                    buf = read_block(f, begin, min(chunk_size, end - begin), delimiter=b"\n")
-                    size = len(buf)
-                    if not size:
-                        break
-                    begin += size - 1
-                    chunk = writer.next(size)
-                    buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
-                    buf_writer.write(buf)
-                    buf_writer.close()
-        writer.finish()
+                    # See Note [Semantic of read_block with delimiter].
+                    if index == 0 and proc_index == 0:
+                        begin -= int(header_row)
+
+                    while begin < end:
+                        buffer = read_block(f, begin, min(chunk_size, end - begin), delimiter=b"\n")
+                        size = len(buffer)
+                        if size <= 0:
+                            break
+                        begin += size - 1
+                        chunk = writer.next(size)
+                        vineyard.memory_copy(chunk, 0, buffer)
+            writer.finish()
+        except Exception:
+            if writer is not None:
+                report_exception()
+                writer.fail()
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 7:
         print("usage: ./read_bytes <ipc_socket> <path> <storage_options> <read_options> <proc_num> <proc_index>")
         exit(1)
@@ -199,3 +205,7 @@ if __name__ == "__main__":
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
     read_bytes(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
+
+
+if __name__ == "__main__":
+    main()
