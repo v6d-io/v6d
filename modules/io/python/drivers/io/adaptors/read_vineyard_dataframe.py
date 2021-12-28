@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 import pyarrow as pa
 import vineyard
-from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import report_exception, report_success
 
 
@@ -35,7 +35,7 @@ def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options
     params["header_row"] = "1" if read_options.get("header_row", False) else "0"
     params["delimiter"] = bytes(read_options.get("delimiter", ","), "utf-8").decode("unicode_escape")
 
-    stream = DataFrameStream.new(client, params)
+    stream = DataframeStream.new(client, params)
     client.persist(stream.id)
     report_success(stream.id)
 
@@ -47,7 +47,7 @@ def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options
         df_id = vineyard.ObjectID(name)
     dataframes = client.get(df_id)
 
-    writer: DataFrameStream.Writer = stream.open_writer(client)
+    writer: DataframeStream.Writer = stream.open_writer(client)
 
     try:
         for df in dataframes:

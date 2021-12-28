@@ -29,7 +29,7 @@ import pyarrow as pa
 import pyorc
 
 import vineyard
-from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import report_success
 
 try:
@@ -127,7 +127,7 @@ def read_orc(
     if read_options:
         raise ValueError("Reading ORC doesn't support read options.")
     client = vineyard.connect(vineyard_socket)
-    stream = DataFrameStream.new(client)
+    stream = DataframeStream.new(client)
     client.persist(stream.id)
     report_success(stream.id)
 

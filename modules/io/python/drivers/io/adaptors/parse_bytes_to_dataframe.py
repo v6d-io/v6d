@@ -26,7 +26,7 @@ import pyarrow.csv
 import vineyard
 from vineyard.data.utils import normalize_arrow_dtype
 from vineyard.io.byte import ByteStream
-from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import report_error, report_exception, report_success
 
 logger = logging.getLogger('vineyard')
@@ -110,7 +110,7 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
             arrow_column_types[columns[i]] = normalize_arrow_dtype(column_type)
     convert_options.column_types = arrow_column_types
 
-    stream = DataFrameStream.new(client, params=instream.params)
+    stream = DataframeStream.new(client, params=instream.params)
     client.persist(stream.id)
     report_success(stream.id)
 

@@ -31,7 +31,6 @@ import pyarrow as pa
 
 import vineyard
 from vineyard.io.byte import ByteStream
-from vineyard.io.dataframe import DataFrameStream
 from vineyard.io.utils import report_error, report_exception, report_success
 
 try:
@@ -189,8 +188,8 @@ def read_bytes(
                         vineyard.memory_copy(chunk, 0, buffer)
             writer.finish()
         except Exception:
+            report_exception()
             if writer is not None:
-                report_exception()
                 writer.fail()
 
 

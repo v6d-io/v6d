@@ -19,12 +19,12 @@
 import sys
 
 import vineyard
-from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.dataframe import DataframeStream
 
 
 def dump_dataframe(vineyard_socket, stream_id):
     client = vineyard.connect(vineyard_socket)
-    stream: DataFrameStream = client.get(stream_id)
+    stream: DataframeStream = client.get(stream_id)
     stream_reader = stream.open_reader(client)
 
     print('metadata: %s', stream.params)
