@@ -21,7 +21,7 @@ import sys
 
 import pyarrow as pa
 import vineyard
-from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import report_success
 
 
@@ -30,7 +30,7 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
         raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
-    instream: DataFrameStream = streams[proc_index]
+    instream: DataframeStream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
     idx = 0

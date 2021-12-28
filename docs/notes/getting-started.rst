@@ -153,7 +153,7 @@ Open a local file as a dataframe stream
      >>> from vineyard.io.stream import open
      >>> stream = open('file://twitter.e')
      >>> stream.typename
-     vineyard::DataFrameStream
+     vineyard::DataframeStream
 
 In practice, the file may be stored in an NFS, and we want to read the file in
 parallel to further speed up the IO process.

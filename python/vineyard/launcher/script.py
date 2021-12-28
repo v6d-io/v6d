@@ -120,8 +120,12 @@ class ScriptLauncher(Launcher):
         r = super(ScriptLauncher, self).wait(timeout=period)
         if r is not None:
             return r
+        if isinstance(self._cmd, list):
+            cmd = ' '.join(self._cmd)
+        else:
+            cmd = self._cmd
         raise RuntimeError('Failed to launch job [%s], exited with %r: %s' %
-                           (self._cmd, self._proc.poll(), ''.join(self._err_message)))
+                           (cmd, self._proc.poll(), ''.join(self._err_message)))
 
     def read_output(self, stdout):
         while self._proc.poll() is None:

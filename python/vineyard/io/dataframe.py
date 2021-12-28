@@ -21,10 +21,10 @@
 .. code:: python
 
     # create a builder, then seal it as stream
-    >>> stream = DataFrameStream.new(client)
+    >>> stream = DataframeStream.new(client)
     >>> stream = builder.seal(client)
     >>> stream
-    DataFrameStream <o0001e09ddd98fd70>
+    DataframeStream <o0001e09ddd98fd70>
 
     # use write to put chunks
     >>> writer = stream.open_writer(client)
@@ -79,7 +79,7 @@ from .._C import memory_copy, ObjectID, ObjectMeta, StreamDrainedException
 from .stream import BaseStream
 
 
-class DataFrameStream(BaseStream):
+class DataframeStream(BaseStream):
     def __init__(self, meta: ObjectMeta, params: Dict = None):
         super().__init__(meta)
         self._params = params
@@ -89,15 +89,15 @@ class DataFrameStream(BaseStream):
         return self._params
 
     @staticmethod
-    def new(client, params: Dict = None) -> "DataFrameStream":
+    def new(client, params: Dict = None) -> "DataframeStream":
         meta = ObjectMeta()
-        meta['typename'] = 'vineyard::DataFrameStream'
+        meta['typename'] = 'vineyard::DataframeStream'
         if params is None:
             params = dict()
-        meta['params'] = params
+        meta['params_'] = params
         meta = client.create_metadata(meta)
         client.create_stream(meta.id)
-        return DataFrameStream(meta, params)
+        return DataframeStream(meta, params)
 
     class Reader(BaseStream.Reader):
         def __init__(self, client, stream: ObjectID):
@@ -149,21 +149,21 @@ class DataFrameStream(BaseStream):
             return self._client.stop_stream(self._stream, False)
 
     def _open_new_reader(self, client):
-        return DataFrameStream.Reader(client, self.id)
+        return DataframeStream.Reader(client, self.id)
 
     def _open_new_writer(self, client):
-        return DataFrameStream.Writer(client, self.id)
+        return DataframeStream.Writer(client, self.id)
 
 
 def dataframe_stream_resolver(obj):
     meta = obj.meta
-    if 'params' in meta:
-        params = json.loads(meta['params'])
+    if 'params_' in meta:
+        params = json.loads(meta['params_'])
     else:
         params = dict
-    return DataFrameStream(obj.meta, params)
+    return DataframeStream(obj.meta, params)
 
 
 def register_dataframe_stream_types(builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
-        resolver_ctx.register('vineyard::DataFrameStream', dataframe_stream_resolver)
+        resolver_ctx.register('vineyard::DataframeStream', dataframe_stream_resolver)

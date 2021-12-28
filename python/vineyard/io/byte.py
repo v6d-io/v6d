@@ -101,7 +101,7 @@ class ByteStream(BaseStream):
         meta['typename'] = 'vineyard::ByteStream'
         if params is None:
             params = dict()
-        meta['params'] = params
+        meta['params_'] = params
         meta = client.create_metadata(meta)
         client.create_stream(meta.id)
         return ByteStream(meta, params)
@@ -162,8 +162,8 @@ class ByteStream(BaseStream):
 
 def byte_stream_resolver(obj):
     meta = obj.meta
-    if 'params' in meta:
-        params = json.loads(meta['params'])
+    if 'params_' in meta:
+        params = json.loads(meta['params_'])
     else:
         params = dict
     return ByteStream(obj.meta, params)

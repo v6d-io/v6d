@@ -110,8 +110,12 @@ class ParallelStreamLauncher(ScriptLauncher):
         for proc in self._procs:
             if proc.status == LauncherStatus.FAILED and \
                     (proc.exit_code is not None and proc.exit_code != 0):
+                if isinstance(proc.command, list):
+                    cmd = ' '.join(proc.command)
+                else:
+                    cmd = proc.command
                 messages.append("Failed to launch job [%s], exited with %r: %s" %
-                                (proc.command, proc.exit_code, ''.join(proc.error_message)))
+                                (cmd, proc.exit_code, ''.join(proc.error_message)))
         if messages:
             raise RuntimeError("Subprocesses failed with the following error: \n%s" % ('\n\n'.join(messages)))
 

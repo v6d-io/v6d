@@ -27,7 +27,7 @@ import numpy as np
 from vineyard.core import default_builder_context, default_resolver_context
 from vineyard.data import register_builtin_types
 from vineyard.io.byte import ByteStream
-from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.dataframe import DataframeStream
 from vineyard.io.recordbatch import RecordBatchStream
 
 register_builtin_types(default_builder_context, default_resolver_context)

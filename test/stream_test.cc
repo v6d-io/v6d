@@ -23,23 +23,14 @@ limitations under the License.
 #include "arrow/util/logging.h"
 
 #include "basic/stream/byte_stream.h"
+#include "basic/stream/dataframe_stream.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
-int main(int argc, char** argv) {
-  if (argc < 2) {
-    printf("usage ./vector_test <ipc_socket>");
-    return 1;
-  }
-  std::string ipc_socket = std::string(argv[1]);
-
-  Client client;
-  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
-  LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
-
+void testByteStream(Client& client, std::string const& ipc_socket) {
   ObjectID stream_id = InvalidObjectID();
   {
     ByteStreamBuilder builder(client);
@@ -115,8 +106,10 @@ int main(int argc, char** argv) {
   for (size_t idx = 0; idx < send_chunks_size.size(); ++idx) {
     CHECK_EQ(send_chunks_size[idx], recv_chunks_size[idx]);
   }
+}
 
-  // when stream fail
+void testByteStreamFailed(Client& client, std::string const& ipc_socket) {
+  ObjectID stream_id = InvalidObjectID();
   {
     ByteStreamBuilder builder(client);
     builder.SetParams(std::unordered_map<std::string, std::string>{
@@ -139,9 +132,10 @@ int main(int argc, char** argv) {
   std::unique_ptr<arrow::Buffer> buffer = nullptr;
   auto status = reader->GetNext(buffer);
   CHECK(status.IsStreamFailed());
+}
 
-  // when stream contains empty chunks
-
+void testEmptyStream(Client& client, std::string const& ipc_socket) {
+  ObjectID stream_id = InvalidObjectID();
   {
     ByteStreamBuilder builder(client);
     builder.SetParams(std::unordered_map<std::string, std::string>{
@@ -179,6 +173,138 @@ int main(int argc, char** argv) {
 
     CHECK(empty_reader->GetNext(buffer).IsStreamDrained());
   }
+}
+
+void testDataframeStream(Client& client, std::string const& ipc_socket) {
+  ObjectID stream_id = InvalidObjectID();
+  {
+    DataframeStreamBuilder builder(client);
+    builder.SetParams(std::unordered_map<std::string, std::string>{
+        {"kind", "test"}, {"test_name", "stream_test"}});
+    auto bstream =
+        std::dynamic_pointer_cast<DataframeStream>(builder.Seal(client));
+    stream_id = bstream->id();
+    CHECK(stream_id != InvalidObjectID());
+  }
+
+  // make a batch
+  std::shared_ptr<arrow::RecordBatch> batch;
+  {
+    arrow::LargeStringBuilder key_builder;
+    arrow::Int64Builder value_builder;
+    arrow::StringBuilder string_builder;
+
+    auto sub_builder = std::make_shared<arrow::Int64Builder>();
+    arrow::LargeListBuilder list_builder(arrow::default_memory_pool(),
+                                         sub_builder);
+
+    std::shared_ptr<arrow::Array> array1;
+    std::shared_ptr<arrow::Array> array2;
+    std::shared_ptr<arrow::Array> array3;
+    std::shared_ptr<arrow::Array> array4;
+
+    for (int64_t j = 0; j < 100; j++) {
+      CHECK_ARROW_ERROR(key_builder.AppendValues({std::to_string(j)}));
+      CHECK_ARROW_ERROR(value_builder.AppendValues({j}));
+      CHECK_ARROW_ERROR(string_builder.AppendValues({std::to_string(j * j)}));
+      CHECK_ARROW_ERROR(sub_builder->AppendValues({j, j + 1, j + 2}));
+      CHECK_ARROW_ERROR(list_builder.Append(true));
+    }
+    CHECK_ARROW_ERROR(key_builder.Finish(&array1));
+    CHECK_ARROW_ERROR(value_builder.Finish(&array2));
+    CHECK_ARROW_ERROR(string_builder.Finish(&array3));
+    CHECK_ARROW_ERROR(list_builder.Finish(&array4));
+
+    auto arrowSchema = arrow::schema(
+        {std::make_shared<arrow::Field>("f1", arrow::large_utf8()),
+         std::make_shared<arrow::Field>("f2", arrow::int64()),
+         std::make_shared<arrow::Field>("f3", arrow::utf8()),
+         std::make_shared<arrow::Field>("f4",
+                                        arrow::large_list(arrow::int64()))});
+    batch = arrow::RecordBatch::Make(arrowSchema, array1->length(),
+                                     {array1, array2, array3, array4});
+  }
+
+  size_t send_chunks = 0, recv_chunks = 0;
+
+  std::thread recv_thrd([&]() {
+    Client reader_client;
+    VINEYARD_CHECK_OK(reader_client.Connect(ipc_socket));
+
+    auto dataframe_stream = reader_client.GetObject<DataframeStream>(stream_id);
+    CHECK(dataframe_stream != nullptr);
+
+    std::unique_ptr<DataframeStreamReader> reader;
+    VINEYARD_CHECK_OK(dataframe_stream->OpenReader(reader_client, reader));
+
+    std::unique_ptr<DataframeStreamReader> failed_reader;
+    auto status1 = dataframe_stream->OpenReader(reader_client, failed_reader);
+    CHECK(status1.IsStreamOpened());
+
+    while (true) {
+      std::shared_ptr<arrow::RecordBatch> load_batch;
+      auto status = reader->ReadBatch(load_batch);
+      if (status.ok()) {
+        CHECK(load_batch != nullptr);
+        recv_chunks += 1;
+      } else {
+        CHECK(status.IsStreamDrained());
+        break;
+      }
+    }
+  });
+
+  std::thread send_thrd([&]() {
+    Client writer_client;
+    VINEYARD_CHECK_OK(writer_client.Connect(ipc_socket));
+
+    auto dataframe_stream = writer_client.GetObject<DataframeStream>(stream_id);
+    CHECK(dataframe_stream != nullptr);
+
+    std::unique_ptr<DataframeStreamWriter> writer;
+    VINEYARD_CHECK_OK(dataframe_stream->OpenWriter(writer_client, writer));
+
+    std::unique_ptr<DataframeStreamWriter> failed_writer;
+    auto status1 = dataframe_stream->OpenWriter(writer_client, failed_writer);
+    CHECK(status1.IsStreamOpened());
+
+    CHECK(writer != nullptr);
+    for (size_t idx = 1; idx <= 11; ++idx) {
+      VINEYARD_CHECK_OK(writer->WriteBatch(batch));
+      send_chunks += 1;
+      sleep(1);
+    }
+    VINEYARD_CHECK_OK(writer->Finish());
+  });
+
+  send_thrd.join();
+  recv_thrd.join();
+
+  CHECK_EQ(send_chunks, recv_chunks);
+}
+
+int main(int argc, char** argv) {
+  if (argc < 2) {
+    printf("usage ./stream_test <ipc_socket>");
+    return 1;
+  }
+  std::string ipc_socket = std::string(argv[1]);
+
+  Client client;
+  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
+  LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
+
+  testByteStream(client, ipc_socket);
+  LOG(INFO) << "Passed bytestream test...";
+
+  testByteStreamFailed(client, ipc_socket);
+  LOG(INFO) << "Passed failed bytestream test...";
+
+  testEmptyStream(client, ipc_socket);
+  LOG(INFO) << "Passed empty bytestream test...";
+
+  testDataframeStream(client, ipc_socket);
+  LOG(INFO) << "Passed empty dataframe test...";
 
   LOG(INFO) << "Passed stream tests...";
 
