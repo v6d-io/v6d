@@ -195,7 +195,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-10.15]
-        python: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39]
+        python: [3.6, 3.7, 3.8, 3.9]
 
     steps:
       - uses: actions/checkout@v2
@@ -227,19 +227,12 @@ jobs:
 
       - name: Install python for MacOS
         if: runner.os == 'macOS'
-        run: |
-          # setup python
-          case "${{ matrix.python }}" in
-            ("cp36-cp36m") sudo conda create --quiet --yes -n buildwheel python=3.6 ;;
-            ("cp37-cp37m") sudo conda create --quiet --yes -n buildwheel python=3.7 ;;
-            ("cp38-cp38")  sudo conda create --quiet --yes -n buildwheel python=3.8 ;;
-            ("cp39-cp39")  sudo conda create --quiet --yes -n buildwheel -c conda-forge python=3.9 ;;
-          esac
-          conda init bash
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
 
-          # validate python
-          source ~/.bash_profile
-          conda activate buildwheel
+      - name: Validate installed python version
+        run: |
           python -c "import sys; print(sys.version)"
 
           # install dependencies
@@ -340,9 +333,6 @@ jobs:
 
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH:$HOME/.local/bin
           export MACOSX_DEPLOYMENT_TARGET=10.9
-
-          source ~/.bash_profile
-          conda activate buildwheel
 
           # run build
           mkdir -p build
