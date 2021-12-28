@@ -241,7 +241,7 @@ Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
   }
 
   // validate expected size first
-  if ((size != 0) && (dst_buffer.size() < size)) {
+  if ((size != 0) && (static_cast<size_t>(dst_buffer.size()) < size)) {
     return Status::AssertionFailed(
         "Expect a destination buffer with size at least '" +
         std::to_string(size) + "', but the buffer size is '" +
