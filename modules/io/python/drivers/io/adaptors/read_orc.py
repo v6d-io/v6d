@@ -24,10 +24,13 @@ from urllib.parse import urlparse
 
 import fsspec
 import fsspec.implementations.hdfs
+
 import pyarrow as pa
 import pyorc
+
 import vineyard
-from vineyard.io.dataframe import DataframeStreamBuilder
+from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.utils import report_success
 
 try:
     from vineyard.drivers.io import ossfs
@@ -85,16 +88,8 @@ def read_single_orc(path, fs, writer):
             rows = reader.read(num=chunk_rows)
             if not rows:
                 break
-            rb = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
-            sink = pa.BufferOutputStream()
-            rb_writer = pa.ipc.new_stream(sink, rb.schema)
-            rb_writer.write_batch(rb)
-            rb_writer.close()
-            buf = sink.getvalue()
-            chunk = writer.next(buf.size)
-            buf_writer = pa.FixedSizeBufferWriter(pa.py_buffer(chunk))
-            buf_writer.write(buf)
-            buf_writer.close()
+            batch = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
+            writer.write(batch)
 
 
 def read_orc(
@@ -132,11 +127,9 @@ def read_orc(
     if read_options:
         raise ValueError("Reading ORC doesn't support read options.")
     client = vineyard.connect(vineyard_socket)
-    builder = DataframeStreamBuilder(client)
-    stream = builder.seal(client)
-    client.persist(stream)
-    ret = {"type": "return", "content": repr(stream.id)}
-    print(json.dumps(ret), flush=True)
+    stream = DataFrameStream.new(client)
+    client.persist(stream.id)
+    report_success(stream.id)
 
     writer = stream.open_writer(client)
     parsed = urlparse(path)
@@ -155,20 +148,19 @@ def read_orc(
     writer.finish()
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 7:
         print(
-            "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> <read_options> <proc_num> <proc_index>"
-        )
+            "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> <read_options> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
     path = sys.argv[2]
-    storage_options = json.loads(
-        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
-    )
-    read_options = json.loads(
-        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
-    )
+    storage_options = json.loads(base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8"))
+    read_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
     read_orc(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
+
+
+if __name__ == "__main__":
+    main()

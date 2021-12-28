@@ -494,6 +494,8 @@ class ObjectMeta {
    */
   size_t MemoryUsage() const;
 
+  std::string ToString() const;
+
   void PrintMeta() const;
 
   const bool incomplete() const;

@@ -23,6 +23,8 @@ import traceback
 
 import fsspec
 import vineyard
+from vineyard.io.byte import ByteStream
+from vineyard.io.utils import report_error, report_exception
 
 try:
     from vineyard.drivers.io import ossfs
@@ -31,11 +33,6 @@ except ImportError:
 
 if ossfs:
     fsspec.register_implementation("oss", ossfs.OSSFileSystem)
-
-
-def report_status(status, content):
-    ret = {"type": status, "content": content}
-    print(json.dumps(ret), flush=True)
 
 
 def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options, proc_num, proc_index):
@@ -57,28 +54,27 @@ def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
         err = f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
-        report_status("error", err)
+        report_error(err)
         raise ValueError(err)
 
     serialization_mode = write_options.pop('serialization_mode', False)
-    instream = streams[proc_index]
+    instream: ByteStream = streams[proc_index]
     try:
         reader = instream.open_reader(client)
         of = fsspec.open(f"{path}_{proc_index}", "wb", **storage_options)
     except Exception as e:
-        err = traceback.format_exc()
-        report_status("error", err)
+        report_exception()
         raise
 
     lengths = []  # store lengths of each chunk. may be unused
     with of as f:
         while True:
             try:
-                buf = reader.next()
-            except vineyard.StreamDrainedException:
+                buffer = reader.next()
+            except (StopIteration, vineyard.StreamDrainedException):
                 break
-            lengths.append(len(buf))
-            f.write(bytes(memoryview(buf)))
+            lengths.append(len(buffer))
+            f.write(bytes(buffer))
     if serialization_mode:
         # Used when serialize a graph to bytes, and write to external storage
         params = instream.params
@@ -87,26 +83,25 @@ def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options
         try:
             with meta as f:
                 f.write(json.dumps(params).encode('utf-8'))
-        except Exception as e:
-            err = traceback.format_exc()
-            report_status("error", err)
+        except Exception:
+            report_exception()
             raise
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 7:
-        print(
-            "usage: ./write_bytes <ipc_socket> <path> <stream_id> "
-            "<storage_options> <write_options> <proc_num> <proc_index>"
-        )
+        print("usage: ./write_bytes <ipc_socket> <path> <stream_id> "
+              "<storage_options> <write_options> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
     path = sys.argv[2]
     stream_id = sys.argv[3]
-    storage_options = json.loads(
-        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
-    )
+    storage_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
     write_options = json.loads(base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8"))
     proc_num = int(sys.argv[6])
     proc_index = int(sys.argv[7])
     write_bytes(ipc_socket, path, stream_id, storage_options, write_options, proc_num, proc_index)
+
+
+if __name__ == "__main__":
+    main()

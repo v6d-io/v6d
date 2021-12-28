@@ -228,6 +228,8 @@ size_t ObjectMeta::MemoryUsage() const {
   return total_size;
 }
 
+std::string ObjectMeta::ToString() const { return meta_.dump(4); }
+
 void ObjectMeta::PrintMeta() const { std::clog << meta_.dump(4) << std::endl; }
 
 const bool ObjectMeta::incomplete() const { return incomplete_; }

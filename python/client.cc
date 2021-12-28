@@ -541,7 +541,7 @@ void bind_client(py::module& mod) {
                   const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
             }
           },
-          "stream"_a, py::call_guard<py::gil_scoped_release>())
+          "stream"_a)
       .def(
           "allocated_size",
           [](Client* self, const ObjectID id) -> size_t {

@@ -20,7 +20,9 @@ import logging
 import traceback
 from urllib.parse import urlparse
 
+from .._C import ObjectID, ObjectMeta, StreamDrainedException
 from ..core.driver import registerize
+from ..core.resolver import resolver_context
 
 logger = logging.getLogger('vineyard')
 
@@ -128,4 +130,113 @@ def open(path, *args, mode='r', **kwargs):
     raise RuntimeError('Opening %s with mode %s is not supported' % (path, mode))
 
 
-__all__ = ['open', 'read', 'write']
+class BaseStream:
+    class Reader:
+        def __init__(self, client, stream: ObjectID, resolver=None):
+            self._client = client
+            self._stream = stream
+            self._resolver = resolver
+            self._client.open_stream(stream, 'r')
+
+        def next(self) -> object:
+            try:
+                chunk = self._client.next_chunk(self._stream)
+            except StreamDrainedException as e:
+                raise StopIteration('No more chunks') from e
+
+            if self._resolver is not None:
+                return self._resolver(chunk)
+            else:
+                with resolver_context() as ctx:
+                    return ctx.run(chunk)
+
+        def next_metadata(self) -> ObjectMeta:
+            try:
+                return self._client.next_chunk_meta(self._stream)
+            except StreamDrainedException as e:
+                raise StopIteration('No more chunks') from e
+
+        def __str__(self) -> str:
+            return repr(self)
+
+        def __repr__(self) -> str:
+            return '%s of Stream <%r>' % (self.__class__, self._stream)
+
+    class Writer:
+        def __init__(self, client, stream: ObjectID):
+            self._client = client
+            self._stream = stream
+            self._client.open_stream(stream, 'w')
+
+        def next(self, size: int) -> memoryview:
+            return self._client.new_buffer_chunk(self._stream, size)
+
+        def append(self, chunk: ObjectID):
+            return self._client.push_chunk(self._stream, chunk)
+
+        def fail(self):
+            return self._client.stop_stream(self._stream, True)
+
+        def finish(self):
+            return self._client.stop_stream(self._stream, False)
+
+        def __str__(self) -> str:
+            return repr(self)
+
+        def __repr__(self) -> str:
+            return '%s of Stream <%r>' % (self.__class__, self._stream)
+
+    def __init__(self, meta: ObjectMeta, resolver=None):
+        self._meta = meta
+        self._stream = meta.id
+        self._resolver = resolver
+
+        self._reader = None
+        self._writer = None
+
+    @property
+    def id(self) -> ObjectID:
+        return self._stream
+
+    @property
+    def meta(self) -> ObjectMeta:
+        return self._meta
+
+    @property
+    def reader(self) -> "BaseStream.Reader":
+        return self.open_reader()
+
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __repr__(self) -> str:
+        return '%s <%r>' % (self.__class__.__name__, self._stream)
+
+    def _open_new_reader(self, client) -> "BaseStream.Reader":
+        ''' Always open a new reader.
+        '''
+        return BaseStream.Reader(client, self.id, self._resolver)
+
+    def open_reader(self, client=None) -> "BaseStream.Reader":
+        if self._reader is None:
+            if client is None:
+                client = self._meta._client
+            self._reader = self._open_new_reader(client)
+        return self._reader
+
+    @property
+    def writer(self) -> "BaseStream.Writer":
+        return self.open_writer()
+
+    def _open_new_writer(self, client) -> "BaseStream.Writer":
+        return BaseStream.Writer(client, self.id)
+
+    def open_writer(self, client=None) -> "BaseStream.Writer":
+        if self._writer is None:
+            if client is None:
+                client = self._meta._client
+            self._writer = self._open_new_writer(client)
+        return self._writer
+
+
+__all__ = ['open', 'read', 'write', 'BaseStream']

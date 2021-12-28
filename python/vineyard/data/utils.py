@@ -20,6 +20,7 @@ import json
 import platform
 
 import numpy as np
+import pyarrow as pa
 
 import pickle
 
@@ -67,6 +68,50 @@ def normalize_cpptype(dtype):
     return dtype.name
 
 
+def normalize_arrow_dtype(dtype):
+    if dtype in ['bool']:
+        return pa.bool_()
+    if dtype in ['int8_t', 'int8', 'byte']:
+        return pa.int8()
+    if dtype in ['uint8_t', 'uint8', 'char']:
+        return pa.uint8()
+    if dtype in ['int16_t', 'int16', 'short']:
+        return pa.int16()
+    if dtype in ['uint16_t', 'uint16']:
+        return pa.uint16()
+    if dtype in ['int32_t', 'int32', 'int']:
+        return pa.int32()
+    if dtype in ['uint32_t', 'uint32']:
+        return pa.uint32()
+    if dtype in ['int64_t', 'int64', 'long']:
+        return pa.int64()
+    if dtype in ['uint64_t', 'uint64']:
+        return pa.uint64()
+    if dtype in ['half']:
+        return pa.float16()
+    if dtype in ['float', 'float32']:
+        return pa.float32()
+    if dtype in ['double', 'float64']:
+        return pa.float64()
+    if dtype in ['string', 'std::string', 'std::__1::string', 'str']:
+        return pa.large_string()
+    if dtype in ['large_list<item: int32>']:
+        return pa.large_list(pa.int32())
+    if dtype in ['large_list<item: uint32>']:
+        return pa.large_list(pa.uint32())
+    if dtype in ['large_list<item: int64>']:
+        return pa.large_list(pa.int64())
+    if dtype in ['large_list<item: uint64>']:
+        return pa.large_list(pa.uint64())
+    if dtype in ['large_list<item: float>']:
+        return pa.large_list(pa.float())
+    if dtype in ['large_list<item: double>']:
+        return pa.large_list(pa.double())
+    if dtype in ['null', 'NULL', 'None', None]:
+        return pa.null()
+    raise ValueError('Unsupported data type: %s' % dtype)
+
+
 def build_buffer(client, address, size):
     if size == 0:
         return client.create_empty_blob()
@@ -110,5 +155,6 @@ def expand_slice(indexer):
 
 
 __all__ = [
-    'normalize_dtype', 'normalize_cpptype', 'build_buffer', 'build_numpy_buffer', 'to_json', 'from_json', 'expand_slice'
+    'normalize_dtype', 'normalize_cpptype', 'normalize_arrow_dtype', 'build_buffer', 'build_numpy_buffer', 'to_json',
+    'from_json', 'expand_slice'
 ]

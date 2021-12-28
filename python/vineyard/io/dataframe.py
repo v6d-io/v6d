@@ -21,38 +21,149 @@
 .. code:: python
 
     # create a builder, then seal it as stream
-    >>> builder = DataframeStreamBuilder(client)
+    >>> stream = DataFrameStream.new(client)
     >>> stream = builder.seal(client)
     >>> stream
-    >>> <vineyard._C.DataframeStream at 0x13b3d7ef0>
+    DataFrameStream <o0001e09ddd98fd70>
 
     # use write to put chunks
-    >>> writer = stream.open_writer()
-    >>> chunk = reader.next(1000)
-    >>> chunk
-    <pyarrow.lib.Buffer at 0x13b3e35f0>
-    >>> len(chunk)
-    1234
-    >>> chunk.is_mutable
-    True
+    >>> writer = stream.open_writer(client)
+    >>> writer.write_table(pa.Table.from_pandas(pd.DataFrame({"x": [1,2,3], "y": [4,5,6]})))
 
     # mark the stream as finished
     >>> writer.finish()
 
     # open a reader
     >>> reader = stream.open_reader(client)
-    >>> chunk = reader.next()
-    >>> chunk
-    <pyarrow.lib.Buffer at 0x13c8a00f0>
-    >>> len(chunk)
-    1234
+    >>> batch = reader.next()
+    >>> batch
+    pyarrow.RecordBatch
+    x: int64
+    y: int64
 
     # the reader reaches the end of the stream
-    >>> chunk = reader.next()
+    >>> batch = reader.next()
     ---------------------------------------------------------------------------
     StreamDrainedException                    Traceback (most recent call last)
-    <ipython-input-20-d8809de11870> in <module>
-    ----> 1 chunk = reader.next()
+    ~/libvineyard/python/vineyard/io/dataframe.py in next(self)
+        97             try:
+    ---> 98                 buffer = self._client.next_buffer_chunk(self._stream)
+        99                 with pa.ipc.open_stream(buffer) as reader:
 
-    StreamDrainedException: Stream drained: no more chunks
+    StreamDrainedException: Stream drain: Stream drained: no more chunks
+
+    The above exception was the direct cause of the following exception:
+
+    StopIteration                             Traceback (most recent call last)
+    <ipython-input-11-10f09bf65f8a> in <module>
+    ----> 1 batch = reader.next()
+
+    ~/libvineyard/python/vineyard/io/dataframe.py in next(self)
+        100                     return reader.read_next_batch()
+        101             except StreamDrainedException as e:
+    --> 102                 raise StopIteration('No more chunks') from e
+        103
+        104         def __str__(self) -> str:
+
+    StopIteration: No more chunks
 '''
+
+from io import BytesIO
+import json
+from typing import Dict
+
+import pyarrow as pa
+import pyarrow.ipc
+
+from .._C import memory_copy, ObjectID, ObjectMeta, StreamDrainedException
+from .stream import BaseStream
+
+
+class DataFrameStream(BaseStream):
+    def __init__(self, meta: ObjectMeta, params: Dict = None):
+        super().__init__(meta)
+        self._params = params
+
+    @property
+    def params(self):
+        return self._params
+
+    @staticmethod
+    def new(client, params: Dict = None) -> "DataFrameStream":
+        meta = ObjectMeta()
+        meta['typename'] = 'vineyard::DataFrameStream'
+        if params is None:
+            params = dict()
+        meta['params'] = params
+        meta = client.create_metadata(meta)
+        client.create_stream(meta.id)
+        return DataFrameStream(meta, params)
+
+    class Reader(BaseStream.Reader):
+        def __init__(self, client, stream: ObjectID):
+            self._client = client
+            self._stream = stream
+            self._client.open_stream(stream, 'r')
+
+        def next(self) -> pa.RecordBatch:
+            try:
+                buffer = self._client.next_buffer_chunk(self._stream)
+                with pa.ipc.open_stream(buffer) as reader:
+                    return reader.read_next_batch()
+            except StreamDrainedException as e:
+                raise StopIteration('No more chunks') from e
+
+        def read_table(self) -> pa.Table:
+            batches = []
+            while True:
+                try:
+                    batches.append(self.next())
+                except StopIteration:
+                    break
+            return pa.Table.from_batches(batches)
+
+    class Writer(BaseStream.Writer):
+        def __init__(self, client, stream: ObjectID):
+            self._client = client
+            self._stream = stream
+            self._client.open_stream(stream, 'w')
+
+            self._buffer = BytesIO()
+
+        def next(self, size: int) -> memoryview:
+            return self._client.new_buffer_chunk(self._stream, size)
+
+        def write(self, batch: pa.RecordBatch):
+            sink = BytesIO()
+            with pa.ipc.new_stream(sink, batch.schema) as writer:
+                writer.write(batch)
+            view = sink.getbuffer()
+            buffer = self.next(len(view))
+            memory_copy(buffer, 0, view)
+
+        def write_table(self, table: pa.Table):
+            for batch in table.to_batches():
+                self.write(batch)
+
+        def finish(self):
+            return self._client.stop_stream(self._stream, False)
+
+    def _open_new_reader(self, client):
+        return DataFrameStream.Reader(client, self.id)
+
+    def _open_new_writer(self, client):
+        return DataFrameStream.Writer(client, self.id)
+
+
+def dataframe_stream_resolver(obj):
+    meta = obj.meta
+    if 'params' in meta:
+        params = json.loads(meta['params'])
+    else:
+        params = dict
+    return DataFrameStream(obj.meta, params)
+
+
+def register_dataframe_stream_types(builder_ctx, resolver_ctx):
+    if resolver_ctx is not None:
+        resolver_ctx.register('vineyard::DataFrameStream', dataframe_stream_resolver)

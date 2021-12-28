@@ -114,6 +114,7 @@ del _init_global_context
 from ._C import connect, IPCClient, RPCClient, \
     Object, ObjectBuilder, ObjectID, ObjectName, ObjectMeta, \
     InstanceStatus, Blob, BlobBuilder
+from ._C import memory_copy
 from ._C import ArrowErrorException, \
     AssertionFailedException, \
     ConnectionErrorException, \

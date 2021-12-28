@@ -24,6 +24,8 @@ import fsspec
 import pyarrow as pa
 import pyorc
 import vineyard
+from vineyard.io.dataframe import DataFrameStream
+from vineyard.io.stream import read, write
 
 
 def orc_type(field):
@@ -61,10 +63,8 @@ def write_orc(vineyard_socket, path, stream_id, storage_options, write_options, 
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(
-            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
-        )
-    instream = streams[proc_index]
+        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+    instream: DataFrameStream = streams[proc_index]
     reader = instream.open_reader(client)
 
     writer = None
@@ -72,27 +72,21 @@ def write_orc(vineyard_socket, path, stream_id, storage_options, write_options, 
     with fsspec.open(path, "wb", **storage_options) as f:
         while True:
             try:
-                buf = reader.next()
-            except vineyard.StreamDrainedException:
+                batch = reader.next()
+            except (StopIteration, vineyard.StreamDrainedException):
                 writer.close()
                 break
-            buf_reader = pa.ipc.open_stream(pa.py_buffer(buf))
             if writer is None:
                 # get schema
                 schema = {}
-                for field in buf_reader.schema:
+                for field in batch.schema:
                     schema[field.name] = orc_type(field.type)
                 writer = pyorc.Writer(f, pyorc.Struct(**schema))
-            while True:
-                try:
-                    batch = buf_reader.read_next_batch()
-                except StopIteration:
-                    break
-                df = batch.to_pandas()
-                writer.writerows(df.itertuples(False, None))
+            writer.writerows(batch.to_pandas.itertuples(False, None))
+        writer.close()
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 7:
         print(
             "usage: ./write_hdfs_orc <ipc_socket> <path> <stream id> <storage_options> <write_options> <proc_num> <proc_index>"
@@ -101,12 +95,12 @@ if __name__ == "__main__":
     ipc_socket = sys.argv[1]
     path = sys.argv[2]
     stream_id = sys.argv[3]
-    storage_options = json.loads(
-        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
-    )
-    write_options = json.loads(
-        base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8")
-    )
+    storage_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
+    write_options = json.loads(base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8"))
     proc_num = int(sys.argv[6])
     proc_index = int(sys.argv[7])
     write_orc(ipc_socket, path, stream_id, storage_options, write_options, proc_num, proc_index)
+
+
+if __name__ == "__main__":
+    main()
