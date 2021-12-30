@@ -96,8 +96,9 @@ class ByteStream(BaseStream):
         return self._params
 
     @staticmethod
-    def new(client, params: Dict = None) -> "ByteStream":
-        meta = ObjectMeta()
+    def new(client, params: Dict = None, meta: ObjectMeta = None) -> "ByteStream":
+        if meta is None:
+            meta = ObjectMeta()
         meta['typename'] = 'vineyard::ByteStream'
         if params is None:
             params = dict()

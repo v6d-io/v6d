@@ -29,7 +29,7 @@ def serialize(path, object_id, *args, **kwargs):
     parsed = urlparse(path)
     if not parsed.scheme:
         path = 'file://' + path
-    obj_type = kwargs.pop('type', 'global')
+    obj_type = kwargs.pop('type', 'default')
     if serialize.__factory and serialize.__factory.get(obj_type):
         proc_kwargs = kwargs.copy()
         serializer = serialize.__factory[obj_type][0]
@@ -46,7 +46,7 @@ def deserialize(path, *args, **kwargs):
     parsed = urlparse(path)
     if not parsed.scheme:
         path = 'file://' + path
-    obj_type = kwargs.pop('type', 'global')
+    obj_type = kwargs.pop('type', 'default')
     if deserialize.__factory and deserialize.__factory.get(obj_type):
         proc_kwargs = kwargs.copy()
         deserializer = deserialize.__factory[obj_type][0]

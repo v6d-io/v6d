@@ -16,8 +16,10 @@
 # limitations under the License.
 #
 
+import json
 import logging
 import traceback
+from typing import Dict, List
 from urllib.parse import urlparse
 
 from .._C import ObjectID, ObjectMeta, StreamDrainedException
@@ -239,4 +241,67 @@ class BaseStream:
         return self._writer
 
 
-__all__ = ['open', 'read', 'write', 'BaseStream']
+class StreamCollection:
+    ''' A stream collection is a set of stream, where each element is a stream, or,
+        another stream collection.
+    '''
+
+    KEY_OF_STREAMS = '__streams'
+    KEY_OF_PATH = '__path'
+    KEY_OF_GLOBAL = '__global'
+
+    def __init__(self, meta: ObjectMeta, streams: List[ObjectID]):
+        self._meta = meta
+        self._streams = streams
+        if StreamCollection.KEY_OF_GLOBAL in self._meta:
+            self._global = self._meta[StreamCollection.KEY_OF_GLOBAL]
+        else:
+            self._global = False
+
+    @staticmethod
+    def new(client, metadata: Dict, streams: List[ObjectID], meta: ObjectMeta = None) -> "StreamCollection":
+        if meta is None:
+            meta = ObjectMeta()
+        meta['typename'] = 'vineyard::StreamCollection'
+        for k, v in metadata.items():
+            if k not in ['global', 'typename']:
+                meta[k] = v
+        meta[StreamCollection.KEY_OF_STREAMS] = [int(s) for s in streams]
+        meta = client.create_metadata(meta)
+        return StreamCollection(meta, streams)
+
+    @property
+    def id(self):
+        return self.meta.id
+
+    @property
+    def meta(self):
+        return self._meta
+
+    @property
+    def isglobal(self):
+        return self._global
+
+    @property
+    def streams(self):
+        return self._streams
+
+    def __repr__(self) -> str:
+        return "StreamCollection: %s [%s]" % (repr(self.id), [repr(s) for s in self.streams])
+
+    def __str__(self) -> str:
+        return repr(self)
+
+
+def stream_collection_resolver(obj):
+    meta = obj.meta
+    streams = json.loads(meta[StreamCollection.KEY_OF_STREAMS])
+    return StreamCollection(meta, [ObjectID(s) for s in streams])
+
+
+def register_stream_collection_types(builder_ctx, resolver_ctx):
+    if resolver_ctx is not None:
+        resolver_ctx.register('vineyard::StreamCollection', stream_collection_resolver)
+
+
+__all__ = ['open', 'read', 'write', 'BaseStream', 'StreamCollection', 'register_stream_collection_types']

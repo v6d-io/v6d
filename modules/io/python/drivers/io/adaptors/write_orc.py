@@ -25,6 +25,7 @@ import pyarrow as pa
 import pyorc
 import vineyard
 from vineyard.io.dataframe import DataframeStream
+from vineyard.io.utils import expand_full_path
 
 
 def orc_type(field):
@@ -92,7 +93,7 @@ def main():
         )
         exit(1)
     ipc_socket = sys.argv[1]
-    path = sys.argv[2]
+    path = expand_full_path(sys.argv[2])
     stream_id = sys.argv[3]
     storage_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
     write_options = json.loads(base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8"))

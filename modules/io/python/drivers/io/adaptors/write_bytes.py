@@ -19,12 +19,11 @@
 import base64
 import json
 import sys
-import traceback
 
 import fsspec
 import vineyard
 from vineyard.io.byte import ByteStream
-from vineyard.io.utils import report_error, report_exception
+from vineyard.io.utils import expand_full_path, report_error, report_exception
 
 try:
     from vineyard.drivers.io import ossfs
@@ -53,48 +52,35 @@ def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        err = f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
-        report_error(err)
-        raise ValueError(err)
+        report_error(f"Fetch stream error with proc_num = {proc_num}, proc_index = {proc_index}")
+        sys.exit(-1)
 
-    serialization_mode = write_options.pop('serialization_mode', False)
     instream: ByteStream = streams[proc_index]
     try:
         reader = instream.open_reader(client)
         of = fsspec.open(f"{path}_{proc_index}", "wb", **storage_options)
-    except Exception as e:
+    except Exception:
         report_exception()
-        raise
+        sys.exit(-1)
 
     lengths = []  # store lengths of each chunk. may be unused
     with of as f:
         while True:
             try:
-                buffer = reader.next()
+                chunk = reader.next()
             except (StopIteration, vineyard.StreamDrainedException):
                 break
-            lengths.append(len(buffer))
-            f.write(bytes(buffer))
-    if serialization_mode:
-        # Used when serialize a graph to bytes, and write to external storage
-        params = instream.params
-        params["lengths"] = lengths
-        meta = fsspec.open(f"{path}_{proc_index}.meta", "wb", **storage_options)
-        try:
-            with meta as f:
-                f.write(json.dumps(params).encode('utf-8'))
-        except Exception:
-            report_exception()
-            raise
+            lengths.append(len(chunk))
+            f.write(bytes(chunk))
 
 
 def main():
-    if len(sys.argv) < 7:
+    if len(sys.argv) < 8:
         print("usage: ./write_bytes <ipc_socket> <path> <stream_id> "
               "<storage_options> <write_options> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
-    path = sys.argv[2]
+    path = expand_full_path(sys.argv[2])
     stream_id = sys.argv[3]
     storage_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
     write_options = json.loads(base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8"))

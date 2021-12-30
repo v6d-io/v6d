@@ -62,6 +62,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     except Exception:
         report_exception()
         stream_writer.fail()
+        sys.exit(-1)
 
 
 def main():

@@ -89,8 +89,9 @@ class DataframeStream(BaseStream):
         return self._params
 
     @staticmethod
-    def new(client, params: Dict = None) -> "DataframeStream":
-        meta = ObjectMeta()
+    def new(client, params: Dict = None, meta: ObjectMeta = None) -> "DataframeStream":
+        if meta is None:
+            meta = ObjectMeta()
         meta['typename'] = 'vineyard::DataframeStream'
         if params is None:
             params = dict()

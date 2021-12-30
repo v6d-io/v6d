@@ -197,9 +197,13 @@ Status copy_memoryview(PyObject* src, void* dst, size_t const size,
                                    std::to_string(src_buffer.size()) + "'");
   }
 
-  // memcpy
-  memcpy(reinterpret_cast<uint8_t*>(dst) + offset, src_buffer.data(),
-         src_buffer.size());
+  {
+    py::gil_scoped_release release;
+    // memcpy
+    memcpy(reinterpret_cast<uint8_t*>(dst) + offset, src_buffer.data(),
+           src_buffer.size());
+  }
+
   return Status::OK();
 }
 
@@ -248,8 +252,12 @@ Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
         std::to_string(dst_buffer.size()) + "'");
   }
 
-  // memcpy
-  memcpy(dst_buffer.data() + offset, src_buffer.data(), src_buffer.size());
+  {
+    py::gil_scoped_release release;
+    // memcpy
+    memcpy(dst_buffer.data() + offset, src_buffer.data(), src_buffer.size());
+  }
+
   return Status::OK();
 }
 

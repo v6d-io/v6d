@@ -63,18 +63,13 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
             report_error('Header line not found while header_row is set to True')
             sys.exit(-1)
         original_columns = header_line.strip().split(delimiter)
-    else:
-        header_line: str = instream.params.get('header_line', None)
-        original_columns = ['f%d' % i for i, _ in enumerate(header_line.strip().split(delimiter))]
 
     schema = instream.params.get('schema', None)
     if schema:
-        logger.debug('param schema: %s', schema)
         columns = schema.split(',')
 
     column_types = instream.params.get('column_types', [])
     if column_types:
-        logger.debug('param column_types: %s', column_types)
         column_types = column_types.split(',')
 
     include_all_columns = instream.params.get('include_all_columns', None) == '1'
@@ -83,24 +78,31 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
     parse_options = pa.csv.ParseOptions()
     convert_options = pa.csv.ConvertOptions()
 
-    read_options.column_names = original_columns
+    if original_columns:
+        read_options.column_names = original_columns
+    else:
+        read_options.autogenerate_column_names = True
     parse_options.delimiter = delimiter
 
     indices = []
     for i, column in enumerate(columns):
-        if column.isdigit():
-            column_index = int(column)
-            if column_index >= len(original_columns):
-                raise IndexError('Column index out of range: %s of %s' % (column_index, original_columns))
-            indices.append(i)
-            columns[i] = original_columns[column_index]
+        if original_columns:
+            if column.isdigit():
+                column_index = int(column)
+                if column_index >= len(original_columns):
+                    raise IndexError('Column index out of range: %s of %s' % (column_index, original_columns))
+                indices.append(i)
+                columns[i] = original_columns[column_index]
+        else:
+            columns[i] = 'f%s' % i  # arrow auto generates column names in that way.
 
     if include_all_columns:
         for column in original_columns:
             if column not in columns:
                 columns.append(column)
 
-    convert_options.include_columns = columns
+    if columns:
+        convert_options.include_columns = columns
     if len(column_types) > len(columns):
         raise ValueError("Format of column type schema is incorrect: too many columns")
 
@@ -131,6 +133,7 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
     except Exception:
         report_exception()
         stream_writer.fail()
+        sys.exit(-1)
 
 
 def main():

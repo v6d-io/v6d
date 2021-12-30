@@ -160,6 +160,17 @@ void bind_core(py::module& mod) {
                              "The value is not a member, but a meta");
              return py::cast(self->GetMember(key));
            })
+      .def("get_buffer",
+           [](ObjectMeta* self, const ObjectID key) -> py::memoryview {
+             std::shared_ptr<arrow::Buffer> buffer;
+             throw_on_error(self->GetBuffer(key, buffer));
+             if (buffer == nullptr) {
+               return py::none();
+             } else {
+               return py::memoryview::from_memory(
+                   const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
+             }
+           })
       .def("__setitem__",
            [](ObjectMeta* self, std::string const& key,
               std::string const& value) { self->AddKeyValue(key, value); })

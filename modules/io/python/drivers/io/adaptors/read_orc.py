@@ -30,7 +30,7 @@ import pyorc
 
 import vineyard
 from vineyard.io.dataframe import DataframeStream
-from vineyard.io.utils import report_success
+from vineyard.io.utils import expand_full_path, report_success
 
 try:
     from vineyard.drivers.io import ossfs
@@ -154,7 +154,7 @@ def main():
             "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> <read_options> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
-    path = sys.argv[2]
+    path = expand_full_path(sys.argv[2])
     storage_options = json.loads(base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8"))
     read_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
     proc_num = int(sys.argv[5])

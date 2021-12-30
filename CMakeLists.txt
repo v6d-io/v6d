@@ -579,7 +579,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     target_include_directories(_C PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                          thirdparty/pybind11/include)
     target_compile_options(_C PRIVATE -Wno-unused-value)
-    set_target_properties(_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/vineyard")
+    set_target_properties(_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
     target_add_link_options(_C PRIVATE
                             OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
     )
