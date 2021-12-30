@@ -16,11 +16,9 @@
 # limitations under the License.
 #
 
-import pytest
-
-import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
-from vineyard.data import register_builtin_types
+from ..._C import ObjectMeta
+from ...core import default_builder_context, default_resolver_context
+from ...data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)
 
@@ -28,7 +26,7 @@ register_builtin_types(default_builder_context, default_resolver_context)
 def test_metadata(vineyard_client):
     xid = vineyard_client.put(1.2345)
     yid = vineyard_client.put(2.3456)
-    meta = vineyard.ObjectMeta()
+    meta = ObjectMeta()
     meta['typename'] = 'vineyard::Pair'
     meta.add_member('first_', xid)
     meta.add_member('second_', vineyard_client.get_meta(yid))
@@ -38,7 +36,7 @@ def test_metadata(vineyard_client):
 
     def go(meta):
         for k, v in meta.items():
-            if isinstance(v, vineyard.ObjectMeta):
+            if isinstance(v, ObjectMeta):
                 go(v)
             else:
                 print('k-v in meta: ', k, v)
@@ -53,7 +51,7 @@ def test_metadata(vineyard_client):
 def test_metadata_global(vineyard_client):
     xid = vineyard_client.put(1.2345)
     yid = vineyard_client.put(2.3456)
-    meta = vineyard.ObjectMeta()
+    meta = ObjectMeta()
     meta['typename'] = 'vineyard::Pair'
     meta.add_member('first_', xid)
     meta.add_member('second_', vineyard_client.get_meta(yid))
@@ -63,7 +61,7 @@ def test_metadata_global(vineyard_client):
 
     def go(meta):
         for k, v in meta.items():
-            if isinstance(v, vineyard.ObjectMeta):
+            if isinstance(v, ObjectMeta):
                 go(v)
             else:
                 print('k-v in meta: ', k, v)
@@ -78,7 +76,7 @@ def test_metadata_global(vineyard_client):
 def test_persist(vineyard_client):
     xid = vineyard_client.put(1.2345)
     yid = vineyard_client.put(2.3456)
-    meta = vineyard.ObjectMeta()
+    meta = ObjectMeta()
     meta['typename'] = 'vineyard::Pair'
     meta.add_member('first_', xid)
     meta.add_member('second_', yid)
@@ -89,7 +87,7 @@ def test_persist(vineyard_client):
 
 def test_persist_multiref(vineyard_client):
     xid = vineyard_client.put(1.2345)
-    meta = vineyard.ObjectMeta()
+    meta = ObjectMeta()
     meta['typename'] = 'vineyard::Pair'
     meta.add_member('first_', xid)
     meta.add_member('second_', xid)

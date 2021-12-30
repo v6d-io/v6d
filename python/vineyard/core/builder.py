@@ -21,7 +21,7 @@ import contextlib
 import inspect
 import threading
 
-from vineyard._C import IPCClient, RPCClient
+from .._C import IPCClient, RPCClient
 
 
 class BuilderContext():

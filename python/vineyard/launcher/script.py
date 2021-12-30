@@ -32,7 +32,7 @@ class ScriptLauncher(Launcher):
         The output of script must be printed to stdout, rather than stderr.
     '''
     def __init__(self, script):
-        super(ScriptLauncher, self).__init__()
+        super().__init__()
         self._script = script
         self._proc = None
         self._listen_out_thrd = None
@@ -95,27 +95,27 @@ class ScriptLauncher(Launcher):
 
     def wait(self, timeout=None):
         # a fast wait: to use existing response directly, since the io adaptor may finish immediately.
-        r = super(ScriptLauncher, self).wait(timeout=0)
+        r = super().wait(timeout=0)
         if r is not None:
             return r
         elapsed, period = 0, 1
         while self._proc.poll() is None:
             if timeout is not None and elapsed > timeout:
                 raise TimeoutError('Unable to wait for status of job [%s] after %r seconds' % (self._cmd, timeout))
-            r = super(ScriptLauncher, self).wait(timeout=period)
+            r = super().wait(timeout=period)
             elapsed += period
             if r is None:
                 continue
             else:
                 return r
-        r = super(ScriptLauncher, self).wait(timeout=period)
+        r = super().wait(timeout=period)
         if r is not None:
             return r
         remaining = self._proc.stdout.read()
         if remaining:
             for line in remaining.split('\n'):
                 self.parse(line)
-        r = super(ScriptLauncher, self).wait(timeout=period)
+        r = super().wait(timeout=period)
         if r is not None:
             return r
         if isinstance(self._cmd, list):

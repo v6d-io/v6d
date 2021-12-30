@@ -60,7 +60,7 @@ except ImportError:
 #
 
 
-class CodeGenKind(object):
+class CodeGenKind:
     def __init__(self, kind='meta', element_type=None):
         self.kind = kind
         if element_type is None:
@@ -193,7 +193,7 @@ def dump_ast(node, indent, saw, base_indent=4, include_refs=False):
     saw.remove(node.hash)
 
 
-class ParseOption(object):
+class ParseOption:
     Default = 0x0
     DetailedPreprocessingRecord = 0x01
     Incomplete = 0x02

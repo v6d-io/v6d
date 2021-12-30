@@ -16,10 +16,10 @@
 # limitations under the License.
 #
 
-import numpy as np
 import re
 
-import vineyard
+import numpy as np
+
 from vineyard._C import ObjectID, ObjectMeta
 from .tensor import ndarray
 from .utils import normalize_dtype
