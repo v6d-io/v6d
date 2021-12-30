@@ -638,7 +638,8 @@ static Status diff_data_meta_tree(const json& meta,
   if (!status.ok()) {
     if (status.IsMetaTreeSubtreeNotExists()) {
       if (IsBlob(ObjectIDFromString(sub_tree_name))) {
-        diff = sub_tree;  // won't be a placeholder
+        // diff = sub_tree;  // won't be a placeholder, no need for thinking it
+        // as different
         instance_id = sub_tree["instance_id"].get<InstanceID>();
         return Status::OK();
       } else {
@@ -759,8 +760,13 @@ static Status diff_data_meta_tree(const json& meta,
           diff_sub_tree["id"] = sub_sub_tree_name;
           diff_sub_tree["typename"] = sub_sub_tree_type;
 
+          // make sure it could serve as a member of unseen objects.
+          diff_sub_tree["instance_id"] = sub_instance_id;
+
           // record a possible signature link
           if (global_object) {
+            // make sure it could serve as a member of unseen global objects.
+            diff_sub_tree["signature"] = sub_sub_tree["signature"];
             signatures[sub_sub_tree["id"].get_ref<std::string const&>()] =
                 sub_sub_tree["signature"].get<Signature>();
           }

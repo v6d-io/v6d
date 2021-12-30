@@ -39,42 +39,65 @@
 
 #define GET_MACRO(_1, _2, NAME, ...) NAME
 
+// __func__ with GCC on Ubuntu 20 would cause GCC's internal error
+#ifndef FUNCTION_NAME
+#if defined(__GNUC__) && !defined(__clang__)
+#define FUNCTION_NAME __PRETTY_FUNCTION__
+#else
+#define FUNCTION_NAME __func__
+#endif
+#endif
+
 // raise a std::runtime_error (inherits std::exception), don't FATAL
 #ifndef VINEYARD_CHECK_OK
-#define VINEYARD_CHECK_OK(status)                                          \
-  do {                                                                     \
-    auto _ret = (status);                                                  \
-    if (!_ret.ok()) {                                                      \
-      std::clog << "[error] Check failed: " << _ret.ToString() << " in \"" \
-                << #status << "\"" << std::endl;                           \
-      throw std::runtime_error("Check failed: " + _ret.ToString() +        \
-                               " in \"" #status "\"");                     \
-    }                                                                      \
+#define VINEYARD_CHECK_OK(status)                                              \
+  do {                                                                         \
+    auto _ret = (status);                                                      \
+    if (!_ret.ok()) {                                                          \
+      std::clog << "[error] Check failed: " << _ret.ToString() << " in \""     \
+                << #status << "\""                                             \
+                << ", in function " << std::string(FUNCTION_NAME) << ", file " \
+                << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)       \
+                << std::endl;                                                  \
+      throw std::runtime_error(                                                \
+          "Check failed: " + _ret.ToString() +                                 \
+          " in \"" #status "\", in function " + std::string(FUNCTION_NAME) +   \
+          ", file " + __FILE__ + ", line " + VINEYARD_TO_STRING(__LINE__));    \
+    }                                                                          \
   } while (0)
 #endif  // VINEYARD_CHECK_OK
 
 // check the condition, raise and runtime error, rather than `FATAL` when false
 #ifndef VINEYARD_ASSERT_NO_VERBOSE
-#define VINEYARD_ASSERT_NO_VERBOSE(condition)                             \
-  do {                                                                    \
-    if (!(condition)) {                                                   \
-      std::clog << "[error] Assertion failed in \"" #condition "\""       \
-                << std::endl;                                             \
-      throw std::runtime_error("Assertion failed in \"" #condition "\""); \
-    }                                                                     \
+#define VINEYARD_ASSERT_NO_VERBOSE(condition)                                  \
+  do {                                                                         \
+    if (!(condition)) {                                                        \
+      std::clog << "[error] Assertion failed in \"" #condition "\""            \
+                << ", in function " << std::string(FUNCTION_NAME) << ", file " \
+                << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)       \
+                << std::endl;                                                  \
+      throw std::runtime_error(                                                \
+          "Assertion failed in \"" #condition "\", in function " +             \
+          std::string(FUNCTION_NAME) + ", file " + __FILE__ + ", line " +      \
+          VINEYARD_TO_STRING(__LINE__));                                       \
+    }                                                                          \
   } while (0)
 #endif  // VINEYARD_ASSERT_NO_VERBOSE
 
 // check the condition, raise and runtime error, rather than `FATAL` when false
 #ifndef VINEYARD_ASSERT_VERBOSE
-#define VINEYARD_ASSERT_VERBOSE(condition, message)                         \
-  do {                                                                      \
-    if (!(condition)) {                                                     \
-      std::clog << "[error] Assertion failed in \"" #condition "\": "       \
-                << message << std::endl;                                    \
-      throw std::runtime_error("Assertion failed in \"" #condition "\": " + \
-                               std::string(message));                       \
-    }                                                                       \
+#define VINEYARD_ASSERT_VERBOSE(condition, message)                            \
+  do {                                                                         \
+    if (!(condition)) {                                                        \
+      std::clog << "[error] Assertion failed in \"" #condition "\": "          \
+                << ", in function " << std::string(FUNCTION_NAME) << ", file " \
+                << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)       \
+                << message << std::endl;                                       \
+      throw std::runtime_error(                                                \
+          "Assertion failed in \"" #condition "\": " + std::string(message) +  \
+          ", in function " + std::string(FUNCTION_NAME) + ", file " +          \
+          __FILE__ + ", line " + VINEYARD_TO_STRING(__LINE__));                \
+    }                                                                          \
   } while (0)
 #endif  // VINEYARD_ASSERT_VERBOSE
 

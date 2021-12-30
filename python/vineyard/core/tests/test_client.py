@@ -31,7 +31,32 @@ def test_metadata(vineyard_client):
     meta = vineyard.ObjectMeta()
     meta['typename'] = 'vineyard::Pair'
     meta.add_member('first_', xid)
-    meta.add_member('second_', yid)
+    meta.add_member('second_', vineyard_client.get_meta(yid))
+    meta.set_global(False)
+    rmeta = vineyard_client.create_metadata(meta)
+    vineyard_client.persist(rmeta)
+
+    def go(meta):
+        for k, v in meta.items():
+            if isinstance(v, vineyard.ObjectMeta):
+                go(v)
+            else:
+                print('k-v in meta: ', k, v)
+
+    meta = vineyard_client.get_meta(rmeta.id)
+    go(meta)
+    go(meta)
+    go(meta)
+    go(meta)
+
+
+def test_metadata_global(vineyard_client):
+    xid = vineyard_client.put(1.2345)
+    yid = vineyard_client.put(2.3456)
+    meta = vineyard.ObjectMeta()
+    meta['typename'] = 'vineyard::Pair'
+    meta.add_member('first_', xid)
+    meta.add_member('second_', vineyard_client.get_meta(yid))
     meta.set_global(True)
     rmeta = vineyard_client.create_metadata(meta)
     vineyard_client.persist(rmeta)
