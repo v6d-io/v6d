@@ -83,7 +83,7 @@ class ReadToByteStreamExecutor(BaseStreamExecutor):
     def __init__(self,
                  client,
                  fs: AbstractFileSystem,
-                 task_queue: ConcurrentQueue[Tuple[ByteStream, str]],
+                 task_queue: "ConcurrentQueue[Tuple[ByteStream, str]]",
                  chunk_size: int = CHUNK_SIZE):
         self._client = client
         self._fs = fs
@@ -105,7 +105,7 @@ class ReadToByteStreamExecutor(BaseStreamExecutor):
         return processed_blobs, processed_bytes
 
 
-def read_stream_collections(client, fs: AbstractFileSystem, queue: ConcurrentQueue[Tuple[ByteStream, str]],
+def read_stream_collections(client, fs: AbstractFileSystem, queue: "ConcurrentQueue[Tuple[ByteStream, str]]",
                             base_prefix: str, prefix: str):
     metadata_path = os.path.join(prefix, 'metadata.json')
     blob_path = os.path.join(prefix, 'blob')
@@ -145,7 +145,7 @@ def read_bytes_collection(vineyard_socket, prefix, storage_options, proc_num, pr
     worker_prefix = os.path.join(prefix_path, '%s-%s' % (proc_num, proc_index))
 
     logger.info("start creating blobs ...")
-    queue: ConcurrentQueue[Tuple[ByteStream, str]] = ConcurrentQueue()
+    queue: "ConcurrentQueue[Tuple[ByteStream, str]]" = ConcurrentQueue()
     stream_id = read_stream_collections(client, fs, queue, worker_prefix, worker_prefix)
     report_success(stream_id)
 

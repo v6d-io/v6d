@@ -152,7 +152,7 @@ jobs:
 
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug \
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
                    -DBUILD_SHARED_LIBS=ON \
                    -DBUILD_VINEYARD_COVERAGE=ON \
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
