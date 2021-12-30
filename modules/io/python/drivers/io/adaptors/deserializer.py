@@ -51,8 +51,8 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
 
 
 class ReconstructExecututor(BaseStreamExecutor):
-    def __init__(self, client, task_queue: ConcurrentQueue[Tuple[ByteStream, str, Union[BlobBuilder, Blob]]],
-                 result_queue: ConcurrentQueue[Tuple[ObjectID, Blob]]) -> None:
+    def __init__(self, client, task_queue: "ConcurrentQueue[Tuple[ByteStream, str, Union[BlobBuilder, Blob]]]",
+                 result_queue: "ConcurrentQueue[Tuple[ObjectID, Blob]]") -> None:
         self._client = client
         self._task_queue = task_queue
         self._result_queue = result_queue
@@ -75,8 +75,8 @@ class ReconstructExecututor(BaseStreamExecutor):
         return processed_blobs, processed_bytes
 
 
-def traverse_to_prepare(client, stream_id: ObjectID, queue: ConcurrentQueue[Tuple[ByteStream, Union[BlobBuilder,
-                                                                                                    Blob]]]):
+def traverse_to_prepare(client, stream_id: ObjectID,
+                        queue: "ConcurrentQueue[Tuple[ByteStream, Union[BlobBuilder, Blob]]]"):
     stream = client.get(stream_id)
     if isinstance(stream, StreamCollection):
         for s in stream.streams:
@@ -133,11 +133,11 @@ def deserialize(vineyard_socket, object_id):
         report_error("Each worker should have only one local stream")
         sys.exit(-1)
 
-    queue: ConcurrentQueue[Tuple[ByteStream, Union[BlobBuilder, Blob]]] = ConcurrentQueue()
+    queue: "ConcurrentQueue[Tuple[ByteStream, Union[BlobBuilder, Blob]]]" = ConcurrentQueue()
     traverse_to_prepare(client, streams[0].id, queue)
 
     # serve as a stream id -> blob id mapping
-    rqueue: ConcurrentQueue[Tuple[ObjectID, str, Blob]] = ConcurrentQueue()
+    rqueue: "ConcurrentQueue[Tuple[ObjectID, str, Blob]]" = ConcurrentQueue()
 
     # copy blobs
     executor = ThreadStreamExecutor(ReconstructExecututor,

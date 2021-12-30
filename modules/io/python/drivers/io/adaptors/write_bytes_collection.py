@@ -72,7 +72,7 @@ def write_byte_stream(client, stream: ByteStream, prefix: str, storage_options: 
 
 
 class WriteBytesExecutor(BaseStreamExecutor):
-    def __init__(self, client, prefix, storage_options: Dict, task_queue: ConcurrentQueue[ObjectID]):
+    def __init__(self, client, prefix, storage_options: Dict, task_queue: "ConcurrentQueue[ObjectID]"):
         self._client = client
         self._prefix = prefix
         self._storage_options = storage_options
@@ -95,7 +95,7 @@ class WriteBytesExecutor(BaseStreamExecutor):
         return processed_blobs, processed_bytes
 
 
-def write_stream_collections(client, stream_id: ObjectID, blob_queue: ConcurrentQueue[ObjectID], worker_prefix: str,
+def write_stream_collections(client, stream_id: ObjectID, blob_queue: "ConcurrentQueue[ObjectID]", worker_prefix: str,
                              storage_options: Dict):
     streams = client.get(stream_id)
     if isinstance(streams, StreamCollection):
@@ -125,7 +125,7 @@ def write_bytes_collection(vineyard_socket, prefix, stream_id, storage_options, 
     worker_prefix = os.path.join(prefix, '%s-%s' % (proc_num, proc_index))
 
     # collect all blobs, and prepare metadata
-    queue: ConcurrentQueue[ObjectID] = ConcurrentQueue()
+    queue: "ConcurrentQueue[ObjectID]" = ConcurrentQueue()
     write_stream_collections(client, streams[0].id, queue, worker_prefix, storage_options)
 
     # write streams to file

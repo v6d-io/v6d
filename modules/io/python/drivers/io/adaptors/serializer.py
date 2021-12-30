@@ -60,7 +60,7 @@ def serialize_blob_to_stream(stream: ByteStream, blob: memoryview, chunk_size: i
 
 
 class SerializeExecutor(BaseStreamExecutor):
-    def __init__(self, task_queue: ConcurrentQueue[Tuple[ByteStream, memoryview]], chunk_size: int = CHUNK_SIZE):
+    def __init__(self, task_queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]", chunk_size: int = CHUNK_SIZE):
         self._task_queue = task_queue
         self._chunk_size = chunk_size
 
@@ -77,7 +77,7 @@ class SerializeExecutor(BaseStreamExecutor):
         return processed_bytes, processed_blobs
 
 
-def traverse_to_serialize(client, meta: ObjectMeta, queue: ConcurrentQueue[Tuple[ByteStream, memoryview]],
+def traverse_to_serialize(client, meta: ObjectMeta, queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]",
                           path: str) -> ObjectID:
     ''' Returns:
             The generated stream or stream collection id.
@@ -117,7 +117,7 @@ def serialize(vineyard_socket, object_id):
     client = vineyard.connect(vineyard_socket)
     meta = client.get_meta(object_id)
 
-    queue: ConcurrentQueue[Tuple[ByteStream, memoryview]] = ConcurrentQueue()
+    queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]" = ConcurrentQueue()
     serilaized_id = traverse_to_serialize(client, meta, queue, '')
 
     # object id done
