@@ -140,7 +140,7 @@ def pandas_sparse_array_resolver(obj, resolver):
     return pd.arrays.SparseArray(sp_values, sparse_index=sp_index, dtype=value_type)
 
 
-def make_global_dataframe(client, blocks, extra_meta=None):
+def make_global_dataframe(client, blocks, extra_meta=None) -> ObjectMeta:
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::GlobalDataFrame'
     meta.set_global(True)

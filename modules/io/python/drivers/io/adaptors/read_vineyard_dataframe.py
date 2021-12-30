@@ -58,6 +58,7 @@ def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options
     except Exception:
         report_exception()
         writer.fail()
+        sys.exit(-1)
 
 
 def main():

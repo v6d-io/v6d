@@ -16,11 +16,9 @@
 # limitations under the License.
 #
 
-import json
 import logging
 import os
 import subprocess
-import sys
 import threading
 
 from .launcher import Launcher, LauncherStatus
@@ -77,7 +75,7 @@ class ScriptLauncher(Launcher):
                     cmd.append(repr(value))
             else:
                 env[key] = value
-        logger.debug('command = %s', ' '.join(cmd))
+        logger.debug('command is: %s', ' '.join(cmd))
         self._cmd = cmd
         self._proc = subprocess.Popen(cmd,
                                       env=env,
@@ -132,12 +130,11 @@ class ScriptLauncher(Launcher):
             line = stdout.readline()
             if line:
                 self.parse(line)
-                logger.debug(line)
 
         # consume all extra lines if the proc exits.
         for line in stdout.readlines():
-            self.parse(line)
-            logger.debug(line)
+            if line:
+                self.parse(line)
 
     def read_err(self, stderr):
         while self._proc.poll() is None:

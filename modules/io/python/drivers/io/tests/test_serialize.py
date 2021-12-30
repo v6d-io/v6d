@@ -16,16 +16,21 @@
 # limitations under the License.
 #
 
+import logging
 import os
-import pytest
+import shutil
+
 import numpy as np
+import pytest
 
 import vineyard
 import vineyard.io
 
+logger = logging.getLogger('vineyard')
+
 
 @pytest.fixture(scope='module')
-def global_obj(vineyard_ipc_socket):
+def global_object(vineyard_ipc_socket):
     client1 = vineyard.connect(vineyard_ipc_socket)
     client2 = vineyard.connect(vineyard_ipc_socket)
     client3 = vineyard.connect(vineyard_ipc_socket)
@@ -47,8 +52,8 @@ def global_obj(vineyard_ipc_socket):
     meta['typename'] = 'vineyard::Tuple'
     meta['size_'] = 4
     meta.set_global(True)
-    meta.add_member('__elements_-0', o1)
-    meta.add_member('__elements_-1', o2)
+    meta.add_member('__elements_-0', client1.get_meta(o1))
+    meta.add_member('__elements_-1', client1.get_meta(o2))
     meta.add_member('__elements_-2', o3)
     meta.add_member('__elements_-3', o4)
     meta['__elements_-size'] = 4
@@ -57,29 +62,39 @@ def global_obj(vineyard_ipc_socket):
     return tup.id
 
 
-@pytest.mark.skip("requires further refine")
-def test_seriarialize_round_trip(vineyard_ipc_socket, vineyard_endpoint, global_obj):
-    vineyard.io.serialize('/tmp/seri-test',
-                          global_obj,
+def test_seriarialize_round_trip(vineyard_ipc_socket, vineyard_endpoint, global_object):
+    destination = '/tmp/seri-test'
+    shutil.rmtree(destination, ignore_errors=True)
+    vineyard.io.serialize(destination,
+                          global_object,
                           vineyard_ipc_socket=vineyard_ipc_socket,
                           vineyard_endpoint=vineyard_endpoint)
-    ret = vineyard.io.deserialize('/tmp/seri-test',
+    logger.info("finish serializing object to %s", destination)
+    ret = vineyard.io.deserialize(destination,
                                   vineyard_ipc_socket=vineyard_ipc_socket,
                                   vineyard_endpoint=vineyard_endpoint)
+    logger.info("finish deserializing object from %s, as %s", destination, ret)
+
     client = vineyard.connect(vineyard_ipc_socket)
-    old_meta = client.get_meta(global_obj)
-    new_meta = client.get_meta(ret)
-    print('old meta', old_meta)
-    print('new meta', new_meta)
+    expected = client.get(global_object)
+    actual = client.get(ret)
+
+    assert isinstance(expected, tuple)
+    assert isinstance(actual, tuple)
+
+    assert len(expected) == len(actual)
+
+    for item1, item2 in zip(expected, actual):
+        np.testing.assert_array_almost_equal(item1, item2)
 
 
 @pytest.mark.skip("require oss")
-def test_seriarialize_round_trip_on_oss(vineyard_ipc_socket, vineyard_endpoint, global_obj):
+def test_seriarialize_round_trip_on_oss(vineyard_ipc_socket, vineyard_endpoint, global_object):
     accessKeyID = os.environ["ACCESS_KEY_ID"]
     accessKeySecret = os.environ["SECRET_ACCESS_KEY"]
     endpoint = os.environ.get("ENDPOINT", "http://oss-cn-hangzhou.aliyuncs.com")
     vineyard.io.serialize('oss://grape-uk/tmp/seri-test',
-                          global_obj,
+                          global_object,
                           vineyard_ipc_socket=vineyard_ipc_socket,
                           vineyard_endpoint=vineyard_endpoint,
                           storage_options={
@@ -95,21 +110,28 @@ def test_seriarialize_round_trip_on_oss(vineyard_ipc_socket, vineyard_endpoint, 
                                       "secret": accessKeySecret,
                                       "endpoint": endpoint,
                                   })
+
     client = vineyard.connect(vineyard_ipc_socket)
-    old_meta = client.get_meta(global_obj)
-    new_meta = client.get_meta(ret)
-    print('old meta', old_meta)
-    print('new meta', new_meta)
+    expected = client.get(global_object)
+    actual = client.get(ret)
+
+    assert isinstance(expected, tuple)
+    assert isinstance(actual, tuple)
+
+    assert len(expected) == len(actual)
+
+    for item1, item2 in zip(expected, actual):
+        np.testing.assert_array_almost_equal(item1, item2)
 
 
 @pytest.mark.skip(reason="require s3")
-def test_seriarialize_round_trip_on_s3(vineyard_ipc_socket, vineyard_endpoint, global_obj):
+def test_seriarialize_round_trip_on_s3(vineyard_ipc_socket, vineyard_endpoint, global_object):
     accessKeyID = os.environ["ACCESS_KEY_ID"]
     accessKeySecret = os.environ["SECRET_ACCESS_KEY"]
     region_name = os.environ.get("REGION", "us-east-1")
     vineyard.io.serialize(
         "s3://test-bucket/tmp/seri-test",
-        global_obj,
+        global_object,
         vineyard_ipc_socket=vineyard_ipc_socket,
         vineyard_endpoint=vineyard_endpoint,
         storage_options={
@@ -132,8 +154,15 @@ def test_seriarialize_round_trip_on_s3(vineyard_ipc_socket, vineyard_endpoint, g
             },
         },
     )
+
     client = vineyard.connect(vineyard_ipc_socket)
-    old_meta = client.get_meta(global_obj)
-    new_meta = client.get_meta(ret)
-    print('old meta', old_meta)
-    print('new meta', new_meta)
+    expected = client.get(global_object)
+    actual = client.get(ret)
+
+    assert isinstance(expected, tuple)
+    assert isinstance(actual, tuple)
+
+    assert len(expected) == len(actual)
+
+    for item1, item2 in zip(expected, actual):
+        np.testing.assert_array_almost_equal(item1, item2)

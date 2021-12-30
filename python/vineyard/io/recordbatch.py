@@ -36,8 +36,9 @@ class RecordBatchStream(BaseStream):
         return self._params
 
     @staticmethod
-    def new(client, params: Dict = None) -> "RecordBatchStream":
-        meta = ObjectMeta()
+    def new(client, params: Dict = None, meta: ObjectMeta = None) -> "RecordBatchStream":
+        if meta is None:
+            meta = ObjectMeta()
         meta['typename'] = 'vineyard::RecordBatchStream'
         if params is None:
             params = dict()

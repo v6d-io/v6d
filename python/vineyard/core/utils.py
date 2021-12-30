@@ -36,4 +36,12 @@ def find_most_precise_match(typename, candidates):
     return None, None
 
 
-__all__ = ['find_most_precise_match']
+class ReprableString(str):
+    """A special class that prevents `repr()` adding extra `""` to `str`.
+    It is used to optimize the user experiences to preseve `\n` when printing exceptions.
+    """
+    def __repr__(self) -> str:
+        return self
+
+
+__all__ = ['find_most_precise_match', 'ReprableString']

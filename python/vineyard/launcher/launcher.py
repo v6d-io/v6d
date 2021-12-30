@@ -19,7 +19,6 @@
 from enum import Enum
 import json
 import logging
-import sys
 import threading
 import uuid
 
@@ -56,6 +55,9 @@ class Launcher(object):
     @property
     def id(self):
         return self._id
+
+    def __del__(self):
+        self.join()
 
     def run(self, *args, **kwargs):
         raise NotImplementedError
@@ -122,35 +124,37 @@ class Launcher(object):
                     "return/error/exit": ......
                 }
         '''
+        line = line.strip()
+        if not line:
+            return None
+
         try:
-            line = line.strip()
-            if line:
-                logger.debug('receive output: %s', line)
-            else:
-                return None
-
             r = json.loads(line)
-            if not isinstance(r, dict):
-                return None
-
-            if 'return' in r:
-                return self.on_return(r['return'])
-            if 'error' in r:
-                return self.on_error(r['error'])
-            if 'exit' in r:
-                return self.on_exit(r['exit'])
-
-            if 'type' in r:
-                if r['type'] == 'return':
-                    return self.on_return(r.get('content'))
-                if r['type'] == 'error':
-                    return self.on_error(r.get('content'))
-                if r['type'] == 'exit':
-                    return self.on_exit(r.get('content'))
-            return None
         except json.JSONDecodeError:
-            # if not a valid launcher message, silently ignore it.
+            r = line
+        if not isinstance(r, dict):
+            logger.debug('driver: [output] %s', line)
             return None
+
+        if 'return' in r:
+            logger.debug('driver: [return] %s', r['return'])
+            return self.on_return(r['return'])
+        if 'error' in r:
+            logger.debug('driver: [error] %s', r['error'])
+            return self.on_error(r['error'])
+        if 'exit' in r:
+            logger.debug('driver: [exit] %s', r['exit'])
+            return self.on_exit(r['exit'])
+
+        if 'type' in r:
+            logger.debug('driver: [%s] %s', r['type'], r.get('content'))
+            if r['type'] == 'return':
+                return self.on_return(r.get('content'))
+            if r['type'] == 'error':
+                return self.on_error(r.get('content'))
+            if r['type'] == 'exit':
+                return self.on_exit(r.get('content'))
+        return None
 
     def on_return(self, return_content):
         ''' The on-return handle, can be overrided to process events with type "return".
@@ -168,5 +172,5 @@ class Launcher(object):
         ''' The on-exit handle, can be overrided to process events with type "exit".
         '''
         if exit_content and exit_content.strip():
-            print(exit_content, file=sys.stderr)
+            logger.info('driver: [exit] %s', exit_content)
         self.dispose(True)

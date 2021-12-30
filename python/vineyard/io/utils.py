@@ -16,8 +16,11 @@
 # limitations under the License.
 #
 
+import concurrent
+import concurrent.futures
 import json
 import traceback
+import os
 
 from vineyard._C import ObjectID
 
@@ -41,3 +44,27 @@ def report_success(content):
 
 def report_exception():
     report_status('error', traceback.format_exc())
+
+
+def expand_full_path(path):
+    return os.path.expanduser(os.path.expandvars(path))
+
+
+class BaseStreamExecutor:
+    def execute(self):
+        """
+        """
+
+
+class ThreadStreamExecutor:
+    def __init__(self, executor_cls, parallism: int = 1, **kwargs):
+        self._parallism = parallism
+        self._executors = [executor_cls(**kwargs) for _ in range(self._parallism)]
+
+    def execute(self):
+        def start_to_execute(executor: BaseStreamExecutor):
+            return executor.execute()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._parallism) as executor:
+            results = [executor.submit(start_to_execute, exec) for exec in self._executors]
+            return [future.result() for future in results]
