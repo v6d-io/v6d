@@ -16,12 +16,37 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_JSON_H_
 #define SRC_COMMON_UTIL_JSON_H_
 
+#include <exception>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <utility>
 
+#include "common/util/macros.h"
+
+// Makes assertion failure in nlohmann::json catchable.
+#ifndef JSON_ASSERT
+#define JSON_ASSERT(condition)                                              \
+  do {                                                                      \
+    if (!(condition)) {                                                     \
+      throw std::logic_error("Assertion failed: " #condition                \
+                             ", in function " +                             \
+                             std::string(__func__) + ", file " + __FILE__ + \
+                             ", line " + VINEYARD_TO_STRING(__LINE__));     \
+    }                                                                       \
+  } while (0)
+#endif
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wexceptions"
+#endif
+
 #include "nlohmann/json.hpp"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 namespace vineyard {
 
@@ -35,6 +60,9 @@ using json = nlohmann::json;
     try {                                                       \
       return (expr);                                            \
     } catch (std::out_of_range const& err) {                    \
+      std::clog << "[error] json: " << err.what() << std::endl; \
+      return vineyard::Status::MetaTreeInvalid();               \
+    } catch (std::logic_error const& err) {                     \
       std::clog << "[error] json: " << err.what() << std::endl; \
       return vineyard::Status::MetaTreeInvalid();               \
     } catch (vineyard::json::exception const& err) {            \
