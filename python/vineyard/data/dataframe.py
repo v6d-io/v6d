@@ -90,10 +90,13 @@ def pandas_dataframe_resolver(obj, resolver):
     columns = from_json(meta['columns_'])
     if not columns:
         return pd.DataFrame()
+
+    names = []
     # ensure zero-copy
     blocks = []
     index_size = 0
-    for idx, name in enumerate(columns):
+    for idx, _ in enumerate(columns):
+        names.append(from_json(meta['__values_-key-%d' % idx]))
         np_value = resolver.run(obj.member('__values_-value-%d' % idx))
         index_size = len(np_value)
         # ndim: 1 for SingleBlockManager/Series, 2 for BlockManager/DataFrame
@@ -114,7 +117,7 @@ def pandas_dataframe_resolver(obj, resolver):
         index = resolver.run(obj.member('index_'))
     else:
         index = pd.RangeIndex(index_size)
-    return pd.DataFrame(BlockManager(blocks, [ensure_index(columns), index]))
+    return pd.DataFrame(BlockManager(blocks, [ensure_index(names), index]))
 
 
 def pandas_sparse_array_builder(client, value, builder, **kw):
