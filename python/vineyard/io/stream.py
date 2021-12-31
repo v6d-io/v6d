@@ -264,7 +264,7 @@ class StreamCollection:
             meta = ObjectMeta()
         meta['typename'] = 'vineyard::StreamCollection'
         for k, v in metadata.items():
-            if k not in ['global', 'typename']:
+            if k not in ['id', 'signature', 'instance_id', 'transient', 'global', 'typename']:
                 meta[k] = v
         meta[StreamCollection.KEY_OF_STREAMS] = [int(s) for s in streams]
         meta = client.create_metadata(meta)

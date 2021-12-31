@@ -148,9 +148,10 @@ class ParallelStreamLauncher(ScriptLauncher):
                                                                                            ObjectMeta]], **kwargs):
         ''' Wait util _all_ results on each launcher is ready and until the launcher finishes its work.
         '''
+        self.join()
+
         results = []
         for proc in self._procs:
-            proc.join()
             results.append(proc._result)
         logger.debug("[join_with_aggregator] partial ids = %s", results)
         return aggregator(self.vineyard_endpoint, results, **kwargs)
@@ -345,6 +346,7 @@ def create_global_dataframe(vineyard_endpoint: str, results: List[List[ObjectID]
     }
     gdf = make_global_dataframe(vineyard_rpc_client, chunks, extra_meta)
     vineyard_rpc_client.put_name(gdf, name)
+    vineyard_rpc_client.persist(gdf.id)
     return gdf.id
 
 
@@ -419,6 +421,7 @@ def merge_global_object(vineyard_endpoint, results: List[List[ObjectID]]) -> Obj
     for v, k in chunkmap.items():
         base_meta.add_member(k, v)
     meta = vineyard_rpc_client.create_metadata(base_meta)
+    vineyard_rpc_client.persist(meta.id)
     return meta.id
 
 

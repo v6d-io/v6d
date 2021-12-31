@@ -147,6 +147,8 @@ def read_bytes_collection(vineyard_socket, prefix, storage_options, proc_num, pr
     logger.info("start creating blobs ...")
     queue: "ConcurrentQueue[Tuple[ByteStream, str]]" = ConcurrentQueue()
     stream_id = read_stream_collections(client, fs, queue, worker_prefix, worker_prefix)
+
+    client.persist(stream_id)
     report_success(stream_id)
 
     logger.info("start reading blobs ...")

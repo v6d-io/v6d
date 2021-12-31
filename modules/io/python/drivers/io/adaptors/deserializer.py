@@ -102,7 +102,7 @@ def traverse_to_rebuild(client, stream_id: ObjectID, blobs: Dict[ObjectID, Blob]
         for k, v in stream.meta.items():
             # erase existing identifiers
             if k in [
-                    'typename', 'id', 'signature', 'instance_id', StreamCollection.KEY_OF_GLOBAL,
+                    'typename', 'id', 'signature', 'instance_id', 'transient', StreamCollection.KEY_OF_GLOBAL,
                     StreamCollection.KEY_OF_PATH, StreamCollection.KEY_OF_STREAMS
             ]:
                 continue
@@ -110,10 +110,13 @@ def traverse_to_rebuild(client, stream_id: ObjectID, blobs: Dict[ObjectID, Blob]
                 meta['typename'] = v
             else:
                 meta[k] = v
-        if stream.meta[StreamCollection.KEY_OF_GLOBAL]:
+        isglobal = stream.meta[StreamCollection.KEY_OF_GLOBAL]
+        if isglobal:
             meta.set_global(True)
         for s in stream.streams:
             name, member = traverse_to_rebuild(client, s, blobs)
+            if isglobal:
+                client.persist(member.id)
             meta.add_member(name, member)
         meta = client.create_metadata(meta)
         return memberpath, meta
@@ -122,19 +125,16 @@ def traverse_to_rebuild(client, stream_id: ObjectID, blobs: Dict[ObjectID, Blob]
         return memberpath, blob
 
 
-def deserialize(vineyard_socket, object_id):
+def deserialize(vineyard_socket, object_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(object_id)
 
-    if len(streams) == 0:
-        report_error("No local stream")
-        sys.exit(-1)
-    if len(streams) > 1:
-        report_error("Each worker should have only one local stream")
+    if len(streams) != proc_num:
+        report_error("Expected: %s stream partitions" % proc_num)
         sys.exit(-1)
 
     queue: "ConcurrentQueue[Tuple[ByteStream, Union[BlobBuilder, Blob]]]" = ConcurrentQueue()
-    traverse_to_prepare(client, streams[0].id, queue)
+    traverse_to_prepare(client, streams[proc_index].id, queue)
 
     # serve as a stream id -> blob id mapping
     rqueue: "ConcurrentQueue[Tuple[ObjectID, str, Blob]]" = ConcurrentQueue()
@@ -152,18 +152,21 @@ def deserialize(vineyard_socket, object_id):
         bs, memberpath, blob = rqueue.get(block=False)
         blobs[bs] = (memberpath, blob)
 
-    _, result = traverse_to_rebuild(client, streams[0].id, blobs)
+    _, result = traverse_to_rebuild(client, streams[proc_index].id, blobs)
+    client.persist(result.id)
     report_success(result.id)
 
 
 def main():
-    if len(sys.argv) < 3:
-        print("usage: ./deserializer <ipc_socket> <object_id>")
+    if len(sys.argv) < 5:
+        print("usage: ./deserializer <ipc_socket> <object_id> <proc_num> <proc_index>")
         exit(1)
     ipc_socket = sys.argv[1]
     object_id = vineyard.ObjectID(sys.argv[2])
+    proc_num = int(sys.argv[3])
+    proc_index = int(sys.argv[4])
     try:
-        deserialize(ipc_socket, object_id)
+        deserialize(ipc_socket, object_id, proc_num, proc_index)
     except Exception:
         report_exception()
         sys.exit(-1)
