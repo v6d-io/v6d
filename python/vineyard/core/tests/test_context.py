@@ -16,12 +16,11 @@
 # limitations under the License.
 #
 
-import pytest
+from ...core import default_builder_context, default_resolver_context
+from ...core.resolver import resolver_context
+from ...data import register_builtin_types
 
-import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
-from vineyard.core.resolver import resolver_context
-from vineyard.data import register_builtin_types
+register_builtin_types(default_builder_context, default_resolver_context)
 
 
 def fake_tuple_resolver(obj, resolver):

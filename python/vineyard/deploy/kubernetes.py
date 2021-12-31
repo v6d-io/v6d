@@ -16,15 +16,11 @@
 # limitations under the License.
 #
 
-import kubernetes
 import logging
 import os
-import pkg_resources
-import subprocess
 import tempfile
-import textwrap
-import time
-import yaml
+
+import kubernetes
 
 from .etcd import start_etcd_k8s
 
@@ -62,8 +58,7 @@ def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyar
     with open(os.path.join(os.path.dirname(__file__), "vineyard.yaml.tpl"), 'r', encoding='utf-8') as fp:
         definitions = fp.read().format(Namespace=namespace, Size=size, Socket=socket, Port=rpc_socket_port)
 
-    rendered = tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False)
-    try:
+    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False) as rendered:
         rendered.write(definitions)
         rendered.flush()
         rendered.close()
@@ -74,8 +69,6 @@ def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyar
         kubernetes.config.load_kube_config()
         k8s_client = kubernetes.client.ApiClient()
         return kubernetes.utils.create_from_yaml(k8s_client, rendered.name, namespace=namespace)
-    finally:
-        os.unlink(rendered.name)
 
 
 __all__ = ['start_vineyardd']
