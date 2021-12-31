@@ -18,6 +18,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-vineyardd:
@@ -377,3 +378,9 @@ jobs:
           prerelease: false
           overwrite: true
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
+        with:
+          name: vineyard-macosx-wheels
+          path: fixed_wheels/*.whl
