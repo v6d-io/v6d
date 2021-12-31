@@ -33,16 +33,16 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     instream: DataframeStream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
-    idx = 0
+    batch_index = 0
     while True:
         try:
             batch = stream_reader.next()
         except:
             break
         df = batch.to_pandas()
-        df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=idx)
+        df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=batch_index)
+        batch_index += 1
         client.persist(df_id)
-        idx += 1
         report_success(df_id)
 
 

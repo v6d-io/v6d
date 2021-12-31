@@ -118,10 +118,11 @@ def serialize(vineyard_socket, object_id):
     meta = client.get_meta(object_id)
 
     queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]" = ConcurrentQueue()
-    serilaized_id = traverse_to_serialize(client, meta, queue, '')
+    serialized_id = traverse_to_serialize(client, meta, queue, '')
 
     # object id done
-    report_success(serilaized_id)
+    client.persist(serialized_id)
+    report_success(serialized_id)
 
     # start transfer
     #

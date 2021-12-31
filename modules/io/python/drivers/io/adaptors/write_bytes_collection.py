@@ -115,18 +115,15 @@ def write_bytes_collection(vineyard_socket, prefix, stream_id, storage_options, 
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
 
-    if len(streams) == 0:
-        report_error("No local stream")
-        sys.exit(-1)
-    if len(streams) > 1:
-        report_error("Each worker should have only one local stream")
+    if len(streams) != proc_num:
+        report_error("Expected: %s stream partitions" % proc_num)
         sys.exit(-1)
 
     worker_prefix = os.path.join(prefix, '%s-%s' % (proc_num, proc_index))
 
     # collect all blobs, and prepare metadata
     queue: "ConcurrentQueue[ObjectID]" = ConcurrentQueue()
-    write_stream_collections(client, streams[0].id, queue, worker_prefix, storage_options)
+    write_stream_collections(client, streams[proc_index].id, queue, worker_prefix, storage_options)
 
     # write streams to file
     executor = ThreadStreamExecutor(WriteBytesExecutor,
