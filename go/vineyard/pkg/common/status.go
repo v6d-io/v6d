@@ -15,6 +15,8 @@ limitations under the License.
 
 package common
 
+import "fmt"
+
 const (
 	KOK              = 0
 	KInvalid         = 1
@@ -64,5 +66,5 @@ type ReplyError struct {
 }
 
 func (r *ReplyError) Error() string {
-	return "code:" + string(r.Code) + " type:" + r.Type + " :" + r.Err.Error()
+	return "code:" + fmt.Sprintf("%v", r.Code) + " type:" + r.Type + " :" + r.Err.Error()
 }

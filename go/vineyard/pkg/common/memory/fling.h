@@ -42,6 +42,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 // This is necessary for Mac OS X, see http://www.apuebook.com/faqs2e.html
 // (10).
 #if !defined(CMSG_SPACE) && !defined(CMSG_LEN)
