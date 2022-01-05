@@ -16,9 +16,12 @@ limitations under the License.
 package vineyard
 
 /*
-//#include "test.h"
-#include "fling.h"
+#cgo CFLAGS: -I ../common/memory
+#cgo LDFLAGS: -L ../common/memory -lfling
+
 #include <sys/mman.h>
+
+#include "fling.h"
 */
 import "C"
 import (
@@ -26,15 +29,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"unsafe"
 
 	"github.com/apache/arrow/go/arrow/memory"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/client/ds"
-
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
-
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
-	"net"
-	"unsafe"
 )
 
 type IPCClient struct {

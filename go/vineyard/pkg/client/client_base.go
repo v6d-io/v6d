@@ -22,8 +22,6 @@ import (
 
 	vineyard "github.com/v6d-io/v6d/go/vineyard/pkg/client/ds"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
-
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
 type Signature = uint64
@@ -73,7 +71,7 @@ func (c *ClientBase) Persist(id common.ObjectID) error {
 	}
 
 	var persistReply common.PersisReply
-	err := json.Unmarshal([]byte(messageIn), persistReply)
+	err := json.Unmarshal([]byte(messageIn), &persistReply)
 	if err != nil {
 		return err
 	}
