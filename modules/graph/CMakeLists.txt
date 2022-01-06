@@ -58,6 +58,7 @@ if(APPLE)
 endif()
 if(VINEYARD_MOD_SRCS)
     add_dependencies(vineyard_graph vineyard_graph_gen)
+    add_dependencies(vineyard_codegen vineyard_graph_gen)
 endif()
 
 install_vineyard_target(vineyard_graph)

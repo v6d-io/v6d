@@ -604,6 +604,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
 endif()
 
 add_custom_target(vineyard_tests)
+add_custom_target(vineyard_codegen)
 
 # add sub_directories
 if(BUILD_VINEYARD_BASIC)
@@ -737,12 +738,6 @@ configure_file("${PROJECT_SOURCE_DIR}/vineyard-config.in.cmake"
 )
 configure_file("${PROJECT_SOURCE_DIR}/vineyard-config-version.in.cmake"
                "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake" @ONLY
-)
-# install vineyard-codegen script.
-get_target_property(VINEYARD_CODEGEN_SCRIPT vineyard::codegen IMPORTED_LOCATION)
-install(PROGRAMS "${VINEYARD_CODEGEN_SCRIPT}"
-        DESTINATION bin
-        RENAME vineyard-codegen
 )
 install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake"
