@@ -22,6 +22,7 @@ target_link_libraries(vineyard_basic PUBLIC vineyard_client
 
 if(VINEYARD_MOD_SRCS)
     add_dependencies(vineyard_basic vineyard_basic_gen)
+    add_dependencies(vineyard_codegen vineyard_basic_gen)
 endif()
 
 install_vineyard_target(vineyard_basic)

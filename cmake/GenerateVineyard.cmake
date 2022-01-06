@@ -14,12 +14,36 @@
 #
 # A cmake function to help users use vineyard's code genenrator.
 #
-add_executable(vineyard::codegen IMPORTED)
-set_target_properties(vineyard::codegen PROPERTIES
-                      IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/python/vineyard/core/codegen.py")
 
 include("${CMAKE_CURRENT_LIST_DIR}/DetermineImplicitIncludes.cmake")
 determine_implicit_includes(CXX CXX_IMPLICIT_INCLUDE_DIRECTORIES)
+
+macro(find_python_executable)
+  if(NOT DEFINED PYTHON_EXECUTABLE)
+    if(DEFINED ENV{VIRTUAL_ENV})
+      find_program(
+        PYTHON_EXECUTABLE python
+        PATHS "$ENV{VIRTUAL_ENV}" "$ENV{VIRTUAL_ENV}/bin"
+        NO_DEFAULT_PATH)
+    elseif(DEFINED ENV{CONDA_PREFIX})
+      find_program(
+        PYTHON_EXECUTABLE python
+        PATHS "$ENV{CONDA_PREFIX}" "$ENV{CONDA_PREFIX}/bin"
+        NO_DEFAULT_PATH)
+    elseif(DEFINED ENV{pythonLocation})
+      find_program(
+        PYTHON_EXECUTABLE python
+        PATHS "$ENV{pythonLocation}" "$ENV{pythonLocation}/bin"
+        NO_DEFAULT_PATH)
+    else()
+      set(PYBIND11_PYTHON_VERSION 3)
+      find_package(PythonInterp)
+    endif()
+    if(NOT PYTHON_EXECUTABLE)
+      message(FATAL_ERROR "Failed to find a valid python interpreter, try speicifying `PYTHON_EXECUTABLE` instead")
+    endif()
+  endif()
+endmacro()
 
 function(vineyard_generate)
   set(_options)
@@ -78,7 +102,8 @@ function(vineyard_generate)
     return()
   endif()
 
-  get_target_property(vineyard_codegen_command vineyard::codegen IMPORTED_LOCATION)
+  find_python_executable()
+  message(STATUS "Use Python executable: ${PYTHON_EXECUTABLE}")
 
   set(_generated_srcs_all)
   foreach(_vineyard_module ${vineyard_generate_VINEYARD_MODULES})
@@ -98,14 +123,17 @@ function(vineyard_generate)
 
     # parse dependencies
     execute_process(
-      COMMAND "${vineyard_codegen_command}"
-        --dump-dependencies "True"
-        --root-directory "${CMAKE_CURRENT_SOURCE_DIR}"
-        --system-includes "${vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES}"
-        --includes "${vineyard_generate_INCLUDE_DIRECTORIES}"
-        --build-directory "${vineyard_generate_CMAKE_BUILD_DIR}"
-        --source ${_abs_file}
-        --target ${_generated_srcs}
+      COMMAND "${PYTHON_EXECUTABLE}"
+              -m
+              codegen
+              --dump-dependencies "True"
+              --root-directory "${CMAKE_CURRENT_SOURCE_DIR}"
+              --system-includes "${vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES}"
+              --includes "${vineyard_generate_INCLUDE_DIRECTORIES}"
+              --build-directory "${vineyard_generate_CMAKE_BUILD_DIR}"
+              --source ${_abs_file}
+              --target ${_generated_srcs}
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python/vineyard/core/"
       OUTPUT_VARIABLE DEPS_OUTPUT
       ERROR_VARIABLE DEPS_ERROR
       RESULT_VARIABLE CODEGEN_EXIT_CODE
@@ -117,7 +145,7 @@ function(vineyard_generate)
 
     string(REGEX REPLACE "\r*\n" ";" output_lines "${DEPS_OUTPUT}")
     set(_generated_srcs_depends_all)
-    if (output_lines)
+    if(output_lines)
       foreach(line in ${output_lines})
         if(${line} MATCHES "Depends:.+")
           string(SUBSTRING ${line} 8 -1 inc_path)
@@ -126,9 +154,12 @@ function(vineyard_generate)
       endforeach()
     endif()
 
+    file(GLOB _codegen_scripts "${PROJECT_SOURCE_DIR}/python/vineyard/core/codegen/*.py")
     add_custom_command(
       OUTPUT ${_generated_srcs}
-      COMMAND vineyard::codegen
+      COMMAND "${PYTHON_EXECUTABLE}"
+      ARGS -m
+      ARGS codegen
       ARGS --root-directory "${CMAKE_CURRENT_SOURCE_DIR}"
       ARGS --system-includes "${vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES}"
       ARGS --includes "${vineyard_generate_INCLUDE_DIRECTORIES}"
@@ -136,7 +167,10 @@ function(vineyard_generate)
       ARGS --source ${_abs_file}
       ARGS --target ${_generated_srcs}
       ARGS --verbose
-      DEPENDS vineyard::codegen ${_abs_file} ${_generated_srcs_depends_all}
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python/vineyard/core/"
+      DEPENDS ${_codegen_scripts}
+              ${_abs_file}
+              ${_generated_srcs_depends_all}
       IMPLICIT_DEPENDS CXX ${_abs_file}
       COMMENT "Running ${vineyard_generate_LANGUAGE} vineyard module compiler on ${_vineyard_module}"
       VERBATIM)
