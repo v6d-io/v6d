@@ -99,18 +99,39 @@ class FormatAndLint(Command):
             self.inplace = False
 
     def run(self):
+        targets = [
+            'python/',
+            'modules/',
+            'setup.py',
+            'setup_airflow.py',
+            'setup_dask.py',
+            'setup_ml.py',
+            'setup_ray.py',
+            'test/runner.py',
+        ]
+
         if self.inplace:
-            subprocess.check_call([sys.executable, '-m', 'isort', '.'], cwd=repo_root)
-            subprocess.check_call([sys.executable, '-m', 'black', '.'], cwd=repo_root)
-            subprocess.check_call([sys.executable, '-m', 'flake8', '.'], cwd=repo_root)
+            subprocess.check_call(
+                [sys.executable, '-m', 'isort'] + targets, cwd=repo_root
+            )
+            subprocess.check_call(
+                [sys.executable, '-m', 'black'] + targets, cwd=repo_root
+            )
+            subprocess.check_call(
+                [sys.executable, '-m', 'flake8'] + targets, cwd=repo_root
+            )
         else:
             subprocess.check_call(
-                [sys.executable, '-m', 'isort', '--check', '--diff', '.'], cwd=repo_root
+                [sys.executable, '-m', 'isort', '--check', '--diff'] + targets,
+                cwd=repo_root,
             )
             subprocess.check_call(
-                [sys.executable, '-m', 'black', '--check', '--diff', '.'], cwd=repo_root
+                [sys.executable, '-m', 'black', '--check', '--diff'] + targets,
+                cwd=repo_root,
             )
-            subprocess.check_call([sys.executable, '-m', 'flake8', '.'], cwd=repo_root)
+            subprocess.check_call(
+                [sys.executable, '-m', 'flake8'] + targets, cwd=repo_root
+            )
 
 
 def find_core_packages(root):
