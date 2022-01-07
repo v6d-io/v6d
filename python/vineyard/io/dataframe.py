@@ -28,7 +28,9 @@
 
     # use write to put chunks
     >>> writer = stream.open_writer(client)
-    >>> writer.write_table(pa.Table.from_pandas(pd.DataFrame({"x": [1,2,3], "y": [4,5,6]})))
+    >>> writer.write_table(
+            pa.Table.from_pandas(
+                pd.DataFrame({"x": [1,2,3], "y": [4,5,6]})))
 
     # mark the stream as finished
     >>> writer.finish()
@@ -68,14 +70,17 @@
     StopIteration: No more chunks
 '''
 
-from io import BytesIO
 import json
+from io import BytesIO
 from typing import Dict
 
 import pyarrow as pa
 import pyarrow.ipc
 
-from .._C import memory_copy, ObjectID, ObjectMeta, StreamDrainedException
+from .._C import ObjectID
+from .._C import ObjectMeta
+from .._C import StreamDrainedException
+from .._C import memory_copy
 from .stream import BaseStream
 
 

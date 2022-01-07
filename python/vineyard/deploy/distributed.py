@@ -18,39 +18,44 @@
 
 import contextlib
 import logging
-import pkg_resources
 import subprocess
 import sys
 import textwrap
 import time
 
-from .utils import start_etcd, ssh_base_cmd
+import pkg_resources
+
+from .utils import ssh_base_cmd
+from .utils import start_etcd
 
 logger = logging.getLogger('vineyard')
 
 
 @contextlib.contextmanager
-def start_vineyardd(hosts=None,
-                    etcd_endpoints=None,
-                    vineyardd_path=None,
-                    size='256M',
-                    socket='/var/run/vineyard.sock',
-                    rpc_socket_port=9600,
-                    debug=False):
-    ''' Launch a local vineyard cluster in a distributed fashion.
+def start_vineyardd(
+    hosts=None,
+    etcd_endpoints=None,
+    vineyardd_path=None,
+    size='256M',
+    socket='/var/run/vineyard.sock',
+    rpc_socket_port=9600,
+    debug=False,
+):
+    '''Launch a local vineyard cluster in a distributed fashion.
 
     Parameters:
         hosts: list of str
             A list of machines to launch vineyard server.
         etcd_endpoint: str
-            Launching vineyard using specified etcd endpoints. If not specified, vineyard
-            will launch its own etcd instance.
+            Launching vineyard using specified etcd endpoints. If not specified,
+            vineyard will launch its own etcd instance.
         vineyardd_path: str
-            Location of vineyard server program. If not specified, vineyard will use its
-            own bundled vineyardd binary.
+            Location of vineyard server program. If not specified, vineyard will
+            use its own bundled vineyardd binary.
         size: int
-            The memory size limit for vineyard's shared memory. The memory size can be a plain
-            integer or as a fixed-point number using one of these suffixes:
+            The memory size limit for vineyard's shared memory. The memory size
+            can be a plain integer or as a fixed-point number using one of these
+            suffixes:
 
             .. code::
 
@@ -86,33 +91,41 @@ def start_vineyardd(hosts=None,
     if debug:
         env['GLOG_v'] = 11
 
-    # yapf: disable
     command = [
         vineyardd_path,
-        '--deployment', 'distributed',
-        '--size', str(size),
-        '--socket', socket,
-        '--rpc_socket_port', str(rpc_socket_port),
-        '--etcd_endpoint', etcd_endpoints
+        '--deployment',
+        'distributed',
+        '--size',
+        str(size),
+        '--socket',
+        socket,
+        '--rpc_socket_port',
+        str(rpc_socket_port),
+        '--etcd_endpoint',
+        etcd_endpoints,
     ]
-    # yapf: enable
 
     procs = []
     try:
         for host in hosts:
-            proc = subprocess.Popen(ssh_base_cmd(host) + command,
-                                    env=env,
-                                    stdout=subprocess.PIPE,
-                                    stderr=sys.__stderr__,
-                                    universal_newlines=True,
-                                    encoding='utf-8')
+            proc = subprocess.Popen(
+                ssh_base_cmd(host) + command,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=sys.__stderr__,
+                universal_newlines=True,
+                encoding='utf-8',
+            )
             procs.append(proc)
         time.sleep(1)
         for proc in procs:
             rc = proc.poll()
             if rc is not None:
                 err = textwrap.indent(proc.stdout.read(), ' ' * 4)
-                raise RuntimeError('vineyardd exited unexpectedly with code %d: error is:\n%s' % (rc, err))
+                raise RuntimeError(
+                    'vineyardd exited unexpectedly with '
+                    'code %d: error is:\n%s' % (rc, err)
+                )
         yield procs, socket, etcd_endpoints
     finally:
         logger.info('Distributed vineyardd being killed')

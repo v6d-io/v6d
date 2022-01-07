@@ -18,20 +18,21 @@
 
 import base64
 import json
-from urllib.parse import urlparse
 import sys
 import traceback
 from typing import Dict
+from urllib.parse import urlparse
 
 import fsspec
-from fsspec.utils import read_block
-from fsspec.core import split_protocol
-
 import pyarrow as pa
-
 import vineyard
+from fsspec.core import split_protocol
+from fsspec.utils import read_block
 from vineyard.io.byte import ByteStream
-from vineyard.io.utils import expand_full_path, report_error, report_exception, report_success
+from vineyard.io.utils import expand_full_path
+from vineyard.io.utils import report_error
+from vineyard.io.utils import report_exception
+from vineyard.io.utils import report_success
 
 try:
     from vineyard.drivers.io import ossfs
@@ -42,7 +43,7 @@ if ossfs:
     fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
 
-def read_bytes(
+def read_bytes(  # noqa: C901
     vineyard_socket: str,
     path: str,
     storage_options: Dict,
@@ -86,7 +87,10 @@ def read_bytes(
         protocol = split_protocol(path)[0]
         fs = fsspec.filesystem(protocol, **storage_options)
     except Exception:
-        report_error(f"Cannot initialize such filesystem for '{path}', exception is:\n{traceback.format_exc()}")
+        report_error(
+            f"Cannot initialize such filesystem for '{path}', "
+            f"exception is:\n{traceback.format_exc()}"
+        )
         sys.exit(-1)
 
     if fs.isfile(path):
@@ -95,7 +99,7 @@ def read_bytes(
         try:
             files = fs.glob(path + '*')
             assert files, f"Cannot find such files: {path}"
-        except:
+        except Exception:
             report_error(f"Cannot find such files for '{path}'")
             sys.exit(-1)
     ''' Note [Semantic of read_block with delimiter]:
@@ -139,7 +143,12 @@ def read_bytes(
                     begin -= int(header_row)
 
                 while begin < end:
-                    buffer = read_block(f, begin, min(chunk_size, end - begin), delimiter=read_block_delimiter)
+                    buffer = read_block(
+                        f,
+                        begin,
+                        min(chunk_size, end - begin),
+                        delimiter=read_block_delimiter,
+                    )
                     size = len(buffer)
                     if size <= 0:
                         break
@@ -156,12 +165,19 @@ def read_bytes(
 
 def main():
     if len(sys.argv) < 7:
-        print("usage: ./read_bytes <ipc_socket> <path> <storage_options> <read_options> <proc_num> <proc_index>")
+        print(
+            "usage: ./read_bytes <ipc_socket> <path> <storage_options> <read_options> "
+            "<proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
-    storage_options = json.loads(base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8"))
-    read_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
+    storage_options = json.loads(
+        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+    )
+    read_options = json.loads(
+        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
+    )
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
     read_bytes(ipc_socket, path, storage_options, read_options, proc_num, proc_index)

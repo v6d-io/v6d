@@ -16,15 +16,16 @@
 # limitations under the License.
 #
 
-import copy
 import contextlib
+import copy
 import inspect
 import threading
 
-from .._C import IPCClient, RPCClient
+from .._C import IPCClient
+from .._C import RPCClient
 
 
-class BuilderContext():
+class BuilderContext:
     def __init__(self):
         self.__factory = dict()
 
@@ -32,33 +33,33 @@ class BuilderContext():
         return str(self.__factory)
 
     def register(self, type_id, builder):
-        ''' Register a Python type to the builder context.
+        '''Register a Python type to the builder context.
 
-            Parameters
-            ----------
-            type_id: Python type
-                Like `int`, or `numpy.ndarray`
+        Parameters
+        ----------
+        type_id: Python type
+            Like `int`, or `numpy.ndarray`
 
-            builder: callable, e.g., a method, callable object
-                A builder translates a python object to vineyard, it accepts a Python
-                value as parameter, and returns an vineyard object as result.
+        builder: callable, e.g., a method, callable object
+            A builder translates a python object to vineyard, it accepts a Python
+            value as parameter, and returns an vineyard object as result.
         '''
         self.__factory[type_id] = builder
 
     def run(self, client, value, **kw):
-        ''' Follows the MRO to find the proper builder for given python value.
+        '''Follows the MRO to find the proper builder for given python value.
 
-            Here "Follows the MRO" implies:
+        Here "Follows the MRO" implies:
 
-            - If the type of python value has been found in the context, the registered
-              builder will be used.
+        - If the type of python value has been found in the context, the registered
+          builder will be used.
 
-            - If not, it follows the MRO chain from down to top to find a registered
-              Python type and used the associated builder.
+        - If not, it follows the MRO chain from down to top to find a registered
+          Python type and used the associated builder.
 
-            - When the traversal reaches the :code:`object` type, since there's a default
-              builder that serialization the python value, the parameter will be serialized
-              and be put into a blob.
+        - When the traversal reaches the :code:`object` type, since there's a default
+          builder that serialization the python value, the parameter will be serialized
+          and be put into a blob.
         '''
 
         # if the python value comes from a vineyard object, we choose to just reuse it.
@@ -69,7 +70,10 @@ class BuilderContext():
         for ty in type(value).__mro__:
             if ty in self.__factory:
                 builder_func_sig = inspect.getfullargspec(self.__factory[ty])
-                if 'builder' in builder_func_sig.args or builder_func_sig.varkw is not None:
+                if (
+                    'builder' in builder_func_sig.args
+                    or builder_func_sig.varkw is not None
+                ):
                     kw['builder'] = self
                 return self.__factory[ty](client, value, **kw)
         raise RuntimeError('Unknown type to build as vineyard object')
@@ -92,8 +96,7 @@ _builder_context_local.default_builder = default_builder_context
 
 
 def get_current_builders():
-    ''' Obtain the current builder context.
-    '''
+    '''Obtain the current builder context.'''
     default_builder = getattr(_builder_context_local, 'default_builder', None)
     if not default_builder:
         default_builder = default_builder_context.extend()
@@ -102,12 +105,12 @@ def get_current_builders():
 
 @contextlib.contextmanager
 def builder_context(builders=None, base=None):
-    ''' Open a new context for register builders, without populting outside global
-        environment.
+    '''Open a new context for register builders, without populting outside global
+    environment.
 
-        See Also:
-            resolver_context
-            driver_context
+    See Also:
+        resolver_context
+        driver_context
     '''
     current_builder = get_current_builders()
     try:
@@ -121,7 +124,7 @@ def builder_context(builders=None, base=None):
 
 
 def put(client, value, builder=None, **kw):
-    ''' Put python value to vineyard.
+    '''Put python value to vineyard.
 
     .. code:: python
 
@@ -134,13 +137,15 @@ def put(client, value, builder=None, **kw):
         client: IPCClient
             The vineyard client to use.
         value:
-            The python value that will be put to vineyard. Supported python value types are
-            decided by modules that registered to vineyard. By default, python value can be
-            put to vineyard after serialized as a bytes buffer using pickle.
+            The python value that will be put to vineyard. Supported python value
+            types are decided by modules that registered to vineyard. By default,
+            python value can be put to vineyard after serialized as a bytes buffer
+            using pickle.
         builder:
-            When putting python value to vineyard, an optional *builder* can be specified to
-            tell vineyard how to construct the corresponding vineyard :class:`Object`. If not
-            specified, the default builder context will be used to select a proper builder.
+            When putting python value to vineyard, an optional *builder* can be
+            specified to tell vineyard how to construct the corresponding vineyard
+            :class:`Object`. If not specified, the default builder context will be
+            used to select a proper builder.
         kw:
             User-specific argument that will be passed to the builder.
 
@@ -152,8 +157,8 @@ def put(client, value, builder=None, **kw):
 
     meta = get_current_builders().run(client, value, **kw)
 
-    # the builders is expected to return an :class:`ObjectMeta`, or an :class:`Object` (in
-    # the `bytes_builder` and `memoryview` builder).
+    # the builders is expected to return an :class:`ObjectMeta`, or an
+    # :class:`Object` (in the `bytes_builder` and `memoryview` builder).
     if meta:
         return meta.id
 

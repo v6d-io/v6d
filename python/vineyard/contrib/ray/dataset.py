@@ -17,19 +17,20 @@
 #
 
 import pyarrow as pa
-
 import ray
 import ray.data
 import ray.data.read_api
+import vineyard
+from ray.data.block import Block
+from ray.data.block import BlockAccessor
 from ray.data.dataset import Dataset
-from ray.data.block import Block, BlockAccessor
 from ray.data.impl.block_list import BlockList
 from ray.data.impl.remote_fn import cached_remote_fn
-
-import vineyard
 from vineyard.data.dataframe import make_global_dataframe
 
-from .actor import spread, spread_and_get, spread_to_all_nodes
+from .actor import spread
+from .actor import spread_and_get
+from .actor import spread_to_all_nodes
 
 
 def _block_to_vineyard(block: Block):
@@ -55,10 +56,15 @@ def _vineyard_to_block(object_id):
 def _get_remote_chunks_map(object_id):
     client = vineyard.connect()
     meta = client.get_meta(object_id)
-    if meta.typename == "vineyard::DataFrame" or meta.typename.startswith("vineyard::Tensor"):
+    if meta.typename == "vineyard::DataFrame" or meta.typename.startswith(
+        "vineyard::Tensor"
+    ):
         return {repr(object_id): meta.instance_id}
 
-    if meta.typename == "vineyard::GlobalDataFrame" or meta.typename == "vineyard::GlobalTensor":
+    if (
+        meta.typename == "vineyard::GlobalDataFrame"
+        or meta.typename == "vineyard::GlobalTensor"
+    ):
         mapping = dict()
         for index in range(int(meta['partitions_-size'])):
             item = meta['partitions_-%d' % index]
@@ -74,7 +80,9 @@ def _get_vineyard_instance_id():
 
 
 def from_vineyard(object_id):
-    vineyard_to_block = cached_remote_fn(_vineyard_to_block, num_cpus=0.1, num_returns=2)
+    vineyard_to_block = cached_remote_fn(
+        _vineyard_to_block, num_cpus=0.1, num_returns=2
+    )
     get_vineyard_instance_id = cached_remote_fn(_get_vineyard_instance_id, num_cpus=0.1)
     get_remote_chunks_map = cached_remote_fn(_get_remote_chunks_map, num_cpus=0.1)
 
@@ -84,14 +92,17 @@ def from_vineyard(object_id):
         instances = dict()  # instance_id -> placement group index
         for index in range(nodes):
             instance = ray.get(
-                get_vineyard_instance_id.options(placement_group=pg, placement_group_bundle_index=index).remote())
+                get_vineyard_instance_id.options(
+                    placement_group=pg, placement_group_bundle_index=index
+                ).remote()
+            )
             instances[instance] = index
 
         blocks, metadatas = [], []
         for object_id, location in chunks.items():
-            block, metadata = vineyard_to_block.options(placement_group=pg,
-                                                        placement_group_bundle_index=instances[location]).remote(
-                                                            vineyard.ObjectID(object_id))
+            block, metadata = vineyard_to_block.options(
+                placement_group=pg, placement_group_bundle_index=instances[location]
+            ).remote(vineyard.ObjectID(object_id))
             blocks.append(block)
             metadatas.append(metadata)
 

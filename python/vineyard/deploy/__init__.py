@@ -16,8 +16,8 @@
 # limitations under the License.
 #
 
-from . import local
 from . import distributed
+from . import local
 
 try:
     from . import kubernetes

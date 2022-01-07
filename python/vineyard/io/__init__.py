@@ -16,15 +16,6 @@
 # limitations under the License.
 #
 
-from . import byte
-from . import dataframe
-from . import parallel
-from . import recordbatch
-from . import stream
-
-from .stream import open, read, write
-from .serialization import serialize, deserialize
-
 from vineyard.core.builder import default_builder_context
 from vineyard.core.resolver import default_resolver_context
 from vineyard.io.byte import register_byte_stream_types
@@ -32,6 +23,17 @@ from vineyard.io.dataframe import register_dataframe_stream_types
 from vineyard.io.parallel import register_parallel_stream_types
 from vineyard.io.recordbatch import register_recordbatch_stream_types
 from vineyard.io.stream import register_stream_collection_types
+
+from . import byte
+from . import dataframe
+from . import parallel
+from . import recordbatch
+from . import stream
+from .serialization import deserialize
+from .serialization import serialize
+from .stream import open
+from .stream import read
+from .stream import write
 
 
 def register_builtin_stream_types(builder_ctx, resolver_ctx):

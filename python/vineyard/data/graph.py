@@ -16,7 +16,8 @@
 # limitations under the License.
 #
 
-from vineyard._C import Object, ObjectMeta
+from vineyard._C import Object
+from vineyard._C import ObjectMeta
 
 
 class Graph:

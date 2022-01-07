@@ -19,8 +19,9 @@
 import contextlib
 
 import ray
-from ray.util.placement_group import placement_group, remove_placement_group
 from ray.remote_function import RemoteFunction
+from ray.util.placement_group import placement_group
+from ray.util.placement_group import remove_placement_group
 
 
 @contextlib.contextmanager
@@ -35,15 +36,21 @@ def spread_to_all_nodes(f: RemoteFunction):
 
 def spread_and_get(f: RemoteFunction, *args, **kwargs):
     with spread_to_all_nodes(f) as (nodes, pg):
-        return ray.get([
-            f.options(placement_group=pg, placement_group_bundle_index=index).remote(*args, **kwargs)
-            for index in range(nodes)
-        ])
+        return ray.get(
+            [
+                f.options(
+                    placement_group=pg, placement_group_bundle_index=index
+                ).remote(*args, **kwargs)
+                for index in range(nodes)
+            ]
+        )
 
 
 def spread(f: RemoteFunction, *args, **kwargs):
     with spread_to_all_nodes(f) as (nodes, pg):
         return [
-            f.options(placement_group=pg, placement_group_bundle_index=index).remote(*args, **kwargs)
+            f.options(placement_group=pg, placement_group_bundle_index=index).remote(
+                *args, **kwargs
+            )
             for index in range(nodes)
         ]

@@ -26,8 +26,8 @@
 
 import numpy as np
 import pandas as pd
-
-from airflow.decorators import dag, task
+from airflow.decorators import dag
+from airflow.decorators import task
 from airflow.utils.dates import days_ago
 
 default_args = {
@@ -35,11 +35,18 @@ default_args = {
 }
 
 
-@dag(default_args=default_args, schedule_interval=None, start_date=days_ago(2), tags=['example'])
+@dag(
+    default_args=default_args,
+    schedule_interval=None,
+    start_date=days_ago(2),
+    tags=['example'],
+)
 def taskflow_etl_pandas():
     @task()
     def extract():
-        order_data_dict = pd.DataFrame({'a': np.random.rand(100000), 'b': np.random.rand(100000)})
+        order_data_dict = pd.DataFrame(
+            {'a': np.random.rand(100000), 'b': np.random.rand(100000)}
+        )
         return order_data_dict
 
     @task(multiple_outputs=True)

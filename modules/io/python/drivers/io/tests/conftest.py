@@ -17,12 +17,12 @@
 #
 
 import logging
-logging.basicConfig(level=logging.NOTSET)
-
 import os
-import pytest
 
+import pytest
 import vineyard
+
+logging.basicConfig(level=logging.NOTSET)
 
 
 def pytest_addoption(parser):
@@ -79,7 +79,7 @@ def pytest_addoption(parser):
         '--hive-endpoint',
         action='store',
         default='hive://127.0.0.1:9000',
-        help='Hive\'s hiveserver2 endpoint that will be used to run vineyard tests',
+        help="Hive's hiveserver2 endpoint that will be used to run vineyard tests",
     )
 
     parser.addoption(
@@ -159,13 +159,14 @@ def vineyard_client(request):
 
 def pytest_configure(config):
     config.addinivalue_line(
-        "markers",
-        "skip_without_hdfs(): skip HDFS test if HDFS service is not available",
+        'markers',
+        'skip_without_hdfs(): skip HDFS test if HDFS service is not available',
     )
 
     config.addinivalue_line(
-        "markers",
-        "skip_without_migration(): skip migration tests if object migration is not available",
+        'markers',
+        'skip_without_migration(): skip migration tests if object migration is '
+        'not available',
     )
 
 

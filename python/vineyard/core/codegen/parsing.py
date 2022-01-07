@@ -1,21 +1,3 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-#
-# Copyright 2020-2021 Alibaba Group Holding Limited.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -48,7 +30,8 @@ DEP_MISSING_ERROR = '''
 
 try:
     import clang.cindex
-    from clang.cindex import CursorKind, TranslationUnit
+    from clang.cindex import CursorKind
+    from clang.cindex import TranslationUnit
 except ImportError:
     raise RuntimeError(DEP_MISSING_ERROR.format(dep='libclang'))
 
@@ -61,16 +44,32 @@ except ImportError:
 #
 # parse codegen spec
 #
-#   __attribute__((annotate("codegen"))): meta codegen
-#   __attribute__((annotate("codegen:Type"))): member type: Type member_
-#   __attribute__((annotate("codegen:Type*"))): member type: std::shared_ptr<Type> member_
-#   __attribute__((annotate("codegen:[Type*]"))): list member type: std::vector<Type> member_
-#   __attribute__((annotate("codegen:{Type}"))): set member type: std::set<Type> member_
-#   __attribute__((annotate("codegen:{Type*}"))): set member type: std::set<std::shared_ptr<Type>> member_
-#   __attribute__((annotate("codegen:{int32_t: Type}"))): dict member type: std::map<int32_t, Type> member_
-#   __attribute__((annotate("codegen:{int32_t: Type*}"))): dict member type: std::map<int32_t, std::shared_ptr<Type>> member_
+#   __attribute__((annotate("codegen"))):
+#       meta codegen
 #
-# FIXME(hetao): parse the codegen spec directly from the type signature of the member variable
+#   __attribute__((annotate("codegen:Type"))):
+#       member type: Type member_
+#
+#   __attribute__((annotate("codegen:Type*"))):
+#       member type: std::shared_ptr<Type> member_
+#
+#   __attribute__((annotate("codegen:[Type*]"))):
+#       list member type: std::vector<Type> member_
+#
+#   __attribute__((annotate("codegen:{Type}"))):
+#       set member type: std::set<Type> member_
+#
+#   __attribute__((annotate("codegen:{Type*}"))):
+#       set member type: std::set<std::shared_ptr<Type>> member_
+#
+#   __attribute__((annotate("codegen:{int32_t: Type}"))):
+#       dict member type: std::map<int32_t, Type> member_
+#
+#   __attribute__((annotate("codegen:{int32_t: Type*}"))):
+#       dict member type: std::map<int32_t, std::shared_ptr<Type>> member_
+#
+# FIXME(hetao): parse the codegen spec directly from the type signature of
+# the member variable
 #
 
 
@@ -133,33 +132,46 @@ class CodeGenKind:
         raise RuntimeError('Invalid codegen kind: %s' % self.kind)
 
 
-name_pattern = parsec.spaces() >> parsec.regex(
-    r'[_a-zA-Z][_a-zA-Z0-9<>, ]*(::[_a-zA-Z][_a-zA-Z0-9<>, ]*)*') << parsec.spaces()
+name_pattern = (
+    parsec.spaces()
+    >> parsec.regex(r'[_a-zA-Z][_a-zA-Z0-9<>, ]*(::[_a-zA-Z][_a-zA-Z0-9<>, ]*)*')
+    << parsec.spaces()
+)
 
-star_pattern = parsec.spaces() >> parsec.optional(parsec.string('*'), '') << parsec.spaces()
+star_pattern = (
+    parsec.spaces() >> parsec.optional(parsec.string('*'), '') << parsec.spaces()
+)
 
 parse_meta = parsec.spaces().parsecmap(lambda _: CodeGenKind('meta'))
 
-parse_plain = (parsec.spaces() >>
-               (name_pattern + star_pattern) << parsec.spaces()).parsecmap(lambda value: CodeGenKind('plain', value))
-parse_list = (parsec.string('[') >>
-              (name_pattern + star_pattern) << parsec.string(']')).parsecmap(lambda value: CodeGenKind('list', value))
+parse_plain = (
+    parsec.spaces() >> (name_pattern + star_pattern) << parsec.spaces()
+).parsecmap(lambda value: CodeGenKind('plain', value))
+parse_list = (
+    parsec.string('[') >> (name_pattern + star_pattern) << parsec.string(']')
+).parsecmap(lambda value: CodeGenKind('list', value))
 parse_dlist = (
-    parsec.string('[[') >>
-    (name_pattern + star_pattern) << parsec.string(']]')).parsecmap(lambda value: CodeGenKind('dlist', value))
-parse_set = (parsec.string('{') >>
-             (name_pattern + star_pattern) << parsec.string('}')).parsecmap(lambda value: CodeGenKind('set', value))
-parse_dict = (parsec.string('{') >> parsec.separated((name_pattern + star_pattern), parsec.string(':'), 2, 2) <<
-              parsec.string('}')).parsecmap(lambda values: CodeGenKind('dict', tuple(values)))
+    parsec.string('[[') >> (name_pattern + star_pattern) << parsec.string(']]')
+).parsecmap(lambda value: CodeGenKind('dlist', value))
+parse_set = (
+    parsec.string('{') >> (name_pattern + star_pattern) << parsec.string('}')
+).parsecmap(lambda value: CodeGenKind('set', value))
+parse_dict = (
+    parsec.string('{')
+    >> parsec.separated((name_pattern + star_pattern), parsec.string(':'), 2, 2)
+    << parsec.string('}')
+).parsecmap(lambda values: CodeGenKind('dict', tuple(values)))
 
-codegen_spec_parser = parse_dict ^ parse_set ^ parse_dlist ^ parse_list ^ parse_plain ^ parse_meta
+codegen_spec_parser = (
+    parse_dict ^ parse_set ^ parse_dlist ^ parse_list ^ parse_plain ^ parse_meta
+)
 
 
 def parse_codegen_spec(kind):
     if kind.startswith('vineyard'):
-        kind = kind[len('vineyard'):]
+        kind = kind[len('vineyard') :]
     if kind.startswith('codegen'):
-        kind = kind[len('codegen'):]
+        kind = kind[len('codegen') :]
     if kind.startswith(':'):
         kind = kind[1:]
     return codegen_spec_parser.parse(kind)
@@ -190,12 +202,16 @@ def dump_ast(node, indent, saw, base_indent=4, include_refs=False):
 
         # FIXME: print opcode or literal
 
-        print(tpl.format(indent=' ' * indent, kind=k.name, name=name, type_name=type_name))
+        print(
+            tpl.format(indent=' ' * indent, kind=k.name, name=name, type_name=type_name)
+        )
 
     saw.add(node.hash)
     if include_refs:
         if node.referenced is not None and node.referenced.hash not in saw:
-            dump_ast(node.referenced, indent + base_indent, saw, base_indent, include_refs)
+            dump_ast(
+                node.referenced, indent + base_indent, saw, base_indent, include_refs
+            )
 
     # FIXME: skip auto generated decls
     skip = len([c for c in node.get_children() if indent == 0 and is_std_ns(c)])
@@ -245,8 +261,10 @@ def check_serialize_attribute(node):
 def check_if_class_definition(node):
     for child in node.get_children():
         if child.kind in [
-                CursorKind.CXX_BASE_SPECIFIER, CursorKind.CXX_ACCESS_SPEC_DECL, CursorKind.CXX_METHOD,
-                CursorKind.FIELD_DECL
+            CursorKind.CXX_BASE_SPECIFIER,
+            CursorKind.CXX_ACCESS_SPEC_DECL,
+            CursorKind.CXX_METHOD,
+            CursorKind.FIELD_DECL,
         ]:
             return True
     return False
@@ -255,17 +273,24 @@ def check_if_class_definition(node):
 def filter_the_module(root, filepath):
     children = []
     for child in root.get_children():
-        if child.location and child.location.file and \
-                child.location.file.name == filepath:
+        if (
+            child.location
+            and child.location.file
+            and child.location.file.name == filepath
+        ):
             children.append(child)
     return children
 
 
 def traverse(node, to_reflect, to_include, namespaces=None):
-    ''' Traverse the AST tree.
-    '''
-    if node.kind in [CursorKind.CLASS_DECL, CursorKind.CLASS_TEMPLATE, CursorKind.STRUCT_DECL]:
-        # codegen for all top-level classes (definitions, not declarations) in the given file.
+    '''Traverse the AST tree.'''
+    if node.kind in [
+        CursorKind.CLASS_DECL,
+        CursorKind.CLASS_TEMPLATE,
+        CursorKind.STRUCT_DECL,
+    ]:
+        # codegen for all top-level classes (definitions, not declarations) in
+        # the given file.
         if check_if_class_definition(node):
             attr = check_serialize_attribute(node)
             if attr is None or 'no-vineyard' not in attr:
@@ -290,7 +315,9 @@ def find_fields(definition):
     for child in definition.get_children():
         if first_mmeber_offset == -1:
             if child.kind not in [
-                    CursorKind.TEMPLATE_TYPE_PARAMETER, CursorKind.CXX_BASE_SPECIFIER, CursorKind.ANNOTATE_ATTR
+                CursorKind.TEMPLATE_TYPE_PARAMETER,
+                CursorKind.CXX_BASE_SPECIFIER,
+                CursorKind.ANNOTATE_ATTR,
             ]:
                 first_mmeber_offset = child.extent.start.offset
 
@@ -304,8 +331,11 @@ def find_fields(definition):
             using_alias.append((child.spelling, child.extent))
             continue
 
-        if not has_post_construct and \
-                child.kind == CursorKind.CXX_METHOD and child.spelling == 'PostConstruct':
+        if (
+            not has_post_construct
+            and child.kind == CursorKind.CXX_METHOD
+            and child.spelling == 'PostConstruct'
+        ):
             for body in child.get_children():
                 if body.kind == CursorKind.CXX_OVERRIDE_ATTR:
                     has_post_construct = True
@@ -341,7 +371,9 @@ def generate_template_type(name, ts):
 def parse_compilation_database(build_directory):
     # check if the file exists first to suppress the clang warning.
     compile_commands_json = os.path.join(build_directory, 'compile_commands.json')
-    if not os.path.isfile(compile_commands_json) or not os.access(compile_commands_json, os.R_OK):
+    if not os.path.isfile(compile_commands_json) or not os.access(
+        compile_commands_json, os.R_OK
+    ):
         return None
     try:
         return clang.cindex.CompilationDatabase.fromDirectory(build_directory)
@@ -371,7 +403,7 @@ def resolve_include(inc_node, system_includes, includes):
     inc_name = inc_node.spelling
     if not inc_name.endswith('.vineyard.h'):  # os.path.splitext won't work
         return None
-    mod_name = inc_name[:-len(".vineyard.h")] + ".vineyard-mod"
+    mod_name = inc_name[: -len(".vineyard.h")] + ".vineyard-mod"
     for inc in itertools.chain(system_includes, includes):
         target = os.path.join(inc, mod_name)
         if os.path.isfile(target) and os.access(target, os.R_OK):
@@ -379,16 +411,18 @@ def resolve_include(inc_node, system_includes, includes):
     return None
 
 
-def parse_module(root_directory,
-                 source,
-                 target=None,
-                 system_includes=None,
-                 includes=None,
-                 extra_flags=None,
-                 build_directory=None,
-                 delayed=True,
-                 parse_only=True,
-                 verbose=False):
+def parse_module(  # noqa: C901
+    root_directory,
+    source,
+    target=None,
+    system_includes=None,
+    includes=None,
+    extra_flags=None,
+    build_directory=None,
+    delayed=True,
+    parse_only=True,
+    verbose=False,
+):
     # prepare inputs
     content, message = validate_and_strip_input_file(source)
     if content is None:
@@ -396,7 +430,8 @@ def parse_module(root_directory,
     unsaved_files = [(source, content)]
 
     # NB:
-    #   `-nostdinc` and `-nostdinc++`: to avoid libclang find incorrect gcc installation.
+    #   `-nostdinc` and `-nostdinc++`: to avoid libclang find an incorrect
+    #                                  gcc installation.
     #   `-Wunused-private-field`: we skip parsing the function bodies.
     base_flags = [
         '-x',
@@ -445,22 +480,29 @@ def parse_module(root_directory,
 
     # parse
     index = clang.cindex.Index.create()
-    options = ParseOption.Default \
-        | ParseOption.DetailedPreprocessingRecord \
-        | ParseOption.SkipFunctionBodies \
-        | ParseOption.IncludeAttributedTypes \
+    options = (
+        ParseOption.Default
+        | ParseOption.DetailedPreprocessingRecord
+        | ParseOption.SkipFunctionBodies
+        | ParseOption.IncludeAttributedTypes
         | ParseOption.KeepGoing
+    )
 
     if parse_only:
         options |= ParseOption.SingleFileParse
 
     parse_flags = base_flags + flags
-    unit = index.parse(source, unsaved_files=unsaved_files, args=parse_flags, options=options)
+    unit = index.parse(
+        source, unsaved_files=unsaved_files, args=parse_flags, options=options
+    )
 
     if not parse_only:
         for diag in unit.diagnostics:
-            if verbose or (diag.location and diag.location.file and \
-                    diag.location.file.name == source):
+            if verbose or (
+                diag.location
+                and diag.location.file
+                and diag.location.file.name == source
+            ):
                 logging.warning(diag)
 
     # traverse
@@ -474,25 +516,29 @@ def parse_module(root_directory,
     return content, to_reflect, to_include, parse_flags
 
 
-def parse_deps(root_directory,
-               source,
-               target=None,
-               system_includes=None,
-               includes=None,
-               extra_flags=None,
-               build_directory=None,
-               delayed=True,
-               verbose=False):
-    _, _, to_include, parse_flags = parse_module(root_directory=root_directory,
-                                                 source=source,
-                                                 target=target,
-                                                 system_includes=system_includes,
-                                                 includes=includes,
-                                                 extra_flags=extra_flags,
-                                                 build_directory=build_directory,
-                                                 delayed=delayed,
-                                                 parse_only=True,
-                                                 verbose=verbose)
+def parse_deps(
+    root_directory,
+    source,
+    target=None,
+    system_includes=None,
+    includes=None,
+    extra_flags=None,
+    build_directory=None,
+    delayed=True,
+    verbose=False,
+):
+    _, _, to_include, parse_flags = parse_module(
+        root_directory=root_directory,
+        source=source,
+        target=target,
+        system_includes=system_includes,
+        includes=includes,
+        extra_flags=extra_flags,
+        build_directory=build_directory,
+        delayed=delayed,
+        parse_only=True,
+        verbose=verbose,
+    )
 
     logging.info('Generating for %s ...', os.path.basename(source))
 

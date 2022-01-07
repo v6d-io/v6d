@@ -18,10 +18,13 @@
 
 import numpy as np
 import tensorflow as tf
-
 from vineyard._C import ObjectMeta
-from vineyard.core.resolver import resolver_context, default_resolver_context
-from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
+from vineyard.core.resolver import default_resolver_context
+from vineyard.core.resolver import resolver_context
+from vineyard.data.utils import build_numpy_buffer
+from vineyard.data.utils import from_json
+from vineyard.data.utils import normalize_dtype
+from vineyard.data.utils import to_json
 
 
 def tf_tensor_builder(client, value, **kw):
@@ -86,15 +89,19 @@ def tf_create_global_dataframe(client, value, builder, **kw):
 
 def tf_tensor_resolver(obj):
     meta = obj.meta
-    num = from_json(meta['num'])
+    num = from_json(meta['num'])  # noqa: F841
     data_shape = from_json(meta['data_shape_'])
     label_shape = from_json(meta['label_shape_'])
     data_name = meta['data_type_']
     label_name = meta['label_type_']
     data_type = normalize_dtype(data_name, meta.get('value_type_meta_', None))
     label_type = normalize_dtype(label_name, meta.get('value_type_meta_', None))
-    data = np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape)
-    label = np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape)
+    data = np.frombuffer(
+        memoryview(obj.member('buffer_data_')), dtype=data_type
+    ).reshape(data_shape)
+    label = np.frombuffer(
+        memoryview(obj.member('buffer_label_')), dtype=label_type
+    ).reshape(label_shape)
     data = tf.data.Dataset.from_tensor_slices((data, label))
     return data
 
@@ -104,7 +111,9 @@ def tf_dataframe_resolver(obj, **kw):
         df = resolver(obj, **kw)
     labels = df.pop(kw.get('label', 'label'))
     if 'data' in kw:
-        return tf.data.Dataset.from_tensor_slices((np.stack(df[kw['data']], axis=0), labels))
+        return tf.data.Dataset.from_tensor_slices(
+            (np.stack(df[kw['data']], axis=0), labels)
+        )
     return tf.data.Dataset.from_tensor_slices((dict(df), labels))
 
 

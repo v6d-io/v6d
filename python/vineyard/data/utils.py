@@ -17,20 +17,18 @@
 #
 
 import json
+import pickle
 import platform
 
 import numpy as np
 import pyarrow as pa
-
-import pickle
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
 
 
 def normalize_dtype(dtype, dtype_meta=None):
-    ''' Normalize a descriptive C++ type to numpy.dtype.
-    '''
+    '''Normalize a descriptive C++ type to numpy.dtype.'''
     if isinstance(dtype, np.dtype):
         return dtype
     if dtype in ['i32', 'int', 'int32', 'int32_t']:
@@ -68,7 +66,7 @@ def normalize_cpptype(dtype):
     return dtype.name
 
 
-def normalize_arrow_dtype(dtype):
+def normalize_arrow_dtype(dtype):  # noqa: C901
     if dtype in ['bool']:
         return pa.bool_()
     if dtype in ['int8_t', 'int8', 'byte']:
@@ -155,6 +153,12 @@ def expand_slice(indexer):
 
 
 __all__ = [
-    'normalize_dtype', 'normalize_cpptype', 'normalize_arrow_dtype', 'build_buffer', 'build_numpy_buffer', 'to_json',
-    'from_json', 'expand_slice'
+    'normalize_dtype',
+    'normalize_cpptype',
+    'normalize_arrow_dtype',
+    'build_buffer',
+    'build_numpy_buffer',
+    'to_json',
+    'from_json',
+    'expand_slice',
 ]

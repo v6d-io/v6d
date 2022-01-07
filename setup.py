@@ -20,9 +20,11 @@ import os
 import subprocess
 import sys
 import textwrap
-
 from distutils.cmd import Command
-from setuptools import setup, Extension, find_packages
+
+from setuptools import Extension
+from setuptools import find_packages
+from setuptools import setup
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
 from setuptools.dist import Distribution
@@ -62,7 +64,7 @@ class build_py_with_dependencies(build_py):
         elif sys.platform == 'darwin':
             filenames = ['libvineyard_internal_registry.dylib']
         else:
-            raise RuntimeError("Unsupported platform: %s" % sys.platform)
+            raise RuntimeError('Unsupported platform: %s' % sys.platform)
 
         rs.append((package, src_dir, build_dir, filenames))
         return rs
@@ -75,46 +77,40 @@ class bdist_wheel_as_nonpure(bdist_wheel):
 
 
 class BinDistribution(Distribution):
-    ''' Always forces a binary package with platform name.
-    '''
+    """Always forces a binary package with platform name."""
+
     def has_ext_modules(self):
         return True
 
 
 class FormatAndLint(Command):
-    description = "format and lint code"
+    description = 'format and lint code'
     user_options = []
 
-    user_options = [("inplace=", "i", "Run code formatter and linter inplace")]
+    user_options = [('inplace=', 'i', 'Run code formatter and linter inplace')]
 
     def initialize_options(self):
         self.inplace = False
 
     def finalize_options(self):
-        if self.inplace in ['true', 'True', '1', 't'] or self.inplace:
+        if self.inplace or self.inplace == 'True' or self.inplace == 'true':
             self.inplace = True
         else:
             self.inplace = False
 
     def run(self):
         if self.inplace:
-            mode = "--in-place"
+            subprocess.check_call([sys.executable, '-m', 'isort', '.'], cwd=repo_root)
+            subprocess.check_call([sys.executable, '-m', 'black', '.'], cwd=repo_root)
+            subprocess.check_call([sys.executable, '-m', 'flake8', '.'], cwd=repo_root)
         else:
-            mode = "--diff"
-        subprocess.check_call([
-            "yapf",
-            mode,
-            "--recursive",
-            "isort",
-            "setup.py",
-            "setup_airflow.py",
-            "setup_ml.py",
-            "setup_ray.py",
-            "python/",
-            "modules/io/setup.py",
-            "modules/io/python",
-        ],
-                              cwd=repo_root)
+            subprocess.check_call(
+                [sys.executable, '-m', 'isort', '--check', '--diff', '.'], cwd=repo_root
+            )
+            subprocess.check_call(
+                [sys.executable, '-m', 'black', '--check', '--diff', '.'], cwd=repo_root
+            )
+            subprocess.check_call([sys.executable, '-m', 'flake8', '.'], cwd=repo_root)
 
 
 def find_core_packages(root):
@@ -125,11 +121,16 @@ def find_core_packages(root):
     return pkgs
 
 
-with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'), encoding='utf-8', mode='r') as fp:
+with open(
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
+    encoding='utf-8',
+    mode='r',
+) as fp:
     long_description = fp.read()
 
     # Github doesn't respect "align: center", and pypi disables `.. raw`.
-    replacement = textwrap.dedent('''
+    replacement = textwrap.dedent(
+        """
         .. image:: https://v6d.io/_static/vineyard_logo.png
            :target: https://v6d.io
            :align: center
@@ -138,7 +139,8 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
 
         vineyard: an in-memory immutable data manager
         ---------------------------------------------
-        ''')
+        """
+    )
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 setup(
@@ -153,10 +155,10 @@ setup(
     packages=find_core_packages('python'),
     package_data={
         'vineyard': [
-            "vineyardd",
-            "**/*.yaml",
-            "**/*.yaml.tpl",
-            "**/**/*.sh",
+            'vineyardd',
+            '**/*.yaml',
+            '**/*.yaml.tpl',
+            '**/**/*.sh',
         ],
     },
     ext_modules=[
@@ -166,7 +168,7 @@ setup(
         'build_ext': build_ext_with_precompiled,
         'build_py': build_py_with_dependencies,
         'bdist_wheel': bdist_wheel_as_nonpure,
-        "lint": FormatAndLint,
+        'lint': FormatAndLint,
     },
     distclass=BinDistribution,
     zip_safe=False,
@@ -182,7 +184,7 @@ setup(
     ],
     install_requires=[
         'argcomplete',
-        "etcd-distro",
+        'etcd-distro',
         'numpy',
         'pandas<1.0.0; python_version<"3.6"',
         'pandas<1.2.0; python_version<"3.7"',
@@ -197,8 +199,11 @@ setup(
     ],
     extras_require={
         'dev': [
+            'black',
             'breathe',
             'docutils==0.16',
+            'flake8',
+            'isort',
             'libclang',
             'nbsphinx',
             'parsec',
@@ -209,11 +214,11 @@ setup(
             'sphinx>=3.0.2',
             'sphinx_rtd_theme',
         ],
-        "kubernetes": [
-            "kubernetes",
+        'kubernetes': [
+            'kubernetes',
         ],
     },
-    platform=['POSIX', 'MacOS'],
+    platform=["POSIX", "MacOS"],
     license="Apache License 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -232,8 +237,8 @@ setup(
         "Programming Language :: Python :: 3.9",
     ],
     project_urls={
-        'Documentation': 'https://v6d.io',
-        'Source': 'https://github.com/v6d-io/v6d',
-        'Tracker': 'https://github.com/v6d-io/v6d/issues',
+        "Documentation": "https://v6d.io",
+        "Source": "https://github.com/v6d-io/v6d",
+        "Tracker": "https://github.com/v6d-io/v6d/issues",
     },
 )

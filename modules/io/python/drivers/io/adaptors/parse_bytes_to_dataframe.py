@@ -27,7 +27,9 @@ import vineyard
 from vineyard.data.utils import normalize_arrow_dtype
 from vineyard.io.byte import ByteStream
 from vineyard.io.dataframe import DataframeStream
-from vineyard.io.utils import report_error, report_exception, report_success
+from vineyard.io.utils import report_error
+from vineyard.io.utils import report_exception
+from vineyard.io.utils import report_success
 
 logger = logging.getLogger('vineyard')
 
@@ -37,13 +39,15 @@ def parse_dataframe_blocks(content, read_options, parse_options, convert_options
     return pa.csv.read_csv(reader, read_options, parse_options, convert_options)
 
 
-def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
+def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):  # noqa: C901
     client = vineyard.connect(vineyard_socket)
 
     # get input streams
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+        raise ValueError(
+            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
+        )
     instream: ByteStream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
@@ -90,7 +94,10 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
             if column.isdigit():
                 column_index = int(column)
                 if column_index >= len(original_columns):
-                    raise IndexError('Column index out of range: %s of %s' % (column_index, original_columns))
+                    raise IndexError(
+                        'Column index out of range: %s of %s'
+                        % (column_index, original_columns)
+                    )
                 indices.append(i)
                 columns[i] = original_columns[column_index]
         else:
@@ -127,7 +134,9 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
                 break
 
             # parse csv
-            table = parse_dataframe_blocks(content, read_options, parse_options, convert_options)
+            table = parse_dataframe_blocks(
+                content, read_options, parse_options, convert_options
+            )
             # write recordbatches
             stream_writer.write_table(table)
     except Exception:
@@ -138,7 +147,10 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):
 
 def main():
     if len(sys.argv) < 5:
-        print("usage: ./parse_bytes_to_dataframe.py <ipc_socket> <stream_id> <proc_num> <proc_index>")
+        print(
+            "usage: ./parse_bytes_to_dataframe.py <ipc_socket> <stream_id> "
+            "<proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]

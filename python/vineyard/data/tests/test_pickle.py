@@ -16,11 +16,11 @@
 # limitations under the License.
 #
 
+import numpy as np
 import pandas as pd
 import pytest
-import numpy as np
-
-from vineyard.data.pickle import PickledReader, PickledWriter
+from vineyard.data.pickle import PickledReader
+from vineyard.data.pickle import PickledWriter
 
 b1m = 1 * 1024 * 1024
 b16m = 16 * 1024 * 1024
@@ -48,22 +48,42 @@ values = [
     (b16m, np.zeros((1024, 1024, 48), dtype='bool')),
     (b16m, np.zeros((1024, 1024, 48))),
     (b64m, np.zeros((1024, 1024, 512))),
-    (b1m, pd.DataFrame({
-        'a': np.ones(1024),
-        'b': np.zeros(1024),
-    })),
-    (b16m, pd.DataFrame({
-        'a': np.ones(1024 * 1024),
-        'b': np.zeros(1024 * 1024),
-    })),
-    (b64m, pd.DataFrame({
-        'a': np.ones(1024 * 1024 * 4),
-        'b': np.zeros(1024 * 1024 * 4),
-    })),
-    (b128m, pd.DataFrame({
-        'a': np.ones(1024 * 1024 * 16),
-        'b': np.zeros(1024 * 1024 * 16),
-    })),
+    (
+        b1m,
+        pd.DataFrame(
+            {
+                'a': np.ones(1024),
+                'b': np.zeros(1024),
+            }
+        ),
+    ),
+    (
+        b16m,
+        pd.DataFrame(
+            {
+                'a': np.ones(1024 * 1024),
+                'b': np.zeros(1024 * 1024),
+            }
+        ),
+    ),
+    (
+        b64m,
+        pd.DataFrame(
+            {
+                'a': np.ones(1024 * 1024 * 4),
+                'b': np.zeros(1024 * 1024 * 4),
+            }
+        ),
+    ),
+    (
+        b128m,
+        pd.DataFrame(
+            {
+                'a': np.ones(1024 * 1024 * 16),
+                'b': np.zeros(1024 * 1024 * 16),
+            }
+        ),
+    ),
 ]
 
 
@@ -200,7 +220,9 @@ def test_bytes_io_pandas_dataframe_int_columns(vineyard_client):
 
 
 def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client):
-    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]})
+    df = pd.DataFrame(
+        {'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]}
+    )
     object_id = vineyard_client.put(df)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     pd.testing.assert_frame_equal(df, target)

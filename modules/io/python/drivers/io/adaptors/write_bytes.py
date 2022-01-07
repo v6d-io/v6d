@@ -23,7 +23,9 @@ import sys
 import fsspec
 import vineyard
 from vineyard.io.byte import ByteStream
-from vineyard.io.utils import expand_full_path, report_error, report_exception
+from vineyard.io.utils import expand_full_path
+from vineyard.io.utils import report_error
+from vineyard.io.utils import report_exception
 
 try:
     from vineyard.drivers.io import ossfs
@@ -34,15 +36,25 @@ if ossfs:
     fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
 
-def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options, proc_num, proc_index):
+def write_bytes(
+    vineyard_socket,
+    path,
+    stream_id,
+    storage_options,
+    write_options,
+    proc_num,
+    proc_index,
+):
     """Read bytes from stream and write to external storage.
 
     Args:
         vineyard_socket (str): Ipc socket
         path (str): External storage path to write to
-        stream_id (str): ObjectID of the stream to be read from, which is a ParallelStream
+        stream_id (str): ObjectID of the stream to be read from, which is a
+                         ParallelStream
         storage_options (dict): Configurations of external storage
-        write_options (dict): Additional options that could control the behavior of write
+        write_options (dict): Additional options that could control the behavior
+                              of write
         proc_num (int): Total amount of process
         proc_index (int): The sequence of this process
 
@@ -52,7 +64,9 @@ def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        report_error(f"Fetch stream error with proc_num = {proc_num}, proc_index = {proc_index}")
+        report_error(
+            f"Fetch stream error with proc_num = {proc_num}, proc_index = {proc_index}"
+        )
         sys.exit(-1)
 
     instream: ByteStream = streams[proc_index]
@@ -76,17 +90,31 @@ def write_bytes(vineyard_socket, path, stream_id, storage_options, write_options
 
 def main():
     if len(sys.argv) < 8:
-        print("usage: ./write_bytes <ipc_socket> <path> <stream_id> "
-              "<storage_options> <write_options> <proc_num> <proc_index>")
+        print(
+            "usage: ./write_bytes <ipc_socket> <path> <stream_id> "
+            "<storage_options> <write_options> <proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
     stream_id = sys.argv[3]
-    storage_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
-    write_options = json.loads(base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8"))
+    storage_options = json.loads(
+        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
+    )
+    write_options = json.loads(
+        base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8")
+    )
     proc_num = int(sys.argv[6])
     proc_index = int(sys.argv[7])
-    write_bytes(ipc_socket, path, stream_id, storage_options, write_options, proc_num, proc_index)
+    write_bytes(
+        ipc_socket,
+        path,
+        stream_id,
+        storage_options,
+        write_options,
+        proc_num,
+        proc_index,
+    )
 
 
 if __name__ == "__main__":

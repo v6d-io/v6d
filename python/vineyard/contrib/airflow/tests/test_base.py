@@ -21,10 +21,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from datetime import timedelta
 import unittest
+from datetime import timedelta
 
-from airflow.models import DAG, DagRun, TaskInstance as TI
+from airflow.models import DAG
+from airflow.models import DagRun
+from airflow.models import TaskInstance as TI
 from airflow.utils import timezone
 from airflow.utils.session import create_session
 
@@ -56,7 +58,9 @@ class TestPythonBase(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.dag = DAG(self.name, default_args={'owner': 'airflow', 'start_date': DEFAULT_DATE})
+        self.dag = DAG(
+            self.name, default_args={'owner': 'airflow', 'start_date': DEFAULT_DATE}
+        )
         self.addCleanup(self.dag.clear)
         self.clear_run()
         self.addCleanup(self.clear_run)

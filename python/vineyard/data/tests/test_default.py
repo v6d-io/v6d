@@ -18,9 +18,9 @@
 
 import numpy as np
 import pytest
-
 import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
+from vineyard.core import default_builder_context
+from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)

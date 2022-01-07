@@ -18,15 +18,12 @@
 
 import numpy as np
 import pandas as pd
-
 import pyarrow as pa
 import pytest
-
 import tensorflow as tf
-
+from vineyard.contrib.ml.tensorflow import register_tf_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
-from vineyard.contrib.ml.tensorflow import register_tf_types
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -55,7 +52,9 @@ def test_tf_tensor(vineyard_client):
 
 
 def test_tf_dataframe(vineyard_client):
-    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'target': [1.0, 2.0, 3.0, 4.0]})
+    df = pd.DataFrame(
+        {'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'target': [1.0, 2.0, 3.0, 4.0]}
+    )
     labels = df.pop('target')
     dataset = tf.data.Dataset.from_tensor_slices((dict(df), labels))
     object_id = vineyard_client.put(dataset)
@@ -69,7 +68,11 @@ def test_tf_dataframe(vineyard_client):
 
 
 def test_tf_record_batch(vineyard_client):
-    arrays = [pa.array([1, 2, 3, 4]), pa.array([3.0, 4.0, 5.0, 6.0]), pa.array([0, 1, 0, 1])]
+    arrays = [
+        pa.array([1, 2, 3, 4]),
+        pa.array([3.0, 4.0, 5.0, 6.0]),
+        pa.array([0, 1, 0, 1]),
+    ]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'label'])
     object_id = vineyard_client.put(batch)
     dtrain = vineyard_client.get(object_id)

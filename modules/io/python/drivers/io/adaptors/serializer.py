@@ -20,16 +20,20 @@ import concurrent
 import concurrent.futures
 import logging
 import os
-from queue import Queue as ConcurrentQueue
-from queue import Empty as QueueEmptyException
 import sys
+from queue import Empty as QueueEmptyException
+from queue import Queue as ConcurrentQueue
 from typing import Tuple
 
 import vineyard
-from vineyard._C import ObjectMeta, ObjectID
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
 from vineyard.io.byte import ByteStream
 from vineyard.io.stream import StreamCollection
-from vineyard.io.utils import BaseStreamExecutor, ThreadStreamExecutor, report_exception, report_success
+from vineyard.io.utils import BaseStreamExecutor
+from vineyard.io.utils import ThreadStreamExecutor
+from vineyard.io.utils import report_exception
+from vineyard.io.utils import report_success
 
 logger = logging.getLogger('vineyard')
 
@@ -46,21 +50,27 @@ def build_a_stream(client, meta: ObjectMeta, path: str):
     return ByteStream.new(client, params)
 
 
-def serialize_blob_to_stream(stream: ByteStream, blob: memoryview, chunk_size: int = CHUNK_SIZE):
+def serialize_blob_to_stream(
+    stream: ByteStream, blob: memoryview, chunk_size: int = CHUNK_SIZE
+):
     logger.info('starting processing blob at %s', stream.params.get('path', 'UNKNOWN'))
     total_size, offset = len(blob), 0
     writer: ByteStream.Writer = stream.open_writer()
     while offset < total_size:
         current_chunk_size = min(chunk_size, total_size - offset)
         chunk = writer.next(current_chunk_size)
-        vineyard.memory_copy(chunk, 0, blob[offset:offset + current_chunk_size])
+        vineyard.memory_copy(chunk, 0, blob[offset : offset + current_chunk_size])
         offset += current_chunk_size
     logger.info('finished processing blob at %s', stream.params.get('path', 'UNKNOWN'))
     writer.finish()
 
 
 class SerializeExecutor(BaseStreamExecutor):
-    def __init__(self, task_queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]", chunk_size: int = CHUNK_SIZE):
+    def __init__(
+        self,
+        task_queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]",
+        chunk_size: int = CHUNK_SIZE,
+    ):
         self._task_queue = task_queue
         self._chunk_size = chunk_size
 
@@ -77,10 +87,14 @@ class SerializeExecutor(BaseStreamExecutor):
         return processed_bytes, processed_blobs
 
 
-def traverse_to_serialize(client, meta: ObjectMeta, queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]",
-                          path: str) -> ObjectID:
-    ''' Returns:
-            The generated stream or stream collection id.
+def traverse_to_serialize(
+    client,
+    meta: ObjectMeta,
+    queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]",
+    path: str,
+) -> ObjectID:
+    '''Returns:
+    The generated stream or stream collection id.
     '''
     if meta.typename == 'vineyard::Blob':
         s = build_a_stream(client, meta, os.path.join(path, 'blob'))
@@ -95,7 +109,9 @@ def traverse_to_serialize(client, meta: ObjectMeta, queue: "ConcurrentQueue[Tupl
                 metadata['__typename'] = v
             elif isinstance(v, ObjectMeta):
                 if v.islocal:
-                    streams.append(traverse_to_serialize(client, v, queue, os.path.join(path, k)))
+                    streams.append(
+                        traverse_to_serialize(client, v, queue, os.path.join(path, k))
+                    )
             else:
                 metadata[k] = v
         metadata[StreamCollection.KEY_OF_PATH] = path
@@ -104,15 +120,15 @@ def traverse_to_serialize(client, meta: ObjectMeta, queue: "ConcurrentQueue[Tupl
 
 
 def serialize(vineyard_socket, object_id):
-    ''' Serialize a vineyard object as a stream.
+    '''Serialize a vineyard object as a stream.
 
-        The serialization executes in the following steps:
+    The serialization executes in the following steps:
 
-        1. glob all blobs in the meta
+    1. glob all blobs in the meta
 
-        2. build a stream for each blob
+    2. build a stream for each blob
 
-        3. generate a hierarchical `StreamCollection` object as the result
+    3. generate a hierarchical `StreamCollection` object as the result
     '''
     client = vineyard.connect(vineyard_socket)
     meta = client.get_meta(object_id)

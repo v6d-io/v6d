@@ -26,7 +26,7 @@ from sortedcontainers import SortedDict
 from .utils import find_most_precise_match
 
 
-class DriverContext():
+class DriverContext:
     def __init__(self):
         self.__factory = SortedDict(dict)
 
@@ -42,7 +42,8 @@ class DriverContext():
         prefix, methods = find_most_precise_match(typename, self.__factory)
         if prefix:
             for meth, func in methods.items():
-                # if shouldn't failed, since it has already been wrapped in during resolving
+                # if shouldn't failed, since it has already been wrapped in during
+                # resolving
                 setattr(obj, meth, functools.partial(func, obj))
         return obj
 
@@ -67,8 +68,7 @@ _driver_context_local.default_driver = default_driver_context
 
 
 def get_current_drivers():
-    ''' Obtain current driver context.
-    '''
+    '''Obtain current driver context.'''
     default_driver = getattr(_driver_context_local, 'default_driver', None)
     if not default_driver:
         default_driver = default_driver_context.extend()
@@ -77,12 +77,12 @@ def get_current_drivers():
 
 @contextlib.contextmanager
 def driver_context(drivers=None, base=None):
-    ''' Open a new context for register drivers, without populting outside global
-        environment.
+    '''Open a new context for register drivers, without populting outside global
+    environment.
 
-        See Also:
-            builder_context
-            resolver_context
+    See Also:
+        builder_context
+        resolver_context
     '''
     current_driver = get_current_drivers()
     try:
@@ -103,24 +103,25 @@ def register_builtin_drivers(ctx):
 
 
 def registerize(func):
-    ''' Registerize a method, add a `__factory` attribute and a `register`
-        interface to a method.
+    '''Registerize a method, add a `__factory` attribute and a `register`
+    interface to a method.
 
-        multiple-level register is automatically supported, users can
+    multiple-level register is automatically supported, users can
 
-        >>> open.register(local_io_adaptor)
-        >>> open.register(oss_io_adaptor)
+    >>> open.register(local_io_adaptor)
+    >>> open.register(oss_io_adaptor)
 
-        OR
+    OR
 
-        >>> open.register('file', local_io_adaptor)
-        >>> open.register('odps', odps_io_adaptor)
+    >>> open.register('file', local_io_adaptor)
+    >>> open.register('odps', odps_io_adaptor)
 
-        OR
+    OR
 
-        >>> open.register('file', 'csv', local_csv_reader)
-        >>> open.register('file', 'tsv', local_tsv_reader)
+    >>> open.register('file', 'csv', local_csv_reader)
+    >>> open.register('file', 'tsv', local_tsv_reader)
     '''
+
     @functools.wraps(func)
     def wrap(*args, **kwargs):
         return func(*args, **kwargs)
@@ -132,13 +133,17 @@ def registerize(func):
             if wrap.__factory is None:
                 wrap.__factory = []
             if not isinstance(wrap.__factory, list):
-                raise RuntimeError('Invalid arguments: inconsistent with existing registerations')
+                raise RuntimeError(
+                    'Invalid arguments: inconsistent with existing registerations'
+                )
             wrap.__factory.append(args[0])
         else:
             if wrap.__factory is None:
                 wrap.__factory = {}
             if not isinstance(wrap.__factory, dict):
-                raise RuntimeError('Invalid arguments: inconsistent with existing registerations')
+                raise RuntimeError(
+                    'Invalid arguments: inconsistent with existing registerations'
+                )
             root = wrap.__factory
             for arg in args[:-2]:
                 if arg not in root:

@@ -16,4 +16,5 @@
 # limitations under the License.
 #
 
-from .shared_memory import SharedMemory, ShareableList
+from .shared_memory import ShareableList
+from .shared_memory import SharedMemory

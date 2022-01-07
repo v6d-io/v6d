@@ -18,16 +18,16 @@
 
 
 def find_most_precise_match(typename, candidates):
-    ''' Find the most precise match for given typename inside a group of prefixes.
+    '''Find the most precise match for given typename inside a group of prefixes.
 
-        Parameters
-        ----------
-        typename: str
-            Given type name to be matched with prefixes.
+    Parameters
+    ----------
+    typename: str
+        Given type name to be matched with prefixes.
 
-        candidates: list of (prefix, candidate)
-            List of candidates to match with, the first element is prefix, and the second
-            entry is the candidate item, e.g., resolver or driver method.
+    candidates: list of (prefix, candidate)
+        List of candidates to match with, the first element is prefix, and the
+        second entry is the candidate item, e.g., resolver or driver method.
     '''
     if candidates:
         for prefix in reversed(candidates):  # requires further optimization
@@ -38,8 +38,11 @@ def find_most_precise_match(typename, candidates):
 
 class ReprableString(str):
     """A special class that prevents `repr()` adding extra `""` to `str`.
-    It is used to optimize the user experiences to preseve `\n` when printing exceptions.
+
+    It is used to optimize the user experiences to preseve `\n` when printing
+    exceptions.
     """
+
     def __repr__(self) -> str:
         return self
 

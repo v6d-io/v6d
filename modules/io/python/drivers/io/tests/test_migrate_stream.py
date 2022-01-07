@@ -18,15 +18,19 @@
 
 import filecmp
 import itertools
-import pytest
 
+import pytest
 import vineyard
 import vineyard.io
 
 
 @pytest.mark.skip_without_migration()
-def test_migrate_stream(vineyard_ipc_sockets, vineyard_endpoint, test_dataset, test_dataset_tmp):
-    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2))
+def test_migrate_stream(
+    vineyard_ipc_sockets, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    vineyard_ipc_sockets = list(
+        itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2)
+    )
 
     # read the file as a stream, note that the open api
     # always returns a global stream
@@ -34,10 +38,7 @@ def test_migrate_stream(vineyard_ipc_sockets, vineyard_endpoint, test_dataset, t
         "file://%s/p2p-31.e" % test_dataset,
         vineyard_ipc_socket=vineyard_ipc_sockets[0],
         vineyard_endpoint=vineyard_endpoint,
-        read_options={
-            "header_row": False,
-            "delimiter": " "
-        },
+        read_options={"header_row": False, "delimiter": " "},
     )
 
     # extract the local stream from the opened global stream
@@ -68,4 +69,6 @@ def test_migrate_stream(vineyard_ipc_sockets, vineyard_endpoint, test_dataset, t
     )
 
     # check the equility
-    assert filecmp.cmp("%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp)
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )

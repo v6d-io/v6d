@@ -19,7 +19,8 @@
 import os
 import textwrap
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
+from setuptools import setup
 from setuptools.command.install import install
 from wheel.bdist_wheel import bdist_wheel
 
@@ -50,10 +51,18 @@ def find_airflow_packages(root):
     return pkgs
 
 
-with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'python', 'vineyard', 'contrib', 'airflow',
-                       'README.md'),
-          encoding='utf-8',
-          mode='r') as fp:
+with open(
+    os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        'python',
+        'vineyard',
+        'contrib',
+        'airflow',
+        'README.md',
+    ),
+    encoding='utf-8',
+    mode='r',
+) as fp:
     long_description = fp.read()
 
 setup(
@@ -66,10 +75,7 @@ setup(
     url='https://v6d.io',
     package_dir={'vineyard.contrib.airflow': 'python/vineyard/contrib/airflow'},
     packages=find_airflow_packages('python'),
-    cmdclass={
-        'bdist_wheel': bdist_wheel_plat,
-        "install": install_plat
-    },
+    cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},
     zip_safe=False,
     install_requires=[
         'apache-airflow',

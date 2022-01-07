@@ -20,9 +20,9 @@
 The shared_memory module provides similar interface like multiprocessing.shared_memory
 for direct access shared memory backed by vineyard across processes.
 
-The API is kept consistent with multiprocessing.shared_memory but the semantics is slightly
-different. For vineyard, to make the shared memory visible for other process, a explictly
-``seal`` or ``close`` operation is needed.
+The API is kept consistent with multiprocessing.shared_memory but the semantics is
+slightly different. For vineyard, to make the shared memory visible for other process,
+a explictly ``seal`` or ``close`` operation is needed.
 
 Refer to the documentation of multiprocessing.shared_memory for details.
 '''
@@ -30,8 +30,8 @@ Refer to the documentation of multiprocessing.shared_memory for details.
 try:
     import multiprocessing.shared_memory as shm
 except ImportError:
-    # multiprocessing.shared_memory is available since Python 3.8, we use the slim library
-    # for earlier version of Python.
+    # multiprocessing.shared_memory is available since Python 3.8, we use the slim
+    # library for earlier version of Python.
     #
     # see also github #327.
     import shared_memory as shm
@@ -44,33 +44,38 @@ from vineyard._C import ObjectID
 
 class SharedMemory:
     def __init__(self, vineyard_client, name=None, create=False, size=0):
-        ''' Create or obtain a shared memory block that backed by vineyard.
+        '''Create or obtain a shared memory block that backed by vineyard.
 
-            Parameters
-            ----------
-            vineyard_client:
-                The vineyard IPC or RPC client.
-            name:
-                The vineyard ObjectID, could be vineyard.ObjectID, int or stringified ObjectID.
-            create:
-                Whether to create a new shared memory block or just obtain existing one.
-            size:
-                Size of the shared memory block.
+        Parameters
+        ----------
+        vineyard_client:
+            The vineyard IPC or RPC client.
+        name:
+            The vineyard ObjectID, could be vineyard.ObjectID, int or stringified
+            ObjectID.
+        create:
+            Whether to create a new shared memory block or just obtain existing one.
+        size:
+            Size of the shared memory block.
 
-            See Also
-            --------
-            multiprocessing.shared_memory.SharedMemory
+        See Also
+        --------
+        multiprocessing.shared_memory.SharedMemory
         '''
         if not size >= 0:
             raise ValueError("'size' must be a positive integer")
         if create:
             if size == 0:
-                raise ValueError("'size' must be a positive number different from zero")
+                raise ValueError(
+                    "'size' must be a positive number " "different from zero"
+                )
             if name is not None:
                 raise ValueError("'name' can only be None if create=True")
         else:
             if size != 0:
-                warnings.warn("'size' will take no effect if create=False", )
+                warnings.warn(
+                    "'size' will take no effect if create=False",
+                )
             if name is None:
                 raise ValueError("'name' cannot be None if create=False")
 
@@ -169,28 +174,29 @@ class ShareableList(shm.ShareableList):
     multiprocessing.shared_memory.ShareableList
     '''
 
-    # yapf: disable
-
-    # note that the implementation of ``__init__`` entirely comes from multiprocessing.shared_memory.
+    # note that the implementation of ``__init__`` entirely comes from
+    # multiprocessing.shared_memory.
     #
-    # and note that https://github.com/python/cpython/commit/c8f1715283ec51822fb37a702bf253cbac1af276
+    # and note that
+    #
+    #   https://github.com/python/cpython/commit/c8f1715283ec51822fb37a702bf253cbac1af276
+    #
     # has made a set of changes to the ``ShareableList`` code.
     #
-
     def __init__(self, vineyard_client, sequence=None, *, name=None):
         if name is None or sequence is not None:
             if name is not None:
                 warnings.warn(
-                    "'name' will take no effect as we are going to create a ShareableList",
+                    "'name' will take no effect as we are going to "
+                    "create a ShareableList",
                 )
 
             sequence = sequence or ()
             _formats = [
                 self._types_mapping[type(item)]
-                    if not isinstance(item, (str, bytes))
-                    else self._types_mapping[type(item)] % (
-                        self._alignment * (len(item) // self._alignment + 1),
-                    )
+                if not isinstance(item, (str, bytes))  # noqa: E131
+                else self._types_mapping[type(item)]
+                % (self._alignment * (len(item) // self._alignment + 1),)  # noqa: E131
                 for item in sequence
             ]
             self._list_len = len(_formats)
@@ -207,10 +213,11 @@ class ShareableList(shm.ShareableList):
                 self._extract_recreation_code(item) for item in sequence
             ]
             requested_size = struct.calcsize(
-                "q" + self._format_size_metainfo +
-                "".join(_formats) +
-                self._format_packing_metainfo +
-                self._format_back_transform_codes
+                "q"
+                + self._format_size_metainfo
+                + "".join(_formats)
+                + self._format_packing_metainfo
+                + self._format_back_transform_codes
             )
 
             self.shm = SharedMemory(vineyard_client, create=True, size=requested_size)
@@ -224,35 +231,31 @@ class ShareableList(shm.ShareableList):
                 self.shm.buf,
                 0,
                 self._list_len,
-                *(self._allocated_offsets)
+                *(self._allocated_offsets),
             )
             struct.pack_into(
                 "".join(_formats),
                 self.shm.buf,
                 self._offset_data_start,
-                *(v.encode(_enc) if isinstance(v, str) else v for v in sequence)
+                *(v.encode(_enc) if isinstance(v, str) else v for v in sequence),
             )
             struct.pack_into(
                 self._format_packing_metainfo,
                 self.shm.buf,
                 self._offset_packing_formats,
-                *(v.encode(_enc) for v in _formats)
+                *(v.encode(_enc) for v in _formats),
             )
             struct.pack_into(
                 self._format_back_transform_codes,
                 self.shm.buf,
                 self._offset_back_transform_codes,
-                *(_recreation_codes)
+                *(_recreation_codes),
             )
 
         else:
             self._list_len = len(self)  # Obtains size from offset 0 in buffer.
             self._allocated_offsets = list(
-                struct.unpack_from(
-                    self._format_size_metainfo,
-                    self.shm.buf,
-                    1 * 8
-                )
+                struct.unpack_from(self._format_size_metainfo, self.shm.buf, 1 * 8)
             )
 
     def _get_back_transform(self, position):
@@ -262,9 +265,7 @@ class ShareableList(shm.ShareableList):
             raise IndexError("Requested position out of range.")
 
         transform_code = struct.unpack_from(
-            "b",
-            self.shm.buf,
-            self._offset_back_transform_codes + position
+            "b", self.shm.buf, self._offset_back_transform_codes + position
         )[0]
         transform_function = self._back_transforms_mapping[transform_code]
 
@@ -281,7 +282,7 @@ class ShareableList(shm.ShareableList):
             "8s",
             self.shm.buf,
             self._offset_packing_formats + position * 8,
-            fmt_as_str.encode(_encoding)
+            fmt_as_str.encode(_encoding),
         )
 
         transform_code = self._extract_recreation_code(value)
@@ -289,7 +290,7 @@ class ShareableList(shm.ShareableList):
             "b",
             self.shm.buf,
             self._offset_back_transform_codes + position,
-            transform_code
+            transform_code,
         )
 
     def __getitem__(self, position):
@@ -297,9 +298,7 @@ class ShareableList(shm.ShareableList):
         try:
             offset = self._offset_data_start + self._allocated_offsets[position]
             (v,) = struct.unpack_from(
-                self._get_packing_format(position),
-                self.shm.buf,
-                offset
+                self._get_packing_format(position), self.shm.buf, offset
             )
         except IndexError:
             raise IndexError("index out of range")
@@ -324,22 +323,15 @@ class ShareableList(shm.ShareableList):
         else:
             allocated_length = self._allocated_offsets[position + 1] - item_offset
 
-            encoded_value = (value.encode(_encoding)
-                             if isinstance(value, str) else value)
+            encoded_value = value.encode(_encoding) if isinstance(value, str) else value
             if len(encoded_value) > allocated_length:
                 raise ValueError("bytes/str item exceeds available storage")
             if current_format[-1] == "s":
                 new_format = current_format
             else:
-                new_format = self._types_mapping[str] % (
-                    allocated_length,
-                )
+                new_format = self._types_mapping[str] % (allocated_length,)
 
-        self._set_packing_format_and_transform(
-            position,
-            new_format,
-            value
-        )
+        self._set_packing_format_and_transform(position, new_format, value)
         struct.pack_into(new_format, self.shm.buf, offset, encoded_value)
 
     @property
@@ -371,11 +363,8 @@ class ShareableList(shm.ShareableList):
     def _offset_back_transform_codes(self):
         return self._offset_packing_formats + self._list_len * 8
 
-    # yapf: enable
-
     def freeze(self):
-        ''' Make the shareable list immutable and visible for other vineyard clients.
-        '''
+        '''Make the shareable list immutable and visible for other vineyard clients.'''
         self.shm.freeze()
 
 

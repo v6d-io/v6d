@@ -21,10 +21,10 @@ import threading
 import time
 from typing import List
 
-import pandas as pd
 import numpy as np
-
-from vineyard.core import default_builder_context, default_resolver_context
+import pandas as pd
+from vineyard.core import default_builder_context
+from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
 from vineyard.io.byte import ByteStream
 from vineyard.io.dataframe import DataframeStream

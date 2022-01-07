@@ -19,8 +19,6 @@
 import contextlib
 import logging
 import os
-import pkg_resources
-import psutil
 import shutil
 import socket
 import subprocess
@@ -28,19 +26,32 @@ import sys
 import textwrap
 import time
 
+import pkg_resources
+import psutil
+
 logger = logging.getLogger('vineyard')
 
 
 def ssh_base_cmd(host):
     return [
-        'ssh', host, '--', 'shopt', '-s', 'huponexit', '2>/dev/null', '||', 'setopt', 'HUP', '2>/dev/null', '||',
-        'true;'
+        'ssh',
+        host,
+        '--',
+        'shopt',
+        '-s',
+        'huponexit',
+        '2>/dev/null',
+        '||',
+        'setopt',
+        'HUP',
+        '2>/dev/null',
+        '||',
+        'true;',
     ]
 
 
 def find_executable(name, search_paths=None):
-    ''' Use executable in local build directory first.
-    '''
+    '''Use executable in local build directory first.'''
     if search_paths:
         for path in search_paths:
             exe = os.path.join(path, name)
@@ -53,7 +64,9 @@ def find_executable(name, search_paths=None):
 
 
 @contextlib.contextmanager
-def start_program(name, *args, verbose=False, nowait=False, search_paths=None, **kwargs):
+def start_program(
+    name, *args, verbose=False, nowait=False, search_paths=None, **kwargs
+):
     env, cmdargs = os.environ.copy(), list(args)
     for k, v in kwargs.items():
         if k[0].isupper():
@@ -89,8 +102,7 @@ def start_program(name, *args, verbose=False, nowait=False, search_paths=None, *
 
 
 def find_port_probe(start=2048, end=20480):
-    ''' Find an available port in range [start, end)
-    '''
+    '''Find an available port in range [start, end)'''
     for port in range(start, end):
         try:
             if port not in [conn.laddr.port for conn in psutil.net_connections()]:
@@ -151,7 +163,9 @@ def find_vineyardd_path():
         vineyardd_path = _check_executable(vineyardd_path)
 
     if vineyardd_path is None:
-        vineyardd_path = os.path.join(current_dir, '..', '..', '..', 'build', 'bin', 'vineyardd')
+        vineyardd_path = os.path.join(
+            current_dir, '..', '..', '..', 'build', 'bin', 'vineyardd'
+        )
         vineyardd_path = _check_executable(vineyardd_path)
 
     __vineyardd_path = vineyardd_path
@@ -171,17 +185,20 @@ def start_etcd(host=None, etcd_executable=None):
         client_port = 2379
         peer_port = 2380
 
-    # yapf: disable
     prog_args = [
         etcd_executable,
         '--max-txn-ops=102400',
-        '--listen-peer-urls', 'http://0.0.0.0:%d' % peer_port,
-        '--listen-client-urls', 'http://0.0.0.0:%d' % client_port,
-        '--advertise-client-urls', 'http://%s:%d' % (srv_host, client_port),
-        '--initial-cluster', 'default=http://%s:%d' % (srv_host, peer_port),
-        '--initial-advertise-peer-urls', 'http://%s:%d' % (srv_host, peer_port)
+        '--listen-peer-urls',
+        'http://0.0.0.0:%d' % peer_port,
+        '--listen-client-urls',
+        'http://0.0.0.0:%d' % client_port,
+        '--advertise-client-urls',
+        'http://%s:%d' % (srv_host, client_port),
+        '--initial-cluster',
+        'default=http://%s:%d' % (srv_host, peer_port),
+        '--initial-advertise-peer-urls',
+        'http://%s:%d' % (srv_host, peer_port),
     ]
-    # yapf: enable
 
     proc = None
     try:
@@ -189,11 +206,13 @@ def start_etcd(host=None, etcd_executable=None):
             commands = []
         else:
             commands = ssh_base_cmd(host)
-        proc = subprocess.Popen(commands + prog_args,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                universal_newlines=True,
-                                encoding='utf-8')
+        proc = subprocess.Popen(
+            commands + prog_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            encoding='utf-8',
+        )
 
         rc = proc.poll()
         while rc is None:
@@ -204,7 +223,9 @@ def start_etcd(host=None, etcd_executable=None):
 
         if rc is not None:
             err = textwrap.indent(proc.stdout.read(), ' ' * 4)
-            raise RuntimeError('Failed to launch program etcd on %s, error:\n%s' % (srv_host, err))
+            raise RuntimeError(
+                'Failed to launch program etcd on %s, error:\n%s' % (srv_host, err)
+            )
         yield proc, 'http://%s:%d' % (srv_host, client_port)
     finally:
         logging.info('Etcd being killed...')

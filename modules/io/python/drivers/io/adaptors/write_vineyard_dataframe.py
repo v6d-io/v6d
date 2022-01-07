@@ -29,7 +29,9 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+        raise ValueError(
+            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
+        )
     instream: DataframeStream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
@@ -37,10 +39,12 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     while True:
         try:
             batch = stream_reader.next()
-        except:
+        except Exception:
             break
         df = batch.to_pandas()
-        df_id = client.put(df, partition_index=[proc_index, 0], row_batch_index=batch_index)
+        df_id = client.put(
+            df, partition_index=[proc_index, 0], row_batch_index=batch_index
+        )
         batch_index += 1
         client.persist(df_id)
         report_success(df_id)
@@ -48,7 +52,10 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
 
 def main():
     if len(sys.argv) < 5:
-        print("usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> <proc_num> <proc_index>")
+        print(
+            "usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> "
+            "<proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]

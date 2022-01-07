@@ -16,18 +16,21 @@
 # limitations under the License.
 #
 
-import json
 import numpy as np
 import pandas as pd
+
 try:
-    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
-except:
+    from pandas.core.internals.blocks import BlockPlacement
+    from pandas.core.internals.blocks import NumpyBlock as Block
+except ImportError:
     BlockPlacement = None
     from pandas.core.internals.blocks import Block
-from pandas.core.internals.managers import SingleBlockManager
 
+from pandas.core.internals.managers import SingleBlockManager
 from vineyard._C import ObjectMeta
-from .utils import from_json, to_json
+
+from .utils import from_json
+from .utils import to_json
 
 
 def pandas_series_builder(client, value, builder, **kw):

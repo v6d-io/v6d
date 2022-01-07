@@ -20,9 +20,11 @@ import logging
 import os
 import textwrap
 
-
-from .parsing import generate_template_header, generate_template_type, check_class, find_fields, \
-    parse_codegen_spec
+from .parsing import check_class
+from .parsing import find_fields
+from .parsing import generate_template_header
+from .parsing import generate_template_type
+from .parsing import parse_codegen_spec
 
 ###############################################################################
 #
@@ -54,9 +56,11 @@ def codegen_create(class_header, class_name, class_name_elaborated, meth=False):
     else:
         function_tpl = create_tpl
 
-    return function_tpl.format(class_header=class_header,
-                               class_name=class_name,
-                               class_name_elaborated=class_name_elaborated)
+    return function_tpl.format(
+        class_header=class_header,
+        class_name=class_name,
+        class_name_elaborated=class_name_elaborated,
+    )
 
 
 ###############################################################################
@@ -163,7 +167,9 @@ construct_dict_tpl = '''
     }}'''
 
 
-def codegen_construct(class_header, class_name, class_name_elaborated, fields, has_post_ctor, meth=False):
+def codegen_construct(
+    class_header, class_name, class_name_elaborated, fields, has_post_ctor, meth=False
+):
     body = []
     for kind, field in fields:
         name = field.spelling
@@ -198,11 +204,14 @@ def codegen_construct(class_header, class_name, class_name_elaborated, fields, h
             value_type = None
 
         body.append(
-            tpl.format(name=name,
-                       element_type=spec.element_type,
-                       key_type=key_type,
-                       value_type=value_type,
-                       deref=spec.deref))
+            tpl.format(
+                name=name,
+                element_type=spec.element_type,
+                key_type=key_type,
+                value_type=value_type,
+                deref=spec.deref,
+            )
+        )
 
     if meth:
         function_tpl = construct_meth_tpl
@@ -219,11 +228,15 @@ def codegen_construct(class_header, class_name, class_name_elaborated, fields, h
         else:
             post_ctor = ''
 
-    code = function_tpl.format(class_header=class_header,
-                               class_name=class_name,
-                               class_name_elaborated=class_name_elaborated,
-                               construct_body=textwrap.indent(''.join(body), ' ' * function_body_indent).strip(),
-                               post_construct=post_ctor)
+    code = function_tpl.format(
+        class_header=class_header,
+        class_name=class_name,
+        class_name_elaborated=class_name_elaborated,
+        construct_body=textwrap.indent(
+            ''.join(body), ' ' * function_body_indent
+        ).strip(),
+        post_construct=post_ctor,
+    )
     return code
 
 
@@ -304,9 +317,14 @@ def codegen_field_declare(field_name, field_type, spec):
     if spec.is_set:
         field_type_elaborated = 'std::set<std::shared_ptr<ObjectBase>>'
     if spec.is_dict:
-        field_type_elaborated = 'std::map<{key_type}, std::shared_ptr<ObjectBase>>'.format(
-            key_type='typename %s::key_type' % field_type)
-    return field_declare_tpl.format(field_name=field_name, field_type_elaborated=field_type_elaborated)
+        field_type_elaborated = (
+            'std::map<{key_type}, std::shared_ptr<ObjectBase>>'.format(
+                key_type='typename %s::key_type' % field_type
+            )
+        )
+    return field_declare_tpl.format(
+        field_name=field_name, field_type_elaborated=field_type_elaborated
+    )
 
 
 field_assign_meta_tpl = '''
@@ -419,11 +437,13 @@ def codegen_field_assign(field_name, field_type, spec):
     else:
         element_type = '::element_type'
         element_type_name = 'typename '
-    return tpl.format(field_name=field_name,
-                      field_type=field_type,
-                      deref=spec.deref,
-                      element_type=element_type,
-                      element_type_name=element_type_name)
+    return tpl.format(
+        field_name=field_name,
+        field_type=field_type,
+        deref=spec.deref,
+        element_type=element_type,
+        element_type_name=element_type_name,
+    )
 
 
 field_setter_meta_tpl = '''
@@ -517,10 +537,12 @@ def codegen_field_setter(field_name, field_type, spec):
     else:
         field_key_type = None
         field_value_type = None
-    return tpl.format(field_name=field_name,
-                      field_type=field_type,
-                      field_key_type=field_key_type,
-                      field_value_type=field_value_type)
+    return tpl.format(
+        field_name=field_name,
+        field_type=field_type,
+        field_key_type=field_key_type,
+        field_value_type=field_value_type,
+    )
 
 
 get_assign_meta_tpl = '''
@@ -623,7 +645,14 @@ post_construct_in_seal_tpl = '''
 '''
 
 
-def codegen_base_builder(class_header, class_name, class_name_elaborated, fields, using_alias_values, has_post_ctor):
+def codegen_base_builder(
+    class_header,
+    class_name,
+    class_name_elaborated,
+    fields,
+    using_alias_values,
+    has_post_ctor,
+):
     declarations = []
     assignments = []
     get_and_assigns = []
@@ -657,15 +686,17 @@ def codegen_base_builder(class_header, class_name, class_name_elaborated, fields
     else:
         post_ctor = ''
 
-    code = base_builder_tpl.format(class_header=class_header,
-                                   class_name=class_name,
-                                   class_name_elaborated=class_name_elaborated,
-                                   post_construct=post_ctor,
-                                   setters=''.join(setters).strip(),
-                                   assignments=''.join(assignments).strip(),
-                                   get_and_assign=''.join(get_and_assigns).strip(),
-                                   using_alias=''.join(using_alias_statements).strip(),
-                                   fields_declares=''.join(declarations).strip())
+    code = base_builder_tpl.format(
+        class_header=class_header,
+        class_name=class_name,
+        class_name_elaborated=class_name_elaborated,
+        post_construct=post_ctor,
+        setters=''.join(setters).strip(),
+        assignments=''.join(assignments).strip(),
+        get_and_assign=''.join(get_and_assigns).strip(),
+        using_alias=''.join(using_alias_statements).strip(),
+        fields_declares=''.join(declarations).strip(),
+    )
     return code
 
 
@@ -691,12 +722,18 @@ def generate_construct(fields, header, name, name_elaborated, has_post_ctor):
 
 def generate_construct_meth(fields, header, name, name_elaborated, has_post_ctor):
     print('construct: ', name, [(kind, n.spelling) for kind, n in fields])
-    return codegen_construct(header, name, name_elaborated, fields, has_post_ctor, meth=True)
+    return codegen_construct(
+        header, name, name_elaborated, fields, has_post_ctor, meth=True
+    )
 
 
-def generate_base_builder(fields, using_alias_values, header, name, name_elaborated, has_post_ctor):
+def generate_base_builder(
+    fields, using_alias_values, header, name, name_elaborated, has_post_ctor
+):
     print('base_builder: ', name, [(kind, n.spelling) for kind, n in fields])
-    return codegen_base_builder(header, name, name_elaborated, fields, using_alias_values, has_post_ctor)
+    return codegen_base_builder(
+        header, name, name_elaborated, fields, using_alias_values, has_post_ctor
+    )
 
 
 def codegen(root_directory, content, to_reflect, source, target=None, verbose=False):
@@ -712,10 +749,12 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
     real_root_path = os.path.realpath(root_directory)
     real_generate_path = os.path.realpath(generated_file_path)
     if real_root_path in real_generate_path:
-        macro_guard_base = real_generate_path[len(real_root_path) + 1:]
+        macro_guard_base = real_generate_path[len(real_root_path) + 1 :]
     else:
         macro_guard_base = generated_file_path
-    macro_guard = macro_guard_base.upper().replace('.', '_').replace('/', '_').replace('-', '_')
+    macro_guard = (
+        macro_guard_base.upper().replace('.', '_').replace('/', '_').replace('-', '_')
+    )
 
     with open(generated_file_path, 'w', encoding='utf-8') as fp:
         code_injections = []
@@ -726,11 +765,15 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
             name, ts = check_class(node)
 
             # get extend of using A = B
-            using_alias_values = [(n, content[t.start.offset:t.end.offset]) for (n, t) in using_alias]
+            using_alias_values = [
+                (n, content[t.start.offset : t.end.offset]) for (n, t) in using_alias
+            ]
 
             # get extent of type parameters, since default value may involved.
             ts_names = [t for (t, _) in ts]  # without `typename`
-            ts_name_values = [content[t.start.offset:t.end.offset] for (_, t) in ts]  # with `typename`
+            ts_name_values = [
+                content[t.start.offset : t.end.offset] for (_, t) in ts
+            ]  # with `typename`
 
             name_elaborated = generate_template_type(name, ts_names)
 
@@ -738,12 +781,20 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
             header_elaborated = generate_template_header(ts_name_values)
 
             meth_create = generate_create_meth(header, name, name_elaborated)
-            meth_construct = generate_construct_meth(fields, header, name, name_elaborated, has_post_ctor)
+            meth_construct = generate_construct_meth(
+                fields, header, name, name_elaborated, has_post_ctor
+            )
             to_inject = '%s\n%s\n private:\n' % (meth_create, meth_construct)
             code_injections.append((first_mmeber_offset, to_inject))
 
-            base_builder = generate_base_builder(fields, using_alias_values, header_elaborated, name, name_elaborated,
-                                                 has_post_ctor)
+            base_builder = generate_base_builder(
+                fields,
+                using_alias_values,
+                header_elaborated,
+                name,
+                name_elaborated,
+                has_post_ctor,
+            )
             code_blocks.append((namespaces, base_builder))
 
         fp.write('#ifndef %s\n' % macro_guard)

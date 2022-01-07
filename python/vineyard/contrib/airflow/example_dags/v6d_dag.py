@@ -10,7 +10,8 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from airflow.decorators import dag, task
+from airflow.decorators import dag
+from airflow.decorators import task
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.dates import days_ago
 
@@ -26,7 +27,9 @@ def build_dataframe() -> pd.DataFrame:
     """
     #### build random dataframe task
     """
-    df = pd.DataFrame(np.random.randint(0, 1000, size=(1000, 6)), columns=list("ABCDEF"))
+    df = pd.DataFrame(
+        np.random.randint(0, 1000, size=(1000, 6)), columns=list("ABCDEF")
+    )
 
     return df
 
@@ -83,7 +86,9 @@ def calc_median(df: pd.DataFrame) -> int:
 
 
 @task()
-def load_results(min_val: int, max_val: int, mean: float, std: float, variance: float, median: float) -> None:
+def load_results(
+    min_val: int, max_val: int, mean: float, std: float, variance: float, median: float
+) -> None:
     """
     #### Load task
     This will print max and min
@@ -115,8 +120,14 @@ def taskflow_v6d():
     calc_variance_r = calc_variance(sum_cols_r)
     calc_median_r = calc_median(sum_cols_r)
 
-    load_results_r = load_results(pick_least_r, pick_greatest_r, calc_mean_r, calc_std_dev_r, calc_variance_r,
-                                  calc_median_r)
+    load_results_r = load_results(
+        pick_least_r,
+        pick_greatest_r,
+        calc_mean_r,
+        calc_std_dev_r,
+        calc_variance_r,
+        calc_median_r,
+    )
 
     kickoff_dag = DummyOperator(task_id="kickoff_dag")
     complete_dag = DummyOperator(task_id="complete_dag")

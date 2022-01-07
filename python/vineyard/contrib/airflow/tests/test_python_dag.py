@@ -26,12 +26,14 @@ from airflow.utils import timezone
 from airflow.utils.state import State
 from airflow.utils.types import DagRunType
 
-from .test_base import TestPythonBase, DEFAULT_DATE
+from .test_base import DEFAULT_DATE
+from .test_base import TestPythonBase
 
 
 class TestAirflowPandasDag(TestPythonBase):
     def test_multiple_outputs(self):
         """Tests pushing multiple outputs as a dictionary"""
+
         @task_decorator(multiple_outputs=True)
         def return_dict(number: int):
             return {'number': number + 1, '43': 43}

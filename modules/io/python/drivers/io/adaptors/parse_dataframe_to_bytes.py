@@ -24,14 +24,17 @@ import pyarrow as pa
 import vineyard
 from vineyard.io.byte import ByteStream
 from vineyard.io.dataframe import DataframeStream
-from vineyard.io.utils import report_exception, report_success
+from vineyard.io.utils import report_exception
+from vineyard.io.utils import report_success
 
 
 def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+        raise ValueError(
+            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
+        )
     instream: DataframeStream = streams[proc_index]
     stream_reader = instream.open_reader(client)
 
@@ -53,7 +56,9 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
                 stream_writer.finish()
                 break
             df = batch.to_pandas()
-            csv_content = df.to_csv(header=first_write, index=False, sep=delimiter).encode('utf-8')
+            csv_content = df.to_csv(
+                header=first_write, index=False, sep=delimiter
+            ).encode('utf-8')
 
             # write to byte stream
             first_write = False
@@ -67,7 +72,10 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
 
 def main():
     if len(sys.argv) < 5:
-        print("usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> <proc_index>")
+        print(
+            "usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> "
+            "<proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]

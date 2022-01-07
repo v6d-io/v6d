@@ -16,14 +16,13 @@
 # limitations under the License.
 #
 
-from collections import defaultdict
 import logging
 import os
 import sys
 import time
+from collections import defaultdict
 
 import vineyard
-
 
 logger = logging.getLogger('vineyard')
 
@@ -40,7 +39,6 @@ def migrate_to_local(replica, rank, object_id):
     meta = client.get_meta(object_id)
     if not meta.isglobal:
         raise ValueError('Expect a global object, but got %s' % meta.typename)
-
 
     nodes = []
     chunks = defaultdict(list)
@@ -87,7 +85,10 @@ def migrate_to_local(replica, rank, object_id):
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
-        print('Usage: ./vineyard-migrate-to-local <replica> <rank> <global object>', file=sys.stderr)
+        print(
+            'Usage: ./vineyard-migrate-to-local <replica> <rank> <global object>',
+            file=sys.stderr,
+        )
 
     logging.basicConfig(level=logging.DEBUG)
 

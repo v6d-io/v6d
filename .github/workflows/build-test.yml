@@ -90,7 +90,10 @@ jobs:
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install -U Pygments>=2.4.1
-          sudo pip3 install libclang parsec yapf==0.30.0 sphinx sphinx_rtd_theme docutils==0.16 breathe nbsphinx gcovr pytest hdfs3
+          sudo pip3 install libclang parsec sphinx sphinx_rtd_theme docutils==0.16 breathe nbsphinx gcovr pytest hdfs3
+
+          # install linters
+          sudo pip3 install black isort flake8
 
           # install clang-format
           sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
@@ -236,7 +239,7 @@ jobs:
           GIT_DIFF=$(git diff --ignore-submodules)
           if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-              echo "| yapf (python format) failures found!"
+              echo "| black (python format) failures found!"
               echo "|"
               echo "$GIT_DIFF" | prepend "| "
               echo "|"
@@ -246,9 +249,9 @@ jobs:
               echo "|"
               echo "| to fix this error."
               echo "|"
-              echo "| The tool yapf can be installed by"
+              echo "| The tool black can be installed by"
               echo "|"
-              echo "|    pip3 install yapf==0.30.0"
+              echo "|    pip3 install black isort flake8
               echo "|"
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               exit -1
