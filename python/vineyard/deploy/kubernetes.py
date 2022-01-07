@@ -27,15 +27,21 @@ from .etcd import start_etcd_k8s
 logger = logging.getLogger('vineyard')
 
 
-def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyard.sock', rpc_socket_port=9600):
-    ''' Launch a vineyard cluster on kubernetes.
+def start_vineyardd(
+    namespace='vineyard',
+    size='256Mi',
+    socket='/var/run/vineyard.sock',
+    rpc_socket_port=9600,
+):
+    '''Launch a vineyard cluster on kubernetes.
 
     Parameters:
         namespace: str
             namespace in kubernetes
         size: int
-            The memory size limit for vineyard's shared memory. The memory size can be a plain
-            integer or as a fixed-point number using one of these suffixes:
+            The memory size limit for vineyard's shared memory. The memory size
+            can be a plain integer or as a fixed-point number using one of these
+            suffixes:
 
             .. code::
 
@@ -55,10 +61,18 @@ def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyar
     '''
     start_etcd_k8s(namespace)
 
-    with open(os.path.join(os.path.dirname(__file__), "vineyard.yaml.tpl"), 'r', encoding='utf-8') as fp:
-        definitions = fp.read().format(Namespace=namespace, Size=size, Socket=socket, Port=rpc_socket_port)
+    with open(
+        os.path.join(os.path.dirname(__file__), "vineyard.yaml.tpl"),
+        'r',
+        encoding='utf-8',
+    ) as fp:
+        definitions = fp.read().format(
+            Namespace=namespace, Size=size, Socket=socket, Port=rpc_socket_port
+        )
 
-    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False) as rendered:
+    with tempfile.NamedTemporaryFile(
+        mode='w', encoding='utf-8', delete=False
+    ) as rendered:
         rendered.write(definitions)
         rendered.flush()
         rendered.close()
@@ -68,7 +82,9 @@ def start_vineyardd(namespace='vineyard', size='256Mi', socket='/var/run/vineyar
 
         kubernetes.config.load_kube_config()
         k8s_client = kubernetes.client.ApiClient()
-        return kubernetes.utils.create_from_yaml(k8s_client, rendered.name, namespace=namespace)
+        return kubernetes.utils.create_from_yaml(
+            k8s_client, rendered.name, namespace=namespace
+        )
 
 
 __all__ = ['start_vineyardd']

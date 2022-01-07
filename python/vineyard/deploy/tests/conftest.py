@@ -17,8 +17,8 @@
 #
 
 import pytest
-
-from vineyard.conftest import vineyard_ipc_sockets, vineyard_endpoints
+from vineyard.conftest import vineyard_endpoints
+from vineyard.conftest import vineyard_ipc_sockets
 
 
 def pytest_addoption(parser):
@@ -37,8 +37,9 @@ def with_migration(request):
 
 def pytest_configure(config):
     config.addinivalue_line(
-        "markers",
-        "skip_without_migration(): skip migration tests if object migration is not available",
+        'markers',
+        'skip_without_migration(): skip migration tests '
+        'if object migration is not available',
     )
 
 

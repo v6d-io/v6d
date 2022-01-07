@@ -59,11 +59,21 @@ def orc_type(field):
         raise ValueError("Cannot Convert %s" % field)
 
 
-def write_orc(vineyard_socket, path, stream_id, storage_options, write_options, proc_num, proc_index):
+def write_orc(
+    vineyard_socket,
+    path,
+    stream_id,
+    storage_options,
+    write_options,
+    proc_num,
+    proc_index,
+):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(stream_id)
     if len(streams) != proc_num or streams[proc_index] is None:
-        raise ValueError(f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}")
+        raise ValueError(
+            f"Fetch stream error with proc_num={proc_num},proc_index={proc_index}"
+        )
     instream: DataframeStream = streams[proc_index]
     reader = instream.open_reader(client)
 
@@ -89,17 +99,30 @@ def write_orc(vineyard_socket, path, stream_id, storage_options, write_options, 
 def main():
     if len(sys.argv) < 7:
         print(
-            "usage: ./write_hdfs_orc <ipc_socket> <path> <stream id> <storage_options> <write_options> <proc_num> <proc_index>"
+            "usage: ./write_hdfs_orc <ipc_socket> <path> <stream id> "
+            "<storage_options> <write_options> <proc_num> <proc_index>"
         )
         exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
     stream_id = sys.argv[3]
-    storage_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
-    write_options = json.loads(base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8"))
+    storage_options = json.loads(
+        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
+    )
+    write_options = json.loads(
+        base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8")
+    )
     proc_num = int(sys.argv[6])
     proc_index = int(sys.argv[7])
-    write_orc(ipc_socket, path, stream_id, storage_options, write_options, proc_num, proc_index)
+    write_orc(
+        ipc_socket,
+        path,
+        stream_id,
+        storage_options,
+        write_options,
+        proc_num,
+        proc_index,
+    )
 
 
 if __name__ == "__main__":

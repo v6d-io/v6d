@@ -29,8 +29,15 @@ import pickle
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
 
-from vineyard._C import Object, ObjectID, ObjectMeta
-from .utils import from_json, to_json, build_numpy_buffer, normalize_dtype, normalize_cpptype
+from vineyard._C import Object
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
+
+from .utils import build_numpy_buffer
+from .utils import from_json
+from .utils import normalize_cpptype
+from .utils import normalize_dtype
+from .utils import to_json
 
 
 # Enable dynamic attribute on numpy.ndarray.
@@ -74,9 +81,11 @@ def numpy_ndarray_resolver(obj):
         order = 'C'
     if np.prod(shape) == 0:
         return np.zeros(shape, dtype=value_type)
-    c_array = np.frombuffer(memoryview(obj.member('buffer_')), dtype=value_type).reshape(shape)
+    c_array = np.frombuffer(
+        memoryview(obj.member('buffer_')), dtype=value_type
+    ).reshape(shape)
     # TODO: revise the memory copy of asfortranarray
-    array = (c_array if order == 'C' else np.asfortranarray(c_array))
+    array = c_array if order == 'C' else np.asfortranarray(c_array)
     return array.view(ndarray)
 
 

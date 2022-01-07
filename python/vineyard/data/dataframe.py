@@ -18,8 +18,10 @@
 
 import numpy as np
 import pandas as pd
+
 try:
-    from pandas.core.internals.blocks import BlockPlacement, NumpyBlock as Block
+    from pandas.core.internals.blocks import BlockPlacement
+    from pandas.core.internals.blocks import NumpyBlock as Block
 except ImportError:
     BlockPlacement = None
     from pandas.core.internals.blocks import Block
@@ -45,10 +47,15 @@ except ImportError:
     DatetimeArray = None
 
 from pandas.core.internals.managers import BlockManager
+from vineyard._C import Object
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
 
-from vineyard._C import Object, ObjectID, ObjectMeta
-from .utils import from_json, to_json, normalize_dtype, expand_slice
 from .tensor import ndarray
+from .utils import expand_slice
+from .utils import from_json
+from .utils import normalize_dtype
+from .utils import to_json
 
 
 def pandas_dataframe_builder(client, value, builder, **kw):
@@ -76,7 +83,9 @@ def pandas_dataframe_builder(client, value, builder, **kw):
 
     for index, name in enumerate(value.columns):
         meta['__values_-key-%d' % index] = to_json(name)
-        meta.add_member('__values_-value-%d' % index, builder.run(client, value_columns[index]))
+        meta.add_member(
+            '__values_-value-%d' % index, builder.run(client, value_columns[index])
+        )
     meta['nbytes'] = 0  # FIXME
     meta['__values_-size'] = len(value.columns)
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]

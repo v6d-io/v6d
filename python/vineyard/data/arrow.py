@@ -19,8 +19,8 @@
 import re
 
 import pyarrow as pa
-
 from vineyard._C import ObjectMeta
+
 from .utils import normalize_dtype
 
 
@@ -198,7 +198,9 @@ def table_builder(client, table, builder):
 
     meta.add_member('schema_', schema_proxy_builder(client, table.schema, builder))
     for idx, batch in enumerate(batches):
-        meta.add_member('__batches_-%d' % idx, record_batch_builder(client, batch, builder))
+        meta.add_member(
+            '__batches_-%d' % idx, record_batch_builder(client, batch, builder)
+        )
     meta['nbytes'] = table.nbytes
     return client.create_metadata(meta)
 
@@ -221,14 +223,18 @@ def table_from_recordbatches(client, schema, batches, num_rows, num_columns, bui
 def numeric_array_resolver(obj):
     meta = obj.meta
     typename = obj.typename
-    value_type = normalize_dtype(re.match(r'vineyard::NumericArray<([^>]+)>', typename).groups()[0])
+    value_type = normalize_dtype(
+        re.match(r'vineyard::NumericArray<([^>]+)>', typename).groups()[0]
+    )
     dtype = pa.from_numpy_dtype(value_type)
     buffer = as_arrow_buffer(obj.member('buffer_'))
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
     length = int(meta['length_'])
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
-    return pa.lib.Array.from_buffers(dtype, length, [null_bitmap, buffer], null_count, offset)
+    return pa.lib.Array.from_buffers(
+        dtype, length, [null_bitmap, buffer], null_count, offset
+    )
 
 
 def fixed_size_binary_array_resolver(obj):
@@ -239,7 +245,9 @@ def fixed_size_binary_array_resolver(obj):
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
     byte_width = int(meta['byte_width_'])
-    return pa.lib.Array.from_buffers(pa.binary(byte_width), length, [null_bitmap, buffer], null_count, offset)
+    return pa.lib.Array.from_buffers(
+        pa.binary(byte_width), length, [null_bitmap, buffer], null_count, offset
+    )
 
 
 def string_array_resolver(obj):
@@ -250,26 +258,39 @@ def string_array_resolver(obj):
     length = int(meta['length_'])
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
-    return pa.lib.Array.from_buffers(pa.large_string(), length, [null_bitmap, buffer_offsets, buffer_data], null_count,
-                                     offset)
+    return pa.lib.Array.from_buffers(
+        pa.large_string(),
+        length,
+        [null_bitmap, buffer_offsets, buffer_data],
+        null_count,
+        offset,
+    )
 
 
 def null_array_resolver(obj):
     length = int(obj.meta['length_'])
-    return pa.lib.Array.from_buffers(pa.null(), length, [
-        None,
-    ], length, 0)
+    return pa.lib.Array.from_buffers(
+        pa.null(),
+        length,
+        [
+            None,
+        ],
+        length,
+        0,
+    )
 
 
 def boolean_array_resolver(obj):
     meta = obj.meta
-    typename = obj.typename
+    typename = obj.typename  # noqa: F841
     buffer = as_arrow_buffer(obj.member('buffer_'))
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
     length = int(meta['length_'])
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
-    return pa.lib.Array.from_buffers(pa.bool_(), length, [null_bitmap, buffer], null_count, offset)
+    return pa.lib.Array.from_buffers(
+        pa.bool_(), length, [null_bitmap, buffer], null_count, offset
+    )
 
 
 def list_array_resolver(obj, resolver):
@@ -280,8 +301,14 @@ def list_array_resolver(obj, resolver):
     offset = int(meta['offset_'])
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
     values = resolver.run(obj.member('values_'))
-    return pa.lib.Array.from_buffers(pa.large_list(values.type), length, [null_bitmap, buffer_offsets], null_count,
-                                     offset, [values])
+    return pa.lib.Array.from_buffers(
+        pa.large_list(values.type),
+        length,
+        [null_bitmap, buffer_offsets],
+        null_count,
+        offset,
+        [values],
+    )
 
 
 def schema_proxy_resolver(obj):
@@ -291,7 +318,7 @@ def schema_proxy_resolver(obj):
 
 def record_batch_resolver(obj, resolver):
     meta = obj.meta
-    nrows, ncolumns = int(meta['row_num_']), int(meta['column_num_'])
+    nrows, ncolumns = int(meta['row_num_']), int(meta['column_num_'])  # noqa: F841
     schema = resolver.run(obj.member('schema_'))
     columns = []
     for idx in range(int(meta['__columns_-size'])):
@@ -324,9 +351,13 @@ def register_arrow_types(builder_ctx=None, resolver_ctx=None):
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
-        resolver_ctx.register('vineyard::FixedSizeBinaryArray', fixed_size_binary_array_resolver)
+        resolver_ctx.register(
+            'vineyard::FixedSizeBinaryArray', fixed_size_binary_array_resolver
+        )
         resolver_ctx.register('vineyard::LargeStringArray', string_array_resolver)
-        resolver_ctx.register('vineyard::BaseBinaryArray<arrow::LargeStringArray>', string_array_resolver)
+        resolver_ctx.register(
+            'vineyard::BaseBinaryArray<arrow::LargeStringArray>', string_array_resolver
+        )
         resolver_ctx.register('vineyard::NullArray', null_array_resolver)
         resolver_ctx.register('vineyard::BooleanArray', boolean_array_resolver)
         resolver_ctx.register('vineyard::SchemaProxy', schema_proxy_resolver)

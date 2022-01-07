@@ -24,13 +24,12 @@ from urllib.parse import urlparse
 
 import fsspec
 import fsspec.implementations.hdfs
-
 import pyarrow as pa
 import pyorc
-
 import vineyard
 from vineyard.io.dataframe import DataframeStream
-from vineyard.io.utils import expand_full_path, report_success
+from vineyard.io.utils import expand_full_path
+from vineyard.io.utils import report_success
 
 try:
     from vineyard.drivers.io import ossfs
@@ -151,12 +150,18 @@ def read_orc(
 def main():
     if len(sys.argv) < 7:
         print(
-            "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> <read_options> <proc_num> <proc_index>")
+            "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> "
+            "<read_options> <proc_num> <proc_index>"
+        )
         exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
-    storage_options = json.loads(base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8"))
-    read_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
+    storage_options = json.loads(
+        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+    )
+    read_options = json.loads(
+        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
+    )
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
     read_orc(ipc_socket, path, storage_options, read_options, proc_num, proc_index)

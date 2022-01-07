@@ -21,13 +21,16 @@ import inspect
 import threading
 
 from sortedcontainers import SortedDict
-
-from vineyard._C import IPCClient, RPCClient, ObjectID, Object, ObjectMeta
-from vineyard.core.utils import find_most_precise_match
+from vineyard._C import IPCClient
+from vineyard._C import Object
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
+from vineyard._C import RPCClient
 from vineyard.core.driver import get_current_drivers
+from vineyard.core.utils import find_most_precise_match
 
 
-class ResolverContext():
+class ResolverContext:
     def __init__(self):
         self.__factory = SortedDict()
 
@@ -52,13 +55,15 @@ class ResolverContext():
                 else:
                     value = resolver(obj)
             if value is None:
-                # if the obj has been resolved by pybind types, and there's no proper resolver, it
-                # shouldn't be an error
+                # if the obj has been resolved by pybind types, and there's no proper
+                # resolver, it shouldn't be an error
                 if type(obj) is not Object:
                     return obj
 
-                raise RuntimeError('Unable to construct the object using resolver: typename is %s, resolver is %s' %
-                                   (obj.meta.typename, resolver))
+                raise RuntimeError(
+                    'Unable to construct the object using resolver: '
+                    'typename is %s, resolver is %s' % (obj.meta.typename, resolver)
+                )
 
             # associate a reference to the base C++ object
             try:
@@ -92,8 +97,7 @@ _resolver_context_local.default_resolver = default_resolver_context
 
 
 def get_current_resolvers():
-    ''' Obtain current resolver context.
-    '''
+    '''Obtain current resolver context.'''
     default_resolver = getattr(_resolver_context_local, 'default_resolver', None)
     if not default_resolver:
         default_resolver = default_resolver_context.extend()
@@ -102,47 +106,50 @@ def get_current_resolvers():
 
 @contextlib.contextmanager
 def resolver_context(resolvers=None, base=None):
-    ''' Open a new context for register resolvers, without populting outside global
-        environment.
+    '''Open a new context for register resolvers, without populting outside
+    the global environment.
 
-        The :code:`resolver_context` can be useful when users have more than more resolver
-        for a certain type, e.g., the :code:`vineyard::Tensor` object can be resolved as
-        :code:`numpy.ndarray` or :code:`xgboost::DMatrix`. We could have
+    The :code:`resolver_context` can be useful when users have more than
+    more resolver for a certain type, e.g., the :code:`vineyard::Tensor`
+    object can be resolved as :code:`numpy.ndarray` or :code:`xgboost::DMatrix`.
 
-        .. code:: python
+    We could have
 
-            def numpy_resolver(obj):
-                ...
+    .. code:: python
 
-            default_resolver_context.register('vineyard::Tensor', numpy_resolver)
+        def numpy_resolver(obj):
+            ...
 
-        and
+        default_resolver_context.register('vineyard::Tensor', numpy_resolver)
 
-        .. code:: python
+    and
 
-            def xgboost_resolver(obj):
-                ...
+    .. code:: python
 
-            default_resolver_context.register('vineyard::Tensor', xgboost_resolver)
+        def xgboost_resolver(obj):
+            ...
 
-        Obviously there's a conflict, and the stackable :code:`resolver_context` could
-        help there,
+        default_resolver_context.register('vineyard::Tensor', xgboost_resolver)
 
-        .. code:: python
+    Obviously there's a conflict, and the stackable :code:`resolver_context` could
+    help there,
 
-            with resolver_context({'vineyard::Tensor', xgboost_resolver}):
-                ...
+    .. code:: python
 
-        Assuming the default context resolves :code:`vineyard::Tensor` to :code:`numpy.ndarray`,
-        inside the :code:`with resolver_context` the :code:`vineyard::Tensor` will be resolved
-        to :code:`xgboost::DMatrix`, and after exiting the context the global environment
-        will be restored back as default.
+        with resolver_context({'vineyard::Tensor', xgboost_resolver}):
+            ...
 
-        The :code:`with resolver_context` is nestable as well.
+    Assuming the default context resolves :code:`vineyard::Tensor` to
+    :code:`numpy.ndarray`, inside the :code:`with resolver_context` the
+    :code:`vineyard::Tensor` will be resolved to :code:`xgboost::DMatrix`,
+    and after exiting the context the global environment will be restored
+    back as default.
 
-        See Also:
-            builder_context
-            driver_context
+    The :code:`with resolver_context` is nestable as well.
+
+    See Also:
+        builder_context
+        driver_context
     '''
     current_resolver = get_current_resolvers()
     try:
@@ -156,7 +163,7 @@ def resolver_context(resolvers=None, base=None):
 
 
 def get(client, object_id, resolver=None, **kw):
-    ''' Get vineyard object as python value.
+    '''Get vineyard object as python value.
 
     .. code:: python
 
@@ -187,7 +194,9 @@ def get(client, object_id, resolver=None, **kw):
     obj = client.get_object(object_id)
     meta = obj.meta
     if not meta.islocal and not meta.isglobal:
-        raise ValueError("Not a local object: for remote object, you can only get its metadata")
+        raise ValueError(
+            "Not a local object: for remote object, you can only get its metadata"
+        )
     if resolver is None:
         resolver = get_current_resolvers()
     return resolver(obj, __vineyard_client=client, **kw)

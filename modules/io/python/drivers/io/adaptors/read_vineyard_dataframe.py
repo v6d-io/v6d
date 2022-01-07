@@ -24,16 +24,21 @@ from urllib.parse import urlparse
 import pyarrow as pa
 import vineyard
 from vineyard.io.dataframe import DataframeStream
-from vineyard.io.utils import report_exception, report_success
+from vineyard.io.utils import report_exception
+from vineyard.io.utils import report_success
 
 
-def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options, proc_num, proc_index):
+def read_vineyard_dataframe(
+    vineyard_socket, path, storage_options, read_options, proc_num, proc_index
+):
     client = vineyard.connect(vineyard_socket)
     params = dict()
     if storage_options:
         raise ValueError("Read vineyard current not support storage options")
     params["header_row"] = "1" if read_options.get("header_row", False) else "0"
-    params["delimiter"] = bytes(read_options.get("delimiter", ","), "utf-8").decode("unicode_escape")
+    params["delimiter"] = bytes(read_options.get("delimiter", ","), "utf-8").decode(
+        "unicode_escape"
+    )
 
     stream = DataframeStream.new(client, params)
     client.persist(stream.id)
@@ -43,7 +48,7 @@ def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options
     # the "name" part in URL can be a name, or an ObjectID for convenience.
     try:
         df_id = client.get_name(name)
-    except:
+    except Exception:
         df_id = vineyard.ObjectID(name)
     dataframes = client.get(df_id)
 
@@ -52,7 +57,6 @@ def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options
     try:
         for df in dataframes:
             batch = pa.RecordBatch.from_pandas(df)
-            sink = pa.BufferOutputStream()
             writer.write(batch)
         writer.finish()
     except Exception:
@@ -64,16 +68,23 @@ def read_vineyard_dataframe(vineyard_socket, path, storage_options, read_options
 def main():
     if len(sys.argv) < 7:
         print(
-            "usage: ./read_vineyard_dataframe <ipc_socket> <vineyard_address> <storage_options> <read_options> <proc num> <proc index>"
+            "usage: ./read_vineyard_dataframe <ipc_socket> <vineyard_address> "
+            "<storage_options> <read_options> <proc num> <proc index>"
         )
         exit(1)
     ipc_socket = sys.argv[1]
     path = sys.argv[2]
-    storage_options = json.loads(base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8"))
-    read_options = json.loads(base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8"))
+    storage_options = json.loads(
+        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+    )
+    read_options = json.loads(
+        base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
+    )
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
-    read_vineyard_dataframe(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
+    read_vineyard_dataframe(
+        ipc_socket, path, storage_options, read_options, proc_num, proc_index
+    )
 
 
 if __name__ == "__main__":

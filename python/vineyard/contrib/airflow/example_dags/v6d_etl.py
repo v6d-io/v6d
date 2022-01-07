@@ -26,7 +26,8 @@
 
 import json
 
-from airflow.decorators import dag, task
+from airflow.decorators import dag
+from airflow.decorators import task
 from airflow.utils.dates import days_ago
 
 default_args = {
@@ -34,7 +35,12 @@ default_args = {
 }
 
 
-@dag(default_args=default_args, schedule_interval=None, start_date=days_ago(2), tags=['example'])
+@dag(
+    default_args=default_args,
+    schedule_interval=None,
+    start_date=days_ago(2),
+    tags=['example'],
+)
 def taskflow_etl():
     @task()
     def extract():

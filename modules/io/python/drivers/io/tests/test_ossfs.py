@@ -37,33 +37,35 @@ import oss2.headers
 import pytest
 
 ossfs = pytest.importorskip("ossfs")
-from ossfs import OSSFileSystem
+from ossfs import OSSFileSystem  # noqa: E402
 
 test_bucket_name = "test-ossfs-zsy"
 secure_bucket_name = "test-ossfs-secure-zsy"
 versioned_bucket_name = "test-ossfs-versioned-zsy"
 tmp_bucket_name = "test-ossfs-tmp-bucket"
 files = {
-    "test/accounts.1.json": (b'{"amount": 100, "name": "Alice"}\n'
-                             b'{"amount": 200, "name": "Bob"}\n'
-                             b'{"amount": 300, "name": "Charlie"}\n'
-                             b'{"amount": 400, "name": "Dennis"}\n'),
-    "test/accounts.2.json": (b'{"amount": 500, "name": "Alice"}\n'
-                             b'{"amount": 600, "name": "Bob"}\n'
-                             b'{"amount": 700, "name": "Charlie"}\n'
-                             b'{"amount": 800, "name": "Dennis"}\n'),
+    "test/accounts.1.json": (
+        b'{"amount": 100, "name": "Alice"}\n'
+        b'{"amount": 200, "name": "Bob"}\n'
+        b'{"amount": 300, "name": "Charlie"}\n'
+        b'{"amount": 400, "name": "Dennis"}\n'
+    ),
+    "test/accounts.2.json": (
+        b'{"amount": 500, "name": "Alice"}\n'
+        b'{"amount": 600, "name": "Bob"}\n'
+        b'{"amount": 700, "name": "Charlie"}\n'
+        b'{"amount": 800, "name": "Dennis"}\n'
+    ),
 }
 
 csv_files = {
-    "2014-01-01.csv": (b"name,amount,id\n"
-                       b"Alice,100,1\n"
-                       b"Bob,200,2\n"
-                       b"Charlie,300,3\n"),
+    "2014-01-01.csv": (
+        b"name,amount,id\n" b"Alice,100,1\n" b"Bob,200,2\n" b"Charlie,300,3\n"
+    ),
     "2014-01-02.csv": (b"name,amount,id\n"),
-    "2014-01-03.csv": (b"name,amount,id\n"
-                       b"Dennis,400,4\n"
-                       b"Edith,500,5\n"
-                       b"Frank,600,6\n"),
+    "2014-01-03.csv": (
+        b"name,amount,id\n" b"Dennis,400,4\n" b"Edith,500,5\n" b"Frank,600,6\n"
+    ),
 }
 text_files = {
     "nested/file1": b"hello\n",
@@ -114,12 +116,12 @@ def oss():
     oss.rm(versioned_bucket_name, recursive=True)
     try:
         oss.rm(tmp_bucket_name, recursive=True)
-    except:
+    except Exception:
         pass
 
 
 def test_simple(oss):
-    data = b"a" * (10 * 2**20)
+    data = b"a" * (10 * 2 ** 20)
 
     with oss.open(a, "wb") as f:
         f.write(data)
@@ -132,7 +134,7 @@ def test_simple(oss):
 
 @pytest.mark.parametrize("default_cache_type", ["none", "bytes", "mmap"])
 def test_default_cache_type(oss, default_cache_type):
-    data = b"a" * (10 * 2**20)
+    data = b"a" * (10 * 2 ** 20)
     oss = OSSFileSystem(
         anon=False,
         key=key,
@@ -180,7 +182,9 @@ def test_config_kwargs_class_attributes_override():
 
 def test_multiple_objects(oss):
     other_oss = OSSFileSystem(key=key, secret=secret, endpoint=endpoint)
-    assert oss.ls(f"{test_bucket_name}/test") == other_oss.ls(f"{test_bucket_name}/test")
+    assert oss.ls(f"{test_bucket_name}/test") == other_oss.ls(
+        f"{test_bucket_name}/test"
+    )
 
 
 def test_info(oss):
@@ -223,7 +227,7 @@ def test_checksum(oss):
     o1 = prefix + "1"
     o2 = prefix + "2"
     path1 = test_bucket_name + "/" + o1
-    path2 = test_bucket_name + "/" + o2
+    path2 = test_bucket_name + "/" + o2  # noqa: F841
 
     # init client and files
     bucket = oss._make_bucket(test_bucket_name)
@@ -278,11 +282,17 @@ def test_xattr(oss):
     etag = oss.info(filename)["ETag"]
     assert oss2.OBJECT_ACL_PUBLIC_READ == bucket.get_object_acl(key).acl
 
-    assert (oss.getxattr(filename, "x-oss-meta-test-xattr") == test_xattr_sample_metadata["x-oss-meta-test-xattr"])
+    assert (
+        oss.getxattr(filename, "x-oss-meta-test-xattr")
+        == test_xattr_sample_metadata["x-oss-meta-test-xattr"]
+    )
     assert oss.metadata(filename)["x-oss-meta-test-xattr"] == "1"  # note _ became -
 
     ossfile = oss.open(filename)
-    assert (ossfile.getxattr("x-oss-meta-test-xattr") == test_xattr_sample_metadata["x-oss-meta-test-xattr"])
+    assert (
+        ossfile.getxattr("x-oss-meta-test-xattr")
+        == test_xattr_sample_metadata["x-oss-meta-test-xattr"]
+    )
     assert ossfile.metadata()["x-oss-meta-test-xattr"] == "1"  # note _ became -
 
     ossfile.setxattr(x_oss_meta_test_xattr="2")
@@ -303,11 +313,13 @@ def test_xattr_setxattr_in_write_mode(oss):
 
 
 def test_ls(oss):
-    assert set(oss.ls("")).issuperset({
-        test_bucket_name,
-        # secure_bucket_name,
-        versioned_bucket_name,
-    })
+    assert set(oss.ls("")).issuperset(
+        {
+            test_bucket_name,
+            # secure_bucket_name,
+            versioned_bucket_name,
+        }
+    )
     with pytest.raises(FileNotFoundError):
         oss.ls("nonexistent")
     fn = test_bucket_name + "/test/accounts.1.json"
@@ -494,7 +506,9 @@ def test_du(oss):
     assert all(isinstance(v, int) and v >= 0 for v in d.values())
     assert test_bucket_name + "/nested/file1" in d
 
-    assert oss.du(test_bucket_name + "/test/", total=True) == sum(map(len, files.values()))
+    assert oss.du(test_bucket_name + "/test/", total=True) == sum(
+        map(len, files.values())
+    )
     assert oss.du(test_bucket_name) == oss.du("oss://" + test_bucket_name)
 
 
@@ -503,7 +517,9 @@ def test_oss_ls(oss):
     assert fn not in oss.ls(test_bucket_name + "/")
     assert fn in oss.ls(test_bucket_name + "/nested/")
     assert fn in oss.ls(test_bucket_name + "/nested")
-    assert oss.ls("oss://" + test_bucket_name + "/nested/") == oss.ls(test_bucket_name + "/nested")
+    assert oss.ls("oss://" + test_bucket_name + "/nested/") == oss.ls(
+        test_bucket_name + "/nested"
+    )
 
 
 def test_oss_big_ls(oss):
@@ -529,8 +545,11 @@ def test_oss_glob(oss):
     assert fn in oss.glob(test_bucket_name + "/*/*")
     assert all(
         any(p.startswith(f + "/") or p == f for p in oss.find(test_bucket_name))
-        for f in oss.glob(test_bucket_name + "/nested/*"))
-    assert [test_bucket_name + "/nested/nested2"] == oss.glob(test_bucket_name + "/nested/nested2")
+        for f in oss.glob(test_bucket_name + "/nested/*")
+    )
+    assert [test_bucket_name + "/nested/nested2"] == oss.glob(
+        test_bucket_name + "/nested/nested2"
+    )
     out = oss.glob(test_bucket_name + "/nested/nested2/*")
     assert {
         f"{test_bucket_name}/nested/nested2/file1",
@@ -549,7 +568,9 @@ def test_get_list_of_summary_objects(oss):
     L = oss.ls(test_bucket_name + "/test")
 
     assert len(L) == 2
-    assert [l.lstrip(test_bucket_name).lstrip("/") for l in sorted(L)] == sorted(list(files))
+    assert [path.lstrip(test_bucket_name).lstrip("/") for path in sorted(L)] == sorted(
+        list(files)
+    )
 
     L2 = oss.ls("oss://" + test_bucket_name + "/test")
 
@@ -561,7 +582,9 @@ def test_read_keys_from_bucket(oss):
         file_contents = oss.cat("/".join([test_bucket_name, k]))
         assert file_contents == data
 
-        assert oss.cat("/".join([test_bucket_name, k])) == oss.cat("oss://" + "/".join([test_bucket_name, k]))
+        assert oss.cat("/".join([test_bucket_name, k])) == oss.cat(
+            "oss://" + "/".join([test_bucket_name, k])
+        )
 
 
 def test_url(oss):
@@ -620,16 +643,16 @@ def test_copy(oss):
 
 
 def test_copy_managed(oss):
-    data = b"abc" * 12 * 2**20
+    data = b"abc" * 12 * 2 ** 20
     fn = test_bucket_name + "/test/biggerfile"
     with oss.open(fn, "wb") as f:
         f.write(data)
-    oss._copy_managed(fn, fn + "2", size=len(data), block=5 * 2**20)
+    oss._copy_managed(fn, fn + "2", size=len(data), block=5 * 2 ** 20)
     assert oss.cat(fn) == oss.cat(fn + "2")
     with pytest.raises(ValueError):
-        oss._copy_managed(fn, fn + "3", size=len(data), block=4 * 2**20)
+        oss._copy_managed(fn, fn + "3", size=len(data), block=4 * 2 ** 20)
     with pytest.raises(ValueError):
-        oss._copy_managed(fn, fn + "3", size=len(data), block=6 * 2**30)
+        oss._copy_managed(fn, fn + "3", size=len(data), block=6 * 2 ** 30)
 
 
 @pytest.mark.parametrize("recursive", [True, False])
@@ -650,13 +673,15 @@ def test_get_put(oss, tmpdir):
     data = files["test/accounts.1.json"]
     assert open(test_file, "rb").read() == data
     oss.put(test_file, test_bucket_name + "/temp")
-    assert oss.du(test_bucket_name + "/temp", total=False)[test_bucket_name + "/temp"] == len(data)
+    assert oss.du(test_bucket_name + "/temp", total=False)[
+        test_bucket_name + "/temp"
+    ] == len(data)
     assert oss.cat(test_bucket_name + "/temp") == data
 
 
 def test_get_put_big(oss, tmpdir):
     test_file = str(tmpdir.join("test"))
-    data = b"1234567890A" * 2**20
+    data = b"1234567890A" * 2 ** 20
     open(test_file, "wb").write(data)
 
     oss.put(test_file, test_bucket_name + "/bigfile")
@@ -665,7 +690,7 @@ def test_get_put_big(oss, tmpdir):
     assert open(test_file, "rb").read() == data
 
 
-@pytest.mark.parametrize("size", [2**10, 2**20, 10 * 2**20])
+@pytest.mark.parametrize("size", [2 ** 10, 2 ** 20, 10 * 2 ** 20])
 def test_pipe_cat_big(oss, size):
     data = b"1234567890A" * size
     oss.pipe(test_bucket_name + "/bigfile", data)
@@ -798,7 +823,7 @@ def test_write_small(oss):
 
 def test_write_large(oss):
     """flush() chunks buffer when processing large singular payload"""
-    mb = 2**20
+    mb = 2 ** 20
     payload_size = int(2.5 * 5 * mb)
     payload = b"0" * payload_size
 
@@ -811,7 +836,7 @@ def test_write_large(oss):
 
 def test_write_limit(oss):
     """flush() respects part_max when processing large singular payload"""
-    mb = 2**20
+    mb = 2 ** 20
     block_size = 15 * mb
     payload_size = 44 * mb
     payload = b"0" * payload_size
@@ -826,25 +851,27 @@ def test_write_limit(oss):
 
 def test_write_blocks(oss):
     with oss.open(test_bucket_name + "/temp", "wb") as f:
-        f.write(b"a" * 2 * 2**20)
-        assert f.buffer.tell() == 2 * 2**20
+        f.write(b"a" * 2 * 2 ** 20)
+        assert f.buffer.tell() == 2 * 2 ** 20
         assert not (f.parts)
         f.flush()
-        assert f.buffer.tell() == 2 * 2**20
+        assert f.buffer.tell() == 2 * 2 ** 20
         assert not (f.parts)
-        f.write(b"a" * 2 * 2**20)
-        f.write(b"a" * 2 * 2**20)
+        f.write(b"a" * 2 * 2 ** 20)
+        f.write(b"a" * 2 * 2 ** 20)
         assert f.mpu
         assert f.parts
-    assert oss.info(test_bucket_name + "/temp")["Size"] == 6 * 2**20
-    with oss.open(test_bucket_name + "/temp", "wb", block_size=10 * 2**20) as f:
-        f.write(b"a" * 15 * 2**20)
+    assert oss.info(test_bucket_name + "/temp")["Size"] == 6 * 2 ** 20
+    with oss.open(test_bucket_name + "/temp", "wb", block_size=10 * 2 ** 20) as f:
+        f.write(b"a" * 15 * 2 ** 20)
         assert f.buffer.tell() == 0
-    assert oss.info(test_bucket_name + "/temp")["Size"] == 15 * 2**20
+    assert oss.info(test_bucket_name + "/temp")["Size"] == 15 * 2 ** 20
 
 
 def test_readline(oss):
-    all_items = chain.from_iterable([files.items(), csv_files.items(), text_files.items()])
+    all_items = chain.from_iterable(
+        [files.items(), csv_files.items(), text_files.items()]
+    )
     for k, data in all_items:
         with oss.open("/".join([test_bucket_name, k]), "rb") as f:
             result = f.readline()
@@ -862,7 +889,7 @@ def test_readline_empty(oss):
 
 
 def test_readline_blocksize(oss):
-    data = b"ab\n" + b"a" * (10 * 2**20) + b"\nab"
+    data = b"ab\n" + b"a" * (10 * 2 ** 20) + b"\nab"
     with oss.open(a, "wb") as f:
         f.write(data)
     with oss.open(a, "rb") as f:
@@ -871,7 +898,7 @@ def test_readline_blocksize(oss):
         assert result == expected
 
         result = f.readline()
-        expected = b"a" * (10 * 2**20) + b"\n"
+        expected = b"a" * (10 * 2 ** 20) + b"\n"
         assert result == expected
 
         result = f.readline()
@@ -933,12 +960,12 @@ def test_writable(oss):
 
 def test_merge(oss):
     with oss.open(a, "wb") as f:
-        f.write(b"a" * 10 * 2**20)
+        f.write(b"a" * 10 * 2 ** 20)
 
     with oss.open(b, "wb") as f:
-        f.write(b"a" * 10 * 2**20)
+        f.write(b"a" * 10 * 2 ** 20)
     oss.merge(test_bucket_name + "/joined", [a, b])
-    assert oss.info(test_bucket_name + "/joined")["Size"] == 2 * 10 * 2**20
+    assert oss.info(test_bucket_name + "/joined")["Size"] == 2 * 10 * 2 ** 20
 
 
 def test_append(oss):
@@ -951,24 +978,24 @@ def test_append(oss):
     assert oss.cat(test_bucket_name + "/nested/file1") == data + b"extra"
 
     with oss.open(a, "wb") as f:
-        f.write(b"a" * 10 * 2**20)
+        f.write(b"a" * 10 * 2 ** 20)
     with oss.open(a, "ab") as f:
         pass  # append, no write, big file
-    assert oss.cat(a) == b"a" * 10 * 2**20
+    assert oss.cat(a) == b"a" * 10 * 2 ** 20
 
     with oss.open(a, "ab") as f:
         assert f.parts is None
         f._initiate_upload()
         assert f.parts
-        assert f.tell() == 10 * 2**20
+        assert f.tell() == 10 * 2 ** 20
         f.write(b"extra")  # append, small write, big file
-    assert oss.cat(a) == b"a" * 10 * 2**20 + b"extra"
+    assert oss.cat(a) == b"a" * 10 * 2 ** 20 + b"extra"
 
     with oss.open(a, "ab") as f:
-        assert f.tell() == 10 * 2**20 + 5
-        f.write(b"b" * 10 * 2**20)  # append, big write, big file
-        assert f.tell() == 20 * 2**20 + 5
-    assert oss.cat(a) == b"a" * 10 * 2**20 + b"extra" + b"b" * 10 * 2**20
+        assert f.tell() == 10 * 2 ** 20 + 5
+        f.write(b"b" * 10 * 2 ** 20)  # append, big write, big file
+        assert f.tell() == 20 * 2 ** 20 + 5
+    assert oss.cat(a) == b"a" * 10 * 2 ** 20 + b"extra" + b"b" * 10 * 2 ** 20
 
 
 def test_bigger_than_block_read(oss):
@@ -1031,14 +1058,14 @@ def test_upload_with_ossfs_prefix(oss):
     path = f"oss://{test_bucket_name}/test/prefix/key"
 
     with oss.open(path, "wb") as f:
-        f.write(b"a" * (10 * 2**20))
+        f.write(b"a" * (10 * 2 ** 20))
 
     with oss.open(path, "ab") as f:
-        f.write(b"b" * (10 * 2**20))
+        f.write(b"b" * (10 * 2 ** 20))
 
 
 def test_multipart_upload_blocksize(oss):
-    blocksize = 5 * (2**20)
+    blocksize = 5 * (2 ** 20)
     expected_parts = 3
 
     ossf = oss.open(a, "wb", block_size=blocksize)
@@ -1114,7 +1141,9 @@ def test_list_versions_many(oss):
 
 
 def test_fsspec_versions_multiple(oss):
-    """Test that the standard fsspec.core.get_fs_token_paths behaves as expected for versionId urls"""
+    """Test that the standard fsspec.core.get_fs_token_paths behaves as
+    expected for versionId urls.
+    """
     oss = OSSFileSystem(key=key, secret=secret, endpoint=endpoint, version_aware=True)
     versioned_file = versioned_bucket_name + "/versioned_file3-" + str(uuid.uuid4())
     version_lookup = {}
@@ -1123,9 +1152,13 @@ def test_fsspec_versions_multiple(oss):
         with oss.open(versioned_file, "wb") as fo:
             fo.write(contents)
         version_lookup[fo.version_id] = contents
-    urls = ["oss://{}?versionId={}".format(versioned_file, version) for version in version_lookup.keys()]
-    fs, token, paths = fsspec.core.get_fs_token_paths(urls,
-                                                      storage_options=dict(key=key, secret=secret, endpoint=endpoint))
+    urls = [
+        "oss://{}?versionId={}".format(versioned_file, version)
+        for version in version_lookup.keys()
+    ]
+    fs, token, paths = fsspec.core.get_fs_token_paths(
+        urls, storage_options=dict(key=key, secret=secret, endpoint=endpoint)
+    )
     assert isinstance(fs, OSSFileSystem)
     assert fs.version_aware
     for path in paths:
@@ -1135,11 +1168,15 @@ def test_fsspec_versions_multiple(oss):
 
 
 def test_versioned_file_fullpath(oss):
-    versioned_file = (versioned_bucket_name + "/versioned_file_fullpath-" + str(uuid.uuid4()))
+    versioned_file = (
+        versioned_bucket_name + "/versioned_file_fullpath-" + str(uuid.uuid4())
+    )
     oss = OSSFileSystem(key=key, secret=secret, endpoint=endpoint, version_aware=True)
     with oss.open(versioned_file, "wb") as fo:
         fo.write(b"1")
-    # moto doesn't correctly return a versionId for a multipart upload. So we resort to this.
+    # moto doesn't correctly return a versionId for a multipart upload.
+    # So we resort to this.
+    #
     # version_id = fo.version_id
     versions = oss.object_version_info(versioned_file)
     version_ids = [version.versionid for version in reversed(versions)]
@@ -1223,28 +1260,28 @@ def test_change_defaults_only_subsequent(oss):
         OSSFileSystem.cachable = False  # don't reuse instances with same pars
 
         fs_default = OSSFileSystem(key=key, secret=secret, endpoint=endpoint)
-        assert fs_default.default_block_size == 5 * (1024**2)
+        assert fs_default.default_block_size == 5 * (1024 ** 2)
 
         fs_overridden = OSSFileSystem(
-            default_block_size=64 * (1024**2),
+            default_block_size=64 * (1024 ** 2),
             key=key,
             secret=secret,
             endpoint=endpoint,
         )
-        assert fs_overridden.default_block_size == 64 * (1024**2)
+        assert fs_overridden.default_block_size == 64 * (1024 ** 2)
 
         # Suppose I want all subsequent file systems to have a block size of 1 GiB
         # instead of 5 MiB:
-        OSSFileSystem.default_block_size = 1024**3
+        OSSFileSystem.default_block_size = 1024 ** 3
 
         fs_big = OSSFileSystem(key=key, secret=secret, endpoint=endpoint)
-        assert fs_big.default_block_size == 1024**3
+        assert fs_big.default_block_size == 1024 ** 3
 
         # Test the other file systems created to see if their block sizes changed
-        assert fs_overridden.default_block_size == 64 * (1024**2)
-        assert fs_default.default_block_size == 5 * (1024**2)
+        assert fs_overridden.default_block_size == 64 * (1024 ** 2)
+        assert fs_default.default_block_size == 5 * (1024 ** 2)
     finally:
-        OSSFileSystem.default_block_size = 5 * (1024**2)
+        OSSFileSystem.default_block_size = 5 * (1024 ** 2)
         OSSFileSystem.cachable = True
 
 
@@ -1378,7 +1415,7 @@ def test_seek_reads(oss):
         f.write(b"a" * 175627146)
     with oss.open(fn, "rb", blocksize=100) as f:
         f.seek(175561610)
-        d1 = f.read(65536)
+        d1 = f.read(65536)  # noqa: F841
 
         f.seek(4)
         size = 17562198
@@ -1473,7 +1510,9 @@ def test_shallow_find(oss):
     ``ls``, without returning subdirectories.  See also issue 378.
     """
 
-    assert oss.ls(test_bucket_name) == oss.find(test_bucket_name, maxdepth=1, withdirs=True)
+    assert oss.ls(test_bucket_name) == oss.find(
+        test_bucket_name, maxdepth=1, withdirs=True
+    )
     assert oss.ls(test_bucket_name) == oss.glob(test_bucket_name + "/*")
 
 
@@ -1484,7 +1523,8 @@ def test_version_sizes(oss):
 
     path = f"oss://{versioned_bucket_name}/test.txt.gz"
     versions = [
-        oss.pipe_file(path, gzip.compress(text)) for text in (
+        oss.pipe_file(path, gzip.compress(text))
+        for text in (
             b"good morning!",
             b"hello!",
             b"hi!",

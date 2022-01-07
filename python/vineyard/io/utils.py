@@ -19,17 +19,22 @@
 import concurrent
 import concurrent.futures
 import json
-import traceback
 import os
+import traceback
 
 from vineyard._C import ObjectID
 
 
 def report_status(status, content):
-    print(json.dumps({
-        'type': status,
-        'content': content,
-    }), flush=True)
+    print(
+        json.dumps(
+            {
+                'type': status,
+                'content': content,
+            }
+        ),
+        flush=True,
+    )
 
 
 def report_error(content):
@@ -52,8 +57,7 @@ def expand_full_path(path):
 
 class BaseStreamExecutor:
     def execute(self):
-        """
-        """
+        """ """
 
 
 class ThreadStreamExecutor:
@@ -65,6 +69,10 @@ class ThreadStreamExecutor:
         def start_to_execute(executor: BaseStreamExecutor):
             return executor.execute()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self._parallism) as executor:
-            results = [executor.submit(start_to_execute, exec) for exec in self._executors]
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self._parallism
+        ) as executor:
+            results = [
+                executor.submit(start_to_execute, exec) for exec in self._executors
+            ]
             return [future.result() for future in results]

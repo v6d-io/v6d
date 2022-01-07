@@ -16,17 +16,14 @@
 # limitations under the License.
 #
 
+import mxnet as mx
 import numpy as np
 import pandas as pd
-
 import pyarrow as pa
 import pytest
-
-import mxnet as mx
-
+from vineyard.contrib.ml.mxnet import register_mxnet_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
-from vineyard.contrib.ml.mxnet import register_mxnet_types
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -53,7 +50,9 @@ def test_mx_dataframe(vineyard_client):
     label = df['c'].values.astype(np.float32)
     data = df.drop('c', axis=1).values.astype(np.float32)
     dataset = mx.gluon.data.ArrayDataset((data, label))
-    object_id = vineyard_client.put(dataset, typename="DataFrame", cols=['a', 'b', 'c'], label='c')
+    object_id = vineyard_client.put(
+        dataset, typename="DataFrame", cols=['a', 'b', 'c'], label='c'
+    )
     dtrain = vineyard_client.get(object_id, label='c')
     assert len(dtrain[0]) == 4
     assert dataset[0].shape == dtrain[0].shape
@@ -61,7 +60,11 @@ def test_mx_dataframe(vineyard_client):
 
 
 def test_mx_record_batch(vineyard_client):
-    arrays = [pa.array([1, 2, 3, 4]), pa.array([3.0, 4.0, 5.0, 6.0]), pa.array([0, 1, 0, 1])]
+    arrays = [
+        pa.array([1, 2, 3, 4]),
+        pa.array([3.0, 4.0, 5.0, 6.0]),
+        pa.array([0, 1, 0, 1]),
+    ]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])
     object_id = vineyard_client.put(batch)
     dtrain = vineyard_client.get(object_id, label='target')

@@ -17,12 +17,14 @@
 #
 
 import mxnet as mx
-
 import numpy as np
-
 from vineyard._C import ObjectMeta
-from vineyard.core.resolver import resolver_context, default_resolver_context
-from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
+from vineyard.core.resolver import default_resolver_context
+from vineyard.core.resolver import resolver_context
+from vineyard.data.utils import build_numpy_buffer
+from vineyard.data.utils import from_json
+from vineyard.data.utils import normalize_dtype
+from vineyard.data.utils import to_json
 
 
 def mxnet_tensor_builder(client, value, **kw):
@@ -50,7 +52,9 @@ def mxnet_dataframe_builder(client, value, builder, **kw):
     meta['label'] = to_json(label)
     meta['columns_'] = to_json(cols)
     meta['__values_-key-%d' % (len(cols) - 1)] = to_json(label)
-    meta.add_member('__values_-value-%d' % (len(cols) - 1), builder.run(client, value[1]))
+    meta.add_member(
+        '__values_-value-%d' % (len(cols) - 1), builder.run(client, value[1])
+    )
     for i in range(len(cols) - 1):
         meta['__values_-key-%d' % i] = to_json(cols[i])
         meta.add_member('__values_-value-%d' % i, builder.run(client, value[0][:, i]))
@@ -77,8 +81,12 @@ def mxnet_tensor_resolver(obj, resolver, **kw):
     label_name = meta['label_type_']
     data_type = normalize_dtype(data_name, meta.get('value_type_meta_', None))
     label_type = normalize_dtype(label_name, meta.get('value_type_meta_', None))
-    data = np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape)
-    label = np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape)
+    data = np.frombuffer(
+        memoryview(obj.member('buffer_data_')), dtype=data_type
+    ).reshape(data_shape)
+    label = np.frombuffer(
+        memoryview(obj.member('buffer_label_')), dtype=label_type
+    ).reshape(label_shape)
     return mx.gluon.data.ArrayDataset((data, label))
 
 
@@ -147,4 +155,6 @@ def register_mxnet_types(builder_ctx, resolver_ctx):
         resolver_ctx.register('vineyard::RecordBatch', mxnet_record_batch_resolver)
         resolver_ctx.register('vineyard::Table', mxnet_table_resolver)
         resolver_ctx.register('vineyard::GlobalTensor', mxnet_global_tensor_resolver)
-        resolver_ctx.register('vineyard::GlobalDataFrame', mxnet_global_dataframe_resolver)
+        resolver_ctx.register(
+            'vineyard::GlobalDataFrame', mxnet_global_dataframe_resolver
+        )

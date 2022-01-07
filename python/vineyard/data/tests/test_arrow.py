@@ -19,9 +19,9 @@
 import numpy as np
 import pyarrow as pa
 import pytest
-
 import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
+from vineyard.core import default_builder_context
+from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)
@@ -62,18 +62,30 @@ def test_arrow_array(vineyard_client):
 
 
 def test_record_batch(vineyard_client):
-    arrays = [pa.array([1, 2, 3, 4]), pa.array(['foo', 'bar', 'baz', None]), pa.array([True, None, False, True])]
+    arrays = [
+        pa.array([1, 2, 3, 4]),
+        pa.array(['foo', 'bar', 'baz', None]),
+        pa.array([True, None, False, True]),
+    ]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
-    object_id = vineyard_client.put(batch)
-    # processing tables that contains string is not roundtrip, as StringArray will be transformed to LargeStringArray
+    object_id = vineyard_client.put(batch)  # noqa: F841
+    # processing tables that contains string is not roundtrip, as StringArray
+    # will be transformed to LargeStringArray
+    #
     # assert batch.equals(vineyard_client.get(object_id))
 
 
 def test_table(vineyard_client):
-    arrays = [pa.array([1, 2, 3, 4]), pa.array(['foo', 'bar', 'baz', None]), pa.array([True, None, False, True])]
+    arrays = [
+        pa.array([1, 2, 3, 4]),
+        pa.array(['foo', 'bar', 'baz', None]),
+        pa.array([True, None, False, True]),
+    ]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
     batches = [batch] * 5
     table = pa.Table.from_batches(batches)
-    object_id = vineyard_client.put(table)
-    # processing tables that contains string is not roundtrip, as StringArray will be transformed to LargeStringArray
+    object_id = vineyard_client.put(table)  # noqa: F841
+    # processing tables that contains string is not roundtrip, as StringArray
+    # will be transformed to LargeStringArray
+    #
     # assert table.equals(vineyard_client.get(object_id))

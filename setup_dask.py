@@ -19,7 +19,8 @@
 import os
 import textwrap
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
+from setuptools import setup
 from setuptools.command.install import install
 from wheel.bdist_wheel import bdist_wheel
 
@@ -50,11 +51,16 @@ def find_dask_packages(root):
     return pkgs
 
 
-with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'), encoding='utf-8', mode='r') as fp:
+with open(
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
+    encoding='utf-8',
+    mode='r',
+) as fp:
     long_description = fp.read()
 
     # Github doesn't respect "align: center", and pypi disables `.. raw`.
-    replacement = textwrap.dedent('''
+    replacement = textwrap.dedent(
+        '''
         .. image:: https://v6d.io/_static/vineyard_logo.png
            :target: https://v6d.io
            :align: center
@@ -63,7 +69,8 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst')
 
         vineyard: an in-memory immutable data manager
         ---------------------------------------------
-        ''')
+        '''
+    )
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 setup(
@@ -76,15 +83,9 @@ setup(
     url='https://v6d.io',
     package_dir={'vineyard.contrib.dask': 'python/vineyard/contrib/dask'},
     packages=find_dask_packages('python'),
-    cmdclass={
-        'bdist_wheel': bdist_wheel_plat,
-        "install": install_plat
-    },
+    cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},
     zip_safe=False,
-    install_requires=[
-        'vineyard',
-        'dask[complete]'
-    ],
+    install_requires=['vineyard', 'dask[complete]'],
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[

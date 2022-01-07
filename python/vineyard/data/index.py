@@ -17,11 +17,13 @@
 #
 
 import json
-import pandas as pd
 
+import pandas as pd
 from vineyard._C import ObjectMeta
 
-from .utils import from_json, to_json, normalize_dtype
+from .utils import from_json
+from .utils import normalize_dtype
+from .utils import to_json
 
 
 def pandas_index_builder(client, value, builder, **kw):

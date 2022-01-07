@@ -22,7 +22,8 @@
 import json
 from typing import Dict
 
-from .._C import ObjectID, ObjectMeta
+from .._C import ObjectID
+from .._C import ObjectMeta
 from .stream import BaseStream
 
 
@@ -36,7 +37,9 @@ class RecordBatchStream(BaseStream):
         return self._params
 
     @staticmethod
-    def new(client, params: Dict = None, meta: ObjectMeta = None) -> "RecordBatchStream":
+    def new(
+        client, params: Dict = None, meta: ObjectMeta = None
+    ) -> "RecordBatchStream":
         if meta is None:
             meta = ObjectMeta()
         meta['typename'] = 'vineyard::RecordBatchStream'
@@ -59,4 +62,6 @@ def recordbatch_stream_resolver(obj, resolver):
 
 def register_recordbatch_stream_types(builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
-        resolver_ctx.register('vineyard::RecordBatchStream', recordbatch_stream_resolver)
+        resolver_ctx.register(
+            'vineyard::RecordBatchStream', recordbatch_stream_resolver
+        )

@@ -20,11 +20,11 @@ import itertools
 import json
 import logging
 
-import pytest
 import numpy as np
-
+import pytest
 import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
+from vineyard.core import default_builder_context
+from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)
@@ -34,7 +34,9 @@ logger = logging.getLogger('vineyard')
 
 @pytest.mark.skip_without_migration()
 def test_migration(vineyard_ipc_sockets):
-    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2))
+    vineyard_ipc_sockets = list(
+        itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2)
+    )
 
     client1 = vineyard.connect(vineyard_ipc_sockets[0])
     client2 = vineyard.connect(vineyard_ipc_sockets[1])
@@ -60,7 +62,9 @@ def test_migration(vineyard_ipc_sockets):
 
 @pytest.mark.skip_without_migration()
 def test_migration_and_deletion(vineyard_ipc_sockets):
-    vineyard_ipc_sockets = list(itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2))
+    vineyard_ipc_sockets = list(
+        itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2)
+    )
 
     client1 = vineyard.connect(vineyard_ipc_sockets[0])
     client2 = vineyard.connect(vineyard_ipc_sockets[1])

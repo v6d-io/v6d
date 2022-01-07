@@ -20,13 +20,16 @@ import numpy as np
 
 try:
     import nvidia.dali as dali
-    from nvidia.dali import pipeline_def
     import nvidia.dali.types as types
+    from nvidia.dali import pipeline_def
 except ImportError:
     dali = None
 
 from vineyard._C import ObjectMeta
-from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
+from vineyard.data.utils import build_numpy_buffer
+from vineyard.data.utils import from_json
+from vineyard.data.utils import normalize_dtype
+from vineyard.data.utils import to_json
 
 num_gpus = 1
 device_id = 0
@@ -69,9 +72,15 @@ def dali_tensor_resolver(obj, **kw):
     label_name = meta['label_type_']
     data_type = normalize_dtype(data_name, meta.get('value_type_meta_', None))
     label_type = normalize_dtype(label_name, meta.get('value_type_meta_', None))
-    data = np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape)
-    label = np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape)
-    pipe_out = dali_pipe(data, label, device_id=device_id, num_threads=num_threads, batch_size=batch_size)
+    data = np.frombuffer(
+        memoryview(obj.member('buffer_data_')), dtype=data_type
+    ).reshape(data_shape)
+    label = np.frombuffer(
+        memoryview(obj.member('buffer_label_')), dtype=label_type
+    ).reshape(label_shape)
+    pipe_out = dali_pipe(
+        data, label, device_id=device_id, num_threads=num_threads, batch_size=batch_size
+    )
     pipe_out.build()
     pipe_output = pipe_out.run()
     return pipe_output
@@ -79,7 +88,9 @@ def dali_tensor_resolver(obj, **kw):
 
 def register_dali_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
-        builder_ctx.register(nvidia.dali.backend.TensorListCPU, dali_tensor_builder)
+        builder_ctx.register(
+            nvidia.dali.backend.TensorListCPU, dali_tensor_builder  # noqa: F821
+        )
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', dali_tensor_resolver)

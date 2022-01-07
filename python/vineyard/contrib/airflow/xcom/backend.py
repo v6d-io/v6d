@@ -20,13 +20,13 @@ import logging
 import os
 from typing import Any
 
+import pendulum
+import vineyard
 from airflow.configuration import conf
 from airflow.models.xcom import BaseXCom
 from airflow.utils.session import provide_session
-import pendulum
-from sqlalchemy.orm import Session, reconstructor
-
-import vineyard
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import reconstructor
 
 logger = logging.getLogger('vineyard')
 
@@ -43,9 +43,12 @@ def _resolve_vineyard_xcom_options():
         if 'VINEYARD_IPC_SOCKET' in os.environ:
             options['ipc_socket'] = os.environ['VINEYARD_IPC_SOCKET']
         else:
-            raise RuntimeError("Failed to find vineyard IPC socket configuration, " +
-                               "please configure it using the environment variable " +
-                               "$VINEYARD_IPC_SOCKET, or via airfow's vineyard.ipc_socket configuration.")
+            raise RuntimeError(
+                "Failed to find vineyard IPC socket configuration, "
+                "please configure it using the environment variable "
+                "$VINEYARD_IPC_SOCKET, or via airfow's vineyard.ipc_socket"
+                "configuration."
+            )
     return options
 
 
@@ -70,8 +73,8 @@ class VineyardXCom(BaseXCom):
     @reconstructor
     def init_on_load(self):
         """
-        Called by the ORM after the instance has been loaded from the DB or otherwise reconstituted
-        i.e automatically deserialize Xcom value when loading from DB.
+        Called by the ORM after the instance has been loaded from the DB or otherwise
+        reconstituted i.e automatically deserialize Xcom value when loading from DB.
         """
         self.value = super(VineyardXCom, self).init_on_load()
 
@@ -87,8 +90,12 @@ class VineyardXCom(BaseXCom):
         value = VineyardXCom.serialize_value(value)
 
         # remove any duplicate XComs
-        query = session.query(cls).filter(cls.key == key, cls.execution_date == execution_date, cls.task_id == task_id,
-                                          cls.dag_id == dag_id)
+        query = session.query(cls).filter(
+            cls.key == key,
+            cls.execution_date == execution_date,
+            cls.task_id == task_id,
+            cls.dag_id == dag_id,
+        )
         targets = []
         for result in query.with_entities(VineyardXCom.value):
             targets.append(vineyard.ObjectID(BaseXCom.deserialize_value(result)))
@@ -105,7 +112,15 @@ class VineyardXCom(BaseXCom):
         session.commit()
 
         # insert new XCom
-        session.add(VineyardXCom(key=key, value=value, execution_date=execution_date, task_id=task_id, dag_id=dag_id))
+        session.add(
+            VineyardXCom(
+                key=key,
+                value=value,
+                execution_date=execution_date,
+                task_id=task_id,
+                dag_id=dag_id,
+            )
+        )
         session.commit()
 
     @classmethod
@@ -165,24 +180,28 @@ class VineyardXCom(BaseXCom):
         return BaseXCom.serialize_value(repr(value_id))
 
     @staticmethod
-    def deserialize_value(result: "XCom") -> Any:
+    def deserialize_value(result: "VineyardXCom") -> Any:
         value = BaseXCom.deserialize_value(result)
         vineyard_value = VineyardXCom.post_resolve_value(result, value)
-        logger.debug("deserialize_value: %s ->  %s -> %s", result, value, vineyard_value)
+        logger.debug(
+            "deserialize_value: %s ->  %s -> %s", result, value, vineyard_value
+        )
         return vineyard_value
 
     @staticmethod
     @provide_session
-    def post_resolve_value(result: "XCom", value: Any, session: Session = None) -> Any:
-        ''' The :code:`post_resolve_value` runs before the return the value to the
-            operators to prepare necessary input data for the task.
+    def post_resolve_value(
+        result: "VineyardXCom", value: Any, session: Session = None
+    ) -> Any:
+        '''The :code:`post_resolve_value` runs before the return the value to the
+        operators to prepare necessary input data for the task.
 
-            The post resolution will fill-up the occurrence if remote objects by
-            of :code:`VineyardObjectRef` with the actual (remote) value by triggering
-            a migration.
+        The post resolution will fill-up the occurrence if remote objects by
+        of :code:`VineyardObjectRef` with the actual (remote) value by triggering
+        a migration.
 
-            It will also record the migrated xcom value into the db as well to make
-            sure it can be dropped properly.
+        It will also record the migrated xcom value into the db as well to make
+        sure it can be dropped properly.
         '''
         client = vineyard.connect(VineyardXCom.options()['ipc_socket'])
         object_id = vineyard.ObjectID(value)

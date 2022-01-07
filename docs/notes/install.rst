@@ -40,7 +40,7 @@ and other packages to help us build the documentation, which can be easily insta
 
 .. code:: shell
 
-    pip3 install libclang parsec yapf==0.30.0 sphinx sphinx_rtd_theme breathe
+    pip3 install libclang parsec black isort flake8 sphinx sphinx_rtd_theme breathe
 
 Ubuntu (or Debian)
 ~~~~~~~~~~~~~~~~~~

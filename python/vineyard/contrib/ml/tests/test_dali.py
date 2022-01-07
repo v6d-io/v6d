@@ -21,14 +21,14 @@ import pytest
 
 try:
     import nvidia.dali as dali
-    from nvidia.dali import pipeline_def
     import nvidia.dali.types as types
+    from nvidia.dali import pipeline_def
 except ImportError:
     dali = None
 
+from vineyard.contrib.ml.dali import register_dali_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
-from vineyard.contrib.ml.dali import register_dali_types
 
 
 @pytest.fixture(scope="module", autouse=True)

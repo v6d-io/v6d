@@ -16,12 +16,12 @@
 # limitations under the License.
 #
 
+import numpy as np
 import pandas as pd
 import pytest
-import numpy as np
-
 import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
+from vineyard.core import default_builder_context
+from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)
@@ -47,7 +47,9 @@ def test_pandas_dataframe_int_columns(vineyard_client):
 
 
 def test_pandas_dataframe_mixed_columns(vineyard_client):
-    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]})
+    df = pd.DataFrame(
+        {'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]}
+    )
     object_id = vineyard_client.put(df)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
@@ -60,7 +62,11 @@ def test_dataframe_reindex(vineyard_client):
 
 
 def test_dataframe_set_index(vineyard_client):
-    df1 = pd.DataFrame([[1, 3, 3], [4, 2, 6], [7, 8, 9]], index=['a1', 'a2', 'a3'], columns=['x', 'y', 'z'])
+    df1 = pd.DataFrame(
+        [[1, 3, 3], [4, 2, 6], [7, 8, 9]],
+        index=['a1', 'a2', 'a3'],
+        columns=['x', 'y', 'z'],
+    )
     expected = df1.set_index('y', drop=True)
     object_id = vineyard_client.put(expected)
     pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))

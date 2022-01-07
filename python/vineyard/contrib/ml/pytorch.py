@@ -18,11 +18,16 @@
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader, ConcatDataset
-
+from torch.utils.data import ConcatDataset
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 from vineyard._C import ObjectMeta
-from vineyard.core.resolver import resolver_context, default_resolver_context
-from vineyard.data.utils import from_json, to_json, build_numpy_buffer, normalize_dtype
+from vineyard.core.resolver import default_resolver_context
+from vineyard.core.resolver import resolver_context
+from vineyard.data.utils import build_numpy_buffer
+from vineyard.data.utils import from_json
+from vineyard.data.utils import normalize_dtype
+from vineyard.data.utils import to_json
 
 
 def torch_tensor_builder(client, value, **kw):
@@ -94,9 +99,16 @@ def torch_tensor_resolver(obj):
     label_name = meta['label_type_']
     data_type = normalize_dtype(data_name, meta.get('value_type_meta_', None))
     label_type = normalize_dtype(label_name, meta.get('value_type_meta_', None))
-    data = torch.from_numpy(np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(data_shape))
+    data = torch.from_numpy(
+        np.frombuffer(memoryview(obj.member('buffer_data_')), dtype=data_type).reshape(
+            data_shape
+        )
+    )
     label = torch.from_numpy(
-        np.frombuffer(memoryview(obj.member('buffer_label_')), dtype=label_type).reshape(label_shape))
+        np.frombuffer(
+            memoryview(obj.member('buffer_label_')), dtype=label_type
+        ).reshape(label_shape)
+    )
     return torch.utils.data.TensorDataset(data, label)
 
 
@@ -160,4 +172,6 @@ def register_torch_types(builder_ctx, resolver_ctx):
         resolver_ctx.register('vineyard::RecordBatch', torch_record_batch_resolver)
         resolver_ctx.register('vineyard::Table', torch_table_resolver)
         resolver_ctx.register('vineyard::GlobalTensor', torch_global_tensor_resolver)
-        resolver_ctx.register('vineyard::GlobalDataFrame', torch_global_dataframe_resolver)
+        resolver_ctx.register(
+            'vineyard::GlobalDataFrame', torch_global_dataframe_resolver
+        )

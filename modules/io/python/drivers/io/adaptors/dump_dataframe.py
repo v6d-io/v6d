@@ -31,7 +31,7 @@ def dump_dataframe(vineyard_socket, stream_id):
 
     table = stream_reader.read_table()
     print('table: %s rows, %s columns' % (table.num_rows, table.num_columns))
-    print('schema: %s' % (table.schema, ))
+    print('schema: %s' % (table.schema,))
 
 
 def main():

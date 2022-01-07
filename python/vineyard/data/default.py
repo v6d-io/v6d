@@ -25,8 +25,7 @@ from vineyard._C import ObjectMeta
 
 
 def default_builder(client, value, **kwargs):
-    ''' Default builder: pickle (version 5), then build a blob object for it.
-    '''
+    '''Default builder: pickle (version 5), then build a blob object for it.'''
     payload = pickle.dumps(value, protocol=5)
     buffer = client.create_blob(len(payload))
     buffer.copy(0, payload)
@@ -40,7 +39,7 @@ def default_builder(client, value, **kwargs):
 
 
 def default_resolver(obj):
-    view = memoryview(obj.member('buffer_'))[0:int(obj.meta['size_'])]
+    view = memoryview(obj.member('buffer_'))[0 : int(obj.meta['size_'])]
     return pickle.loads(view, fix_imports=True)
 
 

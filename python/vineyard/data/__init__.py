@@ -18,14 +18,14 @@
 
 from vineyard.core.builder import default_builder_context
 from vineyard.core.resolver import default_resolver_context
-from vineyard.data.default import register_default_types
-from vineyard.data.base import register_base_types
 from vineyard.data.arrow import register_arrow_types
-from vineyard.data.tensor import register_tensor_types
+from vineyard.data.base import register_base_types
+from vineyard.data.dataframe import register_dataframe_types
+from vineyard.data.default import register_default_types
+from vineyard.data.graph import register_graph_types
 from vineyard.data.index import register_index_types
 from vineyard.data.series import register_series_types
-from vineyard.data.dataframe import register_dataframe_types
-from vineyard.data.graph import register_graph_types
+from vineyard.data.tensor import register_tensor_types
 
 
 def register_builtin_types(builder_ctx, resolver_ctx):

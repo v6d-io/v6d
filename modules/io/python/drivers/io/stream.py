@@ -20,10 +20,14 @@ import base64
 import json
 import logging
 import os
-from typing import Callable, List, Union
+from typing import Callable
+from typing import List
+from typing import Union
 
 import vineyard.io
-from vineyard._C import Object, ObjectID, ObjectMeta
+from vineyard._C import Object
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
 from vineyard.core.utils import ReprableString
 from vineyard.data.dataframe import make_global_dataframe
 from vineyard.launcher.launcher import LauncherStatus
@@ -43,6 +47,7 @@ def _resolve_ssh_script(deployment="ssh"):
 
 class StreamLauncher(ScriptLauncher):
     """Launch the job by executing a script."""
+
     def __init__(self, vineyard_endpoint=None, deployment="ssh"):
         """Launch a job to read as a vineyard stream.
 
@@ -64,10 +69,13 @@ class ParallelStreamLauncher(ScriptLauncher):
     """Launch the job by executing a script, in which `ssh` or `kubectl exec` will
     be used under the hood.
     """
+
     def __init__(self, deployment="ssh"):
         self.deployment = deployment
         self.vineyard_endpoint = None
-        super(ParallelStreamLauncher, self).__init__(_resolve_ssh_script(deployment=deployment))
+        super(ParallelStreamLauncher, self).__init__(
+            _resolve_ssh_script(deployment=deployment)
+        )
 
         self._streams = []
         self._procs: List[StreamLauncher] = []
@@ -111,30 +119,39 @@ class ParallelStreamLauncher(ScriptLauncher):
 
         messages = []
         for proc in self._procs:
-            if proc.status == LauncherStatus.FAILED and \
-                    (proc.exit_code is not None and proc.exit_code != 0):
+            if proc.status == LauncherStatus.FAILED and (
+                proc.exit_code is not None and proc.exit_code != 0
+            ):
                 if isinstance(proc.command, list):
                     cmd = ' '.join(proc.command)
                 else:
                     cmd = proc.command
-                messages.append("Failed to launch job [%s], exited with %r: %s" %
-                                (cmd, proc.exit_code, ''.join(proc.error_message)))
+                messages.append(
+                    "Failed to launch job [%s], exited with %r: %s"
+                    % (cmd, proc.exit_code, ''.join(proc.error_message))
+                )
         if messages:
             raise RuntimeError(
-                ReprableString("Subprocesses failed with the following error: \n%s\n"
-                               "extra diagnostics are as follows: %s" %
-                               ('\n\n'.join(messages), '\n\n'.join(proc.diagnostics))))
+                ReprableString(
+                    "Subprocesses failed with the following error: \n%s\n"
+                    "extra diagnostics are as follows: %s"
+                    % ('\n\n'.join(messages), '\n\n'.join(proc.diagnostics))
+                )
+            )
 
     def dispose(self, desired=True):
         for proc in self._procs:
             proc.dispose()
 
-    def wait(self,
-             timeout=None,
-             aggregator: Callable[[str, List[ObjectID]], Union[Object, ObjectID, ObjectMeta]] = None,
-             **kwargs):
-        ''' Wait util the _first_ result on each launcher is ready.
-        '''
+    def wait(
+        self,
+        timeout=None,
+        aggregator: Callable[
+            [str, List[ObjectID]], Union[Object, ObjectID, ObjectMeta]
+        ] = None,
+        **kwargs,
+    ):
+        '''Wait util the _first_ result on each launcher is ready.'''
         partial_ids = []
         for proc in self._procs:
             r = proc.wait(timeout=timeout)
@@ -144,9 +161,15 @@ class ParallelStreamLauncher(ScriptLauncher):
             return self.create_parallel_stream(partial_ids, **kwargs)
         return aggregator(self.vineyard_endpoint, partial_ids, **kwargs)
 
-    def join_with_aggregator(self, aggregator: Callable[[str, List[List[ObjectID]]], Union[Object, ObjectID,
-                                                                                           ObjectMeta]], **kwargs):
-        ''' Wait util _all_ results on each launcher is ready and until the launcher finishes its work.
+    def join_with_aggregator(
+        self,
+        aggregator: Callable[
+            [str, List[List[ObjectID]]], Union[Object, ObjectID, ObjectMeta]
+        ],
+        **kwargs,
+    ):
+        '''Wait util _all_ results on each launcher is ready and until the launcher
+        finishes its work.
         '''
         self.join()
 
@@ -191,8 +214,12 @@ def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
     launcher = ParallelStreamLauncher(deployment)
     storage_options = kwargs.pop("storage_options", {})
     read_options = kwargs.pop("read_options", {})
-    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
-    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode("utf-8")
+    storage_options = base64.b64encode(
+        json.dumps(storage_options).encode("utf-8")
+    ).decode("utf-8")
+    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode(
+        "utf-8"
+    )
     # Note that vineyard currently supports hive tables stored as orc format only
     launcher.run(
         get_executable("read_vineyard_dataframe"),
@@ -240,12 +267,20 @@ def read_dataframe(path, vineyard_socket, *args, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
     read_options = kwargs.pop("read_options", {})
-    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
-    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode("utf-8")
+    storage_options = base64.b64encode(
+        json.dumps(storage_options).encode("utf-8")
+    ).decode("utf-8")
+    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode(
+        "utf-8"
+    )
     if ".orc" in path:
-        return read_orc(path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy())
+        return read_orc(
+            path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy()
+        )
     else:
-        stream = read_bytes(path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy())
+        stream = read_bytes(
+            path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy()
+        )
         return parse_bytes_to_dataframe(
             vineyard_socket,
             stream,
@@ -274,7 +309,9 @@ def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs)
     return launcher.wait()
 
 
-def write_bytes(path, byte_stream, vineyard_socket, storage_options, write_options, *args, **kwargs):
+def write_bytes(
+    path, byte_stream, vineyard_socket, storage_options, write_options, *args, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -290,7 +327,15 @@ def write_bytes(path, byte_stream, vineyard_socket, storage_options, write_optio
     launcher.join()
 
 
-def write_orc(path, dataframe_stream, vineyard_socket, storage_options, write_options, *args, **kwargs):
+def write_orc(
+    path,
+    dataframe_stream,
+    vineyard_socket,
+    storage_options,
+    write_options,
+    *args,
+    **kwargs,
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -310,8 +355,12 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
     write_options = kwargs.pop("write_options", {})
-    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
-    write_options = base64.b64encode(json.dumps(write_options).encode("utf-8")).decode("utf-8")
+    storage_options = base64.b64encode(
+        json.dumps(storage_options).encode("utf-8")
+    ).decode("utf-8")
+    write_options = base64.b64encode(json.dumps(write_options).encode("utf-8")).decode(
+        "utf-8"
+    )
     if ".orc" in path:
         write_orc(
             path,
@@ -323,14 +372,28 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
             **kwargs.copy(),
         )
     else:
-        stream = parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs.copy())
-        write_bytes(path, stream, vineyard_socket, storage_options, write_options, *args, **kwargs.copy())
+        stream = parse_dataframe_to_bytes(
+            vineyard_socket, dataframe_stream, *args, **kwargs.copy()
+        )
+        write_bytes(
+            path,
+            stream,
+            vineyard_socket,
+            storage_options,
+            write_options,
+            *args,
+            **kwargs.copy(),
+        )
 
 
-def create_global_dataframe(vineyard_endpoint: str, results: List[List[ObjectID]], name: str, **kwargs) -> ObjectID:
-    # use the partial_id_matrix and the name in **kwargs to create a global dataframe.
+def create_global_dataframe(
+    vineyard_endpoint: str, results: List[List[ObjectID]], name: str, **kwargs
+) -> ObjectID:
+    # use the partial_id_matrix and the name in **kwargs to create a global
+    # dataframe.
     #
-    # Here the `name`` is given in the the input URI path in the form of vineyard://{name_for_the_global_dataframe}
+    # Here the `name`` is given in the the input URI path in the form of
+    # vineyard://{name_for_the_global_dataframe}
     if name is None:
         raise ValueError("Name of the global dataframe is not provided")
 
@@ -360,7 +423,9 @@ def write_vineyard_dataframe(path, dataframe_stream, vineyard_socket, *args, **k
         *args,
         **kwargs,
     )
-    return launcher.join_with_aggregator(aggregator=create_global_dataframe, name=path[len("vineyard://"):])
+    return launcher.join_with_aggregator(
+        aggregator=create_global_dataframe, name=path[len("vineyard://") :]
+    )
 
 
 vineyard.io.write.register("file", write_dataframe)
@@ -408,7 +473,9 @@ def merge_global_object(vineyard_endpoint, results: List[List[ObjectID]]) -> Obj
                 raise ValueError('Not all sub objects are global objects: %s' % results)
 
     if not isglobal:
-        raise ValueError("Unable to merge more than one non-global objects: %s" % results)
+        raise ValueError(
+            "Unable to merge more than one non-global objects: %s" % results
+        )
 
     base_meta = ObjectMeta()
     base_meta.set_global(True)
@@ -425,7 +492,9 @@ def merge_global_object(vineyard_endpoint, results: List[List[ObjectID]]) -> Obj
     return meta.id
 
 
-def write_bytes_collection(path, byte_stream, vineyard_socket, storage_options, *args, **kwargs):
+def write_bytes_collection(
+    path, byte_stream, vineyard_socket, storage_options, *args, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -457,30 +526,42 @@ def read_bytes_collection(path, vineyard_socket, storage_options, *args, **kwarg
 def serialize_to_stream(object_id, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable("serializer"), vineyard_socket, object_id, *args, **kwargs)
+    launcher.run(
+        get_executable("serializer"), vineyard_socket, object_id, *args, **kwargs
+    )
     return launcher.wait()
 
 
 def serialize(path, object_id, vineyard_socket, *args, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
-    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
+    storage_options = base64.b64encode(
+        json.dumps(storage_options).encode("utf-8")
+    ).decode("utf-8")
 
     stream = serialize_to_stream(object_id, vineyard_socket, *args, **kwargs.copy())
-    write_bytes_collection(path, stream, vineyard_socket, storage_options, *args, **kwargs.copy())
+    write_bytes_collection(
+        path, stream, vineyard_socket, storage_options, *args, **kwargs.copy()
+    )
 
 
 def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
-    launcher.run(get_executable("deserializer"), vineyard_socket, stream, *args, **kwargs)
+    launcher.run(
+        get_executable("deserializer"), vineyard_socket, stream, *args, **kwargs
+    )
     return launcher.join_with_aggregator(aggregator=merge_global_object)
 
 
 def deserialize(path, vineyard_socket, *args, **kwargs):
     storage_options = kwargs.pop("storage_options", {})
-    storage_options = base64.b64encode(json.dumps(storage_options).encode("utf-8")).decode("utf-8")
-    stream = read_bytes_collection(path, vineyard_socket, storage_options, *args, **kwargs)
+    storage_options = base64.b64encode(
+        json.dumps(storage_options).encode("utf-8")
+    ).decode("utf-8")
+    stream = read_bytes_collection(
+        path, vineyard_socket, storage_options, *args, **kwargs
+    )
     return deserialize_from_stream(stream, vineyard_socket, *args, **kwargs.copy())
 
 

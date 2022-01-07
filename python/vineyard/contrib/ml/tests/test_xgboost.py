@@ -18,13 +18,11 @@
 
 import numpy as np
 import pandas as pd
-
 import pyarrow as pa
 import pytest
-
+from vineyard.contrib.ml.xgboost import register_xgb_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
-from vineyard.contrib.ml.xgboost import register_xgb_types
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -55,7 +53,9 @@ def test_pandas_dataframe_specify_label(vineyard_client):
 
 
 def test_pandas_dataframe_specify_data(vineyard_client):
-    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [[5, 1.0], [6, 2.0], [7, 3.0], [8, 9.0]]})
+    df = pd.DataFrame(
+        {'a': [1, 2, 3, 4], 'b': [[5, 1.0], [6, 2.0], [7, 3.0], [8, 9.0]]}
+    )
     object_id = vineyard_client.put(df)
     dtrain = vineyard_client.get(object_id, data='b', label='a')
     assert dtrain.num_col() == 2
@@ -65,7 +65,11 @@ def test_pandas_dataframe_specify_data(vineyard_client):
 
 
 def test_record_batch_xgb_resolver(vineyard_client):
-    arrays = [pa.array([1, 2, 3, 4]), pa.array([3.0, 4.0, 5.0, 6.0]), pa.array([0, 1, 0, 1])]
+    arrays = [
+        pa.array([1, 2, 3, 4]),
+        pa.array([3.0, 4.0, 5.0, 6.0]),
+        pa.array([0, 1, 0, 1]),
+    ]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])
     object_id = vineyard_client.put(batch)
     dtrain = vineyard_client.get(object_id, label='target')

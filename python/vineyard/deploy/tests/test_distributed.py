@@ -19,19 +19,19 @@
 import itertools
 import json
 import logging
-import random
-import time
 import multiprocessing
+import random
 import threading
+import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
+import numpy as np
 import pandas as pd
 import pytest
-import numpy as np
-
 import vineyard
-from vineyard.core import default_builder_context, default_resolver_context
+from vineyard.core import default_builder_context
+from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)
@@ -49,8 +49,7 @@ def generate_vineyard_ipc_clients(vineyard_ipc_sockets, nclients):
 
 
 def test_get_after_persist(vineyard_ipc_sockets):
-    client1, client2 = \
-            generate_vineyard_ipc_clients(vineyard_ipc_sockets, 2)
+    client1, client2 = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 2)
 
     data = np.ones((1, 2, 3, 4, 5))
     o = client1.put(data)
@@ -60,8 +59,9 @@ def test_get_after_persist(vineyard_ipc_sockets):
 
 
 def test_add_remote_placeholder(vineyard_ipc_sockets):
-    client1, client2, client3, client4 = \
-            generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
+    client1, client2, client3, client4 = generate_vineyard_ipc_clients(
+        vineyard_ipc_sockets, 4
+    )
 
     data = np.ones((1, 2, 3, 4, 5))
 
@@ -92,8 +92,9 @@ def test_add_remote_placeholder(vineyard_ipc_sockets):
 
 
 def test_add_remote_placeholder_with_sync(vineyard_ipc_sockets):
-    client1, client2, client3, client4 = \
-            generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
+    client1, client2, client3, client4 = generate_vineyard_ipc_clients(
+        vineyard_ipc_sockets, 4
+    )
 
     data = np.ones((1, 2, 3, 4, 5))
 
@@ -120,8 +121,7 @@ def test_add_remote_placeholder_with_sync(vineyard_ipc_sockets):
 
 
 def test_remote_deletion(vineyard_ipc_sockets):
-    client1, client2 = \
-            generate_vineyard_ipc_clients(vineyard_ipc_sockets, 2)
+    client1, client2 = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 2)
 
     client1 = vineyard.connect(vineyard_ipc_sockets[0])
     client2 = vineyard.connect(vineyard_ipc_sockets[1])
@@ -148,8 +148,9 @@ def test_remote_deletion(vineyard_ipc_sockets):
 
 
 def test_concurrent_blob(vineyard_ipc_sockets):
-    client1, client2, client3, client4 = \
-            generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
+    client1, client2, client3, client4 = generate_vineyard_ipc_clients(
+        vineyard_ipc_sockets, 4
+    )
 
     # FIXME: test concurrent blob creation and destory
     print(client1)
@@ -158,9 +159,8 @@ def test_concurrent_blob(vineyard_ipc_sockets):
     print(client4)
 
 
-def test_concurrent_meta(vineyard_ipc_sockets):
-    clients = \
-            generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
+def test_concurrent_meta(vineyard_ipc_sockets):  # noqa: C901
+    clients = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
 
     def job1(client):
         try:
@@ -226,12 +226,11 @@ def test_concurrent_meta(vineyard_ipc_sockets):
             pytest.fail("Failed to execute tests ...")
 
 
-def test_concurrent_meta_mp(vineyard_ipc_sockets):
+def test_concurrent_meta_mp(vineyard_ipc_sockets):  # noqa: C901
     num_proc = 8
     job_per_proc = 64
 
-    vineyard_ipc_sockets = \
-            generate_vineyard_ipc_sockets(vineyard_ipc_sockets, num_proc)
+    vineyard_ipc_sockets = generate_vineyard_ipc_sockets(vineyard_ipc_sockets, num_proc)
 
     def job1(rs, state, client):
         try:
@@ -336,11 +335,14 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
     ctx = multiprocessing.get_context(method='fork')
     procs, rs, state = [], ctx.Queue(), ctx.Value('i', 0)
     for sock in vineyard_ipc_sockets:
-        proc = ctx.Process(target=start_requests, args=(
-            rs,
-            state,
-            sock,
-        ))
+        proc = ctx.Process(
+            target=start_requests,
+            args=(
+                rs,
+                state,
+                sock,
+            ),
+        )
         proc.start()
         procs.append(proc)
 
@@ -350,9 +352,8 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):
             pytest.fail(message)
 
 
-def test_concurrent_persist(vineyard_ipc_sockets):
-    clients = \
-            generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
+def test_concurrent_persist(vineyard_ipc_sockets):  # noqa: C901
+    clients = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
 
     def job1(client):
         try:
@@ -433,7 +434,7 @@ def test_concurrent_persist(vineyard_ipc_sockets):
             pytest.fail("Failed to execute tests ...")
 
 
-def test_concurrent_meta_sync(vineyard_ipc_sockets):
+def test_concurrent_meta_sync(vineyard_ipc_sockets):  # noqa: C901
     num_proc = 8
     job_per_proc = 128
 
@@ -550,12 +551,15 @@ def test_concurrent_meta_sync(vineyard_ipc_sockets):
     ctx = multiprocessing.get_context(method='fork')
     procs, rs, state = [], ctx.Queue(), ctx.Value('i', 0)
     for _ in range(num_proc):
-        proc = ctx.Process(target=start_requests, args=(
-            rs,
-            state,
-            job_per_proc,
-            vineyard_ipc_sockets,
-        ))
+        proc = ctx.Process(
+            target=start_requests,
+            args=(
+                rs,
+                state,
+                job_per_proc,
+                vineyard_ipc_sockets,
+            ),
+        )
         proc.start()
         procs.append(proc)
 

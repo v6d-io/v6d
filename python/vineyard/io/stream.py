@@ -19,10 +19,13 @@
 import json
 import logging
 import traceback
-from typing import Dict, List
+from typing import Dict
+from typing import List
 from urllib.parse import urlparse
 
-from .._C import ObjectID, ObjectMeta, StreamDrainedException
+from .._C import ObjectID
+from .._C import ObjectMeta
+from .._C import StreamDrainedException
 from ..core.driver import registerize
 from ..core.resolver import resolver_context
 
@@ -31,19 +34,23 @@ logger = logging.getLogger('vineyard')
 
 @registerize
 def read(path, *args, **kwargs):
-    ''' Open a path and read it as a single stream.
+    '''Open a path and read it as a single stream.
 
-        Parameters
-        ----------
-        path: str
-            Path to read, the last reader registered for the scheme of the path will be used.
-        vineyard_ipc_socket: str
-            The local or remote vineyard's IPC socket location that the remote readers will
-            use to establish connections with the vineyard server.
-        vineyard_endpoint: str, optional
-            An optional address of vineyard's RPC socket, which will be used for retrieving server's
-            information on the client side. If not provided, the `vineyard_ipc_socket` will be used,
-            or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
+    Parameters
+    ----------
+    path: str
+        Path to read, the last reader registered for the scheme of
+        the path will be used.
+    vineyard_ipc_socket: str
+        The local or remote vineyard's IPC socket location that the
+        remote readers will use to establish connections with the
+        vineyard server.
+    vineyard_endpoint: str, optional
+        An optional address of vineyard's RPC socket, which will be
+        used for retrieving server's information on the client side.
+        If not provided, the `vineyard_ipc_socket` will be used, or
+        it will tries to discovery vineyard's IPC or RPC endpoints
+        from environment variables.
     '''
     parsed = urlparse(path)
     if read.__factory and read.__factory.get(parsed.scheme):
@@ -51,34 +58,40 @@ def read(path, *args, **kwargs):
         for reader in read.__factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
-                r = reader(path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
+                r = reader(
+                    path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs
+                )
                 if r is not None:
                     return r
-            except Exception as e:
+            except Exception:
                 errors.append('%s: %s' % (reader.__name__, traceback.format_exc()))
-        raise RuntimeError('Unable to find a proper IO driver for %s, potential causes are:\n %s' %
-                           (path, '\n'.join(errors)))
+        raise RuntimeError(
+            'Unable to find a proper IO driver for %s, potential causes are:\n %s'
+            % (path, '\n'.join(errors))
+        )
     else:
         raise ValueError("No IO driver registered for %s" % path)
 
 
 @registerize
 def write(path, stream, *args, **kwargs):
-    ''' Write the stream to a given path.
+    '''Write the stream to a given path.
 
-        Parameters
-        ----------
-        path: str
-            Path to write, the last writer registered for the scheme of the path will be used.
-        stream: vineyard stream
-            Stream that produces the data to write.
-        vineyard_ipc_socket: str
-            The local or remote vineyard's IPC socket location that the remote readers will
-            use to establish connections with the vineyard server.
-        vineyard_endpoint: str, optional
-            An optional address of vineyard's RPC socket, which will be used for retrieving server's
-            information on the client side. If not provided, the `vineyard_ipc_socket` will be used,
-            or it will tries to discovery vineyard's IPC or RPC endpoints from environment variables.
+    Parameters
+    ----------
+    path: str
+        Path to write, the last writer registered for the scheme of the path
+        will be used.
+    stream: vineyard stream
+        Stream that produces the data to write.
+    vineyard_ipc_socket: str
+        The local or remote vineyard's IPC socket location that the remote
+        readers will use to establish connections with the vineyard server.
+    vineyard_endpoint: str, optional
+        An optional address of vineyard's RPC socket, which will be used for
+        retrieving server's information on the client side. If not provided,
+        the `vineyard_ipc_socket` will be used, or it will tries to discovery
+        vineyard's IPC or RPC endpoints from environment variables.
     '''
     parsed = urlparse(path)
     if write.__factory and write.__factory.get(parsed.scheme):
@@ -86,38 +99,46 @@ def write(path, stream, *args, **kwargs):
         for writer in write.__factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
-                writer(path, stream, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs)
-            except Exception as e:
+                writer(
+                    path,
+                    stream,
+                    proc_kwargs.pop('vineyard_ipc_socket'),
+                    *args,
+                    **proc_kwargs
+                )
+            except Exception:
                 errors.append('%s: %s' % (writer.__name__, traceback.format_exc()))
                 continue
             else:
                 return
-        raise RuntimeError('Unable to find a proper IO driver for %s, potential causes are:\n %s' %
-                           (path, '\n'.join(errors)))
+        raise RuntimeError(
+            'Unable to find a proper IO driver for %s, potential causes are:\n %s'
+            % (path, '\n'.join(errors))
+        )
     else:
         raise ValueError("No IO driver registered for %s" % path)
 
 
 def open(path, *args, mode='r', **kwargs):
-    ''' Open a path as a reader or writer, depends on the parameter :code:`mode`. If :code:`mode`
-        is :code:`r`, it will open a stream for read, and open a stream for write when :code:`mode`
-        is :code:`w`.
+    '''Open a path as a reader or writer, depends on the parameter :code:`mode`.
+    If :code:`mode` is :code:`r`, it will open a stream for read, and open a
+    stream for write when :code:`mode` is :code:`w`.
 
-        Parameters
-        ----------
-        path: str
-            Path to open.
-        mode: char
-            Mode about how to open the path, :code:`r` is for read and :code:`w` for write.
-        vineyard_ipc_socket: str
-            Vineyard's IPC socket location.
-        vineyard_endpoint: str
-            Vineyard's RPC socket address.
+    Parameters
+    ----------
+    path: str
+        Path to open.
+    mode: char
+        Mode about how to open the path, :code:`r` is for read and :code:`w` for write.
+    vineyard_ipc_socket: str
+        Vineyard's IPC socket location.
+    vineyard_endpoint: str
+        Vineyard's RPC socket address.
 
-        See Also
-        --------
-        vineyard.io.read
-        vineyard.io.write
+    See Also
+    --------
+    vineyard.io.read
+    vineyard.io.write
     '''
     parsed = urlparse(path)
     if not parsed.scheme:
@@ -215,8 +236,7 @@ class BaseStream:
         return '%s <%r>' % (self.__class__.__name__, self._stream)
 
     def _open_new_reader(self, client) -> "BaseStream.Reader":
-        ''' Always open a new reader.
-        '''
+        '''Always open a new reader.'''
         return BaseStream.Reader(client, self.id, self._resolver)
 
     def open_reader(self, client=None) -> "BaseStream.Reader":
@@ -242,8 +262,8 @@ class BaseStream:
 
 
 class StreamCollection:
-    ''' A stream collection is a set of stream, where each element is a stream, or,
-        another stream collection.
+    '''A stream collection is a set of stream, where each element is a stream, or,
+    another stream collection.
     '''
 
     KEY_OF_STREAMS = '__streams'
@@ -259,12 +279,21 @@ class StreamCollection:
             self._global = False
 
     @staticmethod
-    def new(client, metadata: Dict, streams: List[ObjectID], meta: ObjectMeta = None) -> "StreamCollection":
+    def new(
+        client, metadata: Dict, streams: List[ObjectID], meta: ObjectMeta = None
+    ) -> "StreamCollection":
         if meta is None:
             meta = ObjectMeta()
         meta['typename'] = 'vineyard::StreamCollection'
         for k, v in metadata.items():
-            if k not in ['id', 'signature', 'instance_id', 'transient', 'global', 'typename']:
+            if k not in [
+                'id',
+                'signature',
+                'instance_id',
+                'transient',
+                'global',
+                'typename',
+            ]:
                 meta[k] = v
         meta[StreamCollection.KEY_OF_STREAMS] = [int(s) for s in streams]
         meta = client.create_metadata(meta)
@@ -287,7 +316,10 @@ class StreamCollection:
         return self._streams
 
     def __repr__(self) -> str:
-        return "StreamCollection: %s [%s]" % (repr(self.id), [repr(s) for s in self.streams])
+        return "StreamCollection: %s [%s]" % (
+            repr(self.id),
+            [repr(s) for s in self.streams],
+        )
 
     def __str__(self) -> str:
         return repr(self)
@@ -304,4 +336,11 @@ def register_stream_collection_types(builder_ctx, resolver_ctx):
         resolver_ctx.register('vineyard::StreamCollection', stream_collection_resolver)
 
 
-__all__ = ['open', 'read', 'write', 'BaseStream', 'StreamCollection', 'register_stream_collection_types']
+__all__ = [
+    'open',
+    'read',
+    'write',
+    'BaseStream',
+    'StreamCollection',
+    'register_stream_collection_types',
+]
