@@ -251,7 +251,7 @@ jobs:
               echo "|"
               echo "| The tool black can be installed by"
               echo "|"
-              echo "|    pip3 install black isort flake8
+              echo "|    pip3 install black isort flake8"
               echo "|"
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               exit -1
