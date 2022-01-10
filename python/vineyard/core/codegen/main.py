@@ -115,7 +115,7 @@ def parse_sys_args():
         '--build-directory',
         type=str,
         default=None,
-        help='Build directory that contains compilation database'
+        help='Build directory that contains compilation database '
         '(compile_commands.json)',
     )
     arg_parser.add_argument(
@@ -127,12 +127,12 @@ def parse_sys_args():
         help='Extra flags that will be passed to libclang',
     )
     arg_parser.add_argument(
+        '--delayed', action='store_true', help='Delayed the template parsing'
+    )
+    arg_parser.add_argument(
         '-v',
         '--verbose',
-        type=lambda x: bool(strtobool(x)),
-        nargs='?',
-        const=True,
-        default=False,
+        action='store_true',
         help='Run codegen script with verbose output',
     )
     return arg_parser.parse_args()
@@ -149,6 +149,7 @@ def main():
             args.includes,
             args.extra_flags,
             args.build_directory,
+            args.delayed,
             args.verbose,
         )
     else:
@@ -161,6 +162,7 @@ def main():
             args.includes,
             args.extra_flags,
             args.build_directory,
+            args.delayed,
             args.verbose,
         )
 

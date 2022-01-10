@@ -295,7 +295,6 @@ GatherETables(Client& client,
   }
 
   std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables;
-  property_graph_types::LABEL_ID_TYPE e_label_id = 0;
   for (auto const& group : grouped_batches) {
     std::shared_ptr<arrow::Table> table;
     std::vector<std::shared_ptr<arrow::Table>> subtables;
@@ -307,7 +306,6 @@ GatherETables(Client& client,
       }
       subtables.emplace_back(table);
     }
-    e_label_id += 1;
     tables.emplace_back(subtables);
   }
   return tables;

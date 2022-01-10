@@ -27,6 +27,7 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/core_types.h"
 #include "client/ds/i_object.h"
 #include "common/util/uuid.h"
 
@@ -39,7 +40,7 @@ namespace vineyard {
 
 class Client;
 
-class __attribute__((annotate("no-vineyard"))) ByteStreamWriter {
+class ByteStreamWriter {
  public:
   const size_t MaximumChunkSize() const { return -1; }
 
@@ -73,7 +74,7 @@ class __attribute__((annotate("no-vineyard"))) ByteStreamWriter {
   friend class Client;
 };
 
-class __attribute__((annotate("no-vineyard"))) ByteStreamReader {
+class ByteStreamReader {
  public:
   Status GetNext(std::unique_ptr<arrow::Buffer>& buffer);
 
@@ -97,7 +98,7 @@ class ByteStreamBaseBuilder;
  * @brief The basic stream with each chunk representing a segment of bytes
  *
  */
-class ByteStream : public Registered<ByteStream> {
+class [[vineyard]] ByteStream : public Registered<ByteStream> {
  public:
   /**
    * @brief Open a reader to consume data from the byte stream
@@ -105,7 +106,8 @@ class ByteStream : public Registered<ByteStream> {
    * @param client The client connected to the vineyard server
    * @param The unique pointer to the reader
    */
-  Status OpenReader(Client& client, std::unique_ptr<ByteStreamReader>& reader);
+  Status OpenReader(Client & client,
+                    std::unique_ptr<ByteStreamReader> & reader);
 
   /**
    * @brief Open a writer to produce data to the byte stream
@@ -113,14 +115,13 @@ class ByteStream : public Registered<ByteStream> {
    * @param client The client connected to the vineyard server
    * @param The unique pointer to the writer
    */
-  Status OpenWriter(Client& client, std::unique_ptr<ByteStreamWriter>& writer);
+  Status OpenWriter(Client & client,
+                    std::unique_ptr<ByteStreamWriter> & writer);
 
   std::unordered_map<std::string, std::string> GetParams() { return params_; }
 
  private:
-  __attribute__((annotate("codegen")))
-  std::unordered_map<std::string, std::string>
-      params_;
+  [[shared]] UnorderedMap<std::string, std::string> params_;
 
   friend class Client;
   friend class ByteStreamBaseBuilder;

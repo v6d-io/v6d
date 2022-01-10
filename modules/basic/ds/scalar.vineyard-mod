@@ -51,7 +51,7 @@ class ScalarBaseBuilder;
  * @tparam T The type for the value.
  */
 template <typename T>
-class Scalar : public Registered<Scalar<T>> {
+class [[vineyard]] Scalar : public Registered<Scalar<T>> {
  public:
   /**
    * @brief Get the value of the scalar.
@@ -68,8 +68,8 @@ class Scalar : public Registered<Scalar<T>> {
   AnyType Type() const { return type_; }
 
  private:
-  __attribute__((annotate("codegen"))) T value_;
-  __attribute__((annotate("codegen"))) AnyType type_ = AnyTypeEnum<T>::value;
+  [[shared]] T value_;
+  [[shared]] AnyType type_ = AnyTypeEnum<T>::value;
 
   friend class Client;
   friend class ScalarBaseBuilder<T>;

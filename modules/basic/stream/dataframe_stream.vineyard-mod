@@ -27,6 +27,7 @@ limitations under the License.
 #include "basic/ds/dataframe.vineyard.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/core_types.h"
 #include "client/ds/i_object.h"
 #include "common/util/uuid.h"
 
@@ -39,7 +40,7 @@ namespace vineyard {
 
 class Client;
 
-class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
+class DataframeStreamWriter {
  public:
   const size_t MaximumChunkSize() const { return -1; }
 
@@ -69,7 +70,7 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamWriter {
   friend class Client;
 };
 
-class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
+class DataframeStreamReader {
  public:
   Status GetNext(std::unique_ptr<arrow::Buffer>& buffer);
 
@@ -104,20 +105,18 @@ class __attribute__((annotate("no-vineyard"))) DataframeStreamReader {
   friend class Client;
 };
 
-class DataframeStream : public Registered<DataframeStream> {
+class [[vineyard]] DataframeStream : public Registered<DataframeStream> {
  public:
-  Status OpenReader(Client& client,
-                    std::unique_ptr<DataframeStreamReader>& reader);
+  Status OpenReader(Client & client,
+                    std::unique_ptr<DataframeStreamReader> & reader);
 
-  Status OpenWriter(Client& client,
-                    std::unique_ptr<DataframeStreamWriter>& writer);
+  Status OpenWriter(Client & client,
+                    std::unique_ptr<DataframeStreamWriter> & writer);
 
   std::unordered_map<std::string, std::string> GetParams() { return params_; }
 
  private:
-  __attribute__((annotate("codegen")))
-  std::unordered_map<std::string, std::string>
-      params_;
+  [[shared]] UnorderedMap<std::string, std::string> params_;
 
   friend class Client;
   friend class DataframeStreamBaseBuilder;
