@@ -66,31 +66,17 @@ def memoryview_builder(client, value, **kwargs):
     return buffer.seal(client)
 
 
-def tuple_builder(client, value, builder, **kwargs):
-    if len(value) == 2:
-        # use pair
-        meta = ObjectMeta(**kwargs)
-        meta['typename'] = 'vineyard::Pair'
-        if isinstance(value[0], ObjectID):
-            meta.add_member('first_', value[0])
+def sequence_builder(client, value, builder, **kwargs):
+    meta = ObjectMeta(**kwargs)
+    meta['typename'] = 'vineyard::Sequence'
+    meta['size_'] = len(value)
+    for i, item in enumerate(value):
+        if isinstance(item, ObjectID):
+            meta.add_member('__elements_-%d' % i, item)
         else:
-            meta.add_member('first_', builder.run(client, value[0]))
-        if isinstance(value[1], ObjectID):
-            meta.add_member('second_', value[1])
-        else:
-            meta.add_member('second_', builder.run(client, value[1]))
-        return client.create_metadata(meta)
-    else:
-        meta = ObjectMeta(**kwargs)
-        meta['typename'] = 'vineyard::Tuple'
-        meta['size_'] = len(value)
-        for i, item in enumerate(value):
-            if isinstance(item, ObjectID):
-                meta.add_member('__elements_-%d' % i, item)
-            else:
-                meta.add_member('__elements_-%d' % i, builder.run(client, item))
-        meta['__elements_-size'] = len(value)
-        return client.create_metadata(meta)
+            meta.add_member('__elements_-%d' % i, builder.run(client, item))
+    meta['__elements_-size'] = len(value)
+    return client.create_metadata(meta)
 
 
 def scalar_resolver(obj):
@@ -109,13 +95,7 @@ def bytes_resolver(obj):
     return memoryview(obj)
 
 
-def pair_resolver(obj, resolver):
-    fst = obj.member('first_')
-    snd = obj.member('second_')
-    return (resolver.run(fst), resolver.run(snd))
-
-
-def tuple_resolver(obj, resolver):
+def sequence_resolver(obj, resolver):
     meta = obj.meta
     elements = []
     for i in range(int(meta['__elements_-size'])):
@@ -138,13 +118,13 @@ def register_base_types(builder_ctx=None, resolver_ctx=None):
         builder_ctx.register(int, int_builder)
         builder_ctx.register(float, double_builder)
         builder_ctx.register(str, string_builder)
-        builder_ctx.register(tuple, tuple_builder)
+        builder_ctx.register(tuple, sequence_builder)
+        builder_ctx.register(list, sequence_builder)
         builder_ctx.register(bytes, bytes_builder)
         builder_ctx.register(memoryview, memoryview_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Blob', bytes_resolver)
         resolver_ctx.register('vineyard::Scalar', scalar_resolver)
-        resolver_ctx.register('vineyard::Pair', pair_resolver)
-        resolver_ctx.register('vineyard::Tuple', tuple_resolver)
         resolver_ctx.register('vineyard::Array', array_resolver)
+        resolver_ctx.register('vineyard::Sequence', sequence_resolver)
