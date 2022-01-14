@@ -20,6 +20,8 @@ import copy
 import itertools
 import logging
 import os
+from collections import Counter
+from typing import Optional
 
 DEP_MISSING_ERROR = '''
     Dependencies {dep} cannot be found, please try again after:
@@ -29,9 +31,10 @@ DEP_MISSING_ERROR = '''
 '''
 
 try:
-    import clang.cindex
+    import clang.cindex as cindex
+    from clang.cindex import Cursor
     from clang.cindex import CursorKind
-    from clang.cindex import TranslationUnit
+    from clang.cindex import TypeKind
 except ImportError:
     raise RuntimeError(DEP_MISSING_ERROR.format(dep='libclang'))
 
@@ -42,7 +45,17 @@ except ImportError:
 
 ###############################################################################
 #
-# parse codegen spec
+# parse codegen spec:
+#
+#   __attribute__((annotate("vineyard"))): vineyard classes
+#   __attribute__((annotate("shared"))): shared member/method
+#   __attribute__((annotate("streamable"))): shared member/method
+#   __attribute__((annotate("distributed"))): shared member/method
+#
+# custom types:
+#
+#   Tuple<T>
+#   Map<Key, Value>
 #
 #   __attribute__((annotate("codegen"))):
 #       meta codegen
@@ -53,8 +66,11 @@ except ImportError:
 #   __attribute__((annotate("codegen:Type*"))):
 #       member type: std::shared_ptr<Type> member_
 #
-#   __attribute__((annotate("codegen:[Type*]"))):
+#   __attribute__((annotate("codegen:[Type]"))):
 #       list member type: std::vector<Type> member_
+#
+#   __attribute__((annotate("codegen:[Type*]"))):
+#       list member type: std::vector<std::shared_ptr<Type>> member_
 #
 #   __attribute__((annotate("codegen:{Type}"))):
 #       set member type: std::set<Type> member_
@@ -167,6 +183,65 @@ codegen_spec_parser = (
 )
 
 
+def figure_out_namespace(node: Cursor) -> Optional[str]:
+    while True:
+        parent = node.semantic_parent
+        if parent is None:
+            return None
+        if parent.kind == CursorKind.NAMESPACE:
+            parent_ns = figure_out_namespace(parent)
+            if parent_ns is None:
+                return parent.spelling
+            else:
+                return '%s::%s' % (parent_ns, parent.spelling)
+        node = parent
+
+
+def unpack_pointer_type(node_type):
+    if node_type.kind == TypeKind.POINTER:
+        return node_type.get_pointee(), '*'
+
+    basename = node_type.spelling.split('<')[0]
+    namespace = figure_out_namespace(node_type.get_declaration())
+
+    if (
+        basename == 'std::shared_ptr'
+        or namespace in ['std', 'std::__1']
+        and basename == 'shared_ptr'
+        or basename == 'std::unique_ptr'
+        or namespace in ['std', 'std::__1']
+        and basename == 'unique_ptr'
+    ):
+        return node_type.get_template_argument_type(0), '*'
+
+    return node_type, ''
+
+
+def is_template_parameter(node: Cursor, typename: str) -> bool:
+    parent = node.semantic_parent
+    if parent is None:
+        return False
+    if parent.kind == CursorKind.CLASS_TEMPLATE:
+        for ch in parent.get_children():
+            if ch.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
+                if typename == ch.spelling:
+                    return True
+    return False
+
+
+def is_primitive_types(
+    node: Cursor, node_type: "cindex.Type", typename: str, star: str
+) -> bool:
+    if star:
+        return False
+    if node_type.is_pod():
+        return True
+    if is_template_parameter(node, typename):
+        # treat template parameter as meta, see `scalar.vineyard-mod`.
+        return True
+    return typename in ['std::string', 'vineyard::String', 'vineyard::json']
+
+
 def parse_codegen_spec(kind):
     if kind.startswith('vineyard'):
         kind = kind[len('vineyard') :]
@@ -177,17 +252,108 @@ def parse_codegen_spec(kind):
     return codegen_spec_parser.parse(kind)
 
 
+def parse_codegen_spec_from_type(node):
+    node_type, star = unpack_pointer_type(node.type)
+    if star:
+        _, star_inside = unpack_pointer_type(node_type)
+        if star_inside:
+            raise ValueError(
+                'Pointer of pointer %s is not supported' % node.type.spelling
+            )
+
+    typename = node_type.spelling
+    basename = typename.split('<')[0]
+    namespace = figure_out_namespace(node_type.get_declaration())
+
+    if not star:
+        if (
+            basename == 'vineyard::Tuple'
+            or namespace == 'vineyard'
+            and basename == 'Tuple'
+        ):
+            element_type = node_type.get_template_argument_type(0)
+            element_type, inside_star = unpack_pointer_type(element_type)
+            element_typename = element_type.spelling
+            if is_primitive_types(node, element_type, element_typename, inside_star):
+                if inside_star:
+                    raise ValueError(
+                        'pointer of primitive types inside Tuple is not supported: %s'
+                        % node.type.spelling
+                    )
+                return CodeGenKind('meta')
+            else:
+                return CodeGenKind('list', (element_typename, inside_star))
+
+        if (
+            basename == 'vineyard::Map'
+            or namespace == 'vineyard'
+            and basename == 'Map'
+            or basename == 'vineyard::UnorderedMap'
+            or namespace == 'vineyard'
+            and basename == 'UnorderedMap'
+        ):
+            key_type = node_type.get_template_argument_type(0)
+            key_typename = key_type.spelling
+            value_type = node_type.get_template_argument_type(1)
+            value_type, inside_star = unpack_pointer_type(value_type)
+            value_typename = value_type.spelling
+            if is_primitive_types(node, value_type, value_typename, inside_star):
+                if inside_star:
+                    raise ValueError(
+                        'pointer of primitive types inside Map is not supported: %s'
+                        % node.type.spelling
+                    )
+                return CodeGenKind('meta')
+            else:
+                return CodeGenKind(
+                    'dict', ((key_typename,), (value_typename, inside_star))
+                )
+
+    if is_primitive_types(node, node_type, typename, star):
+        return CodeGenKind('meta')
+    else:
+        # directly return: generate data members, in pointer format
+        return CodeGenKind('plain', (basename, star))
+
+
 ###############################################################################
 #
 # dump the AST for debugging
 #
 
 
-def dump_ast(node, indent, saw, base_indent=4, include_refs=False):
-    def is_std_ns(node):
-        return node.kind == CursorKind.NAMESPACE and node.spelling == 'std'
+def is_std_ns(node: Cursor) -> bool:
+    if node.kind == CursorKind.NAMESPACE:
+        if node.spelling == 'std':
+            return True
+        if node.spelling == '__1':
+            parent: Cursor = node.semantic_parent
+            if (
+                parent is not None
+                and parent.kind == CursorKind.NAMESPACE
+                and parent.spelling == 'std'
+            ):
+                return True
+    return False
 
-    k = node.kind  # type: clang.cindex.CursorKind
+
+def is_reference_node(node):
+    return node.kind in [
+        CursorKind.TYPE_REF,
+        CursorKind.TEMPLATE_REF,
+        CursorKind.MEMBER_REF,
+        CursorKind.OVERLOADED_DECL_REF,
+        CursorKind.VARIABLE_REF,
+    ]
+
+
+def dump_ast(
+    node, indent=0, saw=None, base_indent=4, include_refs=False, include_ref_depth=1
+):
+    if saw is None:
+        saw = Counter()
+
+    k: "CursorKind" = node.kind
     # skip printting UNEXPOSED_*
     if not k.is_unexposed():
         tpl = '{indent}{kind}{name}{type_name}'
@@ -206,21 +372,36 @@ def dump_ast(node, indent, saw, base_indent=4, include_refs=False):
             tpl.format(indent=' ' * indent, kind=k.name, name=name, type_name=type_name)
         )
 
-    saw.add(node.hash)
-    if include_refs:
-        if node.referenced is not None and node.referenced.hash not in saw:
-            dump_ast(
-                node.referenced, indent + base_indent, saw, base_indent, include_refs
-            )
+    saw[str(node.hash)] += 1
 
     # FIXME: skip auto generated decls
     skip = len([c for c in node.get_children() if indent == 0 and is_std_ns(c)])
     for c in node.get_children():
-        if not skip:
-            dump_ast(c, indent + base_indent, saw, base_indent, include_refs)
         if indent == 0 and is_std_ns(c):
             skip -= 1
-    saw.remove(node.hash)
+        if skip == 0:
+            dump_ast(
+                c,
+                indent + base_indent,
+                saw,
+                base_indent,
+                include_refs,
+                include_ref_depth - 1,
+            )
+
+    if include_refs and include_ref_depth > 0 and is_reference_node(node):
+        ch = node.get_definition()
+        if ch is not None:
+            dump_ast(
+                ch,
+                indent + base_indent,
+                saw,
+                base_indent,
+                include_refs,
+                include_ref_depth - 1,
+            )
+
+    saw[str(node.hash)] -= 1
 
 
 class ParseOption:
@@ -252,7 +433,12 @@ class ParseOption:
 def check_serialize_attribute(node):
     for child in node.get_children():
         if child.kind == CursorKind.ANNOTATE_ATTR:
-            for attr_kind in ['vineyard', 'no-vineyard', 'codegen']:
+            for attr_kind in [
+                'vineyard',
+                'vineyard(streamable)',
+                'shared',
+                'distributed',
+            ]:
                 if child.spelling.startswith(attr_kind):
                     return child.spelling
     return None
@@ -292,9 +478,9 @@ def traverse(node, to_reflect, to_include, namespaces=None):
         # codegen for all top-level classes (definitions, not declarations) in
         # the given file.
         if check_if_class_definition(node):
-            attr = check_serialize_attribute(node)
-            if attr is None or 'no-vineyard' not in attr:
-                to_reflect.append(('vineyard', namespaces, node))
+            attribute = check_serialize_attribute(node)
+            if attribute in ['vineyard', 'vineyard(streamable)']:
+                to_reflect.append((attribute, namespaces, node))
 
     if node.kind == CursorKind.INCLUSION_DIRECTIVE:
         to_include.append(node)
@@ -322,24 +508,37 @@ def find_fields(definition):
                 first_mmeber_offset = child.extent.start.offset
 
         if child.kind == CursorKind.FIELD_DECL:
-            attr = check_serialize_attribute(child)
-            if attr:
-                fields.append((attr, child))
+            if check_serialize_attribute(child) == 'shared':
+                fields.append(child)
+            continue
+
+        if child.kind == CursorKind.CXX_METHOD:
+            if check_serialize_attribute(child) == 'shared':
+                fields.append(child)
+            if not has_post_construct and child.spelling == 'PostConstruct':
+                for body in child.get_children():
+                    if body.kind == CursorKind.CXX_OVERRIDE_ATTR:
+                        has_post_construct = True
+                        break
             continue
 
         if child.kind == CursorKind.TYPE_ALIAS_DECL:
             using_alias.append((child.spelling, child.extent))
             continue
 
-        if (
-            not has_post_construct
-            and child.kind == CursorKind.CXX_METHOD
-            and child.spelling == 'PostConstruct'
-        ):
-            for body in child.get_children():
-                if body.kind == CursorKind.CXX_OVERRIDE_ATTR:
-                    has_post_construct = True
     return fields, using_alias, first_mmeber_offset, has_post_construct
+
+
+def split_members_and_methods(fields):
+    members, methods = [], []
+    for field in fields:
+        if field.kind == CursorKind.FIELD_DECL:
+            members.append(field)
+        elif field.kind == CursorKind.CXX_METHOD:
+            methods.append(field)
+        else:
+            raise ValueError('Unknown field kind: %s', field)
+    return members, methods
 
 
 def check_class(node):
@@ -376,8 +575,8 @@ def parse_compilation_database(build_directory):
     ):
         return None
     try:
-        return clang.cindex.CompilationDatabase.fromDirectory(build_directory)
-    except clang.cindex.CompilationDatabaseError:
+        return cindex.CompilationDatabase.fromDirectory(build_directory)
+    except cindex.CompilationDatabaseError:
         return None
 
 
@@ -386,8 +585,17 @@ def validate_and_strip_input_file(source):
         return None, 'File not exists'
     with open(source, 'r') as fp:
         content = fp.read().splitlines(keepends=False)
-    # TODO: valid and remove the first line
-    return '\n'.join(content), ''
+    # pass(TODO): valid and remove the first line
+    content = '\n'.join(content)
+
+    # pass: rewrite `[[...]]` with `__attribute__((annotate(...)))`
+    attributes = ['vineyard', 'vineyard(streamable)', 'shared', 'distributed']
+    for attr in attributes:
+        content = content.replace(
+            '[[%s]]' % attr, '__attribute__((annotate("%s")))' % attr
+        )
+
+    return content, ''
 
 
 def strip_flags(flags):
@@ -439,7 +647,12 @@ def parse_module(  # noqa: C901
         '-std=c++14',
         '-nostdinc',
         '-nostdinc++',
+    ]
+    warning_flags = [
+        '-Wno-unused-function',
+        '-Wno-unused-parameter',
         '-Wno-unused-private-field',
+        '-Wno-unknown-warning-option',
     ]
 
     # prepare flags
@@ -479,7 +692,7 @@ def parse_module(  # noqa: C901
             flags.append('-fno-delayed-template-parsing')
 
     # parse
-    index = clang.cindex.Index.create()
+    index = cindex.Index.create()
     options = (
         ParseOption.Default
         | ParseOption.DetailedPreprocessingRecord
@@ -491,7 +704,7 @@ def parse_module(  # noqa: C901
     if parse_only:
         options |= ParseOption.SingleFileParse
 
-    parse_flags = base_flags + flags
+    parse_flags = base_flags + flags + warning_flags
     unit = index.parse(
         source, unsaved_files=unsaved_files, args=parse_flags, options=options
     )
@@ -510,7 +723,7 @@ def parse_module(  # noqa: C901
     to_reflect, to_include = [], []
     for module in modules:
         if verbose:
-            dump_ast(module, 0, set())
+            dump_ast(module)
         traverse(module, to_reflect, to_include)
 
     return content, to_reflect, to_include, parse_flags

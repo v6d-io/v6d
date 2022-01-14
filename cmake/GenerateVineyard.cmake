@@ -127,7 +127,7 @@ function(vineyard_generate)
               -m
               codegen
               --dump-dependencies "True"
-              --root-directory "${CMAKE_CURRENT_SOURCE_DIR}"
+              --root-directory "${PROJECT_SOURCE_DIR}"
               --system-includes "${vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES}"
               --includes "${vineyard_generate_INCLUDE_DIRECTORIES}"
               --build-directory "${vineyard_generate_CMAKE_BUILD_DIR}"
@@ -160,13 +160,12 @@ function(vineyard_generate)
       COMMAND "${PYTHON_EXECUTABLE}"
       ARGS -m
       ARGS codegen
-      ARGS --root-directory "${CMAKE_CURRENT_SOURCE_DIR}"
+      ARGS --root-directory "${PROJECT_SOURCE_DIR}"
       ARGS --system-includes "${vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES}"
       ARGS --includes "${vineyard_generate_INCLUDE_DIRECTORIES}"
       ARGS --build-directory "${vineyard_generate_CMAKE_BUILD_DIR}"
       ARGS --source ${_abs_file}
       ARGS --target ${_generated_srcs}
-      ARGS --verbose
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python/vineyard/core/"
       DEPENDS ${_codegen_scripts}
               ${_abs_file}

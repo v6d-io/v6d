@@ -78,7 +78,7 @@ def test_add_remote_placeholder(vineyard_ipc_sockets):
     client1.persist(o1)
 
     meta = vineyard.ObjectMeta()
-    meta['typename'] = 'vineyard::Tuple'
+    meta['typename'] = 'vineyard::Sequence'
     meta['size_'] = 4
     meta.set_global(True)
     meta.add_member('__elements_-0', o1)

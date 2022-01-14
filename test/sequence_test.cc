@@ -23,7 +23,7 @@ limitations under the License.
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.h"
-#include "basic/ds/tuple.h"
+#include "basic/ds/sequence.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
@@ -33,7 +33,7 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    printf("usage ./tuple_test <ipc_socket>");
+    printf("usage ./sequence_test <ipc_socket>");
     return 1;
   }
   std::string ipc_socket = std::string(argv[1]);
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  TupleBuilder tup_builder(client);
+  SequenceBuilder tup_builder(client);
   tup_builder.SetSize(3);
   {
     std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     tup_builder.SetValue(2, builder);
   }
 
-  auto tup = std::dynamic_pointer_cast<Tuple>(tup_builder.Seal(client));
+  auto tup = std::dynamic_pointer_cast<Sequence>(tup_builder.Seal(client));
   VINEYARD_CHECK_OK(client.Persist(tup->id()));
 
   auto first = tup->At(0);
