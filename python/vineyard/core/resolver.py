@@ -49,21 +49,25 @@ class ResolverContext:
             if resolver_func_sig.varkw is not None:
                 value = resolver(obj, resolver=self, **kw)
             else:
-                # don't pass the `**kw`.
-                if 'resolver' in resolver_func_sig.args:
-                    value = resolver(obj, resolver=self)
-                else:
-                    value = resolver(obj)
+                try:
+                    # don't pass the `**kw`.
+                    if 'resolver' in resolver_func_sig.args:
+                        value = resolver(obj, resolver=self)
+                    else:
+                        value = resolver(obj)
+                except Exception:
+                    raise RuntimeError(
+                        'Unable to construct the object using resolver: '
+                        'typename is %s, resolver is %s' % (obj.meta.typename, resolver)
+                    )
             if value is None:
                 # if the obj has been resolved by pybind types, and there's no proper
                 # resolver, it shouldn't be an error
                 if type(obj) is not Object:
                     return obj
 
-                raise RuntimeError(
-                    'Unable to construct the object using resolver: '
-                    'typename is %s, resolver is %s' % (obj.meta.typename, resolver)
-                )
+                # we might `client.put(None)`
+                return None
 
             # associate a reference to the base C++ object
             try:

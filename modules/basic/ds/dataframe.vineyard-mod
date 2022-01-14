@@ -46,7 +46,7 @@ namespace vineyard {
 
 class DataFrameBaseBuilder;
 
-class DataFrame : public Registered<DataFrame> {
+class [[vineyard]] DataFrame : public Registered<DataFrame> {
  public:
   /**
    * @brief Get the column names.
@@ -91,15 +91,13 @@ class DataFrame : public Registered<DataFrame> {
   const std::shared_ptr<arrow::RecordBatch> AsBatch(bool copy = false) const;
 
  private:
-  __attribute__((annotate("codegen"))) size_t partition_index_row_;
-  __attribute__((annotate("codegen"))) size_t partition_index_column_;
+  [[shared]] size_t partition_index_row_;
+  [[shared]] size_t partition_index_column_;
 
-  __attribute__((annotate("codegen"))) size_t row_batch_index_;
+  [[shared]] size_t row_batch_index_;
 
-  __attribute__((annotate("codegen"))) std::vector<json> columns_;
-  __attribute__((annotate("codegen:{json: ITensor*}")))
-  std::map<json, std::shared_ptr<ITensor>>
-      values_;
+  [[shared]] Tuple<json> columns_;
+  [[shared]] Map<json, std::shared_ptr<ITensor>> values_;
 
   friend class Client;
   friend class DataFrameBaseBuilder;

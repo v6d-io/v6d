@@ -21,10 +21,13 @@ import os
 import textwrap
 
 from .parsing import check_class
+from .parsing import dump_ast
 from .parsing import find_fields
 from .parsing import generate_template_header
 from .parsing import generate_template_type
 from .parsing import parse_codegen_spec
+from .parsing import parse_codegen_spec_from_type
+from .parsing import split_members_and_methods
 
 ###############################################################################
 #
@@ -171,9 +174,9 @@ def codegen_construct(
     class_header, class_name, class_name_elaborated, fields, has_post_ctor, meth=False
 ):
     body = []
-    for kind, field in fields:
+    for field in fields:
+        spec = parse_codegen_spec_from_type(field)
         name = field.spelling
-        spec = parse_codegen_spec(kind)
         if spec.is_meta:
             tpl = construct_meta_tpl
         if spec.is_plain:
@@ -664,9 +667,9 @@ def codegen_base_builder(
         using_alias_statements.append(codegen_using_alia(alia, extent))
 
     # core field assignment
-    for kind, field in fields:
+    for field in fields:
         name = field.spelling
-        spec = parse_codegen_spec(kind)
+        spec = parse_codegen_spec_from_type(field)
         field_type = field.type.spelling
 
         # generate field declarations
@@ -716,12 +719,12 @@ def generate_create_meth(header, name, name_elaborated):
 
 
 def generate_construct(fields, header, name, name_elaborated, has_post_ctor):
-    print('construct: ', name, [(kind, n.spelling) for kind, n in fields])
+    print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_construct(header, name, name_elaborated, fields, has_post_ctor)
 
 
 def generate_construct_meth(fields, header, name, name_elaborated, has_post_ctor):
-    print('construct: ', name, [(kind, n.spelling) for kind, n in fields])
+    print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_construct(
         header, name, name_elaborated, fields, has_post_ctor, meth=True
     )
@@ -730,7 +733,7 @@ def generate_construct_meth(fields, header, name, name_elaborated, has_post_ctor
 def generate_base_builder(
     fields, using_alias_values, header, name, name_elaborated, has_post_ctor
 ):
-    print('base_builder: ', name, [(kind, n.spelling) for kind, n in fields])
+    print('base_builder: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_base_builder(
         header, name, name_elaborated, fields, using_alias_values, has_post_ctor
     )
@@ -760,9 +763,11 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
         code_injections = []
         code_blocks = []
 
-        for _kind, namespaces, node in to_reflect:
+        for kind, namespaces, node in to_reflect:
             fields, using_alias, first_mmeber_offset, has_post_ctor = find_fields(node)
+
             name, ts = check_class(node)
+            members, methods = split_members_and_methods(fields)
 
             # get extend of using A = B
             using_alias_values = [
@@ -782,13 +787,13 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
 
             meth_create = generate_create_meth(header, name, name_elaborated)
             meth_construct = generate_construct_meth(
-                fields, header, name, name_elaborated, has_post_ctor
+                members, header, name, name_elaborated, has_post_ctor
             )
             to_inject = '%s\n%s\n private:\n' % (meth_create, meth_construct)
             code_injections.append((first_mmeber_offset, to_inject))
 
             base_builder = generate_base_builder(
-                fields,
+                members,
                 using_alias_values,
                 header_elaborated,
                 name,
@@ -823,4 +828,4 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
                     fp.write('}  // namespace %s\n' % ns)
                 fp.write('\n\n')
 
-        fp.write('#endif // %s\n' % macro_guard)
+        fp.write('\n#endif // %s\n' % macro_guard)

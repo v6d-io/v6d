@@ -28,6 +28,7 @@ limitations under the License.
 #include "basic/ds/dataframe.vineyard.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/core_types.h"
 #include "client/ds/i_object.h"
 #include "common/util/uuid.h"
 
@@ -40,7 +41,7 @@ namespace vineyard {
 
 class Client;
 
-class __attribute__((annotate("no-vineyard"))) RecordBatchStreamWriter {
+class RecordBatchStreamWriter {
  public:
   const size_t MaximumChunkSize() const { return -1; }
 
@@ -73,7 +74,7 @@ class __attribute__((annotate("no-vineyard"))) RecordBatchStreamWriter {
   friend class Client;
 };
 
-class __attribute__((annotate("no-vineyard"))) RecordBatchStreamReader {
+class RecordBatchStreamReader {
  public:
   Status GetNext(std::shared_ptr<Object>& chunk);
 
@@ -108,20 +109,18 @@ class __attribute__((annotate("no-vineyard"))) RecordBatchStreamReader {
   friend class Client;
 };
 
-class RecordBatchStream : public Registered<RecordBatchStream> {
+class [[vineyard]] RecordBatchStream : public Registered<RecordBatchStream> {
  public:
-  Status OpenReader(Client& client,
-                    std::unique_ptr<RecordBatchStreamReader>& reader);
+  Status OpenReader(Client & client,
+                    std::unique_ptr<RecordBatchStreamReader> & reader);
 
-  Status OpenWriter(Client& client,
-                    std::unique_ptr<RecordBatchStreamWriter>& writer);
+  Status OpenWriter(Client & client,
+                    std::unique_ptr<RecordBatchStreamWriter> & writer);
 
   std::unordered_map<std::string, std::string> GetParams() { return params_; }
 
  private:
-  __attribute__((annotate("codegen")))
-  std::unordered_map<std::string, std::string>
-      params_;
+  [[shared]] UnorderedMap<std::string, std::string> params_;
 
   friend class Client;
   friend class RecordBatchStreamBaseBuilder;
