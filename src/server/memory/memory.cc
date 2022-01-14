@@ -143,8 +143,8 @@ Status BulkStore::PreAllocate(const size_t size) {
   void* pointer = BulkAllocator::Init(size);
 
   if (pointer == nullptr) {
-    return Status::NotEnoughMemory("mmap failed, size = " +
-                                   std::to_string(size));
+    return Status::NotEnoughMemory(
+        "Failed to mmap during pre-allocating, size = " + std::to_string(size));
   }
 
   // insert a special marker for obtaining the whole shared memory range
@@ -187,7 +187,11 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   uint8_t* pointer = nullptr;
   pointer = AllocateMemory(data_size, &fd, &map_size, &offset);
   if (pointer == nullptr) {
-    return Status::NotEnoughMemory("size = " + std::to_string(data_size));
+    return Status::NotEnoughMemory(
+        "Failed to allocate memory of size " + std::to_string(data_size) +
+        ", total available memory size are " +
+        std::to_string(FootprintLimit()) + ", and " +
+        std::to_string(Footprint()) + " are already in use");
   }
   object_id = GenerateBlobID(pointer);
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
@@ -304,7 +308,8 @@ size_t BulkStore::FootprintLimit() const {
 Status BulkStore::MakeArena(size_t const size, int& fd, uintptr_t& base) {
   fd = memory::create_buffer(size);
   if (fd == -1) {
-    return Status::NotEnoughMemory("Failed to allocate a new arena");
+    return Status::NotEnoughMemory("Failed to allocate a new arena of size " +
+                                   std::to_string(size));
   }
   void* space = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   base = reinterpret_cast<uintptr_t>(space);

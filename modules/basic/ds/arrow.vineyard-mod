@@ -31,6 +31,7 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/core_types.h"
+#include "client/ds/stream.h"
 
 namespace vineyard {
 
@@ -304,7 +305,7 @@ class [[vineyard]] SchemaProxy : public Registered<SchemaProxy> {
 
 class RecordBatchBaseBuilder;
 
-class [[vineyard]] RecordBatch : public Registered<RecordBatch> {
+class [[vineyard(streamable)]] RecordBatch : public Registered<RecordBatch> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     for (size_t idx = 0; idx < columns_.size(); ++idx) {

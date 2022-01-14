@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
               << std::endl;
   }
 
-  LOG(INFO) << "Passed double array tests...";
+  LOG(INFO) << "Passed custom vector tests...";
 
   client.Disconnect();
 

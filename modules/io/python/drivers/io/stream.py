@@ -59,10 +59,10 @@ class StreamLauncher(ScriptLauncher):
             :code:`VINEYARD_IPC_SOCKET`.
         """
         self.vineyard_endpoint = vineyard_endpoint
-        super(StreamLauncher, self).__init__(_resolve_ssh_script(deployment=deployment))
+        super().__init__(_resolve_ssh_script(deployment=deployment))
 
     def wait(self, timeout=None):
-        return vineyard.ObjectID(super(StreamLauncher, self).wait(timeout=timeout))
+        return vineyard.ObjectID(super().wait(timeout=timeout))
 
 
 class ParallelStreamLauncher(ScriptLauncher):
@@ -73,9 +73,7 @@ class ParallelStreamLauncher(ScriptLauncher):
     def __init__(self, deployment="ssh"):
         self.deployment = deployment
         self.vineyard_endpoint = None
-        super(ParallelStreamLauncher, self).__init__(
-            _resolve_ssh_script(deployment=deployment)
-        )
+        super().__init__(_resolve_ssh_script(deployment=deployment))
 
         self._streams = []
         self._procs: List[StreamLauncher] = []

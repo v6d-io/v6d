@@ -216,10 +216,11 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 
  private:
   [[shared]] size_t num_slots_minus_one_;
-  prime_hash_policy hash_policy_;
   [[shared]] int8_t max_lookups_;
   [[shared]] size_t num_elements_;
   [[shared]] Array<Entry> entries_;
+
+  prime_hash_policy hash_policy_;
 
   friend class Client;
   friend class HashmapBaseBuilder<K, V, H, E>;

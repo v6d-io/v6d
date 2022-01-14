@@ -21,6 +21,7 @@ import itertools
 import logging
 import os
 from collections import Counter
+from typing import List
 from typing import Optional
 
 DEP_MISSING_ERROR = '''
@@ -38,11 +39,6 @@ try:
 except ImportError:
     raise RuntimeError(DEP_MISSING_ERROR.format(dep='libclang'))
 
-try:
-    import parsec
-except ImportError:
-    raise RuntimeError(DEP_MISSING_ERROR.format(dep='parsec'))
-
 ###############################################################################
 #
 # parse codegen spec:
@@ -51,41 +47,6 @@ except ImportError:
 #   __attribute__((annotate("shared"))): shared member/method
 #   __attribute__((annotate("streamable"))): shared member/method
 #   __attribute__((annotate("distributed"))): shared member/method
-#
-# custom types:
-#
-#   Tuple<T>
-#   Map<Key, Value>
-#
-#   __attribute__((annotate("codegen"))):
-#       meta codegen
-#
-#   __attribute__((annotate("codegen:Type"))):
-#       member type: Type member_
-#
-#   __attribute__((annotate("codegen:Type*"))):
-#       member type: std::shared_ptr<Type> member_
-#
-#   __attribute__((annotate("codegen:[Type]"))):
-#       list member type: std::vector<Type> member_
-#
-#   __attribute__((annotate("codegen:[Type*]"))):
-#       list member type: std::vector<std::shared_ptr<Type>> member_
-#
-#   __attribute__((annotate("codegen:{Type}"))):
-#       set member type: std::set<Type> member_
-#
-#   __attribute__((annotate("codegen:{Type*}"))):
-#       set member type: std::set<std::shared_ptr<Type>> member_
-#
-#   __attribute__((annotate("codegen:{int32_t: Type}"))):
-#       dict member type: std::map<int32_t, Type> member_
-#
-#   __attribute__((annotate("codegen:{int32_t: Type*}"))):
-#       dict member type: std::map<int32_t, std::shared_ptr<Type>> member_
-#
-# FIXME(hetao): parse the codegen spec directly from the type signature of
-# the member variable
 #
 
 
@@ -148,41 +109,6 @@ class CodeGenKind:
         raise RuntimeError('Invalid codegen kind: %s' % self.kind)
 
 
-name_pattern = (
-    parsec.spaces()
-    >> parsec.regex(r'[_a-zA-Z][_a-zA-Z0-9<>, ]*(::[_a-zA-Z][_a-zA-Z0-9<>, ]*)*')
-    << parsec.spaces()
-)
-
-star_pattern = (
-    parsec.spaces() >> parsec.optional(parsec.string('*'), '') << parsec.spaces()
-)
-
-parse_meta = parsec.spaces().parsecmap(lambda _: CodeGenKind('meta'))
-
-parse_plain = (
-    parsec.spaces() >> (name_pattern + star_pattern) << parsec.spaces()
-).parsecmap(lambda value: CodeGenKind('plain', value))
-parse_list = (
-    parsec.string('[') >> (name_pattern + star_pattern) << parsec.string(']')
-).parsecmap(lambda value: CodeGenKind('list', value))
-parse_dlist = (
-    parsec.string('[[') >> (name_pattern + star_pattern) << parsec.string(']]')
-).parsecmap(lambda value: CodeGenKind('dlist', value))
-parse_set = (
-    parsec.string('{') >> (name_pattern + star_pattern) << parsec.string('}')
-).parsecmap(lambda value: CodeGenKind('set', value))
-parse_dict = (
-    parsec.string('{')
-    >> parsec.separated((name_pattern + star_pattern), parsec.string(':'), 2, 2)
-    << parsec.string('}')
-).parsecmap(lambda values: CodeGenKind('dict', tuple(values)))
-
-codegen_spec_parser = (
-    parse_dict ^ parse_set ^ parse_dlist ^ parse_list ^ parse_plain ^ parse_meta
-)
-
-
 def figure_out_namespace(node: Cursor) -> Optional[str]:
     while True:
         parent = node.semantic_parent
@@ -240,16 +166,6 @@ def is_primitive_types(
         # treat template parameter as meta, see `scalar.vineyard-mod`.
         return True
     return typename in ['std::string', 'vineyard::String', 'vineyard::json']
-
-
-def parse_codegen_spec(kind):
-    if kind.startswith('vineyard'):
-        kind = kind[len('vineyard') :]
-    if kind.startswith('codegen'):
-        kind = kind[len('codegen') :]
-    if kind.startswith(':'):
-        kind = kind[1:]
-    return codegen_spec_parser.parse(kind)
 
 
 def parse_codegen_spec_from_type(node):
@@ -508,12 +424,18 @@ def find_fields(definition):
                 first_mmeber_offset = child.extent.start.offset
 
         if child.kind == CursorKind.FIELD_DECL:
-            if check_serialize_attribute(child) == 'shared':
+            attribute = check_serialize_attribute(child)
+            if attribute in ['shared', 'distributed']:
                 fields.append(child)
             continue
 
         if child.kind == CursorKind.CXX_METHOD:
-            if check_serialize_attribute(child) == 'shared':
+            attribute = check_serialize_attribute(child)
+            if attribute == 'distributed':
+                raise ValueError(
+                    'The annotation "[[distributed]]" is not allowed on methods'
+                )
+            if attribute == 'shared':
                 fields.append(child)
             if not has_post_construct and child.spelling == 'PostConstruct':
                 for body in child.get_children():
@@ -529,6 +451,23 @@ def find_fields(definition):
     return fields, using_alias, first_mmeber_offset, has_post_construct
 
 
+def find_distributed_field(definitions: List["CursorKind"]) -> "CursorKind":
+    fields = []
+    for child in definitions:
+        if child.kind == CursorKind.FIELD_DECL:
+            attribute = check_serialize_attribute(child)
+            if attribute in ['distributed']:
+                fields.append(child)
+    if len(fields) == 0:
+        return None
+    if len(fields) == 1:
+        return fields[0]
+    raise ValueError(
+        'A distributed object can only have at most one distributed member '
+        '(annotated with "[[distributed]]"'
+    )
+
+
 def split_members_and_methods(fields):
     members, methods = [], []
     for field in fields:
@@ -537,7 +476,7 @@ def split_members_and_methods(fields):
         elif field.kind == CursorKind.CXX_METHOD:
             methods.append(field)
         else:
-            raise ValueError('Unknown field kind: %s', field)
+            raise ValueError('Unknown field kind: %s' % field)
     return members, methods
 
 
@@ -583,7 +522,7 @@ def parse_compilation_database(build_directory):
 def validate_and_strip_input_file(source):
     if not os.path.isfile(source) or not os.access(source, os.R_OK):
         return None, 'File not exists'
-    with open(source, 'r') as fp:
+    with open(source, 'r', encoding='utf-8') as fp:
         content = fp.read().splitlines(keepends=False)
     # pass(TODO): valid and remove the first line
     content = '\n'.join(content)
