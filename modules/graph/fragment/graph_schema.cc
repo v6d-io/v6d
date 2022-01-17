@@ -19,6 +19,7 @@ limitations under the License.
 #include <cctype>
 #include <fstream>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -497,7 +498,7 @@ void PropertyGraphSchema::DumpToFile(std::string const& path) {
   json_file.close();
 }
 
-bool PropertyGraphSchema::Validate() {
+bool PropertyGraphSchema::Validate(std::string& message) {
   // We only need to check entries that are still valid.
   auto v_entries = vertex_entries();
   auto e_entries = edge_entries();
@@ -518,10 +519,15 @@ bool PropertyGraphSchema::Validate() {
   for (size_t i = 1; i < all_props.size(); ++i) {
     if (all_props[i].name == all_props[i - 1].name &&
         !all_props[i].type->Equals(all_props[i - 1].type)) {
-      LOG(ERROR) << "Properties with the same name should have the same type. "
-                    "Found mismatch of property "
-                 << all_props[i].name << ": " << all_props[i].type->ToString()
-                 << " versus " << all_props[i - 1].type->ToString();
+      std::stringstream ss;
+      ss << "The <property_name, property_type> pair should be unique across "
+            "the Graph";
+      ss << " Found two pairs <" << all_props[i].name << ", "
+         << all_props[i].type->ToString();
+      ss << "> and <" << all_props[i - 1].name << ", "
+         << all_props[i - 1].type->ToString();
+      ss << ">.";
+      message = ss.str();
       return false;
     }
   }

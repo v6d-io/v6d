@@ -1283,9 +1283,9 @@ class ArrowFragment
         entry->AddRelation(rel.first, rel.second);
       }
     }
-
-    if (!schema.Validate()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    std::string message;
+    if (!schema.Validate(message)) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, message);
     }
     // Schema
     new_meta.AddKeyValue("schema", schema.ToJSONString());
@@ -1514,8 +1514,9 @@ class ArrowFragment
                                      table->schema()->field(col_id)->name()});
       }
     }
-    if (!schema.Validate()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    std::string message;
+    if (!schema.Validate(message)) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, message);
     }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
@@ -1965,8 +1966,9 @@ class ArrowFragment
         entry->AddRelation(rel.first, rel.second);
       }
     }
-    if (!schema.Validate()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    std::string message;
+    if (!schema.Validate(message)) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, message);
     }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
@@ -2179,8 +2181,9 @@ class ArrowFragment
         new_meta.AddMember(table_name, old_meta.GetMemberMeta(table_name));
       }
     }
-    if (!schema.Validate()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    std::string message;
+    if (!schema.Validate(message)) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, message);
     }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
@@ -2326,8 +2329,9 @@ class ArrowFragment
     invalidate_label(vertex_labels, "VERTEX", schema.vertex_entries().size());
     invalidate_label(edge_labels, "EDGE", schema.edge_entries().size());
 
-    if (!schema.Validate()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Invalid schema.");
+    std::string message;
+    if (!schema.Validate(message)) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, message);
     }
     new_meta.AddKeyValue("schema", schema.ToJSONString());
 
