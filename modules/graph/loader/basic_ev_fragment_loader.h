@@ -589,8 +589,9 @@ class BasicEVFragmentLoader {
                            table->schema()->field(i)->type());
       }
     }
-    if (!schema.Validate()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, "Schema is invalid.");
+    std::string message;
+    if (!schema.Validate(message)) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, message);
     }
     return {};
   }
