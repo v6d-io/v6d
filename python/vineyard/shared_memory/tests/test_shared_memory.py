@@ -16,8 +16,6 @@
 # limitations under the License.
 #
 
-import pytest
-
 import vineyard
 import vineyard.shared_memory as shared_memory
 

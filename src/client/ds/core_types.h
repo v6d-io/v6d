@@ -40,10 +40,6 @@ namespace vineyard {
     return *this;                               \
   }
 
-// explicit operator base_type() const {
-//   return base_type(this->begin(), this->end());
-// }
-
 #endif
 
 template <typename T>
@@ -70,6 +66,16 @@ class Map final : public std::map<Key, T> {
  public:
   using base_type = std::map<Key, T>;
   DECLARE_DEFAULT_WARPPER(Map)
+
+  using __other_type = std::unordered_map<Key, T>;
+
+  Map(__other_type const& v) : base_type(v.begin(), v.end()) {}
+
+  Map& operator=(const __other_type& v) {
+    this->clear();
+    __other_type::insert(v.begin(), v.end());
+    return *this;
+  }
 };
 
 template <typename Key, typename T>
@@ -77,6 +83,15 @@ class UnorderedMap final : public std::unordered_map<Key, T> {
  public:
   using base_type = std::unordered_map<Key, T>;
   DECLARE_DEFAULT_WARPPER(UnorderedMap)
+
+  using __other_type = std::map<Key, T>;
+
+  UnorderedMap(__other_type const& v) : base_type(v.begin(), v.end()) {}
+  UnorderedMap& operator=(const __other_type& v) {
+    this->clear();
+    __other_type::insert(v.begin(), v.end());
+    return *this;
+  }
 };
 
 #undef DECLARE_DEFAULT_WARPPER

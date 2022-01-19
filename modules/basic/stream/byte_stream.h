@@ -20,41 +20,42 @@ limitations under the License.
 #include <string>
 #include <unordered_map>
 
-#include "basic/stream/byte_stream.vineyard.h"
+#include "arrow/builder.h"
+#include "arrow/status.h"
+
+#include "basic/ds/arrow_utils.h"
 #include "client/client.h"
+#include "client/ds/blob.h"
+#include "client/ds/i_object.h"
+#include "client/ds/stream.h"
+#include "common/util/uuid.h"
 
 namespace vineyard {
 
-/**
- * @brief ByteStreamBuilder is used for initiating byte streams
- *
- */
-class ByteStreamBuilder : public ByteStreamBaseBuilder {
+class ByteStream : public BareRegistered<ByteStream>, public Stream<Blob> {
  public:
-  explicit ByteStreamBuilder(Client& client) : ByteStreamBaseBuilder(client) {}
-
-  void SetParam(std::string const& key, std::string const& value) {
-    this->params_.emplace(key, value);
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<ByteStream>{new ByteStream()});
   }
 
-  void SetParams(
-      const std::unordered_multimap<std::string, std::string>& params) {
-    for (auto const& kv : params) {
-      this->params_.emplace(kv.first, kv.second);
-    }
-  }
+  void SetBufferSizeLimit(size_t limit) { buffer_size_limit_ = limit; }
 
-  void SetParams(const std::unordered_map<std::string, std::string>& params) {
-    for (auto const& kv : params) {
-      this->params_.emplace(kv.first, kv.second);
-    }
-  }
+  Status WriteBytes(const char* ptr, size_t len);
 
-  std::shared_ptr<Object> Seal(Client& client) {
-    auto bstream = ByteStreamBaseBuilder::Seal(client);
-    VINEYARD_CHECK_OK(client.CreateStream(bstream->id()));
-    return std::static_pointer_cast<Object>(bstream);
-  }
+  Status WriteLine(const std::string& line);
+
+  Status FlushBuffer();
+
+  Status ReadLine(std::string& line);
+
+ protected:
+  std::string GetTypeName() const override { return type_name<ByteStream>(); }
+
+  size_t buffer_size_limit_ = 1024 * 1024 * 256;  // 256Mi
+
+  arrow::BufferBuilder builder_;  // for write
+  std::stringstream ss_;          // for read
 };
 
 }  // namespace vineyard

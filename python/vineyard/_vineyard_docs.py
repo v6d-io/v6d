@@ -922,16 +922,16 @@ Parameters:
     pattern: str
         The pattern string that will be matched against the object's typename.
     regex: bool
-        Whether the pattern is a regex expression, otherwise the pattern will be used
-        as wildcard pattern. Default value is False.
+        Whether the pattern is a regex expression, otherwise the pattern will be
+        used as wildcard pattern. Default value is False.
     limit: int
         The limit to list. Default value is 5.
     nobuffer: bool
-        Whether to fill the buffers in returned object metadatas. Default value is
-        False.
+        Whether to fill the buffers in returned object metadatas. Default value
+        is False.
 
 Returns:
-    List[Object]
+    List[ObjectMeta]
 ''',
 )
 
@@ -1065,8 +1065,8 @@ Parameters:
     pattern: str
         The pattern string that will be matched against the object's typename.
     regex: bool
-        Whether the pattern is a regex expression, otherwise the pattern will be used
-        as wildcard pattern. Default value is False.
+        Whether the pattern is a regex expression, otherwise the pattern will be
+        used as wildcard pattern. Default value is False.
     limit: int
         The limit to list. Default value is 5.
 
@@ -1088,16 +1088,16 @@ Parameters:
     pattern: str
         The pattern string that will be matched against the object's typename.
     regex: bool
-        Whether the pattern is a regex expression, otherwise the pattern will be used
-        as wildcard pattern. Default value is False.
+        Whether the pattern is a regex expression, otherwise the pattern will be
+        used as wildcard pattern. Default value is False.
     limit: int
         The limit to list. Default value is 5.
     nobuffer: bool
-        Whether to fill the buffers in returned object metadatas. Default value is
-        False.
+        Whether to fill the buffers in returned object metadatas. Default value
+        is False.
 
 Returns:
-    List[Object]
+    List[ObjectMeta]
 ''',
 )
 
@@ -1246,8 +1246,8 @@ The readonly buffer hebind this blob. The result buffer has type
 add_doc(
     BlobBuilder,
     r'''
-:class:`BlobBuilder` is the builder for creating a finally immutable blob in vineyard
-server.
+:class:`BlobBuilder` is the builder for creating a finally immutable blob in
+vineyard server.
 
 A :class:`BlobBuilder` can only be explicitly created using the
 :meth:`IPCClient.create_blob`.

@@ -267,7 +267,7 @@ Status StreamStore::Stop(ObjectID const stream_id, bool failed) {
       stream->reader_ = boost::none;
     } else if (stream->drained) {
       VINEYARD_SUPPRESS(
-          stream->reader_.get()(Status::StreamFailed(), InvalidObjectID()));
+          stream->reader_.get()(Status::StreamDrained(), InvalidObjectID()));
       stream->reader_ = boost::none;
     } else {
       RETURN_ON_ASSERT(false, "Impossible!");
