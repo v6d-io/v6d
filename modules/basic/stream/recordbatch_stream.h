@@ -21,43 +21,40 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "basic/stream/recordbatch_stream.vineyard.h"
+#include "basic/ds/arrow.h"
+#include "basic/ds/dataframe.h"
 #include "client/client.h"
+#include "client/ds/stream.h"
 
 namespace vineyard {
 
-/**
- * @brief RecordBatchStreamBuilder is used for building streams of dataframes
- *
- */
-class RecordBatchStreamBuilder : public RecordBatchStreamBaseBuilder {
+class RecordBatchStream : public BareRegistered<RecordBatchStream>,
+                          public RecordBatchStreamBase {
  public:
-  explicit RecordBatchStreamBuilder(Client& client)
-      : RecordBatchStreamBaseBuilder(client) {}
-
-  void SetParam(std::string const& key, std::string const& value) {
-    this->params_.emplace(key, value);
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<RecordBatchStream>{new RecordBatchStream()});
   }
 
-  void SetParams(
-      const std::unordered_multimap<std::string, std::string>& params) {
-    for (auto const& kv : params) {
-      this->params_.emplace(kv.first, kv.second);
-    }
-  }
+  Status WriteTable(std::shared_ptr<arrow::Table> const& table);
 
-  void SetParams(const std::unordered_map<std::string, std::string>& params) {
-    for (auto const& kv : params) {
-      this->params_.emplace(kv.first, kv.second);
-    }
-  }
+  Status WriteBatch(std::shared_ptr<arrow::RecordBatch> const& batch);
 
-  std::shared_ptr<Object> Seal(Client& client) {
-    auto bstream = RecordBatchStreamBaseBuilder::Seal(client);
-    VINEYARD_CHECK_OK(client.CreateStream(bstream->id()));
-    return std::static_pointer_cast<Object>(bstream);
+  Status WriteDataframe(std::shared_ptr<DataFrame> const& df);
+
+  Status ReadRecordBatches(
+      std::vector<std::shared_ptr<arrow::RecordBatch>>& batches);
+
+  Status ReadTable(std::shared_ptr<arrow::Table>& table);
+
+  Status ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch);
+
+ protected:
+  std::string GetTypeName() const override {
+    return type_name<RecordBatchStream>();
   }
 };
+
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_STREAM_RECORDBATCH_STREAM_H_

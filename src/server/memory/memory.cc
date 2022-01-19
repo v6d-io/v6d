@@ -315,7 +315,8 @@ Status BulkStoreBase<ID, P>::MakeArena(size_t const size, int& fd,
                                        uintptr_t& base) {
   fd = memory::create_buffer(size);
   if (fd == -1) {
-    return Status::NotEnoughMemory("Failed to allocate a new arena");
+    return Status::NotEnoughMemory("Failed to allocate a new arena of size " +
+                                   std::to_string(size));
   }
   void* space = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   base = reinterpret_cast<uintptr_t>(space);

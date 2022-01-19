@@ -31,66 +31,41 @@ limitations under the License.
 
 namespace vineyard {
 
-Status ByteStreamWriter::GetNext(
-    size_t const size, std::unique_ptr<arrow::MutableBuffer>& buffer) {
-  return client_.GetNextStreamChunk(id_, size, buffer);
-}
-
-Status ByteStreamWriter::Abort() {
-  if (stoped_) {
-    return Status::OK();
-  }
-  stoped_ = true;
-  return client_.StopStream(id_, true);
-}
-
-Status ByteStreamWriter::Finish() {
-  if (stoped_) {
-    return Status::OK();
-  }
-  RETURN_ON_ERROR(flushBuffer());
-  stoped_ = true;
-  return client_.StopStream(id_, false);
-}
-
-Status ByteStreamWriter::WriteBytes(const char* ptr, size_t len) {
-  if (builder_.length() + len > buffer_size_limit_) {
-    RETURN_ON_ERROR(flushBuffer());
-  }
+Status ByteStream::WriteBytes(const char* ptr, size_t len) {
   RETURN_ON_ARROW_ERROR(builder_.Append(ptr, len));
-  return Status::OK();
-}
-
-Status ByteStreamWriter::WriteLine(const std::string& line) {
-  if (builder_.length() + line.length() > buffer_size_limit_) {
-    RETURN_ON_ERROR(flushBuffer());
+  if (builder_.length() + len > buffer_size_limit_) {
+    RETURN_ON_ERROR(FlushBuffer());
   }
-  RETURN_ON_ARROW_ERROR(builder_.Append(line.c_str(), line.size()));
   return Status::OK();
 }
 
-Status ByteStreamWriter::flushBuffer() {
+Status ByteStream::WriteLine(const std::string& line) {
+  RETURN_ON_ARROW_ERROR(builder_.Append(line.c_str(), line.size()));
+  if (builder_.length() + line.length() > buffer_size_limit_) {
+    RETURN_ON_ERROR(FlushBuffer());
+  }
+  return Status::OK();
+}
+
+Status ByteStream::FlushBuffer() {
   std::shared_ptr<arrow::Buffer> buf;
   RETURN_ON_ARROW_ERROR(builder_.Finish(&buf));
-  std::unique_ptr<arrow::MutableBuffer> mb;
+
   if (buf->size() > 0) {
-    RETURN_ON_ERROR(GetNext(buf->size(), mb));
-    memcpy(mb->mutable_data(), buf->data(), buf->size());
+    std::unique_ptr<BlobWriter> buffer;
+    RETURN_ON_ERROR(this->client_->CreateBlob(buf->size(), buffer));
+    memcpy(buffer->data(), buf->data(), buf->size());
   }
   return Status::OK();
 }
 
-Status ByteStreamReader::GetNext(std::unique_ptr<arrow::Buffer>& buffer) {
-  return client_.PullNextStreamChunk(id_, buffer);
-}
-
-Status ByteStreamReader::ReadLine(std::string& line) {
+Status ByteStream::ReadLine(std::string& line) {
   if (std::getline(ss_, line)) {
     return Status::OK();
   }
 
-  std::unique_ptr<arrow::Buffer> buffer;
-  if (!GetNext(buffer).ok()) {
+  std::shared_ptr<Blob> buffer;
+  if (!this->Next(buffer).ok()) {
     return Status::EndOfFile();
   }
   std::string buf_str = std::string(
@@ -98,22 +73,6 @@ Status ByteStreamReader::ReadLine(std::string& line) {
   ss_.str(buf_str);
   std::getline(ss_, line);
 
-  return Status::OK();
-}
-
-Status ByteStream::OpenReader(Client& client,
-                              std::unique_ptr<ByteStreamReader>& reader) {
-  RETURN_ON_ERROR(client.OpenStream(id_, StreamOpenMode::read));
-  reader = std::unique_ptr<ByteStreamReader>(
-      new ByteStreamReader(client, id_, meta_));
-  return Status::OK();
-}
-
-Status ByteStream::OpenWriter(Client& client,
-                              std::unique_ptr<ByteStreamWriter>& writer) {
-  RETURN_ON_ERROR(client.OpenStream(id_, StreamOpenMode::write));
-  writer = std::unique_ptr<ByteStreamWriter>(
-      new ByteStreamWriter(client, id_, meta_));
   return Status::OK();
 }
 

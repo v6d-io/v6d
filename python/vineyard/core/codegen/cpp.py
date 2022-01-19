@@ -22,10 +22,10 @@ import textwrap
 
 from .parsing import check_class
 from .parsing import dump_ast
+from .parsing import find_distributed_field
 from .parsing import find_fields
 from .parsing import generate_template_header
 from .parsing import generate_template_type
-from .parsing import parse_codegen_spec
 from .parsing import parse_codegen_spec_from_type
 from .parsing import split_members_and_methods
 
@@ -703,6 +703,65 @@ def codegen_base_builder(
     return code
 
 
+distributed_getter_tpl = '''
+    size_t size() const {{
+        return this->{field_name}.size();
+    }}
+
+    {field_type}::value_type Get(const size_t index) const {{
+        return this->{field_name}[index];
+    }}
+
+    ObjectMeta GetMeta(const size_t index) const {{
+        return this->{field_name}[index]->meta();
+    }}
+
+    Tuple<{field_type}::value_type> const &GetAll() const {{
+        return this->{field_name};
+    }}
+
+    template <typename T>
+    size_t GetLocals(Tuple<std::shared_ptr<T>> &locals) const {{
+        size_t __local_size = 0;
+        for (auto const &__e: this->{field_name}) {{
+            if (__e->IsLocal()) {{
+                locals.emplace_back(std::dynamic_pointer_cast<T>(__e));
+            }}
+        }}
+        return __local_size;
+    }}
+
+    Tuple<{field_type}::value_type> GetLocals() const {{
+        Tuple<{field_type}::value_type> __locals;
+        for (auto const &__e: this->{field_name}) {{
+            if (__e->IsLocal()) {{
+                __locals.emplace_back(__e);
+            }}
+        }}
+        return __locals;
+    }}
+'''
+
+
+def codegen_distributed_getter(field):
+    field_name = field.spelling
+    field_type = field.type.spelling
+    return distributed_getter_tpl.format(field_name=field_name, field_type=field_type)
+
+
+streamable_tpl = '''
+{class_header}
+using {name}StreamBase = vineyard::Stream<{name_elaborated}>;
+'''
+
+
+def codegen_streamable_builder(class_header, name, name_elaborated):
+    code = streamable_tpl.format(
+        class_header=class_header, name=name, name_elaborated=name_elaborated
+    )
+    return code
+
+
 def generate_inclusion(includes):
     code = []
     for inc in includes:
@@ -718,25 +777,55 @@ def generate_create_meth(header, name, name_elaborated):
     return codegen_create(header, name, name_elaborated, meth=True)
 
 
-def generate_construct(fields, header, name, name_elaborated, has_post_ctor):
-    print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
+def generate_construct(
+    fields, header, name, name_elaborated, has_post_ctor, verbose=False
+):
+    if verbose:
+        print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_construct(header, name, name_elaborated, fields, has_post_ctor)
 
 
-def generate_construct_meth(fields, header, name, name_elaborated, has_post_ctor):
-    print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
+def generate_construct_meth(
+    fields, header, name, name_elaborated, has_post_ctor, verbose=False
+):
+    if verbose:
+        print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_construct(
         header, name, name_elaborated, fields, has_post_ctor, meth=True
     )
 
 
 def generate_base_builder(
-    fields, using_alias_values, header, name, name_elaborated, has_post_ctor
+    fields,
+    using_alias_values,
+    header,
+    name,
+    name_elaborated,
+    has_post_ctor,
+    verbose=False,
 ):
-    print('base_builder: ', name, [(n.type.spelling, n.spelling) for n in fields])
+    if verbose:
+        print('base_builder: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_base_builder(
-        header, name, name_elaborated, fields, using_alias_values, has_post_ctor
+        header,
+        name,
+        name_elaborated,
+        fields,
+        using_alias_values,
+        has_post_ctor,
     )
+
+
+def generate_getter_for_distributed(field, verbose=False):
+    if verbose:
+        print('distributed: ', field.spelling)
+    return codegen_distributed_getter(field)
+
+
+def generate_streamable(header, name, name_elaborated, verbose=False):
+    if verbose:
+        print('streamable: ', name, name_elaborated)
+    return codegen_streamable_builder(header, name, name_elaborated)
 
 
 def codegen(root_directory, content, to_reflect, source, target=None, verbose=False):
@@ -764,10 +853,10 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
         code_blocks = []
 
         for kind, namespaces, node in to_reflect:
-            fields, using_alias, first_mmeber_offset, has_post_ctor = find_fields(node)
+            fields, using_alias, first_member_offset, has_post_ctor = find_fields(node)
 
             name, ts = check_class(node)
-            members, methods = split_members_and_methods(fields)
+            members, _methods = split_members_and_methods(fields)
 
             # get extend of using A = B
             using_alias_values = [
@@ -787,10 +876,22 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
 
             meth_create = generate_create_meth(header, name, name_elaborated)
             meth_construct = generate_construct_meth(
-                members, header, name, name_elaborated, has_post_ctor
+                members, header, name, name_elaborated, has_post_ctor, verbose=verbose
             )
-            to_inject = '%s\n%s\n private:\n' % (meth_create, meth_construct)
-            code_injections.append((first_mmeber_offset, to_inject))
+            inject_blocks = [meth_create, meth_construct]
+
+            mb_distributed = find_distributed_field(members)
+            if mb_distributed is not None:
+                if kind == 'vineyard(streamable)':
+                    raise ValueError(
+                        'A stream cannot be a distributed object: %s' % name
+                    )
+                inject_blocks.append(
+                    generate_getter_for_distributed(mb_distributed, verbose=verbose)
+                )
+
+            to_inject = '%s\n private:\n' % ('\n'.join(inject_blocks))
+            code_injections.append((first_member_offset, to_inject))
 
             base_builder = generate_base_builder(
                 members,
@@ -799,8 +900,15 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
                 name,
                 name_elaborated,
                 has_post_ctor,
+                verbose=verbose,
             )
             code_blocks.append((namespaces, base_builder))
+
+            if kind == 'vineyard(streamable)':
+                streamable = generate_streamable(
+                    header, name, name_elaborated, verbose=verbose
+                )
+                code_blocks.append((namespaces, streamable))
 
         fp.write('#ifndef %s\n' % macro_guard)
         fp.write('#define %s\n\n' % macro_guard)

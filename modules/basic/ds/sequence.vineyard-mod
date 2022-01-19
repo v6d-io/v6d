@@ -105,7 +105,7 @@ class [[vineyard]] Sequence : public Registered<Sequence> {
   /**
    * @brief Get the beginning iterator.
    *
-   * @return The beginning iterrator.
+   * @return The beginning iterator.
    */
   const iterator begin() const { return iterator(this, 0); }
 

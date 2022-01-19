@@ -13,33 +13,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_BASIC_STREAM_DATAFRAME_STREAM_H_
-#define MODULES_BASIC_STREAM_DATAFRAME_STREAM_H_
+#ifndef MODULES_BASIC_STREAM_PARALLEL_STREAM_MOD_H_
+#define MODULES_BASIC_STREAM_PARALLEL_STREAM_MOD_H_
 
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
-#include "basic/ds/dataframe.h"
 #include "client/client.h"
+#include "client/ds/core_types.h"
+#include "client/ds/i_object.h"
 
 namespace vineyard {
 
-class DataframeStream : public BareRegistered<DataframeStream>,
-                        public DataFrameStreamBase {
- public:
-  static std::unique_ptr<Object> Create() __attribute__((used)) {
-    return std::static_pointer_cast<Object>(
-        std::unique_ptr<DataframeStream>{new DataframeStream()});
-  }
+class ParallelStreamBaseBuilder;
 
- protected:
-  std::string GetTypeName() const override {
-    return type_name<DataframeStream>();
-  }
+class [[vineyard]] ParallelStream : public Registered<ParallelStream>,
+                                    GlobalObject {
+ private:
+  [[shared]] size_t size_;
+  [[distributed]] Tuple<std::shared_ptr<Object>> streams_;
+
+  friend class ParallelStreamBaseBuilder;
 };
 
 }  // namespace vineyard
 
-#endif  // MODULES_BASIC_STREAM_DATAFRAME_STREAM_H_
+#endif  // MODULES_BASIC_STREAM_PARALLEL_STREAM_MOD_H_
