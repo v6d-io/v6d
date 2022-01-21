@@ -76,9 +76,9 @@ inline int ArrowDataTypeToInt(const std::shared_ptr<arrow::DataType>& type) {
   } else if (type->Equals(arrow::uint32())) {
     return TypeToInt<uint32_t>::value;
   } else if (type->Equals(arrow::int64())) {
-    return TypeToInt<int32_t>::value;
+    return TypeToInt<int64_t>::value;
   } else if (type->Equals(arrow::uint64())) {
-    return TypeToInt<uint32_t>::value;
+    return TypeToInt<uint64_t>::value;
   } else if (type->Equals(arrow::float32())) {
     return TypeToInt<float>::value;
   } else if (type->Equals(arrow::float64())) {
