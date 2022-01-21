@@ -21,7 +21,6 @@ import json
 import sys
 import traceback
 from typing import Dict
-from urllib.parse import urlparse
 
 import fsspec
 import pyarrow as pa
@@ -30,6 +29,7 @@ from fsspec.core import split_protocol
 from fsspec.utils import read_block
 from vineyard.io.byte import ByteStream
 from vineyard.io.utils import expand_full_path
+from vineyard.io.utils import parse_readable_size
 from vineyard.io.utils import report_error
 from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
@@ -112,7 +112,10 @@ def read_bytes(  # noqa: C901
     '''
 
     stream, writer = None, None
-    chunk_size = 1024 * 1024 * 4
+    if 'chunk_size' in storage_options:
+        chunk_size = parse_readable_size(storage_options['chunk_size'])
+    else:
+        chunk_size = 1024 * 1024 * 64  # default: 64MB
 
     try:
         for index, file_path in enumerate(files):

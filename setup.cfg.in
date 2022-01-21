@@ -8,6 +8,7 @@ max_line_length = 88
 ensure_newline_before_comments = True
 line_length = 88
 force_single_line = True
+group_by_package = True
 skip =
     .git/
     benchmark/

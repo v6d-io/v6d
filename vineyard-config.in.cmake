@@ -25,6 +25,9 @@ set(BUILD_VINEYARD_TESTS_ALL @BUILD_VINEYARD_TESTS_ALL@)
 set(BUILD_VINEYARD_COVERAGE @BUILD_VINEYARD_COVERAGE@)
 set(BUILD_VINEYARD_PROFILING @BUILD_VINEYARD_PROFILING@)
 
+# find pthread
+find_package(Threads)
+
 # for finding dependencies
 include(CMakeFindDependencyMacro)
 
