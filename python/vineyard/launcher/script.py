@@ -43,6 +43,7 @@ class ScriptLauncher(Launcher):
 
         self._err_message = None
         self._exit_code = None
+        self._stopped = False
 
     @property
     def command(self):
@@ -158,6 +159,10 @@ class ScriptLauncher(Launcher):
         self._err_message.extend(stderr.readlines())
 
     def join(self):
+        if self._stopped:
+            return
+        self._stopped = True
+
         self._exit_code = self._proc.wait()
         if self._exit_code != 0:
             self._status = LauncherStatus.FAILED
@@ -169,6 +174,10 @@ class ScriptLauncher(Launcher):
         self._listen_err_thrd.join()
 
     def dispose(self, desired=True):
+        if self._stopped:
+            return
+        self._stopped = True
+
         if self._status == LauncherStatus.RUNNING:
             try:
                 self._proc.terminate()
