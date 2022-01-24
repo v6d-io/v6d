@@ -206,7 +206,7 @@ setup(
     install_requires=[
         'argcomplete',
         'etcd-distro',
-        'numpy',
+        'numpy>=0.18.5',
         'pandas<1.0.0; python_version<"3.6"',
         'pandas<1.2.0; python_version<"3.7"',
         'pandas>=1.0.0; python_version>="3.7"',

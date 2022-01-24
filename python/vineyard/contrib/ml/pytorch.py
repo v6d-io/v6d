@@ -18,9 +18,6 @@
 
 import numpy as np
 
-if hasattr(np.random, '_bit_generator'):
-    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
-
 import torch
 from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader

@@ -21,10 +21,6 @@ import pickle
 import platform
 
 import numpy as np
-
-if hasattr(np.random, '_bit_generator'):
-    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
-
 import pyarrow as pa
 
 if pickle.HIGHEST_PROTOCOL < 5:

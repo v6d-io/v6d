@@ -18,9 +18,6 @@
 
 import numpy as np
 
-if hasattr(np.random, '_bit_generator'):
-    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
-
 import xgboost as xgb
 
 from vineyard.core.resolver import default_resolver_context
