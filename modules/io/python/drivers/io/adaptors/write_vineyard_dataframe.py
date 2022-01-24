@@ -20,6 +20,7 @@ import json
 import sys
 
 import pyarrow as pa
+
 import vineyard
 from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import report_success

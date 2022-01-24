@@ -18,7 +18,13 @@
 
 import json
 
+import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
+
 from vineyard._C import ObjectMeta
 
 from .utils import from_json

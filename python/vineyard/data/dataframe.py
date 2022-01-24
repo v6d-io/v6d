@@ -17,6 +17,10 @@
 #
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
 
 try:
@@ -47,6 +51,7 @@ except ImportError:
     DatetimeArray = None
 
 from pandas.core.internals.managers import BlockManager
+
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta

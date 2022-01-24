@@ -21,6 +21,7 @@ import json
 import sys
 
 import fsspec
+
 import vineyard
 from vineyard.io.byte import ByteStream
 from vineyard.io.utils import expand_full_path

@@ -22,7 +22,12 @@ import time
 from typing import List
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
+
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types

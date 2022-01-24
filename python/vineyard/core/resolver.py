@@ -21,6 +21,7 @@ import inspect
 import threading
 
 from sortedcontainers import SortedDict
+
 from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID

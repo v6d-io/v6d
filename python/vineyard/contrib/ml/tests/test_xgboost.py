@@ -17,9 +17,15 @@
 #
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
 import pyarrow as pa
+
 import pytest
+
 from vineyard.contrib.ml.xgboost import register_xgb_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context

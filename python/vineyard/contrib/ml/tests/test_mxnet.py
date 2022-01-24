@@ -16,11 +16,17 @@
 # limitations under the License.
 #
 
-import mxnet as mx
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
 import pyarrow as pa
+
+import mxnet as mx
 import pytest
+
 from vineyard.contrib.ml.mxnet import register_mxnet_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context

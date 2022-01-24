@@ -22,7 +22,12 @@
 # under the License.
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
+
 from airflow.decorators import task as task_decorator
 from airflow.utils import timezone
 from airflow.utils.state import State

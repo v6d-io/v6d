@@ -22,6 +22,7 @@ import sys
 from urllib.parse import urlparse
 
 import pyarrow as pa
+
 import vineyard
 from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import report_exception

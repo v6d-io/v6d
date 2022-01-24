@@ -17,10 +17,16 @@
 #
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
 import pyarrow as pa
+
 import pytest
 import tensorflow as tf
+
 from vineyard.contrib.ml.tensorflow import register_tf_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context

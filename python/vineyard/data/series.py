@@ -17,6 +17,10 @@
 #
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
 
 try:
@@ -27,6 +31,7 @@ except ImportError:
     from pandas.core.internals.blocks import Block
 
 from pandas.core.internals.managers import SingleBlockManager
+
 from vineyard._C import ObjectMeta
 
 from .utils import from_json

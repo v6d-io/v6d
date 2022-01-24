@@ -17,8 +17,14 @@
 #
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pandas as pd
+
 import pytest
+
 import vineyard
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context

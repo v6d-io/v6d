@@ -27,10 +27,11 @@ from typing import Dict
 from typing import Tuple
 
 import fsspec
-import vineyard
 from fsspec.core import split_protocol
 from fsspec.spec import AbstractFileSystem
 from fsspec.utils import read_block
+
+import vineyard
 from vineyard.io.byte import ByteStream
 from vineyard.io.stream import StreamCollection
 from vineyard.io.utils import BaseStreamExecutor

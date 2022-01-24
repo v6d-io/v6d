@@ -21,7 +21,12 @@ import os
 import shutil
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 import pytest
+
 import vineyard
 import vineyard.io
 

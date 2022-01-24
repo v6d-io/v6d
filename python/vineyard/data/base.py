@@ -19,6 +19,10 @@
 import re
 
 import numpy as np
+
+if hasattr(np.random, '_bit_generator'):
+    setattr(np.random, 'bit_generator', getattr(np.random, '_bit_generator'))
+
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 

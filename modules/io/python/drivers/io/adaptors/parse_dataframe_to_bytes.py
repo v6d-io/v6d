@@ -21,6 +21,7 @@ import sys
 import traceback
 
 import pyarrow as pa
+
 import vineyard
 from vineyard.io.byte import ByteStream
 from vineyard.io.dataframe import DataframeStream
