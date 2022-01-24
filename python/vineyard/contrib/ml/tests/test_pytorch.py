@@ -19,9 +19,11 @@
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+
 import pytest
 import torch
 from torch.utils.data import Dataset
+
 from vineyard.contrib.ml.pytorch import register_torch_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context

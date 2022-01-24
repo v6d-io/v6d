@@ -10,6 +10,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+
 from airflow.decorators import dag
 from airflow.decorators import task
 from airflow.operators.dummy_operator import DummyOperator

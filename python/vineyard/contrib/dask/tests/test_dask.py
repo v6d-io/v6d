@@ -18,11 +18,14 @@
 
 import contextlib
 
-import dask.array as da
-import dask.dataframe as dd
 import numpy as np
 import pandas as pd
+
+import dask.array as da
+import dask.dataframe as dd
+
 import pytest
+
 import vineyard
 from vineyard.contrib.dask.dask import register_dask_types
 from vineyard.core.builder import builder_context

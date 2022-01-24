@@ -21,7 +21,9 @@ import json
 import logging
 
 import numpy as np
+
 import pytest
+
 import vineyard
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context

@@ -18,7 +18,9 @@
 
 import json
 
+import numpy as np
 import pandas as pd
+
 from vineyard._C import ObjectMeta
 
 from .utils import from_json

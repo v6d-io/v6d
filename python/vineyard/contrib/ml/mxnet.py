@@ -16,8 +16,10 @@
 # limitations under the License.
 #
 
-import mxnet as mx
 import numpy as np
+
+import mxnet as mx
+
 from vineyard._C import ObjectMeta
 from vineyard.core.resolver import default_resolver_context
 from vineyard.core.resolver import resolver_context

@@ -22,11 +22,13 @@ import sys
 import traceback
 from typing import Dict
 
-import fsspec
 import pyarrow as pa
-import vineyard
+
+import fsspec
 from fsspec.core import split_protocol
 from fsspec.utils import read_block
+
+import vineyard
 from vineyard.io.byte import ByteStream
 from vineyard.io.utils import expand_full_path
 from vineyard.io.utils import parse_readable_size

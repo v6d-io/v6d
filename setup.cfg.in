@@ -19,6 +19,12 @@ skip =
     thirdparty/
     modules/graph/thirdparty/
     modules/io/build/
+known_airflow = airflow
+known_pandas = numpy,pandas,pyarrow
+known_dask = dask
+known_ray = ray
+known_vineyard = vineyard
+sections = FUTURE,STDLIB,PANDAS,AIRFLOW,DASK,RAY,THIRDPARTY,VINEYARD,FIRSTPARTY,LOCALFOLDER
 
 [flake8]
 max-line-length = 88

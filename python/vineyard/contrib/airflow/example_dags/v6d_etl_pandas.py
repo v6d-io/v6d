@@ -26,6 +26,7 @@
 
 import numpy as np
 import pandas as pd
+
 from airflow.decorators import dag
 from airflow.decorators import task
 from airflow.utils.dates import days_ago

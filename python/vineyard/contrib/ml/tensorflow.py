@@ -17,7 +17,9 @@
 #
 
 import numpy as np
+
 import tensorflow as tf
+
 from vineyard._C import ObjectMeta
 from vineyard.core.resolver import default_resolver_context
 from vineyard.core.resolver import resolver_context

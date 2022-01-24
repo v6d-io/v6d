@@ -26,6 +26,7 @@ from queue import Queue as ConcurrentQueue
 from typing import Dict
 
 import fsspec
+
 import vineyard
 from vineyard._C import ObjectID
 from vineyard.io.byte import ByteStream

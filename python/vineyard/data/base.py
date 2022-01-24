@@ -19,6 +19,7 @@
 import re
 
 import numpy as np
+
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 

@@ -22,10 +22,12 @@ import sys
 from typing import Dict
 from urllib.parse import urlparse
 
+import pyarrow as pa
+
 import fsspec
 import fsspec.implementations.hdfs
-import pyarrow as pa
 import pyorc
+
 import vineyard
 from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import expand_full_path

@@ -24,9 +24,12 @@ import json
 import os
 import sys
 
-import argcomplete
+import numpy as np
 import pandas as pd
+
+import argcomplete
 import treelib
+
 import vineyard
 
 EXAMPLES = """

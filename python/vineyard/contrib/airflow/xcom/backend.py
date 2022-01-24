@@ -20,13 +20,15 @@ import logging
 import os
 from typing import Any
 
-import pendulum
-import vineyard
 from airflow.configuration import conf
 from airflow.models.xcom import BaseXCom
 from airflow.utils.session import provide_session
+
+import pendulum
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import reconstructor
+
+import vineyard
 
 logger = logging.getLogger('vineyard')
 

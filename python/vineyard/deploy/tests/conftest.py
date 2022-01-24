@@ -17,6 +17,7 @@
 #
 
 import pytest
+
 from vineyard.conftest import vineyard_endpoints
 from vineyard.conftest import vineyard_ipc_sockets
 

@@ -47,6 +47,7 @@ except ImportError:
     DatetimeArray = None
 
 from pandas.core.internals.managers import BlockManager
+
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta

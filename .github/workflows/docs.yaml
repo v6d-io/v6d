@@ -74,13 +74,13 @@ jobs:
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=3.0.0-1 libarrow-python-dev=3.0.0-1
+          sudo apt install -y libarrow-dev=3.0.0-1
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install -U Pygments>=2.4.1
           sudo pip3 install libclang parsec pyarrow \
                sphinx==4.0.3 sphinx_rtd_theme docutils==0.16 breathe==4.30.0 nbsphinx gcovr pytest hdfs3 \
-               numpy pandas pickle5 setuptools sortedcontainers psutil
+               numpy>=0.18.5 pandas pickle5 setuptools sortedcontainers psutil
 
           # linters
           sudo pip3 install black isort flake8

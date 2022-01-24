@@ -47,6 +47,7 @@ import os
 from urllib.parse import urlparse
 
 import pytest
+
 import vineyard
 import vineyard.io
 

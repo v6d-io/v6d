@@ -20,6 +20,7 @@ import logging
 import os
 
 import pytest
+
 import vineyard
 
 logging.basicConfig(level=logging.NOTSET)

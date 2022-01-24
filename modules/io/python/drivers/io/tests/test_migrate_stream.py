@@ -20,6 +20,7 @@ import filecmp
 import itertools
 
 import pytest
+
 import vineyard
 import vineyard.io
 

@@ -20,9 +20,11 @@ import base64
 import json
 import sys
 
-import fsspec
 import pyarrow as pa
+
+import fsspec
 import pyorc
+
 import vineyard
 from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import expand_full_path

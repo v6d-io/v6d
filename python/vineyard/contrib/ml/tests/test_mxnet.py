@@ -16,11 +16,13 @@
 # limitations under the License.
 #
 
-import mxnet as mx
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+
+import mxnet as mx
 import pytest
+
 from vineyard.contrib.ml.mxnet import register_mxnet_types
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context

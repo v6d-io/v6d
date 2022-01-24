@@ -17,10 +17,12 @@
 #
 
 import numpy as np
+
 import torch
 from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
+
 from vineyard._C import ObjectMeta
 from vineyard.core.resolver import default_resolver_context
 from vineyard.core.resolver import resolver_context

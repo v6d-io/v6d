@@ -18,7 +18,9 @@
 
 import numpy as np
 import pandas as pd
+
 import pytest
+
 from vineyard.data.pickle import PickledReader
 from vineyard.data.pickle import PickledWriter
 
