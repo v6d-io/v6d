@@ -79,6 +79,7 @@ class ParallelStreamLauncher(ScriptLauncher):
 
         self._streams = []
         self._procs: List[StreamLauncher] = []
+        self._stopped = False
 
     def run(self, *args, **kwargs):
         """Execute a job to read as a vineyard stream or write a vineyard stream to
@@ -114,6 +115,10 @@ class ParallelStreamLauncher(ScriptLauncher):
                 self._procs.append(launcher)
 
     def join(self):
+        if self._stopped:
+            return
+        self._stopped = True
+
         for proc in self._procs:
             proc.join()
 
@@ -140,6 +145,10 @@ class ParallelStreamLauncher(ScriptLauncher):
             )
 
     def dispose(self, desired=True):
+        if self._stopped:
+            return
+        self._stopped = True
+
         for proc in self._procs:
             proc.dispose()
 
