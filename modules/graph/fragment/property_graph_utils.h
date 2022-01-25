@@ -673,6 +673,10 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
       }
     }
   }
+  if (field_num == -1) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                    "No table available for normalizing schemas");
+  }
   if (field_num == 0) {
     RETURN_GS_ERROR(ErrorCode::kInvalidOperationError, "Every schema is empty");
   }
