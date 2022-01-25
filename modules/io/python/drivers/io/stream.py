@@ -205,7 +205,9 @@ def get_executable(name):
     return f"vineyard_{name}"
 
 
-def parse_bytes_to_dataframe(vineyard_socket, byte_stream, *args, **kwargs):
+def parse_bytes_to_dataframe(
+    vineyard_socket, byte_stream, *args, handlers=None, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -215,6 +217,8 @@ def parse_bytes_to_dataframe(vineyard_socket, byte_stream, *args, **kwargs):
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.wait()
 
 
@@ -242,7 +246,9 @@ def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
     return launcher.wait()
 
 
-def read_bytes(path, vineyard_socket, storage_options, read_options, *args, **kwargs):
+def read_bytes(
+    path, vineyard_socket, storage_options, read_options, *args, handlers=None, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -254,10 +260,14 @@ def read_bytes(path, vineyard_socket, storage_options, read_options, *args, **kw
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.wait()
 
 
-def read_orc(path, vineyard_socket, storage_options, read_options, *args, **kwargs):
+def read_orc(
+    path, vineyard_socket, storage_options, read_options, *args, handlers=None, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -269,10 +279,12 @@ def read_orc(path, vineyard_socket, storage_options, read_options, *args, **kwar
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.wait()
 
 
-def read_dataframe(path, vineyard_socket, *args, **kwargs):
+def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
     read_options = kwargs.pop("read_options", {})
@@ -284,16 +296,29 @@ def read_dataframe(path, vineyard_socket, *args, **kwargs):
     )
     if ".orc" in path:
         return read_orc(
-            path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy()
+            path,
+            vineyard_socket,
+            storage_options,
+            read_options,
+            *args,
+            handlers=handlers,
+            **kwargs.copy(),
         )
     else:
         stream = read_bytes(
-            path, vineyard_socket, storage_options, read_options, *args, **kwargs.copy()
+            path,
+            vineyard_socket,
+            storage_options,
+            read_options,
+            *args,
+            handlers=handlers,
+            **kwargs.copy(),
         )
         return parse_bytes_to_dataframe(
             vineyard_socket,
             stream,
             *args,
+            handlers=handlers,
             **kwargs.copy(),
         )
 

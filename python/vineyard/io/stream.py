@@ -33,7 +33,7 @@ logger = logging.getLogger('vineyard')
 
 
 @registerize
-def read(path, *args, **kwargs):
+def read(path, *args, handlers=None, **kwargs):
     '''Open a path and read it as a single stream.
 
     Parameters
@@ -59,7 +59,11 @@ def read(path, *args, **kwargs):
             try:
                 proc_kwargs = kwargs.copy()
                 r = reader(
-                    path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs
+                    path,
+                    proc_kwargs.pop('vineyard_ipc_socket'),
+                    *args,
+                    handlers=handlers,
+                    **proc_kwargs
                 )
                 if r is not None:
                     return r
@@ -74,7 +78,7 @@ def read(path, *args, **kwargs):
 
 
 @registerize
-def write(path, stream, *args, **kwargs):
+def write(path, stream, *args, handlers=None, **kwargs):
     '''Write the stream to a given path.
 
     Parameters
@@ -104,6 +108,7 @@ def write(path, stream, *args, **kwargs):
                     stream,
                     proc_kwargs.pop('vineyard_ipc_socket'),
                     *args,
+                    handlers=handlers,
                     **proc_kwargs
                 )
             except Exception:
@@ -119,7 +124,7 @@ def write(path, stream, *args, **kwargs):
         raise ValueError("No IO driver registered for %s" % path)
 
 
-def open(path, *args, mode='r', **kwargs):
+def open(path, *args, mode='r', handlers=None, **kwargs):
     '''Open a path as a reader or writer, depends on the parameter :code:`mode`.
     If :code:`mode` is :code:`r`, it will open a stream for read, and open a
     stream for write when :code:`mode` is :code:`w`.
@@ -134,6 +139,10 @@ def open(path, *args, mode='r', **kwargs):
         Vineyard's IPC socket location.
     vineyard_endpoint: str
         Vineyard's RPC socket address.
+    handlers:
+        A dict that will be filled with a `handler` that contains the process handler
+        of the underlying read/write process that can be `join`ed to capture the
+        possible errors during the I/O proceeding.
 
     See Also
     --------
@@ -145,10 +154,10 @@ def open(path, *args, mode='r', **kwargs):
         path = 'file://' + path
 
     if mode == 'r':
-        return read(path, *args, **kwargs)
+        return read(path, *args, handlers=handlers, **kwargs)
 
     if mode == 'w':
-        return write(path, *args, **kwargs)
+        return write(path, *args, handlers=handlers, **kwargs)
 
     raise RuntimeError('Opening %s with mode %s is not supported' % (path, mode))
 
