@@ -21,6 +21,7 @@ option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" ON)
 option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" ON)
 option(USE_ASAN "Using address sanitizer to check memory accessing" OFF)
+option(USE_INCLUDE_WHAT_YOU_USE "Simply the intra-module dependencies with iwyu" OFF)
 option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of metadata" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
@@ -75,6 +76,15 @@ else()
         COMMAND echo "ccache not found."
     )
 endif(ccache_EXECUTABLE)
+
+if(USE_INCLUDE_WHAT_YOU_USE AND NOT CMAKE_CXX_INCLUDE_WHAT_YOU_USE)
+    find_program(iwyu_EXECUTABLE include-what-you-use)
+    if(iwyu_EXECUTABLE)
+        set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_EXECUTABLE})
+    else()
+        message(WARNING "Failed to locate iwyu, please specify with -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE instead")
+    endif()
+endif()
 
 set(DEFAUTL_ALLOCATOR "dlmalloc")
 set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE

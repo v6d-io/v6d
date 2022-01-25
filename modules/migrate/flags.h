@@ -18,8 +18,6 @@ limitations under the License.
 
 #include <gflags/gflags.h>
 
-#include "migrate/flags.h"
-
 namespace vineyard {
 
 DECLARE_uint64(migration_port);
