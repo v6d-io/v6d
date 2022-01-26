@@ -22,9 +22,6 @@ limitations under the License.
 #include <vector>
 
 #include "flat_hash_map/flat_hash_map.hpp"
-#if defined(EXPERIMENTAL_ON) || defined(NETWORKX)
-#include "folly/dynamic.h"
-#endif
 
 #include "graph/fragment/property_graph_types.h"
 
@@ -101,56 +98,6 @@ class HashPartitioner<std::string> {
  private:
   fid_t fnum_;
 };
-
-#if defined(EXPERIMENTAL_ON) || defined(NETWORKX)
-template <>
-class HashPartitioner<folly::dynamic> {
- public:
-  using oid_t = folly::dynamic;
-
-  HashPartitioner() : fnum_(1) {}
-
-  void Init(fid_t fnum) { fnum_ = fnum; }
-
-  inline fid_t GetPartitionId(const oid_t& oid) const {
-    size_t hash_value;
-    if (oid.isArray() && oid.size() == 2) {
-      // the oid is (label, id) format, just use id to get hash value.
-      hash_value = hash(oid[1]);
-    } else {
-      hash_value = hash(oid);
-    }
-    return static_cast<fid_t>(static_cast<uint64_t>(hash_value) % fnum_);
-  }
-
-  HashPartitioner& operator=(const HashPartitioner& other) {
-    if (this == &other) {
-      return *this;
-    }
-    fnum_ = other.fnum_;
-    return *this;
-  }
-
-  HashPartitioner& operator=(HashPartitioner&& other) {
-    if (this == &other) {
-      return *this;
-    }
-    fnum_ = other.fnum_;
-    return *this;
-  }
-
- private:
-  size_t hash(const oid_t& oid) const {
-    if (oid.isString()) {
-      return std::hash<std::string>()(oid.getString());
-    } else {
-      return std::hash<folly::dynamic>()(oid);
-    }
-  }
-
-  fid_t fnum_;
-};
-#endif  // NETWORKX || EXPERIMENTAL_ON
 
 template <typename OID_T>
 class SegmentedPartitioner {

@@ -20,10 +20,6 @@ limitations under the License.
 #include <type_traits>
 #include <typeinfo>
 
-#if defined(EXPERIMENTAL_ON) || defined(NETWORKX)
-#include "folly/dynamic.h"
-#endif
-
 namespace vineyard {
 
 // TODO(lxj): unify the types conversion or place them together? e.g.
@@ -89,13 +85,6 @@ template <>
 struct TypeName<uint64_t> {
   static const char* Get() { return "uint64_t"; }
 };
-
-#if defined(EXPERIMENTAL_ON) || defined(NETWORKX)
-template <>
-struct TypeName<folly::dynamic> {
-  static const char* Get() { return "folly::dynamic"; }
-};
-#endif
 
 template <>
 struct TypeName<grape::EmptyType> {
