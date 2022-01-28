@@ -91,7 +91,7 @@ static std::string generate_global_object(
   std::vector<std::string> members;
 
   std::string crds;
-  for (auto const& kv : json::iterator_wrapper(object)) {
+  for (auto const& kv : object.items()) {
     if (kv.value().is_object() && !kv.value().empty()) {
       crds += generate_local_object(instances, kv.value());
       members.emplace_back(
@@ -125,7 +125,7 @@ static std::string generate_global_object(
 
 void Kubectl::ApplyObject(const json& meta, const json& object) {
   std::map<InstanceID, std::string> instances;
-  for (auto const& kv : json::iterator_wrapper(meta)) {
+  for (auto const& kv : meta.items()) {
     InstanceID instance_id;
     std::stringstream(kv.key().substr(1)) >> instance_id;
     instances.emplace(instance_id,

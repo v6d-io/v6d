@@ -226,7 +226,7 @@ Status ReadGetDataReply(const json& root, json& content) {
 Status ReadGetDataReply(const json& root,
                         std::unordered_map<ObjectID, json>& content) {
   CHECK_IPC_ERROR(root, "get_data_reply");
-  for (auto const& kv : json::iterator_wrapper(root["content"])) {
+  for (auto const& kv : root["content"].items()) {
     content.emplace(ObjectIDFromString(kv.key()), kv.value());
   }
   return Status::OK();

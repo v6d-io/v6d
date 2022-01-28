@@ -190,7 +190,7 @@ static std::string object_id_from_signature(const json& tree,
   }
   auto iter = tree.find("signatures");
   if (iter != tree.end()) {
-    for (auto const& item : json::iterator_wrapper(*iter)) {
+    for (auto const& item : iter->items()) {
       auto val = item.value().find(signature);
       if (val != item.value().end()) {
         return val->get_ref<std::string const&>();
@@ -290,7 +290,7 @@ Status GetData(const json& tree, const std::string& instance_name,
   if (!status.ok()) {
     return status;
   }
-  for (auto const& item : json::iterator_wrapper(tmp_tree)) {
+  for (auto const& item : tmp_tree.items()) {
     if (!item.value().is_string()) {
       sub_tree[item.key()] = item.value();
       continue;
@@ -357,7 +357,7 @@ Status ListData(const json& tree, const std::string& instance_name,
 
   size_t found = 0;
 
-  for (auto const& item : json::iterator_wrapper(tree["data"])) {
+  for (auto const& item : tree["data"].items()) {
     if (found >= limit) {
       break;
     }
@@ -386,7 +386,7 @@ Status ListAllData(const json& tree, std::vector<ObjectID>& objects) {
     return Status::OK();
   }
 
-  for (auto const& item : json::iterator_wrapper(tree["data"])) {
+  for (auto const& item : tree["data"].items()) {
     if (!item.value().is_object() || item.value().empty()) {
       LOG(INFO) << "Object meta shouldn't be empty";
       return Status::MetaTreeInvalid();
@@ -476,7 +476,7 @@ static void generate_put_ops(const json& meta, std::string const& instance_name,
   }
   std::string key_prefix = "/data" + std::string("/") + name + "/";
   std::string signature_key_prefix = "/signatures/";
-  for (auto const& item : json::iterator_wrapper(diff)) {
+  for (auto const& item : diff.items()) {
     bool global_object = diff.value("global", false);
     if (item.value().is_object() && !item.value().empty()) {
       std::string sub_type, sub_name;
@@ -536,7 +536,7 @@ static void generate_persist_ops(json& diff, const std::string& instance_name,
   bool global_object = diff.value("global", false);
 
   // process members
-  for (auto& item : json::iterator_wrapper(diff)) {
+  for (auto& item : diff.items()) {
     if (item.value().is_object() &&
         !item.value().empty()) /* build link, and recursively generate */ {
       std::string sub_type, sub_name;
@@ -653,7 +653,7 @@ static Status diff_data_meta_tree(const json& meta,
   // recompute instance_id: check if it refers remote objects.
   instance_id = sub_tree["instance_id"].get<InstanceID>();
 
-  for (auto const& item : json::iterator_wrapper(sub_tree)) {
+  for (auto const& item : sub_tree.items()) {
     // don't diff on id, typename and instance_id and don't update them, that
     // means, we can only update member's meta, cannot update the whole member
     // itself.
@@ -801,7 +801,7 @@ static void persist_meta_tree(const json& sub_tree, json& diff) {
   // NB: we don't need to track which objects are persist since the json
   // cached in the server will be updated by the background watcher task.
   if (sub_tree["transient"].get<bool>()) {
-    for (auto const& item : json::iterator_wrapper(sub_tree)) {
+    for (auto const& item : sub_tree.items()) {
       if (item.value().is_object() && !item.value().empty()) {
         const json& sub_sub_tree = item.value();
         // recursive
@@ -879,7 +879,7 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
       "The 'transient' should a plain bool value");
   RETURN_ON_ASSERT(extra_metadata.is_object(),
                    "The 'extra_metadata' must be a dict");
-  for (auto const& item : json::iterator_wrapper(extra_metadata)) {
+  for (auto const& item : extra_metadata.items()) {
     RETURN_ON_ASSERT(
         item.value().is_primitive(),
         "The value of items in 'extra_metadata' must be primitives");
@@ -895,7 +895,7 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
   transient = tmp_tree["transient"].get<bool>();
   std::string key_prefix =
       "/data" + std::string("/") + ObjectIDToString(target) + "/";
-  for (auto const& item : json::iterator_wrapper(tmp_tree)) {
+  for (auto const& item : tmp_tree.items()) {
     ops.emplace_back(
         IMetaService::op_t::Put(key_prefix + item.key(), item.value()));
   }
@@ -918,7 +918,7 @@ Status IfPersist(const json& tree, const ObjectID id, bool& persist) {
 Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
                         std::vector<ObjectID>& objects) {
   if (tree.contains("data")) {
-    for (auto const& item : json::iterator_wrapper(tree["data"])) {
+    for (auto const& item : tree["data"].items()) {
       if (item.value().is_object() && !item.value().empty()) {
         if (item.value().contains("instance_id") &&
             item.value()["instance_id"].get<InstanceID>() == instance_id) {
@@ -968,7 +968,7 @@ bool HasEquivalent(const json& tree, ObjectID const object_id,
     return false;
   }
   bool found = false;
-  for (auto const& item : json::iterator_wrapper(*signatures)) {
+  for (auto const& item : signatures->items()) {
     auto val = item.value().find(signature);
     if (val != item.value().end()) {
       std::string const& val_ref = val->get_ref<std::string const&>();

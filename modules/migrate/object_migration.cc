@@ -207,7 +207,7 @@ Status MigrationServer::Start(Client& client) {
 ObjectID MigrationServer::createObject(json& meta_tree, Client& client,
                                        bool persist) {
   InstanceID instance_id = meta_tree["instance_id"].get<InstanceID>();
-  for (auto& item : json::iterator_wrapper(meta_tree)) {
+  for (auto& item : meta_tree.items()) {
     if (item.value().is_object() && !item.value().empty()) {
       ObjectID id =
           ObjectIDFromString(item.value()["id"].get_ref<std::string const&>());
