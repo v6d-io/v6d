@@ -19,7 +19,9 @@ limitations under the License.
 #include <functional>
 #include <string>
 
-#if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
+// See also: https://stackoverflow.com/a/55926503/5080177
+//
+#if defined(__GNUC__) && !defined(__llvm__) && !defined(__INTEL_COMPILER)
 #define __VINEYARD_GCC_VERSION \
   (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #endif
