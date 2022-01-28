@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 
   json instance_map_tree = json::parse(FLAGS_instance_map);
   std::unordered_map<InstanceID, InstanceID> instance_map;
-  for (auto const& instance : json::iterator_wrapper(instance_map_tree)) {
+  for (auto const& instance : instance_map_tree.items()) {
     InstanceID src_instance = ObjectIDFromString(instance.key());
     InstanceID dst_instance =
         instance_map_tree[instance.key()].get<InstanceID>();

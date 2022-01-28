@@ -77,7 +77,7 @@ void get_container(json const& tree, std::string const& path,
   // FIXME: parse the JSON array directly
   json body = json::parse(tree[path].get_ref<std::string const&>());
   using T = typename Container::value_type;
-  for (auto const& item : json::iterator_wrapper(body)) {
+  for (auto const& item : body.items()) {
     container.insert(std::end(container), item.value().get<T>());
   }
 }

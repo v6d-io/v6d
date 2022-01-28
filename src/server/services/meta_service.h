@@ -372,7 +372,7 @@ class IMetaService {
                 static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
 #endif
             if (tree.contains("instances") && !tree["instances"].is_null()) {
-              for (auto& instance : json::iterator_wrapper(tree["instances"])) {
+              for (auto& instance : tree["instances"].items()) {
                 auto id = static_cast<InstanceID>(
                     std::stoul(instance.key().substr(1)));
                 instances_list_.emplace(id);

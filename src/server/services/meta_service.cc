@@ -329,7 +329,7 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
       IncRef(server_ptr_->instance_name(), kv.key,
              value.get_ref<std::string const&>(), from_remote);
     } else if (value.is_object() && !value.empty()) {
-      for (auto const& item : json::iterator_wrapper(value)) {
+      for (auto const& item : value.items()) {
         if (item.value().is_string()) {
           IncRef(server_ptr_->instance_name(), kv.key,
                  item.value().get_ref<std::string const&>(), from_remote);

@@ -367,7 +367,7 @@ void bind_client(py::module& mod) {
             for (auto const& kv : meta) {
               std::unordered_map<std::string, py::object> element;
               if (!kv.second.empty()) {
-                for (auto const& elem : json::iterator_wrapper(kv.second)) {
+                for (auto const& elem : kv.second.items()) {
                   element[elem.key()] = detail::from_json(elem.value());
                 }
               }

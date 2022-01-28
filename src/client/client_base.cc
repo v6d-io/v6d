@@ -482,7 +482,7 @@ Status ClientBase::ClusterInfo(std::map<InstanceID, json>& meta) {
   RETURN_ON_ERROR(doRead(message_in));
   json cluster_meta;
   RETURN_ON_ERROR(ReadClusterMetaReply(message_in, cluster_meta));
-  for (auto& kv : json::iterator_wrapper(cluster_meta)) {
+  for (auto& kv : cluster_meta.items()) {
     InstanceID instance_id = UnspecifiedInstanceID();
     std::stringstream(kv.key().substr(1)) >> instance_id;
     meta.emplace(instance_id, kv.value());
@@ -513,7 +513,7 @@ Status ClientBase::Instances(std::vector<InstanceID>& instances) {
   RETURN_ON_ERROR(doRead(message_in));
   json cluster_meta;
   RETURN_ON_ERROR(ReadClusterMetaReply(message_in, cluster_meta));
-  for (auto& kv : json::iterator_wrapper(cluster_meta)) {
+  for (auto& kv : cluster_meta.items()) {
     InstanceID instance_id;
     std::stringstream(kv.key().substr(1)) >> instance_id;
     instances.emplace_back(instance_id);
