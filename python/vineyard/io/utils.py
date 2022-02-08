@@ -82,12 +82,12 @@ def parse_readable_size(size):
             cs = c.upper()
             break
     ratios = {
-        'K': 2 ** 10,
-        'M': 2 ** 20,
-        'G': 2 ** 30,
-        'T': 2 ** 40,
-        'P': 2 ** 50,
-        'E': 2 ** 60,
+        'K': 2**10,
+        'M': 2**20,
+        'G': 2**30,
+        'T': 2**40,
+        'P': 2**50,
+        'E': 2**60,
     }
     return int(ns) * ratios.get(cs, 1)
 

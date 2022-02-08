@@ -185,7 +185,7 @@ class OSSFileSystem(AbstractFileSystem):
     root_marker = ""
     connect_timeout = 60
     retries = 5
-    default_block_size = 5 * 2 ** 20
+    default_block_size = 5 * 2**20
     protocol = ["oss"]
     _extra_tokenize_attributes = ("default_block_size",)
 
@@ -285,7 +285,7 @@ class OSSFileSystem(AbstractFileSystem):
                 return caller(*args, **kwargs)
             except RETRYABLE_ERRORS as e:
                 logger.debug("Retryable error: %s", e)
-                time.sleep(min(1.7 ** i * 0.1, 15))
+                time.sleep(min(1.7**i * 0.1, 15))
             except Exception as e:
                 logger.exception("Nonretryable error: %s", e)
                 raise
@@ -516,11 +516,11 @@ class OSSFileSystem(AbstractFileSystem):
         stream.close()
         return data
 
-    def pipe_file(self, path, data, chunksize=50 * 2 ** 20, **kwargs):
+    def pipe_file(self, path, data, chunksize=50 * 2**20, **kwargs):
         bucket_name, key, _ = self.split_path(path)
         size = len(data)
         # Max size of PutObject is 5GB
-        if size < min(5 * 2 ** 30, 2 * chunksize):
+        if size < min(5 * 2**30, 2 * chunksize):
             return self.call_oss(bucket_name, "put_object", key, data, **kwargs)
         else:
             mpu = self.call_oss(bucket_name, "init_multipart_upload", key, **kwargs)
@@ -543,14 +543,14 @@ class OSSFileSystem(AbstractFileSystem):
             )
         self.invalidate_cache(path)
 
-    def put_file(self, lpath, rpath, chunksize=50 * 2 ** 20, **kwargs):
+    def put_file(self, lpath, rpath, chunksize=50 * 2**20, **kwargs):
         bucket_name, key, _ = self.split_path(rpath)
         if os.path.isdir(lpath) and key:
             # don't make remote "directory"
             return
         size = os.path.getsize(lpath)
         with open(lpath, "rb") as f0:
-            if size < min(5 * 2 ** 30, 2 * chunksize):
+            if size < min(5 * 2**30, 2 * chunksize):
                 return self.call_oss(bucket_name, "put_object", key, f0, **kwargs)
             else:
                 mpu = self.call_oss(bucket_name, "init_multipart_upload", key, **kwargs)
@@ -1087,14 +1087,14 @@ class OSSFileSystem(AbstractFileSystem):
             raise ValueError("Copy failed (%r -> %r): %s" % (path1, path2, e)) from e
         self.invalidate_cache(path2)
 
-    def _copy_managed(self, path1, path2, size, block=5 * 2 ** 30, **kwargs):
+    def _copy_managed(self, path1, path2, size, block=5 * 2**30, **kwargs):
         """Copy file between locations on OSS as multi-part
 
         block: int
             The size of the pieces, must be larger than 5MB and at most 5GB.
             Smaller blocks mean more calls, only useful for testing.
         """
-        if block < 5 * 2 ** 20 or block > 5 * 2 ** 30:
+        if block < 5 * 2**20 or block > 5 * 2**30:
             raise ValueError("Copy block size must be 5MB<=block<=5GB")
         buc1, key1, ver1 = self.split_path(path1)
         buc2, key2, ver2 = self.split_path(path2)
@@ -1122,7 +1122,7 @@ class OSSFileSystem(AbstractFileSystem):
         self.invalidate_cache(path2)
 
     def cp_file(self, path1, path2, **kwargs):
-        gb5 = 5 * 2 ** 30
+        gb5 = 5 * 2**30
         path1 = self._strip_protocol(path1)
         size = self._info(path1)["size"]
         if size <= gb5:
@@ -1245,15 +1245,15 @@ class OSSFileSystem(AbstractFileSystem):
 
 class OSSFile(AbstractBufferedFile):
     retries = 5
-    part_min = 5 * 2 ** 20
-    part_max = 5 * 2 ** 30
+    part_min = 5 * 2**20
+    part_max = 5 * 2**30
 
     def __init__(
         self,
         oss,
         path,
         mode="rb",
-        block_size=5 * 2 ** 20,
+        block_size=5 * 2**20,
         version_id=None,
         fill_cache=True,
         autocommit=True,
@@ -1271,7 +1271,7 @@ class OSSFile(AbstractBufferedFile):
         self.fill_cache = fill_cache
 
         if "r" not in mode:
-            if block_size < 5 * 2 ** 20:
+            if block_size < 5 * 2**20:
                 raise ValueError("Block size must be >=5MB")
         else:
             if version_id and oss.version_aware:
@@ -1295,7 +1295,7 @@ class OSSFile(AbstractBufferedFile):
 
         if "a" in mode and oss.exists(path):
             loc = oss.info(path)["size"]
-            if loc < 5 * 2 ** 20:
+            if loc < 5 * 2**20:
                 # existing file too small for multi-upload: download
                 self.write(self.fs.cat(self.path))
             else:

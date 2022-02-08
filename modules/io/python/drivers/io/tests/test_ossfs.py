@@ -121,7 +121,7 @@ def oss():
 
 
 def test_simple(oss):
-    data = b"a" * (10 * 2 ** 20)
+    data = b"a" * (10 * 2**20)
 
     with oss.open(a, "wb") as f:
         f.write(data)
@@ -134,7 +134,7 @@ def test_simple(oss):
 
 @pytest.mark.parametrize("default_cache_type", ["none", "bytes", "mmap"])
 def test_default_cache_type(oss, default_cache_type):
-    data = b"a" * (10 * 2 ** 20)
+    data = b"a" * (10 * 2**20)
     oss = OSSFileSystem(
         anon=False,
         key=key,
@@ -643,16 +643,16 @@ def test_copy(oss):
 
 
 def test_copy_managed(oss):
-    data = b"abc" * 12 * 2 ** 20
+    data = b"abc" * 12 * 2**20
     fn = test_bucket_name + "/test/biggerfile"
     with oss.open(fn, "wb") as f:
         f.write(data)
-    oss._copy_managed(fn, fn + "2", size=len(data), block=5 * 2 ** 20)
+    oss._copy_managed(fn, fn + "2", size=len(data), block=5 * 2**20)
     assert oss.cat(fn) == oss.cat(fn + "2")
     with pytest.raises(ValueError):
-        oss._copy_managed(fn, fn + "3", size=len(data), block=4 * 2 ** 20)
+        oss._copy_managed(fn, fn + "3", size=len(data), block=4 * 2**20)
     with pytest.raises(ValueError):
-        oss._copy_managed(fn, fn + "3", size=len(data), block=6 * 2 ** 30)
+        oss._copy_managed(fn, fn + "3", size=len(data), block=6 * 2**30)
 
 
 @pytest.mark.parametrize("recursive", [True, False])
@@ -681,7 +681,7 @@ def test_get_put(oss, tmpdir):
 
 def test_get_put_big(oss, tmpdir):
     test_file = str(tmpdir.join("test"))
-    data = b"1234567890A" * 2 ** 20
+    data = b"1234567890A" * 2**20
     open(test_file, "wb").write(data)
 
     oss.put(test_file, test_bucket_name + "/bigfile")
@@ -690,7 +690,7 @@ def test_get_put_big(oss, tmpdir):
     assert open(test_file, "rb").read() == data
 
 
-@pytest.mark.parametrize("size", [2 ** 10, 2 ** 20, 10 * 2 ** 20])
+@pytest.mark.parametrize("size", [2**10, 2**20, 10 * 2**20])
 def test_pipe_cat_big(oss, size):
     data = b"1234567890A" * size
     oss.pipe(test_bucket_name + "/bigfile", data)
@@ -823,7 +823,7 @@ def test_write_small(oss):
 
 def test_write_large(oss):
     """flush() chunks buffer when processing large singular payload"""
-    mb = 2 ** 20
+    mb = 2**20
     payload_size = int(2.5 * 5 * mb)
     payload = b"0" * payload_size
 
@@ -836,7 +836,7 @@ def test_write_large(oss):
 
 def test_write_limit(oss):
     """flush() respects part_max when processing large singular payload"""
-    mb = 2 ** 20
+    mb = 2**20
     block_size = 15 * mb
     payload_size = 44 * mb
     payload = b"0" * payload_size
@@ -851,21 +851,21 @@ def test_write_limit(oss):
 
 def test_write_blocks(oss):
     with oss.open(test_bucket_name + "/temp", "wb") as f:
-        f.write(b"a" * 2 * 2 ** 20)
-        assert f.buffer.tell() == 2 * 2 ** 20
+        f.write(b"a" * 2 * 2**20)
+        assert f.buffer.tell() == 2 * 2**20
         assert not (f.parts)
         f.flush()
-        assert f.buffer.tell() == 2 * 2 ** 20
+        assert f.buffer.tell() == 2 * 2**20
         assert not (f.parts)
-        f.write(b"a" * 2 * 2 ** 20)
-        f.write(b"a" * 2 * 2 ** 20)
+        f.write(b"a" * 2 * 2**20)
+        f.write(b"a" * 2 * 2**20)
         assert f.mpu
         assert f.parts
-    assert oss.info(test_bucket_name + "/temp")["Size"] == 6 * 2 ** 20
-    with oss.open(test_bucket_name + "/temp", "wb", block_size=10 * 2 ** 20) as f:
-        f.write(b"a" * 15 * 2 ** 20)
+    assert oss.info(test_bucket_name + "/temp")["Size"] == 6 * 2**20
+    with oss.open(test_bucket_name + "/temp", "wb", block_size=10 * 2**20) as f:
+        f.write(b"a" * 15 * 2**20)
         assert f.buffer.tell() == 0
-    assert oss.info(test_bucket_name + "/temp")["Size"] == 15 * 2 ** 20
+    assert oss.info(test_bucket_name + "/temp")["Size"] == 15 * 2**20
 
 
 def test_readline(oss):
@@ -889,7 +889,7 @@ def test_readline_empty(oss):
 
 
 def test_readline_blocksize(oss):
-    data = b"ab\n" + b"a" * (10 * 2 ** 20) + b"\nab"
+    data = b"ab\n" + b"a" * (10 * 2**20) + b"\nab"
     with oss.open(a, "wb") as f:
         f.write(data)
     with oss.open(a, "rb") as f:
@@ -898,7 +898,7 @@ def test_readline_blocksize(oss):
         assert result == expected
 
         result = f.readline()
-        expected = b"a" * (10 * 2 ** 20) + b"\n"
+        expected = b"a" * (10 * 2**20) + b"\n"
         assert result == expected
 
         result = f.readline()
@@ -960,12 +960,12 @@ def test_writable(oss):
 
 def test_merge(oss):
     with oss.open(a, "wb") as f:
-        f.write(b"a" * 10 * 2 ** 20)
+        f.write(b"a" * 10 * 2**20)
 
     with oss.open(b, "wb") as f:
-        f.write(b"a" * 10 * 2 ** 20)
+        f.write(b"a" * 10 * 2**20)
     oss.merge(test_bucket_name + "/joined", [a, b])
-    assert oss.info(test_bucket_name + "/joined")["Size"] == 2 * 10 * 2 ** 20
+    assert oss.info(test_bucket_name + "/joined")["Size"] == 2 * 10 * 2**20
 
 
 def test_append(oss):
@@ -978,24 +978,24 @@ def test_append(oss):
     assert oss.cat(test_bucket_name + "/nested/file1") == data + b"extra"
 
     with oss.open(a, "wb") as f:
-        f.write(b"a" * 10 * 2 ** 20)
+        f.write(b"a" * 10 * 2**20)
     with oss.open(a, "ab") as f:
         pass  # append, no write, big file
-    assert oss.cat(a) == b"a" * 10 * 2 ** 20
+    assert oss.cat(a) == b"a" * 10 * 2**20
 
     with oss.open(a, "ab") as f:
         assert f.parts is None
         f._initiate_upload()
         assert f.parts
-        assert f.tell() == 10 * 2 ** 20
+        assert f.tell() == 10 * 2**20
         f.write(b"extra")  # append, small write, big file
-    assert oss.cat(a) == b"a" * 10 * 2 ** 20 + b"extra"
+    assert oss.cat(a) == b"a" * 10 * 2**20 + b"extra"
 
     with oss.open(a, "ab") as f:
-        assert f.tell() == 10 * 2 ** 20 + 5
-        f.write(b"b" * 10 * 2 ** 20)  # append, big write, big file
-        assert f.tell() == 20 * 2 ** 20 + 5
-    assert oss.cat(a) == b"a" * 10 * 2 ** 20 + b"extra" + b"b" * 10 * 2 ** 20
+        assert f.tell() == 10 * 2**20 + 5
+        f.write(b"b" * 10 * 2**20)  # append, big write, big file
+        assert f.tell() == 20 * 2**20 + 5
+    assert oss.cat(a) == b"a" * 10 * 2**20 + b"extra" + b"b" * 10 * 2**20
 
 
 def test_bigger_than_block_read(oss):
@@ -1058,14 +1058,14 @@ def test_upload_with_ossfs_prefix(oss):
     path = f"oss://{test_bucket_name}/test/prefix/key"
 
     with oss.open(path, "wb") as f:
-        f.write(b"a" * (10 * 2 ** 20))
+        f.write(b"a" * (10 * 2**20))
 
     with oss.open(path, "ab") as f:
-        f.write(b"b" * (10 * 2 ** 20))
+        f.write(b"b" * (10 * 2**20))
 
 
 def test_multipart_upload_blocksize(oss):
-    blocksize = 5 * (2 ** 20)
+    blocksize = 5 * (2**20)
     expected_parts = 3
 
     ossf = oss.open(a, "wb", block_size=blocksize)
@@ -1260,28 +1260,28 @@ def test_change_defaults_only_subsequent(oss):
         OSSFileSystem.cachable = False  # don't reuse instances with same pars
 
         fs_default = OSSFileSystem(key=key, secret=secret, endpoint=endpoint)
-        assert fs_default.default_block_size == 5 * (1024 ** 2)
+        assert fs_default.default_block_size == 5 * (1024**2)
 
         fs_overridden = OSSFileSystem(
-            default_block_size=64 * (1024 ** 2),
+            default_block_size=64 * (1024**2),
             key=key,
             secret=secret,
             endpoint=endpoint,
         )
-        assert fs_overridden.default_block_size == 64 * (1024 ** 2)
+        assert fs_overridden.default_block_size == 64 * (1024**2)
 
         # Suppose I want all subsequent file systems to have a block size of 1 GiB
         # instead of 5 MiB:
-        OSSFileSystem.default_block_size = 1024 ** 3
+        OSSFileSystem.default_block_size = 1024**3
 
         fs_big = OSSFileSystem(key=key, secret=secret, endpoint=endpoint)
-        assert fs_big.default_block_size == 1024 ** 3
+        assert fs_big.default_block_size == 1024**3
 
         # Test the other file systems created to see if their block sizes changed
-        assert fs_overridden.default_block_size == 64 * (1024 ** 2)
-        assert fs_default.default_block_size == 5 * (1024 ** 2)
+        assert fs_overridden.default_block_size == 64 * (1024**2)
+        assert fs_default.default_block_size == 5 * (1024**2)
     finally:
-        OSSFileSystem.default_block_size = 5 * (1024 ** 2)
+        OSSFileSystem.default_block_size = 5 * (1024**2)
         OSSFileSystem.cachable = True
 
 
