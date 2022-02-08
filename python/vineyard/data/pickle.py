@@ -91,7 +91,7 @@ class PickledReader:
 
     def read(self, block_size):
         if block_size == -1:
-            block_size = 2 ** 30
+            block_size = 2**30
         if self._chunk_index >= len(self._buffers):  # may read again when it reach EOF.
             return b''
         if self._chunk_offset == len(self._buffers[self._chunk_index]):
