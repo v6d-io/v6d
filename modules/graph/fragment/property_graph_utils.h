@@ -682,7 +682,7 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
   }
   // Perform type lossen.
   // Date32 -> int32
-  // Timestamp(s) -> int64 -> double -> utf8   binary (not supported)
+  // Timestamp -> int64 -> double -> utf8   binary (not supported)
 
   // Timestamp value are stored as as number of seconds, milliseconds,
   // microseconds or nanoseconds since UNIX epoch.
@@ -803,28 +803,21 @@ inline boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
       std::vector<std::shared_ptr<arrow::Array>> chunks;
       for (int64_t j = 0; j < col->num_chunks(); ++j) {
         auto array = col->chunk(j);
-        if (from_type->Equals(arrow::utf8()) &&
-            to_type->Equals(arrow::large_utf8())) {
+        if (arrow::compute::CanCast(*from_type, *to_type)) {
+          BOOST_LEAF_AUTO(new_array, GeneralCast(array, to_type));
+          chunks.push_back(new_array);
+        } else if (from_type->Equals(arrow::utf8()) &&
+                   to_type->Equals(arrow::large_utf8())) {
           BOOST_LEAF_AUTO(new_array, CastStringToBigString(array, to_type));
           chunks.push_back(new_array);
         } else if (from_type->Equals(arrow::null())) {
           BOOST_LEAF_AUTO(new_array, CastNullToOthers(array, to_type));
-          chunks.push_back(new_array);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 1000000
-        } else {
-          BOOST_LEAF_AUTO(new_array, GeneralCast(array, to_type));
-          chunks.push_back(new_array);
-        }
-#else
-        } else if (arrow::compute::CanCast(*from_type, *to_type)) {
-          BOOST_LEAF_AUTO(new_array, GeneralCast(array, to_type));
           chunks.push_back(new_array);
         } else {
           RETURN_GS_ERROR(ErrorCode::kDataTypeError,
                           "Unsupported cast: To type: " + to_type->ToString() +
                               "; Origin type: " + from_type->ToString());
         }
-#endif
         VLOG(10) << "Cast " << from_type->ToString() << " To "
                  << to_type->ToString();
       }
