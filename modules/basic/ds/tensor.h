@@ -28,6 +28,7 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "basic/ds/array.h"
 #include "basic/ds/tensor.vineyard.h"

@@ -25,6 +25,7 @@ limitations under the License.
 #include <utility>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "client/ds/i_object.h"
 #include "common/memory/payload.h"

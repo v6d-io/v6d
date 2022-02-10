@@ -16,6 +16,8 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
+#include "arrow/ipc/api.h"
 
 namespace vineyard {
 

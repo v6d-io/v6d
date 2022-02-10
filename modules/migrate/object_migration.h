@@ -26,6 +26,7 @@ limitations under the License.
 #include "boost/asio.hpp"
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "glog/logging.h"
 
 #include "client/client.h"

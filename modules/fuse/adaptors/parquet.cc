@@ -21,6 +21,7 @@ limitations under the License.
 #include <memory>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "parquet/api/reader.h"
 #include "parquet/api/schema.h"
 #include "parquet/api/writer.h"

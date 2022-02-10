@@ -20,8 +20,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/util/config.h"
-#include "arrow/util/key_value_metadata.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "basic/ds/arrow.h"
 #include "client/client.h"

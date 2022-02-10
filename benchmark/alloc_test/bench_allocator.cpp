@@ -43,6 +43,7 @@
 #include <thread>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "glog/logging.h"
 
 #include "basic/ds/array.h"

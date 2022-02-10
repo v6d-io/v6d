@@ -24,6 +24,7 @@ limitations under the License.
 #include <unordered_map>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "basic/ds/array.h"
 #include "basic/ds/pair.h"

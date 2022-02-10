@@ -25,6 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "client/client_base.h"
 #include "client/ds/i_object.h"

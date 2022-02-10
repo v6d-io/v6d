@@ -25,6 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "boost/leaf.hpp"
 
 #include "grape/communication/sync_comm.h"

@@ -19,6 +19,7 @@ limitations under the License.
 #include <thread>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "basic/ds/scalar.h"
 #include "client/client.h"

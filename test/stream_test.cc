@@ -19,6 +19,7 @@ limitations under the License.
 #include <unordered_map>
 
 #include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/dataframe_stream.h"
