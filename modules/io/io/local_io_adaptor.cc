@@ -29,6 +29,7 @@ limitations under the License.
 #include "arrow/csv/api.h"
 #include "arrow/filesystem/api.h"
 #include "arrow/io/api.h"
+#include "arrow/util/uri.h"
 
 #include "boost/algorithm/string.hpp"
 #include "glog/logging.h"
