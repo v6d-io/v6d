@@ -368,7 +368,7 @@ class StringCollection {
     for (auto& block : blocks_) {
       block.SendTo(worker_id, comm, tag);
     }
-    grape::SendVector(addr_lists_, worker_id, comm, tag);
+    grape::sync_comm::Send(addr_lists_, worker_id, tag, comm);
   }
 
   void RecvFrom(int worker_id, MPI_Comm comm, int tag = 0) {
@@ -379,13 +379,14 @@ class StringCollection {
     for (auto& block : blocks_) {
       block.RecvFrom(worker_id, comm, tag);
     }
-    grape::RecvVector(addr_lists_, worker_id, comm, tag);
+    grape::sync_comm::Recv(addr_lists_, worker_id, tag, comm);
   }
 
  private:
   struct rs_addr {
-    rs_addr() : addr(), length() {}
+    rs_addr() = default;
     rs_addr(uint64_t a, size_t l) : addr(a), length(l) {}
+    ~rs_addr() = default;
     uint64_t addr;
     size_t length;
   };

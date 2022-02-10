@@ -66,7 +66,8 @@ inline void SendArrowBuffer(const std::shared_ptr<arrow::Buffer>& buffer,
   int64_t size = buffer->size();
   MPI_Send(&size, 1, MPI_INT64_T, dst_worker_id, 0, comm);
   if (size != 0) {
-    grape::send_buffer<uint8_t>(buffer->data(), size, dst_worker_id, comm, 0);
+    grape::sync_comm::send_buffer<uint8_t>(buffer->data(), size, dst_worker_id,
+                                           0, comm);
   }
 }
 
@@ -82,8 +83,8 @@ inline void RecvArrowBuffer(std::shared_ptr<arrow::Buffer>& buffer,
       buffer, arrow::AllocateBuffer(size, arrow::default_memory_pool()));
 #endif
   if (size != 0) {
-    grape::recv_buffer<uint8_t>(buffer->mutable_data(), size, src_worker_id,
-                                comm, 0);
+    grape::sync_comm::recv_buffer<uint8_t>(buffer->mutable_data(), size,
+                                           src_worker_id, 0, comm);
   }
 }
 
@@ -504,7 +505,7 @@ void ShuffleTableByOffsetLists(
     while (msg_out.Get(item)) {
       int dst_worker_id = comm_spec.FragToWorker(item.first);
       auto& arc = item.second;
-      grape::SendArchive(arc, dst_worker_id, comm_spec.comm());
+      grape::sync_comm::Send(arc, dst_worker_id, 0, comm_spec.comm());
     }
   });
 
@@ -514,7 +515,7 @@ void ShuffleTableByOffsetLists(
       MPI_Status status;
       MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, comm_spec.comm(), &status);
       grape::OutArchive arc;
-      grape::RecvArchive(arc, status.MPI_SOURCE, comm_spec.comm());
+      grape::sync_comm::Recv(arc, status.MPI_SOURCE, 0, comm_spec.comm());
       msg_in.Put(std::move(arc));
       --remaining_msg_num;
     }
@@ -583,14 +584,14 @@ void ShuffleTableByOffsetLists(
         SerializeSelectedRows(arc, record_batches_out[rb_i],
                               offset_lists[rb_i][dst_fid]);
       }
-      grape::SendArchive(arc, dst_worker_id, comm_spec.comm());
+      grape::sync_comm::Send(arc, dst_worker_id, 0, comm_spec.comm());
     }
   });
   std::thread recv_thread([&]() {
     for (int i = 1; i != worker_num; ++i) {
       int src_worker_id = (worker_id + i) % worker_num;
       grape::OutArchive arc;
-      grape::RecvArchive(arc, src_worker_id, comm_spec.comm());
+      grape::sync_comm::Recv(arc, src_worker_id, 0, comm_spec.comm());
       size_t rb_num;
       arc >> rb_num;
       for (size_t rb_i = 0; rb_i != rb_num; ++rb_i) {
