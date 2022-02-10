@@ -20,8 +20,8 @@ limitations under the License.
 #include <limits>
 #include <memory>
 
-#include "arrow/io/memory.h"
-#include "arrow/util/logging.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "parquet/api/reader.h"
 #include "parquet/api/schema.h"
 #include "parquet/api/writer.h"

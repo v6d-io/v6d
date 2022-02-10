@@ -20,8 +20,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/builder.h"
-#include "arrow/status.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"

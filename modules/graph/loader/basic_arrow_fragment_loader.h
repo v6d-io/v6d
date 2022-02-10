@@ -24,7 +24,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/util/config.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "client/client.h"
 #include "grape/worker/comm_spec.h"
 #include "io/io/i_io_adaptor.h"

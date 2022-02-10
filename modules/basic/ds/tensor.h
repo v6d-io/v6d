@@ -27,9 +27,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/record_batch.h"
-#include "arrow/table.h"
-#include "arrow/tensor.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "basic/ds/array.h"
 #include "basic/ds/tensor.vineyard.h"

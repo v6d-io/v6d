@@ -15,12 +15,9 @@ limitations under the License.
 
 #include "basic/ds/arrow_utils.h"
 
-#include "arrow/io/memory.h"
-#include "arrow/ipc/options.h"
-#include "arrow/ipc/reader.h"
-#include "arrow/ipc/writer.h"
-#include "arrow/record_batch.h"
-#include "arrow/util/config.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
+#include "arrow/ipc/api.h"
 
 namespace vineyard {
 

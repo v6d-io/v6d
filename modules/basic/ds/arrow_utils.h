@@ -21,18 +21,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/array.h"
-#include "arrow/array/builder_binary.h"
-#include "arrow/array/builder_nested.h"
-#include "arrow/array/builder_primitive.h"
-#include "arrow/buffer.h"
-#include "arrow/io/memory.h"
-#include "arrow/ipc/reader.h"
-#include "arrow/ipc/writer.h"
-#include "arrow/table.h"
-#include "arrow/table_builder.h"
-#include "arrow/type.h"
-#include "arrow/util/config.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "glog/logging.h"
 
 #include "basic/ds/types.h"

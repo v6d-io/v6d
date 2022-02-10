@@ -42,8 +42,8 @@
 #include <string>
 #include <thread>
 
-#include "arrow/status.h"
-#include "arrow/util/io_util.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 #include "glog/logging.h"
 
 #include "basic/ds/array.h"

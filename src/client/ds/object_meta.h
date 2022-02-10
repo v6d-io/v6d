@@ -24,7 +24,8 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "arrow/buffer.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "common/util/boost.h"
 #include "common/util/json.h"

@@ -25,12 +25,10 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "arrow/api.h"
 #include "arrow/csv/api.h"
 #include "arrow/filesystem/api.h"
 #include "arrow/io/api.h"
-#include "arrow/result.h"
-#include "arrow/status.h"
-#include "arrow/util/config.h"
 #include "arrow/util/uri.h"
 
 #include "boost/algorithm/string.hpp"

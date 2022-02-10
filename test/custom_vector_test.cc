@@ -17,9 +17,8 @@ limitations under the License.
 #include <string>
 #include <thread>
 
-#include "arrow/status.h"
-#include "arrow/util/io_util.h"
-#include "arrow/util/logging.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "client/client.h"
 #include "client/ds/blob.h"

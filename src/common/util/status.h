@@ -32,7 +32,9 @@
 #include <string>
 #include <utility>
 
-#include "arrow/status.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
+
 #include "common/util/boost.h"
 #include "common/util/json.h"
 #include "common/util/macros.h"

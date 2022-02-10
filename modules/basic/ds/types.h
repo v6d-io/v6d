@@ -21,7 +21,8 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
-#include "arrow/type.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "common/util/json.h"
 

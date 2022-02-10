@@ -22,6 +22,10 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "arrow/api.h"
+#include "arrow/io/api.h"
+#include "arrow/ipc/api.h"
+
 #include "basic/ds/arrow.vineyard.h"
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
