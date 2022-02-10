@@ -24,7 +24,7 @@ limitations under the License.
 #include <unordered_map>
 #include <utility>
 
-#include "arrow/buffer.h"
+#include "arrow/api.h"
 
 #include "client/ds/i_object.h"
 #include "common/memory/payload.h"

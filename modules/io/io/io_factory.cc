@@ -27,8 +27,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/status.h"
-#include "arrow/util/uri.h"
+#include "arrow/api.h"
 #include "boost/algorithm/string.hpp"
 #include "glog/logging.h"
 

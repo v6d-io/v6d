@@ -17,9 +17,7 @@ limitations under the License.
 #include <string>
 #include <thread>
 
-#include "arrow/status.h"
-#include "arrow/util/io_util.h"
-#include "arrow/util/logging.h"
+#include "arrow/api.h"
 
 #include "basic/ds/dataframe.h"
 #include "basic/ds/tensor.h"

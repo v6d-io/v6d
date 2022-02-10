@@ -25,13 +25,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/buffer.h"
-#include "arrow/io/memory.h"
-#include "arrow/ipc/dictionary.h"
-#include "arrow/ipc/reader.h"
-#include "arrow/ipc/writer.h"
-#include "arrow/type.h"
-#include "arrow/util/string_view.h"
+#include "arrow/api.h"
 #include "boost/leaf.hpp"
 
 #include "grape/communication/sync_comm.h"

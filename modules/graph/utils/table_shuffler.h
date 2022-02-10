@@ -24,9 +24,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/buffer.h"
-#include "arrow/table.h"
-#include "arrow/util/config.h"
+#include "arrow/api.h"
 #include "boost/leaf.hpp"
 
 #include "grape/communication/sync_comm.h"

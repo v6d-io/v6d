@@ -22,10 +22,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/io/memory.h"
-#include "arrow/ipc/reader.h"
-#include "arrow/ipc/writer.h"
-#include "arrow/util/config.h"
+#include "arrow/api.h"
 
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"

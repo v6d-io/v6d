@@ -24,7 +24,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/buffer.h"
+#include "arrow/api.h"
 
 #include "client/client_base.h"
 #include "client/ds/i_object.h"
@@ -182,30 +182,6 @@ class Client : public ClientBase {
   Status CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob);
 
   /**
-   * @brief Get a blob from vineyard server. When obtaining blobs from vineyard
-   * server, the memory address in the server process will be mmapped to the
-   * client's process to share the memory.
-   *
-   * @param id Object id for the blob to get.
-   * @param blob: The result immutable blob will be set in `blob`. Note that
-   * blob is special, since it can be get as immutable object before sealing.
-   *
-   * @return Status that indicates whether the create action has succeeded.
-   */
-  Status GetBlob(const ObjectID id, Payload& object);
-
-  /**
-   * @brief Get a set of blobs from vineyard server. See also `GetBlob`.
-   *
-   * @param ids Object ids for the blobs to get.
-   * @param blobs: The result immutable blobs will be added to `blobs`.
-   *
-   * @return Status that indicates whether the create action has succeeded.
-   */
-  Status GetBlobs(const std::vector<ObjectID>& ids,
-                  std::vector<std::shared_ptr<Blob>>& blobs);
-
-  /**
    * @brief Allocate a chunk of given size in vineyard for a stream. When the
    * request cannot be statisfied immediately, e.g., vineyard doesn't have
    * enough memory or the specified has accumulated too many chunks, the request
@@ -219,6 +195,9 @@ class Client : public ClientBase {
    */
   Status GetNextStreamChunk(ObjectID const id, size_t const size,
                             std::unique_ptr<arrow::MutableBuffer>& blob);
+
+  // bring the overloadings in parent class to current scope.
+  using ClientBase::PullNextStreamChunk;
 
   /**
    * @brief Pull a chunk from a stream. When there's no more chunk available in
@@ -380,8 +359,27 @@ class Client : public ClientBase {
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
                       std::shared_ptr<arrow::MutableBuffer>& buffer);
 
+  /**
+   * @brief Get a blob from vineyard server. When obtaining blobs from vineyard
+   * server, the memory address in the server process will be mmapped to the
+   * client's process to share the memory.
+   *
+   * @param id Object id for the blob to get.
+   * @param buffer: The result immutable blob will be set in `blob`. Note that
+   * blob is special, since it can be get as immutable object before sealing.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
   Status GetBuffer(const ObjectID id, std::shared_ptr<arrow::Buffer>& buffer);
 
+  /**
+   * @brief Get a set of blobs from vineyard server. See also `GetBuffer`.
+   *
+   * @param ids Object ids for the blobs to get.
+   * @param buffers: The result immutable blobs will be added to `buffers`.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
   Status GetBuffers(
       const std::set<ObjectID>& ids,
       std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers);

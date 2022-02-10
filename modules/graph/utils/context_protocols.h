@@ -19,7 +19,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "arrow/type.h"
+#include "arrow/api.h"
 
 namespace vineyard {
 

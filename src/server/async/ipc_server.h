@@ -19,9 +19,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "arrow/status.h"
-#include "arrow/util/io_util.h"
-#include "arrow/util/logging.h"
+#include "arrow/api.h"
 
 #include "boost/asio.hpp"
 

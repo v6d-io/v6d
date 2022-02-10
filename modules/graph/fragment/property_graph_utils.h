@@ -24,10 +24,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/builder.h"
-#include "arrow/compute/api.h"
-#include "arrow/util/config.h"
-#include "arrow/util/key_value_metadata.h"
+#include "arrow/api.h"
 #include "boost/leaf.hpp"
 
 #include "grape/serialization/in_archive.h"

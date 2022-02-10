@@ -20,7 +20,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "arrow/util/config.h"
+#include "arrow/api.h"
 #include "glog/logging.h"
 
 #include "client/client.h"
