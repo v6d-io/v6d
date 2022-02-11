@@ -717,7 +717,7 @@ add_custom_target(vineyard_cpplint
         VERBATIM)
 
 add_custom_target(python_install
-        COMMAND python3 setup.py install
+        COMMAND python3 -m pip install --user .
         COMMAND python3 setup_airflow.py install
         COMMAND python3 setup_ml.py install
         COMMAND python3 setup_dask.py install

@@ -16,8 +16,9 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_UUID_H_
 #define SRC_COMMON_UTIL_UUID_H_
 
-#if defined(__x86_64__)
-#include <immintrin.h>
+// The __VPP macro is used to avoid including <x86intrin.h> when parsing
+// and coding with libclang/clang tooling.
+#if defined(__x86_64__) && !defined(__VPP)
 #include <x86intrin.h>
 #endif
 
@@ -67,7 +68,7 @@ inline ObjectID GenerateBlobID(const uintptr_t ptr) {
 constexpr inline ObjectID EmptyBlobID() { return 0x8000000000000000UL; }
 
 inline ObjectID GenerateObjectID() {
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(__VPP)
   return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
 #else
   return 0x7FFFFFFFFFFFFFFFUL &
