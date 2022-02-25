@@ -818,8 +818,6 @@ inline boost::leaf::result<std::shared_ptr<arrow::Table>> CastTableToSchema(
                           "Unsupported cast: To type: " + to_type->ToString() +
                               "; Origin type: " + from_type->ToString());
         }
-        VLOG(10) << "Cast " << from_type->ToString() << " To "
-                 << to_type->ToString();
       }
       auto chunk_array = std::make_shared<arrow::ChunkedArray>(chunks, to_type);
       new_columns.push_back(chunk_array);

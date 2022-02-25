@@ -21,8 +21,6 @@ import concurrent.futures
 import json
 import os
 import traceback
-from curses.ascii import isalnum
-from curses.ascii import isdigit
 
 from vineyard._C import ObjectID
 
