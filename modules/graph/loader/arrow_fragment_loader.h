@@ -80,7 +80,6 @@ inline Status ReadRecordBatchesFromVineyardStream(
     {
       std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
       for (auto const& batch : read_batches) {
-        VLOG(10) << "recordbatch from stream: " << batch->schema()->ToString();
         batches.emplace_back(batch);
       }
     }
