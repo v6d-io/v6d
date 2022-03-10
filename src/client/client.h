@@ -120,6 +120,29 @@ class Client : public ClientBase {
   Status Connect();
 
   /**
+   * @brief Create a new session in vineyardd.
+   *
+   * @param session_name the name of the session.
+   *
+   * @return Status that indicates whether the creation of has succeeded.
+   */
+  Status NewSession(std::string const& session_name, std::string& ipc_socket);
+
+  /**
+   * @brief Create a new anonymous session in vineyardd and connect to it .
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   *
+   * @return Status that indicates whether the connection of has succeeded.
+   */
+  Status Open(std::string const& ipc_socket);
+
+  /**
+   * @brief Close the session that the client is connecting to.
+   */
+  void CloseSession();
+
+  /**
    * @brief Connect to vineyardd using the given UNIX domain socket
    * `ipc_socket`.
    *
@@ -274,11 +297,13 @@ class Client : public ClientBase {
    */
   template <typename T>
   Status GetObject(const ObjectID id, std::shared_ptr<T>& object) {
-    object = std::dynamic_pointer_cast<T>(GetObject(id));
-    if (object == nullptr) {
+    std::shared_ptr<Object> _object;
+    RETURN_ON_ERROR(GetObject(id, _object));
+    if (_object == nullptr) {
       return Status::ObjectNotExists("object not exists: " +
                                      ObjectIDToString(id));
     } else {
+      object = std::dynamic_pointer_cast<T>(_object);
       return Status::OK();
     }
   }

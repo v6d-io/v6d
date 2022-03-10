@@ -60,20 +60,16 @@ bool DeferredReq::TestThenCall(const json& meta) const {
   return false;
 }
 
-VineyardServer::VineyardServer(const json& spec)
+VineyardServer::VineyardServer(const json& spec, const SessionId& session_id,
+                               std::shared_ptr<VineyardRunner> runner,
+                               asio::io_context& context,
+                               asio::io_context& meta_context)
     : spec_(spec),
-      concurrency_(std::thread::hardware_concurrency()),
-      context_(concurrency_),
-      meta_context_(),
-#if BOOST_VERSION >= 106600
-      guard_(asio::make_work_guard(context_)),
-      meta_guard_(asio::make_work_guard(meta_context_)),
-#else
-      guard_(new boost::asio::io_service::work(context_)),
-      meta_guard_(new boost::asio::io_service::work(context_)),
-#endif
-      ready_(0) {
-}
+      session_id_(session_id),
+      context_(context),
+      meta_context_(meta_context),
+      runner_(runner),
+      ready_(0) {}
 
 Status VineyardServer::Serve() {
   stopped_.store(false);
@@ -99,26 +95,10 @@ Status VineyardServer::Serve() {
   BulkReady();
 
   serve_status_ = Status::OK();
-
-  for (unsigned int idx = 0; idx < concurrency_; ++idx) {
-#if BOOST_VERSION >= 106600
-    workers_.emplace_back(
-        boost::bind(&boost::asio::io_context::run, &context_));
-#else
-    workers_.emplace_back(
-        boost::bind(&boost::asio::io_service::run, &context_));
-#endif
-  }
-  meta_context_.run();
-
   return serve_status_;
 }
 
 Status VineyardServer::Finalize() { return Status::OK(); }
-
-std::shared_ptr<VineyardServer> VineyardServer::Get(const json& spec) {
-  return std::shared_ptr<VineyardServer>(new VineyardServer(spec));
-}
 
 void VineyardServer::Ready() {}
 
@@ -985,8 +965,6 @@ void VineyardServer::Stop() {
     return;
   }
 
-  guard_.reset();
-  meta_guard_.reset();
   if (this->ipc_server_ptr_) {
     this->ipc_server_ptr_->Stop();
   }
@@ -997,21 +975,10 @@ void VineyardServer::Stop() {
     this->meta_service_ptr_->Stop();
   }
 
-  // stop the asio context at last
-  context_.stop();
-  meta_context_.stop();
-
   // cleanup
   this->ipc_server_ptr_.reset(nullptr);
   this->rpc_server_ptr_.reset(nullptr);
   this->meta_service_ptr_.reset();
-
-  // wait for the IO context finishes.
-  for (auto& worker : workers_) {
-    if (worker.joinable()) {
-      worker.join();
-    }
-  }
 }
 
 bool VineyardServer::Running() const { return !stopped_.load(); }

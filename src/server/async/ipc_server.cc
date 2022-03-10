@@ -110,9 +110,12 @@ void IPCServer::doAccept() {
       connections_.emplace(next_conn_id_, conn);
       ++next_conn_id_;
     }
-    // don't continue when the iocontext being cancelled.
-    if (!stopped_.load()) {
-      doAccept();
+    // don't continue when the iocontext being cancelled or the session is going
+    // to close.
+    if (!ec || ec != boost::system::errc::operation_canceled) {
+      if (!stopped_.load() || !closable_.load()) {
+        doAccept();
+      }
     }
   });
 }

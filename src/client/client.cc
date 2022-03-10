@@ -81,6 +81,38 @@ Status Client::Connect(const std::string& ipc_socket) {
   return Status::OK();
 }
 
+Status Client::Open(std::string const& ipc_socket) {
+  RETURN_ON_ASSERT(!Connected(),
+                   "The client has already been connected to vineyard server");
+  std::string socket_path;
+  VINEYARD_CHECK_OK(Connect(ipc_socket));
+
+  {
+    std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+    std::string message_out;
+    WriteNewSessionRequest(message_out);
+    RETURN_ON_ERROR(doWrite(message_out));
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(ReadNewSessionReply(message_in, socket_path));
+  }
+
+  Disconnect();
+  VINEYARD_CHECK_OK(Connect(socket_path));
+  return Status::OK();
+}
+
+void Client::CloseSession() {
+  // TODO: send a request to vineyardd to tear down the session
+  {
+    std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+    std::string message_out;
+    WriteDeleteSessionRequest(message_out);
+    VINEYARD_SUPPRESS(doWrite(message_out));
+  }
+  Disconnect();
+}
+
 Status Client::Fork(Client& client) {
   RETURN_ON_ASSERT(!client.Connected(),
                    "The client has already been connected to vineyard server");

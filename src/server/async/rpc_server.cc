@@ -79,8 +79,10 @@ void RPCServer::doAccept() {
       ++next_conn_id_;
     }
     // don't continue when the iocontext being cancelled.
-    if (!stopped_.load()) {
-      doAccept();
+    if (!ec || ec != boost::system::errc::operation_canceled) {
+      if (!stopped_.load()) {
+        doAccept();
+      }
     }
   });
 }

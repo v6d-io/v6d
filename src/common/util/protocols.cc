@@ -108,6 +108,12 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::ClearRequest;
   } else if (str_type == "debug_command") {
     return CommandType::DebugCommand;
+  } else if (str_type == "new_session_request") {
+    return CommandType::NewSessionRequest;
+  } else if (str_type == "new_session_reply") {
+    return CommandType::NewSessionReply;
+  } else if (str_type == "delete_session_request") {
+    return CommandType::DeleteSessionRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1111,4 +1117,28 @@ Status ReadDebugReply(const json& root, json& result) {
   return Status::OK();
 }
 
+void WriteNewSessionRequest(std::string& msg) {
+  json root;
+  root["type"] = "new_session_request";
+  encode_msg(root, msg);
+}
+
+void WriteNewSessionReply(std::string& msg, std::string const& socket_path) {
+  json root;
+  root["type"] = "new_session_reply";
+  root["socket_path"] = socket_path;
+  encode_msg(root, msg);
+}
+
+Status ReadNewSessionReply(const json& root, std::string& socket_path) {
+  CHECK_IPC_ERROR(root, "new_session_reply");
+  socket_path = root["socket_path"].get_ref<std::string const&>();
+  return Status::OK();
+}
+
+void WriteDeleteSessionRequest(std::string& msg) {
+  json root;
+  root["type"] = "delete_session_request";
+  encode_msg(root, msg);
+}
 }  // namespace vineyard

@@ -37,4 +37,10 @@ const std::string SignatureToString(const Signature id) {
   return std::string(buffer);
 }
 
+const std::string SessionIDToString(const SessionId id) {
+  thread_local char buffer[18] = {'\0'};
+  std::snprintf(buffer, sizeof(buffer), "S%016" PRIx64, id);
+  return std::string(buffer);
+}
+
 }  // namespace vineyard
