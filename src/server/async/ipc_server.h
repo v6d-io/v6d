@@ -43,6 +43,8 @@ class IPCServer : public SocketServer {
 
   void Start() override;
 
+  void Close() override;
+
   std::string Socket() {
     return ipc_spec_["socket"].get_ref<std::string const&>();
   }

@@ -78,14 +78,29 @@ int main(int argc, char** argv) {
 
   {  // test session deletion
     Client client1, client2;
+    Client client3;
     auto session_socket_path = client1.IPCSocket();
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
     VINEYARD_CHECK_OK(client1.Fork(client2));
     client2.CloseSession();
     client1.Disconnect();
-    auto status = client2.Connect(session_socket_path);
+    auto status = client3.Connect(session_socket_path);
     CHECK(status.IsConnectionFailed());
   }
 
+  {  // test session deletion
+    std::vector<Client> clients(1024);
+    VINEYARD_CHECK_OK(clients[0].Open(ipc_socket));
+    auto session_socket_path = clients[0].IPCSocket();
+    for (size_t i = 1; i < clients.size(); ++i) {
+      VINEYARD_CHECK_OK(clients[i].Connect(session_socket_path));
+    }
+    for (size_t i = 0; i < clients.size(); ++i) {
+      clients[i].CloseSession();
+    }
+    Client clientx;
+    auto status = clientx.Connect(session_socket_path);
+    CHECK(status.IsConnectionFailed());
+  }
   return 0;
 }

@@ -112,7 +112,7 @@ Status VineyardRunner::Delete(SessionId const& sid) {
   }
   accessor->second->Stop();
   sessions_.erase(accessor);
-  LOG(INFO) << SessionIDToString(sid) << std::endl;
+  LOG(INFO) << "Delete session : " << SessionIDToString(sid) << std::endl;
   return Status::OK();
 }
 

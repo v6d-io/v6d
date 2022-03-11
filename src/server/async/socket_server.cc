@@ -1015,7 +1015,10 @@ bool SocketConnection::doNewSession(const json& root) {
 }
 
 bool SocketConnection::doDeleteSession(const json& root) {
+  std::string message_out;
+  WriteDeleteSessionReply(message_out);
   socket_server_ptr_->Close();
+  this->doWrite(message_out);
   return true;
 }
 

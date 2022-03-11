@@ -120,13 +120,14 @@ class Client : public ClientBase {
   Status Connect();
 
   /**
-   * @brief Create a new session in vineyardd.
+   * @brief Connect to vineyardd using the given UNIX domain socket
+   * `ipc_socket`.
    *
-   * @param session_name the name of the session.
+   * @param ipc_socket Location of the UNIX domain socket.
    *
-   * @return Status that indicates whether the creation of has succeeded.
+   * @return Status that indicates whether the connect has succeeded.
    */
-  Status NewSession(std::string const& session_name, std::string& ipc_socket);
+  Status Connect(const std::string& ipc_socket);
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .
@@ -136,21 +137,6 @@ class Client : public ClientBase {
    * @return Status that indicates whether the connection of has succeeded.
    */
   Status Open(std::string const& ipc_socket);
-
-  /**
-   * @brief Close the session that the client is connecting to.
-   */
-  void CloseSession();
-
-  /**
-   * @brief Connect to vineyardd using the given UNIX domain socket
-   * `ipc_socket`.
-   *
-   * @param ipc_socket Location of the UNIX domain socket.
-   *
-   * @return Status that indicates whether the connect has succeeded.
-   */
-  Status Connect(const std::string& ipc_socket);
 
   /**
    * @brief Create a new client using self UNIX domain socket.

@@ -204,7 +204,7 @@ class SocketServer {
   /**
    * ready to stop the session.
    */
-  void Close() { closable_.store(true); }
+  virtual void Close() { closable_.store(true); }
 
   /**
    * Check if @conn_id@ exists in the connection pool.

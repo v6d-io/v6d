@@ -444,6 +444,20 @@ void ClientBase::Disconnect() {
   connected_ = false;
 }
 
+void ClientBase::CloseSession() {
+  std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+  if (!Connected()) {
+    return;
+  }
+  std::string message_out;
+  WriteDeleteSessionRequest(message_out);
+  VINEYARD_SUPPRESS(doWrite(message_out));
+  json message_in;
+  VINEYARD_SUPPRESS(doRead(message_in));
+  close(vineyard_conn_);
+  connected_ = false;
+}
+
 Status ClientBase::doWrite(const std::string& message_out) {
   auto status = send_message(vineyard_conn_, message_out);
   if (!status.ok()) {

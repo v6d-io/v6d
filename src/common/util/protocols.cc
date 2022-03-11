@@ -114,6 +114,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::NewSessionReply;
   } else if (str_type == "delete_session_request") {
     return CommandType::DeleteSessionRequest;
+  } else if (str_type == "delete_session_reply") {
+    return CommandType::DeleteSessionReply;
   } else {
     return CommandType::NullCommand;
   }
@@ -1141,4 +1143,11 @@ void WriteDeleteSessionRequest(std::string& msg) {
   root["type"] = "delete_session_request";
   encode_msg(root, msg);
 }
+
+void WriteDeleteSessionReply(std::string& msg) {
+  json root;
+  root["type"] = "delete_session_reply";
+  encode_msg(root, msg);
+}
+
 }  // namespace vineyard

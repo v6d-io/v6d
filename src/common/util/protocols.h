@@ -72,6 +72,7 @@ enum class CommandType {
   NewSessionRequest = 38,
   NewSessionReply = 39,
   DeleteSessionRequest = 40,
+  DeleteSessionReply = 41,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -382,6 +383,8 @@ void WriteNewSessionReply(std::string& msg, std::string const& socket_path);
 Status ReadNewSessionReply(json const& root, std::string& socket_path);
 
 void WriteDeleteSessionRequest(std::string& msg);
+
+void WriteDeleteSessionReply(std::string& msg);
 
 }  // namespace vineyard
 
