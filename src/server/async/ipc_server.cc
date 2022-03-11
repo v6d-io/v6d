@@ -56,7 +56,7 @@ void IPCServer::Close() {
   SocketServer::Close();
   boost::system::error_code ec;
   acceptor_.cancel(ec);
-  if (!ec) {
+  if (ec) {
     LOG(ERROR) << "Vineyard cannot close session : " << ec.message()
                << std::endl;
   }
