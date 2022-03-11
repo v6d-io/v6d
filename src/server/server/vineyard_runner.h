@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef SRC_SERVER_SERVER_VINEYARD_SESSION_H_
-#define SRC_SERVER_SERVER_VINEYARD_SESSION_H_
+#ifndef SRC_SERVER_SERVER_VINEYARD_RUNNER_H_
+#define SRC_SERVER_SERVER_VINEYARD_RUNNER_H_
 
 #include <atomic>
 #include <list>
@@ -81,4 +81,4 @@ class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
 
 }  // namespace vineyard
 
-#endif  // SRC_SERVER_SERVER_VINEYARD_SESSION_H_
+#endif  // SRC_SERVER_SERVER_VINEYARD_RUNNER_H_

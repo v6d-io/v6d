@@ -25,7 +25,7 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
 
-using namespace vineyard;
+using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   if (argc < 2) {
