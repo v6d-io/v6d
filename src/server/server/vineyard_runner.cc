@@ -36,12 +36,12 @@ VineyardRunner::VineyardRunner(const json& spec)
       meta_context_(),
 #if BOOST_VERSION >= 106600
       guard_(asio::make_work_guard(context_)),
-      meta_guard_(asio::make_work_guard(meta_context_)),
+      meta_guard_(asio::make_work_guard(meta_context_))
 #else
       guard_(new boost::asio::io_service::work(context_)),
-      meta_guard_(new boost::asio::io_service::work(context_)),
+      meta_guard_(new boost::asio::io_service::work(context_))
 #endif
-      root_(0) {
+{
 }
 
 std::shared_ptr<VineyardRunner> VineyardRunner::Get(const json& spec) {
@@ -54,10 +54,10 @@ Status VineyardRunner::Serve() {
   stopped_.store(false);
 
   VINEYARD_ASSERT(sessions_.empty(), "Vineyard Runner already started");
-  root_ = GenerateSessionId();
   auto root_vs = std::make_shared<VineyardServer>(
-      spec_template_, root_, shared_from_this(), context_, meta_context_);
-  sessions_.emplace(root_, root_vs);
+      spec_template_, RootSessionID(), shared_from_this(), context_,
+      meta_context_);
+  sessions_.emplace(RootSessionID(), root_vs);
 
   // start a root session
   VINEYARD_CHECK_OK(root_vs->Serve());
@@ -80,7 +80,7 @@ Status VineyardRunner::Finalize() { return Status::OK(); }
 
 Status VineyardRunner::GetRootSession(vs_ptr_t& vs_ptr) {
   session_map_t::const_accessor accessor;
-  if (!sessions_.find(accessor, root_)) {
+  if (!sessions_.find(accessor, RootSessionID())) {
     return Status::Invalid("No root session.");
   }
   vs_ptr = accessor->second;

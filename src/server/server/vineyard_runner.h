@@ -75,7 +75,6 @@ class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
   std::vector<std::thread> workers_;
 
   session_map_t sessions_;
-  SessionId root_;
   std::atomic_bool stopped_;
 };
 

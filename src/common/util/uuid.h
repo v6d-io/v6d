@@ -110,6 +110,8 @@ inline ObjectID ObjectIDFromString(const char* s) {
   return strtoull(s + 1, nullptr, 16);
 }
 
+constexpr inline SessionId RootSessionID() { return 0x0000000000000000UL; }
+
 const std::string SessionIDToString(const SessionId id);
 
 inline SessionId SessionIDFromString(const std::string& s) {
