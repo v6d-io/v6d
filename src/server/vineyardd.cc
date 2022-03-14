@@ -29,7 +29,7 @@ limitations under the License.
 #include "common/util/flags.h"
 #include "common/util/logging.h"
 #include "common/util/version.h"
-#include "server/server/vineyard_server.h"
+#include "server/server/vineyard_runner.h"
 #include "server/util/spec_resolvers.h"
 
 DECLARE_bool(help);
@@ -45,7 +45,7 @@ void __gcov_flush() {}
 #endif
 
 // we need a global reference of the server_ptr to do cleanup
-static std::shared_ptr<vineyard::VineyardServer> server_ptr_ = nullptr;
+static std::shared_ptr<vineyard::VineyardRunner> server_runner_ = nullptr;
 
 extern "C" void vineyardd_signal_handler(int sig) {
   if (sig == SIGTERM || sig == SIGINT) {
@@ -57,9 +57,9 @@ extern "C" void vineyardd_signal_handler(int sig) {
     });
     exit_thread.detach();
     // exit normally to guarantee resources are released correctly via dtor.
-    if (server_ptr_) {
+    if (server_runner_) {
       LOG(INFO) << "SIGTERM Signal received, stop vineyard server...";
-      server_ptr_->Stop();
+      server_runner_->Stop();
     }
   }
   __gcov_flush();
@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
   signal(SIGPIPE, SIG_IGN);
 
   const auto& spec = vineyard::ServerSpecResolver().resolve();
-  server_ptr_ = vineyard::VineyardServer::Get(spec);
+  server_runner_ = vineyard::VineyardRunner::Get(spec);
   // do proper cleanup in response to signals
   std::set_terminate(vineyard::backtrace_on_terminate);
   signal(SIGINT, vineyardd_signal_handler);
@@ -108,14 +108,14 @@ int main(int argc, char* argv[]) {
 #endif
 
   {
-    auto status = server_ptr_->Serve();
-    if (server_ptr_->Running()) {
+    auto status = server_runner_->Serve();
+    if (server_runner_->Running()) {
       VINEYARD_CHECK_OK(status);
     }
   }
   {
-    auto status = server_ptr_->Finalize();
-    if (server_ptr_->Running()) {
+    auto status = server_runner_->Finalize();
+    if (server_runner_->Running()) {
       VINEYARD_CHECK_OK(status);
     }
   }

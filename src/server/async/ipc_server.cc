@@ -52,6 +52,16 @@ void IPCServer::Start() {
   LOG(INFO) << "Vineyard will listen on " << ipc_spec_["socket"] << " for IPC";
 }
 
+void IPCServer::Close() {
+  SocketServer::Close();
+  boost::system::error_code ec;
+  acceptor_.cancel(ec);
+  if (ec) {
+    LOG(ERROR) << "Vineyard cannot close session : " << ec.message()
+               << std::endl;
+  }
+}
+
 #if BOOST_VERSION >= 106600
 asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     asio::io_context& context) {
@@ -110,9 +120,12 @@ void IPCServer::doAccept() {
       connections_.emplace(next_conn_id_, conn);
       ++next_conn_id_;
     }
-    // don't continue when the iocontext being cancelled.
-    if (!stopped_.load()) {
-      doAccept();
+    // don't continue when the iocontext being cancelled or the session is going
+    // to close.
+    if (!ec || ec != boost::system::errc::operation_canceled) {
+      if (!stopped_.load() || !closable_.load()) {
+        doAccept();
+      }
     }
   });
 }

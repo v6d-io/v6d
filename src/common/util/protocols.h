@@ -69,6 +69,10 @@ enum class CommandType {
   DeepCopyRequest = 35,
   ClearRequest = 36,
   PushNextStreamChunkRequest = 37,
+  NewSessionRequest = 38,
+  NewSessionReply = 39,
+  DeleteSessionRequest = 40,
+  DeleteSessionReply = 41,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -371,6 +375,16 @@ Status ReadDebugRequest(const json& root, json& debug);
 void WriteDebugReply(const json& result, std::string& msg);
 
 Status ReadDebugReply(const json& root, json& result);
+
+void WriteNewSessionRequest(std::string& msg);
+
+void WriteNewSessionReply(std::string& msg, std::string const& socket_path);
+
+Status ReadNewSessionReply(json const& root, std::string& socket_path);
+
+void WriteDeleteSessionRequest(std::string& msg);
+
+void WriteDeleteSessionReply(std::string& msg);
 
 }  // namespace vineyard
 

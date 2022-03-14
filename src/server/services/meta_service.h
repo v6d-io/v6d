@@ -512,8 +512,11 @@ class IMetaService {
         LOG(ERROR) << "heartbeat timer error: " << error << ", "
                    << error.message();
       }
-      // run check, and start the next round in the finish callback.
-      checkInstanceStatus(boost::bind(&IMetaService::startHeartbeat, this, _1));
+      if (!error || error != boost::system::errc::operation_canceled) {
+        // run check, and start the next round in the finish callback.
+        checkInstanceStatus(
+            boost::bind(&IMetaService::startHeartbeat, this, _1));
+      }
     });
     return Status::OK();
   }

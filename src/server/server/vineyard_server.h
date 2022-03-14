@@ -32,6 +32,7 @@ limitations under the License.
 
 #include "server/memory/memory.h"
 #include "server/memory/stream_store.h"
+#include "server/server/vineyard_runner.h"
 
 namespace vineyard {
 
@@ -72,12 +73,18 @@ class DeferredReq {
  */
 class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
  public:
+  explicit VineyardServer(const json& spec, const SessionId& session_id,
+                          std::shared_ptr<VineyardRunner> runner,
+                          asio::io_context& context,
+                          asio::io_context& meta_context);
   Status Serve();
   Status Finalize();
   inline const json& GetSpec() { return spec_; }
   inline const std::string GetDeployment() {
     return spec_["deployment"].get_ref<std::string const&>();
   }
+
+  inline SessionId GetSessionId() const { return session_id_; }
 #if BOOST_VERSION >= 106600
   inline asio::io_context& GetContext() { return context_; }
   inline asio::io_context& GetMetaContext() { return meta_context_; }
@@ -87,7 +94,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 #endif
   inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
-  static std::shared_ptr<VineyardServer> Get(const json& spec);
+  inline std::shared_ptr<VineyardRunner> GetRunner() { return runner_; }
 
   void MetaReady();
   void BulkReady();
@@ -183,24 +190,16 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   ~VineyardServer();
 
  private:
-  explicit VineyardServer(const json& spec);
-
   json spec_;
-
-  unsigned int concurrency_;
-#if BOOST_VERSION >= 106600
-  asio::io_context context_, meta_context_;
-#else
-  asio::io_service context_, meta_context_;
-#endif
+  SessionId session_id_;
 
 #if BOOST_VERSION >= 106600
-  using ctx_guard = asio::executor_work_guard<asio::io_context::executor_type>;
+  asio::io_context& context_;
+  asio::io_context& meta_context_;
 #else
-  using ctx_guard = std::unique_ptr<boost::asio::io_service::work>;
+  asio::io_service& context_;
+  asio::io_service& meta_context_;
 #endif
-  ctx_guard guard_, meta_guard_;
-  std::vector<std::thread> workers_;
 
   std::shared_ptr<IMetaService> meta_service_ptr_;
   std::unique_ptr<IPCServer> ipc_server_ptr_;
@@ -210,6 +209,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   std::shared_ptr<BulkStore> bulk_store_;
   std::shared_ptr<StreamStore> stream_store_;
+  std::shared_ptr<VineyardRunner> runner_;
 
   Status serve_status_;
 

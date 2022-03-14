@@ -272,6 +272,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::ExitRequest: {
     return true;
   }
+  case CommandType::NewSessionRequest: {
+    return doNewSession(root);
+  }
+  case CommandType::DeleteSessionRequest: {
+    return doDeleteSession(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -998,6 +1004,24 @@ bool SocketConnection::doDebug(const json& root) {
   return false;
 }
 
+bool SocketConnection::doNewSession(const json& root) {
+  auto self(shared_from_this());
+  std::string message_out, ipc_socket;
+  json result;
+  VINEYARD_CHECK_OK(server_ptr_->GetRunner()->CreateNewSession(ipc_socket));
+  WriteNewSessionReply(message_out, ipc_socket);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doDeleteSession(const json& root) {
+  std::string message_out;
+  WriteDeleteSessionReply(message_out);
+  socket_server_ptr_->Close();
+  this->doWrite(message_out);
+  return true;
+}
+
 void SocketConnection::doWrite(const std::string& buf) {
   std::string to_send;
   size_t length = buf.size();
@@ -1103,6 +1127,7 @@ SocketServer::SocketServer(vs_ptr_t vs_ptr)
 
 void SocketServer::Start() {
   stopped_.store(false);
+  closable_.store(false);
   doAccept();
 }
 
@@ -1124,19 +1149,31 @@ bool SocketServer::ExistsConnection(int conn_id) const {
 }
 
 void SocketServer::RemoveConnection(int conn_id) {
-  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
-  auto conn = connections_.find(conn_id);
-  if (conn != connections_.end()) {
-    connections_.erase(conn);
+  {
+    std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
+    auto conn = connections_.find(conn_id);
+    if (conn != connections_.end()) {
+      connections_.erase(conn);
+    }
+
+    if (AliveConnections() == 0 && closable_.load()) {
+      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionId()));
+    }
   }
 }
 
 void SocketServer::CloseConnection(int conn_id) {
-  std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
-  auto conn = connections_.find(conn_id);
-  if (conn != connections_.end()) {
-    conn->second->Stop();
-    connections_.erase(conn);
+  {
+    std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
+    auto conn = connections_.find(conn_id);
+    if (conn != connections_.end()) {
+      conn->second->Stop();
+      connections_.erase(conn);
+    }
+  }
+
+  if (AliveConnections() == 0 && closable_.load()) {
+    VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionId()));
   }
 }
 

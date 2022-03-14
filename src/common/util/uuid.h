@@ -42,11 +42,16 @@ using ObjectID = uint64_t;
 using Signature = uint64_t;
 
 /**
- * @brief InstanceID is an opaque type for vineyard's instance ID id. The
- * underlying type of ObjectID is a 64-bit unsigned integer.
+ * @brief InstanceID is an opaque type for vineyard's instance. The
+ * underlying type of Instance is a 64-bit unsigned integer.
  */
 using InstanceID = uint64_t;
 
+/**
+ * @brief SessionId is an opaque type for vineyard's Session. The
+ * underlying type of SessionId is a 64-bit unsigned integer.
+ */
+using SessionId = int64_t;
 // blob id: 1 + memory address (in vineyardd)
 // non-blob id: 0 + random (rdstc)
 
@@ -62,6 +67,15 @@ inline ObjectID GenerateBlobID(const void* ptr) {
 
 inline ObjectID GenerateBlobID(const uintptr_t ptr) {
   return 0x8000000000000000UL | static_cast<uint64_t>(ptr);
+}
+
+inline SessionId GenerateSessionId() {
+#if defined(__x86_64__)
+  return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
+#else
+  return 0x7FFFFFFFFFFFFFFFUL &
+         static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
+#endif
 }
 
 constexpr inline ObjectID EmptyBlobID() { return 0x8000000000000000UL; }
@@ -93,6 +107,18 @@ inline ObjectID ObjectIDFromString(const std::string& s) {
 }
 
 inline ObjectID ObjectIDFromString(const char* s) {
+  return strtoull(s + 1, nullptr, 16);
+}
+
+constexpr inline SessionId RootSessionID() { return 0x0000000000000000UL; }
+
+const std::string SessionIDToString(const SessionId id);
+
+inline SessionId SessionIDFromString(const std::string& s) {
+  return strtoull(s.c_str() + 1, nullptr, 16);
+}
+
+inline SessionId SessionIDFromString(const char* s) {
   return strtoull(s + 1, nullptr, 16);
 }
 

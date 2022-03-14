@@ -137,7 +137,8 @@ class EtcdMetaService : public IMetaService {
   explicit EtcdMetaService(vs_ptr_t& server_ptr)
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
-        prefix_(etcd_spec_["etcd_prefix"].get_ref<std::string const&>()) {
+        prefix_(etcd_spec_["etcd_prefix"].get<std::string>() + "/" +
+                SessionIDToString(server_ptr->GetSessionId())) {
     this->handled_rev_.store(0);
   }
 

@@ -415,6 +415,20 @@ class ClientBase {
   void Disconnect();
 
   /**
+   * @brief Create a new anonymous session in vineyardd and connect to it .
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   *
+   * @return Status that indicates whether the connection of has succeeded.
+   */
+  Status Open(std::string const& ipc_socket);
+
+  /**
+   * @brief Close the session that the client is connecting to.
+   */
+  void CloseSession();
+
+  /**
    * @brief Get the UNIX domain socket location of the connected vineyardd
    * server.
    *

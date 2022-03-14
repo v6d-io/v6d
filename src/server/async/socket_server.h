@@ -126,6 +126,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doDebug(const json& root);
 
+  bool doNewSession(const json& root);
+
+  bool doDeleteSession(const json& root);
+
  private:
   int nativeHandle() { return socket_.native_handle(); }
 
@@ -198,6 +202,11 @@ class SocketServer {
   void Stop();
 
   /**
+   * ready to stop the session.
+   */
+  virtual void Close() { closable_.store(true); }
+
+  /**
    * Check if @conn_id@ exists in the connection pool.
    */
   bool ExistsConnection(int conn_id) const;
@@ -220,7 +229,8 @@ class SocketServer {
   size_t AliveConnections() const;
 
  protected:
-  std::atomic_bool stopped_;  // if the socket server being stopped.
+  std::atomic_bool stopped_;   // if the socket server being stopped.
+  std::atomic_bool closable_;  // if client want to close the session,
   vs_ptr_t vs_ptr_;
   int next_conn_id_;
   std::unordered_map<int, std::shared_ptr<SocketConnection>> connections_;
