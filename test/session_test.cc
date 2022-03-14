@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     }
     Client clientx;
     auto status = clientx.Connect(session_socket_path);
-    CHECK(status.IsConnectionFailed());
+    CHECK(status.IsConnectionFailed() || status.IsIOError());
   }
   return 0;
 }
