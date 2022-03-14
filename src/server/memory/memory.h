@@ -41,30 +41,31 @@
 
 namespace vineyard {
 
+template<typename ID>
 class BulkStore {
  public:
   using object_map_t =
-      tbb::concurrent_hash_map<ObjectID, std::shared_ptr<Payload>>;
+      tbb::concurrent_hash_map<ID, std::shared_ptr<Payload>>;
 
   ~BulkStore();
 
   Status PreAllocate(const size_t size);
 
-  Status Create(const size_t size, ObjectID& object_id,
+  Status Create(const size_t size, ID& object_id,
                 std::shared_ptr<Payload>& object);
 
-  Status Get(const ObjectID id, std::shared_ptr<Payload>& object);
+  Status Get(const ID id, std::shared_ptr<Payload>& object);
 
   /**
    * This methods only return available objects, and doesn't fail when object
    * does not exists.
    */
-  Status Get(const std::vector<ObjectID>& ids,
+  Status Get(const std::vector<ID>& ids,
              std::vector<std::shared_ptr<Payload>>& objects);
 
-  Status Delete(const ObjectID& object_id);
+  Status Delete(const ID& object_id);
 
-  bool Exists(const ObjectID& object_id);
+  bool Exists(const ID& object_id);
 
   object_map_t const& List() const { return objects_; }
 
@@ -83,7 +84,7 @@ class BulkStore {
     int fd;
     size_t size;
     uintptr_t base;
-    static std::set<ObjectID> spans;
+    static std::set<ID> spans;
   };
 
   std::unordered_map<int /* fd */, Arena> arenas_;
