@@ -285,11 +285,11 @@ class Client : public ClientBase {
   Status GetObject(const ObjectID id, std::shared_ptr<T>& object) {
     std::shared_ptr<Object> _object;
     RETURN_ON_ERROR(GetObject(id, _object));
-    if (_object == nullptr) {
+    object = std::dynamic_pointer_cast<T>(_object);
+    if (object == nullptr) {
       return Status::ObjectNotExists("object not exists: " +
                                      ObjectIDToString(id));
     } else {
-      object = std::dynamic_pointer_cast<T>(_object);
       return Status::OK();
     }
   }
