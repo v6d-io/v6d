@@ -109,7 +109,7 @@ class Client : public ClientBase {
  public:
   Client();
 
-  virtual ~Client() override;
+  ~Client() override;
 
   /**
    * @brief Connect to vineyard using the UNIX domain socket file specified by
@@ -419,7 +419,7 @@ class Client : public ClientBase {
 class ExternalClient : public Client {
   ExternalClient() : Client() {}
 
-  virtual ~ExternalClient() override;
+  ~ExternalClient() override;
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .

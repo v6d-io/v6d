@@ -416,7 +416,7 @@ Status ReadGetBuffersByExternalRequest(json const& root,
                                        std::vector<ExternalID>& external_ids);
 
 void WriteGetBuffersByExternalReply(
-    std::vector<std::shared_ptr<ExternalPayload>> const external_objects,
+    std::vector<std::shared_ptr<ExternalPayload>> const& external_objects,
     std::string& msg);
 
 Status ReadGetBuffersByExternalReply(

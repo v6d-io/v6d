@@ -1227,7 +1227,7 @@ Status ReadGetBuffersByExternalRequest(const json& root,
 }
 
 void WriteGetBuffersByExternalReply(
-    std::vector<std::shared_ptr<ExternalPayload>> const external_objects,
+    std::vector<std::shared_ptr<ExternalPayload>> const& external_objects,
     std::string& msg) {
   json root;
   root["type"] = "get_buffers_by_external_reply";
