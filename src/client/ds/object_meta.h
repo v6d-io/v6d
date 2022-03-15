@@ -460,7 +460,7 @@ class ObjectMeta {
                    Map<std::string, Value>& values) const {
     json tree;
     GetKeyValue(key, tree);
-    for (auto const& kv : json::iterator_wrapper(tree)) {
+    for (auto const& kv : tree.items()) {
       values.emplace(kv.key(), kv.value().get<Value>());
     }
   }
@@ -497,7 +497,7 @@ class ObjectMeta {
   void GetKeyValue(const std::string& key, Map<json, Value>& values) const {
     json tree;
     GetKeyValue(key, tree);
-    for (auto const& kv : json::iterator_wrapper(tree)) {
+    for (auto const& kv : tree.items()) {
       values.emplace(json::parse(kv.key()), kv.value().get<Value>());
     }
   }
@@ -535,7 +535,7 @@ class ObjectMeta {
                    UnorderedMap<std::string, Value>& values) const {
     json tree;
     GetKeyValue(key, tree);
-    for (auto const& kv : json::iterator_wrapper(tree)) {
+    for (auto const& kv : tree.items()) {
       values.emplace(kv.key(), kv.value().get<Value>());
     }
   }
@@ -573,7 +573,7 @@ class ObjectMeta {
                    UnorderedMap<json, Value>& values) const {
     json tree;
     GetKeyValue(key, tree);
-    for (auto const& kv : json::iterator_wrapper(tree)) {
+    for (auto const& kv : tree.items()) {
       values.emplace(json::parse(kv.key()), kv.value().get<Value>());
     }
   }

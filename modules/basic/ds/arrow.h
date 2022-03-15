@@ -83,6 +83,17 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
   std::shared_ptr<ArrayType> array_;
 };
 
+using Int8Builder = NumericArrayBuilder<int8_t>;
+using Int16Builder = NumericArrayBuilder<int16_t>;
+using Int32Builder = NumericArrayBuilder<int32_t>;
+using Int64Builder = NumericArrayBuilder<int64_t>;
+using UInt8Builder = NumericArrayBuilder<uint8_t>;
+using UInt16Builder = NumericArrayBuilder<uint16_t>;
+using UInt32Builder = NumericArrayBuilder<uint32_t>;
+using UInt64Builder = NumericArrayBuilder<uint64_t>;
+using FloatBuilder = NumericArrayBuilder<float>;
+using DoubleBuilder = NumericArrayBuilder<double>;
+
 /**
  * @brief BooleanArrayBuilder is designed for constructing  Arrow arrays of
  * boolean data type

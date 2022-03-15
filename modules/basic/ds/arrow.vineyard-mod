@@ -117,6 +117,17 @@ class [[vineyard]] BooleanArray : public PrimitiveArray,
   friend class BooleanArrayBaseBuilder;
 };
 
+using Int8Array = NumericArray<int8_t>;
+using Int16Array = NumericArray<int16_t>;
+using Int32Array = NumericArray<int32_t>;
+using Int64Array = NumericArray<int64_t>;
+using UInt8Array = NumericArray<uint8_t>;
+using UInt16Array = NumericArray<uint16_t>;
+using UInt32Array = NumericArray<uint32_t>;
+using UInt64Array = NumericArray<uint64_t>;
+using FloatArray = NumericArray<float>;
+using DoubleArray = NumericArray<double>;
+
 /// Binary array
 
 template <typename ArrayType>

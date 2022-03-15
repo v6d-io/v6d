@@ -232,6 +232,70 @@ def parse_codegen_spec_from_type(node):
         return CodeGenKind('plain', (basename, star))
 
 
+def parse_codegen_spec_from_type(node):
+    node_type, star = unpack_pointer_type(node.type)
+    if star:
+        _, star_inside = unpack_pointer_type(node_type)
+        if star_inside:
+            raise ValueError(
+                'Pointer of pointer %s is not supported' % node.type.spelling
+            )
+
+    typename = node_type.spelling
+    basename = typename.split('<')[0]
+    namespace = figure_out_namespace(node_type.get_declaration())
+
+    if not star:
+        if (
+            basename == 'vineyard::Tuple'
+            or namespace == 'vineyard'
+            and basename == 'Tuple'
+        ):
+            element_type = node_type.get_template_argument_type(0)
+            element_type, inside_star = unpack_pointer_type(element_type)
+            element_typename = element_type.spelling
+            if is_primitive_types(node, element_type, element_typename, inside_star):
+                if inside_star:
+                    raise ValueError(
+                        'pointer of primitive types inside Tuple is not supported: %s'
+                        % node.type.spelling
+                    )
+                return CodeGenKind('meta')
+            else:
+                return CodeGenKind('list', (element_typename, inside_star))
+
+        if (
+            basename == 'vineyard::Map'
+            or namespace == 'vineyard'
+            and basename == 'Map'
+            or basename == 'vineyard::UnorderedMap'
+            or namespace == 'vineyard'
+            and basename == 'UnorderedMap'
+        ):
+            key_type = node_type.get_template_argument_type(0)
+            key_typename = key_type.spelling
+            value_type = node_type.get_template_argument_type(1)
+            value_type, inside_star = unpack_pointer_type(value_type)
+            value_typename = value_type.spelling
+            if is_primitive_types(node, value_type, value_typename, inside_star):
+                if inside_star:
+                    raise ValueError(
+                        'pointer of primitive types inside Map is not supported: %s'
+                        % node.type.spelling
+                    )
+                return CodeGenKind('meta')
+            else:
+                return CodeGenKind(
+                    'dict', ((key_typename,), (value_typename, inside_star))
+                )
+
+    if is_primitive_types(node, node_type, typename, star):
+        return CodeGenKind('meta')
+    else:
+        # directly return: generate data members, in pointer format
+        return CodeGenKind('plain', (basename, star))
+
+
 ###############################################################################
 #
 # dump the AST for debugging
