@@ -73,18 +73,18 @@ class DeferredReq {
  */
 class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
  public:
-  explicit VineyardServer(const json& spec, const SessionId& session_id,
+  explicit VineyardServer(const json& spec, const SessionID& session_id,
                           std::shared_ptr<VineyardRunner> runner,
                           asio::io_context& context,
                           asio::io_context& meta_context);
-  Status Serve();
+  Status Serve(std::string bulk_store_name);
   Status Finalize();
   inline const json& GetSpec() { return spec_; }
   inline const std::string GetDeployment() {
     return spec_["deployment"].get_ref<std::string const&>();
   }
 
-  inline SessionId GetSessionId() const { return session_id_; }
+  inline SessionID GetSessionID() const { return session_id_; }
 #if BOOST_VERSION >= 106600
   inline asio::io_context& GetContext() { return context_; }
   inline asio::io_context& GetMetaContext() { return meta_context_; }
@@ -93,6 +93,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   inline asio::io_service& GetMetaContext() { return meta_context_; }
 #endif
   inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
+  inline std::shared_ptr<ExternalBulkStore> GetExternalBulkStore() {
+    return external_bulk_store_;
+  }
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
   inline std::shared_ptr<VineyardRunner> GetRunner() { return runner_; }
 
@@ -191,7 +194,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
  private:
   json spec_;
-  SessionId session_id_;
+  SessionID session_id_;
 
 #if BOOST_VERSION >= 106600
   asio::io_context& context_;
@@ -208,6 +211,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::list<DeferredReq> deferred_;
 
   std::shared_ptr<BulkStore> bulk_store_;
+  std::shared_ptr<ExternalBulkStore> external_bulk_store_;
   std::shared_ptr<StreamStore> stream_store_;
   std::shared_ptr<VineyardRunner> runner_;
 

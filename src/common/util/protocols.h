@@ -73,6 +73,10 @@ enum class CommandType {
   NewSessionReply = 39,
   DeleteSessionRequest = 40,
   DeleteSessionReply = 41,
+  CreateBufferByExternalRequest = 42,
+  CreateBufferByExternalReply = 43,
+  GetBuffersByExternalRequest = 44,
+  GetBuffersByExternalReply = 45,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -376,7 +380,10 @@ void WriteDebugReply(const json& result, std::string& msg);
 
 Status ReadDebugReply(const json& root, json& result);
 
-void WriteNewSessionRequest(std::string& msg);
+void WriteNewSessionRequest(std::string& msg,
+                            std::string const& bulk_store_name);
+
+Status ReadNewSessionRequest(json const& root, std::string& bulk_store_name);
 
 void WriteNewSessionReply(std::string& msg, std::string const& socket_path);
 
@@ -385,6 +392,35 @@ Status ReadNewSessionReply(json const& root, std::string& socket_path);
 void WriteDeleteSessionRequest(std::string& msg);
 
 void WriteDeleteSessionReply(std::string& msg);
+
+void WriteCreateBufferByExternalRequest(ExternalID const external_id,
+                                        size_t const size,
+                                        size_t const external_size,
+                                        std::string& msg);
+
+Status ReadCreateBufferByExternalRequest(json const& root,
+                                         ExternalID& external_id, size_t& size,
+                                         size_t& external_size);
+
+void WriteCreateBufferByExternalReply(
+    ObjectID const object_id,
+    const std::shared_ptr<ExternalPayload>& external_object, std::string& msg);
+
+Status ReadCreateBufferByExternalReply(json const& root, ObjectID& object_id,
+                                       ExternalPayload& external_object);
+
+void WriteGetBuffersByExternalRequest(std::set<ExternalID> const& external_ids,
+                                      std::string& msg);
+
+Status ReadGetBuffersByExternalRequest(json const& root,
+                                       std::vector<ExternalID>& external_ids);
+
+void WriteGetBuffersByExternalReply(
+    std::vector<std::shared_ptr<ExternalPayload>> const external_objects,
+    std::string& msg);
+
+Status ReadGetBuffersByExternalReply(
+    json const& root, std::vector<ExternalPayload>& external_objects);
 
 }  // namespace vineyard
 
