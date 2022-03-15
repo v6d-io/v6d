@@ -39,7 +39,6 @@ std::string base64_encode(const std::string& buffer) {
   size_t bufLen = buffer.size();
   std::string ret;
   int i = 0;
-  int j = 0;
   unsigned char char_array_3[3];
   unsigned char char_array_4[4];
 
@@ -60,7 +59,7 @@ std::string base64_encode(const std::string& buffer) {
   }
 
   if (i) {
-    for (j = i; j < 3; j++)
+    for (int j = i; j < 3; j++)
       char_array_3[j] = '\0';
 
     char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
@@ -70,7 +69,7 @@ std::string base64_encode(const std::string& buffer) {
         ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
     char_array_4[3] = char_array_3[2] & 0x3f;
 
-    for (j = 0; (j < i + 1); j++)
+    for (int j = 0; (j < i + 1); j++)
       ret += base64_chars[char_array_4[j]];
 
     while ((i++ < 3))
