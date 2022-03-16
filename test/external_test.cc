@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
     }
   };
 
-  {
+  {  // test create/get
     std::map<std::string, std::string> answer;
     generated_test_data(answer, 64);
 
@@ -113,5 +113,25 @@ int main(int argc, char** argv) {
     check_results(eids, results, answer);
 
     client.CloseSession();
+  }
+
+  {  // test cross connection (external -> normal)
+    Client client1;
+    ExternalClient client2;
+    VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    auto socket_path = client1.IPCSocket();
+    auto status = client2.Connect(socket_path);
+    CHECK(status.IsInvalid());
+    client1.CloseSession();
+  }
+
+  {  // test cross connection (normal -> external)
+    ExternalClient client1;
+    Client client2;
+    VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    auto socket_path = client1.IPCSocket();
+    auto status = client2.Connect(socket_path);
+    CHECK(status.IsInvalid());
+    client1.CloseSession();
   }
 }

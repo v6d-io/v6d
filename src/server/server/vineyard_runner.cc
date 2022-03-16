@@ -88,7 +88,7 @@ Status VineyardRunner::GetRootSession(vs_ptr_t& vs_ptr) {
 }
 
 Status VineyardRunner::CreateNewSession(std::string& ipc_socket,
-                                        std::string const& bulk_store_name) {
+                                        std::string const& bulk_store_type) {
   SessionID session_id = GenerateSessionID();
   json spec(spec_template_);
 
@@ -103,7 +103,7 @@ Status VineyardRunner::CreateNewSession(std::string& ipc_socket,
   sessions_.emplace(session_id, vs_ptr);
   LOG(INFO) << "Vineyard creates a new session with SessionID = "
             << SessionIDToString(session_id) << std::endl;
-  return vs_ptr->Serve(bulk_store_name);
+  return vs_ptr->Serve(bulk_store_type);
 }
 
 Status VineyardRunner::Delete(SessionID const& sid) {

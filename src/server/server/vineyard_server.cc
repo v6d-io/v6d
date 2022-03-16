@@ -71,8 +71,9 @@ VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
       runner_(runner),
       ready_(0) {}
 
-Status VineyardServer::Serve(std::string bulk_store_name = "Normal") {
+Status VineyardServer::Serve(std::string bulk_store_type = "Normal") {
   stopped_.store(false);
+  bulk_store_type_ = bulk_store_type;
 
   // Initialize the ipc/rpc server ptr first to get self endpoints when
   // initializing the metadata service.
@@ -86,7 +87,7 @@ Status VineyardServer::Serve(std::string bulk_store_name = "Normal") {
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
-  if (bulk_store_name == "External") {
+  if (bulk_store_type_ == "External") {
     external_bulk_store_ = std::make_shared<ExternalBulkStore>();
     RETURN_ON_ERROR(external_bulk_store_->PreAllocate(
         spec_["bulkstore_spec"]["memory_size"].get<size_t>()));

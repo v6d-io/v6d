@@ -408,6 +408,29 @@ class Client : public ClientBase {
    */
   Status DropBuffer(const ObjectID id, const int fd);
 
+  /**
+   * @brief Connect to vineyardd using the given UNIX domain socket
+   * `ipc_socket` with the given store type.
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   * @param bulk_store_type The name of the bulk store.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& ipc_socket,
+                 std::string const& bulk_store_type);
+
+  /**
+   * @brief Create a new anonymous session in vineyardd and connect to it .
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   * @param bulk_store_type The name of the bulk store.
+   *
+   * @return Status that indicates whether the connection of has succeeded.
+   */
+  Status Open(std::string const& ipc_socket,
+              std::string const& bulk_store_type);
+
  protected:
   std::shared_ptr<detail::SharedMemoryManager> shm_;
 
@@ -430,6 +453,16 @@ class ExternalClient : public Client {
    * @return Status that indicates whether the connection of has succeeded.
    */
   Status Open(std::string const& ipc_socket);
+
+  /**
+   * @brief Connect to vineyardd using the given UNIX domain socket
+   * `ipc_socket`.
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& ipc_socket);
 
   /**
    * @brief Create a blob in vineyard server. When creating a blob, vineyard

@@ -51,6 +51,11 @@ Status Client::Connect() {
 }
 
 Status Client::Connect(const std::string& ipc_socket) {
+  return Connect(ipc_socket, /*bulk_store_type=*/"Nromal");
+}
+
+Status Client::Connect(const std::string& ipc_socket,
+                       std::string const& store_type) {
   std::lock_guard<std::recursive_mutex> guard(client_mutex_);
   RETURN_ON_ASSERT(!connected_ || ipc_socket == ipc_socket_);
   if (connected_) {
@@ -59,14 +64,15 @@ Status Client::Connect(const std::string& ipc_socket) {
   ipc_socket_ = ipc_socket;
   RETURN_ON_ERROR(connect_ipc_socket_retry(ipc_socket, vineyard_conn_));
   std::string message_out;
-  WriteRegisterRequest(message_out);
+  WriteRegisterRequest(message_out, store_type);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
+  bool store_match;
   RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
                                     rpc_endpoint_value, instance_id_,
-                                    server_version_));
+                                    server_version_, store_match));
   rpc_endpoint_ = rpc_endpoint_value;
   connected_ = true;
 
@@ -79,19 +85,29 @@ Status Client::Connect(const std::string& ipc_socket) {
   }
 
   shm_.reset(new detail::SharedMemoryManager(vineyard_conn_));
+
+  if (!store_match) {
+    Disconnect();
+    return Status::Invalid("Mismatched store type");
+  }
   return Status::OK();
 }
 
 Status Client::Open(std::string const& ipc_socket) {
+  return Client::Open(ipc_socket, /*bulk_store_type=*/"Normal");
+}
+
+Status Client::Open(std::string const& ipc_socket,
+                    std::string const& bulk_store_type) {
   RETURN_ON_ASSERT(!this->connected_,
                    "The client has already been connected to vineyard server");
   std::string socket_path;
-  VINEYARD_CHECK_OK(Connect(ipc_socket));
+  VINEYARD_CHECK_OK(Connect(ipc_socket, "Any"));
 
   {
     std::lock_guard<std::recursive_mutex> guard(client_mutex_);
     std::string message_out;
-    WriteNewSessionRequest(message_out, "Normal");
+    WriteNewSessionRequest(message_out, bulk_store_type);
     RETURN_ON_ERROR(doWrite(message_out));
     json message_in;
     RETURN_ON_ERROR(doRead(message_in));
@@ -99,7 +115,7 @@ Status Client::Open(std::string const& ipc_socket) {
   }
 
   Disconnect();
-  VINEYARD_CHECK_OK(Connect(socket_path));
+  VINEYARD_CHECK_OK(Connect(socket_path, bulk_store_type));
   return Status::OK();
 }
 
@@ -508,24 +524,11 @@ Status Client::DropBuffer(const ObjectID id, const int fd) {
 ExternalClient::~ExternalClient() {}
 
 Status ExternalClient::Open(std::string const& ipc_socket) {
-  RETURN_ON_ASSERT(!this->connected_,
-                   "The client has already been connected to vineyard server");
-  std::string socket_path;
-  VINEYARD_CHECK_OK(Connect(ipc_socket));
+  return Client::Open(ipc_socket, /*bulk_store_type=*/"External");
+}
 
-  {
-    std::lock_guard<std::recursive_mutex> guard(client_mutex_);
-    std::string message_out;
-    WriteNewSessionRequest(message_out, "External");
-    RETURN_ON_ERROR(doWrite(message_out));
-    json message_in;
-    RETURN_ON_ERROR(doRead(message_in));
-    RETURN_ON_ERROR(ReadNewSessionReply(message_in, socket_path));
-  }
-
-  Disconnect();
-  VINEYARD_CHECK_OK(Connect(socket_path));
-  return Status::OK();
+Status ExternalClient::Connect(const std::string& ipc_socket) {
+  return Client::Connect(ipc_socket, /*bulk_store_type=*/"External");
 }
 
 Status ExternalClient::CreateBlob(ExternalID external_id, size_t size,
