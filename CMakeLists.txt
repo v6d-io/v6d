@@ -397,6 +397,7 @@ endmacro()
 
 macro(target_enable_sanitizer target visibility)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND USE_ASAN)
+        message(STATUS "Vineyardd will be bulit with -fsanitize=address")
         target_compile_options(${target} ${visibility} -fsanitize=address)
         target_add_link_options(${target} ${visibility} OPTIONS -fsanitize=address)
     endif()
