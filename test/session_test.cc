@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
   }
 
   {  // test session deletion
-    std::vector<Client> clients(1024);
+    std::vector<Client> clients(8);
     VINEYARD_CHECK_OK(clients[0].Open(ipc_socket));
     auto session_socket_path = clients[0].IPCSocket();
     for (size_t i = 1; i < clients.size(); ++i) {

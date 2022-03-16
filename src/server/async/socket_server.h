@@ -56,79 +56,83 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool Stop();
 
  protected:
-  bool doRegister(const json& root);
+  bool doRegister(json const& root);
 
-  bool doGetBuffers(const json& root);
+  bool doGetBuffers(json const& root);
 
   /**
    * @brief doGetRemoteBuffers differs from doGetRemoteBuffers, that the
    * content of blob is in the response body, rather than via memory sharing.
    */
-  bool doGetRemoteBuffers(const json& root);
+  bool doGetRemoteBuffers(json const& root);
 
-  bool doCreateBuffer(const json& root);
+  bool doCreateBuffer(json const& root);
 
   /**
    * @brief doCreateBuffer differs from doCreateRemoteBuffer, that the content
    * of blob is in the request body, rather than via memory sharing.
    */
-  bool doCreateRemoteBuffer(const json& root);
+  bool doCreateRemoteBuffer(json const& root);
 
-  bool doDropBuffer(const json& root);
+  bool doDropBuffer(json const& root);
 
-  bool doGetData(const json& root);
+  bool doGetData(json const& root);
 
-  bool doListData(const json& root);
+  bool doListData(json const& root);
 
-  bool doCreateData(const json& root);
+  bool doCreateData(json const& root);
 
-  bool doPersist(const json& root);
+  bool doPersist(json const& root);
 
-  bool doIfPersist(const json& root);
+  bool doIfPersist(json const& root);
 
-  bool doExists(const json& root);
+  bool doExists(json const& root);
 
-  bool doShallowCopy(const json& root);
+  bool doShallowCopy(json const& root);
 
-  bool doDeepCopy(const json& root);
+  bool doDeepCopy(json const& root);
 
-  bool doDelData(const json& root);
+  bool doDelData(json const& root);
 
-  bool doCreateStream(const json& root);
+  bool doCreateStream(json const& root);
 
-  bool doOpenStream(const json& root);
+  bool doOpenStream(json const& root);
 
-  bool doGetNextStreamChunk(const json& root);
+  bool doGetNextStreamChunk(json const& root);
 
-  bool doPushNextStreamChunk(const json& root);
+  bool doPushNextStreamChunk(json const& root);
 
-  bool doPullNextStreamChunk(const json& root);
+  bool doPullNextStreamChunk(json const& root);
 
-  bool doStopStream(const json& root);
+  bool doStopStream(json const& root);
 
-  bool doPutName(const json& root);
+  bool doPutName(json const& root);
 
-  bool doGetName(const json& root);
+  bool doGetName(json const& root);
 
-  bool doDropName(const json& root);
+  bool doDropName(json const& root);
 
-  bool doMigrateObject(const json& root);
+  bool doMigrateObject(json const& root);
 
-  bool doClusterMeta(const json& root);
+  bool doClusterMeta(json const& root);
 
-  bool doInstanceStatus(const json& root);
+  bool doInstanceStatus(json const& root);
 
-  bool doMakeArena(const json& root);
+  bool doMakeArena(json const& root);
 
-  bool doFinalizeArena(const json& root);
+  bool doFinalizeArena(json const& root);
 
-  bool doClear(const json& root);
+  bool doClear(json const& root);
 
-  bool doDebug(const json& root);
+  bool doDebug(json const& root);
 
-  bool doNewSession(const json& root);
+  bool doNewSession(json const& root);
 
-  bool doDeleteSession(const json& root);
+  bool doDeleteSession(json const& root);
+
+  bool doCreateBufferByExternal(json const& root);
+
+  bool doGetBuffersByExternal(json const& root);
 
  private:
   int nativeHandle() { return socket_.native_handle(); }

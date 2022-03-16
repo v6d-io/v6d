@@ -60,7 +60,7 @@ Status VineyardRunner::Serve() {
   sessions_.emplace(RootSessionID(), root_vs);
 
   // start a root session
-  VINEYARD_CHECK_OK(root_vs->Serve());
+  VINEYARD_CHECK_OK(root_vs->Serve("Normal"));
 
   for (unsigned int idx = 0; idx < concurrency_; ++idx) {
 #if BOOST_VERSION >= 106600
@@ -87,8 +87,9 @@ Status VineyardRunner::GetRootSession(vs_ptr_t& vs_ptr) {
   return Status::OK();
 }
 
-Status VineyardRunner::CreateNewSession(std::string& ipc_socket) {
-  SessionId session_id = GenerateSessionId();
+Status VineyardRunner::CreateNewSession(std::string& ipc_socket,
+                                        std::string const& bulk_store_name) {
+  SessionID session_id = GenerateSessionID();
   json spec(spec_template_);
 
   std::string default_ipc_socket =
@@ -102,10 +103,10 @@ Status VineyardRunner::CreateNewSession(std::string& ipc_socket) {
   sessions_.emplace(session_id, vs_ptr);
   LOG(INFO) << "Vineyard creates a new session with SessionID = "
             << SessionIDToString(session_id) << std::endl;
-  return vs_ptr->Serve();
+  return vs_ptr->Serve(bulk_store_name);
 }
 
-Status VineyardRunner::Delete(SessionId const& sid) {
+Status VineyardRunner::Delete(SessionID const& sid) {
   session_map_t::const_accessor accessor;
   if (!sessions_.find(accessor, sid)) {
     return Status::OK();
@@ -116,7 +117,7 @@ Status VineyardRunner::Delete(SessionId const& sid) {
   return Status::OK();
 }
 
-Status VineyardRunner::Get(SessionId const& sid, vs_ptr_t& session) {
+Status VineyardRunner::Get(SessionID const& sid, vs_ptr_t& session) {
   session_map_t::const_accessor accessor;
   if (sessions_.find(accessor, sid)) {
     session = accessor->second;
@@ -127,7 +128,7 @@ Status VineyardRunner::Get(SessionId const& sid, vs_ptr_t& session) {
   }
 }
 
-bool VineyardRunner::Exists(SessionId const& sid) {
+bool VineyardRunner::Exists(SessionID const& sid) {
   session_map_t::const_accessor accessor;
   return sessions_.find(accessor, sid);
 }
@@ -138,7 +139,7 @@ void VineyardRunner::Stop() {
     return;
   }
 
-  std::vector<SessionId> session_ids;
+  std::vector<SessionID> session_ids;
   session_ids.reserve(sessions_.size());
   for (auto iter = sessions_.begin(); iter != sessions_.end(); iter++) {
     session_ids.emplace_back(iter->first);

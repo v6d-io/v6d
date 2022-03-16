@@ -32,6 +32,7 @@ limitations under the License.
 #include "client/utils.h"
 #include "common/memory/fling.h"
 #include "common/util/boost.h"
+#include "common/util/logging.h"
 #include "common/util/protocols.h"
 
 namespace vineyard {
@@ -90,7 +91,7 @@ Status Client::Open(std::string const& ipc_socket) {
   {
     std::lock_guard<std::recursive_mutex> guard(client_mutex_);
     std::string message_out;
-    WriteNewSessionRequest(message_out);
+    WriteNewSessionRequest(message_out, "Normal");
     RETURN_ON_ERROR(doWrite(message_out));
     json message_in;
     RETURN_ON_ERROR(doRead(message_in));
@@ -501,6 +502,96 @@ Status Client::DropBuffer(const ObjectID id, const int fd) {
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadDropBufferReply(message_in));
+  return Status::OK();
+}
+
+ExternalClient::~ExternalClient() {}
+
+Status ExternalClient::Open(std::string const& ipc_socket) {
+  RETURN_ON_ASSERT(!this->connected_,
+                   "The client has already been connected to vineyard server");
+  std::string socket_path;
+  VINEYARD_CHECK_OK(Connect(ipc_socket));
+
+  {
+    std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+    std::string message_out;
+    WriteNewSessionRequest(message_out, "External");
+    RETURN_ON_ERROR(doWrite(message_out));
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(ReadNewSessionReply(message_in, socket_path));
+  }
+
+  Disconnect();
+  VINEYARD_CHECK_OK(Connect(socket_path));
+  return Status::OK();
+}
+
+Status ExternalClient::CreateBlob(ExternalID external_id, size_t size,
+                                  size_t external_size,
+                                  std::unique_ptr<BlobWriter>& blob) {
+  ENSURE_CONNECTED(this);
+  ObjectID object_id = InvalidObjectID();
+  ExternalPayload external_payload;
+  std::shared_ptr<arrow::MutableBuffer> buffer = nullptr;
+
+  std::string message_out;
+  WriteCreateBufferByExternalRequest(external_id, size, external_size,
+                                     message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(
+      ReadCreateBufferByExternalReply(message_in, object_id, external_payload));
+
+  RETURN_ON_ASSERT(static_cast<size_t>(external_payload.data_size) == size);
+  uint8_t *shared = nullptr, *dist = nullptr;
+  if (external_payload.data_size > 0) {
+    RETURN_ON_ERROR(this->shm_->Mmap(external_payload.store_fd,
+                                     external_payload.map_size, false, true,
+                                     &shared));
+    dist = shared + external_payload.data_offset;
+  }
+  buffer =
+      std::make_shared<arrow::MutableBuffer>(dist, external_payload.data_size);
+
+  auto payload = external_payload.ToNormalPayload();
+  blob.reset(new BlobWriter(object_id, payload, buffer));
+  return Status::OK();
+}
+
+Status ExternalClient::GetBlobs(
+    const std::set<ExternalID>& external_ids,
+    std::map<ExternalID, ExternalPayload>& external_payloads,
+    std::map<ExternalID, std::shared_ptr<arrow::Buffer>>& buffers) {
+  if (external_ids.empty()) {
+    return Status::OK();
+  }
+  ENSURE_CONNECTED(this);
+
+  std::string message_out;
+  WriteGetBuffersByExternalRequest(external_ids, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  std::vector<ExternalPayload> _payloads;
+
+  RETURN_ON_ERROR(ReadGetBuffersByExternalReply(message_in, _payloads));
+  for (auto const& item : _payloads) {
+    std::shared_ptr<arrow::Buffer> buffer = nullptr;
+    uint8_t *shared = nullptr, *dist = nullptr;
+    if (item.data_size > 0) {
+      VINEYARD_CHECK_OK(
+          this->shm_->Mmap(item.store_fd, item.map_size, true, true, &shared));
+      dist = shared + item.data_offset;
+    }
+    buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
+    buffers.emplace(item.external_id, buffer);
+    external_payloads.emplace(item.external_id, item);
+  }
   return Status::OK();
 }
 

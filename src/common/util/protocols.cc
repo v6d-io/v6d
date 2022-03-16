@@ -116,6 +116,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::DeleteSessionRequest;
   } else if (str_type == "delete_session_reply") {
     return CommandType::DeleteSessionReply;
+  } else if (str_type == "create_buffer_by_external_request") {
+    return CommandType::CreateBufferByExternalRequest;
+  } else if (str_type == "get_buffers_by_external_request") {
+    return CommandType::GetBuffersByExternalRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1119,10 +1123,18 @@ Status ReadDebugReply(const json& root, json& result) {
   return Status::OK();
 }
 
-void WriteNewSessionRequest(std::string& msg) {
+void WriteNewSessionRequest(std::string& msg,
+                            std::string const& bulk_store_name) {
   json root;
   root["type"] = "new_session_request";
+  root["bulk_store_name"] = bulk_store_name;
   encode_msg(root, msg);
+}
+
+Status ReadNewSessionRequest(json const& root, std::string& bulk_store_name) {
+  RETURN_ON_ASSERT(root["type"] == "new_session_request");
+  bulk_store_name = root["bulk_store_name"].get_ref<std::string const&>();
+  return Status::OK();
 }
 
 void WriteNewSessionReply(std::string& msg, std::string const& socket_path) {
@@ -1148,6 +1160,102 @@ void WriteDeleteSessionReply(std::string& msg) {
   json root;
   root["type"] = "delete_session_reply";
   encode_msg(root, msg);
+}
+
+void WriteCreateBufferByExternalRequest(ExternalID const external_id,
+                                        size_t const size,
+                                        size_t const external_size,
+                                        std::string& msg) {
+  json root;
+  root["type"] = "create_buffer_by_external_request";
+  root["external_id"] = external_id;
+  root["external_size"] = external_size;
+  root["size"] = size;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateBufferByExternalRequest(json const& root,
+                                         ExternalID& external_id, size_t& size,
+                                         size_t& external_size) {
+  RETURN_ON_ASSERT(root["type"] == "create_buffer_by_external_request");
+  external_id = root["external_id"].get<ExternalID>();
+  size = root["size"].get<size_t>();
+  external_size = root["external_size"].get<size_t>();
+
+  return Status::OK();
+}
+
+void WriteCreateBufferByExternalReply(
+    ObjectID const object_id,
+    const std::shared_ptr<ExternalPayload>& external_object, std::string& msg) {
+  json root;
+  root["type"] = "create_buffer_by_external_reply";
+  root["id"] = object_id;
+  json tree;
+  external_object->ToJSON(tree);
+  root["created"] = tree;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateBufferByExternalReply(json const& root, ObjectID& object_id,
+                                       ExternalPayload& external_object) {
+  CHECK_IPC_ERROR(root, "create_buffer_by_external_reply");
+  json tree = root["created"];
+  object_id = root["id"].get<ObjectID>();
+  external_object.FromJSON(tree);
+  return Status::OK();
+}
+
+void WriteGetBuffersByExternalRequest(std::set<ExternalID> const& external_ids,
+                                      std::string& msg) {
+  json root;
+  root["type"] = "get_buffers_by_external_request";
+  int idx = 0;
+  for (auto const& eid : external_ids) {
+    root[std::to_string(idx++)] = eid;
+  }
+  root["num"] = external_ids.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetBuffersByExternalRequest(const json& root,
+                                       std::vector<ExternalID>& external_ids) {
+  RETURN_ON_ASSERT(root["type"] == "get_buffers_by_external_request");
+  size_t num = root["num"].get<size_t>();
+  for (size_t i = 0; i < num; ++i) {
+    external_ids.push_back(root[std::to_string(i)].get<ExternalID>());
+  }
+  return Status::OK();
+}
+
+void WriteGetBuffersByExternalReply(
+    std::vector<std::shared_ptr<ExternalPayload>> const& external_objects,
+    std::string& msg) {
+  json root;
+  root["type"] = "get_buffers_by_external_reply";
+  for (size_t i = 0; i < external_objects.size(); ++i) {
+    json tree;
+    external_objects[i]->ToJSON(tree);
+    root[std::to_string(i)] = tree;
+  }
+  root["num"] = external_objects.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetBuffersByExternalReply(
+    json const& root, std::vector<ExternalPayload>& external_objects) {
+  CHECK_IPC_ERROR(root, "get_buffers_by_external_reply");
+  for (size_t i = 0; i < root["num"]; ++i) {
+    json tree = root[std::to_string(i)];
+    ExternalPayload external_object;
+    external_object.FromJSON(tree);
+    external_objects.emplace_back(external_object);
+  }
+  return Status::OK();
 }
 
 }  // namespace vineyard

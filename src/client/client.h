@@ -408,12 +408,51 @@ class Client : public ClientBase {
    */
   Status DropBuffer(const ObjectID id, const int fd);
 
- private:
+ protected:
   std::shared_ptr<detail::SharedMemoryManager> shm_;
 
  private:
   friend class Blob;
   friend class BlobWriter;
+};
+
+class ExternalClient : public Client {
+ public:
+  ExternalClient() : Client() {}
+
+  ~ExternalClient() override;
+
+  /**
+   * @brief Create a new anonymous session in vineyardd and connect to it .
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   *
+   * @return Status that indicates whether the connection of has succeeded.
+   */
+  Status Open(std::string const& ipc_socket);
+
+  /**
+   * @brief Create a blob in vineyard server. When creating a blob, vineyard
+   * server's bulk allocator will prepare a block of memory of the requested
+   * size, the map the memory to client's process to share the allocated memory.
+   *
+   * @param external_id The id of external data.
+   * @param size The size of requested blob.
+   * @param external_size The size of external data.
+   * @param blob The result mutable blob will be set in `blob`.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
+  Status CreateBlob(ExternalID external_id, size_t size, size_t external_size,
+                    std::unique_ptr<BlobWriter>& blob);
+
+  /**
+   * Used only for integration.
+   */
+  Status GetBlobs(
+      const std::set<ExternalID>& external_ids,
+      std::map<ExternalID, ExternalPayload>& external_payloads,
+      std::map<ExternalID, std::shared_ptr<arrow::Buffer>>& buffers);
 };
 
 }  // namespace vineyard

@@ -278,6 +278,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::DeleteSessionRequest: {
     return doDeleteSession(root);
   }
+  case CommandType::CreateBufferByExternalRequest: {
+    return doCreateBufferByExternal(root);
+  }
+  case CommandType::GetBuffersByExternalRequest: {
+    return doGetBuffersByExternal(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -1006,9 +1012,13 @@ bool SocketConnection::doDebug(const json& root) {
 
 bool SocketConnection::doNewSession(const json& root) {
   auto self(shared_from_this());
-  std::string message_out, ipc_socket;
+  std::string message_out, ipc_socket, bulk_store_name;
   json result;
-  VINEYARD_CHECK_OK(server_ptr_->GetRunner()->CreateNewSession(ipc_socket));
+
+  TRY_READ_REQUEST(ReadNewSessionRequest, root, bulk_store_name);
+  VINEYARD_CHECK_OK(
+      server_ptr_->GetRunner()->CreateNewSession(ipc_socket, bulk_store_name));
+
   WriteNewSessionReply(message_out, ipc_socket);
   this->doWrite(message_out);
   return false;
@@ -1020,6 +1030,74 @@ bool SocketConnection::doDeleteSession(const json& root) {
   socket_server_ptr_->Close();
   this->doWrite(message_out);
   return true;
+}
+
+bool SocketConnection::doCreateBufferByExternal(json const& root) {
+  auto self(shared_from_this());
+  ExternalID external_id;
+  ObjectID object_id = InvalidObjectID();
+  size_t size, external_size;
+  std::shared_ptr<ExternalPayload> external_object;
+
+  TRY_READ_REQUEST(ReadCreateBufferByExternalRequest, root, external_id, size,
+                   external_size);
+
+  std::string message_out;
+  RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Create(
+      size, external_size, external_id, object_id, external_object));
+  WriteCreateBufferByExternalReply(object_id, external_object, message_out);
+
+  int store_fd = external_object->store_fd;
+  int data_size = external_object->data_size;
+  this->doWrite(
+      message_out, [this, self, store_fd, data_size](const Status& status) {
+        if (data_size > 0 &&
+            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+          self->used_fds_.emplace(store_fd);
+          send_fd(self->nativeHandle(), store_fd);
+        }
+        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                    server_ptr_->GetExternalBulkStore()->Footprint());
+        return Status::OK();
+      });
+  return false;
+}
+
+bool SocketConnection::doGetBuffersByExternal(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ExternalID> external_ids;
+  std::vector<std::shared_ptr<ExternalPayload>> external_objects;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadGetBuffersByExternalRequest, root, external_ids);
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetExternalBulkStore()->Get(external_ids, external_objects));
+  WriteGetBuffersByExternalReply(external_objects, message_out);
+
+  /* NOTE: Here we send the file descriptor after the objects.
+   *       We are using sendmsg to send the file descriptor
+   *       which is a sync method. In theory, this might cause
+   *       the server to block, but currently this seems to be
+   *       the only method that are widely used in practice, e.g.,
+   *       boost and Plasma, and actually the file descriptor is
+   *       a very short message.
+   *
+   *       We will examine other methods later, such as using
+   *       explicit file descritors.
+   */
+  this->doWrite(message_out, [self, external_objects](const Status& status) {
+    for (auto object : external_objects) {
+      int store_fd = object->store_fd;
+      int data_size = object->data_size;
+      if (data_size > 0 &&
+          self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+        self->used_fds_.emplace(store_fd);
+        send_fd(self->nativeHandle(), store_fd);
+      }
+    }
+    return Status::OK();
+  });
+  return false;
 }
 
 void SocketConnection::doWrite(const std::string& buf) {
@@ -1157,7 +1235,7 @@ void SocketServer::RemoveConnection(int conn_id) {
     }
 
     if (AliveConnections() == 0 && closable_.load()) {
-      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionId()));
+      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionID()));
     }
   }
 }
@@ -1173,7 +1251,7 @@ void SocketServer::CloseConnection(int conn_id) {
   }
 
   if (AliveConnections() == 0 && closable_.load()) {
-    VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionId()));
+    VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionID()));
   }
 }
 

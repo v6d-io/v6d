@@ -36,6 +36,7 @@ namespace vineyard {
 class BlobWriter;
 class BufferSet;
 class Client;
+class ExternalClient;
 class ObjectMeta;
 
 /**
@@ -134,6 +135,7 @@ class Blob : public Registered<Blob> {
   std::shared_ptr<arrow::Buffer> buffer_ = nullptr;
 
   friend class Client;
+  friend class ExternalClient;
   friend class RPCClient;
   friend class BlobWriter;
   friend class BufferSet;
@@ -239,6 +241,7 @@ class BlobWriter : public ObjectBuilder {
   std::unordered_map<std::string, std::string> metadata_;
 
   friend class Client;
+  friend class ExternalClient;
   friend class RPCClient;
 };
 

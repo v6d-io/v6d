@@ -84,6 +84,95 @@ struct Payload {
   static Payload FromJSON1(const json& tree);
 };
 
+struct ExternalPayload {
+  ExternalID external_id;
+  ObjectID object_id;
+  int64_t external_size;
+  int store_fd;
+  int arena_fd;
+  ptrdiff_t data_offset;
+  int64_t data_size;
+  int64_t map_size;
+  uint8_t* pointer;
+
+  ExternalPayload()
+      : external_id(),
+        object_id(EmptyBlobID()),
+        external_size(0),
+        store_fd(-1),
+        arena_fd(-1),
+        data_offset(0),
+        data_size(0),
+        map_size(0),
+        pointer(nullptr) {}
+
+  ExternalPayload(ExternalID external_id, ObjectID object_id,
+                  int64_t external_size, int64_t size, uint8_t* ptr, int fd,
+                  int64_t msize, ptrdiff_t offset)
+      : external_id(external_id),
+        object_id(object_id),
+        external_size(external_size),
+        store_fd(fd),
+        arena_fd(-1),
+        data_offset(offset),
+        data_size(size),
+        map_size(msize),
+        pointer(ptr) {}
+
+  ExternalPayload(ExternalID external_id, ObjectID object_id,
+                  int64_t external_size, int64_t size, uint8_t* ptr, int fd,
+                  int arena_fd, int64_t msize, ptrdiff_t offset)
+      : external_id(external_id),
+        object_id(object_id),
+        external_size(external_size),
+        store_fd(fd),
+        arena_fd(arena_fd),
+        data_offset(offset),
+        data_size(size),
+        map_size(msize),
+        pointer(ptr) {}
+
+  ExternalPayload(ExternalID external_id, int64_t size, uint8_t* ptr, int fd,
+                  int64_t msize, ptrdiff_t offset)
+      : external_id(external_id),
+        object_id(EmptyBlobID()),
+        external_size(0),
+        store_fd(fd),
+        arena_fd(-1),
+        data_offset(offset),
+        data_size(size),
+        map_size(msize),
+        pointer(ptr) {}
+
+  static std::shared_ptr<ExternalPayload> MakeEmpty() {
+    static std::shared_ptr<ExternalPayload> payload =
+        std::make_shared<ExternalPayload>();
+    return payload;
+  }
+
+  bool operator==(const ExternalPayload& other) const {
+    return ((object_id == other.object_id) && (store_fd == other.store_fd) &&
+            (data_offset == other.data_offset) &&
+            (data_size == other.data_size));
+  }
+
+  Payload ToNormalPayload() {
+    return Payload(object_id, data_size, pointer, store_fd, arena_fd, map_size,
+                   data_offset);
+  }
+
+  json ToJSON() const;
+
+  void ToJSON(json& tree) const;
+
+  void FromJSON(const json& tree);
+
+  /**
+   * @brief A static variant for `FromJSON`.
+   */
+  static ExternalPayload FromJSON1(const json& tree);
+};
+
 }  // namespace vineyard
 
 #endif  // SRC_COMMON_MEMORY_PAYLOAD_H_

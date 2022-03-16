@@ -60,7 +60,7 @@ bool DeferredReq::TestThenCall(const json& meta) const {
   return false;
 }
 
-VineyardServer::VineyardServer(const json& spec, const SessionId& session_id,
+VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
                                std::shared_ptr<VineyardRunner> runner,
                                asio::io_context& context,
                                asio::io_context& meta_context)
@@ -71,7 +71,7 @@ VineyardServer::VineyardServer(const json& spec, const SessionId& session_id,
       runner_(runner),
       ready_(0) {}
 
-Status VineyardServer::Serve() {
+Status VineyardServer::Serve(std::string bulk_store_name = "Normal") {
   stopped_.store(false);
 
   // Initialize the ipc/rpc server ptr first to get self endpoints when
@@ -86,12 +86,24 @@ Status VineyardServer::Serve() {
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
-  bulk_store_ = std::make_shared<BulkStore>();
-  RETURN_ON_ERROR(bulk_store_->PreAllocate(
-      spec_["bulkstore_spec"]["memory_size"].get<size_t>()));
-  stream_store_ = std::make_shared<StreamStore>(
-      shared_from_this(), bulk_store_,
-      spec_["bulkstore_spec"]["stream_threshold"].get<size_t>());
+  if (bulk_store_name == "External") {
+    external_bulk_store_ = std::make_shared<ExternalBulkStore>();
+    RETURN_ON_ERROR(external_bulk_store_->PreAllocate(
+        spec_["bulkstore_spec"]["memory_size"].get<size_t>()));
+
+    // TODO(mengke.mk): Currently we do not allow streamming in external
+    // bulkstore, anyway, we can templatize stream store to solve this.
+    stream_store_ = nullptr;
+  } else {
+    bulk_store_ = std::make_shared<BulkStore>();
+    RETURN_ON_ERROR(bulk_store_->PreAllocate(
+        spec_["bulkstore_spec"]["memory_size"].get<size_t>()));
+
+    stream_store_ = std::make_shared<StreamStore>(
+        shared_from_this(), bulk_store_,
+        spec_["bulkstore_spec"]["stream_threshold"].get<size_t>());
+  }
+
   BulkReady();
 
   serve_status_ = Status::OK();

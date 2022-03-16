@@ -39,7 +39,7 @@ limitations under the License.
 namespace vineyard {
 
 namespace asio = boost::asio;
-using session_map_t = tbb::concurrent_hash_map<SessionId, vs_ptr_t>;
+using session_map_t = tbb::concurrent_hash_map<SessionID, vs_ptr_t>;
 
 class VineyardServer;
 
@@ -49,10 +49,11 @@ class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
   Status Serve();
   Status Finalize();
   Status GetRootSession(vs_ptr_t& vs_ptr);
-  Status CreateNewSession(std::string& ipc_socket);
-  Status Delete(SessionId const& sid);
-  Status Get(SessionId const& sid, vs_ptr_t& session);
-  bool Exists(SessionId const& sid);
+  Status CreateNewSession(std::string& ipc_socket,
+                          std::string const& bulk_store_name);
+  Status Delete(SessionID const& sid);
+  Status Get(SessionID const& sid, vs_ptr_t& session);
+  bool Exists(SessionID const& sid);
   void Stop();
   bool Running() const;
 

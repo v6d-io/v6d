@@ -46,4 +46,37 @@ Payload Payload::FromJSON1(const json& tree) {
   return payload;
 }
 
+json ExternalPayload::ToJSON() const {
+  json payload;
+  this->ToJSON(payload);
+  return payload;
+}
+
+void ExternalPayload::ToJSON(json& tree) const {
+  tree["external_id"] = external_id;
+  tree["object_id"] = object_id;
+  tree["external_size"] = external_size;
+  tree["store_fd"] = store_fd;
+  tree["data_offset"] = data_offset;
+  tree["data_size"] = data_size;
+  tree["map_size"] = map_size;
+}
+
+void ExternalPayload::FromJSON(const json& tree) {
+  external_id = tree["external_id"].get<ExternalID>();
+  object_id = tree["object_id"].get<ObjectID>();
+  external_size = tree["external_size"].get<int64_t>();
+  store_fd = tree["store_fd"].get<int>();
+  data_offset = tree["data_offset"].get<ptrdiff_t>();
+  data_size = tree["data_size"].get<int64_t>();
+  map_size = tree["map_size"].get<int64_t>();
+  pointer = nullptr;
+}
+
+ExternalPayload ExternalPayload::FromJSON1(const json& tree) {
+  ExternalPayload external_payload;
+  external_payload.FromJSON(tree);
+  return external_payload;
+}
+
 }  // namespace vineyard
