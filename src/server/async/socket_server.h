@@ -27,6 +27,7 @@ limitations under the License.
 
 #include "boost/asio.hpp"
 
+#include "common/util/logging.h"
 #include "common/util/protocols.h"
 #include "server/server/vineyard_server.h"
 

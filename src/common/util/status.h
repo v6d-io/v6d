@@ -211,6 +211,7 @@ enum class StatusCode : unsigned char {
   kConnectionFailed = 33,
   kConnectionError = 34,
   kEtcdError = 35,
+  kAlreadyStopped = 36,
 
   kNotEnoughMemory = 41,
   kStreamDrained = 42,
@@ -451,6 +452,10 @@ class VINEYARD_MUST_USE_TYPE Status {
                                               std::to_string(error_code));
   }
 
+  static Status AlreadyStopped(std::string const& component = "") {
+    return Status(StatusCode::kAlreadyStopped, component + " already stopped");
+  }
+
   /// Return an error when the vineyard server cannot allocate more memory
   /// blocks.
   static Status NotEnoughMemory(std::string const& error_message) {
@@ -562,6 +567,10 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
   /// Return true iff etcd related error occurs in vineyard server.
   bool IsEtcdError() const { return code() == StatusCode::kEtcdError; }
+  /// Return true iff certain component is already stopped.
+  bool IsAlreadyStopped() const {
+    return code() == StatusCode::kAlreadyStopped;
+  }
   /// Return true iff vineyard server fails to allocate memory.
   bool IsNotEnoughMemory() const {
     return code() == StatusCode::kNotEnoughMemory;
