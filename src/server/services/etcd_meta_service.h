@@ -47,26 +47,30 @@ using callback_task_queue_t =
     std::priority_queue<callback_task_t, std::vector<callback_task_t>,
                         detail::greater_on_tuple_fst<callback_task_t>>;
 
+// forward declaration.
+class EtcdMetaService;
+
 /**
  * @brief EtcdWatchHandler manages the watch on etcd
  *
  */
 class EtcdWatchHandler {
  public:
-  EtcdWatchHandler(
+  EtcdWatchHandler(const std::shared_ptr<EtcdMetaService>& meta_service_ptr,
 #if BOOST_VERSION >= 106600
-      asio::io_context& ctx,
+                   asio::io_context& ctx,
 #else
-      asio::io_service& ctx,
+                   asio::io_service& ctx,
 #endif
-      callback_t<const std::vector<IMetaService::op_t>&, unsigned,
-                 callback_t<unsigned>>
-          callback,
-      std::string const& prefix, std::string const& filter_prefix,
-      callback_task_queue_t& registered_callbacks,
-      std::atomic<unsigned>& handled_rev,
-      std::mutex& registered_callbacks_mutex)
-      : ctx_(ctx),
+                   callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                              callback_t<unsigned>>
+                       callback,
+                   std::string const& prefix, std::string const& filter_prefix,
+                   callback_task_queue_t& registered_callbacks,
+                   std::atomic<unsigned>& handled_rev,
+                   std::mutex& registered_callbacks_mutex)
+      : meta_service_ptr_(meta_service_ptr),
+        ctx_(ctx),
         callback_(callback),
         prefix_(prefix),
         filter_prefix_(filter_prefix),
@@ -79,6 +83,7 @@ class EtcdWatchHandler {
   void operator()(etcd::Response const& task);
 
  private:
+  const std::shared_ptr<EtcdMetaService> meta_service_ptr_;
 #if BOOST_VERSION >= 106600
   asio::io_context& ctx_;
 #else
@@ -105,10 +110,12 @@ class EtcdLock : public ILock {
   }
   ~EtcdLock() override {}
 
-  explicit EtcdLock(const callback_t<unsigned&>& callback, unsigned rev)
-      : ILock(rev), callback_(callback) {}
+  explicit EtcdLock(std::shared_ptr<EtcdMetaService> meta_service_ptr,
+                    const callback_t<unsigned&>& callback, unsigned rev)
+      : ILock(rev), meta_service_ptr_(meta_service_ptr), callback_(callback) {}
 
  protected:
+  const std::shared_ptr<EtcdMetaService> meta_service_ptr_;
   const callback_t<unsigned&> callback_;
 };
 
@@ -120,6 +127,13 @@ class EtcdLock : public ILock {
 class EtcdMetaService : public IMetaService {
  public:
   inline void Stop() override {
+    if (stopped_.exchange(true)) {
+      return;
+    }
+    if (backoff_timer_) {
+      boost::system::error_code ec;
+      backoff_timer_->cancel(ec);
+    }
     if (watcher_) {
       try {
         watcher_->Cancel();
@@ -132,6 +146,8 @@ class EtcdMetaService : public IMetaService {
       etcd_proc_->wait(err);
     }
   }
+
+  ~EtcdMetaService() override {}
 
  protected:
   explicit EtcdMetaService(vs_ptr_t& server_ptr)
@@ -180,6 +196,10 @@ class EtcdMetaService : public IMetaService {
   const std::string prefix_;
 
  private:
+  std::shared_ptr<EtcdMetaService> shared_from_base() {
+    return std::static_pointer_cast<EtcdMetaService>(shared_from_this());
+  }
+
   Status preStart() override;
 
   std::unique_ptr<etcd::Client> etcd_;

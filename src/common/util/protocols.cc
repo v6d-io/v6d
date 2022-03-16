@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "boost/algorithm/string.hpp"
 
+#include "common/util/logging.h"
 #include "common/util/uuid.h"
 #include "common/util/version.h"
 
@@ -149,7 +150,7 @@ Status ReadRegisterRequest(const json& root, std::string& version,
   // When the "version" field is missing from the client, we treat it
   // as default unknown version number: 0.0.0.
   version = root.value<std::string>("version", "0.0.0");
-  store_type = root["store_type"].get_ref<std::string const&>();
+  store_type = root.value("store_type", /* default */ std::string("Normal"));
   return Status::OK();
 }
 

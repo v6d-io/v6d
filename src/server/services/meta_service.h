@@ -67,7 +67,7 @@ class ILock {
  * @brief IMetaService is the base class of EtcdMetaService
  *
  */
-class IMetaService {
+class IMetaService : public std::enable_shared_from_this<IMetaService> {
  public:
   struct kv_t {
     std::string key;
@@ -124,9 +124,11 @@ class IMetaService {
     callback_t<const json&, const std::string&> watcher;
     std::string tag;
   };
-  virtual ~IMetaService() {}
+  virtual ~IMetaService() { LOG(INFO) << "dtor the metadata service"; }
   explicit IMetaService(vs_ptr_t& server_ptr)
-      : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("/meta_sync_lock") {}
+      : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("/meta_sync_lock") {
+    stopped_.store(false);
+  }
 
   static std::shared_ptr<IMetaService> Get(vs_ptr_t);
 
@@ -134,16 +136,20 @@ class IMetaService {
     LOG(INFO) << "meta service is starting ...";
     RETURN_ON_ERROR(this->preStart());
     RETURN_ON_ERROR(this->probe());
-    requestValues("", [this](const Status& status, const json& meta,
+    auto self(shared_from_this());
+    requestValues("", [self](const Status& status, const json& meta,
                              unsigned rev) {
+      if (self->stopped_.load()) {
+        return Status::AlreadyStopped("etcd metadata service");
+      }
       if (status.ok()) {
         // start the watcher.
-        this->startDaemonWatch("", rev_,
+        self->startDaemonWatch("", self->rev_,
                                boost::bind(&IMetaService::daemonWatchHandler,
-                                           this, _1, _2, _3, _4));
+                                           self, _1, _2, _3, _4));
 
         // register self info.
-        this->registerToEtcd();
+        self->registerToEtcd();
       } else {
         Status s = status;
         s << "Failed to get initial value";
@@ -163,18 +169,25 @@ class IMetaService {
       callback_t<const json&, std::vector<op_t>&, InstanceID&>
           callback_after_ready,
       callback_t<const InstanceID> callback_after_finish) {
-    server_ptr_->GetMetaContext().post([this, callback_after_ready,
+    auto self(shared_from_this());
+    server_ptr_->GetMetaContext().post([self, callback_after_ready,
                                         callback_after_finish]() {
+      if (self->stopped_.load()) {
+        VINEYARD_SUPPRESS(callback_after_finish(
+            Status::AlreadyStopped("etcd metadata service"),
+            UnspecifiedInstanceID()));
+        return;
+      }
       std::vector<op_t> ops;
       InstanceID computed_instance_id;
-      auto status =
-          callback_after_ready(Status::OK(), meta_, ops, computed_instance_id);
+      auto status = callback_after_ready(Status::OK(), self->meta_, ops,
+                                         computed_instance_id);
       if (status.ok()) {
 #ifndef NDEBUG
         // debugging
-        printDepsGraph();
+        self->printDepsGraph();
 #endif
-        this->metaUpdate(ops, false);
+        self->metaUpdate(ops, false);
       } else {
         LOG(ERROR) << status.ToString();
       }
@@ -187,14 +200,21 @@ class IMetaService {
       callback_t<> callback_after_finish) {
     // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
     // avoid contention between other vineyard instances.
+    auto self(shared_from_this());
     this->requestLock(
         meta_sync_lock_,
-        [this, callback_after_ready, callback_after_finish](
+        [self, callback_after_ready, callback_after_finish](
             const Status& status, std::shared_ptr<ILock> lock) {
+          if (self->stopped_.load()) {
+            return Status::AlreadyStopped("etcd metadata service");
+          }
           if (status.ok()) {
-            requestValues(
-                "", [this, callback_after_ready, callback_after_finish, lock](
+            self->requestValues(
+                "", [self, callback_after_ready, callback_after_finish, lock](
                         const Status& status, const json& meta, unsigned rev) {
+                  if (self->stopped_.load()) {
+                    return Status::AlreadyStopped("etcd metadata service");
+                  }
                   std::vector<op_t> ops;
                   auto s = callback_after_ready(status, meta, ops);
                   if (s.ok()) {
@@ -204,16 +224,19 @@ class IMetaService {
                       return callback_after_finish(Status::OK());
                     }
                     // apply changes locally before committing to etcd
-                    this->metaUpdate(ops, false);
+                    self->metaUpdate(ops, false);
                     // commit to etcd
-                    this->commitUpdates(
-                        ops, [callback_after_finish, lock](const Status& status,
-                                                           unsigned rev) {
-                          // update rev_ to the revision after unlock.
-                          unsigned rev_after_unlock = 0;
-                          VINEYARD_DISCARD(lock->Release(rev_after_unlock));
-                          return callback_after_finish(status);
-                        });
+                    self->commitUpdates(ops, [self, callback_after_finish,
+                                              lock](const Status& status,
+                                                    unsigned rev) {
+                      if (self->stopped_.load()) {
+                        return Status::AlreadyStopped("etcd metadata service");
+                      }
+                      // update rev_ to the revision after unlock.
+                      unsigned rev_after_unlock = 0;
+                      VINEYARD_DISCARD(lock->Release(rev_after_unlock));
+                      return callback_after_finish(status);
+                    });
                     return Status::OK();
                   } else {
                     unsigned rev_after_unlock = 0;
@@ -254,15 +277,21 @@ class IMetaService {
                  bool&>
           callback_after_ready,
       callback_t<> callback_after_finish) {
-    server_ptr_->GetMetaContext().post([this, object_ids, force, deep,
+    auto self(shared_from_this());
+    server_ptr_->GetMetaContext().post([self, object_ids, force, deep,
                                         callback_after_ready,
                                         callback_after_finish]() {
+      if (self->stopped_.load()) {
+        VINEYARD_DISCARD(callback_after_finish(
+            Status::AlreadyStopped("etcd metadata service")));
+      }
+
       // generated ops.
       std::vector<op_t> ops;
 
       bool sync_remote = false;
       std::vector<ObjectID> processed_delete_set;
-      findDeleteSet(object_ids, processed_delete_set, force, deep);
+      self->findDeleteSet(object_ids, processed_delete_set, force, deep);
 
 #ifndef NDEBUG
       if (VLOG_IS_ON(10)) {
@@ -272,15 +301,15 @@ class IMetaService {
       }
 #endif
 
-      auto s = callback_after_ready(Status::OK(), meta_, processed_delete_set,
-                                    ops, sync_remote);
+      auto s = callback_after_ready(Status::OK(), self->meta_,
+                                    processed_delete_set, ops, sync_remote);
       if (!s.ok()) {
         VINEYARD_DISCARD(callback_after_finish(s));
         return;
       }
 
       // apply changes locally (before committing to etcd)
-      this->metaUpdate(ops, false);
+      self->metaUpdate(ops, false);
 
       if (!sync_remote) {
         VINEYARD_DISCARD(callback_after_finish(s));
@@ -291,15 +320,21 @@ class IMetaService {
       //
       // NB: when persist local meta to etcd, we needs the meta_sync_lock_ to
       // avoid contention between other vineyard instances.
-      this->requestLock(
-          meta_sync_lock_,
-          [this, ops /* by copy */, callback_after_ready,
+      self->requestLock(
+          self->meta_sync_lock_,
+          [self, ops /* by copy */, callback_after_ready,
            callback_after_finish](const Status& status,
                                   std::shared_ptr<ILock> lock) {
+            if (self->stopped_.load()) {
+              return Status::AlreadyStopped("etcd metadata service");
+            }
             if (status.ok()) {
               // commit to etcd
-              this->commitUpdates(ops, [callback_after_finish, lock](
+              self->commitUpdates(ops, [self, callback_after_finish, lock](
                                            const Status& status, unsigned rev) {
+                if (self->stopped_.load()) {
+                  return Status::AlreadyStopped("etcd metadata service");
+                }
                 // update rev_ to the revision after unlock.
                 unsigned rev_after_unlock = 0;
                 VINEYARD_DISCARD(lock->Release(rev_after_unlock));
@@ -317,21 +352,28 @@ class IMetaService {
   inline void RequestToShallowCopy(
       callback_t<const json&, std::vector<op_t>&, bool&> callback_after_ready,
       callback_t<> callback_after_finish) {
-    requestValues("", [this, callback_after_ready, callback_after_finish](
+    auto self(shared_from_this());
+    requestValues("", [self, callback_after_ready, callback_after_finish](
                           const Status& status, const json& meta,
                           unsigned rev) {
+      if (self->stopped_.load()) {
+        return Status::AlreadyStopped("etcd metadata service");
+      }
       if (status.ok()) {
         std::vector<op_t> ops;
         bool transient = true;
         auto status = callback_after_ready(Status::OK(), meta, ops, transient);
         if (status.ok()) {
           if (transient) {
-            this->metaUpdate(ops, false);
+            self->metaUpdate(ops, false);
             return callback_after_finish(Status::OK());
           } else {
-            this->RequestToPersist(
-                [ops](const Status& status, const json& meta,
-                      std::vector<IMetaService::op_t>& persist_ops) {
+            self->RequestToPersist(
+                [self, ops](const Status& status, const json& meta,
+                            std::vector<IMetaService::op_t>& persist_ops) {
+                  if (self->stopped_.load()) {
+                    return Status::AlreadyStopped("etcd metadata service");
+                  }
                   persist_ops.insert(persist_ops.end(), ops.begin(), ops.end());
                   return Status::OK();
                 },
@@ -351,18 +393,25 @@ class IMetaService {
 
   void IncRef(std::string const& instance_name, std::string const& key,
               std::string const& value, const bool from_remote);
+
   void CloneRef(ObjectID const target, ObjectID const mirror);
+
+  bool stopped() const { return this->stopped_.load(); }
 
  private:
   inline void registerToEtcd() {
+    auto self(shared_from_this());
     RequestToPersist(
-        [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
+        [self](const Status& status, const json& tree, std::vector<op_t>& ops) {
+          if (self->stopped_.load()) {
+            return Status::AlreadyStopped("etcd metadata service");
+          }
           if (status.ok()) {
             std::string hostname = get_hostname(), nodename = get_nodename();
 
             int64_t timestamp = GetTimestamp();
 
-            instances_list_.clear();
+            self->instances_list_.clear();
 #if defined(__x86_64__)
             uint64_t self_host_id = static_cast<uint64_t>(gethostid()) |
                                     static_cast<uint64_t>(__rdtsc());
@@ -375,7 +424,7 @@ class IMetaService {
               for (auto& instance : tree["instances"].items()) {
                 auto id = static_cast<InstanceID>(
                     std::stoul(instance.key().substr(1)));
-                instances_list_.emplace(id);
+                self->instances_list_.emplace(id);
               }
             }
             InstanceID rank = 0;
@@ -384,20 +433,20 @@ class IMetaService {
               rank = tree["next_instance_id"].get<InstanceID>();
             }
 
-            this->server_ptr_->set_instance_id(rank);
-            this->server_ptr_->set_hostname(hostname);
-            this->server_ptr_->set_nodename(nodename);
+            self->server_ptr_->set_instance_id(rank);
+            self->server_ptr_->set_hostname(hostname);
+            self->server_ptr_->set_nodename(nodename);
 
-            instances_list_.emplace(rank);
+            self->instances_list_.emplace(rank);
             std::string key =
-                "/instances/" + this->server_ptr_->instance_name();
+                "/instances/" + self->server_ptr_->instance_name();
             ops.emplace_back(op_t::Put(key + "/hostid", self_host_id));
             ops.emplace_back(op_t::Put(key + "/hostname", hostname));
             ops.emplace_back(op_t::Put(key + "/nodename", nodename));
             ops.emplace_back(op_t::Put(key + "/rpc_endpoint",
-                                       this->server_ptr_->RPCEndpoint()));
+                                       self->server_ptr_->RPCEndpoint()));
             ops.emplace_back(
-                op_t::Put(key + "/ipc_socket", this->server_ptr_->IPCSocket()));
+                op_t::Put(key + "/ipc_socket", self->server_ptr_->IPCSocket()));
             ops.emplace_back(op_t::Put(key + "/timestamp", timestamp));
             ops.emplace_back(op_t::Put("/next_instance_id", rank + 1));
             LOG(INFO) << "Decide to set rank as " << rank;
@@ -407,14 +456,17 @@ class IMetaService {
             return status;
           }
         },
-        [&](const Status& status) {
+        [self](const Status& status) {
+          if (self->stopped_.load()) {
+            return Status::AlreadyStopped("etcd metadata service");
+          }
           if (status.ok()) {
             // start heartbeat
-            VINEYARD_DISCARD(this->startHeartbeat(Status::OK()));
+            VINEYARD_DISCARD(startHeartbeat(self, Status::OK()));
             // mark meta service as ready
-            Ready();
+            self->Ready();
           } else {
-            this->server_ptr_->set_instance_id(UINT64_MAX);
+            self->server_ptr_->set_instance_id(UINT64_MAX);
             LOG(ERROR) << "compute instance_id error.";
           }
           return status;
@@ -428,54 +480,66 @@ class IMetaService {
    *  - the last one watches for the first one;
    *  - if there's only one instance, it does nothing.
    */
-  void checkInstanceStatus(callback_t<> callback_after_finish) {
-    RequestToPersist(
-        [&](const Status& status, const json& tree, std::vector<op_t>& ops) {
+  static void checkInstanceStatus(std::shared_ptr<IMetaService> const& self,
+                                  callback_t<> callback_after_finish) {
+    self->RequestToPersist(
+        [self](const Status& status, const json& tree, std::vector<op_t>& ops) {
+          if (self->stopped_.load()) {
+            return Status::AlreadyStopped("etcd metadata service");
+          }
           if (status.ok()) {
-            ops.emplace_back(op_t::Put(
-                "/instances/" + server_ptr_->instance_name() + "/timestamp",
-                GetTimestamp()));
+            ops.emplace_back(op_t::Put("/instances/" +
+                                           self->server_ptr_->instance_name() +
+                                           "/timestamp",
+                                       GetTimestamp()));
             return status;
           } else {
             LOG(ERROR) << status.ToString();
             return status;
           }
         },
-        [&, callback_after_finish](const Status& status) {
+        [self, callback_after_finish](const Status& status) {
+          if (self->stopped_.load()) {
+            return Status::AlreadyStopped("etcd metadata service");
+          }
           if (!status.ok()) {
             LOG(ERROR) << "Failed to refresh self: " << status.ToString();
             return callback_after_finish(status);
           }
-          auto the_next =
-              instances_list_.upper_bound(server_ptr_->instance_id());
-          if (the_next == instances_list_.end()) {
-            the_next = instances_list_.begin();
+          auto the_next = self->instances_list_.upper_bound(
+              self->server_ptr_->instance_id());
+          if (the_next == self->instances_list_.end()) {
+            the_next = self->instances_list_.begin();
           }
           InstanceID target_inst = *the_next;
-          if (target_inst == server_ptr_->instance_id()) {
+          if (target_inst == self->server_ptr_->instance_id()) {
             return callback_after_finish(status);
           }
-          VLOG(10) << "Instance size " << instances_list_.size()
+          VLOG(10) << "Instance size " << self->instances_list_.size()
                    << ", target instance is " << target_inst;
-          auto target = meta_["instances"]["i" + std::to_string(target_inst)];
+          auto target =
+              self->meta_["instances"]["i" + std::to_string(target_inst)];
           // The subtree might be empty, when the etcd been resumed with another
           // data directory but the same endpoint. that leads to a crash here
           // but we just let it crash to help us diagnosis the error.
           if (!target.is_null() /* && !target.empty() */) {
             int64_t ts = target["timestamp"].get<int64_t>();
-            if (ts == target_latest_time_) {
-              ++timeout_count_;
+            if (ts == self->target_latest_time_) {
+              ++self->timeout_count_;
             } else {
-              timeout_count_ = 0;
+              self->timeout_count_ = 0;
             }
-            target_latest_time_ = ts;
-            if (timeout_count_ >= MAX_TIMEOUT_COUNT) {
+            self->target_latest_time_ = ts;
+            if (self->timeout_count_ >= MAX_TIMEOUT_COUNT) {
               LOG(ERROR) << "Instance " << target_inst << " timeout";
-              timeout_count_ = 0;
-              target_latest_time_ = 0;
-              RequestToPersist(
-                  [&, target_inst](const Status& status, const json& tree,
-                                   std::vector<op_t>& ops) {
+              self->timeout_count_ = 0;
+              self->target_latest_time_ = 0;
+              self->RequestToPersist(
+                  [self, target_inst](const Status& status, const json& tree,
+                                      std::vector<op_t>& ops) {
+                    if (self->stopped_.load()) {
+                      return Status::AlreadyStopped("etcd metadata service");
+                    }
                     if (status.ok()) {
                       std::string key =
                           "/instances/i" + std::to_string(target_inst);
@@ -490,10 +554,14 @@ class IMetaService {
                     }
                     return status;
                   },
-                  [&, callback_after_finish](const Status& status) {
+                  [self, callback_after_finish](const Status& status) {
+                    if (self->stopped_.load()) {
+                      return Status::AlreadyStopped("etcd metadata service");
+                    }
                     return callback_after_finish(status);
                   });
-              VINEYARD_SUPPRESS(server_ptr_->DeleteAllAt(meta_, target_inst));
+              VINEYARD_SUPPRESS(
+                  self->server_ptr_->DeleteAllAt(self->meta_, target_inst));
               return status;
             } else {
               return callback_after_finish(status);
@@ -504,20 +572,26 @@ class IMetaService {
         });
   }
 
-  Status startHeartbeat(Status const&) {
-    heartbeat_timer_.reset(new asio::steady_timer(
-        server_ptr_->GetMetaContext(), std::chrono::seconds(HEARTBEAT_TIME)));
-    heartbeat_timer_->async_wait([&](const boost::system::error_code& error) {
-      if (error) {
-        LOG(ERROR) << "heartbeat timer error: " << error << ", "
-                   << error.message();
-      }
-      if (!error || error != boost::system::errc::operation_canceled) {
-        // run check, and start the next round in the finish callback.
-        checkInstanceStatus(
-            boost::bind(&IMetaService::startHeartbeat, this, _1));
-      }
-    });
+  static Status startHeartbeat(std::shared_ptr<IMetaService> const& self,
+                               Status const&) {
+    self->heartbeat_timer_.reset(
+        new asio::steady_timer(self->server_ptr_->GetMetaContext(),
+                               std::chrono::seconds(HEARTBEAT_TIME)));
+    self->heartbeat_timer_->async_wait(
+        [self](const boost::system::error_code& error) {
+          if (self->stopped_.load()) {
+            return;
+          }
+          if (error) {
+            LOG(ERROR) << "heartbeat timer error: " << error << ", "
+                       << error.message();
+          }
+          if (!error || error != boost::system::errc::operation_canceled) {
+            // run check, and start the next round in the finish callback.
+            checkInstanceStatus(
+                self, boost::bind(&IMetaService::startHeartbeat, self, _1));
+          }
+        });
     return Status::OK();
   }
 
@@ -535,26 +609,33 @@ class IMetaService {
     // We still need to run a `etcdctl get` for the first time. With a
     // long-running and no compact Etcd, watching from revision 0 may
     // lead to a super huge amount of events, which is unacceptable.
+    auto self(shared_from_this());
     if (rev_ == 0) {
       requestAll(prefix, rev_,
-                 [this, callback](const Status& status,
+                 [self, callback](const Status& status,
                                   const std::vector<op_t>& ops, unsigned rev) {
-                   if (status.ok()) {
-                     this->metaUpdate(ops, true);
-                     rev_ = rev;
+                   if (self->stopped_.load()) {
+                     return Status::AlreadyStopped("etcd metadata service");
                    }
-                   return callback(status, meta_, rev_);
+                   if (status.ok()) {
+                     self->metaUpdate(ops, true);
+                     self->rev_ = rev;
+                   }
+                   return callback(status, self->meta_, self->rev_);
                  });
     } else {
       requestUpdates(
           prefix, rev_,
-          [this, callback](const Status& status, const std::vector<op_t>& ops,
+          [self, callback](const Status& status, const std::vector<op_t>& ops,
                            unsigned rev) {
-            if (status.ok()) {
-              this->metaUpdate(ops, true);
-              rev_ = rev;
+            if (self->stopped_.load()) {
+              return Status::AlreadyStopped("etcd metadata service");
             }
-            return callback(status, meta_, rev_);
+            if (status.ok()) {
+              self->metaUpdate(ops, true);
+              self->rev_ = rev;
+            }
+            return callback(status, self->meta_, self->rev_);
           });
     }
   }
@@ -581,6 +662,7 @@ class IMetaService {
 
   void printDepsGraph();
 
+  std::atomic<bool> stopped_;
   json meta_;
   vs_ptr_t server_ptr_;
 
@@ -782,9 +864,15 @@ class IMetaService {
     }
   }
 
-  Status daemonWatchHandler(const Status& status, const std::vector<op_t>& ops,
-                            unsigned rev,
-                            callback_t<unsigned> callback_after_update) {
+  static Status daemonWatchHandler(std::shared_ptr<IMetaService> self,
+                                   const Status& status,
+                                   const std::vector<op_t>& ops, unsigned rev,
+                                   callback_t<unsigned> callback_after_update) {
+    // `this` must be non-stopped in this handler, as the {Etcd}WatchHandler
+    // keeps a reference of `this` (std::shared_ptr<EtcdMetaService>).
+    if (self->stopped_.load()) {
+      return Status::AlreadyStopped("etcd metadata service");
+    }
     // Guarantee: all kvs inside a txn reaches the client at the same time,
     // which is guaranteed by the implementation of etcd.
     //
@@ -806,9 +894,9 @@ class IMetaService {
         op_batch.emplace_back(ops[idx]);
         idx += 1;
       }
-      metaUpdate(op_batch, true);
+      self->metaUpdate(op_batch, true);
       op_batch.clear();
-      rev_ = head_index;
+      self->rev_ = head_index;
     }
     return callback_after_update(Status::OK(), rev);
   }

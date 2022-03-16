@@ -46,7 +46,11 @@ class LocalLock : public ILock {
  */
 class LocalMetaService : public IMetaService {
  public:
-  inline void Stop() override {}
+  inline void Stop() override {
+    if (stopped_.exchange(true)) {
+      return;
+    }
+  }
 
  protected:
   explicit LocalMetaService(vs_ptr_t& server_ptr) : IMetaService(server_ptr) {}
@@ -72,6 +76,11 @@ class LocalMetaService : public IMetaService {
           callback) override;
 
   Status probe() override { return Status::OK(); }
+
+ private:
+  std::shared_ptr<LocalMetaService> shared_from_base() {
+    return std::static_pointer_cast<LocalMetaService>(shared_from_this());
+  }
 
   friend class IMetaService;
 };
