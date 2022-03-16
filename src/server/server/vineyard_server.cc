@@ -71,9 +71,9 @@ VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
       runner_(runner),
       ready_(0) {}
 
-Status VineyardServer::Serve(std::string bulk_store_type = "Normal") {
+Status VineyardServer::Serve(std::string const& bulk_store_type) {
   stopped_.store(false);
-  bulk_store_type_ = bulk_store_type;
+  this->bulk_store_type_ = bulk_store_type;
 
   // Initialize the ipc/rpc server ptr first to get self endpoints when
   // initializing the metadata service.

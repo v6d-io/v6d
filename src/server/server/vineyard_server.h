@@ -77,7 +77,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                           std::shared_ptr<VineyardRunner> runner,
                           asio::io_context& context,
                           asio::io_context& meta_context);
-  Status Serve(std::string bulk_store_type);
+  Status Serve(std::string const& bulk_store_type);
   Status Finalize();
   inline const json& GetSpec() { return spec_; }
   inline const std::string GetDeployment() {

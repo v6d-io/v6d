@@ -98,7 +98,9 @@ int main(int argc, char** argv) {
 
   {  // test create/get
     std::map<std::string, std::string> answer;
-    generated_test_data(answer, 64);
+    size_t test_data_size = 64;
+    generated_test_data(answer, test_data_size);
+    LOG(INFO) << "Generated test data " << test_data_size;
 
     ExternalClient client;
     VINEYARD_CHECK_OK(client.Open(ipc_socket));
@@ -107,10 +109,12 @@ int main(int argc, char** argv) {
     for (auto it = answer.begin(); it != answer.end(); ++it) {
       eids.emplace_back(create_external_object(client, it->first, it->second));
     }
+    LOG(INFO) << "Finish all the get request... ";
 
     auto results = get_external_objects(client, eids);
 
     check_results(eids, results, answer);
+    LOG(INFO) << "Passed external create/get test...";
 
     client.CloseSession();
   }
@@ -119,9 +123,11 @@ int main(int argc, char** argv) {
     Client client1;
     ExternalClient client2;
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer(ExternalBulkStore): " << ipc_socket;
     auto socket_path = client1.IPCSocket();
     auto status = client2.Connect(socket_path);
     CHECK(status.IsInvalid());
+    LOG(INFO) << "Passed cross connection test... ";
     client1.CloseSession();
   }
 
@@ -129,9 +135,11 @@ int main(int argc, char** argv) {
     ExternalClient client1;
     Client client2;
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer(NormalBulkStore): " << ipc_socket;
     auto socket_path = client1.IPCSocket();
     auto status = client2.Connect(socket_path);
     CHECK(status.IsInvalid());
+    LOG(INFO) << "Passed cross connection test... ";
     client1.CloseSession();
   }
 }

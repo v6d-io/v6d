@@ -51,7 +51,7 @@ Status Client::Connect() {
 }
 
 Status Client::Connect(const std::string& ipc_socket) {
-  return Connect(ipc_socket, /*bulk_store_type=*/"Nromal");
+  return Connect(ipc_socket, /*bulk_store_type=*/"Normal");
 }
 
 Status Client::Connect(const std::string& ipc_socket,

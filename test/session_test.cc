@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
   {  // test basic functionality;
     Client client;
     VINEYARD_CHECK_OK(client.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer: " << client.IPCSocket();
 
     std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
     ArrayBuilder<double> builder(client, double_array);
@@ -51,6 +52,7 @@ int main(int argc, char** argv) {
     CHECK_EQ(arrays.size(), 2);
     CHECK_EQ(arrays[0]->id(), id);
     CHECK_EQ(arrays[1]->id(), copied_id);
+    LOG(INFO) << "Passed session creat/get test...";
 
     client.Disconnect();
   }
@@ -58,7 +60,9 @@ int main(int argc, char** argv) {
   {  // test isolation;
     Client client1, client2;
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    LOG(INFO) << "Client1 connected to IPCServer: " << client1.IPCSocket();
     VINEYARD_CHECK_OK(client2.Open(ipc_socket));
+    LOG(INFO) << "Client2 connected to IPCServer: " << client2.IPCSocket();
 
     std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
     ArrayBuilder<double> builder1(client1, double_array);
@@ -72,25 +76,31 @@ int main(int argc, char** argv) {
     CHECK(status.IsObjectNotExists());
     CHECK(array == nullptr);
 
+    LOG(INFO) << "Passed session isolation test...";
     client1.Disconnect();
     client2.Disconnect();
   }
 
-  {  // test session deletion
+  {  // test session deletion (case 1)
     Client client1, client2;
     Client client3;
     auto session_socket_path = client1.IPCSocket();
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    LOG(INFO) << "Client1 connected to IPCServer: " << client1.IPCSocket();
+
     VINEYARD_CHECK_OK(client1.Fork(client2));
     client2.CloseSession();
     client1.Disconnect();
     auto status = client3.Connect(session_socket_path);
     CHECK(status.IsConnectionFailed());
+    LOG(INFO) << "Passed session deletion test 1...";
   }
 
-  {  // test session deletion
+  {  // test session deletion (case 2)
     std::vector<Client> clients(8);
     VINEYARD_CHECK_OK(clients[0].Open(ipc_socket));
+    LOG(INFO) << "Client[0] connected to IPCServer: " << clients[0].IPCSocket();
+
     auto session_socket_path = clients[0].IPCSocket();
     for (size_t i = 1; i < clients.size(); ++i) {
       VINEYARD_CHECK_OK(clients[i].Connect(session_socket_path));
@@ -101,6 +111,7 @@ int main(int argc, char** argv) {
     Client clientx;
     auto status = clientx.Connect(session_socket_path);
     CHECK(status.IsConnectionFailed() || status.IsIOError());
+    LOG(INFO) << "Passed session deletion test 2...";
   }
   return 0;
 }
