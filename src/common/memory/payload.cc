@@ -53,7 +53,8 @@ json ExternalPayload::ToJSON() const {
 }
 
 void ExternalPayload::ToJSON(json& tree) const {
-  tree["external_id"] = object_id;
+  tree["external_id"] = external_id;
+  tree["object_id"] = object_id;
   tree["external_size"] = external_size;
   tree["store_fd"] = store_fd;
   tree["data_offset"] = data_offset;
@@ -62,7 +63,8 @@ void ExternalPayload::ToJSON(json& tree) const {
 }
 
 void ExternalPayload::FromJSON(const json& tree) {
-  external_id = tree["external_id"].get<ObjectID>();
+  external_id = tree["external_id"].get<ExternalID>();
+  object_id = tree["object_id"].get<ObjectID>();
   external_size = tree["external_size"].get<int64_t>();
   store_fd = tree["store_fd"].get<int>();
   data_offset = tree["data_offset"].get<ptrdiff_t>();

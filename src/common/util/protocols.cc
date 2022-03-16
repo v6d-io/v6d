@@ -116,6 +116,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::DeleteSessionRequest;
   } else if (str_type == "delete_session_reply") {
     return CommandType::DeleteSessionReply;
+  } else if (str_type == "create_buffer_by_external_request") {
+    return CommandType::CreateBufferByExternalRequest;
+  } else if (str_type == "get_buffers_by_external_request") {
+    return CommandType::GetBuffersByExternalRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1159,13 +1163,14 @@ void WriteDeleteSessionReply(std::string& msg) {
 }
 
 void WriteCreateBufferByExternalRequest(ExternalID const external_id,
+                                        size_t const size,
                                         size_t const external_size,
-                                        size_t const size, std::string& msg) {
+                                        std::string& msg) {
   json root;
-  root["type"] = "create_buffer_request_by_external_request";
-  root["size"] = size;
-  root["external_size"] = external_size;
+  root["type"] = "create_buffer_by_external_request";
   root["external_id"] = external_id;
+  root["external_size"] = external_size;
+  root["size"] = size;
 
   encode_msg(root, msg);
 }
@@ -1173,9 +1178,9 @@ void WriteCreateBufferByExternalRequest(ExternalID const external_id,
 Status ReadCreateBufferByExternalRequest(json const& root,
                                          ExternalID& external_id, size_t& size,
                                          size_t& external_size) {
-  RETURN_ON_ASSERT(root["type"] == "create_buffer_request_by_external_request");
-  size = root["size"].get<size_t>();
+  RETURN_ON_ASSERT(root["type"] == "create_buffer_by_external_request");
   external_id = root["external_id"].get<ExternalID>();
+  size = root["size"].get<size_t>();
   external_size = root["external_size"].get<size_t>();
 
   return Status::OK();

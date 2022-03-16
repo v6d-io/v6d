@@ -417,6 +417,7 @@ class Client : public ClientBase {
 };
 
 class ExternalClient : public Client {
+ public:
   ExternalClient() : Client() {}
 
   ~ExternalClient() override;

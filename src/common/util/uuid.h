@@ -25,6 +25,8 @@ limitations under the License.
 #include <limits>
 #include <string>
 
+#include "common/util/base64.h"
+
 namespace vineyard {
 
 /**
@@ -123,7 +125,7 @@ inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
 const std::string ObjectIDToString(const ObjectID id);
 
 inline std::string const ExternalIDToString(ExternalID const external_id) {
-  return std::string(external_id);
+  return base64_decode(std::string(external_id));
 }
 
 inline ObjectID ObjectIDFromString(const std::string& s) {
@@ -136,10 +138,12 @@ inline ObjectID ObjectIDFromString(const char* s) {
 
 // TODO base64 encoding
 inline ExternalID ExternalIDFromString(std::string const& s) {
-  return ExternalID(s);
+  return ExternalID(base64_encode(s));
 }
 
-inline ExternalID ExternalIDFromString(const char* s) { return ExternalID(s); }
+inline ExternalID ExternalIDFromString(const char* s) {
+  return ExternalID(base64_encode(s));
+}
 
 constexpr inline SessionID RootSessionID() { return 0x0000000000000000UL; }
 
