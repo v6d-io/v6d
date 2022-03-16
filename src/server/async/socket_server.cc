@@ -293,10 +293,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
 
 bool SocketConnection::doRegister(const json& root) {
   auto self(shared_from_this());
-  std::string client_version, message_out;
-  TRY_READ_REQUEST(ReadRegisterRequest, root, client_version);
+  std::string client_version, message_out, bulk_store_type;
+  TRY_READ_REQUEST(ReadRegisterRequest, root, client_version, bulk_store_type);
+  bool store_match = (bulk_store_type == "Any" ||
+                      bulk_store_type == server_ptr_->GetBulkStoreType());
   WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
-                     server_ptr_->instance_id(), message_out);
+                     server_ptr_->instance_id(), store_match, message_out);
   doWrite(message_out);
   return false;
 }
@@ -1012,12 +1014,12 @@ bool SocketConnection::doDebug(const json& root) {
 
 bool SocketConnection::doNewSession(const json& root) {
   auto self(shared_from_this());
-  std::string message_out, ipc_socket, bulk_store_name;
+  std::string message_out, ipc_socket, bulk_store_type;
   json result;
 
-  TRY_READ_REQUEST(ReadNewSessionRequest, root, bulk_store_name);
+  TRY_READ_REQUEST(ReadNewSessionRequest, root, bulk_store_type);
   VINEYARD_CHECK_OK(
-      server_ptr_->GetRunner()->CreateNewSession(ipc_socket, bulk_store_name));
+      server_ptr_->GetRunner()->CreateNewSession(ipc_socket, bulk_store_type));
 
   WriteNewSessionReply(message_out, ipc_socket);
   this->doWrite(message_out);

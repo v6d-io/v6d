@@ -83,17 +83,19 @@ CommandType ParseCommandType(const std::string& str_type);
 
 void WriteErrorReply(Status const& status, std::string& msg);
 
-void WriteRegisterRequest(std::string& msg);
+void WriteRegisterRequest(std::string& msg, std::string const& bulk_store_type);
 
-Status ReadRegisterRequest(const json& msg, std::string& version);
+Status ReadRegisterRequest(const json& msg, std::string& version,
+                           std::string& bulk_store_type);
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
-                        const InstanceID instance_id, std::string& msg);
+                        const InstanceID instance_id, bool& store_match,
+                        std::string& msg);
 
 Status ReadRegisterReply(const json& msg, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id,
-                         std::string& version);
+                         std::string& version, bool& store_match);
 
 void WriteExitRequest(std::string& msg);
 
@@ -381,9 +383,9 @@ void WriteDebugReply(const json& result, std::string& msg);
 Status ReadDebugReply(const json& root, json& result);
 
 void WriteNewSessionRequest(std::string& msg,
-                            std::string const& bulk_store_name);
+                            std::string const& bulk_store_type);
 
-Status ReadNewSessionRequest(json const& root, std::string& bulk_store_name);
+Status ReadNewSessionRequest(json const& root, std::string& bulk_store_type);
 
 void WriteNewSessionReply(std::string& msg, std::string const& socket_path);
 

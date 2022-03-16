@@ -77,7 +77,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                           std::shared_ptr<VineyardRunner> runner,
                           asio::io_context& context,
                           asio::io_context& meta_context);
-  Status Serve(std::string bulk_store_name);
+  Status Serve(std::string const& bulk_store_type);
   Status Finalize();
   inline const json& GetSpec() { return spec_; }
   inline const std::string GetDeployment() {
@@ -92,6 +92,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   inline asio::io_service& GetContext() { return context_; }
   inline asio::io_service& GetMetaContext() { return meta_context_; }
 #endif
+  inline std::string GetBulkStoreType() { return bulk_store_type_; }
   inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
   inline std::shared_ptr<ExternalBulkStore> GetExternalBulkStore() {
     return external_bulk_store_;
@@ -210,6 +211,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   std::list<DeferredReq> deferred_;
 
+  std::string bulk_store_type_;
   std::shared_ptr<BulkStore> bulk_store_;
   std::shared_ptr<ExternalBulkStore> external_bulk_store_;
   std::shared_ptr<StreamStore> stream_store_;

@@ -65,14 +65,15 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
   rpc_endpoint_ = rpc_endpoint;
   RETURN_ON_ERROR(connect_rpc_socket_retry(host, port, vineyard_conn_));
   std::string message_out;
-  WriteRegisterRequest(message_out);
+  WriteRegisterRequest(message_out, "Any");
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
+  bool store_match;
   RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
                                     rpc_endpoint_value, remote_instance_id_,
-                                    server_version_));
+                                    server_version_, store_match));
   ipc_socket_ = ipc_socket_value;
   connected_ = true;
 
