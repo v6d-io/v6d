@@ -529,12 +529,15 @@ Status Client::Seal(ObjectID const& object_id) {
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadSealReply(message_in));
   return Status::OK();
 }
 
 ExternalClient::~ExternalClient() {}
 
 Status ExternalClient::Seal(ExternalID const& external_id) {
+  VINEYARD_CHECK_OK(check_fd(this->vineyard_conn_));
+
   ENSURE_CONNECTED(this);
   std::string message_out;
   WriteExternalSealRequest(external_id, message_out);
@@ -542,6 +545,7 @@ Status ExternalClient::Seal(ExternalID const& external_id) {
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadSealReply(message_in));
   return Status::OK();
 }
 
@@ -583,6 +587,7 @@ Status ExternalClient::CreateBlob(ExternalID external_id, size_t size,
       std::make_shared<arrow::MutableBuffer>(dist, external_payload.data_size);
 
   auto payload = external_payload.ToNormalPayload();
+  object_id = payload.object_id;
   blob.reset(new BlobWriter(object_id, payload, buffer));
   return Status::OK();
 }

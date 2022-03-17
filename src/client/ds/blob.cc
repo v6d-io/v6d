@@ -223,6 +223,7 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id_));
   VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id_, buffer));
 
+  VINEYARD_CHECK_OK(client.Seal(object_id_));
   // assoicate extra key-value metadata
   for (auto const& kv : metadata_) {
     blob->meta_.AddKeyValue(kv.first, kv.second);

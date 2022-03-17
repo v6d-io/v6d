@@ -79,6 +79,7 @@ enum class CommandType {
   GetBuffersByExternalReply = 45,
   SealRequest = 46,
   ExternalSealRequest = 47,
+  SealReply = 48,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -436,6 +437,8 @@ void WriteExternalSealRequest(ExternalID const& external_id,
 Status ReadExternalSealRequest(json const& root, ExternalID& external_id);
 
 void WriteSealReply(std::string& msg);
+
+Status ReadSealReply(json const& root);
 
 }  // namespace vineyard
 

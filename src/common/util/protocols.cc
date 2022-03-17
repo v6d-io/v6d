@@ -1277,7 +1277,7 @@ void WriteSealRequest(ObjectID const& object_id, std::string& msg) {
 }
 
 Status ReadSealRequest(json const& root, ObjectID& object_id) {
-  CHECK_IPC_ERROR(root, "seal_request");
+  RETURN_ON_ASSERT(root["type"] == "seal_request");
   object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1290,7 +1290,7 @@ void WriteExternalSealRequest(ExternalID const& external_id, std::string& msg) {
 }
 
 Status ReadExternalSealRequest(json const& root, ExternalID& external_id) {
-  CHECK_IPC_ERROR(root, "external_seal_request");
+  RETURN_ON_ASSERT(root["type"] == "external_seal_request");
   external_id = root["external_id"].get<ExternalID>();
   return Status::OK();
 }
@@ -1301,5 +1301,9 @@ void WriteSealReply(std::string& msg) {
   encode_msg(root, msg);
 }
 
+Status ReadSealReply(json const& root) {
+  RETURN_ON_ASSERT(root["type"] == "seal_reply");
+  return Status::OK();
+}
+
 }  // namespace vineyard
-   //

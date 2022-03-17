@@ -179,8 +179,8 @@ Status BulkStoreBase<ID, P>::Get(ID const& id, std::shared_ptr<P>& object) {
   } else {
     typename object_map_t::const_accessor accessor;
     if (objects_.find(accessor, id)) {
-      object = accessor->second;
-      if (object->IsSealed()) {
+      if (accessor->second->IsSealed()) {
+        object = accessor->second;
         return Status::OK();
       } else {
         return Status::ObjectNotSealed();

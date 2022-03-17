@@ -1109,6 +1109,7 @@ bool SocketConnection::doGetBuffersByExternal(json const& root) {
 }
 
 bool SocketConnection::doSealBlob(json const& root) {
+  LOG(INFO) << "Normal";
   auto self(shared_from_this());
   ObjectID id;
   TRY_READ_REQUEST(ReadSealRequest, root, id);
@@ -1123,7 +1124,7 @@ bool SocketConnection::doSealExternalBlob(json const& root) {
   auto self(shared_from_this());
   ExternalID id;
   TRY_READ_REQUEST(ReadExternalSealRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Seal(id));
+  //RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Seal(id));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);

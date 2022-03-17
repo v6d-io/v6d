@@ -489,7 +489,6 @@ class ExternalClient : public Client {
       std::map<ExternalID, ExternalPayload>& external_payloads,
       std::map<ExternalID, std::shared_ptr<arrow::Buffer>>& buffers);
 
- protected:
   Status Seal(ExternalID const& object_id);
 };
 
