@@ -431,6 +431,8 @@ class Client : public ClientBase {
   Status Open(std::string const& ipc_socket,
               std::string const& bulk_store_type);
 
+  Status Seal(ObjectID const& object_id);
+
  protected:
   std::shared_ptr<detail::SharedMemoryManager> shm_;
 
@@ -486,6 +488,9 @@ class ExternalClient : public Client {
       const std::set<ExternalID>& external_ids,
       std::map<ExternalID, ExternalPayload>& external_payloads,
       std::map<ExternalID, std::shared_ptr<arrow::Buffer>>& buffers);
+
+ protected:
+  Status Seal(ExternalID const& object_id);
 };
 
 }  // namespace vineyard

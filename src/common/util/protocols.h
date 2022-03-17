@@ -77,6 +77,8 @@ enum class CommandType {
   CreateBufferByExternalReply = 43,
   GetBuffersByExternalRequest = 44,
   GetBuffersByExternalReply = 45,
+  SealRequest = 46,
+  ExternalSealRequest = 47,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -423,6 +425,17 @@ void WriteGetBuffersByExternalReply(
 
 Status ReadGetBuffersByExternalReply(
     json const& root, std::vector<ExternalPayload>& external_objects);
+
+void WriteSealRequest(ObjectID const& object_id, std::string& message_out);
+
+Status ReadSealRequest(json const& root, ObjectID& object_id);
+
+void WriteExternalSealRequest(ExternalID const& external_id,
+                              std::string& message_out);
+
+Status ReadExternalSealRequest(json const& root, ExternalID& external_id);
+
+void WriteSealReply(std::string& msg);
 
 }  // namespace vineyard
 
