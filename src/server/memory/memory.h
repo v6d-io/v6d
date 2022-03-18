@@ -50,6 +50,8 @@ class BulkStoreBase {
 
   Status Get(ID const& id, std::shared_ptr<P>& object);
 
+  Status GetUnchecked(ID const& id, std::shared_ptr<P>& object);
+
   /**
    * This methods only return available objects, and doesn't fail when object
    * does not exists.

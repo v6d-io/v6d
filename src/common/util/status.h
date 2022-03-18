@@ -345,6 +345,12 @@ class VINEYARD_MUST_USE_TYPE Status {
     return Status(StatusCode::kObjectNotSealed, "");
   }
 
+  /// Return an error when user are trying to maniplate the object but the
+  /// object hasn't been sealed yet.
+  static Status ObjectNotSealed(std::string const& message) {
+    return Status(StatusCode::kObjectNotSealed, message);
+  }
+
   /// Return an error when user are trying to perform unsupported operations
   /// on blob objects.
   static Status ObjectIsBlob(std::string const& message = "") {

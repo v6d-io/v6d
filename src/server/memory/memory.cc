@@ -183,10 +183,30 @@ Status BulkStoreBase<ID, P>::Get(ID const& id, std::shared_ptr<P>& object) {
         object = accessor->second;
         return Status::OK();
       } else {
-        return Status::ObjectNotSealed();
+        return Status::ObjectNotSealed("Failed to get blob with id " +
+                                       IDToString<ID>(id));
       }
     } else {
-      return Status::ObjectNotExists("get: id = " + IDToString<ID>(id));
+      return Status::ObjectNotExists("Failed to get blob with id " +
+                                     IDToString<ID>(id));
+    }
+  }
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::GetUnchecked(ID const& id,
+                                          std::shared_ptr<P>& object) {
+  if (id == EmptyBlobID<ID>()) {
+    object = P::MakeEmpty();
+    return Status::OK();
+  } else {
+    typename object_map_t::const_accessor accessor;
+    if (objects_.find(accessor, id)) {
+      object = accessor->second;
+      return Status::OK();
+    } else {
+      return Status::ObjectNotExists("Failed to get blob with id " +
+                                     IDToString<ID>(id));
     }
   }
 }

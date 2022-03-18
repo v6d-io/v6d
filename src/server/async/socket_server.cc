@@ -716,7 +716,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
         if (status.ok()) {
           std::shared_ptr<Payload> object;
           RETURN_ON_ERROR(
-              self->server_ptr_->GetBulkStore()->Get(chunk, object));
+              self->server_ptr_->GetBulkStore()->GetUnchecked(chunk, object));
           WriteGetNextStreamChunkReply(object, message_out);
           int store_fd = object->store_fd;
           int data_size = object->data_size;
