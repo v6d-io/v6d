@@ -37,26 +37,6 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 #include "graph/utils/error.h"
 
-namespace grape {
-
-inline InArchive& operator<<(InArchive& in_archive,
-                             const arrow::util::string_view& val) {
-  in_archive << val.length();
-  in_archive.AddBytes(val.data(), val.length());
-  return in_archive;
-}
-
-inline OutArchive& operator>>(OutArchive& out_archive,
-                              arrow::util::string_view& val) {
-  size_t length;
-  out_archive >> length;
-  const char* ptr = static_cast<const char*>(out_archive.GetBytes(length));
-  val = arrow::util::string_view(ptr, length);
-  return out_archive;
-}
-
-}  // namespace grape
-
 namespace vineyard {
 
 namespace beta {
