@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "client/io.h"
 
+#include <fcntl.h>
+#include <unistd.h>
 #include <iostream>
 
 namespace vineyard {
@@ -189,4 +191,15 @@ Status recv_message(int fd, std::string& msg) {
   return Status::OK();
 }
 
+Status check_fd(int fd) {
+  int r = fcntl(fd, F_GETFL);
+  if (r == -1) {
+    return Status::Invalid("fd error.");
+  } else if (r & O_RDONLY) {
+    return Status::Invalid("fd is read-only.");
+  } else if (r & O_WRONLY) {
+    return Status::Invalid("fd is write-only.");
+  }
+  return Status::OK();
+}
 }  // namespace vineyard

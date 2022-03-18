@@ -60,27 +60,40 @@ int main(int argc, char** argv) {
 
   auto create_external_object = [](ExternalClient& client,
                                    std::string const& oid,
-                                   std::string const& data) {
+                                   std::string const& data, bool do_seal) {
     ExternalID eid = ExternalIDFromString(oid);
     std::unique_ptr<vineyard::BlobWriter> blob;
     VINEYARD_CHECK_OK(client.CreateBlob(eid, data.size(), 0, blob));
     auto buffer = reinterpret_cast<uint8_t*>(blob->data());
     memcpy(buffer, data.c_str(), data.size());
+    if (do_seal) {
+      VINEYARD_CHECK_OK(client.Seal(eid));
+    }
     return eid;
   };
 
   auto get_external_objects = [](ExternalClient& client,
-                                 std::vector<ExternalID>& eids) {
+                                 std::vector<ExternalID>& eids,
+                                 bool check_seal) {
     std::vector<std::string> results;
     std::map<ExternalID, ExternalPayload> payloads;
     std::map<ExternalID, std::shared_ptr<arrow::Buffer>> buffers;
-    VINEYARD_CHECK_OK(client.GetBlobs(
-        std::set<ExternalID>(eids.begin(), eids.end()), payloads, buffers));
+    auto status = client.GetBlobs(
+        std::set<ExternalID>(eids.begin(), eids.end()), payloads, buffers);
+    if (!check_seal) {
+      VINEYARD_CHECK_OK(status);
+    } else {
+      LOG(INFO) << "status should be not sealed: " << status.ToString()
+                << std::endl;
+      CHECK(status.IsObjectNotSealed());
+      return results;
+    }
     for (size_t i = 0; i < eids.size(); ++i) {
       std::shared_ptr<arrow::Buffer> buff = buffers.find(eids[i])->second;
       ExternalPayload payload = payloads.find(eids[i])->second;
       char* data = reinterpret_cast<char*>(const_cast<uint8_t*>(buff->data()));
       results.emplace_back(std::string(data, buff->size()));
+      VINEYARD_CHECK_OK(client.Seal(eids[i]));
     }
     return results;
   };
@@ -97,25 +110,40 @@ int main(int argc, char** argv) {
   };
 
   {  // test create/get
+    ExternalClient client;
+    VINEYARD_CHECK_OK(client.Open(ipc_socket));
+
+    LOG(INFO) << "Connected to IPCServer(ExternalBulkStore): "
+              << client.IPCSocket();
+
     std::map<std::string, std::string> answer;
     size_t test_data_size = 64;
     generated_test_data(answer, test_data_size);
     LOG(INFO) << "Generated test data " << test_data_size;
 
-    ExternalClient client;
-    VINEYARD_CHECK_OK(client.Open(ipc_socket));
-
     std::vector<std::string> eids;
     for (auto it = answer.begin(); it != answer.end(); ++it) {
-      eids.emplace_back(create_external_object(client, it->first, it->second));
+      eids.emplace_back(
+          create_external_object(client, it->first, it->second, true));
     }
     LOG(INFO) << "Finish all the get request... ";
 
-    auto results = get_external_objects(client, eids);
+    auto results = get_external_objects(client, eids, false);
 
     check_results(eids, results, answer);
     LOG(INFO) << "Passed external create/get test...";
 
+    client.CloseSession();
+  }
+
+  {  // test visibility
+    ExternalClient client;
+    VINEYARD_CHECK_OK(client.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer(ExternalBulkStore): "
+              << client.IPCSocket();
+    create_external_object(client, "hetao", "the_gaint_head", false);
+    std::vector<ExternalID> eids = {ExternalIDFromString("hetao")};
+    get_external_objects(client, eids, true);
     client.CloseSession();
   }
 

@@ -284,6 +284,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::GetBuffersByExternalRequest: {
     return doGetBuffersByExternal(root);
   }
+  case CommandType::SealRequest: {
+    return doSealBlob(root);
+  }
+  case CommandType::ExternalSealRequest: {
+    return doSealExternalBlob(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -710,7 +716,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
         if (status.ok()) {
           std::shared_ptr<Payload> object;
           RETURN_ON_ERROR(
-              self->server_ptr_->GetBulkStore()->Get(chunk, object));
+              self->server_ptr_->GetBulkStore()->GetUnchecked(chunk, object));
           WriteGetNextStreamChunkReply(object, message_out);
           int store_fd = object->store_fd;
           int data_size = object->data_size;
@@ -1099,6 +1105,28 @@ bool SocketConnection::doGetBuffersByExternal(json const& root) {
     }
     return Status::OK();
   });
+  return false;
+}
+
+bool SocketConnection::doSealBlob(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;
+  TRY_READ_REQUEST(ReadSealRequest, root, id);
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Seal(id));
+  std::string message_out;
+  WriteSealReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doSealExternalBlob(json const& root) {
+  auto self(shared_from_this());
+  ExternalID id;
+  TRY_READ_REQUEST(ReadExternalSealRequest, root, id);
+  RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Seal(id));
+  std::string message_out;
+  WriteSealReply(message_out);
+  this->doWrite(message_out);
   return false;
 }
 

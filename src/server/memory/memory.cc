@@ -156,7 +156,46 @@ uint8_t* BulkStoreBase<ID, P>::AllocateMemory(size_t size, int* fd,
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::Get(const ID id, std::shared_ptr<P>& object) {
+Status BulkStoreBase<ID, P>::Seal(ID const& id) {
+  if (id == EmptyBlobID<ID>()) {
+    return Status::OK();
+  } else {
+    typename object_map_t::const_accessor accessor;
+    if (objects_.find(accessor, id)) {
+      auto object = accessor->second;
+      object->MarkAsSealed();
+      return Status::OK();
+    } else {
+      return Status::ObjectNotExists("get: id = " + IDToString<ID>(id));
+    }
+  }
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::Get(ID const& id, std::shared_ptr<P>& object) {
+  if (id == EmptyBlobID<ID>()) {
+    object = P::MakeEmpty();
+    return Status::OK();
+  } else {
+    typename object_map_t::const_accessor accessor;
+    if (objects_.find(accessor, id)) {
+      if (accessor->second->IsSealed()) {
+        object = accessor->second;
+        return Status::OK();
+      } else {
+        return Status::ObjectNotSealed("Failed to get blob with id " +
+                                       IDToString<ID>(id));
+      }
+    } else {
+      return Status::ObjectNotExists("Failed to get blob with id " +
+                                     IDToString<ID>(id));
+    }
+  }
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::GetUnchecked(ID const& id,
+                                          std::shared_ptr<P>& object) {
   if (id == EmptyBlobID<ID>()) {
     object = P::MakeEmpty();
     return Status::OK();
@@ -166,7 +205,8 @@ Status BulkStoreBase<ID, P>::Get(const ID id, std::shared_ptr<P>& object) {
       object = accessor->second;
       return Status::OK();
     } else {
-      return Status::ObjectNotExists("get: id = " + IDToString<ID>(id));
+      return Status::ObjectNotExists("Failed to get blob with id " +
+                                     IDToString<ID>(id));
     }
   }
 }
@@ -180,7 +220,13 @@ Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
     } else {
       typename object_map_t::const_accessor accessor;
       if (objects_.find(accessor, object_id)) {
-        objects.push_back(accessor->second);
+        auto object = accessor->second;
+        if (object->IsSealed()) {
+          objects.push_back(accessor->second);
+        } else {
+          objects.clear();
+          return Status::ObjectNotSealed();
+        }
       }
     }
   }

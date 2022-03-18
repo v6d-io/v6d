@@ -47,6 +47,8 @@ Status recv_bytes(int fd, void* data, size_t length);
 
 Status recv_message(int fd, std::string& msg);
 
+Status check_fd(int fd);
+
 }  // namespace vineyard
 
 #endif  // SRC_CLIENT_IO_H_

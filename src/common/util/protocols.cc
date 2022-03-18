@@ -121,6 +121,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::CreateBufferByExternalRequest;
   } else if (str_type == "get_buffers_by_external_request") {
     return CommandType::GetBuffersByExternalRequest;
+  } else if (str_type == "seal_request") {
+    return CommandType::SealRequest;
+  } else if (str_type == "external_seal_request") {
+    return CommandType::ExternalSealRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1262,6 +1266,43 @@ Status ReadGetBuffersByExternalReply(
     external_object.FromJSON(tree);
     external_objects.emplace_back(external_object);
   }
+  return Status::OK();
+}
+
+void WriteSealRequest(ObjectID const& object_id, std::string& msg) {
+  json root;
+  root["type"] = "seal_request";
+  root["object_id"] = object_id;
+  encode_msg(root, msg);
+}
+
+Status ReadSealRequest(json const& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"] == "seal_request");
+  object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteExternalSealRequest(ExternalID const& external_id, std::string& msg) {
+  json root;
+  root["type"] = "external_seal_request";
+  root["external_id"] = external_id;
+  encode_msg(root, msg);
+}
+
+Status ReadExternalSealRequest(json const& root, ExternalID& external_id) {
+  RETURN_ON_ASSERT(root["type"] == "external_seal_request");
+  external_id = root["external_id"].get<ExternalID>();
+  return Status::OK();
+}
+
+void WriteSealReply(std::string& msg) {
+  json root;
+  root["type"] = "seal_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadSealReply(json const& root) {
+  RETURN_ON_ASSERT(root["type"] == "seal_reply");
   return Status::OK();
 }
 

@@ -78,6 +78,7 @@ Status StreamStore::Get(ObjectID const stream_id, size_t const size,
 
   // seal current chunk
   if (stream->current_writing_) {
+    VINEYARD_DISCARD(store_->Seal(stream->current_writing_.get()));
     stream->ready_chunks_.push(stream->current_writing_.get());
     stream->current_writing_ = boost::none;
   }
@@ -236,6 +237,7 @@ Status StreamStore::Stop(ObjectID const stream_id, bool failed) {
   }
   // seal current writing chunk
   if (stream->current_writing_) {
+    VINEYARD_DISCARD(store_->Seal(stream->current_writing_.get()));
     stream->ready_chunks_.push(stream->current_writing_.get());
     stream->current_writing_ = boost::none;
   }

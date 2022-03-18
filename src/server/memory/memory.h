@@ -48,29 +48,33 @@ class BulkStoreBase {
 
   ~BulkStoreBase();
 
-  Status Get(const ID id, std::shared_ptr<P>& object);
+  Status Get(ID const& id, std::shared_ptr<P>& object);
+
+  Status GetUnchecked(ID const& id, std::shared_ptr<P>& object);
 
   /**
    * This methods only return available objects, and doesn't fail when object
    * does not exists.
    */
-  Status Get(const std::vector<ID>& ids,
+  Status Get(std::vector<ID> const& ids,
              std::vector<std::shared_ptr<P>>& objects);
 
-  Status Delete(const ID& object_id);
+  Status Delete(ID const& object_id);
 
-  bool Exists(const ID& object_id);
+  bool Exists(ID const& object_id);
+
+  Status Seal(ID const& object_id);
 
   object_map_t const& List() const { return objects_; }
 
   size_t Footprint() const;
   size_t FootprintLimit() const;
 
-  Status MakeArena(const size_t size, int& fd, uintptr_t& base);
+  Status MakeArena(size_t const size, int& fd, uintptr_t& base);
 
-  Status PreAllocate(const size_t size);
+  Status PreAllocate(size_t const size);
 
-  Status FinalizeArena(const int fd, std::vector<size_t> const& offsets,
+  Status FinalizeArena(int const fd, std::vector<size_t> const& offsets,
                        std::vector<size_t> const& sizes);
 
  protected:

@@ -135,6 +135,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doGetBuffersByExternal(json const& root);
 
+  bool doSealBlob(json const& root);
+
+  bool doSealExternalBlob(json const& root);
+
  private:
   int nativeHandle() { return socket_.native_handle(); }
 

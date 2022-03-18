@@ -521,7 +521,31 @@ Status Client::DropBuffer(const ObjectID id, const int fd) {
   return Status::OK();
 }
 
+Status Client::Seal(ObjectID const& object_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteSealRequest(object_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadSealReply(message_in));
+  return Status::OK();
+}
+
 ExternalClient::~ExternalClient() {}
+
+Status ExternalClient::Seal(ExternalID const& external_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteExternalSealRequest(external_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadSealReply(message_in));
+  return Status::OK();
+}
 
 Status ExternalClient::Open(std::string const& ipc_socket) {
   return Client::Open(ipc_socket, /*bulk_store_type=*/"External");
@@ -561,6 +585,7 @@ Status ExternalClient::CreateBlob(ExternalID external_id, size_t size,
       std::make_shared<arrow::MutableBuffer>(dist, external_payload.data_size);
 
   auto payload = external_payload.ToNormalPayload();
+  object_id = payload.object_id;
   blob.reset(new BlobWriter(object_id, payload, buffer));
   return Status::OK();
 }
