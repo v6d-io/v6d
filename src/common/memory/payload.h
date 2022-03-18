@@ -30,8 +30,8 @@ struct Payload {
   ptrdiff_t data_offset;
   int64_t data_size;
   int64_t map_size;
-  int64_t is_sealed;
   uint8_t* pointer;
+  bool is_sealed;
 
   Payload()
       : object_id(EmptyBlobID()),
@@ -40,8 +40,8 @@ struct Payload {
         data_offset(0),
         data_size(0),
         map_size(0),
-        is_sealed(0),
-        pointer(nullptr) {}
+        pointer(nullptr),
+        is_sealed(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize,
           ptrdiff_t offset)
@@ -51,8 +51,8 @@ struct Payload {
         data_offset(offset),
         data_size(size),
         map_size(msize),
-        is_sealed(0),
-        pointer(ptr){}
+        pointer(ptr),
+        is_sealed(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
           int64_t msize, ptrdiff_t offset)
@@ -62,8 +62,8 @@ struct Payload {
         data_offset(offset),
         data_size(size),
         map_size(msize),
-        is_sealed(0),
-        pointer(ptr){}
+        pointer(ptr),
+        is_sealed(0) {}
 
   static std::shared_ptr<Payload> MakeEmpty() {
     static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
@@ -76,7 +76,7 @@ struct Payload {
             (data_size == other.data_size));
   }
 
-  inline void MarkAsSealed() { is_sealed = 1; }
+  inline void MarkAsSealed() { is_sealed = true; }
 
   inline bool IsSealed() { return is_sealed; }
 

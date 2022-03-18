@@ -536,8 +536,6 @@ Status Client::Seal(ObjectID const& object_id) {
 ExternalClient::~ExternalClient() {}
 
 Status ExternalClient::Seal(ExternalID const& external_id) {
-  VINEYARD_CHECK_OK(check_fd(this->vineyard_conn_));
-
   ENSURE_CONNECTED(this);
   std::string message_out;
   WriteExternalSealRequest(external_id, message_out);

@@ -64,8 +64,8 @@ int main(int argc, char** argv) {
     ExternalID eid = ExternalIDFromString(oid);
     std::unique_ptr<vineyard::BlobWriter> blob;
     VINEYARD_CHECK_OK(client.CreateBlob(eid, data.size(), 0, blob));
-    // auto buffer = reinterpret_cast<uint8_t*>(blob->data());
-    // memcpy(buffer, data.c_str(), data.size());
+    auto buffer = reinterpret_cast<uint8_t*>(blob->data());
+    memcpy(buffer, data.c_str(), data.size());
     if (do_seal) {
       VINEYARD_CHECK_OK(client.Seal(eid));
     }
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
               << client.IPCSocket();
     create_external_object(client, "hetao", "the_gaint_head", false);
     std::vector<ExternalID> eids = {ExternalIDFromString("hetao")};
-    get_external_objects(client, eids, false);
+    get_external_objects(client, eids, true);
     client.CloseSession();
   }
 
