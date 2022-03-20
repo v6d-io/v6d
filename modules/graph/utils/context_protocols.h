@@ -30,6 +30,11 @@ struct TypeToInt {
 };
 
 template <>
+struct TypeToInt<void> {
+  static constexpr int value = 0;
+};
+
+template <>
 struct TypeToInt<bool> {
   static constexpr int value = 1;
 };
