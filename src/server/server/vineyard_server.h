@@ -75,8 +75,13 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
  public:
   explicit VineyardServer(const json& spec, const SessionID& session_id,
                           std::shared_ptr<VineyardRunner> runner,
+#if BOOST_VERSION >= 106600
                           asio::io_context& context,
                           asio::io_context& meta_context);
+#else
+                          asio::io_service& context,
+                          asio::io_service& meta_context);
+#endif
   Status Serve(std::string const& bulk_store_type);
   Status Finalize();
   inline const json& GetSpec() { return spec_; }

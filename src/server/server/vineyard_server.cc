@@ -62,14 +62,20 @@ bool DeferredReq::TestThenCall(const json& meta) const {
 
 VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
                                std::shared_ptr<VineyardRunner> runner,
+#if BOOST_VERSION >= 106600
                                asio::io_context& context,
                                asio::io_context& meta_context)
+#else
+                               asio::io_service& context,
+                               asio::io_service& meta_context)
+#endif
     : spec_(spec),
       session_id_(session_id),
       context_(context),
       meta_context_(meta_context),
       runner_(runner),
-      ready_(0) {}
+      ready_(0) {
+}
 
 Status VineyardServer::Serve(std::string const& bulk_store_type) {
   stopped_.store(false);
