@@ -75,7 +75,9 @@ struct TypeToInt<std::string> {
 };
 
 inline int ArrowDataTypeToInt(const std::shared_ptr<arrow::DataType>& type) {
-  if (type->Equals(arrow::boolean())) {
+  if (type->Equals(arrow::null())) {
+    return TypeToInt<void>::value;
+  } else if (type->Equals(arrow::boolean())) {
     return TypeToInt<bool>::value;
   } else if (type->Equals(arrow::int32())) {
     return TypeToInt<int32_t>::value;
