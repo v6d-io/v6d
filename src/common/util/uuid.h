@@ -200,7 +200,7 @@ inline InstanceID UnspecifiedInstanceID() {
 
 template <typename ID = ObjectID>
 inline ID GenerateBlobID(uintptr_t ptr) {
-  uint64_t ans = 0x8000000000000000UL | reinterpret_cast<uint64_t>(ptr);
+  uint64_t ans = 0x8000000000000000UL | static_cast<uint64_t>(ptr);
   return static_if<std::is_same<ID, ObjectID>{}>(
       [&]() { return ObjectID(ans); },
       [&]() {
