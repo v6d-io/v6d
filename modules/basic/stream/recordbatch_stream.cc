@@ -72,12 +72,8 @@ Status RecordBatchStream::ReadRecordBatches(
 Status RecordBatchStream::ReadTable(std::shared_ptr<arrow::Table>& table) {
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
   RETURN_ON_ERROR(this->ReadRecordBatches(batches));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(arrow::Table::FromRecordBatches(batches, &table));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(table,
                                    arrow::Table::FromRecordBatches(batches));
-#endif
   return Status::OK();
 }
 

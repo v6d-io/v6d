@@ -932,14 +932,9 @@ class ArrowFragment
       ivnums[i] = ivnums_[i];
     }
     for (size_t i = 0; i < vertex_tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(vertex_tables[i]->CombineChunks(
-          arrow::default_memory_pool(), &vertex_tables[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(
           vertex_tables[i],
           vertex_tables[i]->CombineChunks(arrow::default_memory_pool()));
-#endif
       ivnums[vertex_label_num_ + i] =
           vm_ptr->GetInnerVertexSize(fid_, vertex_label_num_ + i);
     }
@@ -970,14 +965,9 @@ class ArrowFragment
 
     std::vector<std::vector<vid_t>> extra_ovgids(total_vertex_label_num);
     for (int i = 0; i < extra_edge_label_num; ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(edge_tables[i]->CombineChunks(
-          arrow::default_memory_pool(), &edge_tables[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(
           edge_tables[i],
           edge_tables[i]->CombineChunks(arrow::default_memory_pool()));
-#endif
 
       collect_extra_outer_vertices(
           std::dynamic_pointer_cast<
@@ -1056,13 +1046,8 @@ class ArrowFragment
                                  edge_tables[i]->column(1)->chunk(0)),
                              fid_, ovg2l_maps, concurrency, edge_dst[i]);
       std::shared_ptr<arrow::Table> tmp_table0;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(edge_tables[i]->RemoveColumn(0, &tmp_table0));
-      ARROW_OK_OR_RAISE(tmp_table0->RemoveColumn(0, &edge_tables[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(tmp_table0, edge_tables[i]->RemoveColumn(0));
       ARROW_OK_ASSIGN_OR_RAISE(edge_tables[i], tmp_table0->RemoveColumn(0));
-#endif
     }
 
     // Generate CSR vector of new edge tables.
@@ -1463,14 +1448,9 @@ class ArrowFragment
       tvnums[i] = tvnums_[i];
     }
     for (size_t i = 0; i < vertex_tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(vertex_tables[i]->CombineChunks(
-          arrow::default_memory_pool(), &vertex_tables[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(
           vertex_tables[i],
           vertex_tables[i]->CombineChunks(arrow::default_memory_pool()));
-#endif
       ivnums[vertex_label_num_ + i] =
           vm_ptr->GetInnerVertexSize(fid_, vertex_label_num_ + i);
       ovnums[vertex_label_num_ + i] = 0;
@@ -1749,14 +1729,9 @@ class ArrowFragment
 
     std::vector<std::vector<vid_t>> extra_ovgids(vertex_label_num_);
     for (int i = 0; i < extra_edge_label_num; ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(edge_tables[i]->CombineChunks(
-          arrow::default_memory_pool(), &edge_tables[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(
           edge_tables[i],
           edge_tables[i]->CombineChunks(arrow::default_memory_pool()));
-#endif
 
       collect_extra_outer_vertices(
           std::dynamic_pointer_cast<
@@ -1869,13 +1844,8 @@ class ArrowFragment
                                  edge_tables[i]->column(1)->chunk(0)),
                              fid_, ovg2l_maps, concurrency, edge_dst[i]);
       std::shared_ptr<arrow::Table> tmp_table0;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(edge_tables[i]->RemoveColumn(0, &tmp_table0));
-      ARROW_OK_OR_RAISE(tmp_table0->RemoveColumn(0, &edge_tables[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(tmp_table0, edge_tables[i]->RemoveColumn(0));
       ARROW_OK_ASSIGN_OR_RAISE(edge_tables[i], tmp_table0->RemoveColumn(0));
-#endif
     }
 
     // Generate CSR vector of new edge tables.
@@ -3226,14 +3196,9 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
     ovnums_.resize(vertex_label_num_);
     tvnums_.resize(vertex_label_num_);
     for (size_t i = 0; i < vertex_tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(vertex_tables[i]->CombineChunks(
-          arrow::default_memory_pool(), &vertex_tables_[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(
           vertex_tables_[i],
           vertex_tables[i]->CombineChunks(arrow::default_memory_pool()));
-#endif
       ivnums_[i] = vm_ptr_->GetInnerVertexSize(fid_, i);
     }
     return {};
@@ -3254,14 +3219,9 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
 
     for (size_t i = 0; i < edge_tables.size(); ++i) {
       std::shared_ptr<arrow::Table> combined_table;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(edge_tables[i]->CombineChunks(
-          arrow::default_memory_pool(), &combined_table));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(
           combined_table,
           edge_tables[i]->CombineChunks(arrow::default_memory_pool()));
-#endif
       edge_tables[i].swap(combined_table);
 
       collect_outer_vertices(vid_parser_,
@@ -3297,13 +3257,8 @@ class BasicArrowFragmentBuilder : public ArrowFragmentBuilder<OID_T, VID_T> {
                              fid_, ovg2l_maps_, concurrency, edge_dst[i]);
 
       std::shared_ptr<arrow::Table> tmp_table0;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_OK_OR_RAISE(edge_tables[i]->RemoveColumn(0, &tmp_table0));
-      ARROW_OK_OR_RAISE(tmp_table0->RemoveColumn(0, &edge_tables_[i]));
-#else
       ARROW_OK_ASSIGN_OR_RAISE(tmp_table0, edge_tables[i]->RemoveColumn(0));
       ARROW_OK_ASSIGN_OR_RAISE(edge_tables_[i], tmp_table0->RemoveColumn(0));
-#endif
 
       edge_tables[i].reset();
     }

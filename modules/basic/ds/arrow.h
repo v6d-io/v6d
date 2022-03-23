@@ -386,10 +386,7 @@ class SchemaProxyBuilder : public SchemaProxyBaseBuilder {
  public:
   Status Build(Client& client) override {
     std::shared_ptr<arrow::Buffer> schema_buffer;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(arrow::ipc::SerializeSchema(
-        *schema_, nullptr, arrow::default_memory_pool(), &schema_buffer));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_buffer, arrow::ipc::SerializeSchema(
                            *schema_, nullptr, arrow::default_memory_pool()));
@@ -463,13 +460,8 @@ class RecordBatchExtender : public RecordBatchBaseBuilder {
     }
     // extend schema
     auto field = ::arrow::field(std::move(field_name), column->type());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(
-        schema_->AddField(schema_->num_fields(), field, &schema_));
-#else
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_, schema_->AddField(schema_->num_fields(), field));
-#endif
     // extend columns
     arrow_columns_.push_back(column);
     column_num_ += 1;
@@ -548,13 +540,8 @@ class TableExtender : public TableBaseBuilder {
     }
     // extend schema
     auto field = ::arrow::field(field_name, column->type());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(
-        schema_->AddField(schema_->num_fields(), field, &schema_));
-#else
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_, schema_->AddField(schema_->num_fields(), field));
-#endif
 
     // extend columns on every batch
     size_t offset = 0;
@@ -579,13 +566,8 @@ class TableExtender : public TableBaseBuilder {
     }
     // extend schema
     auto field = ::arrow::field(field_name, column->type());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(
-        schema_->AddField(schema_->num_fields(), field, &schema_));
-#else
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_, schema_->AddField(schema_->num_fields(), field));
-#endif
 
     // extend columns on every batch
     size_t chunk_index = 0;

@@ -382,16 +382,6 @@ int main(int argc, char** argv) {
     VINEYARD_CHECK_OK(client.Persist(r3->id()));
     ObjectID id3 = r3->id();
 
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(
-        batch->AddColumn(batch->num_columns(), "f7", array1, &batch));
-    CHECK_ARROW_ERROR(
-        batch->AddColumn(batch->num_columns(), "f8", array2, &batch));
-    CHECK_ARROW_ERROR(
-        batch->AddColumn(batch->num_columns(), "f9", array3, &batch));
-    CHECK_ARROW_ERROR(
-        batch->AddColumn(batch->num_columns(), "f10", array4, &batch));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(
         batch, batch->AddColumn(batch->num_columns(), "f7", array1));
     CHECK_ARROW_ERROR_AND_ASSIGN(
@@ -400,7 +390,7 @@ int main(int argc, char** argv) {
         batch, batch->AddColumn(batch->num_columns(), "f9", array3));
     CHECK_ARROW_ERROR_AND_ASSIGN(
         batch, batch->AddColumn(batch->num_columns(), "f10", array4));
-#endif
+
     auto r4 = std::dynamic_pointer_cast<RecordBatch>(client.GetObject(id3));
     CHECK(r4->GetRecordBatch()->Equals(*batch));
     LOG(INFO) << "Passed record batch wrapper tests...";
@@ -448,22 +438,12 @@ int main(int argc, char** argv) {
 
     auto field = ::arrow::field("f7", array1->type());
     auto chunked_array1 = std::make_shared<arrow::ChunkedArray>(array1);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(
-        table->AddColumn(table->num_columns(), field, chunked_array1, &table));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(
         table, table->AddColumn(table->num_columns(), field, chunked_array1));
-#endif
     field = ::arrow::field("f8", array2->type());
     auto chunked_array2 = std::make_shared<arrow::ChunkedArray>(array2);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(
-        table->AddColumn(table->num_columns(), field, chunked_array2, &table));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(
         table, table->AddColumn(table->num_columns(), field, chunked_array2));
-#endif
     auto r4 = std::dynamic_pointer_cast<Table>(client.GetObject(id3));
     CHECK(r4->GetTable()->Equals(*table));
 

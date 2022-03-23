@@ -242,13 +242,8 @@ inline Status RecvArrowBuffer(std::shared_ptr<arrow::Buffer>& buffer,
   int64_t size;
   MPI_Recv(&size, 1, MPI_INT64_T, src_worker_id, tag, comm, MPI_STATUS_IGNORE);
 
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      arrow::AllocateBuffer(arrow::default_memory_pool(), size, &buffer));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       buffer, arrow::AllocateBuffer(size, arrow::default_memory_pool()));
-#endif
 
   if (size != 0) {
     recv_buffer<uint8_t>(buffer->mutable_data(), size, src_worker_id, comm,
@@ -457,13 +452,8 @@ Status ShufflePropertyVertexTable(const grape::CommSpec& comm_spec,
   }
   std::shared_ptr<arrow::Table> tmp_table;
   RETURN_ON_ERROR(RecordBatchesToTable(batches, &tmp_table));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      tmp_table->CombineChunks(arrow::default_memory_pool(), &table_out));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       table_out, tmp_table->CombineChunks(arrow::default_memory_pool()));
-#endif
   return Status::OK();
 }
 
@@ -600,13 +590,8 @@ Status ShufflePropertyEdgeTable(const grape::CommSpec& comm_spec,
   } else {
     std::shared_ptr<arrow::Table> tmp_table;
     RETURN_ON_ERROR(RecordBatchesToTable(batches, &tmp_table));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(
-        tmp_table->CombineChunks(arrow::default_memory_pool(), &table_out));
-#else
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         table_out, tmp_table->CombineChunks(arrow::default_memory_pool()));
-#endif
   }
   return Status::OK();
 }

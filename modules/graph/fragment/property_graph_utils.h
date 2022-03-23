@@ -1374,10 +1374,7 @@ inline InArchive& operator<<(InArchive& in_archive,
                              std::shared_ptr<arrow::Schema>& schema) {
   if (schema != nullptr) {
     std::shared_ptr<arrow::Buffer> out;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
-        *schema, nullptr, arrow::default_memory_pool(), &out));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
     CHECK_ARROW_ERROR_AND_ASSIGN(
         out, arrow::ipc::SerializeSchema(*schema, nullptr,
                                          arrow::default_memory_pool()));
@@ -1398,12 +1395,8 @@ inline OutArchive& operator>>(OutArchive& out_archive,
         reinterpret_cast<const uint8_t*>(out_archive.GetBuffer()),
         out_archive.GetSize());
     arrow::io::BufferReader reader(buffer);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &schema));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(schema,
                                  arrow::ipc::ReadSchema(&reader, nullptr));
-#endif
   }
   return out_archive;
 }

@@ -648,11 +648,7 @@ class ArrowFragmentLoader {
       }
       auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
 
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      meta->Append(LABEL_TAG, v_label_name);
-#else
       CHECK_ARROW_ERROR(meta->Set(LABEL_TAG, v_label_name));
-#endif
 
       tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
     }
@@ -721,15 +717,9 @@ class ArrowFragmentLoader {
           }
           std::string dst_label_name = it->second;
 
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-          meta->Append(LABEL_TAG, edge_label_name);
-          meta->Append(SRC_LABEL_TAG, src_label_name);
-          meta->Append(DST_LABEL_TAG, dst_label_name);
-#else
           CHECK_ARROW_ERROR(meta->Set(LABEL_TAG, edge_label_name));
           CHECK_ARROW_ERROR(meta->Set(SRC_LABEL_TAG, src_label_name));
           CHECK_ARROW_ERROR(meta->Set(DST_LABEL_TAG, dst_label_name));
-#endif
 
           tables[label_id].emplace_back(
               normalized_table->ReplaceSchemaMetadata(meta));

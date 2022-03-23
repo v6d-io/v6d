@@ -28,12 +28,8 @@ std::shared_ptr<arrow::Table> ConcatenateTables(
   }
   auto col_names = tables[0]->ColumnNames();
   for (size_t i = 1; i < tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(tables[i]->RenameColumns(col_names, &tables[i]));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
                                  tables[i]->RenameColumns(col_names));
-#endif
   }
   std::shared_ptr<arrow::Table> table;
   CHECK_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(tables));
@@ -64,10 +60,7 @@ Status GetRecordBatchStreamSize(const arrow::RecordBatch& batch, size_t* size) {
   arrow::io::MockOutputStream dst;
 
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      arrow::ipc::RecordBatchStreamWriter::Open(&dst, batch.schema(), &writer));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       writer, arrow::ipc::NewStreamWriter(&dst, batch.schema()));
 #else
@@ -106,13 +99,8 @@ Status DeserializeRecordBatches(
     std::vector<std::shared_ptr<arrow::RecordBatch>>* batches) {
   arrow::io::BufferReader reader(buffer);
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      arrow::ipc::RecordBatchStreamReader::Open(&reader, &batch_reader));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
-#endif
   RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(batches));
   return Status::OK();
 }
@@ -120,12 +108,8 @@ Status DeserializeRecordBatches(
 Status RecordBatchesToTable(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::Table>* table) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(arrow::Table::FromRecordBatches(batches, table));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table,
                                    arrow::Table::FromRecordBatches(batches));
-#endif
   return Status::OK();
 }
 
@@ -134,13 +118,8 @@ Status CombineRecordBatches(
     std::shared_ptr<arrow::RecordBatch>* batch) {
   std::shared_ptr<arrow::Table> table, combined_table;
   RETURN_ON_ERROR(RecordBatchesToTable(batches, &table));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      table->CombineChunks(arrow::default_memory_pool(), &combined_table));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       combined_table, table->CombineChunks(arrow::default_memory_pool()));
-#endif
   arrow::TableBatchReader tbreader(*combined_table);
   RETURN_ON_ARROW_ERROR(tbreader.ReadNext(batch));
   std::shared_ptr<arrow::RecordBatch> test_batch;
@@ -177,13 +156,8 @@ Status DeserializeTable(std::shared_ptr<arrow::Buffer> buffer,
                         std::shared_ptr<arrow::Table>* table) {
   arrow::io::BufferReader reader(buffer);
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      arrow::ipc::RecordBatchStreamReader::Open(&reader, &batch_reader));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
-#endif
   RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(table));
   return Status::OK();
 }

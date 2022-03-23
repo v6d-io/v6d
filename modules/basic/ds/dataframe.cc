@@ -79,14 +79,9 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::AsBatch(bool copy) const {
 
     std::shared_ptr<arrow::Buffer> copied_buffer;
     if (copy) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      CHECK_ARROW_ERROR(
-          df_col->buffer()->Copy(0, df_col->buffer()->size(), &copied_buffer));
-#else
       CHECK_ARROW_ERROR_AND_ASSIGN(
           copied_buffer,
           df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
-#endif
     } else {
       copied_buffer = df_col->buffer();
     }

@@ -123,13 +123,8 @@ class BasicArrowFragmentLoader {
          * Keep the oid column in vertex data table for HTAP, rather, we
          * record the id column name (primary key) in schema's metadata.
          *
-  #if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-        ARROW_OK_OR_RAISE(tmp_table->RemoveColumn(
-            id_column_idx, &local_v_tables[v_label]));
-  #else
         ARROW_OK_ASSIGN_OR_RAISE(local_v_tables[v_label],
                                  tmp_table->RemoveColumn(id_column_idx));
-  #endif
         */
 
         /**
@@ -140,17 +135,11 @@ class BasicArrowFragmentLoader {
          */
         auto id_field = tmp_table->schema()->field(id_column_idx);
         auto id_column = tmp_table->column(id_column_idx);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-        CHECK_ARROW_ERROR(tmp_table->RemoveColumn(id_column_idx, &tmp_table));
-        CHECK_ARROW_ERROR(tmp_table->AddColumn(
-            tmp_table->num_columns(), id_field, id_column, &tmp_table));
-#else
         CHECK_ARROW_ERROR_AND_ASSIGN(tmp_table,
                                      tmp_table->RemoveColumn(id_column_idx));
         CHECK_ARROW_ERROR_AND_ASSIGN(
             tmp_table, tmp_table->AddColumn(tmp_table->num_columns(), id_field,
                                             id_column));
-#endif
         id_column_idx = tmp_table->num_columns() - 1;
 
         metadata->Append("primary_key",
@@ -273,19 +262,12 @@ class BasicArrowFragmentLoader {
                                    edge_table->column(dst_column_idx), mapper));
 
           // replace oid columns with gid
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-          ARROW_OK_OR_RAISE(edge_table->SetColumn(src_column_idx, src_gid_field,
-                                                  src_gid_array, &edge_table));
-          ARROW_OK_OR_RAISE(edge_table->SetColumn(dst_column_idx, dst_gid_field,
-                                                  dst_gid_array, &edge_table));
-#else
           ARROW_OK_ASSIGN_OR_RAISE(
               edge_table, edge_table->SetColumn(src_column_idx, src_gid_field,
                                                 src_gid_array));
           ARROW_OK_ASSIGN_OR_RAISE(
               edge_table, edge_table->SetColumn(dst_column_idx, dst_gid_field,
                                                 dst_gid_array));
-#endif
 
           processed_table_list[edge_table_index] = edge_table;
         }

@@ -294,12 +294,8 @@ class [[vineyard]] SchemaProxy : public Registered<SchemaProxy> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     arrow::io::BufferReader reader(this->buffer_->Buffer());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &this->schema_));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(this->schema_,
                                  arrow::ipc::ReadSchema(&reader, nullptr));
-#endif
   }
 
   std::shared_ptr<arrow::Schema> const& GetSchema() const { return schema_; }
@@ -369,14 +365,9 @@ class [[vineyard]] Table : public Registered<Table> {
         }
         VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches_, &this->table_));
       } else {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-        CHECK_ARROW_ERROR(arrow::Table::FromRecordBatches(
-            this->schema_->GetSchema(), {}, &this->table_));
-#else
         CHECK_ARROW_ERROR_AND_ASSIGN(
             this->table_,
             arrow::Table::FromRecordBatches(this->schema_->GetSchema(), {}));
-#endif
       }
     }
     return this->table_;

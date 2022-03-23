@@ -104,14 +104,9 @@ int main(int argc, char** argv) {
         auto table = v_tables[i][j];
         std::shared_ptr<arrow::Table> combined_table;
         if (table->column(0)->num_chunks() != 1) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-          CHECK_ARROW_ERROR(table->CombineChunks(arrow::default_memory_pool(),
-                                                 &combined_table));
-#else
           CHECK_ARROW_ERROR_AND_ASSIGN(
               combined_table,
               table->CombineChunks(arrow::default_memory_pool()));
-#endif
         } else {
           combined_table = table;
         }

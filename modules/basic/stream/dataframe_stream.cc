@@ -61,12 +61,8 @@ Status DataframeStream::ReadRecordBatches(
 Status DataframeStream::ReadTable(std::shared_ptr<arrow::Table>& table) {
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
   RETURN_ON_ERROR(this->ReadRecordBatches(batches));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(arrow::Table::FromRecordBatches(batches, &table));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(table,
                                    arrow::Table::FromRecordBatches(batches));
-#endif
   return Status::OK();
 }
 
@@ -80,7 +76,8 @@ Status DataframeStream::ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
 
 Status DataframeStream::GetHeaderLine(bool& header_row,
                                       std::string& header_line) {
-  auto params = meta_.GetKeyValue<std::unordered_map<std::string, std::string>>("params");
+  auto params =
+      meta_.GetKeyValue<std::unordered_map<std::string, std::string>>("params");
   if (params.find("header_row") != params.end()) {
     header_row = (params["header_row"] == "1");
     if (params.find("header_line") != params.end()) {
