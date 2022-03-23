@@ -2171,7 +2171,7 @@ class ArrowFragment
     if (replace) {
       for (auto& pair : columns) {
         auto label_id = pair.first;
-        auto& entry = schema.GetMutableEntry(pair.first, "VERTEX");
+        auto& entry = schema.GetMutableEntry(label_id, "VERTEX");
         for (size_t i = 0; i < entry.props_.size(); ++i) {
           entry.InvalidateProperty(i);
         }

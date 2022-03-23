@@ -34,6 +34,21 @@ class DataframeStream : public BareRegistered<DataframeStream>,
         std::unique_ptr<DataframeStream>{new DataframeStream()});
   }
 
+  Status WriteTable(std::shared_ptr<arrow::Table> table);
+
+  Status WriteBatch(std::shared_ptr<arrow::RecordBatch> batch);
+
+  Status WriteDataframe(std::shared_ptr<DataFrame> df);
+
+  Status ReadRecordBatches(
+      std::vector<std::shared_ptr<arrow::RecordBatch>>& batches);
+
+  Status ReadTable(std::shared_ptr<arrow::Table>& table);
+
+  Status ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch, const bool copy);
+
+  Status GetHeaderLine(bool& header_row, std::string& header_line);
+
  protected:
   std::string GetTypeName() const override {
     return type_name<DataframeStream>();
