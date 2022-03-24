@@ -306,6 +306,7 @@ def run_single_vineyardd_tests():
         run_test('scalar_test')
         run_test('server_status_test')
         run_test('session_test')
+        run_test('lifecycle_test')
         run_test('signature_test')
         run_test('shallow_copy_test')
         run_test('shared_memory_test')

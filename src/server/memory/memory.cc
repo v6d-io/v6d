@@ -234,7 +234,25 @@ Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::Delete(const ID& object_id) {
+Status BulkStoreBase<ID, P>::OnRelease(ID const& id) {
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, id)) {
+    return Status::ObjectNotExists("object " + IDToString(id) +
+                                   " cannot be found");
+  } else {
+    // TODO(mengke): currently, ref_cnt == 0 means deletion
+    // RETURN_ON_ERROR(OnDelete(id));
+  }
+  return Status::OK();
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::Release(ID const& id, int conn) {
+  return this->RemoveDependency(id, conn);
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::OnDelete(const ID& object_id) {
   if (object_id == EmptyBlobID<ID>() ||
       object_id == GenerateBlobID<ID>(reinterpret_cast<void*>(
                        std::numeric_limits<uintptr_t>::max()))) {
@@ -292,6 +310,11 @@ Status BulkStoreBase<ID, P>::Delete(const ID& object_id) {
   }
   objects_.erase(accessor);
   return Status::OK();
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::Delete(ID const& id) {
+  return this->PreDelete(id);
 }
 
 template <typename ID, typename P>
@@ -388,6 +411,20 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
     record.fd = fd;
     record.size = mmap_size;
     arenas_.erase(arena);
+  }
+  return Status::OK();
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::FetchAndModify(const ID& id, int64_t& ref_cnt,
+                                            int64_t changes) {
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, id)) {
+    return Status::ObjectNotExists("object " + IDToString(id) +
+                                   " cannot be found");
+  } else {
+    accessor->second->ref_cnt += changes;
+    ref_cnt = accessor->second->ref_cnt;
   }
   return Status::OK();
 }

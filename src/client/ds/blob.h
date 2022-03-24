@@ -149,6 +149,7 @@ class Blob : public Registered<Blob> {
  */
 class BlobWriter : public ObjectBuilder {
  public:
+   ~BlobWriter() override;
   /**
    * @brief Return the object id of this blob builder. Note that before sealing
    * the blob builder the object id cannot be used to get "Blob" objects.
@@ -228,11 +229,11 @@ class BlobWriter : public ObjectBuilder {
  private:
   BlobWriter(ObjectID const object_id, const Payload& payload,
              std::shared_ptr<arrow::MutableBuffer> const& buffer)
-      : object_id_(object_id), payload_(payload), buffer_(buffer) {}
+      : object_id_(object_id), payload_(payload), buffer_(buffer){}
 
   BlobWriter(ObjectID const object_id, Payload&& payload,
              std::shared_ptr<arrow::MutableBuffer> const& buffer)
-      : object_id_(object_id), payload_(payload), buffer_(buffer) {}
+      : object_id_(object_id), payload_(payload), buffer_(buffer){}
 
   ObjectID object_id_;
   Payload payload_;

@@ -37,25 +37,10 @@ limitations under the License.
 
 namespace vineyard {
 
-Client::Client() : shm_(new detail::SharedMemoryManager(-1)) {}
+BasicIPCClient::BasicIPCClient() : shm_(new detail::SharedMemoryManager(-1)) {}
 
-Client::~Client() { Disconnect(); }
-
-Status Client::Connect() {
-  auto ep = read_env("VINEYARD_IPC_SOCKET");
-  if (!ep.empty()) {
-    return Connect(ep);
-  }
-  return Status::ConnectionError(
-      "Environment variable VINEYARD_IPC_SOCKET does't exists");
-}
-
-Status Client::Connect(const std::string& ipc_socket) {
-  return Connect(ipc_socket, /*bulk_store_type=*/"Normal");
-}
-
-Status Client::Connect(const std::string& ipc_socket,
-                       std::string const& store_type) {
+Status BasicIPCClient::Connect(const std::string& ipc_socket,
+                               std::string const& store_type) {
   std::lock_guard<std::recursive_mutex> guard(client_mutex_);
   RETURN_ON_ASSERT(!connected_ || ipc_socket == ipc_socket_);
   if (connected_) {
@@ -93,12 +78,8 @@ Status Client::Connect(const std::string& ipc_socket,
   return Status::OK();
 }
 
-Status Client::Open(std::string const& ipc_socket) {
-  return Client::Open(ipc_socket, /*bulk_store_type=*/"Normal");
-}
-
-Status Client::Open(std::string const& ipc_socket,
-                    std::string const& bulk_store_type) {
+Status BasicIPCClient::Open(std::string const& ipc_socket,
+                            std::string const& bulk_store_type) {
   RETURN_ON_ASSERT(!this->connected_,
                    "The client has already been connected to vineyard server");
   std::string socket_path;
@@ -117,6 +98,25 @@ Status Client::Open(std::string const& ipc_socket,
   Disconnect();
   VINEYARD_CHECK_OK(Connect(socket_path, bulk_store_type));
   return Status::OK();
+}
+
+Client::~Client() { Disconnect(); }
+
+Status Client::Connect() {
+  auto ep = read_env("VINEYARD_IPC_SOCKET");
+  if (!ep.empty()) {
+    return Connect(ep);
+  }
+  return Status::ConnectionError(
+      "Environment variable VINEYARD_IPC_SOCKET does't exists");
+}
+
+Status Client::Connect(const std::string& ipc_socket) {
+  return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Normal");
+}
+
+Status Client::Open(std::string const& ipc_socket) {
+  return BasicIPCClient::Open(ipc_socket, /*bulk_store_type=*/"Normal");
 }
 
 Status Client::Fork(Client& client) {
@@ -432,6 +432,8 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
     dist = shared + payload.data_offset;
   }
   buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
+
+  RETURN_ON_ERROR(AddUsage(id, payload));
   return Status::OK();
 }
 
@@ -454,13 +456,30 @@ Status Client::GetBuffers(
     return Status::OK();
   }
   ENSURE_CONNECTED(this);
+  std::set<ObjectID> remote_ids;
+  std::vector<Payload> local_payloads;
+
+  /// Lookup in local cache
+  for (auto const& id : ids) {
+    Payload tmp;
+    if (FetchOnLocal(id, tmp).ok()) {
+      local_payloads.emplace_back(tmp);
+    } else {
+      remote_ids.emplace(id);
+    }
+  }
+
+  /// Lookup in remote server
   std::string message_out;
-  WriteGetBuffersRequest(ids, message_out);
+  WriteGetBuffersRequest(remote_ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::vector<Payload> payloads;
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
+
+  payloads.insert(payloads.end(), local_payloads.begin(), local_payloads.end());
+
   for (auto const& item : payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
     uint8_t *shared = nullptr, *dist = nullptr;
@@ -471,6 +490,77 @@ Status Client::GetBuffers(
     }
     buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
     buffers.emplace(item.object_id, buffer);
+
+    /// Add reference count of buffers
+    RETURN_ON_ERROR(AddUsage(item.object_id, item));
+  }
+  return Status::OK();
+}
+
+Status Client::GetDependency(ObjectID const& id, std::set<ObjectID>& bids) {
+  ENSURE_CONNECTED(this);
+  ObjectMeta meta;
+  json tree;
+  RETURN_ON_ERROR(GetData(id, tree, /*sync_remote=*/true));
+  meta.SetMetaData(this, tree);
+
+  bids = meta.GetBufferSet()->AllBufferIds();
+  return Status::OK();
+}
+
+/// Release a bolb
+Status Client::OnRelease(ObjectID const& id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteReleaseRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadReleaseReply(message_in));
+  return Status::OK();
+}
+
+/// Delete a blob
+Status Client::OnDelete(ObjectID const& id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  RETURN_ON_ASSERT(IsBlob(id));
+  WriteDelDataRequest(id, true, false, false, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDelDataReply(message_in));
+  return Status::OK();
+}
+
+Status Client::Release(const ObjectID& id) {
+  if (!IsBlob(id)) {
+    /// It is a object, release all the underlying blobs
+    std::set<ObjectID> bids;
+    RETURN_ON_ERROR(GetDependency(id, bids));
+    for (auto const& bid : bids) {
+      RETURN_ON_ASSERT(IsBlob(bid));
+      RETURN_ON_ERROR(RemoveUsage(bid));
+    }
+  } else {
+    /// It is a blob, release it directly.
+    RETURN_ON_ERROR(RemoveUsage(id));
+  }
+  return Status::OK();
+}
+
+Status Client::Delete(const ObjectID& id) {
+  if (!IsBlob(id)) {
+    /// It is a objecl, delete all the underlying blobs
+    std::set<ObjectID> bids;
+    VINEYARD_CHECK_OK(GetDependency(id, bids));
+    for (auto const& bid : bids) {
+      RETURN_ON_ASSERT(IsBlob(bid));
+      VINEYARD_CHECK_OK(PreDelete(bid));
+    }
+  } else {
+    /// It is a blob, delete it directly.
+    VINEYARD_CHECK_OK(PreDelete(id));
   }
   return Status::OK();
 }
@@ -535,6 +625,12 @@ Status Client::Seal(ObjectID const& object_id) {
 
 ExternalClient::~ExternalClient() {}
 
+// dummy implementation
+Status ExternalClient::GetMetaData(const ObjectID id, ObjectMeta& meta_data,
+                                   const bool sync_remote) {
+  return Status::OK();
+}
+
 Status ExternalClient::Seal(ExternalID const& external_id) {
   ENSURE_CONNECTED(this);
   std::string message_out;
@@ -548,11 +644,11 @@ Status ExternalClient::Seal(ExternalID const& external_id) {
 }
 
 Status ExternalClient::Open(std::string const& ipc_socket) {
-  return Client::Open(ipc_socket, /*bulk_store_type=*/"External");
+  return BasicIPCClient::Open(ipc_socket, /*bulk_store_type=*/"External");
 }
 
 Status ExternalClient::Connect(const std::string& ipc_socket) {
-  return Client::Connect(ipc_socket, /*bulk_store_type=*/"External");
+  return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"External");
 }
 
 Status ExternalClient::CreateBlob(ExternalID external_id, size_t size,
@@ -587,6 +683,7 @@ Status ExternalClient::CreateBlob(ExternalID external_id, size_t size,
   auto payload = external_payload.ToNormalPayload();
   object_id = payload.object_id;
   blob.reset(new BlobWriter(object_id, payload, buffer));
+  RETURN_ON_ERROR(AddUsage(external_id, external_payload));
   return Status::OK();
 }
 
@@ -598,16 +695,32 @@ Status ExternalClient::GetBlobs(
     return Status::OK();
   }
   ENSURE_CONNECTED(this);
+  std::set<ExternalID> remote_ids;
+  std::vector<ExternalPayload> local_payloads;
 
+  /// Lookup in local cache
+  for (auto const& id : external_ids) {
+    ExternalPayload tmp;
+    if (FetchOnLocal(id, tmp).ok()) {
+      local_payloads.emplace_back(tmp);
+    } else {
+      remote_ids.emplace(id);
+    }
+  }
+
+  /// Lookup in remote server
   std::string message_out;
-  WriteGetBuffersByExternalRequest(external_ids, message_out);
+  WriteGetBuffersByExternalRequest(remote_ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::vector<ExternalPayload> _payloads;
-
   RETURN_ON_ERROR(ReadGetBuffersByExternalReply(message_in, _payloads));
+
+  _payloads.insert(_payloads.end(), local_payloads.begin(),
+                   local_payloads.end());
+
   for (auto const& item : _payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
     uint8_t *shared = nullptr, *dist = nullptr;
@@ -619,9 +732,41 @@ Status ExternalClient::GetBlobs(
     buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
     buffers.emplace(item.external_id, buffer);
     external_payloads.emplace(item.external_id, item);
+
+    RETURN_ON_ERROR(AddUsage(item.external_id, item));
   }
   return Status::OK();
 }
+
+/// Release an external blob.
+Status ExternalClient::OnRelease(ExternalID const& external_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteExternalReleaseRequest(external_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadExternalReleaseReply(message_in));
+  return Status::OK();
+}
+
+/// Delete an external blob.
+Status ExternalClient::OnDelete(ExternalID const& external_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteExternalDelDataRequest(external_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadExternalDelDataReply(message_in));
+  return Status::OK();
+}
+
+Status ExternalClient::Release(const ExternalID& id) { return RemoveUsage(id); }
+
+Status ExternalClient::Delete(const ExternalID& id) { return PreDelete(id); }
 
 namespace detail {
 
