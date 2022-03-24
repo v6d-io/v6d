@@ -541,7 +541,7 @@ ExternalClient::~ExternalClient() {}
 // dummy implementation
 Status ExternalClient::GetMetaData(const ObjectID id, ObjectMeta& meta_data,
                                    const bool sync_remote) {
-  return Status::OK();
+  return Status::Invalid("Unsupported.");
 }
 
 Status ExternalClient::Seal(ExternalID const& external_id) {
