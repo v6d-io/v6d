@@ -433,7 +433,6 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   }
   buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
 
-  RETURN_ON_ERROR(AddUsage(id, payload));
   return Status::OK();
 }
 
@@ -456,29 +455,14 @@ Status Client::GetBuffers(
     return Status::OK();
   }
   ENSURE_CONNECTED(this);
-  std::set<ObjectID> remote_ids;
-  std::vector<Payload> local_payloads;
 
-  /// Lookup in local cache
-  for (auto const& id : ids) {
-    Payload tmp;
-    if (FetchOnLocal(id, tmp).ok()) {
-      local_payloads.emplace_back(tmp);
-    } else {
-      remote_ids.emplace(id);
-    }
-  }
-
-  /// Lookup in remote server
   std::string message_out;
-  WriteGetBuffersRequest(remote_ids, message_out);
+  WriteGetBuffersRequest(ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::vector<Payload> payloads;
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
-
-  payloads.insert(payloads.end(), local_payloads.begin(), local_payloads.end());
 
   for (auto const& item : payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
@@ -490,77 +474,6 @@ Status Client::GetBuffers(
     }
     buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
     buffers.emplace(item.object_id, buffer);
-
-    /// Add reference count of buffers
-    RETURN_ON_ERROR(AddUsage(item.object_id, item));
-  }
-  return Status::OK();
-}
-
-Status Client::GetDependency(ObjectID const& id, std::set<ObjectID>& bids) {
-  ENSURE_CONNECTED(this);
-  ObjectMeta meta;
-  json tree;
-  RETURN_ON_ERROR(GetData(id, tree, /*sync_remote=*/true));
-  meta.SetMetaData(this, tree);
-
-  bids = meta.GetBufferSet()->AllBufferIds();
-  return Status::OK();
-}
-
-/// Release a bolb
-Status Client::OnRelease(ObjectID const& id) {
-  ENSURE_CONNECTED(this);
-  std::string message_out;
-  WriteReleaseRequest(id, message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadReleaseReply(message_in));
-  return Status::OK();
-}
-
-/// Delete a blob
-Status Client::OnDelete(ObjectID const& id) {
-  ENSURE_CONNECTED(this);
-  std::string message_out;
-  RETURN_ON_ASSERT(IsBlob(id));
-  WriteDelDataRequest(id, true, false, false, message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadDelDataReply(message_in));
-  return Status::OK();
-}
-
-Status Client::Release(const ObjectID& id) {
-  if (!IsBlob(id)) {
-    /// It is a object, release all the underlying blobs
-    std::set<ObjectID> bids;
-    RETURN_ON_ERROR(GetDependency(id, bids));
-    for (auto const& bid : bids) {
-      RETURN_ON_ASSERT(IsBlob(bid));
-      RETURN_ON_ERROR(RemoveUsage(bid));
-    }
-  } else {
-    /// It is a blob, release it directly.
-    RETURN_ON_ERROR(RemoveUsage(id));
-  }
-  return Status::OK();
-}
-
-Status Client::Delete(const ObjectID& id) {
-  if (!IsBlob(id)) {
-    /// It is a objecl, delete all the underlying blobs
-    std::set<ObjectID> bids;
-    VINEYARD_CHECK_OK(GetDependency(id, bids));
-    for (auto const& bid : bids) {
-      RETURN_ON_ASSERT(IsBlob(bid));
-      VINEYARD_CHECK_OK(PreDelete(bid));
-    }
-  } else {
-    /// It is a blob, delete it directly.
-    VINEYARD_CHECK_OK(PreDelete(id));
   }
   return Status::OK();
 }
@@ -640,6 +553,7 @@ Status ExternalClient::Seal(ExternalID const& external_id) {
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadSealReply(message_in));
+  RETURN_ON_ERROR(SealUsage(external_id));
   return Status::OK();
 }
 

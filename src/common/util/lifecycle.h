@@ -83,7 +83,6 @@ class LifeCycleTracker {
     return pending_to_delete.find(id) != pending_to_delete.end();
   }
 
-
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
   /// Cache the objects that client wants to delete but `ref_count > 0`

@@ -32,6 +32,7 @@
 #include <memory>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "oneapi/tbb/concurrent_hash_map.h"
@@ -147,7 +148,7 @@ class DependencyTracker
 };
 
 template <typename ID, typename P>
-class BulkStoreBase : public DependencyTracker<ID, P, BulkStoreBase<ID, P>> {
+class BulkStoreBase {
  public:
   using object_map_t = tbb::concurrent_hash_map<ID, std::shared_ptr<P>>;
 
@@ -168,6 +169,8 @@ class BulkStoreBase : public DependencyTracker<ID, P, BulkStoreBase<ID, P>> {
 
   Status Seal(ID const& object_id);
 
+  Status Delete(ID const& object_id);
+
   object_map_t const& List() const { return objects_; }
 
   size_t Footprint() const;
@@ -179,16 +182,6 @@ class BulkStoreBase : public DependencyTracker<ID, P, BulkStoreBase<ID, P>> {
 
   Status FinalizeArena(int const fd, std::vector<size_t> const& offsets,
                        std::vector<size_t> const& sizes);
-
-  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes);
-
-  Status OnRelease(ID const& id);
-
-  Status OnDelete(ID const& id);
-
-  Status Release(ID const& id, int conn);
-
-  Status Delete(ID const& id);
 
  protected:
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
@@ -211,11 +204,24 @@ class BulkStore : public BulkStoreBase<ObjectID, Payload> {
                 std::shared_ptr<Payload>& object);
 };
 
-class ExternalBulkStore : public BulkStoreBase<ExternalID, ExternalPayload> {
+class ExternalBulkStore
+    : public BulkStoreBase<ExternalID, ExternalPayload>,
+      public DependencyTracker<ExternalID, ExternalPayload, ExternalBulkStore> {
  public:
   Status Create(size_t const data_size, size_t const external_size,
                 ExternalID const& external_id, ObjectID& object_id,
                 std::shared_ptr<ExternalPayload>& object);
+
+  Status FetchAndModify(ExternalID const& id, int64_t& ref_cnt,
+                        int64_t changes);
+
+  Status OnRelease(ExternalID const& id);
+
+  Status OnDelete(ExternalID const& id);
+
+  Status Release(ExternalID const& id, int conn);
+
+  Status Delete(ExternalID const& id);
 };
 
 }  // namespace vineyard

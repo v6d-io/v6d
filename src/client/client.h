@@ -121,6 +121,19 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     auto elem = object_in_use_.find(id);
     if (elem != object_in_use_.end()) {
       payload = *(elem->second);
+      if (payload.IsSealed()) {
+        return Status::OK();
+      } else {
+        return Status::ObjectNotSealed();
+      }
+    }
+    return Status::ObjectNotExists();
+  }
+
+  Status SealUsage(ID const& id) {
+    auto elem = object_in_use_.find(id);
+    if (elem != object_in_use_.end()) {
+      elem->second->is_sealed = true;
       return Status::OK();
     }
     return Status::ObjectNotExists();
@@ -137,7 +150,7 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
 
   Status RemoveUsage(ID const& id) { return this->DecreaseReferenceCount(id); }
 
-  Status OnRelease(ID const& id) { return Self().OnRelease(id); }
+  Status OnRelease(ID const& id) { return this->Self().OnRelease(id); }
 
   Status OnDelete(ID const& id) { return Self().OnDelete(id); }
 
@@ -184,8 +197,7 @@ class BasicIPCClient : public ClientBase {
  *        vineyard server. Vineyard's IPC Client talks to vineyard server
  *        and manipulate objects in vineyard.
  */
-class Client : public BasicIPCClient,
-               public UsageTracker<ObjectID, Payload, Client> {
+class Client : public BasicIPCClient {
  public:
   Client() {}
 
@@ -447,19 +459,7 @@ class Client : public BasicIPCClient,
   Status ReleaseArena(const int fd, std::vector<size_t> const& offsets,
                       std::vector<size_t> const& sizes);
 
-  Status Release(ObjectID const& id) override;
-
-  Status Delete(ObjectID const& id);
-
-  /// For UsageTracker only
-  Status OnRelease(ObjectID const& id);
-
-  /// For UsageTracker only
-  Status OnDelete(ObjectID const& id);
-
  protected:
-  Status GetDependency(ObjectID const& id, std::set<ObjectID>& bids);
-
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
                       std::shared_ptr<arrow::MutableBuffer>& buffer);
 
@@ -516,7 +516,7 @@ class ExternalClient
   ~ExternalClient() override;
 
   Status GetMetaData(const ObjectID id, ObjectMeta& meta_data,
-                     const bool sync_remote = false) override; 
+                     const bool sync_remote = false) override;
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .

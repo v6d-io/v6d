@@ -234,90 +234,6 @@ Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::OnRelease(ID const& id) {
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, id)) {
-    return Status::ObjectNotExists("object " + IDToString(id) +
-                                   " cannot be found");
-  } else {
-    // TODO(mengke): currently, ref_cnt == 0 means deletion
-    // RETURN_ON_ERROR(OnDelete(id));
-  }
-  return Status::OK();
-}
-
-template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::Release(ID const& id, int conn) {
-  return this->RemoveDependency(id, conn);
-}
-
-template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::OnDelete(const ID& object_id) {
-  if (object_id == EmptyBlobID<ID>() ||
-      object_id == GenerateBlobID<ID>(reinterpret_cast<void*>(
-                       std::numeric_limits<uintptr_t>::max()))) {
-    return Status::OK();
-  }
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, object_id)) {
-    return Status::ObjectNotExists("delete: id = " + IDToString(object_id));
-  }
-  auto& object = accessor->second;
-  if (object->arena_fd == -1) {
-    auto buff_size = object->data_size;
-    BulkAllocator::Free(object->pointer, buff_size);
-    DVLOG(10) << "after free: " << IDToString(object_id) << ": " << Footprint()
-              << "(" << FootprintLimit() << ")";
-  } else {
-    static size_t page_size = memory::system_page_size();
-    uintptr_t pointer = reinterpret_cast<uintptr_t>(object->pointer);
-    uintptr_t lower = memory::align_down(pointer, page_size),
-              upper = memory::align_up(pointer, page_size);
-    uintptr_t lower_bound = lower, upper_bound = upper;
-    {
-      auto iter = Arena::spans.find(object_id);
-      if (iter != Arena::spans.begin()) {
-        auto iter_prev = std::prev(iter);
-        typename object_map_t::const_accessor accessor;
-        if (!objects_.find(accessor, *iter_prev)) {
-          return Status::Invalid(
-              "Internal state error: previous blob not found");
-        }
-        auto& object_prev = accessor->second;
-        lower_bound =
-            memory::align_up(reinterpret_cast<uintptr_t>(object_prev->pointer) +
-                                 object_prev->data_size,
-                             page_size);
-      }
-      auto iter_next = std::next(iter);
-      if (iter_next != Arena::spans.end()) {
-        typename object_map_t::const_accessor accessor;
-        if (!objects_.find(accessor, *iter_next)) {
-          return Status::Invalid("Internal state error: next blob not found");
-        }
-        auto& object_next = accessor->second;
-        upper_bound = memory::align_down(
-            reinterpret_cast<uintptr_t>(object_next->pointer), page_size);
-      }
-    }
-    if (std::max(lower, lower_bound) < std::min(upper, upper_bound)) {
-      DVLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit()
-                << "), recycle: (" << std::max(lower, lower_bound) << ", "
-                << std::min(upper, upper_bound) << ")";
-      memory::recycle_resident_memory(std::max(lower, lower_bound),
-                                      std::min(upper, upper_bound));
-    }
-  }
-  objects_.erase(accessor);
-  return Status::OK();
-}
-
-template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::Delete(ID const& id) {
-  return this->PreDelete(id);
-}
-
-template <typename ID, typename P>
 bool BulkStoreBase<ID, P>::Exists(const ID& object_id) {
   typename object_map_t::const_accessor accessor;
   return objects_.find(accessor, object_id);
@@ -416,16 +332,63 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::FetchAndModify(const ID& id, int64_t& ref_cnt,
-                                            int64_t changes) {
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, id)) {
-    return Status::ObjectNotExists("object " + IDToString(id) +
-                                   " cannot be found");
-  } else {
-    accessor->second->ref_cnt += changes;
-    ref_cnt = accessor->second->ref_cnt;
+Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
+  if (object_id == EmptyBlobID<ID>() ||
+      object_id == GenerateBlobID<ID>(reinterpret_cast<void*>(
+                       std::numeric_limits<uintptr_t>::max()))) {
+    return Status::OK();
   }
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, object_id)) {
+    return Status::ObjectNotExists("delete: id = " + IDToString(object_id));
+  }
+  auto& object = accessor->second;
+  if (object->arena_fd == -1) {
+    auto buff_size = object->data_size;
+    BulkAllocator::Free(object->pointer, buff_size);
+    DVLOG(10) << "after free: " << IDToString(object_id) << ": " << Footprint()
+              << "(" << FootprintLimit() << ")";
+  } else {
+    static size_t page_size = memory::system_page_size();
+    uintptr_t pointer = reinterpret_cast<uintptr_t>(object->pointer);
+    uintptr_t lower = memory::align_down(pointer, page_size),
+              upper = memory::align_up(pointer, page_size);
+    uintptr_t lower_bound = lower, upper_bound = upper;
+    {
+      auto iter = Arena::spans.find(object_id);
+      if (iter != Arena::spans.begin()) {
+        auto iter_prev = std::prev(iter);
+        typename object_map_t::const_accessor accessor;
+        if (!objects_.find(accessor, *iter_prev)) {
+          return Status::Invalid(
+              "Internal state error: previous blob not found");
+        }
+        auto& object_prev = accessor->second;
+        lower_bound =
+            memory::align_up(reinterpret_cast<uintptr_t>(object_prev->pointer) +
+                                 object_prev->data_size,
+                             page_size);
+      }
+      auto iter_next = std::next(iter);
+      if (iter_next != Arena::spans.end()) {
+        typename object_map_t::const_accessor accessor;
+        if (!objects_.find(accessor, *iter_next)) {
+          return Status::Invalid("Internal state error: next blob not found");
+        }
+        auto& object_next = accessor->second;
+        upper_bound = memory::align_down(
+            reinterpret_cast<uintptr_t>(object_next->pointer), page_size);
+      }
+    }
+    if (std::max(lower, lower_bound) < std::min(upper, upper_bound)) {
+      DVLOG(10) << "after free: " << Footprint() << "(" << FootprintLimit()
+                << "), recycle: (" << std::max(lower, lower_bound) << ", "
+                << std::min(upper, upper_bound) << ")";
+      memory::recycle_resident_memory(std::max(lower, lower_bound),
+                                      std::min(upper, upper_bound));
+    }
+  }
+  objects_.erase(accessor);
   return Status::OK();
 }
 
@@ -485,4 +448,41 @@ Status ExternalBulkStore::Create(size_t const data_size,
             << Footprint() << "(" << FootprintLimit() << ")";
   return Status::OK();
 }
+
+Status ExternalBulkStore::OnRelease(ExternalID const& id) {
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, id)) {
+    return Status::ObjectNotExists("object " + ExternalIDToString(id) +
+                                   " cannot be found");
+  } else {
+    RETURN_ON_ERROR(OnDelete(id));
+  }
+  return Status::OK();
+}
+
+Status ExternalBulkStore::Release(ExternalID const& id, int conn) {
+  return this->RemoveDependency(id, conn);
+}
+
+Status ExternalBulkStore::FetchAndModify(const ExternalID& id, int64_t& ref_cnt,
+                                         int64_t changes) {
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, id)) {
+    return Status::ObjectNotExists("object " + IDToString(id) +
+                                   " cannot be found");
+  } else {
+    accessor->second->ref_cnt += changes;
+    ref_cnt = accessor->second->ref_cnt;
+  }
+  return Status::OK();
+}
+
+Status ExternalBulkStore::OnDelete(ExternalID const& id) {
+  return BulkStoreBase<ExternalID, ExternalPayload>::Delete(id);
+}
+
+Status ExternalBulkStore::Delete(ExternalID const& id) {
+  return this->PreDelete(id);
+}
+
 }  // namespace vineyard

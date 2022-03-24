@@ -74,14 +74,13 @@ enum class CommandType {
   DeleteSessionRequest = 40,
   DeleteSessionReply = 41,
   SealRequest = 42,
-  ReleaseRequest = 43,
-  CreateBufferByExternalRequest = 44,
-  CreateBufferByExternalReply = 45,
-  GetBuffersByExternalRequest = 46,
-  GetBuffersByExternalReply = 47,
-  ExternalSealRequest = 48,
-  ExternalReleaseRequest = 49,
-  ExternalDelDataRequest = 50,
+  CreateBufferByExternalRequest = 43,
+  CreateBufferByExternalReply = 44,
+  GetBuffersByExternalRequest = 45,
+  GetBuffersByExternalReply = 46,
+  ExternalSealRequest = 47,
+  ExternalReleaseRequest = 48,
+  ExternalDelDataRequest = 49,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -442,18 +441,14 @@ void WriteSealReply(std::string& msg);
 
 Status ReadSealReply(json const& root);
 
-void WriteReleaseRequest(ObjectID const& object_id, std::string& message_out);
-
-Status ReadReleaseRequest(json const& root, ObjectID& object_id);
-
-void WriteReleaseReply(std::string& msg);
-
-Status ReadReleaseReply(json const& root);
-
 void WriteExternalReleaseRequest(ExternalID const& external_id,
                                  std::string& message_out);
 
 Status ReadExternalReleaseRequest(json const& root, ExternalID& external_id);
+
+void WriteExternalReleaseReply(std::string& msg);
+
+Status ReadExternalReleaseReply(json const& root);
 
 void WriteExternalReleaseReply(std::string& msg);
 

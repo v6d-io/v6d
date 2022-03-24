@@ -146,11 +146,6 @@ const std::shared_ptr<arrow::Buffer>& Blob::BufferUnsafe() const {
   return buffer_;
 }
 
-BlobWriter::~BlobWriter() {
-  VINEYARD_DISCARD(Abort(client_));
-  VINEYARD_DISCARD(Abort(external_client_));
-}
-
 ObjectID BlobWriter::id() const { return object_id_; }
 
 size_t BlobWriter::size() const { return buffer_ ? buffer_->size() : 0; }

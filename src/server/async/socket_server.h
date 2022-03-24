@@ -139,8 +139,6 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doSealExternalBlob(json const& root);
 
-  bool doRelease(json const& root);
-
   bool doExternalRelease(json const& root);
 
   bool doExternalDelData(json const& root);

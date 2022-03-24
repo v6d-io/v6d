@@ -30,7 +30,6 @@ struct Payload {
   ptrdiff_t data_offset;
   int64_t data_size;
   int64_t map_size;
-  int64_t ref_cnt;
   uint8_t* pointer;
   bool is_sealed;
 
@@ -41,7 +40,6 @@ struct Payload {
         data_offset(0),
         data_size(0),
         map_size(0),
-        ref_cnt(0),
         pointer(nullptr),
         is_sealed(0) {}
 
@@ -53,7 +51,6 @@ struct Payload {
         data_offset(offset),
         data_size(size),
         map_size(msize),
-        ref_cnt(0),
         pointer(ptr),
         is_sealed(0) {}
 
@@ -65,7 +62,6 @@ struct Payload {
         data_offset(offset),
         data_size(size),
         map_size(msize),
-        ref_cnt(0),
         pointer(ptr),
         is_sealed(0) {}
 
@@ -99,28 +95,32 @@ struct Payload {
 struct ExternalPayload : public Payload {
   ExternalID external_id;
   int64_t external_size;
+  int64_t ref_cnt;
 
-  ExternalPayload() : Payload(), external_id(), external_size(0) {}
+  ExternalPayload() : Payload(), external_id(), external_size(0), ref_cnt(0) {}
 
   ExternalPayload(ExternalID external_id, ObjectID object_id,
                   int64_t external_size, int64_t size, uint8_t* ptr, int fd,
                   int64_t msize, ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, msize, offset),
         external_id(external_id),
-        external_size(external_size) {}
+        external_size(external_size),
+        ref_cnt(0) {}
 
   ExternalPayload(ExternalID external_id, ObjectID object_id,
                   int64_t external_size, int64_t size, uint8_t* ptr, int fd,
                   int arena_fd, int64_t msize, ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, arena_fd, msize, offset),
         external_id(external_id),
-        external_size(external_size) {}
+        external_size(external_size),
+        ref_cnt(0) {}
 
   ExternalPayload(ExternalID external_id, int64_t size, uint8_t* ptr, int fd,
                   int64_t msize, ptrdiff_t offset)
       : Payload(EmptyBlobID(), size, ptr, fd, msize, offset),
         external_id(external_id),
-        external_size(0) {}
+        external_size(0),
+        ref_cnt(0) {}
 
   static std::shared_ptr<ExternalPayload> MakeEmpty() {
     static std::shared_ptr<ExternalPayload> payload =

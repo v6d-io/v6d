@@ -49,25 +49,6 @@ bool SocketConnection::Stop() {
     // already stopped, or haven't started
     return false;
   }
-
-  auto self(shared_from_this());
-  // release all objects in this connection
-  if (server_ptr_->GetBulkStoreType() == "Normal") {
-    std::unordered_set<ObjectID> ids;
-    auto status = server_ptr_->GetBulkStore()->PopList(this->getConnId(), ids);
-    if (!status.ok()) {
-      LOG(ERROR) << "Failed to pop list of objects in connection "
-                 << this->getConnId() << ": " << status.ToString();
-    }
-    // delete all the depenedent objects
-    VINEYARD_CHECK_OK(server_ptr_->DelData(
-        std::vector<ObjectID>(ids.begin(), ids.end()),
-        /*force=*/true, /*deep=*/true, /*fastpath=*/false,
-        [self](const Status& status) { return Status::OK(); }));
-  } else {
-    // do nothing, objects will be deleted in the destructor
-  }
-
   // do cleanup: clean up streams associated with this client
   for (auto stream_id : associated_streams_) {
     VINEYARD_SUPPRESS(server_ptr_->GetStreamStore()->Drop(stream_id));
@@ -308,9 +289,6 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::ExternalSealRequest: {
     return doSealExternalBlob(root);
   }
-  case CommandType::ReleaseRequest: {
-    return doRelease(root);
-  }
   case CommandType::ExternalReleaseRequest: {
     return doExternalRelease(root);
   }
@@ -344,8 +322,6 @@ bool SocketConnection::doGetBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
-      std::unordered_set<ObjectID>(ids.begin(), ids.end()), getConnId()));
   WriteGetBuffersReply(objects, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
@@ -404,8 +380,6 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
-      std::unordered_set<ObjectID>(ids.begin(), ids.end()), getConnId()));
   WriteGetBuffersReply(objects, message_out);
 
   this->doWrite(message_out, [this, self, objects](const Status& status) {
@@ -490,7 +464,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   ObjectID object_id = InvalidObjectID();
   TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
   // Delete ignore reference count.
-  auto status = server_ptr_->GetBulkStore()->OnDelete(object_id);
+  auto status = server_ptr_->GetBulkStore()->Delete(object_id);
   std::string message_out;
   if (status.ok()) {
     WriteDropBufferReply(message_out);
@@ -1145,8 +1119,6 @@ bool SocketConnection::doSealBlob(json const& root) {
   ObjectID id;
   TRY_READ_REQUEST(ReadSealRequest, root, id);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Seal(id));
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -1158,21 +1130,8 @@ bool SocketConnection::doSealExternalBlob(json const& root) {
   ExternalID id;
   TRY_READ_REQUEST(ReadExternalSealRequest, root, id);
   RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Seal(id));
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetExternalBulkStore()->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
-  this->doWrite(message_out);
-  return false;
-}
-
-bool SocketConnection::doRelease(json const& root) {
-  auto self(shared_from_this());
-  ObjectID id;
-  TRY_READ_REQUEST(ReadReleaseRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Release(id, getConnId()));
-  std::string message_out;
-  WriteReleaseReply(message_out);
   this->doWrite(message_out);
   return false;
 }
@@ -1184,7 +1143,7 @@ bool SocketConnection::doExternalRelease(json const& root) {
   RESPONSE_ON_ERROR(
       server_ptr_->GetExternalBulkStore()->Release(id, getConnId()));
   std::string message_out;
-  WriteReleaseReply(message_out);
+  WriteExternalReleaseReply(message_out);
   this->doWrite(message_out);
   return false;
 }
