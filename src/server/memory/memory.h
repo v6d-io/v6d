@@ -32,14 +32,120 @@
 #include <memory>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "oneapi/tbb/concurrent_hash_map.h"
 
 #include "common/memory/payload.h"
+#include "common/util/lifecycle.h"
+#include "common/util/logging.h"
 #include "common/util/status.h"
 
 namespace vineyard {
+
+//  Track Dependency lest dangling objects and double deletion.
+template <typename ID, typename P, typename Der>
+class DependencyTracker
+    : public LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>> {
+ public:
+  using dependency_map_t = tbb::concurrent_hash_map</*socket_connection*/ int,
+                                                    std::unordered_set<ID>>;
+
+  DependencyTracker() {}
+
+  Status AddDependency(std::unordered_set<ID> const& ids, int conn) {
+    for (auto const& id : ids) {
+      RETURN_ON_ERROR(AddDependency(id, conn));
+    }
+    return Status::OK();
+  }
+
+  Status AddDependency(ID const& id, int conn) {
+    RETURN_ON_ERROR(this->IncreaseReferenceCount(id));
+
+    typename dependency_map_t::accessor accessor;
+    if (!dependency_.find(accessor, conn)) {
+      dependency_.emplace(conn, std::unordered_set<ID>());
+    }
+
+    if (dependency_.find(accessor, conn)) {
+      auto& objects = accessor->second;
+      if (objects.find(id) == objects.end()) {
+        objects.emplace(id);
+      }
+    }
+    return Status::OK();
+  }
+
+  Status RemoveDependency(std::unordered_set<ID> const& ids, int conn) {
+    for (auto const& id : ids) {
+      RETURN_ON_ERROR(RemoveDependency(id, conn));
+    }
+    return Status::OK();
+  }
+
+  Status RemoveDependency(ID const& id, int conn) {
+    typename dependency_map_t::accessor accessor;
+    if (!dependency_.find(accessor, conn)) {
+      return Status::Invalid("connection not exist.");
+    } else {
+      auto& objects = accessor->second;
+      if (objects.find(id) == objects.end()) {
+        return Status::ObjectNotExists();
+      } else {
+        objects.erase(id);
+      }
+    }
+
+    RETURN_ON_ERROR(this->DecreaseReferenceCount(id));
+
+    return Status::OK();
+  }
+
+  /**
+   * Note:
+   * If object_id exists in dependency_, then its reference count should
+   * determinately greater than 0, thus it will determinately not be deleted.
+   * Delete will not remove dependency.
+   */
+  Status PreDelete(ID const& id) {
+    return LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>>::PreDelete(
+        id);
+  }
+
+  /// remove dependency of all objects in dependency_[conn].
+  Status PopList(int conn, std::unordered_set<ID>& objects) {
+    typename dependency_map_t::const_accessor accessor;
+    if (!dependency_.find(accessor, conn)) {
+      return Status::Invalid("connection not exist.");
+    } else {
+      objects = accessor->second;
+      auto status = Status::OK();
+      for (auto& elem : objects) {
+        // try our best to remove dependency.
+        auto _status = RemoveDependency(elem, conn);
+        if (!_status.ok()) {
+          status = _status;
+        }
+      }
+      return status;
+    }
+  }
+
+  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {
+    auto status = Self().FetchAndModify(id, ref_cnt, changes);
+    return status;
+  }
+
+  Status OnRelease(ID const& id) { return Self().OnRelease(id); }
+
+  Status OnDelete(ID const& id) { return Self().OnDelete(id); }
+
+ private:
+  inline Der& Self() { return static_cast<Der&>(*this); }
+  dependency_map_t dependency_;
+};
 
 template <typename ID, typename P>
 class BulkStoreBase {
@@ -59,11 +165,11 @@ class BulkStoreBase {
   Status Get(std::vector<ID> const& ids,
              std::vector<std::shared_ptr<P>>& objects);
 
-  Status Delete(ID const& object_id);
-
   bool Exists(ID const& object_id);
 
   Status Seal(ID const& object_id);
+
+  Status Delete(ID const& object_id);
 
   object_map_t const& List() const { return objects_; }
 
@@ -98,11 +204,24 @@ class BulkStore : public BulkStoreBase<ObjectID, Payload> {
                 std::shared_ptr<Payload>& object);
 };
 
-class ExternalBulkStore : public BulkStoreBase<ExternalID, ExternalPayload> {
+class ExternalBulkStore
+    : public BulkStoreBase<ExternalID, ExternalPayload>,
+      public DependencyTracker<ExternalID, ExternalPayload, ExternalBulkStore> {
  public:
   Status Create(size_t const data_size, size_t const external_size,
                 ExternalID const& external_id, ObjectID& object_id,
                 std::shared_ptr<ExternalPayload>& object);
+
+  Status FetchAndModify(ExternalID const& id, int64_t& ref_cnt,
+                        int64_t changes);
+
+  Status OnRelease(ExternalID const& id);
+
+  Status OnDelete(ExternalID const& id);
+
+  Status Release(ExternalID const& id, int conn);
+
+  Status Delete(ExternalID const& id);
 };
 
 }  // namespace vineyard

@@ -52,6 +52,8 @@ class ClientBase {
   ClientBase();
   virtual ~ClientBase() {}
 
+  virtual Status Release(ObjectID const& id) { return Status::OK(); }
+
   ClientBase(const ClientBase&) = delete;
   ClientBase(ClientBase&&) = delete;
   ClientBase& operator=(const ClientBase&) = delete;

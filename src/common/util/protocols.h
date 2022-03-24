@@ -73,13 +73,14 @@ enum class CommandType {
   NewSessionReply = 39,
   DeleteSessionRequest = 40,
   DeleteSessionReply = 41,
-  CreateBufferByExternalRequest = 42,
-  CreateBufferByExternalReply = 43,
-  GetBuffersByExternalRequest = 44,
-  GetBuffersByExternalReply = 45,
-  SealRequest = 46,
+  SealRequest = 42,
+  CreateBufferByExternalRequest = 43,
+  CreateBufferByExternalReply = 44,
+  GetBuffersByExternalRequest = 45,
+  GetBuffersByExternalReply = 46,
   ExternalSealRequest = 47,
-  SealReply = 48,
+  ExternalReleaseRequest = 48,
+  ExternalDelDataRequest = 49,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -439,6 +440,28 @@ Status ReadExternalSealRequest(json const& root, ExternalID& external_id);
 void WriteSealReply(std::string& msg);
 
 Status ReadSealReply(json const& root);
+
+void WriteExternalReleaseRequest(ExternalID const& external_id,
+                                 std::string& message_out);
+
+Status ReadExternalReleaseRequest(json const& root, ExternalID& external_id);
+
+void WriteExternalReleaseReply(std::string& msg);
+
+Status ReadExternalReleaseReply(json const& root);
+
+void WriteExternalReleaseReply(std::string& msg);
+
+Status ReadExternalReleaseReply(json const& root);
+
+void WriteExternalDelDataRequest(ExternalID const& external_id,
+                                 std::string& message_out);
+
+Status ReadExternalDelDataRequest(json const& root, ExternalID& external_id);
+
+void WriteExternalDelDataReply(std::string& msg);
+
+Status ReadExternalDelDataReply(json const& root);
 
 }  // namespace vineyard
 

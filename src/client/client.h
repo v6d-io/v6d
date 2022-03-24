@@ -31,6 +31,7 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
 #include "common/memory/payload.h"
+#include "common/util/lifecycle.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -100,14 +101,105 @@ class SharedMemoryManager {
 
 }  // namespace detail
 
+// Track the reference count in client-side to support object RAII.
+template <typename ID, typename P, typename Der>
+class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
+ public:
+  UsageTracker() {}
+
+  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change) {
+    auto elem = object_in_use_.find(id);
+    if (elem != object_in_use_.end()) {
+      elem->second->ref_cnt += change;
+      ref_cnt = elem->second->ref_cnt;
+      return Status::OK();
+    }
+    return Status::ObjectNotExists();
+  }
+
+  Status FetchOnLocal(ID const& id, P& payload) {
+    auto elem = object_in_use_.find(id);
+    if (elem != object_in_use_.end()) {
+      payload = *(elem->second);
+      if (payload.IsSealed()) {
+        return Status::OK();
+      } else {
+        return Status::ObjectNotSealed();
+      }
+    }
+    return Status::ObjectNotExists();
+  }
+
+  Status SealUsage(ID const& id) {
+    auto elem = object_in_use_.find(id);
+    if (elem != object_in_use_.end()) {
+      elem->second->is_sealed = true;
+      return Status::OK();
+    }
+    return Status::ObjectNotExists();
+  }
+
+  Status AddUsage(ID const& id, P const& payload) {
+    auto elem = object_in_use_.find(id);
+    if (elem == object_in_use_.end()) {
+      object_in_use_[id] = std::make_shared<P>(payload);
+      object_in_use_[id]->ref_cnt = 0;
+    }
+    return this->IncreaseReferenceCount(id);
+  }
+
+  Status RemoveUsage(ID const& id) { return this->DecreaseReferenceCount(id); }
+
+  Status OnRelease(ID const& id) { return this->Self().OnRelease(id); }
+
+  Status OnDelete(ID const& id) { return Self().OnDelete(id); }
+
+ private:
+  inline Der& Self() { return static_cast<Der&>(*this); }
+  // Track the objects' usage.
+  std::unordered_map<ID, std::shared_ptr<P>> object_in_use_;
+};
+
+class BasicIPCClient : public ClientBase {
+ public:
+  BasicIPCClient();
+
+  ~BasicIPCClient() {}
+  /**
+   * @brief Connect to vineyardd using the given UNIX domain socket
+   * `ipc_socket` with the given store type.
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   * @param bulk_store_type The name of the bulk store.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& ipc_socket,
+                 std::string const& bulk_store_type);
+
+  /**
+   * @brief Create a new anonymous session in vineyardd and connect to it .
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   * @param bulk_store_type The name of the bulk store.
+   *
+   * @return Status that indicates whether the connection of has succeeded.
+   */
+  Status Open(std::string const& ipc_socket,
+              std::string const& bulk_store_type);
+
+ protected:
+  std::shared_ptr<detail::SharedMemoryManager> shm_;
+};
+
 /**
  * @brief Vineyard's IPC Client connects to to UNIX domain socket of the
  *        vineyard server. Vineyard's IPC Client talks to vineyard server
  *        and manipulate objects in vineyard.
  */
-class Client : public ClientBase {
+class Client : public BasicIPCClient {
  public:
-  Client();
+  Client() {}
 
   ~Client() override;
 
@@ -408,44 +500,23 @@ class Client : public ClientBase {
    */
   Status DropBuffer(const ObjectID id, const int fd);
 
-  /**
-   * @brief Connect to vineyardd using the given UNIX domain socket
-   * `ipc_socket` with the given store type.
-   *
-   * @param ipc_socket Location of the UNIX domain socket.
-   * @param bulk_store_type The name of the bulk store.
-   *
-   * @return Status that indicates whether the connect has succeeded.
-   */
-  Status Connect(const std::string& ipc_socket,
-                 std::string const& bulk_store_type);
-
-  /**
-   * @brief Create a new anonymous session in vineyardd and connect to it .
-   *
-   * @param ipc_socket Location of the UNIX domain socket.
-   * @param bulk_store_type The name of the bulk store.
-   *
-   * @return Status that indicates whether the connection of has succeeded.
-   */
-  Status Open(std::string const& ipc_socket,
-              std::string const& bulk_store_type);
-
   Status Seal(ObjectID const& object_id);
-
- protected:
-  std::shared_ptr<detail::SharedMemoryManager> shm_;
 
  private:
   friend class Blob;
   friend class BlobWriter;
 };
 
-class ExternalClient : public Client {
+class ExternalClient
+    : public BasicIPCClient,
+      public UsageTracker<ExternalID, ExternalPayload, ExternalClient> {
  public:
-  ExternalClient() : Client() {}
+  ExternalClient() {}
 
   ~ExternalClient() override;
+
+  Status GetMetaData(const ObjectID id, ObjectMeta& meta_data,
+                     const bool sync_remote = false) override;
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .
@@ -490,6 +561,23 @@ class ExternalClient : public Client {
       std::map<ExternalID, std::shared_ptr<arrow::Buffer>>& buffers);
 
   Status Seal(ExternalID const& object_id);
+
+  Status Release(ExternalID const& id);
+
+  Status Delete(ExternalID const& id);
+
+  /// For UsageTracker only
+  Status OnFetch(ExternalID const& id,
+                 std::shared_ptr<ExternalPayload> const& external_payload);
+
+  /// For UsageTracker only
+  Status OnRelease(ExternalID const& id);
+
+  /// For UsageTracker only
+  Status OnDelete(ExternalID const& id);
+
+ private:
+  using ClientBase::Release;  // avoid warning
 };
 
 }  // namespace vineyard

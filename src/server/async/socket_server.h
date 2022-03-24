@@ -139,8 +139,14 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doSealExternalBlob(json const& root);
 
+  bool doExternalRelease(json const& root);
+
+  bool doExternalDelData(json const& root);
+
  private:
   int nativeHandle() { return socket_.native_handle(); }
+
+  int getConnId() { return conn_id_; }
 
   /**
    * @brief Return should be exit after this message.

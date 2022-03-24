@@ -125,6 +125,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::SealRequest;
   } else if (str_type == "external_seal_request") {
     return CommandType::ExternalSealRequest;
+  } else if (str_type == "external_release_request") {
+    return CommandType::ExternalReleaseRequest;
+  } else if (str_type == "external_del_data_request") {
+    return CommandType::ExternalDelDataRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1306,4 +1310,53 @@ Status ReadSealReply(json const& root) {
   return Status::OK();
 }
 
+void WriteExternalReleaseRequest(ExternalID const& external_id,
+                                 std::string& msg) {
+  json root;
+  root["type"] = "external_release_request";
+  root["external_id"] = external_id;
+  encode_msg(root, msg);
+}
+
+Status ReadExternalReleaseRequest(json const& root, ExternalID& external_id) {
+  RETURN_ON_ASSERT(root["type"] == "external_release_request");
+  external_id = root["external_id"].get<ExternalID>();
+  return Status::OK();
+}
+
+void WriteExternalReleaseReply(std::string& msg) {
+  json root;
+  root["type"] = "external_release_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadExternalReleaseReply(json const& root) {
+  CHECK_IPC_ERROR(root, "external_release_reply");
+  return Status::OK();
+}
+
+void WriteExternalDelDataRequest(ExternalID const& external_id,
+                                 std::string& msg) {
+  json root;
+  root["type"] = "external_delete_data_request";
+  root["external_id"] = external_id;
+  encode_msg(root, msg);
+}
+
+Status ReadExternalDelDataRequest(json const& root, ExternalID& external_id) {
+  RETURN_ON_ASSERT(root["type"] == "external_delete_data_request");
+  external_id = root["external_id"].get<ExternalID>();
+  return Status::OK();
+}
+
+void WriteExternalDelDataReply(std::string& msg) {
+  json root;
+  root["type"] = "external_delete_data_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadExternalDelDataReply(json const& root) {
+  CHECK_IPC_ERROR(root, "external_delete_data_reply");
+  return Status::OK();
+}
 }  // namespace vineyard

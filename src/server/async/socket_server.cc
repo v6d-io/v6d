@@ -49,7 +49,6 @@ bool SocketConnection::Stop() {
     // already stopped, or haven't started
     return false;
   }
-
   // do cleanup: clean up streams associated with this client
   for (auto stream_id : associated_streams_) {
     VINEYARD_SUPPRESS(server_ptr_->GetStreamStore()->Drop(stream_id));
@@ -290,6 +289,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::ExternalSealRequest: {
     return doSealExternalBlob(root);
   }
+  case CommandType::ExternalReleaseRequest: {
+    return doExternalRelease(root);
+  }
+  case CommandType::ExternalDelDataRequest: {
+    return doExternalDelData(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -458,6 +463,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   auto self(shared_from_this());
   ObjectID object_id = InvalidObjectID();
   TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
+  // Delete ignore reference count.
   auto status = server_ptr_->GetBulkStore()->Delete(object_id);
   std::string message_out;
   if (status.ok()) {
@@ -1126,6 +1132,32 @@ bool SocketConnection::doSealExternalBlob(json const& root) {
   RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Seal(id));
   std::string message_out;
   WriteSealReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doExternalRelease(json const& root) {
+  auto self(shared_from_this());
+  ExternalID id;
+  TRY_READ_REQUEST(ReadExternalReleaseRequest, root, id);
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetExternalBulkStore()->Release(id, getConnId()));
+  std::string message_out;
+  WriteExternalReleaseReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doExternalDelData(json const& root) {
+  auto self(shared_from_this());
+  ExternalID id;
+  TRY_READ_REQUEST(ReadExternalDelDataRequest, root, id);
+
+  /// External Data are not composable, so we do not have to wrestle with meta.
+  RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Delete(id));
+
+  std::string message_out;
+  WriteExternalDelDataReply(message_out);
   this->doWrite(message_out);
   return false;
 }

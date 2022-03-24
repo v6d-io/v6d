@@ -234,7 +234,7 @@ Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::Delete(const ID& object_id) {
+Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
   if (object_id == EmptyBlobID<ID>() ||
       object_id == GenerateBlobID<ID>(reinterpret_cast<void*>(
                        std::numeric_limits<uintptr_t>::max()))) {
@@ -448,4 +448,41 @@ Status ExternalBulkStore::Create(size_t const data_size,
             << Footprint() << "(" << FootprintLimit() << ")";
   return Status::OK();
 }
+
+Status ExternalBulkStore::OnRelease(ExternalID const& id) {
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, id)) {
+    return Status::ObjectNotExists("object " + ExternalIDToString(id) +
+                                   " cannot be found");
+  } else {
+    RETURN_ON_ERROR(OnDelete(id));
+  }
+  return Status::OK();
+}
+
+Status ExternalBulkStore::Release(ExternalID const& id, int conn) {
+  return this->RemoveDependency(id, conn);
+}
+
+Status ExternalBulkStore::FetchAndModify(const ExternalID& id, int64_t& ref_cnt,
+                                         int64_t changes) {
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, id)) {
+    return Status::ObjectNotExists("object " + IDToString(id) +
+                                   " cannot be found");
+  } else {
+    accessor->second->ref_cnt += changes;
+    ref_cnt = accessor->second->ref_cnt;
+  }
+  return Status::OK();
+}
+
+Status ExternalBulkStore::OnDelete(ExternalID const& id) {
+  return BulkStoreBase<ExternalID, ExternalPayload>::Delete(id);
+}
+
+Status ExternalBulkStore::Delete(ExternalID const& id) {
+  return this->PreDelete(id);
+}
+
 }  // namespace vineyard

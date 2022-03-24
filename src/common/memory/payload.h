@@ -95,28 +95,32 @@ struct Payload {
 struct ExternalPayload : public Payload {
   ExternalID external_id;
   int64_t external_size;
+  int64_t ref_cnt;
 
-  ExternalPayload() : Payload(), external_id(), external_size(0) {}
+  ExternalPayload() : Payload(), external_id(), external_size(0), ref_cnt(0) {}
 
   ExternalPayload(ExternalID external_id, ObjectID object_id,
                   int64_t external_size, int64_t size, uint8_t* ptr, int fd,
                   int64_t msize, ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, msize, offset),
         external_id(external_id),
-        external_size(external_size) {}
+        external_size(external_size),
+        ref_cnt(0) {}
 
   ExternalPayload(ExternalID external_id, ObjectID object_id,
                   int64_t external_size, int64_t size, uint8_t* ptr, int fd,
                   int arena_fd, int64_t msize, ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, arena_fd, msize, offset),
         external_id(external_id),
-        external_size(external_size) {}
+        external_size(external_size),
+        ref_cnt(0) {}
 
   ExternalPayload(ExternalID external_id, int64_t size, uint8_t* ptr, int fd,
                   int64_t msize, ptrdiff_t offset)
       : Payload(EmptyBlobID(), size, ptr, fd, msize, offset),
         external_id(external_id),
-        external_size(0) {}
+        external_size(0),
+        ref_cnt(0) {}
 
   static std::shared_ptr<ExternalPayload> MakeEmpty() {
     static std::shared_ptr<ExternalPayload> payload =
