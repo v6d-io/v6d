@@ -536,6 +536,79 @@ Status Client::Seal(ObjectID const& object_id) {
   return Status::OK();
 }
 
+Status Client::RemoveBuffersOwnership(std::set<ObjectID> const& object_ids) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteRemoveBuffersOwnershipRequest(object_ids, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadRemoveBuffersOwnershipReply(message_in));
+  return Status::OK();
+}
+
+Status Client::ShallowCopy(ObjectID const id, ObjectID& target_id,
+                           Client& source_client) {
+  ENSURE_CONNECTED(this);
+  ObjectMeta meta;
+  json tree;
+
+  RETURN_ON_ERROR(source_client.GetData(id, tree, /*sync_remote==*/true));
+  meta.SetMetaData(this, tree);
+  auto bids = meta.GetBufferSet()->AllBufferIds();
+  std::map<ObjectID, size_t> id_to_size;
+  RETURN_ON_ERROR(source_client.GetBufferSizes(bids, id_to_size));
+
+  RETURN_ON_ERROR(source_client.RemoveBuffersOwnership(bids));
+
+  // TODO(mengke.mk) Avoid object leak when failure.
+  std::string message_out;
+  WriteMoveBuffersOwnershipRequest(id_to_size, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMoveBuffersOwnershipReply(message_in));
+
+  std::map<ObjectID, ObjectID> mapping;
+  for (auto const& id : bids) {
+    mapping.emplace(id, id);
+  }
+  auto meta_tree = meta.MutMetaData();
+
+  std::function<ObjectID(json&)> reconstruct =
+      [&](json& meta_tree) -> ObjectID {
+    for (auto& item : meta_tree.items()) {
+      if (item.value().is_object() && !item.value().empty()) {
+        auto sub_id = ObjectIDFromString(
+            item.value()["id"].get_ref<std::string const&>());
+        auto new_sub_id = sub_id;
+        if (mapping.find(sub_id) == mapping.end()) {
+          new_sub_id = reconstruct(item.value());
+          mapping.emplace(sub_id, new_sub_id);
+        } else {
+          new_sub_id = mapping[sub_id];
+        }
+        if (!IsBlob(new_sub_id)) {
+          ObjectMeta sub_meta;
+          VINEYARD_CHECK_OK(GetMetaData(new_sub_id, sub_meta));
+          meta_tree[item.key()] = sub_meta.MetaData();
+        }
+      }
+    }
+    ObjectMeta new_meta;
+    ObjectID new_id;
+    new_meta.SetMetaData(this, meta_tree);
+    VINEYARD_CHECK_OK(CreateMetaData(new_meta, new_id));
+    return new_id;
+  };
+
+  target_id = reconstruct(meta_tree);
+
+  return Status::OK();
+}
+
 PlasmaClient::~PlasmaClient() {}
 
 // dummy implementation

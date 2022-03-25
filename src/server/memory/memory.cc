@@ -245,6 +245,11 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
     return Status::ObjectNotExists("delete: id = " + IDToString(object_id));
   }
   auto& object = accessor->second;
+
+  if (!object->IsOwner()) {
+    return Status::OK();
+  }
+
   if (object->arena_fd == -1) {
     auto buff_size = object->data_size;
     BulkAllocator::Free(object->pointer, buff_size);
@@ -418,6 +423,47 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   objects_.emplace(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
+  return Status::OK();
+}
+
+Status BulkStore::MoveOwnership(std::map<ObjectID, size_t> const& id_to_size) {
+  for (auto& item : id_to_size) {
+    auto object_id = item.first;
+    auto data_size = item.second;
+    int fd = -1;
+    int64_t map_size = 0;
+    ptrdiff_t offset = 0;
+    uint8_t* pointer = nullptr;
+    pointer = reinterpret_cast<uint8_t*>(GetBlobAddr(object_id));
+    if (pointer == nullptr) {
+      return Status::ObjectNotExists(
+          "object " + IDToString<ObjectID>(object_id) + " cannot be found");
+    } else {
+      memory::GetMallocMapinfo(pointer, &fd, &map_size, &offset);
+    }
+    auto object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
+                                            map_size, offset);
+
+    object->MarkAsSealed();
+    objects_.emplace(object_id, object);
+  }
+  return Status::OK();
+}
+
+Status BulkStore::RemoveOwnership(const std::set<ObjectID>& ids) {
+  for (auto object_id : ids) {
+    if (object_id == EmptyBlobID<ObjectID>() ||
+        object_id == GenerateBlobID<ObjectID>(reinterpret_cast<void*>(
+                         std::numeric_limits<uintptr_t>::max()))) {
+      continue;
+    }
+    typename object_map_t::const_accessor accessor;
+    if (!objects_.find(accessor, object_id)) {
+      continue;
+    } else {
+      accessor->second->RemoveOwner();
+    }
+  }
   return Status::OK();
 }
 

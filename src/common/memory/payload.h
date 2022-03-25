@@ -32,6 +32,7 @@ struct Payload {
   int64_t map_size;
   uint8_t* pointer;
   bool is_sealed;
+  bool is_owner;
 
   Payload()
       : object_id(EmptyBlobID()),
@@ -41,7 +42,8 @@ struct Payload {
         data_size(0),
         map_size(0),
         pointer(nullptr),
-        is_sealed(0) {}
+        is_sealed(0),
+        is_owner(1) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize,
           ptrdiff_t offset)
@@ -52,7 +54,8 @@ struct Payload {
         data_size(size),
         map_size(msize),
         pointer(ptr),
-        is_sealed(0) {}
+        is_sealed(0),
+        is_owner(1) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
           int64_t msize, ptrdiff_t offset)
@@ -63,7 +66,8 @@ struct Payload {
         data_size(size),
         map_size(msize),
         pointer(ptr),
-        is_sealed(0) {}
+        is_sealed(0),
+        is_owner(1) {}
 
   static std::shared_ptr<Payload> MakeEmpty() {
     static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
@@ -79,6 +83,10 @@ struct Payload {
   inline void MarkAsSealed() { is_sealed = true; }
 
   inline bool IsSealed() { return is_sealed; }
+
+  inline void RemoveOwner() { is_owner = false; }
+
+  inline bool IsOwner() { return is_owner; }
 
   json ToJSON() const;
 

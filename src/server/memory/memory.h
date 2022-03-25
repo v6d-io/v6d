@@ -29,6 +29,7 @@
 #ifndef SRC_SERVER_MEMORY_MEMORY_H_
 #define SRC_SERVER_MEMORY_MEMORY_H_
 
+#include <map>
 #include <memory>
 #include <set>
 #include <unordered_map>
@@ -202,6 +203,10 @@ class BulkStore : public BulkStoreBase<ObjectID, Payload> {
  public:
   Status Create(const size_t size, ObjectID& object_id,
                 std::shared_ptr<Payload>& object);
+
+  Status MoveOwnership(std::map<ObjectID, size_t> const& id_to_size);
+
+  Status RemoveOwnership(std::set<ObjectID> const& ids);
 };
 
 class PlasmaBulkStore

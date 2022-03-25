@@ -129,6 +129,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::PlasmaReleaseRequest;
   } else if (str_type == "plasma_del_data_request") {
     return CommandType::PlasmaDelDataRequest;
+  } else if (str_type == "move_buffers_ownership_request") {
+    return CommandType::MoveBuffersOwnershipRequest;
+  } else if (str_type == "remove_buffers_ownership_request") {
+    return CommandType::RemoveBuffersOwnershipRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1356,4 +1360,57 @@ Status ReadPlasmaDelDataReply(json const& root) {
   CHECK_IPC_ERROR(root, "plasma_delete_data_reply");
   return Status::OK();
 }
+
+void WriteMoveBuffersOwnershipRequest(
+    std::map<ObjectID, size_t> const& id_to_size, std::string& msg) {
+  json root;
+  root["type"] = "move_buffers_ownership_request";
+  root["id_to_size"] = id_to_size;
+  encode_msg(root, msg);
+}
+
+Status ReadMoveBuffersOwnershipRequest(json const& root,
+                                       std::map<ObjectID, size_t>& id_to_size) {
+  RETURN_ON_ASSERT(root["type"] == "move_buffers_ownership_request");
+  id_to_size = root["id_to_size"].get<std::map<ObjectID, size_t>>();
+  return Status::OK();
+}
+
+void WriteMoveBuffersOwnershipReply(std::string& msg) {
+  json root;
+  root["type"] = "move_buffers_ownership_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadMoveBuffersOwnershipReply(json const& root) {
+  CHECK_IPC_ERROR(root, "move_buffers_ownership_reply");
+  return Status::OK();
+}
+
+void WriteRemoveBuffersOwnershipRequest(std::set<ObjectID> const& object_ids,
+                                        std::string& msg) {
+  json root;
+  root["type"] = "remove_buffers_ownership_request";
+  root["object_ids"] = object_ids;
+  encode_msg(root, msg);
+}
+
+Status ReadRemoveBuffersOwnershipRequest(json const& root,
+                                         std::set<ObjectID>& object_ids) {
+  RETURN_ON_ASSERT(root["type"] == "remove_buffers_ownership_request");
+  object_ids = root["object_ids"].get<std::set<ObjectID>>();
+  return Status::OK();
+}
+
+void WriteRemoveBuffersOwnershipReply(std::string& msg) {
+  json root;
+  root["type"] = "remove_buffers_ownership_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadRemoveBuffersOwnershipReply(json const& root) {
+  CHECK_IPC_ERROR(root, "remove_buffers_ownership_reply");
+  return Status::OK();
+}
+
 }  // namespace vineyard

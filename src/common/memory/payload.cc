@@ -29,6 +29,8 @@ void Payload::ToJSON(json& tree) const {
   tree["data_offset"] = data_offset;
   tree["data_size"] = data_size;
   tree["map_size"] = map_size;
+  tree["is_sealed"] = is_sealed;
+  tree["is_owner"] = is_owner;
 }
 
 void Payload::FromJSON(const json& tree) {
@@ -37,6 +39,8 @@ void Payload::FromJSON(const json& tree) {
   data_offset = tree["data_offset"].get<ptrdiff_t>();
   data_size = tree["data_size"].get<int64_t>();
   map_size = tree["map_size"].get<int64_t>();
+  is_sealed = tree["is_sealed"].get<bool>();
+  is_owner = tree["is_owner"].get<bool>();
   pointer = nullptr;
 }
 
@@ -61,6 +65,8 @@ void PlasmaPayload::ToJSON(json& tree) const {
   tree["data_size"] = data_size;
   tree["map_size"] = map_size;
   tree["ref_cnt"] = ref_cnt;
+  tree["is_sealed"] = is_sealed;
+  tree["is_owner"] = is_owner;
 }
 
 void PlasmaPayload::FromJSON(const json& tree) {
@@ -72,6 +78,8 @@ void PlasmaPayload::FromJSON(const json& tree) {
   data_size = tree["data_size"].get<int64_t>();
   map_size = tree["map_size"].get<int64_t>();
   ref_cnt = tree["ref_cnt"].get<int64_t>();
+  is_sealed = tree["is_sealed"].get<bool>();
+  is_owner = tree["is_owner"].get<bool>();
   pointer = nullptr;
 }
 

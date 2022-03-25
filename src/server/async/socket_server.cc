@@ -16,7 +16,9 @@ limitations under the License.
 #include "server/async/socket_server.h"
 
 #include <limits>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -294,6 +296,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   }
   case CommandType::PlasmaDelDataRequest: {
     return doPlasmaDelData(root);
+  }
+  case CommandType::MoveBuffersOwnershipRequest: {
+    return doMoveBuffersOwnership(root);
+  }
+  case CommandType::RemoveBuffersOwnershipRequest: {
+    return doRemoveBuffersOwnership(root);
   }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
@@ -1158,6 +1166,28 @@ bool SocketConnection::doPlasmaDelData(json const& root) {
 
   std::string message_out;
   WritePlasmaDelDataReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doRemoveBuffersOwnership(json const& root) {
+  auto self(shared_from_this());
+  std::set<ObjectID> object_ids;
+  TRY_READ_REQUEST(ReadRemoveBuffersOwnershipRequest, root, object_ids);
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->RemoveOwnership(object_ids));
+  std::string message_out;
+  WriteRemoveBuffersOwnershipReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doMoveBuffersOwnership(json const& root) {
+  auto self(shared_from_this());
+  std::map<ObjectID, size_t> id_to_size;
+  TRY_READ_REQUEST(ReadMoveBuffersOwnershipRequest, root, id_to_size);
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->MoveOwnership(id_to_size));
+  std::string message_out;
+  WriteMoveBuffersOwnershipReply(message_out);
   this->doWrite(message_out);
   return false;
 }

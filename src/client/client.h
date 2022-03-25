@@ -459,6 +459,13 @@ class Client : public BasicIPCClient {
   Status ReleaseArena(const int fd, std::vector<size_t> const& offsets,
                       std::vector<size_t> const& sizes);
 
+  using BasicIPCClient::ShallowCopy;
+  /**
+   * @brief Move the selected objects from the source session to the target
+   */
+  Status ShallowCopy(ObjectID const ids, ObjectID& target_id,
+                     Client& source_client);
+
  protected:
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
                       std::shared_ptr<arrow::MutableBuffer>& buffer);
@@ -491,6 +498,7 @@ class Client : public BasicIPCClient {
   Status GetBufferSizes(const std::set<ObjectID>& ids,
                         std::map<ObjectID, size_t>& sizes);
 
+  Status RemoveBuffersOwnership(std::set<ObjectID> const& object_id);
   /**
    * @brief An (unsafe) internal-usage method that drop the buffer, without
    * checking the dependency. To achieve the "DeleteObject" semantic for blobs,
