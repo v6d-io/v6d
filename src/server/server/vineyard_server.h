@@ -99,8 +99,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 #endif
   inline std::string GetBulkStoreType() { return bulk_store_type_; }
   inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
-  inline std::shared_ptr<ExternalBulkStore> GetExternalBulkStore() {
-    return external_bulk_store_;
+  inline std::shared_ptr<PlasmaBulkStore> GetPlasmaBulkStore() {
+    return plasma_bulk_store_;
   }
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
   inline std::shared_ptr<VineyardRunner> GetRunner() { return runner_; }
@@ -218,7 +218,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   std::string bulk_store_type_;
   std::shared_ptr<BulkStore> bulk_store_;
-  std::shared_ptr<ExternalBulkStore> external_bulk_store_;
+  std::shared_ptr<PlasmaBulkStore> plasma_bulk_store_;
   std::shared_ptr<StreamStore> stream_store_;
   std::shared_ptr<VineyardRunner> runner_;
 

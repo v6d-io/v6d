@@ -95,12 +95,12 @@ Status VineyardServer::Serve(std::string const& bulk_store_type) {
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
-  if (bulk_store_type_ == "External") {
-    external_bulk_store_ = std::make_shared<ExternalBulkStore>();
-    RETURN_ON_ERROR(external_bulk_store_->PreAllocate(
+  if (bulk_store_type_ == "Plasma") {
+    plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
+    RETURN_ON_ERROR(plasma_bulk_store_->PreAllocate(
         spec_["bulkstore_spec"]["memory_size"].get<size_t>()));
 
-    // TODO(mengke.mk): Currently we do not allow streamming in external
+    // TODO(mengke.mk): Currently we do not allow streamming in plasma
     // bulkstore, anyway, we can templatize stream store to solve this.
     stream_store_ = nullptr;
   } else {
@@ -1002,7 +1002,7 @@ void VineyardServer::Stop() {
   this->meta_service_ptr_.reset();
   this->stream_store_.reset();
   this->bulk_store_.reset();
-  this->external_bulk_store_.reset();
+  this->plasma_bulk_store_.reset();
 }
 
 bool VineyardServer::Running() const { return !stopped_.load(); }

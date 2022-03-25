@@ -552,7 +552,7 @@ class ObjectMeta {
 
   friend class ClientBase;
   friend class Client;
-  friend class ExternalClient;
+  friend class PlasmaClient;
   friend class RPCClient;
 
   friend class Blob;

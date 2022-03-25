@@ -92,48 +92,47 @@ struct Payload {
   static Payload FromJSON1(const json& tree);
 };
 
-struct ExternalPayload : public Payload {
-  ExternalID external_id;
-  int64_t external_size;
+struct PlasmaPayload : public Payload {
+  PlasmaID plasma_id;
+  int64_t plasma_size;
   int64_t ref_cnt;
 
-  ExternalPayload() : Payload(), external_id(), external_size(0), ref_cnt(0) {}
+  PlasmaPayload() : Payload(), plasma_id(), plasma_size(0), ref_cnt(0) {}
 
-  ExternalPayload(ExternalID external_id, ObjectID object_id,
-                  int64_t external_size, int64_t size, uint8_t* ptr, int fd,
-                  int64_t msize, ptrdiff_t offset)
+  PlasmaPayload(PlasmaID plasma_id, ObjectID object_id, int64_t plasma_size,
+                int64_t size, uint8_t* ptr, int fd, int64_t msize,
+                ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, msize, offset),
-        external_id(external_id),
-        external_size(external_size),
+        plasma_id(plasma_id),
+        plasma_size(plasma_size),
         ref_cnt(0) {}
 
-  ExternalPayload(ExternalID external_id, ObjectID object_id,
-                  int64_t external_size, int64_t size, uint8_t* ptr, int fd,
-                  int arena_fd, int64_t msize, ptrdiff_t offset)
+  PlasmaPayload(PlasmaID plasma_id, ObjectID object_id, int64_t plasma_size,
+                int64_t size, uint8_t* ptr, int fd, int arena_fd, int64_t msize,
+                ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, arena_fd, msize, offset),
-        external_id(external_id),
-        external_size(external_size),
+        plasma_id(plasma_id),
+        plasma_size(plasma_size),
         ref_cnt(0) {}
 
-  ExternalPayload(ExternalID external_id, int64_t size, uint8_t* ptr, int fd,
-                  int64_t msize, ptrdiff_t offset)
+  PlasmaPayload(PlasmaID plasma_id, int64_t size, uint8_t* ptr, int fd,
+                int64_t msize, ptrdiff_t offset)
       : Payload(EmptyBlobID(), size, ptr, fd, msize, offset),
-        external_id(external_id),
-        external_size(0),
+        plasma_id(plasma_id),
+        plasma_size(0),
         ref_cnt(0) {}
 
-  static std::shared_ptr<ExternalPayload> MakeEmpty() {
-    static std::shared_ptr<ExternalPayload> payload =
-        std::make_shared<ExternalPayload>();
+  static std::shared_ptr<PlasmaPayload> MakeEmpty() {
+    static std::shared_ptr<PlasmaPayload> payload =
+        std::make_shared<PlasmaPayload>();
     return payload;
   }
 
-  bool operator==(const ExternalPayload& other) const {
+  bool operator==(const PlasmaPayload& other) const {
     return ((object_id == other.object_id) && (store_fd == other.store_fd) &&
             (data_offset == other.data_offset) &&
-            (external_size == other.external_size) &&
-            (external_id == other.external_id) &&
-            (data_size == other.data_size));
+            (plasma_size == other.plasma_size) &&
+            (plasma_id == other.plasma_id) && (data_size == other.data_size));
   }
 
   Payload ToNormalPayload() const {
@@ -150,7 +149,7 @@ struct ExternalPayload : public Payload {
   /**
    * @brief A static variant for `FromJSON`.
    */
-  static ExternalPayload FromJSON1(const json& tree);
+  static PlasmaPayload FromJSON1(const json& tree);
 };
 
 }  // namespace vineyard

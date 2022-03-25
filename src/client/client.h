@@ -507,13 +507,13 @@ class Client : public BasicIPCClient {
   friend class BlobWriter;
 };
 
-class ExternalClient
+class PlasmaClient
     : public BasicIPCClient,
-      public UsageTracker<ExternalID, ExternalPayload, ExternalClient> {
+      public UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient> {
  public:
-  ExternalClient() {}
+  PlasmaClient() {}
 
-  ~ExternalClient() override;
+  ~PlasmaClient() override;
 
   Status GetMetaData(const ObjectID id, ObjectMeta& meta_data,
                      const bool sync_remote = false) override;
@@ -542,39 +542,38 @@ class ExternalClient
    * server's bulk allocator will prepare a block of memory of the requested
    * size, the map the memory to client's process to share the allocated memory.
    *
-   * @param external_id The id of external data.
+   * @param plasma_id The id of plasma data.
    * @param size The size of requested blob.
-   * @param external_size The size of external data.
+   * @param plasma_size The size of plasma data.
    * @param blob The result mutable blob will be set in `blob`.
    *
    * @return Status that indicates whether the create action has succeeded.
    */
-  Status CreateBlob(ExternalID external_id, size_t size, size_t external_size,
+  Status CreateBlob(PlasmaID plasma_id, size_t size, size_t plasma_size,
                     std::unique_ptr<BlobWriter>& blob);
 
   /**
    * Used only for integration.
    */
-  Status GetBlobs(
-      const std::set<ExternalID>& external_ids,
-      std::map<ExternalID, ExternalPayload>& external_payloads,
-      std::map<ExternalID, std::shared_ptr<arrow::Buffer>>& buffers);
+  Status GetBlobs(const std::set<PlasmaID>& plasma_ids,
+                  std::map<PlasmaID, PlasmaPayload>& plasma_payloads,
+                  std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
 
-  Status Seal(ExternalID const& object_id);
+  Status Seal(PlasmaID const& object_id);
 
-  Status Release(ExternalID const& id);
+  Status Release(PlasmaID const& id);
 
-  Status Delete(ExternalID const& id);
-
-  /// For UsageTracker only
-  Status OnFetch(ExternalID const& id,
-                 std::shared_ptr<ExternalPayload> const& external_payload);
+  Status Delete(PlasmaID const& id);
 
   /// For UsageTracker only
-  Status OnRelease(ExternalID const& id);
+  Status OnFetch(PlasmaID const& id,
+                 std::shared_ptr<PlasmaPayload> const& plasma_payload);
 
   /// For UsageTracker only
-  Status OnDelete(ExternalID const& id);
+  Status OnRelease(PlasmaID const& id);
+
+  /// For UsageTracker only
+  Status OnDelete(PlasmaID const& id);
 
  private:
   using ClientBase::Release;  // avoid warning

@@ -536,85 +536,84 @@ Status Client::Seal(ObjectID const& object_id) {
   return Status::OK();
 }
 
-ExternalClient::~ExternalClient() {}
+PlasmaClient::~PlasmaClient() {}
 
 // dummy implementation
-Status ExternalClient::GetMetaData(const ObjectID id, ObjectMeta& meta_data,
-                                   const bool sync_remote) {
+Status PlasmaClient::GetMetaData(const ObjectID id, ObjectMeta& meta_data,
+                                 const bool sync_remote) {
   return Status::Invalid("Unsupported.");
 }
 
-Status ExternalClient::Seal(ExternalID const& external_id) {
+Status PlasmaClient::Seal(PlasmaID const& plasma_id) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteExternalSealRequest(external_id, message_out);
+  WritePlasmaSealRequest(plasma_id, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadSealReply(message_in));
-  RETURN_ON_ERROR(SealUsage(external_id));
+  RETURN_ON_ERROR(SealUsage(plasma_id));
   return Status::OK();
 }
 
-Status ExternalClient::Open(std::string const& ipc_socket) {
-  return BasicIPCClient::Open(ipc_socket, /*bulk_store_type=*/"External");
+Status PlasmaClient::Open(std::string const& ipc_socket) {
+  return BasicIPCClient::Open(ipc_socket, /*bulk_store_type=*/"Plasma");
 }
 
-Status ExternalClient::Connect(const std::string& ipc_socket) {
-  return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"External");
+Status PlasmaClient::Connect(const std::string& ipc_socket) {
+  return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Plasma");
 }
 
-Status ExternalClient::CreateBlob(ExternalID external_id, size_t size,
-                                  size_t external_size,
-                                  std::unique_ptr<BlobWriter>& blob) {
+Status PlasmaClient::CreateBlob(PlasmaID plasma_id, size_t size,
+                                size_t plasma_size,
+                                std::unique_ptr<BlobWriter>& blob) {
   ENSURE_CONNECTED(this);
   ObjectID object_id = InvalidObjectID();
-  ExternalPayload external_payload;
+  PlasmaPayload plasma_payload;
   std::shared_ptr<arrow::MutableBuffer> buffer = nullptr;
 
   std::string message_out;
-  WriteCreateBufferByExternalRequest(external_id, size, external_size,
-                                     message_out);
+  WriteCreateBufferByPlasmaRequest(plasma_id, size, plasma_size, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(
-      ReadCreateBufferByExternalReply(message_in, object_id, external_payload));
+      ReadCreateBufferByPlasmaReply(message_in, object_id, plasma_payload));
 
-  RETURN_ON_ASSERT(static_cast<size_t>(external_payload.data_size) == size);
+  RETURN_ON_ASSERT(static_cast<size_t>(plasma_payload.data_size) == size);
   uint8_t *shared = nullptr, *dist = nullptr;
-  if (external_payload.data_size > 0) {
-    RETURN_ON_ERROR(this->shm_->Mmap(external_payload.store_fd,
-                                     external_payload.map_size, false, true,
+  if (plasma_payload.data_size > 0) {
+    RETURN_ON_ERROR(this->shm_->Mmap(plasma_payload.store_fd,
+                                     plasma_payload.map_size, false, true,
                                      &shared));
-    dist = shared + external_payload.data_offset;
+    dist = shared + plasma_payload.data_offset;
   }
   buffer =
-      std::make_shared<arrow::MutableBuffer>(dist, external_payload.data_size);
+      std::make_shared<arrow::MutableBuffer>(dist, plasma_payload.data_size);
 
-  auto payload = external_payload.ToNormalPayload();
+  auto payload = plasma_payload.ToNormalPayload();
   object_id = payload.object_id;
   blob.reset(new BlobWriter(object_id, payload, buffer));
-  RETURN_ON_ERROR(AddUsage(external_id, external_payload));
+  RETURN_ON_ERROR(AddUsage(plasma_id, plasma_payload));
   return Status::OK();
 }
 
-Status ExternalClient::GetBlobs(
-    const std::set<ExternalID>& external_ids,
-    std::map<ExternalID, ExternalPayload>& external_payloads,
-    std::map<ExternalID, std::shared_ptr<arrow::Buffer>>& buffers) {
-  if (external_ids.empty()) {
+Status PlasmaClient::GetBlobs(
+    const std::set<PlasmaID>& plasma_ids,
+    std::map<PlasmaID, PlasmaPayload>& plasma_payloads,
+    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
+  if (plasma_ids.empty()) {
     return Status::OK();
   }
   ENSURE_CONNECTED(this);
-  std::set<ExternalID> remote_ids;
-  std::vector<ExternalPayload> local_payloads;
+  std::set<PlasmaID> remote_ids;
+  std::vector<PlasmaPayload> local_payloads;
 
   /// Lookup in local cache
-  for (auto const& id : external_ids) {
-    ExternalPayload tmp;
+  for (auto const& id : plasma_ids) {
+    PlasmaPayload tmp;
     if (FetchOnLocal(id, tmp).ok()) {
       local_payloads.emplace_back(tmp);
     } else {
@@ -624,13 +623,13 @@ Status ExternalClient::GetBlobs(
 
   /// Lookup in remote server
   std::string message_out;
-  WriteGetBuffersByExternalRequest(remote_ids, message_out);
+  WriteGetBuffersByPlasmaRequest(remote_ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  std::vector<ExternalPayload> _payloads;
-  RETURN_ON_ERROR(ReadGetBuffersByExternalReply(message_in, _payloads));
+  std::vector<PlasmaPayload> _payloads;
+  RETURN_ON_ERROR(ReadGetBuffersByPlasmaReply(message_in, _payloads));
 
   _payloads.insert(_payloads.end(), local_payloads.begin(),
                    local_payloads.end());
@@ -644,43 +643,43 @@ Status ExternalClient::GetBlobs(
       dist = shared + item.data_offset;
     }
     buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
-    buffers.emplace(item.external_id, buffer);
-    external_payloads.emplace(item.external_id, item);
+    buffers.emplace(item.plasma_id, buffer);
+    plasma_payloads.emplace(item.plasma_id, item);
 
-    RETURN_ON_ERROR(AddUsage(item.external_id, item));
+    RETURN_ON_ERROR(AddUsage(item.plasma_id, item));
   }
   return Status::OK();
 }
 
-/// Release an external blob.
-Status ExternalClient::OnRelease(ExternalID const& external_id) {
+/// Release an plasma blob.
+Status PlasmaClient::OnRelease(PlasmaID const& plasma_id) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteExternalReleaseRequest(external_id, message_out);
+  WritePlasmaReleaseRequest(plasma_id, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadExternalReleaseReply(message_in));
+  RETURN_ON_ERROR(ReadPlasmaReleaseReply(message_in));
   return Status::OK();
 }
 
-/// Delete an external blob.
-Status ExternalClient::OnDelete(ExternalID const& external_id) {
+/// Delete an plasma blob.
+Status PlasmaClient::OnDelete(PlasmaID const& plasma_id) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteExternalDelDataRequest(external_id, message_out);
+  WritePlasmaDelDataRequest(plasma_id, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadExternalDelDataReply(message_in));
+  RETURN_ON_ERROR(ReadPlasmaDelDataReply(message_in));
   return Status::OK();
 }
 
-Status ExternalClient::Release(const ExternalID& id) { return RemoveUsage(id); }
+Status PlasmaClient::Release(const PlasmaID& id) { return RemoveUsage(id); }
 
-Status ExternalClient::Delete(const ExternalID& id) { return PreDelete(id); }
+Status PlasmaClient::Delete(const PlasmaID& id) { return PreDelete(id); }
 
 namespace detail {
 

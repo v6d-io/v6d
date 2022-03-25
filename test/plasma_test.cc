@@ -31,7 +31,7 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    printf("usage ./external_test.cc <ipc_socket>");
+    printf("usage ./plasma_test.cc <ipc_socket>");
     return 1;
   }
 
@@ -58,10 +58,9 @@ int main(int argc, char** argv) {
     }
   };
 
-  auto create_external_object = [](ExternalClient& client,
-                                   std::string const& oid,
-                                   std::string const& data, bool do_seal) {
-    ExternalID eid = ExternalIDFromString(oid);
+  auto create_plasma_object = [](PlasmaClient& client, std::string const& oid,
+                                 std::string const& data, bool do_seal) {
+    PlasmaID eid = PlasmaIDFromString(oid);
     std::unique_ptr<vineyard::BlobWriter> blob;
     VINEYARD_CHECK_OK(client.CreateBlob(eid, data.size(), 0, blob));
     auto buffer = reinterpret_cast<uint8_t*>(blob->data());
@@ -72,14 +71,13 @@ int main(int argc, char** argv) {
     return eid;
   };
 
-  auto get_external_objects = [](ExternalClient& client,
-                                 std::vector<ExternalID>& eids,
-                                 bool check_seal) {
+  auto get_plasma_objects = [](PlasmaClient& client,
+                               std::vector<PlasmaID>& eids, bool check_seal) {
     std::vector<std::string> results;
-    std::map<ExternalID, ExternalPayload> payloads;
-    std::map<ExternalID, std::shared_ptr<arrow::Buffer>> buffers;
-    auto status = client.GetBlobs(
-        std::set<ExternalID>(eids.begin(), eids.end()), payloads, buffers);
+    std::map<PlasmaID, PlasmaPayload> payloads;
+    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>> buffers;
+    auto status = client.GetBlobs(std::set<PlasmaID>(eids.begin(), eids.end()),
+                                  payloads, buffers);
     if (!check_seal) {
       VINEYARD_CHECK_OK(status);
     } else {
@@ -90,7 +88,7 @@ int main(int argc, char** argv) {
     }
     for (size_t i = 0; i < eids.size(); ++i) {
       std::shared_ptr<arrow::Buffer> buff = buffers.find(eids[i])->second;
-      ExternalPayload payload = payloads.find(eids[i])->second;
+      PlasmaPayload payload = payloads.find(eids[i])->second;
       char* data = reinterpret_cast<char*>(const_cast<uint8_t*>(buff->data()));
       results.emplace_back(std::string(data, buff->size()));
       VINEYARD_CHECK_OK(client.Seal(eids[i]));
@@ -98,22 +96,22 @@ int main(int argc, char** argv) {
     return results;
   };
 
-  auto check_results = [&](std::vector<ExternalID>& eids,
+  auto check_results = [&](std::vector<PlasmaID>& eids,
                            std::vector<std::string> results,
                            std::map<std::string, std::string> answer) {
     CHECK_EQ(eids.size(), results.size());
     for (size_t i = 0; i < eids.size(); ++i) {
-      auto search = answer.find(ExternalIDToString(eids[i]));
+      auto search = answer.find(PlasmaIDToString(eids[i]));
       CHECK(search != answer.end());
       CHECK(search->second == results[i]);
     }
   };
 
   {  // test create/get
-    ExternalClient client;
+    PlasmaClient client;
     VINEYARD_CHECK_OK(client.Open(ipc_socket));
 
-    LOG(INFO) << "Connected to IPCServer(ExternalBulkStore): "
+    LOG(INFO) << "Connected to IPCServer(PlasmaBulkStore): "
               << client.IPCSocket();
 
     std::map<std::string, std::string> answer;
@@ -124,34 +122,34 @@ int main(int argc, char** argv) {
     std::vector<std::string> eids;
     for (auto it = answer.begin(); it != answer.end(); ++it) {
       eids.emplace_back(
-          create_external_object(client, it->first, it->second, true));
+          create_plasma_object(client, it->first, it->second, true));
     }
     LOG(INFO) << "Finish all the get request... ";
 
-    auto results = get_external_objects(client, eids, false);
+    auto results = get_plasma_objects(client, eids, false);
 
     check_results(eids, results, answer);
-    LOG(INFO) << "Passed external create/get test...";
+    LOG(INFO) << "Passed plasma create/get test...";
 
     client.CloseSession();
   }
 
   {  // test visibility
-    ExternalClient client;
+    PlasmaClient client;
     VINEYARD_CHECK_OK(client.Open(ipc_socket));
-    LOG(INFO) << "Connected to IPCServer(ExternalBulkStore): "
+    LOG(INFO) << "Connected to IPCServer(PlasmaBulkStore): "
               << client.IPCSocket();
-    create_external_object(client, "hetao", "the_gaint_head", false);
-    std::vector<ExternalID> eids = {ExternalIDFromString("hetao")};
-    get_external_objects(client, eids, true);
+    create_plasma_object(client, "hetao", "the_gaint_head", false);
+    std::vector<PlasmaID> eids = {PlasmaIDFromString("hetao")};
+    get_plasma_objects(client, eids, true);
     client.CloseSession();
   }
 
-  {  // test cross connection (external -> normal)
+  {  // test cross connection (plasma -> normal)
     Client client1;
-    ExternalClient client2;
+    PlasmaClient client2;
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
-    LOG(INFO) << "Connected to IPCServer(ExternalBulkStore): " << ipc_socket;
+    LOG(INFO) << "Connected to IPCServer(PlasmaBulkStore): " << ipc_socket;
     auto socket_path = client1.IPCSocket();
     auto status = client2.Connect(socket_path);
     CHECK(status.IsInvalid());
@@ -159,8 +157,8 @@ int main(int argc, char** argv) {
     client1.CloseSession();
   }
 
-  {  // test cross connection (normal -> external)
-    ExternalClient client1;
+  {  // test cross connection (normal -> plasma)
+    PlasmaClient client1;
     Client client2;
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
     LOG(INFO) << "Connected to IPCServer(NormalBulkStore): " << ipc_socket;

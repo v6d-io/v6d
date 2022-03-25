@@ -131,17 +131,17 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doDeleteSession(json const& root);
 
-  bool doCreateBufferByExternal(json const& root);
+  bool doCreateBufferByPlasma(json const& root);
 
-  bool doGetBuffersByExternal(json const& root);
+  bool doGetBuffersByPlasma(json const& root);
 
   bool doSealBlob(json const& root);
 
-  bool doSealExternalBlob(json const& root);
+  bool doSealPlasmaBlob(json const& root);
 
-  bool doExternalRelease(json const& root);
+  bool doPlasmaRelease(json const& root);
 
-  bool doExternalDelData(json const& root);
+  bool doPlasmaDelData(json const& root);
 
  private:
   int nativeHandle() { return socket_.native_handle(); }
@@ -168,7 +168,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   /**
    * Being called when the encounter a socket error (in read/write), or by
-   * external "conn->Stop()".
+   * plasma "conn->Stop()".
    *
    * Just do some clean up and won't remove connecion from parent's pool.
    */

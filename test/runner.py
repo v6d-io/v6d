@@ -288,7 +288,7 @@ def run_single_vineyardd_tests():
         run_test('dataframe_test')
         run_test('deep_copy_test')
         run_test('delete_test')
-        run_test('external_test')
+        run_test('plasma_test')
         run_test('get_wait_test')
         run_test('get_object_test')
         run_test('global_object_test')
