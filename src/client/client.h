@@ -463,7 +463,7 @@ class Client : public BasicIPCClient {
   /**
    * @brief Move the selected objects from the source session to the target
    */
-  Status ShallowCopy(ObjectID const ids, ObjectID& target_id,
+  Status ShallowCopy(ObjectID const id, ObjectID& target_id,
                      Client& source_client);
 
  protected:
