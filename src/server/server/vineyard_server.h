@@ -89,7 +89,6 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     return spec_["deployment"].get_ref<std::string const&>();
   }
 
-  inline SessionID GetSessionID() const { return session_id_; }
 #if BOOST_VERSION >= 106600
   inline asio::io_context& GetContext() { return context_; }
   inline asio::io_context& GetMetaContext() { return meta_context_; }
@@ -171,6 +170,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status ProcessDeferred(const json& meta);
 
+  inline SessionID session_id() const { return session_id_; }
   inline InstanceID instance_id() { return instance_id_; }
   inline std::string instance_name() { return instance_name_; }
   inline void set_instance_id(InstanceID id) {

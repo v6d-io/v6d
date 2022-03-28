@@ -206,7 +206,7 @@ class BulkStore : public BulkStoreBase<ObjectID, Payload> {
 
   Status MoveOwnership(std::map<ObjectID, size_t> const& id_to_size);
 
-  Status RemoveOwnership(std::set<ObjectID> const& ids);
+  Status RemoveOwnership(std::set<ObjectID>& ids);
 };
 
 class PlasmaBulkStore

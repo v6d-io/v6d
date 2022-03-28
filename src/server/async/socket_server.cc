@@ -300,9 +300,6 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::MoveBuffersOwnershipRequest: {
     return doMoveBuffersOwnership(root);
   }
-  case CommandType::RemoveBuffersOwnershipRequest: {
-    return doRemoveBuffersOwnership(root);
-  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -317,7 +314,8 @@ bool SocketConnection::doRegister(const json& root) {
   bool store_match = (bulk_store_type == "Any" ||
                       bulk_store_type == server_ptr_->GetBulkStoreType());
   WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
-                     server_ptr_->instance_id(), store_match, message_out);
+                     server_ptr_->instance_id(), server_ptr_->session_id(),
+                     store_match, message_out);
   doWrite(message_out);
   return false;
 }
@@ -1170,22 +1168,37 @@ bool SocketConnection::doPlasmaDelData(json const& root) {
   return false;
 }
 
-bool SocketConnection::doRemoveBuffersOwnership(json const& root) {
-  auto self(shared_from_this());
-  std::set<ObjectID> object_ids;
-  TRY_READ_REQUEST(ReadRemoveBuffersOwnershipRequest, root, object_ids);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->RemoveOwnership(object_ids));
-  std::string message_out;
-  WriteRemoveBuffersOwnershipReply(message_out);
-  this->doWrite(message_out);
-  return false;
-}
-
 bool SocketConnection::doMoveBuffersOwnership(json const& root) {
   auto self(shared_from_this());
   std::map<ObjectID, size_t> id_to_size;
-  TRY_READ_REQUEST(ReadMoveBuffersOwnershipRequest, root, id_to_size);
+  SessionID session_id;
+  TRY_READ_REQUEST(ReadMoveBuffersOwnershipRequest, root, id_to_size,
+                   session_id);
+
+  if (session_id == server_ptr_->session_id()) {
+    return false;
+  }
+
+  std::set<ObjectID> object_ids;
+  for (auto& item : id_to_size) {
+    object_ids.insert(item.first);
+  }
+
+  vs_ptr_t source_session;
+  RESPONSE_ON_ERROR(server_ptr_->GetRunner()->Get(session_id, source_session));
+
+  RESPONSE_ON_ERROR(
+      source_session->GetBulkStore()->RemoveOwnership(object_ids));
+  // some objects are deleted by other session, we should ignore them
+  if (!object_ids.empty()) {
+    for (auto& item : object_ids) {
+      id_to_size.erase(item);
+    }
+  }
+  // If remove ownership is running into issues, we still have to move the
+  // ownership into new session.
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->MoveOwnership(id_to_size));
+
   std::string message_out;
   WriteMoveBuffersOwnershipReply(message_out);
   this->doWrite(message_out);
@@ -1327,7 +1340,7 @@ void SocketServer::RemoveConnection(int conn_id) {
     }
 
     if (AliveConnections() == 0 && closable_.load()) {
-      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionID()));
+      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->session_id()));
     }
   }
 }
@@ -1343,7 +1356,7 @@ void SocketServer::CloseConnection(int conn_id) {
   }
 
   if (AliveConnections() == 0 && closable_.load()) {
-    VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionID()));
+    VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->session_id()));
   }
 }
 

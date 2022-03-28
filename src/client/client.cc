@@ -57,7 +57,7 @@ Status BasicIPCClient::Connect(const std::string& ipc_socket,
   bool store_match;
   RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
                                     rpc_endpoint_value, instance_id_,
-                                    server_version_, store_match));
+                                    session_id_, server_version_, store_match));
   rpc_endpoint_ = rpc_endpoint_value;
   connected_ = true;
 
@@ -536,18 +536,6 @@ Status Client::Seal(ObjectID const& object_id) {
   return Status::OK();
 }
 
-Status Client::RemoveBuffersOwnership(std::set<ObjectID> const& object_ids) {
-  ENSURE_CONNECTED(this);
-  std::string message_out;
-  WriteRemoveBuffersOwnershipRequest(object_ids, message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadRemoveBuffersOwnershipReply(message_in));
-  return Status::OK();
-}
-
 Status Client::ShallowCopy(ObjectID const id, ObjectID& target_id,
                            Client& source_client) {
   ENSURE_CONNECTED(this);
@@ -560,11 +548,9 @@ Status Client::ShallowCopy(ObjectID const id, ObjectID& target_id,
   std::map<ObjectID, size_t> id_to_size;
   RETURN_ON_ERROR(source_client.GetBufferSizes(bids, id_to_size));
 
-  RETURN_ON_ERROR(source_client.RemoveBuffersOwnership(bids));
-
-  // TODO(mengke.mk) Avoid object leak when failure.
   std::string message_out;
-  WriteMoveBuffersOwnershipRequest(id_to_size, message_out);
+  WriteMoveBuffersOwnershipRequest(id_to_size, source_client.session_id(),
+                                   message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;

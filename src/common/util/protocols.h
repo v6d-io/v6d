@@ -82,7 +82,6 @@ enum class CommandType {
   PlasmaReleaseRequest = 48,
   PlasmaDelDataRequest = 49,
   MoveBuffersOwnershipRequest = 50,
-  RemoveBuffersOwnershipRequest = 51,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -96,12 +95,14 @@ Status ReadRegisterRequest(const json& msg, std::string& version,
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
-                        const InstanceID instance_id, bool& store_match,
+                        const InstanceID instance_id,
+                        const SessionID session_id, bool& store_match,
                         std::string& msg);
 
 Status ReadRegisterReply(const json& msg, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id,
-                         std::string& version, bool& store_match);
+                         SessionID& sessionid, std::string& version,
+                         bool& store_match);
 
 void WriteExitRequest(std::string& msg);
 
@@ -465,24 +466,16 @@ void WritePlasmaDelDataReply(std::string& msg);
 Status ReadPlasmaDelDataReply(json const& root);
 
 void WriteMoveBuffersOwnershipRequest(
-    std::map<ObjectID, size_t> const& id_to_size, std::string& msg);
+    std::map<ObjectID, size_t> const& id_to_size, SessionID const session_id,
+    std::string& msg);
 
 Status ReadMoveBuffersOwnershipRequest(json const& root,
-                                       std::map<ObjectID, size_t>& id_to_size);
+                                       std::map<ObjectID, size_t>& id_to_size,
+                                       SessionID& session_id);
 
 void WriteMoveBuffersOwnershipReply(std::string& msg);
 
 Status ReadMoveBuffersOwnershipReply(json const& root);
-
-void WriteRemoveBuffersOwnershipRequest(std::set<ObjectID> const& object_ids,
-                                        std::string& msg);
-
-Status ReadRemoveBuffersOwnershipRequest(json const& root,
-                                         std::set<ObjectID>& object_ids);
-
-void WriteRemoveBuffersOwnershipReply(std::string& msg);
-
-Status ReadRemoveBuffersOwnershipReply(json const& root);
 
 }  // namespace vineyard
 

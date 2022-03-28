@@ -455,6 +455,15 @@ class ClientBase {
   const InstanceID instance_id() const { return instance_id_; }
 
   /**
+   * @brief Get the session id of the connected vineyard server.
+   *
+   * Note that for RPC client the instance id is not available.
+   *
+   * @return The vineyard server's session id.
+   */
+  const SessionID session_id() const { return session_id_; }
+
+  /**
    * @brief Retrieve the cluster information of the connected vineyard server.
    *
    * The cluster information for every instance mainly includes the host address
@@ -528,6 +537,7 @@ class ClientBase {
   std::string ipc_socket_;
   std::string rpc_endpoint_;
   int vineyard_conn_;
+  SessionID session_id_;
   InstanceID instance_id_;
   std::string server_version_;
 

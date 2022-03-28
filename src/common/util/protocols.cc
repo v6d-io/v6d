@@ -131,8 +131,6 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::PlasmaDelDataRequest;
   } else if (str_type == "move_buffers_ownership_request") {
     return CommandType::MoveBuffersOwnershipRequest;
-  } else if (str_type == "remove_buffers_ownership_request") {
-    return CommandType::RemoveBuffersOwnershipRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -168,13 +166,15 @@ Status ReadRegisterRequest(const json& root, std::string& version,
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
-                        const InstanceID instance_id, bool& store_match,
+                        const InstanceID instance_id,
+                        const SessionID session_id, bool& store_match,
                         std::string& msg) {
   json root;
   root["type"] = "register_reply";
   root["ipc_socket"] = ipc_socket;
   root["rpc_endpoint"] = rpc_endpoint;
   root["instance_id"] = instance_id;
+  root["session_id"] = session_id;
   root["version"] = vineyard_version();
   root["store_match"] = store_match;
   encode_msg(root, msg);
@@ -182,11 +182,13 @@ void WriteRegisterReply(const std::string& ipc_socket,
 
 Status ReadRegisterReply(const json& root, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id,
-                         std::string& version, bool& store_match) {
+                         SessionID& session_id, std::string& version,
+                         bool& store_match) {
   CHECK_IPC_ERROR(root, "register_reply");
   ipc_socket = root["ipc_socket"].get_ref<std::string const&>();
   rpc_endpoint = root["rpc_endpoint"].get_ref<std::string const&>();
   instance_id = root["instance_id"].get<InstanceID>();
+  session_id = root["session_id"].get<SessionID>();
 
   // When the "version" field is missing from the server, we treat it
   // as default unknown version number: 0.0.0.
@@ -1362,17 +1364,21 @@ Status ReadPlasmaDelDataReply(json const& root) {
 }
 
 void WriteMoveBuffersOwnershipRequest(
-    std::map<ObjectID, size_t> const& id_to_size, std::string& msg) {
+    std::map<ObjectID, size_t> const& id_to_size, SessionID const session_id,
+    std::string& msg) {
   json root;
   root["type"] = "move_buffers_ownership_request";
   root["id_to_size"] = id_to_size;
+  root["session_id"] = session_id;
   encode_msg(root, msg);
 }
 
 Status ReadMoveBuffersOwnershipRequest(json const& root,
-                                       std::map<ObjectID, size_t>& id_to_size) {
+                                       std::map<ObjectID, size_t>& id_to_size,
+                                       SessionID& session_id) {
   RETURN_ON_ASSERT(root["type"] == "move_buffers_ownership_request");
   id_to_size = root["id_to_size"].get<std::map<ObjectID, size_t>>();
+  session_id = root["session_id"].get<SessionID>();
   return Status::OK();
 }
 
@@ -1384,32 +1390,6 @@ void WriteMoveBuffersOwnershipReply(std::string& msg) {
 
 Status ReadMoveBuffersOwnershipReply(json const& root) {
   CHECK_IPC_ERROR(root, "move_buffers_ownership_reply");
-  return Status::OK();
-}
-
-void WriteRemoveBuffersOwnershipRequest(std::set<ObjectID> const& object_ids,
-                                        std::string& msg) {
-  json root;
-  root["type"] = "remove_buffers_ownership_request";
-  root["object_ids"] = object_ids;
-  encode_msg(root, msg);
-}
-
-Status ReadRemoveBuffersOwnershipRequest(json const& root,
-                                         std::set<ObjectID>& object_ids) {
-  RETURN_ON_ASSERT(root["type"] == "remove_buffers_ownership_request");
-  object_ids = root["object_ids"].get<std::set<ObjectID>>();
-  return Status::OK();
-}
-
-void WriteRemoveBuffersOwnershipReply(std::string& msg) {
-  json root;
-  root["type"] = "remove_buffers_ownership_reply";
-  encode_msg(root, msg);
-}
-
-Status ReadRemoveBuffersOwnershipReply(json const& root) {
-  CHECK_IPC_ERROR(root, "remove_buffers_ownership_reply");
   return Status::OK();
 }
 

@@ -498,7 +498,6 @@ class Client : public BasicIPCClient {
   Status GetBufferSizes(const std::set<ObjectID>& ids,
                         std::map<ObjectID, size_t>& sizes);
 
-  Status RemoveBuffersOwnership(std::set<ObjectID> const& object_id);
   /**
    * @brief An (unsafe) internal-usage method that drop the buffer, without
    * checking the dependency. To achieve the "DeleteObject" semantic for blobs,

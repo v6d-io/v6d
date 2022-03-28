@@ -429,6 +429,11 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
 Status BulkStore::MoveOwnership(std::map<ObjectID, size_t> const& id_to_size) {
   for (auto& item : id_to_size) {
     auto object_id = item.first;
+    typename object_map_t::const_accessor accessor;
+    // already exists
+    if (objects_.find(accessor, object_id)) {
+      continue;
+    }
     auto data_size = item.second;
     int fd = -1;
     int64_t map_size = 0;
@@ -450,7 +455,8 @@ Status BulkStore::MoveOwnership(std::map<ObjectID, size_t> const& id_to_size) {
   return Status::OK();
 }
 
-Status BulkStore::RemoveOwnership(const std::set<ObjectID>& ids) {
+Status BulkStore::RemoveOwnership(std::set<ObjectID>& ids) {
+  std::vector<ObjectID> succeed;
   for (auto object_id : ids) {
     if (object_id == EmptyBlobID<ObjectID>() ||
         object_id == GenerateBlobID<ObjectID>(reinterpret_cast<void*>(
@@ -459,10 +465,15 @@ Status BulkStore::RemoveOwnership(const std::set<ObjectID>& ids) {
     }
     typename object_map_t::const_accessor accessor;
     if (!objects_.find(accessor, object_id)) {
+      // already deleted by other session
       continue;
     } else {
+      succeed.push_back(object_id);
       accessor->second->RemoveOwner();
     }
+  }
+  for (auto item : succeed) {
+    ids.erase(item);
   }
   return Status::OK();
 }
