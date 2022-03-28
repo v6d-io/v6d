@@ -29,6 +29,7 @@
 #ifndef SRC_SERVER_MEMORY_MEMORY_H_
 #define SRC_SERVER_MEMORY_MEMORY_H_
 
+#include <map>
 #include <memory>
 #include <set>
 #include <unordered_map>
@@ -202,26 +203,29 @@ class BulkStore : public BulkStoreBase<ObjectID, Payload> {
  public:
   Status Create(const size_t size, ObjectID& object_id,
                 std::shared_ptr<Payload>& object);
+
+  Status MoveOwnership(std::map<ObjectID, size_t> const& id_to_size);
+
+  Status RemoveOwnership(std::set<ObjectID>& ids);
 };
 
-class ExternalBulkStore
-    : public BulkStoreBase<ExternalID, ExternalPayload>,
-      public DependencyTracker<ExternalID, ExternalPayload, ExternalBulkStore> {
+class PlasmaBulkStore
+    : public BulkStoreBase<PlasmaID, PlasmaPayload>,
+      public DependencyTracker<PlasmaID, PlasmaPayload, PlasmaBulkStore> {
  public:
-  Status Create(size_t const data_size, size_t const external_size,
-                ExternalID const& external_id, ObjectID& object_id,
-                std::shared_ptr<ExternalPayload>& object);
+  Status Create(size_t const data_size, size_t const plasma_size,
+                PlasmaID const& plasma_id, ObjectID& object_id,
+                std::shared_ptr<PlasmaPayload>& object);
 
-  Status FetchAndModify(ExternalID const& id, int64_t& ref_cnt,
-                        int64_t changes);
+  Status FetchAndModify(PlasmaID const& id, int64_t& ref_cnt, int64_t changes);
 
-  Status OnRelease(ExternalID const& id);
+  Status OnRelease(PlasmaID const& id);
 
-  Status OnDelete(ExternalID const& id);
+  Status OnDelete(PlasmaID const& id);
 
-  Status Release(ExternalID const& id, int conn);
+  Status Release(PlasmaID const& id, int conn);
 
-  Status Delete(ExternalID const& id);
+  Status Delete(PlasmaID const& id);
 };
 
 }  // namespace vineyard

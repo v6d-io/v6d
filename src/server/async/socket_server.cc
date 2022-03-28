@@ -16,7 +16,9 @@ limitations under the License.
 #include "server/async/socket_server.h"
 
 #include <limits>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -277,23 +279,26 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::DeleteSessionRequest: {
     return doDeleteSession(root);
   }
-  case CommandType::CreateBufferByExternalRequest: {
-    return doCreateBufferByExternal(root);
+  case CommandType::CreateBufferByPlasmaRequest: {
+    return doCreateBufferByPlasma(root);
   }
-  case CommandType::GetBuffersByExternalRequest: {
-    return doGetBuffersByExternal(root);
+  case CommandType::GetBuffersByPlasmaRequest: {
+    return doGetBuffersByPlasma(root);
   }
   case CommandType::SealRequest: {
     return doSealBlob(root);
   }
-  case CommandType::ExternalSealRequest: {
-    return doSealExternalBlob(root);
+  case CommandType::PlasmaSealRequest: {
+    return doSealPlasmaBlob(root);
   }
-  case CommandType::ExternalReleaseRequest: {
-    return doExternalRelease(root);
+  case CommandType::PlasmaReleaseRequest: {
+    return doPlasmaRelease(root);
   }
-  case CommandType::ExternalDelDataRequest: {
-    return doExternalDelData(root);
+  case CommandType::PlasmaDelDataRequest: {
+    return doPlasmaDelData(root);
+  }
+  case CommandType::MoveBuffersOwnershipRequest: {
+    return doMoveBuffersOwnership(root);
   }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
@@ -309,7 +314,8 @@ bool SocketConnection::doRegister(const json& root) {
   bool store_match = (bulk_store_type == "Any" ||
                       bulk_store_type == server_ptr_->GetBulkStoreType());
   WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
-                     server_ptr_->instance_id(), store_match, message_out);
+                     server_ptr_->instance_id(), server_ptr_->session_id(),
+                     store_match, message_out);
   doWrite(message_out);
   return false;
 }
@@ -1046,23 +1052,23 @@ bool SocketConnection::doDeleteSession(const json& root) {
   return true;
 }
 
-bool SocketConnection::doCreateBufferByExternal(json const& root) {
+bool SocketConnection::doCreateBufferByPlasma(json const& root) {
   auto self(shared_from_this());
-  ExternalID external_id;
+  PlasmaID plasma_id;
   ObjectID object_id = InvalidObjectID();
-  size_t size, external_size;
-  std::shared_ptr<ExternalPayload> external_object;
+  size_t size, plasma_size;
+  std::shared_ptr<PlasmaPayload> plasma_object;
 
-  TRY_READ_REQUEST(ReadCreateBufferByExternalRequest, root, external_id, size,
-                   external_size);
+  TRY_READ_REQUEST(ReadCreateBufferByPlasmaRequest, root, plasma_id, size,
+                   plasma_size);
 
   std::string message_out;
-  RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Create(
-      size, external_size, external_id, object_id, external_object));
-  WriteCreateBufferByExternalReply(object_id, external_object, message_out);
+  RESPONSE_ON_ERROR(server_ptr_->GetPlasmaBulkStore()->Create(
+      size, plasma_size, plasma_id, object_id, plasma_object));
+  WriteCreateBufferByPlasmaReply(object_id, plasma_object, message_out);
 
-  int store_fd = external_object->store_fd;
-  int data_size = external_object->data_size;
+  int store_fd = plasma_object->store_fd;
+  int data_size = plasma_object->data_size;
   this->doWrite(
       message_out, [this, self, store_fd, data_size](const Status& status) {
         if (data_size > 0 &&
@@ -1071,22 +1077,22 @@ bool SocketConnection::doCreateBufferByExternal(json const& root) {
           send_fd(self->nativeHandle(), store_fd);
         }
         LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                    server_ptr_->GetExternalBulkStore()->Footprint());
+                    server_ptr_->GetPlasmaBulkStore()->Footprint());
         return Status::OK();
       });
   return false;
 }
 
-bool SocketConnection::doGetBuffersByExternal(json const& root) {
+bool SocketConnection::doGetBuffersByPlasma(json const& root) {
   auto self(shared_from_this());
-  std::vector<ExternalID> external_ids;
-  std::vector<std::shared_ptr<ExternalPayload>> external_objects;
+  std::vector<PlasmaID> plasma_ids;
+  std::vector<std::shared_ptr<PlasmaPayload>> plasma_objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetBuffersByExternalRequest, root, external_ids);
+  TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids);
   RESPONSE_ON_ERROR(
-      server_ptr_->GetExternalBulkStore()->Get(external_ids, external_objects));
-  WriteGetBuffersByExternalReply(external_objects, message_out);
+      server_ptr_->GetPlasmaBulkStore()->Get(plasma_ids, plasma_objects));
+  WriteGetBuffersByPlasmaReply(plasma_objects, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
    *       We are using sendmsg to send the file descriptor
@@ -1099,8 +1105,8 @@ bool SocketConnection::doGetBuffersByExternal(json const& root) {
    *       We will examine other methods later, such as using
    *       explicit file descritors.
    */
-  this->doWrite(message_out, [self, external_objects](const Status& status) {
-    for (auto object : external_objects) {
+  this->doWrite(message_out, [self, plasma_objects](const Status& status) {
+    for (auto object : plasma_objects) {
       int store_fd = object->store_fd;
       int data_size = object->data_size;
       if (data_size > 0 &&
@@ -1125,39 +1131,76 @@ bool SocketConnection::doSealBlob(json const& root) {
   return false;
 }
 
-bool SocketConnection::doSealExternalBlob(json const& root) {
+bool SocketConnection::doSealPlasmaBlob(json const& root) {
   auto self(shared_from_this());
-  ExternalID id;
-  TRY_READ_REQUEST(ReadExternalSealRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Seal(id));
+  PlasmaID id;
+  TRY_READ_REQUEST(ReadPlasmaSealRequest, root, id);
+  RESPONSE_ON_ERROR(server_ptr_->GetPlasmaBulkStore()->Seal(id));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
   return false;
 }
 
-bool SocketConnection::doExternalRelease(json const& root) {
+bool SocketConnection::doPlasmaRelease(json const& root) {
   auto self(shared_from_this());
-  ExternalID id;
-  TRY_READ_REQUEST(ReadExternalReleaseRequest, root, id);
+  PlasmaID id;
+  TRY_READ_REQUEST(ReadPlasmaReleaseRequest, root, id);
   RESPONSE_ON_ERROR(
-      server_ptr_->GetExternalBulkStore()->Release(id, getConnId()));
+      server_ptr_->GetPlasmaBulkStore()->Release(id, getConnId()));
   std::string message_out;
-  WriteExternalReleaseReply(message_out);
+  WritePlasmaReleaseReply(message_out);
   this->doWrite(message_out);
   return false;
 }
 
-bool SocketConnection::doExternalDelData(json const& root) {
+bool SocketConnection::doPlasmaDelData(json const& root) {
   auto self(shared_from_this());
-  ExternalID id;
-  TRY_READ_REQUEST(ReadExternalDelDataRequest, root, id);
+  PlasmaID id;
+  TRY_READ_REQUEST(ReadPlasmaDelDataRequest, root, id);
 
-  /// External Data are not composable, so we do not have to wrestle with meta.
-  RESPONSE_ON_ERROR(server_ptr_->GetExternalBulkStore()->Delete(id));
+  /// Plasma Data are not composable, so we do not have to wrestle with meta.
+  RESPONSE_ON_ERROR(server_ptr_->GetPlasmaBulkStore()->Delete(id));
 
   std::string message_out;
-  WriteExternalDelDataReply(message_out);
+  WritePlasmaDelDataReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doMoveBuffersOwnership(json const& root) {
+  auto self(shared_from_this());
+  std::map<ObjectID, size_t> id_to_size;
+  SessionID session_id;
+  TRY_READ_REQUEST(ReadMoveBuffersOwnershipRequest, root, id_to_size,
+                   session_id);
+
+  if (session_id == server_ptr_->session_id()) {
+    return false;
+  }
+
+  std::set<ObjectID> object_ids;
+  for (auto& item : id_to_size) {
+    object_ids.insert(item.first);
+  }
+
+  vs_ptr_t source_session;
+  RESPONSE_ON_ERROR(server_ptr_->GetRunner()->Get(session_id, source_session));
+
+  RESPONSE_ON_ERROR(
+      source_session->GetBulkStore()->RemoveOwnership(object_ids));
+  // some objects are deleted by other session, we should ignore them
+  if (!object_ids.empty()) {
+    for (auto& item : object_ids) {
+      id_to_size.erase(item);
+    }
+  }
+  // If remove ownership is running into issues, we still have to move the
+  // ownership into new session.
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->MoveOwnership(id_to_size));
+
+  std::string message_out;
+  WriteMoveBuffersOwnershipReply(message_out);
   this->doWrite(message_out);
   return false;
 }
@@ -1297,7 +1340,7 @@ void SocketServer::RemoveConnection(int conn_id) {
     }
 
     if (AliveConnections() == 0 && closable_.load()) {
-      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionID()));
+      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->session_id()));
     }
   }
 }
@@ -1313,7 +1356,7 @@ void SocketServer::CloseConnection(int conn_id) {
   }
 
   if (AliveConnections() == 0 && closable_.load()) {
-    VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->GetSessionID()));
+    VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->session_id()));
   }
 }
 

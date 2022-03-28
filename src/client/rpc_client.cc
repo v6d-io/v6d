@@ -73,7 +73,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
   bool store_match;
   RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
                                     rpc_endpoint_value, remote_instance_id_,
-                                    server_version_, store_match));
+                                    session_id_, server_version_, store_match));
   ipc_socket_ = ipc_socket_value;
   connected_ = true;
 

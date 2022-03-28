@@ -55,6 +55,36 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Passed session creat/get test...";
 
     client.Disconnect();
+    LOG(INFO) << "Disconnected from IPCServer: " << client.IPCSocket();
+  }
+
+  {  // test shallow copy between session
+    Client client1, client2;
+    VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    VINEYARD_CHECK_OK(client2.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer: " << client1.IPCSocket();
+
+    std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
+    ArrayBuilder<double> builder(client1, double_array);
+    auto sealed_double_array =
+        std::dynamic_pointer_cast<Array<double>>(builder.Seal(client1));
+    ObjectID id = sealed_double_array->id();
+    ObjectID new_id = InvalidObjectID();
+
+    VINEYARD_CHECK_OK(client2.ShallowCopy(id, new_id, client1));
+    CHECK(new_id != InvalidObjectID());
+
+    auto array =
+        std::dynamic_pointer_cast<Array<double>>(client2.GetObject(new_id));
+    for (size_t i = 0; i < array->size(); i++) {
+      CHECK_EQ((*array)[i], double_array[i]);
+    }
+    LOG(INFO) << "Passed session shallow copy test ...";
+
+    client1.CloseSession();
+    LOG(INFO) << "Closed session: " << client1.IPCSocket();
+    client2.CloseSession();
+    LOG(INFO) << "Closed session: " << client2.IPCSocket();
   }
 
   {  // test isolation;

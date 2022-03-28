@@ -56,10 +56,10 @@ using InstanceID = uint64_t;
 using SessionID = int64_t;
 
 /**
- * @brief ExternalID is an opaque type for vineyard's ExternalPayload. The
- * underlying type of ExternalID is base64 string for compatibility.
+ * @brief PlasmaID is an opaque type for vineyard's PlasmaPayload. The
+ * underlying type of PlasmaID is base64 string for compatibility.
  */
-using ExternalID = std::string;
+using PlasmaID = std::string;
 
 template <typename T, typename F>
 auto static_if(std::true_type, T t, F f) {
@@ -124,8 +124,8 @@ inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
 
 const std::string ObjectIDToString(const ObjectID id);
 
-inline std::string const ExternalIDToString(ExternalID const external_id) {
-  return base64_decode(std::string(external_id));
+inline std::string const PlasmaIDToString(PlasmaID const plasma_id) {
+  return base64_decode(std::string(plasma_id));
 }
 
 inline ObjectID ObjectIDFromString(const std::string& s) {
@@ -137,12 +137,12 @@ inline ObjectID ObjectIDFromString(const char* s) {
 }
 
 // TODO base64 encoding
-inline ExternalID ExternalIDFromString(std::string const& s) {
-  return ExternalID(base64_encode(s));
+inline PlasmaID PlasmaIDFromString(std::string const& s) {
+  return PlasmaID(base64_encode(s));
 }
 
-inline ExternalID ExternalIDFromString(const char* s) {
-  return ExternalID(base64_encode(s));
+inline PlasmaID PlasmaIDFromString(const char* s) {
+  return PlasmaID(base64_encode(s));
 }
 
 constexpr inline SessionID RootSessionID() { return 0x0000000000000000UL; }
@@ -203,9 +203,7 @@ inline ID GenerateBlobID(uintptr_t ptr) {
   uint64_t ans = 0x8000000000000000UL | reinterpret_cast<uintptr_t>(ptr);
   return static_if<std::is_same<ID, ObjectID>{}>(
       [&]() { return ObjectID(ans); },
-      [&]() {
-        return ExternalIDFromString(ObjectIDToString(ObjectID(ans)));
-      })();
+      [&]() { return PlasmaIDFromString(ObjectIDToString(ObjectID(ans))); })();
 }
 
 template <typename ID = ObjectID>
@@ -213,9 +211,7 @@ inline ID GenerateBlobID(const void* ptr) {
   uint64_t ans = 0x8000000000000000UL | reinterpret_cast<uint64_t>(ptr);
   return static_if<std::is_same<ID, ObjectID>{}>(
       [&]() { return ObjectID(ans); },
-      [&]() {
-        return ExternalIDFromString(ObjectIDToString(ObjectID(ans)));
-      })();
+      [&]() { return PlasmaIDFromString(ObjectIDToString(ObjectID(ans))); })();
 }
 
 template <typename ID = ObjectID>
@@ -227,7 +223,7 @@ template <typename ID>
 std::string IDToString(ID id) {
   return static_if<std::is_same<ID, ObjectID>{}>(
       [](ObjectID& id) { return ObjectIDToString(id); },
-      [](ExternalID& id) { return ExternalIDToString(id); })(id);
+      [](PlasmaID& id) { return PlasmaIDToString(id); })(id);
 }
 
 }  // namespace vineyard

@@ -154,7 +154,7 @@ class EtcdMetaService : public IMetaService {
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
         prefix_(etcd_spec_["etcd_prefix"].get<std::string>() + "/" +
-                SessionIDToString(server_ptr->GetSessionID())) {
+                SessionIDToString(server_ptr->session_id())) {
     this->handled_rev_.store(0);
   }
 

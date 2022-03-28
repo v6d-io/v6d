@@ -245,6 +245,11 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
     return Status::ObjectNotExists("delete: id = " + IDToString(object_id));
   }
   auto& object = accessor->second;
+
+  if (!object->IsOwner()) {
+    return Status::OK();
+  }
+
   if (object->arena_fd == -1) {
     auto buff_size = object->data_size;
     BulkAllocator::Free(object->pointer, buff_size);
@@ -394,7 +399,7 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
 
 template class BulkStoreBase<ObjectID, Payload>;
 
-template class BulkStoreBase<ExternalID, ExternalPayload>;
+template class BulkStoreBase<PlasmaID, PlasmaPayload>;
 
 // implementation for BulkStore
 Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
@@ -421,14 +426,64 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   return Status::OK();
 }
 
-// implementation for ExternalBulkStore
-Status ExternalBulkStore::Create(size_t const data_size,
-                                 size_t const external_size,
-                                 ExternalID const& external_id,
-                                 ObjectID& object_id,
-                                 std::shared_ptr<ExternalPayload>& object) {
+Status BulkStore::MoveOwnership(std::map<ObjectID, size_t> const& id_to_size) {
+  for (auto& item : id_to_size) {
+    auto object_id = item.first;
+    typename object_map_t::const_accessor accessor;
+    // already exists
+    if (objects_.find(accessor, object_id)) {
+      continue;
+    }
+    auto data_size = item.second;
+    int fd = -1;
+    int64_t map_size = 0;
+    ptrdiff_t offset = 0;
+    uint8_t* pointer = nullptr;
+    pointer = reinterpret_cast<uint8_t*>(GetBlobAddr(object_id));
+    if (pointer == nullptr) {
+      return Status::ObjectNotExists(
+          "object " + IDToString<ObjectID>(object_id) + " cannot be found");
+    } else {
+      memory::GetMallocMapinfo(pointer, &fd, &map_size, &offset);
+    }
+    auto object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
+                                            map_size, offset);
+
+    object->MarkAsSealed();
+    objects_.emplace(object_id, object);
+  }
+  return Status::OK();
+}
+
+Status BulkStore::RemoveOwnership(std::set<ObjectID>& ids) {
+  std::vector<ObjectID> succeed;
+  for (auto object_id : ids) {
+    if (object_id == EmptyBlobID<ObjectID>() ||
+        object_id == GenerateBlobID<ObjectID>(reinterpret_cast<void*>(
+                         std::numeric_limits<uintptr_t>::max()))) {
+      continue;
+    }
+    typename object_map_t::const_accessor accessor;
+    if (!objects_.find(accessor, object_id)) {
+      // already deleted by other session
+      continue;
+    } else {
+      succeed.push_back(object_id);
+      accessor->second->RemoveOwner();
+    }
+  }
+  for (auto item : succeed) {
+    ids.erase(item);
+  }
+  return Status::OK();
+}
+
+// implementation for PlasmaBulkStore
+Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
+                               PlasmaID const& plasma_id, ObjectID& object_id,
+                               std::shared_ptr<PlasmaPayload>& object) {
   if (data_size == 0) {
-    object = ExternalPayload::MakeEmpty();
+    object = PlasmaPayload::MakeEmpty();
     return Status::OK();
   }
   int fd = -1;
@@ -440,19 +495,19 @@ Status ExternalBulkStore::Create(size_t const data_size,
     return Status::NotEnoughMemory("size = " + std::to_string(data_size));
   }
   object_id = GenerateBlobID<ObjectID>(pointer);
-  object = std::make_shared<ExternalPayload>(external_id, object_id,
-                                             external_size, data_size, pointer,
-                                             fd, map_size, offset);
-  objects_.emplace(external_id, object);
-  DVLOG(10) << "after allocate: " << IDToString<ExternalID>(external_id) << ": "
+  object =
+      std::make_shared<PlasmaPayload>(plasma_id, object_id, plasma_size,
+                                      data_size, pointer, fd, map_size, offset);
+  objects_.emplace(plasma_id, object);
+  DVLOG(10) << "after allocate: " << IDToString<PlasmaID>(plasma_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
   return Status::OK();
 }
 
-Status ExternalBulkStore::OnRelease(ExternalID const& id) {
+Status PlasmaBulkStore::OnRelease(PlasmaID const& id) {
   typename object_map_t::const_accessor accessor;
   if (!objects_.find(accessor, id)) {
-    return Status::ObjectNotExists("object " + ExternalIDToString(id) +
+    return Status::ObjectNotExists("object " + PlasmaIDToString(id) +
                                    " cannot be found");
   } else {
     RETURN_ON_ERROR(OnDelete(id));
@@ -460,12 +515,12 @@ Status ExternalBulkStore::OnRelease(ExternalID const& id) {
   return Status::OK();
 }
 
-Status ExternalBulkStore::Release(ExternalID const& id, int conn) {
+Status PlasmaBulkStore::Release(PlasmaID const& id, int conn) {
   return this->RemoveDependency(id, conn);
 }
 
-Status ExternalBulkStore::FetchAndModify(const ExternalID& id, int64_t& ref_cnt,
-                                         int64_t changes) {
+Status PlasmaBulkStore::FetchAndModify(const PlasmaID& id, int64_t& ref_cnt,
+                                       int64_t changes) {
   typename object_map_t::const_accessor accessor;
   if (!objects_.find(accessor, id)) {
     return Status::ObjectNotExists("object " + IDToString(id) +
@@ -477,11 +532,11 @@ Status ExternalBulkStore::FetchAndModify(const ExternalID& id, int64_t& ref_cnt,
   return Status::OK();
 }
 
-Status ExternalBulkStore::OnDelete(ExternalID const& id) {
-  return BulkStoreBase<ExternalID, ExternalPayload>::Delete(id);
+Status PlasmaBulkStore::OnDelete(PlasmaID const& id) {
+  return BulkStoreBase<PlasmaID, PlasmaPayload>::Delete(id);
 }
 
-Status ExternalBulkStore::Delete(ExternalID const& id) {
+Status PlasmaBulkStore::Delete(PlasmaID const& id) {
   return this->PreDelete(id);
 }
 

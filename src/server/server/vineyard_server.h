@@ -89,7 +89,6 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     return spec_["deployment"].get_ref<std::string const&>();
   }
 
-  inline SessionID GetSessionID() const { return session_id_; }
 #if BOOST_VERSION >= 106600
   inline asio::io_context& GetContext() { return context_; }
   inline asio::io_context& GetMetaContext() { return meta_context_; }
@@ -99,8 +98,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 #endif
   inline std::string GetBulkStoreType() { return bulk_store_type_; }
   inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
-  inline std::shared_ptr<ExternalBulkStore> GetExternalBulkStore() {
-    return external_bulk_store_;
+  inline std::shared_ptr<PlasmaBulkStore> GetPlasmaBulkStore() {
+    return plasma_bulk_store_;
   }
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
   inline std::shared_ptr<VineyardRunner> GetRunner() { return runner_; }
@@ -171,6 +170,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status ProcessDeferred(const json& meta);
 
+  inline SessionID session_id() const { return session_id_; }
   inline InstanceID instance_id() { return instance_id_; }
   inline std::string instance_name() { return instance_name_; }
   inline void set_instance_id(InstanceID id) {
@@ -218,7 +218,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   std::string bulk_store_type_;
   std::shared_ptr<BulkStore> bulk_store_;
-  std::shared_ptr<ExternalBulkStore> external_bulk_store_;
+  std::shared_ptr<PlasmaBulkStore> plasma_bulk_store_;
   std::shared_ptr<StreamStore> stream_store_;
   std::shared_ptr<VineyardRunner> runner_;
 

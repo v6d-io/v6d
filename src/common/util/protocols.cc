@@ -117,18 +117,20 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::DeleteSessionRequest;
   } else if (str_type == "delete_session_reply") {
     return CommandType::DeleteSessionReply;
-  } else if (str_type == "create_buffer_by_external_request") {
-    return CommandType::CreateBufferByExternalRequest;
-  } else if (str_type == "get_buffers_by_external_request") {
-    return CommandType::GetBuffersByExternalRequest;
+  } else if (str_type == "create_buffer_by_plasma_request") {
+    return CommandType::CreateBufferByPlasmaRequest;
+  } else if (str_type == "get_buffers_by_plasma_request") {
+    return CommandType::GetBuffersByPlasmaRequest;
   } else if (str_type == "seal_request") {
     return CommandType::SealRequest;
-  } else if (str_type == "external_seal_request") {
-    return CommandType::ExternalSealRequest;
-  } else if (str_type == "external_release_request") {
-    return CommandType::ExternalReleaseRequest;
-  } else if (str_type == "external_del_data_request") {
-    return CommandType::ExternalDelDataRequest;
+  } else if (str_type == "plasma_seal_request") {
+    return CommandType::PlasmaSealRequest;
+  } else if (str_type == "plasma_release_request") {
+    return CommandType::PlasmaReleaseRequest;
+  } else if (str_type == "plasma_del_data_request") {
+    return CommandType::PlasmaDelDataRequest;
+  } else if (str_type == "move_buffers_ownership_request") {
+    return CommandType::MoveBuffersOwnershipRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -164,13 +166,15 @@ Status ReadRegisterRequest(const json& root, std::string& version,
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
-                        const InstanceID instance_id, bool& store_match,
+                        const InstanceID instance_id,
+                        const SessionID session_id, bool& store_match,
                         std::string& msg) {
   json root;
   root["type"] = "register_reply";
   root["ipc_socket"] = ipc_socket;
   root["rpc_endpoint"] = rpc_endpoint;
   root["instance_id"] = instance_id;
+  root["session_id"] = session_id;
   root["version"] = vineyard_version();
   root["store_match"] = store_match;
   encode_msg(root, msg);
@@ -178,11 +182,13 @@ void WriteRegisterReply(const std::string& ipc_socket,
 
 Status ReadRegisterReply(const json& root, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id,
-                         std::string& version, bool& store_match) {
+                         SessionID& session_id, std::string& version,
+                         bool& store_match) {
   CHECK_IPC_ERROR(root, "register_reply");
   ipc_socket = root["ipc_socket"].get_ref<std::string const&>();
   rpc_endpoint = root["rpc_endpoint"].get_ref<std::string const&>();
   instance_id = root["instance_id"].get<InstanceID>();
+  session_id = root["session_id"].get<SessionID>();
 
   // When the "version" field is missing from the server, we treat it
   // as default unknown version number: 0.0.0.
@@ -1177,98 +1183,97 @@ void WriteDeleteSessionReply(std::string& msg) {
   encode_msg(root, msg);
 }
 
-void WriteCreateBufferByExternalRequest(ExternalID const external_id,
-                                        size_t const size,
-                                        size_t const external_size,
-                                        std::string& msg) {
+void WriteCreateBufferByPlasmaRequest(PlasmaID const plasma_id,
+                                      size_t const size,
+                                      size_t const plasma_size,
+                                      std::string& msg) {
   json root;
-  root["type"] = "create_buffer_by_external_request";
-  root["external_id"] = external_id;
-  root["external_size"] = external_size;
+  root["type"] = "create_buffer_by_plasma_request";
+  root["plasma_id"] = plasma_id;
+  root["plasma_size"] = plasma_size;
   root["size"] = size;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateBufferByExternalRequest(json const& root,
-                                         ExternalID& external_id, size_t& size,
-                                         size_t& external_size) {
-  RETURN_ON_ASSERT(root["type"] == "create_buffer_by_external_request");
-  external_id = root["external_id"].get<ExternalID>();
+Status ReadCreateBufferByPlasmaRequest(json const& root, PlasmaID& plasma_id,
+                                       size_t& size, size_t& plasma_size) {
+  RETURN_ON_ASSERT(root["type"] == "create_buffer_by_plasma_request");
+  plasma_id = root["plasma_id"].get<PlasmaID>();
   size = root["size"].get<size_t>();
-  external_size = root["external_size"].get<size_t>();
+  plasma_size = root["plasma_size"].get<size_t>();
 
   return Status::OK();
 }
 
-void WriteCreateBufferByExternalReply(
+void WriteCreateBufferByPlasmaReply(
     ObjectID const object_id,
-    const std::shared_ptr<ExternalPayload>& external_object, std::string& msg) {
+    const std::shared_ptr<PlasmaPayload>& plasma_object, std::string& msg) {
   json root;
-  root["type"] = "create_buffer_by_external_reply";
+  root["type"] = "create_buffer_by_plasma_reply";
   root["id"] = object_id;
   json tree;
-  external_object->ToJSON(tree);
+  plasma_object->ToJSON(tree);
   root["created"] = tree;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateBufferByExternalReply(json const& root, ObjectID& object_id,
-                                       ExternalPayload& external_object) {
-  CHECK_IPC_ERROR(root, "create_buffer_by_external_reply");
+Status ReadCreateBufferByPlasmaReply(json const& root, ObjectID& object_id,
+                                     PlasmaPayload& plasma_object) {
+  CHECK_IPC_ERROR(root, "create_buffer_by_plasma_reply");
   json tree = root["created"];
   object_id = root["id"].get<ObjectID>();
-  external_object.FromJSON(tree);
+  plasma_object.FromJSON(tree);
   return Status::OK();
 }
 
-void WriteGetBuffersByExternalRequest(std::set<ExternalID> const& external_ids,
-                                      std::string& msg) {
+void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
+                                    std::string& msg) {
   json root;
-  root["type"] = "get_buffers_by_external_request";
+  root["type"] = "get_buffers_by_plasma_request";
   int idx = 0;
-  for (auto const& eid : external_ids) {
+  for (auto const& eid : plasma_ids) {
     root[std::to_string(idx++)] = eid;
   }
-  root["num"] = external_ids.size();
+  root["num"] = plasma_ids.size();
 
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersByExternalRequest(const json& root,
-                                       std::vector<ExternalID>& external_ids) {
-  RETURN_ON_ASSERT(root["type"] == "get_buffers_by_external_request");
+Status ReadGetBuffersByPlasmaRequest(const json& root,
+                                     std::vector<PlasmaID>& plasma_ids) {
+  RETURN_ON_ASSERT(root["type"] == "get_buffers_by_plasma_request");
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
-    external_ids.push_back(root[std::to_string(i)].get<ExternalID>());
+    plasma_ids.push_back(root[std::to_string(i)].get<PlasmaID>());
   }
   return Status::OK();
 }
 
-void WriteGetBuffersByExternalReply(
-    std::vector<std::shared_ptr<ExternalPayload>> const& external_objects,
+void WriteGetBuffersByPlasmaReply(
+    std::vector<std::shared_ptr<PlasmaPayload>> const& plasma_objects,
     std::string& msg) {
   json root;
-  root["type"] = "get_buffers_by_external_reply";
-  for (size_t i = 0; i < external_objects.size(); ++i) {
+  root["type"] = "get_buffers_by_plasma_reply";
+  for (size_t i = 0; i < plasma_objects.size(); ++i) {
     json tree;
-    external_objects[i]->ToJSON(tree);
+    plasma_objects[i]->ToJSON(tree);
     root[std::to_string(i)] = tree;
   }
-  root["num"] = external_objects.size();
+  root["num"] = plasma_objects.size();
 
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersByExternalReply(
-    json const& root, std::vector<ExternalPayload>& external_objects) {
-  CHECK_IPC_ERROR(root, "get_buffers_by_external_reply");
+Status ReadGetBuffersByPlasmaReply(json const& root,
+                                   std::vector<PlasmaPayload>& plasma_objects) {
+  CHECK_IPC_ERROR(root, "get_buffers_by_plasma_reply");
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
-    ExternalPayload external_object;
-    external_object.FromJSON(tree);
-    external_objects.emplace_back(external_object);
+    PlasmaPayload plasma_object;
+    plasma_object.FromJSON(tree);
+    plasma_objects.emplace_back(plasma_object);
   }
   return Status::OK();
 }
@@ -1286,16 +1291,16 @@ Status ReadSealRequest(json const& root, ObjectID& object_id) {
   return Status::OK();
 }
 
-void WriteExternalSealRequest(ExternalID const& external_id, std::string& msg) {
+void WritePlasmaSealRequest(PlasmaID const& plasma_id, std::string& msg) {
   json root;
-  root["type"] = "external_seal_request";
-  root["external_id"] = external_id;
+  root["type"] = "plasma_seal_request";
+  root["plasma_id"] = plasma_id;
   encode_msg(root, msg);
 }
 
-Status ReadExternalSealRequest(json const& root, ExternalID& external_id) {
-  RETURN_ON_ASSERT(root["type"] == "external_seal_request");
-  external_id = root["external_id"].get<ExternalID>();
+Status ReadPlasmaSealRequest(json const& root, PlasmaID& plasma_id) {
+  RETURN_ON_ASSERT(root["type"] == "plasma_seal_request");
+  plasma_id = root["plasma_id"].get<PlasmaID>();
   return Status::OK();
 }
 
@@ -1310,53 +1315,82 @@ Status ReadSealReply(json const& root) {
   return Status::OK();
 }
 
-void WriteExternalReleaseRequest(ExternalID const& external_id,
-                                 std::string& msg) {
+void WritePlasmaReleaseRequest(PlasmaID const& plasma_id, std::string& msg) {
   json root;
-  root["type"] = "external_release_request";
-  root["external_id"] = external_id;
+  root["type"] = "plasma_release_request";
+  root["plasma_id"] = plasma_id;
   encode_msg(root, msg);
 }
 
-Status ReadExternalReleaseRequest(json const& root, ExternalID& external_id) {
-  RETURN_ON_ASSERT(root["type"] == "external_release_request");
-  external_id = root["external_id"].get<ExternalID>();
+Status ReadPlasmaReleaseRequest(json const& root, PlasmaID& plasma_id) {
+  RETURN_ON_ASSERT(root["type"] == "plasma_release_request");
+  plasma_id = root["plasma_id"].get<PlasmaID>();
   return Status::OK();
 }
 
-void WriteExternalReleaseReply(std::string& msg) {
+void WritePlasmaReleaseReply(std::string& msg) {
   json root;
-  root["type"] = "external_release_reply";
+  root["type"] = "plasma_release_reply";
   encode_msg(root, msg);
 }
 
-Status ReadExternalReleaseReply(json const& root) {
-  CHECK_IPC_ERROR(root, "external_release_reply");
+Status ReadPlasmaReleaseReply(json const& root) {
+  CHECK_IPC_ERROR(root, "plasma_release_reply");
   return Status::OK();
 }
 
-void WriteExternalDelDataRequest(ExternalID const& external_id,
-                                 std::string& msg) {
+void WritePlasmaDelDataRequest(PlasmaID const& plasma_id, std::string& msg) {
   json root;
-  root["type"] = "external_delete_data_request";
-  root["external_id"] = external_id;
+  root["type"] = "plasma_delete_data_request";
+  root["plasma_id"] = plasma_id;
   encode_msg(root, msg);
 }
 
-Status ReadExternalDelDataRequest(json const& root, ExternalID& external_id) {
-  RETURN_ON_ASSERT(root["type"] == "external_delete_data_request");
-  external_id = root["external_id"].get<ExternalID>();
+Status ReadPlasmaDelDataRequest(json const& root, PlasmaID& plasma_id) {
+  RETURN_ON_ASSERT(root["type"] == "plasma_delete_data_request");
+  plasma_id = root["plasma_id"].get<PlasmaID>();
   return Status::OK();
 }
 
-void WriteExternalDelDataReply(std::string& msg) {
+void WritePlasmaDelDataReply(std::string& msg) {
   json root;
-  root["type"] = "external_delete_data_reply";
+  root["type"] = "plasma_delete_data_reply";
   encode_msg(root, msg);
 }
 
-Status ReadExternalDelDataReply(json const& root) {
-  CHECK_IPC_ERROR(root, "external_delete_data_reply");
+Status ReadPlasmaDelDataReply(json const& root) {
+  CHECK_IPC_ERROR(root, "plasma_delete_data_reply");
   return Status::OK();
 }
+
+void WriteMoveBuffersOwnershipRequest(
+    std::map<ObjectID, size_t> const& id_to_size, SessionID const session_id,
+    std::string& msg) {
+  json root;
+  root["type"] = "move_buffers_ownership_request";
+  root["id_to_size"] = id_to_size;
+  root["session_id"] = session_id;
+  encode_msg(root, msg);
+}
+
+Status ReadMoveBuffersOwnershipRequest(json const& root,
+                                       std::map<ObjectID, size_t>& id_to_size,
+                                       SessionID& session_id) {
+  RETURN_ON_ASSERT(root["type"] == "move_buffers_ownership_request");
+  id_to_size = root["id_to_size"].get<std::map<ObjectID, size_t>>();
+  session_id = root["session_id"].get<SessionID>();
+  return Status::OK();
+}
+
+void WriteMoveBuffersOwnershipReply(std::string& msg) {
+  json root;
+  root["type"] = "move_buffers_ownership_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadMoveBuffersOwnershipReply(json const& root) {
+  CHECK_IPC_ERROR(root, "move_buffers_ownership_reply");
+  return Status::OK();
+}
+
 }  // namespace vineyard
