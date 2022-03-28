@@ -72,7 +72,6 @@ int main(int argc, char** argv) {
     ObjectID new_id = InvalidObjectID();
 
     auto this_array = client1.GetObject(id);
-    auto meta = this_array->meta();
 
     VINEYARD_CHECK_OK(client2.ShallowCopy(id, new_id, client1));
     CHECK(new_id != InvalidObjectID());
