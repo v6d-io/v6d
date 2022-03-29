@@ -20,7 +20,7 @@
 
     <dependency.commons-lang.version>3.12.0</dependency.commons-lang.version>
     <dependency.guava.version>31.0.1-jre</dependency.guava.version>
-    <dependency.jackson.version>2.12.4</dependency.jackson.version>
+    <dependency.jackson.version>2.12.6.1</dependency.jackson.version>
     <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
     <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
     <dependency.junit.version>4.13.1</dependency.junit.version>
