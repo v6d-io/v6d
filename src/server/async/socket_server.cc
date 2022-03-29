@@ -1063,7 +1063,7 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
                    plasma_size);
 
   std::string message_out;
-  RESPONSE_ON_ERROR(server_ptr_->GetPlasmaBulkStore()->Create(
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Create(
       size, plasma_size, plasma_id, object_id, plasma_object));
   WriteCreateBufferByPlasmaReply(object_id, plasma_object, message_out);
 
@@ -1077,7 +1077,7 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
           send_fd(self->nativeHandle(), store_fd);
         }
         LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                    server_ptr_->GetPlasmaBulkStore()->Footprint());
+                    server_ptr_->GetBulkStore<PlasmaID>()->Footprint());
         return Status::OK();
       });
   return false;
@@ -1091,7 +1091,7 @@ bool SocketConnection::doGetBuffersByPlasma(json const& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids);
   RESPONSE_ON_ERROR(
-      server_ptr_->GetPlasmaBulkStore()->Get(plasma_ids, plasma_objects));
+      server_ptr_->GetBulkStore<PlasmaID>()->Get(plasma_ids, plasma_objects));
   WriteGetBuffersByPlasmaReply(plasma_objects, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
@@ -1135,7 +1135,7 @@ bool SocketConnection::doSealPlasmaBlob(json const& root) {
   auto self(shared_from_this());
   PlasmaID id;
   TRY_READ_REQUEST(ReadPlasmaSealRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->GetPlasmaBulkStore()->Seal(id));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Seal(id));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -1147,7 +1147,7 @@ bool SocketConnection::doPlasmaRelease(json const& root) {
   PlasmaID id;
   TRY_READ_REQUEST(ReadPlasmaReleaseRequest, root, id);
   RESPONSE_ON_ERROR(
-      server_ptr_->GetPlasmaBulkStore()->Release(id, getConnId()));
+      server_ptr_->GetBulkStore<PlasmaID>()->Release(id, getConnId()));
   std::string message_out;
   WritePlasmaReleaseReply(message_out);
   this->doWrite(message_out);
@@ -1160,7 +1160,7 @@ bool SocketConnection::doPlasmaDelData(json const& root) {
   TRY_READ_REQUEST(ReadPlasmaDelDataRequest, root, id);
 
   /// Plasma Data are not composable, so we do not have to wrestle with meta.
-  RESPONSE_ON_ERROR(server_ptr_->GetPlasmaBulkStore()->Delete(id));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Delete(id));
 
   std::string message_out;
   WritePlasmaDelDataReply(message_out);
@@ -1170,34 +1170,33 @@ bool SocketConnection::doPlasmaDelData(json const& root) {
 
 bool SocketConnection::doMoveBuffersOwnership(json const& root) {
   auto self(shared_from_this());
-  std::map<ObjectID, size_t> id_to_size;
+  std::map<ObjectID, ObjectID> id_to_id;
+  std::map<PlasmaID, ObjectID> pid_to_id;
+  std::map<ObjectID, PlasmaID> id_to_pid;
+  std::map<PlasmaID, PlasmaID> pid_to_pid;
   SessionID session_id;
-  TRY_READ_REQUEST(ReadMoveBuffersOwnershipRequest, root, id_to_size,
-                   session_id);
-
+  TRY_READ_REQUEST(ReadMoveBuffersOwnershipRequest, root, id_to_id, pid_to_id,
+                   id_to_pid, pid_to_pid, session_id);
   if (session_id == server_ptr_->session_id()) {
     return false;
-  }
-
-  std::set<ObjectID> object_ids;
-  for (auto& item : id_to_size) {
-    object_ids.insert(item.first);
   }
 
   vs_ptr_t source_session;
   RESPONSE_ON_ERROR(server_ptr_->GetRunner()->Get(session_id, source_session));
 
-  RESPONSE_ON_ERROR(
-      source_session->GetBulkStore()->RemoveOwnership(object_ids));
-  // some objects are deleted by other session, we should ignore them
-  if (!object_ids.empty()) {
-    for (auto& item : object_ids) {
-      id_to_size.erase(item);
+  if (source_session->GetBulkStoreType() == "Normal") {
+    if (server_ptr_->GetBulkStoreType() == "Normal") {
+      RESPONSE_ON_ERROR(MoveBuffers(id_to_id, source_session));
+    } else {
+      RESPONSE_ON_ERROR(MoveBuffers(id_to_pid, source_session));
+    }
+  } else {
+    if (server_ptr_->GetBulkStoreType() == "Normal") {
+      RESPONSE_ON_ERROR(MoveBuffers(pid_to_id, source_session));
+    } else {
+      RESPONSE_ON_ERROR(MoveBuffers(pid_to_pid, source_session));
     }
   }
-  // If remove ownership is running into issues, we still have to move the
-  // ownership into new session.
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->MoveOwnership(id_to_size));
 
   std::string message_out;
   WriteMoveBuffersOwnershipReply(message_out);

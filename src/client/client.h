@@ -192,6 +192,9 @@ class BasicIPCClient : public ClientBase {
   std::shared_ptr<detail::SharedMemoryManager> shm_;
 };
 
+class Client;
+class PlasmaClient;
+
 /**
  * @brief Vineyard's IPC Client connects to to UNIX domain socket of the
  *        vineyard server. Vineyard's IPC Client talks to vineyard server
@@ -463,8 +466,11 @@ class Client : public BasicIPCClient {
   /**
    * @brief Move the selected objects from the source session to the target
    */
-  Status ShallowCopy(ObjectID const ids, ObjectID& target_id,
+  Status ShallowCopy(ObjectID const id, ObjectID& target_id,
                      Client& source_client);
+
+  Status ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
+                     PlasmaClient& source_client);
 
  protected:
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
@@ -556,15 +562,24 @@ class PlasmaClient
    *
    * @return Status that indicates whether the create action has succeeded.
    */
-  Status CreateBlob(PlasmaID plasma_id, size_t size, size_t plasma_size,
-                    std::unique_ptr<BlobWriter>& blob);
+  Status CreateBuffer(PlasmaID plasma_id, size_t size, size_t plasma_size,
+                      std::unique_ptr<BlobWriter>& blob);
+
+  Status GetPayloads(std::set<PlasmaID> const& plasma_ids,
+                     std::map<PlasmaID, PlasmaPayload>& plasma_payloads);
 
   /**
    * Used only for integration.
    */
-  Status GetBlobs(const std::set<PlasmaID>& plasma_ids,
-                  std::map<PlasmaID, PlasmaPayload>& plasma_payloads,
-                  std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
+  Status GetBuffers(
+      std::set<PlasmaID> const& plasma_ids,
+      std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
+
+  Status ShallowCopy(PlasmaID const plasma_id, PlasmaID& target_pid,
+                     PlasmaClient& source_client);
+
+  Status ShallowCopy(ObjectID const id, std::set<PlasmaID>& target_pids,
+                     Client& source_client);
 
   Status Seal(PlasmaID const& object_id);
 

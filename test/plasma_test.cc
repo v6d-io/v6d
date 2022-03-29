@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
                                  std::string const& data, bool do_seal) {
     PlasmaID eid = PlasmaIDFromString(oid);
     std::unique_ptr<vineyard::BlobWriter> blob;
-    VINEYARD_CHECK_OK(client.CreateBlob(eid, data.size(), 0, blob));
+    VINEYARD_CHECK_OK(client.CreateBuffer(eid, data.size(), 0, blob));
     auto buffer = reinterpret_cast<uint8_t*>(blob->data());
     memcpy(buffer, data.c_str(), data.size());
     if (do_seal) {
@@ -74,10 +74,9 @@ int main(int argc, char** argv) {
   auto get_plasma_objects = [](PlasmaClient& client,
                                std::vector<PlasmaID>& eids, bool check_seal) {
     std::vector<std::string> results;
-    std::map<PlasmaID, PlasmaPayload> payloads;
     std::map<PlasmaID, std::shared_ptr<arrow::Buffer>> buffers;
-    auto status = client.GetBlobs(std::set<PlasmaID>(eids.begin(), eids.end()),
-                                  payloads, buffers);
+    auto status = client.GetBuffers(
+        std::set<PlasmaID>(eids.begin(), eids.end()), buffers);
     if (!check_seal) {
       VINEYARD_CHECK_OK(status);
     } else {
@@ -88,7 +87,6 @@ int main(int argc, char** argv) {
     }
     for (size_t i = 0; i < eids.size(); ++i) {
       std::shared_ptr<arrow::Buffer> buff = buffers.find(eids[i])->second;
-      PlasmaPayload payload = payloads.find(eids[i])->second;
       char* data = reinterpret_cast<char*>(const_cast<uint8_t*>(buff->data()));
       results.emplace_back(std::string(data, buff->size()));
       VINEYARD_CHECK_OK(client.Seal(eids[i]));

@@ -225,6 +225,7 @@ setup(
             'docutils==0.16',
             'flake8',
             'isort',
+            'jinia2>=3.0.0',
             'libclang',
             'nbsphinx',
             'parsec',

@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Disconnected from IPCServer: " << client.IPCSocket();
   }
 
-  {  // test shallow copy between session
+  {  // test shallow copy between session, normal -> normal
     Client client1, client2;
     VINEYARD_CHECK_OK(client1.Open(ipc_socket));
     VINEYARD_CHECK_OK(client2.Open(ipc_socket));
@@ -79,7 +79,88 @@ int main(int argc, char** argv) {
     for (size_t i = 0; i < array->size(); i++) {
       CHECK_EQ((*array)[i], double_array[i]);
     }
-    LOG(INFO) << "Passed session shallow copy test ...";
+    LOG(INFO) << "Passed session shallow copy test1 ...";
+
+    client1.CloseSession();
+    LOG(INFO) << "Closed session: " << client1.IPCSocket();
+    client2.CloseSession();
+    LOG(INFO) << "Closed session: " << client2.IPCSocket();
+  }
+
+  {  // test shallow copy between session, normal -> plasma
+    Client client1;
+    PlasmaClient client2;
+    VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    VINEYARD_CHECK_OK(client2.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer: " << client1.IPCSocket();
+
+    std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
+    ArrayBuilder<double> builder(client1, double_array);
+    auto sealed_double_array =
+        std::dynamic_pointer_cast<Array<double>>(builder.Seal(client1));
+    ObjectID id = sealed_double_array->id();
+    std::set<PlasmaID> new_ids;
+
+    VINEYARD_CHECK_OK(client2.ShallowCopy(id, new_ids, client1));
+
+    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>> buffers;
+    VINEYARD_CHECK_OK(client2.GetBuffers(new_ids, buffers));
+    LOG(INFO) << "Passed session shallow copy test2 ...";
+
+    client1.CloseSession();
+    LOG(INFO) << "Closed session: " << client1.IPCSocket();
+    client2.CloseSession();
+    LOG(INFO) << "Closed session: " << client2.IPCSocket();
+  }
+
+  auto create_plasma_object = [](PlasmaClient& client, std::string const& oid,
+                                 std::string const& data, bool do_seal) {
+    PlasmaID eid = PlasmaIDFromString(oid);
+    std::unique_ptr<vineyard::BlobWriter> blob;
+    VINEYARD_CHECK_OK(client.CreateBuffer(eid, data.size(), 0, blob));
+    auto buffer = reinterpret_cast<uint8_t*>(blob->data());
+    memcpy(buffer, data.c_str(), data.size());
+    if (do_seal) {
+      VINEYARD_CHECK_OK(client.Seal(eid));
+    }
+    return eid;
+  };
+
+  {  // test shallow copy between session, plasma -> normal
+    PlasmaClient client1;
+    Client client2;
+    VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    VINEYARD_CHECK_OK(client2.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer: " << client1.IPCSocket();
+
+    create_plasma_object(client1, "hetao", "the_gaint_head", true);
+    PlasmaID id = PlasmaIDFromString("hetao");
+    ObjectID new_id = InvalidObjectID();
+
+    VINEYARD_CHECK_OK(client2.ShallowCopy(id, new_id, client1));
+    CHECK(new_id != InvalidObjectID());
+
+    LOG(INFO) << "Passed session shallow copy test3 ...";
+
+    client1.CloseSession();
+    LOG(INFO) << "Closed session: " << client1.IPCSocket();
+    client2.CloseSession();
+    LOG(INFO) << "Closed session: " << client2.IPCSocket();
+  }
+
+  {  // test shallow copy between session, plasma -> normal
+    PlasmaClient client1, client2;
+    VINEYARD_CHECK_OK(client1.Open(ipc_socket));
+    VINEYARD_CHECK_OK(client2.Open(ipc_socket));
+    LOG(INFO) << "Connected to IPCServer: " << client1.IPCSocket();
+
+    create_plasma_object(client1, "hetao", "the_gaint_head", true);
+    PlasmaID id = PlasmaIDFromString("hetao");
+    PlasmaID new_id = "";
+
+    VINEYARD_CHECK_OK(client2.ShallowCopy(id, new_id, client1));
+
+    LOG(INFO) << "Passed session shallow copy test4 ...";
 
     client1.CloseSession();
     LOG(INFO) << "Closed session: " << client1.IPCSocket();

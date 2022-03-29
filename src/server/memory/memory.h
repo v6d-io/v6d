@@ -184,6 +184,11 @@ class BulkStoreBase {
   Status FinalizeArena(int const fd, std::vector<size_t> const& offsets,
                        std::vector<size_t> const& sizes);
 
+  Status MoveOwnership(std::map<ID, P> const& to_process_ids);
+
+  Status RemoveOwnership(std::set<ID> const& ids,
+                         std::map<ID, P>& successed_ids);
+
  protected:
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
                           ptrdiff_t* offset);
@@ -203,10 +208,6 @@ class BulkStore : public BulkStoreBase<ObjectID, Payload> {
  public:
   Status Create(const size_t size, ObjectID& object_id,
                 std::shared_ptr<Payload>& object);
-
-  Status MoveOwnership(std::map<ObjectID, size_t> const& id_to_size);
-
-  Status RemoveOwnership(std::set<ObjectID>& ids);
 };
 
 class PlasmaBulkStore

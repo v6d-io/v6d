@@ -18,8 +18,10 @@ limitations under the License.
 
 #include <atomic>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -144,6 +146,30 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doPlasmaDelData(json const& root);
 
   bool doMoveBuffersOwnership(json const& root);
+
+ protected:
+  template <typename FROM, typename TO>
+  Status MoveBuffers(std::map<FROM, TO> mapping, vs_ptr_t& source_session) {
+    std::set<FROM> ids;
+    for (auto const& item : mapping) {
+      ids.insert(item.first);
+    }
+
+    std::map<FROM, typename ID_traits<FROM>::P> successed_ids;
+    RETURN_ON_ERROR(source_session->GetBulkStore<FROM>()->RemoveOwnership(
+        ids, successed_ids));
+
+    std::map<TO, typename ID_traits<TO>::P> to_process_ids;
+    for (auto& item : successed_ids) {
+      typename ID_traits<TO>::P payload(item.second);
+      payload.Reset();
+      to_process_ids.emplace(mapping.at(item.first), payload);
+    }
+
+    RETURN_ON_ERROR(
+        server_ptr_->GetBulkStore<TO>()->MoveOwnership(to_process_ids));
+    return Status::OK();
+  }
 
  private:
   int nativeHandle() { return socket_.native_handle(); }

@@ -397,6 +397,44 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
   return Status::OK();
 }
 
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::MoveOwnership(
+    std::map<ID, P> const& to_process_ids) {
+  for (auto& item : to_process_ids) {
+    auto id = item.first;
+    typename object_map_t::const_accessor accessor;
+    // already exists
+    if (objects_.find(accessor, id)) {
+      continue;
+    }
+    auto object = std::make_shared<P>(item.second);
+    object->MarkAsSealed();
+    objects_.emplace(id, object);
+  }
+  return Status::OK();
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::RemoveOwnership(
+    std::set<ID> const& ids, std::map<ID, P>& successed_id_to_size) {
+  for (auto id : ids) {
+    if (id == EmptyBlobID<ID>() ||
+        id == GenerateBlobID<ID>(reinterpret_cast<void*>(
+                  std::numeric_limits<uintptr_t>::max()))) {
+      continue;
+    }
+    typename object_map_t::const_accessor accessor;
+    if (!objects_.find(accessor, id)) {
+      // already deleted by other session
+      continue;
+    } else {
+      successed_id_to_size.emplace(id, *(accessor->second));
+      accessor->second->RemoveOwner();
+    }
+  }
+  return Status::OK();
+}
+
 template class BulkStoreBase<ObjectID, Payload>;
 
 template class BulkStoreBase<PlasmaID, PlasmaPayload>;
@@ -423,58 +461,6 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   objects_.emplace(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
-  return Status::OK();
-}
-
-Status BulkStore::MoveOwnership(std::map<ObjectID, size_t> const& id_to_size) {
-  for (auto& item : id_to_size) {
-    auto object_id = item.first;
-    typename object_map_t::const_accessor accessor;
-    // already exists
-    if (objects_.find(accessor, object_id)) {
-      continue;
-    }
-    auto data_size = item.second;
-    int fd = -1;
-    int64_t map_size = 0;
-    ptrdiff_t offset = 0;
-    uint8_t* pointer = nullptr;
-    pointer = reinterpret_cast<uint8_t*>(GetBlobAddr(object_id));
-    if (pointer == nullptr) {
-      return Status::ObjectNotExists(
-          "object " + IDToString<ObjectID>(object_id) + " cannot be found");
-    } else {
-      memory::GetMallocMapinfo(pointer, &fd, &map_size, &offset);
-    }
-    auto object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
-                                            map_size, offset);
-
-    object->MarkAsSealed();
-    objects_.emplace(object_id, object);
-  }
-  return Status::OK();
-}
-
-Status BulkStore::RemoveOwnership(std::set<ObjectID>& ids) {
-  std::vector<ObjectID> succeed;
-  for (auto object_id : ids) {
-    if (object_id == EmptyBlobID<ObjectID>() ||
-        object_id == GenerateBlobID<ObjectID>(reinterpret_cast<void*>(
-                         std::numeric_limits<uintptr_t>::max()))) {
-      continue;
-    }
-    typename object_map_t::const_accessor accessor;
-    if (!objects_.find(accessor, object_id)) {
-      // already deleted by other session
-      continue;
-    } else {
-      succeed.push_back(object_id);
-      accessor->second->RemoveOwner();
-    }
-  }
-  for (auto item : succeed) {
-    ids.erase(item);
-  }
   return Status::OK();
 }
 

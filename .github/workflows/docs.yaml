@@ -77,10 +77,10 @@ jobs:
           sudo apt install -y libarrow-dev=3.0.0-1
 
           # install python packages for codegen, and io adaptors
-          sudo pip3 install -U Pygments>=2.4.1
+          sudo pip3 install -U "Pygments>=2.4.1"
           sudo pip3 install libclang parsec pyarrow \
-               sphinx==4.0.3 sphinx_rtd_theme docutils==0.16 breathe==4.30.0 nbsphinx gcovr pytest hdfs3 \
-               numpy>=0.18.5 pandas pickle5 setuptools sortedcontainers psutil
+               "sphinx==4.0.3" sphinx_rtd_theme docutils==0.16 breathe==4.30.0 nbsphinx gcovr pytest hdfs3 \
+               "numpy>=0.18.5" pandas pickle5 setuptools sortedcontainers psutil "jinja2>=3.0.0"
 
           # linters
           sudo pip3 install black isort flake8
