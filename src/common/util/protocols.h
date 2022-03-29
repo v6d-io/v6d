@@ -465,12 +465,31 @@ void WritePlasmaDelDataReply(std::string& msg);
 
 Status ReadPlasmaDelDataReply(json const& root);
 
+/// normal -> normal
 void WriteMoveBuffersOwnershipRequest(
-    std::map<ObjectID, size_t> const& id_to_size, SessionID const session_id,
+    std::map<ObjectID, ObjectID> const& id_to_id, SessionID const session_id,
+    std::string& msg);
+
+/// normal -> plasma
+void WriteMoveBuffersOwnershipRequest(
+    std::map<PlasmaID, ObjectID> const& pid_to_id, SessionID const session_id,
+    std::string& msg);
+
+/// plasma -> normal
+void WriteMoveBuffersOwnershipRequest(
+    std::map<ObjectID, PlasmaID> const& id_to_pid, SessionID const session_id,
+    std::string& msg);
+
+/// plasma -> plasma
+void WriteMoveBuffersOwnershipRequest(
+    std::map<PlasmaID, PlasmaID> const& pid_to_pid, SessionID const session_id,
     std::string& msg);
 
 Status ReadMoveBuffersOwnershipRequest(json const& root,
-                                       std::map<ObjectID, size_t>& id_to_size,
+                                       std::map<ObjectID, ObjectID>& id_to_id,
+                                       std::map<PlasmaID, ObjectID>& pid_to_id,
+                                       std::map<ObjectID, PlasmaID>& id_to_pid,
+                                       std::map<PlasmaID, PlasmaID>& pid_to_pid,
                                        SessionID& session_id);
 
 void WriteMoveBuffersOwnershipReply(std::string& msg);

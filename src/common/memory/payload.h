@@ -23,6 +23,8 @@ limitations under the License.
 
 namespace vineyard {
 
+struct PlasmaPayload;
+
 struct Payload {
   ObjectID object_id;
   int store_fd;
@@ -80,6 +82,8 @@ struct Payload {
             (data_size == other.data_size));
   }
 
+  inline void Reset() { is_sealed = false, is_owner = true; }
+
   inline void MarkAsSealed() { is_sealed = true; }
 
   inline bool IsSealed() { return is_sealed; }
@@ -130,6 +134,12 @@ struct PlasmaPayload : public Payload {
         plasma_size(0),
         ref_cnt(0) {}
 
+  explicit PlasmaPayload(Payload _p)
+      : Payload(_p),
+        plasma_id(PlasmaIDFromString(ObjectIDToString(_p.object_id))),
+        plasma_size(0),
+        ref_cnt(0) {}
+
   static std::shared_ptr<PlasmaPayload> MakeEmpty() {
     static std::shared_ptr<PlasmaPayload> payload =
         std::make_shared<PlasmaPayload>();
@@ -158,6 +168,19 @@ struct PlasmaPayload : public Payload {
    * @brief A static variant for `FromJSON`.
    */
   static PlasmaPayload FromJSON1(const json& tree);
+};
+
+template <typename T>
+struct ID_traits {};
+
+template <>
+struct ID_traits<ObjectID> {
+  typedef Payload P;
+};
+
+template <>
+struct ID_traits<PlasmaID> {
+  typedef PlasmaPayload P;
 };
 
 }  // namespace vineyard

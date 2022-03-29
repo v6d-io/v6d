@@ -545,24 +545,22 @@ Status Client::ShallowCopy(ObjectID const id, ObjectID& target_id,
   RETURN_ON_ERROR(source_client.GetData(id, tree, /*sync_remote==*/true));
   meta.SetMetaData(this, tree);
   auto bids = meta.GetBufferSet()->AllBufferIds();
-  std::map<ObjectID, size_t> id_to_size;
-  RETURN_ON_ERROR(source_client.GetBufferSizes(bids, id_to_size));
-
-  std::string message_out;
-  WriteMoveBuffersOwnershipRequest(id_to_size, source_client.session_id(),
-                                   message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadMoveBuffersOwnershipReply(message_in));
-
   std::map<ObjectID, ObjectID> mapping;
   for (auto const& id : bids) {
     mapping.emplace(id, id);
   }
-  auto meta_tree = meta.MutMetaData();
 
+  // create buffers in normal bulk store.
+  std::string message_out;
+  WriteMoveBuffersOwnershipRequest(mapping, source_client.session_id(),
+                                   message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMoveBuffersOwnershipReply(message_in));
+
+  // reconstruct meta tree
+  auto meta_tree = meta.MutMetaData();
   std::function<ObjectID(json&)> reconstruct =
       [&](json& meta_tree) -> ObjectID {
     for (auto& item : meta_tree.items()) {
@@ -595,6 +593,35 @@ Status Client::ShallowCopy(ObjectID const id, ObjectID& target_id,
   return Status::OK();
 }
 
+Status Client::ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
+                           PlasmaClient& source_client) {
+  ENSURE_CONNECTED(this);
+  std::set<PlasmaID> plasma_ids;
+  std::map<PlasmaID, PlasmaPayload> plasma_payloads;
+  plasma_ids.emplace(plasma_id);
+  // get PlasmaPayload to get the object_id and data_size
+  VINEYARD_CHECK_OK(source_client.GetPayloads(plasma_ids, plasma_payloads));
+
+  std::map<PlasmaID, ObjectID> mapping;
+  for (auto const& item : plasma_payloads) {
+    mapping.emplace(item.first, item.second.object_id);
+  }
+
+  // create buffers in normal bulk store.
+  std::string message_out;
+  WriteMoveBuffersOwnershipRequest(mapping, source_client.session_id(),
+                                   message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMoveBuffersOwnershipReply(message_in));
+
+  /// no need to reconstruct meta_tree since we do not support composable object
+  /// for plasma store.
+  target_id = plasma_payloads.at(plasma_id).object_id;
+  return Status::OK();
+}
+
 PlasmaClient::~PlasmaClient() {}
 
 // dummy implementation
@@ -624,9 +651,9 @@ Status PlasmaClient::Connect(const std::string& ipc_socket) {
   return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Plasma");
 }
 
-Status PlasmaClient::CreateBlob(PlasmaID plasma_id, size_t size,
-                                size_t plasma_size,
-                                std::unique_ptr<BlobWriter>& blob) {
+Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
+                                  size_t plasma_size,
+                                  std::unique_ptr<BlobWriter>& blob) {
   ENSURE_CONNECTED(this);
   ObjectID object_id = InvalidObjectID();
   PlasmaPayload plasma_payload;
@@ -659,16 +686,16 @@ Status PlasmaClient::CreateBlob(PlasmaID plasma_id, size_t size,
   return Status::OK();
 }
 
-Status PlasmaClient::GetBlobs(
-    const std::set<PlasmaID>& plasma_ids,
-    std::map<PlasmaID, PlasmaPayload>& plasma_payloads,
-    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
+Status PlasmaClient::GetPayloads(
+    std::set<PlasmaID> const& plasma_ids,
+    std::map<PlasmaID, PlasmaPayload>& plasma_payloads) {
   if (plasma_ids.empty()) {
     return Status::OK();
   }
   ENSURE_CONNECTED(this);
   std::set<PlasmaID> remote_ids;
   std::vector<PlasmaPayload> local_payloads;
+  std::vector<PlasmaPayload> _payloads;
 
   /// Lookup in local cache
   for (auto const& id : plasma_ids) {
@@ -687,26 +714,88 @@ Status PlasmaClient::GetBlobs(
 
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  std::vector<PlasmaPayload> _payloads;
   RETURN_ON_ERROR(ReadGetBuffersByPlasmaReply(message_in, _payloads));
 
   _payloads.insert(_payloads.end(), local_payloads.begin(),
                    local_payloads.end());
 
   for (auto const& item : _payloads) {
+    plasma_payloads.emplace(item.plasma_id, item);
+  }
+  return Status::OK();
+}
+
+Status PlasmaClient::GetBuffers(
+    std::set<PlasmaID> const& plasma_ids,
+    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
+  std::map<PlasmaID, PlasmaPayload> plasma_payloads;
+  RETURN_ON_ERROR(GetPayloads(plasma_ids, plasma_payloads));
+
+  for (auto const& item : plasma_payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
     uint8_t *shared = nullptr, *dist = nullptr;
-    if (item.data_size > 0) {
-      VINEYARD_CHECK_OK(
-          this->shm_->Mmap(item.store_fd, item.map_size, true, true, &shared));
-      dist = shared + item.data_offset;
+    if (item.second.data_size > 0) {
+      VINEYARD_CHECK_OK(this->shm_->Mmap(
+          item.second.store_fd, item.second.map_size, true, true, &shared));
+      dist = shared + item.second.data_offset;
     }
-    buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
-    buffers.emplace(item.plasma_id, buffer);
-    plasma_payloads.emplace(item.plasma_id, item);
+    buffer = std::make_shared<arrow::Buffer>(dist, item.second.data_size);
+    buffers.emplace(item.second.plasma_id, buffer);
 
-    RETURN_ON_ERROR(AddUsage(item.plasma_id, item));
+    RETURN_ON_ERROR(AddUsage(item.second.plasma_id, item.second));
   }
+  return Status::OK();
+}
+
+Status PlasmaClient::ShallowCopy(PlasmaID const plasma_id, PlasmaID& target_pid,
+                                 PlasmaClient& source_client) {
+  ENSURE_CONNECTED(this);
+  std::map<PlasmaID, PlasmaID> mapping;
+  mapping.emplace(plasma_id, plasma_id);
+
+  // create a new plasma object in plasma bulk store.
+  std::string message_out;
+  WriteMoveBuffersOwnershipRequest(mapping, source_client.session_id(),
+                                   message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMoveBuffersOwnershipReply(message_in));
+
+  /// no need to reconstruct meta_tree since we do not support composable object
+  /// for plasma store.
+  target_pid = plasma_id;
+  return Status::OK();
+}
+
+Status PlasmaClient::ShallowCopy(ObjectID const id,
+                                 std::set<PlasmaID>& target_pids,
+                                 Client& source_client) {
+  ENSURE_CONNECTED(this);
+  ObjectMeta meta;
+  json tree;
+
+  RETURN_ON_ERROR(source_client.GetData(id, tree, /*sync_remote==*/true));
+  meta.SetMetaData(this, tree);
+  auto bids = meta.GetBufferSet()->AllBufferIds();
+
+  std::map<ObjectID, PlasmaID> mapping;
+  for (auto const& bid : bids) {
+    PlasmaID new_pid = PlasmaIDFromString(ObjectIDToString(bid));
+    mapping.emplace(bid, new_pid);
+  }
+
+  // create a new plasma object in plasma bulk store.
+  std::string message_out;
+  WriteMoveBuffersOwnershipRequest(mapping, source_client.session_id(),
+                                   message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMoveBuffersOwnershipReply(message_in));
+
+  /// no need to reconstruct meta_tree since we do not support composable object
+  /// for plasma store.
   return Status::OK();
 }
 

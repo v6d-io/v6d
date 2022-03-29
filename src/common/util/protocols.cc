@@ -1364,20 +1364,56 @@ Status ReadPlasmaDelDataReply(json const& root) {
 }
 
 void WriteMoveBuffersOwnershipRequest(
-    std::map<ObjectID, size_t> const& id_to_size, SessionID const session_id,
+    std::map<ObjectID, ObjectID> const& id_to_id, SessionID const session_id,
     std::string& msg) {
   json root;
   root["type"] = "move_buffers_ownership_request";
-  root["id_to_size"] = id_to_size;
+  root["id_to_id"] = id_to_id;
+  root["session_id"] = session_id;
+  encode_msg(root, msg);
+}
+
+void WriteMoveBuffersOwnershipRequest(
+    std::map<ObjectID, PlasmaID> const& id_to_pid, SessionID const session_id,
+    std::string& msg) {
+  json root;
+  root["type"] = "move_buffers_ownership_request";
+  root["id_to_pid"] = id_to_pid;
+  root["session_id"] = session_id;
+  encode_msg(root, msg);
+}
+
+void WriteMoveBuffersOwnershipRequest(
+    std::map<PlasmaID, ObjectID> const& pid_to_id, SessionID const session_id,
+    std::string& msg) {
+  json root;
+  root["type"] = "move_buffers_ownership_request";
+  root["pid_to_id"] = pid_to_id;
+  root["session_id"] = session_id;
+  encode_msg(root, msg);
+}
+
+void WriteMoveBuffersOwnershipRequest(
+    std::map<PlasmaID, PlasmaID> const& pid_to_pid, SessionID const session_id,
+    std::string& msg) {
+  json root;
+  root["type"] = "move_buffers_ownership_request";
+  root["pid_to_pid"] = pid_to_pid;
   root["session_id"] = session_id;
   encode_msg(root, msg);
 }
 
 Status ReadMoveBuffersOwnershipRequest(json const& root,
-                                       std::map<ObjectID, size_t>& id_to_size,
+                                       std::map<ObjectID, ObjectID>& id_to_id,
+                                       std::map<PlasmaID, ObjectID>& pid_to_id,
+                                       std::map<ObjectID, PlasmaID>& id_to_pid,
+                                       std::map<PlasmaID, PlasmaID>& pid_to_pid,
                                        SessionID& session_id) {
   RETURN_ON_ASSERT(root["type"] == "move_buffers_ownership_request");
-  id_to_size = root["id_to_size"].get<std::map<ObjectID, size_t>>();
+  id_to_id = root.value<std::map<ObjectID, ObjectID>>("id_to_id", {});
+  pid_to_id = root.value<std::map<PlasmaID, ObjectID>>("pid_to_id", {});
+  id_to_pid = root.value<std::map<ObjectID, PlasmaID>>("id_to_pid", {});
+  pid_to_pid = root.value<std::map<PlasmaID, PlasmaID>>("pid_to_pid", {});
   session_id = root["session_id"].get<SessionID>();
   return Status::OK();
 }

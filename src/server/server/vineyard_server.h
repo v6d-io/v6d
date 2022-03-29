@@ -29,6 +29,7 @@ limitations under the License.
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
+#include "common/util/uuid.h"
 
 #include "server/memory/memory.h"
 #include "server/memory/stream_store.h"
@@ -97,10 +98,14 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   inline asio::io_service& GetMetaContext() { return meta_context_; }
 #endif
   inline std::string GetBulkStoreType() { return bulk_store_type_; }
-  inline std::shared_ptr<BulkStore> GetBulkStore() { return bulk_store_; }
-  inline std::shared_ptr<PlasmaBulkStore> GetPlasmaBulkStore() {
-    return plasma_bulk_store_;
+
+  template <typename T = ObjectID>
+  auto GetBulkStore() {
+    return static_if<std::is_same<T, ObjectID>{}>(
+        [this]() { return bulk_store_; },
+        [this]() { return plasma_bulk_store_; })();
   }
+
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
   inline std::shared_ptr<VineyardRunner> GetRunner() { return runner_; }
 
