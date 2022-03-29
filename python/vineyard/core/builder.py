@@ -33,7 +33,7 @@ class BuilderContext:
         return str(self.__factory)
 
     def register(self, type_id, builder):
-        '''Register a Python type to the builder context.
+        """Register a Python type to the builder context.
 
         Parameters
         ----------
@@ -43,11 +43,11 @@ class BuilderContext:
         builder: callable, e.g., a method, callable object
             A builder translates a python object to vineyard, it accepts a Python
             value as parameter, and returns an vineyard object as result.
-        '''
+        """
         self.__factory[type_id] = builder
 
     def run(self, client, value, **kw):
-        '''Follows the MRO to find the proper builder for given python value.
+        """Follows the MRO to find the proper builder for given python value.
 
         Here "Follows the MRO" implies:
 
@@ -60,7 +60,7 @@ class BuilderContext:
         - When the traversal reaches the :code:`object` type, since there's a default
           builder that serialization the python value, the parameter will be serialized
           and be put into a blob.
-        '''
+        """
 
         # if the python value comes from a vineyard object, we choose to just reuse it.
         base = getattr(value, '__vineyard_ref', None)
@@ -105,13 +105,13 @@ def get_current_builders():
 
 @contextlib.contextmanager
 def builder_context(builders=None, base=None):
-    '''Open a new context for register builders, without populting outside global
+    """Open a new context for register builders, without populting outside global
     environment.
 
     See Also:
         resolver_context
         driver_context
-    '''
+    """
     current_builder = get_current_builders()
     try:
         builders = builders or dict()
@@ -124,7 +124,7 @@ def builder_context(builders=None, base=None):
 
 
 def put(client, value, builder=None, **kw):
-    '''Put python value to vineyard.
+    """Put python value to vineyard.
 
     .. code:: python
 
@@ -151,7 +151,7 @@ def put(client, value, builder=None, **kw):
 
     Returns:
         ObjectID: The result object id will be returned.
-    '''
+    """
     if builder is not None:
         return builder(client, value, **kw)
 

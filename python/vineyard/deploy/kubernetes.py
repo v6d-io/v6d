@@ -33,7 +33,7 @@ def start_vineyardd(
     socket='/var/run/vineyard.sock',
     rpc_socket_port=9600,
 ):
-    '''Launch a vineyard cluster on kubernetes.
+    """Launch a vineyard cluster on kubernetes.
 
     Parameters:
         namespace: str
@@ -58,7 +58,7 @@ def start_vineyardd(
             The UNIX domain socket socket path that vineyard server will listen on.
         rpc_socket_port: int
             The port that vineyard will use to privode RPC service.
-    '''
+    """
     start_etcd_k8s(namespace)
 
     with open(

@@ -18,7 +18,7 @@
 
 
 def find_most_precise_match(typename, candidates):
-    '''Find the most precise match for given typename inside a group of prefixes.
+    """Find the most precise match for given typename inside a group of prefixes.
 
     Parameters
     ----------
@@ -28,7 +28,7 @@ def find_most_precise_match(typename, candidates):
     candidates: list of (prefix, candidate)
         List of candidates to match with, the first element is prefix, and the
         second entry is the candidate item, e.g., resolver or driver method.
-    '''
+    """
     if candidates:
         for prefix in reversed(candidates):  # requires further optimization
             if typename.startswith(prefix):

@@ -28,7 +28,7 @@ if pickle.HIGHEST_PROTOCOL < 5:
 
 
 class PickledReader:
-    '''Serialize a python object in zero-copy fashion and provides a bytes-like
+    """Serialize a python object in zero-copy fashion and provides a bytes-like
     read interface.
 
     How do we keep the round-trip between the reader and writer:
@@ -41,7 +41,7 @@ class PickledReader:
     + for other type of objects:
 
         - add a special `__VINEYARD__` tag at the beginning
-    '''
+    """
 
     def __init__(self, value):
         self._value = value

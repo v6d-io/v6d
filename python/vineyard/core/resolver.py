@@ -107,7 +107,7 @@ def get_current_resolvers():
 
 @contextlib.contextmanager
 def resolver_context(resolvers=None, base=None):
-    '''Open a new context for register resolvers, without populting outside
+    """Open a new context for register resolvers, without populting outside
     the global environment.
 
     The :code:`resolver_context` can be useful when users have more than
@@ -151,7 +151,7 @@ def resolver_context(resolvers=None, base=None):
     See Also:
         builder_context
         driver_context
-    '''
+    """
     current_resolver = get_current_resolvers()
     try:
         resolvers = resolvers or dict()
@@ -164,7 +164,7 @@ def resolver_context(resolvers=None, base=None):
 
 
 def get(client, object_id, resolver=None, **kw):
-    '''Get vineyard object as python value.
+    """Get vineyard object as python value.
 
     .. code:: python
 
@@ -186,7 +186,7 @@ def get(client, object_id, resolver=None, **kw):
 
     Returns:
         A python object that return by the resolver, by resolving an vineyard object.
-    '''
+    """
     # wrap object_id
     if isinstance(object_id, (int, str)):
         object_id = ObjectID(object_id)

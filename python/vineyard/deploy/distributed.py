@@ -41,7 +41,7 @@ def start_vineyardd(
     rpc_socket_port=9600,
     debug=False,
 ):
-    '''Launch a local vineyard cluster in a distributed fashion.
+    """Launch a local vineyard cluster in a distributed fashion.
 
     Parameters:
         hosts: list of str
@@ -74,7 +74,7 @@ def start_vineyardd(
             The port that vineyard will use to privode RPC service.
         debug: bool
             Whether print debug logs.
-    '''
+    """
     if vineyardd_path is None:
         vineyardd_path = pkg_resources.resource_filename('vineyard', 'vineyardd')
 

@@ -33,7 +33,7 @@ class LauncherStatus(Enum):
 
 
 class Launcher(object):
-    ''':code:`Launcher` is an abstraction about a managed vineyard job.
+    """:code:`Launcher` is an abstraction about a managed vineyard job.
 
     :code:`Launcher` provides a unified interface for users to invoke a vineyard
     driver (internal or external).
@@ -46,7 +46,7 @@ class Launcher(object):
           finished, return the result immediately
         - dispose: interrupt the process and destroy the job
         - status: query the execution status of the job
-    '''
+    """
 
     def __init__(self):
         self._id = uuid.uuid4()
@@ -66,7 +66,7 @@ class Launcher(object):
         raise NotImplementedError
 
     def wait(self, timeout=None):
-        '''Will block until obtain an result, a :code:`Launcher` can be "wait" for
+        """Will block until obtain an result, a :code:`Launcher` can be "wait" for
         multiple since the job might yields many results.
 
         The launcher can be safely "wait" at the same time in multiple threads,
@@ -75,7 +75,7 @@ class Launcher(object):
         Note that :code:`wait` doesn't means the finish or exit of the job, it
         indicates the job has yield some results, and the job itself may or may not
         continue.
-        '''
+        """
 
         with self._result_cv:
             if not self._result:
@@ -104,17 +104,17 @@ class Launcher(object):
         raise NotImplementedError
 
     def dispose(self, desired=True):
-        '''Dispose the launched job and release resources.
+        """Dispose the launched job and release resources.
 
         Parameters
         ----------
         desired: bool
             Whether the dispose is an desired action.
-        '''
+        """
         raise NotImplementedError
 
     def parse(self, line):
-        '''Parse job message. The messages should statisfy the following spec:
+        """Parse job message. The messages should statisfy the following spec:
 
         ..code-block:
 
@@ -128,7 +128,7 @@ class Launcher(object):
             {
                 "return/error/exit": ......
             }
-        '''
+        """
         line = line.strip()
         if not line:
             return None
@@ -162,23 +162,23 @@ class Launcher(object):
         return None
 
     def on_return(self, return_content):
-        '''The on-return handle, can be overrided to process events
+        """The on-return handle, can be overrided to process events
         with type "return".
-        '''
+        """
         with self._result_cv:
             self._result.append(return_content)
             self._result_cv.notify()
 
     def on_error(self, error_content):
-        '''The on-error handle, can be overrided to process events
+        """The on-error handle, can be overrided to process events
         with type "error".
-        '''
+        """
         self._diagnostics.append(error_content)
 
     def on_exit(self, exit_content):
-        '''The on-exit handle, can be overrided to process events
+        """The on-exit handle, can be overrided to process events
         with type "exit".
-        '''
+        """
         if exit_content and exit_content.strip():
             logger.info('driver: [exit] %s', exit_content)
         self.dispose(True)

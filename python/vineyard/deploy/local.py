@@ -46,7 +46,7 @@ def start_vineyardd(
     rpc_socket_port=9600,
     debug=False,
 ):
-    '''Launch a local vineyard cluster.
+    """Launch a local vineyard cluster.
 
     Parameters:
         etcd_endpoint: str
@@ -88,7 +88,7 @@ def start_vineyardd(
         (proc, socket):
             Yields a tuple with the subprocess as the first element and the UNIX-domain
             IPC socket as the second element.
-    '''
+    """
 
     if not vineyardd_path:
         vineyardd_path = find_vineyardd_path()
@@ -177,7 +177,7 @@ __default_instance_contexts = {}
 
 
 def init(num_instances=1, **kw):
-    '''
+    """
     Launching a local vineyardd instance and get a client as easy as possible
 
     In a clean environment, simply use:
@@ -203,7 +203,7 @@ def init(num_instances=1, **kw):
     The init method can only be called once in a process, to get the established
     sockets or clients later in the process, use :code:`get_current_socket` or
     :code:`get_current_client` respectively.
-    '''
+    """
     assert __default_instance_contexts == {}
 
     if 'VINEYARD_IPC_SOCKET' in os.environ:
@@ -229,12 +229,12 @@ def init(num_instances=1, **kw):
 
 
 def get_current_client():
-    '''
+    """
     Get current vineyard IPC clients established by :code:`vineyard.init()`.
 
     Raises:
         ValueError if vineyard is not initialized.
-    '''
+    """
     if not __default_instance_contexts:
         raise ValueError(
             'Vineyard has not been initialized, '
@@ -245,12 +245,12 @@ def get_current_client():
 
 
 def get_current_socket():
-    '''
+    """
     Get current vineyard UNIX-domain socket established by :code:`vineyard.init()`.
 
     Raises:
         ValueError if vineyard is not initialized.
-    '''
+    """
     if not __default_instance_contexts:
         raise ValueError(
             'Vineyard has not been initialized, '
@@ -261,9 +261,9 @@ def get_current_socket():
 
 
 def shutdown():
-    '''
+    """
     Shutdown the vineyardd instances launched by previous :code:`vineyard.init()`.
-    '''
+    """
     global __default_instance_contexts
     if __default_instance_contexts:
         for ipc_socket in reversed(__default_instance_contexts):

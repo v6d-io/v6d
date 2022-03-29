@@ -195,7 +195,7 @@ class VineyardXCom(BaseXCom):
     def post_resolve_value(
         result: "VineyardXCom", value: Any, session: Session = None
     ) -> Any:
-        '''The :code:`post_resolve_value` runs before the return the value to the
+        """The :code:`post_resolve_value` runs before the return the value to the
         operators to prepare necessary input data for the task.
 
         The post resolution will fill-up the occurrence if remote objects by
@@ -204,7 +204,7 @@ class VineyardXCom(BaseXCom):
 
         It will also record the migrated xcom value into the db as well to make
         sure it can be dropped properly.
-        '''
+        """
         client = vineyard.connect(VineyardXCom.options()['ipc_socket'])
         object_id = vineyard.ObjectID(value)
 
