@@ -93,9 +93,9 @@ def traverse_to_serialize(
     queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]",
     path: str,
 ) -> ObjectID:
-    '''Returns:
+    """Returns:
     The generated stream or stream collection id.
-    '''
+    """
     if meta.typename == 'vineyard::Blob':
         s = build_a_stream(client, meta, os.path.join(path, 'blob'))
         blob = meta.get_buffer(meta.id)
@@ -120,7 +120,7 @@ def traverse_to_serialize(
 
 
 def serialize(vineyard_socket, object_id):
-    '''Serialize a vineyard object as a stream.
+    """Serialize a vineyard object as a stream.
 
     The serialization executes in the following steps:
 
@@ -129,7 +129,7 @@ def serialize(vineyard_socket, object_id):
     2. build a stream for each blob
 
     3. generate a hierarchical `StreamCollection` object as the result
-    '''
+    """
     client = vineyard.connect(vineyard_socket)
     meta = client.get_meta(object_id)
 

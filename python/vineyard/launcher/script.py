@@ -28,10 +28,10 @@ logger = logging.getLogger('vineyard')
 
 
 class ScriptLauncher(Launcher):
-    '''Launch the job by executing a script.
+    """Launch the job by executing a script.
 
     The output of script must be printed to stdout, rather than stderr.
-    '''
+    """
 
     def __init__(self, script):
         super().__init__()

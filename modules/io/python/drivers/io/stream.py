@@ -177,9 +177,9 @@ class ParallelStreamLauncher(ScriptLauncher):
         ],
         **kwargs,
     ):
-        '''Wait util _all_ results on each launcher is ready and until the launcher
+        """Wait util _all_ results on each launcher is ready and until the launcher
         finishes its work.
-        '''
+        """
         self.join()
 
         results = []

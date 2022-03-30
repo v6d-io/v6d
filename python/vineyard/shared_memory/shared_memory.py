@@ -44,7 +44,7 @@ from vineyard._C import ObjectID
 
 class SharedMemory:
     def __init__(self, vineyard_client, name=None, create=False, size=0):
-        '''Create or obtain a shared memory block that backed by vineyard.
+        """Create or obtain a shared memory block that backed by vineyard.
 
         Parameters
         ----------
@@ -61,7 +61,7 @@ class SharedMemory:
         See Also
         --------
         multiprocessing.shared_memory.SharedMemory
-        '''
+        """
         if not size >= 0:
             raise ValueError("'size' must be a positive integer")
         if create:
@@ -155,7 +155,7 @@ _encoding = "utf8"
 
 
 class ShareableList(shm.ShareableList):
-    '''
+    """
     Pattern for a mutable list-like object shareable via a shared
     memory block.  It differs from the built-in list type in that these
     lists can not change their overall length (i.e. no append, insert,
@@ -172,7 +172,7 @@ class ShareableList(shm.ShareableList):
     See Also
     --------
     multiprocessing.shared_memory.ShareableList
-    '''
+    """
 
     # note that the implementation of ``__init__`` entirely comes from
     # multiprocessing.shared_memory.

@@ -649,7 +649,7 @@ void bind_client(py::module& mod) {
 
   mod.def(
          "connect",
-         [](nullptr_t) -> py::object {
+         [](std::nullptr_t) -> py::object {
            if (!read_env("VINEYARD_IPC_SOCKET").empty()) {
              return py::cast(ClientManager<Client>::GetManager()->Connect());
            }

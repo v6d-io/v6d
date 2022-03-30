@@ -77,13 +77,13 @@ def get_current_drivers():
 
 @contextlib.contextmanager
 def driver_context(drivers=None, base=None):
-    '''Open a new context for register drivers, without populting outside global
+    """Open a new context for register drivers, without populting outside global
     environment.
 
     See Also:
         builder_context
         resolver_context
-    '''
+    """
     current_driver = get_current_drivers()
     try:
         drivers = drivers or dict()
@@ -103,7 +103,7 @@ def register_builtin_drivers(ctx):
 
 
 def registerize(func):
-    '''Registerize a method, add a `__factory` attribute and a `register`
+    """Registerize a method, add a `__factory` attribute and a `register`
     interface to a method.
 
     multiple-level register is automatically supported, users can
@@ -120,7 +120,7 @@ def registerize(func):
 
     >>> open.register('file', 'csv', local_csv_reader)
     >>> open.register('file', 'tsv', local_tsv_reader)
-    '''
+    """
 
     @functools.wraps(func)
     def wrap(*args, **kwargs):

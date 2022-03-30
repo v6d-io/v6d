@@ -17,6 +17,7 @@
 #
 
 import contextlib
+import sys
 
 import numpy as np
 import pandas as pd
@@ -46,7 +47,15 @@ def vineyard_for_dask():
 @contextlib.contextmanager
 def launch_dask_cluster(vineyard_ipc_sockets, host, port):
     with contextlib.ExitStack() as stack:
-        proc = start_program('dask-scheduler', '--host', host, '--port', str(port))
+        proc = start_program(
+            sys.executable,
+            '-m',
+            'distributed.cli.dask_scheduler',
+            '--host',
+            host,
+            '--port',
+            str(port),
+        )
         stack.enter_context(proc)
         scheduler = f'tcp://{host}:{port}'
         clients = []
@@ -57,7 +66,9 @@ def launch_dask_cluster(vineyard_ipc_sockets, host, port):
             workers[client.instance_id] = worker_name
             # launch a worker with corresponding name for each vineyard instance
             proc = start_program(
-                'dask-worker',
+                sys.executable,
+                '-m',
+                'distributed.cli.dask_worker',
                 scheduler,
                 '--name',
                 worker_name,

@@ -34,7 +34,7 @@ logger = logging.getLogger('vineyard')
 
 @registerize
 def read(path, *args, handlers=None, **kwargs):
-    '''Open a path and read it as a single stream.
+    """Open a path and read it as a single stream.
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ def read(path, *args, handlers=None, **kwargs):
         If not provided, the `vineyard_ipc_socket` will be used, or
         it will tries to discovery vineyard's IPC or RPC endpoints
         from environment variables.
-    '''
+    """
     parsed = urlparse(path)
     if read.__factory and read.__factory.get(parsed.scheme):
         errors = []
@@ -79,7 +79,7 @@ def read(path, *args, handlers=None, **kwargs):
 
 @registerize
 def write(path, stream, *args, handlers=None, **kwargs):
-    '''Write the stream to a given path.
+    """Write the stream to a given path.
 
     Parameters
     ----------
@@ -96,7 +96,7 @@ def write(path, stream, *args, handlers=None, **kwargs):
         retrieving server's information on the client side. If not provided,
         the `vineyard_ipc_socket` will be used, or it will tries to discovery
         vineyard's IPC or RPC endpoints from environment variables.
-    '''
+    """
     parsed = urlparse(path)
     if write.__factory and write.__factory.get(parsed.scheme):
         errors = []
@@ -125,7 +125,7 @@ def write(path, stream, *args, handlers=None, **kwargs):
 
 
 def open(path, *args, mode='r', handlers=None, **kwargs):
-    '''Open a path as a reader or writer, depends on the parameter :code:`mode`.
+    """Open a path as a reader or writer, depends on the parameter :code:`mode`.
     If :code:`mode` is :code:`r`, it will open a stream for read, and open a
     stream for write when :code:`mode` is :code:`w`.
 
@@ -148,7 +148,7 @@ def open(path, *args, mode='r', handlers=None, **kwargs):
     --------
     vineyard.io.read
     vineyard.io.write
-    '''
+    """
     parsed = urlparse(path)
     if not parsed.scheme:
         path = 'file://' + path
@@ -271,9 +271,9 @@ class BaseStream:
 
 
 class StreamCollection:
-    '''A stream collection is a set of stream, where each element is a stream, or,
+    """A stream collection is a set of stream, where each element is a stream, or,
     another stream collection.
-    '''
+    """
 
     KEY_OF_STREAMS = '__streams'
     KEY_OF_PATH = '__path'

@@ -56,7 +56,7 @@ def expand_full_path(path):
 
 
 def parse_readable_size(size):
-    '''Parse human-readable size. Note that any extra character that follows a
+    """Parse human-readable size. Note that any extra character that follows a
     valid sequence will be ignored.
 
     You can express memory as a plain integer or as a fixed-point number
@@ -68,7 +68,7 @@ def parse_readable_size(size):
     .. code:: python
 
         128974848, 129k, 129M, 123Mi, 1G, 10Gi, ...
-    '''
+    """
     if isinstance(size, (int, float)):
         return int(size)
 
