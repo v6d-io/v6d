@@ -21,7 +21,7 @@ import itertools
 import logging
 import os
 from collections import Counter
-from typing import List
+from typing import List, Tuple
 from typing import Optional
 
 DEP_MISSING_ERROR = '''
@@ -35,6 +35,7 @@ try:
     import clang.cindex as cindex
     from clang.cindex import Cursor
     from clang.cindex import CursorKind
+    from clang.cindex import Type
     from clang.cindex import TypeKind
 except ImportError:
     raise RuntimeError(DEP_MISSING_ERROR.format(dep='libclang'))
@@ -123,24 +124,33 @@ def figure_out_namespace(node: Cursor) -> Optional[str]:
         node = parent
 
 
-def unpack_pointer_type(node_type):
+def unpack_pointer_type(node_type: Type) -> Tuple[Type, str, str]:
     if node_type.kind == TypeKind.POINTER:
-        return node_type.get_pointee(), '*'
+        node_type = node_type.get_pointee()
+        star = '*'
+    else:
+        basename = node_type.spelling.split('<')[0]
+        namespace = figure_out_namespace(node_type.get_declaration())
 
-    basename = node_type.spelling.split('<')[0]
-    namespace = figure_out_namespace(node_type.get_declaration())
+        if (
+            basename == 'std::shared_ptr'
+            or namespace in ['std', 'std::__1']
+            and basename == 'shared_ptr'
+            or basename == 'std::unique_ptr'
+            or namespace in ['std', 'std::__1']
+            and basename == 'unique_ptr'
+        ):
+            star = '*'
+            node_type = node_type.get_template_argument_type(0)
+            namespace = figure_out_namespace(node_type.get_declaration())
+        else:
+            star = ''
 
-    if (
-        basename == 'std::shared_ptr'
-        or namespace in ['std', 'std::__1']
-        and basename == 'shared_ptr'
-        or basename == 'std::unique_ptr'
-        or namespace in ['std', 'std::__1']
-        and basename == 'unique_ptr'
-    ):
-        return node_type.get_template_argument_type(0), '*'
+    node_typename = node_type.spelling
+    if namespace is not None and node_typename.startswith(namespace):
+        node_typename = node_typename[len(namespace) + 2:]
 
-    return node_type, ''
+    return node_type, star, node_typename
 
 
 def is_template_parameter(node: Cursor, typename: str) -> bool:
@@ -165,118 +175,59 @@ def is_primitive_types(
     if is_template_parameter(node, typename):
         # treat template parameter as meta, see `scalar.vineyard-mod`.
         return True
-    return typename in ['std::string', 'vineyard::String', 'vineyard::json']
+    return typename in ['std::string', 'String', 'vineyard::String', 'json', 'vineyard::json']
 
 
-def parse_codegen_spec_from_type(node):
-    node_type, star = unpack_pointer_type(node.type)
+def is_list_type(namespace: str, basename: str) -> bool:
+    return basename in ['vineyard::Tuple', 'vineyard::List'] or \
+            namespace == 'vineyard' and basename in ['Tuple', 'List']
+
+
+def is_dict_type(namespace: str, basename: str) -> bool:
+    return basename == 'vineyard::Map' or basename == 'vineyard::UnorderedMap' or \
+            namespace == 'vineyard' and (basename == 'Map' or basename == 'UnorderedMap')
+
+
+def parse_codegen_spec_from_type(node: Cursor):
+    node_type, star, typename = unpack_pointer_type(node.type)
     if star:
-        _, star_inside = unpack_pointer_type(node_type)
+        _, star_inside, _ = unpack_pointer_type(node_type)
         if star_inside:
             raise ValueError(
                 'Pointer of pointer %s is not supported' % node.type.spelling
             )
 
-    typename = node_type.spelling
     basename = typename.split('<')[0]
     namespace = figure_out_namespace(node_type.get_declaration())
 
     if not star:
-        if (
-            basename == 'vineyard::Tuple'
-            or namespace == 'vineyard'
-            and basename == 'Tuple'
-        ):
+        if is_list_type(namespace, basename):
             element_type = node_type.get_template_argument_type(0)
-            element_type, inside_star = unpack_pointer_type(element_type)
-            element_typename = element_type.spelling
-            if is_primitive_types(node, element_type, element_typename, inside_star):
-                if inside_star:
-                    raise ValueError(
-                        'pointer of primitive types inside Tuple is not supported: %s'
-                        % node.type.spelling
-                    )
-                return CodeGenKind('meta')
-            else:
-                return CodeGenKind('list', (element_typename, inside_star))
 
-        if (
-            basename == 'vineyard::Map'
-            or namespace == 'vineyard'
-            and basename == 'Map'
-            or basename == 'vineyard::UnorderedMap'
-            or namespace == 'vineyard'
-            and basename == 'UnorderedMap'
-        ):
+            nested_base_name = element_type.spelling.split('<')[0]
+            nested_namespace = figure_out_namespace(element_type.get_declaration())
+            if is_list_type(nested_namespace, nested_base_name):
+                element_type = element_type.get_template_argument_type(0)
+                element_type, inside_star, element_typename = unpack_pointer_type(element_type)
+                typekind = 'dlist'
+            else:
+                element_type, inside_star, element_typename = unpack_pointer_type(element_type)
+                if is_primitive_types(node, element_type, element_typename, inside_star):
+                    if inside_star:
+                        raise ValueError(
+                            'pointer of primitive types inside Tuple/List is not supported: %s'
+                            % node.type.spelling
+                        )
+                    return CodeGenKind('meta')
+                else:
+                    typekind = 'list'
+            return CodeGenKind(typekind, (element_typename, inside_star))
+
+        if is_dict_type(namespace, basename):
             key_type = node_type.get_template_argument_type(0)
             key_typename = key_type.spelling
             value_type = node_type.get_template_argument_type(1)
-            value_type, inside_star = unpack_pointer_type(value_type)
-            value_typename = value_type.spelling
-            if is_primitive_types(node, value_type, value_typename, inside_star):
-                if inside_star:
-                    raise ValueError(
-                        'pointer of primitive types inside Map is not supported: %s'
-                        % node.type.spelling
-                    )
-                return CodeGenKind('meta')
-            else:
-                return CodeGenKind(
-                    'dict', ((key_typename,), (value_typename, inside_star))
-                )
-
-    if is_primitive_types(node, node_type, typename, star):
-        return CodeGenKind('meta')
-    else:
-        # directly return: generate data members, in pointer format
-        return CodeGenKind('plain', (basename, star))
-
-
-def parse_codegen_spec_from_type(node):
-    node_type, star = unpack_pointer_type(node.type)
-    if star:
-        _, star_inside = unpack_pointer_type(node_type)
-        if star_inside:
-            raise ValueError(
-                'Pointer of pointer %s is not supported' % node.type.spelling
-            )
-
-    typename = node_type.spelling
-    basename = typename.split('<')[0]
-    namespace = figure_out_namespace(node_type.get_declaration())
-
-    if not star:
-        if (
-            basename == 'vineyard::Tuple'
-            or namespace == 'vineyard'
-            and basename == 'Tuple'
-        ):
-            element_type = node_type.get_template_argument_type(0)
-            element_type, inside_star = unpack_pointer_type(element_type)
-            element_typename = element_type.spelling
-            if is_primitive_types(node, element_type, element_typename, inside_star):
-                if inside_star:
-                    raise ValueError(
-                        'pointer of primitive types inside Tuple is not supported: %s'
-                        % node.type.spelling
-                    )
-                return CodeGenKind('meta')
-            else:
-                return CodeGenKind('list', (element_typename, inside_star))
-
-        if (
-            basename == 'vineyard::Map'
-            or namespace == 'vineyard'
-            and basename == 'Map'
-            or basename == 'vineyard::UnorderedMap'
-            or namespace == 'vineyard'
-            and basename == 'UnorderedMap'
-        ):
-            key_type = node_type.get_template_argument_type(0)
-            key_typename = key_type.spelling
-            value_type = node_type.get_template_argument_type(1)
-            value_type, inside_star = unpack_pointer_type(value_type)
-            value_typename = value_type.spelling
+            value_type, inside_star, value_typename = unpack_pointer_type(value_type)
             if is_primitive_types(node, value_type, value_typename, inside_star):
                 if inside_star:
                     raise ValueError(
