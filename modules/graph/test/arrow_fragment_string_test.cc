@@ -63,7 +63,8 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
 int main(int argc, char** argv) {
   if (argc < 6) {
     printf(
-        "usage: ./arrow_fragment_test <ipc_socket> <e_label_num> <efiles...> "
+        "usage: ./arrow_fragment_string_test <ipc_socket> <e_label_num> "
+        "<efiles...> "
         "<v_label_num> <vfiles...> [directed]\n");
     return 1;
   }
@@ -93,38 +94,42 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   grape::InitMPIComm();
-  grape::CommSpec comm_spec;
-  comm_spec.Init(MPI_COMM_WORLD);
+  {
+    grape::CommSpec comm_spec;
+    comm_spec.Init(MPI_COMM_WORLD);
 
-  {
-    auto loader = std::make_unique<ArrowFragmentLoader<std::string, uint64_t>>(
-        client, comm_spec, efiles, vfiles, directed != 0);
-    auto fragment_group_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragment(); },
-        [](const GSError& e) {
-          LOG(FATAL) << e.error_msg;
-          return 0;
-        },
-        [](const boost::leaf::error_info& unmatched) {
-          LOG(FATAL) << "Unmatched error " << unmatched;
-          return 0;
-        });
-    WriteOut(client, comm_spec, fragment_group_id);
-  }
-  {
-    auto loader = std::make_unique<ArrowFragmentLoader<std::string, uint64_t>>(
-        client, comm_spec, vfiles, directed != 0);
-    auto fragment_group_id = boost::leaf::try_handle_all(
-        [&loader]() { return loader->LoadFragment(); },
-        [](const GSError& e) {
-          LOG(FATAL) << e.error_msg;
-          return 0;
-        },
-        [](const boost::leaf::error_info& unmatched) {
-          LOG(FATAL) << "Unmatched error " << unmatched;
-          return 0;
-        });
-    WriteOut(client, comm_spec, fragment_group_id);
+    {
+      auto loader =
+          std::make_unique<ArrowFragmentLoader<std::string, uint64_t>>(
+              client, comm_spec, efiles, vfiles, directed != 0);
+      auto fragment_group_id = boost::leaf::try_handle_all(
+          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+          [](const GSError& e) {
+            LOG(FATAL) << e.error_msg;
+            return 0;
+          },
+          [](const boost::leaf::error_info& unmatched) {
+            LOG(FATAL) << "Unmatched error " << unmatched;
+            return 0;
+          });
+      WriteOut(client, comm_spec, fragment_group_id);
+    }
+    {
+      auto loader =
+          std::make_unique<ArrowFragmentLoader<std::string, uint64_t>>(
+              client, comm_spec, efiles, directed != 0);
+      auto fragment_group_id = boost::leaf::try_handle_all(
+          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
+          [](const GSError& e) {
+            LOG(FATAL) << e.error_msg;
+            return 0;
+          },
+          [](const boost::leaf::error_info& unmatched) {
+            LOG(FATAL) << "Unmatched error " << unmatched;
+            return 0;
+          });
+      WriteOut(client, comm_spec, fragment_group_id);
+    }
   }
 
   grape::FinalizeMPIComm();
