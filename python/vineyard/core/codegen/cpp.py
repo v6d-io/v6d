@@ -266,6 +266,10 @@ class {class_name}BaseBuilder: public ObjectBuilder {{
         {class_name}BaseBuilder(*__value) {{
     }}
 
+    ObjectMeta &ValueMetaRef(std::shared_ptr<{class_name_elaborated}> &__value) {{
+        return __value->meta_;
+    }}
+
     std::shared_ptr<Object> _Seal(Client &client) override {{
         // ensure the builder hasn't been sealed yet.
         ENSURE_NOT_SEALED(this);
@@ -273,6 +277,10 @@ class {class_name}BaseBuilder: public ObjectBuilder {{
         VINEYARD_CHECK_OK(this->Build(client));
         auto __value = std::make_shared<{class_name_elaborated}>();
 
+        return this->_Seal(client, __value);
+    }}
+
+    std::shared_ptr<Object> _Seal(Client &client, std::shared_ptr<{class_name_elaborated}> &__value) {{
         size_t __value_nbytes = 0;
 
         __value->meta_.SetTypeName(type_name<{class_name_elaborated}>());
@@ -514,6 +522,7 @@ field_setter_dict_tpl = '''
     void set_{field_name}(std::map<{field_key_type}, std::shared_ptr<ObjectBase>> const &{field_name}_) {{
         this->{field_name} = {field_name}_;
     }}
+    // FIXME: set a corresponding builder, rather than ObjectBase.
     void set_{field_name}({field_key_type} const &{field_name}_key_,
                            std::shared_ptr<ObjectBase> {field_name}_value_) {{
         this->{field_name}.emplace({field_name}_key_, {field_name}_value_);
