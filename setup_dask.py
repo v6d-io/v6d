@@ -85,7 +85,7 @@ setup(
     packages=find_dask_packages('python'),
     cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},
     zip_safe=False,
-    install_requires=['vineyard', 'dask[complete]'],
+    install_requires=['vineyard', 'dask[complete]', 'click<8.1'],
     platform=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
