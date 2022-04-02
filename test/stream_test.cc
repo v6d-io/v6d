@@ -23,6 +23,7 @@ limitations under the License.
 
 #include "basic/stream/byte_stream.h"
 #include "basic/stream/dataframe_stream.h"
+#include "basic/stream/recordbatch_stream.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
@@ -32,11 +33,9 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 void testByteStream(Client& client, std::string const& ipc_socket) {
   ObjectID stream_id = InvalidObjectID();
   {
-    ByteStreamBuilder builder(client);
-    builder.SetParams(std::unordered_map<std::string, std::string>{
-        {"kind", "test"}, {"test_name", "stream_test"}});
-    auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
-    stream_id = bstream->id();
+    std::unordered_map<std::string, std::string> params{
+        {"kind", "test"}, {"test_name", "stream_test"}};
+    stream_id = ByteStream::Make<ByteStream>(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 
@@ -50,21 +49,20 @@ void testByteStream(Client& client, std::string const& ipc_socket) {
     auto byte_stream = reader_client.GetObject<ByteStream>(stream_id);
     CHECK(byte_stream != nullptr);
 
-    std::unique_ptr<ByteStreamReader> reader;
-    VINEYARD_CHECK_OK(byte_stream->OpenReader(reader_client, reader));
+    VINEYARD_CHECK_OK(byte_stream->OpenReader(&reader_client));
 
-    std::unique_ptr<ByteStreamReader> failed_reader;
-    auto status1 = byte_stream->OpenReader(reader_client, failed_reader);
+    auto status1 = byte_stream->OpenReader(&reader_client);
     CHECK(status1.IsStreamOpened());
 
     while (true) {
-      std::unique_ptr<arrow::Buffer> buffer = nullptr;
-      auto status = reader->GetNext(buffer);
+      std::shared_ptr<Blob> buffer;
+      auto status = byte_stream->Next(buffer);
       if (status.ok()) {
         CHECK(buffer != nullptr);
         recv_chunks += 1;
         recv_chunks_size.emplace_back(buffer->size());
       } else {
+        LOG(INFO) << "status = " << status.ToString();
         CHECK(status.IsStreamDrained());
         break;
       }
@@ -78,23 +76,23 @@ void testByteStream(Client& client, std::string const& ipc_socket) {
     auto byte_stream = writer_client.GetObject<ByteStream>(stream_id);
     CHECK(byte_stream != nullptr);
 
-    std::unique_ptr<ByteStreamWriter> writer;
-    VINEYARD_CHECK_OK(byte_stream->OpenWriter(writer_client, writer));
+    VINEYARD_CHECK_OK(byte_stream->OpenWriter(&writer_client));
 
-    std::unique_ptr<ByteStreamWriter> failed_writer;
-    auto status1 = byte_stream->OpenWriter(writer_client, failed_writer);
+    auto status1 = byte_stream->OpenWriter(&writer_client);
     CHECK(status1.IsStreamOpened());
 
-    CHECK(writer != nullptr);
     for (size_t idx = 1; idx <= 11; ++idx) {
-      std::unique_ptr<arrow::MutableBuffer> buffer = nullptr;
-      VINEYARD_CHECK_OK(writer->GetNext(1 << idx, buffer));
+      std::unique_ptr<BlobWriter> buffer;
+      VINEYARD_CHECK_OK(writer_client.CreateBlob(1 << idx, buffer));
       CHECK(buffer != nullptr);
+      auto r = buffer->Seal(writer_client);
+      CHECK(r != nullptr);
+      VINEYARD_CHECK_OK(byte_stream->Push(r));
       send_chunks += 1;
       send_chunks_size.emplace_back(1 << idx);
       sleep(1);
     }
-    VINEYARD_CHECK_OK(writer->Finish());
+    VINEYARD_CHECK_OK(byte_stream->Finish());
   });
 
   send_thrd.join();
@@ -110,79 +108,63 @@ void testByteStream(Client& client, std::string const& ipc_socket) {
 void testByteStreamFailed(Client& client, std::string const& ipc_socket) {
   ObjectID stream_id = InvalidObjectID();
   {
-    ByteStreamBuilder builder(client);
-    builder.SetParams(std::unordered_map<std::string, std::string>{
-        {"kind", "test"}, {"test_name", "stream_test"}});
-    auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
-    stream_id = bstream->id();
+    std::unordered_map<std::string, std::string> params{
+        {"kind", "test"}, {"test_name", "stream_test"}};
+    stream_id = ByteStream::Make<ByteStream>(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 
-  auto failed_byte_stream = client.GetObject<ByteStream>(stream_id);
+  auto failed_r_byte_stream = client.GetObject<ByteStream>(stream_id);
+  auto failed_w_byte_stream = client.GetObject<ByteStream>(stream_id);
 
-  std::unique_ptr<ByteStreamReader> reader = nullptr;
-  std::unique_ptr<ByteStreamWriter> writer = nullptr;
-  VINEYARD_CHECK_OK(failed_byte_stream->OpenReader(client, reader));
-  VINEYARD_CHECK_OK(failed_byte_stream->OpenWriter(client, writer));
-  CHECK(reader != nullptr);
-  CHECK(writer != nullptr);
-  VINEYARD_CHECK_OK(writer->Abort());
+  VINEYARD_CHECK_OK(failed_r_byte_stream->OpenReader(&client));
+  VINEYARD_CHECK_OK(failed_w_byte_stream->OpenWriter(&client));
+  VINEYARD_CHECK_OK(failed_w_byte_stream->Abort());
 
-  std::unique_ptr<arrow::Buffer> buffer = nullptr;
-  auto status = reader->GetNext(buffer);
+  std::shared_ptr<Blob> buffer;
+  auto status = failed_r_byte_stream->Next(buffer);
   CHECK(status.IsStreamFailed());
 }
 
 void testEmptyStream(Client& client, std::string const& ipc_socket) {
   ObjectID stream_id = InvalidObjectID();
   {
-    ByteStreamBuilder builder(client);
-    builder.SetParams(std::unordered_map<std::string, std::string>{
-        {"kind", "test"}, {"test_name", "stream_test"}});
-    auto bstream = std::dynamic_pointer_cast<ByteStream>(builder.Seal(client));
-    stream_id = bstream->id();
+    std::unordered_map<std::string, std::string> params{
+        {"kind", "test"}, {"test_name", "stream_test"}};
+    stream_id = ByteStream::Make<ByteStream>(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 
-  auto empty_byte_stream = client.GetObject<ByteStream>(stream_id);
+  auto empty_r_byte_stream = client.GetObject<ByteStream>(stream_id);
+  auto empty_w_byte_stream = client.GetObject<ByteStream>(stream_id);
 
-  std::unique_ptr<ByteStreamReader> empty_reader = nullptr;
-  std::unique_ptr<ByteStreamWriter> empty_writer = nullptr;
-  VINEYARD_CHECK_OK(empty_byte_stream->OpenReader(client, empty_reader));
-  VINEYARD_CHECK_OK(empty_byte_stream->OpenWriter(client, empty_writer));
-  CHECK(empty_reader != nullptr);
-  CHECK(empty_writer != nullptr);
+  VINEYARD_CHECK_OK(empty_r_byte_stream->OpenReader(&client));
+  VINEYARD_CHECK_OK(empty_w_byte_stream->OpenWriter(&client));
 
   {
     // write empty chunk
-    std::unique_ptr<arrow::MutableBuffer> buffer = nullptr;
-    VINEYARD_CHECK_OK(empty_writer->GetNext(0, buffer));
-
-    CHECK(buffer != nullptr);
-    CHECK_EQ(buffer->size(), 0);
-    VINEYARD_CHECK_OK(empty_writer->Finish());
+    auto empty_blob = Blob::MakeEmpty(client);
+    VINEYARD_CHECK_OK(empty_w_byte_stream->Push(empty_blob->id()));
+    VINEYARD_CHECK_OK(empty_w_byte_stream->Finish());
   }
 
   {
     // read the empty chunk
-    std::unique_ptr<arrow::Buffer> buffer = nullptr;
-    VINEYARD_CHECK_OK(empty_reader->GetNext(buffer));
+    std::shared_ptr<Blob> buffer;
+    VINEYARD_CHECK_OK(empty_r_byte_stream->Next(buffer));
     CHECK(buffer != nullptr);
     CHECK_EQ(buffer->size(), 0);
 
-    CHECK(empty_reader->GetNext(buffer).IsStreamDrained());
+    CHECK(empty_r_byte_stream->Next(buffer).IsStreamDrained());
   }
 }
 
 void testDataframeStream(Client& client, std::string const& ipc_socket) {
   ObjectID stream_id = InvalidObjectID();
   {
-    DataframeStreamBuilder builder(client);
-    builder.SetParams(std::unordered_map<std::string, std::string>{
-        {"kind", "test"}, {"test_name", "stream_test"}});
-    auto bstream =
-        std::dynamic_pointer_cast<DataframeStream>(builder.Seal(client));
-    stream_id = bstream->id();
+    std::unordered_map<std::string, std::string> params{
+        {"kind", "test"}, {"test_name", "stream_test"}};
+    stream_id = RecordBatchStream::Make<RecordBatchStream>(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 
@@ -230,19 +212,18 @@ void testDataframeStream(Client& client, std::string const& ipc_socket) {
     Client reader_client;
     VINEYARD_CHECK_OK(reader_client.Connect(ipc_socket));
 
-    auto dataframe_stream = reader_client.GetObject<DataframeStream>(stream_id);
+    auto dataframe_stream =
+        reader_client.GetObject<RecordBatchStream>(stream_id);
     CHECK(dataframe_stream != nullptr);
 
-    std::unique_ptr<DataframeStreamReader> reader;
-    VINEYARD_CHECK_OK(dataframe_stream->OpenReader(reader_client, reader));
+    VINEYARD_CHECK_OK(dataframe_stream->OpenReader(&reader_client));
 
-    std::unique_ptr<DataframeStreamReader> failed_reader;
-    auto status1 = dataframe_stream->OpenReader(reader_client, failed_reader);
+    auto status1 = dataframe_stream->OpenReader(&reader_client);
     CHECK(status1.IsStreamOpened());
 
     while (true) {
       std::shared_ptr<arrow::RecordBatch> load_batch;
-      auto status = reader->ReadBatch(load_batch);
+      auto status = dataframe_stream->ReadBatch(load_batch);
       if (status.ok()) {
         CHECK(load_batch != nullptr);
         recv_chunks += 1;
@@ -257,23 +238,21 @@ void testDataframeStream(Client& client, std::string const& ipc_socket) {
     Client writer_client;
     VINEYARD_CHECK_OK(writer_client.Connect(ipc_socket));
 
-    auto dataframe_stream = writer_client.GetObject<DataframeStream>(stream_id);
+    auto dataframe_stream =
+        writer_client.GetObject<RecordBatchStream>(stream_id);
     CHECK(dataframe_stream != nullptr);
 
-    std::unique_ptr<DataframeStreamWriter> writer;
-    VINEYARD_CHECK_OK(dataframe_stream->OpenWriter(writer_client, writer));
+    VINEYARD_CHECK_OK(dataframe_stream->OpenWriter(&writer_client));
 
-    std::unique_ptr<DataframeStreamWriter> failed_writer;
-    auto status1 = dataframe_stream->OpenWriter(writer_client, failed_writer);
+    auto status1 = dataframe_stream->OpenWriter(&writer_client);
     CHECK(status1.IsStreamOpened());
 
-    CHECK(writer != nullptr);
     for (size_t idx = 1; idx <= 11; ++idx) {
-      VINEYARD_CHECK_OK(writer->WriteBatch(batch));
+      VINEYARD_CHECK_OK(dataframe_stream->WriteBatch(batch));
       send_chunks += 1;
       sleep(1);
     }
-    VINEYARD_CHECK_OK(writer->Finish());
+    VINEYARD_CHECK_OK(dataframe_stream->Finish());
   });
 
   send_thrd.join();

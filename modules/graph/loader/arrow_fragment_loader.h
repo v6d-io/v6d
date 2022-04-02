@@ -33,8 +33,8 @@ limitations under the License.
 
 #include "basic/ds/dataframe.h"
 #include "basic/ds/tensor.h"
-#include "basic/stream/dataframe_stream.h"
 #include "basic/stream/parallel_stream.h"
+#include "basic/stream/recordbatch_stream.h"
 #include "client/client.h"
 #include "io/io/io_factory.h"
 
@@ -58,7 +58,8 @@ inline Status ReadRecordBatchesFromVineyardStream(
     Client& client, std::shared_ptr<ParallelStream>& pstream,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
     int part_num) {
-  auto local_streams = pstream->GetLocalStreams<DataframeStream>();
+  Tuple<std::shared_ptr<RecordBatchStream>> local_streams;
+  pstream->GetLocals(local_streams);
 
   size_t split_size = local_streams.size() / part_num +
                       (local_streams.size() % part_num == 0 ? 0 : 1);
@@ -73,10 +74,11 @@ inline Status ReadRecordBatchesFromVineyardStream(
     // use a local client, since reading from stream may block the client.
     Client local_client;
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
-    std::unique_ptr<DataframeStreamReader> reader;
-    VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(local_client, reader));
+
+    auto& stream = local_streams[idx];
+    VINEYARD_CHECK_OK(stream->OpenReader(&local_client));
     std::vector<std::shared_ptr<arrow::RecordBatch>> read_batches;
-    RETURN_ON_ERROR(reader->ReadRecordBatches(read_batches));
+    RETURN_ON_ERROR(stream->ReadRecordBatches(read_batches));
     {
       std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
       for (auto const& batch : read_batches) {
@@ -139,7 +141,8 @@ inline Status ReadRecordBatchesFromVineyard(
 inline Status ReadTableFromVineyardStream(
     Client& client, std::shared_ptr<ParallelStream>& pstream,
     std::shared_ptr<arrow::Table>& table, int part_id, int part_num) {
-  auto local_streams = pstream->GetLocalStreams<DataframeStream>();
+  Tuple<std::shared_ptr<RecordBatchStream>> local_streams;
+  pstream->GetLocals(local_streams);
   size_t split_size = local_streams.size() / part_num +
                       (local_streams.size() % part_num == 0 ? 0 : 1);
   int start_to_read = part_id * split_size;
@@ -151,10 +154,11 @@ inline Status ReadTableFromVineyardStream(
     // use a local client, since reading from stream may block the client.
     Client local_client;
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
-    std::unique_ptr<DataframeStreamReader> reader;
-    VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(local_client, reader));
+
+    auto const& stream = local_streams[idx];
+    VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(&local_client));
     std::shared_ptr<arrow::Table> table;
-    RETURN_ON_ERROR(reader->ReadTable(table));
+    RETURN_ON_ERROR(stream->ReadTable(table));
     if (table == nullptr) {
       VLOG(10) << "table from stream is null.";
     } else {
@@ -294,7 +298,6 @@ GatherETables(Client& client,
   }
 
   std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables;
-  property_graph_types::LABEL_ID_TYPE e_label_id = 0;
   for (auto const& group : grouped_batches) {
     std::shared_ptr<arrow::Table> table;
     std::vector<std::shared_ptr<arrow::Table>> subtables;
@@ -306,7 +309,6 @@ GatherETables(Client& client,
       }
       subtables.emplace_back(table);
     }
-    e_label_id += 1;
     tables.emplace_back(subtables);
   }
   return tables;
@@ -646,11 +648,7 @@ class ArrowFragmentLoader {
       }
       auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
 
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      meta->Append(LABEL_TAG, v_label_name);
-#else
       CHECK_ARROW_ERROR(meta->Set(LABEL_TAG, v_label_name));
-#endif
 
       tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
     }
@@ -719,15 +717,9 @@ class ArrowFragmentLoader {
           }
           std::string dst_label_name = it->second;
 
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-          meta->Append(LABEL_TAG, edge_label_name);
-          meta->Append(SRC_LABEL_TAG, src_label_name);
-          meta->Append(DST_LABEL_TAG, dst_label_name);
-#else
           CHECK_ARROW_ERROR(meta->Set(LABEL_TAG, edge_label_name));
           CHECK_ARROW_ERROR(meta->Set(SRC_LABEL_TAG, src_label_name));
           CHECK_ARROW_ERROR(meta->Set(DST_LABEL_TAG, dst_label_name));
-#endif
 
           tables[label_id].emplace_back(
               normalized_table->ReplaceSchemaMetadata(meta));

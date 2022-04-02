@@ -29,6 +29,8 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/core_types.h"
+#include "client/ds/stream.h"
 
 namespace vineyard {
 
@@ -40,25 +42,25 @@ namespace vineyard {
 /// The arrays in vineyard is a wrapper of arrow arrays, in order to
 /// Simplify the Build and Construct process.
 
-class __attribute__((annotate("no-vineyard"))) ArrowArray {
+class ArrowArray {
  public:
   virtual std::shared_ptr<arrow::Array> ToArray() const = 0;
 };
 
-class __attribute__((annotate("no-vineyard"))) FlatArray : public ArrowArray {};
+class FlatArray : public ArrowArray {};
 
 /// Primitive array
 
 /// Base class for primitive arrays for type factory.
 
-class __attribute__((annotate("no-vineyard"))) PrimitiveArray
-    : public FlatArray {};
+class PrimitiveArray : public FlatArray {};
 
 template <typename T>
 class NumericArrayBaseBuilder;
 
 template <typename T>
-class NumericArray : public PrimitiveArray, public Registered<NumericArray<T>> {
+class [[vineyard]] NumericArray : public PrimitiveArray,
+                                  public Registered<NumericArray<T>> {
  public:
   using ArrayType = typename ConvertToArrowType<T>::ArrayType;
 
@@ -76,10 +78,9 @@ class NumericArray : public PrimitiveArray, public Registered<NumericArray<T>> {
   const uint8_t* GetBase() const { return array_->values()->data(); }
 
  private:
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
-      null_bitmap_;
+  [[shared]] size_t length_;
+  [[shared]] int64_t null_count_, offset_;
+  [[shared]] std::shared_ptr<Blob> buffer_, null_bitmap_;
 
   std::shared_ptr<ArrayType> array_;
   friend class Client;
@@ -88,7 +89,8 @@ class NumericArray : public PrimitiveArray, public Registered<NumericArray<T>> {
 
 class BooleanArrayBaseBuilder;
 
-class BooleanArray : public PrimitiveArray, public Registered<BooleanArray> {
+class [[vineyard]] BooleanArray : public PrimitiveArray,
+                                  public Registered<BooleanArray> {
  public:
   using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
 
@@ -106,15 +108,25 @@ class BooleanArray : public PrimitiveArray, public Registered<BooleanArray> {
   const uint8_t* GetBase() const { return array_->values()->data(); }
 
  private:
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
-      null_bitmap_;
+  [[shared]] size_t length_;
+  [[shared]] int64_t null_count_, offset_;
+  [[shared]] std::shared_ptr<Blob> buffer_, null_bitmap_;
 
   std::shared_ptr<ArrayType> array_;
   friend class Client;
   friend class BooleanArrayBaseBuilder;
 };
+
+using Int8Array = NumericArray<int8_t>;
+using Int16Array = NumericArray<int16_t>;
+using Int32Array = NumericArray<int32_t>;
+using Int64Array = NumericArray<int64_t>;
+using UInt8Array = NumericArray<uint8_t>;
+using UInt16Array = NumericArray<uint16_t>;
+using UInt32Array = NumericArray<uint32_t>;
+using UInt64Array = NumericArray<uint64_t>;
+using FloatArray = NumericArray<float>;
+using DoubleArray = NumericArray<double>;
 
 /// Binary array
 
@@ -122,8 +134,9 @@ template <typename ArrayType>
 class BaseBinaryArrayBaseBuilder;
 
 template <typename ArrayType>
-class BaseBinaryArray : public FlatArray,
-                        public Registered<BaseBinaryArray<ArrayType>> {
+class [[vineyard]] BaseBinaryArray
+    : public FlatArray,
+      public Registered<BaseBinaryArray<ArrayType>> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<ArrayType>(
@@ -138,10 +151,9 @@ class BaseBinaryArray : public FlatArray,
   const uint8_t* GetBase() const { return array_->value_data()->data(); }
 
  private:
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_data_,
-      buffer_offsets_, null_bitmap_;
+  [[shared]] size_t length_;
+  [[shared]] int64_t null_count_, offset_;
+  [[shared]] std::shared_ptr<Blob> buffer_data_, buffer_offsets_, null_bitmap_;
 
   std::shared_ptr<ArrayType> array_;
 
@@ -157,8 +169,9 @@ using LargeStringArray = BaseBinaryArray<arrow::LargeStringArray>;
 
 class FixedSizeBinaryArrayBaseBuilder;
 
-class FixedSizeBinaryArray : public PrimitiveArray,
-                             public Registered<FixedSizeBinaryArray> {
+class [[vineyard]] FixedSizeBinaryArray
+    : public PrimitiveArray,
+      public Registered<FixedSizeBinaryArray> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
@@ -173,11 +186,10 @@ class FixedSizeBinaryArray : public PrimitiveArray,
   std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
 
  private:
-  __attribute__((annotate("codegen"))) int32_t byte_width_;
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_,
-      null_bitmap_;
+  [[shared]] int32_t byte_width_;
+  [[shared]] size_t length_;
+  [[shared]] int64_t null_count_, offset_;
+  [[shared]] std::shared_ptr<Blob> buffer_, null_bitmap_;
 
   std::shared_ptr<arrow::FixedSizeBinaryArray> array_;
 
@@ -189,7 +201,7 @@ class FixedSizeBinaryArray : public PrimitiveArray,
 
 class NullArrayBaseBuilder;
 
-class NullArray : public FlatArray, public Registered<NullArray> {
+class [[vineyard]] NullArray : public FlatArray, public Registered<NullArray> {
  public:
   using ArrayType = arrow::NullArray;
   void PostConstruct(const ObjectMeta& meta) override {
@@ -201,7 +213,7 @@ class NullArray : public FlatArray, public Registered<NullArray> {
   std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
 
  private:
-  __attribute__((annotate("codegen"))) size_t length_;
+  [[shared]] size_t length_;
 
   std::shared_ptr<arrow::NullArray> array_;
 
@@ -243,8 +255,8 @@ template <typename ArrayType>
 class BaseListArrayBaseBuilder;
 
 template <typename ArrayType>
-class BaseListArray : public ArrowArray,
-                      public Registered<BaseListArray<ArrayType>> {
+class [[vineyard]] BaseListArray : public ArrowArray,
+                                   public Registered<BaseListArray<ArrayType>> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     auto arr = detail::ConstructArray(values_);
@@ -262,11 +274,10 @@ class BaseListArray : public ArrowArray,
   const uint8_t* GetBase() const { return array_->value_data()->data(); }
 
  private:
-  __attribute__((annotate("codegen"))) size_t length_;
-  __attribute__((annotate("codegen"))) int64_t null_count_, offset_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob>
-      buffer_offsets_, null_bitmap_;
-  __attribute__((annotate("codegen:Object*"))) std::shared_ptr<Object> values_;
+  [[shared]] size_t length_;
+  [[shared]] int64_t null_count_, offset_;
+  [[shared]] std::shared_ptr<Blob> buffer_offsets_, null_bitmap_;
+  [[shared]] std::shared_ptr<Object> values_;
 
   std::shared_ptr<ArrayType> array_;
 
@@ -279,22 +290,18 @@ using LargeListArray = BaseListArray<arrow::LargeListArray>;
 
 class SchemaProxyBaseBuilder;
 
-class SchemaProxy : public Registered<SchemaProxy> {
+class [[vineyard]] SchemaProxy : public Registered<SchemaProxy> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     arrow::io::BufferReader reader(this->buffer_->Buffer());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &this->schema_));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(this->schema_,
                                  arrow::ipc::ReadSchema(&reader, nullptr));
-#endif
   }
 
   std::shared_ptr<arrow::Schema> const& GetSchema() const { return schema_; }
 
  private:
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_;
+  [[shared]] std::shared_ptr<Blob> buffer_;
 
   std::shared_ptr<arrow::Schema> schema_;
 
@@ -304,7 +311,7 @@ class SchemaProxy : public Registered<SchemaProxy> {
 
 class RecordBatchBaseBuilder;
 
-class RecordBatch : public Registered<RecordBatch> {
+class [[vineyard(streamable)]] RecordBatch : public Registered<RecordBatch> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     for (size_t idx = 0; idx < columns_.size(); ++idx) {
@@ -331,12 +338,10 @@ class RecordBatch : public Registered<RecordBatch> {
   }
 
  private:
-  __attribute__((annotate("codegen"))) size_t column_num_ = 0;
-  __attribute__((annotate("codegen"))) size_t row_num_ = 0;
-  __attribute__((annotate("codegen:SchemaProxy"))) SchemaProxy schema_;
-  __attribute__((annotate("codegen:[Object*]")))
-  std::vector<std::shared_ptr<Object>>
-      columns_;
+  [[shared]] size_t column_num_ = 0;
+  [[shared]] size_t row_num_ = 0;
+  [[shared]] SchemaProxy schema_;
+  [[shared]] Tuple<std::shared_ptr<Object>> columns_;
 
   std::vector<std::shared_ptr<arrow::Array>> arrow_columns_;
   mutable std::shared_ptr<arrow::RecordBatch> batch_;
@@ -347,7 +352,7 @@ class RecordBatch : public Registered<RecordBatch> {
 
 class TableBaseBuilder;
 
-class Table : public Registered<Table> {
+class [[vineyard]] Table : public Registered<Table> {
  public:
   void PostConstruct(const ObjectMeta& meta) override {}
 
@@ -360,17 +365,20 @@ class Table : public Registered<Table> {
         }
         VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches_, &this->table_));
       } else {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-        CHECK_ARROW_ERROR(arrow::Table::FromRecordBatches(
-            this->schema_->GetSchema(), {}, &this->table_));
-#else
         CHECK_ARROW_ERROR_AND_ASSIGN(
             this->table_,
             arrow::Table::FromRecordBatches(this->schema_->GetSchema(), {}));
-#endif
       }
     }
     return this->table_;
+  }
+
+  std::shared_ptr<arrow::ChunkedArray> column(int i) const {
+    return GetTable()->column(i);
+  }
+
+  std::shared_ptr<arrow::Field> field(int i) const {
+    return schema_->GetSchema()->field(i);
   }
 
   std::shared_ptr<arrow::Schema> schema() const { return schema_->GetSchema(); }
@@ -386,13 +394,9 @@ class Table : public Registered<Table> {
   }
 
  private:
-  __attribute__((annotate("codegen"))) size_t batch_num_, num_rows_,
-      num_columns_;
-  __attribute__((annotate("codegen:[RecordBatch*]")))
-  std::vector<std::shared_ptr<RecordBatch>>
-      batches_;
-  __attribute__((annotate("codegen:SchemaProxy*"))) std::shared_ptr<SchemaProxy>
-      schema_;
+  [[shared]] size_t batch_num_, num_rows_, num_columns_;
+  [[shared]] Tuple<std::shared_ptr<RecordBatch>> batches_;
+  [[shared]] std::shared_ptr<SchemaProxy> schema_;
 
   mutable std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches_;
   mutable std::shared_ptr<arrow::Table> table_;

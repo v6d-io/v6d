@@ -22,7 +22,7 @@ limitations under the License.
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.h"
-#include "basic/ds/tuple.h"
+#include "basic/ds/sequence.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 
   const size_t element_size = 10240;
 
-  TupleBuilder tup_builder(client);
+  SequenceBuilder tup_builder(client);
   tup_builder.SetSize(element_size);
   for (size_t idx = 0; idx < element_size; ++idx) {
     std::vector<double> double_array = {1.0, static_cast<double>(element_size),
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     tup_builder.SetValue(idx, builder);
   }
 
-  auto tup = std::dynamic_pointer_cast<Tuple>(tup_builder.Seal(client));
+  auto tup = std::dynamic_pointer_cast<Sequence>(tup_builder.Seal(client));
   VINEYARD_CHECK_OK(client.Persist(tup->id()));
 
   for (size_t idx = 0; idx < element_size; ++idx) {

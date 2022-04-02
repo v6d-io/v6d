@@ -24,8 +24,8 @@ from ...data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-def fake_tuple_resolver(obj, resolver):
-    return 'faked tuple'
+def fake_sequence_resolver(obj, resolver):
+    return 'faked sequence'
 
 
 def test_resolver_context(vineyard_client):
@@ -33,24 +33,24 @@ def test_resolver_context(vineyard_client):
     o = vineyard_client.put(value)
     result = vineyard_client.get(o)
     assert result == value
-    assert result != 'faked tuple'
+    assert result != 'faked sequence'
 
     with resolver_context() as ctx:
-        ctx.register('vineyard::Tuple', fake_tuple_resolver)
+        ctx.register('vineyard::Sequence', fake_sequence_resolver)
 
         result = vineyard_client.get(o)
         assert result != value
-        assert result == 'faked tuple'
+        assert result == 'faked sequence'
 
     result = vineyard_client.get(o)
     assert result == value
-    assert result != 'faked tuple'
+    assert result != 'faked sequence'
 
-    with resolver_context({'vineyard::Tuple': fake_tuple_resolver}) as ctx:
+    with resolver_context({'vineyard::Sequence': fake_sequence_resolver}) as ctx:
         result = vineyard_client.get(o)
         assert result != value
-        assert result == 'faked tuple'
+        assert result == 'faked sequence'
 
     result = vineyard_client.get(o)
     assert result == value
-    assert result != 'faked tuple'
+    assert result != 'faked sequence'

@@ -6,6 +6,8 @@
 .vscode
 .idea
 .DS_store
+.cache/
+.ossutil_checkpoint/
 compile_commands.json
 cmake-build-debug
 
@@ -20,6 +22,7 @@ cmake-build-debug
 
 # generated files
 *.vineyard.h
+*.java.touch
 
 # etcd data directory during testing
 default.etcd/
@@ -35,3 +38,7 @@ default.etcd/
 
 # go vendor
 /**/vendor/
+
+# Rust build
+/**/target/
+

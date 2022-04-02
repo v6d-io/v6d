@@ -22,18 +22,17 @@ limitations under the License.
 #include "arrow/util/logging.h"
 
 #include "basic/ds/array.h"
-#include "basic/ds/hashmap.h"
-#include "basic/ds/pair.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
-#include "common/util/typename.h"
+#include "msgpack/pickle.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
+using vineyard::Pickler;
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    printf("usage ./pair_test <ipc_socket>");
+    printf("usage ./pickle_test <ipc_socket>");
     return 1;
   }
   std::string ipc_socket = std::string(argv[1]);
@@ -42,35 +41,20 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  PairBuilder pair_builder(client);
-  {
-    std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
-    auto builder = std::make_shared<ArrayBuilder<double>>(client, double_array);
-    pair_builder.SetFirst(builder);
-  }
-  {
-    auto builder = std::make_shared<HashmapBuilder<int, double>>(client);
-    builder->operator[](1) = 100.0;
-    builder->operator[](2) = 50.0;
-    builder->operator[](3) = 25.0;
-    builder->operator[](4) = 12.5;
-    builder->operator[](5) = 6.25;
-    pair_builder.SetSecond(builder);
-  }
+  // std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
+  // ArrayBuilder<double> builder(client, double_array);
+  // auto sealed_double_array =
+  //     std::dynamic_pointer_cast<Array<double>>(builder.Seal(client));
 
-  auto pair = std::dynamic_pointer_cast<Pair>(pair_builder.Seal(client));
-  VINEYARD_CHECK_OK(client.Persist(pair->id()));
+  // LOG(INFO) << "successfully sealed...";
+  // LOG(INFO) << "sealed object id: " << sealed_double_array->id() << ", "
+  //           << ObjectIDToString(sealed_double_array->id());
 
-  auto first = pair->First();
-  auto second = pair->Second();
+  auto sealed_double_array =
+      client.GetObject(ObjectIDFromString("o00003e2dcb86e08e"));
+  Pickler pickled(sealed_double_array);
 
-  CHECK_EQ(first->meta().GetTypeName(), type_name<Array<double>>());
-  {
-    auto type = type_name<Hashmap<int, double>>();
-    CHECK_EQ(second->meta().GetTypeName(), type);
-  }
-
-  LOG(INFO) << "Passed pair tests...";
+  LOG(INFO) << "Passed pickle array tests...";
 
   client.Disconnect();
 

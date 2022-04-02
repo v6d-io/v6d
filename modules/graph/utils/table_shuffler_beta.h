@@ -56,13 +56,8 @@ inline void RecvArrowBuffer(std::shared_ptr<arrow::Buffer>& buffer,
                             int src_worker_id, MPI_Comm comm) {
   int64_t size;
   MPI_Recv(&size, 1, MPI_INT64_T, src_worker_id, 0, comm, MPI_STATUS_IGNORE);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  ARROW_CHECK_OK(
-      arrow::AllocateBuffer(arrow::default_memory_pool(), size, &buffer));
-#else
   ARROW_CHECK_OK_AND_ASSIGN(
       buffer, arrow::AllocateBuffer(size, arrow::default_memory_pool()));
-#endif
   if (size != 0) {
     grape::sync_comm::recv_buffer<uint8_t>(buffer->mutable_data(), size,
                                            src_worker_id, 0, comm);
@@ -73,11 +68,7 @@ inline boost::leaf::result<void> SchemaConsistent(
     const arrow::Schema& schema, const grape::CommSpec& comm_spec) {
   std::shared_ptr<arrow::Buffer> buffer;
   arrow::Status serialized_status;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  arrow::ipc::DictionaryMemo out_memo;
-  serialized_status = arrow::ipc::SerializeSchema(
-      schema, &out_memo, arrow::default_memory_pool(), &buffer);
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
   arrow::ipc::DictionaryMemo out_memo;
   auto ret = arrow::ipc::SerializeSchema(schema, &out_memo,
                                          arrow::default_memory_pool());
@@ -124,12 +115,8 @@ inline boost::leaf::result<void> SchemaConsistent(
       arrow::ipc::DictionaryMemo in_memo;
       arrow::io::BufferReader reader(got_buffer);
       std::shared_ptr<arrow::Schema> got_schema;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      ARROW_CHECK_OK(arrow::ipc::ReadSchema(&reader, &in_memo, &got_schema));
-#else
       ARROW_CHECK_OK_AND_ASSIGN(got_schema,
                                 arrow::ipc::ReadSchema(&reader, &in_memo));
-#endif
       consistent &= (got_schema->Equals(schema));
     }
   });
@@ -209,7 +196,7 @@ inline void deserialize_selected_typed_items(grape::OutArchive& arc,
   T val;
   for (int64_t i = 0; i != num; ++i) {
     arc >> val;
-    casted_builder->Append(val);
+    CHECK_ARROW_ERROR(casted_builder->Append(val));
   }
 }
 
@@ -219,14 +206,14 @@ inline void deserialize_string_items(grape::OutArchive& arc, int64_t num,
   arrow::util::string_view val;
   for (int64_t i = 0; i != num; ++i) {
     arc >> val;
-    casted_builder->Append(val);
+    CHECK_ARROW_ERROR(casted_builder->Append(val));
   }
 }
 
 inline void deserialize_null_items(grape::OutArchive& arc, int64_t num,
                                    arrow::ArrayBuilder* builder) {
   auto casted_builder = dynamic_cast<arrow::NullBuilder*>(builder);
-  casted_builder->AppendNulls(num);
+  CHECK_ARROW_ERROR(casted_builder->AppendNulls(num));
 }
 
 template <typename T>
@@ -238,7 +225,7 @@ inline void deserialize_list_items(grape::OutArchive& arc, int64_t num,
   for (int64_t i = 0; i != num; ++i) {
     arc >> length;
     deserialize_selected_typed_items<T>(arc, length, value_builder);
-    casted_builder->Append(true);
+    CHECK_ARROW_ERROR(casted_builder->Append(true));
   }
 }
 
@@ -258,7 +245,7 @@ inline void select_typed_items(std::shared_ptr<arrow::Array> array,
           ->raw_values();
   auto casted_builder =
       dynamic_cast<typename ConvertToArrowType<T>::BuilderType*>(builder);
-  casted_builder->AppendValues(ptr, array->length());
+  CHECK_ARROW_ERROR(casted_builder->AppendValues(ptr, array->length()));
 }
 
 template <typename T>
@@ -272,7 +259,7 @@ inline void select_typed_items(std::shared_ptr<arrow::Array> array,
   auto casted_builder =
       dynamic_cast<typename ConvertToArrowType<T>::BuilderType*>(builder);
   for (auto x : offset) {
-    casted_builder->Append(ptr[x]);
+    CHECK_ARROW_ERROR(casted_builder->Append(ptr[x]));
   }
 }
 
@@ -282,7 +269,7 @@ inline void select_string_items(std::shared_ptr<arrow::Array> array,
   auto* ptr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get();
   auto casted_builder = dynamic_cast<arrow::LargeStringBuilder*>(builder);
   for (auto x : offset) {
-    casted_builder->Append(ptr->GetView(x));
+    CHECK_ARROW_ERROR(casted_builder->Append(ptr->GetView(x)));
   }
 }
 
@@ -291,7 +278,7 @@ inline void select_null_items(std::shared_ptr<arrow::Array> array,
                               arrow::ArrayBuilder* builder) {
   arrow::NullBuilder* casted_builder =
       dynamic_cast<arrow::NullBuilder*>(builder);
-  casted_builder->AppendNulls(offset.size());
+  CHECK_ARROW_ERROR(casted_builder->AppendNulls(offset.size()));
 }
 
 template <typename T>
@@ -304,7 +291,7 @@ inline void select_list_items(std::shared_ptr<arrow::Array> array,
   auto value_builder = casted_builder->value_builder();
   for (auto x : offset) {
     select_typed_items<T>(ptr->value_slice(x), value_builder);
-    casted_builder->Append(true);
+    CHECK_ARROW_ERROR(casted_builder->Append(true));
   }
 }
 
@@ -447,13 +434,8 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
   } else {
     std::shared_ptr<arrow::Table> tmp_table;
     VY_OK_OR_RAISE(RecordBatchesToTable(batches_in, &tmp_table));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    ARROW_OK_OR_RAISE(
-        tmp_table->CombineChunks(arrow::default_memory_pool(), &table_out));
-#else
     ARROW_OK_ASSIGN_OR_RAISE(
         table_out, tmp_table->CombineChunks(arrow::default_memory_pool()));
-#endif
   }
   return table_out;
 }
@@ -525,13 +507,8 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
   } else {
     std::shared_ptr<arrow::Table> tmp_table;
     VY_OK_OR_RAISE(RecordBatchesToTable(batches_in, &tmp_table));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    ARROW_OK_OR_RAISE(
-        tmp_table->CombineChunks(arrow::default_memory_pool(), &table_out));
-#else
     ARROW_OK_ASSIGN_OR_RAISE(
         table_out, tmp_table->CombineChunks(arrow::default_memory_pool()));
-#endif
   }
   return table_out;
 }

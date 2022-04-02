@@ -36,8 +36,6 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "common/util/json.h"
 
-#define INDEX_COL_NAME "index_"
-
 namespace vineyard {
 
 /**

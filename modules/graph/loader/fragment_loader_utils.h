@@ -60,9 +60,9 @@ class OidSet {
 
   boost::leaf::result<std::shared_ptr<oid_array_t>> ToArrowArray() {
     typename vineyard::ConvertToArrowType<oid_t>::BuilderType builder;
-    builder.Reserve(oids.size());
+    ARROW_OK_OR_RAISE(builder.Reserve(oids.size()));
     for (auto& oid : oids) {
-      builder.Append(oid);
+      ARROW_OK_OR_RAISE(builder.Append(oid));
     }
 
     std::shared_ptr<oid_array_t> oid_arr;

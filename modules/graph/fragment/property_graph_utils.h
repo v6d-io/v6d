@@ -579,41 +579,6 @@ inline std::string generate_type_name(
   return ret;
 }
 
-inline std::string arrow_type_to_type_name(
-    std::shared_ptr<arrow::DataType> type) {
-  if (vineyard::ConvertToArrowType<bool>::TypeValue()->Equals(type)) {
-    return type_name<bool>();
-  } else if (vineyard::ConvertToArrowType<int8_t>::TypeValue()->Equals(type)) {
-    return type_name<int8_t>();
-  } else if (vineyard::ConvertToArrowType<uint8_t>::TypeValue()->Equals(type)) {
-    return type_name<uint8_t>();
-  } else if (vineyard::ConvertToArrowType<int16_t>::TypeValue()->Equals(type)) {
-    return type_name<int16_t>();
-  } else if (vineyard::ConvertToArrowType<uint16_t>::TypeValue()->Equals(
-                 type)) {
-    return type_name<uint16_t>();
-  } else if (vineyard::ConvertToArrowType<int32_t>::TypeValue()->Equals(type)) {
-    return type_name<int32_t>();
-  } else if (vineyard::ConvertToArrowType<uint32_t>::TypeValue()->Equals(
-                 type)) {
-    return type_name<uint32_t>();
-  } else if (vineyard::ConvertToArrowType<int64_t>::TypeValue()->Equals(type)) {
-    return type_name<int64_t>();
-  } else if (vineyard::ConvertToArrowType<uint64_t>::TypeValue()->Equals(
-                 type)) {
-    return type_name<uint64_t>();
-  } else if (vineyard::ConvertToArrowType<float>::TypeValue()->Equals(type)) {
-    return type_name<float>();
-  } else if (vineyard::ConvertToArrowType<double>::TypeValue()->Equals(type)) {
-    return type_name<double>();
-  } else if (vineyard::ConvertToArrowType<std::string>::TypeValue()->Equals(
-                 type)) {
-    return type_name<std::string>();
-  } else {
-    return "";
-  }
-}
-
 class EmptyArray {
   using value_type = grape::EmptyType;
 
@@ -752,8 +717,8 @@ inline boost::leaf::result<std::shared_ptr<arrow::Array>> CastStringToBigString(
   }
   std::shared_ptr<arrow::Buffer> buffer;
   arrow::TypedBufferBuilder<to_string_offset_type> buffer_builder;
-  buffer_builder.Append(to_offset.data(), to_offset.size());
-  buffer_builder.Finish(&buffer);
+  ARROW_OK_OR_RAISE(buffer_builder.Append(to_offset.data(), to_offset.size()));
+  ARROW_OK_OR_RAISE(buffer_builder.Finish(&buffer));
   array_data->type = to_type;
   array_data->buffers[1] = buffer;
   auto out = arrow::MakeArray(array_data);
@@ -1011,7 +976,7 @@ boost::leaf::result<void> generate_local_id_list(
       }
     }
   } else {
-    builder.Resize(length);
+    ARROW_OK_OR_RAISE(builder.Resize(length));
     parallel_for(
         static_cast<int64_t>(0), length,
         [&vec, &parser, fid, &ovg2l_maps, &builder](int64_t i) {
@@ -1374,10 +1339,7 @@ inline InArchive& operator<<(InArchive& in_archive,
                              std::shared_ptr<arrow::Schema>& schema) {
   if (schema != nullptr) {
     std::shared_ptr<arrow::Buffer> out;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::SerializeSchema(
-        *schema, nullptr, arrow::default_memory_pool(), &out));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
     CHECK_ARROW_ERROR_AND_ASSIGN(
         out, arrow::ipc::SerializeSchema(*schema, nullptr,
                                          arrow::default_memory_pool()));
@@ -1398,12 +1360,8 @@ inline OutArchive& operator>>(OutArchive& out_archive,
         reinterpret_cast<const uint8_t*>(out_archive.GetBuffer()),
         out_archive.GetSize());
     arrow::io::BufferReader reader(buffer);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(arrow::ipc::ReadSchema(&reader, nullptr, &schema));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(schema,
                                  arrow::ipc::ReadSchema(&reader, nullptr));
-#endif
   }
   return out_archive;
 }

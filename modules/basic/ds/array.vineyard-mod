@@ -43,32 +43,34 @@ class ArrayBaseBuilder;
  * @tparam T The type for the elements.
  */
 template <typename T>
-class Array : public Registered<Array<T>> {
+class [[vineyard]] Array : public Registered<Array<T>> {
  public:
   /**
    * @brief Get the element at the given location.
    *
    * @param loc The given location to get the element.
    */
-  const T& operator[](size_t loc) const { return data()[loc]; }
+  [[shared]] const T& operator[](size_t loc) const { return data()[loc]; }
 
   /**
    * @brief Get the size of the array.
    *
    * @return The size.
    */
-  size_t size() const { return size_; }
+  [[shared]] size_t size() const { return size_; }
 
   /**
    * @brief Get the pointer to the beginning of the data buffer
    *
    * @param The pointer to the data buffer
    */
-  const T* data() const { return reinterpret_cast<const T*>(buffer_->data()); }
+  [[shared]] const T* data() const {
+    return reinterpret_cast<const T*>(buffer_->data());
+  }
 
  private:
-  __attribute__((annotate("codegen"))) size_t size_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_;
+  [[shared]] size_t size_;
+  [[shared]] std::shared_ptr<Blob> buffer_;
 
   friend class Client;
   friend class ArrayBaseBuilder<T>;

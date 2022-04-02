@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_BASIC_DS_PAIR_MOD_H_
-#define MODULES_BASIC_DS_PAIR_MOD_H_
+#ifndef MODULES_BASIC_DS_SEQUENCE_MOD_H_
+#define MODULES_BASIC_DS_SEQUENCE_MOD_H_
 
 #include <memory>
 #include <string>
@@ -23,7 +23,9 @@ limitations under the License.
 
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/core_types.h"
 #include "client/ds/i_object.h"
+#include "common/util/logging.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -33,54 +35,77 @@ namespace vineyard {
 #pragma GCC diagnostic ignored "-Wattributes"
 #endif
 
-class PairBaseBuilder;
+class SequenceBaseBuilder;
 
-class Pair : public Registered<Pair> {
+/**
+ * @brief The sequence type in vineyard
+ *
+ */
+class [[vineyard]] Sequence : public Registered<Sequence> {
  public:
+  /**
+   * @brief Get the size of the sequence, i.e., the number of elements it
+   * contains.
+   *
+   * @return The size of the sequence.
+   */
+  size_t const Size() const { return this->size_; }
+
+  /**
+   * @brief Get the value at the given index.
+   *
+   * @param index The given index to get the value.
+   */
+  std::shared_ptr<Object> const At(size_t index) const {
+    if (index >= size_) {
+      LOG(ERROR) << "Sequence::at(): out of range: " << index;
+      return nullptr;
+    }
+    return elements_[index];
+  }
+
   /**
    * @brief Get the first element of the pair.
    *
    * @return The shared pointer to the first object.
    */
-  std::shared_ptr<Object> const First() const { return first_; }
+  std::shared_ptr<Object> const First() const { return this->At(0); }
 
   /**
    * @brief Get the second element of the pair.
    *
    * @return The shared pointer to the second object.
    */
-  std::shared_ptr<Object> const Second() const { return second_; }
+  std::shared_ptr<Object> const Second() const { return this->At(1); }
 
   /**
-   * @brief The iterator for the pair object to iterate from the first to the
-   * last element.
+   * @brief The iterator for the sequence object to iterate from the first to
+   * the last element.
    *
    */
   class iterator
       : public std::iterator<
             std::bidirectional_iterator_tag, std::shared_ptr<Object>, size_t,
             const std::shared_ptr<Object>*, std::shared_ptr<Object>> {
-    Pair const* pair_;
+    Sequence const* sequence_;
     size_t index_;
 
    public:
-    explicit iterator(Pair const* pair, size_t index = 0)
-        : pair_(pair), index_(index) {}
+    explicit iterator(Sequence const* sequence, size_t index = 0)
+        : sequence_(sequence), index_(index) {}
     iterator& operator++() {
       index_ += 1;
       return *this;
     }
     bool operator==(iterator other) const { return index_ == other.index_; }
     bool operator!=(iterator other) const { return index_ != other.index_; }
-    reference operator*() const {
-      return index_ == 0 ? pair_->First() : pair_->Second();
-    }
+    reference operator*() const { return sequence_->At(index_); }
   };
 
   /**
    * @brief Get the beginning iterator.
    *
-   * @return The beginning iterrator.
+   * @return The beginning iterator.
    */
   const iterator begin() const { return iterator(this, 0); }
 
@@ -89,14 +114,14 @@ class Pair : public Registered<Pair> {
    *
    * @return The ending iterator.
    */
-  const iterator end() const { return iterator(this, 2); }
+  const iterator end() const { return iterator(this, size_); }
 
  private:
-  __attribute__((annotate("codegen:Object*"))) std::shared_ptr<Object> first_,
-      second_;
+  [[shared]] size_t size_;
+  [[shared]] Tuple<std::shared_ptr<Object>> elements_;
 
   friend class Client;
-  friend class PairBaseBuilder;
+  friend class SequenceBaseBuilder;
 };
 
 #ifdef __GNUC__
@@ -105,4 +130,4 @@ class Pair : public Registered<Pair> {
 
 }  // namespace vineyard
 
-#endif  // MODULES_BASIC_DS_PAIR_MOD_H_
+#endif  // MODULES_BASIC_DS_SEQUENCE_MOD_H_

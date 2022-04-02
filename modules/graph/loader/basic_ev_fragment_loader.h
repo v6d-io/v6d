@@ -133,17 +133,11 @@ class BasicEVFragmentLoader {
         if (retain_oid_) {
           auto id_field = tmp_table->schema()->field(id_column);
           auto id_array = tmp_table->column(id_column);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-          CHECK_ARROW_ERROR(tmp_table->RemoveColumn(id_column, &tmp_table));
-          CHECK_ARROW_ERROR(tmp_table->AddColumn(
-              tmp_table->num_columns(), id_field, id_array, &tmp_table));
-#else
           CHECK_ARROW_ERROR_AND_ASSIGN(tmp_table,
                                        tmp_table->RemoveColumn(id_column));
           CHECK_ARROW_ERROR_AND_ASSIGN(
               tmp_table, tmp_table->AddColumn(tmp_table->num_columns(),
                                               id_field, id_array));
-#endif
         }
 
         return tmp_table;
@@ -254,19 +248,12 @@ class BasicEVFragmentLoader {
         parseOidChunkedArray(dst_label, edge_table->column(dst_column)));
 
     // replace oid columns with gid
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    ARROW_OK_OR_RAISE(edge_table->SetColumn(src_column, src_gid_field,
-                                            src_gid_array, &edge_table));
-    ARROW_OK_OR_RAISE(edge_table->SetColumn(dst_column, dst_gid_field,
-                                            dst_gid_array, &edge_table));
-#else
     ARROW_OK_ASSIGN_OR_RAISE(
         edge_table,
         edge_table->SetColumn(src_column, src_gid_field, src_gid_array));
     ARROW_OK_ASSIGN_OR_RAISE(
         edge_table,
         edge_table->SetColumn(dst_column, dst_gid_field, dst_gid_array));
-#endif
     return edge_table;
   }
 
@@ -562,8 +549,7 @@ class BasicEVFragmentLoader {
 
       if (retain_oid_) {
         int col_id = table->num_columns() - 1;
-        entry->AddPrimaryKeys(1, std::vector<std::string>{
-                                     table->schema()->field(col_id)->name()});
+        entry->AddPrimaryKey(table->schema()->field(col_id)->name());
       }
 
       for (int i = 0; i < table->num_columns(); ++i) {
@@ -618,11 +604,11 @@ class BasicEVFragmentLoader {
           int64_t row_num = rb->num_rows();
           typename ConvertToArrowType<int64_t>::BuilderType builder;
           for (int64_t i = 0; i != row_num; ++i) {
-            builder.Append(static_cast<int64_t>(cur_id));
+            CHECK_ARROW_ERROR(builder.Append(static_cast<int64_t>(cur_id)));
             ++cur_id;
           }
           std::shared_ptr<arrow::Array> eid_array;
-          builder.Finish(&eid_array);
+          CHECK_ARROW_ERROR(builder.Finish(&eid_array));
           generated_arrays.push_back(eid_array);
         }
         std::shared_ptr<arrow::ChunkedArray> chunked_eid_array =
@@ -632,14 +618,9 @@ class BasicEVFragmentLoader {
         auto eid_field = std::make_shared<arrow::Field>(
             "eid", ConvertToArrowType<int64_t>::TypeValue());
 
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-        CHECK_ARROW_ERROR(edge_table->AddColumn(
-            edge_id_column, eid_field, chunked_eid_array, &edge_table));
-#else
         CHECK_ARROW_ERROR_AND_ASSIGN(
             edge_table, edge_table->AddColumn(edge_id_column, eid_field,
                                               chunked_eid_array));
-#endif
       }
     }
 

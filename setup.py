@@ -98,7 +98,7 @@ class FormatAndLint(Command):
         else:
             self.inplace = False
 
-    def run(self):
+    def lint_current_repo(self, cmd):
         targets = [
             'python/',
             'modules/',
@@ -109,29 +109,17 @@ class FormatAndLint(Command):
             'setup_ray.py',
             'test/runner.py',
         ]
+        subprocess.check_call(cmd + targets, cwd=repo_root)
 
+    def run(self):
         if self.inplace:
-            subprocess.check_call(
-                [sys.executable, '-m', 'isort'] + targets, cwd=repo_root
-            )
-            subprocess.check_call(
-                [sys.executable, '-m', 'black'] + targets, cwd=repo_root
-            )
-            subprocess.check_call(
-                [sys.executable, '-m', 'flake8'] + targets, cwd=repo_root
-            )
+            self.lint_current_repo([sys.executable, '-m', 'isort'])
+            self.lint_current_repo([sys.executable, '-m', 'black'])
+            self.lint_current_repo([sys.executable, '-m', 'flake8'])
         else:
-            subprocess.check_call(
-                [sys.executable, '-m', 'isort', '--check', '--diff'] + targets,
-                cwd=repo_root,
-            )
-            subprocess.check_call(
-                [sys.executable, '-m', 'black', '--check', '--diff'] + targets,
-                cwd=repo_root,
-            )
-            subprocess.check_call(
-                [sys.executable, '-m', 'flake8'] + targets, cwd=repo_root
-            )
+            self.lint_current_repo([sys.executable, '-m', 'isort', '--check', '--diff'])
+            self.lint_current_repo([sys.executable, '-m', 'black', '--check', '--diff'])
+            self.lint_current_repo([sys.executable, '-m', 'flake8'])
 
 
 def find_core_packages(root):
@@ -228,7 +216,6 @@ setup(
             'jinia2>=3.0.0',
             'libclang',
             'nbsphinx',
-            'parsec',
             'pygments>=2.4.1',
             'pytest',
             'pytest-benchmark',

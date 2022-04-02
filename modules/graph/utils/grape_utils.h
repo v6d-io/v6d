@@ -48,8 +48,14 @@ inline bool is_number(const std::string& s) {
 namespace vineyard {
 
 inline std::string normalize_datatype(const std::string& str) {
+  if (str == "null", str == "NULL") {
+    return "null";
+  }
+  if (str == "bool" || str == "boolean") {
+    return "bool";
+  }
   if (str == "int" || str == "int32_t" || str == "int32") {
-    return "int";
+    return "int32_t";
   }
   if (str == "int64_t" || str == "int64") {
     return "int64_t";

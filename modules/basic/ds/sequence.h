@@ -13,15 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_BASIC_DS_TUPLE_H_
-#define MODULES_BASIC_DS_TUPLE_H_
+#ifndef MODULES_BASIC_DS_SEQUENCE_H_
+#define MODULES_BASIC_DS_SEQUENCE_H_
 
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "basic/ds/tuple.vineyard.h"
+#include "basic/ds/sequence.vineyard.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
@@ -31,42 +31,43 @@ limitations under the License.
 namespace vineyard {
 
 /**
- * @brief TupleBuilder is designed for generating tuples
+ * @brief SequenceBuilder is designed for generating sequences
  *
  */
-class TupleBuilder : public TupleBaseBuilder {
+class SequenceBuilder : public SequenceBaseBuilder {
  public:
-  explicit TupleBuilder(Client& client) : TupleBaseBuilder(client) {
+  explicit SequenceBuilder(Client& client) : SequenceBaseBuilder(client) {
     this->set_size_(0);
   }
 
   /**
-   * @brief Initialize the TupleBuilder with a given size.
+   * @brief Initialize the SequenceBuilder with a given size.
    *
    * @param client The client connected to the vineyard server.
-   * @param size The size of the tuple to build.
+   * @param size The size of the sequence to build.
    */
-  explicit TupleBuilder(Client& client, size_t const size)
-      : TupleBaseBuilder(client) {
+  explicit SequenceBuilder(Client& client, size_t const size)
+      : SequenceBaseBuilder(client) {
     this->set_size_(size);
   }
 
   /**
-   * @brief Get the size of the tuple, i.e., the number of elements it contains.
+   * @brief Get the size of the sequence, i.e., the number of elements it
+   * contains.
    *
-   * @return The size of the tuple.
+   * @return The size of the sequence.
    */
   size_t const Size() const { return this->size_; }
 
   /**
-   * @brief Set the size for the tuple.
-   * Note that the size of a tuple can be set only once.
+   * @brief Set the size for the sequence.
+   * Note that the size of a sequence can be set only once.
    *
-   * @param size The size for the tuple.
+   * @param size The size for the sequence.
    */
   void SetSize(size_t size) {
     if (this->size_ > 0) {
-      LOG(ERROR) << "The size of a tuple cannot set for multiple times";
+      LOG(ERROR) << "The size of a sequence cannot set for multiple times";
     } else {
       this->set_size_(size);
     }
@@ -81,7 +82,7 @@ class TupleBuilder : public TupleBaseBuilder {
    */
   std::shared_ptr<ObjectBuilder> At(size_t index) {
     if (index >= size_) {
-      LOG(ERROR) << "tuple builder::at(): out of range: " << index;
+      LOG(ERROR) << "Sequence builder::at(): out of range: " << index;
       return nullptr;
     }
     return std::dynamic_pointer_cast<ObjectBuilder>(this->elements_[index]);
@@ -89,7 +90,7 @@ class TupleBuilder : public TupleBaseBuilder {
 
   /**
    * @brief Set the builder for the value at the given index.
-   * When building the tuple, the builder will be invoked to
+   * When building the sequence, the builder will be invoked to
    * build the value.
    *
    * @param idx The index of the value.
@@ -97,7 +98,7 @@ class TupleBuilder : public TupleBaseBuilder {
    */
   void SetValue(size_t idx, std::shared_ptr<ObjectBuilder> const& value) {
     if (idx >= size_) {
-      LOG(ERROR) << "tuple::set(): out of range";
+      LOG(ERROR) << "sequence::set(): out of range";
     } else {
       this->set_elements_(idx, value);
     }
@@ -105,7 +106,7 @@ class TupleBuilder : public TupleBaseBuilder {
 
   /**
    * @brief Set the builder for the value at the given index.
-   * When building the tuple, the builder will be invoked to
+   * When building the sequence, the builder will be invoked to
    * build the value.
    *
    * @param idx The index of the value.
@@ -113,7 +114,7 @@ class TupleBuilder : public TupleBaseBuilder {
    */
   void SetValue(size_t idx, std::shared_ptr<Object> const& value) {
     if (idx >= size_) {
-      LOG(ERROR) << "tuple::set(): out of range";
+      LOG(ERROR) << "sequence::set(): out of range";
     } else {
       this->set_elements_(idx, value);
     }
@@ -122,4 +123,4 @@ class TupleBuilder : public TupleBaseBuilder {
 
 }  // namespace vineyard
 
-#endif  // MODULES_BASIC_DS_TUPLE_H_
+#endif  // MODULES_BASIC_DS_SEQUENCE_H_

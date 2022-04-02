@@ -113,19 +113,11 @@ Data types
     :members:
     :undoc-members:
 
-.. doxygenclass:: vineyard::Pair
+.. doxygenclass:: vineyard::Sequence
     :members:
     :undoc-members:
 
-.. doxygenclass:: vineyard::PairBuilder
-    :members:
-    :undoc-members:
-
-.. doxygenclass:: vineyard::Tuple
-    :members:
-    :undoc-members:
-
-.. doxygenclass:: vineyard::TupleBuilder
+.. doxygenclass:: vineyard::SequenceBuilder
     :members:
     :undoc-members:
 
