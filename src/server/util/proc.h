@@ -21,6 +21,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "boost/filesystem.hpp"
 #include "boost/process.hpp"
 
 #include "common/util/boost.h"
@@ -102,6 +103,9 @@ class Process : public std::enable_shared_from_this<Process> {
   boost::process::async_pipe stdin_pipe_, stdout_pipe_, stderr_pipe_;
 
   Status recordLog(Status const& status, std::string const& line);
+
+  Status findRelativeProgram(std::string const& name,
+                             boost::filesystem::path& target);
 };
 
 }  // namespace vineyard
