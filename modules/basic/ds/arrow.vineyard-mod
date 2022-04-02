@@ -373,6 +373,14 @@ class [[vineyard]] Table : public Registered<Table> {
     return this->table_;
   }
 
+  std::shared_ptr<arrow::ChunkedArray> column(int i) const {
+    return GetTable()->column(i);
+  }
+
+  std::shared_ptr<arrow::Field> field(int i) const {
+    return schema_->GetSchema()->field(i);
+  }
+
   std::shared_ptr<arrow::Schema> schema() const { return schema_->GetSchema(); }
 
   size_t batch_num() const { return batch_num_; }

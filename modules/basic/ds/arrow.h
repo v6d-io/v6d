@@ -60,6 +60,10 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
  public:
   using ArrayType = typename ConvertToArrowType<T>::ArrayType;
 
+  NumericArrayBuilder(Client& client) : NumericArrayBaseBuilder<T>(client) {
+    CHECK_ARROW_ERROR(ConvertToArrowType<bool>::BuilderType{}.Finish(&array_));
+  }
+
   NumericArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
       : NumericArrayBaseBuilder<T>(client), array_(array) {}
 
@@ -103,6 +107,11 @@ class BooleanArrayBuilder : public BooleanArrayBaseBuilder {
  public:
   using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
 
+  // build an empty array
+  BooleanArrayBuilder(Client& client) : BooleanArrayBaseBuilder(client) {
+    CHECK_ARROW_ERROR(ConvertToArrowType<bool>::BuilderType{}.Finish(&array_));
+  }
+
   BooleanArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
       : BooleanArrayBaseBuilder(client), array_(array) {}
 
@@ -131,9 +140,14 @@ class BooleanArrayBuilder : public BooleanArrayBaseBuilder {
  * binary data type
  *
  */
-template <typename ArrayType>
+template <typename ArrayType, typename BuilderType>
 class BaseBinaryArrayBuilder : public BaseBinaryArrayBaseBuilder<ArrayType> {
  public:
+  BaseBinaryArrayBuilder(Client& client)
+      : BaseBinaryArrayBaseBuilder<ArrayType>(client) {
+    CHECK_ARROW_ERROR(BuilderType{}.Finish(&array_));
+  }
+
   BaseBinaryArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
       : BaseBinaryArrayBaseBuilder<ArrayType>(client), array_(array) {}
 
@@ -171,10 +185,14 @@ class BaseBinaryArrayBuilder : public BaseBinaryArrayBaseBuilder<ArrayType> {
   std::shared_ptr<ArrayType> array_;
 };
 
-using BinaryArrayBuilder = BaseBinaryArrayBuilder<arrow::BinaryArray>;
-using LargeBinaryArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeBinaryArray>;
-using StringArrayBuilder = BaseBinaryArrayBuilder<arrow::StringArray>;
-using LargeStringArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeStringArray>;
+using BinaryArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::BinaryArray, arrow::BinaryBuilder>;
+using LargeBinaryArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::LargeBinaryArray, arrow::LargeBinaryBuilder>;
+using StringArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::StringArray, arrow::StringBuilder>;
+using LargeStringArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::LargeStringArray, arrow::LargeStringBuilder>;
 
 /**
  * @brief FixedSizeBinaryArrayBuilder is designed for constructing Arrow arrays
@@ -183,6 +201,12 @@ using LargeStringArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeStringArray>;
  */
 class FixedSizeBinaryArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
  public:
+  FixedSizeBinaryArrayBuilder(Client& client,
+                              const std::shared_ptr<arrow::DataType>& type)
+      : FixedSizeBinaryArrayBaseBuilder(client) {
+    CHECK_ARROW_ERROR(arrow::FixedSizeBinaryBuilder{type}.Finish(&array_));
+  }
+
   FixedSizeBinaryArrayBuilder(
       Client& client, std::shared_ptr<arrow::FixedSizeBinaryArray> array)
       : FixedSizeBinaryArrayBaseBuilder(client), array_(array) {}
@@ -217,6 +241,10 @@ class FixedSizeBinaryArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
  */
 class NullArrayBuilder : public NullArrayBaseBuilder {
  public:
+  NullArrayBuilder(Client& client) : NullArrayBaseBuilder(client) {
+    CHECK_ARROW_ERROR(arrow::NullBuilder{}.Finish(&array_));
+  }
+
   NullArrayBuilder(Client& client, std::shared_ptr<arrow::NullArray> array)
       : NullArrayBaseBuilder(client), array_(array) {}
 

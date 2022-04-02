@@ -49,6 +49,13 @@ class Tuple final : public std::vector<T> {
   DECLARE_DEFAULT_WARPPER(Tuple)
 };
 
+template <typename T>
+class List final : public std::vector<T> {
+ public:
+  using base_type = std::vector<T>;
+  DECLARE_DEFAULT_WARPPER(List)
+};
+
 class String final : public std::string {
  public:
   using base_type = std::string;

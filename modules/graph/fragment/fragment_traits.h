@@ -56,41 +56,6 @@ struct is_property_fragment<AppendOnlyArrowFragment<OID_T, VID_T>> {
   static constexpr bool value = true;
 };
 
-template <typename T>
-struct TypeName {
-  static const char* Get() { return typeid(T).name(); }
-};
-
-template <>
-struct TypeName<int> {
-  static const char* Get() { return "int"; }
-};
-
-template <>
-struct TypeName<double> {
-  static const char* Get() { return "double"; }
-};
-
-template <>
-struct TypeName<std::string> {
-  static const char* Get() { return "string"; }
-};
-
-template <>
-struct TypeName<int64_t> {
-  static const char* Get() { return "int64_t"; }
-};
-
-template <>
-struct TypeName<uint64_t> {
-  static const char* Get() { return "uint64_t"; }
-};
-
-template <>
-struct TypeName<grape::EmptyType> {
-  static const char* Get() { return "grape::EmptyType"; }
-};
-
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_FRAGMENT_TRAITS_H_

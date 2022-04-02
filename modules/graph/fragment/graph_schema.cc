@@ -132,6 +132,16 @@ void Entry::AddProperty(const std::string& name, PropertyType type) {
   valid_properties.push_back(1);
 }
 
+void Entry::AddPrimaryKey(const std::string& key_name) {
+  primary_keys.emplace_back(key_name);
+}
+
+void Entry::AddPrimaryKeys(const std::vector<std::string>& key_name_list) {
+  for (auto const& key_name : key_name_list) {
+    primary_keys.emplace_back(key_name);
+  }
+}
+
 void Entry::AddPrimaryKeys(size_t key_count,
                            const std::vector<std::string>& key_name_list) {
   for (size_t idx = 0; idx < key_count; ++idx) {
@@ -445,6 +455,12 @@ PropertyGraphSchema::GetEdgePropertyListByLabel(LabelId label_id) const {
     }
   }
   return properties;
+}
+
+json PropertyGraphSchema::ToJSON() const {
+  json root = json::object();
+  this->ToJSON(root);
+  return root;
 }
 
 void PropertyGraphSchema::ToJSON(json& root) const {

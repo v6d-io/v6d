@@ -175,10 +175,10 @@ inline boost::leaf::result<ObjectID> ConstructFragmentGroup(
 
     builder.set_vertex_label_num(
         meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
-            "vertex_label_num"));
+            "vertex_label_num_"));
     builder.set_edge_label_num(
         meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
-            "edge_label_num"));
+            "edge_label_num_"));
     for (fid_t i = 0; i < comm_spec.fnum(); ++i) {
       builder.AddFragmentObject(
           i, gathered_object_ids[comm_spec.FragToWorker(i)],
