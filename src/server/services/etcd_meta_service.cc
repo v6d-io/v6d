@@ -317,9 +317,10 @@ void EtcdMetaService::startDaemonWatch(
       LOG(INFO) << "Watcher stopped, as cancelled: "
                 << (cancelled ? "true" : "false");
       if (cancelled) {
-        return;
+        return false;
       }
       this->retryDaeminWatch(prefix, callback);
+      return true;
     });
   } catch (std::runtime_error& e) {
     LOG(ERROR) << "Failed to create daemon etcd watcher: " << e.what();

@@ -60,6 +60,11 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
  public:
   using ArrayType = typename ConvertToArrowType<T>::ArrayType;
 
+  explicit NumericArrayBuilder(Client& client)
+      : NumericArrayBaseBuilder<T>(client) {
+    CHECK_ARROW_ERROR(ConvertToArrowType<bool>::BuilderType{}.Finish(&array_));
+  }
+
   NumericArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
       : NumericArrayBaseBuilder<T>(client), array_(array) {}
 
@@ -83,6 +88,17 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
   std::shared_ptr<ArrayType> array_;
 };
 
+using Int8Builder = NumericArrayBuilder<int8_t>;
+using Int16Builder = NumericArrayBuilder<int16_t>;
+using Int32Builder = NumericArrayBuilder<int32_t>;
+using Int64Builder = NumericArrayBuilder<int64_t>;
+using UInt8Builder = NumericArrayBuilder<uint8_t>;
+using UInt16Builder = NumericArrayBuilder<uint16_t>;
+using UInt32Builder = NumericArrayBuilder<uint32_t>;
+using UInt64Builder = NumericArrayBuilder<uint64_t>;
+using FloatBuilder = NumericArrayBuilder<float>;
+using DoubleBuilder = NumericArrayBuilder<double>;
+
 /**
  * @brief BooleanArrayBuilder is designed for constructing  Arrow arrays of
  * boolean data type
@@ -91,6 +107,12 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
 class BooleanArrayBuilder : public BooleanArrayBaseBuilder {
  public:
   using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
+
+  // build an empty array
+  explicit BooleanArrayBuilder(Client& client)
+      : BooleanArrayBaseBuilder(client) {
+    CHECK_ARROW_ERROR(ConvertToArrowType<bool>::BuilderType{}.Finish(&array_));
+  }
 
   BooleanArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
       : BooleanArrayBaseBuilder(client), array_(array) {}
@@ -120,9 +142,14 @@ class BooleanArrayBuilder : public BooleanArrayBaseBuilder {
  * binary data type
  *
  */
-template <typename ArrayType>
+template <typename ArrayType, typename BuilderType>
 class BaseBinaryArrayBuilder : public BaseBinaryArrayBaseBuilder<ArrayType> {
  public:
+  explicit BaseBinaryArrayBuilder(Client& client)
+      : BaseBinaryArrayBaseBuilder<ArrayType>(client) {
+    CHECK_ARROW_ERROR(BuilderType{}.Finish(&array_));
+  }
+
   BaseBinaryArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
       : BaseBinaryArrayBaseBuilder<ArrayType>(client), array_(array) {}
 
@@ -160,10 +187,14 @@ class BaseBinaryArrayBuilder : public BaseBinaryArrayBaseBuilder<ArrayType> {
   std::shared_ptr<ArrayType> array_;
 };
 
-using BinaryArrayBuilder = BaseBinaryArrayBuilder<arrow::BinaryArray>;
-using LargeBinaryArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeBinaryArray>;
-using StringArrayBuilder = BaseBinaryArrayBuilder<arrow::StringArray>;
-using LargeStringArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeStringArray>;
+using BinaryArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::BinaryArray, arrow::BinaryBuilder>;
+using LargeBinaryArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::LargeBinaryArray, arrow::LargeBinaryBuilder>;
+using StringArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::StringArray, arrow::StringBuilder>;
+using LargeStringArrayBuilder =
+    BaseBinaryArrayBuilder<arrow::LargeStringArray, arrow::LargeStringBuilder>;
 
 /**
  * @brief FixedSizeBinaryArrayBuilder is designed for constructing Arrow arrays
@@ -172,6 +203,12 @@ using LargeStringArrayBuilder = BaseBinaryArrayBuilder<arrow::LargeStringArray>;
  */
 class FixedSizeBinaryArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
  public:
+  FixedSizeBinaryArrayBuilder(Client& client,
+                              const std::shared_ptr<arrow::DataType>& type)
+      : FixedSizeBinaryArrayBaseBuilder(client) {
+    CHECK_ARROW_ERROR(arrow::FixedSizeBinaryBuilder{type}.Finish(&array_));
+  }
+
   FixedSizeBinaryArrayBuilder(
       Client& client, std::shared_ptr<arrow::FixedSizeBinaryArray> array)
       : FixedSizeBinaryArrayBaseBuilder(client), array_(array) {}
@@ -206,6 +243,10 @@ class FixedSizeBinaryArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
  */
 class NullArrayBuilder : public NullArrayBaseBuilder {
  public:
+  explicit NullArrayBuilder(Client& client) : NullArrayBaseBuilder(client) {
+    CHECK_ARROW_ERROR(arrow::NullBuilder{}.Finish(&array_));
+  }
+
   NullArrayBuilder(Client& client, std::shared_ptr<arrow::NullArray> array)
       : NullArrayBaseBuilder(client), array_(array) {}
 
@@ -375,10 +416,7 @@ class SchemaProxyBuilder : public SchemaProxyBaseBuilder {
  public:
   Status Build(Client& client) override {
     std::shared_ptr<arrow::Buffer> schema_buffer;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(arrow::ipc::SerializeSchema(
-        *schema_, nullptr, arrow::default_memory_pool(), &schema_buffer));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_buffer, arrow::ipc::SerializeSchema(
                            *schema_, nullptr, arrow::default_memory_pool()));
@@ -452,13 +490,8 @@ class RecordBatchExtender : public RecordBatchBaseBuilder {
     }
     // extend schema
     auto field = ::arrow::field(std::move(field_name), column->type());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(
-        schema_->AddField(schema_->num_fields(), field, &schema_));
-#else
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_, schema_->AddField(schema_->num_fields(), field));
-#endif
     // extend columns
     arrow_columns_.push_back(column);
     column_num_ += 1;
@@ -537,13 +570,8 @@ class TableExtender : public TableBaseBuilder {
     }
     // extend schema
     auto field = ::arrow::field(field_name, column->type());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(
-        schema_->AddField(schema_->num_fields(), field, &schema_));
-#else
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_, schema_->AddField(schema_->num_fields(), field));
-#endif
 
     // extend columns on every batch
     size_t offset = 0;
@@ -568,13 +596,8 @@ class TableExtender : public TableBaseBuilder {
     }
     // extend schema
     auto field = ::arrow::field(field_name, column->type());
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    RETURN_ON_ARROW_ERROR(
-        schema_->AddField(schema_->num_fields(), field, &schema_));
-#else
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
         schema_, schema_->AddField(schema_->num_fields(), field));
-#endif
 
     // extend columns on every batch
     size_t chunk_index = 0;

@@ -63,6 +63,8 @@ class Entry {
   std::vector<int> reverse_mapping;  // new prop id -> old prop id
 
   void AddProperty(const std::string& name, PropertyType type);
+  void AddPrimaryKey(const std::string& key_name);
+  void AddPrimaryKeys(const std::vector<std::string>& key_name_list);
   void AddPrimaryKeys(size_t key_count,
                       const std::vector<std::string>& key_name_list);
   void AddRelation(const std::string& src, const std::string& dst);
@@ -148,6 +150,7 @@ class PropertyGraphSchema {
     }
   }
 
+  json ToJSON() const;
   void ToJSON(json& root) const;
   void FromJSON(json const& root);
 

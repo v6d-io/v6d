@@ -27,6 +27,7 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 
+#include "client/ds/core_types.h"
 #include "common/util/boost.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
@@ -195,6 +196,19 @@ class ObjectMeta {
   }
 
   /**
+   * @brief Add a generic vector value entry to the metadata.
+   *
+   * @param T The type of metadata's value.
+   * @param key The name of metadata entry, it will be first convert to JSON
+   * array by `nlohmann::json`.
+   * @param value The value of the metadata entry.
+   */
+  template <typename T>
+  void AddKeyValue(const std::string& key, Tuple<T> const& values) {
+    meta_[key] = json_to_string(json(values));
+  }
+
+  /**
    * @brief Add a associated map value entry to the metadata.
    *
    * @param Value The type of metadata's value.
@@ -220,7 +234,40 @@ class ObjectMeta {
    */
   template <typename Value>
   void AddKeyValue(const std::string& key,
+                   Map<std::string, Value> const& values) {
+    json mapping;
+    for (auto const& kv : values) {
+      mapping[kv.first] = kv.second;
+    }
+    AddKeyValue(key, mapping);
+  }
+
+  /**
+   * @brief Add a associated map value entry to the metadata.
+   *
+   * @param Value The type of metadata's value.
+   * @param key The name of metadata entry, it will be first convert to string.
+   * @param value The value of the metadata entry.
+   */
+  template <typename Value>
+  void AddKeyValue(const std::string& key,
                    std::map<json, Value> const& values) {
+    json mapping;
+    for (auto const& kv : values) {
+      mapping[json_to_string(kv.first)] = kv.second;
+    }
+    AddKeyValue(key, mapping);
+  }
+
+  /**
+   * @brief Add a associated map value entry to the metadata.
+   *
+   * @param Value The type of metadata's value.
+   * @param key The name of metadata entry, it will be first convert to string.
+   * @param value The value of the metadata entry.
+   */
+  template <typename Value>
+  void AddKeyValue(const std::string& key, Map<json, Value> const& values) {
     json mapping;
     for (auto const& kv : values) {
       mapping[json_to_string(kv.first)] = kv.second;
@@ -254,7 +301,41 @@ class ObjectMeta {
    */
   template <typename Value>
   void AddKeyValue(const std::string& key,
+                   UnorderedMap<std::string, Value> const& values) {
+    json mapping;
+    for (auto const& kv : values) {
+      mapping[kv.first] = kv.second;
+    }
+    AddKeyValue(key, mapping);
+  }
+
+  /**
+   * @brief Add a associated map value entry to the metadata.
+   *
+   * @param Value The type of metadata's value.
+   * @param key The name of metadata entry, it will be first convert to string.
+   * @param value The value of the metadata entry.
+   */
+  template <typename Value>
+  void AddKeyValue(const std::string& key,
                    std::unordered_map<json, Value> const& values) {
+    json mapping;
+    for (auto const& kv : values) {
+      mapping[json_to_string(kv.first)] = kv.second;
+    }
+    AddKeyValue(key, mapping);
+  }
+
+  /**
+   * @brief Add a associated map value entry to the metadata.
+   *
+   * @param Value The type of metadata's value.
+   * @param key The name of metadata entry, it will be first convert to string.
+   * @param value The value of the metadata entry.
+   */
+  template <typename Value>
+  void AddKeyValue(const std::string& key,
+                   UnorderedMap<json, Value> const& values) {
     json mapping;
     for (auto const& kv : values) {
       mapping[json_to_string(kv.first)] = kv.second;
@@ -333,6 +414,20 @@ class ObjectMeta {
   }
 
   /**
+   * @brief Get generic vector metadata value, with automatically type
+   * deduction.
+   *
+   * @param T The type of metadata value.
+   * @param key The key of metadata.
+   * @param value The result will be stored in `value`, the generic result is
+   * pass by reference to help type deduction.
+   */
+  template <typename T>
+  void GetKeyValue(const std::string& key, Tuple<T>& values) const {
+    get_container(meta_, key, values);
+  }
+
+  /**
    * @brief Get associated map metadata value, with automatically type
    * deduction.
    *
@@ -362,7 +457,44 @@ class ObjectMeta {
    */
   template <typename Value>
   void GetKeyValue(const std::string& key,
+                   Map<std::string, Value>& values) const {
+    json tree;
+    GetKeyValue(key, tree);
+    for (auto const& kv : tree.items()) {
+      values.emplace(kv.key(), kv.value().get<Value>());
+    }
+  }
+
+  /**
+   * @brief Get associated map metadata value, with automatically type
+   * deduction.
+   *
+   * @param Value The type of metadata value.
+   * @param key The key of metadata.
+   * @param value The result will be stored in `value`, the generic result is
+   * pass by reference to help type deduction.
+   */
+  template <typename Value>
+  void GetKeyValue(const std::string& key,
                    std::map<json, Value>& values) const {
+    json tree;
+    GetKeyValue(key, tree);
+    for (auto const& kv : tree.items()) {
+      values.emplace(json::parse(kv.key()), kv.value().get<Value>());
+    }
+  }
+
+  /**
+   * @brief Get associated map metadata value, with automatically type
+   * deduction.
+   *
+   * @param Value The type of metadata value.
+   * @param key The key of metadata.
+   * @param value The result will be stored in `value`, the generic result is
+   * pass by reference to help type deduction.
+   */
+  template <typename Value>
+  void GetKeyValue(const std::string& key, Map<json, Value>& values) const {
     json tree;
     GetKeyValue(key, tree);
     for (auto const& kv : tree.items()) {
@@ -400,7 +532,45 @@ class ObjectMeta {
    */
   template <typename Value>
   void GetKeyValue(const std::string& key,
+                   UnorderedMap<std::string, Value>& values) const {
+    json tree;
+    GetKeyValue(key, tree);
+    for (auto const& kv : tree.items()) {
+      values.emplace(kv.key(), kv.value().get<Value>());
+    }
+  }
+
+  /**
+   * @brief Get associated map metadata value, with automatically type
+   * deduction.
+   *
+   * @param Value The type of metadata value.
+   * @param key The key of metadata.
+   * @param value The result will be stored in `value`, the generic result is
+   * pass by reference to help type deduction.
+   */
+  template <typename Value>
+  void GetKeyValue(const std::string& key,
                    std::unordered_map<json, Value>& values) const {
+    json tree;
+    GetKeyValue(key, tree);
+    for (auto const& kv : tree.items()) {
+      values.emplace(json::parse(kv.key()), kv.value().get<Value>());
+    }
+  }
+
+  /**
+   * @brief Get associated map metadata value, with automatically type
+   * deduction.
+   *
+   * @param Value The type of metadata value.
+   * @param key The key of metadata.
+   * @param value The result will be stored in `value`, the generic result is
+   * pass by reference to help type deduction.
+   */
+  template <typename Value>
+  void GetKeyValue(const std::string& key,
+                   UnorderedMap<json, Value>& values) const {
     json tree;
     GetKeyValue(key, tree);
     for (auto const& kv : tree.items()) {

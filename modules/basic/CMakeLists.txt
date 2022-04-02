@@ -1,16 +1,35 @@
 # build vineyard-basic
 file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
-                                    "*.vineyard-mod")
+                                    "ds/*.vineyard-mod"
+                                    "stream/*.vineyard-mod")
 
-if (VINEYARD_MOD_SRCS)
+file(GLOB_RECURSE VINEYARD_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}"
+                                   "ds/*.h"
+                                   "stream/*.h")
+
+if(VINEYARD_MOD_SRCS)
     vineyard_generate(
         OUT_VAR VINEYARD_GENERATES
         VINEYARD_MODULES ${VINEYARD_MOD_SRCS}
     )
-    add_custom_target(vineyard_basic_gen
-                      DEPENDS ${VINEYARD_GENERATES}
-                      COMMENT "Running code generation for vineyard_basic.")
+else()
+    set(VINEYARD_GENERATES)
 endif()
+if(FALSE AND (VINEYARD_HEADERS OR VINEYARD_GENERATES))
+    vineyard_generate(
+        OUT_VAR VINEYARD_JAVA_GENERATES
+        LANGUAGE java
+        VINEYARD_MODULES ${VINEYARD_HEADERS} ${VINEYARD_GENERATES}
+        DEPENDS ${VINEYARD_GENERATES}
+    )
+else()
+    set(VINEYARD_JAVA_GENERATES)
+endif()
+
+add_custom_target(vineyard_basic_gen
+                  DEPENDS ${VINEYARD_GENERATES}
+                          ${VINEYARD_JAVA_GENERATES}
+                  COMMENT "Running code generation for vineyard_basic.")
 
 file(GLOB_RECURSE BASIC_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "*.cc")
 
@@ -20,10 +39,8 @@ target_link_libraries(vineyard_basic PUBLIC vineyard_client
                                             ${GLOG_LIBRARIES}
 )
 
-if(VINEYARD_MOD_SRCS)
-    add_dependencies(vineyard_basic vineyard_basic_gen)
-    add_dependencies(vineyard_codegen vineyard_basic_gen)
-endif()
+add_dependencies(vineyard_basic vineyard_basic_gen)
+add_dependencies(vineyard_codegen vineyard_basic_gen)
 
 install_vineyard_target(vineyard_basic)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")

@@ -20,62 +20,20 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "basic/stream/parallel_stream.vineyard.h"
 #include "client/client.h"
 
 namespace vineyard {
-
-class ParallelStreamBuilder;
-
-class ParallelStream : public Registered<ParallelStream>, GlobalObject {
- public:
-  static std::unique_ptr<Object> Create() __attribute__((used)) {
-    return std::static_pointer_cast<Object>(
-        std::unique_ptr<ParallelStream>{new ParallelStream()});
-  }
-
-  void Construct(const ObjectMeta& meta) override;
-
-  ObjectMeta GetStreamMeta(int index) { return streams_[index]->meta(); }
-
-  size_t GetStreamSize() { return size_; }
-
-  template <typename T>
-  std::shared_ptr<T> GetStream(int index) {
-    return std::dynamic_pointer_cast<T>(streams_[index]);
-  }
-
-  template <typename T>
-  std::vector<std::shared_ptr<T>> GetLocalStreams() {
-    std::vector<std::shared_ptr<T>> local_streams;
-    for (auto const& s : streams_) {
-      if (s->IsLocal()) {
-        local_streams.emplace_back(std::dynamic_pointer_cast<T>(s));
-      }
-    }
-    return local_streams;
-  }
-
- private:
-  size_t size_;
-  std::vector<std::shared_ptr<Object>> streams_;
-
-  friend class Client;
-  friend class ParallelStreamBuilder;
-};
 
 /**
  * @brief ParallelStreamBuilder is desinged for building parallel stremas
  *
  */
-class ParallelStreamBuilder : public ObjectBuilder {
+class ParallelStreamBuilder : public ParallelStreamBaseBuilder {
  public:
-  explicit ParallelStreamBuilder(Client& client) {}
-
   void AddStream(const ObjectID stream_id);
 
   Status Build(Client& client) override;
-
-  std::shared_ptr<Object> _Seal(Client& client) override;
 
  private:
   std::vector<ObjectID> streams_;

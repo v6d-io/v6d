@@ -5,7 +5,7 @@ file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
 find_package(MPI REQUIRED)
 find_package(libgrapelite REQUIRED)
 
-if (VINEYARD_MOD_SRCS)
+if(VINEYARD_MOD_SRCS)
     vineyard_generate(
         OUT_VAR VINEYARD_GENERATES
         VINEYARD_MODULES ${VINEYARD_MOD_SRCS}
@@ -23,30 +23,38 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
                                                                 "vertex_map/*.cc"
 )
 
-# boost::leaf for error_handling
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf"
-                 "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/boost-leaf"
-)
-# install boost leaf
-include(GNUInstallDirs)
-install(DIRECTORY
-    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include/"
-    DESTINATION
-    ${CMAKE_INSTALL_PREFIX}/include
-)
-
 add_library(vineyard_graph ${GRAPH_SRC_FILES})
 target_include_directories(vineyard_graph PUBLIC
                                           ${MPI_CXX_INCLUDE_PATH}
 )
+
+find_package(Boost COMPONENTS leaf)
+if(Boost_LEAF_FOUND)
+    target_include_directories(vineyard_graph PUBLIC ${Boost_INCLUDE_DIRS})
+else()
+    # boost::leaf for error_handling
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf"
+                     "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/boost-leaf"
+    )
+    # install boost leaf
+    include(GNUInstallDirs)
+    install(DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include/"
+        DESTINATION
+        ${CMAKE_INSTALL_PREFIX}/include
+    )
+
+    target_include_directories(vineyard_graph PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include>
+        $<INSTALL_INTERFACE:include>
+    )
+endif()
+
 target_include_directories(vineyard_graph PUBLIC
     $<BUILD_INTERFACE:${LIBGRAPELITE_INCLUDE_DIRS}>
     $<INSTALL_INTERFACE:include>
 )
-target_include_directories(vineyard_graph PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include>
-    $<INSTALL_INTERFACE:include>
-)
+
 target_link_libraries(vineyard_graph vineyard_client
                                      vineyard_basic
                                      vineyard_io

@@ -51,7 +51,7 @@ def test_np_bool(vineyard_client):
 def test_list(vineyard_client):
     value = [1, 2, 3, 4, 5, 6, None, None, 9]
     object_id = vineyard_client.put(value)
-    assert vineyard_client.get(object_id) == value
+    assert vineyard_client.get(object_id) == tuple(value)
 
 
 def test_dict(vineyard_client):

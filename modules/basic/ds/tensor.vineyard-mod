@@ -46,17 +46,19 @@ namespace vineyard {
 template <typename T>
 class TensorBaseBuilder;
 
-class __attribute__((annotate("no-vineyard"))) ITensor : public Object {
+class ITensor : public Object {
  public:
-  virtual std::vector<int64_t> const& shape() const = 0;
-  virtual std::vector<int64_t> const& partition_index() const = 0;
+  [[shared]] virtual std::vector<int64_t> const& shape() const = 0;
 
-  virtual AnyType value_type() const = 0;
-  virtual const std::shared_ptr<arrow::Buffer> buffer() const = 0;
+  [[shared]] virtual std::vector<int64_t> const& partition_index() const = 0;
+
+  [[shared]] virtual AnyType value_type() const = 0;
+
+  [[shared]] virtual const std::shared_ptr<arrow::Buffer> buffer() const = 0;
 };
 
 template <typename T>
-class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
+class [[vineyard]] Tensor : public ITensor, public BareRegistered<Tensor<T>> {
   using ArrowTensorT =
       arrow::NumericTensor<typename arrow::CTypeTraits<T>::ArrowType>;
 
@@ -67,7 +69,7 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    * @return The strides of the tensor. The definition of the tensor's strides
    * can be found in https://pytorch.org/docs/stable/tensor_attributes.html
    */
-  std::vector<int64_t> strides() const {
+  [[shared]] std::vector<int64_t> strides() const {
     std::vector<int64_t> vec(shape_.size());
     vec[shape_.size() - 1] = sizeof(T);
     for (size_t i = shape_.size() - 1; i > 0; --i) {
@@ -82,7 +84,9 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    * @return The shape vector where the ith element represents
    * the size of the ith axis.
    */
-  std::vector<int64_t> const& shape() const override { return shape_; }
+  [[shared]] std::vector<int64_t> const& shape() const override {
+    return shape_;
+  }
 
   /**
    * @brief Get the index of this partition in the global tensor.
@@ -90,7 +94,7 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    * @return The index vector where the ith element represents the index
    * in the ith axis.
    */
-  std::vector<int64_t> const& partition_index() const override {
+  [[shared]] std::vector<int64_t> const& partition_index() const override {
     return partition_index_;
   }
 
@@ -99,14 +103,16 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    *
    * @return The type of the tensor's elements.
    */
-  AnyType value_type() const override { return this->value_type_; }
+  [[shared]] AnyType value_type() const override { return this->value_type_; }
 
   /**
    * @brief Get the data pointer to the tensor's data buffer.
    *
    * @return The data pointer.
    */
-  const T* data() const { return reinterpret_cast<const T*>(buffer_->data()); }
+  [[shared]] const T* data() const {
+    return reinterpret_cast<const T*>(buffer_->data());
+  }
 
   /**
    * @brief Get the buffer of the tensor.
@@ -114,7 +120,7 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    * @return The shared pointer to an arrow buffer which
    * holds the data buffer of the tensor.
    */
-  const std::shared_ptr<arrow::Buffer> buffer() const override {
+  [[shared]] const std::shared_ptr<arrow::Buffer> buffer() const override {
     return this->buffer_->Buffer();
   }
 
@@ -123,15 +129,15 @@ class Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    * arrow's Tensor.
    *
    */
-  const std::shared_ptr<ArrowTensorT> ArrowTensor() {
+  [[shared]] const std::shared_ptr<ArrowTensorT> ArrowTensor() {
     return std::make_shared<ArrowTensorT>(buffer_->Buffer(), shape());
   }
 
  private:
-  __attribute__((annotate("codegen"))) AnyType value_type_;
-  __attribute__((annotate("codegen:Blob*"))) std::shared_ptr<Blob> buffer_;
-  __attribute__((annotate("codegen"))) std::vector<int64_t> shape_;
-  __attribute__((annotate("codegen"))) std::vector<int64_t> partition_index_;
+  [[shared]] AnyType value_type_;
+  [[shared]] std::shared_ptr<Blob> buffer_;
+  [[shared]] Tuple<int64_t> shape_;
+  [[shared]] Tuple<int64_t> partition_index_;
 
   friend class Client;
   friend class TensorBaseBuilder<T>;

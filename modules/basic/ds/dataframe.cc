@@ -22,7 +22,7 @@ class DataFrameBuilder;
 const std::vector<json>& DataFrame::Columns() const { return this->columns_; }
 
 std::shared_ptr<ITensor> DataFrame::Index() const {
-  return values_.at(INDEX_COL_NAME);
+  return values_.at("index_");
 }
 
 std::shared_ptr<ITensor> DataFrame::Column(json const& column) const {
@@ -79,14 +79,9 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::AsBatch(bool copy) const {
 
     std::shared_ptr<arrow::Buffer> copied_buffer;
     if (copy) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-      CHECK_ARROW_ERROR(
-          df_col->buffer()->Copy(0, df_col->buffer()->size(), &copied_buffer));
-#else
       CHECK_ARROW_ERROR_AND_ASSIGN(
           copied_buffer,
           df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
-#endif
     } else {
       copied_buffer = df_col->buffer();
     }
@@ -115,7 +110,7 @@ void DataFrameBuilder::set_row_batch_index(size_t row_batch_index) {
 }
 
 void DataFrameBuilder::set_index(std::shared_ptr<ITensorBuilder> builder) {
-  this->values_.emplace(INDEX_COL_NAME, builder);
+  this->values_.emplace("index_", builder);
 }
 
 std::shared_ptr<ITensorBuilder> DataFrameBuilder::Column(

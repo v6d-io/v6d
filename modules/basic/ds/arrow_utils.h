@@ -68,11 +68,19 @@ struct RefString;
 template <typename T>
 struct ConvertToArrowType {};
 
+template <typename T>
+class NumericArray;
+
+template <typename T>
+class NumericArrayBuilder;
+
 #define CONVERT_TO_ARROW_TYPE(type, array_type, builder_type, type_value)      \
   template <>                                                                  \
   struct ConvertToArrowType<type> {                                            \
     using ArrayType = array_type;                                              \
+    using VineyardArrayType = NumericArray<type>;                              \
     using BuilderType = builder_type;                                          \
+    using VineyardBuilderType = NumericArrayBuilder<type>;                     \
     static std::shared_ptr<arrow::DataType> TypeValue() { return type_value; } \
   };
 
@@ -215,6 +223,11 @@ std::shared_ptr<arrow::Table> ConcatenateTables(
  */
 std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
     const std::string& name);
+
+std::string type_name_from_arrow_type(
+    const std::shared_ptr<arrow::DataType>& type);
+
+const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array);
 
 }  // namespace vineyard
 

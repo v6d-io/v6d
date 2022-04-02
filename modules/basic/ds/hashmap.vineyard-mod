@@ -36,7 +36,7 @@ namespace vineyard {
 #pragma GCC diagnostic ignored "-Wattributes"
 #endif
 
-struct __attribute__((annotate("no-vineyard"))) prime_hash_policy {
+struct prime_hash_policy {
   prime_hash_policy() : current_prime_(1) {}
   prime_hash_policy(const prime_hash_policy& rhs)
       : current_prime_(rhs.current_prime_) {}
@@ -66,7 +66,9 @@ class HashmapBaseBuilder;
  */
 template <typename K, typename V, typename H = std::hash<K>,
           typename E = std::equal_to<K>>
-class Hashmap : public Registered<Hashmap<K, V, H, E>>, public H, public E {
+class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
+                             public H,
+                             public E {
  public:
   using T = std::pair<K, V>;
 
@@ -213,11 +215,12 @@ class Hashmap : public Registered<Hashmap<K, V, H, E>>, public H, public E {
   }
 
  private:
-  __attribute__((annotate("codegen"))) size_t num_slots_minus_one_;
+  [[shared]] size_t num_slots_minus_one_;
+  [[shared]] int8_t max_lookups_;
+  [[shared]] size_t num_elements_;
+  [[shared]] Array<Entry> entries_;
+
   prime_hash_policy hash_policy_;
-  __attribute__((annotate("codegen"))) int8_t max_lookups_;
-  __attribute__((annotate("codegen"))) size_t num_elements_;
-  __attribute__((annotate("codegen:Array<Entry>"))) Array<Entry> entries_;
 
   friend class Client;
   friend class HashmapBaseBuilder<K, V, H, E>;

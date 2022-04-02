@@ -19,6 +19,8 @@ limitations under the License.
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
 
+#include "common/util/typename.h"
+
 namespace vineyard {
 
 std::shared_ptr<arrow::Table> ConcatenateTables(
@@ -28,12 +30,8 @@ std::shared_ptr<arrow::Table> ConcatenateTables(
   }
   auto col_names = tables[0]->ColumnNames();
   for (size_t i = 1; i < tables.size(); ++i) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-    CHECK_ARROW_ERROR(tables[i]->RenameColumns(col_names, &tables[i]));
-#else
     CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
                                  tables[i]->RenameColumns(col_names));
-#endif
   }
   std::shared_ptr<arrow::Table> table;
   CHECK_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(tables));
@@ -64,10 +62,7 @@ Status GetRecordBatchStreamSize(const arrow::RecordBatch& batch, size_t* size) {
   arrow::io::MockOutputStream dst;
 
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      arrow::ipc::RecordBatchStreamWriter::Open(&dst, batch.schema(), &writer));
-#elif defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       writer, arrow::ipc::NewStreamWriter(&dst, batch.schema()));
 #else
@@ -106,13 +101,8 @@ Status DeserializeRecordBatches(
     std::vector<std::shared_ptr<arrow::RecordBatch>>* batches) {
   arrow::io::BufferReader reader(buffer);
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      arrow::ipc::RecordBatchStreamReader::Open(&reader, &batch_reader));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
-#endif
   RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(batches));
   return Status::OK();
 }
@@ -120,12 +110,8 @@ Status DeserializeRecordBatches(
 Status RecordBatchesToTable(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::Table>* table) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(arrow::Table::FromRecordBatches(batches, table));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table,
                                    arrow::Table::FromRecordBatches(batches));
-#endif
   return Status::OK();
 }
 
@@ -134,13 +120,8 @@ Status CombineRecordBatches(
     std::shared_ptr<arrow::RecordBatch>* batch) {
   std::shared_ptr<arrow::Table> table, combined_table;
   RETURN_ON_ERROR(RecordBatchesToTable(batches, &table));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      table->CombineChunks(arrow::default_memory_pool(), &combined_table));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       combined_table, table->CombineChunks(arrow::default_memory_pool()));
-#endif
   arrow::TableBatchReader tbreader(*combined_table);
   RETURN_ON_ARROW_ERROR(tbreader.ReadNext(batch));
   std::shared_ptr<arrow::RecordBatch> test_batch;
@@ -177,13 +158,8 @@ Status DeserializeTable(std::shared_ptr<arrow::Buffer> buffer,
                         std::shared_ptr<arrow::Table>* table) {
   arrow::io::BufferReader reader(buffer);
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 17000
-  RETURN_ON_ARROW_ERROR(
-      arrow::ipc::RecordBatchStreamReader::Open(&reader, &batch_reader));
-#else
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
-#endif
   RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(table));
   return Status::OK();
 }
@@ -309,6 +285,97 @@ std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
   } else {
     LOG(ERROR) << "Unsupported data type: " << name;
     return nullptr;
+  }
+}
+
+std::string type_name_from_arrow_type(std::shared_ptr<arrow::DataType> type) {
+  if (arrow::null()->Equals(type)) {
+    return "null";
+  } else if (vineyard::ConvertToArrowType<bool>::TypeValue()->Equals(type)) {
+    return type_name<bool>();
+  } else if (vineyard::ConvertToArrowType<int8_t>::TypeValue()->Equals(type)) {
+    return type_name<int8_t>();
+  } else if (vineyard::ConvertToArrowType<uint8_t>::TypeValue()->Equals(type)) {
+    return type_name<uint8_t>();
+  } else if (vineyard::ConvertToArrowType<int16_t>::TypeValue()->Equals(type)) {
+    return type_name<int16_t>();
+  } else if (vineyard::ConvertToArrowType<uint16_t>::TypeValue()->Equals(
+                 type)) {
+    return type_name<uint16_t>();
+  } else if (vineyard::ConvertToArrowType<int32_t>::TypeValue()->Equals(type)) {
+    return type_name<int32_t>();
+  } else if (vineyard::ConvertToArrowType<uint32_t>::TypeValue()->Equals(
+                 type)) {
+    return type_name<uint32_t>();
+  } else if (vineyard::ConvertToArrowType<int64_t>::TypeValue()->Equals(type)) {
+    return type_name<int64_t>();
+  } else if (vineyard::ConvertToArrowType<uint64_t>::TypeValue()->Equals(
+                 type)) {
+    return type_name<uint64_t>();
+  } else if (vineyard::ConvertToArrowType<float>::TypeValue()->Equals(type)) {
+    return type_name<float>();
+  } else if (vineyard::ConvertToArrowType<double>::TypeValue()->Equals(type)) {
+    return type_name<double>();
+  } else if (vineyard::ConvertToArrowType<std::string>::TypeValue()->Equals(
+                 type)) {
+    return type_name<std::string>();
+  } else {
+    return "undefined";
+  }
+}
+
+const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array) {
+  if (array->type()->Equals(arrow::int8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int8Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt8Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int16Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt16Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int32Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt32Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int64Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt64Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::float32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FloatArray>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::float64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::DoubleArray>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::StringArray>(array).get());
+  } else if (array->type()->Equals(arrow::large_utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
+  } else if (array->type()->Equals(arrow::list(arrow::int32())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint32())) ||
+             array->type()->Equals(arrow::large_list(arrow::int64())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint64())) ||
+             array->type()->Equals(arrow::large_list(arrow::float32())) ||
+             array->type()->Equals(arrow::large_list(arrow::float64()))) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeListArray>(array).get());
+  } else if (array->type()->Equals(arrow::null())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::NullArray>(array).get());
+  } else {
+    LOG(FATAL) << "Array type - " << array->type()->ToString()
+               << " is not supported yet...";
+    return NULL;
   }
 }
 

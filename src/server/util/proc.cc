@@ -19,6 +19,14 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#if defined(__APPLE__) && defined(__MACH__)
+#include <libproc.h>
+#elif defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+#include <limits.h>
+#include <unistd.h>
+#endif
+
 #include "boost/asio.hpp"
 #include "boost/bind.hpp"
 #include "boost/filesystem.hpp"
@@ -52,9 +60,14 @@ void Process::Start(const std::string& command,
   std::string command_path = command;
   {
     setenv("LC_ALL", "C", 1);
-    auto path = boost::process::search_path(command).string();
-    if (!path.empty()) {
-      command_path = path;
+    boost::filesystem::path target;
+    if (this->findRelativeProgram(command, target).ok()) {
+      command_path = target.string();
+    } else {
+      auto path = boost::process::search_path(command).string();
+      if (!path.empty()) {
+        command_path = path;
+      }
     }
   }
   // launch proc
@@ -125,6 +138,40 @@ Status Process::recordLog(Status const& status, std::string const& line) {
     diagnostic_.push_back(status.ToString());
   }
   return status;
+}
+
+Status Process::findRelativeProgram(std::string const& name,
+                                    boost::filesystem::path& target) {
+  boost::filesystem::path current_location;
+
+#if defined(__APPLE__) && defined(__MACH__)
+  char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
+  if (proc_pidpath(boost::this_process::get_id(), pathbuf, sizeof(pathbuf))) {
+    current_location = std::string(pathbuf);
+  } else {
+    return Status::IOError("Failed to get location of current process");
+  }
+
+#elif defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+  char result[PATH_MAX];
+  ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+  if (count > 0) {
+    current_location = std::string(result, count);
+  } else {
+    return Status::IOError("Failed to get location of current process");
+  }
+
+#endif
+
+  boost::filesystem::path parent_path = current_location.parent_path();
+  target = parent_path.append(name);
+  boost::system::error_code err;
+  if (boost::filesystem::exists(target, err)) {
+    return Status::OK();
+  } else {
+    return Status::IOError("Failed to get location of current process");
+  }
 }
 
 }  // namespace vineyard

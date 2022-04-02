@@ -27,8 +27,7 @@ limitations under the License.
 #include "arrow/io/api.h"
 
 #include "basic/ds/array.h"
-#include "basic/ds/pair.h"
-#include "basic/ds/tuple.h"
+#include "basic/ds/sequence.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "client/rpc_client.h"
@@ -182,9 +181,10 @@ int main(int argc, char** argv) {
     CHECK(blob_id != InvalidObjectID());
 
     // wrap
-    PairBuilder pair_builder(client);
-    pair_builder.SetFirst(sealed_double_array);
-    pair_builder.SetSecond(sealed_double_array);
+    SequenceBuilder pair_builder(client);
+    pair_builder.SetSize(2);
+    pair_builder.SetValue(0, sealed_double_array);
+    pair_builder.SetValue(1, sealed_double_array);
     wrapper_id = pair_builder.Seal(client)->id();
   }
 
@@ -297,19 +297,22 @@ int main(int argc, char** argv) {
     std::vector<double> double_array4 = {1.0, 7.0, 3.0, 4.0, 2.0};
     ArrayBuilder<double> builder4(client, double_array4);
 
-    PairBuilder pair_builder1(client);
-    pair_builder1.SetFirst(builder1.Seal(client));
-    pair_builder1.SetSecond(builder2.Seal(client));
+    SequenceBuilder pair_builder1(client);
+    pair_builder1.SetSize(2);
+    pair_builder1.SetValue(0, builder1.Seal(client));
+    pair_builder1.SetValue(1, builder2.Seal(client));
 
-    PairBuilder pair_builder2(client);
-    pair_builder2.SetFirst(builder3.Seal(client));
-    pair_builder2.SetSecond(Blob::MakeEmpty(client));
+    SequenceBuilder pair_builder2(client);
+    pair_builder2.SetSize(2);
+    pair_builder2.SetValue(0, builder3.Seal(client));
+    pair_builder2.SetValue(1, Blob::MakeEmpty(client));
 
-    PairBuilder pair_builder3(client);
-    pair_builder3.SetFirst(Blob::MakeEmpty(client));
-    pair_builder3.SetSecond(builder4.Seal(client));
+    SequenceBuilder pair_builder3(client);
+    pair_builder3.SetSize(2);
+    pair_builder3.SetValue(0, Blob::MakeEmpty(client));
+    pair_builder3.SetValue(1, builder4.Seal(client));
 
-    TupleBuilder tuple_builder(client);
+    SequenceBuilder tuple_builder(client);
     tuple_builder.SetSize(3);
     tuple_builder.SetValue(0, pair_builder1.Seal(client));
     tuple_builder.SetValue(1, pair_builder2.Seal(client));

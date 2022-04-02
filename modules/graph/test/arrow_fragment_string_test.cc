@@ -102,32 +102,14 @@ int main(int argc, char** argv) {
       auto loader =
           std::make_unique<ArrowFragmentLoader<std::string, uint64_t>>(
               client, comm_spec, efiles, vfiles, directed != 0);
-      auto fragment_group_id = boost::leaf::try_handle_all(
-          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
-          [](const GSError& e) {
-            LOG(FATAL) << e.error_msg;
-            return 0;
-          },
-          [](const boost::leaf::error_info& unmatched) {
-            LOG(FATAL) << "Unmatched error " << unmatched;
-            return 0;
-          });
+      auto fragment_group_id = loader->LoadFragmentAsFragmentGroup().value();
       WriteOut(client, comm_spec, fragment_group_id);
     }
     {
       auto loader =
           std::make_unique<ArrowFragmentLoader<std::string, uint64_t>>(
               client, comm_spec, efiles, directed != 0);
-      auto fragment_group_id = boost::leaf::try_handle_all(
-          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
-          [](const GSError& e) {
-            LOG(FATAL) << e.error_msg;
-            return 0;
-          },
-          [](const boost::leaf::error_info& unmatched) {
-            LOG(FATAL) << "Unmatched error " << unmatched;
-            return 0;
-          });
+      auto fragment_group_id = loader->LoadFragmentAsFragmentGroup().value();
       WriteOut(client, comm_spec, fragment_group_id);
     }
   }

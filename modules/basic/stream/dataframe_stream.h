@@ -21,43 +21,40 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "basic/stream/dataframe_stream.vineyard.h"
+#include "basic/ds/dataframe.h"
 #include "client/client.h"
 
 namespace vineyard {
 
-/**
- * @brief DataframeStreamBuilder is used for building streams of dataframes
- *
- */
-class DataframeStreamBuilder : public DataframeStreamBaseBuilder {
+class DataframeStream : public BareRegistered<DataframeStream>,
+                        public DataFrameStreamBase {
  public:
-  explicit DataframeStreamBuilder(Client& client)
-      : DataframeStreamBaseBuilder(client) {}
-
-  void SetParam(std::string const& key, std::string const& value) {
-    this->params_.emplace(key, value);
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<DataframeStream>{new DataframeStream()});
   }
 
-  void SetParams(
-      const std::unordered_multimap<std::string, std::string>& params) {
-    for (auto const& kv : params) {
-      this->params_.emplace(kv.first, kv.second);
-    }
-  }
+  Status WriteTable(std::shared_ptr<arrow::Table> table);
 
-  void SetParams(const std::unordered_map<std::string, std::string>& params) {
-    for (auto const& kv : params) {
-      this->params_.emplace(kv.first, kv.second);
-    }
-  }
+  Status WriteBatch(std::shared_ptr<arrow::RecordBatch> batch);
 
-  std::shared_ptr<Object> Seal(Client& client) {
-    auto bstream = DataframeStreamBaseBuilder::Seal(client);
-    VINEYARD_CHECK_OK(client.CreateStream(bstream->id()));
-    return std::static_pointer_cast<Object>(bstream);
+  Status WriteDataframe(std::shared_ptr<DataFrame> df);
+
+  Status ReadRecordBatches(
+      std::vector<std::shared_ptr<arrow::RecordBatch>>& batches);
+
+  Status ReadTable(std::shared_ptr<arrow::Table>& table);
+
+  Status ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch, const bool copy);
+
+  Status GetHeaderLine(bool& header_row, std::string& header_line);
+
+ protected:
+  std::string GetTypeName() const override {
+    return type_name<DataframeStream>();
   }
 };
+
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_STREAM_DATAFRAME_STREAM_H_
