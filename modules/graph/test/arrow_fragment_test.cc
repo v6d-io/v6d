@@ -150,16 +150,7 @@ int main(int argc, char** argv) {
                                                property_graph_types::VID_TYPE>>(
               client, comm_spec, efiles, directed != 0);
 #endif
-      fragment_id = boost::leaf::try_handle_all(
-          [&loader]() { return loader->LoadFragment(); },
-          [](const GSError& e) {
-            LOG(FATAL) << e.error_msg;
-            return 0;
-          },
-          [](const boost::leaf::error_info& unmatched) {
-            LOG(FATAL) << "Unmatched error " << unmatched;
-            return 0;
-          });
+      fragment_id = loader->LoadFragment().value();
     }
     MPI_Barrier(MPI_COMM_WORLD);
     t += GetCurrentTime();
@@ -182,16 +173,8 @@ int main(int argc, char** argv) {
           std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                                property_graph_types::VID_TYPE>>(
               client, comm_spec, efiles, vfiles, directed != 0);
-      vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
-          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
-          [](const GSError& e) {
-            LOG(FATAL) << e.error_msg;
-            return 0;
-          },
-          [](const boost::leaf::error_info& unmatched) {
-            LOG(FATAL) << "Unmatched error " << unmatched;
-            return 0;
-          });
+      vineyard::ObjectID fragment_group_id =
+          loader->LoadFragmentAsFragmentGroup().value();
       WriteOut(client, comm_spec, fragment_group_id);
     }
 
@@ -201,16 +184,8 @@ int main(int argc, char** argv) {
           std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                                property_graph_types::VID_TYPE>>(
               client, comm_spec, efiles, directed != 0);
-      vineyard::ObjectID fragment_group_id = boost::leaf::try_handle_all(
-          [&loader]() { return loader->LoadFragmentAsFragmentGroup(); },
-          [](const GSError& e) {
-            LOG(FATAL) << e.error_msg;
-            return 0;
-          },
-          [](const boost::leaf::error_info& unmatched) {
-            LOG(FATAL) << "Unmatched error " << unmatched;
-            return 0;
-          });
+      vineyard::ObjectID fragment_group_id =
+          loader->LoadFragmentAsFragmentGroup().value();
       WriteOut(client, comm_spec, fragment_group_id);
     }
 #endif

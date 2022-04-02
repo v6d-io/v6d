@@ -35,8 +35,6 @@ class ParallelStreamBuilder : public ParallelStreamBaseBuilder {
 
   Status Build(Client& client) override;
 
-  std::shared_ptr<Object> _Seal(Client& client) override;
-
  private:
   std::vector<ObjectID> streams_;
 };

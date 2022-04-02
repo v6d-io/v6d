@@ -19,6 +19,8 @@ limitations under the License.
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
 
+#include "common/util/typename.h"
+
 namespace vineyard {
 
 std::shared_ptr<arrow::Table> ConcatenateTables(
@@ -283,6 +285,97 @@ std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
   } else {
     LOG(ERROR) << "Unsupported data type: " << name;
     return nullptr;
+  }
+}
+
+std::string type_name_from_arrow_type(std::shared_ptr<arrow::DataType> type) {
+  if (arrow::null()->Equals(type)) {
+    return "null";
+  } else if (vineyard::ConvertToArrowType<bool>::TypeValue()->Equals(type)) {
+    return type_name<bool>();
+  } else if (vineyard::ConvertToArrowType<int8_t>::TypeValue()->Equals(type)) {
+    return type_name<int8_t>();
+  } else if (vineyard::ConvertToArrowType<uint8_t>::TypeValue()->Equals(type)) {
+    return type_name<uint8_t>();
+  } else if (vineyard::ConvertToArrowType<int16_t>::TypeValue()->Equals(type)) {
+    return type_name<int16_t>();
+  } else if (vineyard::ConvertToArrowType<uint16_t>::TypeValue()->Equals(
+                 type)) {
+    return type_name<uint16_t>();
+  } else if (vineyard::ConvertToArrowType<int32_t>::TypeValue()->Equals(type)) {
+    return type_name<int32_t>();
+  } else if (vineyard::ConvertToArrowType<uint32_t>::TypeValue()->Equals(
+                 type)) {
+    return type_name<uint32_t>();
+  } else if (vineyard::ConvertToArrowType<int64_t>::TypeValue()->Equals(type)) {
+    return type_name<int64_t>();
+  } else if (vineyard::ConvertToArrowType<uint64_t>::TypeValue()->Equals(
+                 type)) {
+    return type_name<uint64_t>();
+  } else if (vineyard::ConvertToArrowType<float>::TypeValue()->Equals(type)) {
+    return type_name<float>();
+  } else if (vineyard::ConvertToArrowType<double>::TypeValue()->Equals(type)) {
+    return type_name<double>();
+  } else if (vineyard::ConvertToArrowType<std::string>::TypeValue()->Equals(
+                 type)) {
+    return type_name<std::string>();
+  } else {
+    return "undefined";
+  }
+}
+
+const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array) {
+  if (array->type()->Equals(arrow::int8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int8Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt8Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int16Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt16Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int32Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt32Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int64Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt64Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::float32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FloatArray>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::float64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::DoubleArray>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::StringArray>(array).get());
+  } else if (array->type()->Equals(arrow::large_utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
+  } else if (array->type()->Equals(arrow::list(arrow::int32())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint32())) ||
+             array->type()->Equals(arrow::large_list(arrow::int64())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint64())) ||
+             array->type()->Equals(arrow::large_list(arrow::float32())) ||
+             array->type()->Equals(arrow::large_list(arrow::float64()))) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeListArray>(array).get());
+  } else if (array->type()->Equals(arrow::null())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::NullArray>(array).get());
+  } else {
+    LOG(FATAL) << "Array type - " << array->type()->ToString()
+               << " is not supported yet...";
+    return NULL;
   }
 }
 

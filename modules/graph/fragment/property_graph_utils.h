@@ -579,41 +579,6 @@ inline std::string generate_type_name(
   return ret;
 }
 
-inline std::string arrow_type_to_type_name(
-    std::shared_ptr<arrow::DataType> type) {
-  if (vineyard::ConvertToArrowType<bool>::TypeValue()->Equals(type)) {
-    return type_name<bool>();
-  } else if (vineyard::ConvertToArrowType<int8_t>::TypeValue()->Equals(type)) {
-    return type_name<int8_t>();
-  } else if (vineyard::ConvertToArrowType<uint8_t>::TypeValue()->Equals(type)) {
-    return type_name<uint8_t>();
-  } else if (vineyard::ConvertToArrowType<int16_t>::TypeValue()->Equals(type)) {
-    return type_name<int16_t>();
-  } else if (vineyard::ConvertToArrowType<uint16_t>::TypeValue()->Equals(
-                 type)) {
-    return type_name<uint16_t>();
-  } else if (vineyard::ConvertToArrowType<int32_t>::TypeValue()->Equals(type)) {
-    return type_name<int32_t>();
-  } else if (vineyard::ConvertToArrowType<uint32_t>::TypeValue()->Equals(
-                 type)) {
-    return type_name<uint32_t>();
-  } else if (vineyard::ConvertToArrowType<int64_t>::TypeValue()->Equals(type)) {
-    return type_name<int64_t>();
-  } else if (vineyard::ConvertToArrowType<uint64_t>::TypeValue()->Equals(
-                 type)) {
-    return type_name<uint64_t>();
-  } else if (vineyard::ConvertToArrowType<float>::TypeValue()->Equals(type)) {
-    return type_name<float>();
-  } else if (vineyard::ConvertToArrowType<double>::TypeValue()->Equals(type)) {
-    return type_name<double>();
-  } else if (vineyard::ConvertToArrowType<std::string>::TypeValue()->Equals(
-                 type)) {
-    return type_name<std::string>();
-  } else {
-    return "";
-  }
-}
-
 class EmptyArray {
   using value_type = grape::EmptyType;
 

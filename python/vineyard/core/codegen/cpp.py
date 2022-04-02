@@ -309,6 +309,9 @@ class {class_name}BaseBuilder: public ObjectBuilder {{
     {fields_declares}
 
     {setters}
+
+  private:
+    friend class {class_name_elaborated};
 }};
 '''
 
@@ -378,6 +381,7 @@ field_assign_dlist_tpl = '''
         __value->{field_name}.resize({field_name}.size());
         for (auto &__{field_name}_value_vec: {field_name}) {{
             size_t __{field_name}_idy = 0;
+            __value->meta_.AddKeyValue("__{field_name}-" + std::to_string(__{field_name}_idx) + "-size", __{field_name}_value_vec.size());
             for (auto &__{field_name}_value: __{field_name}_value_vec) {{
                 auto __value_{field_name} = std::dynamic_pointer_cast<__{field_name}_value_type>(
                     __{field_name}_value->_Seal(client));

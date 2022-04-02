@@ -6,6 +6,8 @@
 .vscode
 .idea
 .DS_store
+.cache/
+.ossutil_checkpoint/
 compile_commands.json
 cmake-build-debug
 
@@ -35,3 +37,7 @@ default.etcd/
 
 # go vendor
 /**/vendor/
+
+# Rust build
+/**/target/
+

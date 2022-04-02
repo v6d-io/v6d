@@ -302,11 +302,9 @@ class ArrowVertexMap
   std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays_;
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
 
-  template <typename _OID_T, typename _VID_T>
-  friend class ArrowVertexMapBuilder;
+  friend class ArrowVertexMapBuilder<OID_T, VID_T>;
 
-  template <typename _OID_T, typename _VID_T>
-  friend class gs::ArrowProjectedVertexMap;
+  friend class gs::ArrowProjectedVertexMap<OID_T, VID_T>;
 };
 
 template <typename VID_T>
@@ -536,11 +534,9 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays_;
   std::vector<std::vector<ska::flat_hash_map<oid_t, vid_t>>> o2g_;
 
-  template <typename _OID_T, typename _VID_T>
-  friend class ArrowVertexMapBuilder;
+  friend class ArrowVertexMapBuilder<arrow::util::string_view, VID_T>;
 
-  template <typename _OID_T, typename _VID_T>
-  friend class gs::ArrowProjectedVertexMap;
+  friend class gs::ArrowProjectedVertexMap<arrow::util::string_view, VID_T>;
 };
 
 template <typename OID_T, typename VID_T>
