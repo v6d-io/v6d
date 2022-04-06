@@ -306,7 +306,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
@@ -324,7 +324,7 @@ jobs:
         uses: sighingnow/action-tmate@master
         with:
           script-to-run: |
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
 
             # enable coredump for debugging
             ulimit -c unlimited
@@ -341,7 +341,7 @@ jobs:
       - name: Run Python Tests
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
 
           # enable coredump for debugging
           ulimit -c unlimited
@@ -361,7 +361,7 @@ jobs:
 
       - name: Run IO Tests
         run: |
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
 
           export VINEYARD_DEVELOP=TRUE
 

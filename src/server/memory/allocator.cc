@@ -29,7 +29,9 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 
 #include "server/memory/allocator.h"
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstring>
+#include <string>
 
 #include "common/util/env.h"
 #include "common/util/logging.h"
@@ -41,6 +43,11 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 
 #if defined(WITH_JEMALLOC)
 #include "server/memory/jemalloc.h"
+#endif
+
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+#include <sys/mount.h>
 #endif
 
 namespace vineyard {
@@ -59,6 +66,7 @@ void* BulkAllocator::Init(const size_t size) {
   // Vineyard actually can use shared memory larger than the the sysctl result,
   // we disable the warning on mac for less inaccurate warnings.
   int64_t shmmax = get_maximum_shared_memory();
+  LOG(INFO) << "shmax: " << shmmax;
   if (shmmax < static_cast<float>(size)) {
     LOG(WARNING)
         << "The 'size' is greater than the maximum shared memory size ("
@@ -68,6 +76,15 @@ void* BulkAllocator::Init(const size_t size) {
         << "    If you are inside a Docker container, please pass the argument "
            "'--shm-size' when 'docker run'.";
     LOG(WARNING) << std::endl;
+
+    // try remount
+    //
+    // shm on /dev/shm type tmpfs (rw,nosuid,nodev,noexec,relatime,size=65536k)
+    std::string options = "size=" + std::to_string(size);
+    int flags = MS_REMOUNT | MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_RELATIME;
+    if (mount("shm", "/dev/shm", "tmpfs", flags, options.c_str()) != 0) {
+      VLOG(2) << "Failed to remount: " << strerror(errno);
+    }
   }
 #endif
 
