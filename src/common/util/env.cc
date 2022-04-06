@@ -27,7 +27,8 @@ limitations under the License.
 #include <mach/mach.h>
 #elif defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
-#include <stdio.h>
+#include <fcntl.h>
+#include <sys/statvfs.h>
 #endif
 #endif
 
@@ -136,15 +137,13 @@ size_t get_peek_rss() {
 int64_t get_maximum_shared_memory() {
   int64_t shmmax = 0;
 #ifdef __linux__
-  FILE* shmmax_file = fopen(SHMMAX_SYS_FILE, "r");
-  if (!shmmax_file) {
-    std::clog << "[warn] 'SHMMAX_SYS_FILE' not found!" << std::endl;
-  }
-  if (fscanf(shmmax_file, "%" PRId64, &shmmax) != 1) {
-    std::clog << "[warn] Failed to open shmmax from 'SHMMAX_SYS_FILE'!"
-              << std::endl;
-  }
-  fclose(shmmax_file);
+  int shm_fd = open("/dev/shm", O_RDONLY);
+  struct statvfs shm_vfs_stats;
+  fstatvfs(shm_fd, &shm_vfs_stats);
+  // The value shm_vfs_stats.f_bsize is the block size, and the value
+  // shm_vfs_stats.f_bavail is the number of available blocks.
+  shmmax = shm_vfs_stats.f_bsize * shm_vfs_stats.f_bavail;
+  close(shm_fd);
 #else
   size_t len = sizeof(shmmax);
   if (-1 == sysctlbyname("kern.sysv.shmmax", &shmmax, &len, NULL, 0)) {
