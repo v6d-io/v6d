@@ -19,8 +19,8 @@
 
 import os
 import pathlib
-
-from sphinx import subprocess
+import subprocess
+import sys
 
 from .parsing import generate_parsing_flags
 
@@ -61,6 +61,10 @@ def codegen(
     extra_flags=None,
     build_directory=None,
     verbose=None,
+    package_name=None,
+    ffilibrary_name=None,
+    excludes=None,
+    forwards=None,
 ):
     if os.path.exists(target):
         try:
@@ -87,26 +91,6 @@ def codegen(
         *['--extra-arg-before=%s' % flag for flag in parsing_flags],
     ]
 
-    # known unsupported classes
-    known_unsupported = [
-        '--exclude',
-        'std.map',
-        '--exclude',
-        'std.set',
-        '--exclude',
-        'std.unordered_map',
-        '--exclude',
-        'std.vector',
-        '--exclude',
-        'nonstd.sv_lite.basic_string_view',
-        '--exclude',
-        '.*::list_type',
-        '--exclude',
-        'arrow.LargeStringType' '--exclude',
-        'arrow.LargeBinaryType' '--exclude',
-        'arrow.Buffer.Copy',
-    ]
-
     # execute
     cmd = [
         'java',
@@ -114,21 +98,30 @@ def codegen(
         find_ffi_binding_generator(),
         '--output-directory',
         package,
-        '--debug',
-        *known_unsupported,
-        '--',
-        *flags,
-        source,
     ]
+    if package_name:
+        cmd.extend(['--root-package', package_name])
+    if ffilibrary_name:
+        cmd.extend(['--ffilibrary-name', ffilibrary_name])
+    if excludes:
+        cmd.extend(['--excludes-file', excludes])
+    if forwards:
+        cmd.extend(['--forward-headers-file', forwards])
+
+    cmd.append('--')
+    cmd.extend(flags)
+    cmd.append(source)
 
     proc = None
     try:
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        proc = subprocess.run(cmd)
     except subprocess.CalledProcessError as e:
-        print(e)
-    if proc is not None and proc.returncode != 0:
-        print(proc.stdout)
-
-    # touch the file to ensure the dependencies
-    os.makedirs(os.path.dirname(target), exist_ok=True)
-    pathlib.Path(target).touch(exist_ok=True)
+        print(e, file=sys.stderr)
+        sys.exit(-1)
+    else:
+        # touch the file to ensure the dependencies
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        pathlib.Path(target).touch(exist_ok=True)
+    finally:
+        if proc is not None and proc.returncode != 0:
+            sys.exit(-1)

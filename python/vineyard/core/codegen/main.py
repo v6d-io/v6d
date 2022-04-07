@@ -38,6 +38,7 @@ def codegen(
     build_directory=None,
     delayed=True,
     verbose=False,
+    **kwargs,
 ):
     if language == 'java':
         javagen(
@@ -50,6 +51,7 @@ def codegen(
             extra_flags,
             build_directory,
             verbose,
+            **kwargs,
         )
         return
 
@@ -139,6 +141,34 @@ def parse_sys_args():
         help='Package directory for Java/Python bindings',
     )
     arg_parser.add_argument(
+        '-pkg',
+        '--package-name',
+        type=str,
+        default=None,
+        help="Package name for Java/Python bindings",
+    )
+    arg_parser.add_argument(
+        '-lib',
+        '--ffilibrary-name',
+        type=str,
+        default=None,
+        help="FFI library name for Java/Python bindings",
+    )
+    arg_parser.add_argument(
+        '-e',
+        '--excludes',
+        type=str,
+        default=None,
+        help="Excluded declarations for Java/Python bindings",
+    )
+    arg_parser.add_argument(
+        '-fwd',
+        '--forwards',
+        type=str,
+        default=None,
+        help="Forward declrations for Java/Python bindings",
+    )
+    arg_parser.add_argument(
         '-f',
         '--extra-flags',
         type=str,
@@ -185,6 +215,10 @@ def main():
             args.build_directory,
             args.delayed,
             args.verbose,
+            package_name=args.package_name,
+            ffilibrary_name=args.ffilibrary_name,
+            excludes=args.excludes,
+            forwards=args.forwards,
         )
 
 
