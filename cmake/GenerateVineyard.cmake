@@ -16,39 +16,11 @@
 #
 
 include("${CMAKE_CURRENT_LIST_DIR}/DetermineImplicitIncludes.cmake")
-determine_implicit_includes(CXX CXX_IMPLICIT_INCLUDE_DIRECTORIES)
-
-macro(find_python_executable)
-  if(NOT DEFINED PYTHON_EXECUTABLE)
-    if(DEFINED ENV{VIRTUAL_ENV})
-      find_program(
-        PYTHON_EXECUTABLE python
-        PATHS "$ENV{VIRTUAL_ENV}" "$ENV{VIRTUAL_ENV}/bin"
-        NO_DEFAULT_PATH)
-    elseif(DEFINED ENV{CONDA_PREFIX})
-      find_program(
-        PYTHON_EXECUTABLE python
-        PATHS "$ENV{CONDA_PREFIX}" "$ENV{CONDA_PREFIX}/bin"
-        NO_DEFAULT_PATH)
-    elseif(DEFINED ENV{pythonLocation})
-      find_program(
-        PYTHON_EXECUTABLE python
-        PATHS "$ENV{pythonLocation}" "$ENV{pythonLocation}/bin"
-        NO_DEFAULT_PATH)
-    else()
-      set(PYBIND11_PYTHON_VERSION 3)
-      find_package(PythonInterp)
-    endif()
-    if(NOT PYTHON_EXECUTABLE)
-      message(FATAL_ERROR "Failed to find a valid python interpreter, try speicifying `PYTHON_EXECUTABLE` instead")
-    endif()
-    message(STATUS "Use Python executable: ${PYTHON_EXECUTABLE}")
-  endif()
-endmacro()
+include("${CMAKE_CURRENT_LIST_DIR}/FindPythonExecutable.cmake")
 
 function(vineyard_generate)
   set(_options)
-  set(_singleargs LANGUAGE OUT_VAR CMAKE_BUILD_DIR VINEYARD_OUT_DIR PACKAGE_DIR)
+  set(_singleargs LANGUAGE OUT_VAR CMAKE_BUILD_DIR VINEYARD_OUT_DIR)
   set(_multiargs VINEYARD_MODULES SYSTEM_INCLUDE_DIRECTORIES INCLUDE_DIRECTORIES GENERATE_EXTENSIONS DEPENDS)
 
   cmake_parse_arguments(vineyard_generate "${_options}" "${_singleargs}" "${_multiargs}" "${ARGN}")
@@ -75,15 +47,9 @@ function(vineyard_generate)
   if(NOT vineyard_generate_VINEYARD_OUT_DIR)
     set(vineyard_generate_VINEYARD_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
   endif()
-  if(NOT vineyard_generate_PACKAGE_DIR)
-    if(vineyard_generate_LANGUAGE STREQUAL java)
-      set(vineyard_generate_PACKAGE_DIR "${PROJECT_SOURCE_DIR}/packages-java/src/main/java")
-    else()
-      set(vineyard_generate_PACKAGE_DIR "${PROJECT_SOURCE_DIR}")
-    endif()
-  endif()
 
   if(NOT vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES)
+    determine_implicit_includes(CXX CXX_IMPLICIT_INCLUDE_DIRECTORIES)
     set(vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES ${CXX_IMPLICIT_INCLUDE_DIRECTORIES})
   endif()
 
@@ -91,7 +57,6 @@ function(vineyard_generate)
     get_property(CXX_EXPLICIT_INCLUDE_DIRECTORIES
                  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                  PROPERTY INCLUDE_DIRECTORIES)
-    message(STATUS "${CXX_EXPLICIT_INCLUDE_DIRECTORIES}")
     set(vineyard_generate_INCLUDE_DIRECTORIES ${CXX_EXPLICIT_INCLUDE_DIRECTORIES})
   endif()
 
@@ -100,8 +65,6 @@ function(vineyard_generate)
       set(vineyard_generate_GENERATE_EXTENSIONS .vineyard.h)
     elseif(vineyard_generate_LANGUAGE STREQUAL python)
       set(vineyard_generate_GENERATE_EXTENSIONS _vineyard.py)
-    elseif(vineyard_generate_LANGUAGE STREQUAL java)
-      set(vineyard_generate_GENERATE_EXTENSIONS .java.touch)
     else()
       message(SEND_ERROR "Error: vineyard_generate given unknown Language ${LANGUAGE}, please provide a value for GENERATE_EXTENSIONS")
       return()
@@ -149,28 +112,6 @@ function(vineyard_generate)
       ERROR_VARIABLE DEPS_ERROR
       RESULT_VARIABLE CODEGEN_EXIT_CODE
       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if("${_baseext}" STREQUAL ".vineyard-mod")
-      execute_process(
-        COMMAND "${PYTHON_EXECUTABLE}"
-                -m
-                codegen
-                --dump-dependencies "True"
-                --root-directory "${PROJECT_SOURCE_DIR}"
-                --system-includes "${vineyard_generate_SYSTEM_INCLUDE_DIRECTORIES}"
-                --includes "${vineyard_generate_INCLUDE_DIRECTORIES}"
-                --build-directory "${vineyard_generate_CMAKE_BUILD_DIR}"
-                --source ${_abs_file}
-                --target ${_generated_srcs}
-        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python/vineyard/core/"
-        OUTPUT_VARIABLE DEPS_OUTPUT
-        ERROR_VARIABLE DEPS_ERROR
-        RESULT_VARIABLE CODEGEN_EXIT_CODE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    else()
-      set(DEPS_OUTPUT)
-      set(DEPS_ERROR)
-      set(CODEGEN_EXIT_CODE 0)
-    endif()
 
     if(DEPS_OUTPUT MATCHES ".*pip3\ install.*" OR DEPS_ERROR MATCHES ".*pip3\ install.*" OR NOT CODEGEN_EXIT_CODE EQUAL 0)
       message(FATAL_ERROR "${DEPS_OUTPUT} ${DEPS_ERROR}")
@@ -200,7 +141,6 @@ function(vineyard_generate)
       ARGS --source ${_abs_file}
       ARGS --target ${_generated_srcs}
       ARGS --langauge ${vineyard_generate_LANGUAGE}
-      ARGS --package ${vineyard_generate_PACKAGE_DIR}
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python/vineyard/core/"
       DEPENDS ${_codegen_scripts}
               ${_abs_file}

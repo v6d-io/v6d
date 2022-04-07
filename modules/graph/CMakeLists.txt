@@ -2,6 +2,9 @@
 file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                     "*.vineyard-mod")
 
+file(GLOB_RECURSE VINEYARD_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}"
+                                   "*.h")
+
 find_package(MPI REQUIRED)
 find_package(libgrapelite REQUIRED)
 
@@ -10,12 +13,32 @@ if(VINEYARD_MOD_SRCS)
         OUT_VAR VINEYARD_GENERATES
         VINEYARD_MODULES ${VINEYARD_MOD_SRCS}
     )
-    add_custom_target(vineyard_graph_gen
-                      DEPENDS ${VINEYARD_GENERATES}
-                      COMMENT "Running code generation for vineyard_graph."
-    )
-    add_dependencies(vineyard_graph_gen vineyard_basic_gen)
+else()
+    set(VINEYARD_GENERATES)
 endif()
+
+if(FALSE AND BUILD_VINEYARD_JAVA AND (VINEYARD_HEADERS OR VINEYARD_GENERATES))
+    vineyard_generate_java(
+        OUT_VAR VINEYARD_JAVA_GENERATES
+        VINEYARD_MODULES ${VINEYARD_HEADERS} ${VINEYARD_GENERATES}
+        DEPENDS ${VINEYARD_GENERATES}
+    )
+else()
+    set(VINEYARD_JAVA_GENERATES)
+endif()
+
+add_custom_target(vineyard_graph_gen
+                  DEPENDS ${VINEYARD_GENERATES}
+                  COMMENT "Running code generation for vineyard_graph."
+)
+
+add_custom_target(vineyard_graph_java_gen
+                  DEPENDS vineyard_graph_gen
+                          ${VINEYARD_JAVA_GENERATES}
+                  COMMENT "Running java code generation for vineyard_graph."
+)
+
+add_dependencies(vineyard_graph_gen vineyard_basic_gen)
 
 file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
                                                                 "loader/*.cc"
@@ -64,9 +87,12 @@ target_link_libraries(vineyard_graph vineyard_client
 if(APPLE)
     target_compile_options(vineyard_graph PUBLIC -Wno-unused-result)
 endif()
-if(VINEYARD_MOD_SRCS)
-    add_dependencies(vineyard_graph vineyard_graph_gen)
-    add_dependencies(vineyard_codegen vineyard_graph_gen)
+
+add_dependencies(vineyard_graph vineyard_graph_gen)
+
+add_dependencies(vineyard_codegen vineyard_graph_gen)
+if(VINEYARD_JAVA_GENERATES)
+    add_dependencies(vineyard_codegen_java vineyard_graph_java_gen)
 endif()
 
 install_vineyard_target(vineyard_graph)
