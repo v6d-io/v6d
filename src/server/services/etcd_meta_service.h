@@ -126,26 +126,7 @@ class EtcdLock : public ILock {
  */
 class EtcdMetaService : public IMetaService {
  public:
-  inline void Stop() override {
-    if (stopped_.exchange(true)) {
-      return;
-    }
-    if (backoff_timer_) {
-      boost::system::error_code ec;
-      backoff_timer_->cancel(ec);
-    }
-    if (watcher_) {
-      try {
-        watcher_->Cancel();
-      } catch (...) {}
-    }
-    if (etcd_proc_) {
-      std::error_code err;
-      etcd_proc_->terminate(err);
-      kill(etcd_proc_->id(), SIGTERM);
-      etcd_proc_->wait(err);
-    }
-  }
+  inline void Stop() override;
 
   ~EtcdMetaService() override {}
 
