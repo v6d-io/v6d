@@ -42,11 +42,6 @@ IPCServer::~IPCServer() {
 }
 
 void IPCServer::Start() {
-  std::lock_guard<std::recursive_mutex> stop_lock(mutex_for_stop_);
-  if (stopped_.load()) {
-    return;
-  }
-
   std::string const& ipc_socket =
       ipc_spec_["socket"].get_ref<std::string const&>();
   chmod(ipc_socket.c_str(),

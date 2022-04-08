@@ -271,8 +271,6 @@ class SocketServer {
 
  protected:
   std::atomic_bool stopped_;  // if the socket server being stopped.
-  // a mutex that ensure `Start()` and `Stop()` doesn't happen at the same time.
-  std::recursive_mutex mutex_for_stop_;
 
   std::atomic_bool closable_;  // if client want to close the session,
   vs_ptr_t vs_ptr_;

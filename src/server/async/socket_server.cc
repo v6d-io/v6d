@@ -1036,11 +1036,17 @@ bool SocketConnection::doNewSession(const json& root) {
   json result;
 
   TRY_READ_REQUEST(ReadNewSessionRequest, root, bulk_store_type);
-  VINEYARD_CHECK_OK(
-      server_ptr_->GetRunner()->CreateNewSession(ipc_socket, bulk_store_type));
-
-  WriteNewSessionReply(message_out, ipc_socket);
-  this->doWrite(message_out);
+  VINEYARD_CHECK_OK(server_ptr_->GetRunner()->CreateNewSession(
+      ipc_socket, bulk_store_type, [self, ipc_socket](Status const& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteNewSessionReply(message_out, ipc_socket);
+        } else {
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
   return false;
 }
 
@@ -1279,8 +1285,6 @@ void SocketServer::Start() {
 }
 
 void SocketServer::Stop() {
-  std::lock_guard<std::recursive_mutex> stop_lock(mutex_for_stop_);
-
   if (stopped_.exchange(true)) {
     return;
   }

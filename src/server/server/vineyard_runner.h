@@ -50,7 +50,8 @@ class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
   Status Finalize();
   Status GetRootSession(vs_ptr_t& vs_ptr);
   Status CreateNewSession(std::string& ipc_socket,
-                          std::string const& bulk_store_type);
+                          std::string const& bulk_store_type,
+                          callback_t<> callback);
   Status Delete(SessionID const& sid);
   Status Get(SessionID const& sid, vs_ptr_t& session);
   bool Exists(SessionID const& sid);

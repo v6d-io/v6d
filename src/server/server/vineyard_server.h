@@ -78,11 +78,12 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                           std::shared_ptr<VineyardRunner> runner,
 #if BOOST_VERSION >= 106600
                           asio::io_context& context,
-                          asio::io_context& meta_context);
+                          asio::io_context& meta_context,
 #else
                           asio::io_service& context,
-                          asio::io_service& meta_context);
+                          asio::io_service& meta_context,
 #endif
+                          callback_t<> callback);
   Status Serve(std::string const& bulk_store_type);
   Status Finalize();
   inline const json& GetSpec() { return spec_; }
@@ -214,6 +215,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   asio::io_service& context_;
   asio::io_service& meta_context_;
 #endif
+  callback_t<> callback_;
 
   std::shared_ptr<IMetaService> meta_service_ptr_;
   std::unique_ptr<IPCServer> ipc_server_ptr_;

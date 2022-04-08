@@ -56,7 +56,7 @@ Status VineyardRunner::Serve() {
   VINEYARD_ASSERT(sessions_.empty(), "Vineyard Runner already started");
   auto root_vs = std::make_shared<VineyardServer>(
       spec_template_, RootSessionID(), shared_from_this(), context_,
-      meta_context_);
+      meta_context_, [](Status const& s) { return s; });
   sessions_.emplace(RootSessionID(), root_vs);
 
   // start a root session
@@ -88,7 +88,8 @@ Status VineyardRunner::GetRootSession(vs_ptr_t& vs_ptr) {
 }
 
 Status VineyardRunner::CreateNewSession(std::string& ipc_socket,
-                                        std::string const& bulk_store_type) {
+                                        std::string const& bulk_store_type,
+                                        callback_t<> callback) {
   SessionID session_id = GenerateSessionID();
   json spec(spec_template_);
 
@@ -99,7 +100,7 @@ Status VineyardRunner::CreateNewSession(std::string& ipc_socket,
   spec["ipc_spec"]["socket"] = ipc_socket;
 
   auto vs_ptr = std::make_shared<VineyardServer>(
-      spec, session_id, shared_from_this(), context_, meta_context_);
+      spec, session_id, shared_from_this(), context_, meta_context_, callback);
   sessions_.emplace(session_id, vs_ptr);
   LOG(INFO) << "Vineyard creates a new session with SessionID = "
             << SessionIDToString(session_id) << std::endl;

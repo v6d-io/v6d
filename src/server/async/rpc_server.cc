@@ -48,11 +48,6 @@ RPCServer::~RPCServer() {
 }
 
 void RPCServer::Start() {
-  std::lock_guard<std::recursive_mutex> stop_lock(mutex_for_stop_);
-  if (stopped_.load()) {
-    return;
-  }
-
   vs_ptr_->RPCReady();
   SocketServer::Start();
   LOG(INFO) << "Vineyard will listen on 0.0.0.0:"
