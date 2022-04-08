@@ -306,6 +306,11 @@ void EtcdMetaService::startDaemonWatch(
           prefix_ + meta_sync_lock_, this->registered_callbacks_,
           this->handled_rev_, this->registered_callbacks_mutex_));
     }
+
+    if (this->watcher_ && this->watcher_->Cancelled()) {
+      return;
+    }
+
     // Use "" as the prefix to watch, and filter out unused garbage values
     // in the watch handlers.
     //
@@ -317,10 +322,9 @@ void EtcdMetaService::startDaemonWatch(
       LOG(INFO) << "Watcher stopped, as cancelled: "
                 << (cancelled ? "true" : "false");
       if (cancelled) {
-        return false;
+        return;
       }
       this->retryDaeminWatch(prefix, callback);
-      return true;
     });
   } catch (std::runtime_error& e) {
     LOG(ERROR) << "Failed to create daemon etcd watcher: " << e.what();
