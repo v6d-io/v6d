@@ -1212,11 +1212,7 @@ void SocketConnection::doWrite(const std::string& buf) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    write_msgs_.push_back(std::move(to_send));
-  }
-  doAsyncWrite();
+  doAsyncWrite(std::move(to_send));
 }
 
 void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
@@ -1227,19 +1223,11 @@ void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    write_msgs_.push_back(std::move(to_send));
-  }
-  doAsyncWrite(callback);
+  doAsyncWrite(std::move(to_send), callback);
 }
 
 void SocketConnection::doWrite(std::string&& buf) {
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    write_msgs_.push_back(std::move(buf));
-  }
-  doAsyncWrite();
+  doAsyncWrite(std::move(buf));
 }
 
 void SocketConnection::doStop() {
@@ -1249,55 +1237,32 @@ void SocketConnection::doStop() {
   }
 }
 
-void SocketConnection::doAsyncWrite() {
-  std::shared_ptr<std::string> payload = nullptr;
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    if (!write_msgs_.empty()) {
-      payload.reset(new std::string());
-      payload->swap(write_msgs_.front());
-      write_msgs_.pop_front();
-    }
-  }
-  if (payload == nullptr) {
-    return;
-  }
+void SocketConnection::doAsyncWrite(std::string&& buf) {
+  std::shared_ptr<std::string> payload =
+      std::make_shared<std::string>(std::move(buf));
   auto self(shared_from_this());
   asio::async_write(
       socket_, boost::asio::buffer(payload->data(), payload->length()),
       [this, self, payload](boost::system::error_code ec, std::size_t) {
-        if (!ec) {
-          doAsyncWrite();
-        } else {
+        if (ec) {
           doStop();
         }
       });
 }
 
-void SocketConnection::doAsyncWrite(callback_t<> callback) {
-  std::shared_ptr<std::string> payload = nullptr;
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    if (!write_msgs_.empty()) {
-      payload.reset(new std::string());
-      payload->swap(write_msgs_.front());
-      write_msgs_.pop_front();
-    }
-  }
-  if (payload == nullptr) {
-    auto status = callback(Status::OK());
-    if (!status.ok()) {
-      doStop();
-    }
-    return;
-  }
+void SocketConnection::doAsyncWrite(std::string&& buf, callback_t<> callback) {
+  std::shared_ptr<std::string> payload =
+      std::make_shared<std::string>(std::move(buf));
   auto self(shared_from_this());
   asio::async_write(socket_,
                     boost::asio::buffer(payload->data(), payload->length()),
                     [this, self, payload, callback](
                         boost::system::error_code ec, std::size_t) {
                       if (!ec) {
-                        doAsyncWrite(callback);
+                        auto status = callback(Status::OK());
+                        if (!status.ok()) {
+                          doStop();
+                        }
                       } else {
                         doStop();
                       }

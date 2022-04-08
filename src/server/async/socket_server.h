@@ -202,9 +202,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
    */
   void doStop();
 
-  void doAsyncWrite();
+  void doAsyncWrite(std::string&& buf);
 
-  void doAsyncWrite(callback_t<> callback);
+  void doAsyncWrite(std::string&& buf, callback_t<> callback);
 
   void sendBufferHelper(std::vector<std::shared_ptr<Payload>> const objects,
                         size_t index, boost::system::error_code const ec,
@@ -217,8 +217,6 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   std::atomic_bool running_;
 
   asio::streambuf buf_;
-  socket_message_queue_t write_msgs_;
-  std::recursive_mutex write_msgs_mutex_;  // protect the write_msgs
 
   std::unordered_set<int> used_fds_;
   // the associated reader of the stream
