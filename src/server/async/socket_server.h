@@ -218,7 +218,6 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   asio::streambuf buf_;
   socket_message_queue_t write_msgs_;
-  std::recursive_mutex write_msgs_mutex_;  // protect the write_msgs
 
   std::unordered_set<int> used_fds_;
   // the associated reader of the stream

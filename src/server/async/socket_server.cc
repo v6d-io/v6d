@@ -1212,10 +1212,7 @@ void SocketConnection::doWrite(const std::string& buf) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    write_msgs_.push_back(std::move(to_send));
-  }
+  write_msgs_.push_back(std::move(to_send));
   doAsyncWrite();
 }
 
@@ -1227,18 +1224,12 @@ void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    write_msgs_.push_back(std::move(to_send));
-  }
+  write_msgs_.push_back(std::move(to_send));
   doAsyncWrite(callback);
 }
 
 void SocketConnection::doWrite(std::string&& buf) {
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    write_msgs_.push_back(std::move(buf));
-  }
+  write_msgs_.push_back(std::move(buf));
   doAsyncWrite();
 }
 
@@ -1251,13 +1242,10 @@ void SocketConnection::doStop() {
 
 void SocketConnection::doAsyncWrite() {
   std::shared_ptr<std::string> payload = nullptr;
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    if (!write_msgs_.empty()) {
-      payload.reset(new std::string());
-      payload->swap(write_msgs_.front());
-      write_msgs_.pop_front();
-    }
+  if (!write_msgs_.empty()) {
+    payload.reset(new std::string());
+    payload->swap(write_msgs_.front());
+    write_msgs_.pop_front();
   }
   if (payload == nullptr) {
     return;
@@ -1276,13 +1264,10 @@ void SocketConnection::doAsyncWrite() {
 
 void SocketConnection::doAsyncWrite(callback_t<> callback) {
   std::shared_ptr<std::string> payload = nullptr;
-  {
-    std::lock_guard<std::recursive_mutex> scoped_lock(write_msgs_mutex_);
-    if (!write_msgs_.empty()) {
-      payload.reset(new std::string());
-      payload->swap(write_msgs_.front());
-      write_msgs_.pop_front();
-    }
+  if (!write_msgs_.empty()) {
+    payload.reset(new std::string());
+    payload->swap(write_msgs_.front());
+    write_msgs_.pop_front();
   }
   if (payload == nullptr) {
     auto status = callback(Status::OK());
