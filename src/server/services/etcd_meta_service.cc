@@ -127,6 +127,27 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
       }));
 }
 
+void EtcdMetaService::Stop() {
+  if (stopped_.exchange(true)) {
+    return;
+  }
+  if (backoff_timer_) {
+    boost::system::error_code ec;
+    backoff_timer_->cancel(ec);
+  }
+  if (watcher_) {
+    try {
+      watcher_->Cancel();
+    } catch (...) {}
+  }
+  if (etcd_proc_) {
+    std::error_code err;
+    etcd_proc_->terminate(err);
+    kill(etcd_proc_->id(), SIGTERM);
+    etcd_proc_->wait(err);
+  }
+}
+
 void EtcdMetaService::requestLock(
     std::string lock_name,
     callback_t<std::shared_ptr<ILock>> callback_after_locked) {
@@ -306,6 +327,11 @@ void EtcdMetaService::startDaemonWatch(
           prefix_ + meta_sync_lock_, this->registered_callbacks_,
           this->handled_rev_, this->registered_callbacks_mutex_));
     }
+
+    if (this->watcher_ && this->watcher_->Cancelled()) {
+      return;
+    }
+
     // Use "" as the prefix to watch, and filter out unused garbage values
     // in the watch handlers.
     //
@@ -317,10 +343,9 @@ void EtcdMetaService::startDaemonWatch(
       LOG(INFO) << "Watcher stopped, as cancelled: "
                 << (cancelled ? "true" : "false");
       if (cancelled) {
-        return false;
+        return;
       }
       this->retryDaeminWatch(prefix, callback);
-      return true;
     });
   } catch (std::runtime_error& e) {
     LOG(ERROR) << "Failed to create daemon etcd watcher: " << e.what();
