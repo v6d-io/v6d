@@ -1279,6 +1279,8 @@ void SocketServer::Start() {
 }
 
 void SocketServer::Stop() {
+  std::lock_guard<std::recursive_mutex> stop_lock(mutex_for_stop_);
+
   if (stopped_.exchange(true)) {
     return;
   }

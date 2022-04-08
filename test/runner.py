@@ -90,7 +90,7 @@ def start_etcd():
 def start_vineyardd(
     etcd_endpoints,
     etcd_prefix,
-    size=4 * 1024 * 1024 * 1024,
+    size=3 * 1024 * 1024 * 1024,
     default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     idx=None,
     **kw,
