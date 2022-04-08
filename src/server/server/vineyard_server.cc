@@ -69,7 +69,7 @@ VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
                                asio::io_service& context,
                                asio::io_service& meta_context,
 #endif
-                               callback_t<> callback)
+                               callback_t<std::string const&> callback)
     : spec_(spec),
       session_id_(session_id),
       context_(context),
@@ -123,7 +123,9 @@ Status VineyardServer::Serve(std::string const& bulk_store_type) {
 
 Status VineyardServer::Finalize() { return Status::OK(); }
 
-void VineyardServer::Ready() { VINEYARD_DISCARD(callback_(Status::OK())); }
+void VineyardServer::Ready() {
+  VINEYARD_DISCARD(callback_(Status::OK(), IPCSocket()));
+}
 
 void VineyardServer::BackendReady() {
   try {
@@ -136,7 +138,7 @@ void VineyardServer::BackendReady() {
                << ", or please try to cleanup existing "
                << spec_["ipc_spec"]["socket"];
     serve_status_ = Status::IOError();
-    VINEYARD_DISCARD(callback_(serve_status_));
+    VINEYARD_DISCARD(callback_(serve_status_, IPCSocket()));
     context_.stop();
     return;
   }
@@ -151,7 +153,7 @@ void VineyardServer::BackendReady() {
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard RPC server: " << ex.what();
     serve_status_ = Status::IOError();
-    VINEYARD_DISCARD(callback_(serve_status_));
+    VINEYARD_DISCARD(callback_(serve_status_, IPCSocket()));
     context_.stop();
     return;
   }

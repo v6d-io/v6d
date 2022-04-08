@@ -1032,12 +1032,12 @@ bool SocketConnection::doDebug(const json& root) {
 
 bool SocketConnection::doNewSession(const json& root) {
   auto self(shared_from_this());
-  std::string message_out, ipc_socket, bulk_store_type;
+  std::string bulk_store_type;
   json result;
-
   TRY_READ_REQUEST(ReadNewSessionRequest, root, bulk_store_type);
   VINEYARD_CHECK_OK(server_ptr_->GetRunner()->CreateNewSession(
-      ipc_socket, bulk_store_type, [self, ipc_socket](Status const& status) {
+      bulk_store_type,
+      [self](Status const& status, std::string const& ipc_socket) {
         std::string message_out;
         if (status.ok()) {
           WriteNewSessionReply(message_out, ipc_socket);
