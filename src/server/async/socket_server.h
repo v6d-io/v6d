@@ -270,7 +270,8 @@ class SocketServer {
   size_t AliveConnections() const;
 
  protected:
-  std::atomic_bool stopped_;   // if the socket server being stopped.
+  std::atomic_bool stopped_;  // if the socket server being stopped.
+
   std::atomic_bool closable_;  // if client want to close the session,
   vs_ptr_t vs_ptr_;
   int next_conn_id_;
