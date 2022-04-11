@@ -11,6 +11,9 @@
 compile_commands.json
 cmake-build-debug
 
+# core dump
+core
+
 # for python packaging
 /dist/
 *.egg-info/
@@ -42,3 +45,5 @@ default.etcd/
 # Rust build
 /**/target/
 
+# Java JVM crash logs
+hs_err_pid*.log
