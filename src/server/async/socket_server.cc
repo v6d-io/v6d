@@ -1033,7 +1033,6 @@ bool SocketConnection::doDebug(const json& root) {
 bool SocketConnection::doNewSession(const json& root) {
   auto self(shared_from_this());
   std::string bulk_store_type;
-  json result;
   TRY_READ_REQUEST(ReadNewSessionRequest, root, bulk_store_type);
   VINEYARD_CHECK_OK(server_ptr_->GetRunner()->CreateNewSession(
       bulk_store_type,
