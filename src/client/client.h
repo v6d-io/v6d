@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_CLIENT_CLIENT_H_
 #define SRC_CLIENT_CLIENT_H_
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
@@ -42,13 +43,16 @@ class BlobWriter;
 
 namespace detail {
 
+class SharedMemoryManager;
+
 /**
  * @brief MmapEntry represents a memory-mapped fd on the client side. The fd
  * can be mmapped as readonly or readwrite memory.
  */
 class MmapEntry {
  public:
-  MmapEntry(int fd, int64_t map_size, bool readonly, bool realign = false);
+  MmapEntry(int fd, int64_t map_size, uint8_t* pointer, bool readonly,
+            bool realign = false);
 
   ~MmapEntry();
 
@@ -71,24 +75,36 @@ class MmapEntry {
  private:
   /// The associated file descriptor on the client.
   int fd_;
+  /// The pointer at the server side, for obtaining the object id by given
+  /// offset.
+  uint8_t* pointer;
   /// The result of mmap for this file descriptor.
   uint8_t *ro_pointer_, *rw_pointer_;
   /// The length of the memory-mapped file.
   size_t length_;
+
+  friend class SharedMemoryManager;
 };
 
 class SharedMemoryManager {
  public:
   explicit SharedMemoryManager(int vineyard_conn);
 
-  Status Mmap(int fd, int64_t map_size, bool readonly, bool realign,
-              uint8_t** ptr);
+  Status Mmap(int fd, int64_t map_size, uint8_t* pointer, bool readonly,
+              bool realign, uint8_t** ptr);
 
   bool Exists(const uintptr_t target);
 
   bool Exists(const void* target);
 
+  bool Exists(const uintptr_t target, ObjectID& object_id);
+
+  bool Exists(const void* target, ObjectID& object_id);
+
  private:
+  ObjectID resolveObjectID(const uintptr_t target, const uintptr_t key,
+                           const MmapEntry* entry);
+
   // UNIX-domain socket
   int vineyard_conn_ = -1;
 
@@ -96,7 +112,7 @@ class SharedMemoryManager {
   std::unordered_map<int, std::unique_ptr<MmapEntry>> mmap_table_;
 
   // sorted shm segments for fast "if exists" query
-  std::set<std::pair<uintptr_t, size_t>> segments_;
+  std::map<uintptr_t, MmapEntry*> segments_;
 };
 
 }  // namespace detail
@@ -438,6 +454,8 @@ class Client : public BasicIPCClient {
   /**
    * Check if the given address belongs to the shared memory region.
    *
+   * @param target The pointer that been queried.
+   *
    * Return true if the address (client-side address) comes from the vineyard
    * server.
    */
@@ -446,10 +464,34 @@ class Client : public BasicIPCClient {
   /**
    * Check if the given address belongs to the shared memory region.
    *
+   * @param target The pointer that been queried.
+   *
    * Return true if the address (client-side address) comes from the vineyard
    * server.
    */
   bool IsSharedMemory(const uintptr_t target) const;
+
+  /**
+   * Check if the given address belongs to the shared memory region.
+   *
+   * @param target The pointer that been queried.
+   * @param object_id Return the object id of the queried pointer, if found.
+   *
+   * Return true if the address (client-side address) comes from the vineyard
+   * server.
+   */
+  bool IsSharedMemory(const void* target, ObjectID& object_id) const;
+
+  /**
+   * Check if the given address belongs to the shared memory region.
+   *
+   * @param target The pointer that been queried.
+   * @param object_id Return the object id of the queried pointer, if found.
+   *
+   * Return true if the address (client-side address) comes from the vineyard
+   * server.
+   */
+  bool IsSharedMemory(const uintptr_t target, ObjectID& object_id) const;
 
   /**
    * Get the allocated size for the given object.

@@ -24,6 +24,7 @@ limitations under the License.
 #include "common/util/env.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
+#include "common/util/uuid.h"
 
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
@@ -561,8 +562,17 @@ void bind_client(py::module& mod) {
           },
           "target"_a)
       .def("is_shared_memory",
-           [](Client* self, const uintptr_t target) {
+           [](Client* self, const uintptr_t target) -> bool {
              return self->IsSharedMemory(target);
+           })
+      .def("find_shared_memory",
+           [](Client* self, const uintptr_t target) -> py::object {
+             ObjectID object_id = InvalidObjectID();
+             if (self->IsSharedMemory(target, object_id)) {
+               return py::cast(ObjectIDWrapper(object_id));
+             } else {
+               return py::none();
+             }
            })
       .def("close",
            [](Client* self) {

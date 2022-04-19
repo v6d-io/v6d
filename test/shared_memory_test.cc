@@ -24,6 +24,7 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
+#include "common/util/uuid.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -42,16 +43,19 @@ int main(int argc, char** argv) {
   ArrayBuilder<double> builder(client, double_array);
   auto sealed_double_array =
       std::dynamic_pointer_cast<Array<double>>(builder.Seal(client));
+  auto blob = std::dynamic_pointer_cast<Blob>(
+      sealed_double_array->meta().GetMember("buffer_"));
 
   ObjectID id = sealed_double_array->id();
   LOG(INFO) << "successfully sealed, " << ObjectIDToString(id) << " ...";
 
   auto ptr = sealed_double_array->data();
+
   CHECK(client.IsSharedMemory(ptr));
-  CHECK(client.IsSharedMemory(ptr + 1));
-  CHECK(client.IsSharedMemory(ptr + 2));
-  CHECK(client.IsSharedMemory(ptr + 3));
-  CHECK(client.IsSharedMemory(ptr + 4));
+  ObjectID object_id = InvalidObjectID();
+
+  CHECK(client.IsSharedMemory(ptr, object_id));
+  CHECK_EQ(object_id, blob->id());
 
   CHECK(!client.IsSharedMemory(&ptr));
   CHECK(!client.IsSharedMemory(&double_array));

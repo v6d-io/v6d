@@ -15,12 +15,16 @@ limitations under the License.
 
 #include "client/ds/blob.h"
 
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 
 #include "client/client.h"
 #include "common/memory/payload.h"
+#include "common/util/status.h"
+#include "common/util/uuid.h"
 
 namespace vineyard {
 
@@ -96,7 +100,7 @@ void Blob::Dump() const {
     }
     std::cout.flags(os_flags);
   }
-  std::clog << "buffer is " << ss.str() << std::endl;
+  std::clog << "[debug] buffer is " << ss.str() << std::endl;
 #endif
 }
 
@@ -116,9 +120,10 @@ std::shared_ptr<Blob> Blob::MakeEmpty(Client& client) {
   return empty_blob;
 }
 
-std::shared_ptr<Blob> Blob::FromBuffer(Client& client, const ObjectID object_id,
-                                       const size_t size,
-                                       const uintptr_t pointer) {
+std::shared_ptr<Blob> Blob::FromAllocator(Client& client,
+                                          const ObjectID object_id,
+                                          const uintptr_t pointer,
+                                          const size_t size) {
   std::shared_ptr<Blob> blob = std::shared_ptr<Blob>(new Blob());
   blob->id_ = object_id;
   blob->size_ = size;
@@ -140,6 +145,42 @@ std::shared_ptr<Blob> Blob::FromBuffer(Client& client, const ObjectID object_id,
   blob->meta_.AddKeyValue("instance_id", client.instance_id());
   blob->meta_.AddKeyValue("transient", true);
   return blob;
+}
+
+std::shared_ptr<Blob> Blob::FromPointer(Client& client, const uintptr_t pointer,
+                                        const size_t size) {
+  ObjectID object_id = InvalidObjectID();
+  if (size == 0 || reinterpret_cast<uint8_t*>(pointer) == nullptr) {
+    return Blob::MakeEmpty(client);
+  }
+  if (client.IsSharedMemory(pointer, object_id)) {
+    std::shared_ptr<Blob> blob = std::shared_ptr<Blob>(new Blob());
+    blob->id_ = object_id;
+    blob->size_ = size;
+    blob->meta_.SetId(object_id);
+    blob->meta_.SetSignature(static_cast<Signature>(object_id));
+    blob->meta_.SetTypeName(type_name<Blob>());
+    blob->meta_.AddKeyValue("length", size);
+    blob->meta_.SetNBytes(size);
+
+    blob->buffer_ =
+        arrow::Buffer::Wrap(reinterpret_cast<const uint8_t*>(pointer), size);
+
+    // n.b.: the later emplacement requires object id exists
+    VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id));
+    VINEYARD_CHECK_OK(
+        blob->meta_.buffer_set_->EmplaceBuffer(object_id, blob->buffer_));
+
+    blob->meta_.SetClient(&client);
+    blob->meta_.AddKeyValue("instance_id", client.instance_id());
+    blob->meta_.AddKeyValue("transient", true);
+    return blob;
+  } else {
+    std::unique_ptr<BlobWriter> writer;
+    VINEYARD_CHECK_OK(client.CreateBlob(size, writer));
+    memcpy(writer->data(), reinterpret_cast<uint8_t*>(pointer), size);
+    return std::dynamic_pointer_cast<Blob>(writer->Seal(client));
+  }
 }
 
 const std::shared_ptr<arrow::Buffer>& Blob::BufferUnsafe() const {
@@ -191,7 +232,7 @@ void BlobWriter::Dump() const {
     }
     std::cout.flags(os_flags);
   }
-  std::clog << "buffer is " << ss.str() << std::endl;
+  std::clog << "[debug] buffer is " << ss.str() << std::endl;
 #endif
 }
 
@@ -201,6 +242,7 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (payload_.data_size > 0) {
     VINEYARD_CHECK_OK(client.shm_->Mmap(payload_.store_fd, payload_.map_size,
+                                        payload_.pointer - payload_.data_offset,
                                         false, true, &mmapped_ptr));
     dist = mmapped_ptr + payload_.data_offset;
   }

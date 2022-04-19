@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_CLIENT_DS_BLOB_H_
 #define SRC_CLIENT_DS_BLOB_H_
 
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <memory>
@@ -107,17 +108,29 @@ class Blob : public Registered<Blob> {
   static std::shared_ptr<Blob> MakeEmpty(Client& client);
 
   /**
-   * @brief Create the blob from a buffer from allocator.
+   * @brief Create the blob from a buffer from the client-side allocator.
    *
    * @param object_id The object ID of this blob.
-   * allocator.
-   * @param pointer The address of buffer in the client allocator.
+   * @param pointer The address of buffer in the client-side allocator.
    * @param size The estimated size of the buffer.
    */
-  static std::shared_ptr<Blob> FromBuffer(Client& client,
-                                          const ObjectID object_id,
-                                          const size_t size,
-                                          const uintptr_t pointer);
+  static std::shared_ptr<Blob> FromAllocator(Client& client,
+                                             const ObjectID object_id,
+                                             const uintptr_t pointer,
+                                             const size_t size);
+
+  /**
+   * @brief Create the blob from a given buffer. If the buffer already lies in
+   * the vineyardd, it would return immediately without copying, otherwise a
+   *        blob writer will be created and the content of the buffer will be
+   *        copied into.
+   *
+   * @param pointer The address of the buffer.
+   * @param size The estimated size of the buffer.
+   */
+  static std::shared_ptr<Blob> FromPointer(Client& client,
+                                           const uintptr_t pointer,
+                                           const size_t size);
 
  private:
   /**
