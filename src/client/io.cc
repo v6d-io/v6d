@@ -97,9 +97,9 @@ Status connect_ipc_socket_retry(const std::string& pathname, int& socket_fd) {
   auto status = connect_ipc_socket(pathname, socket_fd);
 
   while (!status.ok() && num_retries > 0) {
-    std::clog << "Connection to IPC socket failed for pathname " << pathname
-              << " with ret = " << status << ", retrying " << num_retries
-              << " more times." << std::endl;
+    std::clog << "[info] Connection to IPC socket failed for pathname "
+              << pathname << " with ret = " << status << ", retrying "
+              << num_retries << " more times." << std::endl;
     usleep(static_cast<int>(timeout * 1000));
     status = connect_ipc_socket(pathname, socket_fd);
     --num_retries;
@@ -118,8 +118,8 @@ Status connect_rpc_socket_retry(const std::string& host, const uint32_t port,
   auto status = connect_rpc_socket(host, port, socket_fd);
 
   while (!status.ok() && num_retries > 0) {
-    std::clog << "Connection to RPC socket failed for endpoint " << host << ":"
-              << port << " with ret = " << status << ", retrying "
+    std::clog << "[info] Connection to RPC socket failed for endpoint " << host
+              << ":" << port << " with ret = " << status << ", retrying "
               << num_retries << " more times." << std::endl;
     usleep(static_cast<int>(timeout * 1000));
     status = connect_rpc_socket(host, port, socket_fd);

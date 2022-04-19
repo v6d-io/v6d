@@ -32,7 +32,7 @@ struct Payload {
   ptrdiff_t data_offset;
   int64_t data_size;
   int64_t map_size;
-  uint8_t* pointer;
+  uint8_t* pointer;  // the direct pointer for this blob on the server side
   bool is_sealed;
   bool is_owner;
 

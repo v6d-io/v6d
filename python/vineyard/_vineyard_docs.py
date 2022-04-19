@@ -955,7 +955,7 @@ Returns:
 add_doc(
     IPCClient.is_shared_memory,
     r'''
-.. method:: allocated_size(target: ptr) -> bool
+.. method:: is_shared_memory(target: ptr) -> bool
     :noindex:
 
 Check if the address is on the shared memory region.
@@ -966,6 +966,23 @@ Parameters:
 
 Returns:
     bool
+''',
+)
+
+add_doc(
+    IPCClient.find_shared_memory,
+    r'''
+.. method:: find_shared_memory(target: ptr) -> bool
+    :noindex:
+
+Find the corresponding blob (if exists) of the given pointer.
+
+Parameters:
+    target: address, in int format
+        The given address.
+
+Returns:
+    ObjectID
 ''',
 )
 

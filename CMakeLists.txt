@@ -26,6 +26,7 @@ option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of met
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
+option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
 option(BUILD_VINEYARD_PYPI_PACKAGES "Build vineyard's python bindings" OFF)
 
@@ -583,6 +584,10 @@ if(BUILD_VINEYARD_CLIENT)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
         $<INSTALL_INTERFACE:include>
     )
+
+    if(BUILD_VINEYARD_CLIENT_VERBOSE)
+        target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
+    endif()
 
     if(BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)

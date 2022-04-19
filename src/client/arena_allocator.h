@@ -75,8 +75,8 @@ struct VineyardArenaAllocator : public memory::ArenaAllocator {
     sizes_.emplace_back(allocated_size);
     freezed_.emplace(reinterpret_cast<uintptr_t>(ptr));
     ObjectID id = base_ + (reinterpret_cast<uintptr_t>(ptr) - space_);
-    return Blob::FromBuffer(client_, id, reinterpret_cast<uintptr_t>(ptr),
-                            allocated_size);
+    return Blob::FromAllocator(client_, id, reinterpret_cast<uintptr_t>(ptr),
+                               allocated_size);
   }
 
   Status Release() {
