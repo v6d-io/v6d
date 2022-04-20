@@ -168,6 +168,9 @@ else()
     set(HAVE_FLAG_STD_CXX14 TRUE)
 endif()
 
+set(CMAKE_INSTALL_DIR lib/cmake/vineyard CACHE STRING
+    "The subdirectory where CMake package config files should be installed")
+
 macro(find_apache_arrow)
     # workaround for: https://issues.apache.org/jira/browse/ARROW-11836
     if(NOT BUILD_VINEYARD_PYPI_PACKAGES)
@@ -790,11 +793,11 @@ install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/GenerateVineyard.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/GenerateVineyardJava.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/DetermineImplicitIncludes.cmake"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vineyard
+              DESTINATION ${CMAKE_INSTALL_DIR}
 )
 install(EXPORT vineyard-targets
         FILE vineyard-targets.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vineyard
+        DESTINATION ${CMAKE_INSTALL_DIR}
 )
 
 # build docs
