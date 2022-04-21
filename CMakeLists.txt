@@ -790,11 +790,11 @@ install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/GenerateVineyard.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/GenerateVineyardJava.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/DetermineImplicitIncludes.cmake"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vineyard
+              DESTINATION lib/cmake/vineyard
 )
 install(EXPORT vineyard-targets
         FILE vineyard-targets.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vineyard
+        DESTINATION lib/cmake/vineyard
 )
 
 # build docs
