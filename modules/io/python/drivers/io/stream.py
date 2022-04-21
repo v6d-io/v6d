@@ -55,7 +55,7 @@ class StreamLauncher(ScriptLauncher):
         ----------
         vineyard_endpoint: str
             IPC or RPC endpoint to connect to vineyard. If not specified, vineyard
-            will try to discovery vineyardd from the environment variable named
+            will try to find vineyardd from the environment variable named
             :code:`VINEYARD_IPC_SOCKET`.
         """
         self.vineyard_endpoint = vineyard_endpoint

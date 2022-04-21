@@ -210,7 +210,7 @@ std::shared_ptr<Object> GlobalDataFrameBaseBuilder::_Seal(Client& client) {
     __value_nbytes += __value_partitions_->nbytes();
     __partitions__idx += 1;
   }
-  __value->meta_.AddKeyValue("partitions_-size", __value->partitions_.size());
+  __value->meta_.AddKeyValue("partitions_-size", partitions_.size());
 
   __value->meta_.SetNBytes(__value_nbytes);
 
