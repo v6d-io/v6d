@@ -104,6 +104,8 @@ class LocalIOAdaptor : public IIOAdaptor {
 
   Status ReadTable(std::shared_ptr<arrow::Table>* table) override;
 
+  Status WriteTable(std::shared_ptr<arrow::Table> table) override;
+
   Status ReadPartialTable(std::shared_ptr<arrow::Table>* table, int index);
 
   Status Seek(const int64_t offset);
