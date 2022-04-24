@@ -475,6 +475,17 @@ Status LocalIOAdaptor::ReadLine(std::string& line) {
   return Status::OK();
 }
 
+Status LocalIOAdaptor::WriteTable(std::shared_ptr<arrow::Table> table) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 4000000
+  return Status::NotImplemented();
+#else
+  arrow::csv::WriteOptions options;
+  options.include_header = false;
+  RETURN_ON_ARROW_ERROR(arrow::csv::WriteCSV(*table, options, ofp_.get()));
+  return Status::OK();
+#endif
+}
+
 Status LocalIOAdaptor::WriteLine(const std::string& line) {
   if (ofp_ == nullptr) {
     return Status::IOError("The file hasn't been opened in write mode: " +
