@@ -631,6 +631,10 @@ def generate_parsing_flags(
             # strip flags
             flags = strip_flags(list(commands[0].arguments)[1:-1])
 
+            # adapts to libclang v14.0.1
+            if flags and flags[-1] == '--':
+                flags.pop(-1)
+
             # NB: even use compilation database we still needs to include the
             # system includes, since we `-nostdinc{++}`.
             if system_includes:
