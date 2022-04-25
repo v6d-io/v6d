@@ -131,6 +131,11 @@ class Stream : public Object {
                         meta.GetTypeName() + "'");
     this->meta_ = meta;
     this->id_ = meta.GetId();
+    meta.GetKeyValue("params_", this->params_);
+  }
+
+  std::map<std::string, std::string> const& GetParams() {
+    return this->params_;
   }
 
   Status OpenReader(Client* client) {
@@ -157,11 +162,14 @@ class Stream : public Object {
     return Status::OK();
   }
 
+  bool IsOpen() const { return client_ != nullptr; }
+
  protected:
   Client* client_ = nullptr;
   virtual std::string GetTypeName() const { return type_name<Stream<T>>(); }
 
  private:
+  std::map<std::string, std::string> params_;
   bool readonly_ = false;
   bool stoped_;  // an optimization: avoid repeated idempotent requests.
 

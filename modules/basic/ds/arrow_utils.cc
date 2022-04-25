@@ -288,7 +288,8 @@ std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
   }
 }
 
-std::string type_name_from_arrow_type(std::shared_ptr<arrow::DataType> type) {
+std::string type_name_from_arrow_type(
+    std::shared_ptr<arrow::DataType> const& type) {
   if (arrow::null()->Equals(type)) {
     return "null";
   } else if (vineyard::ConvertToArrowType<bool>::TypeValue()->Equals(type)) {

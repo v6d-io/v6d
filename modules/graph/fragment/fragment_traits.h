@@ -47,15 +47,6 @@ struct is_property_fragment<ArrowFragment<OID_T, VID_T>> {
   static constexpr bool value = true;
 };
 
-template <typename OID_T, typename VID_T>
-class AppendOnlyArrowFragment;
-
-template <typename OID_T, typename VID_T>
-struct is_property_fragment<AppendOnlyArrowFragment<OID_T, VID_T>> {
-  using type = std::true_type;
-  static constexpr bool value = true;
-};
-
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_FRAGMENT_TRAITS_H_

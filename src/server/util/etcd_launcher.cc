@@ -254,7 +254,13 @@ void EtcdLauncher::initHostInfo() {
 bool EtcdLauncher::probeEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
                                    std::string const& key) {
   // probe: as a 1-limit range request
-  return etcd_client && etcd_client->ls(key, 1).get().is_ok();
+
+  // don't use `etcd_client->ls(key, 1).get().is_ok()` to avoid a random
+  // stack-buffer-overflow error when asan is enabled.
+
+  auto task = etcd_client->ls(key, 1);
+  auto response = task.get();
+  return etcd_client && response.is_ok();
 }
 
 }  // namespace vineyard

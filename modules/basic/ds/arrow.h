@@ -62,7 +62,8 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
 
   explicit NumericArrayBuilder(Client& client)
       : NumericArrayBaseBuilder<T>(client) {
-    CHECK_ARROW_ERROR(ConvertToArrowType<bool>::BuilderType{}.Finish(&array_));
+    CHECK_ARROW_ERROR(
+        typename ConvertToArrowType<T>::BuilderType{}.Finish(&array_));
   }
 
   NumericArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
@@ -111,7 +112,8 @@ class BooleanArrayBuilder : public BooleanArrayBaseBuilder {
   // build an empty array
   explicit BooleanArrayBuilder(Client& client)
       : BooleanArrayBaseBuilder(client) {
-    CHECK_ARROW_ERROR(ConvertToArrowType<bool>::BuilderType{}.Finish(&array_));
+    CHECK_ARROW_ERROR(
+        typename ConvertToArrowType<bool>::BuilderType{}.Finish(&array_));
   }
 
   BooleanArrayBuilder(Client& client, std::shared_ptr<ArrayType> array)
