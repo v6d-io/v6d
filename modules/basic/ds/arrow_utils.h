@@ -143,7 +143,7 @@ class PodArrayBuilder : public arrow::FixedSizeBinaryBuilder {
   // https://github.com/apache/arrow/commit/e990d177, and hopeful to be
   // fixed in arrow 0.6.0.
 
-  arrow::Status Resize(int64_t capacity) override {
+  arrow::Status ResizeAndFill(int64_t capacity) {
 #if defined(ARROW_VERSION) && ARROW_VERSION < 5000000
     return arrow::FixedSizeBinaryBuilder::Resize(capacity);
 #else

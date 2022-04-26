@@ -1141,7 +1141,9 @@ boost::leaf::result<void> generate_directed_csr(
   std::vector<vineyard::PodArrayBuilder<nbr_unit_t>> edge_builders(
       vertex_label_num);
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
-    ARROW_OK_OR_RAISE(edge_builders[v_label].Resize(actual_edge_num[v_label]));
+    // FixedSizeBinaryBuilder has different behaviour on `Resize/Advance`
+    ARROW_OK_OR_RAISE(
+        edge_builders[v_label].ResizeAndFill(actual_edge_num[v_label]));
   }
 
   if (concurrency == 1) {
@@ -1265,7 +1267,9 @@ boost::leaf::result<void> generate_undirected_csr(
   std::vector<vineyard::PodArrayBuilder<nbr_unit_t>> edge_builders(
       vertex_label_num);
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
-    ARROW_OK_OR_RAISE(edge_builders[v_label].Resize(actual_edge_num[v_label]));
+    // FixedSizeBinaryBuilder has different behaviour on `Resize/Advance`
+    ARROW_OK_OR_RAISE(
+        edge_builders[v_label].ResizeAndFill(actual_edge_num[v_label]));
   }
 
   if (concurrency == 1) {

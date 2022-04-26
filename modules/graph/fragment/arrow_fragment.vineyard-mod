@@ -1565,7 +1565,7 @@ class [[vineyard]] ArrowFragment
         builder.set_vertex_tables_(label_id, new_table);
         auto& entry = schema.GetMutableEntry(
             schema.GetVertexLabelName(label_id), "VERTEX");
-        for (prop_id_t index = table->num_columns();
+        for (size_t index = table->num_columns();
              index < new_table->num_columns(); ++index) {
           entry.AddProperty(new_table->field(index)->name(),
                             new_table->field(index)->type());
@@ -1772,7 +1772,7 @@ class [[vineyard]] ArrowFragment
 
       for (label_id_t j = 0; j < edge_label_num_; ++j) {
         oe_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
-            oe_lists_[i][j]->GetArray()->GetValue(0));
+            oe_lists_[i][j]->GetArray()->raw_values());
         oe_offsets_ptr_lists_[i][j] =
             oe_offsets_lists_[i][j]->GetArray()->raw_values();
       }
@@ -1786,7 +1786,7 @@ class [[vineyard]] ArrowFragment
         ie_offsets_ptr_lists_[i].resize(edge_label_num_);
         for (label_id_t j = 0; j < edge_label_num_; ++j) {
           ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
-              ie_lists_[i][j]->GetArray()->GetValue(0));
+              ie_lists_[i][j]->GetArray()->raw_values());
           ie_offsets_ptr_lists_[i][j] =
               ie_offsets_lists_[i][j]->GetArray()->raw_values();
         }
