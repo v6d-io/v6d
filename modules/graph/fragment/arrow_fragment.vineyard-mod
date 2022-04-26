@@ -16,9 +16,7 @@ limitations under the License.
 #ifndef MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 #define MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 
-#include <arrow/buffer_builder.h>
 #include <algorithm>
-#include <chrono>
 #include <cstddef>
 #include <map>
 #include <memory>
@@ -1675,14 +1673,10 @@ class [[vineyard]] ArrowFragment
     ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
     builder.set_directed_(!directed_);
 
-    LOG(INFO) << "start transformation ... ";
-
     std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
         oe_lists(vertex_label_num_);
     std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
         oe_offsets_lists(vertex_label_num_);
-
-    LOG(INFO) << "start resize ... ";
 
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
       oe_lists[v_label].resize(edge_label_num_);
@@ -1693,13 +1687,9 @@ class [[vineyard]] ArrowFragment
       std::atomic<size_t> oe_num;
       oe_num.store(0);
 
-      LOG(INFO) << "start directedCSR2Undirected ... ";
-
       bool is_multigraph = is_multigraph_;
       directedCSR2Undirected(oe_lists, oe_offsets_lists, concurrency,
                              is_multigraph);
-
-      LOG(INFO) << "finish directedCSR2Undirected ... ";
 
       for (label_id_t i = 0; i < vertex_label_num_; ++i) {
         for (label_id_t j = 0; j < edge_label_num_; ++j) {
