@@ -16,12 +16,15 @@ limitations under the License.
 #ifndef MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 #define MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 
+#include <arrow/buffer_builder.h>
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -1117,15 +1120,14 @@ class [[vineyard]] ArrowFragment
     std::vector<std::vector<std::shared_ptr<vineyard::NumericArray<int64_t>>>>
         vy_ie_offsets_lists, vy_oe_offsets_lists;
 
-    for (int extra_label_id = 0; extra_label_id < extra_vertex_label_num;
+    for (label_id_t extra_label_id = 0; extra_label_id < extra_vertex_label_num;
          ++extra_label_id) {
+      label_id_t label_id = vertex_label_num_ + extra_label_id;
       vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(client);
-      builder.set_ovgid_lists_(vertex_label_num_ + extra_label_id,
-                               ovgid_list_builder.Seal(client));
+      builder.set_ovgid_lists_(label_id, ovgid_list_builder.Seal(client));
 
       vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(client);
-      builder.set_ovg2l_maps_(vertex_label_num_ + extra_label_id,
-                              ovg2l_builder.Seal(client));
+      builder.set_ovg2l_maps_(label_id, ovg2l_builder.Seal(client));
     }
 
     for (label_id_t i = 0; i < extra_vertex_label_num; ++i) {
@@ -1460,7 +1462,8 @@ class [[vineyard]] ArrowFragment
 
             vineyard::NumericArrayBuilder<int64_t> ieo_builder(
                 client, ie_offsets_lists[i][j]);
-            builder.set_ie_offsets_lists_(i, j, ieo_builder.Seal(client));
+            builder.set_ie_offsets_lists_(i, edge_label_id,
+                                          ieo_builder.Seal(client));
           }
           vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
                                                            oe_lists[i][j]);
@@ -1480,7 +1483,7 @@ class [[vineyard]] ArrowFragment
       for (label_id_t j = 0; j < edge_label_num_; ++j) {
         auto fn = [this, &builder, i, j, &ie_offsets_lists_expanded,
                    &oe_offsets_lists_expanded](Client& client) {
-          label_id_t edge_label_id = edge_label_num_ + j;
+          label_id_t edge_label_id = j;
           if (directed_) {
             vineyard::NumericArrayBuilder<int64_t> ieo_builder_expanded(
                 client, ie_offsets_lists_expanded[i][j]);
@@ -1672,12 +1675,14 @@ class [[vineyard]] ArrowFragment
     ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
     builder.set_directed_(!directed_);
 
-    bool is_multigraph = is_multigraph_;
+    LOG(INFO) << "start transformation ... ";
 
     std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
         oe_lists(vertex_label_num_);
     std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
         oe_offsets_lists(vertex_label_num_);
+
+    LOG(INFO) << "start resize ... ";
 
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
       oe_lists[v_label].resize(edge_label_num_);
@@ -1688,8 +1693,13 @@ class [[vineyard]] ArrowFragment
       std::atomic<size_t> oe_num;
       oe_num.store(0);
 
+      LOG(INFO) << "start directedCSR2Undirected ... ";
+
+      bool is_multigraph = is_multigraph_;
       directedCSR2Undirected(oe_lists, oe_offsets_lists, concurrency,
                              is_multigraph);
+
+      LOG(INFO) << "finish directedCSR2Undirected ... ";
 
       for (label_id_t i = 0; i < vertex_label_num_; ++i) {
         for (label_id_t j = 0; j < edge_label_num_; ++j) {
@@ -1860,10 +1870,12 @@ class [[vineyard]] ArrowFragment
       int concurrency, bool& is_multigraph) {
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
       for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
-        const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
-        const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
-        const int64_t* ie_offset = ie_offsets_ptr_lists_[v_label][e_label];
-        const int64_t* oe_offset = oe_offsets_ptr_lists_[v_label][e_label];
+        const nbr_unit_t* ie = ie_ptr_lists_.at(v_label).at(e_label);
+        const nbr_unit_t* oe = oe_ptr_lists_.at(v_label).at(e_label);
+        const int64_t* ie_offset =
+            ie_offsets_ptr_lists_.at(v_label).at(e_label);
+        const int64_t* oe_offset =
+            oe_offsets_ptr_lists_.at(v_label).at(e_label);
 
         // Merge edges from two array into one
         vineyard::PodArrayBuilder<nbr_unit_t> edge_builder;
@@ -1872,11 +1884,11 @@ class [[vineyard]] ArrowFragment
         for (int offset = 0; offset < tvnums_[v_label]; ++offset) {
           for (int k = ie_offset[offset]; k < ie_offset[offset + 1]; ++k) {
             CHECK_ARROW_ERROR(
-                edge_builder.Append(reinterpret_cast<const uint8_t*>(&ie[k])));
+                edge_builder.Append(reinterpret_cast<const uint8_t*>(ie + k)));
           }
           for (int k = oe_offset[offset]; k < oe_offset[offset + 1]; ++k) {
             CHECK_ARROW_ERROR(
-                edge_builder.Append(reinterpret_cast<const uint8_t*>(&oe[k])));
+                edge_builder.Append(reinterpret_cast<const uint8_t*>(oe + k)));
           }
           CHECK_ARROW_ERROR(offset_builder.Append(edge_builder.length()));
         }
