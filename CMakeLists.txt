@@ -80,6 +80,13 @@ else()
     )
 endif(ccache_EXECUTABLE)
 
+# enable colored diagnostics
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    add_compile_options(-fdiagnostics-color=always)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    add_compile_options(-fcolor-diagnostics)
+endif()
+
 if(USE_INCLUDE_WHAT_YOU_USE AND NOT CMAKE_CXX_INCLUDE_WHAT_YOU_USE)
     find_program(iwyu_EXECUTABLE include-what-you-use)
     if(iwyu_EXECUTABLE)

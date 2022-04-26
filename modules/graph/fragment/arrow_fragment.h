@@ -137,7 +137,7 @@ class BasicArrowFragmentBuilder
             vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
                                                              oe_lists_[i][j]);
             this->set_oe_lists_(i, j, oe_builder.Seal(client));
-            oe_num.fetch_add(ie_lists_[i][j]->length());
+            oe_num.fetch_add(oe_lists_[i][j]->length());
           }
           if (this->directed_) {
             vineyard::NumericArrayBuilder<int64_t> ieo(client,

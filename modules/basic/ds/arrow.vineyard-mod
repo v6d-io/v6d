@@ -77,6 +77,10 @@ class [[vineyard]] NumericArray : public PrimitiveArray,
 
   const uint8_t* GetBase() const { return array_->values()->data(); }
 
+  const size_t length() const { return array_->length(); }
+
+  const T* raw_values() const { return array_->raw_values(); }
+
  private:
   [[shared]] size_t length_;
   [[shared]] int64_t null_count_, offset_;

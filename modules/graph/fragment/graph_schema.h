@@ -88,6 +88,10 @@ class PropertyGraphSchema {
   using LabelId = int;
   using PropertyId = int;
 
+  PropertyGraphSchema() = default;
+
+  explicit PropertyGraphSchema(json const& json) { FromJSON(json); }
+
   PropertyId GetVertexPropertyId(LabelId label_id,
                                  const std::string& name) const;
   PropertyType GetVertexPropertyType(LabelId label_id,
