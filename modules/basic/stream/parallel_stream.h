@@ -31,7 +31,8 @@ namespace vineyard {
  */
 class ParallelStreamBuilder : public ParallelStreamBaseBuilder {
  public:
-  ParallelStreamBuilder(Client& client) : ParallelStreamBaseBuilder(client) {}
+  explicit ParallelStreamBuilder(Client& client)
+      : ParallelStreamBaseBuilder(client) {}
 
   void AddStream(const ObjectID stream_id);
 
