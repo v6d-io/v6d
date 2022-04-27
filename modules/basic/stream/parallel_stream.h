@@ -34,12 +34,9 @@ class ParallelStreamBuilder : public ParallelStreamBaseBuilder {
   explicit ParallelStreamBuilder(Client& client)
       : ParallelStreamBaseBuilder(client) {}
 
-  void AddStream(const ObjectID stream_id);
+  void AddStream(Client& client, const ObjectID stream_id);
 
-  Status Build(Client& client) override;
-
- private:
-  std::vector<ObjectID> streams_;
+  void AddStream(const std::shared_ptr<Object>& stream);
 };
 
 }  // namespace vineyard

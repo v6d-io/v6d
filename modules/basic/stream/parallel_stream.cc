@@ -23,10 +23,13 @@ limitations under the License.
 
 namespace vineyard {
 
-void ParallelStreamBuilder::AddStream(const ObjectID stream_id) {
-  streams_.emplace_back(stream_id);
+void ParallelStreamBuilder::AddStream(Client& client,
+                                      const ObjectID stream_id) {
+  this->add_streams_(client.GetObject(stream_id));
 }
 
-Status ParallelStreamBuilder::Build(Client& client) { return Status::OK(); }
+void ParallelStreamBuilder::AddStream(const std::shared_ptr<Object>& stream) {
+  this->add_streams_(stream);
+}
 
 }  // namespace vineyard

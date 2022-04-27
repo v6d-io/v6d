@@ -71,7 +71,14 @@ class Stream : public Object {
                      "Expect a readonly stream");
     std::shared_ptr<Object> result = nullptr;
     auto status = client_->ClientBase::PullNextStreamChunk(this->id_, result);
-    chunk = std::dynamic_pointer_cast<T>(result);
+    if (status.ok()) {
+      chunk = std::dynamic_pointer_cast<T>(result);
+      if (chunk == nullptr) {
+        return Status::Invalid("Failed to cast object with type '" +
+                               result->meta().GetTypeName() + "' to type '" +
+                               type_name<T>() + "'");
+      }
+    }
     return status;
   }
 

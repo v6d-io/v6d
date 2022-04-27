@@ -58,8 +58,7 @@ Status RecordBatchStream::ReadRecordBatches(
   while (true) {
     auto status = ReadBatch(batch, true);
     if (status.ok()) {
-      batches.emplace_back(
-          std::dynamic_pointer_cast<RecordBatch>(batch)->GetRecordBatch());
+      batches.emplace_back(batch);
     } else if (status.IsStreamDrained()) {
       break;
     } else {
