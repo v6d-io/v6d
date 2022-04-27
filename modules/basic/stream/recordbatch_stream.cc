@@ -56,7 +56,7 @@ Status RecordBatchStream::ReadRecordBatches(
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches) {
   std::shared_ptr<arrow::RecordBatch> batch;
   while (true) {
-    auto status = ReadBatch(batch);
+    auto status = ReadBatch(batch, true);
     if (status.ok()) {
       batches.emplace_back(
           std::dynamic_pointer_cast<RecordBatch>(batch)->GetRecordBatch());
@@ -77,12 +77,17 @@ Status RecordBatchStream::ReadTable(std::shared_ptr<arrow::Table>& table) {
   return Status::OK();
 }
 
-Status RecordBatchStream::ReadBatch(
-    std::shared_ptr<arrow::RecordBatch>& batch) {
+Status RecordBatchStream::ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
+                                    bool const copy) {
   std::shared_ptr<RecordBatch> recordbatch;
   auto status = this->Next(recordbatch);
   if (status.ok()) {
     batch = recordbatch->GetRecordBatch();
+    if (copy) {
+      std::shared_ptr<arrow::Buffer> buffer;
+      RETURN_ON_ERROR(SerializeRecordBatch(batch, &buffer));
+      RETURN_ON_ERROR(DeserializeRecordBatch(buffer, &batch));
+    }
   }
   return status;
 }

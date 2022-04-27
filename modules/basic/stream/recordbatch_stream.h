@@ -47,7 +47,8 @@ class RecordBatchStream : public BareRegistered<RecordBatchStream>,
 
   Status ReadTable(std::shared_ptr<arrow::Table>& table);
 
-  Status ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch);
+  Status ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
+                   bool const copy = false);
 
  protected:
   std::string GetTypeName() const override {
