@@ -55,6 +55,11 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
     auto mg_schema = vineyard::MaxGraphSchema(schema);
     mg_schema.DumpToFile("/tmp/" + std::to_string(fragment_group_id) + ".json");
 
+    LOG(INFO) << "graph total node number: " << frag->GetTotalNodesNum();
+    LOG(INFO) << "fragment edge number: " << frag->GetEdgeNum();
+    LOG(INFO) << "fragment in edge number: " << frag->GetInEdgeNum();
+    LOG(INFO) << "fragment out edge number: " << frag->GetOutEdgeNum();
+
     LOG(INFO) << "[worker-" << comm_spec.worker_id()
               << "] loaded graph to vineyard: " << ObjectIDToString(frag_id)
               << " ...";
