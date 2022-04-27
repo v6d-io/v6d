@@ -31,7 +31,6 @@ class ParallelStreamBaseBuilder;
 class [[vineyard]] ParallelStream : public Registered<ParallelStream>,
                                     GlobalObject {
  private:
-  [[shared]] size_t size_;
   [[distributed]] Tuple<std::shared_ptr<Object>> streams_;
 
   friend class ParallelStreamBaseBuilder;

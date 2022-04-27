@@ -247,12 +247,12 @@ ObjectID MigrationServer::createObject(json& meta_tree, Client& client,
     VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, obj_id));
     VINEYARD_CHECK_OK(client.GetMetaData(obj_id, new_meta));
     if (persist) {
+      VINEYARD_CHECK_OK(client.Persist(obj_id));
       if (instance_id != UnspecifiedInstanceID()) {
         std::string obj_name = ObjectIDToString(obj_id) + "_" +
                                std::to_string(client.instance_id());
         VINEYARD_CHECK_OK(client.PutName(obj_id, obj_name));
       }
-      VINEYARD_CHECK_OK(client.Persist(obj_id));
     }
     return obj_id;
   } else {
