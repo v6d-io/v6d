@@ -223,7 +223,7 @@ void testDataframeStream(Client& client, std::string const& ipc_socket) {
 
     while (true) {
       std::shared_ptr<arrow::RecordBatch> load_batch;
-      auto status = dataframe_stream->ReadBatch(load_batch);
+      auto status = dataframe_stream->ReadBatch(load_batch, true);
       if (status.ok()) {
         CHECK(load_batch != nullptr);
         recv_chunks += 1;
