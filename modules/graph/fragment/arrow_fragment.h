@@ -120,24 +120,18 @@ class BasicArrowFragmentBuilder
       tg.AddTask(fn, std::ref(client));
     }
 
-    std::atomic<size_t> ie_num, oe_num;
-    ie_num.store(0);
-    oe_num.store(0);
-
     for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
       for (label_id_t j = 0; j < this->edge_label_num_; ++j) {
-        auto fn = [this, i, j, &ie_num, &oe_num](Client& client) {
+        auto fn = [this, i, j](Client& client) {
           if (this->directed_) {
             vineyard::FixedSizeBinaryArrayBuilder ie_builder(client,
                                                              ie_lists_[i][j]);
             this->set_ie_lists_(i, j, ie_builder.Seal(client));
-            ie_num.fetch_add(ie_lists_[i][j]->length());
           }
           {
             vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
                                                              oe_lists_[i][j]);
             this->set_oe_lists_(i, j, oe_builder.Seal(client));
-            oe_num.fetch_add(oe_lists_[i][j]->length());
           }
           if (this->directed_) {
             vineyard::NumericArrayBuilder<int64_t> ieo(client,
@@ -157,8 +151,6 @@ class BasicArrowFragmentBuilder
 
     tg.TakeResults();
 
-    this->set_ienum_(ie_num.load());
-    this->set_oenum_(oe_num.load());
     this->set_vm_ptr_(vm_ptr_);
 
     this->set_oid_type(type_name<oid_t>());
