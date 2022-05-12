@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20210929
+FROM docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20220512
 
 # target: docker.pkg.github.com/v6d-io/v6d/vineyard-wheel
 
@@ -21,6 +21,7 @@ FROM docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20210929
 #   - cp37-cp37m
 #   - cp38-cp38
 #   - cp39-cp39
+#   - cp310-cp310
 ARG python
 
 ADD . /work/v6d
@@ -51,7 +52,7 @@ RUN cd /work/v6d && \
     /opt/python/$python/bin/python setup_migrate.py bdist_wheel && \
     export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
     for pylibs in /opt/_internal/tools/lib/*; do\
-        sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py; \
+        sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py || true; \
     done && \
     for wheel in `ls dist/*`; do \
         auditwheel repair -w fixed_wheels $wheel; \

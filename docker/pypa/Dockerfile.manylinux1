@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM quay.io/pypa/manylinux2010_x86_64:2020-10-18-c6d2d92
+FROM quay.io/pypa/manylinux2010_x86_64:2022-05-08-ac9d5ec
 
-# target: docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20210929
+# target: docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20220512
 
 RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     mkdir /deps && \
@@ -27,13 +27,22 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     curl -L https://github.com/google/glog/archive/v0.5.0.tar.gz --output glog-v0.5.0.tar.gz && \
     tar zxvf glog-v0.5.0.tar.gz && \
     cd glog-0.5.0 && \
-    mkdir build && \
-    cd build && \
+    mkdir build-dir && \
+    cd build-dir && \
     cmake .. -DBUILD_SHARED_LIBS=OFF \
              -DBUILD_TESTING=OFF \
              -DWITH_GFLAGS=OFF \
              -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
-    make install -j && \
+    make install -j`nproc` && \
+    echo "Installing gflags ..." && \
+    cd /deps && \
+    curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz && \
+    tar zxf gflags-v2.2.2.tar.gz && \
+    cd gflags-2.2.2 && \
+    mkdir -p build-dir && \
+    cd build-dir && \
+    cmake .. -DBUILD_SHARED_LIBS=OFF && \
+    make install -j`nproc` && \
     echo "Installing boost header libraries ..." && \
     cd /deps && \
     curl -L https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz \
@@ -45,8 +54,8 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     curl -L https://github.com/apache/arrow/archive/apache-arrow-1.0.1.tar.gz --output apache-arrow-1.0.1.tar.gz && \
     tar zxvf apache-arrow-1.0.1.tar.gz && \
     cd arrow-apache-arrow-1.0.1 && \
-    mkdir build && \
-    cd build && \
+    mkdir build-dir && \
+    cd build-dir && \
     cmake ../cpp \
         -DARROW_COMPUTE=ON \
         -DARROW_WITH_UTF8PROC=OFF \
@@ -87,7 +96,7 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
         -DARROW_BUILD_SHARED=OFF \
         -DARROW_BUILD_STATIC=ON \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
-    make install -j && \
+    make install -j`nproc` && \
     echo "Prepare python dev dependencies ..." && \
     pip3 install libclang parsec && \
     echo "Done." && \
