@@ -283,12 +283,6 @@ jobs:
             python3 setup_${pkg}.py bdist_wheel
           done
 
-          # repair python wheels
-          pushd dist
-          auditwheel repair -w fixed_wheels ./vineyard_migrate*.whl
-          mv fixed_wheels/* ./
-          popd
-
           # install python packages
           sudo pip3 install dist/*.whl -U
 
