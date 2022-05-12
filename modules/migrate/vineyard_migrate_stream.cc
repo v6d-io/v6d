@@ -20,7 +20,6 @@ limitations under the License.
 #include <utility>
 
 #include "boost/asio.hpp"
-#include "gflags/gflags.h"
 
 #include "client/client.h"
 #include "client/ds/blob.h"
@@ -33,7 +32,6 @@ limitations under the License.
 namespace vineyard {
 
 namespace asio = boost::asio;
-using boost::asio::generic::stream_protocol;
 
 DEFINE_bool(client, false, "Run as the client");
 DEFINE_bool(server, false, "Run as the server");

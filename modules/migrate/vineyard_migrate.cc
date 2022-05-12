@@ -20,7 +20,6 @@ limitations under the License.
 #include <utility>
 
 #include "boost/asio.hpp"
-#include "gflags/gflags.h"
 
 #include "client/client.h"
 #include "client/ds/blob.h"
