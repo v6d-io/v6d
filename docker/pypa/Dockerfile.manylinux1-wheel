@@ -38,21 +38,24 @@ RUN cd /work/v6d && \
              -DBUILD_VINEYARD_BASIC=OFF \
              -DBUILD_VINEYARD_IO=OFF \
              -DBUILD_VINEYARD_GRAPH=OFF \
-             -DBUILD_VINEYARD_MIGRATION=OFF \
+             -DBUILD_VINEYARD_MIGRATION=ON \
              -DBUILD_VINEYARD_TESTS=OFF \
              -DBUILD_VINEYARD_TESTS_ALL=OFF \
              -DBUILD_VINEYARD_COVERAGE=OFF \
              -DBUILD_VINEYARD_PROFILING=OFF \
              -DCMAKE_BUILD_TYPE=Release \
              -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
-    make vineyard_client_python -j2 && \
+    make vineyard_client_python vineyard_migrate_python -j2 && \
     cd .. && \
     /opt/python/$python/bin/python setup.py bdist_wheel && \
+    /opt/python/$python/bin/python setup_migrate.py bdist_wheel && \
     export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
-    for pylibs in /opt/_internal/tools/lib/*; \
-        do sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py; \
+    for pylibs in /opt/_internal/tools/lib/*; do\
+        sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py; \
     done && \
-    for wheel in `ls dist/*`; do auditwheel repair -w fixed_wheels $wheel; done && \
+    for wheel in `ls dist/*`; do \
+        auditwheel repair -w fixed_wheels $wheel; \
+    done && \
     cd /work && \
     mkdir -p fixed_wheels/ && \
     mv /work/v6d/fixed_wheels/* /work/fixed_wheels/ && \

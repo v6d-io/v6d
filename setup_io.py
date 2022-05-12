@@ -1,7 +1,7 @@
 #!/usr/env/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020-2021 Alibaba Group Holding Limited.
+# Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-import os
 
 from setuptools import find_packages
 from setuptools import setup
@@ -42,13 +40,10 @@ class install_plat(install):
         install.finalize_options(self)
 
 
-repo_root = os.path.dirname(os.path.abspath(__file__))
-
-
 def find_vineyard_io_packages():
     packages = []
 
-    for pkg in find_packages("python/drivers"):
+    for pkg in find_packages('modules/io/python/drivers'):
         packages.append('vineyard.drivers.%s' % pkg)
 
     return packages
@@ -56,13 +51,13 @@ def find_vineyard_io_packages():
 
 def resolve_vineyard_io_package_dir():
     package_dir = {
-        "vineyard.drivers": "python/drivers",
+        'vineyard.drivers': 'modules/io/python/drivers',
     }
     return package_dir
 
 
 with open(
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
+    'modules/io/README.rst',
     encoding='utf-8',
     mode='r',
 ) as fp:
@@ -71,7 +66,7 @@ with open(
 setup(
     name='vineyard-io',
     author='The vineyard team',
-    author_email='developers@alibaba-inc.com',
+    author_email='developers@v6d.io',
     description='IO drivers for vineyard',
     long_description=long_description,
     long_description_content_type='text/x-rst',
@@ -111,6 +106,14 @@ setup(
     setup_requires=[
         'setuptools',
         'wheel',
+    ],
+    install_requires=[
+        'fsspec',
+        'hdfs3',
+        'oss2',
+        'pyarrow',
+        's3fs',
+        'vineyard',
     ],
     extras_require={
         'dev': [
