@@ -20,6 +20,8 @@ import os
 import subprocess
 import sys
 
+import vineyard
+
 base_loc = os.path.join(os.path.dirname(__file__), 'tools')
 
 
@@ -27,13 +29,20 @@ def _program(name, args):
     if os.name == 'nt':
         name = name + '.exe'
     prog = os.path.join(base_loc, name)
-    if os.name == 'nt':
-        try:
-            return subprocess.call([prog] + args)
-        except KeyboardInterrupt:
-            return 0
-    else:
-        return os.execvp(prog, [prog] + args)
+
+    with vineyard.envvars(
+        {
+            'LD_LIBRARY_PATH': os.path.dirname(vineyard.__file__),
+            'DYLD_LIBRARY_PATH': os.path.dirname(vineyard.__file__),
+        }
+    ) as env:
+        if os.name == 'nt':
+            try:
+                return subprocess.call([prog] + args, env=env)
+            except KeyboardInterrupt:
+                return 0
+        else:
+            return os.execvpe(prog, [prog] + args, env=env)
 
 
 def vineyard_migrate():
