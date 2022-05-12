@@ -25,3 +25,13 @@ install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/vineyard-migrate-to-local.py"
         DESTINATION bin
         RENAME vineyard-migrate-to-local
 )
+
+add_custom_target(vineyard_migrate_python
+        ALL
+        COMMAND cp "$<TARGET_FILE:vineyard-migrate>" "${PROJECT_SOURCE_DIR}/modules/migrate/python/drivers/migrate/tools/"
+        COMMAND cp "$<TARGET_FILE:vineyard-migrate-stream>" "${PROJECT_SOURCE_DIR}/modules/migrate/python/drivers/migrate/tools/"
+        COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/vineyard-migrate-to-local.py" "${PROJECT_SOURCE_DIR}/modules/migrate/python/drivers/migrate/tools/vineyard-migrate-to-local"
+        DEPENDS vineyard-migrate
+                vineyard-migrate-stream
+        COMMENT "Copying the migration artifacts to the python package."
+        VERBATIM)

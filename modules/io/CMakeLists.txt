@@ -36,5 +36,3 @@ endif()
 
 install_vineyard_target(vineyard_io)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
-
-configure_file(setup.cfg.in "${CMAKE_CURRENT_SOURCE_DIR}/setup.cfg" @ONLY)

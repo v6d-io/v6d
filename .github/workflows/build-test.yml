@@ -93,7 +93,7 @@ jobs:
           sudo pip3 install -U libclang parsec sphinx sphinx_rtd_theme docutils==0.16 breathe nbsphinx gcovr pytest hdfs3 "numpy>=0.18.5"
 
           # install linters
-          sudo pip3 install black isort flake8
+          sudo pip3 install auditwheel black isort flake8
 
           # install clang-format
           sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
@@ -278,23 +278,19 @@ jobs:
           rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
 
-          for pkg in airflow dask ml; do
+          for pkg in airflow dask io migrate ml; do
             rm -rf build/lib* build/bdist.*
             python3 setup_${pkg}.py bdist_wheel
           done
 
-          # build & install vineyard-io
-          pushd modules/io
-          rm -rf build/lib* build/bdist.*
-          python3 setup.py bdist_wheel
+          # repair python wheels
+          pushd dist
+          auditwheel repair -w fixed_wheels ./vineyard_migrate*.whl
+          mv fixed_wheels/* ./
           popd
 
           # install python packages
           sudo pip3 install dist/*.whl -U
-
-          pushd modules/io
-          sudo pip3 install dist/*.whl -U
-          popd
 
       - name: Get Test Data
         run: |
@@ -392,33 +388,9 @@ jobs:
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/vineyard_*.whl
+          file: dist/*vineyard*.whl
           file_glob: true
           tag: ${{ steps.tag.outputs.TAG }}
           prerelease: false
           overwrite: true
           body: "vineyard-contrib ${{ steps.tag.outputs.TAG }}"
-
-      - name: Upload vineyard contrib wheels to tagged release
-        uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*_vineyard*.whl
-          file_glob: true
-          tag: ${{ steps.tag.outputs.TAG }}
-          prerelease: false
-          overwrite: true
-          body: "vineyard-contrib ${{ steps.tag.outputs.TAG }}"
-
-      - name: Upload vineyard-io wheels to tagged release
-        uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: modules/io/dist/*.whl
-          file_glob: true
-          tag: ${{ steps.tag.outputs.TAG }}
-          prerelease: false
-          overwrite: true
-          body: "vineyard-io ${{ steps.tag.outputs.TAG }}"
