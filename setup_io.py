@@ -107,7 +107,7 @@ setup(
         'setuptools',
         'wheel',
     ],
-    requires=[
+    install_requires=[
         'fsspec',
         'hdfs3',
         'oss2',
