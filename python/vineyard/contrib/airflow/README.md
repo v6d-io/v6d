@@ -10,7 +10,15 @@ database backend without involving external storage systems like HDFS. The
 Vineyard XCom backend handles object migration as well when the required inputs
 is not located on where the task is scheduled to execute.
 
-Requirements
+Table of Contents
+-----------------
+
+- [Requirements](#requirements)
+- [Configuration and Usage](#configuration-and-usage)
+- [Run the tests](#run-tests)
+- [Deploy on Kubernetes](#deploy-on-kubernetes)
+
+Requirements <a name="requirements"/>
 ------------
 
 The following packages are needed to run Airflow on Vineyard,
@@ -18,7 +26,7 @@ The following packages are needed to run Airflow on Vineyard,
 - airflow >= 2.1.0
 - vineyard >= 0.2.12
 
-Configuration and Usage
+Configuration and Usage <a name="configuration-and-usage"/>
 -----------------------
 
 1. Install required packages:
@@ -92,7 +100,7 @@ table in backend databases of Airflow.
 The example is adapted from the documentation of Airflow, see also
 [Tutorial on the Taskflow API][2].
 
-Run the tests
+Run the tests <a name="run-tests"/>
 -------------
 
 1. Start your vineyardd with the following command,
@@ -110,5 +118,41 @@ Run the tests
 The pandas test suite is not possible to run with the default XCom backend, vineyard
 enables airflow to exchange **complex** and **big** data without modify the DAG and tasks!
 
+Deploy on Kubernetes <a name="deploy-on-kubernetes"/>
+--------------------
+
+We provide a reference settings (see [values.yaml](./values.yaml)) for deploying
+Airflow with vineyard as the XCom backend on Kubernetes, based on [the official helm charts][3].
+
+Deploying vineyard requires etcd, to ease to deploy process, you first need to
+setup a standalone etcd cluster. A _test_ etcd cluster with only one instance can
+be deployed by
+
+```bash
+$ kubectl create -f etcd.yaml
+```
+
+The [values.yaml](./values.yaml) mainly tweaks the following settings:
+
+- Installing vineyard dependency to the containers using pip before start workers
+- Adding a vineyardd container to the airflow pods
+- Mounting the vineyardd's UNIX-domain socket and shared memory to the airflow worker pods
+
+Note that **the `values.yaml` may doesn't work in your environment**, as airflow requires
+other settings like postgresql database, presistance volumes, etc. You can combine
+the reference `values.yaml` with your own specific Airflow settings.
+
+The [values.yaml](./values.yaml) for Airflow's helm chart can be used as
+
+```bash
+# add airflow helm stable repo
+$ helm repo add apache-airflow https://airflow.apache.org
+$ helm repo update
+
+# deploy airflow
+$ helm install -f values.yaml $RELEASE_NAME apache-airflow/airflow --namespace $NAMESPACE
+```
+
 [1]: https://v6d.io/notes/getting-started.html#starting-vineyard-server
 [2]: https://airflow.apache.org/docs/apache-airflow/stable/tutorial_taskflow_api.html
+[3]: https://github.com/apache/airflow/tree/main/chart
