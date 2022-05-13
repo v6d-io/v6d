@@ -172,5 +172,5 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
         with:
-          name: vineyard-linux-wheels
+          name: vineyard-linux-wheels-${{ matrix.python }}
           path: fixed_wheels/*.whl
