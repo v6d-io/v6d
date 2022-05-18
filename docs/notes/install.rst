@@ -84,7 +84,7 @@ Vineyard has been tests on MacOS as well, the dependencies can be installed usin
 
 .. code:: shell
 
-    brew install apache-arrow boost gflags glog grpc protobuf mpich openssl zlib
+    brew install apache-arrow boost gflags glog grpc protobuf mpich openssl zlib autoconf
 
 Install from source
 -------------------
