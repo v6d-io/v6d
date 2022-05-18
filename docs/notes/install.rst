@@ -111,6 +111,17 @@ Then you do a out-of-source build using CMake:
 You will see vineyard server binary under the ``bin`` directory, and static or shared linked
 libraries will be placed under the ``lib`` folder.
 
+Install from source on various platforms
+----------------------------------------
+
+Vineyard is continously tested on various platforms and you may find building and installatio steps
+from our CI:
+
+- [Ubuntu](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml)
+- [MacOS](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml)
+- [CentOS](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-centos-latest.yml)
+- [Arch Linux](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-achlinux-latest.yml)
+
 Build python wheels
 -------------------
 

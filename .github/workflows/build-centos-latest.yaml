@@ -1,0 +1,213 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Compatibility Build on CentOS Latest
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    container:
+      image: centos:latest
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+    steps:
+      - name: Get time
+        run: |
+          date +'%Y-%m' > snapshot.txt
+      - name: Install dependencies for Linux
+        run: |
+          # switch to centos stream
+          dnf -y --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos
+          dnf -y update
+          yum -y install sudo
+
+          # install required dependencies
+          sudo yum -y group install "Development Tools"
+          sudo yum -y install boost-devel \
+                              cmake \
+                              git \
+                              brotli-devel \
+                              bzip2-devel \
+                              curl \
+                              lz4-devel \
+                              m4 \
+                              make \
+                              autoconf \
+                              automake \
+                              openmpi-devel \
+                              librdkafka \
+                              snappy \
+                              pkgconf \
+                              zlib-devel \
+                              libzstd-devel \
+                              python3-devel \
+                              python3-pip \
+                              openssl-devel \
+                              wget
+
+          # install python packages for codegen
+          sudo pip3 install -U pip
+          sudo pip3 install libclang parsec setuptools wheel twine
+
+      # the checkout action require new version of git
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Install gflags, glog and apache-arrow for CentOS latest
+        run: |
+          echo "Installing gflags ..."
+          cd /tmp
+          curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
+          tar zxf gflags-v2.2.2.tar.gz
+          cd gflags-2.2.2
+          mkdir -p build-dir
+          cd build-dir
+          cmake .. -DBUILD_SHARED_LIBS=ON
+          sudo make install -j`nproc`
+
+          echo "Installing glog ..."
+          cd /tmp
+          curl -L https://github.com/google/glog/archive/v0.5.0.tar.gz --output glog-v0.5.0.tar.gz
+          tar zxf glog-v0.5.0.tar.gz
+          cd glog-0.5.0
+          mkdir -p build-dir
+          cd build-dir
+          cmake .. -DBUILD_SHARED_LIBS=ON \
+                   -DBUILD_TESTING=OFF
+          sudo make install -j`nproc`
+
+          echo "Installing apache-arrow ..."
+          cd /tmp
+          wget https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.0.tar.gz
+          tar zxf apache-arrow-8.0.0.tar.gz
+          cd arrow-apache-arrow-8.0.0
+          mkdir -p build-dir
+          cd build-dir
+          cmake ../cpp \
+              -DARROW_COMPUTE=ON \
+              -DARROW_WITH_UTF8PROC=ON \
+              -DARROW_CSV=ON \
+              -DARROW_CUDA=OFF \
+              -DARROW_DATASET=OFF \
+              -DARROW_FILESYSTEM=ON \
+              -DARROW_FLIGHT=OFF \
+              -DARROW_GANDIVA=OFF \
+              -DARROW_GANDIVA_JAVA=OFF \
+              -DARROW_HDFS=OFF \
+              -DARROW_HIVESERVER2=OFF \
+              -DARROW_JSON=OFF \
+              -DARROW_ORC=OFF \
+              -DARROW_PARQUET=OFF \
+              -DARROW_PLASMA=OFF \
+              -DARROW_PLASMA_JAVA_CLIENT=OFF \
+              -DARROW_PYTHON=OFF \
+              -DARROW_S3=OFF \
+              -DARROW_WITH_BZ2=OFF \
+              -DARROW_WITH_ZLIB=OFF \
+              -DARROW_WITH_LZ4=OFF \
+              -DARROW_WITH_SNAPPY=OFF \
+              -DARROW_WITH_ZSTD=OFF \
+              -DARROW_WITH_BROTLI=OFF \
+              -DARROW_IPC=ON \
+              -DARROW_BUILD_BENCHMARKS=OFF \
+              -DARROW_BUILD_EXAMPLES=OFF \
+              -DARROW_BUILD_INTEGRATION=OFF \
+              -DARROW_BUILD_UTILITIES=OFF \
+              -DARROW_BUILD_TESTS=OFF \
+              -DARROW_ENABLE_TIMING_TESTS=OFF \
+              -DARROW_FUZZING=OFF \
+              -DARROW_USE_ASAN=OFF \
+              -DARROW_USE_TSAN=OFF \
+              -DARROW_USE_UBSAN=OFF \
+              -DARROW_JEMALLOC=OFF \
+              -DARROW_BUILD_SHARED=ON \
+              -DARROW_BUILD_STATIC=OFF
+          sudo make install -j`nproc`
+
+      - name: Install grpc v1.27.x and bundled protobuf for CentOS latest
+        run: |
+          cd /tmp
+          git clone https://github.com/grpc/grpc.git --depth 1 --branch v1.46.x
+          cd grpc/
+          git submodule update --init
+          mkdir cmake-build
+          cd cmake-build/
+          cmake .. -DBUILD_SHARED_LIBS=ON \
+            -DgRPC_INSTALL=ON \
+            -DgRPC_BUILD_TESTS=OFF \
+            -DgRPC_BUILD_CSHARP_EXT=OFF \
+            -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
+            -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
+            -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
+            -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
+            -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
+            -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
+            -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON \
+            -DgRPC_ZLIB_PROVIDER=package \
+            -DgRPC_SSL_PROVIDER=package
+          sudo make install -j`nproc`
+
+      - name: Install libgrape-lite
+        run: |
+          # leverage ccache
+          export PATH=/usr/lib64/openmpi/bin/:$PATH
+
+          git clone https://github.com/alibaba/libgrape-lite.git --depth=1
+          cd libgrape-lite
+          mkdir build
+          cd build
+          cmake ..
+          make -j`nproc`
+          sudo make install
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
+      - name: CMake
+        run: |
+          export PATH=/usr/lib64/openmpi/bin/:$PATH
+          export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH
+
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+                   -DBUILD_SHARED_LIBS=ON \
+                   -DBUILD_VINEYARD_COVERAGE=ON \
+                   -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+                   -DBUILD_VINEYARD_BASIC=ON \
+                   -DBUILD_VINEYARD_IO=ON \
+                   -DBUILD_VINEYARD_IO_KAFKA=ON \
+                   -DBUILD_VINEYARD_MIGRATION=ON \
+                   -DBUILD_VINEYARD_TESTS=ON
+
+      - name: Build
+        run: |
+          export PATH=/usr/lib64/openmpi/bin/:$PATH
+          export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH
+
+          pushd build
+          make -j`nproc`
+          make vineyard_tests -j`nproc`
+          make vineyard_client_python -j`nproc`
+          sudo make install
+          popd

@@ -1,0 +1,163 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Compatibility Build on Arch Linux Latest
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    container:
+      image: archlinux:latest
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+      - name: Install Dependencies for Linux
+        if: runner.os == 'Linux'
+        run: |
+          pacman --noconfirm -Syu
+          pacman --noconfirm -S sudo
+
+          sudo pacman --noconfirm -S cmake \
+                                     boost \
+                                     brotli \
+                                     bzip2 \
+                                     curl \
+                                     git \
+                                     gflags \
+                                     google-glog \
+                                     grpc \
+                                     gtest \
+                                     lz4 \
+                                     m4 \
+                                     make \
+                                     autoconf \
+                                     automake \
+                                     openmpi \
+                                     protobuf \
+                                     librdkafka \
+                                     re2 \
+                                     snappy \
+                                     pkgconf \
+                                     libutf8proc \
+                                     zlib \
+                                     zstd \
+                                     lsb-release \
+                                     python-pip \
+                                     wget \
+                                     gcc
+
+          sudo pip3 install -U pip
+          sudo pip3 install libclang parsec setuptools wheel twine
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Install libgrape-lite
+        run: |
+          git clone https://github.com/alibaba/libgrape-lite.git
+          cd libgrape-lite
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_CXX_FLAGS="-Wno-dangling-pointer"
+          make -j`nproc`
+          sudo make install
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v2
+
+      - name: Install apache-arrow
+        run: |
+          # arrow is broken in archlinux, see also
+          #
+          #   https://bugs.archlinux.org/task/74682
+
+          wget https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.0.tar.gz
+          tar zxf apache-arrow-8.0.0.tar.gz
+          cd arrow-apache-arrow-8.0.0
+          mkdir -p build-dir
+          cd build-dir
+          cmake ../cpp \
+              -DARROW_COMPUTE=ON \
+              -DARROW_WITH_UTF8PROC=ON \
+              -DARROW_CSV=ON \
+              -DARROW_CUDA=OFF \
+              -DARROW_DATASET=OFF \
+              -DARROW_FILESYSTEM=ON \
+              -DARROW_FLIGHT=OFF \
+              -DARROW_GANDIVA=OFF \
+              -DARROW_GANDIVA_JAVA=OFF \
+              -DARROW_HDFS=OFF \
+              -DARROW_HIVESERVER2=OFF \
+              -DARROW_JSON=OFF \
+              -DARROW_ORC=OFF \
+              -DARROW_PARQUET=OFF \
+              -DARROW_PLASMA=OFF \
+              -DARROW_PLASMA_JAVA_CLIENT=OFF \
+              -DARROW_PYTHON=OFF \
+              -DARROW_S3=OFF \
+              -DARROW_WITH_BZ2=OFF \
+              -DARROW_WITH_ZLIB=OFF \
+              -DARROW_WITH_LZ4=OFF \
+              -DARROW_WITH_SNAPPY=OFF \
+              -DARROW_WITH_ZSTD=OFF \
+              -DARROW_WITH_BROTLI=OFF \
+              -DARROW_IPC=ON \
+              -DARROW_BUILD_BENCHMARKS=OFF \
+              -DARROW_BUILD_EXAMPLES=OFF \
+              -DARROW_BUILD_INTEGRATION=OFF \
+              -DARROW_BUILD_UTILITIES=OFF \
+              -DARROW_BUILD_TESTS=OFF \
+              -DARROW_ENABLE_TIMING_TESTS=OFF \
+              -DARROW_FUZZING=OFF \
+              -DARROW_USE_ASAN=OFF \
+              -DARROW_USE_TSAN=OFF \
+              -DARROW_USE_UBSAN=OFF \
+              -DARROW_JEMALLOC=OFF \
+              -DARROW_BUILD_SHARED=ON \
+              -DARROW_BUILD_STATIC=OFF
+
+          sudo make install -j`nproc`
+
+      - name: CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+                   -DBUILD_SHARED_LIBS=ON \
+                   -DBUILD_VINEYARD_COVERAGE=ON \
+                   -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+                   -DBUILD_VINEYARD_BASIC=ON \
+                   -DBUILD_VINEYARD_IO=ON \
+                   -DBUILD_VINEYARD_IO_KAFKA=ON \
+                   -DBUILD_VINEYARD_MIGRATION=ON \
+                   -DBUILD_VINEYARD_TESTS=ON
+
+      - name: Build
+        run: |
+          pushd build
+          make -j`nproc`
+          make vineyard_tests -j`nproc`
+          make vineyard_client_python -j`nproc`
+          sudo make install
+          popd
