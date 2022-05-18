@@ -46,7 +46,7 @@ void* Jemalloc::Init(void* space, const size_t size) {
   size_t size_of_narenas = sizeof(unsigned);
   if (auto ret = vineyard_je_mallctl("arenas.narenas", &narenas,
                                      &size_of_narenas, nullptr, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "[error] Failed to get narenas" << std::endl;
     errno = err;
     return nullptr;
@@ -73,7 +73,7 @@ void* Jemalloc::Init(void* space, const size_t size) {
   if (auto ret =
           vineyard_je_mallctl("arenas.create", &arena_index_, &arena_index_size,
                               &extent_hooks_, sizeof(extent_hooks_))) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "[error] Failed to create arena" << std::endl;
     errno = err;
     return nullptr;
@@ -89,7 +89,7 @@ void* Jemalloc::Init(void* space, const size_t size) {
   // if (auto ret = vineyard_je_mallctl(dirty_decay_key.c_str(), nullptr,
   // nullptr,
   //                           &decay_ms, sizeof(decay_ms))) {
-  //   int err = std::exchange(errno, ret);
+  //   int err = detail::exchange_value(errno, ret);
   //   std::clog << "Failed to set the dirty decay time" << std::endl;
   //   errno = err;
   //   return nullptr;
@@ -99,7 +99,7 @@ void* Jemalloc::Init(void* space, const size_t size) {
       "arena." + std::to_string(arena_index_) + ".muzzy_decay_ms";
   if (auto ret = vineyard_je_mallctl(muzzy_decay_key.c_str(), nullptr, nullptr,
                                      &decay_ms, sizeof(decay_ms))) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "[error] Failed to set the muzzy decay time" << std::endl;
     errno = err;
     return nullptr;
@@ -127,7 +127,7 @@ void Jemalloc::Recycle(const bool /* unused currently */) {
   std::string decay_key = "arena." + std::to_string(arena_index_) + ".decay";
   if (auto ret = vineyard_je_mallctl(decay_key.c_str(), nullptr, nullptr,
                                      nullptr, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "[error] Failed to recycle arena " << arena_index_
               << std::endl;
     errno = err;
@@ -147,7 +147,7 @@ void Jemalloc::Traverse() {
       "arena." + std::to_string(arena_index_) + ".traverse";
   if (auto ret = vineyard_je_mallctl(traverse_key.c_str(), nullptr, nullptr,
                                      nullptr, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "[error] Failed to traverse arena" << std::endl;
     errno = err;
   }

@@ -74,7 +74,7 @@ int ArenaAllocator::LookUp(void* ptr) {
   size_t sz = sizeof(unsigned);
   if (auto ret = vineyard_je_mallctl("arenas.lookup", &arena_index, &sz, &ptr,
                                      sizeof(ptr))) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "failed to lookup arena" << std::endl;
     errno = err;
     return -1;
@@ -98,7 +98,7 @@ unsigned ArenaAllocator::ThreadTotalAllocatedBytes() {
   if (auto ret = vineyard_je_mallctl("thread.allocated",
                                      reinterpret_cast<void*>(&allocated), &sz,
                                      NULL, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to get allocated bytes" << std::endl;
     errno = err;
     return -1;
@@ -112,7 +112,7 @@ unsigned ArenaAllocator::ThreadTotalDeallocatedBytes() {
   if (auto ret = vineyard_je_mallctl("thread.deallocated",
                                      reinterpret_cast<void*>(&deallocated), &sz,
                                      NULL, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to get deallocated bytes" << std::endl;
     errno = err;
     return -1;
@@ -143,7 +143,7 @@ int ArenaAllocator::requestArena() {
 
   if (auto ret = vineyard_je_mallctl("thread.arena", NULL, NULL, &arena_index,
                                      sizeof(arena_index))) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to bind arena " << arena_index << "for thread " << id
               << std::endl;
     errno = err;
@@ -173,7 +173,7 @@ int ArenaAllocator::doCreateArena() {
   size_t sz = sizeof(arena_index);
   if (auto ret =
           vineyard_je_mallctl("arenas.create", &arena_index, &sz, nullptr, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to create arena" << std::endl;
     errno = err;
     return -1;
@@ -185,7 +185,7 @@ int ArenaAllocator::doCreateArena() {
   size_t len = sizeof(extent_hooks_);
   if (auto ret = vineyard_je_mallctl(hooks_key.str().c_str(), &extent_hooks_,
                                      &len, nullptr, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to set extent hooks" << std::endl;
     errno = err;
     return -1;
@@ -200,7 +200,7 @@ int ArenaAllocator::doDestroyArena(unsigned arena_index) {
   miblen = sizeof(mib) / sizeof(size_t);
   if (auto ret =
           vineyard_je_mallctlnametomib("arena.0.destroy", mib, &miblen)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to destroy arena " << arena_index << std::endl;
     errno = err;
     return -1;
@@ -208,7 +208,7 @@ int ArenaAllocator::doDestroyArena(unsigned arena_index) {
 
   mib[1] = arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to destroy arena " << arena_index << std::endl;
     errno = err;
     return -1;
@@ -223,7 +223,7 @@ int ArenaAllocator::doResetArena(unsigned arena_index) {
 
   miblen = sizeof(mib) / sizeof(size_t);
   if (auto ret = vineyard_je_mallctlnametomib("arena.0.reset", mib, &miblen)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to reset arena " << arena_index << std::endl;
     errno = err;
     return -1;
@@ -231,7 +231,7 @@ int ArenaAllocator::doResetArena(unsigned arena_index) {
 
   mib[1] = (size_t) arena_index;
   if (auto ret = vineyard_je_mallctlbymib(mib, miblen, NULL, NULL, NULL, 0)) {
-    int err = std::exchange(errno, ret);
+    int err = detail::exchange_value(errno, ret);
     std::clog << "Failed to reset arena " << arena_index << std::endl;
     errno = err;
     return -1;
