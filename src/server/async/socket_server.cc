@@ -328,7 +328,16 @@ bool SocketConnection::doGetBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
-  WriteGetBuffersReply(objects, message_out);
+
+  std::vector<int> fd_to_send;
+  for (auto object : objects) {
+    if (object->data_size > 0 &&
+        self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
+      self->used_fds_.emplace(object->store_fd);
+      fd_to_send.emplace_back(object->store_fd);
+    }
+  }
+  WriteGetBuffersReply(objects, fd_to_send, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
    *       We are using sendmsg to send the file descriptor
@@ -341,15 +350,9 @@ bool SocketConnection::doGetBuffers(const json& root) {
    *       We will examine other methods later, such as using
    *       explicit file descritors.
    */
-  this->doWrite(message_out, [self, objects](const Status& status) {
-    for (auto object : objects) {
-      int store_fd = object->store_fd;
-      int data_size = object->data_size;
-      if (data_size > 0 &&
-          self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-        self->used_fds_.emplace(store_fd);
-        send_fd(self->nativeHandle(), store_fd);
-      }
+  this->doWrite(message_out, [self, objects, fd_to_send](const Status& status) {
+    for (int store_fd : fd_to_send) {
+      send_fd(self->nativeHandle(), store_fd);
     }
     return Status::OK();
   });
@@ -386,7 +389,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
-  WriteGetBuffersReply(objects, message_out);
+  WriteGetBuffersReply(objects, {}, message_out);
 
   this->doWrite(message_out, [this, self, objects](const Status& status) {
     boost::system::error_code ec;
@@ -412,21 +415,24 @@ bool SocketConnection::doCreateBuffer(const json& root) {
   ObjectID object_id;
   RESPONSE_ON_ERROR(
       server_ptr_->GetBulkStore()->Create(size, object_id, object));
-  WriteCreateBufferReply(object_id, object, message_out);
 
-  int store_fd = object->store_fd;
-  int data_size = object->data_size;
-  this->doWrite(
-      message_out, [this, self, store_fd, data_size](const Status& status) {
-        if (data_size > 0 &&
-            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-          self->used_fds_.emplace(store_fd);
-          send_fd(self->nativeHandle(), store_fd);
-        }
-        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                    server_ptr_->GetBulkStore()->Footprint());
-        return Status::OK();
-      });
+  int fd_to_send = -1;
+  if (object->data_size > 0 &&
+      self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
+    this->used_fds_.emplace(object->store_fd);
+    fd_to_send = object->store_fd;
+  }
+
+  WriteCreateBufferReply(object_id, object, fd_to_send, message_out);
+
+  this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
+    if (fd_to_send != -1) {
+      send_fd(self->nativeHandle(), fd_to_send);
+    }
+    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                server_ptr_->GetBulkStore()->Footprint());
+    return Status::OK();
+  });
   return false;
 }
 
@@ -446,7 +452,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
         std::string message_out;
         if (static_cast<size_t>(object->data_size) == size &&
             (!ec || ec == asio::error::eof)) {
-          WriteCreateBufferReply(object->object_id, object, message_out);
+          WriteCreateBufferReply(object->object_id, object, -1, message_out);
         } else {
           VINEYARD_DISCARD(
               server_ptr_->GetBulkStore()->Delete(object->object_id));
@@ -729,18 +735,21 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
           std::shared_ptr<Payload> object;
           RETURN_ON_ERROR(
               self->server_ptr_->GetBulkStore()->GetUnchecked(chunk, object));
-          WriteGetNextStreamChunkReply(object, message_out);
-          int store_fd = object->store_fd;
+          int store_fd = object->store_fd, fd_to_send = -1;
           int data_size = object->data_size;
-          self->doWrite(
-              message_out, [self, store_fd, data_size](const Status& status) {
-                if (data_size > 0 &&
-                    self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-                  self->used_fds_.emplace(store_fd);
-                  send_fd(self->nativeHandle(), store_fd);
-                }
-                return Status::OK();
-              });
+          if (data_size > 0 &&
+              self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+            self->used_fds_.emplace(store_fd);
+            fd_to_send = store_fd;
+          }
+
+          WriteGetNextStreamChunkReply(object, fd_to_send, message_out);
+          self->doWrite(message_out, [self, fd_to_send](const Status& status) {
+            if (fd_to_send != -1) {
+              send_fd(self->nativeHandle(), fd_to_send);
+            }
+            return Status::OK();
+          });
         } else {
           LOG(ERROR) << status.ToString();
           WriteErrorReply(status, message_out);
@@ -952,16 +961,20 @@ bool SocketConnection::doMakeArena(const json& root) {
   if (size == std::numeric_limits<size_t>::max()) {
     size = server_ptr_->GetBulkStore()->FootprintLimit();
   }
-  int store_fd = -1;
+  int store_fd = -1, fd_to_send = -1;
   uintptr_t base = reinterpret_cast<uintptr_t>(nullptr);
   RESPONSE_ON_ERROR(
       server_ptr_->GetBulkStore()->MakeArena(size, store_fd, base));
   WriteMakeArenaReply(store_fd, size, base, message_out);
 
-  this->doWrite(message_out, [self, store_fd](const Status& status) {
-    if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-      self->used_fds_.emplace(store_fd);
-      send_fd(self->nativeHandle(), store_fd);
+  if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+    self->used_fds_.emplace(store_fd);
+    fd_to_send = store_fd;
+  }
+
+  this->doWrite(message_out, [self, fd_to_send](const Status& status) {
+    if (fd_to_send != -1) {
+      send_fd(self->nativeHandle(), fd_to_send);
     }
     return Status::OK();
   });
@@ -1070,21 +1083,27 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
   std::string message_out;
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Create(
       size, plasma_size, plasma_id, object_id, plasma_object));
-  WriteCreateBufferByPlasmaReply(object_id, plasma_object, message_out);
 
-  int store_fd = plasma_object->store_fd;
+  int store_fd = plasma_object->store_fd, fd_to_send = -1;
   int data_size = plasma_object->data_size;
-  this->doWrite(
-      message_out, [this, self, store_fd, data_size](const Status& status) {
-        if (data_size > 0 &&
-            self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-          self->used_fds_.emplace(store_fd);
-          send_fd(self->nativeHandle(), store_fd);
-        }
-        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                    server_ptr_->GetBulkStore<PlasmaID>()->Footprint());
-        return Status::OK();
-      });
+
+  if (data_size > 0 &&
+      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+    self->used_fds_.emplace(store_fd);
+    fd_to_send = store_fd;
+  }
+
+  WriteCreateBufferByPlasmaReply(object_id, plasma_object, fd_to_send,
+                                 message_out);
+
+  this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
+    if (fd_to_send != -1) {
+      send_fd(self->nativeHandle(), fd_to_send);
+    }
+    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                server_ptr_->GetBulkStore<PlasmaID>()->Footprint());
+    return Status::OK();
+  });
   return false;
 }
 

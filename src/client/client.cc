@@ -36,6 +36,7 @@ limitations under the License.
 #include "common/util/boost.h"
 #include "common/util/logging.h"
 #include "common/util/protocols.h"
+#include "common/util/status.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -206,11 +207,23 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   Payload object;
-  RETURN_ON_ERROR(ReadGetNextStreamChunkReply(message_in, object));
+  int fd_sent = -1, fd_recv = -1;
+  RETURN_ON_ERROR(ReadGetNextStreamChunkReply(message_in, object, fd_sent));
   RETURN_ON_ASSERT(size == static_cast<size_t>(object.data_size),
                    "The size of returned chunk doesn't match");
   uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (object.data_size > 0) {
+    fd_recv = shm_->PreMmap(object.store_fd);
+    if (fd_recv != fd_sent) {
+      json error = json::object();
+      error["error"] =
+          "GetNextStreamChunk: the fd is not matched between client and server";
+      error["fd_sent"] = fd_sent;
+      error["fd_recv"] = fd_recv;
+      error["response"] = message_in;
+      return Status::Invalid(error.dump());
+    }
+
     RETURN_ON_ERROR(shm_->Mmap(object.store_fd, object.map_size,
                                object.pointer - object.data_offset, false, true,
                                &mmapped_ptr));
@@ -434,12 +447,24 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   WriteCreateBufferRequest(size, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
+  int fd_sent = -1, fd_recv = -1;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload));
+  RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload, fd_sent));
   RETURN_ON_ASSERT(static_cast<size_t>(payload.data_size) == size);
 
   uint8_t *shared = nullptr, *dist = nullptr;
   if (payload.data_size > 0) {
+    fd_recv = shm_->PreMmap(payload.store_fd);
+    if (fd_recv != fd_sent) {
+      json error = json::object();
+      error["error"] =
+          "CreateBuffer: the fd is not matched between client and server";
+      error["fd_sent"] = fd_sent;
+      error["fd_recv"] = fd_recv;
+      error["response"] = message_in;
+      return Status::Invalid(error.dump());
+    }
+
     RETURN_ON_ERROR(shm_->Mmap(payload.store_fd, payload.map_size,
                                payload.pointer - payload.data_offset, false,
                                true, &shared));
@@ -476,7 +501,24 @@ Status Client::GetBuffers(
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::vector<Payload> payloads;
-  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
+  std::vector<int> fd_sent, fd_recv;
+  std::set<int> fd_recv_dedup;
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+
+  for (auto const& item : payloads) {
+    if (item.data_size > 0) {
+      shm_->PreMmap(item.store_fd, fd_recv, fd_recv_dedup);
+    }
+  }
+  if (message_in.contains("fds") && fd_sent != fd_recv) {
+    json error = json::object();
+    error["error"] =
+        "GetBuffers: the fd set is not matched between client and server";
+    error["fd_sent"] = fd_sent;
+    error["fd_recv"] = fd_recv;
+    error["response"] = message_in;
+    return Status::UnknownError(error.dump());
+  }
 
   for (auto const& item : payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
@@ -505,7 +547,25 @@ Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::vector<Payload> payloads;
-  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads));
+  std::vector<int> fd_sent, fd_recv;
+  std::set<int> fd_recv_dedup;
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+
+  for (auto const& item : payloads) {
+    if (item.data_size > 0) {
+      shm_->PreMmap(item.store_fd, fd_recv, fd_recv_dedup);
+    }
+  }
+  if (message_in.contains("fds") && fd_sent != fd_recv) {
+    json error = json::object();
+    error["error"] =
+        "GetBufferSizes: the fd set is not matched between client and server";
+    error["fd_sent"] = fd_sent;
+    error["fd_recv"] = fd_recv;
+    error["response"] = message_in;
+    return Status::UnknownError(error.dump());
+  }
+
   for (auto const& item : payloads) {
     uint8_t* shared = nullptr;
     if (item.data_size > 0) {
@@ -680,13 +740,26 @@ Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
+  int fd_sent = -1, fd_recv = -1;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(
-      ReadCreateBufferByPlasmaReply(message_in, object_id, plasma_payload));
+  RETURN_ON_ERROR(ReadCreateBufferByPlasmaReply(message_in, object_id,
+                                                plasma_payload, fd_sent));
 
   RETURN_ON_ASSERT(static_cast<size_t>(plasma_payload.data_size) == size);
   uint8_t *shared = nullptr, *dist = nullptr;
   if (plasma_payload.data_size > 0) {
+    fd_recv = shm_->PreMmap(plasma_payload.store_fd);
+    if (fd_recv != fd_sent) {
+      json error = json::object();
+      error["error"] =
+          "PlasmaClient::CreateBuffer: the fd is not matched between client "
+          "and server";
+      error["fd_sent"] = fd_sent;
+      error["fd_recv"] = fd_recv;
+      error["response"] = message_in;
+      return Status::Invalid(error.dump());
+    }
+
     RETURN_ON_ERROR(
         this->shm_->Mmap(plasma_payload.store_fd, plasma_payload.map_size,
                          plasma_payload.pointer - plasma_payload.data_offset,
@@ -938,6 +1011,20 @@ Status SharedMemoryManager::Mmap(int fd, int64_t map_size, uint8_t* pointer,
   }
   segments_.emplace(reinterpret_cast<uintptr_t>(*ptr), entry->second.get());
   return Status::OK();
+}
+
+int SharedMemoryManager::PreMmap(int fd) {
+  return mmap_table_.find(fd) == mmap_table_.end() ? fd : (-1);
+}
+
+void SharedMemoryManager::PreMmap(int fd, std::vector<int>& fds,
+                                  std::set<int>& dedup) {
+  if (dedup.find(fd) == dedup.end()) {
+    if (mmap_table_.find(fd) == mmap_table_.end()) {
+      fds.emplace_back(fd);
+      dedup.emplace(fd);
+    }
+  }
 }
 
 bool SharedMemoryManager::Exists(const uintptr_t target) {
