@@ -74,6 +74,9 @@ setup(
     long_description_content_type='text/markdown',
     url='https://v6d.io',
     package_dir={'vineyard.contrib.airflow': 'python/vineyard/contrib/airflow'},
+    package_data={
+        'vineyard.contrib.airflow': ['*.yaml', '*.README'],
+    },
     packages=find_airflow_packages('python'),
     cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},
     zip_safe=False,
