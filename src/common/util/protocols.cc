@@ -301,10 +301,11 @@ Status ReadCreateBufferRequest(const json& root, size_t& size) {
 
 void WriteCreateBufferReply(const ObjectID id,
                             const std::shared_ptr<Payload>& object,
-                            std::string& msg) {
+                            const int fd_to_send, std::string& msg) {
   json root;
   root["type"] = "create_buffer_reply";
   root["id"] = id;
+  root["fd"] = fd_to_send;
   json tree;
   object->ToJSON(tree);
   root["created"] = tree;
@@ -312,11 +313,13 @@ void WriteCreateBufferReply(const ObjectID id,
   encode_msg(root, msg);
 }
 
-Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object) {
+Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
+                             int& fd_sent) {
   CHECK_IPC_ERROR(root, "create_buffer_reply");
   json tree = root["created"];
   id = root["id"].get<ObjectID>();
   object.FromJSON(tree);
+  fd_sent = root.value("fd", -1);
   return Status::OK();
 }
 
@@ -356,6 +359,7 @@ Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids) {
 }
 
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
+                          const std::vector<int>& fd_to_send,
                           std::string& msg) {
   json root;
   root["type"] = "get_buffers_reply";
@@ -364,18 +368,23 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
     objects[i]->ToJSON(tree);
     root[std::to_string(i)] = tree;
   }
+  root["fds"] = fd_to_send;
   root["num"] = objects.size();
 
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects) {
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
+                           std::vector<int>& fd_sent) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
     Payload object;
     object.FromJSON(tree);
     objects.emplace_back(object);
+  }
+  if (root.contains("fds")) {
+    fd_sent = root["fds"].get<std::vector<int>>();
   }
   return Status::OK();
 }
@@ -847,20 +856,23 @@ Status ReadGetNextStreamChunkRequest(const json& root, ObjectID& stream_id,
   return Status::OK();
 }
 
-void WriteGetNextStreamChunkReply(std::shared_ptr<Payload>& object,
-                                  std::string& msg) {
+void WriteGetNextStreamChunkReply(std::shared_ptr<Payload> const& object,
+                                  int fd_sent, std::string& msg) {
   json root;
   root["type"] = "get_next_stream_chunk_reply";
   json buffer_meta;
   object->ToJSON(buffer_meta);
   root["buffer"] = buffer_meta;
+  root["fd"] = fd_sent;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetNextStreamChunkReply(const json& root, Payload& object) {
+Status ReadGetNextStreamChunkReply(const json& root, Payload& object,
+                                   int& fd_sent) {
   CHECK_IPC_ERROR(root, "get_next_stream_chunk_reply");
   object.FromJSON(root["buffer"]);
+  fd_sent = root.value("fd", -1);
   return Status::OK();
 }
 
@@ -1208,23 +1220,27 @@ Status ReadCreateBufferByPlasmaRequest(json const& root, PlasmaID& plasma_id,
 
 void WriteCreateBufferByPlasmaReply(
     ObjectID const object_id,
-    const std::shared_ptr<PlasmaPayload>& plasma_object, std::string& msg) {
+    const std::shared_ptr<PlasmaPayload>& plasma_object, int fd_to_send,
+    std::string& msg) {
   json root;
   root["type"] = "create_buffer_by_plasma_reply";
   root["id"] = object_id;
   json tree;
   plasma_object->ToJSON(tree);
   root["created"] = tree;
+  root["fd"] = fd_to_send;
 
   encode_msg(root, msg);
 }
 
 Status ReadCreateBufferByPlasmaReply(json const& root, ObjectID& object_id,
-                                     PlasmaPayload& plasma_object) {
+                                     PlasmaPayload& plasma_object,
+                                     int& fd_sent) {
   CHECK_IPC_ERROR(root, "create_buffer_by_plasma_reply");
   json tree = root["created"];
   object_id = root["id"].get<ObjectID>();
   plasma_object.FromJSON(tree);
+  fd_sent = root.value("fd", -1);
   return Status::OK();
 }
 

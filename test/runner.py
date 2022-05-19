@@ -299,6 +299,7 @@ def run_single_vineyardd_tests(tests):
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         run_test(tests, 'array_test')
+        run_test(tests, 'array_two_clients_test')
         # FIXME: cannot be safely dtor after #350 and #354.
         # run_test('allocator_test')
         run_test(tests, 'arrow_data_structure_test')

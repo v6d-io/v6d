@@ -93,6 +93,12 @@ class SharedMemoryManager {
   Status Mmap(int fd, int64_t map_size, uint8_t* pointer, bool readonly,
               bool realign, uint8_t** ptr);
 
+  // compute if the given fd requireds a recv_fd and mmap
+  int PreMmap(int fd);
+
+  // compute the set of fds that needs to `recv` from the server
+  void PreMmap(int fd, std::vector<int>& fds, std::set<int>& dedup);
+
   bool Exists(const uintptr_t target);
 
   bool Exists(const void* target);

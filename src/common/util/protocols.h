@@ -199,9 +199,10 @@ Status ReadCreateBufferRequest(const json& root, size_t& size);
 
 void WriteCreateBufferReply(const ObjectID id,
                             const std::shared_ptr<Payload>& object,
-                            std::string& msg);
+                            const int fd_to_send, std::string& msg);
 
-Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object);
+Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
+                             int& fd_sent);
 
 void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
 
@@ -212,9 +213,10 @@ void WriteGetBuffersRequest(const std::set<ObjectID>& ids, std::string& msg);
 Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids);
 
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
-                          std::string& msg);
+                          const std::vector<int>& fd_to_send, std::string& msg);
 
-Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects);
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
+                           std::vector<int>& fd_sent);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   std::string& msg);
@@ -294,10 +296,11 @@ void WriteGetNextStreamChunkRequest(const ObjectID stream_id, const size_t size,
 Status ReadGetNextStreamChunkRequest(const json& root, ObjectID& stream_id,
                                      size_t& size);
 
-void WriteGetNextStreamChunkReply(std::shared_ptr<Payload>& object,
-                                  std::string& msg);
+void WriteGetNextStreamChunkReply(std::shared_ptr<Payload> const& object,
+                                  int fd_to_send, std::string& msg);
 
-Status ReadGetNextStreamChunkReply(const json& root, Payload& object);
+Status ReadGetNextStreamChunkReply(const json& root, Payload& object,
+                                   int& fd_sent);
 
 void WritePushNextStreamChunkRequest(const ObjectID stream_id,
                                      const ObjectID chunk, std::string& msg);
@@ -412,10 +415,12 @@ Status ReadCreateBufferByPlasmaRequest(json const& root, PlasmaID& plasma_id,
 
 void WriteCreateBufferByPlasmaReply(
     ObjectID const object_id,
-    const std::shared_ptr<PlasmaPayload>& plasma_object, std::string& msg);
+    const std::shared_ptr<PlasmaPayload>& plasma_object, int fd_to_send,
+    std::string& msg);
 
 Status ReadCreateBufferByPlasmaReply(json const& root, ObjectID& object_id,
-                                     PlasmaPayload& plasma_object);
+                                     PlasmaPayload& plasma_object,
+                                     int& fd_sent);
 
 void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
                                     std::string& msg);
