@@ -214,7 +214,7 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
   uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (object.data_size > 0) {
     fd_recv = shm_->PreMmap(object.store_fd);
-    if (fd_recv != fd_sent) {
+    if (message_in.contains("fd") && fd_recv != fd_sent) {
       json error = json::object();
       error["error"] =
           "GetNextStreamChunk: the fd is not matched between client and server";
@@ -455,7 +455,7 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   uint8_t *shared = nullptr, *dist = nullptr;
   if (payload.data_size > 0) {
     fd_recv = shm_->PreMmap(payload.store_fd);
-    if (fd_recv != fd_sent) {
+    if (message_in.contains("fd") && fd_recv != fd_sent) {
       json error = json::object();
       error["error"] =
           "CreateBuffer: the fd is not matched between client and server";
@@ -749,7 +749,7 @@ Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
   uint8_t *shared = nullptr, *dist = nullptr;
   if (plasma_payload.data_size > 0) {
     fd_recv = shm_->PreMmap(plasma_payload.store_fd);
-    if (fd_recv != fd_sent) {
+    if (message_in.contains("fd") && fd_recv != fd_sent) {
       json error = json::object();
       error["error"] =
           "PlasmaClient::CreateBuffer: the fd is not matched between client "
