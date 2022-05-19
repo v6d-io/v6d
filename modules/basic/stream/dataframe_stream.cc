@@ -51,9 +51,9 @@ Status DataframeStream::WriteDataframe(std::shared_ptr<DataFrame> df) {
 
 Status DataframeStream::ReadRecordBatches(
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches) {
-  std::shared_ptr<DataFrame> df;
-  while (this->Next(df).ok()) {
-    batches.emplace_back(df->AsBatch(true));
+  std::shared_ptr<arrow::RecordBatch> batch;
+  while (this->ReadBatch(batch, true).ok()) {
+    batches.emplace_back(batch);
   }
   return Status::OK();
 }

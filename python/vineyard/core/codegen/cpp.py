@@ -738,7 +738,10 @@ distributed_getter_tpl = '''
         size_t __local_size = 0;
         for (auto const &__e: this->{field_name}) {{
             if (__e->IsLocal()) {{
-                locals.emplace_back(std::dynamic_pointer_cast<T>(__e));
+                auto const __item = std::dynamic_pointer_cast<T>(__e);
+                if (__item != nullptr) {{
+                    locals.emplace_back(__item);
+                }}
             }}
         }}
         return __local_size;

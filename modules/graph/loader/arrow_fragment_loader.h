@@ -54,184 +54,43 @@ limitations under the License.
 
 namespace vineyard {
 
-inline Status ReadRecordBatchesFromVineyardStream(
+Status ReadRecordBatchesFromVineyardStream(
     Client& client, std::shared_ptr<ParallelStream>& pstream,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
-    int part_num) {
-  Tuple<std::shared_ptr<RecordBatchStream>> local_streams;
-  pstream->GetLocals(local_streams);
+    int part_num);
 
-  size_t split_size = local_streams.size() / part_num +
-                      (local_streams.size() % part_num == 0 ? 0 : 1);
-  size_t start_to_read = part_id * split_size;
-  size_t end_to_read =
-      std::min(local_streams.size(), (part_id + 1) * split_size);
-
-  std::mutex mutex_for_results;
-
-  auto reader = [&client, &local_streams, &mutex_for_results,
-                 &batches](size_t idx) {
-    // use a local client, since reading from stream may block the client.
-    Client local_client;
-    RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
-
-    auto& stream = local_streams[idx];
-    VINEYARD_CHECK_OK(stream->OpenReader(&local_client));
-    std::vector<std::shared_ptr<arrow::RecordBatch>> read_batches;
-    RETURN_ON_ERROR(stream->ReadRecordBatches(read_batches));
-    {
-      std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      for (auto const& batch : read_batches) {
-        batches.emplace_back(batch);
-      }
-    }
-    return Status::OK();
-  };
-
-  ThreadGroup tg;
-  for (size_t idx = start_to_read; idx != end_to_read; ++idx) {
-    tg.AddTask(reader, idx);
-  }
-  auto readers_status = tg.TakeResults();
-  for (auto const& status : readers_status) {
-    RETURN_ON_ERROR(status);
-  }
-  return Status::OK();
-}
-
-inline Status ReadRecordBatchesFromVineyardDataFrame(
+Status ReadRecordBatchesFromVineyardDataFrame(
     Client& client, std::shared_ptr<GlobalDataFrame>& gdf,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
-    int part_num) {
-  auto local_chunks = gdf->LocalPartitions(client);
-  size_t split_size = local_chunks.size() / part_num +
-                      (local_chunks.size() % part_num == 0 ? 0 : 1);
-  int start_to_read = part_id * split_size;
-  int end_to_read = std::min(local_chunks.size(), (part_id + 1) * split_size);
-  for (int idx = start_to_read; idx != end_to_read; ++idx) {
-    batches.emplace_back(local_chunks[idx]->AsBatch(true));
-  }
-  return Status::OK();
-}
+    int part_num);
 
-inline Status ReadRecordBatchesFromVineyard(
+Status ReadRecordBatchesFromVineyard(
     Client& client, const ObjectID object_id,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
-    int part_num) {
-  auto source = client.GetObject(object_id);
-  RETURN_ON_ASSERT(source != nullptr,
-                   "Object not exists: " + ObjectIDToString(object_id));
-  if (auto pstream = std::dynamic_pointer_cast<ParallelStream>(source)) {
-    return ReadRecordBatchesFromVineyardStream(client, pstream, batches,
-                                               part_id, part_num);
-  }
-  if (auto gdf = std::dynamic_pointer_cast<GlobalDataFrame>(source)) {
-    return ReadRecordBatchesFromVineyardDataFrame(client, gdf, batches, part_id,
-                                                  part_num);
-  }
-
-  return Status::Invalid(
-      "The source is not a parallel stream nor a global dataframe: " +
-      source->meta().GetTypeName());
-}
+    int part_num);
 
 /**
  * @brief When the stream is empty, the result `table` will be set as nullptr.
  */
-inline Status ReadTableFromVineyardStream(
-    Client& client, std::shared_ptr<ParallelStream>& pstream,
-    std::shared_ptr<arrow::Table>& table, int part_id, int part_num) {
-  Tuple<std::shared_ptr<RecordBatchStream>> local_streams;
-  pstream->GetLocals(local_streams);
-  size_t split_size = local_streams.size() / part_num +
-                      (local_streams.size() % part_num == 0 ? 0 : 1);
-  int start_to_read = part_id * split_size;
-  int end_to_read = std::min(local_streams.size(), (part_id + 1) * split_size);
-  std::mutex mutex_for_results;
-  std::vector<std::shared_ptr<arrow::Table>> tables;
-  auto reader = [&client, &local_streams, &mutex_for_results,
-                 &tables](size_t idx) {
-    // use a local client, since reading from stream may block the client.
-    Client local_client;
-    RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
-
-    auto const& stream = local_streams[idx];
-    VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(&local_client));
-    std::shared_ptr<arrow::Table> table;
-    RETURN_ON_ERROR(stream->ReadTable(table));
-    if (table == nullptr) {
-      VLOG(10) << "table from stream is null.";
-    } else {
-      VLOG(10) << "table from stream: " << table->schema()->ToString();
-    }
-    {
-      std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      tables.emplace_back(table);
-    }
-    return Status::OK();
-  };
-  ThreadGroup tg;
-  for (int idx = start_to_read; idx != end_to_read; ++idx) {
-    tg.AddTask(reader, idx);
-  }
-  auto readers_status = tg.TakeResults();
-  for (auto const& status : readers_status) {
-    RETURN_ON_ERROR(status);
-  }
-  if (tables.empty()) {
-    table = nullptr;
-  } else {
-    table = ConcatenateTables(tables);
-  }
-  return Status::OK();
-}
+Status ReadTableFromVineyardStream(Client& client,
+                                   std::shared_ptr<ParallelStream>& pstream,
+                                   std::shared_ptr<arrow::Table>& table,
+                                   int part_id, int part_num);
 
 /**
  * @brief When no local chunk, the result `table` will be set as nullptr.
  */
-inline Status ReadTableFromVineyardDataFrame(
-    Client& client, std::shared_ptr<GlobalDataFrame>& gdf,
-    std::shared_ptr<arrow::Table>& table, int part_id, int part_num) {
-  auto local_chunks = gdf->LocalPartitions(client);
-  size_t split_size = local_chunks.size() / part_num +
-                      (local_chunks.size() % part_num == 0 ? 0 : 1);
-  int start_to_read = part_id * split_size;
-  int end_to_read = std::min(local_chunks.size(), (part_id + 1) * split_size);
-  std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-  batches.reserve(end_to_read - start_to_read);
-  for (int idx = start_to_read; idx != end_to_read; ++idx) {
-    batches.emplace_back(local_chunks[idx]->AsBatch(true));
-  }
-  if (batches.empty()) {
-    table = nullptr;
-    return Status::OK();
-  } else {
-    return RecordBatchesToTable(batches, &table);
-  }
-}
+Status ReadTableFromVineyardDataFrame(Client& client,
+                                      std::shared_ptr<GlobalDataFrame>& gdf,
+                                      std::shared_ptr<arrow::Table>& table,
+                                      int part_id, int part_num);
 
 /**
  * @brief The result `table` will be set as nullptr.
  */
-inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
-                                    std::shared_ptr<arrow::Table>& table,
-                                    int part_id, int part_num) {
-  auto source = client.GetObject(object_id);
-  RETURN_ON_ASSERT(source != nullptr,
-                   "Object not exists: " + ObjectIDToString(object_id));
-  if (auto pstream = std::dynamic_pointer_cast<ParallelStream>(source)) {
-    return ReadTableFromVineyardStream(client, pstream, table, part_id,
-                                       part_num);
-  }
-  if (auto gdf = std::dynamic_pointer_cast<GlobalDataFrame>(source)) {
-    return ReadTableFromVineyardDataFrame(client, gdf, table, part_id,
-                                          part_num);
-  }
-
-  return Status::Invalid(
-      "The source is not a parallel stream nor a global dataframe: " +
-      source->meta().GetTypeName());
-}
+Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
+                             std::shared_ptr<arrow::Table>& table, int part_id,
+                             int part_num);
 
 /** Note [GatherETables and GatherVTables]
  *
@@ -246,129 +105,14 @@ inline Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
  * + or all chunks doesn't have such meta.
  */
 
-inline boost::leaf::result<
-    std::vector<std::vector<std::shared_ptr<arrow::Table>>>>
+boost::leaf::result<std::vector<std::vector<std::shared_ptr<arrow::Table>>>>
 GatherETables(Client& client,
               const std::vector<std::vector<ObjectID>>& estreams, int part_id,
-              int part_num) {
-  using batch_group_t = std::unordered_map<
-      std::string, std::map<std::pair<std::string, std::string>,
-                            std::vector<std::shared_ptr<arrow::RecordBatch>>>>;
-  batch_group_t grouped_batches;
-  std::mutex mutex_for_results;
-  auto reader = [&client, &mutex_for_results, &grouped_batches, part_id,
-                 part_num](size_t const index, ObjectID const estream) {
-    std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-    auto status = ReadRecordBatchesFromVineyard(client, estream, batches,
-                                                part_id, part_num);
-    if (status.ok()) {
-      std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      std::string label = std::to_string(index), src_label = "", dst_label = "";
-      for (auto const& batch : batches) {
-        auto metadata = batch->schema()->metadata();
-        if (metadata != nullptr) {
-          std::unordered_map<std::string, std::string> meta_map;
-          metadata->ToUnorderedMap(&meta_map);
-          if (meta_map.find("label") != meta_map.end()) {
-            label = meta_map["label"];
-          }
-          src_label = meta_map["src_label"];
-          dst_label = meta_map["dst_label"];
-        }
-        grouped_batches[label][std::make_pair(src_label, dst_label)]
-            .emplace_back(batch);
-      }
-    } else {
-      LOG(ERROR) << "Failed to read from stream " << ObjectIDToString(estream)
-                 << ": " << status.ToString();
-    }
-    return Status::OK();
-  };
+              int part_num);
 
-  ThreadGroup tg;
-  for (size_t index = 0; index < estreams.size(); ++index) {
-    for (auto const& estream : estreams[index]) {
-      tg.AddTask(reader, index, estream);
-    }
-  }
-  tg.TakeResults();
-
-  if (!estreams.empty() && grouped_batches.empty()) {
-    grouped_batches[std::to_string(0)][std::make_pair("", "")] = {};
-  }
-
-  std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables;
-  for (auto const& group : grouped_batches) {
-    std::shared_ptr<arrow::Table> table;
-    std::vector<std::shared_ptr<arrow::Table>> subtables;
-    for (auto const& subgroup : group.second) {
-      if (subgroup.second.empty()) {
-        table = nullptr;  // no tables at current worker
-      } else {
-        VY_OK_OR_RAISE(RecordBatchesToTable(subgroup.second, &table));
-      }
-      subtables.emplace_back(table);
-    }
-    tables.emplace_back(subtables);
-  }
-  return tables;
-}
-
-inline boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>>
-GatherVTables(Client& client, const std::vector<ObjectID>& vstreams,
-              int part_id, int part_num) {
-  using batch_group_t =
-      std::unordered_map<std::string,
-                         std::vector<std::shared_ptr<arrow::RecordBatch>>>;
-  batch_group_t grouped_batches;
-  std::mutex mutex_for_results;
-  auto reader = [&client, &mutex_for_results, &grouped_batches, part_id,
-                 part_num](size_t const index, ObjectID const vstream) {
-    std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-    auto status = ReadRecordBatchesFromVineyard(client, vstream, batches,
-                                                part_id, part_num);
-    if (status.ok()) {
-      std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      for (auto const& batch : batches) {
-        std::string label = std::to_string(index);
-        if (batch->schema()->metadata() != nullptr) {
-          std::unordered_map<std::string, std::string> meta_map;
-          batch->schema()->metadata()->ToUnorderedMap(&meta_map);
-          if (meta_map.find("label") != meta_map.end()) {
-            label = meta_map["label"];
-          }
-        }
-        grouped_batches[label].emplace_back(batch);
-      }
-    } else {
-      LOG(ERROR) << "Failed to read from stream " << ObjectIDToString(vstream)
-                 << ": " << status.ToString();
-    }
-    return Status::OK();
-  };
-
-  ThreadGroup tg;
-  for (size_t index = 0; index < vstreams.size(); ++index) {
-    tg.AddTask(reader, index, vstreams[index]);
-  }
-  tg.TakeResults();
-
-  if (!vstreams.empty() && grouped_batches.empty()) {
-    grouped_batches[std::to_string(0)] = {};
-  }
-
-  std::vector<std::shared_ptr<arrow::Table>> tables;
-  for (auto const& group : grouped_batches) {
-    std::shared_ptr<arrow::Table> table;
-    if (group.second.empty()) {
-      table = nullptr;  // no tables at current worker
-    } else {
-      VY_OK_OR_RAISE(RecordBatchesToTable(group.second, &table));
-    }
-    tables.emplace_back(table);
-  }
-  return tables;
-}
+boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> GatherVTables(
+    Client& client, const std::vector<ObjectID>& vstreams, int part_id,
+    int part_num);
 
 template <typename OID_T = property_graph_types::OID_TYPE,
           typename VID_T = property_graph_types::VID_TYPE>
