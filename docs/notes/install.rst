@@ -114,13 +114,13 @@ libraries will be placed under the ``lib`` folder.
 Install from source on various platforms
 ----------------------------------------
 
-Vineyard is continously tested on various platforms and you may find building and installatio steps
+Vineyard is continously tested on various platforms and you may find building and installation steps
 from our CI:
 
-- [Ubuntu](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml)
-- [MacOS](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml)
-- [CentOS](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-centos-latest.yml)
-- [Arch Linux](https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-achlinux-latest.yml)
+- `Ubuntu <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml>`_
+- `MacOS <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml>`_
+- `CentOS <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-centos-latest.yaml>`_
+- `Arch Linux <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-archlinux-latest.yml>`_
 
 Build python wheels
 -------------------

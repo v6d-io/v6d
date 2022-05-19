@@ -203,7 +203,8 @@ Vineyard is distributed as a `python package`_ and can be easily installed with 
 
 The latest version of online documentation can be found at https://v6d.io.
 
-If you want to build vineyard from source, please refer to `Installation`_.
+If you want to build vineyard from source, please refer to `Installation`_, and refer to
+`Contributing`_ for how to build and run unittests locally.
 
 FAQ
 ---
@@ -265,6 +266,7 @@ third-party libraries may not have the same license as vineyard.
 .. _Mars: https://github.com/mars-project/mars
 .. _GraphScope: https://github.com/alibaba/GraphScope
 .. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/install.rst
+.. _Contributing: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _Apache License 2.0: https://github.com/v6d-io/v6d/blob/main/LICENSE
 .. _contribution guide: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb

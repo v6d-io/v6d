@@ -304,6 +304,7 @@ jobs:
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
           python3 test/runner.py --with-cpp
+          python3 test/runner.py --with-deployment
 
       - name: Setup tmate session
         if: false
@@ -326,7 +327,7 @@ jobs:
 
             rm -rf default.etcd
             rm -rf /dev/shm/etcd*
-            python3 test/runner.py --with-python --with-migration --with-contrib
+            python3 test/runner.py --with-python --with-migration --with-deployment --with-contrib
 
       - name: Run Python Tests
         if: ${{ github.event_name == 'pull_request' }}
@@ -343,7 +344,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-python --with-migration --with-contrib
+          python3 test/runner.py --with-python --with-migration --with-deployment --with-contrib
 
       - name: Setup tmate session
         if: false

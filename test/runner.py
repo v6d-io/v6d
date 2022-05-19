@@ -191,9 +191,25 @@ def resolve_mpiexec_cmdargs():
 mpiexec_cmdargs = resolve_mpiexec_cmdargs()
 
 
+def include_test(tests, test_name):
+    if not tests:
+        return True
+    for test in tests:
+        if test in test_name:
+            return True
+    return False
+
+
 def run_test(
-    test_name, *args, nproc=1, capture=False, vineyard_ipc_socket=VINEYARD_CI_IPC_SOCKET
+    tests,
+    test_name,
+    *args,
+    nproc=1,
+    capture=False,
+    vineyard_ipc_socket=VINEYARD_CI_IPC_SOCKET,
 ):
+    if not include_test(tests, test_name):
+        return
     print(
         f'running test case -*-*-*-*-*-  {test_name}  -*-*-*-*-*-*-*-',
         flush=True,
@@ -236,12 +252,15 @@ def get_data_path(name):
         return os.path.join(binary_dir, name)
 
 
-def run_invalid_client_test(host, port):
+def run_invalid_client_test(tests, host, port):
     def send_garbage_bytes(bytes):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))
         sock.sendall(bytes)
         sock.close()
+
+    if not include_test(tests, 'invalid_client_test'):
+        return
 
     send_garbage_bytes(b'\x01')
     send_garbage_bytes(b'\x0001')
@@ -271,7 +290,7 @@ def run_invalid_client_test(host, port):
     send_garbage_bytes(b'\xFF' * 100000)
 
 
-def run_single_vineyardd_tests():
+def run_single_vineyardd_tests(tests):
     etcd_port = find_port()
     [find_port() for _ in range(10)]  # skip some ports
     with start_vineyardd(
@@ -279,42 +298,43 @@ def run_single_vineyardd_tests():
         'vineyard_test_%s' % time.time(),
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
-        run_test('array_test')
+        run_test(tests, 'array_test')
         # FIXME: cannot be safely dtor after #350 and #354.
         # run_test('allocator_test')
-        run_test('arrow_data_structure_test')
-        run_test('clear_test')
-        run_test('custom_vector_test')
-        run_test('dataframe_test')
-        run_test('deep_copy_test')
-        run_test('delete_test')
-        run_test('get_wait_test')
-        run_test('get_object_test')
-        run_test('global_object_test')
-        run_test('hashmap_test')
-        run_test('id_test')
-        run_test('invalid_connect_test', '127.0.0.1:%d' % rpc_socket_port)
-        run_test('large_meta_test')
-        run_test('list_object_test')
-        run_test('name_test')
-        run_test('persist_test')
-        run_test('plasma_test')
-        run_test('rpc_delete_test', '127.0.0.1:%d' % rpc_socket_port)
-        run_test('rpc_get_object_test', '127.0.0.1:%d' % rpc_socket_port)
-        run_test('rpc_test', '127.0.0.1:%d' % rpc_socket_port)
-        run_test('scalar_test')
-        run_test('sequence_test')
-        run_test('server_status_test')
-        run_test('session_test')
-        run_test('signature_test')
-        run_test('shallow_copy_test')
-        run_test('shared_memory_test')
-        run_test('stream_test')
-        run_test('tensor_test')
-        run_test('typename_test')
-        run_test('version_test')
+        run_test(tests, 'arrow_data_structure_test')
+        run_test(tests, 'clear_test')
+        run_test(tests, 'custom_vector_test')
+        run_test(tests, 'dataframe_test')
+        run_test(tests, 'deep_copy_test')
+        run_test(tests, 'delete_test')
+        run_test(tests, 'get_wait_test')
+        run_test(tests, 'get_object_test')
+        run_test(tests, 'global_object_test')
+        run_test(tests, 'hashmap_test')
+        run_test(tests, 'id_test')
+        run_test(tests, 'invalid_connect_test', '127.0.0.1:%d' % rpc_socket_port)
+        run_test(tests, 'large_meta_test')
+        run_test(tests, 'list_object_test')
+        run_test(tests, 'name_test')
+        run_test(tests, 'persist_test')
+        run_test(tests, 'plasma_test')
+        run_test(tests, 'rpc_delete_test', '127.0.0.1:%d' % rpc_socket_port)
+        run_test(tests, 'rpc_get_object_test', '127.0.0.1:%d' % rpc_socket_port)
+        run_test(tests, 'rpc_test', '127.0.0.1:%d' % rpc_socket_port)
+        run_test(tests, 'scalar_test')
+        run_test(tests, 'sequence_test')
+        run_test(tests, 'server_status_test')
+        run_test(tests, 'session_test')
+        run_test(tests, 'signature_test')
+        run_test(tests, 'shallow_copy_test')
+        run_test(tests, 'shared_memory_test')
+        run_test(tests, 'stream_test')
+        run_test(tests, 'tensor_test')
+        run_test(tests, 'typename_test')
+        run_test(tests, 'version_test')
 
-        run_invalid_client_test('127.0.0.1', rpc_socket_port)
+        # test invalid inputs from client
+        run_invalid_client_test(tests, '127.0.0.1', rpc_socket_port)
 
 
 def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
@@ -347,12 +367,17 @@ def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
         time.sleep(5)
 
 
-def run_python_tests(etcd_endpoints, with_migration):
+def run_python_tests(etcd_endpoints, tests):
     etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_vineyardd(
         etcd_endpoints, etcd_prefix, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
     ) as (_, rpc_socket_port):
         start_time = time.time()
+        test_args = []
+        if tests:
+            for test in tests:
+                test_args.append('-k')
+                test_args.append(test)
         subprocess.check_call(
             [
                 'pytest',
@@ -364,6 +389,7 @@ def run_python_tests(etcd_endpoints, with_migration):
                 'python/vineyard/core',
                 'python/vineyard/data',
                 'python/vineyard/shared_memory',
+                *test_args,
                 '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
             ],
@@ -567,6 +593,12 @@ def parse_sys_args():
         help='Whether to run IO adaptors tests',
     )
     arg_parser.add_argument(
+        '--with-deployment',
+        action='store_true',
+        default=False,
+        help='Whether to run deployment and scaling in/out tests',
+    )
+    arg_parser.add_argument(
         '--with-migration',
         action='store_true',
         default=False,
@@ -578,37 +610,53 @@ def parse_sys_args():
         default=False,
         help="Whether to run python contrib tests",
     )
+    arg_parser.add_argument(
+        '--tests',
+        action='extend',
+        nargs="*",
+        type=str,
+        help="Specify tests cases ro run",
+    )
     return arg_parser, arg_parser.parse_args()
 
 
 def main():
     parser, args = parse_sys_args()
 
-    if not (args.with_cpp or args.with_python or args.with_io):
+    if not (args.with_cpp or args.with_python or args.with_io or args.with_deployment):
+        print(
+            'Error: \n\tat least of of --with-{cpp,python,io,deployment} needs '
+            'to be specified\n'
+        )
         parser.print_help()
         exit(1)
 
     if args.with_cpp:
-        run_single_vineyardd_tests()
-        with start_etcd() as (_, etcd_endpoints):
-            run_scale_in_out_tests(etcd_endpoints, instance_size=4)
+        run_single_vineyardd_tests(args.tests)
 
     if args.with_python:
         with start_etcd() as (_, etcd_endpoints):
-            run_python_tests(etcd_endpoints, args.with_migration)
-        with start_etcd() as (_, etcd_endpoints):
-            run_python_deploy_tests(etcd_endpoints, args.with_migration)
-        if args.with_contrib:
-            with start_etcd() as (_, etcd_endpoints):
-                run_python_contrib_ml_tests(etcd_endpoints)
-            with start_etcd() as (_, etcd_endpoints):
-                run_python_contrib_dask_tests(etcd_endpoints)
+            run_python_tests(etcd_endpoints, args.tests)
 
     if args.with_io:
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_tests(etcd_endpoints, args.with_migration)
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_distributed_tests(etcd_endpoints, args.with_migration)
+
+    if args.with_deployment:
+        with start_etcd() as (_, etcd_endpoints):
+            run_scale_in_out_tests(etcd_endpoints, instance_size=4)
+
+        if args.with_python:
+            with start_etcd() as (_, etcd_endpoints):
+                run_python_deploy_tests(etcd_endpoints, args.with_migration)
+
+    if args.with_python and args.with_contrib:
+        with start_etcd() as (_, etcd_endpoints):
+            run_python_contrib_ml_tests(etcd_endpoints)
+        with start_etcd() as (_, etcd_endpoints):
+            run_python_contrib_dask_tests(etcd_endpoints)
 
 
 if __name__ == '__main__':

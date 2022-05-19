@@ -39,6 +39,57 @@ You can do an out-of-source build using CMake:
 
 The vineyardd target will be generated under the `bin` directory.
 
+You may find building and installation instructions for other platforms from our CI:
+
+- `Ubuntu <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml>`_
+- `MacOS <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml>`_
+- `CentOS <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-centos-latest.yaml>`_
+- `Arch Linux <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-archlinux-latest.yml>`_
+
+Run unittests
+-------------
+
+Vineyard has included a set of unittests in the continous integration process. Test cases can be
+built from the following command:
+
+.. code:: shell
+
+    cd build
+    make vineyard_tests -j$(nproc)
+
+Before running test cases, you need to ensure etcd is correctly installed, by `brew install etcd` on Mac or
+:code:`pip3 install etcd_distro` on Linux distributions.
+
+There's a script to setup required environments and run test cases:
+
+.. code:: shell
+
+    ./test/runner.py --help
+    usage: runner.py [-h] [--with-cpp] [--with-python] [--with-io] [--with-deployment] [--with-migration] [--with-contrib] [--tests [TESTS [TESTS ...]]]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --with-cpp            Whether to run C++ tests
+      --with-python         Whether to run python tests
+      --with-io             Whether to run IO adaptors tests
+      --with-deployment     Whether to run deployment and scaling in/out tests
+      --with-migration      Whether to run object migration tests
+      --with-contrib        Whether to run python contrib tests
+      --tests [TESTS [TESTS ...]]
+                            Specify tests cases ro run
+
+As shown above, you could run C++ unittests by
+
+.. code:: shell
+
+    ./test/runner --with-cpp
+
+You could only run specified test case as well:
+
+.. code:: shell
+
+    ./test/runner --with-cpp --tests array_test dataframe_test
+
 Documentation
 -------------
 
