@@ -356,7 +356,7 @@ jobs:
           make vineyard_client_python vineyard_migrate_python -j`nproc`
           cd ..
           python setup.py bdist_wheel
-          python setup_migrate.py bdist_wheel
+          python setup_migrate.py bdist_wheel --plat macosx_10_15_x86_64
           export LD_LIBRARY_PATH=`pwd`/build/lib:$LD_LIBRARY_PATH
           for wheel in `ls dist/*`; do delocate-wheel -w fixed_wheels -v $wheel; done
           ls -la ./fixed_wheels
