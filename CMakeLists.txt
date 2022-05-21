@@ -175,6 +175,20 @@ else()
     set(HAVE_FLAG_STD_CXX14 TRUE)
 endif()
 
+macro(add_subdirectory_shared directory)
+    set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
+    set(BUILD_SHARED_LIBS ON)
+    add_subdirectory(${directory} EXCLUDE_FROM_ALL)
+    set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
+endmacro(add_subdirectory_shared)
+
+macro(add_subdirectory_static directory)
+    set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
+    set(BUILD_SHARED_LIBS OFF)
+    add_subdirectory(${directory} EXCLUDE_FROM_ALL)
+    set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
+endmacro(add_subdirectory_static)
+
 macro(find_apache_arrow)
     # workaround for: https://issues.apache.org/jira/browse/ARROW-11836
     if(NOT BUILD_VINEYARD_PYPI_PACKAGES)
@@ -212,7 +226,7 @@ macro(find_boost)
 endmacro(find_boost)
 
 macro(find_ctti)
-    add_subdirectory(thirdparty/ctti)
+    add_subdirectory_static(thirdparty/ctti)
 endmacro(find_ctti)
 
 macro(find_etcd_cpp_apiv3)
@@ -238,20 +252,28 @@ macro(find_fuse)
 endmacro()
 
 macro(find_intel_tbb)
+    set(TBB_FIND_PACKAGE OFF CACHE BOOL "Build TBB from bundled source")
     set(TBB_TEST OFF CACHE BOOL "Disable tbb testing")
     set(TBB_EXAMPLES OFF CACHE BOOL "Disable tbb examples")
     set(TBB_STRICT OFF CACHE BOOL "Don't treat warnings as errors for tbb library")
     set(TBB4PY_BUILD OFF CACHE BOOL "Disable tbb4py build")
+    set(TBBMALLOC_BUILD OFF CACHE BOOL "Disable tbb4py build")
+    set(TBBMALLOC_PROXY_BUILD OFF CACHE BOOL "Disable tbb4py build")
+    set(TBB_ENABLE_IPO OFF CACHE BOOL "Enable interprocedural optimization")
     set(TBB_CPF ON CACHE BOOL "Enable preview features of the library")
 
     if(USE_EXTERNAL_TBB_LIBS)
         find_package(TBB QUIET)
         if(NOT TBB_FOUND)
             message(WARNING "intel-tbb not found, will use the bundled one from git submodules.")
-            add_subdirectory(thirdparty/intel-tbb)
+            # clear previous cmake configure result
+            set(TBB_DIR)
+            add_subdirectory_static(thirdparty/intel-tbb)
         endif()
     else()
-        add_subdirectory(thirdparty/intel-tbb)
+        # clear previous cmake configure result
+        set(TBB_DIR)
+        add_subdirectory_static(thirdparty/intel-tbb)
     endif()
 endmacro(find_intel_tbb)
 
@@ -318,7 +340,7 @@ macro(find_nlohmann_json)
     set(JSON_Install ON CACHE INTERNAL "")
     set(JSON_MultipleHeaders ON CACHE INTERNAL "")
     set(JSON_ImplicitConversions OFF CACHE INTERNAL "")
-    add_subdirectory(thirdparty/nlohmann-json)
+    add_subdirectory_static(thirdparty/nlohmann-json)
 endmacro(find_nlohmann_json)
 
 macro(find_openssl_libraries)
@@ -613,7 +635,7 @@ endif()
 
 if(BUILD_VINEYARD_PYTHON_BINDINGS)
     set(PYBIND11_PYTHON_VERSION 3)
-    add_subdirectory(thirdparty/pybind11)
+    add_subdirectory_static(thirdparty/pybind11)
     set(PYTHON_BIND_FILES "python/client.cc"
                           "python/core.cc"
                           "python/error.cc"
