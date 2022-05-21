@@ -21,6 +21,7 @@ limitations under the License.
 #undef JEMALLOC_NO_DEMANGLE
 
 #include "common/memory/jemalloc.h"
+#include "common/util/functions.h"
 
 extern const extent_hooks_t je_ehooks_default_extent_hooks;
 

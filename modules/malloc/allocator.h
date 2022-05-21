@@ -18,26 +18,119 @@ limitations under the License.
 
 #include <stddef.h>
 
-#if !defined(VINEYARD_MALLOC_PREFIX)
-#define VINEYARD_MALLOC_PREFIX
-#endif
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <set>
+#include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif  // __cplusplus
+#include "client/client.h"
+#include "client/ds/blob.h"
+#include "common/memory/jemalloc.h"
 
-void* vineyard_malloc(size_t size);
-void* vineyard_realloc(void* pointer, size_t size);
-void* vineyard_calloc(size_t num, size_t size);
-void vineyard_free(void* pointer);
-void vineyard_freeze(void* pointer);
-void vineyard_allocator_finalize(int renew);
+namespace vineyard {
 
-void* vineyard_arena_malloc(size_t size);
-void vineyard_arena_free(void* ptr);
+template <typename T>
+struct VineyardAllocator : public memory::Jemalloc {
+ public:
+  using value_type = T;
+  using size_type = std::size_t;
+  using pointer = T*;
+  using const_pointer = const T*;
+  using difference_type =
+      typename std::pointer_traits<pointer>::difference_type;
 
-#ifdef __cplusplus
+  explicit VineyardAllocator(
+      const size_t size = std::numeric_limits<size_t>::max())
+      : client_(vineyard::Client::Default()) {
+    VINEYARD_CHECK_OK(_initialize_arena(size));
+  }
+
+  VineyardAllocator(Client& client,
+                    const size_t size = std::numeric_limits<size_t>::max())
+      : client_(client) {
+    VINEYARD_CHECK_OK(_initialize_arena(size));
+  }
+
+  ~VineyardAllocator() noexcept { VINEYARD_DISCARD(Release()); }
+
+  template <typename U>
+  VineyardAllocator(const VineyardAllocator<U>&) noexcept {}
+
+  T* allocate(size_t size, const void* = nullptr) {
+    return reinterpret_cast<T*>(Jemalloc::Allocate(size));
+  }
+
+  void deallocate(T* ptr, size_t size) {
+    if (freezed_.find(reinterpret_cast<uintptr_t>(ptr)) != freezed_.end()) {
+      Jemalloc::Free(ptr, size);
+    }
+  }
+
+  std::shared_ptr<Blob> Freeze(T* ptr) {
+    size_t allocated_size = Jemalloc::GetAllocatedSize(ptr);
+    std::clog << "freeze the pointer " << ptr << " of size " << allocated_size
+              << std::endl;
+    offsets_.emplace_back(reinterpret_cast<uintptr_t>(ptr) - space_);
+    sizes_.emplace_back(allocated_size);
+    freezed_.emplace(reinterpret_cast<uintptr_t>(ptr));
+    ObjectID id = base_ + (reinterpret_cast<uintptr_t>(ptr) - space_);
+    return Blob::FromAllocator(client_, id, reinterpret_cast<uintptr_t>(ptr),
+                               allocated_size);
+  }
+
+  Status Release() {
+    std::clog << "jemalloc arena finalized: of " << offsets_.size()
+              << " blocks are in use." << std::endl;
+    return client_.ReleaseArena(fd_, offsets_, sizes_);
+  }
+
+  Status Renew() {
+    RETURN_ON_ERROR(client_.ReleaseArena(fd_, offsets_, sizes_));
+    return _initialize_arena(available_size_);
+  }
+
+  template <typename U>
+  struct rebind {
+    using other = VineyardAllocator<U>;
+  };
+
+ private:
+  Client& client_;
+  int fd_;
+  uintptr_t base_, space_;
+  size_t available_size_;
+  std::vector<size_t> offsets_, sizes_;
+  std::set<uintptr_t> freezed_;
+
+  Status _initialize_arena(size_t size) {
+    std::clog << "make arena: " << size << std::endl;
+    RETURN_ON_ERROR(
+        client_.CreateArena(size, fd_, available_size_, base_, space_));
+    Jemalloc::Init(reinterpret_cast<void*>(space_), available_size_);
+    std::clog << "jemalloc arena initialized: " << available_size_ << ", at "
+              << reinterpret_cast<void*>(space_) << std::endl;
+
+    // reset the context
+    offsets_.clear();
+    sizes_.clear();
+    freezed_.clear();
+    return Status::OK();
+  }
+};
+
+template <typename T, typename U>
+constexpr bool operator==(const VineyardAllocator<T>&,
+                          const VineyardAllocator<U>&) noexcept {
+  return true;
 }
-#endif  // __cplusplus
+
+template <typename T, typename U>
+constexpr bool operator!=(const VineyardAllocator<T>&,
+                          const VineyardAllocator<U>&) noexcept {
+  return false;
+}
+
+}  // namespace vineyard
 
 #endif  // MODULES_MALLOC_ALLOCATOR_H_

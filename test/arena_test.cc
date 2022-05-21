@@ -25,10 +25,14 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "jemalloc/include/jemalloc/jemalloc.h"
-
 #include "common/memory/jemalloc.h"
+#include "common/util/functions.h"
 #include "common/util/logging.h"
+
+#if defined(WITH_JEMALLOC)
+#define JEMALLOC_NO_DEMANGLE
+#include "jemalloc/include/jemalloc/jemalloc.h"
+#undef JEMALLOC_NO_DEMANGLE
 
 #define KB 1024
 #define MB (KB * 1024)
@@ -449,8 +453,12 @@ int AllocateArenaTest() {
   return 0;
 }
 
+#endif  // WITH_JEMALLOC
+
 int main(int argc, char** argv) {
   LOG(INFO) << "arena test starts...";
+
+#if defined(WITH_JEMALLOC)
 
   LOG(INFO) << "Base test starts...";
   if (BaseTest() == -1) {
@@ -458,7 +466,7 @@ int main(int argc, char** argv) {
     exit(-1);
   }
 
-#ifdef MULTITHREAD
+#if defined(MULTITHREAD)
   LOG(INFO) << NUM_ARENA << " arenas totally";
   LOG(INFO) << NUM_THREAD << " threads working concurrently";
 
@@ -484,7 +492,8 @@ int main(int argc, char** argv) {
     exit(-1);
   }
 
-#endif
+#endif  // MULTITHREAD
+#endif  // WITH_JEMALLOC
 
   LOG(INFO) << "Arena test succeed";
 
