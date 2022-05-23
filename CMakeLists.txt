@@ -379,7 +379,6 @@ macro(find_common_libraries)
     find_ctti()
     find_gflags()
     find_glog()
-    find_jemalloc()
     find_libunwind()
     find_pthread()
     find_nlohmann_json()
@@ -483,6 +482,10 @@ endif()
 
 if(BUILD_VINEYARD_MALLOC)
     set(BUILD_VINEYARD_CLIENT ON)
+endif()
+
+if(WITH_ALLOCATOR STREQUAL "jemalloc")
+    find_jemalloc()
 endif()
 
 add_custom_target(vineyard_tests)
@@ -603,9 +606,6 @@ if(BUILD_VINEYARD_CLIENT)
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
-    target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
-    target_compile_options(vineyard_client PUBLIC -DWITH_JEMALLOC)
-
     target_include_directories(vineyard_client PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
         $<INSTALL_INTERFACE:include>
@@ -613,6 +613,11 @@ if(BUILD_VINEYARD_CLIENT)
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
         target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
+    endif()
+
+    if(WITH_ALLOCATOR STREQUAL "jemalloc")
+        target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
+        target_compile_options(vineyard_client PRIVATE -DWITH_JEMALLOC)
     endif()
 
     if(BUILD_VINEYARD_PYPI_PACKAGES)
@@ -733,6 +738,14 @@ if(BUILD_VINEYARD_TESTS)
 
         if(${T_NAME} STREQUAL "delete_test" OR ${T_NAME} STREQUAL "rpc_delete_test")
             target_compile_options(${T_NAME} PRIVATE "-fno-access-control")
+        endif()
+
+        if(${T_NAME} STREQUAL "allocator_test"
+                OR ${T_NAME} STREQUAL "arena_test"
+                OR ${T_NAME} STREQUAL "jemalloc_test")
+            if(WITH_ALLOCATOR STREQUAL "jemalloc")
+                target_compile_options(${T_NAME} PRIVATE -DWITH_JEMALLOC)
+            endif()
         endif()
     endforeach()
 endif()

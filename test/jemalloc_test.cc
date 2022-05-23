@@ -25,7 +25,6 @@ limitations under the License.
 #include "arrow/io/api.h"
 
 #include "basic/ds/array.h"
-#include "client/allocator.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/memory/arena.h"
@@ -33,7 +32,11 @@ limitations under the License.
 #include "common/util/env.h"
 #include "common/util/logging.h"
 
+#include "malloc/allocator.h"
+
 int main(int argc, char** argv) {
+#if defined(WITH_JEMALLOC)
+
   void* base = malloc(20 * 1024 * 1024);
 #ifdef VINEYARD_BENCH
   auto* jemalloc_allocator = new vineyard::memory::Jemalloc();
@@ -66,6 +69,8 @@ int main(int argc, char** argv) {
   void* p5 = jemalloc_allocator->Allocate(16 * 1024 * 1024);
   LOG(INFO) << "p5 " << jemalloc_allocator->GetAllocatedSize(p5);
   jemalloc_allocator->Free(p5);
+
+#endif  // WITH_JEMALLOC
 
   LOG(INFO) << "Passed jemalloc tests...";
 

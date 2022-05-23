@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef SRC_COMMON_MEMORY_JEMALLOC_H_
 #define SRC_COMMON_MEMORY_JEMALLOC_H_
 
-#if defined(WITH_JEMALLOC)
-
 #include <utility>
 
 #include "server/memory/malloc.h"
@@ -27,21 +25,6 @@ struct extent_hooks_s;
 typedef struct extent_hooks_s extent_hooks_t;
 
 namespace vineyard {
-
-namespace detail {
-
-// Private implementation for std::exchange, as it is unavailable on ArchLinux.
-//
-// See also: https://en.cppreference.com/w/cpp/utility/exchange
-//
-template <class T, class U = T>
-inline T exchange_value(T& obj, U&& new_value) {
-  T old_value = std::move(obj);
-  obj = std::forward<U>(new_value);
-  return old_value;
-}
-
-}  // namespace detail
 
 namespace memory {
 
@@ -93,7 +76,5 @@ class Jemalloc {
 }  // namespace memory
 
 }  // namespace vineyard
-
-#endif  // WITH_JEMALLOC
 
 #endif  // SRC_COMMON_MEMORY_JEMALLOC_H_

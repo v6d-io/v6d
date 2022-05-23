@@ -25,11 +25,11 @@ limitations under the License.
 #include "arrow/io/api.h"
 
 #include "basic/ds/array.h"
-#include "client/allocator.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
+#include "malloc/allocator.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -44,6 +44,8 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
+#if defined(WITH_JEMALLOC)
+
   VineyardAllocator<void> allocator(client);
 
   void* p1 = allocator.Allocate(1025);
@@ -53,6 +55,8 @@ int main(int argc, char** argv) {
   allocator.Freeze(p2);
 
   VINEYARD_CHECK_OK(allocator.Release());
+
+#endif
 
   LOG(INFO) << "Passed allocator tests...";
 

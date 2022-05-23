@@ -20,69 +20,7 @@ limitations under the License.
 #include <mutex>
 #include <utility>
 
-#include "client/allocator.h"
-#include "client/arena_allocator.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 
-namespace vineyard {
-
-namespace detail {
-
-static VineyardAllocator<void>& _DefaultAllocator() {
-  static VineyardAllocator<void>* default_allocator =
-      new VineyardAllocator<void>{};
-  return *default_allocator;
-}
-
-static VineyardArenaAllocator<void>& _ArenaAllocator() {
-  static VineyardArenaAllocator<void>* default_allocator =
-      new VineyardArenaAllocator<void>{};
-  return *default_allocator;
-}
-
-static std::mutex allocator_mutex;
-
-}  // namespace detail
-
-}  // namespace vineyard
-
-void* vineyard_malloc(size_t size) {
-  return vineyard::detail::_DefaultAllocator().Allocate(size);
-}
-
-void* vineyard_calloc(size_t num, size_t size) {
-  return vineyard::detail::_DefaultAllocator().Allocate(num * size);
-}
-
-void* vineyard_realloc(void* pointer, size_t size) {
-  return vineyard::detail::_DefaultAllocator().Reallocate(pointer, size);
-}
-
-void vineyard_free(void* pointer) {
-  vineyard::detail::_DefaultAllocator().Free(pointer);
-}
-
-void vineyard_freeze(void* pointer) {
-  std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
-  vineyard::detail::_DefaultAllocator().Freeze(pointer);
-}
-
-void vineyard_allocator_finalize(int renew) {
-  std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
-  vineyard::VineyardAllocator<void>& default_allocator =
-      vineyard::detail::_DefaultAllocator();
-  if (renew) {
-    VINEYARD_CHECK_OK(default_allocator.Renew());
-  } else {
-    VINEYARD_CHECK_OK(default_allocator.Release());
-  }
-}
-
-void* vineyard_arena_malloc(size_t size) {
-  return vineyard::detail::_ArenaAllocator().Allocate(size);
-}
-
-void vineyard_arena_free(void* ptr) {
-  vineyard::detail::_ArenaAllocator().Free(ptr, 0);
-}
+namespace vineyard {}  // namespace vineyard

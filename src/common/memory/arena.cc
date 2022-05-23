@@ -18,8 +18,8 @@ limitations under the License.
 #include <thread>
 
 #include "common/memory/arena.h"
-#include "common/memory/jemalloc.h"
 #include "common/util/env.h"
+#include "common/util/functions.h"
 
 #define JEMALLOC_NO_DEMANGLE
 #include "jemalloc/include/jemalloc/jemalloc.h"

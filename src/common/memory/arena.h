@@ -13,23 +13,19 @@ limitations under the License.
 #ifndef SRC_COMMON_MEMORY_ARENA_H_
 #define SRC_COMMON_MEMORY_ARENA_H_
 
-#if defined(WITH_JEMALLOC)
-
-#include <sys/mman.h>
-
 #include <deque>
-#include <fstream>
-#include <iostream>
 #include <memory>
 #include <mutex>
-#include <queue>
-#include <string>
 #include <thread>
 #include <unordered_map>
-#include <vector>
 
-#include "common/memory/jemalloc.h"
-#include "jemalloc/include/jemalloc/jemalloc.h"
+#include <utility>
+
+#include "server/memory/malloc.h"
+
+// forward declarations, to avoid include jemalloc/jemalloc.h.
+struct extent_hooks_s;
+typedef struct extent_hooks_s extent_hooks_t;
 
 namespace vineyard {
 
@@ -107,7 +103,5 @@ class ArenaAllocator {
 }  // namespace memory
 
 }  // namespace vineyard
-
-#endif  // WITH_JEMALLOC
 
 #endif  // SRC_COMMON_MEMORY_ARENA_H_

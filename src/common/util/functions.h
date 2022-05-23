@@ -21,6 +21,7 @@ limitations under the License.
 #include <iostream>
 #include <regex>
 #include <string>
+#include <utility>
 
 #include "boost/algorithm/string.hpp"
 
@@ -58,6 +59,21 @@ inline int64_t GetTimestamp() {
   gettimeofday(&t, 0);
   return ((int64_t) t.tv_sec << sizeof(int32_t) * 8) + (int64_t) t.tv_usec;
 }
+
+namespace detail {
+
+// Private implementation for std::exchange, as it is unavailable on ArchLinux.
+//
+// See also: https://en.cppreference.com/w/cpp/utility/exchange
+//
+template <class T, class U = T>
+inline T exchange_value(T& obj, U&& new_value) {
+  T old_value = std::move(obj);
+  obj = std::forward<U>(new_value);
+  return old_value;
+}
+}  // namespace detail
+
 }  // namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_FUNCTIONS_H_
