@@ -56,8 +56,8 @@ if(Boost_LEAF_FOUND)
     target_include_directories(vineyard_graph PUBLIC ${Boost_INCLUDE_DIRS})
 else()
     # boost::leaf for error_handling
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf"
-                     "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/boost-leaf"
+    add_subdirectory_static("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf"
+                            "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/boost-leaf"
     )
     # install boost leaf
     include(GNUInstallDirs)
