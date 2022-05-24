@@ -17,12 +17,12 @@ set(WERROR OFF CACHE BOOL "Treat warnings as errors")
 set(BUILD_TESTS OFF CACHE BOOL "Build tests.")
 set(BUILD_SAMPLES OFF CACHE BOOL "Build sample applications.")
 set(CPPREST_EXCLUDE_WEBSOCKETS ON CACHE BOOL "Exclude websockets functionality..")
-add_subdirectory_static(thirdparty/cpprestsdk)
+add_subdirectory_static(thirdparty/cpprestsdk EXCLUDE_FROM_ALL)
 set(CPPREST_INCLUDE_DIR thirdparty/cpprestsdk/Release/include)
 set(CPPREST_LIB cpprest)
 
 # build etcd-cpp-apiv3
-add_subdirectory_static(thirdparty/etcd-cpp-apiv3)
+add_subdirectory_static(thirdparty/etcd-cpp-apiv3 EXCLUDE_FROM_ALL)
 set(ETCD_CPP_LIBRARIES etcd-cpp-api)
 set(ETCD_CPP_INCLUDE_DIR thirdparty/etcd-cpp-apiv3
                          ${PROJECT_BINARY_DIR}/thirdparty/etcd-cpp-apiv3/proto/gen
