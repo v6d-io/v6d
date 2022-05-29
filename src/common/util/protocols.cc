@@ -131,6 +131,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::PlasmaDelDataRequest;
   } else if (str_type == "move_buffers_ownership_request") {
     return CommandType::MoveBuffersOwnershipRequest;
+  } else if (str_type == "release_request") {
+    return CommandType::ReleaseRequest;
+  } else if (str_type == "del_data_with_feedbacks_request") {
+    return CommandType::DelDataWithFeedbacksRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1442,6 +1446,70 @@ void WriteMoveBuffersOwnershipReply(std::string& msg) {
 
 Status ReadMoveBuffersOwnershipReply(json const& root) {
   CHECK_IPC_ERROR(root, "move_buffers_ownership_reply");
+  return Status::OK();
+}
+
+void WriteReleaseRequest(ObjectID const& object_id, std::string& msg) {
+  json root;
+  root["type"] = "release_request";
+  root["object_id"] = object_id;
+  encode_msg(root, msg);
+}
+
+Status ReadReleaseRequest(json const& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"] == "release_request");
+  object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteReleaseReply(std::string& msg) {
+  json root;
+  root["type"] = "release_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadReleaseReply(json const& root) {
+  CHECK_IPC_ERROR(root, "release_reply");
+  return Status::OK();
+}
+
+void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
+                                      const bool force, const bool deep,
+                                      const bool fastpath, std::string& msg) {
+  json root;
+  root["type"] = "del_data_with_feedbacks_request";
+  root["id"] = std::vector<ObjectID>{id};
+  root["force"] = force;
+  root["deep"] = deep;
+  root["fastpath"] = fastpath;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDelDataWithFeedbacksRequest(json const& root,
+                                       std::vector<ObjectID>& ids, bool& force,
+                                       bool& deep, bool& fastpath) {
+  RETURN_ON_ASSERT(root["type"] == "del_data_with_feedbacks_request");
+  ids = root["id"].get_to(ids);
+  force = root.value("force", false);
+  deep = root.value("deep", false);
+  fastpath = root.value("fastpath", false);
+  return Status::OK();
+}
+
+void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
+                                    std::string& msg) {
+  json root;
+  root["type"] = "del_data_with_feedbacks_reply";
+  root["deleted_bids"] = deleted_bids;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDelDataWithFeedbacksReply(json const& root,
+                                     std::vector<ObjectID>& deleted_bids) {
+  RETURN_ON_ASSERT(root["type"] == "del_data_with_feedbacks_reply");
+  deleted_bids = root["deleted_bids"].get_to(deleted_bids);
   return Status::OK();
 }
 

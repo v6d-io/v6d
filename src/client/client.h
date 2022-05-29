@@ -172,7 +172,21 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
 
   Status RemoveUsage(ID const& id) { return this->DecreaseReferenceCount(id); }
 
-  Status OnRelease(ID const& id) { return this->Self().OnRelease(id); }
+  Status DeleteUsage(ID const& id) {
+    auto elem = object_in_use_.find(id);
+    if (elem != object_in_use_.end()) {
+      object_in_use_.erase(elem);
+      return Status::OK();
+    }
+    return Status::ObjectNotExists();
+  }
+
+  Status OnRelease(ID const& id) {
+    // once reference count reaches zero, the accessibility of the object cannot
+    // be guaranteed, thus should be regard as not-in-use.
+    RETURN_ON_ERROR(DeleteUsage(id));
+    return this->Self().OnRelease(id);
+  }
 
   Status OnDelete(ID const& id) { return Self().OnDelete(id); }
 
@@ -222,7 +236,8 @@ class PlasmaClient;
  *        vineyard server. Vineyard's IPC Client talks to vineyard server
  *        and manipulate objects in vineyard.
  */
-class Client : public BasicIPCClient {
+class Client : public BasicIPCClient,
+               public UsageTracker<ObjectID, Payload, Client> {
  public:
   Client() {}
 
@@ -520,7 +535,25 @@ class Client : public BasicIPCClient {
   Status ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
                      PlasmaClient& source_client);
 
+  Status Release(ObjectID const& id) override;
+
+  Status DelData(const ObjectID id, const bool force, const bool deep);
+
+  Status DelData(const std::vector<ObjectID>& ids, const bool force,
+                 const bool deep);
+
+  /// For UsageTracker only
+  Status OnFetch(ObjectID const& id, std::shared_ptr<Payload> const& payload);
+
+  /// For UsageTracker only
+  Status OnRelease(ObjectID const& id);
+
+  /// For UsageTracker only
+  Status OnDelete(ObjectID const& id);
+
  protected:
+  Status GetDependency(ObjectID const& id, std::set<ObjectID>& bids);
+
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
                       std::shared_ptr<arrow::MutableBuffer>& buffer);
 

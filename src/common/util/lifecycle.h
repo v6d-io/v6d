@@ -55,8 +55,8 @@ class LifeCycleTracker {
 
     VINEYARD_CHECK_OK(Self().OnRelease(id));
 
-    if (pending_to_delete.count(id) > 0) {
-      pending_to_delete.erase(id);
+    if (pending_to_delete_.count(id) > 0) {
+      pending_to_delete_.erase(id);
       VINEYARD_CHECK_OK(Self().OnDelete(id));
     }
     return Status::OK();
@@ -67,7 +67,7 @@ class LifeCycleTracker {
     int64_t ref_cnt = 0;
     RETURN_ON_ERROR(FetchAndModify(id, ref_cnt, 0));
     if (ref_cnt != 0) {
-      pending_to_delete.emplace(id);
+      pending_to_delete_.emplace(id);
     } else {
       VINEYARD_CHECK_OK(Self().OnDelete(id));
     }
@@ -80,14 +80,14 @@ class LifeCycleTracker {
   }
 
   bool IsInDeletion(ID const& id) {
-    return pending_to_delete.find(id) != pending_to_delete.end();
+    return pending_to_delete_.find(id) != pending_to_delete_.end();
   }
 
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
   /// Cache the objects that client wants to delete but `ref_count > 0`
   /// Race condition should be settled by Der.
-  std::unordered_set<ID> pending_to_delete;
+  std::unordered_set<ID> pending_to_delete_;
 };
 
 }  // namespace vineyard

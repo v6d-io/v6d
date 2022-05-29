@@ -32,6 +32,7 @@ struct Payload {
   ptrdiff_t data_offset;
   int64_t data_size;
   int64_t map_size;
+  int64_t ref_cnt;
   uint8_t* pointer;  // the direct pointer for this blob on the server side
   bool is_sealed;
   bool is_owner;
@@ -43,6 +44,7 @@ struct Payload {
         data_offset(0),
         data_size(0),
         map_size(0),
+        ref_cnt(0),
         pointer(nullptr),
         is_sealed(0),
         is_owner(1) {}
@@ -55,6 +57,7 @@ struct Payload {
         data_offset(offset),
         data_size(size),
         map_size(msize),
+        ref_cnt(0),
         pointer(ptr),
         is_sealed(0),
         is_owner(1) {}
@@ -67,6 +70,7 @@ struct Payload {
         data_offset(offset),
         data_size(size),
         map_size(msize),
+        ref_cnt(0),
         pointer(ptr),
         is_sealed(0),
         is_owner(1) {}
@@ -107,38 +111,33 @@ struct Payload {
 struct PlasmaPayload : public Payload {
   PlasmaID plasma_id;
   int64_t plasma_size;
-  int64_t ref_cnt;
 
-  PlasmaPayload() : Payload(), plasma_id(), plasma_size(0), ref_cnt(0) {}
+  PlasmaPayload() : Payload(), plasma_id(), plasma_size(0) {}
 
   PlasmaPayload(PlasmaID plasma_id, ObjectID object_id, int64_t plasma_size,
                 int64_t size, uint8_t* ptr, int fd, int64_t msize,
                 ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, msize, offset),
         plasma_id(plasma_id),
-        plasma_size(plasma_size),
-        ref_cnt(0) {}
+        plasma_size(plasma_size) {}
 
   PlasmaPayload(PlasmaID plasma_id, ObjectID object_id, int64_t plasma_size,
                 int64_t size, uint8_t* ptr, int fd, int arena_fd, int64_t msize,
                 ptrdiff_t offset)
       : Payload(object_id, size, ptr, fd, arena_fd, msize, offset),
         plasma_id(plasma_id),
-        plasma_size(plasma_size),
-        ref_cnt(0) {}
+        plasma_size(plasma_size) {}
 
   PlasmaPayload(PlasmaID plasma_id, int64_t size, uint8_t* ptr, int fd,
                 int64_t msize, ptrdiff_t offset)
       : Payload(EmptyBlobID(), size, ptr, fd, msize, offset),
         plasma_id(plasma_id),
-        plasma_size(0),
-        ref_cnt(0) {}
+        plasma_size(0) {}
 
   explicit PlasmaPayload(Payload _p)
       : Payload(_p),
         plasma_id(PlasmaIDFromString(ObjectIDToString(_p.object_id))),
-        plasma_size(0),
-        ref_cnt(0) {}
+        plasma_size(0) {}
 
   static std::shared_ptr<PlasmaPayload> MakeEmpty() {
     static std::shared_ptr<PlasmaPayload> payload =

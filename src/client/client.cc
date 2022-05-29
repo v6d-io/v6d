@@ -472,6 +472,7 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   }
   buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
 
+  RETURN_ON_ERROR(AddUsage(id, payload));
   return Status::OK();
 }
 
@@ -495,8 +496,22 @@ Status Client::GetBuffers(
   }
   ENSURE_CONNECTED(this);
 
+  std::set<ObjectID> remote_ids;
+  std::vector<Payload> local_payloads;
+
+  /// lookup in client-side cache
+  for (auto const& id : ids) {
+    Payload tmp;
+    if (FetchOnLocal(id, tmp).ok()) {
+      local_payloads.emplace_back(tmp);
+    } else {
+      remote_ids.emplace(id);
+    }
+  }
+
+  /// lookup in server-side store
   std::string message_out;
-  WriteGetBuffersRequest(ids, message_out);
+  WriteGetBuffersRequest(remote_ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -504,6 +519,8 @@ Status Client::GetBuffers(
   std::vector<int> fd_sent, fd_recv;
   std::set<int> fd_recv_dedup;
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+
+  payloads.insert(payloads.end(), local_payloads.begin(), local_payloads.end());
 
   for (auto const& item : payloads) {
     if (item.data_size > 0) {
@@ -531,6 +548,80 @@ Status Client::GetBuffers(
     }
     buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
     buffers.emplace(item.object_id, buffer);
+    /// Add reference count of buffers
+    RETURN_ON_ERROR(AddUsage(item.object_id, item));
+  }
+  return Status::OK();
+}
+
+Status Client::GetDependency(ObjectID const& id, std::set<ObjectID>& bids) {
+  ENSURE_CONNECTED(this);
+  ObjectMeta meta;
+  json tree;
+  RETURN_ON_ERROR(GetData(id, tree, /*sync_remote=*/true));
+  meta.SetMetaData(this, tree);
+  bids = meta.GetBufferSet()->AllBufferIds();
+  return Status::OK();
+}
+
+// If reference count reaches 0, send Release request to server.
+Status Client::OnRelease(ObjectID const& id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteReleaseRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadReleaseReply(message_in));
+  return Status::OK();
+}
+
+// TODO(mengke): If reference count reaches 0 and marked as to be deleted, send
+// DelData request to server.
+Status Client::OnDelete(ObjectID const& id) {
+  // Currently, the deletion does not respect the reference count.
+  return Status::OK();
+}
+
+// Released by users.
+Status Client::Release(ObjectID const& id) {
+  ENSURE_CONNECTED(this);
+  if (!IsBlob(id)) {
+    std::set<ObjectID> bids;
+    RETURN_ON_ERROR(GetDependency(id, bids));
+    for (auto const& bid : bids) {
+      RETURN_ON_ASSERT(IsBlob(bid));
+      RETURN_ON_ERROR(RemoveUsage(bid));
+    }
+  } else {
+    RETURN_ON_ERROR(RemoveUsage(id));
+  }
+  return Status::OK();
+}
+
+Status Client::DelData(const ObjectID id, const bool force, const bool deep) {
+  return this->DelData(std::vector<ObjectID>{id}, force, deep);
+}
+
+Status Client::DelData(const std::vector<ObjectID>& ids, const bool force,
+                       const bool deep) {
+  ENSURE_CONNECTED(this);
+  for (auto id : ids) {
+    RETURN_ON_ERROR(Release(id));
+  }
+  std::string message_out;
+  WriteDelDataWithFeedbacksRequest(ids, force, deep, /*fastpath=*/false,
+                                   message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  std::vector<ObjectID> deleted_bids;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDelDataWithFeedbacksReply(message_in, deleted_bids));
+
+  for (auto const& id : deleted_bids) {
+    if (IsBlob(id)) {
+      RETURN_ON_ERROR(DeleteUsage(id));
+    }
   }
   return Status::OK();
 }
@@ -581,6 +672,7 @@ Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
 Status Client::DropBuffer(const ObjectID id, const int fd) {
   ENSURE_CONNECTED(this);
 
+  RETURN_ON_ASSERT(IsBlob(id));
   // unmap from client
   //
   // FIXME: the erase may cause re-recv fd problem, needs further inspection.
@@ -597,6 +689,7 @@ Status Client::DropBuffer(const ObjectID id, const int fd) {
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadDropBufferReply(message_in));
+  RETURN_ON_ERROR(DeleteUsage(id));
   return Status::OK();
 }
 
@@ -609,6 +702,7 @@ Status Client::Seal(ObjectID const& object_id) {
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadSealReply(message_in));
+  RETURN_ON_ERROR(SealUsage(object_id));
   return Status::OK();
 }
 

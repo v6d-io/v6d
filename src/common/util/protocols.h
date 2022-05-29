@@ -82,6 +82,8 @@ enum class CommandType {
   PlasmaReleaseRequest = 48,
   PlasmaDelDataRequest = 49,
   MoveBuffersOwnershipRequest = 50,
+  ReleaseRequest = 51,
+  DelDataWithFeedbacksRequest = 52,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -500,6 +502,28 @@ Status ReadMoveBuffersOwnershipRequest(json const& root,
 void WriteMoveBuffersOwnershipReply(std::string& msg);
 
 Status ReadMoveBuffersOwnershipReply(json const& root);
+
+void WriteReleaseRequest(ObjectID const& object_id, std::string& msg);
+
+Status ReadReleaseRequest(json const& root, ObjectID& object_id);
+
+void WriteReleaseReply(std::string& msg);
+
+Status ReadReleaseReply(json const& root);
+
+void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
+                                      const bool force, const bool deep,
+                                      const bool fastpath, std::string& msg);
+
+Status ReadDelDataWithFeedbacksRequest(json const& root,
+                                       std::vector<ObjectID>& id, bool& force,
+                                       bool& deep, bool& fastpath);
+
+void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
+                                    std::string& msg);
+
+Status ReadDelDataWithFeedbacksReply(json const& root,
+                                     std::vector<ObjectID>& deleted_bids);
 
 }  // namespace vineyard
 

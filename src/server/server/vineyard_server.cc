@@ -584,6 +584,16 @@ Status VineyardServer::DeepCopy(const ObjectID id, const std::string& peer,
 Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
                                const bool force, const bool deep,
                                const bool fastpath, callback_t<> callback) {
+  return DelData(ids, force, deep, fastpath,
+                 [callback](Status const& status,
+                            std::vector<ObjectID> const& deleted_ids) {
+                   return callback(status);
+                 });
+}
+
+Status VineyardServer::DelData(
+    const std::vector<ObjectID>& ids, const bool force, const bool deep,
+    const bool fastpath, callback_t<std::vector<ObjectID> const&> callback) {
   ENSURE_VINEYARDD_READY();
   if (fastpath) {
     // forcely delete the given blobs: used for allocators
@@ -595,7 +605,7 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
       for (auto const id : ids) {
         VINEYARD_DISCARD(bulk_store_->Delete(id));
       }
-      VINEYARD_DISCARD(callback(Status::OK()));
+      VINEYARD_DISCARD(callback(Status::OK(), ids));
     });
     return Status::OK();
   }
