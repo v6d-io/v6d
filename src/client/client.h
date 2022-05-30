@@ -195,9 +195,9 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
   Status OnDelete(ID const& id) { return Self().OnDelete(id); }
 
   // Clear cache when re-connect a new socket.
-  void ClearCache() { 
+  void ClearCache() {
     base_t::ClearCache();
-    object_in_use_.clear(); 
+    object_in_use_.clear();
   }
 
  private:

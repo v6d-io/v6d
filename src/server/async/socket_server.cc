@@ -58,7 +58,7 @@ bool SocketConnection::Stop() {
     auto status = server_ptr_->GetBulkStore()->PopList(this->getConnId(), ids);
     if (!status.ok()) {
       LOG(INFO) << "No dependent objects, conn_id: " << this->getConnId()
-                 << ", status: " << status.ToString();
+                << ", status: " << status.ToString();
     }
   }
 

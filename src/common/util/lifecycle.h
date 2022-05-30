@@ -74,7 +74,7 @@ class LifeCycleTracker {
     return Status::OK();
   }
 
-  void ClearCache() { 
+  void ClearCache() {
     for (auto const& id : pending_to_delete_) {
       VINEYARD_CHECK_OK(Self().OnDelete(id));
     }
