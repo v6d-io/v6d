@@ -171,9 +171,7 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     return this->IncreaseReferenceCount(id);
   }
 
-  Status RemoveUsage(ID const& id) { 
-    return this->DecreaseReferenceCount(id); 
-  }
+  Status RemoveUsage(ID const& id) { return this->DecreaseReferenceCount(id); }
 
   Status DeleteUsage(ID const& id) {
     auto elem = object_in_use_.find(id);
