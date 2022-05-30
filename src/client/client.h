@@ -127,6 +127,7 @@ class SharedMemoryManager {
 template <typename ID, typename P, typename Der>
 class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
  public:
+  using base_t = LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>>;
   UsageTracker() {}
 
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change) {
@@ -192,6 +193,12 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
   }
 
   Status OnDelete(ID const& id) { return Self().OnDelete(id); }
+
+  // Clear cache when re-connect a new socket.
+  void ClearCache() { 
+    base_t::ClearCache();
+    object_in_use_.clear(); 
+  }
 
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
@@ -263,6 +270,11 @@ class Client : public BasicIPCClient,
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& ipc_socket);
+
+  /**
+   * @brief Disconnect this client.
+   */
+  void Disconnect();
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .
@@ -634,6 +646,11 @@ class PlasmaClient
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& ipc_socket);
+
+  /**
+   * @brief Disconnect this client.
+   */
+  void Disconnect();
 
   /**
    * @brief Create a blob in vineyard server. When creating a blob, vineyard

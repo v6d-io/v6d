@@ -57,7 +57,7 @@ bool SocketConnection::Stop() {
     std::unordered_set<ObjectID> ids;
     auto status = server_ptr_->GetBulkStore()->PopList(this->getConnId(), ids);
     if (!status.ok()) {
-      LOG(ERROR) << "PopList failed, conn_id: " << this->getConnId()
+      LOG(INFO) << "No dependent objects, conn_id: " << this->getConnId()
                  << ", status: " << status.ToString();
     }
   }

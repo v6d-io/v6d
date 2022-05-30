@@ -164,8 +164,10 @@ class ColdObjectTracker
 
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
     typename cold_object_map_t::accessor accessor;
-    if (!cold_objects_.find(accessor, id)) {
-      cold_objects_.emplace(id, payload);
+    if(payload->IsSealed()){
+      if (!cold_objects_.find(accessor, id)) {
+        cold_objects_.emplace(id, payload);
+      }
     }
     return Status::OK();
   }

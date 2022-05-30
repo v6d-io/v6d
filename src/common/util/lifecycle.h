@@ -74,6 +74,13 @@ class LifeCycleTracker {
     return Status::OK();
   }
 
+  void ClearCache() { 
+    for (auto const& id : pending_to_delete_) {
+      VINEYARD_CHECK_OK(Self().OnDelete(id));
+    }
+    pending_to_delete_.clear();
+  }
+
  protected:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change) {
     return Self().FetchAndModify(id, ref_cnt, change);

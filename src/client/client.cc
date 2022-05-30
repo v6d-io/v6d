@@ -115,6 +115,12 @@ Status Client::Connect() {
       "Environment variable VINEYARD_IPC_SOCKET does't exists");
 }
 
+void Client::Disconnect() {
+  std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+  this->ClearCache();
+  ClientBase::Disconnect();
+}
+
 Status Client::Connect(const std::string& ipc_socket) {
   return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Normal");
 }
@@ -527,6 +533,7 @@ Status Client::GetBuffers(
       shm_->PreMmap(item.store_fd, fd_recv, fd_recv_dedup);
     }
   }
+
   if (message_in.contains("fds") && fd_sent != fd_recv) {
     json error = json::object();
     error["error"] =
@@ -820,6 +827,12 @@ Status PlasmaClient::Open(std::string const& ipc_socket) {
 
 Status PlasmaClient::Connect(const std::string& ipc_socket) {
   return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Plasma");
+}
+
+void PlasmaClient::Disconnect() {
+  std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+  this->ClearCache();
+  ClientBase::Disconnect();
 }
 
 Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
