@@ -166,11 +166,14 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     if (elem == object_in_use_.end()) {
       object_in_use_[id] = std::make_shared<P>(payload);
       object_in_use_[id]->ref_cnt = 0;
+    } else {
     }
     return this->IncreaseReferenceCount(id);
   }
 
-  Status RemoveUsage(ID const& id) { return this->DecreaseReferenceCount(id); }
+  Status RemoveUsage(ID const& id) { 
+    return this->DecreaseReferenceCount(id); 
+  }
 
   Status DeleteUsage(ID const& id) {
     auto elem = object_in_use_.find(id);
@@ -178,12 +181,14 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
       object_in_use_.erase(elem);
       return Status::OK();
     }
-    return Status::ObjectNotExists();
+    // May already be deleted when `ref_cnt == 0`
+    return Status::OK();
   }
 
   Status OnRelease(ID const& id) {
-    // once reference count reaches zero, the accessibility of the object cannot
-    // be guaranteed, thus should be regard as not-in-use.
+    // N.B.: Once reference count reaches zero, the accessibility of the object
+    // cannot be guaranteed (may trigger spilling in server-side), thus this
+    // blob should be regard as not-in-use.
     RETURN_ON_ERROR(DeleteUsage(id));
     return this->Self().OnRelease(id);
   }
@@ -537,10 +542,11 @@ class Client : public BasicIPCClient,
 
   Status Release(ObjectID const& id) override;
 
-  Status DelData(const ObjectID id, const bool force, const bool deep);
+  Status DelData(const ObjectID id, const bool force = false,
+                 const bool deep = true);
 
-  Status DelData(const std::vector<ObjectID>& ids, const bool force,
-                 const bool deep);
+  Status DelData(const std::vector<ObjectID>& ids, const bool force = false,
+                 const bool deep = true);
 
   /// For UsageTracker only
   Status OnFetch(ObjectID const& id, std::shared_ptr<Payload> const& payload);

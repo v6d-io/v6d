@@ -60,11 +60,6 @@ bool SocketConnection::Stop() {
       LOG(ERROR) << "PopList failed, conn_id: " << this->getConnId()
                  << ", status: " << status.ToString();
     }
-    // release all the depenedent objects
-    for (auto& id : ids) {
-      VINEYARD_CHECK_OK(
-          server_ptr_->GetBulkStore()->Release(id, this->getConnId()));
-    }
   }
 
   // do cleanup: clean up streams associated with this client

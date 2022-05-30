@@ -607,7 +607,8 @@ Status Client::DelData(const std::vector<ObjectID>& ids, const bool force,
                        const bool deep) {
   ENSURE_CONNECTED(this);
   for (auto id : ids) {
-    RETURN_ON_ERROR(Release(id));
+    // May contain duplicated blob ids.
+    VINEYARD_DISCARD(Release(id));
   }
   std::string message_out;
   WriteDelDataWithFeedbacksRequest(ids, force, deep, /*fastpath=*/false,

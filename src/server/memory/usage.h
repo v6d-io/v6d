@@ -82,6 +82,9 @@ class DependencyTracker
         return Status::ObjectNotExists();
       } else {
         objects.erase(id);
+        if (objects.empty()) {
+          dependency_.erase(accessor);
+        }
       }
     }
 
@@ -101,7 +104,7 @@ class DependencyTracker
         id);
   }
 
-  /// get the dependency of all objects in given connection.
+  /// Remove the dependency of all objects in given connection.
   Status PopList(int conn, std::unordered_set<ID>& objects) {
     typename dependency_map_t::const_accessor accessor;
     if (!dependency_.find(accessor, conn)) {
@@ -138,24 +141,25 @@ class ColdObjectTracker
     : public DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>> {
  public:
   using cold_object_map_t = tbb::concurrent_hash_map<ID, std::shared_ptr<P>>;
+  using base_t = DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>>;
 
   ColdObjectTracker() {}
 
   Status RemoveFromColdList(ID const& id) {
     typename cold_object_map_t::accessor accessor;
     if (cold_objects_.find(accessor, id)) {
-      cold_objects_.erase(id);
+      cold_objects_.erase(accessor);
     }
     return Status::OK();
   }
 
-  using DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>>::AddDependency;
-  using DependencyTracker<ID, P,
-                          ColdObjectTracker<ID, P, Der>>::RemoveDependency;
+  using base_t::AddDependency;
+  using base_t::RemoveDependency;
 
   Status AddDependency(ID const& id, int conn) {
-    RETURN_ON_ERROR(this->AddDependency(id, conn));
+    RETURN_ON_ERROR(base_t::AddDependency(id, conn));
     RETURN_ON_ERROR(this->RemoveFromColdList(id));
+    return Status::OK();
   }
 
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
