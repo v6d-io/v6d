@@ -55,7 +55,8 @@ bool SocketConnection::Stop() {
   auto self(shared_from_this());
   if (server_ptr_->GetBulkStoreType() == "Normal") {
     std::unordered_set<ObjectID> ids;
-    auto status = server_ptr_->GetBulkStore()->ReleaseConnection(this->getConnId());
+    auto status =
+        server_ptr_->GetBulkStore()->ReleaseConnection(this->getConnId());
     if (!status.ok()) {
       LOG(INFO) << "No dependent objects, conn_id: " << this->getConnId()
                 << ", status: " << status.ToString();

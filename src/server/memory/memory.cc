@@ -550,8 +550,8 @@ Status PlasmaBulkStore::FetchAndModify(const PlasmaID& id, int64_t& ref_cnt,
                                        int64_t changes) {
   typename object_map_t::const_accessor accessor;
   if (!objects_.find(accessor, id)) {
-    return Status::ObjectNotExists("object " + IDToString(id) +
-                                   " cannot be found");
+    // NB: Keep consistent with the the Get opeartion.
+    return Status::OK();
   } else {
     accessor->second->ref_cnt += changes;
     ref_cnt = accessor->second->ref_cnt;

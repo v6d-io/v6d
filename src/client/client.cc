@@ -502,22 +502,9 @@ Status Client::GetBuffers(
   }
   ENSURE_CONNECTED(this);
 
-  std::set<ObjectID> remote_ids;
-  std::vector<Payload> local_payloads;
-
-  /// lookup in client-side cache
-  for (auto const& id : ids) {
-    Payload tmp;
-    if (FetchOnLocal(id, tmp).ok()) {
-      local_payloads.emplace_back(tmp);
-    } else {
-      remote_ids.emplace(id);
-    }
-  }
-
   /// lookup in server-side store
   std::string message_out;
-  WriteGetBuffersRequest(remote_ids, message_out);
+  WriteGetBuffersRequest(ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -525,8 +512,6 @@ Status Client::GetBuffers(
   std::vector<int> fd_sent, fd_recv;
   std::set<int> fd_recv_dedup;
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
-
-  payloads.insert(payloads.end(), local_payloads.begin(), local_payloads.end());
 
   for (auto const& item : payloads) {
     if (item.data_size > 0) {

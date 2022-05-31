@@ -50,7 +50,6 @@ class DependencyTracker
   }
 
   Status AddDependency(ID const& id, int conn) {
-    RETURN_ON_ERROR(this->IncreaseReferenceCount(id));
 
     typename dependency_map_t::accessor accessor;
     if (!dependency_.find(accessor, conn)) {
@@ -61,6 +60,7 @@ class DependencyTracker
       auto& objects = accessor->second;
       if (objects.find(id) == objects.end()) {
         objects.emplace(id);
+        RETURN_ON_ERROR(this->IncreaseReferenceCount(id));
       }
     }
     return Status::OK();

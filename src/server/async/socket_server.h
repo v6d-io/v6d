@@ -178,7 +178,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
     for (auto const& item : mapping) {
       VINEYARD_CHECK_OK(source_session->GetBulkStore<FROM>()->FetchAndModify(
           item.first, ref_cnt, 1));
-      VINEYARD_CHECK_OK(source_session->GetBulkStore<TO>()->FetchAndModify(
+      VINEYARD_CHECK_OK(server_ptr_->GetBulkStore<TO>()->FetchAndModify(
           item.second, ref_cnt, 1));
     }
 
