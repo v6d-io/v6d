@@ -562,7 +562,7 @@ class ArrowFragmentLoader {
   bool generate_eid_;
 
   std::function<void(IIOAdaptor*)> io_deleter_ = [](IIOAdaptor* adaptor) {
-    VINEYARD_CHECK_OK(adaptor->Close());
+    VINEYARD_DISCARD(adaptor->Close());
     delete adaptor;
   };
 };

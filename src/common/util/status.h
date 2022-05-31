@@ -43,56 +43,55 @@
 
 // raise a std::runtime_error (inherits std::exception), don't FATAL
 #ifndef VINEYARD_CHECK_OK
-#define VINEYARD_CHECK_OK(status)                                              \
-  do {                                                                         \
-    auto _ret = (status);                                                      \
-    if (!_ret.ok()) {                                                          \
-      std::clog << "[error] Check failed: " << _ret.ToString() << " in \""     \
-                << #status << "\""                                             \
-                << ", in function " << VINEYARD_TO_STRING(__PRETTY_FUNCTION__) \
-                << ", file " << __FILE__ << ", line "                          \
-                << VINEYARD_TO_STRING(__LINE__) << std::endl;                  \
-      throw std::runtime_error(                                                \
-          "Check failed: " + _ret.ToString() +                                 \
-          " in \"" #status "\", in function " +                                \
-          std::string(VINEYARD_TO_STRING(__PRETTY_FUNCTION__)) + ", file " +   \
-          __FILE__ + ", line " + VINEYARD_TO_STRING(__LINE__));                \
-    }                                                                          \
+#define VINEYARD_CHECK_OK(status)                                             \
+  do {                                                                        \
+    auto _ret = (status);                                                     \
+    if (!_ret.ok()) {                                                         \
+      std::clog << "[error] Check failed: " << _ret.ToString() << " in \""    \
+                << #status << "\""                                            \
+                << ", in function " << __PRETTY_FUNCTION__ << ", file "       \
+                << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)      \
+                << std::endl;                                                 \
+      throw std::runtime_error("Check failed: " + _ret.ToString() +           \
+                               " in \"" #status "\", in function " +          \
+                               std::string(__PRETTY_FUNCTION__) + ", file " + \
+                               __FILE__ + ", line " +                         \
+                               VINEYARD_TO_STRING(__LINE__));                 \
+    }                                                                         \
   } while (0)
 #endif  // VINEYARD_CHECK_OK
 
 // check the condition, raise and runtime error, rather than `FATAL` when false
 #ifndef VINEYARD_ASSERT_NO_VERBOSE
-#define VINEYARD_ASSERT_NO_VERBOSE(condition)                                  \
-  do {                                                                         \
-    if (!(condition)) {                                                        \
-      std::clog << "[error] Assertion failed in \"" #condition "\""            \
-                << ", in function " << VINEYARD_TO_STRING(__PRETTY_FUNCTION__) \
-                << ", file " << __FILE__ << ", line "                          \
-                << VINEYARD_TO_STRING(__LINE__) << std::endl;                  \
-      throw std::runtime_error(                                                \
-          "Assertion failed in \"" #condition "\", in function " +             \
-          std::string(VINEYARD_TO_STRING(__PRETTY_FUNCTION__)) + ", file " +   \
-          __FILE__ + ", line " + VINEYARD_TO_STRING(__LINE__));                \
-    }                                                                          \
+#define VINEYARD_ASSERT_NO_VERBOSE(condition)                             \
+  do {                                                                    \
+    if (!(condition)) {                                                   \
+      std::clog << "[error] Assertion failed in \"" #condition "\""       \
+                << ", in function '" << __PRETTY_FUNCTION__ << "', file " \
+                << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)  \
+                << std::endl;                                             \
+      throw std::runtime_error(                                           \
+          "Assertion failed in \"" #condition "\", in function '" +       \
+          std::string(__PRETTY_FUNCTION__) + "', file " + __FILE__ +      \
+          ", line " + VINEYARD_TO_STRING(__LINE__));                      \
+    }                                                                     \
   } while (0)
 #endif  // VINEYARD_ASSERT_NO_VERBOSE
 
 // check the condition, raise and runtime error, rather than `FATAL` when false
 #ifndef VINEYARD_ASSERT_VERBOSE
-#define VINEYARD_ASSERT_VERBOSE(condition, message)                            \
-  do {                                                                         \
-    if (!(condition)) {                                                        \
-      std::clog << "[error] Assertion failed in \"" #condition "\": "          \
-                << ", in function " << VINEYARD_TO_STRING(__PRETTY_FUNCTION__) \
-                << ", file " << __FILE__ << ", line "                          \
-                << VINEYARD_TO_STRING(__LINE__) << message << std::endl;       \
-      throw std::runtime_error(                                                \
-          "Assertion failed in \"" #condition "\": " + std::string(message) +  \
-          ", in function " +                                                   \
-          std::string(VINEYARD_TO_STRING(__PRETTY_FUNCTION__)) + ", file " +   \
-          __FILE__ + ", line " + VINEYARD_TO_STRING(__LINE__));                \
-    }                                                                          \
+#define VINEYARD_ASSERT_VERBOSE(condition, message)                           \
+  do {                                                                        \
+    if (!(condition)) {                                                       \
+      std::clog << "[error] Assertion failed in \"" #condition "\": "         \
+                << std::string(message) << ", in function '"                  \
+                << __PRETTY_FUNCTION__ << "', file " << __FILE__ << ", line " \
+                << VINEYARD_TO_STRING(__LINE__) << std::endl;                 \
+      throw std::runtime_error(                                               \
+          "Assertion failed in \"" #condition "\": " + std::string(message) + \
+          ", in function '" + std::string(__PRETTY_FUNCTION__) + "', file " + \
+          __FILE__ + ", line " + VINEYARD_TO_STRING(__LINE__));               \
+    }                                                                         \
   } while (0)
 #endif  // VINEYARD_ASSERT_VERBOSE
 
