@@ -471,10 +471,7 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
 
 Status BulkStore::OnRelease(ObjectID const& id) {
   typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, id)) {
-    return Status::ObjectNotExists("object " + IDToString(id) +
-                                   " cannot be found");
-  } else {
+  if (objects_.find(accessor, id)) {
     RETURN_ON_ERROR(this->MarkAsCold(id, accessor->second));
   }
   return Status::OK();

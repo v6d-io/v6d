@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
   ObjectID target_id = InvalidObjectID();
   VINEYARD_CHECK_OK(client.DeepCopy(id, target_id));
   CHECK(target_id != InvalidObjectID());
+  std::cout << "Deep copied object id: " << target_id << std::endl;
 
   auto copied_vec =
       std::dynamic_pointer_cast<Array<double>>(client.GetObject(target_id));

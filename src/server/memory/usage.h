@@ -36,6 +36,7 @@ template <typename ID, typename P, typename Der>
 class DependencyTracker
     : public LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>> {
  public:
+  using base_t = LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>>;
   using dependency_map_t = tbb::concurrent_hash_map</*socket_connection*/ int,
                                                     std::unordered_set<ID>>;
 
@@ -99,27 +100,21 @@ class DependencyTracker
    * determinately greater than 0, thus it will determinately not be deleted.
    * Delete will not remove dependency.
    */
-  Status PreDelete(ID const& id) {
-    return LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>>::PreDelete(
-        id);
-  }
+  Status PreDelete(ID const& id) { return base_t::PreDelete(id); }
 
   /// Remove the dependency of all objects in given connection.
-  Status PopList(int conn, std::unordered_set<ID>& objects) {
+  Status ReleaseConnection(int conn) {
     typename dependency_map_t::const_accessor accessor;
     if (!dependency_.find(accessor, conn)) {
       return Status::Invalid("connection not exist.");
     } else {
-      objects = accessor->second;
-      auto status = Status::OK();
+      auto& objects = accessor->second;
       for (auto& elem : objects) {
         // try our best to remove dependency.
-        auto _status = RemoveDependency(elem, conn);
-        if (!_status.ok()) {
-          status = _status;
-        }
+        RETURN_ON_ERROR(this->DecreaseReferenceCount(elem));
       }
-      return status;
+      dependency_.erase(accessor);
+      return Status::OK();
     }
   }
 
@@ -146,7 +141,7 @@ class ColdObjectTracker
   ColdObjectTracker() {}
 
   Status RemoveFromColdList(ID const& id) {
-    typename cold_object_map_t::accessor accessor;
+    typename cold_object_map_t::const_accessor accessor;
     if (cold_objects_.find(accessor, id)) {
       cold_objects_.erase(accessor);
     }
@@ -163,7 +158,7 @@ class ColdObjectTracker
   }
 
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
-    typename cold_object_map_t::accessor accessor;
+    typename cold_object_map_t::const_accessor accessor;
     if (payload->IsSealed()) {
       if (!cold_objects_.find(accessor, id)) {
         cold_objects_.emplace(id, payload);
