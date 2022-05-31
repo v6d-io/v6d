@@ -24,6 +24,7 @@ limitations under the License.
 #include <vector>
 
 #include "boost/algorithm/string.hpp"
+#include "boost/asio.hpp"
 
 #include "common/util/env.h"
 
@@ -62,6 +63,21 @@ static bool validate_advertise_hostname(std::string& ipaddress,
   }
   freeaddrinfo(addrs);
   return true;
+}
+
+static bool check_port_in_use(
+#if BOOST_VERSION >= 106600
+    boost::asio::io_context& context,
+#else
+    boost::asio::io_service& context,
+#endif
+    unsigned short port) {
+  boost::system::error_code ec;
+
+  boost::asio::ip::tcp::acceptor acceptor(context);
+  acceptor.open(boost::asio::ip::tcp::v4(), ec) ||
+      acceptor.bind({boost::asio::ip::tcp::v4(), port}, ec);
+  return ec == boost::asio::error::address_in_use;
 }
 
 Status EtcdLauncher::LaunchEtcdServer(
@@ -139,10 +155,20 @@ Status EtcdLauncher::LaunchEtcdServer(
     host_to_advertise = "127.0.0.1";
   }
 
+#if BOOST_VERSION >= 106600
+  boost::asio::io_context context;
+#else
+  boost::asio::io_service context;
+#endif
+  unsigned int etcd_peer_port = endpoint_port_ + 1;
+  while (check_port_in_use(context, etcd_peer_port)) {
+    etcd_peer_port += 1;
+  }
+
   std::string client_endpoint =
       "http://" + host_to_advertise + ":" + std::to_string(endpoint_port_);
   std::string peer_endpoint =
-      "http://" + host_to_advertise + ":" + std::to_string(endpoint_port_ + 1);
+      "http://" + host_to_advertise + ":" + std::to_string(etcd_peer_port);
 
   std::vector<std::string> args;
   args.emplace_back("--listen-client-urls");
@@ -150,7 +176,7 @@ Status EtcdLauncher::LaunchEtcdServer(
   args.emplace_back("--advertise-client-urls");
   args.emplace_back(client_endpoint);
   args.emplace_back("--listen-peer-urls");
-  args.emplace_back("http://0.0.0.0:" + std::to_string(endpoint_port_ + 1));
+  args.emplace_back("http://0.0.0.0:" + std::to_string(etcd_peer_port));
   args.emplace_back("--initial-cluster");
   args.emplace_back("default=" + peer_endpoint);
   args.emplace_back("--initial-advertise-peer-urls");
