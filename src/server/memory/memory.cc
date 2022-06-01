@@ -494,8 +494,6 @@ Status BulkStore::FetchAndModify(const ObjectID& id, int64_t& ref_cnt,
   return Status::OK();
 }
 
-// TODO(mengke): If reference count reaches 0 and marked as to be deleted, send
-// DelData request to server.
 Status BulkStore::OnDelete(ObjectID const& id) { return Delete(id); }
 
 // implementation for PlasmaBulkStore
