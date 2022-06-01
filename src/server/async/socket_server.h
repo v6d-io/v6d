@@ -151,6 +151,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doDelDataWithFeedbacks(json const& root);
 
+  bool doIsInUse(json const& root);
+
+  bool doPinBlobs(json const& root);
+
  protected:
   template <typename FROM, typename TO>
   Status MoveBuffers(std::map<FROM, TO> mapping, vs_ptr_t& source_session) {

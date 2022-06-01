@@ -50,7 +50,6 @@ class DependencyTracker
   }
 
   Status AddDependency(ID const& id, int conn) {
-
     typename dependency_map_t::accessor accessor;
     if (!dependency_.find(accessor, conn)) {
       dependency_.emplace(conn, std::unordered_set<ID>());
@@ -148,8 +147,14 @@ class ColdObjectTracker
     return Status::OK();
   }
 
-  using base_t::AddDependency;
   using base_t::RemoveDependency;
+
+  Status AddDependency(std::unordered_set<ID> const& ids, int conn) {
+    for (auto const& id : ids) {
+      RETURN_ON_ERROR(AddDependency(id, conn));
+    }
+    return Status::OK();
+  }
 
   Status AddDependency(ID const& id, int conn) {
     RETURN_ON_ERROR(base_t::AddDependency(id, conn));
@@ -163,6 +168,16 @@ class ColdObjectTracker
       if (!cold_objects_.find(accessor, id)) {
         cold_objects_.emplace(id, payload);
       }
+    }
+    return Status::OK();
+  }
+
+  Status IsInUse(ID const& id, bool& is_in_use) {
+    typename cold_object_map_t::const_accessor accessor;
+    if (cold_objects_.find(accessor, id)) {
+      is_in_use = false;
+    } else {
+      is_in_use = true;
     }
     return Status::OK();
   }

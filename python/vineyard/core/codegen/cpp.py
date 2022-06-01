@@ -60,10 +60,10 @@ def codegen_create(class_header, class_name, class_name_elaborated, meth=False):
         function_tpl = create_tpl
 
     return function_tpl.format(
-        class_header=class_header,
-        class_name=class_name,
-        class_name_elaborated=class_name_elaborated,
-    )
+            class_header=class_header,
+            class_name=class_name,
+            class_name_elaborated=class_name_elaborated,
+            )
 
 
 ###############################################################################
@@ -171,8 +171,8 @@ construct_dict_tpl = '''
 
 
 def codegen_construct(
-    class_header, class_name, class_name_elaborated, fields, has_post_ctor, meth=False
-):
+        class_header, class_name, class_name_elaborated, fields, has_post_ctor, meth=False
+        ):
     body = []
     for field in fields:
         spec = parse_codegen_spec_from_type(field)
@@ -207,14 +207,14 @@ def codegen_construct(
             value_type = None
 
         body.append(
-            tpl.format(
-                name=name,
-                element_type=spec.element_type,
-                key_type=key_type,
-                value_type=value_type,
-                deref=spec.deref,
-            )
-        )
+                tpl.format(
+                    name=name,
+                    element_type=spec.element_type,
+                    key_type=key_type,
+                    value_type=value_type,
+                    deref=spec.deref,
+                    )
+                )
 
     if meth:
         function_tpl = construct_meth_tpl
@@ -232,14 +232,14 @@ def codegen_construct(
             post_ctor = ''
 
     code = function_tpl.format(
-        class_header=class_header,
-        class_name=class_name,
-        class_name_elaborated=class_name_elaborated,
-        construct_body=textwrap.indent(
-            ''.join(body), ' ' * function_body_indent
-        ).strip(),
-        post_construct=post_ctor,
-    )
+            class_header=class_header,
+            class_name=class_name,
+            class_name_elaborated=class_name_elaborated,
+            construct_body=textwrap.indent(
+                ''.join(body), ' ' * function_body_indent
+                ).strip(),
+            post_construct=post_ctor,
+            )
     return code
 
 
@@ -298,6 +298,8 @@ class {class_name}BaseBuilder: public ObjectBuilder {{
         this->set_sealed(true);
 
         {post_construct}
+
+        VINEYARD_CHECK_OK(client.PostSeal(__value->meta_));
         return std::static_pointer_cast<Object>(__value);
     }}
 
@@ -332,13 +334,13 @@ def codegen_field_declare(field_name, field_type, spec):
         field_type_elaborated = 'std::set<std::shared_ptr<ObjectBase>>'
     if spec.is_dict:
         field_type_elaborated = (
-            'std::map<{key_type}, std::shared_ptr<ObjectBase>>'.format(
-                key_type='typename %s::key_type' % field_type
-            )
-        )
+                'std::map<{key_type}, std::shared_ptr<ObjectBase>>'.format(
+                    key_type='typename %s::key_type' % field_type
+                    )
+                )
     return field_declare_tpl.format(
-        field_name=field_name, field_type_elaborated=field_type_elaborated
-    )
+            field_name=field_name, field_type_elaborated=field_type_elaborated
+            )
 
 
 field_assign_meta_tpl = '''
@@ -453,12 +455,12 @@ def codegen_field_assign(field_name, field_type, spec):
         element_type = '::element_type'
         element_type_name = 'typename '
     return tpl.format(
-        field_name=field_name,
-        field_type=field_type,
-        deref=spec.deref,
-        element_type=element_type,
-        element_type_name=element_type_name,
-    )
+            field_name=field_name,
+            field_type=field_type,
+            deref=spec.deref,
+            element_type=element_type,
+            element_type_name=element_type_name,
+            )
 
 
 field_setter_meta_tpl = '''
@@ -554,11 +556,11 @@ def codegen_field_setter(field_name, field_type, spec):
         field_key_type = None
         field_value_type = None
     return tpl.format(
-        field_name=field_name,
-        field_type=field_type,
-        field_key_type=field_key_type,
-        field_value_type=field_value_type,
-    )
+            field_name=field_name,
+            field_type=field_type,
+            field_key_type=field_key_type,
+            field_value_type=field_value_type,
+            )
 
 
 get_assign_meta_tpl = '''
@@ -662,13 +664,13 @@ post_construct_in_seal_tpl = '''
 
 
 def codegen_base_builder(
-    class_header,
-    class_name,
-    class_name_elaborated,
-    fields,
-    using_alias_values,
-    has_post_ctor,
-):
+        class_header,
+        class_name,
+        class_name_elaborated,
+        fields,
+        using_alias_values,
+        has_post_ctor,
+        ):
     declarations = []
     assignments = []
     get_and_assigns = []
@@ -703,16 +705,16 @@ def codegen_base_builder(
         post_ctor = ''
 
     code = base_builder_tpl.format(
-        class_header=class_header,
-        class_name=class_name,
-        class_name_elaborated=class_name_elaborated,
-        post_construct=post_ctor,
-        setters=''.join(setters).strip(),
-        assignments=''.join(assignments).strip(),
-        get_and_assign=''.join(get_and_assigns).strip(),
-        using_alias=''.join(using_alias_statements).strip(),
-        fields_declares=''.join(declarations).strip(),
-    )
+            class_header=class_header,
+            class_name=class_name,
+            class_name_elaborated=class_name_elaborated,
+            post_construct=post_ctor,
+            setters=''.join(setters).strip(),
+            assignments=''.join(assignments).strip(),
+            get_and_assign=''.join(get_and_assigns).strip(),
+            using_alias=''.join(using_alias_statements).strip(),
+            fields_declares=''.join(declarations).strip(),
+            )
     return code
 
 
@@ -773,8 +775,8 @@ using {name}StreamBase = vineyard::Stream<{name_elaborated}>;
 
 def codegen_streamable_builder(class_header, name, name_elaborated):
     code = streamable_tpl.format(
-        class_header=class_header, name=name, name_elaborated=name_elaborated
-    )
+            class_header=class_header, name=name, name_elaborated=name_elaborated
+            )
     return code
 
 
@@ -794,42 +796,42 @@ def generate_create_meth(header, name, name_elaborated):
 
 
 def generate_construct(
-    fields, header, name, name_elaborated, has_post_ctor, verbose=False
-):
+        fields, header, name, name_elaborated, has_post_ctor, verbose=False
+        ):
     if verbose:
         print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_construct(header, name, name_elaborated, fields, has_post_ctor)
 
 
 def generate_construct_meth(
-    fields, header, name, name_elaborated, has_post_ctor, verbose=False
-):
+        fields, header, name, name_elaborated, has_post_ctor, verbose=False
+        ):
     if verbose:
         print('construct: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_construct(
-        header, name, name_elaborated, fields, has_post_ctor, meth=True
-    )
+            header, name, name_elaborated, fields, has_post_ctor, meth=True
+            )
 
 
 def generate_base_builder(
-    fields,
-    using_alias_values,
-    header,
-    name,
-    name_elaborated,
-    has_post_ctor,
-    verbose=False,
-):
-    if verbose:
-        print('base_builder: ', name, [(n.type.spelling, n.spelling) for n in fields])
-    return codegen_base_builder(
+        fields,
+        using_alias_values,
         header,
         name,
         name_elaborated,
-        fields,
-        using_alias_values,
         has_post_ctor,
-    )
+        verbose=False,
+        ):
+    if verbose:
+        print('base_builder: ', name, [(n.type.spelling, n.spelling) for n in fields])
+    return codegen_base_builder(
+            header,
+            name,
+            name_elaborated,
+            fields,
+            using_alias_values,
+            has_post_ctor,
+            )
 
 
 def generate_getter_for_distributed(field, verbose=False):
@@ -861,8 +863,8 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
     else:
         macro_guard_base = generated_file_path
     macro_guard = (
-        macro_guard_base.upper().replace('.', '_').replace('/', '_').replace('-', '_')
-    )
+            macro_guard_base.upper().replace('.', '_').replace('/', '_').replace('-', '_')
+            )
 
     with open(generated_file_path, 'w', encoding='utf-8') as fp:
         code_injections = []
@@ -876,14 +878,14 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
 
             # get extend of using A = B
             using_alias_values = [
-                (n, content[t.start.offset : t.end.offset]) for (n, t) in using_alias
-            ]
+                    (n, content[t.start.offset : t.end.offset]) for (n, t) in using_alias
+                    ]
 
             # get extent of type parameters, since default value may involved.
             ts_names = [t for (t, _) in ts]  # without `typename`
             ts_name_values = [
-                content[t.start.offset : t.end.offset] for (_, t) in ts
-            ]  # with `typename`
+                    content[t.start.offset : t.end.offset] for (_, t) in ts
+                    ]  # with `typename`
 
             name_elaborated = generate_template_type(name, ts_names)
 
@@ -892,38 +894,38 @@ def codegen(root_directory, content, to_reflect, source, target=None, verbose=Fa
 
             meth_create = generate_create_meth(header, name, name_elaborated)
             meth_construct = generate_construct_meth(
-                members, header, name, name_elaborated, has_post_ctor, verbose=verbose
-            )
+                    members, header, name, name_elaborated, has_post_ctor, verbose=verbose
+                    )
             inject_blocks = [meth_create, meth_construct]
 
             mb_distributed = find_distributed_field(members)
             if mb_distributed is not None:
                 if kind == 'vineyard(streamable)':
                     raise ValueError(
-                        'A stream cannot be a distributed object: %s' % name
-                    )
+                            'A stream cannot be a distributed object: %s' % name
+                            )
                 inject_blocks.append(
-                    generate_getter_for_distributed(mb_distributed, verbose=verbose)
-                )
+                        generate_getter_for_distributed(mb_distributed, verbose=verbose)
+                        )
 
             to_inject = '%s\n private:\n' % ('\n'.join(inject_blocks))
             code_injections.append((first_member_offset, to_inject))
 
             base_builder = generate_base_builder(
-                members,
-                using_alias_values,
-                header_elaborated,
-                name,
-                name_elaborated,
-                has_post_ctor,
-                verbose=verbose,
-            )
+                    members,
+                    using_alias_values,
+                    header_elaborated,
+                    name,
+                    name_elaborated,
+                    has_post_ctor,
+                    verbose=verbose,
+                    )
             code_blocks.append((namespaces, base_builder))
 
             if kind == 'vineyard(streamable)':
                 streamable = generate_streamable(
-                    header, name, name_elaborated, verbose=verbose
-                )
+                        header, name, name_elaborated, verbose=verbose
+                        )
                 code_blocks.append((namespaces, streamable))
 
         fp.write('#ifndef %s\n' % macro_guard)

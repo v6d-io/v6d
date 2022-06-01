@@ -84,6 +84,8 @@ enum class CommandType {
   MoveBuffersOwnershipRequest = 50,
   ReleaseRequest = 51,
   DelDataWithFeedbacksRequest = 52,
+  IsInUseRequest = 53,
+  PinBlobsRequest = 54,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -524,6 +526,22 @@ void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
 
 Status ReadDelDataWithFeedbacksReply(json const& root,
                                      std::vector<ObjectID>& deleted_bids);
+
+void WriteIsInUseRequest(const ObjectID& id, std::string& msg);
+
+Status ReadIsInUseRequest(json const& root, ObjectID& id);
+
+void WriteIsInUseReply(const bool is_in_use, std::string& msg);
+
+Status ReadIsInUseReply(json const& root, bool& is_in_use);
+
+void WritePinBlobsRequest(const std::vector<ObjectID>& ids, std::string& msg);
+
+Status ReadPinBlobsRequest(json const& root, std::vector<ObjectID>& ids);
+
+void WritePinBlobsReply(std::string& msg);
+
+Status ReadPinBlobsReply(json const& root);
 
 }  // namespace vineyard
 

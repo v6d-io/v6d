@@ -556,6 +556,31 @@ Status Client::GetDependency(ObjectID const& id, std::set<ObjectID>& bids) {
   return Status::OK();
 }
 
+Status Client::PostSeal(ObjectMeta const& meta) {
+  ENSURE_CONNECTED(this);
+  ObjectMeta tmp_meta;
+  tmp_meta.SetMetaData(this, meta.MetaData());
+  auto bids = tmp_meta.GetBufferSet()->AllBufferIds();
+  std::vector<ObjectID> remote_bids;
+
+  for (auto bid : bids) {
+    auto s = IncreaseReferenceCount(bid);
+    if (!s.ok()) {
+      remote_bids.push_back(bid);
+    }
+  }
+
+  if (!remote_bids.empty()) {
+    std::string message_out;
+    WritePinBlobsRequest(remote_bids, message_out);
+    RETURN_ON_ERROR(doWrite(message_out));
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(ReadPinBlobsReply(message_in));
+  }
+  return Status::OK();
+}
+
 // If reference count reaches 0, send Release request to server.
 Status Client::OnRelease(ObjectID const& id) {
   ENSURE_CONNECTED(this);
@@ -572,6 +597,13 @@ Status Client::OnRelease(ObjectID const& id) {
 // DelData request to server.
 Status Client::OnDelete(ObjectID const& id) {
   // Currently, the deletion does not respect the reference count.
+  return Status::OK();
+}
+
+Status Client::Release(std::vector<ObjectID> const& ids) {
+  for (auto id : ids) {
+    RETURN_ON_ERROR(Release(id));
+  }
   return Status::OK();
 }
 
@@ -783,6 +815,23 @@ Status Client::ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
   /// for plasma store.
   target_id = plasma_payloads.at(plasma_id).object_id;
   return Status::OK();
+}
+
+bool Client::IsInUse(ObjectID const& id) {
+  if (!this->connected_) {
+    VINEYARD_CHECK_OK(Status::ConnectionError("Client is not connected"));
+  }
+  std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
+
+  std::string message_out;
+  WriteIsInUseRequest(id, message_out);
+  VINEYARD_CHECK_OK(doWrite(message_out));
+
+  json message_in;
+  bool is_in_use = false;
+  VINEYARD_CHECK_OK(doRead(message_in));
+  VINEYARD_CHECK_OK(ReadIsInUseReply(message_in, is_in_use));
+  return is_in_use;
 }
 
 PlasmaClient::~PlasmaClient() {}

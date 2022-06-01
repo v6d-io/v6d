@@ -318,6 +318,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::DelDataWithFeedbacksRequest: {
     return doDelDataWithFeedbacks(root);
   }
+  case CommandType::IsInUseRequest: {
+    return doIsInUse(root);
+  }
+  case CommandType::PinBlobsRequest: {
+    return doPinBlobs(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -1300,6 +1306,31 @@ bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
         LOG_COUNTER("data_requests_total", "delete");
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doIsInUse(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;  // Must be a blob id.
+  TRY_READ_REQUEST(ReadIsInUseRequest, root, id);
+  bool is_in_use = false;
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore<ObjectID>()->IsInUse(id, is_in_use));
+  std::string message_out;
+  WriteIsInUseReply(is_in_use, message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doPinBlobs(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  TRY_READ_REQUEST(ReadPinBlobsRequest, root, ids);
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
+      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  std::string message_out;
+  WritePinBlobsReply(message_out);
+  this->doWrite(message_out);
   return false;
 }
 

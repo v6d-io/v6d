@@ -135,6 +135,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::ReleaseRequest;
   } else if (str_type == "del_data_with_feedbacks_request") {
     return CommandType::DelDataWithFeedbacksRequest;
+  } else if (str_type == "is_in_use_request") {
+    return CommandType::IsInUseRequest;
+  } else if (str_type == "pin_blobs_request") {
+    return CommandType::PinBlobsRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1510,6 +1514,57 @@ Status ReadDelDataWithFeedbacksReply(json const& root,
                                      std::vector<ObjectID>& deleted_bids) {
   RETURN_ON_ASSERT(root["type"] == "del_data_with_feedbacks_reply");
   deleted_bids = root["deleted_bids"].get_to(deleted_bids);
+  return Status::OK();
+}
+
+// IsInUse
+void WriteIsInUseRequest(const ObjectID& id, std::string& msg) {
+  json root;
+  root["type"] = "is_in_use_request";
+  root["id"] = id;
+  encode_msg(root, msg);
+}
+
+Status ReadIsInUseRequest(json const& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "is_in_use_request");
+  id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteIsInUseReply(const bool is_in_use, std::string& msg) {
+  json root;
+  root["type"] = "is_in_use_reply";
+  root["is_in_use"] = is_in_use;
+  encode_msg(root, msg);
+}
+
+Status ReadIsInUseReply(json const& root, bool& is_in_use) {
+  RETURN_ON_ASSERT(root["type"] == "is_in_use_reply");
+  is_in_use = root["is_in_use"].get<bool>();
+  return Status::OK();
+}
+
+void WritePinBlobsRequest(const std::vector<ObjectID>& ids, std::string& msg) {
+  json root;
+  root["type"] = "pin_blobs_request";
+  root["ids"] = std::vector<ObjectID>{ids};
+  encode_msg(root, msg);
+}
+
+Status ReadPinBlobsRequest(json const& root, std::vector<ObjectID>& ids) {
+  RETURN_ON_ASSERT(root["type"] == "pin_blobs_request");
+  ids = root["ids"].get_to(ids);
+  return Status::OK();
+}
+
+void WritePinBlobsReply(std::string& msg) {
+  json root;
+  root["type"] = "pin_blobs_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadPinBlobsReply(json const& root) {
+  RETURN_ON_ASSERT(root["type"] == "pin_blobs_reply");
   return Status::OK();
 }
 

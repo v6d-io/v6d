@@ -167,7 +167,6 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     if (elem == object_in_use_.end()) {
       object_in_use_[id] = std::make_shared<P>(payload);
       object_in_use_[id]->ref_cnt = 0;
-    } else {
     }
     return this->IncreaseReferenceCount(id);
   }
@@ -529,6 +528,8 @@ class Client : public BasicIPCClient,
    */
   bool IsSharedMemory(const uintptr_t target, ObjectID& object_id) const;
 
+  bool IsInUse(ObjectID const& id);
+
   /**
    * Get the allocated size for the given object.
    */
@@ -550,6 +551,8 @@ class Client : public BasicIPCClient,
   Status ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
                      PlasmaClient& source_client);
 
+  Status Release(std::vector<ObjectID> const& ids);
+
   Status Release(ObjectID const& id) override;
 
   Status DelData(const ObjectID id, const bool force = false,
@@ -566,6 +569,8 @@ class Client : public BasicIPCClient,
 
   /// For UsageTracker only
   Status OnDelete(ObjectID const& id);
+
+  Status PostSeal(ObjectMeta const& meta_data);
 
  protected:
   Status GetDependency(ObjectID const& id, std::set<ObjectID>& bids);
