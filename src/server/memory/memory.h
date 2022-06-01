@@ -101,40 +101,90 @@ class BulkStoreBase {
   object_map_t objects_;
 };
 
-class BulkStore : public BulkStoreBase<ObjectID, Payload>,
-                  public ColdObjectTracker<ObjectID, Payload, BulkStore> {
+class BulkStore
+    : public BulkStoreBase<ObjectID, Payload>,
+      protected detail::ColdObjectTracker<ObjectID, Payload, BulkStore> {
  public:
+  /*
+   * @brief Allocate space for a new blob.
+   */
   Status Create(const size_t size, ObjectID& object_id,
                 std::shared_ptr<Payload>& object);
 
-  Status FetchAndModify(ObjectID const& id, int64_t& ref_cnt, int64_t changes);
-
-  Status OnRelease(ObjectID const& id);
-
-  Status OnDelete(ObjectID const& id);
-
+  /*
+   * @brief Decrease the reference count of a blob, when its reference count
+   * reaches zero. It will trigger `OnRelease` behavior. See ColdObjectTracker
+   */
   Status Release(ObjectID const& id, int conn);
 
-  Status Delete(ObjectID const& id);
+ protected:
+  /**
+   * @brief change the reference count of the object on the client-side cache.
+   */
+  Status FetchAndModify(ObjectID const& id, int64_t& ref_cnt, int64_t changes);
+
+  /**
+   * @brief Required by `ColdObjectTracker`. When reference count reaches zero,
+   * mark the blob as cold blob
+   */
+  Status OnRelease(ObjectID const& id);
+
+  /**
+   * @brief Required by `ColdObjectTracker`. Currently, the deletion does not
+   * respect the reference count.
+   */
+  Status OnDelete(ObjectID const& id);
+
+  friend class detail::ColdObjectTracker<ObjectID, Payload, BulkStore>;
+  friend class SocketConnection;
 };
 
+/**
+ * @brief A wrapper of `BulkStore` that provides a simple interface to act like
+ * a Plasma mock.
+ */
 class PlasmaBulkStore
     : public BulkStoreBase<PlasmaID, PlasmaPayload>,
-      public DependencyTracker<PlasmaID, PlasmaPayload, PlasmaBulkStore> {
+      protected detail::DependencyTracker<PlasmaID, PlasmaPayload,
+                                          PlasmaBulkStore> {
  public:
+  /*
+   * @brief Allocate space for a new blob.
+   */
   Status Create(size_t const data_size, size_t const plasma_size,
                 PlasmaID const& plasma_id, ObjectID& object_id,
                 std::shared_ptr<PlasmaPayload>& object);
 
-  Status FetchAndModify(PlasmaID const& id, int64_t& ref_cnt, int64_t changes);
-
-  Status OnRelease(PlasmaID const& id);
-
-  Status OnDelete(PlasmaID const& id);
-
+  /*
+   * @brief Decrease the reference count of a blob, when its reference count
+   * reaches zero. It will trigger `OnRelease` behavior. See DependencyTracker
+   */
   Status Release(PlasmaID const& id, int conn);
 
+  /**
+   * @brief delete a object lazily, this will add the object to a delete queue
+   * and do the actual deletion when their reference count reaches zero.
+   */
   Status Delete(PlasmaID const& id);
+
+ protected:
+  Status FetchAndModify(PlasmaID const& id, int64_t& ref_cnt, int64_t changes);
+
+  /**
+   * @brief Required by `DependencyTracker`. When reference count reaches zero,
+   * evict the blob for more space eagerly.
+   */
+  Status OnRelease(PlasmaID const& id);
+
+  /**
+   * @brief Required by `DependencyTracker`. Delete the blob when its reference
+   * count reaches zero.
+   */
+  Status OnDelete(PlasmaID const& id);
+
+  friend class detail::DependencyTracker<PlasmaID, PlasmaPayload,
+                                         PlasmaBulkStore>;
+  friend class SocketConnection;
 };
 
 }  // namespace vineyard

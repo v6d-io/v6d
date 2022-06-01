@@ -321,8 +321,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::IsInUseRequest: {
     return doIsInUse(root);
   }
-  case CommandType::PinBlobsRequest: {
-    return doPinBlobs(root);
+  case CommandType::IncreaseReferenceCountRequest: {
+    return doIncreaseReferenceCount(root);
   }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
@@ -1322,14 +1322,14 @@ bool SocketConnection::doIsInUse(json const& root) {
   return false;
 }
 
-bool SocketConnection::doPinBlobs(json const& root) {
+bool SocketConnection::doIncreaseReferenceCount(json const& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
-  TRY_READ_REQUEST(ReadPinBlobsRequest, root, ids);
+  TRY_READ_REQUEST(ReadIncreaseReferenceCountRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   std::string message_out;
-  WritePinBlobsReply(message_out);
+  WriteIncreaseReferenceCountReply(message_out);
   this->doWrite(message_out);
   return false;
 }

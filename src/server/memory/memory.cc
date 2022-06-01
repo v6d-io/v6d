@@ -494,16 +494,9 @@ Status BulkStore::FetchAndModify(const ObjectID& id, int64_t& ref_cnt,
   return Status::OK();
 }
 
-Status BulkStore::OnDelete(ObjectID const& id) {
-  return BulkStoreBase<ObjectID, Payload>::Delete(id);
-}
-
 // TODO(mengke): If reference count reaches 0 and marked as to be deleted, send
 // DelData request to server.
-Status BulkStore::Delete(ObjectID const& id) {
-  // Currently, the deletion does not respect the reference count.
-  return BulkStoreBase::Delete(id);
-}
+Status BulkStore::OnDelete(ObjectID const& id) { return Delete(id); }
 
 // implementation for PlasmaBulkStore
 Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
@@ -550,7 +543,7 @@ Status PlasmaBulkStore::FetchAndModify(const PlasmaID& id, int64_t& ref_cnt,
                                        int64_t changes) {
   typename object_map_t::const_accessor accessor;
   if (!objects_.find(accessor, id)) {
-    // NB: Keep consistent with the the Get opeartion.
+    // N.B.: Keep consistent with the the Get opeartion.
     return Status::OK();
   } else {
     accessor->second->ref_cnt += changes;

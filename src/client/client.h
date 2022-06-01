@@ -121,25 +121,29 @@ class SharedMemoryManager {
   std::map<uintptr_t, MmapEntry*> segments_;
 };
 
-}  // namespace detail
-
-// Track the reference count in client-side to support object RAII.
+/**
+ * @brief UsageTracker is a CRTP class optimize the LifeCycleTracker by caching
+ * the reference count and payload on client to avoid frequent IPCs like
+ * `IncreaseReferenceCountRequest` with server. It requires the derived class to
+ * implement the:
+ *  - OnRelease(ID) method to describe what will happens when ref_count reaches
+ * zero.
+ *  - OnDelete(ID) method to describe what will happens what reaches reaches
+ * zero and the object is marked as to be deleted.
+ */
 template <typename ID, typename P, typename Der>
 class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
  public:
   using base_t = LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>>;
   UsageTracker() {}
 
-  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change) {
-    auto elem = object_in_use_.find(id);
-    if (elem != object_in_use_.end()) {
-      elem->second->ref_cnt += change;
-      ref_cnt = elem->second->ref_cnt;
-      return Status::OK();
-    }
-    return Status::ObjectNotExists();
-  }
-
+  /**
+   * @brief Fetch the blob payload from the client-side cache.
+   *
+   * @param id The object id.
+   * @param payload The payload of the object.
+   * @returns Status::OK() if the reference count is increased successfully.
+   */
   Status FetchOnLocal(ID const& id, P& payload) {
     auto elem = object_in_use_.find(id);
     if (elem != object_in_use_.end()) {
@@ -153,6 +157,12 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     return Status::ObjectNotExists();
   }
 
+  /**
+   * @brief Mark the blob in the client-side cache as sealed, to keep
+   * consistent with server on blob visibility.
+   *
+   * @param id The object id.
+   */
   Status SealUsage(ID const& id) {
     auto elem = object_in_use_.find(id);
     if (elem != object_in_use_.end()) {
@@ -162,6 +172,11 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     return Status::ObjectNotExists();
   }
 
+  /**
+   * @brief Increase the Reference Count, add it to cache if not exists.
+   *
+   * @param id The object id.
+   */
   Status AddUsage(ID const& id, P const& payload) {
     auto elem = object_in_use_.find(id);
     if (elem == object_in_use_.end()) {
@@ -171,8 +186,18 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     return this->IncreaseReferenceCount(id);
   }
 
+  /**
+   * @brief Decrease the Reference Count.
+   *
+   * @param id The object id.
+   */
   Status RemoveUsage(ID const& id) { return this->DecreaseReferenceCount(id); }
 
+  /**
+   * @brief Try to delete the blob from the client-side cache.
+   *
+   * @param id The object id.
+   */
   Status DeleteUsage(ID const& id) {
     auto elem = object_in_use_.find(id);
     if (elem != object_in_use_.end()) {
@@ -181,6 +206,25 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
     }
     // May already be deleted when `ref_cnt == 0`
     return Status::OK();
+  }
+
+  void ClearCache() {
+    base_t::ClearCache();
+    object_in_use_.clear();
+  }
+
+ public:
+  /**
+   * @brief change the reference count of the object on the client-side cache.
+   */
+  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change) {
+    auto elem = object_in_use_.find(id);
+    if (elem != object_in_use_.end()) {
+      elem->second->ref_cnt += change;
+      ref_cnt = elem->second->ref_cnt;
+      return Status::OK();
+    }
+    return Status::ObjectNotExists();
   }
 
   Status OnRelease(ID const& id) {
@@ -193,17 +237,15 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
 
   Status OnDelete(ID const& id) { return Self().OnDelete(id); }
 
-  // Clear cache when re-connect a new socket.
-  void ClearCache() {
-    base_t::ClearCache();
-    object_in_use_.clear();
-  }
-
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
   // Track the objects' usage.
   std::unordered_map<ID, std::shared_ptr<P>> object_in_use_;
+
+  friend class LifeCycleTracker<ID, P, Der>;
 };
+
+}  // namespace detail
 
 class BasicIPCClient : public ClientBase {
  public:
@@ -246,7 +288,7 @@ class PlasmaClient;
  *        and manipulate objects in vineyard.
  */
 class Client : public BasicIPCClient,
-               public UsageTracker<ObjectID, Payload, Client> {
+               protected detail::UsageTracker<ObjectID, Payload, Client> {
  public:
   Client() {}
 
@@ -528,6 +570,11 @@ class Client : public BasicIPCClient,
    */
   bool IsSharedMemory(const uintptr_t target, ObjectID& object_id) const;
 
+  /**
+   * @brief Check if the blob is a cold blob (no client is using it).
+   *
+   * Return true if the the blob is in-use.
+   */
   bool IsInUse(ObjectID const& id);
 
   /**
@@ -551,28 +598,68 @@ class Client : public BasicIPCClient,
   Status ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
                      PlasmaClient& source_client);
 
+  /**
+   * @brief Decrease the reference count of the object. It will trigger
+   * `OnRelease` behavior when reference count reaches zero. See UsageTracker.
+   */
   Status Release(std::vector<ObjectID> const& ids);
 
   Status Release(ObjectID const& id) override;
 
+  /**
+   * @brief Delete metadata in vineyard. When the object is a used by other
+   * object, it will be deleted only when the `force` parameter is specified.
+   *
+   * @param id The ID to delete.
+   * @param force Whether to delete the object forcely. Forcely delete an object
+   *        means the object and objects which use this object will be delete.
+   *        Default is false.
+   * @param deep Whether to delete the member of this object. Default is true.
+   *        Note that when deleting object which has *direct* blob members, the
+   *        processing on those blobs yields a "deep" behavior.
+   *
+   * @return Status that indicates whether the delete action has succeeded.
+   */
   Status DelData(const ObjectID id, const bool force = false,
                  const bool deep = true);
-
+  /**
+   * @brief Delete multiple metadatas in vineyard.
+   *
+   * @param ids The IDs to delete.
+   * @param force Whether to delete the object forcely. Forcely delete an object
+   *        means the object and objects which use this object will be delete.
+   *        Default is false.
+   * @param deep Whether to delete the member of this object. Default is true.
+   *        Note that when deleting objects which have *direct* blob members,
+   *        the processing on those blobs yields a "deep" behavior.
+   *
+   * @return Status that indicates whether the delete action has succeeded.
+   */
   Status DelData(const std::vector<ObjectID>& ids, const bool force = false,
                  const bool deep = true);
 
-  /// For UsageTracker only
-  Status OnFetch(ObjectID const& id, std::shared_ptr<Payload> const& payload);
-
-  /// For UsageTracker only
+ protected:
+  /**
+   * @brief Required by `UsageTracker`. When reference count reaches zero, send
+   * the `ReleaseRequest` to server.
+   */
   Status OnRelease(ObjectID const& id);
 
-  /// For UsageTracker only
+  /**
+   * @brief Required by `UsageTracker`. Currently, the deletion does not respect
+   * the reference count, it will send the DelData to server and do the deletion
+   * forcely.
+   */
   Status OnDelete(ObjectID const& id);
 
+  /**
+   * @brief Increase reference count after a new object is sealed.
+   */
   Status PostSeal(ObjectMeta const& meta_data);
 
- protected:
+  /**
+   * @brief Send request to server to get all underlying blobs of a object.
+   */
   Status GetDependency(ObjectID const& id, std::set<ObjectID>& bids);
 
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
@@ -615,16 +702,22 @@ class Client : public BasicIPCClient,
    */
   Status DropBuffer(const ObjectID id, const int fd);
 
+  /**
+   * @brief mark the blob as sealed to control the visibility of a blob, client
+   * can never `Get` an unsealed blob.
+   */
   Status Seal(ObjectID const& object_id);
 
  private:
   friend class Blob;
   friend class BlobWriter;
+  friend class ObjectBuilder;
+  friend class detail::UsageTracker<ObjectID, Payload, Client>;
 };
 
 class PlasmaClient
     : public BasicIPCClient,
-      public UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient> {
+      public detail::UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient> {
  public:
   PlasmaClient() {}
 
@@ -675,9 +768,6 @@ class PlasmaClient
   Status GetPayloads(std::set<PlasmaID> const& plasma_ids,
                      std::map<PlasmaID, PlasmaPayload>& plasma_payloads);
 
-  /**
-   * Used only for integration.
-   */
   Status GetBuffers(
       std::set<PlasmaID> const& plasma_ids,
       std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
@@ -688,24 +778,40 @@ class PlasmaClient
   Status ShallowCopy(ObjectID const id, std::set<PlasmaID>& target_pids,
                      Client& source_client);
 
+  /**
+   * @brief mark the blob as sealed to control the visibility of a blob, client
+   * can never `Get` an unsealed blob.
+   */
   Status Seal(PlasmaID const& object_id);
 
+  /**
+   * @brief Decrease the reference count of a plasma object. It will trigger
+   * `OnRelease` behavior when reference count reaches zero. See UsageTracker.
+   */
   Status Release(PlasmaID const& id);
 
+  /**
+   * @brief Delete a plasma object. It will trigger `OnDelete` behavior when
+   * reference count reaches zero. See UsageTracker.
+   */
   Status Delete(PlasmaID const& id);
 
-  /// For UsageTracker only
-  Status OnFetch(PlasmaID const& id,
-                 std::shared_ptr<PlasmaPayload> const& plasma_payload);
-
-  /// For UsageTracker only
+ protected:
+  /**
+   * @brief Required by `UsageTracker`. When reference count reaches zero, send
+   * the `ReleaseRequest` to server.
+   */
   Status OnRelease(PlasmaID const& id);
 
-  /// For UsageTracker only
+  /**
+   * @brief Required by `UsageTracker`. Deletion will be defered until its
+   * reference count reaches zero.
+   */
   Status OnDelete(PlasmaID const& id);
 
- private:
-  using ClientBase::Release;  // avoid warning
+  using ClientBase::Release;
+
+  friend class detail::UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient>;
 };
 
 }  // namespace vineyard

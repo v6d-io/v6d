@@ -350,21 +350,6 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     });
   }
 
-  inline void RequestToDelete(
-      const std::vector<ObjectID>& object_ids, const bool force,
-      const bool deep,
-      callback_t<const json&, std::vector<ObjectID> const&, std::vector<op_t>&,
-                 bool&>
-          callback_after_ready,
-      callback_t<> callback_after_finish) {
-    RequestToDelete(
-        object_ids, force, deep, callback_after_ready,
-        [callback_after_finish](Status const& status,
-                                std::vector<ObjectID> const& deleted_ids) {
-          return callback_after_finish(status);
-        });
-  }
-
   inline void RequestToShallowCopy(
       callback_t<const json&, std::vector<op_t>&, bool&> callback_after_ready,
       callback_t<> callback_after_finish) {

@@ -572,11 +572,11 @@ Status Client::PostSeal(ObjectMeta const& meta) {
 
   if (!remote_bids.empty()) {
     std::string message_out;
-    WritePinBlobsRequest(remote_bids, message_out);
+    WriteIncreaseReferenceCountRequest(remote_bids, message_out);
     RETURN_ON_ERROR(doWrite(message_out));
     json message_in;
     RETURN_ON_ERROR(doRead(message_in));
-    RETURN_ON_ERROR(ReadPinBlobsReply(message_in));
+    RETURN_ON_ERROR(ReadIncreaseReferenceCountReply(message_in));
   }
   return Status::OK();
 }

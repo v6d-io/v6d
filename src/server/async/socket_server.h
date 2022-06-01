@@ -153,7 +153,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doIsInUse(json const& root);
 
-  bool doPinBlobs(json const& root);
+  bool doIncreaseReferenceCount(json const& root);
 
  protected:
   template <typename FROM, typename TO>

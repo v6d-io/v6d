@@ -32,6 +32,19 @@ limitations under the License.
 
 namespace vineyard {
 
+namespace detail {
+
+/**
+ * @brief DependencyTracker is a CRTP class provides the dependency tracking for
+ * its derived classes. It record which blobs is been used by each
+ * `SocketConnection`. It requires the derived class to implement the:
+ *  - OnRelease(ID) method to describe what will happens when ref_count reaches
+ * zero.
+ *  - OnDelete(ID) method to describe what will happens what reaches reaches
+ * zero and the object is marked as to be deleted.
+ *  - FetchAndModify(ID, int, int) method to fetch the current ref_count and
+ * modify it by the given value.
+ */
 template <typename ID, typename P, typename Der>
 class DependencyTracker
     : public LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>> {
@@ -42,6 +55,14 @@ class DependencyTracker
 
   DependencyTracker() {}
 
+  /**
+   * @brief Add dependency of blobs to the socket connection. Also increase the
+   * reference count of blobs by one if they are not tracked before. Each socket
+   * connection can increase the reference count of a blob at most by one.
+   *
+   * @param ids The blob IDs.
+   * @param socket_connection The socket connection ID.
+   */
   Status AddDependency(std::unordered_set<ID> const& ids, int conn) {
     for (auto const& id : ids) {
       RETURN_ON_ERROR(AddDependency(id, conn));
@@ -65,6 +86,13 @@ class DependencyTracker
     return Status::OK();
   }
 
+  /**
+   * @brief Remove the dependency of the blob from the socket connection.
+   * Decrease the reference count of the blob by one.
+   *
+   * @param ids The blob IDs.
+   * @param socket_connection The socket connection ID.
+   */
   Status RemoveDependency(std::unordered_set<ID> const& ids, int conn) {
     for (auto const& id : ids) {
       RETURN_ON_ERROR(RemoveDependency(id, conn));
@@ -94,14 +122,14 @@ class DependencyTracker
   }
 
   /**
-   * Note:
-   * If object_id exists in dependency_, then its reference count should
-   * determinately greater than 0, thus it will determinately not be deleted.
-   * Delete will not remove dependency.
+   * @brief delete a object lazily, this will add the object to a delete queue
+   * and do the actual deletion when their reference count reaches zero.
    */
   Status PreDelete(ID const& id) { return base_t::PreDelete(id); }
 
-  /// Remove the dependency of all objects in given connection.
+  /**
+   * @brief Remove all the dependency of all objects in given socket connection.
+   */
   Status ReleaseConnection(int conn) {
     typename dependency_map_t::const_accessor accessor;
     if (!dependency_.find(accessor, conn)) {
@@ -117,6 +145,7 @@ class DependencyTracker
     }
   }
 
+ public:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {
     return Self().FetchAndModify(id, ref_cnt, changes);
   }
@@ -130,6 +159,16 @@ class DependencyTracker
   dependency_map_t dependency_;
 };
 
+/**
+ * @brief ColdObjectTracker is a CRTP class record nou-in-use object in a list
+ * for its derived classes. It requires the derived class to implement the:
+ *  - OnRelease(ID) method to describe what will happens when ref_count reaches
+ * zero.
+ *  - OnDelete(ID) method to describe what will happens what reaches reaches
+ * zero and the object is marked as to be deleted.
+ *  - FetchAndModify(ID, int, int) method to fetch the current ref_count and
+ * modify it by the given value.
+ */
 template <typename ID, typename P, typename Der>
 class ColdObjectTracker
     : public DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>> {
@@ -139,6 +178,11 @@ class ColdObjectTracker
 
   ColdObjectTracker() {}
 
+  /**
+   * @brief remove a blob from the cold object list.
+   *
+   * @param id The object ID.
+   */
   Status RemoveFromColdList(ID const& id) {
     typename cold_object_map_t::const_accessor accessor;
     if (cold_objects_.find(accessor, id)) {
@@ -156,12 +200,18 @@ class ColdObjectTracker
     return Status::OK();
   }
 
+  /**
+   * @brief Remove this blob from cold object list if it accessed again.
+   */
   Status AddDependency(ID const& id, int conn) {
     RETURN_ON_ERROR(base_t::AddDependency(id, conn));
     RETURN_ON_ERROR(this->RemoveFromColdList(id));
     return Status::OK();
   }
 
+  /**
+   * @brief Add a blob to the cold object list.
+   */
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
     typename cold_object_map_t::const_accessor accessor;
     if (payload->IsSealed()) {
@@ -172,6 +222,9 @@ class ColdObjectTracker
     return Status::OK();
   }
 
+  /**
+   * @brief check if a blob is in-use. Return true if it is in-use.
+   */
   Status IsInUse(ID const& id, bool& is_in_use) {
     typename cold_object_map_t::const_accessor accessor;
     if (cold_objects_.find(accessor, id)) {
@@ -182,6 +235,7 @@ class ColdObjectTracker
     return Status::OK();
   }
 
+ public:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {
     return Self().FetchAndModify(id, ref_cnt, changes);
   }
@@ -194,6 +248,8 @@ class ColdObjectTracker
   inline Der& Self() { return static_cast<Der&>(*this); }
   cold_object_map_t cold_objects_;
 };
+
+}  // namespace detail
 
 }  // namespace vineyard
 

@@ -137,8 +137,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::DelDataWithFeedbacksRequest;
   } else if (str_type == "is_in_use_request") {
     return CommandType::IsInUseRequest;
-  } else if (str_type == "pin_blobs_request") {
-    return CommandType::PinBlobsRequest;
+  } else if (str_type == "increase_reference_count_request") {
+    return CommandType::IncreaseReferenceCountRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1544,27 +1544,29 @@ Status ReadIsInUseReply(json const& root, bool& is_in_use) {
   return Status::OK();
 }
 
-void WritePinBlobsRequest(const std::vector<ObjectID>& ids, std::string& msg) {
+void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
+                                        std::string& msg) {
   json root;
-  root["type"] = "pin_blobs_request";
+  root["type"] = "increase_reference_count_request";
   root["ids"] = std::vector<ObjectID>{ids};
   encode_msg(root, msg);
 }
 
-Status ReadPinBlobsRequest(json const& root, std::vector<ObjectID>& ids) {
-  RETURN_ON_ASSERT(root["type"] == "pin_blobs_request");
+Status ReadIncreaseReferenceCountRequest(json const& root,
+                                         std::vector<ObjectID>& ids) {
+  RETURN_ON_ASSERT(root["type"] == "increase_reference_count_request");
   ids = root["ids"].get_to(ids);
   return Status::OK();
 }
 
-void WritePinBlobsReply(std::string& msg) {
+void WriteIncreaseReferenceCountReply(std::string& msg) {
   json root;
-  root["type"] = "pin_blobs_reply";
+  root["type"] = "increase_reference_count_reply";
   encode_msg(root, msg);
 }
 
-Status ReadPinBlobsReply(json const& root) {
-  RETURN_ON_ASSERT(root["type"] == "pin_blobs_reply");
+Status ReadIncreaseReferenceCountReply(json const& root) {
+  RETURN_ON_ASSERT(root["type"] == "increase_reference_count_reply");
   return Status::OK();
 }
 
