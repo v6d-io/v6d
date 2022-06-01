@@ -131,6 +131,14 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::PlasmaDelDataRequest;
   } else if (str_type == "move_buffers_ownership_request") {
     return CommandType::MoveBuffersOwnershipRequest;
+  } else if (str_type == "release_request") {
+    return CommandType::ReleaseRequest;
+  } else if (str_type == "del_data_with_feedbacks_request") {
+    return CommandType::DelDataWithFeedbacksRequest;
+  } else if (str_type == "is_in_use_request") {
+    return CommandType::IsInUseRequest;
+  } else if (str_type == "increase_reference_count_request") {
+    return CommandType::IncreaseReferenceCountRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1442,6 +1450,123 @@ void WriteMoveBuffersOwnershipReply(std::string& msg) {
 
 Status ReadMoveBuffersOwnershipReply(json const& root) {
   CHECK_IPC_ERROR(root, "move_buffers_ownership_reply");
+  return Status::OK();
+}
+
+void WriteReleaseRequest(ObjectID const& object_id, std::string& msg) {
+  json root;
+  root["type"] = "release_request";
+  root["object_id"] = object_id;
+  encode_msg(root, msg);
+}
+
+Status ReadReleaseRequest(json const& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"] == "release_request");
+  object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteReleaseReply(std::string& msg) {
+  json root;
+  root["type"] = "release_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadReleaseReply(json const& root) {
+  CHECK_IPC_ERROR(root, "release_reply");
+  return Status::OK();
+}
+
+void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
+                                      const bool force, const bool deep,
+                                      const bool fastpath, std::string& msg) {
+  json root;
+  root["type"] = "del_data_with_feedbacks_request";
+  root["id"] = std::vector<ObjectID>{id};
+  root["force"] = force;
+  root["deep"] = deep;
+  root["fastpath"] = fastpath;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDelDataWithFeedbacksRequest(json const& root,
+                                       std::vector<ObjectID>& ids, bool& force,
+                                       bool& deep, bool& fastpath) {
+  RETURN_ON_ASSERT(root["type"] == "del_data_with_feedbacks_request");
+  ids = root["id"].get_to(ids);
+  force = root.value("force", false);
+  deep = root.value("deep", false);
+  fastpath = root.value("fastpath", false);
+  return Status::OK();
+}
+
+void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
+                                    std::string& msg) {
+  json root;
+  root["type"] = "del_data_with_feedbacks_reply";
+  root["deleted_bids"] = deleted_bids;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDelDataWithFeedbacksReply(json const& root,
+                                     std::vector<ObjectID>& deleted_bids) {
+  RETURN_ON_ASSERT(root["type"] == "del_data_with_feedbacks_reply");
+  deleted_bids = root["deleted_bids"].get_to(deleted_bids);
+  return Status::OK();
+}
+
+// IsInUse
+void WriteIsInUseRequest(const ObjectID& id, std::string& msg) {
+  json root;
+  root["type"] = "is_in_use_request";
+  root["id"] = id;
+  encode_msg(root, msg);
+}
+
+Status ReadIsInUseRequest(json const& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "is_in_use_request");
+  id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteIsInUseReply(const bool is_in_use, std::string& msg) {
+  json root;
+  root["type"] = "is_in_use_reply";
+  root["is_in_use"] = is_in_use;
+  encode_msg(root, msg);
+}
+
+Status ReadIsInUseReply(json const& root, bool& is_in_use) {
+  RETURN_ON_ASSERT(root["type"] == "is_in_use_reply");
+  is_in_use = root["is_in_use"].get<bool>();
+  return Status::OK();
+}
+
+void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
+                                        std::string& msg) {
+  json root;
+  root["type"] = "increase_reference_count_request";
+  root["ids"] = std::vector<ObjectID>{ids};
+  encode_msg(root, msg);
+}
+
+Status ReadIncreaseReferenceCountRequest(json const& root,
+                                         std::vector<ObjectID>& ids) {
+  RETURN_ON_ASSERT(root["type"] == "increase_reference_count_request");
+  ids = root["ids"].get_to(ids);
+  return Status::OK();
+}
+
+void WriteIncreaseReferenceCountReply(std::string& msg) {
+  json root;
+  root["type"] = "increase_reference_count_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadIncreaseReferenceCountReply(json const& root) {
+  RETURN_ON_ASSERT(root["type"] == "increase_reference_count_reply");
   return Status::OK();
 }
 

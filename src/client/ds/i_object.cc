@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "client/ds/i_object.h"
 
+#include "client/client.h"
 #include "client/client_base.h"
 
 namespace vineyard {
@@ -57,7 +58,9 @@ bool const Object::IsPersist() const {
 bool const Object::IsGlobal() const { return meta_.IsGlobal(); }
 
 std::shared_ptr<Object> ObjectBuilder::Seal(Client& client) {
-  return this->_Seal(client);
+  auto object = this->_Seal(client);
+  VINEYARD_CHECK_OK(client.PostSeal(object->meta()));
+  return object;
 }
 
 }  // namespace vineyard

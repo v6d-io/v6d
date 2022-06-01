@@ -469,6 +469,33 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   return Status::OK();
 }
 
+Status BulkStore::OnRelease(ObjectID const& id) {
+  typename object_map_t::const_accessor accessor;
+  if (objects_.find(accessor, id)) {
+    RETURN_ON_ERROR(this->MarkAsCold(id, accessor->second));
+  }
+  return Status::OK();
+}
+
+Status BulkStore::Release(ObjectID const& id, int conn) {
+  return this->RemoveDependency(id, conn);
+}
+
+Status BulkStore::FetchAndModify(const ObjectID& id, int64_t& ref_cnt,
+                                 int64_t changes) {
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, id)) {
+    // NB: Keep consistent with the the Get opeartion.
+    return Status::OK();
+  } else {
+    accessor->second->ref_cnt += changes;
+    ref_cnt = accessor->second->ref_cnt;
+  }
+  return Status::OK();
+}
+
+Status BulkStore::OnDelete(ObjectID const& id) { return Delete(id); }
+
 // implementation for PlasmaBulkStore
 Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
                                PlasmaID const& plasma_id, ObjectID& object_id,
@@ -514,8 +541,8 @@ Status PlasmaBulkStore::FetchAndModify(const PlasmaID& id, int64_t& ref_cnt,
                                        int64_t changes) {
   typename object_map_t::const_accessor accessor;
   if (!objects_.find(accessor, id)) {
-    return Status::ObjectNotExists("object " + IDToString(id) +
-                                   " cannot be found");
+    // N.B.: Keep consistent with the the Get opeartion.
+    return Status::OK();
   } else {
     accessor->second->ref_cnt += changes;
     ref_cnt = accessor->second->ref_cnt;

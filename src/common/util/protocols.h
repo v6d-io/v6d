@@ -82,6 +82,10 @@ enum class CommandType {
   PlasmaReleaseRequest = 48,
   PlasmaDelDataRequest = 49,
   MoveBuffersOwnershipRequest = 50,
+  ReleaseRequest = 51,
+  DelDataWithFeedbacksRequest = 52,
+  IsInUseRequest = 53,
+  IncreaseReferenceCountRequest = 54,
 };
 
 CommandType ParseCommandType(const std::string& str_type);
@@ -500,6 +504,46 @@ Status ReadMoveBuffersOwnershipRequest(json const& root,
 void WriteMoveBuffersOwnershipReply(std::string& msg);
 
 Status ReadMoveBuffersOwnershipReply(json const& root);
+
+void WriteReleaseRequest(ObjectID const& object_id, std::string& msg);
+
+Status ReadReleaseRequest(json const& root, ObjectID& object_id);
+
+void WriteReleaseReply(std::string& msg);
+
+Status ReadReleaseReply(json const& root);
+
+void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
+                                      const bool force, const bool deep,
+                                      const bool fastpath, std::string& msg);
+
+Status ReadDelDataWithFeedbacksRequest(json const& root,
+                                       std::vector<ObjectID>& id, bool& force,
+                                       bool& deep, bool& fastpath);
+
+void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
+                                    std::string& msg);
+
+Status ReadDelDataWithFeedbacksReply(json const& root,
+                                     std::vector<ObjectID>& deleted_bids);
+
+void WriteIsInUseRequest(const ObjectID& id, std::string& msg);
+
+Status ReadIsInUseRequest(json const& root, ObjectID& id);
+
+void WriteIsInUseReply(const bool is_in_use, std::string& msg);
+
+Status ReadIsInUseReply(json const& root, bool& is_in_use);
+
+void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
+                                        std::string& msg);
+
+Status ReadIncreaseReferenceCountRequest(json const& root,
+                                         std::vector<ObjectID>& ids);
+
+void WriteIncreaseReferenceCountReply(std::string& msg);
+
+Status ReadIncreaseReferenceCountReply(json const& root);
 
 }  // namespace vineyard
 

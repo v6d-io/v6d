@@ -73,7 +73,8 @@ int main(int argc, char** argv) {
   CHECK(exists);
   VINEYARD_CHECK_OK(client.Exists(blob_id, exists));
   CHECK(exists);
-  LOG(INFO) << "delete id: " << id << ": " << ObjectIDToString(id);
+  LOG(INFO) << "delete id = " << ObjectIDToString(id)
+            << ", blob id = " << ObjectIDToString(blob_id);
   VINEYARD_CHECK_OK(client.DelData(id, false, true));
   VINEYARD_CHECK_OK(client.Exists(id, exists));
   CHECK(!exists);
@@ -225,6 +226,8 @@ int main(int argc, char** argv) {
     CHECK(blob_id != InvalidObjectID());
   }
 
+  LOG(INFO) << "deep deletion id = " << ObjectIDToString(id)
+            << ", blob id = " << ObjectIDToString(blob_id);
   // force deletion
   VINEYARD_CHECK_OK(client.Exists(id, exists));
   CHECK(exists);
@@ -243,6 +246,8 @@ int main(int argc, char** argv) {
     CHECK(s.ok() && buffers.size() == 0);
   }
 
+  LOG(INFO) << "deep deletion OK";
+
   {
     // prepare data
     std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
@@ -254,6 +259,9 @@ int main(int argc, char** argv) {
     blob_id = sealed_double_array->meta().GetMemberMeta("buffer_").GetId();
     CHECK(blob_id != InvalidObjectID());
   }
+
+  LOG(INFO) << "multiple deletion id = " << ObjectIDToString(id)
+            << ", blob id = " << ObjectIDToString(blob_id);
 
   // shallow delete multiple objects
   VINEYARD_CHECK_OK(client.Exists(id, exists));
@@ -316,6 +324,8 @@ int main(int argc, char** argv) {
     tuple_builder.SetValue(2, pair_builder3.Seal(client));
     nested_tuple_id = tuple_builder.Seal(client)->id();
   }
+  LOG(INFO) << "nest deletion id = " << ObjectIDToString(nested_tuple_id);
+
   VINEYARD_CHECK_OK(client.DelData(nested_tuple_id, true, true));
 
   std::shared_ptr<InstanceStatus> status_after;

@@ -51,6 +51,18 @@ bool SocketConnection::Stop() {
     // already stopped, or haven't started
     return false;
   }
+
+  auto self(shared_from_this());
+  if (server_ptr_->GetBulkStoreType() == "Normal") {
+    std::unordered_set<ObjectID> ids;
+    auto status =
+        server_ptr_->GetBulkStore()->ReleaseConnection(this->getConnId());
+    if (!status.ok()) {
+      LOG(INFO) << "No dependent objects, conn_id: " << this->getConnId()
+                << ", status: " << status.ToString();
+    }
+  }
+
   // do cleanup: clean up streams associated with this client
   for (auto stream_id : associated_streams_) {
     VINEYARD_SUPPRESS(server_ptr_->GetStreamStore()->Drop(stream_id));
@@ -300,6 +312,18 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::MoveBuffersOwnershipRequest: {
     return doMoveBuffersOwnership(root);
   }
+  case CommandType::ReleaseRequest: {
+    return doRelease(root);
+  }
+  case CommandType::DelDataWithFeedbacksRequest: {
+    return doDelDataWithFeedbacks(root);
+  }
+  case CommandType::IsInUseRequest: {
+    return doIsInUse(root);
+  }
+  case CommandType::IncreaseReferenceCountRequest: {
+    return doIncreaseReferenceCount(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -328,6 +352,8 @@ bool SocketConnection::doGetBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
+      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
 
   std::vector<int> fd_to_send;
   for (auto object : objects) {
@@ -389,6 +415,8 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
+      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, message_out);
 
   this->doWrite(message_out, [this, self, objects](const Status& status) {
@@ -1116,6 +1144,9 @@ bool SocketConnection::doGetBuffersByPlasma(json const& root) {
   TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids);
   RESPONSE_ON_ERROR(
       server_ptr_->GetBulkStore<PlasmaID>()->Get(plasma_ids, plasma_objects));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->AddDependency(
+      std::unordered_set<PlasmaID>(plasma_ids.begin(), plasma_ids.end()),
+      getConnId()));
   WriteGetBuffersByPlasmaReply(plasma_objects, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
@@ -1149,6 +1180,8 @@ bool SocketConnection::doSealBlob(json const& root) {
   ObjectID id;
   TRY_READ_REQUEST(ReadSealRequest, root, id);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Seal(id));
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -1160,6 +1193,8 @@ bool SocketConnection::doSealPlasmaBlob(json const& root) {
   PlasmaID id;
   TRY_READ_REQUEST(ReadPlasmaSealRequest, root, id);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Seal(id));
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore<PlasmaID>()->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -1224,6 +1259,77 @@ bool SocketConnection::doMoveBuffersOwnership(json const& root) {
 
   std::string message_out;
   WriteMoveBuffersOwnershipReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doRelease(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;  // Must be a blob id.
+  TRY_READ_REQUEST(ReadReleaseRequest, root, id);
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore<ObjectID>()->Release(id, getConnId()));
+  std::string message_out;
+  WriteReleaseReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool force, deep, fastpath;
+  double startTime = GetCurrentTime();
+  TRY_READ_REQUEST(ReadDelDataWithFeedbacksRequest, root, ids, force, deep,
+                   fastpath);
+  RESPONSE_ON_ERROR(server_ptr_->DelData(
+      ids, force, deep, fastpath,
+      [self, startTime](const Status& status,
+                        std::vector<ObjectID> const& delete_ids) {
+        std::string message_out;
+        if (status.ok()) {
+          std::vector<ObjectID> deleted_bids;
+          for (auto id : delete_ids) {
+            if (IsBlob(id)) {
+              deleted_bids.emplace_back(id);
+            }
+          }
+          WriteDelDataWithFeedbacksReply(deleted_bids, message_out);
+        } else {
+          LOG(ERROR) << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "delete",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "delete");
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doIsInUse(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;  // Must be a blob id.
+  TRY_READ_REQUEST(ReadIsInUseRequest, root, id);
+  bool is_in_use = false;
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore<ObjectID>()->IsInUse(id, is_in_use));
+  std::string message_out;
+  WriteIsInUseReply(is_in_use, message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doIncreaseReferenceCount(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  TRY_READ_REQUEST(ReadIncreaseReferenceCountRequest, root, ids);
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
+      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  std::string message_out;
+  WriteIncreaseReferenceCountReply(message_out);
   this->doWrite(message_out);
   return false;
 }

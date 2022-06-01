@@ -276,14 +276,14 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
       callback_t<const json&, std::vector<ObjectID> const&, std::vector<op_t>&,
                  bool&>
           callback_after_ready,
-      callback_t<> callback_after_finish) {
+      callback_t<std::vector<ObjectID> const&> callback_after_finish) {
     auto self(shared_from_this());
     server_ptr_->GetMetaContext().post([self, object_ids, force, deep,
                                         callback_after_ready,
                                         callback_after_finish]() {
       if (self->stopped_.load()) {
         VINEYARD_DISCARD(callback_after_finish(
-            Status::AlreadyStopped("etcd metadata service")));
+            Status::AlreadyStopped("etcd metadata service"), {}));
       }
 
       // generated ops.
@@ -304,7 +304,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
       auto s = callback_after_ready(Status::OK(), self->meta_,
                                     processed_delete_set, ops, sync_remote);
       if (!s.ok()) {
-        VINEYARD_DISCARD(callback_after_finish(s));
+        VINEYARD_DISCARD(callback_after_finish(s, {}));
         return;
       }
 
@@ -312,7 +312,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
       self->metaUpdate(ops, false);
 
       if (!sync_remote) {
-        VINEYARD_DISCARD(callback_after_finish(s));
+        VINEYARD_DISCARD(callback_after_finish(s, processed_delete_set));
         return;
       }
 
@@ -322,7 +322,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
       // avoid contention between other vineyard instances.
       self->requestLock(
           self->meta_sync_lock_,
-          [self, ops /* by copy */, callback_after_ready,
+          [self, ops /* by copy */, callback_after_ready, processed_delete_set,
            callback_after_finish](const Status& status,
                                   std::shared_ptr<ILock> lock) {
             if (self->stopped_.load()) {
@@ -330,20 +330,21 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
             }
             if (status.ok()) {
               // commit to etcd
-              self->commitUpdates(ops, [self, callback_after_finish, lock](
-                                           const Status& status, unsigned rev) {
-                if (self->stopped_.load()) {
-                  return Status::AlreadyStopped("etcd metadata service");
-                }
-                // update rev_ to the revision after unlock.
-                unsigned rev_after_unlock = 0;
-                VINEYARD_DISCARD(lock->Release(rev_after_unlock));
-                return callback_after_finish(status);
-              });
+              self->commitUpdates(
+                  ops, [self, processed_delete_set, callback_after_finish,
+                        lock](const Status& status, unsigned rev) {
+                    if (self->stopped_.load()) {
+                      return Status::AlreadyStopped("etcd metadata service");
+                    }
+                    // update rev_ to the revision after unlock.
+                    unsigned rev_after_unlock = 0;
+                    VINEYARD_DISCARD(lock->Release(rev_after_unlock));
+                    return callback_after_finish(status, processed_delete_set);
+                  });
               return Status::OK();
             } else {
               LOG(ERROR) << status.ToString();
-              return callback_after_finish(status);  // propogate the error.
+              return callback_after_finish(status, {});  // propogate the error.
             }
           });
     });

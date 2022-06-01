@@ -115,6 +115,12 @@ Status Client::Connect() {
       "Environment variable VINEYARD_IPC_SOCKET does't exists");
 }
 
+void Client::Disconnect() {
+  std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+  this->ClearCache();
+  ClientBase::Disconnect();
+}
+
 Status Client::Connect(const std::string& ipc_socket) {
   return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Normal");
 }
@@ -472,6 +478,7 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   }
   buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
 
+  RETURN_ON_ERROR(AddUsage(id, payload));
   return Status::OK();
 }
 
@@ -495,6 +502,7 @@ Status Client::GetBuffers(
   }
   ENSURE_CONNECTED(this);
 
+  /// lookup in server-side store
   std::string message_out;
   WriteGetBuffersRequest(ids, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
@@ -510,6 +518,7 @@ Status Client::GetBuffers(
       shm_->PreMmap(item.store_fd, fd_recv, fd_recv_dedup);
     }
   }
+
   if (message_in.contains("fds") && fd_sent != fd_recv) {
     json error = json::object();
     error["error"] =
@@ -531,6 +540,113 @@ Status Client::GetBuffers(
     }
     buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
     buffers.emplace(item.object_id, buffer);
+    /// Add reference count of buffers
+    RETURN_ON_ERROR(AddUsage(item.object_id, item));
+  }
+  return Status::OK();
+}
+
+Status Client::GetDependency(ObjectID const& id, std::set<ObjectID>& bids) {
+  ENSURE_CONNECTED(this);
+  ObjectMeta meta;
+  json tree;
+  RETURN_ON_ERROR(GetData(id, tree, /*sync_remote=*/true));
+  meta.SetMetaData(this, tree);
+  bids = meta.GetBufferSet()->AllBufferIds();
+  return Status::OK();
+}
+
+Status Client::PostSeal(ObjectMeta const& meta) {
+  ENSURE_CONNECTED(this);
+  ObjectMeta tmp_meta;
+  tmp_meta.SetMetaData(this, meta.MetaData());
+  auto bids = tmp_meta.GetBufferSet()->AllBufferIds();
+  std::vector<ObjectID> remote_bids;
+
+  for (auto bid : bids) {
+    auto s = IncreaseReferenceCount(bid);
+    if (!s.ok()) {
+      remote_bids.push_back(bid);
+    }
+  }
+
+  if (!remote_bids.empty()) {
+    std::string message_out;
+    WriteIncreaseReferenceCountRequest(remote_bids, message_out);
+    RETURN_ON_ERROR(doWrite(message_out));
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(ReadIncreaseReferenceCountReply(message_in));
+  }
+  return Status::OK();
+}
+
+// If reference count reaches 0, send Release request to server.
+Status Client::OnRelease(ObjectID const& id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteReleaseRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadReleaseReply(message_in));
+  return Status::OK();
+}
+
+// TODO(mengke): If reference count reaches 0 and marked as to be deleted, send
+// DelData request to server.
+Status Client::OnDelete(ObjectID const& id) {
+  // Currently, the deletion does not respect the reference count.
+  return Status::OK();
+}
+
+Status Client::Release(std::vector<ObjectID> const& ids) {
+  for (auto id : ids) {
+    RETURN_ON_ERROR(Release(id));
+  }
+  return Status::OK();
+}
+
+// Released by users.
+Status Client::Release(ObjectID const& id) {
+  ENSURE_CONNECTED(this);
+  if (!IsBlob(id)) {
+    std::set<ObjectID> bids;
+    RETURN_ON_ERROR(GetDependency(id, bids));
+    for (auto const& bid : bids) {
+      RETURN_ON_ASSERT(IsBlob(bid));
+      RETURN_ON_ERROR(RemoveUsage(bid));
+    }
+  } else {
+    RETURN_ON_ERROR(RemoveUsage(id));
+  }
+  return Status::OK();
+}
+
+Status Client::DelData(const ObjectID id, const bool force, const bool deep) {
+  return this->DelData(std::vector<ObjectID>{id}, force, deep);
+}
+
+Status Client::DelData(const std::vector<ObjectID>& ids, const bool force,
+                       const bool deep) {
+  ENSURE_CONNECTED(this);
+  for (auto id : ids) {
+    // May contain duplicated blob ids.
+    VINEYARD_DISCARD(Release(id));
+  }
+  std::string message_out;
+  WriteDelDataWithFeedbacksRequest(ids, force, deep, /*fastpath=*/false,
+                                   message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  std::vector<ObjectID> deleted_bids;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDelDataWithFeedbacksReply(message_in, deleted_bids));
+
+  for (auto const& id : deleted_bids) {
+    if (IsBlob(id)) {
+      RETURN_ON_ERROR(DeleteUsage(id));
+    }
   }
   return Status::OK();
 }
@@ -581,6 +697,7 @@ Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
 Status Client::DropBuffer(const ObjectID id, const int fd) {
   ENSURE_CONNECTED(this);
 
+  RETURN_ON_ASSERT(IsBlob(id));
   // unmap from client
   //
   // FIXME: the erase may cause re-recv fd problem, needs further inspection.
@@ -597,6 +714,7 @@ Status Client::DropBuffer(const ObjectID id, const int fd) {
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadDropBufferReply(message_in));
+  RETURN_ON_ERROR(DeleteUsage(id));
   return Status::OK();
 }
 
@@ -609,6 +727,7 @@ Status Client::Seal(ObjectID const& object_id) {
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadSealReply(message_in));
+  RETURN_ON_ERROR(SealUsage(object_id));
   return Status::OK();
 }
 
@@ -698,6 +817,23 @@ Status Client::ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
   return Status::OK();
 }
 
+bool Client::IsInUse(ObjectID const& id) {
+  if (!this->connected_) {
+    VINEYARD_CHECK_OK(Status::ConnectionError("Client is not connected"));
+  }
+  std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
+
+  std::string message_out;
+  WriteIsInUseRequest(id, message_out);
+  VINEYARD_CHECK_OK(doWrite(message_out));
+
+  json message_in;
+  bool is_in_use = false;
+  VINEYARD_CHECK_OK(doRead(message_in));
+  VINEYARD_CHECK_OK(ReadIsInUseReply(message_in, is_in_use));
+  return is_in_use;
+}
+
 PlasmaClient::~PlasmaClient() {}
 
 // dummy implementation
@@ -725,6 +861,12 @@ Status PlasmaClient::Open(std::string const& ipc_socket) {
 
 Status PlasmaClient::Connect(const std::string& ipc_socket) {
   return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Plasma");
+}
+
+void PlasmaClient::Disconnect() {
+  std::lock_guard<std::recursive_mutex> guard(client_mutex_);
+  this->ClearCache();
+  ClientBase::Disconnect();
 }
 
 Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,

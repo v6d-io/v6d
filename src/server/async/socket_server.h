@@ -147,6 +147,14 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doMoveBuffersOwnership(json const& root);
 
+  bool doRelease(json const& root);
+
+  bool doDelDataWithFeedbacks(json const& root);
+
+  bool doIsInUse(json const& root);
+
+  bool doIncreaseReferenceCount(json const& root);
+
  protected:
   template <typename FROM, typename TO>
   Status MoveBuffers(std::map<FROM, TO> mapping, vs_ptr_t& source_session) {
@@ -168,6 +176,16 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
     RETURN_ON_ERROR(
         server_ptr_->GetBulkStore<TO>()->MoveOwnership(to_process_ids));
+
+    // FIXME: this is a hack to make sure Moved buffers will never be released.
+    int64_t ref_cnt;
+    for (auto const& item : mapping) {
+      VINEYARD_CHECK_OK(source_session->GetBulkStore<FROM>()->FetchAndModify(
+          item.first, ref_cnt, 1));
+      VINEYARD_CHECK_OK(server_ptr_->GetBulkStore<TO>()->FetchAndModify(
+          item.second, ref_cnt, 1));
+    }
+
     return Status::OK();
   }
 

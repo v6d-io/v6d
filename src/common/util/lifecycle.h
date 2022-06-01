@@ -31,20 +31,27 @@ limitations under the License.
 
 namespace vineyard {
 
-// Der should has a side-effect free get.
+namespace detail {
+/**
+ * @brief LifeCycleTracker is a CRTP class provides the lifecycle management for
+ * its derived classes. It requires the derived class to implement the:
+ *  - OnRelease(ID) method to describe what will happens when ref_count reaches
+ * zero.
+ *  - OnDelete(ID) method to describe what will happens what reaches reaches
+ * zero and the object is marked as to be deleted.
+ *  - FetchAndModify(ID, int, int) method to fetch the current ref_count and
+ * modify it by the given value.
+ */
 template <typename ID, typename P, typename Der>
 class LifeCycleTracker {
  public:
   LifeCycleTracker() {}
 
-  // Simply increase the reference count.
   Status IncreaseReferenceCount(ID const& id) {
     int64_t ref_cnt = 0;
     return FetchAndModify(id, ref_cnt, 1);
   }
 
-  // Decrease the reference count.
-  // If reaches zero, release it or delete it
   Status DecreaseReferenceCount(ID const& id) {
     int64_t ref_cnt = 0;
     RETURN_ON_ERROR(FetchAndModify(id, ref_cnt, -1));
@@ -53,25 +60,36 @@ class LifeCycleTracker {
       return Status::OK();
     }
 
+    // If reaches zero, trigger `OnRelease` behavior.
     VINEYARD_CHECK_OK(Self().OnRelease(id));
 
-    if (pending_to_delete.count(id) > 0) {
-      pending_to_delete.erase(id);
+    // If the object is marked as to be deleted, trigger `OnDelete` behavior.
+    if (pending_to_delete_.count(id) > 0) {
+      pending_to_delete_.erase(id);
       VINEYARD_CHECK_OK(Self().OnDelete(id));
     }
     return Status::OK();
   }
 
-  // Delete the object when reference count reaches zero.
+  /**
+   * @brief: Defer deletion until reference count goes to zero.
+   */
   Status PreDelete(ID const& id) {
     int64_t ref_cnt = 0;
     RETURN_ON_ERROR(FetchAndModify(id, ref_cnt, 0));
     if (ref_cnt != 0) {
-      pending_to_delete.emplace(id);
+      pending_to_delete_.emplace(id);
     } else {
       VINEYARD_CHECK_OK(Self().OnDelete(id));
     }
     return Status::OK();
+  }
+
+  void ClearCache() {
+    for (auto const& id : pending_to_delete_) {
+      VINEYARD_CHECK_OK(Self().OnDelete(id));
+    }
+    pending_to_delete_.clear();
   }
 
  protected:
@@ -80,15 +98,17 @@ class LifeCycleTracker {
   }
 
   bool IsInDeletion(ID const& id) {
-    return pending_to_delete.find(id) != pending_to_delete.end();
+    return pending_to_delete_.find(id) != pending_to_delete_.end();
   }
 
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
   /// Cache the objects that client wants to delete but `ref_count > 0`
   /// Race condition should be settled by Der.
-  std::unordered_set<ID> pending_to_delete;
+  std::unordered_set<ID> pending_to_delete_;
 };
+
+}  // namespace detail
 
 }  // namespace vineyard
 #endif  // SRC_COMMON_UTIL_LIFECYCLE_H_
