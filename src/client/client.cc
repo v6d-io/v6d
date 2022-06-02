@@ -87,7 +87,7 @@ Status BasicIPCClient::Open(std::string const& ipc_socket,
   RETURN_ON_ASSERT(!this->connected_,
                    "The client has already been connected to vineyard server");
   std::string socket_path;
-  VINEYARD_CHECK_OK(Connect(ipc_socket, StoreType::kHost));
+  VINEYARD_CHECK_OK(Connect(ipc_socket, StoreType::kDefault));
 
   {
     std::lock_guard<std::recursive_mutex> guard(client_mutex_);

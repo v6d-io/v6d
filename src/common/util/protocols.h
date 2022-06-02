@@ -89,7 +89,6 @@ enum class CommandType {
 };
 
 enum class StoreType {
-  kHost = 0,
   kDefault = 1,
   kPlasma = 2,
 };

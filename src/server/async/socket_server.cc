@@ -336,8 +336,7 @@ bool SocketConnection::doRegister(const json& root) {
   std::string client_version, message_out;
   StoreType bulk_store_type;
   TRY_READ_REQUEST(ReadRegisterRequest, root, client_version, bulk_store_type);
-  bool store_match = (bulk_store_type == StoreType::kHost ||
-                      bulk_store_type == server_ptr_->GetBulkStoreType());
+  bool store_match = (bulk_store_type == server_ptr_->GetBulkStoreType());
   WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
                      server_ptr_->instance_id(), server_ptr_->session_id(),
                      store_match, message_out);
