@@ -38,11 +38,11 @@ namespace detail {
  * @brief DependencyTracker is a CRTP class provides the dependency tracking for
  * its derived classes. It record which blobs is been used by each
  * `SocketConnection`. It requires the derived class to implement the:
- *  - OnRelease(ID) method to describe what will happens when ref_count reaches
- * zero.
- *  - OnDelete(ID) method to describe what will happens what reaches reaches
- * zero and the object is marked as to be deleted.
- *  - FetchAndModify(ID, int, int) method to fetch the current ref_count and
+ *  - `OnRelease(ID)` method to describe what will happens when `ref_count`
+ * reaches zero.
+ *  - `OnDelete(ID)` method to describe what will happens when `ref_count`
+ * reaches zero and the object is marked as to be deleted.
+ *  - `FetchAndModify(ID, int, int)` method to fetch the current `ref_count` and
  * modify it by the given value.
  */
 template <typename ID, typename P, typename Der>
@@ -160,13 +160,13 @@ class DependencyTracker
 };
 
 /**
- * @brief ColdObjectTracker is a CRTP class record nou-in-use object in a list
+ * @brief ColdObjectTracker is a CRTP class record non-in-use object in a list
  * for its derived classes. It requires the derived class to implement the:
- *  - OnRelease(ID) method to describe what will happens when ref_count reaches
- * zero.
- *  - OnDelete(ID) method to describe what will happens what reaches reaches
- * zero and the object is marked as to be deleted.
- *  - FetchAndModify(ID, int, int) method to fetch the current ref_count and
+ *  - `OnRelease(ID)` method to describe what will happens when `ref_count`
+ * reaches zero.
+ *  - `OnDelete(ID)` method to describe what will happens when `ref_count`
+ * reaches zero and the object is marked as to be deleted.
+ *  - `FetchAndModify(ID, int, int)` method to fetch the current `ref_count` and
  * modify it by the given value.
  */
 template <typename ID, typename P, typename Der>

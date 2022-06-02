@@ -79,7 +79,7 @@ VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
       ready_(0) {
 }
 
-Status VineyardServer::Serve(std::string const& bulk_store_type) {
+Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   stopped_.store(false);
   this->bulk_store_type_ = bulk_store_type;
 
@@ -97,7 +97,7 @@ Status VineyardServer::Serve(std::string const& bulk_store_type) {
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
-  if (bulk_store_type_ == "Plasma") {
+  if (bulk_store_type_ == StoreType::kPlasma) {
     plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
     RETURN_ON_ERROR(plasma_bulk_store_->PreAllocate(
         spec_["bulkstore_spec"]["memory_size"].get<size_t>()));
@@ -105,7 +105,7 @@ Status VineyardServer::Serve(std::string const& bulk_store_type) {
     // TODO(mengke.mk): Currently we do not allow streamming in plasma
     // bulkstore, anyway, we can templatize stream store to solve this.
     stream_store_ = nullptr;
-  } else {
+  } else if (bulk_store_type_ == StoreType::kDefault) {
     bulk_store_ = std::make_shared<BulkStore>();
     RETURN_ON_ERROR(bulk_store_->PreAllocate(
         spec_["bulkstore_spec"]["memory_size"].get<size_t>()));

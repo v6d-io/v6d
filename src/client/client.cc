@@ -44,7 +44,7 @@ namespace vineyard {
 BasicIPCClient::BasicIPCClient() : shm_(new detail::SharedMemoryManager(-1)) {}
 
 Status BasicIPCClient::Connect(const std::string& ipc_socket,
-                               std::string const& store_type) {
+                               StoreType const& store_type) {
   std::lock_guard<std::recursive_mutex> guard(client_mutex_);
   RETURN_ON_ASSERT(!connected_ || ipc_socket == ipc_socket_);
   if (connected_) {
@@ -83,11 +83,11 @@ Status BasicIPCClient::Connect(const std::string& ipc_socket,
 }
 
 Status BasicIPCClient::Open(std::string const& ipc_socket,
-                            std::string const& bulk_store_type) {
+                            StoreType const& bulk_store_type) {
   RETURN_ON_ASSERT(!this->connected_,
                    "The client has already been connected to vineyard server");
   std::string socket_path;
-  VINEYARD_CHECK_OK(Connect(ipc_socket, "Any"));
+  VINEYARD_CHECK_OK(Connect(ipc_socket, StoreType::kDefault));
 
   {
     std::lock_guard<std::recursive_mutex> guard(client_mutex_);
@@ -122,11 +122,11 @@ void Client::Disconnect() {
 }
 
 Status Client::Connect(const std::string& ipc_socket) {
-  return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Normal");
+  return BasicIPCClient::Connect(ipc_socket, StoreType::kDefault);
 }
 
 Status Client::Open(std::string const& ipc_socket) {
-  return BasicIPCClient::Open(ipc_socket, /*bulk_store_type=*/"Normal");
+  return BasicIPCClient::Open(ipc_socket, StoreType::kDefault);
 }
 
 Status Client::Fork(Client& client) {
@@ -856,11 +856,11 @@ Status PlasmaClient::Seal(PlasmaID const& plasma_id) {
 }
 
 Status PlasmaClient::Open(std::string const& ipc_socket) {
-  return BasicIPCClient::Open(ipc_socket, /*bulk_store_type=*/"Plasma");
+  return BasicIPCClient::Open(ipc_socket, StoreType::kPlasma);
 }
 
 Status PlasmaClient::Connect(const std::string& ipc_socket) {
-  return BasicIPCClient::Connect(ipc_socket, /*bulk_store_type=*/"Plasma");
+  return BasicIPCClient::Connect(ipc_socket, StoreType::kPlasma);
 }
 
 void PlasmaClient::Disconnect() {

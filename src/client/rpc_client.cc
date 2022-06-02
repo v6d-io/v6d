@@ -65,7 +65,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
   rpc_endpoint_ = rpc_endpoint;
   RETURN_ON_ERROR(connect_rpc_socket_retry(host, port, vineyard_conn_));
   std::string message_out;
-  WriteRegisterRequest(message_out, "Any");
+  WriteRegisterRequest(message_out, StoreType::kDefault);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
