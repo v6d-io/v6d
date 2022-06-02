@@ -152,7 +152,7 @@ void WriteErrorReply(Status const& status, std::string& msg) {
   encode_msg(status.ToJSON(), msg);
 }
 
-void WriteRegisterRequest(std::string& msg, std::string const& store_type) {
+void WriteRegisterRequest(std::string& msg, StoreType const& store_type) {
   json root;
   root["type"] = "register_request";
   root["version"] = vineyard_version();
@@ -162,13 +162,13 @@ void WriteRegisterRequest(std::string& msg, std::string const& store_type) {
 }
 
 Status ReadRegisterRequest(const json& root, std::string& version,
-                           std::string& store_type) {
+                           StoreType& store_type) {
   RETURN_ON_ASSERT(root["type"] == "register_request");
 
   // When the "version" field is missing from the client, we treat it
   // as default unknown version number: 0.0.0.
   version = root.value<std::string>("version", "0.0.0");
-  store_type = root.value("store_type", /* default */ std::string("Normal"));
+  store_type = root.value("store_type", /* default */ StoreType::kDefault);
   return Status::OK();
 }
 
@@ -1165,16 +1165,17 @@ Status ReadDebugReply(const json& root, json& result) {
 }
 
 void WriteNewSessionRequest(std::string& msg,
-                            std::string const& bulk_store_type) {
+                            StoreType const& bulk_store_type) {
   json root;
   root["type"] = "new_session_request";
   root["bulk_store_type"] = bulk_store_type;
   encode_msg(root, msg);
 }
 
-Status ReadNewSessionRequest(json const& root, std::string& bulk_store_type) {
+Status ReadNewSessionRequest(json const& root, StoreType& bulk_store_type) {
   RETURN_ON_ASSERT(root["type"] == "new_session_request");
-  bulk_store_type = root["bulk_store_type"].get_ref<std::string const&>();
+  bulk_store_type =
+      root.value("bulk_store_type", /* default */ StoreType::kDefault);
   return Status::OK();
 }
 

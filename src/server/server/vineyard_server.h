@@ -28,6 +28,7 @@ limitations under the License.
 
 #include "common/util/callback.h"
 #include "common/util/json.h"
+#include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -84,7 +85,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                           asio::io_service& meta_context,
 #endif
                           callback_t<std::string const&> callback);
-  Status Serve(std::string const& bulk_store_type);
+  Status Serve(StoreType const& bulk_store_type);
   Status Finalize();
   inline const json& GetSpec() { return spec_; }
   inline const std::string GetDeployment() {
@@ -98,7 +99,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   inline asio::io_service& GetContext() { return context_; }
   inline asio::io_service& GetMetaContext() { return meta_context_; }
 #endif
-  inline std::string GetBulkStoreType() { return bulk_store_type_; }
+  inline StoreType GetBulkStoreType() { return bulk_store_type_; }
 
   template <typename T = ObjectID>
   auto GetBulkStore() {
@@ -227,7 +228,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   std::list<DeferredReq> deferred_;
 
-  std::string bulk_store_type_;
+  StoreType bulk_store_type_;
   std::shared_ptr<BulkStore> bulk_store_;
   std::shared_ptr<PlasmaBulkStore> plasma_bulk_store_;
   std::shared_ptr<StreamStore> stream_store_;

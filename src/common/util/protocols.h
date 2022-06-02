@@ -88,14 +88,20 @@ enum class CommandType {
   IncreaseReferenceCountRequest = 54,
 };
 
+enum class StoreType {
+  kHost = 0,
+  kDefault = 1,
+  kPlasma = 2,
+};
+
 CommandType ParseCommandType(const std::string& str_type);
 
 void WriteErrorReply(Status const& status, std::string& msg);
 
-void WriteRegisterRequest(std::string& msg, std::string const& bulk_store_type);
+void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type);
 
 Status ReadRegisterRequest(const json& msg, std::string& version,
-                           std::string& bulk_store_type);
+                           StoreType& bulk_store_type);
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
@@ -396,10 +402,9 @@ void WriteDebugReply(const json& result, std::string& msg);
 
 Status ReadDebugReply(const json& root, json& result);
 
-void WriteNewSessionRequest(std::string& msg,
-                            std::string const& bulk_store_type);
+void WriteNewSessionRequest(std::string& msg, StoreType const& bulk_store_type);
 
-Status ReadNewSessionRequest(json const& root, std::string& bulk_store_type);
+Status ReadNewSessionRequest(json const& root, StoreType& bulk_store_type);
 
 void WriteNewSessionReply(std::string& msg, std::string const& socket_path);
 

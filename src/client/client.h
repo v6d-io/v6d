@@ -33,6 +33,7 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/memory/payload.h"
 #include "common/util/lifecycle.h"
+#include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -126,10 +127,10 @@ class SharedMemoryManager {
  * the reference count and payload on client to avoid frequent IPCs like
  * `IncreaseReferenceCountRequest` with server. It requires the derived class to
  * implement the:
- *  - OnRelease(ID) method to describe what will happens when ref_count reaches
- * zero.
- *  - OnDelete(ID) method to describe what will happens what reaches reaches
- * zero and the object is marked as to be deleted.
+ *  - `OnRelease(ID)` method to describe what will happens when `ref_count`
+ * reaches zero.
+ *  - `OnDelete(ID)` method to describe what will happens when `ref_count`
+ * reaches zero and the object is marked as to be deleted.
  */
 template <typename ID, typename P, typename Der>
 class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
@@ -262,7 +263,7 @@ class BasicIPCClient : public ClientBase {
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& ipc_socket,
-                 std::string const& bulk_store_type);
+                 StoreType const& bulk_store_type);
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .
@@ -272,8 +273,7 @@ class BasicIPCClient : public ClientBase {
    *
    * @return Status that indicates whether the connection of has succeeded.
    */
-  Status Open(std::string const& ipc_socket,
-              std::string const& bulk_store_type);
+  Status Open(std::string const& ipc_socket, StoreType const& bulk_store_type);
 
  protected:
   std::shared_ptr<detail::SharedMemoryManager> shm_;

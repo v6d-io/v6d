@@ -28,6 +28,7 @@ limitations under the License.
 
 #include "common/util/callback.h"
 #include "common/util/json.h"
+#include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -49,7 +50,7 @@ class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
   Status Serve();
   Status Finalize();
   Status GetRootSession(vs_ptr_t& vs_ptr);
-  Status CreateNewSession(std::string const& bulk_store_type,
+  Status CreateNewSession(StoreType const& bulk_store_type,
                           callback_t<std::string const&> callback);
   Status Delete(SessionID const& sid);
   Status Get(SessionID const& sid, vs_ptr_t& session);

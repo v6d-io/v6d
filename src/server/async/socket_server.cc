@@ -53,7 +53,7 @@ bool SocketConnection::Stop() {
   }
 
   auto self(shared_from_this());
-  if (server_ptr_->GetBulkStoreType() == "Normal") {
+  if (server_ptr_->GetBulkStoreType() == StoreType::kDefault) {
     std::unordered_set<ObjectID> ids;
     auto status =
         server_ptr_->GetBulkStore()->ReleaseConnection(this->getConnId());
@@ -333,9 +333,10 @@ bool SocketConnection::processMessage(const std::string& message_in) {
 
 bool SocketConnection::doRegister(const json& root) {
   auto self(shared_from_this());
-  std::string client_version, message_out, bulk_store_type;
+  std::string client_version, message_out;
+  StoreType bulk_store_type;
   TRY_READ_REQUEST(ReadRegisterRequest, root, client_version, bulk_store_type);
-  bool store_match = (bulk_store_type == "Any" ||
+  bool store_match = (bulk_store_type == StoreType::kHost ||
                       bulk_store_type == server_ptr_->GetBulkStoreType());
   WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
                      server_ptr_->instance_id(), server_ptr_->session_id(),
@@ -1073,7 +1074,7 @@ bool SocketConnection::doDebug(const json& root) {
 
 bool SocketConnection::doNewSession(const json& root) {
   auto self(shared_from_this());
-  std::string bulk_store_type;
+  StoreType bulk_store_type;
   TRY_READ_REQUEST(ReadNewSessionRequest, root, bulk_store_type);
   VINEYARD_CHECK_OK(server_ptr_->GetRunner()->CreateNewSession(
       bulk_store_type,
@@ -1243,14 +1244,14 @@ bool SocketConnection::doMoveBuffersOwnership(json const& root) {
   vs_ptr_t source_session;
   RESPONSE_ON_ERROR(server_ptr_->GetRunner()->Get(session_id, source_session));
 
-  if (source_session->GetBulkStoreType() == "Normal") {
-    if (server_ptr_->GetBulkStoreType() == "Normal") {
+  if (source_session->GetBulkStoreType() == StoreType::kDefault) {
+    if (server_ptr_->GetBulkStoreType() == StoreType::kDefault) {
       RESPONSE_ON_ERROR(MoveBuffers(id_to_id, source_session));
     } else {
       RESPONSE_ON_ERROR(MoveBuffers(id_to_pid, source_session));
     }
   } else {
-    if (server_ptr_->GetBulkStoreType() == "Normal") {
+    if (server_ptr_->GetBulkStoreType() == StoreType::kDefault) {
       RESPONSE_ON_ERROR(MoveBuffers(pid_to_id, source_session));
     } else {
       RESPONSE_ON_ERROR(MoveBuffers(pid_to_pid, source_session));

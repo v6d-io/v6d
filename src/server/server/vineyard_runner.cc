@@ -60,7 +60,7 @@ Status VineyardRunner::Serve() {
   sessions_.emplace(RootSessionID(), root_vs);
 
   // start a root session
-  VINEYARD_CHECK_OK(root_vs->Serve("Normal"));
+  VINEYARD_CHECK_OK(root_vs->Serve(StoreType::kDefault));
 
   for (unsigned int idx = 0; idx < concurrency_; ++idx) {
 #if BOOST_VERSION >= 106600
@@ -88,8 +88,7 @@ Status VineyardRunner::GetRootSession(vs_ptr_t& vs_ptr) {
 }
 
 Status VineyardRunner::CreateNewSession(
-    std::string const& bulk_store_type,
-    callback_t<std::string const&> callback) {
+    StoreType const& bulk_store_type, callback_t<std::string const&> callback) {
   SessionID session_id = GenerateSessionID();
   json spec(spec_template_);
 
