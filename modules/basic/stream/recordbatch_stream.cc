@@ -24,9 +24,12 @@ limitations under the License.
 #include "arrow/io/api.h"
 
 #include "basic/ds/arrow.h"
+#include "basic/ds/arrow.vineyard.h"
+#include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "common/util/status.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -78,17 +81,26 @@ Status RecordBatchStream::ReadTable(std::shared_ptr<arrow::Table>& table) {
 
 Status RecordBatchStream::ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
                                     bool const copy) {
-  std::shared_ptr<RecordBatch> recordbatch;
-  auto status = this->Next(recordbatch);
-  if (status.ok()) {
-    batch = recordbatch->GetRecordBatch();
-    if (copy) {
-      std::shared_ptr<arrow::Buffer> buffer;
-      RETURN_ON_ERROR(SerializeRecordBatch(batch, &buffer));
-      RETURN_ON_ERROR(DeserializeRecordBatch(buffer, &batch));
-    }
+  RETURN_ON_ASSERT(client_ != nullptr && this->readonly_ == true,
+                   "Expect a readonly stream");
+  std::shared_ptr<Object> result = nullptr;
+  RETURN_ON_ERROR(client_->ClientBase::PullNextStreamChunk(this->id_, result));
+
+  if (auto chunk = std::dynamic_pointer_cast<RecordBatch>(result)) {
+    batch = chunk->GetRecordBatch();
+  } else if (auto chunk = std::dynamic_pointer_cast<Blob>(result)) {
+    auto buffer = chunk->Buffer();
+    RETURN_ON_ERROR(DeserializeRecordBatch(buffer, &batch));
+    batch = AddMetadataToRecordBatch(batch, params_);
+  } else {
+    return Status::Invalid("Failed to cast object with type '" +
+                           result->meta().GetTypeName() + "' to type '" +
+                           type_name<RecordBatch>() + "'");
   }
-  return status;
+  if (batch != nullptr && copy) {
+    batch = CopyRecordBatch(batch);
+  }
+  return Status::OK();
 }
 
 }  // namespace vineyard

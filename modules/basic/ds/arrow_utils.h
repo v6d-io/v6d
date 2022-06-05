@@ -16,8 +16,10 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_ARROW_UTILS_H_
 #define MODULES_BASIC_DS_ARROW_UTILS_H_
 
+#include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -222,6 +224,36 @@ struct EmptyTableBuilder {
  */
 std::shared_ptr<arrow::Table> ConcatenateTables(
     std::vector<std::shared_ptr<arrow::Table>>& tables);
+
+/**
+ * @brief Make a copy for a arrow ArrayData.
+ *
+ * arrow::ArrayData::Copy() is a shallow thus is not suitable in many
+ * cases.
+ */
+std::shared_ptr<arrow::ArrayData> CopyArrayData(
+    std::shared_ptr<arrow::ArrayData> const& array);
+
+/**
+ * @brief Make a copy for a arrow recordbatch.
+ */
+std::shared_ptr<arrow::RecordBatch> CopyRecordBatch(
+    std::shared_ptr<arrow::RecordBatch> const& batch);
+
+/**
+ * @brief Add extra metadata mapping to existing recordbatch.
+ */
+std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
+    std::shared_ptr<arrow::RecordBatch> const& batch,
+    std::map<std::string, std::string> const& meta);
+
+/**
+ * @brief Add extra metadata mapping to existing recordbatch, the
+ * std::unordered_map variant.
+ */
+std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
+    std::shared_ptr<arrow::RecordBatch> const& batch,
+    std::unordered_map<std::string, std::string> const& meta);
 
 /**
  * @brief Convert type name in string to arrow type.

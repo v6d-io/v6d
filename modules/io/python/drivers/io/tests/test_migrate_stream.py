@@ -55,8 +55,8 @@ def test_migrate_stream(
     meta = vineyard.ObjectMeta()
     meta['typename'] = 'vineyard::ParallelStream'
     meta.set_global(True)
-    meta['size_'] = 1
-    meta.add_member("stream_0", new_stream)
+    meta['__streams_-size'] = 1
+    meta.add_member("__streams_-0", new_stream)
     ret_meta = client2.create_metadata(meta)
     client2.persist(ret_meta)
 

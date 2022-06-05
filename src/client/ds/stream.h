@@ -173,11 +173,12 @@ class Stream : public Object {
 
  protected:
   Client* client_ = nullptr;
+  bool readonly_ = false;
+  std::map<std::string, std::string> params_;
+
   virtual std::string GetTypeName() const { return type_name<Stream<T>>(); }
 
  private:
-  std::map<std::string, std::string> params_;
-  bool readonly_ = false;
   bool stoped_;  // an optimization: avoid repeated idempotent requests.
 
   friend class StreamBuilder<T>;

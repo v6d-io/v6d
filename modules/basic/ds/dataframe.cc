@@ -19,6 +19,9 @@ namespace vineyard {
 
 class DataFrameBuilder;
 
+DataFrameBuilder::DataFrameBuilder(Client& client)
+    : DataFrameBaseBuilder(client) {}
+
 const std::vector<json>& DataFrame::Columns() const { return this->columns_; }
 
 std::shared_ptr<ITensor> DataFrame::Index() const {
