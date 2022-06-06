@@ -190,9 +190,9 @@ class ParallelStreamLauncher(ScriptLauncher):
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::ParallelStream'
         meta.set_global(True)
-        meta['size_'] = len(partial_ids)
+        meta['__streams_-size'] = len(partial_ids)
         for idx, partition_id in enumerate(partial_ids):
-            meta.add_member("stream_%d" % idx, partition_id)
+            meta.add_member("__streams_-%d" % idx, partition_id)
         vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
         ret_meta = vineyard_rpc_client.create_metadata(meta)
         vineyard_rpc_client.persist(ret_meta.id)

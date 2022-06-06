@@ -15,6 +15,9 @@ limitations under the License.
 
 #include "basic/ds/arrow_utils.h"
 
+#include <map>
+#include <unordered_map>
+
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
@@ -88,6 +91,10 @@ Status SerializeRecordBatch(std::shared_ptr<arrow::RecordBatch>& batch,
 
 Status DeserializeRecordBatch(std::shared_ptr<arrow::Buffer>& buffer,
                               std::shared_ptr<arrow::RecordBatch>* batch) {
+  if (buffer == nullptr || buffer->size() == 0) {
+    return Status::Invalid(
+        "Unable to deserialize to recordbatch: buffer is empty");
+  }
   arrow::io::BufferReader reader(buffer);
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
@@ -260,6 +267,80 @@ std::shared_ptr<arrow::Schema> EmptyTableBuilder::EmptySchema() {
 #else
   return std::shared_ptr<arrow::Schema>(new arrow::Schema({}));
 #endif
+}
+
+std::shared_ptr<arrow::ArrayData> CopyArrayData(
+    std::shared_ptr<arrow::ArrayData> const& array) {
+  if (array == nullptr) {
+    return array;
+  }
+  std::vector<std::shared_ptr<arrow::Buffer>> buffers;
+  for (auto const& buffer : array->buffers) {
+    if (buffer == nullptr || buffer->size() == 0) {
+      buffers.push_back(buffer);
+    } else {
+      std::shared_ptr<arrow::Buffer> buf;
+      CHECK_ARROW_ERROR_AND_ASSIGN(buf, buffer->CopySlice(0, buffer->size()));
+      buffers.push_back(buf);
+    }
+  }
+  std::vector<std::shared_ptr<arrow::ArrayData>> child_data;
+  for (auto const& child : array->child_data) {
+    child_data.push_back(CopyArrayData(child));
+  }
+  return arrow::ArrayData::Make(array->type, array->length, buffers, child_data,
+                                array->null_count, array->offset);
+}
+
+std::shared_ptr<arrow::RecordBatch> CopyRecordBatch(
+    std::shared_ptr<arrow::RecordBatch> const& batch) {
+  if (batch == nullptr) {
+    return nullptr;
+  }
+  arrow::ArrayDataVector columns_data;
+  for (auto const& column : batch->column_data()) {
+    columns_data.push_back(CopyArrayData(column));
+  }
+  return arrow::RecordBatch::Make(batch->schema(), batch->num_rows(),
+                                  columns_data);
+}
+
+std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
+    std::shared_ptr<arrow::RecordBatch> const& batch,
+    std::map<std::string, std::string> const& meta) {
+  if (batch == nullptr || meta.empty()) {
+    return batch;
+  }
+  std::shared_ptr<arrow::KeyValueMetadata> metadata;
+  if (batch->schema()->metadata() != nullptr) {
+    metadata = batch->schema()->metadata()->Copy();
+  } else {
+    metadata.reset(new arrow::KeyValueMetadata());
+  }
+
+  for (auto const& kv : meta) {
+    CHECK_ARROW_ERROR(metadata->Set(kv.first, kv.second));
+  }
+  return batch->ReplaceSchemaMetadata(metadata);
+}
+
+std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
+    std::shared_ptr<arrow::RecordBatch> const& batch,
+    std::unordered_map<std::string, std::string> const& meta) {
+  if (batch == nullptr || meta.empty()) {
+    return batch;
+  }
+  std::shared_ptr<arrow::KeyValueMetadata> metadata;
+  if (batch->schema()->metadata() != nullptr) {
+    metadata = batch->schema()->metadata()->Copy();
+  } else {
+    metadata.reset(new arrow::KeyValueMetadata());
+  }
+
+  for (auto const& kv : meta) {
+    CHECK_ARROW_ERROR(metadata->Set(kv.first, kv.second));
+  }
+  return batch->ReplaceSchemaMetadata(metadata);
 }
 
 std::shared_ptr<arrow::DataType> type_name_to_arrow_type(

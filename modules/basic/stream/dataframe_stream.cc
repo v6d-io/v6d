@@ -24,6 +24,8 @@ limitations under the License.
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
 
+#include "basic/ds/arrow_utils.h"
+#include "basic/ds/dataframe.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
@@ -52,8 +54,15 @@ Status DataframeStream::WriteDataframe(std::shared_ptr<DataFrame> df) {
 Status DataframeStream::ReadRecordBatches(
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches) {
   std::shared_ptr<arrow::RecordBatch> batch;
-  while (this->ReadBatch(batch, true).ok()) {
-    batches.emplace_back(batch);
+  while (true) {
+    auto status = this->ReadBatch(batch, true);
+    if (status.ok()) {
+      batches.emplace_back(batch);
+    } else if (status.IsStreamDrained()) {
+      break;
+    } else {
+      return status;
+    }
   }
   return Status::OK();
 }
@@ -68,9 +77,28 @@ Status DataframeStream::ReadTable(std::shared_ptr<arrow::Table>& table) {
 
 Status DataframeStream::ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
                                   const bool copy) {
-  std::shared_ptr<DataFrame> df;
-  RETURN_ON_ERROR(this->Next(df));
-  batch = df->AsBatch(copy);
+  RETURN_ON_ASSERT(client_ != nullptr && this->readonly_ == true,
+                   "Expect a readonly stream");
+  std::shared_ptr<Object> result = nullptr;
+  RETURN_ON_ERROR(client_->ClientBase::PullNextStreamChunk(this->id_, result));
+
+  if (auto chunk = std::dynamic_pointer_cast<DataFrame>(result)) {
+    batch = chunk->AsBatch();
+  }
+  if (auto chunk = std::dynamic_pointer_cast<RecordBatch>(result)) {
+    batch = chunk->GetRecordBatch();
+  } else if (auto chunk = std::dynamic_pointer_cast<Blob>(result)) {
+    auto buffer = chunk->Buffer();
+    RETURN_ON_ERROR(DeserializeRecordBatch(buffer, &batch));
+    batch = AddMetadataToRecordBatch(batch, params_);
+  } else {
+    return Status::Invalid("Failed to cast object with type '" +
+                           result->meta().GetTypeName() + "' to type '" +
+                           type_name<RecordBatch>() + "'");
+  }
+  if (batch != nullptr && copy) {
+    batch = CopyRecordBatch(batch);
+  }
   return Status::OK();
 }
 

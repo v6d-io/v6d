@@ -168,7 +168,21 @@ Status ReadRegisterRequest(const json& root, std::string& version,
   // When the "version" field is missing from the client, we treat it
   // as default unknown version number: 0.0.0.
   version = root.value<std::string>("version", "0.0.0");
-  store_type = root.value("store_type", /* default */ StoreType::kDefault);
+
+  // Keep backwards compatibility.
+  if (root.contains("store_type")) {
+    if (root["store_type"].is_number()) {
+      store_type = root.value("store_type", /* default */ StoreType::kDefault);
+    } else {
+      std::string store_type_name =
+          root.value("store_type", /* default */ "Normal");
+      if (store_type_name == "Plasma") {
+        store_type = StoreType::kPlasma;
+      } else {
+        store_type = StoreType::kDefault;
+      }
+    }
+  }
   return Status::OK();
 }
 

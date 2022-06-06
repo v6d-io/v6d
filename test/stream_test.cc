@@ -159,7 +159,7 @@ void testEmptyStream(Client& client, std::string const& ipc_socket) {
   }
 }
 
-void testDataframeStream(Client& client, std::string const& ipc_socket) {
+void testRecordBatchStream(Client& client, std::string const& ipc_socket) {
   ObjectID stream_id = InvalidObjectID();
   {
     std::unordered_map<std::string, std::string> params{
@@ -212,18 +212,18 @@ void testDataframeStream(Client& client, std::string const& ipc_socket) {
     Client reader_client;
     VINEYARD_CHECK_OK(reader_client.Connect(ipc_socket));
 
-    auto dataframe_stream =
+    auto recordbatch_stream =
         reader_client.GetObject<RecordBatchStream>(stream_id);
-    CHECK(dataframe_stream != nullptr);
+    CHECK(recordbatch_stream != nullptr);
 
-    VINEYARD_CHECK_OK(dataframe_stream->OpenReader(&reader_client));
+    VINEYARD_CHECK_OK(recordbatch_stream->OpenReader(&reader_client));
 
-    auto status1 = dataframe_stream->OpenReader(&reader_client);
+    auto status1 = recordbatch_stream->OpenReader(&reader_client);
     CHECK(status1.IsStreamOpened());
 
     while (true) {
       std::shared_ptr<arrow::RecordBatch> load_batch;
-      auto status = dataframe_stream->ReadBatch(load_batch, true);
+      auto status = recordbatch_stream->ReadBatch(load_batch, true);
       if (status.ok()) {
         CHECK(load_batch != nullptr);
         recv_chunks += 1;
@@ -238,21 +238,21 @@ void testDataframeStream(Client& client, std::string const& ipc_socket) {
     Client writer_client;
     VINEYARD_CHECK_OK(writer_client.Connect(ipc_socket));
 
-    auto dataframe_stream =
+    auto recordbatch_stream =
         writer_client.GetObject<RecordBatchStream>(stream_id);
-    CHECK(dataframe_stream != nullptr);
+    CHECK(recordbatch_stream != nullptr);
 
-    VINEYARD_CHECK_OK(dataframe_stream->OpenWriter(&writer_client));
+    VINEYARD_CHECK_OK(recordbatch_stream->OpenWriter(&writer_client));
 
-    auto status1 = dataframe_stream->OpenWriter(&writer_client);
+    auto status1 = recordbatch_stream->OpenWriter(&writer_client);
     CHECK(status1.IsStreamOpened());
 
     for (size_t idx = 1; idx <= 11; ++idx) {
-      VINEYARD_CHECK_OK(dataframe_stream->WriteBatch(batch));
+      VINEYARD_CHECK_OK(recordbatch_stream->WriteBatch(batch));
       send_chunks += 1;
       sleep(1);
     }
-    VINEYARD_CHECK_OK(dataframe_stream->Finish());
+    VINEYARD_CHECK_OK(recordbatch_stream->Finish());
   });
 
   send_thrd.join();
@@ -272,17 +272,37 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
+  std::shared_ptr<InstanceStatus> status_before, status_after;
+
+  VINEYARD_CHECK_OK(client.InstanceStatus(status_before));
+
   testByteStream(client, ipc_socket);
   LOG(INFO) << "Passed bytestream test...";
+
+  VINEYARD_CHECK_OK(client.InstanceStatus(status_after));
+  CHECK_EQ(status_before->memory_limit, status_after->memory_limit);
+  CHECK_EQ(status_before->memory_usage, status_after->memory_usage);
 
   testByteStreamFailed(client, ipc_socket);
   LOG(INFO) << "Passed failed bytestream test...";
 
+  VINEYARD_CHECK_OK(client.InstanceStatus(status_after));
+  CHECK_EQ(status_before->memory_limit, status_after->memory_limit);
+  CHECK_EQ(status_before->memory_usage, status_after->memory_usage);
+
   testEmptyStream(client, ipc_socket);
   LOG(INFO) << "Passed empty bytestream test...";
 
-  testDataframeStream(client, ipc_socket);
-  LOG(INFO) << "Passed empty dataframe test...";
+  VINEYARD_CHECK_OK(client.InstanceStatus(status_after));
+  CHECK_EQ(status_before->memory_limit, status_after->memory_limit);
+  CHECK_EQ(status_before->memory_usage, status_after->memory_usage);
+
+  testRecordBatchStream(client, ipc_socket);
+  LOG(INFO) << "Passed recordbatch test...";
+
+  VINEYARD_CHECK_OK(client.InstanceStatus(status_after));
+  CHECK_EQ(status_before->memory_limit, status_after->memory_limit);
+  CHECK_EQ(status_before->memory_usage, status_after->memory_usage);
 
   LOG(INFO) << "Passed stream tests...";
 

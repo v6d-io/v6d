@@ -27,10 +27,12 @@ logger = logging.getLogger("vineyard")
 def parallel_stream_resolver(obj):
     """Return a list of *local* partial streams."""
     meta = obj.meta
-    partition_size = int(meta["size_"])
+    partition_size = int(meta["__streams_-size"])
     logger.debug('parallel stream: partitions = %d', partition_size)
     with resolver_context() as ctx:
-        return [ctx(meta.get_member("stream_%d" % i)) for i in range(partition_size)]
+        return [
+            ctx(meta.get_member("__streams_-%d" % i)) for i in range(partition_size)
+        ]
 
 
 def register_parallel_stream_types(builder_ctx, resolver_ctx):

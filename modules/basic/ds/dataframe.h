@@ -45,7 +45,7 @@ namespace vineyard {
  */
 class DataFrameBuilder : public DataFrameBaseBuilder {
  public:
-  explicit DataFrameBuilder(Client& client) : DataFrameBaseBuilder(client) {}
+  explicit DataFrameBuilder(Client& client);
 
   /**
    * @brief Get the partition index of the global dataframe.
