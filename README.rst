@@ -38,7 +38,7 @@ Table of Contents
   * `Deployment on Kubernetes <#deployment-on-kubernetes>`_
   * `Deployment with Helm <#deployment-with-helm>`_
 
-* `FAQ <#faq>`_
+* `Frequently asked questions <#faq>`_
 * `Getting involved <#getting-involved>`_
 * `Acknowledgements <#acknowledgements>`_
 
