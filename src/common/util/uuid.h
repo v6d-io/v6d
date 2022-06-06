@@ -87,8 +87,9 @@ inline ObjectID GenerateBlobID(const uintptr_t ptr) {
   return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc())) |
          0x8000000000000000UL;
 #else
-  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(rand())) |
-         0x8000000000000000UL;  // NOLINT(runtime/threadsafe_fn)
+  return 0x8000000000000000UL |
+         (0x7FFFFFFFFFFFFFFFUL &
+          static_cast<uint64_t>(rand()));  // NOLINT(runtime/threadsafe_fn)
 #endif
 }
 
