@@ -82,16 +82,15 @@ auto static_if(T t) {
   return static_if(std::integral_constant<bool, B>{}, t, [](auto&&...) {});
 }
 
-// blob id: 1 + memory address (in vineyardd)
-// non-blob id: 0 + random (rdstc)
-inline void* GetBlobAddr(ObjectID const id) {
-  return (id & 0x8000000000000000UL)
-             ? reinterpret_cast<void*>(id & 0x7FFFFFFFFFFFFFFFUL)
-             : nullptr;
-}
-
 inline ObjectID GenerateBlobID(const uintptr_t ptr) {
-  return 0x8000000000000000UL | reinterpret_cast<uintptr_t>(ptr);
+#if defined(__x86_64__)
+  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc())) |
+         0x8000000000000000UL;
+#else
+  return 0x8000000000000000UL |
+         (0x7FFFFFFFFFFFFFFFUL &
+          static_cast<uint64_t>(rand()));  // NOLINT(runtime/threadsafe_fn)
+#endif
 }
 
 inline SessionID GenerateSessionID() {
