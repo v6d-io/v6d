@@ -55,18 +55,22 @@ command -v sed >/dev/null 2>&1 || { usage; echo >&2 "ERROR:I require sed but it'
 # requires gzip
 command -v gzip >/dev/null 2>&1 || { usage; echo >&2 "ERROR:I require gzip but it's not installed.  Aborting."; usage; exit 1; }
 
-export TARMODULE=`basename \`git rev-parse --show-toplevel\``
 export GIT_TAG=`git describe --tags --abbrev=0`
+if [[ -z "${GIT_TAG}" ]]; then
+  export GIT_TAG=`git rev-parse --short HEAD`
+fi
+
+export TARMODULE=`basename \`git rev-parse --show-toplevel\``
 export TARVERSION=`echo ${GIT_TAG} | sed 's/v//g'`
 export TARPREFIX="${TARMODULE}-${TARVERSION}"
 
 if [[ ! -d "${TMPDIR}" ]]; then
-  export TMPDIR=$(dirname $(mktemp -u))
+  export TMPDIR=$(dirname $(mktemp -u))/
 fi
 
 # create module archive
-git archive --prefix=${TARPREFIX}/ -o ${TMPDIR}${TARPREFIX}.tar ${GIT_TAG}
-if [[ ! -f "${TMPDIR}${TARPREFIX}.tar" ]]; then
+git archive --prefix=${TARPREFIX}/ -o ${TMPDIR}/${TARPREFIX}.tar ${GIT_TAG}
+if [[ ! -f "${TMPDIR}/${TARPREFIX}.tar" ]]; then
   echo "ERROR: base sourcecode archive was not created. check git output in log above."
   usage
   exit 1
@@ -82,11 +86,11 @@ fi
 git submodule update --init ${recursively}
 
 # tar each submodule recursively
-git submodule foreach ${recursively} 'git archive --prefix=${TARPREFIX}/${displaypath}/ HEAD > ${TMPDIR}tmp.tar && ${TARCOMMAND} --concatenate --file=${TMPDIR}${TARPREFIX}.tar ${TMPDIR}tmp.tar'
+git submodule foreach ${recursively} 'git archive --prefix=${TARPREFIX}/${displaypath}/ HEAD > ${TMPDIR}/tmp.tar && ${TARCOMMAND} --concatenate --file=${TMPDIR}/${TARPREFIX}.tar ${TMPDIR}/tmp.tar'
 
 # compress tar file
-gzip -9 ${TMPDIR}${TARPREFIX}.tar
-if [[ ! -f "${TMPDIR}${TARPREFIX}.tar.gz" ]]; then
+gzip -9 ${TMPDIR}/${TARPREFIX}.tar
+if [[ ! -f "${TMPDIR}/${TARPREFIX}.tar.gz" ]]; then
   echo "ERROR: gzipped archive was not created. check git output in log above."
   usage
   exit 1
@@ -98,12 +102,12 @@ if [[ -z "$1" ]]; then
 else
   destination=$1
 fi
-cp ${TMPDIR}${TARPREFIX}.tar.gz ${destination}
-if [[ -f "${TMPDIR}${TARPREFIX}.tar.gz" ]]; then
-  rm ${TMPDIR}${TARPREFIX}.tar.gz
+cp ${TMPDIR}/${TARPREFIX}.tar.gz ${destination}
+if [[ -f "${TMPDIR}/${TARPREFIX}.tar.gz" ]]; then
+  rm ${TMPDIR}/${TARPREFIX}.tar.gz
   echo "created ${destination}"
 else
-  echo "ERROR copying ${TMPDIR}${TARPREFIX}.tar.gz to ${destination}"
+  echo "ERROR copying ${TMPDIR}/${TARPREFIX}.tar.gz to ${destination}"
   usage
   exit 1
 fi
