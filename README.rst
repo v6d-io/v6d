@@ -21,6 +21,27 @@ computing (e.g., `Mars`_), and machine learning.
 
 Vineyard is a `CNCF sandbox project`_ and indeed made successful by its community.
 
+Table of Contents
+-----------------
+
+* `What is vineyard <#what-is-vineyard>`_
+* `Features <#features>`_
+
+  * `In-Memory immutable data sharing <#in-memory-immutable-data-sharing>`_
+  * `Out-of-box high level data abstraction <#out-of-box-high-level-data-abstraction>`_
+  * `Stream pipelining <#stream-pipelining>`_
+  * `Drivers <#drivers>`_
+
+* `Try vineyard <#try-vineyard>`_
+* `Integrate with Kubernetes <#integrate-with-kubernetes>`_
+
+  * `Deployment on Kubernetes <#deployment-on-kubernetes>`_
+  * `Deployment with Helm <#deployment-with-helm>`_
+
+* `FAQ <#faq>`_
+* `Getting involved <#getting-involved>`_
+* `Acknowledgements <#acknowledgements>`_
+
 What is vineyard
 ----------------
 
@@ -157,6 +178,29 @@ Besides sharing the high level data abstractions, vineyard extends the capabilit
 of data structures by drivers, enabling out-of-the-box reusable routines for the
 boilerplate part in computation jobs.
 
+Try vineyard
+------------
+
+Vineyard is distributed as a `python package`_ and can be easily installed with ``pip``:
+
+.. code:: shell
+
+   pip3 install vineyard
+
+The latest version of online documentation can be found at https://v6d.io.
+
+If you want to build vineyard from source, please refer to `Installation`_, and refer to
+`Contributing`_ for how to build and run unittests locally.
+
+Once installed, you can start a vineyard instance with:
+
+.. code:: shell
+
+   python3 -m vineyard
+
+For more details about connecting to a locally deployed vineyard instance, please refer to
+`Getting Started`_.
+
 Integrate with Kubernetes
 -------------------------
 
@@ -165,8 +209,8 @@ to cloud-native computing. Vineyard could provide efficient distributed data sha
 in cloud-native environment by embracing cloud-native big data processing and Kubernetes
 helps vineyard leverage the scale-in/out and scheduling ability of Kubernetes.
 
-Deployment
-^^^^^^^^^^
+Deployment on Kubernetes
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 For better leveraging the scale-in/out capability of Kubernetes for worker pods of
 a data analytical job, vineyard could be deployed on Kubernetes to as a DaemonSet
@@ -176,6 +220,9 @@ domain socket with fine-grained access control.
 The UNIX domain socket can be either mounted on ``hostPath`` or via a ``PersistentVolumeClaim``.
 When users bundle vineyard and the workload to the same pod, the UNIX domain socket
 could also be shared using an ``emptyDir``.
+
+**Note** that when deploying vineyard on Kubernetes, it usually can only be connected
+from containers in the same pod, or pods on the same hosts.
 
 Deployment with Helm
 ^^^^^^^^^^^^^^^^^^^^
@@ -191,20 +238,6 @@ with ``helm``:
 In the further vineyard will improve the integration with Kubernetes by abstract
 vineyard objects as as Kubernetes resources (i.e., CRDs), and leverage a vineyard
 operator to operate vineyard cluster.
-
-Install vineyard
-----------------
-
-Vineyard is distributed as a `python package`_ and can be easily installed with ``pip``:
-
-.. code:: shell
-
-   pip3 install vineyard
-
-The latest version of online documentation can be found at https://v6d.io.
-
-If you want to build vineyard from source, please refer to `Installation`_, and refer to
-`Contributing`_ for how to build and run unittests locally.
 
 FAQ
 ---
@@ -267,6 +300,7 @@ third-party libraries may not have the same license as vineyard.
 .. _GraphScope: https://github.com/alibaba/GraphScope
 .. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/install.rst
 .. _Contributing: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
+.. _Getting Started: https://v6d.io/notes/getting-started.html
 .. _Apache License 2.0: https://github.com/v6d-io/v6d/blob/main/LICENSE
 .. _contribution guide: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
