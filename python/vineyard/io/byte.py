@@ -149,8 +149,9 @@ class ByteStream(BaseStream):
         def _try_flush_buffer(self, force=False):
             view = self._buffer.getbuffer()
             if len(view) >= self._buffer_size_limit or (force and len(view) > 0):
-                chunk = self.next(len(view))
-                memory_copy(chunk, 0, view)
+                if len(view) > 0:
+                    chunk = self.next(len(view))
+                    memory_copy(chunk, 0, view)
                 self._buffer = BytesIO()
 
         def finish(self):

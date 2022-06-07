@@ -58,8 +58,9 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
         assert offset + len(chunk) <= len(
             buffer
         ), "Failed to reconstruct blobs: buffer out of range"
-        vineyard.memory_copy(buffer, offset, chunk)
-        offset += len(chunk)
+        if len(chunk) > 0:
+            vineyard.memory_copy(buffer, offset, chunk)
+            offset += len(chunk)
     return blob.seal(client)
 
 

@@ -158,8 +158,9 @@ def read_bytes(  # noqa: C901
                     if size <= 0:
                         break
                     begin += size - 1
-                    chunk = writer.next(size)
-                    vineyard.memory_copy(chunk, 0, buffer)
+                    if size > 0:
+                        chunk = writer.next(size)
+                        vineyard.memory_copy(chunk, 0, buffer)
         writer.finish()
     except Exception:
         report_exception()
