@@ -144,8 +144,9 @@ class DataframeStream(BaseStream):
             with pa.ipc.new_stream(sink, batch.schema) as writer:
                 writer.write(batch)
             view = sink.getbuffer()
-            buffer = self.next(len(view))
-            memory_copy(buffer, 0, view)
+            if len(view) > 0:
+                buffer = self.next(len(view))
+                memory_copy(buffer, 0, view)
 
         def write_table(self, table: pa.Table):
             for batch in table.to_batches():

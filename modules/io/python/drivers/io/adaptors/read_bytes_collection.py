@@ -79,9 +79,10 @@ def read_byte_stream(
             begin, end = 0, total_size
             while begin < end:
                 buffer = read_block(f, begin, min(chunk_size, end - begin))
-                chunk = writer.next(len(buffer))
-                vineyard.memory_copy(chunk, 0, buffer)
-                begin += len(buffer)
+                if len(buffer) > 0:
+                    chunk = writer.next(len(buffer))
+                    vineyard.memory_copy(chunk, 0, buffer)
+                    begin += len(buffer)
         except Exception:
             report_exception()
             writer.fail()

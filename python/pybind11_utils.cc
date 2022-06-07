@@ -217,7 +217,7 @@ Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
   }
 
   // skip none buffers
-  if (src_buffer.data() == nullptr) {
+  if (src_buffer.data() == nullptr || src_buffer.size() == 0) {
     return Status::OK();
   }
 

@@ -63,8 +63,9 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
 
             # write to byte stream
             first_write = False
-            chunk = stream_writer.next(len(csv_content))
-            vineyard.memory_copy(chunk, 0, csv_content)
+            if len(csv_content) > 0:
+                chunk = stream_writer.next(len(csv_content))
+                vineyard.memory_copy(chunk, 0, csv_content)
     except Exception:
         report_exception()
         stream_writer.fail()
