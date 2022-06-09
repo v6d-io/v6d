@@ -20,6 +20,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
 option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" OFF)
+option(USE_EXTERNAL_NLOHMANN_JSON_LIBS "Build with external nlohmann-json library rather than the submodule one" ON)
 option(USE_ASAN "Using address sanitizer to check memory accessing" OFF)
 option(USE_INCLUDE_WHAT_YOU_USE "Simply the intra-module dependencies with iwyu" OFF)
 option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of metadata" OFF)
@@ -340,8 +341,16 @@ macro(find_nlohmann_json)
     set(JSON_Install ON CACHE INTERNAL "")
     set(JSON_MultipleHeaders ON CACHE INTERNAL "")
     set(JSON_ImplicitConversions OFF CACHE INTERNAL "")
-    if(NOT TARGET nlohmann_json)
-        add_subdirectory_static(thirdparty/nlohmann-json)
+    if(NOT TARGET nlohmann_json AND NOT TARGET nlohmann_json::nlohmann_json)
+        if(USE_EXTERNAL_NLOHMANN_JSON_LIBS)
+            find_package(nlohmann_json 3.10.5 QUIET)
+            if(NOT TARGET nlohmann_json AND NOT TARGET nlohmann_json::nlohmann_json)
+                message(WARNING "nlohmann-json not found, will use the bundled one from git submodules.")
+                add_subdirectory_static(thirdparty/nlohmann-json)
+            endif()
+        else()
+            add_subdirectory_static(thirdparty/nlohmann-json)
+        endif()
     endif()
 endmacro(find_nlohmann_json)
 
@@ -443,13 +452,18 @@ macro(install_vineyard_target target)
 endmacro()
 
 macro(install_vineyard_headers header_path)
+    if(${ARGC} GREATER_EQUAL 2)
+        set(install_headers_destination "${ARGV1}")
+    else()
+        set(install_headers_destination "include/vineyard")
+    endif()
     install(DIRECTORY ${header_path}
-            DESTINATION include/vineyard        # target directory
-            FILES_MATCHING                      # install only matched files
-            PATTERN "*.h"                       # select header files
-            PATTERN "*.hpp"                     # select C++ template header files
-            PATTERN "*.vineyard-mod"            # select vineyard template files
-            PATTERN "*/thirdparty/*" EXCLUDE    # exclude thirdparty
+            DESTINATION ${install_headers_destination}          # target directory
+            FILES_MATCHING                                      # install only matched files
+            PATTERN "*.h"                                       # select header files
+            PATTERN "*.hpp"                                     # select C++ template header files
+            PATTERN "*.vineyard-mod"                            # select vineyard template files
+            PATTERN "*/thirdparty/*" EXCLUDE                    # exclude thirdparty
     )
 endmacro()
 
@@ -610,7 +624,7 @@ if(BUILD_VINEYARD_CLIENT)
 
     target_include_directories(vineyard_client PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
-        $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:include/vineyard/contrib>
     )
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
@@ -634,9 +648,9 @@ if(BUILD_VINEYARD_CLIENT)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
 
     install(DIRECTORY thirdparty/ctti/include/ctti
-            DESTINATION include                 # target directory
-            FILES_MATCHING                      # install only matched files
-            PATTERN "*.hpp"                     # select C++ template header files
+            DESTINATION include/vineyard/contrib  # target directory
+            FILES_MATCHING                        # install only matched files
+            PATTERN "*.hpp"                       # select C++ template header files
     )
 endif()
 
@@ -792,14 +806,6 @@ add_custom_target(python_install
         COMMAND python3 setup_dask.py install
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         VERBATIM)
-
-# install bundled thirdparty: flat_hash_map
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
-        DESTINATION include                 # target directory
-        FILES_MATCHING                      # install only matched files
-        PATTERN "*.h"                       # select header files
-        PATTERN "*.hpp"                     # select C++ template header files
-)
 
 # for python's setup.cfg
 configure_file("${PROJECT_SOURCE_DIR}/setup.cfg.in"
