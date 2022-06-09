@@ -64,12 +64,12 @@ else()
     install(DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include/"
         DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/include
+        ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
     )
 
     target_include_directories(vineyard_graph PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include>
-        $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:include/vineyard/contrib>
     )
 endif()
 

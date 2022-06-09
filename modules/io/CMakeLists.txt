@@ -23,11 +23,6 @@ target_link_libraries(vineyard_io PUBLIC vineyard_client
 )
 target_link_libraries(vineyard_io PRIVATE ${GFLAGS_LIBRARIES})
 
-target_include_directories(vineyard_io PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libgrape-lite>
-    $<INSTALL_INTERFACE:include>
-)
-
 if(Rdkafka_FOUND)
     target_include_directories(vineyard_io PUBLIC ${Rdkafka_INCLUDE_DIRS})
     target_compile_definitions(vineyard_io PRIVATE -DKAFKA_ENABLED)
@@ -35,4 +30,4 @@ if(Rdkafka_FOUND)
 endif()
 
 install_vineyard_target(vineyard_io)
-install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
+install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/io" "include/vineyard/io")
