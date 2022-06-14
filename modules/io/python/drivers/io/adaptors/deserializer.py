@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import json
 import logging
 import os
 import sys
@@ -43,10 +44,28 @@ logger = logging.getLogger('vineyard')
 CHUNK_SIZE = 1024 * 1024 * 128
 
 
+def decompress_chunk(blob: memoryview, serialization_options: Dict[str, str]):
+    if len(blob) == 0:
+        return blob
+
+    if serialization_options:
+        method = serialization_options.get('compression_method', None)
+        if method == 'zstd':
+            import zstd
+
+            return zstd.decompress(bytes(blob))
+
+    # no action
+    return blob
+
+
 def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
     logger.info(
         "start copying byte stream to blob: %s", bs.params[StreamCollection.KEY_OF_PATH]
     )
+    serialization_options = bs.params.get(StreamCollection.KEY_OF_OPTIONS, None)
+    if serialization_options is not None:
+        serialization_options = json.loads(serialization_options)
     offset = 0
     reader = bs.open_reader(client)
     buffer = blob.buffer
@@ -55,6 +74,7 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
             chunk = reader.next()
         except (StopIteration, vineyard.StreamDrainedException):
             break
+        chunk = decompress_chunk(chunk, serialization_options)
         assert offset + len(chunk) <= len(
             buffer
         ), "Failed to reconstruct blobs: buffer out of range"

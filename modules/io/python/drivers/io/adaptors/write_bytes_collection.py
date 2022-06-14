@@ -77,6 +77,10 @@ def write_byte_stream(client, stream: ByteStream, prefix: str, storage_options: 
                 break
             f.write(bytes(chunk))
 
+    options_path = path + '.meta.json'
+    with fsspec.open(os.path.join(prefix, options_path), "w", **storage_options) as f:
+        f.write(json.dumps(stream.params))
+
 
 class WriteBytesExecutor(BaseStreamExecutor):
     def __init__(
