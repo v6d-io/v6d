@@ -23,6 +23,7 @@ limitations under the License.
 #include "client/rpc_client.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
+#include "common/util/uuid.h"
 
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
@@ -49,6 +50,23 @@ void bind_core(py::module& mod) {
       .def("__hash__", [](const ObjectIDWrapper& id) { return ObjectID(id); })
       .def("__eq__", [](const ObjectIDWrapper& id,
                         const ObjectIDWrapper& other) { return id == other; })
+      .def_property_readonly("uri",
+                             [](const ObjectIDWrapper& id) {
+                               return "vineyard://" + ObjectIDToString(id);
+                             })
+      .def_static(
+          "from_uri",
+          [](const std::string& uri) -> py::object {
+            if (uri.find("vineyard://") == 0) {
+              return py::cast(
+                  ObjectIDWrapper(ObjectIDFromString(uri.substr(11))));
+            } else {
+              throw_on_error(Status::UserInputError(
+                  "Not a valid uri for vineyard object ID"));
+              return py::none();
+            }
+          },
+          "uri"_a)
       .def(py::pickle(
           [](const ObjectIDWrapper& id) {  // __getstate__
             return py::make_tuple(ObjectID(id));
@@ -80,6 +98,22 @@ void bind_core(py::module& mod) {
            [](const ObjectNameWrapper& name, const ObjectNameWrapper& other) {
              return name == other;
            })
+      .def_property_readonly("uri",
+                             [](const ObjectNameWrapper& name) {
+                               return "vineyard://" + std::string(name);
+                             })
+      .def_static(
+          "from_uri",
+          [](const std::string& uri) -> py::object {
+            if (uri.find("vineyard://") == 0) {
+              return py::cast(ObjectNameWrapper(uri.substr(11)));
+            } else {
+              throw_on_error(Status::UserInputError(
+                  "Not a valid uri for vineyard object name"));
+              return py::none();
+            }
+          },
+          "uri"_a)
       .def(py::pickle(
           [](const ObjectNameWrapper& name) {  // __getstate__
             return py::make_tuple(py::cast(std::string(name)));
