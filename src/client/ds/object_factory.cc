@@ -30,7 +30,7 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name) {
   auto creator = known_types.find(type_name);
   if (creator == known_types.end()) {
 #ifndef NDEBUG
-    std::clog << "Failed to create an instance due to the unknown typename: "
+    std::clog << "[debug] create an instance with the unknown typename: "
               << type_name << std::endl;
 #endif
     return nullptr;
@@ -49,7 +49,7 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name,
   auto creator = known_types.find(type_name);
   if (creator == known_types.end()) {
 #ifndef NDEBUG
-    std::clog << "Failed to create an instance due to the unknown typename: "
+    std::clog << "[debug] create an instance with the unknown typename: "
               << type_name << std::endl;
 #endif
     return nullptr;
