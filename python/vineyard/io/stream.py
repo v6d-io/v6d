@@ -278,6 +278,7 @@ class StreamCollection:
     KEY_OF_STREAMS = '__streams'
     KEY_OF_PATH = '__path'
     KEY_OF_GLOBAL = '__global'
+    KEY_OF_OPTIONS = '__options'
 
     def __init__(self, meta: ObjectMeta, streams: List[ObjectID]):
         self._meta = meta

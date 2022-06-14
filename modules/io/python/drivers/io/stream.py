@@ -557,9 +557,18 @@ def read_bytes_collection(path, vineyard_socket, storage_options, *args, **kwarg
 
 def serialize_to_stream(object_id, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
+    serialization_options = kwargs.pop("serialization_options", {})
+    serialization_options = base64.b64encode(
+        json.dumps(serialization_options).encode("utf-8")
+    ).decode("utf-8")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
-        get_executable("serializer"), vineyard_socket, object_id, *args, **kwargs
+        get_executable("serializer"),
+        vineyard_socket,
+        object_id,
+        serialization_options,
+        *args,
+        **kwargs,
     )
     return launcher.wait()
 
@@ -581,7 +590,11 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
-        get_executable("deserializer"), vineyard_socket, stream, *args, **kwargs
+        get_executable("deserializer"),
+        vineyard_socket,
+        stream,
+        *args,
+        **kwargs,
     )
     return launcher.join_with_aggregator(aggregator=merge_global_object)
 

@@ -16,13 +16,14 @@
 # limitations under the License.
 #
 
-import concurrent
-import concurrent.futures
+import base64
+import json
 import logging
 import os
 import sys
 from queue import Empty as QueueEmptyException
 from queue import Queue as ConcurrentQueue
+from typing import Dict
 from typing import Tuple
 
 import vineyard
@@ -40,12 +41,15 @@ logger = logging.getLogger('vineyard')
 CHUNK_SIZE = 1024 * 1024 * 128
 
 
-def build_a_stream(client, meta: ObjectMeta, path: str):
+def build_a_stream(
+    client, meta: ObjectMeta, length, path: str, serialization_options: Dict[str, str]
+):
     assert meta.typename == 'vineyard::Blob'
     logger.info('creating stream for blob %r at path %s...', meta.id, path)
     params = {
         StreamCollection.KEY_OF_PATH: path,
-        'length': meta['length'],
+        'length': length,
+        StreamCollection.KEY_OF_OPTIONS: json.dumps(serialization_options),
     }
     return ByteStream.new(client, params)
 
@@ -71,9 +75,30 @@ class SerializeExecutor(BaseStreamExecutor):
         self,
         task_queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]",
         chunk_size: int = CHUNK_SIZE,
+        serialization_options: Dict[str, str] = None,
     ):
         self._task_queue = task_queue
         self._chunk_size = chunk_size
+        self._serialization_options = serialization_options
+        if self._serialization_options is None:
+            self._serialization_options = dict()
+
+    def compress_chunk(self, blob: memoryview) -> memoryview:
+        if len(blob) == 0:
+            return blob
+
+        method = self._serialization_options.get('compression_method', None)
+        level = self._serialization_options.get('compression_level', None)
+        if method == 'zstd':
+            import zstd
+
+            if level is None:
+                return zstd.compress(bytes(blob))
+            else:
+                return zstd.compress(bytes(blob), level)
+
+        # no action
+        return blob
 
     def execute(self):
         processed_blobs, processed_bytes = 0, 0
@@ -82,6 +107,7 @@ class SerializeExecutor(BaseStreamExecutor):
                 s, buffer = self._task_queue.get(block=False)
             except QueueEmptyException:
                 break
+            buffer = self.compress_chunk(buffer)
             processed_blobs += 1
             processed_bytes += len(buffer)
             serialize_blob_to_stream(s, buffer, self._chunk_size)
@@ -93,13 +119,16 @@ def traverse_to_serialize(
     meta: ObjectMeta,
     queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]",
     path: str,
+    serialization_options: Dict[str, str],
 ) -> ObjectID:
     """Returns:
     The generated stream or stream collection id.
     """
     if meta.typename == 'vineyard::Blob':
-        s = build_a_stream(client, meta, os.path.join(path, 'blob'))
         blob = meta.get_buffer(meta.id)
+        s = build_a_stream(
+            client, meta, len(blob), os.path.join(path, 'blob'), serialization_options
+        )
         queue.put((s, blob))
         return s.id
     else:
@@ -111,7 +140,13 @@ def traverse_to_serialize(
             elif isinstance(v, ObjectMeta):
                 if v.islocal:
                     streams.append(
-                        traverse_to_serialize(client, v, queue, os.path.join(path, k))
+                        traverse_to_serialize(
+                            client,
+                            v,
+                            queue,
+                            os.path.join(path, k),
+                            serialization_options,
+                        )
                     )
             else:
                 metadata[k] = v
@@ -120,7 +155,7 @@ def traverse_to_serialize(
         return collection.id
 
 
-def serialize(vineyard_socket, object_id):
+def serialize(vineyard_socket, object_id, serialization_options):
     """Serialize a vineyard object as a stream.
 
     The serialization executes in the following steps:
@@ -135,7 +170,9 @@ def serialize(vineyard_socket, object_id):
     meta = client.get_meta(object_id)
 
     queue: "ConcurrentQueue[Tuple[ByteStream, memoryview]]" = ConcurrentQueue()
-    serialized_id = traverse_to_serialize(client, meta, queue, '')
+    serialized_id = traverse_to_serialize(
+        client, meta, queue, '', serialization_options
+    )
 
     # object id done
     client.persist(serialized_id)
@@ -144,19 +181,32 @@ def serialize(vineyard_socket, object_id):
     # start transfer
     #
     # easy to be implemented as a threaded executor in a future
-    executor = ThreadStreamExecutor(SerializeExecutor, parallism=1, task_queue=queue)
+    executor = ThreadStreamExecutor(
+        SerializeExecutor,
+        parallism=1,
+        task_queue=queue,
+        serialization_options=serialization_options,
+    )
     results = executor.execute()
     logger.info('finish serialization: %s', results)
 
 
 def main():
     if len(sys.argv) < 3:
-        print("usage: ./serializer <ipc_socket> <object_id>")
+        print("usage: ./serializer <ipc_socket> <object_id> [<serialization_options>]")
         exit(1)
     ipc_socket = sys.argv[1]
     object_id = vineyard.ObjectID(sys.argv[2])
+    if len(sys.argv) >= 4:
+        serialization_options = json.loads(
+            base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+        )
+    else:
+        serialization_options = {}
+    if 'compression_method' not in serialization_options:
+        serialization_options['compression_method'] = 'zstd'
     try:
-        serialize(ipc_socket, object_id)
+        serialize(ipc_socket, object_id, serialization_options)
     except Exception:
         report_exception()
         sys.exit(-1)

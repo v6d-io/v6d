@@ -146,10 +146,18 @@ def read_stream_collections(
     else:
         # make a blob
         with fs.open(blob_path, 'rb') as f:
-            try:
-                total_size = f.size()
-            except TypeError:
-                total_size = f.size
+            options_path = blob_path + '.meta.json'
+            if fs.exists(options_path):
+                with fs.open(options_path, 'r') as f:
+                    params = json.loads(f.read())
+                total_size = params['length']
+                options = params.get(StreamCollection.KEY_OF_OPTIONS, '{}')
+            else:
+                try:
+                    total_size = f.size()
+                except TypeError:
+                    total_size = f.size
+                options = '{}'
             # create a stream
             stream = ByteStream.new(
                 client,
@@ -158,6 +166,7 @@ def read_stream_collections(
                         blob_path, base_prefix
                     ),
                     'length': total_size,
+                    StreamCollection.KEY_OF_OPTIONS: options,
                 },
             )
             queue.put((stream, blob_path))

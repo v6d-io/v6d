@@ -114,6 +114,7 @@ setup(
         'pyarrow',
         's3fs',
         'vineyard',
+        'zstd',
     ],
     extras_require={
         'dev': [
