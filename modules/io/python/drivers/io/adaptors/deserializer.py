@@ -74,12 +74,6 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
             chunk = reader.next()
         except (StopIteration, vineyard.StreamDrainedException):
             break
-        assert offset + len(chunk) <= len(
-            buffer
-        ), "Failed to reconstruct blobs: buffer out of range: %d vs. %d" % (
-            offset + len(chunk),
-            len(buffer),
-        )
         raw_buffer.write(chunk)
     blob_data = decompress_chunk(raw_buffer.getbuffer(), serialization_options)
     assert len(blob_data) <= len(
