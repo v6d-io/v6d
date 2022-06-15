@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import io
 import json
 import logging
 import os
@@ -40,8 +41,6 @@ from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
 
 logger = logging.getLogger('vineyard')
-
-CHUNK_SIZE = 1024 * 1024 * 128
 
 
 def decompress_chunk(blob: memoryview, serialization_options: Dict[str, str]):
@@ -69,18 +68,23 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
     offset = 0
     reader = bs.open_reader(client)
     buffer = blob.buffer
+    raw_buffer = io.BytesIO()
     while True:
         try:
             chunk = reader.next()
         except (StopIteration, vineyard.StreamDrainedException):
             break
-        chunk = decompress_chunk(chunk, serialization_options)
-        assert offset + len(chunk) <= len(
-            buffer
-        ), "Failed to reconstruct blobs: buffer out of range"
-        if len(chunk) > 0:
-            vineyard.memory_copy(buffer, offset, chunk)
-            offset += len(chunk)
+        raw_buffer.write(chunk)
+    blob_data = decompress_chunk(raw_buffer.getbuffer(), serialization_options)
+    assert len(blob_data) <= len(
+        buffer
+    ), "The source and destination buffer sizes don't match: %d vs. %d" % (
+        len(blob_data),
+        len(buffer),
+    )
+    if len(blob_data) > 0:
+        vineyard.memory_copy(buffer, offset, blob_data)
+        offset += len(blob_data)
     return blob.seal(client)
 
 
