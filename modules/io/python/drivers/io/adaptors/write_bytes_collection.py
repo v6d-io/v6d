@@ -19,6 +19,7 @@
 import base64
 import json
 import logging
+import multiprocessing
 import os
 import sys
 from queue import Empty as QueueEmptyException
@@ -156,7 +157,7 @@ def write_bytes_collection(
     # write streams to file
     executor = ThreadStreamExecutor(
         WriteBytesExecutor,
-        parallism=1,
+        parallism=multiprocessing.cpu_count(),
         client=client,
         prefix=worker_prefix,
         storage_options=storage_options,

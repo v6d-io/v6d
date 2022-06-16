@@ -19,6 +19,7 @@
 import base64
 import json
 import logging
+import multiprocessing
 import os
 import sys
 from queue import Empty as QueueEmptyException
@@ -194,7 +195,7 @@ def read_bytes_collection(
     logger.info("start reading blobs ...")
     executor = ThreadStreamExecutor(
         ReadToByteStreamExecutor,
-        parallism=1,
+        parallism=multiprocessing.cpu_count(),
         client=client,
         fs=fs,
         task_queue=queue,

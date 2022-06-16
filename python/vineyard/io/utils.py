@@ -19,6 +19,7 @@
 import concurrent
 import concurrent.futures
 import json
+import multiprocessing
 import os
 import traceback
 
@@ -96,8 +97,11 @@ class BaseStreamExecutor:
 
 
 class ThreadStreamExecutor:
-    def __init__(self, executor_cls, parallism: int = 1, **kwargs):
-        self._parallism = parallism
+    def __init__(self, executor_cls, parallism: int = None, **kwargs):
+        if parallism is None:
+            self._parallism = multiprocessing.cpu_count()
+        else:
+            self._parallism = parallism
         self._executors = [executor_cls(**kwargs) for _ in range(self._parallism)]
 
     def execute(self):

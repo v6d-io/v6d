@@ -19,6 +19,7 @@
 import base64
 import json
 import logging
+import multiprocessing
 import os
 import sys
 from queue import Empty as QueueEmptyException
@@ -183,7 +184,7 @@ def serialize(vineyard_socket, object_id, serialization_options):
     # easy to be implemented as a threaded executor in a future
     executor = ThreadStreamExecutor(
         SerializeExecutor,
-        parallism=1,
+        parallism=multiprocessing.cpu_count(),
         task_queue=queue,
         serialization_options=serialization_options,
     )
