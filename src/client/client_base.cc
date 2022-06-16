@@ -74,7 +74,12 @@ Status ClientBase::CreateData(const json& tree, ObjectID& id,
 }
 
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
-  InstanceID instance_id = this->instance_id_;
+  return this->CreateMetaData(meta_data, this->instance_id_, std::ref(id));
+}
+
+Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
+                                  InstanceID const& instance_id, ObjectID& id) {
+  InstanceID computed_instance_id = instance_id;
   meta_data.SetInstanceId(instance_id);
   meta_data.AddKeyValue("transient", true);
   // nbytes is optional
@@ -86,12 +91,13 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
     VINEYARD_SUPPRESS(SyncMetaData());
   }
   Signature signature;
-  auto status = CreateData(meta_data.MetaData(), id, signature, instance_id);
+  auto status =
+      CreateData(meta_data.MetaData(), id, signature, computed_instance_id);
   if (status.ok()) {
     meta_data.SetId(id);
     meta_data.SetSignature(signature);
     meta_data.SetClient(this);
-    meta_data.SetInstanceId(instance_id);
+    meta_data.SetInstanceId(computed_instance_id);
     if (meta_data.incomplete()) {
       // N.B.: don't use `meta_data` directly to `GetMetaData` otherwise it may
       // violate the invariant of `BufferSet` in `ObjectMeta`.

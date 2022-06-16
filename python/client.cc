@@ -114,6 +114,16 @@ void bind_client(py::module& mod) {
           },
           "metadata"_a)
       .def(
+          "create_metadata",
+          [](ClientBase* self, ObjectMeta& metadata,
+             InstanceID const& instance_id) -> ObjectMeta& {
+            ObjectID object_id;
+            throw_on_error(
+                self->CreateMetaData(metadata, instance_id, object_id));
+            return metadata;
+          },
+          "metadata"_a, "instance_id"_a)
+      .def(
           "delete",
           [](ClientBase* self, const ObjectIDWrapper object_id,
              const bool force, const bool deep) {

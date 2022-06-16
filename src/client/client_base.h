@@ -114,6 +114,22 @@ class ClientBase {
   Status CreateMetaData(ObjectMeta& meta_data, ObjectID& id);
 
   /**
+   * @brief Create the metadata in the vineyard server with specified instance
+   * id, after created, the resulted object id in the `meta_data` will be
+   * filled.
+   *
+   * The specified instance id is required that the metadata can be created
+   * using the RPC client on the specified instance as a placeholder.
+   *
+   * @param meta_data The metadata that will be created in vineyard.
+   * @param id The returned object ID of the created metadata.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
+  Status CreateMetaData(ObjectMeta& meta_data, InstanceID const& instance_id,
+                        ObjectID& id);
+
+  /**
    * @brief Get the meta-data of the requested object
    *
    * @param id The ID of the requested object
