@@ -68,6 +68,11 @@ else()
     message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}'.")
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # avoid the llvm-strip: error: unsupported load command (cmd=0x80000034) error
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+endif()
+
 find_program(ccache_EXECUTABLE ccache)
 if(ccache_EXECUTABLE)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${ccache_EXECUTABLE})
