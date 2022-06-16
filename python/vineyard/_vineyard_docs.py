@@ -495,6 +495,20 @@ Parameters:
 
 Returns:
     The result created metadata.
+
+.. method:: create_metadata(metadata: ObjectMeta, instance_id: InstanceID) -> ObjectMeta
+    :noindex:
+
+Create metadata in vineyardd with a specified instance id.
+
+Parameters:
+    metadata: ObjectMeta
+        The metadata that will be created on vineyardd.
+    instance_id: InstanceID
+        The instance to place the object metadata.
+
+Returns:
+    The result created metadata.
 ''',
 )
 
