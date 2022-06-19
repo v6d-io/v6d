@@ -16,14 +16,15 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_USAGE_H_
 #define SRC_SERVER_MEMORY_USAGE_H_
 
+#include <list>
 #include <map>
 #include <memory>
 #include <set>
+#include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
-#include <list>
-#include <shared_mutex>
 
 #include "oneapi/tbb/concurrent_hash_map.h"
 
@@ -174,25 +175,26 @@ template <typename ID, typename P, typename Der>
 class ColdObjectTracker
     : public DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>> {
   /*
-  * @brief LRU is a tracker of least recent used blob ID, it has two methods:
-  * - `Ref(ID id)` Add the id if not exists, or refresh usage if exists
-  * - `PopLeastUsed()` Get the least used blob id. If no object in structure, then 
-  *    statu will be Invalids
-  */
-  class LRU{
-    public:
+   * @brief LRU is a tracker of least recent used blob ID, it has two methods:
+   * - `Ref(ID id)` Add the id if not exists, or refresh usage if exists
+   * - `PopLeastUsed()` Get the least used blob id. If no object in structure,
+   * then statu will be Invalids
+   */
+  class LRU {
+   public:
     using value_t = std::pair<ID, std::shared_ptr<P>>;
-    using lru_map_t = std::unordered_map<ID, typename std::list<value_t>::iterator>;
+    using lru_map_t =
+        std::unordered_map<ID, typename std::list<value_t>::iterator>;
     using lru_list_t = std::list<value_t>;
     LRU() = default;
     ~LRU() = default;
-    void Ref(ID id, std::shared_ptr<P> payload){
+    void Ref(ID id, std::shared_ptr<P> payload) {
       std::unique_lock<decltype(mu_)> locked;
       auto it = map_.find(id);
-      if(it == map_.end()){
+      if (it == map_.end()) {
         list_.emplace_front(id, payload);
         map_.emplace(id, list_.begin());
-      }else{
+      } else {
         list_.splice(list_.begin(), list_, it->second);
       }
     }
@@ -200,7 +202,7 @@ class ColdObjectTracker
     bool CheckExist(ID id) const {
       std::shared_lock<decltype(mu_)> shared_locked;
       auto it = map_.find(id);
-      if(it == map_.end()){
+      if (it == map_.end()) {
         return false;
       }
       return true;
@@ -209,7 +211,7 @@ class ColdObjectTracker
     Status UnRef(const ID& id) {
       std::unique_lock<decltype(mu_)> locked;
       auto it = map_.find(id);
-      if(it == map_.end()){
+      if (it == map_.end()) {
         return Status::OK();
       }
       list_.erase(it->second);
@@ -217,9 +219,9 @@ class ColdObjectTracker
       return Status::OK();
     }
 
-    std::pair<Status, value_t> PopLeastUsed(){
+    std::pair<Status, value_t> PopLeastUsed() {
       std::unique_lock<decltype(mu_)> locked;
-      if(list_.empty()){
+      if (list_.empty()) {
         return {Status::Invalid(), -1};
       }
       auto back = list_.back();
@@ -228,13 +230,13 @@ class ColdObjectTracker
       return {Status::OK(), back};
     }
 
-
-    private:
+   private:
     mutable std::shared_timed_mutex mu_;
     // protect by mu_
     lru_map_t map_;
     lru_list_t list_;
   };
+
  public:
   using cold_object_map_t = tbb::concurrent_hash_map<ID, std::shared_ptr<P>>;
   using base_t = DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>>;
