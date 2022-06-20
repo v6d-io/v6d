@@ -676,7 +676,7 @@ def main():
 
     if not (args.with_cpp or args.with_python or args.with_io or args.with_deployment):
         print(
-            'Error: \n\tat least of of --with-{cpp,python,io,deployment} needs '
+            'Error: \n\tat least one of of --with-{cpp,python,io,deployment} needs '
             'to be specified\n'
         )
         parser.print_help()
