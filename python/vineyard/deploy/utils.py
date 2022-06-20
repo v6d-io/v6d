@@ -231,3 +231,44 @@ def start_etcd(host=None, etcd_executable=None):
         logging.info('Etcd being killed...')
         if proc is not None and proc.poll() is None:
             proc.terminate()
+
+
+@contextlib.contextmanager
+def envvars(key, value=None, append=False):
+    """Create a context with specified environment variables set.
+
+    It is useful for settting the :code`VINEYARD_IPC_SOCKET` environment
+    variable to obtain a proper default vineyard client.
+
+    This context macro can be used as
+
+    .. code:: python
+
+        with environment('KEY'):
+            # env :code:`KEY` will be set to None.
+
+        with environment('KEY', 'value'):
+            # env :code:`KEY` will be set as :code:`value`.
+
+        with environment({'KEY1': None, 'KEY2': 'value2'}):
+            # env :code:`KEY1` will be set as None and :code:`KEY2` will
+            # be set as :code:`value2`.
+    """
+    items = key
+    if isinstance(key, str):
+        items = {key: value}
+    original_items = dict()
+    for k, v in items.items():
+        original_items[k] = os.environ.get(k, None)
+        if append and original_items[k] is not None:
+            os.environ[k] = original_items[k] + ':' + v
+        else:
+            os.environ[k] = v
+
+    yield os.environ
+
+    for k, v in original_items.items():
+        if v is not None:
+            os.environ[k] = v
+        else:
+            del os.environ[k]

@@ -34,9 +34,11 @@ def prepare_runner_environment():
     global find_executable_generic
     global start_program_generic
     global find_port
+    global envvars
     find_executable_generic = getattr(mod, 'find_executable')
     start_program_generic = getattr(mod, 'start_program')
     find_port = getattr(mod, 'find_port')
+    envvars = getattr(mod, 'envvars')
 
 
 prepare_runner_environment()
@@ -575,7 +577,25 @@ def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
 
 
 def parse_sys_args():
+    default_builder_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '..',
+        'build',
+    )
+    if os.path.exists('shared-lib'):
+        default_builder_dir = '.'
+    if os.path.exists('build'):
+        default_builder_dir = 'build'
+
     arg_parser = ArgumentParser()
+
+    arg_parser.add_argument(
+        '-b',
+        '--build-dir',
+        type=str,
+        default=default_builder_dir,
+        help='Directory where the build artifacts are generated',
+    )
     arg_parser.add_argument(
         '--with-cpp',
         action='store_true',
@@ -622,17 +642,7 @@ def parse_sys_args():
     return arg_parser, arg_parser.parse_args()
 
 
-def main():
-    parser, args = parse_sys_args()
-
-    if not (args.with_cpp or args.with_python or args.with_io or args.with_deployment):
-        print(
-            'Error: \n\tat least of of --with-{cpp,python,io,deployment} needs '
-            'to be specified\n'
-        )
-        parser.print_help()
-        exit(1)
-
+def execute_tests(args):
     if args.with_cpp:
         run_single_vineyardd_tests(args.tests)
 
@@ -659,6 +669,22 @@ def main():
             run_python_contrib_ml_tests(etcd_endpoints)
         with start_etcd() as (_, etcd_endpoints):
             run_python_contrib_dask_tests(etcd_endpoints)
+
+
+def main():
+    parser, args = parse_sys_args()
+
+    if not (args.with_cpp or args.with_python or args.with_io or args.with_deployment):
+        print(
+            'Error: \n\tat least of of --with-{cpp,python,io,deployment} needs '
+            'to be specified\n'
+        )
+        parser.print_help()
+        exit(1)
+
+    built_shared_libs = os.path.join(os.path.abspath(args.build_dir), 'shared-lib')
+    with envvars('LD_LIBRARY_PATH', built_shared_libs, append=True):
+        execute_tests(args)
 
 
 if __name__ == '__main__':

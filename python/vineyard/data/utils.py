@@ -152,6 +152,24 @@ def expand_slice(indexer):
         return indexer
 
 
+def str_to_bool(s):
+    if s is None:
+        return False
+    if not isinstance(s, str):
+        s = str(s)
+    return s.lower() in [
+        'true',
+        '1',
+        't',
+        'y',
+        'yes',
+        'yeah',
+        'yup',
+        'certainly',
+        'uh-huh',
+    ]
+
+
 __all__ = [
     'normalize_dtype',
     'normalize_cpptype',
@@ -161,4 +179,5 @@ __all__ = [
     'to_json',
     'from_json',
     'expand_slice',
+    'str_to_bool',
 ]
