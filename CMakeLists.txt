@@ -618,6 +618,8 @@ if(BUILD_VINEYARD_CLIENT)
                                                  Threads::Threads
                                                  nlohmann_json::nlohmann_json
     )
+    # make sure `vineyard_internal_registry` been built.
+    add_dependencies(vineyard_client vineyard_internal_registry)
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyard_client PUBLIC ${ARROW_SHARED_LIB})
     else()

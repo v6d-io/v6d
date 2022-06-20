@@ -42,6 +42,28 @@ def prepare_runner_environment():
 prepare_runner_environment()
 
 
+@contextlib.contextmanager
+def envvars(key, value=None, append=False):
+    items = key
+    if isinstance(key, str):
+        items = {key: value}
+    original_items = dict()
+    for k, v in items.items():
+        original_items[k] = os.environ.get(k, None)
+        if append and original_items[k] is not None:
+            os.environ[k] = original_items[k] + ':' + v
+        else:
+            os.environ[k] = v
+
+    yield os.environ
+
+    for k, v in original_items.items():
+        if v is not None:
+            os.environ[k] = v
+        else:
+            del os.environ[k]
+
+
 def find_executable(name):
     default_builder_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '..', 'build', 'bin'
@@ -575,7 +597,25 @@ def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
 
 
 def parse_sys_args():
+    default_builder_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '..',
+        'build',
+    )
+    if os.path.exists('shared-lib'):
+        default_builder_dir = '.'
+    if os.path.exists('build'):
+        default_builder_dir = 'build'
+
     arg_parser = ArgumentParser()
+
+    arg_parser.add_argument(
+        '-b',
+        '--build-dir',
+        type=str,
+        default=default_builder_dir,
+        help='Directory where the build artifacts are generated',
+    )
     arg_parser.add_argument(
         '--with-cpp',
         action='store_true',
@@ -622,17 +662,7 @@ def parse_sys_args():
     return arg_parser, arg_parser.parse_args()
 
 
-def main():
-    parser, args = parse_sys_args()
-
-    if not (args.with_cpp or args.with_python or args.with_io or args.with_deployment):
-        print(
-            'Error: \n\tat least of of --with-{cpp,python,io,deployment} needs '
-            'to be specified\n'
-        )
-        parser.print_help()
-        exit(1)
-
+def execute_tests(args):
     if args.with_cpp:
         run_single_vineyardd_tests(args.tests)
 
@@ -659,6 +689,22 @@ def main():
             run_python_contrib_ml_tests(etcd_endpoints)
         with start_etcd() as (_, etcd_endpoints):
             run_python_contrib_dask_tests(etcd_endpoints)
+
+
+def main():
+    parser, args = parse_sys_args()
+
+    if not (args.with_cpp or args.with_python or args.with_io or args.with_deployment):
+        print(
+            'Error: \n\tat least one of of --with-{cpp,python,io,deployment} needs '
+            'to be specified\n'
+        )
+        parser.print_help()
+        exit(1)
+
+    built_shared_libs = os.path.join(os.path.abspath(args.build_dir), 'shared-lib')
+    with envvars('LD_LIBRARY_PATH', built_shared_libs, append=True):
+        execute_tests(args)
 
 
 if __name__ == '__main__':
