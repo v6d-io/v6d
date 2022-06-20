@@ -16,6 +16,15 @@ limitations under the License.
 #include "client/ds/object_factory.h"
 
 #include <dlfcn.h>
+#include <libgen.h>
+
+#if defined(__APPLE__) && defined(__MACH__)
+#include <libproc.h>
+#elif defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+#include <limits.h>
+#include <unistd.h>
+#endif
 
 #include <iostream>
 
@@ -67,41 +76,77 @@ ObjectFactory::FactoryRef() {
 
 namespace detail {
 
+static void* __try_load_internal_registry(std::string const& location,
+                                          std::string& error_message) {
+  if (location.empty()) {
+    return nullptr;
+  }
+  int dlflags = RTLD_GLOBAL | RTLD_NOW;
+  void* handle = dlopen(location.c_str(), dlflags);
+  if (handle == nullptr) {
+    auto err = dlerror();
+    if (err) {
+      error_message = err;
+#ifndef NDEBUG
+      // See: Note [std::cerr instead of DVLOG()]
+      std::clog << "vineyard: error in loading: " << err << std::endl;
+#endif
+    }
+  }
+  return handle;
+}
+
+extern "C" {
+int __find_vineyard_library_location(Dl_info* info) {
+  // void *fn = *reinterpret_cast<void**>(&__find_vineyard_library_location);
+  void* fn = reinterpret_cast<void*>(&__find_vineyard_library_location);
+  return dladdr(fn, info);
+}
+}
+
 static void* __load_internal_registry(std::string& error_message) {
   void* handle = nullptr;
-  auto lib = read_env("__VINEYARD_INTERNAL_REGISTRY");
-  int dlflags = RTLD_GLOBAL | RTLD_NOW;
-  if (!lib.empty()) {
-    handle = dlopen(lib.c_str(), dlflags);
-    if (handle == nullptr) {
-      auto err = dlerror();
-      if (err) {
-        error_message = err;
-#ifndef NDEBUG
-        // See: Note [std::cerr instead of DVLOG()]
-        std::clog << "vineyard: error in loading: " << err << std::endl;
-#endif
-      }
-    }
+
+  // search from environment variable
+  const std::string lib_from_env = read_env("__VINEYARD_INTERNAL_REGISTRY");
+  if (access(lib_from_env.c_str(), F_OK) == 0) {
+    handle = __try_load_internal_registry(lib_from_env, error_message);
   }
-  if (handle == nullptr) {
+  if (handle != nullptr) {
+    return handle;
+  }
+
+  // search from the current location where `vineyard_client` locates
+  Dl_info info;
+  if (__find_vineyard_library_location(&info) != 0) {
+    char* fname = strndup(info.dli_fname, PATH_MAX);
+    if (fname != nullptr && info.dli_fname[0] != '\0') {
 #if __APPLE__
-    handle = dlopen("libvineyard_internal_registry.dylib", dlflags);
+      handle = __try_load_internal_registry(
+          std::string(dirname(fname)) + "/libvineyard_internal_registry.dylib",
+          error_message);
 #else
-    handle = dlopen("libvineyard_internal_registry.so", dlflags);
+      handle = __try_load_internal_registry(
+          std::string(dirname(fname)) + "/libvineyard_internal_registry.so",
+          error_message);
 #endif
-    if (handle == nullptr) {
-      auto err = dlerror();
-      if (err) {
-        error_message = err;
-#ifndef NDEBUG
-        // See: Note [std::clog instead of DVLOG()]
-        std::clog << "vineyard: error in loading from default: " << err
-                  << std::endl;
-#endif
-      }
+    }
+    if (fname != nullptr) {
+      free(fname);
     }
   }
+  if (handle != nullptr) {
+    return handle;
+  }
+
+  // search from the LD_LIBRARY_PATH
+#if __APPLE__
+  handle = __try_load_internal_registry("libvineyard_internal_registry.dylib",
+                                        error_message);
+#else
+  handle = __try_load_internal_registry("libvineyard_internal_registry.so",
+                                        error_message);
+#endif
   return handle;
 }
 
