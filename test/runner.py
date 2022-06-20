@@ -34,14 +34,34 @@ def prepare_runner_environment():
     global find_executable_generic
     global start_program_generic
     global find_port
-    global envvars
     find_executable_generic = getattr(mod, 'find_executable')
     start_program_generic = getattr(mod, 'start_program')
     find_port = getattr(mod, 'find_port')
-    envvars = getattr(mod, 'envvars')
 
 
 prepare_runner_environment()
+
+
+@contextlib.contextmanager
+def envvars(key, value=None, append=False):
+    items = key
+    if isinstance(key, str):
+        items = {key: value}
+    original_items = dict()
+    for k, v in items.items():
+        original_items[k] = os.environ.get(k, None)
+        if append and original_items[k] is not None:
+            os.environ[k] = original_items[k] + ':' + v
+        else:
+            os.environ[k] = v
+
+    yield os.environ
+
+    for k, v in original_items.items():
+        if v is not None:
+            os.environ[k] = v
+        else:
+            del os.environ[k]
 
 
 def find_executable(name):
