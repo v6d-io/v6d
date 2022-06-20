@@ -174,11 +174,16 @@ class DependencyTracker
 template <typename ID, typename P, typename Der>
 class ColdObjectTracker
     : public DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>> {
+ public:
   /*
    * @brief LRU is a tracker of least recent used blob ID, it has two methods:
-   * - `Ref(ID id)` Add the id if not exists, or refresh usage if exists
+   * - `Ref(ID id)` Add the id if not exists. (Actually here we shouldn't expect
+   *    a redundant Ref, because no Object will be insert twice). But in current
+   *    implementation, we will overwrite the previous one.
+   * - `UnRef(ID id)` Remove the designated id from lru.
    * - `PopLeastUsed()` Get the least used blob id. If no object in structure,
-   * then statu will be Invalids
+   * then statu will be Invalids.
+   * - `CheckExist(ID id)` Check the existence of id.
    */
   class LRU {
    public:
@@ -195,7 +200,9 @@ class ColdObjectTracker
         list_.emplace_front(id, payload);
         map_.emplace(id, list_.begin());
       } else {
-        list_.splice(list_.begin(), list_, it->second);
+        list_.erase(it->second);
+        list_.emplace_front(id, payload);
+        it->second = list_.begin();
       }
     }
 
@@ -222,7 +229,7 @@ class ColdObjectTracker
     std::pair<Status, value_t> PopLeastUsed() {
       std::unique_lock<decltype(mu_)> locked;
       if (list_.empty()) {
-        return {Status::Invalid(), -1};
+        return {Status::Invalid(), {-1, nullptr}};
       }
       auto back = list_.back();
       map_.erase(back.first);

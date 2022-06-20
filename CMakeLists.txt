@@ -774,6 +774,10 @@ if(BUILD_VINEYARD_TESTS)
             target_compile_options(${T_NAME} PRIVATE "-fno-access-control")
         endif()
 
+        if(${T_NAME} STREQUAL "lru_test")
+            target_link_libraries(${T_NAME} PRIVATE TBB::tbb)
+        endif()
+
         if(${T_NAME} STREQUAL "allocator_test"
                 OR ${T_NAME} STREQUAL "arena_test"
                 OR ${T_NAME} STREQUAL "jemalloc_test")
