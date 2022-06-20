@@ -111,6 +111,13 @@ set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
 )
 message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
+# disables messages from sub_directory, see also: https://stackoverflow.com/a/38983571/5080177
+function(message)
+    if (NOT MESSAGE_QUIET)
+        _message(${ARGN})
+    endif()
+endfunction()
+
 # reference: https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling#always-full-rpath
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 if(APPLE)
@@ -274,12 +281,16 @@ macro(find_intel_tbb)
             message(WARNING "intel-tbb not found, will use the bundled one from git submodules.")
             # clear previous cmake configure result
             set(TBB_DIR)
+            set(MESSAGE_QUIET ON)
             add_subdirectory_static(thirdparty/intel-tbb EXCLUDE_FROM_ALL)
+            unset(MESSAGE_QUIET)
         endif()
     else()
         # clear previous cmake configure result
         set(TBB_DIR)
+        set(MESSAGE_QUIET ON)
         add_subdirectory_static(thirdparty/intel-tbb EXCLUDE_FROM_ALL)
+        unset(MESSAGE_QUIET)
     endif()
 endmacro(find_intel_tbb)
 
