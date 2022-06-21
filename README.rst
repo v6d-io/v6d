@@ -142,8 +142,8 @@ different systems via shared memory without extra overheads. Vineyard eliminates
 the overhead of serialization/deserialization and IO during exchanging immutable
 data between systems.
 
-Out-of-box high level data abstraction
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Out-of-the-box high level data abstraction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Computation frameworks usually have their own data abstractions for high-level concepts,
 for example tensor could be `torch.tensor`, `tf.Tensor`, `mxnet.ndarray` etc., not to

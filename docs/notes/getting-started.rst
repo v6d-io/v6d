@@ -62,6 +62,7 @@ Creating a dataframe
 .. code:: python
 
      >>> import numpy as np
+     >>> import pandas as pd
      >>> import vineyard.data.dataframe
      >>> df = pd.DataFrame({'u': [0, 0, 1, 2, 2, 3],
      >>>                    'v': [1, 2, 3, 3, 4, 4],
