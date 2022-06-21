@@ -51,7 +51,8 @@ include("${CMAKE_CURRENT_LIST_DIR}/vineyard-targets.cmake")
 
 set(VINEYARD_LIBRARIES @VINEYARD_INSTALL_LIBS@)
 set(VINEYARD_INCLUDE_DIR "${VINEYARD_HOME}/include"
-                         "${VINEYARD_HOME}/include/vineyard")
+                         "${VINEYARD_HOME}/include/vineyard"
+                         "${VINEYARD_HOME}/include/vineyard/contrib")
 set(VINEYARD_INCLUDE_DIRS "${VINEYARD_INCLUDE_DIR}")
 
 set(VINEYARDD_EXECUTABLE "${VINEYARD_HOME}/bin/vineyardd")
