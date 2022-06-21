@@ -16,11 +16,14 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_USAGE_H_
 #define SRC_SERVER_MEMORY_USAGE_H_
 
+#include <list>
 #include <map>
 #include <memory>
 #include <set>
+#include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "oneapi/tbb/concurrent_hash_map.h"
@@ -52,7 +55,6 @@ class DependencyTracker
   using base_t = LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>>;
   using dependency_map_t = tbb::concurrent_hash_map</*socket_connection*/ int,
                                                     std::unordered_set<ID>>;
-
   DependencyTracker() {}
 
   /**
@@ -173,8 +175,79 @@ template <typename ID, typename P, typename Der>
 class ColdObjectTracker
     : public DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>> {
  public:
+  /*
+   * @brief LRU is a tracker of least recent used blob ID, it has two methods:
+   * - `Ref(ID id)` Add the id if not exists. (Actually here we shouldn't expect
+   *    a redundant Ref, because no Object will be insert twice). But in current
+   *    implementation, we will overwrite the previous one.
+   * - `UnRef(ID id)` Remove the designated id from lru.
+   * - `PopLeastUsed()` Get the least used blob id. If no object in structure,
+   * then statu will be Invalids.
+   * - `CheckExist(ID id)` Check the existence of id.
+   */
+  class LRU {
+   public:
+    using value_t = std::pair<ID, std::shared_ptr<P>>;
+    using lru_map_t =
+        std::unordered_map<ID, typename std::list<value_t>::iterator>;
+    using lru_list_t = std::list<value_t>;
+    LRU() = default;
+    ~LRU() = default;
+    void Ref(ID id, std::shared_ptr<P> payload) {
+      std::unique_lock<decltype(mu_)> locked;
+      auto it = map_.find(id);
+      if (it == map_.end()) {
+        list_.emplace_front(id, payload);
+        map_.emplace(id, list_.begin());
+      } else {
+        list_.erase(it->second);
+        list_.emplace_front(id, payload);
+        it->second = list_.begin();
+      }
+    }
+
+    bool CheckExist(ID id) const {
+      std::shared_lock<decltype(mu_)> shared_locked;
+      auto it = map_.find(id);
+      if (it == map_.end()) {
+        return false;
+      }
+      return true;
+    }
+
+    Status UnRef(const ID& id) {
+      std::unique_lock<decltype(mu_)> locked;
+      auto it = map_.find(id);
+      if (it == map_.end()) {
+        return Status::OK();
+      }
+      list_.erase(it->second);
+      map_.erase(it);
+      return Status::OK();
+    }
+
+    std::pair<Status, value_t> PopLeastUsed() {
+      std::unique_lock<decltype(mu_)> locked;
+      if (list_.empty()) {
+        return {Status::Invalid(), {-1, nullptr}};
+      }
+      auto back = list_.back();
+      map_.erase(back.first);
+      list_.pop_back();
+      return {Status::OK(), back};
+    }
+
+   private:
+    mutable std::shared_timed_mutex mu_;
+    // protect by mu_
+    lru_map_t map_;
+    lru_list_t list_;
+  };
+
+ public:
   using cold_object_map_t = tbb::concurrent_hash_map<ID, std::shared_ptr<P>>;
   using base_t = DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>>;
+  using lru_t = LRU;
 
   ColdObjectTracker() {}
 
@@ -184,10 +257,7 @@ class ColdObjectTracker
    * @param id The object ID.
    */
   Status RemoveFromColdList(ID const& id) {
-    typename cold_object_map_t::const_accessor accessor;
-    if (cold_objects_.find(accessor, id)) {
-      cold_objects_.erase(accessor);
-    }
+    cold_obj_lru_.UnRef(id);
     return Status::OK();
   }
 
@@ -213,11 +283,8 @@ class ColdObjectTracker
    * @brief Add a blob to the cold object list.
    */
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
-    typename cold_object_map_t::const_accessor accessor;
     if (payload->IsSealed()) {
-      if (!cold_objects_.find(accessor, id)) {
-        cold_objects_.emplace(id, payload);
-      }
+      cold_obj_lru_.Ref(id, payload);
     }
     return Status::OK();
   }
@@ -226,8 +293,7 @@ class ColdObjectTracker
    * @brief check if a blob is in-use. Return true if it is in-use.
    */
   Status IsInUse(ID const& id, bool& is_in_use) {
-    typename cold_object_map_t::const_accessor accessor;
-    if (cold_objects_.find(accessor, id)) {
+    if (cold_obj_lru_.CheckExist(id)) {
       is_in_use = false;
     } else {
       is_in_use = true;
@@ -246,7 +312,7 @@ class ColdObjectTracker
 
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
-  cold_object_map_t cold_objects_;
+  lru_t cold_obj_lru_;
 };
 
 }  // namespace detail
