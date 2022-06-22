@@ -23,6 +23,9 @@ limitations under the License.
 #include <utility>
 
 #include "flat_hash_map/flat_hash_map.hpp"
+#if defined(USE_WY_HASH)
+#include "wyhash/wyhash.hpp"
+#endif
 
 #include "basic/ds/array.vineyard.h"
 #include "client/ds/blob.h"
@@ -64,12 +67,24 @@ class HashmapBaseBuilder;
  * @tparam std::hash<K> The hash function for the key.
  * @tparam std::equal_to<K> The compare function for the key.
  */
-template <typename K, typename V, typename H = std::hash<K>,
+template <typename K, typename V,
+#if defined(USE_WY_HASH)
+          typename H = wy::hash<K>,
+#else
+          typename H = std::hash<K>,
+#endif
           typename E = std::equal_to<K>>
 class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
                              public H,
                              public E {
  public:
+#if defined(USE_WY_HASH)
+  using KeyHash = typename wy::hash<K>;
+#else
+  using KeyHash = typename std::hash<K>;
+#endif
+  using KeyEqual = typename std::equal_to<K>;
+
   using T = std::pair<K, V>;
 
   using Entry = ska::detailv3::sherwood_v3_entry<T>;

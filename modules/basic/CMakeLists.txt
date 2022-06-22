@@ -54,6 +54,14 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
         PATTERN "*.hpp"                         # select C++ template header files
 )
 
+# install bundled thirdparty: wyhash
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/wyhash
+        DESTINATION include/vineyard/contrib    # target directory
+        FILES_MATCHING                          # install only matched files
+        PATTERN "*.h"                           # select header files
+        PATTERN "*.hpp"                         # select C++ template header files
+)
+
 target_include_directories(vineyard_basic PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty>
     $<INSTALL_INTERFACE:include/vineyard/contrib>

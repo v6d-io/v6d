@@ -23,6 +23,9 @@ limitations under the License.
 #include <utility>
 
 #include "flat_hash_map/flat_hash_map.hpp"
+#if defined(USE_WY_HASH)
+#include "wyhash/wyhash.hpp"
+#endif
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.vineyard.h"
@@ -41,14 +44,20 @@ namespace vineyard {
  * @tparam std::hash<K> The hash function for the key.
  * @tparam std::equal_to<K> The compare function for the key.
  */
-template <typename K, typename V, typename H = std::hash<K>,
+template <typename K, typename V,
+#if defined(USE_WY_HASH)
+          typename H = wy::hash<K>,
+#else
+          typename H = std::hash<K>,
+#endif
           typename E = std::equal_to<K>>
 class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
  public:
   explicit HashmapBuilder(Client& client)
       : HashmapBaseBuilder<K, V, H, E>(client) {}
 
-  explicit HashmapBuilder(Client& client, ska::flat_hash_map<K, V>&& hashmap)
+  explicit HashmapBuilder(Client& client,
+                          ska::flat_hash_map<K, V, H, E>&& hashmap)
       : HashmapBaseBuilder<K, V, H, E>(client), hashmap_(std::move(hashmap)) {}
 
   /**
