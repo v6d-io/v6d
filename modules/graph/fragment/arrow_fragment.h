@@ -319,7 +319,7 @@ class BasicArrowFragmentBuilder
 
   std::vector<std::shared_ptr<arrow::Table>> vertex_tables_;
   std::vector<std::shared_ptr<vid_array_t>> ovgid_lists_;
-  std::vector<ska::flat_hash_map<vid_t, vid_t>> ovg2l_maps_;
+  std::vector<typename ArrowFragment<OID_T, VID_T>::ovg2l_map_t> ovg2l_maps_;
 
   std::vector<std::shared_ptr<arrow::Table>> edge_tables_;
 

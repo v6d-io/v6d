@@ -24,6 +24,10 @@ This product includes software from the flat_hash_map project (Boost Software Li
  * Copyright (c) 2017 Malte Skarupke
  * https://github.com/skarupke/flat_hash_map
 
+This product includes software from the wyhash project (MIT License)
+ * Copyright (c) 2022 Alain Espinosa
+ * https://github.com/alainesp/wy
+
 This product includes software from the Doug Lea's dlmalloc project
  * Copyright (c) Doug Lea
  * http://gee.cs.oswego.edu/dl/html/malloc.html

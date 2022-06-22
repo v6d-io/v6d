@@ -40,6 +40,8 @@ limitations under the License.
 #include "graph/utils/error.h"
 #include "graph/utils/mpi_utils.h"
 
+#include "basic/ds/hashmap.h"
+
 namespace vineyard {
 
 // Hardcoded the max vertex label num to 128
@@ -921,7 +923,8 @@ template <typename VID_T>
 boost::leaf::result<void> generate_outer_vertices_map(
     std::vector<std::vector<VID_T>>& collected_ovgids,
     const std::vector<VID_T>& start_ids, int vertex_label_num,
-    std::vector<ska::flat_hash_map<VID_T, VID_T>>& ovg2l_maps,
+    std::vector<ska::flat_hash_map<
+        VID_T, VID_T, typename Hashmap<VID_T, VID_T>::KeyHash>>& ovg2l_maps,
     std::vector<std::shared_ptr<
         typename vineyard::ConvertToArrowType<VID_T>::ArrayType>>&
         ovgid_lists) {
@@ -956,7 +959,10 @@ boost::leaf::result<void> generate_local_id_list(
     IdParser<VID_T>& parser,
     const std::shared_ptr<
         typename vineyard::ConvertToArrowType<VID_T>::ArrayType>& gid_list,
-    fid_t fid, std::vector<ska::flat_hash_map<VID_T, VID_T>> ovg2l_maps,
+    fid_t fid,
+    std::vector<ska::flat_hash_map<VID_T, VID_T,
+                                   typename Hashmap<VID_T, VID_T>::KeyHash>>
+        ovg2l_maps,
     int concurrency,
     std::shared_ptr<typename vineyard::ConvertToArrowType<VID_T>::ArrayType>&
         lid_list) {
