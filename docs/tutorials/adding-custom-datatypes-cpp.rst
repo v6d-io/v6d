@@ -242,7 +242,7 @@ our vector type,
 .. code:: diff
 
      template <typename T>
-     class VectorBuilder: public vineyard::ObjectBuilder {
+     class Vector: public vineyard::Registered<Vector<T>> {
     
          const T& operator[](size_t index) {
            assert(index < size);
