@@ -57,10 +57,23 @@ class ITensor : public Object {
   [[shared]] virtual const std::shared_ptr<arrow::Buffer> buffer() const = 0;
 };
 
+namespace detail {
+
+template <typename T>
+struct ArrowTensorType {
+  using type = arrow::NumericTensor<typename arrow::CTypeTraits<T>::ArrowType>;
+};
+
+template <>
+struct ArrowTensorType<arrow::util::string_view> {
+  using type = void;
+};
+
+}  // namespace detail
+
 template <typename T>
 class [[vineyard]] Tensor : public ITensor, public BareRegistered<Tensor<T>> {
-  using ArrowTensorT =
-      arrow::NumericTensor<typename arrow::CTypeTraits<T>::ArrowType>;
+  using ArrowTensorT = typename detail::ArrowTensorType<T>::type;
 
  public:
   /**
@@ -129,6 +142,7 @@ class [[vineyard]] Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    * arrow's Tensor.
    *
    */
+  template <typename = std::enable_if<!std::is_void<ArrowTensorT>::value>>
   [[shared]] const std::shared_ptr<ArrowTensorT> ArrowTensor() {
     return std::make_shared<ArrowTensorT>(buffer_->Buffer(), shape());
   }
