@@ -26,6 +26,10 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#ifdef __APPLE__
+#include "boost/thread/shared_mutex.hpp"
+#endif
+
 #include "oneapi/tbb/concurrent_hash_map.h"
 
 #include "common/memory/payload.h"
@@ -238,8 +242,12 @@ class ColdObjectTracker
     }
 
    private:
+#if __APPLE__
+    mutable boost::shared_mutex mu_;
+#else
     mutable std::shared_timed_mutex mu_;
-    // protect by mu_
+#endif
+    // protected by mu_
     lru_map_t map_;
     lru_list_t list_;
   };
@@ -257,7 +265,7 @@ class ColdObjectTracker
    * @param id The object ID.
    */
   Status RemoveFromColdList(ID const& id) {
-    cold_obj_lru_.UnRef(id);
+    VINEYARD_DISCARD(cold_obj_lru_.UnRef(id));
     return Status::OK();
   }
 
