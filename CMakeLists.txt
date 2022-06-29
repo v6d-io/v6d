@@ -22,6 +22,7 @@ option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather
 option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" OFF)
 option(USE_EXTERNAL_NLOHMANN_JSON_LIBS "Build with external nlohmann-json library rather than the submodule one" ON)
 option(USE_ASAN "Using address sanitizer to check memory accessing" OFF)
+option(USE_LIBUNWIND "Using libunwind to retrieve the stack backtrace when exception occurs" ON)
 option(USE_INCLUDE_WHAT_YOU_USE "Simply the intra-module dependencies with iwyu" OFF)
 option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of metadata" OFF)
 
@@ -341,7 +342,9 @@ macro(find_gflags)
 endmacro(find_gflags)
 
 macro(find_libunwind)
-    include("cmake/FindLibUnwind.cmake")
+    if(USE_LIBUNWIND)
+        include("cmake/FindLibUnwind.cmake")
+    endif()
 endmacro(find_libunwind)
 
 macro(find_nlohmann_json)
