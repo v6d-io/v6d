@@ -16,6 +16,7 @@ Table of Contents
 - [Requirements](#requirements)
 - [Configuration and Usage](#configuration-and-usage)
 - [Run the tests](#run-tests)
+- [Deploy using Docker Compose](#deploy-using-docker-compose)
 - [Deploy on Kubernetes](#deploy-on-kubernetes)
 
 Requirements <a name="requirements"/>
@@ -118,11 +119,27 @@ Run the tests <a name="run-tests"/>
 The pandas test suite is not possible to run with the default XCom backend, vineyard
 enables airflow to exchange **complex** and **big** data without modify the DAG and tasks!
 
+Deploy using Docker Compose <a name="deploy-using-docker-compose"/>
+---------------------------
+
+We provide a reference docker compose settings (see [docker-compose.yaml](./docker-compose.yaml))
+for deploying airflow with vineyard as the XCom backend on Docker Compose.
+
+The docker compose containers cloud be deployed as
+
+```bash
+$ cd docker/
+$ docker compose up
+```
+
+We have also included a diff file [docker-compose.yaml.diff](./docker-compose.yaml.diff) that shows
+the changed pieces that can be introduced into your own docker compose deployment.
+
 Deploy on Kubernetes <a name="deploy-on-kubernetes"/>
 --------------------
 
 We provide a reference settings (see [values.yaml](./values.yaml)) for deploying
-Airflow with vineyard as the XCom backend on Kubernetes, based on [the official helm charts][3].
+airflow with vineyard as the XCom backend on Kubernetes, based on [the official helm charts][3].
 
 Deploying vineyard requires etcd, to ease to deploy process, you first need to
 setup a standalone etcd cluster. A _test_ etcd cluster with only one instance can

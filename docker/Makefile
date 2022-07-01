@@ -1,5 +1,5 @@
 REGISTRY 			:= registry-vpc.cn-hongkong.aliyuncs.com
-IMAGE 				:= libvineyard/vineyardd
+IMAGE 				:= docker.pkg.github.com/v6d-io/v6d/vineyardd
 
 ALPINE_REGISTRY		:= docker.pkg.github.com/v6d-io
 ALPINE_IMAGE		:= v6d/vineyardd

@@ -45,7 +45,7 @@ scheduler:
   # Launch additional containers into scheduler.
   extraContainers:
     - name: vineyard
-      image: libvineyard/vineyardd:v0.4.1
+      image: docker.pkg.github.com/v6d-io/v6d/vineyardd:v0.6.0
       command:
       - /bin/bash
       - "-c"
@@ -128,7 +128,7 @@ workers:
 
   extraContainers:
     - name: vineyard
-      image: libvineyard/vineyardd:v0.4.1
+      image: docker.pkg.github.com/v6d-io/v6d/vineyardd:v0.6.0
       command:
       - /bin/bash
       - "-c"

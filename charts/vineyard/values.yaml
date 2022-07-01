@@ -3,14 +3,14 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: libvineyard/vineyardd
+  repository: docker.pkg.github.com/v6d-io/v6d/vineyardd
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tagPrefix: ""
   tag: ""
 
 metricImage:
-  repository: libvineyard/vineyardd-grok-exporter
+  repository: docker.pkg.github.com/v6d-io/v6d/vineyardd-grok-exporter
   pullPolicy: Never
   # Overrides the image tag whose default is the chart appVersion.
   tagPrefix: ""

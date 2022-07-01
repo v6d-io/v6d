@@ -21,7 +21,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: vineyard
-        image: quay.io/libvineyard/vineyardd:latest
+        image: docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
         args:
         - "--socket"
         - "{Socket}"
