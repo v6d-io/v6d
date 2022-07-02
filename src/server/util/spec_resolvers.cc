@@ -95,6 +95,8 @@ json BulkstoreSpecResolver::resolve() const {
   size_t bulkstore_limit = parseMemoryLimit(FLAGS_size);
   spec["memory_size"] = bulkstore_limit;
   spec["stream_threshold"] = FLAGS_stream_threshold;
+  // if need to config the spill threshold, add json option here
+  // spec["memory_spill_threshold"]
   return spec;
 }
 

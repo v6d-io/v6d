@@ -184,7 +184,7 @@ class ColdObjectTracker
    * - `Ref(ID id)` Add the id if not exists. (Actually here we shouldn't expect
    *    a redundant Ref, because no Object will be insert twice). But in current
    *    implementation, we will overwrite the previous one.
-   * - `UnRef(ID id)` Remove the designated id from lru.
+   * - `Unref(ID id)` Remove the designated id from lru.
    * - `PopLeastUsed()` Get the least used blob id. If no object in structure,
    * then statu will be Invalids.
    * - `CheckExist(ID id)` Check the existence of id.
@@ -221,10 +221,17 @@ class ColdObjectTracker
       return true;
     }
 
-    Status UnRef(const ID& id) {
+    /**
+     * @brief Here we have two actions: 1. delete from lru_list
+     *        2. delete from spilled_obj_
+     * @param id
+     * @return Status
+     */
+    Status Unref(const ID& id) {
       std::unique_lock<decltype(mu_)> locked;
       auto it = map_.find(id);
       if (it == map_.end()) {
+        spilled_obj_.erase(id);
         return Status::OK();
       }
       list_.erase(it->second);
@@ -243,6 +250,31 @@ class ColdObjectTracker
       return {Status::OK(), back};
     }
 
+    /**
+     * @brief spill cold-obj till their sizes sum up to sz
+     *
+     * @param sz: specify the spilled size
+     */
+    void Spill(size_t sz) {
+      std::unique_lock<decltype(mu_)> locked;
+      size_t spilled_sz = 0;
+      for (auto it = list_.begin(); it != list_.end();) {
+        auto ret = it->second->Spill();
+        if (!ret || sz <= spilled_sz) {
+          break;
+        }
+        spilled_sz += it->second->data_size;
+        spilled_obj_.emplace(it->first, it->second);
+        map_.erase(it->first);
+        // erase here is safe for list's iterator
+        it = list_.erase(it);
+        if (sz <= spilled_sz) {
+          break;
+        }
+      }
+      return;
+    }
+
    private:
 #if __APPLE__
     mutable boost::shared_mutex mu_;
@@ -252,6 +284,7 @@ class ColdObjectTracker
     // protected by mu_
     lru_map_t map_;
     lru_list_t list_;
+    std::unordered_map<ID, std::shared_ptr<P>> spilled_obj_;
   };
 
  public:
@@ -267,7 +300,7 @@ class ColdObjectTracker
    * @param id The object ID.
    */
   Status RemoveFromColdList(ID const& id) {
-    VINEYARD_DISCARD(cold_obj_lru_.UnRef(id));
+    VINEYARD_DISCARD(cold_obj_lru_.Unref(id));
     return Status::OK();
   }
 
@@ -310,6 +343,13 @@ class ColdObjectTracker
     }
     return Status::OK();
   }
+
+  /**
+   * @brief Only triggered when detected OOM, this function will spill cold-obj
+   * to disk till memory usage back to allowed watermark.
+   * @param sz spilled size
+   */
+  void SpillColdObject() { cold_obj_lru_->Spill(Self().mem_spill_size_); }
 
  public:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {

@@ -446,6 +446,11 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   uint8_t* pointer = nullptr;
   pointer = AllocateMemory(data_size, &fd, &map_size, &offset);
   if (pointer == nullptr) {
+    // try to spill the cold-obj and try again
+    this->SpillColdObject();
+    pointer = AllocateMemory(data_size, &fd, &map_size, &offset);
+  }
+  if (pointer == nullptr) {
     return Status::NotEnoughMemory(
         "Failed to allocate memory of size " + std::to_string(data_size) +
         ", total available memory size are " +

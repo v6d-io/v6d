@@ -92,6 +92,10 @@ class BulkStoreBase {
   Status RemoveOwnership(std::set<ID> const& ids,
                          std::map<ID, P>& successed_ids);
 
+  void SetMemSpillSize(size_t mem_spill_size_) {
+    mem_spill_size_ = mem_spill_size_;
+  }
+
  protected:
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
                           ptrdiff_t* offset);
@@ -105,6 +109,8 @@ class BulkStoreBase {
   std::unordered_map<int /* fd */, Arena> arenas_;
 
   object_map_t objects_;
+
+  size_t mem_spill_size_;
 };
 
 class BulkStore
