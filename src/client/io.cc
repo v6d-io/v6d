@@ -87,6 +87,13 @@ Status connect_rpc_socket(const std::string& host, uint32_t port,
                            std::to_string(port));
   }
 
+  // avoid SIGPIPE in any cases as it is hard to catch, see also `send_bytes()`.
+#if defined(__APPLE__)
+  int option_value = 1;
+  setsockopt(socket_fd, SOL_SOCKET, SO_NOSIGPIPE, &option_value,
+             sizeof(option_value));
+#endif
+
   return Status::OK();
 }
 
@@ -137,8 +144,16 @@ Status send_bytes(int fd, const void* data, size_t length) {
   size_t offset = 0;
   const char* ptr = static_cast<const char*>(data);
   while (bytes_left > 0) {
-    // Release: avoid SIGPIPE in any cases as it is hard to catch and diagnose.
+    // NB: (in `Release()` operation) avoid SIGPIPE in any cases as it is hard
+    // to catch and diagnose (the server may has already down).
+    //
+    // The `MSG_NOSIGNAL` is not supported on Mac, instead, we have set the flag
+    // `SO_NOSIGPIPE` on the socket once established.
+#if defined(__APPLE__)
+    nbytes = write(fd, ptr + offset, bytes_left);
+#else
     nbytes = send(fd, ptr + offset, bytes_left, MSG_NOSIGNAL);
+#endif
     if (nbytes < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
         continue;
