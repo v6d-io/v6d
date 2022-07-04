@@ -1,17 +1,14 @@
 Python API Reference
 ====================
 
-.. default-domain:: py
-
 .. _python-api:
 
-.. contents::
-    :local:
+.. default-domain:: py
 
 .. currentmodule:: vineyard
 
-ObjectID and Object
--------------------
+Objects
+-------
 
 .. autoclass:: ObjectID
     :special-members:
@@ -23,15 +20,15 @@ ObjectID and Object
 .. autoclass:: ObjectBuilder
     :members:
 
-Metadata of objects
--------------------
+Metadata
+--------
 
 .. autoclass:: ObjectMeta
     :special-members:
     :members:
 
-Connect to vineyard
--------------------
+Vineyard Client
+---------------
 
 .. autofunction:: connect
 
@@ -43,15 +40,15 @@ Connect to vineyard
     :inherited-members:
     :members:
 
-State of server
----------------
+Vineyard Cluster
+----------------
 
 .. autoclass:: InstanceStatus
     :special-members:
     :members:
 
-Primitives
-----------
+Blob
+----
 
 .. autoclass:: Blob
     :members:
@@ -101,8 +98,8 @@ Deployment
 .. autofunction:: vineyard.deploy.local.start_vineyardd
 .. autofunction:: vineyard.deploy.distributed.start_vineyardd
 
-IO Facilities
--------------
+I/O Drivers
+-----------
 
 .. autofunction:: vineyard.io.open
 .. autofunction:: vineyard.io.read

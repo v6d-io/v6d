@@ -132,76 +132,76 @@ Users can try Airflow provider for Vineyard by the following steps:
 
 1. Install required packages:
 
-    .. code:: bash
+   .. code:: bash
 
-        pip3 install airflow-provider-vineyard
+       pip3 install airflow-provider-vineyard
 
 2. Configure Vineyard locally
 
-    The vineyard server can be easier launched locally with the following command:
+   The vineyard server can be easier launched locally with the following command:
 
-    .. code:: bash
+   .. code:: bash
 
-        python -m vineyard --socket=/tmp/vineyard.sock
+       python -m vineyard --socket=/tmp/vineyard.sock
 
-    See also our documentation about `launching vineyard`_.
+   See also our documentation about `launching vineyard`_.
 
 3. Configure Airflow to use the vineyard XCom backend by specifying the environment
-    variable
+   variable
 
-    .. code:: bash
+   .. code:: bash
 
-        export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
+       export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
 
-    and configure the location of UNIX-domain IPC socket for vineyard client by
+   and configure the location of UNIX-domain IPC socket for vineyard client by
 
-    .. code:: bash
+   .. code:: bash
 
-        export AIRFLOW__VINEYARD__IPC_SOCKET=/tmp/vineyard.sock
+       export AIRFLOW__VINEYARD__IPC_SOCKET=/tmp/vineyard.sock
 
-    or
+   or
 
-    .. code:: bash
+   .. code:: bash
 
-        export VINEYARD_IPC_SOCKET=/tmp/vineyard.sock
+       export VINEYARD_IPC_SOCKET=/tmp/vineyard.sock
 
 4. Launching your airflow scheduler and workers, and run the following DAG as example,
 
-    .. code:: python
+   .. code:: python
 
-        import numpy as np
-        import pandas as pd
+       import numpy as np
+       import pandas as pd
 
-        from airflow.decorators import dag, task
-        from airflow.utils.dates import days_ago
+       from airflow.decorators import dag, task
+       from airflow.utils.dates import days_ago
 
-        default_args = {
-            'owner': 'airflow',
-        }
+       default_args = {
+           'owner': 'airflow',
+       }
 
-        @dag(default_args=default_args, schedule_interval=None, start_date=days_ago(2), tags=['example'])
-        def taskflow_etl_pandas():
-            @task()
-            def extract():
-                order_data_dict = pd.DataFrame({
-                    'a': np.random.rand(100000),
-                    'b': np.random.rand(100000),
-                })
-                return order_data_dict
+       @dag(default_args=default_args, schedule_interval=None, start_date=days_ago(2), tags=['example'])
+       def taskflow_etl_pandas():
+           @task()
+           def extract():
+               order_data_dict = pd.DataFrame({
+                   'a': np.random.rand(100000),
+                   'b': np.random.rand(100000),
+               })
+               return order_data_dict
 
-            @task(multiple_outputs=True)
-            def transform(order_data_dict: dict):
-                return {"total_order_value": order_data_dict["a"].sum()}
+           @task(multiple_outputs=True)
+           def transform(order_data_dict: dict):
+               return {"total_order_value": order_data_dict["a"].sum()}
 
-            @task()
-            def load(total_order_value: float):
-                print(f"Total order value is: {total_order_value:.2f}")
+           @task()
+           def load(total_order_value: float):
+               print(f"Total order value is: {total_order_value:.2f}")
 
-            order_data = extract()
-            order_summary = transform(order_data)
-            load(order_summary["total_order_value"])
+           order_data = extract()
+           order_summary = transform(order_data)
+           load(order_summary["total_order_value"])
 
-        taskflow_etl_pandas_dag = taskflow_etl_pandas()
+       taskflow_etl_pandas_dag = taskflow_etl_pandas()
 
 In above example, task :code:`extract` and task :code:`transform` shares a
 :code:`pandas.DataFrame` as the intermediate data, which is impossible as

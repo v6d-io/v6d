@@ -25,7 +25,7 @@ del vineyard
 # -- Project information -----------------------------------------------------
 
 project = 'vineyard'
-copyright = '2019-2021, The Vineyard Contributors'
+copyright = '2019-2022, The Vineyard Authors'
 author = 'The Vineyard Authors'
 
 
@@ -42,6 +42,10 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    "sphinx_copybutton",
+    'sphinx_panels',
+    'sphinxemoji.sphinxemoji',
+    "sphinxext.opengraph",
 ]
 
 # breathe
@@ -74,12 +78,38 @@ exclude_patterns = [
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "furo"
+
+html_theme_options = {
+    "sidebar_hide_name": True,  # we use the logo
+    "navigation_with_keys": True,
+    "source_repository": "https://github.com/v6d-io/v6d/",
+    "source_branch": "main",
+    "source_directory": "docs/",
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/v6d-io/v6d",
+            "html": "",
+            "class": "fa fa-solid fa-github fa-2x",
+        },
+    ],
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['images/']
+html_static_path = [
+    'images/',
+    "_static/",
+]
+
+html_css_files = [
+    "css/brands.min.css",    # font-awesome
+    "css/v4-shims.min.css",  # font-awesome
+    "css/custom.css",
+    "css/panels.css",
+]
 
 html_extra_path = [
     './CNAME',
@@ -87,4 +117,13 @@ html_extra_path = [
     './summer.html',
 ]
 
+html_title = 'Vineyard'
+html_logo = "images/vineyard-logo-h.png"
 html_favicon = "images/vineyard.ico"
+
+html_show_copyright= True
+html_show_sphinx = False
+html_last_updated = True
+
+# add copy button to code blocks, exclude the notebook (nbsphinx) prompts
+copybutton_selector = "div.notranslate:not(.prompt) div.highlight pre"

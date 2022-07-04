@@ -3,6 +3,29 @@ Vineyard Cli
 
 **vineyard-ctl**: A command-line tool for **vineyard**.
 
+Connect to vineyard
+-------------------
+
++ Via command-line:
+
+  Options:
+
+  + :code:`ipc_socket`: Socket location of connected vineyard server.
+  + :code:`rpc_host`: RPC HOST of the connected vineyard server.
+  + :code:`rpc_port`: RPC PORT of the connected vineyard server.
+  + :code:`rpc_endpoint`: RPC endpoint of the connected vineyard server.
+
+  Example:
+
+  .. code:: shell
+
+      vineyard-ctl --ipc_socket /var/run/vineyard.sock
+
++ Via vineyard configuraion file:
+
+  This will pick IPC or RPC values from the vineyard configuration file or
+  environment variables.
+
 Supported Commands
 ------------------
 
@@ -18,54 +41,14 @@ Supported Commands
 + :code:`debug`
 + :code:`start`
 
-Autocomplete
-------------
+.. note::
 
-Autocomplete for vineyard-ctl is only supported for the bash shell currently.
+    .. code:: shell
 
-Follow the following steps to enable autocomplete for vineyard-ctl on your system:
+        vineyard-ctl {command}
 
-+ Install :code:`argcomplete` via :code:`pip3`: :code:`pip3 install argcomplete`.
-+ Copy the :code:`python/vineyard/cli.py` file to :code:`/usr/local/bin`.
-+ Add :code:`eval "$(register-python-argcomplete cli.py)"` to :code:`~/.bashrc`.
-+ Run :code:`source /etc/profile`.
-+ Run :code:`source ~/.bashrc`.
-+ Run :code:`activate-global-python-argcomplete`
-
-That is it. You're good to go. Autocomplete will be enabled working for vineyard-ctl.
-
-Example:
-
-In the bash shell, type :code:`vineyard-ctl sta` and press :code:`tab`, it will autocomplete to :code:`vineyard-ctl start`
-
-Connect to a vineyard server
-----------------------------
-
-+ Via command-line:
-   Options:
-   
-   + :code:`ipc_socket`: Socket location of connected vineyard server.
-   + :code:`rpc_host`: RPC HOST of the connected vineyard server.
-   + :code:`rpc_port`: RPC PORT of the connected vineyard server.
-   + :code:`rpc_endpoint`: RPC endpoint of the connected vineyard server.
-
-Example:
-
-.. code:: shell
-
-    vineyard-ctl --ipc_socket /var/run/vineyard.sock
-
-+ Via vineyard configuraion file:
-This will pick IPC or RPC values from the vineyard configuration file.
-
-Example:
-
-.. code:: shell
-
-    vineyard-ctl {command}
-
-ls
----
+:code:`ls`
+^^^^^^^^^^
 
 List vineyard objects.
 
@@ -81,8 +64,8 @@ Example:
 
     vineyard-ctl ls --pattern * --regex --limit 8
 
-query
------
+:code:`query`
+^^^^^^^^^^^^^
 
 Query a vineyard object.
 
@@ -104,8 +87,8 @@ Example:
 
     vineyard-ctl query --object_id 00002ec13bc81226 --meta json --metric typename
 
-head
-----
+:code:`head`
+^^^^^^^^^^^^
 
 Print first n(limit) lines of a vineyard object. Currently supported for a pandas dataframe only.
 
@@ -120,8 +103,8 @@ Example:
 
     vineyard-ctl head --object_id 00002ec13bc81226 --limit 3
 
-copy
-----
+:code:`copy`
+^^^^^^^^^^^^
 
 Copy a vineyard object.
 
@@ -137,8 +120,8 @@ Example:
 
     vineyard-ctl copy --object_id 00002ec13bc81226 --shallow
 
-del
----
+:code:`del`
+^^^^^^^^^^^
 
 Delete a vineyard object.
 
@@ -155,8 +138,8 @@ Example:
 
     vineyard-ctl del --object_id 00002ec13bc81226 --force
 
-stat
-----
+:code:`stat`
+^^^^^^^^^^^^
 
 Get the status of connected vineyard server.
 
@@ -176,8 +159,8 @@ Example:
 
     vineyard-ctl stat
 
-put
----
+:code:`put`
+^^^^^^^^^^^
 
 Put a python value to vineyard.
 
@@ -195,8 +178,8 @@ Example:
 
     vineyard-ctl put --file example_csv_file.csv --sep ,
 
-config
-------
+:code:`config`
+^^^^^^^^^^^^^^
 
 Edit configuration file.
 
@@ -213,8 +196,8 @@ Example:
 
     vineyard-ctl config --ipc_socket_value /var/run/vineyard.sock
 
-migrate
--------
+:code:`migrate`
+^^^^^^^^^^^^^^^
 
 Migrate a vineyard object.
 
@@ -234,8 +217,8 @@ Example:
 
     vineyard-ctl migrate --ipc_socket_value /tmp/vineyard.sock --object_id 00002ec13bc81226 --remote
 
-debug
-------
+:code:`debug`
+^^^^^^^^^^^^^
 
 Issue a debug request.
 
@@ -249,8 +232,8 @@ Example:
 
     vineyard-ctl debug --payload '{"instance_status":[], "memory_size":[]}'
 
-start
--------
+:code:`start`
+^^^^^^^^^^^^^
 
 Start vineyardd.
 
@@ -259,15 +242,44 @@ Options:
 + :code:`local`: start a local vineyard cluster.
 + :code:`distributed`: start a local vineyard cluster in a distributed fashion.
 + :code:`hosts`: A list of machines to launch vineyard server.
-+ :code:`etcd_endpoints`: Launching vineyard using specified etcd endpoints. If not specified, vineyard will launch its own etcd instance.
-+ :code:`vineyardd_path`: Location of vineyard server program. If not specified, vineyard will use its own bundled vineyardd binary.
-+ :code:`size`: The memory size limit for vineyard’s shared memory. The memory size can be a plain integer or as a fixed-point number using one of these suffixes: E, P, T, G, M, K. You can also use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
-+ :code:`socket`: The UNIX domain socket socket path that vineyard server will listen on. When the socket parameter is None, a random path under temporary directory will be generated and used.
++ :code:`etcd_endpoints`: Launching vineyard using specified etcd endpoints.
+  If not specified, vineyard will launch its own etcd instance.
++ :code:`vineyardd_path`: Location of vineyard server program. If not specified,
+  vineyard will use its own bundled vineyardd binary.
++ :code:`size`: The memory size limit for vineyard’s shared memory. The memory size
+  can be a plain integer or as a fixed-point number using one of these suffixes:
+  :code:`E`, :code:`P`, :code:`T`, :code:`G`, :code:`M`, :code:`K`. You can also
+  use the power-of-two equivalents: :code:`Ei`, :code:`Pi`, :code:`Ti`, :code:`Gi`,
+  :code:`Mi`, :code:`Ki`.
++ :code:`socket`: The UNIX domain socket socket path that vineyard server will
+  bind and listen on. When the socket parameter is None, a random path under
+  temporary directory will be generated and used.
 + :code:`rpc_socket_port`: The port that vineyard will use to privode RPC service.
-+ :code:`debug`: Whether print debug logs.
++ :code:`debug`: Whether to print debug logs.
 
 Example:
 
 .. code:: shell
 
     vineyard-ctl start --local
+
+Autocomplete
+------------
+
+Autocomplete for vineyard-ctl is only supported for the bash shell currently.
+
+Follow the following steps to enable autocomplete for vineyard-ctl on your system:
+
++ Install :code:`argcomplete` via :code:`pip3`: :code:`pip3 install argcomplete`.
++ Copy the :code:`python/vineyard/cli.py` file to :code:`/usr/local/bin`.
++ Add :code:`eval "$(register-python-argcomplete cli.py)"` to :code:`~/.bashrc`.
++ Run :code:`source /etc/profile`.
++ Run :code:`source ~/.bashrc`.
++ Run :code:`activate-global-python-argcomplete`
+
+That is it. You're good to go. Autocomplete will be enabled working for vineyard-ctl.
+
+.. note::
+
+   In the bash shell, type :code:`vineyard-ctl sta` and press :code:`tab`, it will autocomplete
+   to :code:`vineyard-ctl start`

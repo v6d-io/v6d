@@ -90,7 +90,7 @@ jobs:
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install -U "Pygments>=2.4.1"
-          sudo pip3 install -U libclang parsec sphinx sphinx_rtd_theme docutils==0.16 breathe nbsphinx gcovr pytest hdfs3 "numpy>=0.18.5"
+          sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
 
           # install linters
           sudo pip3 install auditwheel black isort flake8

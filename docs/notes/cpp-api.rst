@@ -5,11 +5,8 @@ C++ API Reference
 
 .. default-domain:: cpp
 
-.. contents::
-    :local:
-
-ObjectID and Object
--------------------
+Objects
+-------
 
 .. doxygentypedef:: vineyard::ObjectID
 
@@ -27,16 +24,16 @@ ObjectID and Object
     :members:
     :undoc-members:
 
-Metadata of objects
--------------------
+Metadata
+--------
 
 .. doxygenclass:: vineyard::ObjectMeta
     :members:
     :protected-members:
     :undoc-members:
 
-Connect to vineyard
--------------------
+Vineyard Clients
+----------------
 
 .. doxygenclass:: vineyard::ClientBase
     :members:
@@ -53,15 +50,15 @@ Connect to vineyard
     :protected-members:
     :undoc-members:
 
-State of server
+Vineyard Server
 ---------------
 
 .. doxygenstruct:: vineyard::InstanceStatus
     :members:
     :undoc-members:
 
-Primitives
-----------
+Blob
+----
 
 .. doxygenclass:: vineyard::Blob
     :members:
@@ -78,8 +75,8 @@ Stream
     :members:
     :undoc-members:
 
-Data types
-----------
+Basic Data Types
+----------------
 
 .. doxygenclass:: vineyard::Array
     :members:
@@ -129,7 +126,7 @@ Data types
     :members:
     :undoc-members:
 
-Distributed data types
+Distributed Data Types
 ----------------------
 
 .. doxygenclass:: vineyard::GlobalTensor
