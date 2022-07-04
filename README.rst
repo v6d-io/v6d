@@ -1,6 +1,6 @@
 .. raw:: html
 
-    <h1 align="center">
+    <h1 align="center" style="clear: both;">
         <img src="https://v6d.io/_static/vineyard-logo-rect.png" width="397" alt="vineyard">
     </h1>
     <p align="center">
