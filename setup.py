@@ -132,6 +132,20 @@ def find_core_packages(root):
     return pkgs
 
 
+def load_requirements_txt(kind=""):
+    requirements = []
+    with open(
+        os.path.join(repo_root, "requirements%s.txt" % kind), "r", encoding="utf-8"
+    ) as fp:
+        for req in fp.read().splitlines():
+            if '#' in req:
+                req = req.split('#')[0]
+            req = req.strip()
+            if req:
+                requirements.append(req)
+    return requirements
+
+
 with open(
     os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
     encoding='utf-8',
@@ -187,47 +201,11 @@ setup(
         'cli': ['vineyard-codegen=vineyard.cli:main'],
         'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
     },
-    setup_requires=[
-        'libclang',
-        'parsec',
-        'setuptools',
-        'wheel',
-    ],
-    install_requires=[
-        'argcomplete',
-        'etcd-distro',
-        'numpy>=0.18.5',
-        'pandas<1.0.0; python_version<"3.6"',
-        'pandas<1.2.0; python_version<"3.7"',
-        'pandas>=1.0.0; python_version>="3.7"',
-        'pickle5; python_version<="3.7"',
-        'psutil',
-        'pyarrow',
-        'setuptools',
-        'shared-memory38; python_version<="3.7"',
-        'sortedcontainers',
-        'treelib',
-    ],
+    setup_requires=load_requirements_txt("-setup"),
+    install_requires=load_requirements_txt(),
     extras_require={
-        'dev': [
-            'black',
-            'breathe',
-            'docutils==0.16',
-            'flake8',
-            'isort',
-            'jinia2>=3.0.0',
-            'libclang',
-            'nbsphinx',
-            'pygments>=2.4.1',
-            'pytest',
-            'pytest-benchmark',
-            'pytest-datafiles',
-            'sphinx>=3.0.2',
-            'sphinx_rtd_theme',
-        ],
-        'kubernetes': [
-            'kubernetes',
-        ],
+        'dev': load_requirements_txt("-dev"),
+        'kubernetes': load_requirements_txt("-kubernetes"),
     },
     platform=["POSIX", "MacOS"],
     license="Apache License 2.0",

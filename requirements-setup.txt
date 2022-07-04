@@ -1,0 +1,4 @@
+libclang
+parsec
+setuptools
+wheel

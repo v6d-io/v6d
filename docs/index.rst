@@ -13,46 +13,38 @@
 .. include:: ../README.rst
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents
+   :maxdepth: 1
+   :caption: User Guide
+   :hidden:
 
-   notes/install.rst
    notes/getting-started.rst
-   notes/divein.rst
+   user-guide.rst
+   tutorials.rst
 
 .. toctree::
-   :maxdepth: 6
-   :caption: Tutorials
+   :maxdepth: 1
+   :caption: Integrations
+   :hidden:
 
-   tutorials/adding-custom-datatypes-cpp.rst
-   tutorials/distributed-learning
-
-.. toctree::
-   :maxdepth: 6
-   :caption: Third-party Integration
-
-   notes/airflow.rst
-   notes/dask.rst
-   notes/ml.rst
+   integrations.rst
 
 .. toctree::
-   :maxdepth: 6
-   :caption: Development
+   :maxdepth: 1
+   :caption: Deployment
+   :hidden:
 
-   notes/faq.rst
-   notes/troubleshooting.rst
-   notes/roadmap.rst
-   notes/contributing.rst
+   deployment.rst
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 1
    :caption: API Reference
+   :hidden:
 
-   notes/ctl.rst
-   notes/cpp-api.rst
-   notes/python-api.rst
+   api-reference.rst
 
-Indexes
--------
+.. toctree::
+   :maxdepth: 1
+   :caption: Community
+   :hidden:
 
-* :ref:`API Index <genindex>`
+   community.rst

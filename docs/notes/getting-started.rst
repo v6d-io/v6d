@@ -1,6 +1,18 @@
 Getting Started
 ===============
 
+.. _getting-started:
+
+Installing vineyard
+-------------------
+
+Vineyard is distributed as a `python package <https://pypi.org/project/vineyard/>`_
+and can be easily installed with :code:`pip`:
+
+.. code:: shell
+
+    pip3 install vineyard
+
 Starting vineyard server
 ------------------------
 
@@ -99,8 +111,7 @@ In this case, when we ``import vineyard.dataframe``,
 a resolver that can resolve a vineyard dataframe object to a pandas dataframe is
 registered to the resolver factory under the vineyard type ``vineyard::DataFrame``,
 so that the client can automatically resolve the vineyard dataframe object.
-To further understand the registration design
-in vineyard, see :ref:`divein-driver-label`.
+To further understand the registration design in vineyard, see :ref:`divein-driver-label`.
 
 Shared Memory
 -------------

@@ -1,0 +1,18 @@
+black
+breathe
+docutils==0.16
+flake8
+furo        # sphinx theme
+isort
+jinja2>=3.0.0
+libclang
+nbsphinx
+pygments>=2.4.1
+pytest
+pytest-benchmark
+pytest-datafiles
+sphinx>=3.0.2
+sphinx-copybutton
+sphinx-panels
+sphinxemoji
+sphinxext-opengraph
