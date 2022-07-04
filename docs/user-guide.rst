@@ -7,7 +7,9 @@ User Guide
    :hidden:
 
    notes/install.rst
-   notes/divein.rst
+   notes/architecture.rst
+   notes/objects.rst
+   notes/io-drivers.rst
 
 The *User Guide* sections provides a comprehensive perspective of the design and
 implementation of vineyard. Including a detailed environment setup guidance, the
@@ -42,9 +44,28 @@ Concepts
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: notes/divein
+   .. link-button:: notes/architecture
       :type: ref
-      :text: Dive into Vineyard
+      :text: Architecture
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Dive into vineyard to a deeper understanding about how vineyard works.
+   Overview the motivation and architecture of vineyard.
+
+   ---
+
+   .. link-button:: notes/objects
+      :type: ref
+      :text: Vineyard Objects
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   The design space of vineyard objects.
+
+   ---
+
+   .. link-button:: notes/io-drivers
+      :type: ref
+      :text: I/O Drivers
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   Design and implementation of the builtin I/O drivers that eases the integration
+   of computing engines to existing infrastructure.

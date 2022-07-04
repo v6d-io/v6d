@@ -56,8 +56,6 @@ Blob
 .. autoclass:: BlobBuilder
     :members:
 
-.. _shared-memory:
-
 Resolvers and Builders
 ----------------------
 
@@ -78,6 +76,8 @@ Resolvers and Builders
 
 .. autofunction:: vineyard.core.driver.get_current_drivers
 .. autofunction:: vineyard.core.driver.driver_context
+
+.. _shared-memory:
 
 Shared Memory
 -------------

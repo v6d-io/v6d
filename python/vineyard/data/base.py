@@ -20,6 +20,7 @@ import re
 
 import numpy as np
 
+from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 
@@ -71,7 +72,7 @@ def sequence_builder(client, value, builder, **kwargs):
     meta['typename'] = 'vineyard::Sequence'
     meta['size_'] = len(value)
     for i, item in enumerate(value):
-        if isinstance(item, ObjectID):
+        if isinstance(item, (ObjectID, Object, ObjectMeta)):
             meta.add_member('__elements_-%d' % i, item)
         else:
             meta.add_member('__elements_-%d' % i, builder.run(client, item))

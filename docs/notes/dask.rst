@@ -107,7 +107,11 @@ in keras of Tensorflow.
 
 To use the preprocessed data, we register the resolvers that can resolve a **vineyard::GlobalDataFrame** distributedly
 by mulitple workers to the resolver_context. Then we can get the **tf.data.Dataset** directly from vineyard by the **get**
-method. Note that we should specify the column names for the data and label which were set in the last step.
+method.
+
+.. note::
+
+   We should specify the column names for the data and label which were set in the last step.
 
 Transfer Learning
 -----------------
