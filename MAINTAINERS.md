@@ -15,3 +15,9 @@ maintainers are listed in the [GOVERNANCE.md](GOVERNANCE.md) file.
 | Siyuan Zhang | [siyuan0322](https://github.com/siyuan0322)     | Alibaba     | [siyuanzhang.zsy@alibaba-inc.com](mailto:siyuanzhang.zsy@alibaba-inc.com) |
 | Diwen Zhu    | [andydiwenzhu](https://github.com/andydiwenzhu) | Alibaba     | [diwen.zdw@alibaba-inc.com](mailto:diwen.zdw@alibaba-inc.com)             |
 
+## Project Committers
+
+| Name         | GitHub ID                                       | Affiliation | Email                                                                     |
+| -------------| ----------------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| Lihong Lin   | [linlih](https://github.com/linlih)             | PKU         | [linlh@stu.pku.edu.cn](mailto:linlh@stu.pku.edu.cn)                       |
+| Pei Li       | [peilii](https://github.com/peilii)             | CMU         | [peili.dev@gmail.com](mailto:peili.dev@gmail.com)                         |

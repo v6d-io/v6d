@@ -24,23 +24,23 @@ Vineyard is a `CNCF sandbox project`_ and indeed made successful by its communit
 Table of Contents
 -----------------
 
-* `What is vineyard <#what-is-vineyard>`_
-* `Features <#features>`_
+* `Overview <#what-is-vineyard>`_
+* `Features of vineyard <#features>`_
 
-  * `In-Memory immutable data sharing <#in-memory-immutable-data-sharing>`_
-  * `Out-of-box high level data abstraction <#out-of-box-high-level-data-abstraction>`_
-  * `Stream pipelining <#stream-pipelining>`_
-  * `Drivers <#drivers>`_
+  * `Efficient sharing for in-memory immutable data <#in-memory-immutable-data-sharing>`_
+  * `Out-of-the-box high level data structures <#out-of-the-box-high-level-data-abstraction>`_
+  * `Pipelining using stream <#stream-pipelining>`_
+  * `I/O Drivers <#drivers>`_
 
-* `Try vineyard <#try-vineyard>`_
-* `Integrate with Kubernetes <#integrate-with-kubernetes>`_
+* `Getting started <#try-vineyard>`_
+* `Vineyard on Kubernetes <#integrate-with-kubernetes>`_
 
-  * `Deployment on Kubernetes <#deployment-on-kubernetes>`_
-  * `Deployment with Helm <#deployment-with-helm>`_
+  * `Deploying on Kubernetes <#deployment-on-kubernetes>`_
+  * `Deploying using Helm <#deployment-with-helm>`_
 
 * `Frequently asked questions <#faq>`_
-* `Getting involved <#getting-involved>`_
-* `Acknowledgements <#acknowledgements>`_
+* `Getting involved in our community <#getting-involved>`_
+* `Third-party dependencies <#acknowledgements>`_
 
 What is vineyard
 ----------------
@@ -134,7 +134,7 @@ I/O and transformation overheads are also eliminated.
 Features
 ---------
 
-In-Memory immutable data sharing
+In-memory immutable data sharing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Vineyard is an in-memory immutable data manager, sharing immutable data across
@@ -274,7 +274,7 @@ Thank you in advance for your contributions to vineyard!
 Acknowledgements
 ----------------
 
-We thank the following excellent opensource projects:
+We thank the following excellent open-source projects:
 
 - `apache-arrow <https://github.com/apache/arrow>`_, a cross-language development platform for in-memory analytics;
 - `boost-leaf <https://github.com/boostorg/leaf>`_, a C++ lightweight error augmentation framework;
