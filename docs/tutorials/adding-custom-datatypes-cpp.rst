@@ -8,6 +8,8 @@ However there are still scenarios where users need to develop their
 own data structures and efficiently share the data with Vineyard. Custom
 C++ data types could be easily added by following this step-by-step tutorial.
 
+.. note::
+
     Note that this tutorial includes code that could be auto-generated for
     keeping clear about the design internals and helping developers get a whole
     picture about how vineyard client works.
@@ -41,9 +43,6 @@ and the builder
 
 Where the object is the base class for user-defined data types, and the
 builders is responsible for placing the data into vineyard.
-
-
-reg.docker.alibaba-inc.com/v6d/graphscope:2f40c443
 
 Adding Your Own Types
 ---------------------
@@ -100,7 +99,7 @@ We first migrate the existing :code:`Vector<T>` to vineyard's :code:`Object`,
     +
          Vector(): size(0), data(nullptr) {
          }
-     
+
          Vector(const int size, const T *data): size(size), data(data) {
          }
 
@@ -109,23 +108,23 @@ We first migrate the existing :code:`Vector<T>` to vineyard's :code:`Object`,
 
 Note the two changes above,
 
-+ inherits from :code:`vineyard::Registered<Vector<T>>`
++ inherits from :code:`vineyard::Registered<Vector<T>>`:
 
-    :code:`vineyard::Registered<T>` is a helper to generate some static
-    initialization stubs to register the data type :code:`T` to the type
-    resolving factory, and associate the type :code:`T` with its typename.
-    The typename is the auto-generated readable name for C++ types, e.g.,
-    :code:`"Vector<int32>"` for :code:`Vector<int32_t>`.
+  :code:`vineyard::Registered<T>` is a helper to generate some static
+  initialization stubs to register the data type :code:`T` to the type
+  resolving factory, and associate the type :code:`T` with its typename.
+  The typename is the auto-generated readable name for C++ types, e.g.,
+  :code:`"Vector<int32>"` for :code:`Vector<int32_t>`.
 
-+ The zero-parameter static constructor :code:`Create()`
++ The zero-parameter static constructor :code:`Create()`:
 
-    :code:`Create()` is a static function that will be registered to
-    the resolving factory by helper :code:`vineyard::Registered<T>` and
-    used to construct a instance of type :code:`T` first when getting objects
-    from vineyard.
+  :code:`Create()` is a static function that will be registered to
+  the resolving factory by helper :code:`vineyard::Registered<T>` and
+  used to construct a instance of type :code:`T` first when getting objects
+  from vineyard.
 
-    Vineyard client looks up the static constructor by :code:`typename` in
-    the metadata of vineyard objects store in the daemon server.
+  Vineyard client looks up the static constructor by :code:`typename` in
+  the metadata of vineyard objects store in the daemon server.
 
 To obtain the object :code:`Vector<T>` from vineyard's metadata, we need to
 implements a `Construct` method as well. The :code:`Construct` method takes
@@ -140,7 +139,7 @@ without the cost of copying.
      class Vector: public vineyard::Registered<Vector<T>> {
        public:
          ...
- 
+
     +    void Construct(const ObjectMeta& meta) override {
     +      this->size = meta.GetKeyValue<size_t>("size");
     +
@@ -173,18 +172,18 @@ For our :code:`Vector<T>` type, we first define a general vector builder,
         std::unique_ptr<BlobWriter> buffer_builder;
         std::size_t size;
         T *data;
-    
+
       public:
         VectorBuilder(size_t size): size(size) {
           data = static_cast<T *>(malloc(sizeof(T) * size));
         }
-    
+
         T& operator[](size_t index) {
           assert(index < size);
           return data[index];
         }
     };
-    
+
 The builder allocate the required memory based on required :code:`size` to contain
 the elements, and a `[]` operator to fill the data in.
 
@@ -199,12 +198,12 @@ Now we adapts the builder above as a `ObjectBuilder` in vineyard,
          std::unique_ptr<BlobWriter> buffer_builder;
          std::size_t size;
          T *data;
-     
+
        public:
          VectorBuilder(size_t size): size(size) {
            data = static_cast<T *>(malloc(sizeof(T) * size));
          }
-     
+
     +    Status Build(Client& client) override {
     +      VINEYARD_CHECK_OK(client.CreateBlob(size * sizeof(T), buffer_builder));
     +      memcpy(buffer_builder->data(), data, size * sizeof(T));
@@ -235,23 +234,28 @@ Now we adapts the builder above as a `ObjectBuilder` in vineyard,
          }
      };
 
-Note that the builder needs to directly access the private data member of
-:code:`Vector<T>`, thus we need to makes the builder as a friend class of
-our vector type,
+To accessing the private member fields and member methods, the builder may
+need to be added as a friend class of the original type declaration.
+
+.. note::
+
+   The builder needs to directly access the private data member of
+   :code:`Vector<T>`, thus we need to makes the builder as a friend class of
+   our vector type,
 
 .. code:: diff
 
      template <typename T>
      class Vector: public vineyard::Registered<Vector<T>> {
-    
+
          const T& operator[](size_t index) {
            assert(index < size);
            return data[index];
          }
-    +  
+    +
     +  friend class VectorBuilder<T>;
      };
-    
+
 As you can see in the above example, there are many boilerplate snippets
 in the builder and constructor. They are be auto-generated from the layout
 of class :code:`Vector<T>` based on the static analysis of user's source code.
@@ -297,7 +301,6 @@ languages based on a C++-like DSL, just stay tuned!
 
 For a preview about how the code generator works, please refer to `array.vineyard-mod`_
 and `arrow.vineyard-mod`_.
-
 
 .. _array.vineyard-mod: https://github.com/v6d-io/v6d/blob/main/modules/basic/ds/array.vineyard-mod
 .. _arrow.vineyard-mod: https://github.com/v6d-io/v6d/blob/main/modules/basic/ds/arrow.vineyard-mod

@@ -114,8 +114,8 @@ design and implementation details. The documentation follows the syntax
 of Doxygen and sphinx markup. If you find anything you can help, submit 
 pull request to us. Thanks for your enthusiasm!
 
-Bug report and pull requests
-----------------------------
+Reporting bugs
+--------------
 
 Vineyard is hosted on Github, and use Github issues as the bug tracker.
 You can `file an issue`_ when you find anything that is expected to work
@@ -127,6 +127,9 @@ vineyard bugs to see if it has already been resolved.
 When creating a new bug entry, please provide necessary information of your
 problem in the description, such as operating system version, vineyard
 version, and other system configurations to help us diagnose the problem.
+
+Submitting pull requests
+------------------------
 
 We also welcome any help on vineyard from the community, including but not
 limited to fixing bugs and adding new features. Our project vineyard has enabled
@@ -164,32 +167,32 @@ the latest main branch, using the following commands:
 
 + First rebasing to the most recent main:
 
-.. code:: shell
+  .. code:: shell
 
-    git remote add upstream https://github.com/v6d-io/v6d.git
-    git fetch upstream
-    git rebase upstream/main
+      git remote add upstream https://github.com/v6d-io/v6d.git
+      git fetch upstream
+      git rebase upstream/main
 
 + Then git may show you some conflicts when it cannot merge, say `conflict.cpp`,
   you need
   - Manually modify the file to resolve the conflicts
   - After resolved, mark it as resolved by
 
-.. code:: shell
+  .. code:: shell
 
-    git add conflict.cpp
+      git add conflict.cpp
 
 + Then you can continue rebasing by
 
-.. code:: shell
+  .. code:: shell
 
-    git rebase --continue
+      git rebase --continue
 
 + Finally push to your fork, then the pull request will be got updated:
 
-.. code:: shell
+  .. code:: shell
 
-    git push --force
+      git push --force
 
 Cut a release
 -------------

@@ -24,14 +24,16 @@ A vineyard daemon server will be launched on the underlying machine with default
 settings. The default ``socket`` is ``/var/run/vineyard.sock``, and it is
 listened by the server for ipc connections. 
 
-Note that a vineyard daemon server is a vineyard instance in a vineyard cluster.
-Thus, to start a vineyard cluster, we can simply start ``vineyardd`` over all the 
+A vineyard daemon server is a vineyard instance in a vineyard cluster. Thus, to
+start a vineyard cluster, we can simply start ``vineyardd`` over all the
 machines in the cluster, and make sure these vineyard instances can register to 
 the same ``etcd_endpoint``. The default value of ``etcd_endpoint`` is 
 ``http://127.0.0.1:2379``, and ``vineyard`` will launch the ``etcd_endpoint`` 
 in case the etcd servers are not started on the cluster.
 
-Use ``python3 -m vineyard --help`` for other parameter settings.
+.. tip::
+
+   Use ``python3 -m vineyard --help`` for other parameter settings.
 
 Connecting to vineyard
 ----------------------
@@ -65,8 +67,12 @@ We first use :code:`client.put()` to build the vineyard object from the local va
 which returns the ``object_id`` that is the unique id in vineyard to represent the object.
 
 Then given the ``object_id``, we can obtain a shared-memory object from vineyard 
-with :code:`client.get()`. Note that :code:`shared_arr` doesn't allocate memory in the
-client process; instead, it shares the memory from the vineyard server.
+with :code:`client.get()`.
+
+.. note::
+
+   Note that :code:`shared_arr` doesn't allocate memory in the
+   client process; instead, it shares the memory from the vineyard server.
 
 Creating a dataframe
 --------------------
@@ -131,9 +137,11 @@ The shared memory interface can be used in the following way:
      >>> value
      ShareableList([b'a', 'bb', 1234, 56.78, False], name='o8000000119aa10c0')
 
-Note that the semantic of the vineyard's :code:`shared_memory` is slightly different
-with the :code:`shared_memory` in python's multiprocessing module. Shared memory in
-vineyard cannot be mutable after been visible to other clients.
+.. caution::
+
+   Note that the semantic of the vineyard's :code:`shared_memory` is slightly different
+   with the :code:`shared_memory` in python's multiprocessing module. Shared memory in
+   vineyard cannot be mutable after been visible to other clients.
 
 We have added a :code:`freeze` method to make such transformation happen:
 
@@ -170,7 +178,7 @@ Open a local file as a dataframe stream
 In practice, the file may be stored in an NFS, and we want to read the file in
 parallel to further speed up the IO process.
 
-Open a file in NFS parallelized as a parallel stream
+Open a file in NFS in parallel as a parallel stream
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
@@ -182,4 +190,4 @@ Open a file in NFS parallelized as a parallel stream
      16
 
 To further understand the implementation of the driver ``open``, and the underlying
-registration mechanism for drivers in vineyard, see :ref:`divein-driver-label`.
+registration mechanism for drivers in vineyard, see also :ref:`divein-driver-label`.

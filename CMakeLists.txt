@@ -69,7 +69,9 @@ else()
     message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}'.")
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND
+        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+            "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
     # avoid the llvm-strip: error: unsupported load command (cmd=0x80000034) error
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif()
