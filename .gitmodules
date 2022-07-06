@@ -1,3 +1,7 @@
+[submodule "thirdparty/redis-plus-plus"]
+	path = thirdparty/redis-plus-plus
+	url = https://github.com/sewenew/redis-plus-plus.git
+	shallow = true
 [submodule "thirdparty/etcd-cpp-apiv3"]
 	path = thirdparty/etcd-cpp-apiv3
 	url = https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3.git
