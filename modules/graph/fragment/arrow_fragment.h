@@ -92,7 +92,7 @@ class BasicArrowFragmentBuilder
       auto fn = [this, i](Client* client) {
         vineyard::TableBuilder vt(*client, vertex_tables_[i]);
         this->set_vertex_tables_(
-            i, std::dynamic_pointer_cast<vineyard::Table>(vt.Seal(client)));
+            i, std::dynamic_pointer_cast<vineyard::Table>(vt.Seal(*client)));
 
         vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(
             *client, ovgid_lists_[i]);
