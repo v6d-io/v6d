@@ -29,6 +29,8 @@
 #ifndef SRC_SERVER_MEMORY_MEMORY_H_
 #define SRC_SERVER_MEMORY_MEMORY_H_
 
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>

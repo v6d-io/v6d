@@ -72,7 +72,7 @@ class IIOAdaptor {
   virtual Status WriteLine(const std::string& line) = 0;
 
   virtual Status Read(void* buffer, size_t size) = 0;
-  virtual Status Write(void* buffer, size_t size) = 0;
+  virtual Status Write(const void* buffer, size_t size) = 0;
 
   virtual Status Flush() { return Status::OK(); }
 

@@ -83,7 +83,7 @@ class LocalIOAdaptor : public IIOAdaptor {
 
   Status Read(void* buffer, size_t size) override;
 
-  Status Write(void* buffer, size_t size) override;
+  Status Write(const void* buffer, size_t size) override;
 
   Status Flush() override;
 

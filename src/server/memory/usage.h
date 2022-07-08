@@ -16,9 +16,11 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_USAGE_H_
 #define SRC_SERVER_MEMORY_USAGE_H_
 
+#include <atomic>
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <shared_mutex>
 #include <unordered_map>
@@ -227,11 +229,16 @@ class ColdObjectTracker
      * @param id
      * @return Status
      */
-    Status Unref(const ID& id) {
+    Status Unref(const ID& id, std::shared_ptr<Der> store_ptr) {
       std::unique_lock<decltype(mu_)> locked;
       auto it = map_.find(id);
       if (it == map_.end()) {
-        spilled_obj_.erase(id);
+        auto it = spilled_obj_.find(id);
+        if (it == spilled_obj_.end()) {
+          return Status::ObjectNotExists("Can't find %d in lru", id);
+        }
+        it->second->ReloadFromSpill(store_ptr);
+        spilled_obj_.erase(it);
         return Status::OK();
       }
       list_.erase(it->second);
@@ -254,13 +261,14 @@ class ColdObjectTracker
      * @brief spill cold-obj till their sizes sum up to sz
      *
      * @param sz: specify the spilled size
+     * @return: if objects are spilled
      */
-    void Spill(size_t sz) {
+    bool Spill(size_t sz) {
       std::unique_lock<decltype(mu_)> locked;
       size_t spilled_sz = 0;
       for (auto it = list_.begin(); it != list_.end();) {
         auto ret = it->second->Spill();
-        if (!ret || sz <= spilled_sz) {
+        if (!ret.ok() || sz <= spilled_sz) {
           break;
         }
         spilled_sz += it->second->data_size;
@@ -272,7 +280,7 @@ class ColdObjectTracker
           break;
         }
       }
-      return;
+      return spilled_sz > 0;
     }
 
    private:
@@ -300,7 +308,7 @@ class ColdObjectTracker
    * @param id The object ID.
    */
   Status RemoveFromColdList(ID const& id) {
-    VINEYARD_DISCARD(cold_obj_lru_.Unref(id));
+    VINEYARD_DISCARD(cold_obj_lru_.Unref(id, Self().shared_from_this()));
     return Status::OK();
   }
 
@@ -349,7 +357,26 @@ class ColdObjectTracker
    * to disk till memory usage back to allowed watermark.
    * @param sz spilled size
    */
-  void SpillColdObject() { cold_obj_lru_->Spill(Self().mem_spill_size_); }
+  bool SpillColdObject() { return cold_obj_lru_.Spill(Self().mem_spill_size_); }
+
+  // if exceed memory limit, we try to spill cold object onto external memory
+  uint8_t* AllocateMemoryWithSpill(size_t size, int* fd, int64_t* map_size,
+                                   ptrdiff_t* offset) {
+    uint8_t* pointer = nullptr;
+    pointer = Self().AllocateMemory(size, fd, map_size, offset);
+    if (pointer == nullptr) {
+      std::unique_lock<std::mutex> locked(spill_mu_);
+      // if already got someone spilled, then we should allocate normally
+      pointer = Self().AllocateMemory(size, fd, map_size, offset);
+
+      if (pointer == nullptr) {
+        if (SpillColdObject()) {
+          pointer = Self().AllocateMemory(size, fd, map_size, offset);
+        }
+      }
+    }
+    return pointer;
+  }
 
  public:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {
@@ -363,6 +390,7 @@ class ColdObjectTracker
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
   lru_t cold_obj_lru_;
+  std::mutex spill_mu_;
 };
 
 }  // namespace detail

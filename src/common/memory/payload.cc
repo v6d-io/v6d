@@ -14,9 +14,9 @@ limitations under the License.
 */
 
 #include "common/memory/payload.h"
-
 #include <cstdint>
 #include <string>
+#include "common/util/logging.h"
 
 namespace vineyard {
 
@@ -54,26 +54,19 @@ Payload Payload::FromJSON1(const json& tree) {
   return payload;
 }
 
-// spilled file name format: tmp_spill_<object_id>
-// we need to dump 1. object_id 2. data_size
-bool Payload::Spill() {
-  assert(this->is_sealed);
-  std::string file_name = "tmp_spill" + std::to_string(object_id);
-  // spill object_id + data_size to disk
-  pointer = nullptr;
-  is_spilled = false;
-  return true;
+inline bool Payload::IsSpilled() {
+  LOG(INFO) << "Unimplemented IsSpilled()";
+  return false;
 }
 
-// reload object_id data_size
-Status Payload::ReloadFromSpill() {
-  assert(is_spilled == true);
-  // if(is_spilled == false){
-  // return Status::OK();
-  // }
+Status Payload::Spill() {
+  LOG(INFO) << "Unimplemented Spill() in Payload";
+  return Status::Invalid();
+}
 
-  // reload 1. object_id 2. data_size back to memory
-  return Status::OK();
+Status Payload::ReloadFromSpill(std::shared_ptr<BulkStore> bulk_store_ptr) {
+  LOG(INFO) << "Unimplemented ReloadFromSpill() in Payload";
+  return Status::Invalid();
 }
 
 json PlasmaPayload::ToJSON() const {

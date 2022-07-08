@@ -31,15 +31,19 @@
 #include <sys/mman.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 #include "common/util/logging.h"
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"
+#include "server/memory/spillable_payload.h"
+#include "server/util/file_io.h"
 
 namespace vineyard {
 
@@ -444,12 +448,7 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   int64_t map_size = 0;
   ptrdiff_t offset = 0;
   uint8_t* pointer = nullptr;
-  pointer = AllocateMemory(data_size, &fd, &map_size, &offset);
-  if (pointer == nullptr) {
-    // try to spill the cold-obj and try again
-    this->SpillColdObject();
-    pointer = AllocateMemory(data_size, &fd, &map_size, &offset);
-  }
+  pointer = AllocateMemoryWithSpill(data_size, &fd, &map_size, &offset);
   if (pointer == nullptr) {
     return Status::NotEnoughMemory(
         "Failed to allocate memory of size " + std::to_string(data_size) +
@@ -458,8 +457,8 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
         std::to_string(Footprint()) + " are already in use");
   }
   object_id = GenerateBlobID<ObjectID>(pointer);
-  object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
-                                     map_size, offset);
+  object = std::make_shared<SpillablePayload>(object_id, data_size, pointer, fd,
+                                              map_size, offset);
   objects_.emplace(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
