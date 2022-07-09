@@ -23,6 +23,7 @@ limitations under the License.
 #include <mutex>
 #include <set>
 #include <shared_mutex>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -235,7 +236,7 @@ class ColdObjectTracker
       if (it == map_.end()) {
         auto it = spilled_obj_.find(id);
         if (it == spilled_obj_.end()) {
-          return Status::ObjectNotExists("Can't find %d in lru", id);
+          return Status::ObjectNotExists("Can't find " + std::to_string(id) + " in lru");
         }
         it->second->ReloadFromSpill(store_ptr);
         spilled_obj_.erase(it);

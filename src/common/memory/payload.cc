@@ -59,12 +59,12 @@ inline bool Payload::IsSpilled() {
   return false;
 }
 
-Status Payload::Spill() {
+inline Status Payload::Spill() {
   LOG(INFO) << "Unimplemented Spill() in Payload";
   return Status::Invalid();
 }
 
-Status Payload::ReloadFromSpill(std::shared_ptr<BulkStore> bulk_store_ptr) {
+inline Status Payload::ReloadFromSpill(std::shared_ptr<BulkStore> bulk_store_ptr) {
   LOG(INFO) << "Unimplemented ReloadFromSpill() in Payload";
   return Status::Invalid();
 }

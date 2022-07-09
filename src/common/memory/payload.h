@@ -77,6 +77,8 @@ struct Payload {
         pointer(ptr),
         is_sealed(0),
         is_owner(1) {}
+  
+  virtual ~Payload() = default;
 
   static std::shared_ptr<Payload> MakeEmpty() {
     static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
@@ -99,7 +101,7 @@ struct Payload {
 
   inline bool IsOwner() { return is_owner; }
 
-  virtual inline bool IsSpilled();
+  virtual bool IsSpilled();
 
   virtual Status Spill();
 

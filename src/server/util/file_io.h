@@ -54,7 +54,7 @@ class SpillReadFile {
 
   SpillReadFile(const SpillReadFile&) = delete;
   SpillReadFile& operator=(const SpillReadFile&) = delete;
-  ~SpillReadFile();
+  ~SpillReadFile() = default;
 
   vineyard::Status Open();
   vineyard::Status Read(size_t n, char* result);

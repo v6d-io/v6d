@@ -17,6 +17,7 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
+#include "server/memory/allocator.h"
 #include "server/util/file_io.h"
 
 namespace vineyard{
@@ -33,7 +34,8 @@ namespace vineyard{
     RETURN_ON_ERROR(spill_file.Write(reinterpret_cast<const char*>(pointer),
                                     data_size, object_id));
     RETURN_ON_ERROR(spill_file.Sync());
-    // TODO: free this pointer
+    BulkAllocator::Free(pointer, data_size);
+    store_fd = -1;
     pointer = nullptr;
     is_spilled = true;
     return Status::OK();
@@ -42,10 +44,6 @@ namespace vineyard{
   // reload object_id data_size
   Status SpillablePayload::ReloadFromSpill(std::shared_ptr<BulkStore> bulk_store_ptr){
     assert(is_spilled == true);
-    // if(is_spilled == false){
-    // return Status::OK();
-    // }
-
     // reload 1. object_id 2. data_size back to memory
     std::string file_name = "tmp_spill" + std::to_string(object_id);
     util::SpillReadFile spill_file(file_name);
@@ -60,15 +58,15 @@ namespace vineyard{
     {
       char buf[sizeof(data_size)];
       RETURN_ON_ERROR(spill_file.Read(sizeof(uint64_t), buf));
-      if(data_size != util::DecodeFixed64(buf)){
+      if(static_cast<uint64_t>(data_size) != util::DecodeFixed64(buf)){
         return Status::IOError("Opened wrong file: " + file_name);
       }
-      pointer = nullptr;
-          // bulk_store_ptr->AllocateMemoryWithSpill(data_size, &store_fd, &map_size, &data_offset);
+      pointer = bulk_store_ptr->AllocateMemoryWithSpill(data_size, &store_fd, &map_size, &data_offset);
     }
     if(pointer == nullptr){
       return Status::NotEnoughMemory("Failed to allocate memory of size " + std::to_string(data_size) + " while reload spilling file");
     }
+    is_spilled = false;
     return Status::OK();
     }
 }

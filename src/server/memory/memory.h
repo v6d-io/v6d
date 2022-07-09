@@ -117,8 +117,8 @@ class BulkStoreBase {
 
 class BulkStore
     : public BulkStoreBase<ObjectID, Payload>,
-      public std::enable_shared_from_this<BulkStore>,
-      protected detail::ColdObjectTracker<ObjectID, Payload, BulkStore> {
+      public detail::ColdObjectTracker<ObjectID, Payload, BulkStore>,
+      public std::enable_shared_from_this<BulkStore> {
  public:
   /*
    * @brief Allocate space for a new blob.

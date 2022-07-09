@@ -25,13 +25,18 @@ limitations under the License.
 namespace vineyard {
     struct SpillablePayload : public Payload{
         SpillablePayload() = default;
-        SpillablePayload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize, ptrdiff_t offset):Payload(object_id, size, ptr, fd, msize, offset), is_spilled(0) {}
+        SpillablePayload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize, ptrdiff_t offset)
+            :Payload(object_id, size, ptr, fd, msize, offset), is_spilled(0) {}
+        SpillablePayload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
+          int64_t msize, ptrdiff_t offset): Payload(object_id, size, ptr, fd, arena_fd, msize, offset), is_spilled(0) {}
 
         bool operator==(const SpillablePayload& other) const{
             return ((object_id == other.object_id) && (store_fd == other.store_fd) &&
             (data_offset == other.data_offset) &&
             (data_size == other.data_size));
         }
+
+        ~SpillablePayload() override {}
 
         bool IsSpilled() override { return is_spilled; }
 
