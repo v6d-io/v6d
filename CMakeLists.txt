@@ -542,17 +542,20 @@ include("cmake/GenerateVineyardJava.cmake")
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
-    set(BUILD_VINEYARD_IO)
+    set(V6D_SERVER vineyardd)
+    set(V6D_SERVER_LIB vineyard_server)
     find_openssl_libraries(REQUIRED)
     find_etcd_cpp_apiv3()
     find_intel_tbb()
-    file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
+    file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
     )
-    add_executable(vineyardd ${SERVER_SRC_FILES})
-    target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
-    target_link_libraries(vineyardd PUBLIC ${Boost_LIBRARIES}
+    add_library(${V6D_SERVER_LIB} SHARED ${SERVER_SRC_FILES})
+    add_executable(${V6D_SERVER} "src/server/vineyardd.cc")
+    target_link_libraries(${V6D_SERVER} PRIVATE ${V6D_SERVER_LIB})
+    target_compile_options(${V6D_SERVER_LIB} PRIVATE -DBUILD_VINEYARDD)
+    target_link_libraries(${V6D_SERVER_LIB} PUBLIC ${Boost_LIBRARIES}
                                            ${CPPREST_LIB}
                                            ${ETCD_CPP_LIBRARIES}
                                            ${GFLAGS_LIBRARIES}
@@ -562,32 +565,31 @@ if(BUILD_VINEYARD_SERVER)
                                            TBB::tbb
                                            vineyard_io
     )
-    target_include_directories(vineyardd PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>)
-    target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
+    target_include_directories(${V6D_SERVER_LIB} PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})
-        target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
+        target_link_libraries(${V6D_SERVER} PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
-    install_vineyard_target(vineyardd)
+    install_vineyard_target(${V6D_SERVER})
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/server")
-    target_enable_sanitizer(vineyardd PRIVATE)
+    target_enable_sanitizer(${V6D_SERVER} PRIVATE)
     if(NOT BUILD_SHARED_LIBS)
         if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-            target_compile_options(vineyardd PRIVATE -static-libgcc -static-libstdc++ -Os)
-            target_add_link_options(vineyardd PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
+            target_compile_options(${V6D_SERVER_LIB} PRIVATE -static-libgcc -static-libstdc++ -Os)
+            target_add_link_options(${V6D_SERVER_LIB} PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
         endif()
-        target_link_libraries(vineyardd PRIVATE ${GRPC_GRPC++_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+        target_link_libraries(${V6D_SERVER_LIB} PRIVATE ${GRPC_GRPC++_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
     endif()
     if(BUILD_VINEYARD_PROFILING)
-        target_include_directories(vineyardd PRIVATE ${Gperftools_INCLUDE_DIRS})
-        target_link_libraries(vineyardd PRIVATE ${Gperftools_LIBRARIES})
+        target_include_directories(${V6D_SERVER_LIB} PRIVATE ${Gperftools_INCLUDE_DIRS})
+        target_link_libraries(${V6D_SERVER_LIB} PRIVATE ${Gperftools_LIBRARIES})
     endif()
     message(STATUS "Vineyard will use '${WITH_ALLOCATOR}' for shared memory allocation")
     if(WITH_ALLOCATOR STREQUAL "dlmalloc")
         # use dlmalloc
-        target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
+        target_compile_options(${V6D_SERVER_LIB} PRIVATE -DWITH_DLMALLOC)
     elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
-        target_link_libraries(vineyardd PRIVATE jemalloc ${CMAKE_DL_LIBS})
-        target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
+        target_link_libraries(${V6D_SERVER_LIB} PRIVATE jemalloc ${CMAKE_DL_LIBS})
+        target_compile_options(${V6D_SERVER_LIB} PRIVATE -DWITH_JEMALLOC)
     else()
         message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
     endif()
