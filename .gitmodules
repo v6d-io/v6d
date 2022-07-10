@@ -30,7 +30,7 @@
 	path = thirdparty/ctti
 	url = https://github.com/Manu343726/ctti.git
 	shallow = true
-
 [submodule "thirdparty/redis-plus-plus"]
 	path = thirdparty/redis-plus-plus
 	url = https://github.com/sewenew/redis-plus-plus.git
+	shallow = true
