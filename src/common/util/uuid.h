@@ -18,6 +18,7 @@ limitations under the License.
 
 // The __VPP macro is used to avoid including <x86intrin.h> when parsing
 // and coding with libclang/clang tooling.
+#include <cstdint>
 #if defined(__x86_64__) && !defined(__VPP)
 #include <x86intrin.h>
 #endif
@@ -82,14 +83,25 @@ auto static_if(T t) {
   return static_if(std::integral_constant<bool, B>{}, t, [](auto&&...) {});
 }
 
+/*
+ *  @brief Make empty blob and preallocate blob always mapping to the same place
+ *         Others will be mapped randomly between
+ * (0x8000000000000000UL,0xFFFFFFFFFFFFFFFFUL) exclusively.
+ */
 inline ObjectID GenerateBlobID(const uintptr_t ptr) {
+  if (ptr == 0x8000000000000000UL ||
+      ptr == std::numeric_limits<uintptr_t>::max()) {
+    return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
+  }
 #if defined(__x86_64__)
-  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc())) |
+  auto rd = __rdtsc() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
+  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(rd)) |
          0x8000000000000000UL;
 #else
+  auto rd =
+      rand() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;  // NOLINT(runtime/threadsafe_fn)
   return 0x8000000000000000UL |
-         (0x7FFFFFFFFFFFFFFFUL &
-          static_cast<uint64_t>(rand()));  // NOLINT(runtime/threadsafe_fn)
+         (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(rd));
 #endif
 }
 
@@ -198,17 +210,17 @@ inline InstanceID UnspecifiedInstanceID() {
   return std::numeric_limits<InstanceID>::max();
 }
 
-template <typename ID = ObjectID>
+template <typename ID>
 inline ID GenerateBlobID(uintptr_t ptr) {
-  uint64_t ans = 0x8000000000000000UL | reinterpret_cast<uintptr_t>(ptr);
+  uint64_t ans = GenerateBlobID(ptr);
   return static_if<std::is_same<ID, ObjectID>{}>(
       [&]() { return ObjectID(ans); },
       [&]() { return PlasmaIDFromString(ObjectIDToString(ObjectID(ans))); })();
 }
 
-template <typename ID = ObjectID>
+template <typename ID>
 inline ID GenerateBlobID(const void* ptr) {
-  uint64_t ans = 0x8000000000000000UL | reinterpret_cast<uint64_t>(ptr);
+  uint64_t ans = GenerateBlobID(reinterpret_cast<const uintptr_t>(ptr));
   return static_if<std::is_same<ID, ObjectID>{}>(
       [&]() { return ObjectID(ans); },
       [&]() { return PlasmaIDFromString(ObjectIDToString(ObjectID(ans))); })();

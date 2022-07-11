@@ -236,8 +236,7 @@ Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
   if (object_id == EmptyBlobID<ID>() ||
-      object_id == GenerateBlobID<ID>(reinterpret_cast<void*>(
-                       std::numeric_limits<uintptr_t>::max()))) {
+      object_id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
     return Status::OK();
   }
   typename object_map_t::const_accessor accessor;
@@ -342,8 +341,7 @@ Status BulkStoreBase<ID, P>::PreAllocate(const size_t size) {
   }
 
   // insert a special marker for obtaining the whole shared memory range
-  ID object_id = GenerateBlobID<ID>(
-      reinterpret_cast<void*>(std::numeric_limits<uintptr_t>::max()));
+  ID object_id = GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max());
   int fd = -1;
   int64_t map_size = 0;
   ptrdiff_t offset = 0;
@@ -420,8 +418,7 @@ Status BulkStoreBase<ID, P>::RemoveOwnership(
     std::set<ID> const& ids, std::map<ID, P>& successed_id_to_size) {
   for (auto id : ids) {
     if (id == EmptyBlobID<ID>() ||
-        id == GenerateBlobID<ID>(reinterpret_cast<void*>(
-                  std::numeric_limits<uintptr_t>::max()))) {
+        id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
       continue;
     }
     typename object_map_t::const_accessor accessor;

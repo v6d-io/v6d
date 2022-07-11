@@ -14,6 +14,7 @@ limitations under the License.
 */
 
 #include <bitset>
+#include <cstdint>
 #include <iostream>
 
 #include "common/util/logging.h"
@@ -23,7 +24,7 @@ using vineyard::ObjectID;
 
 int main() {
   // after revise
-  ObjectID id1 = vineyard::GenerateBlobID(reinterpret_cast<void*>(&main));
+  ObjectID id1 = vineyard::GenerateBlobID(reinterpret_cast<uintptr_t>(&main));
   LOG(INFO) << id1 << "\n";
   CHECK(vineyard::IsBlob(id1));
   ObjectID id2 = vineyard::GenerateObjectID();
