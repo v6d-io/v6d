@@ -94,6 +94,10 @@ class SharedMemoryManager {
   Status Mmap(int fd, int64_t map_size, uint8_t* pointer, bool readonly,
               bool realign, uint8_t** ptr);
 
+  Status Mmap(int fd, ObjectID id, int64_t map_size, size_t data_size,
+              size_t data_offset, uint8_t* pointer, bool readonly, bool realign,
+              uint8_t** ptr);
+
   // compute if the given fd requireds a recv_fd and mmap
   int PreMmap(int fd);
 
@@ -110,7 +114,7 @@ class SharedMemoryManager {
 
  private:
   ObjectID resolveObjectID(const uintptr_t target, const uintptr_t key,
-                           const MmapEntry* entry);
+                           const uintptr_t data_size, const ObjectID object_id);
 
   // UNIX-domain socket
   int vineyard_conn_ = -1;
@@ -119,7 +123,7 @@ class SharedMemoryManager {
   std::unordered_map<int, std::unique_ptr<MmapEntry>> mmap_table_;
 
   // sorted shm segments for fast "if exists" query
-  std::map<uintptr_t, MmapEntry*> segments_;
+  std::map<uintptr_t, std::pair<size_t, ObjectID>> segments_;
 };
 
 /**

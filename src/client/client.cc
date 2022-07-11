@@ -230,9 +230,10 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
       return Status::Invalid(error.dump());
     }
 
-    RETURN_ON_ERROR(shm_->Mmap(object.store_fd, object.map_size,
-                               object.pointer - object.data_offset, false, true,
-                               &mmapped_ptr));
+    RETURN_ON_ERROR(shm_->Mmap(
+        object.store_fd, object.object_id, object.map_size, object.data_size,
+        object.data_offset, object.pointer - object.data_offset, false, true,
+        &mmapped_ptr));
     dist = mmapped_ptr + object.data_offset;
   }
   blob.reset(new arrow::MutableBuffer(dist, object.data_size));
@@ -428,8 +429,8 @@ Status Client::CreateArena(const size_t size, int& fd, size_t& available_size,
   VINEYARD_ASSERT(size == std::numeric_limits<size_t>::max() ||
                   size == available_size);
   uint8_t* mmapped_ptr = nullptr;
-  VINEYARD_CHECK_OK(
-      shm_->Mmap(fd, available_size, nullptr, false, false, &mmapped_ptr));
+  VINEYARD_CHECK_OK(shm_->Mmap(fd, InvalidObjectID(), available_size, 0, 0,
+                               nullptr, false, false, &mmapped_ptr));
   space = reinterpret_cast<uintptr_t>(mmapped_ptr);
   return Status::OK();
 }
@@ -471,9 +472,10 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
       return Status::Invalid(error.dump());
     }
 
-    RETURN_ON_ERROR(shm_->Mmap(payload.store_fd, payload.map_size,
-                               payload.pointer - payload.data_offset, false,
-                               true, &shared));
+    RETURN_ON_ERROR(shm_->Mmap(
+        payload.store_fd, payload.object_id, payload.map_size,
+        payload.data_size, payload.data_offset,
+        payload.pointer - payload.data_offset, false, true, &shared));
     dist = shared + payload.data_offset;
   }
   buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
@@ -533,7 +535,8 @@ Status Client::GetBuffers(
     std::shared_ptr<arrow::Buffer> buffer = nullptr;
     uint8_t *shared = nullptr, *dist = nullptr;
     if (item.data_size > 0) {
-      VINEYARD_CHECK_OK(shm_->Mmap(item.store_fd, item.map_size,
+      VINEYARD_CHECK_OK(shm_->Mmap(item.store_fd, item.object_id, item.map_size,
+                                   item.data_size, item.data_offset,
                                    item.pointer - item.data_offset, true, true,
                                    &shared));
       dist = shared + item.data_offset;
@@ -685,7 +688,8 @@ Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
   for (auto const& item : payloads) {
     uint8_t* shared = nullptr;
     if (item.data_size > 0) {
-      VINEYARD_CHECK_OK(shm_->Mmap(item.store_fd, item.map_size,
+      VINEYARD_CHECK_OK(shm_->Mmap(item.store_fd, item.object_id, item.map_size,
+                                   item.data_size, item.data_offset,
                                    item.pointer - item.data_offset, true, true,
                                    &shared));
     }
@@ -903,7 +907,9 @@ Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
     }
 
     RETURN_ON_ERROR(
-        this->shm_->Mmap(plasma_payload.store_fd, plasma_payload.map_size,
+        this->shm_->Mmap(plasma_payload.store_fd, plasma_payload.object_id,
+                         plasma_payload.map_size, plasma_payload.data_size,
+                         plasma_payload.data_offset,
                          plasma_payload.pointer - plasma_payload.data_offset,
                          false, true, &shared));
     dist = shared + plasma_payload.data_offset;
@@ -968,7 +974,8 @@ Status PlasmaClient::GetBuffers(
     uint8_t *shared = nullptr, *dist = nullptr;
     if (item.second.data_size > 0) {
       VINEYARD_CHECK_OK(this->shm_->Mmap(
-          item.second.store_fd, item.second.map_size,
+          item.second.store_fd, item.second.object_id, item.second.map_size,
+          item.second.data_size, item.second.data_offset,
           item.second.pointer - item.second.data_offset, true, true, &shared));
       dist = shared + item.second.data_offset;
     }
@@ -1151,7 +1158,16 @@ Status SharedMemoryManager::Mmap(int fd, int64_t map_size, uint8_t* pointer,
       return Status::IOError("Failed to mmap received fd as a writable buffer");
     }
   }
-  segments_.emplace(reinterpret_cast<uintptr_t>(*ptr), entry->second.get());
+  return Status::OK();
+}
+
+Status SharedMemoryManager::Mmap(int fd, ObjectID id, int64_t map_size,
+                                 size_t data_size, size_t data_offset,
+                                 uint8_t* pointer, bool readonly, bool realign,
+                                 uint8_t** ptr) {
+  RETURN_ON_ERROR(this->Mmap(fd, map_size, pointer, readonly, realign, ptr));
+  segments_.emplace(reinterpret_cast<uintptr_t>(*ptr) + data_offset,
+                    std::make_pair(data_size, id));
   return Status::OK();
 }
 
@@ -1191,8 +1207,8 @@ bool SharedMemoryManager::Exists(const uintptr_t target, ObjectID& object_id) {
             << reinterpret_cast<void*>(target) << std::endl;
   for (auto const& item : segments_) {
     std::clog << "[trace] [" << reinterpret_cast<void*>(item.first) << ", "
-              << reinterpret_cast<void*>(item.first + item.second->length_)
-              << ")" << std::endl;
+              << reinterpret_cast<void*>(item.first + item.second.first) << ")"
+              << std::endl;
   }
 #endif
 
@@ -1204,12 +1220,14 @@ bool SharedMemoryManager::Exists(const uintptr_t target, ObjectID& object_id) {
   } else if (loc == segments_.end()) {
     // check rbegin
     auto const item = segments_.rbegin();
-    object_id = resolveObjectID(target, item->first, item->second);
+    object_id = this->resolveObjectID(target, item->first, item->second.first,
+                                      item->second.second);
     return object_id != InvalidObjectID();
   } else {
     // check prev
     auto const item = std::prev(loc);
-    object_id = resolveObjectID(target, item->first, item->second);
+    object_id = this->resolveObjectID(target, item->first, item->second.first,
+                                      item->second.second);
     return object_id != InvalidObjectID();
   }
 }
@@ -1220,22 +1238,13 @@ bool SharedMemoryManager::Exists(const void* target, ObjectID& object_id) {
 
 ObjectID SharedMemoryManager::resolveObjectID(const uintptr_t target,
                                               const uintptr_t key,
-                                              const MmapEntry* entry) {
-  if (key <= target && target < key + entry->length_) {
-    ptrdiff_t offset = 0;
-    if (key == reinterpret_cast<uintptr_t>(entry->ro_pointer_)) {
-      offset = target - reinterpret_cast<uintptr_t>(entry->ro_pointer_);
-    } else if (key == reinterpret_cast<uintptr_t>(entry->rw_pointer_)) {
-      offset = target - reinterpret_cast<uintptr_t>(entry->rw_pointer_);
-    } else {
-      return InvalidObjectID();
-    }
-    ObjectID object_id = GenerateBlobID<ObjectID>(entry->pointer + offset);
+                                              const uintptr_t data_size,
+                                              const ObjectID object_id) {
+  if (key <= target && target < key + data_size) {
 #if defined(WITH_VERBOSE)
     std::clog << "[trace] resuing blob " << ObjectIDToString(object_id)
-              << " (offset is " << offset << ")"
               << " for pointer " << reinterpret_cast<void*>(target)
-              << std::endl;
+              << " (size is " << data_size << ")" << std::endl;
 #endif
     return object_id;
   } else {
