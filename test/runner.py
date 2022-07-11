@@ -352,9 +352,7 @@ def run_single_vineyardd_tests(tests):
         run_test(tests, 'session_test')
         run_test(tests, 'signature_test')
         run_test(tests, 'shallow_copy_test')
-        # FIXME: Exists() in client.h can't find the correct ObjectID from pointer
-        # since #839
-        # run_test(tests, 'shared_memory_test')
+        run_test(tests, 'shared_memory_test')
         run_test(tests, 'stream_test')
         run_test(tests, 'tensor_test')
         run_test(tests, 'typename_test')
