@@ -1,0 +1,18 @@
+set(CMAKE_CXX_STANDARD 17)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/DataFrame/include/
+)
+
+add_custom_target(
+    build_hn_df
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND ./build_hn_df.sh
+)
+
+add_library(hosseinmoein_dataframe STATIC hosseinmoein_dataframe.cc)
+target_link_libraries(hosseinmoein_dataframe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/DataFrame/build/libDataFrame.a)
+target_link_libraries(hosseinmoein_dataframe PUBLIC vineyard_client vineyard_basic)
+
+install_vineyard_target(hosseinmoein_dataframe)
+install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
+

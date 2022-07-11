@@ -722,6 +722,9 @@ if(BUILD_VINEYARD_BASIC)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_basic)
 endif()
 
+add_subdirectory(modules/hosseinmoein-dataframe)
+list(APPEND VINEYARD_INSTALL_LIBS hosseinmoein_dataframe)
+
 if(BUILD_VINEYARD_IO)
     add_subdirectory(modules/io)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_io)
