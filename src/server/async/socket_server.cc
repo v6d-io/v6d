@@ -551,7 +551,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   ObjectID object_id = InvalidObjectID();
   TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
   // Delete ignore reference count.
-  auto status = bulk_store_->Delete(object_id);
+  auto status = bulk_store_->OnDelete(object_id);
   std::string message_out;
   if (status.ok()) {
     WriteDropBufferReply(message_out);
@@ -1261,7 +1261,7 @@ bool SocketConnection::doPlasmaDelData(json const& root) {
   TRY_READ_REQUEST(ReadPlasmaDelDataRequest, root, id);
 
   /// Plasma Data are not composable, so we do not have to wrestle with meta.
-  RESPONSE_ON_ERROR(plasma_bulk_store_->Delete(id));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->OnDelete(id));
 
   std::string message_out;
   WritePlasmaDelDataReply(message_out);
@@ -1508,7 +1508,7 @@ void SocketServer::RemoveConnection(int conn_id) {
     }
 
     if (AliveConnections() == 0 && closable_.load()) {
-      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->session_id()));
+      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->OnDelete(vs_ptr_->session_id()));
     }
   }
 }

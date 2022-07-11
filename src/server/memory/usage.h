@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_USAGE_H_
 #define SRC_SERVER_MEMORY_USAGE_H_
 
+#include <glog/logging.h>
 #include <atomic>
 #include <list>
 #include <map>
@@ -236,9 +237,9 @@ class ColdObjectTracker
       if (it == map_.end()) {
         auto it = spilled_obj_.find(id);
         if (it == spilled_obj_.end()) {
-          return Status::ObjectNotExists("Can't find " + std::to_string(id) + " in lru");
+          return Status::OK();
         }
-        it->second->ReloadFromSpill(store_ptr);
+        RETURN_ON_ERROR(it->second->ReloadFromSpill(store_ptr));
         spilled_obj_.erase(it);
         return Status::OK();
       }
@@ -264,16 +265,25 @@ class ColdObjectTracker
      * @param sz: specify the spilled size
      * @return: if objects are spilled
      */
-    bool Spill(size_t sz) {
+    Status Spill(size_t sz) {
       std::unique_lock<decltype(mu_)> locked;
       size_t spilled_sz = 0;
+      auto st = Status::OK();
+      LOG(INFO) << "vineryardd is trying to spilling objects for more space...";
       for (auto it = list_.begin(); it != list_.end();) {
-        auto ret = it->second->Spill();
-        if (!ret.ok() || sz <= spilled_sz) {
+        LOG(INFO) << "\tspilling ObjID: " << it->first;
+        st = it->second->Spill();
+        if (!st.ok()) { 
+          LOG(ERROR) << st.ToString();
           break;
         }
         spilled_sz += it->second->data_size;
+        LOG(ERROR) << "Gonna spill ObjectID: " << it->first;
         spilled_obj_.emplace(it->first, it->second);
+        LOG(INFO) << "spill_obj now contains:"; 
+        for(auto iter = spilled_obj_.begin(); iter != spilled_obj_.end(); iter++){
+          LOG(INFO) <<"\t" << iter->first; 
+        }
         map_.erase(it->first);
         // erase here is safe for list's iterator
         it = list_.erase(it);
@@ -281,7 +291,16 @@ class ColdObjectTracker
           break;
         }
       }
-      return spilled_sz > 0;
+      if(st.ok() && spilled_sz == 0){
+        return Status::NotEnoughMemory("Nothing spilled");
+      }
+      return st; 
+    }
+
+    bool CheckSpilled(const ID& id){
+      std::shared_lock<decltype(mu_)> lock;
+      LOG(INFO) << "Searching for " << id;
+      return spilled_obj_.find(id) != spilled_obj_.end();
     }
 
    private:
@@ -309,7 +328,7 @@ class ColdObjectTracker
    * @param id The object ID.
    */
   Status RemoveFromColdList(ID const& id) {
-    VINEYARD_DISCARD(cold_obj_lru_.Unref(id, Self().shared_from_this()));
+    RETURN_ON_ERROR(cold_obj_lru_.Unref(id, Self().shared_from_this()));
     return Status::OK();
   }
 
@@ -337,6 +356,8 @@ class ColdObjectTracker
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
     if (payload->IsSealed()) {
       cold_obj_lru_.Ref(id, payload);
+    }else{
+      LOG(INFO) << "Not Sealed, Object ID: " << id;
     }
     return Status::OK();
   }
@@ -354,13 +375,28 @@ class ColdObjectTracker
   }
 
   /**
+  * @brief check if a blob is spilled out. Return true if it is spilled.
+  */ 
+  Status IsSpilled(ID const& id, bool& is_spilled) {
+    if (cold_obj_lru_.CheckSpilled(id)) {
+      is_spilled = true;
+    }else{
+      is_spilled = false;
+    }
+    return Status::OK();
+  }
+
+  /**
    * @brief Only triggered when detected OOM, this function will spill cold-obj
    * to disk till memory usage back to allowed watermark.
    * @param sz spilled size
    */
-  bool SpillColdObject() { return cold_obj_lru_.Spill(Self().mem_spill_size_); }
+  Status SpillColdObject() { return cold_obj_lru_.Spill(Self().mem_spill_size_); }
 
-  // if exceed memory limit, we try to spill cold object onto external memory
+  /**
+   * @brief if exceed memory limit, we try to spill cold object onto external memory
+   * @return if succeed to spill and allocate the memory, then return pointer, else return nullptr
+   */
   uint8_t* AllocateMemoryWithSpill(size_t size, int* fd, int64_t* map_size,
                                    ptrdiff_t* offset) {
     uint8_t* pointer = nullptr;
@@ -371,7 +407,7 @@ class ColdObjectTracker
       pointer = Self().AllocateMemory(size, fd, map_size, offset);
 
       if (pointer == nullptr) {
-        if (SpillColdObject()) {
+        if (SpillColdObject().ok()) {
           pointer = Self().AllocateMemory(size, fd, map_size, offset);
         }
       }

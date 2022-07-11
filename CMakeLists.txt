@@ -565,6 +565,7 @@ if(BUILD_VINEYARD_SERVER)
                                            TBB::tbb
                                            vineyard_io
     )
+    target_include_directories(${V6D_SERVER_LIB} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>)
     target_include_directories(${V6D_SERVER_LIB} PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})
         target_link_libraries(${V6D_SERVER} PRIVATE ${LIBUNWIND_LIBRARIES})
@@ -805,6 +806,10 @@ if(BUILD_VINEYARD_TESTS)
 
         if(${T_NAME} STREQUAL "lru_test")
             target_link_libraries(${T_NAME} PRIVATE TBB::tbb)
+        endif()
+
+        if(${T_NAME} STREQUAL "spillable_payload_test")
+            target_link_libraries(${T_NAME} PRIVATE TBB::tbb vineyard_server)
         endif()
 
         if(${T_NAME} STREQUAL "allocator_test"

@@ -124,6 +124,7 @@ void BulkAllocator::Free(void* mem, size_t bytes) {
   allocator_.Free(mem);
 #endif
   allocated_ -= bytes;
+  LOG(INFO) << "After freeing, allocated: " << allocated_;
 }
 
 void BulkAllocator::SetFootprintLimit(size_t bytes) {

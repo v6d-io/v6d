@@ -353,6 +353,7 @@ def run_single_vineyardd_tests(tests):
         run_test(tests, 'server_status_test')
         run_test(tests, 'session_test')
         run_test(tests, 'signature_test')
+        run_test(tests, 'spillable_payload_test')
         run_test(tests, 'shallow_copy_test')
         run_test(tests, 'shared_memory_test')
         run_test(tests, 'stream_test')
@@ -363,6 +364,13 @@ def run_single_vineyardd_tests(tests):
 
         # test invalid inputs from client
         run_invalid_client_test(tests, '127.0.0.1', rpc_socket_port)
+    # with start_vineyardd(
+        # 'http://localhost:%d' % etcd_port,
+        # 'vineyard_test_%s' % time.time(),
+        # 2048,
+        # default_ipc_socket=VINEYARD_CI_IPC_SOCKET, 
+    # ):
+        # run_test(tests, 'spill_test')
 
 
 def run_scale_in_out_tests(etcd_endpoints, instance_size=4):

@@ -152,6 +152,7 @@ class BulkStore
 
   friend class detail::ColdObjectTracker<ObjectID, Payload, BulkStore>;
   friend class SocketConnection;
+  friend class VineyardServer;
 };
 
 /**

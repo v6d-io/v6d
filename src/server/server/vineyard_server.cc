@@ -627,7 +627,7 @@ Status VineyardServer::DelData(
     }
     context_.post([this, ids, callback] {
       for (auto const id : ids) {
-        VINEYARD_DISCARD(bulk_store_->Delete(id));
+        VINEYARD_DISCARD(bulk_store_->OnDelete(id));
       }
       VINEYARD_DISCARD(callback(Status::OK(), ids));
     });
@@ -657,7 +657,7 @@ Status VineyardServer::DelData(
 
 Status VineyardServer::DeleteBlobBatch(const std::set<ObjectID>& ids) {
   for (auto object_id : ids) {
-    VINEYARD_SUPPRESS(this->bulk_store_->Delete(object_id));
+    VINEYARD_SUPPRESS(this->bulk_store_->OnDelete(object_id));
   }
   return Status::OK();
 }
