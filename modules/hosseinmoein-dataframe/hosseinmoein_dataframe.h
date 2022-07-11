@@ -21,15 +21,15 @@ class HNDataFrameBuilder;
  * @T: The index type.
  */
 template<typename T>
-class HNDataFrame: public vineyard::Registered<HNDataFrame<T>> {
+class HDataFrame: public vineyard::Registered<HDataFrame<T>> {
  private:
   StdDataFrame<T> df;
   uint64_t vineyard_df_id;
  public:
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(
-      std::unique_ptr<HNDataFrame<T>>{
-        new HNDataFrame<T>()});
+      std::unique_ptr<HDataFrame<T>>{
+        new HDataFrame<T>()});
   }
 
   void Construct(const ObjectMeta& meta) override {
@@ -170,7 +170,7 @@ class HNDataFrame: public vineyard::Registered<HNDataFrame<T>> {
     return df;
   }
 
-  HNDataFrame() {
+  HDataFrame() {
 
   }
 
@@ -202,7 +202,7 @@ class HNDataFrameBuilder: public vineyard::ObjectBuilder {
   std::shared_ptr<Object> _Seal(Client& client) override {
     std::cout << __func__ << std::endl;
     VINEYARD_CHECK_OK(this->Build(client));
-    auto hn_df = std::make_shared<HNDataFrame <T>>();
+    auto hn_df = std::make_shared<HDataFrame <T>>();
 
     {
       std::vector<T> &index_vec = df.get_index();
@@ -260,7 +260,7 @@ class HNDataFrameBuilder: public vineyard::ObjectBuilder {
 
     hn_df->vineyard_df_id = vineyard_df_id;
     hn_df->meta_.AddKeyValue("vineyard_df_id", vineyard_df_id);
-    hn_df->meta_.SetTypeName(vineyard::type_name<HNDataFrame<T>>());
+    hn_df->meta_.SetTypeName(vineyard::type_name<HDataFrame<T>>());
     VINEYARD_CHECK_OK(client.CreateMetaData(hn_df->meta_, hn_df->id_));
     return hn_df;
   }
