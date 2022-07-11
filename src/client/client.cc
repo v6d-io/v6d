@@ -1230,7 +1230,7 @@ ObjectID SharedMemoryManager::resolveObjectID(const uintptr_t target,
     } else {
       return InvalidObjectID();
     }
-    ObjectID object_id = GenerateBlobID(entry->pointer + offset);
+    ObjectID object_id = GenerateBlobID<ObjectID>(entry->pointer + offset);
 #if defined(WITH_VERBOSE)
     std::clog << "[trace] resuing blob " << ObjectIDToString(object_id)
               << " (offset is " << offset << ")"
