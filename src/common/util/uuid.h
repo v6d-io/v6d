@@ -91,7 +91,7 @@ auto static_if(T t) {
 inline ObjectID GenerateBlobID(const uintptr_t ptr) {
   if (ptr == 0x8000000000000000UL ||
       ptr == std::numeric_limits<uintptr_t>::max()) {
-    return static_cast<uint64_t>(ptr);
+    return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
   }
 #if defined(__x86_64__)
   auto rd = __rdtsc() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
