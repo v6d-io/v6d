@@ -213,6 +213,12 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
             VLOG(10) << "Got request from client to get data, dump json:";
             std::cerr << meta.dump(4) << std::endl;
             VLOG(10) << "=========================================";
+            std::stringstream ss;
+            for (auto const& id : ids) {
+              ss << id << "(" << ObjectIDToString(id) << "), ";
+            }
+            VLOG(10) << "Requesting objects: " << ss.str();
+            VLOG(10) << "=========================================";
           }
 #endif
           auto test_task = [this, ids](const json& meta) -> bool {
@@ -236,13 +242,18 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
               json sub_tree;
               if (IsBlob(id)) {
                 std::shared_ptr<Payload> object;
-                if (this->bulk_store_->Get(id, object).ok()) {
+                auto status = this->bulk_store_->Get(id, object);
+                if (status.ok()) {
                   sub_tree["id"] = ObjectIDToString(id);
                   sub_tree["typename"] = "vineyard::Blob";
                   sub_tree["length"] = object->data_size;
                   sub_tree["nbytes"] = object->data_size;
                   sub_tree["transient"] = true;
                   sub_tree["instance_id"] = this->instance_id();
+                } else {
+                  VLOG(10) << "Failed to find payload for blob: "
+                           << ObjectIDToString(id)
+                           << ", reason: " << status.ToString();
                 }
               } else {
                 auto s = CATCH_JSON_ERROR(meta_tree::GetData(

@@ -19,10 +19,12 @@ limitations under the License.
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "client/ds/blob.h"
 #include "client/ds/object_factory.h"
+#include "client/ds/remote_blob.h"
 #include "client/io.h"
 #include "client/utils.h"
 #include "common/util/boost.h"
@@ -202,6 +204,79 @@ std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
     objects.emplace_back(std::shared_ptr<Object>(object.release()));
   }
   return objects;
+}
+
+Status RPCClient::CreateRemoteBlob(
+    std::shared_ptr<RemoteBlobWriter> const& buffer, ObjectID& id) {
+  ENSURE_CONNECTED(this);
+  VINEYARD_ASSERT(buffer != nullptr, "Expects a non-null remote blob rewriter");
+
+  Payload payload;
+  int fd_sent = -1;
+
+  std::string message_out;
+  WriteCreateRemoteBufferRequest(buffer->size(), message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  // send the actual payload
+  RETURN_ON_ERROR(send_bytes(vineyard_conn_, buffer->data(), buffer->size()));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload, fd_sent));
+  RETURN_ON_ASSERT(
+      static_cast<size_t>(payload.data_size) == buffer->size(),
+      "The result blob size doesn't match with the requested size");
+  return Status::OK();
+}
+
+Status RPCClient::GetRemoteBlob(const ObjectID& id,
+                                std::shared_ptr<RemoteBlob>& buffer) {
+  ENSURE_CONNECTED(this);
+
+  std::vector<Payload> payloads;
+  std::vector<int> fd_sent;
+
+  std::string message_out;
+  WriteGetRemoteBuffersRequest({id}, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+  RETURN_ON_ASSERT(payloads.size() == 1, "Expects only one payload");
+
+  // read the actual payload
+  buffer = std::shared_ptr<RemoteBlob>(new RemoteBlob(
+      payloads[0].object_id, remote_instance_id_, payloads[0].data_size));
+  RETURN_ON_ERROR(recv_bytes(vineyard_conn_, buffer->mutable_data(),
+                             payloads[0].data_size));
+  return Status::OK();
+}
+
+Status RPCClient::GetRemoteBlobs(
+    std::vector<ObjectID> const& ids,
+    std::vector<std::shared_ptr<RemoteBlob>>& buffers) {
+  ENSURE_CONNECTED(this);
+
+  std::unordered_set<ObjectID> id_set(ids.begin(), ids.end());
+  std::vector<Payload> payloads;
+  std::vector<int> fd_sent;
+
+  std::string message_out;
+  WriteGetRemoteBuffersRequest(id_set, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+  RETURN_ON_ASSERT(payloads.size() == id_set.size(),
+                   "The result size doesn't match with the requested sizes");
+
+  for (auto const& payload : payloads) {
+    auto buffer = std::shared_ptr<RemoteBlob>(new RemoteBlob(
+        payload.object_id, remote_instance_id_, payload.data_size));
+    RETURN_ON_ERROR(
+        recv_bytes(vineyard_conn_, buffer->mutable_data(), payload.data_size));
+    buffers.emplace_back(buffer);
+  }
+  return Status::OK();
 }
 
 }  // namespace vineyard

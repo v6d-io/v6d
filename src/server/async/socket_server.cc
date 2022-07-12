@@ -344,6 +344,67 @@ bool SocketConnection::doRegister(const json& root) {
   return false;
 }
 
+void SocketConnection::sendRemoteBufferHelper(
+    std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
+    boost::system::error_code const ec, callback_t<> callback_after_finish) {
+  auto self(shared_from_this());
+  if (!ec && index < objects.size()) {
+    boost::asio::async_write(
+        socket_,
+        boost::asio::buffer(objects[index]->pointer, objects[index]->data_size),
+        [self, callback_after_finish, objects, index](
+            boost::system::error_code ec, std::size_t) {
+          self->sendRemoteBufferHelper(objects, index + 1, ec,
+                                       callback_after_finish);
+        });
+  } else {
+    if (ec) {
+      VINEYARD_DISCARD(callback_after_finish(Status::IOError(
+          "Failed to write buffer to client: " + ec.message())));
+    } else {
+      VINEYARD_DISCARD(callback_after_finish(Status::OK()));
+    }
+  }
+}
+
+void SocketConnection::recvRemoteBufferHelper(
+    std::shared_ptr<Payload> const& object, size_t offset,
+    boost::system::error_code const ec,
+    callback_t<std::shared_ptr<Payload> const&> callback_after_finish) {
+  auto self(shared_from_this());
+  boost::asio::async_read(
+      socket_,
+      boost::asio::buffer(object->pointer + offset, object->data_size - offset),
+      [self, callback_after_finish, object, offset](
+          boost::system::error_code ec, std::size_t read_size) {
+        if (ec) {
+          if (ec == asio::error::eof) {
+            if (read_size + offset < object->data_size) {
+              VINEYARD_DISCARD(callback_after_finish(
+                  Status::IOError("Failed to read buffer from client, no "
+                                  "enough content from client: " +
+                                  ec.message()),
+                  object));
+            } else {
+              VINEYARD_DISCARD(callback_after_finish(Status::OK(), object));
+            }
+          } else {
+            VINEYARD_DISCARD(callback_after_finish(
+                Status::IOError("Failed to read buffer from client: " +
+                                ec.message()),
+                object));
+          }
+        } else {
+          if (read_size + offset < object->data_size) {
+            self->recvRemoteBufferHelper(object, read_size + offset, ec,
+                                         callback_after_finish);
+          } else {
+            VINEYARD_DISCARD(callback_after_finish(Status::OK(), object));
+          }
+        }
+      });
+}
+
 bool SocketConnection::doGetBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
@@ -385,35 +446,13 @@ bool SocketConnection::doGetBuffers(const json& root) {
   return false;
 }
 
-void SocketConnection::sendBufferHelper(
-    std::vector<std::shared_ptr<Payload>> const objects, size_t index,
-    boost::system::error_code const ec, callback_t<> callback_after_finish) {
-  auto self(shared_from_this());
-  if (!ec && index < objects.size()) {
-    async_write(
-        socket_,
-        boost::asio::buffer(objects[index]->pointer, objects[index]->data_size),
-        [this, self, callback_after_finish, objects, index](
-            boost::system::error_code ec, std::size_t) {
-          sendBufferHelper(objects, index + 1, ec, callback_after_finish);
-        });
-  } else {
-    if (ec) {
-      VINEYARD_DISCARD(callback_after_finish(Status::IOError(
-          "Failed to write buffer to client: " + ec.message())));
-    } else {
-      VINEYARD_DISCARD(callback_after_finish(Status::OK()));
-    }
-  }
-}
-
 bool SocketConnection::doGetRemoteBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
+  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids);
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
@@ -421,7 +460,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   this->doWrite(message_out, [this, self, objects](const Status& status) {
     boost::system::error_code ec;
-    sendBufferHelper(objects, 0, ec, [self](const Status& status) {
+    sendRemoteBufferHelper(objects, 0, ec, [self](const Status& status) {
       if (!status.ok()) {
         LOG(ERROR) << "Failed to send buffers to remote client: "
                    << status.ToString();
@@ -469,32 +508,31 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   size_t size;
   std::shared_ptr<Payload> object;
 
-  TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
+  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size);
   ObjectID object_id;
   RESPONSE_ON_ERROR(
       server_ptr_->GetBulkStore()->Create(size, object_id, object));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Seal(object_id));
 
-  asio::async_read(
-      socket_, asio::buffer(object->pointer, size),
-      [this, self, &object](boost::system::error_code ec, std::size_t size) {
+  boost::system::error_code ec;
+  this->recvRemoteBufferHelper(
+      object, 0, ec,
+      [self](const Status& status,
+             std::shared_ptr<Payload> const& object) -> Status {
         std::string message_out;
-        if (static_cast<size_t>(object->data_size) == size &&
-            (!ec || ec == asio::error::eof)) {
+        if (status.ok()) {
           WriteCreateBufferReply(object->object_id, object, -1, message_out);
         } else {
+          // cleanup
           VINEYARD_DISCARD(
-              server_ptr_->GetBulkStore()->Delete(object->object_id));
-          if (static_cast<size_t>(object->data_size) == size) {
-            WriteErrorReply(
-                Status::IOError("Failed to read buffer's content from client"),
-                message_out);
-          } else {
-            WriteErrorReply(Status::IOError(ec.message()), message_out);
-          }
+              self->server_ptr_->GetBulkStore()->Delete(object->object_id));
+          WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
-        LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                    server_ptr_->GetBulkStore()->Footprint());
+        LOG_SUMMARY("instances_memory_usage_bytes",
+                    self->server_ptr_->instance_id(),
+                    self->server_ptr_->GetBulkStore()->Footprint());
+        return Status::OK();
       });
   return false;
 }
