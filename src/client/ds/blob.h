@@ -42,6 +42,7 @@ class ObjectMeta;
 
 /**
  * @brief The unit to store data payload in vineyard.
+ *
  * When the client gets a blob from vineyard, the vineyard server maps
  * a chunk of memory from its memory space to the client space in a
  * zero-copy fashion.
@@ -157,6 +158,7 @@ class Blob : public Registered<Blob> {
 
 /**
  * @brief The writer to write a blob in vineyard.
+ *
  * The writer is initialized in the client with a local buffer and its size,
  * and a blob in vineyard will be created when Build is invoked.
  */

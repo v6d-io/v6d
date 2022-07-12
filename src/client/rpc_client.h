@@ -23,11 +23,13 @@ limitations under the License.
 #include "client/client_base.h"
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
+#include "client/ds/remote_blob.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
 
+class Blob;
 class BlobWriter;
 
 class RPCClient : public ClientBase {
@@ -224,6 +226,13 @@ class RPCClient : public ClientBase {
    * @return The vineyard server's instance id.
    */
   const InstanceID remote_instance_id() const { return remote_instance_id_; }
+
+  Status CreateRemoteBlob(std::shared_ptr<RemoteBlobWriter> const& buffer,
+                          ObjectID& id);
+
+  Status GetRemoteBlob(const ObjectID& id, std::shared_ptr<RemoteBlob>& buffer);
+  Status GetRemoteBlobs(std::vector<ObjectID> const& ids,
+                        std::vector<std::shared_ptr<RemoteBlob>>& buffers);
 
  private:
   InstanceID remote_instance_id_;

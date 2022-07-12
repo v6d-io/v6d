@@ -21,6 +21,7 @@ namespace vineyard {
 
 void bind_error(py::module& mod);
 void bind_core(py::module& mod);
+void bind_blobs(py::module& mod);
 void bind_client(py::module& mod);
 void bind_utils(py::module& mod);
 void bind_stream(py::module& mod);
@@ -32,6 +33,7 @@ PYBIND11_MODULE(_C, mod) {
 
   bind_error(mod);
   bind_core(mod);
+  bind_blobs(mod);
   bind_client(mod);
   bind_utils(mod);
 

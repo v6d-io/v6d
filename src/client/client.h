@@ -384,6 +384,25 @@ class Client : public BasicIPCClient,
   Status CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob);
 
   /**
+   * @brief Get a blob from vineyard server.
+   *
+   * @param id the blob to get.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetBlob(ObjectID const id, std::shared_ptr<Blob>& blob);
+
+  /**
+   * @brief Get a blob from vineyard server.
+   *
+   * @param id the blob to get.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetBlobs(std::vector<ObjectID> const id,
+                  std::vector<std::shared_ptr<Blob>>& blobs);
+
+  /**
    * @brief Allocate a chunk of given size in vineyard for a stream. When the
    * request cannot be statisfied immediately, e.g., vineyard doesn't have
    * enough memory or the specified has accumulated too many chunks, the request

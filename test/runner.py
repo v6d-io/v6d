@@ -343,6 +343,7 @@ def run_single_vineyardd_tests(tests):
         run_test(tests, 'persist_test')
         run_test(tests, 'plasma_test')
         run_test(tests, 'release_test')
+        run_test(tests, 'remote_buffer_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test(tests, 'rpc_delete_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test(tests, 'rpc_get_object_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test(tests, 'rpc_test', '127.0.0.1:%d' % rpc_socket_port)

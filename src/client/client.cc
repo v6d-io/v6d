@@ -25,6 +25,7 @@ limitations under the License.
 #include <mutex>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 #include "boost/range/combine.hpp"
@@ -201,6 +202,21 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   std::shared_ptr<arrow::MutableBuffer> buffer = nullptr;
   RETURN_ON_ERROR(CreateBuffer(size, object_id, object, buffer));
   blob.reset(new BlobWriter(object_id, object, buffer));
+  return Status::OK();
+}
+
+Status Client::GetBlob(ObjectID const id, std::shared_ptr<Blob>& blob) {
+  return this->GetObject<Blob>(id, blob);
+}
+
+Status Client::GetBlobs(std::vector<ObjectID> const id,
+                        std::vector<std::shared_ptr<Blob>>& blobs) {
+  std::unordered_set<ObjectID> id_set(id.begin(), id.end());
+  for (auto const& id : id_set) {
+    std::shared_ptr<Blob> blob;
+    RETURN_ON_ERROR(this->GetObject<Blob>(id, blob));
+    blobs.emplace_back(blob);
+  }
   return Status::OK();
 }
 

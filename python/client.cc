@@ -476,6 +476,26 @@ void bind_client(py::module& mod) {
              return Blob::MakeEmpty(*self);
            })
       .def(
+          "get_blob",
+          [](Client* self, const ObjectIDWrapper object_id) {
+            std::shared_ptr<Blob> blob;
+            throw_on_error(self->GetBlob(object_id, blob));
+            return blob;
+          },
+          "object_id"_a)
+      .def(
+          "get_blobs",
+          [](Client* self, std::vector<ObjectIDWrapper> object_ids) {
+            std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
+            for (size_t idx = 0; idx < object_ids.size(); ++idx) {
+              unwrapped_object_ids[idx] = object_ids[idx];
+            }
+            std::vector<std::shared_ptr<Blob>> blobs;
+            throw_on_error(self->GetBlobs(unwrapped_object_ids, blobs));
+            return blobs;
+          },
+          "object_ids"_a)
+      .def(
           "get_object",
           [](Client* self, const ObjectIDWrapper object_id) {
             // receive the status to throw a more precise exception when failed.
@@ -603,6 +623,38 @@ void bind_client(py::module& mod) {
   // RPCClient
   py::class_<RPCClient, std::shared_ptr<RPCClient>, ClientBase>(mod,
                                                                 "RPCClient")
+      .def(
+          "create_remote_blob",
+          [](RPCClient* self,
+             const std::shared_ptr<RemoteBlobWriter>& remote_blob_builder)
+              -> ObjectIDWrapper {
+            ObjectID blob_id = InvalidObjectID();
+            throw_on_error(
+                self->CreateRemoteBlob(remote_blob_builder, blob_id));
+            return blob_id;
+          },
+          "remote_blob_builder"_a)
+      .def(
+          "get_remote_blob",
+          [](RPCClient* self, const ObjectIDWrapper object_id) {
+            std::shared_ptr<RemoteBlob> remote_blob;
+            throw_on_error(self->GetRemoteBlob(object_id, remote_blob));
+            return remote_blob;
+          },
+          "object_id"_a)
+      .def(
+          "get_remote_blobs",
+          [](RPCClient* self, std::vector<ObjectIDWrapper> object_ids) {
+            std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
+            for (size_t idx = 0; idx < object_ids.size(); ++idx) {
+              unwrapped_object_ids[idx] = object_ids[idx];
+            }
+            std::vector<std::shared_ptr<RemoteBlob>> remote_blobs;
+            throw_on_error(
+                self->GetRemoteBlobs(unwrapped_object_ids, remote_blobs));
+            return remote_blobs;
+          },
+          "object_ids"_a)
       .def(
           "get_object",
           [](RPCClient* self, const ObjectIDWrapper object_id) {
