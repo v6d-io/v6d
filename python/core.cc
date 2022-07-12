@@ -20,6 +20,7 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
+#include "client/ds/remote_blob.h"
 #include "client/rpc_client.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
@@ -376,7 +377,9 @@ void bind_core(py::module& mod) {
       // NB: don't expose the "Build" method to python.
       .def("seal", &ObjectBuilder::Seal, "client"_a)
       .def_property_readonly("issealed", &ObjectBuilder::sealed);
+}
 
+void bind_blobs(py::module& mod) {
   // Blob
   py::class_<Blob, std::shared_ptr<Blob>, Object>(mod, "Blob",
                                                   py::buffer_protocol())
@@ -391,7 +394,7 @@ void bind_core(py::module& mod) {
            })
       .def(
           "__getitem__",
-          [](BlobWriter* self, size_t const index) -> int8_t {
+          [](Blob* self, size_t const index) -> int8_t {
             // NB: unchecked
             return self->data()[index];
           },
@@ -425,7 +428,7 @@ void bind_core(py::module& mod) {
       .def_property_readonly("size", &BlobWriter::size)
       .def("__len__", &BlobWriter::size)
       .def("__iter__",
-           [](Blob* self) {
+           [](BlobWriter* self) {
              auto data = self->data();
              auto size = self->size();
              return py::make_iterator(data, data + size);
@@ -507,6 +510,142 @@ void bind_core(py::module& mod) {
                                }
                              })
       .def_buffer([](BlobWriter& blob) -> py::buffer_info {
+        return py::buffer_info(blob.data(), sizeof(int8_t),
+                               py::format_descriptor<int8_t>::format(), 1,
+                               {blob.size()}, {sizeof(int8_t)}, false);
+      });
+
+  // RemoteBlob
+  py::class_<RemoteBlob, std::shared_ptr<RemoteBlob>>(mod, "RemoteBlob",
+                                                      py::buffer_protocol())
+      .def_property_readonly(
+          "id", [](RemoteBlob* self) -> ObjectIDWrapper { return self->id(); })
+      .def_property_readonly(
+          "instance_id",
+          [](RemoteBlob* self) -> InstanceID { return self->instance_id(); })
+      .def_property_readonly("size", &RemoteBlob::size)
+      .def_property_readonly("allocated_size", &RemoteBlob::allocated_size)
+      .def("__len__", &RemoteBlob::allocated_size)
+      .def("__iter__",
+           [](RemoteBlob* self) {
+             auto data = self->data();
+             auto size = self->size();
+             return py::make_iterator(data, data + size);
+           })
+      .def(
+          "__getitem__",
+          [](RemoteBlob* self, size_t const index) -> int8_t {
+            // NB: unchecked
+            return self->data()[index];
+          },
+          "index"_a)
+      .def("__dealloc__", [](RemoteBlob* self) {})
+      .def_property_readonly("address",
+                             [](RemoteBlob* self) {
+                               return reinterpret_cast<uintptr_t>(self->data());
+                             })
+      .def_property_readonly("buffer",
+                             [](RemoteBlob& blob) -> py::object {
+                               auto buffer = blob.Buffer();
+                               if (buffer == nullptr) {
+                                 return py::none();
+                               } else {
+                                 return py::memoryview::from_memory(
+                                     const_cast<uint8_t*>(buffer->data()),
+                                     buffer->size(), true);
+                               }
+                             })
+      .def_buffer([](RemoteBlob& blob) -> py::buffer_info {
+        return py::buffer_info(const_cast<char*>(blob.data()), sizeof(int8_t),
+                               py::format_descriptor<int8_t>::format(), 1,
+                               {blob.size()}, {sizeof(int8_t)}, true);
+      });
+
+  // RemoteBlobBuilder
+  py::class_<RemoteBlobWriter, std::shared_ptr<RemoteBlobWriter>>(
+      mod, "RemoteBlobBuilder", py::buffer_protocol())
+      .def(py::init<>(
+               [](const size_t size) -> std::unique_ptr<RemoteBlobWriter> {
+                 return std::make_unique<RemoteBlobWriter>(size);
+               }),
+           py::arg("size"))
+      .def_property_readonly("size", &RemoteBlobWriter::size)
+      .def("__len__", &RemoteBlobWriter::size)
+      .def("__iter__",
+           [](RemoteBlobWriter* self) {
+             auto data = self->data();
+             auto size = self->size();
+             return py::make_iterator(data, data + size);
+           })
+      .def(
+          "__getitem__",
+          [](RemoteBlobWriter* self, size_t const index) -> int8_t {
+            // NB: unchecked
+            return self->data()[index];
+          },
+          "index_a")
+      .def(
+          "__setitem__",
+          [](RemoteBlobWriter* self, size_t const index, int8_t const value) {
+            // NB: unchecked
+            self->data()[index] = value;
+          },
+          "index"_a, "value"_a)
+      .def(
+          "abort",
+          [](RemoteBlobWriter* self, Client& client) {
+            throw_on_error(self->Abort());
+          },
+          "client"_a)
+      .def(
+          "copy",
+          [](RemoteBlobWriter* self, size_t const offset, uintptr_t ptr,
+             size_t const size) {
+            std::memcpy(self->data() + offset, reinterpret_cast<void*>(ptr),
+                        size);
+          },
+          "offset"_a, "address"_a, "size"_a)
+      .def(
+          "copy",
+          [](RemoteBlobWriter* self, size_t offset, py::buffer const& buffer) {
+            throw_on_error(copy_memoryview(buffer.ptr(), self->data(),
+                                           self->size(), offset));
+          },
+          "offset"_a, "buffer"_a)
+      .def(
+          "copy",
+          [](RemoteBlobWriter* self, size_t offset, py::bytes const& bs) {
+            char* buffer = nullptr;
+            ssize_t length = 0;
+            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
+              py::pybind11_fail("Unable to extract bytes contents!");
+            }
+            if (offset + length > self->size()) {
+              throw_on_error(Status::AssertionFailed(
+                  "Expect a source buffer with size at most '" +
+                  std::to_string(self->size() - offset) +
+                  "', but the buffer size is '" + std::to_string(length) +
+                  "'"));
+            }
+            std::memcpy(self->data() + offset, buffer, length);
+          },
+          "offset"_a, "bytes"_a)
+      .def_property_readonly("address",
+                             [](RemoteBlobWriter* self) {
+                               return reinterpret_cast<uintptr_t>(self->data());
+                             })
+      .def_property_readonly("buffer",
+                             [](RemoteBlobWriter& blob) -> py::object {
+                               auto buffer = blob.Buffer();
+                               if (buffer == nullptr) {
+                                 return py::none();
+                               } else {
+                                 return py::memoryview::from_memory(
+                                     buffer->mutable_data(), buffer->size(),
+                                     false);
+                               }
+                             })
+      .def_buffer([](RemoteBlobWriter& blob) -> py::buffer_info {
         return py::buffer_info(blob.data(), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,
                                {blob.size()}, {sizeof(int8_t)}, false);

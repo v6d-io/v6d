@@ -159,6 +159,8 @@ from ._C import ObjectName
 from ._C import ObjectNotExistsException
 from ._C import ObjectNotSealedException
 from ._C import ObjectSealedException
+from ._C import RemoteBlob
+from ._C import RemoteBlobBuilder
 from ._C import RPCClient
 from ._C import StreamDrainedException
 from ._C import StreamFailedException
