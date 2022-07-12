@@ -9,8 +9,8 @@ add_custom_target(
     COMMAND ./build_hn_df.sh
 )
 
-add_library(hosseinmoein_dataframe STATIC hosseinmoein_dataframe.cc)
-target_link_libraries(hosseinmoein_dataframe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/DataFrame/build/libDataFrame.a)
+add_library(hosseinmoein_dataframe STATIC hosseinmoein_dataframe.cc hosseinmoein_dataframe.h)
+target_link_libraries(hosseinmoein_dataframe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/DataFrame/build/libDataFrame.a)
 target_link_libraries(hosseinmoein_dataframe PUBLIC vineyard_client vineyard_basic)
 add_dependencies(hosseinmoein_dataframe build_hn_df)
 
