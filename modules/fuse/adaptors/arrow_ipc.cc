@@ -46,7 +46,7 @@ std::shared_ptr<arrow::Buffer> arrow_ipc_view(
     std::shared_ptr<arrow::io::BufferOutputStream> ssink;
 
   FUSE_ASSIGN_OR_RAISE( ssink, arrow::io::BufferOutputStream::Create(
-                     arr->nbytes()*2, arrow::default_memory_pool()));
+                     ));
       VLOG(2)<<"buffer successfully created";
 
   auto kvmeta = std::shared_ptr<arrow::KeyValueMetadata>(
@@ -65,7 +65,7 @@ std::shared_ptr<arrow::Buffer> arrow_ipc_view(
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
   CHECK_ARROW_ERROR_AND_ASSIGN( writer,
                                arrow::ipc::MakeStreamWriter(ssink, schema));
-
+  
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   VLOG(4)<< "table is written";
   writer->Close();
