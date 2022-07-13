@@ -4,7 +4,6 @@ set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 6)
 set(VINEYARD_PATCH_VERSION 0)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
-
 message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
 
 if(POLICY CMP0025)
@@ -36,11 +35,11 @@ option(BUILD_VINEYARD_JAVA "Build vineyard's java SDK" OFF)
 
 option(BUILD_VINEYARD_BASIC "Build vineyard's basic data structures" ON)
 option(BUILD_VINEYARD_IO "Enable vineyard's IOAdaptor support" ON)
-option(BUILD_VINEYARD_GRAPH "Enable vineyard's graph data structures" ON)
+option(BUILD_VINEYARD_GRAPH "Enable vineyard's graph data structures" OFF)
 option(BUILD_VINEYARD_MALLOC "Build vineyard's implementation for client-side malloc" ON)
 option(BUILD_VINEYARD_MIGRATION "Enable vineyard's object migration support" ON)
-option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
-option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
+option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" ON)
+option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" ON)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -262,9 +261,12 @@ endmacro(find_etcd_cpp_apiv3)
 macro(find_fuse)
     include("cmake/FindFUSE3.cmake")
     if(BUILD_VINEYARD_FUSE_PARQUET)
+        
         if(NOT ARROW_PARQUET)
             message(FATAL_ERROR "Parquet is not enabled in the installed arrow.")
         endif()
+        message(STATUS ${Arrow_DIR})
+        
         find_package(Parquet REQUIRED HINTS ${Arrow_DIR})
     endif()
 endmacro()
@@ -737,11 +739,12 @@ if(BUILD_VINEYARD_MIGRATION)
     add_subdirectory(modules/migrate)
     # don't includes vineyard_migrate to "VINEYARD_LIBRARIES"
 endif()
-
 if(BUILD_VINEYARD_FUSE)
+
     find_fuse()
     add_subdirectory(modules/fuse)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_fuse)
+
 endif()
 
 if(BUILD_VINEYARD_TESTS)
@@ -888,3 +891,5 @@ else()
         message(STATUS "Cannot find the sphinx-build executable.")
     endif()
 endif()
+
+add_subdirectory(modules/playground)

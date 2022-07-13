@@ -18,5 +18,5 @@ limitations under the License.
 
 #include "fuse/adaptors/orc.h"
 #include "fuse/adaptors/parquet.h"
-
+#include "fuse/adaptors/arrow_ipc.h"
 #endif  // MODULES_FUSE_ADAPTORS_FORMATS_H_

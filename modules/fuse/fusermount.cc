@@ -56,9 +56,11 @@ static void print_help(const char* progname) {
 static int process_args(struct fuse_args& args, int argc, char** argv) {
   // Set defaults -- we have to use strdup so that fuse_opt_parse can free
   // the defaults if other values are specified.
-  std::string env = vineyard::read_env("VINEYARD_IPC_SOCKET");
-  options.vineyard_socket = strdup(env.c_str());
+  // std::string env = vineyard::read_env("VINEYARD_IPC_SOCKET");
+    std::string env = "/var/run/vineyard.sock";
 
+  options.vineyard_socket = strdup(env.c_str());
+  LOG(INFO)<<env;
   /* Parse options */
   if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1) {
     LOG(ERROR) << "Failed to parse command line options.";
@@ -95,7 +97,7 @@ static const struct fuse_operations vineyard_fuse_operations = {
     .readdir = vineyard::fuse::fs::fuse_readdir,
     .init = vineyard::fuse::fs::fuse_init,
     .destroy = vineyard::fuse::fs::fuse_destroy,
-    .access = vineyard::fuse::fs::fuse_access,
+    // .access = vineyard::fuse::fs::fuse_access,
 };
 
 int main(int argc, char* argv[]) {
