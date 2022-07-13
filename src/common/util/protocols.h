@@ -217,9 +217,11 @@ void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
 
 Status ReadCreateRemoteBufferRequest(const json& root, size_t& size);
 
-void WriteGetBuffersRequest(const std::set<ObjectID>& ids, std::string& msg);
+void WriteGetBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
+                            std::string& msg);
 
-Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids);
+Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                             bool& unsafe);
 
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           const std::vector<int>& fd_to_send, std::string& msg);
@@ -228,10 +230,10 @@ Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
                            std::vector<int>& fd_sent);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  std::string& msg);
+                                  const bool unsafe, std::string& msg);
 
-Status ReadGetRemoteBuffersRequest(const json& root,
-                                   std::vector<ObjectID>& ids);
+Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                                   bool& unsafe);
 
 void WriteDropBufferRequest(const ObjectID id, std::string& msg);
 
@@ -431,10 +433,11 @@ Status ReadCreateBufferByPlasmaReply(json const& root, ObjectID& object_id,
                                      int& fd_sent);
 
 void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
-                                    std::string& msg);
+                                    const bool unsafe, std::string& msg);
 
 Status ReadGetBuffersByPlasmaRequest(json const& root,
-                                     std::vector<PlasmaID>& plasma_ids);
+                                     std::vector<PlasmaID>& plasma_ids,
+                                     bool& unsafe);
 
 void WriteGetBuffersByPlasmaReply(
     std::vector<std::shared_ptr<PlasmaPayload>> const& plasma_objects,

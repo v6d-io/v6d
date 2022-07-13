@@ -42,7 +42,7 @@ namespace detail {
  *  - `FetchAndModify(ID, int, int)` method to fetch the current `ref_count` and
  * modify it by the given value.
  */
-template <typename ID, typename P, typename Der>
+template <typename ID, typename P, typename Derived>
 class LifeCycleTracker {
  public:
   LifeCycleTracker() {}
@@ -102,7 +102,7 @@ class LifeCycleTracker {
   }
 
  private:
-  inline Der& Self() { return static_cast<Der&>(*this); }
+  inline Derived& Self() { return static_cast<Derived&>(*this); }
   /// Cache the objects that client wants to delete but `ref_count > 0`
   /// Race condition should be settled by Der.
   std::unordered_set<ID> pending_to_delete_;

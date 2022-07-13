@@ -230,13 +230,18 @@ Status RPCClient::CreateRemoteBlob(
 
 Status RPCClient::GetRemoteBlob(const ObjectID& id,
                                 std::shared_ptr<RemoteBlob>& buffer) {
+  return this->GetRemoteBlob(id, false, buffer);
+}
+
+Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
+                                std::shared_ptr<RemoteBlob>& buffer) {
   ENSURE_CONNECTED(this);
 
   std::vector<Payload> payloads;
   std::vector<int> fd_sent;
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest({id}, message_out);
+  WriteGetRemoteBuffersRequest({id}, unsafe, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -250,10 +255,15 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id,
                              payloads[0].data_size));
   return Status::OK();
 }
-
 Status RPCClient::GetRemoteBlobs(
     std::vector<ObjectID> const& ids,
-    std::vector<std::shared_ptr<RemoteBlob>>& buffers) {
+    std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs) {
+  return this->GetRemoteBlobs(ids, false, remote_blobs);
+}
+
+Status RPCClient::GetRemoteBlobs(
+    std::vector<ObjectID> const& ids, const bool unsafe,
+    std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs) {
   ENSURE_CONNECTED(this);
 
   std::unordered_set<ObjectID> id_set(ids.begin(), ids.end());
@@ -261,7 +271,7 @@ Status RPCClient::GetRemoteBlobs(
   std::vector<int> fd_sent;
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest(id_set, message_out);
+  WriteGetRemoteBuffersRequest(id_set, unsafe, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -269,12 +279,23 @@ Status RPCClient::GetRemoteBlobs(
   RETURN_ON_ASSERT(payloads.size() == id_set.size(),
                    "The result size doesn't match with the requested sizes");
 
+  std::unordered_map<ObjectID, std::shared_ptr<RemoteBlob>> id_payload_map;
   for (auto const& payload : payloads) {
-    auto buffer = std::shared_ptr<RemoteBlob>(new RemoteBlob(
+    auto remote_blob = std::shared_ptr<RemoteBlob>(new RemoteBlob(
         payload.object_id, remote_instance_id_, payload.data_size));
-    RETURN_ON_ERROR(
-        recv_bytes(vineyard_conn_, buffer->mutable_data(), payload.data_size));
-    buffers.emplace_back(buffer);
+    RETURN_ON_ERROR(recv_bytes(vineyard_conn_, remote_blob->mutable_data(),
+                               payload.data_size));
+    id_payload_map[payload.object_id] = remote_blob;
+  }
+  // clear the result container
+  remote_blobs.clear();
+  for (auto const& id : ids) {
+    auto it = id_payload_map.find(id);
+    if (it != id_payload_map.end()) {
+      remote_blobs.emplace_back(nullptr);
+    } else {
+      remote_blobs.emplace_back(it->second);
+    }
   }
   return Status::OK();
 }

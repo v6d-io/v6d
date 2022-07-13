@@ -54,7 +54,10 @@ class BulkStoreBase {
 
   Status Get(ID const& id, std::shared_ptr<P>& object);
 
-  Status GetUnchecked(ID const& id, std::shared_ptr<P>& object);
+  /**
+   * Like `Get()`, but optionally bypass the "sealed" check.
+   */
+  Status GetUnsafe(ID const& id, const bool unsafe, std::shared_ptr<P>& object);
 
   /**
    * This methods only return available objects, and doesn't fail when object
@@ -62,6 +65,9 @@ class BulkStoreBase {
    */
   Status Get(std::vector<ID> const& ids,
              std::vector<std::shared_ptr<P>>& objects);
+
+  Status GetUnsafe(std::vector<ID> const& ids, const bool unsafe,
+                   std::vector<std::shared_ptr<P>>& objects);
 
   bool Exists(ID const& object_id);
 

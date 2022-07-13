@@ -379,7 +379,7 @@ void SocketConnection::recvRemoteBufferHelper(
           boost::system::error_code ec, std::size_t read_size) {
         if (ec) {
           if (ec == asio::error::eof) {
-            if (read_size + offset < object->data_size) {
+            if (read_size + offset < static_cast<size_t>(object->data_size)) {
               VINEYARD_DISCARD(callback_after_finish(
                   Status::IOError("Failed to read buffer from client, no "
                                   "enough content from client: " +
@@ -395,7 +395,7 @@ void SocketConnection::recvRemoteBufferHelper(
                 object));
           }
         } else {
-          if (read_size + offset < object->data_size) {
+          if (read_size + offset < static_cast<size_t>(object->data_size)) {
             self->recvRemoteBufferHelper(object, read_size + offset, ec,
                                          callback_after_finish);
           } else {
@@ -408,11 +408,13 @@ void SocketConnection::recvRemoteBufferHelper(
 bool SocketConnection::doGetBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
+  bool unsafe = false;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
+  TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids, unsafe);
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
 
@@ -449,11 +451,13 @@ bool SocketConnection::doGetBuffers(const json& root) {
 bool SocketConnection::doGetRemoteBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
+  bool unsafe = false;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Get(ids, objects));
+  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe);
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore()->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, message_out);
@@ -799,8 +803,8 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
         std::string message_out;
         if (status.ok()) {
           std::shared_ptr<Payload> object;
-          RETURN_ON_ERROR(
-              self->server_ptr_->GetBulkStore()->GetUnchecked(chunk, object));
+          RETURN_ON_ERROR(self->server_ptr_->GetBulkStore()->GetUnsafe(
+              chunk, true, object));
           int store_fd = object->store_fd, fd_to_send = -1;
           int data_size = object->data_size;
           if (data_size > 0 &&
@@ -1176,12 +1180,13 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
 bool SocketConnection::doGetBuffersByPlasma(json const& root) {
   auto self(shared_from_this());
   std::vector<PlasmaID> plasma_ids;
+  bool unsafe = false;
   std::vector<std::shared_ptr<PlasmaPayload>> plasma_objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids);
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore<PlasmaID>()->Get(plasma_ids, plasma_objects));
+  TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids, unsafe);
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->GetUnsafe(
+      plasma_ids, unsafe, plasma_objects));
   RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->AddDependency(
       std::unordered_set<PlasmaID>(plasma_ids.begin(), plasma_ids.end()),
       getConnId()));

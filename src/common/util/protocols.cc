@@ -359,7 +359,8 @@ Status ReadCreateRemoteBufferRequest(const json& root, size_t& size) {
   return Status::OK();
 }
 
-void WriteGetBuffersRequest(const std::set<ObjectID>& ids, std::string& msg) {
+void WriteGetBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
+                            std::string& msg) {
   json root;
   root["type"] = "get_buffers_request";
   int idx = 0;
@@ -367,16 +368,19 @@ void WriteGetBuffersRequest(const std::set<ObjectID>& ids, std::string& msg) {
     root[std::to_string(idx++)] = id;
   }
   root["num"] = ids.size();
+  root["unsafe"] = unsafe;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids) {
+Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                             bool& unsafe) {
   RETURN_ON_ASSERT(root["type"] == "get_buffers_request");
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
     ids.push_back(root[std::to_string(i)].get<ObjectID>());
   }
+  unsafe = root.value("unsafe", false);
   return Status::OK();
 }
 
@@ -412,7 +416,7 @@ Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
 }
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  std::string& msg) {
+                                  const bool unsafe, std::string& msg) {
   json root;
   root["type"] = "get_remote_buffers_request";
   int idx = 0;
@@ -420,17 +424,19 @@ void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
     root[std::to_string(idx++)] = id;
   }
   root["num"] = ids.size();
+  root["unsafe"] = unsafe;
 
   encode_msg(root, msg);
 }
 
-Status ReadGetRemoteBuffersRequest(const json& root,
-                                   std::vector<ObjectID>& ids) {
+Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                                   bool& unsafe) {
   RETURN_ON_ASSERT(root["type"] == "get_remote_buffers_request");
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
     ids.push_back(root[std::to_string(i)].get<ObjectID>());
   }
+  unsafe = root.value("unsafe", false);
   return Status::OK();
 }
 
@@ -1268,7 +1274,7 @@ Status ReadCreateBufferByPlasmaReply(json const& root, ObjectID& object_id,
 }
 
 void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
-                                    std::string& msg) {
+                                    const bool unsafe, std::string& msg) {
   json root;
   root["type"] = "get_buffers_by_plasma_request";
   int idx = 0;
@@ -1276,17 +1282,20 @@ void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
     root[std::to_string(idx++)] = eid;
   }
   root["num"] = plasma_ids.size();
+  root["unsafe"] = unsafe;
 
   encode_msg(root, msg);
 }
 
 Status ReadGetBuffersByPlasmaRequest(const json& root,
-                                     std::vector<PlasmaID>& plasma_ids) {
+                                     std::vector<PlasmaID>& plasma_ids,
+                                     bool& unsafe) {
   RETURN_ON_ASSERT(root["type"] == "get_buffers_by_plasma_request");
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
     plasma_ids.push_back(root[std::to_string(i)].get<PlasmaID>());
   }
+  unsafe = root.value("unsafe", false);
   return Status::OK();
 }
 
