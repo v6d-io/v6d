@@ -206,16 +206,48 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
 }
 
 Status Client::GetBlob(ObjectID const id, std::shared_ptr<Blob>& blob) {
-  return this->GetObject<Blob>(id, blob);
+  return this->GetBlob(id, false, blob);
+}
+
+Status Client::GetBlob(ObjectID const id, const bool unsafe,
+                       std::shared_ptr<Blob>& blob) {
+  std::vector<std::shared_ptr<Blob>> blobs;
+  RETURN_ON_ERROR(this->GetBlobs({id}, unsafe, blobs));
+  if (blobs.size() > 0) {
+    blob = blobs[0];
+    return Status::OK();
+  } else {
+    return Status::ObjectNotExists("Blob not found");
+  }
 }
 
 Status Client::GetBlobs(std::vector<ObjectID> const id,
                         std::vector<std::shared_ptr<Blob>>& blobs) {
-  std::unordered_set<ObjectID> id_set(id.begin(), id.end());
-  for (auto const& id : id_set) {
-    std::shared_ptr<Blob> blob;
-    RETURN_ON_ERROR(this->GetObject<Blob>(id, blob));
-    blobs.emplace_back(blob);
+  return this->GetBlobs(id, false, blobs);
+}
+
+Status Client::GetBlobs(std::vector<ObjectID> const ids, const bool unsafe,
+                        std::vector<std::shared_ptr<Blob>>& blobs) {
+  std::set<ObjectID> id_set(ids.begin(), ids.end());
+  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  RETURN_ON_ERROR(this->GetBuffers(id_set, unsafe, buffers));
+  // clear the result container
+  blobs.clear();
+  for (auto const& id : ids) {
+    auto const iter = buffers.find(id);
+    if (iter != buffers.end() && iter->second != nullptr) {
+      auto blob = std::shared_ptr<Blob>(new Blob{});
+      blob->id_ = id;
+      blob->size_ = iter->second->size();
+      blob->buffer_ = iter->second;
+      // fake metadata
+      blob->meta_.SetId(id);
+      blob->meta_.SetTypeName(type_name<Blob>());
+      blob->meta_.SetInstanceId(this->instance_id_);
+      blobs.emplace_back(blob);
+    } else {
+      blobs.emplace_back(nullptr /* shouldn't happen */);
+    }
   }
   return Status::OK();
 }
@@ -515,6 +547,12 @@ Status Client::GetBuffer(const ObjectID id,
 Status Client::GetBuffers(
     const std::set<ObjectID>& ids,
     std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers) {
+  return this->GetBuffers(ids, false, buffers);
+}
+
+Status Client::GetBuffers(
+    const std::set<ObjectID>& ids, const bool unsafe,
+    std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers) {
   if (ids.empty()) {
     return Status::OK();
   }
@@ -522,7 +560,7 @@ Status Client::GetBuffers(
 
   /// lookup in server-side store
   std::string message_out;
-  WriteGetBuffersRequest(ids, message_out);
+  WriteGetBuffersRequest(ids, unsafe, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -672,12 +710,17 @@ Status Client::DelData(const std::vector<ObjectID>& ids, const bool force,
 
 Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
                               std::map<ObjectID, size_t>& sizes) {
+  return this->GetBufferSizes(ids, false, sizes);
+}
+
+Status Client::GetBufferSizes(const std::set<ObjectID>& ids, const bool unsafe,
+                              std::map<ObjectID, size_t>& sizes) {
   if (ids.empty()) {
     return Status::OK();
   }
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteGetBuffersRequest(ids, message_out);
+  WriteGetBuffersRequest(ids, unsafe, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -943,6 +986,12 @@ Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
 Status PlasmaClient::GetPayloads(
     std::set<PlasmaID> const& plasma_ids,
     std::map<PlasmaID, PlasmaPayload>& plasma_payloads) {
+  return this->GetPayloads(plasma_ids, false, plasma_payloads);
+}
+
+Status PlasmaClient::GetPayloads(
+    std::set<PlasmaID> const& plasma_ids, const bool unsafe,
+    std::map<PlasmaID, PlasmaPayload>& plasma_payloads) {
   if (plasma_ids.empty()) {
     return Status::OK();
   }
@@ -963,7 +1012,7 @@ Status PlasmaClient::GetPayloads(
 
   /// Lookup in remote server
   std::string message_out;
-  WriteGetBuffersByPlasmaRequest(remote_ids, message_out);
+  WriteGetBuffersByPlasmaRequest(remote_ids, unsafe, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
 
   json message_in;
@@ -982,8 +1031,13 @@ Status PlasmaClient::GetPayloads(
 Status PlasmaClient::GetBuffers(
     std::set<PlasmaID> const& plasma_ids,
     std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
+  return this->GetBuffers(plasma_ids, false, buffers);
+}
+Status PlasmaClient::GetBuffers(
+    std::set<PlasmaID> const& plasma_ids, const bool unsafe,
+    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
   std::map<PlasmaID, PlasmaPayload> plasma_payloads;
-  RETURN_ON_ERROR(GetPayloads(plasma_ids, plasma_payloads));
+  RETURN_ON_ERROR(GetPayloads(plasma_ids, unsafe, plasma_payloads));
 
   for (auto const& item : plasma_payloads) {
     std::shared_ptr<arrow::Buffer> buffer = nullptr;

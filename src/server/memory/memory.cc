@@ -173,13 +173,19 @@ Status BulkStoreBase<ID, P>::Seal(ID const& id) {
 
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::Get(ID const& id, std::shared_ptr<P>& object) {
+  return GetUnsafe(id, false, object);
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::GetUnsafe(ID const& id, const bool unsafe,
+                                       std::shared_ptr<P>& object) {
   if (id == EmptyBlobID<ID>()) {
     object = P::MakeEmpty();
     return Status::OK();
   } else {
     typename object_map_t::const_accessor accessor;
     if (objects_.find(accessor, id)) {
-      if (accessor->second->IsSealed()) {
+      if (unsafe || accessor->second->IsSealed()) {
         object = accessor->second;
         return Status::OK();
       } else {
@@ -194,26 +200,15 @@ Status BulkStoreBase<ID, P>::Get(ID const& id, std::shared_ptr<P>& object) {
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::GetUnchecked(ID const& id,
-                                          std::shared_ptr<P>& object) {
-  if (id == EmptyBlobID<ID>()) {
-    object = P::MakeEmpty();
-    return Status::OK();
-  } else {
-    typename object_map_t::const_accessor accessor;
-    if (objects_.find(accessor, id)) {
-      object = accessor->second;
-      return Status::OK();
-    } else {
-      return Status::ObjectNotExists("Failed to get blob with id " +
-                                     IDToString<ID>(id));
-    }
-  }
+Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
+                                 std::vector<std::shared_ptr<P>>& objects) {
+  return GetUnsafe(ids, false, objects);
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
-                                 std::vector<std::shared_ptr<P>>& objects) {
+Status BulkStoreBase<ID, P>::GetUnsafe(
+    std::vector<ID> const& ids, const bool unsafe,
+    std::vector<std::shared_ptr<P>>& objects) {
   for (auto object_id : ids) {
     if (object_id == EmptyBlobID<ID>()) {
       objects.push_back(P::MakeEmpty());
@@ -221,7 +216,7 @@ Status BulkStoreBase<ID, P>::Get(std::vector<ID> const& ids,
       typename object_map_t::const_accessor accessor;
       if (objects_.find(accessor, object_id)) {
         auto object = accessor->second;
-        if (object->IsSealed()) {
+        if (unsafe || object->IsSealed()) {
           objects.push_back(accessor->second);
         } else {
           objects.clear();

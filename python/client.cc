@@ -477,24 +477,25 @@ void bind_client(py::module& mod) {
            })
       .def(
           "get_blob",
-          [](Client* self, const ObjectIDWrapper object_id) {
+          [](Client* self, const ObjectIDWrapper object_id, const bool unsafe) {
             std::shared_ptr<Blob> blob;
-            throw_on_error(self->GetBlob(object_id, blob));
+            throw_on_error(self->GetBlob(object_id, unsafe, blob));
             return blob;
           },
-          "object_id"_a)
+          "object_id"_a, py::arg("unsafe") = false)
       .def(
           "get_blobs",
-          [](Client* self, std::vector<ObjectIDWrapper> object_ids) {
+          [](Client* self, std::vector<ObjectIDWrapper> object_ids,
+             const bool unsafe) {
             std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
             for (size_t idx = 0; idx < object_ids.size(); ++idx) {
               unwrapped_object_ids[idx] = object_ids[idx];
             }
             std::vector<std::shared_ptr<Blob>> blobs;
-            throw_on_error(self->GetBlobs(unwrapped_object_ids, blobs));
+            throw_on_error(self->GetBlobs(unwrapped_object_ids, unsafe, blobs));
             return blobs;
           },
-          "object_ids"_a)
+          "object_ids"_a, py::arg("unsafe") = false)
       .def(
           "get_object",
           [](Client* self, const ObjectIDWrapper object_id) {
@@ -636,25 +637,27 @@ void bind_client(py::module& mod) {
           "remote_blob_builder"_a)
       .def(
           "get_remote_blob",
-          [](RPCClient* self, const ObjectIDWrapper object_id) {
+          [](RPCClient* self, const ObjectIDWrapper object_id,
+             const bool unsafe) {
             std::shared_ptr<RemoteBlob> remote_blob;
-            throw_on_error(self->GetRemoteBlob(object_id, remote_blob));
+            throw_on_error(self->GetRemoteBlob(object_id, unsafe, remote_blob));
             return remote_blob;
           },
-          "object_id"_a)
+          "object_id"_a, py::arg("unsafe") = false)
       .def(
           "get_remote_blobs",
-          [](RPCClient* self, std::vector<ObjectIDWrapper> object_ids) {
+          [](RPCClient* self, std::vector<ObjectIDWrapper> object_ids,
+             const bool unsafe) {
             std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
             for (size_t idx = 0; idx < object_ids.size(); ++idx) {
               unwrapped_object_ids[idx] = object_ids[idx];
             }
             std::vector<std::shared_ptr<RemoteBlob>> remote_blobs;
-            throw_on_error(
-                self->GetRemoteBlobs(unwrapped_object_ids, remote_blobs));
+            throw_on_error(self->GetRemoteBlobs(unwrapped_object_ids, unsafe,
+                                                remote_blobs));
             return remote_blobs;
           },
-          "object_ids"_a)
+          "object_ids"_a, py::arg("unsafe") = false)
       .def(
           "get_object",
           [](RPCClient* self, const ObjectIDWrapper object_id) {

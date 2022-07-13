@@ -393,13 +393,34 @@ class Client : public BasicIPCClient,
   Status GetBlob(ObjectID const id, std::shared_ptr<Blob>& blob);
 
   /**
+   * @brief Get a blob from vineyard server, and optionally bypass the "sealed"
+   * check.
+   *
+   * @param id the blob to get.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetBlob(ObjectID const id, bool unsafe, std::shared_ptr<Blob>& blob);
+
+  /**
    * @brief Get a blob from vineyard server.
    *
    * @param id the blob to get.
    *
    * @return Status that indicates whether the get action has succeeded.
    */
-  Status GetBlobs(std::vector<ObjectID> const id,
+  Status GetBlobs(std::vector<ObjectID> const ids,
+                  std::vector<std::shared_ptr<Blob>>& blobs);
+
+  /**
+   * @brief Get a blob from vineyard server, and optionally bypass the "sealed"
+   * check.
+   *
+   * @param id the blob to get.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetBlobs(std::vector<ObjectID> const ids, const bool unsafe,
                   std::vector<std::shared_ptr<Blob>>& blobs);
 
   /**
@@ -707,12 +728,20 @@ class Client : public BasicIPCClient,
    * @param ids Object ids for the blobs to get.
    * @param buffers: The result immutable blobs will be added to `buffers`.
    *
-   * @return Status that indicates whether the create action has succeeded.
+   * @return Status that indicates whether the get action has succeeded.
    */
   Status GetBuffers(
       const std::set<ObjectID>& ids,
       std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers);
 
+  /**
+   * @brief Get the size of blobs from vineyard server.
+   *
+   * @param ids Object ids for the blobs to get.
+   * @param sizes: The result sizes of immutable blobs will be added to `sizes`.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
   Status GetBufferSizes(const std::set<ObjectID>& ids,
                         std::map<ObjectID, size_t>& sizes);
 
@@ -732,6 +761,13 @@ class Client : public BasicIPCClient,
   Status Seal(ObjectID const& object_id);
 
  private:
+  Status GetBuffers(
+      const std::set<ObjectID>& ids, const bool unsafe,
+      std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers);
+
+  Status GetBufferSizes(const std::set<ObjectID>& ids, const bool unsafe,
+                        std::map<ObjectID, size_t>& sizes);
+
   friend class Blob;
   friend class BlobWriter;
   friend class ObjectBuilder;
@@ -833,6 +869,14 @@ class PlasmaClient
   Status OnDelete(PlasmaID const& id);
 
   using ClientBase::Release;
+
+ private:
+  Status GetPayloads(std::set<PlasmaID> const& plasma_ids, const bool unsafe,
+                     std::map<PlasmaID, PlasmaPayload>& plasma_payloads);
+
+  Status GetBuffers(
+      std::set<PlasmaID> const& plasma_ids, const bool unsafe,
+      std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
 
   friend class detail::UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient>;
 };

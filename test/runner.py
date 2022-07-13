@@ -339,6 +339,7 @@ def run_single_vineyardd_tests(tests):
         run_test(tests, 'large_meta_test')
         run_test(tests, 'list_object_test')
         run_test(tests, 'lru_test')
+        run_test(tests, 'mutable_blob_test')
         run_test(tests, 'name_test')
         run_test(tests, 'persist_test')
         run_test(tests, 'plasma_test')
