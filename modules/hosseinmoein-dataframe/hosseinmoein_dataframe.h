@@ -13,6 +13,8 @@
 using namespace vineyard;
 using namespace hmdf;
 
+#define ACCEPT_TYPE double, float, int32_t, int64_t, uint32_t, uint64_t
+
 #define LOAD_INDEX_FROM_VINEYARD_TO_SDF(T, num_rows)                        \
 do {                                                                        \
   auto index = std::dynamic_pointer_cast<Tensor<T>>(vineyard_df->Index());  \
@@ -42,9 +44,6 @@ do {                                                                            
 template <typename T>
 class HDataFrameBuilder;
 
-/*
- * @T: The index type.
- */
 template<typename T>
 class HDataFrame: public vineyard::Registered<HDataFrame<T>> {
  private:
@@ -61,7 +60,7 @@ class HDataFrame: public vineyard::Registered<HDataFrame<T>> {
     this->vineyard_df_id = meta.GetKeyValue<uint64_t>("vineyard_df_id");
   }
 
-  StdDataFrame<T> &Resolve(Client &client);
+  StdDataFrame<T> Resolve(Client &client);
 
   friend class HDataFrameBuilder<T>;
 };
@@ -93,33 +92,29 @@ class HDataFrameBuilder: public vineyard::ObjectBuilder {
 };
 
 template<typename T>
-StdDataFrame<T> &HDataFrame<T>::Resolve(Client &client) {
+StdDataFrame<T> HDataFrame<T>::Resolve(Client &client) {
   auto vineyard_df = std::dynamic_pointer_cast<vineyard::DataFrame>(client.GetObject(vineyard_df_id));
   int64_t num_rows = vineyard_df->shape().first;
   size_t num_columns = vineyard_df->shape().second;
 
+  /* Fill the index data from vineyard::DataFrame to StdDataFrame. */
   switch(vineyard_df->Index()->value_type()) {
-  case AnyType::Int32 : {
-    LOAD_INDEX_FROM_VINEYARD_TO_SDF(T, num_rows);
-    break;
-  }
-  case AnyType::Int64 : {
-    LOAD_INDEX_FROM_VINEYARD_TO_SDF(T, num_rows);
-    break;
-  }
-  case AnyType::UInt32 : {
-    LOAD_INDEX_FROM_VINEYARD_TO_SDF(T, num_rows);
-    break;
-  }
-  case AnyType::UInt64 : {
+  case AnyType::Int32 :
+  case AnyType::Int64 :
+  case AnyType::UInt32 :
+  case AnyType::UInt64 :
+  case AnyType::Double :
+  case AnyType::Float : {
     LOAD_INDEX_FROM_VINEYARD_TO_SDF(T, num_rows);
     break;
   }
   default : {
-    std::cout << "The support of this type: " << vineyard_df->Index()->value_type() << "is to be finished." << std::endl;
+    LOG(INFO) << __func__ << std::endl;
+    LOG(INFO) << "The support of this type: " << vineyard_df->Index()->value_type() << " need to be finished." << std::endl;
   }
   }
 
+  /* Fill the column data from vineyard::DataFrame to StdDataFrame. */
   for (int i = 0; i < num_columns; i++) {
     auto cname = vineyard_df->Columns()[i];
     std::string field_name;
@@ -139,7 +134,7 @@ StdDataFrame<T> &HDataFrame<T>::Resolve(Client &client) {
       break;
     }
     case AnyType::UInt32 : {
-      LOAD_COLUMN_FROM_VINEYARD_TO_SDF(uint64_t, field_name);
+      LOAD_COLUMN_FROM_VINEYARD_TO_SDF(uint32_t, field_name);
       break;
     }
     case AnyType::UInt64 : {
@@ -155,7 +150,8 @@ StdDataFrame<T> &HDataFrame<T>::Resolve(Client &client) {
       break;
     }
     default : {
-      std::cout << "The support of type: " << vineyard_df->Column(cname)->value_type() << "is to be finished." << std::endl;
+      LOG(INFO) << __func__ << std::endl;
+      LOG(INFO) << "The support of type: " << vineyard_df->Column(cname)->value_type() << " need to be finished." << std::endl;
       break;
     }
     }
@@ -170,6 +166,7 @@ std::shared_ptr<Object> HDataFrameBuilder<T>::_Seal(Client& client)
   VINEYARD_CHECK_OK(this->Build(client));
   auto hn_df = std::make_shared<HDataFrame <T>>();
 
+  /* Get index info. */
   std::vector<T> &index_vec = df.get_index();
   auto tb = std::make_shared<TensorBuilder<T>>(client, std::vector<int64_t>{(int64_t)index_vec.size()});
   vineyard_df_builder->set_index(tb);
@@ -177,7 +174,8 @@ std::shared_ptr<Object> HDataFrameBuilder<T>::_Seal(Client& client)
   auto data = (std::dynamic_pointer_cast<TensorBuilder<T>>(vineyard_df_builder->Column("index_")))->data();
   memcpy(data, index_vec.data(), sizeof(T) * index_vec.size());
 
-  auto result = df.template get_columns_info<int, double, std::string>();
+  /* Fill column data of StdDataFrame into vineyard::DataFrame. */
+  auto result = df.template get_columns_info<ACCEPT_TYPE>();
   for (auto citer: result)  {
     if(std::get<2>(citer) == std::type_index(typeid(double))) {
       LOAD_COLUMN_FROM_SDF_TO_VINEYARD(double, citer);
@@ -192,8 +190,9 @@ std::shared_ptr<Object> HDataFrameBuilder<T>::_Seal(Client& client)
     } else if (std::get<2>(citer) == std::type_index(typeid(uint64_t))) {
       LOAD_COLUMN_FROM_SDF_TO_VINEYARD(uint64_t, citer);
     } else {
-      std::cout << "The support of this type is to be finished." << std::endl;
-      return nullptr;
+      LOG(INFO) << __func__ << std::endl;
+      LOG(INFO) << "The support of this type need to be finished." << std::endl;
+      assert(0);
     }
   }
 

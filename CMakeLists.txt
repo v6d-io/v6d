@@ -41,6 +41,7 @@ option(BUILD_VINEYARD_MALLOC "Build vineyard's implementation for client-side ma
 option(BUILD_VINEYARD_MIGRATION "Enable vineyard's object migration support" ON)
 option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
+option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" ON)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -722,8 +723,6 @@ if(BUILD_VINEYARD_BASIC)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_basic)
 endif()
 
-add_subdirectory(modules/hosseinmoein-dataframe)
-list(APPEND VINEYARD_INSTALL_LIBS hosseinmoein_dataframe)
 
 if(BUILD_VINEYARD_IO)
     add_subdirectory(modules/io)
@@ -751,6 +750,11 @@ if(BUILD_VINEYARD_FUSE)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_fuse)
 endif()
 
+if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
+    add_subdirectory(modules/hosseinmoein-dataframe)
+    list(APPEND VINEYARD_INSTALL_LIBS hosseinmoein_dataframe)
+endif()
+
 if(BUILD_VINEYARD_TESTS)
     enable_testing()
     file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test"
@@ -760,6 +764,11 @@ if(BUILD_VINEYARD_TESTS)
         string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${f})
         set(T_NAME ${CMAKE_MATCH_1})
         message(STATUS "Found unit_test - " ${T_NAME})
+
+        if(${T_NAME} STREQUAL "hosseinmoein_dataframe_test")
+            set(CMAKE_CXX_STANDARD 17)
+        endif()
+
         if(BUILD_VINEYARD_TESTS_ALL)
             add_executable(${T_NAME} test/${T_NAME}.cc)
         else()
@@ -794,6 +803,10 @@ if(BUILD_VINEYARD_TESTS)
             if(WITH_ALLOCATOR STREQUAL "jemalloc")
                 target_compile_options(${T_NAME} PRIVATE -DWITH_JEMALLOC)
             endif()
+        endif()
+
+        if(${T_NAME} STREQUAL "hosseinmoein_dataframe_test")
+            set(CMAKE_CXX_STANDARD 14)
         endif()
     endforeach()
 endif()
