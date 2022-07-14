@@ -1,4 +1,3 @@
-include_directories(/home/sitan/v6d)
 set(SS)
 list(APPEND SS "playground.cc")
 add_executable(play ${SS} )
