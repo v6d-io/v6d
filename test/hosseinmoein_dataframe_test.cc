@@ -1,31 +1,31 @@
-#include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
 
+#include "client/client.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
 #include "hosseinmoein-dataframe/hosseinmoein_dataframe.h"
-#include "client/client.h"
 
 #include "DataFrame/DataFrame.h"
 
 #define COLOR_GREEN "\033[32m"
-#define COLOR_RED   "\033[31m"
+#define COLOR_RED "\033[31m"
 #define COLOR_WHITE "\033[37m"
 
-#define CUR_BACK    "\033[1D"
+#define CUR_BACK "\033[1D"
 
-#define MAX_ROW   (20)
-#define MAX_DATA  (9973)
+#define MAX_ROW (20)
+#define MAX_DATA (9973)
 
 #define OFF 0
-#define ON  1
+#define ON 1
 #define OUTPUT_SWITCH ON
 
 int row;
 
-template<typename T>
-std::ostream &operator<<(std::ostream &o, std::vector<T> &vec) {
+template <typename T>
+std::ostream& operator<<(std::ostream& o, std::vector<T>& vec) {
   o << "[";
   for (int i = 0; i < vec.size(); i++) {
     o << " " << vec[i] << ",";
@@ -34,21 +34,20 @@ std::ostream &operator<<(std::ostream &o, std::vector<T> &vec) {
   return o;
 }
 
-void init()
-{
+void init() {
   srand(time(0));
   row = rand() % (MAX_ROW - 1) + 1;
 }
 
-template<typename T>
-void fill_random_data(std::vector<T> &vec) {
+template <typename T>
+void fill_random_data(std::vector<T>& vec) {
   for (int i = 0; i < row; i++) {
     vec[i] = ((T)(rand() % MAX_DATA + 1)) / 3;
   }
 }
 
-template<typename T>
-int test_func(Client &client) {
+template <typename T>
+int test_func(Client& client) {
   auto builder = HDataFrameBuilder<T>();
   StdDataFrame<T> data_frame_input;
   StdDataFrame<T> data_frame_output;
@@ -92,15 +91,21 @@ int test_func(Client &client) {
   builder.Put(data_frame_input);
   auto result = builder.Seal(client);
 
-  auto hdf = std::dynamic_pointer_cast<HDataFrame<T>>(client.GetObject(result->id()));
+  auto hdf =
+      std::dynamic_pointer_cast<HDataFrame<T>>(client.GetObject(result->id()));
   data_frame_output = hdf->Resolve(client);
 
   idx_col_result = data_frame_output.get_index();
-  int32_col_result = data_frame_output.template get_column<int32_t>("int32_col");
-  int64_col_result = data_frame_output.template get_column<int64_t>("int64_col");
-  uint32_col_result = data_frame_output.template get_column<uint32_t>("uint32_col");
-  uint64_col_result = data_frame_output.template get_column<uint64_t>("uint64_col");
-  double_col_result = data_frame_output.template get_column<double>("double_col");
+  int32_col_result =
+      data_frame_output.template get_column<int32_t>("int32_col");
+  int64_col_result =
+      data_frame_output.template get_column<int64_t>("int64_col");
+  uint32_col_result =
+      data_frame_output.template get_column<uint32_t>("uint32_col");
+  uint64_col_result =
+      data_frame_output.template get_column<uint64_t>("uint64_col");
+  double_col_result =
+      data_frame_output.template get_column<double>("double_col");
   float_col_result = data_frame_output.template get_column<float>("float_col");
 
 #if OUTPUT_SWITCH == ON
@@ -115,13 +120,13 @@ int test_func(Client &client) {
 #endif
 
   for (int i = 0; i < row; i++) {
-    if(idx_col_result[i] != idx_col[i] ||
-       int32_col_result[i] != int32_col[i] ||
-       int64_col_result[i] != int64_col[i] ||
-       uint32_col_result[i] != uint32_col[i] ||
-       uint64_col_result[i] != uint64_col[i] ||
-       double_col_result[i] != double_col[i] ||
-       float_col_result[i] != float_col[i]) {
+    if (idx_col_result[i] != idx_col[i] ||
+        int32_col_result[i] != int32_col[i] ||
+        int64_col_result[i] != int64_col[i] ||
+        uint32_col_result[i] != uint32_col[i] ||
+        uint64_col_result[i] != uint64_col[i] ||
+        double_col_result[i] != double_col[i] ||
+        float_col_result[i] != float_col[i]) {
       return -1;
     }
   }
@@ -191,9 +196,11 @@ int main(int argc, char** argv) {
 
 fail:
   if (ret)
-    LOG(INFO) << "Hosseinmoein dataframe test:" << COLOR_RED << " FAIL" << COLOR_WHITE <<std::endl;
+    LOG(INFO) << "Hosseinmoein dataframe test:" << COLOR_RED << " FAIL"
+              << COLOR_WHITE << std::endl;
   else
-    LOG(INFO) << "Hosseinmoein dataframe test:" << COLOR_GREEN << " PASS" << COLOR_WHITE <<std::endl;
+    LOG(INFO) << "Hosseinmoein dataframe test:" << COLOR_GREEN << " PASS"
+              << COLOR_WHITE << std::endl;
 
   client.Disconnect();
   return ret;
