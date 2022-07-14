@@ -36,8 +36,10 @@ To address this issue, vineyard provides:
    and the meta data of the distributed data will be shared across the vineyard cluster
    via the backend key-value store, e.g., etcd or zookeeper.
 
-   .. image:: ../images/vineyard_deployment.jpg
-      :alt: Vineyard deployment
+   .. figure:: ../images/vineyard_deployment.jpg
+      :alt: Distributed data sharing in vineyard
+
+      Distributed data sharing in vineyard
 
    For example, a distributed tensor is stored in the vineyard cluster as illustrated
    above. Each partition is stored in the corresponding vineyard instance, while the
@@ -66,11 +68,15 @@ To address this issue, vineyard provides:
    traversal operations are built-in with the vineyard distributed graph, as a result,
    nearly zero extra development are required to reuse the data.
 
-Architecture
-------------
+.. _architecture-of-vineyard:
 
-.. image:: ../images/vineyard_arch.jpg
+Architecture of vineyard
+------------------------
+
+.. figure:: ../images/vineyard_arch.jpg
    :alt: Architecture of vineyard
+
+   Architecture of vineyard
 
 The figure above demonstrates the architecture of vineyard.
 
@@ -103,6 +109,8 @@ three major components:
    to the vineyard instance through UNIX domain socket, this is because, the data
    sharing is via the system call of memory mapping, thus requires the client to stay
    in the same machine of the vineyard instance.
+
+.. _client-side:
 
 Client side
 ^^^^^^^^^^^

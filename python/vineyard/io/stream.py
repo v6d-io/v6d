@@ -140,9 +140,9 @@ def open(path, *args, mode='r', handlers=None, **kwargs):
     vineyard_endpoint: str
         Vineyard's RPC socket address.
     handlers:
-        A dict that will be filled with a `handler` that contains the process handler
-        of the underlying read/write process that can be `join`ed to capture the
-        possible errors during the I/O proceeding.
+        A dict that will be filled with a :code:`handler` that contains the process
+        handler of the underlying read/write process that can be joined using
+        :code:`join` to capture the possible errors during the I/O proceeding.
 
     See Also
     --------

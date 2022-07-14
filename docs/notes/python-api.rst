@@ -27,7 +27,7 @@ Metadata
     :special-members:
     :members:
 
-Vineyard Client
+Vineyard client
 ---------------
 
 .. autofunction:: connect
@@ -40,7 +40,7 @@ Vineyard Client
     :inherited-members:
     :members:
 
-Vineyard Cluster
+Vineyard cluster
 ----------------
 
 .. autoclass:: InstanceStatus
@@ -56,7 +56,13 @@ Blob
 .. autoclass:: BlobBuilder
     :members:
 
-Resolvers and Builders
+.. autoclass:: RemoteBlob
+    :members:
+
+.. autoclass:: RemoteBlobBuilder
+    :members:
+
+Resolvers and builders
 ----------------------
 
 .. autoclass:: vineyard.core.resolver.ResolverContext
@@ -79,7 +85,7 @@ Resolvers and Builders
 
 .. _shared-memory:
 
-Shared Memory
+Shared memory
 -------------
 
 .. autoclass:: vineyard.shared_memory.SharedMemory
@@ -104,3 +110,17 @@ I/O Drivers
 .. autofunction:: vineyard.io.open
 .. autofunction:: vineyard.io.read
 .. autofunction:: vineyard.io.write
+
+.. _python-api-streams:
+
+Streams
+-------
+
+.. autoclass:: vineyard.io.byte.ByteStream
+    :members:
+
+.. autoclass:: vineyard.io.dataframe.DataframeStream
+    :members:
+
+.. autoclass:: vineyard.io.recordbatch.RecordBatchStream
+    :members:

@@ -9,6 +9,8 @@ User Guide
    notes/install.rst
    notes/architecture.rst
    notes/objects.rst
+   notes/data-accessing.rst
+   notes/streams.rst
    notes/io-drivers.rst
 
 The *User Guide* sections provides a comprehensive perspective of the design and
@@ -59,6 +61,25 @@ Concepts
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
    The design space of vineyard objects.
+
+   ---
+
+   .. link-button:: notes/data-accessing
+      :type: ref
+      :text: Accessing Objects in Vineyard
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   The approaches that can be used to access various kinds of objects stored in
+   vineyard.
+
+   ---
+
+   .. link-button:: notes/streams
+      :type: ref
+      :text: Stream in Vineyard
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   The stream abstraction upon the immutable data sharing storage and its usages.
 
    ---
 

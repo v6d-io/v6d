@@ -1,7 +1,7 @@
 .. _divein-driver-label:
 
-I/O Driver
-==========
+I/O Drivers
+===========
 
 As we shown in the getting-started, the ``open`` function in vineyard can open a local
 file as a stream  for consuming, and we notice that the path of the local file is headed
