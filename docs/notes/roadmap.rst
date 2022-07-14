@@ -7,11 +7,57 @@ and a patch release every one or two weeks.
 
 The roadmap for major vineyard releases are listed as follows:
 
+v0.8.0
+------
+
+Vineyard *v0.8.0* will deliver the first implementation of the following
+important features and will be hopefully release in the later Aug, 2022:
+
+- Filesystem view of vineyard objects: vineyard objects can be accessed like
+  files on a filesystem in a high-performance fashion. Such a feature would
+  greatly ease the integration of computing processes with vineyard.
+- Copy-on-realloc and data lineage: the mutation support would be extended
+  from blobs to general objects with a carefully concurrency-control design.
+- Transparent object spilling: objects in vineyard can be spilled to disk
+  when they are too large to fit in memory.
+- Sharing GPU memory between processes of different compute engines: we are
+  working on shared memory on devices to enable boarder applications that
+  can benefit from the shared vineyard store, especially for deep learning
+  frameworks and GNN frameworks.
+
+v0.7.0
+------
+
+Vineyard *v0.7.0* will be released  in later July, 2022. Vineyard v0.7.0 will
+introduces the following experimental features to ease the integration of
+various kinds of workloads with Vineyard:
+
+- Limited mutation support on blobs: starts from vineyard *v0.7.0*, unsealed
+  blobs can be get by other clients with an :code:`unsafe` flag to ease the
+  integration of some online storage engines.
+- Limited support for remote data accessing using the RPC client: vineyard
+  *v0.7.0* will bring the feature about creating and accessing remote blobs
+  using the RPC client. It would be greatly helpful for some specific deployment
+  and the cost of remote data sourcing to vineyard is tolerable.
+
+v0.6.0
+------
+
+We plan to release the *v0.6.0* version before tne end of June, 2022. The *v0.6.0*
+release will include the following enhancement:
+
+- Better compatibility on various platforms (e.g., CentOS and ArchLinux), and process
+  platform-specific features like `LD_LIBRARY_PATH` and `libunwind` dependency
+  carefully.
+- Ensure the backwards compatibility with various third-party integrations, e.g.,
+  apache-airflow.
+- Vineyard v0.6.0 will be available from `homebrew <https://brew.sh/>`_.
+
 v0.5.0
 ------
 
 We plan to release the first preliminary version for the Rust SDK and Go SDK
-in vineyard *v0.5.0*, that is expected to be delivered in later Oct, 2021.
+in vineyard *v0.5.0*, that is expected to be delivered in later May, 2022.
 
 In vineyard *v0.5.0*, we will investigate the opportunity about code generation
 based on the metadata of vineyard objects, i.e., we could generate the data
@@ -26,7 +72,7 @@ Further details about release for *v0.5.0* will be added later.
 v0.4.0
 ------
 
-The release of vineyard *v0.4.0*, will be hopefully released in Aug, 2021, will
+The release of vineyard *v0.4.0*, will be hopefully released before April, 2022, will
 be a follow-up bugfix releases after *v0.3.0*. The version *v0.4.0* makes the
 kubernetes related components better.
 
@@ -37,8 +83,8 @@ kubernetes related components better.
 v0.3.0
 ------
 
-We plan to release *v0.3.0* in June, 2021. vineyard *v0.3.0*
-will be the first major stable releases with fully kubernetes support, which will include:
+We plan to release *v0.3.0* by the end of 2021. vineyard *v0.3.0* will be the first major
+stable releases with fully kubernetes support, which will include:
 
 + A stable CRD definition for ``LocalObject`` and ``GlobalObject`` to represents vineyard objects
   as kubernetes resources.
@@ -51,7 +97,8 @@ v0.2.0
 ------
 
 Vineyard *v0.2.0* will address the issue about Python ecosystem compatibility, I/O, and
-the kubernetes integration.
+the kubernetes integration. Vineyard v0.2.0 will take about half of a year with several bugfix
+release to testing the design and APIs to reach a stable stable state.
 
 + Vineyard *v0.2.0* will support any *filesystem-spec*-compatible data source/sink as well as file
   format.

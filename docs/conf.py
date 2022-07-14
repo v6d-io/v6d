@@ -28,6 +28,7 @@ project = 'vineyard'
 copyright = '2019-2022, The Vineyard Authors'
 author = 'The Vineyard Authors'
 
+language = 'en'
 
 # -- General configuration ---------------------------------------------------
 

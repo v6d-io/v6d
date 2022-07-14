@@ -1,11 +1,13 @@
-Objects in Vineyard
-===================
+Internals of Objects
+====================
 
 Vineyard represents all kinds of data as vineyard objects. Vineyard adopts a
 metadata-payloads decoupled design and an object in vineyard consists of two folds:
 
 1.  A set of blobs where the payload of the data lives in;
 2.  A hierarchical meta tree which describes the type, layout and properties of the data.
+
+.. _metadata-and-payloads:
 
 Metadata and payloads
 ---------------------
@@ -48,12 +50,74 @@ forms vineyard objects:
   - payloads:
 
     - a set of :code:`pointer` in the member :code:`columns` (the member :code:`data` of
-      of those :code:`Tensor`s)
+      of those :code:`Tensor` s)
 
 From the example above you could see that the objects naturally fit a hierarchical
 model and complex data objects can be composed from some simpler objects. Each object
 contains a set of blobs as the payload, and a metadata (in tree form) that describes
 the semantic and organizations of those blobs.
+
+.. code:: json
+   :caption: An example for the object metadata: a dataframe with two columns where each
+             column is a tensor.
+
+    {
+        "__values_-key-0": "1",
+        "__values_-key-1": "\"a\"",
+        "__values_-size": 2,
+        "__values_-value-0": {
+            "buffer_": {
+                "id": "o800527ecdf05cff9",
+                "instance_id": 39,
+                "length": 0,
+                "nbytes": 0,
+                "transient": true,
+                "typename": "vineyard::Blob"
+            },
+            "id": "o000527ecdffd95c4",
+            "instance_id": 39,
+            "nbytes": 400,
+            "partition_index_": "[]",
+            "shape_": "[100]",
+            "signature": 1451273207424436,
+            "transient": false,
+            "typename": "vineyard::Tensor<float>",
+            "value_type_": "float"
+        },
+        "__values_-value-1": {
+            "buffer_": {
+                "id": "o800527ecdeaf1015",
+                "instance_id": 39,
+                "length": 0,
+                "nbytes": 0,
+                "transient": true,
+                "typename": "vineyard::Blob"
+            },
+            "id": "o000527ece12e4f0a",
+            "instance_id": 39,
+            "nbytes": 800,
+            "partition_index_": "[]",
+            "shape_": "[100]",
+            "signature": 1451273227452968,
+            "transient": false,
+            "typename": "vineyard::Tensor<double>",
+            "value_type_": "double"
+        },
+        "columns_": "[\"a\",1]",
+        "id": "o000527ece15d374c",
+        "instance_id": 39,
+        "nbytes": 1200,
+        "partition_index_column_": 0,
+        "partition_index_row_": 0,
+        "row_batch_index_": 0,
+        "signature": 1451273231074538,
+        "transient": false,
+        "typename": "vineyard::DataFrame"
+    }
+
+From the above example of an object metadata you can see that and object is composed
+by certain sub objects and forms a hierarchical data model. An object consists of
+a set of blobs and a metadata tree that describes the semantic of those blobs.
 
 .. tip::
 

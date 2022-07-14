@@ -384,6 +384,8 @@ void bind_blobs(py::module& mod) {
   py::class_<Blob, std::shared_ptr<Blob>, Object>(mod, "Blob",
                                                   py::buffer_protocol())
       .def_property_readonly("size", &Blob::size)
+      .def_property_readonly(
+          "is_empty", [](Blob* self) { return self->allocated_size() == 0; })
       .def_static("empty", &Blob::MakeEmpty)
       .def("__len__", &Blob::size)
       .def("__iter__",
@@ -525,6 +527,9 @@ void bind_blobs(py::module& mod) {
           [](RemoteBlob* self) -> InstanceID { return self->instance_id(); })
       .def_property_readonly("size", &RemoteBlob::size)
       .def_property_readonly("allocated_size", &RemoteBlob::allocated_size)
+      .def_property_readonly(
+          "is_empty",
+          [](RemoteBlob* self) { return self->allocated_size() == 0; })
       .def("__len__", &RemoteBlob::allocated_size)
       .def("__iter__",
            [](RemoteBlob* self) {

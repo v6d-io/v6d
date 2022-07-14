@@ -13,6 +13,8 @@ from ._C import ObjectBuilder
 from ._C import ObjectID
 from ._C import ObjectMeta
 from ._C import ObjectName
+from ._C import RemoteBlob
+from ._C import RemoteBlobBuilder
 from ._C import RPCClient
 from ._C import _add_doc
 from ._C import connect
@@ -714,7 +716,7 @@ add_doc(
 .. method:: reset() -> None
     :noindex:
 
-Alias of :method:`ClientBase.clear`.
+Alias of :meth:`ClientBase.clear`.
 ''',
 )
 
@@ -827,6 +829,57 @@ Returns:
 )
 
 add_doc(
+    IPCClient.get_blob,
+    r'''
+.. method:: get_blob(object_id: ObjectID, unsafe: bool = false) -> Blob
+    :noindex:
+
+Getting a blob from vineyard using the given object ID.
+
+Parameters:
+    object_id: ObjectID
+        The blob to get.
+    unsafe: bool
+        :code:`unsafe` means getting the blob even the blob is not sealed yet.
+        Default is :code:`False`.
+
+Returns:
+    Blob
+
+See Also:
+    IPCClient.get_blob
+    RPCClient.get_remote_blob
+    RPCClient.get_remote_blobs
+''',
+)
+
+
+add_doc(
+    IPCClient.get_blobs,
+    r'''
+.. method:: get_blobs(object_ids: List[ObjectID], unsafe: bool = false) -> List[Blob]
+    :noindex:
+
+Getting blobs from vineyard using the given object IDs.
+
+Parameters:
+    object_ids: List[ObjectID]
+        The blobs to get.
+    unsafe: bool
+        :code:`unsafe` means getting the blob even the blob is not sealed yet.
+        Default is :code:`False`.
+
+Returns:
+    List[Blob]
+
+See Also:
+    IPCClient.get_blobs
+    RPCClient.get_remote_blob
+    RPCClient.get_remote_blobs
+''',
+)
+
+add_doc(
     IPCClient.get_object,
     r'''
 .. method:: get_object(object_id: ObjectID) -> Object
@@ -851,7 +904,7 @@ add_doc(
 
 Get multiple objects from vineyard.
 
-Paramters:
+Parameters:
     object_ids: List[ObjectID]
 
 Returns:
@@ -888,7 +941,7 @@ add_doc(
 
 Get metadatas of multiple objects from vineyard.
 
-Paramters:
+Parameters:
     object_ids: List[ObjectID]
         The object ids to get.
     sync_remote: bool
@@ -1042,11 +1095,103 @@ add_doc(
 
 Get multiple objects from vineyard.
 
-Paramters:
+Parameters:
     object_ids: List[ObjectID]
 
 Returns:
     List[Object]
+''',
+)
+
+add_doc(
+    RPCClient.create_remote_blob,
+    r'''
+.. method:: create_remote_blob(blob_builder: RemoteBlobBuilder) -> ObjectID
+    :noindex:
+
+Put the remote blob to connected remote vineyard instance. The :code:`blob_builder`
+is assumed to be ready and modification on the :code:`blob_builder` after creation
+won't take effect.
+
+Note that creating remote blobs requires network transfer and may yields significate
+overhead.
+
+.. code:: python
+
+    vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
+
+    buffer_writer = RemoteBlobBuilder(len(payload))
+    buffer_writer.copy(0, payload)
+    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+
+Parameters:
+    blob_builder: RemoteBlobBuilder
+        The remote blob to create.
+
+Returns:
+    ObjectID
+
+See Also:
+    RPCClient.get_remote_blob
+    RPCClient.get_remote_blobs
+''',
+)
+
+add_doc(
+    RPCClient.get_remote_blob,
+    r'''
+.. method:: get_remote_blob(object_id: ObjectID, unsafe: bool = false) -> RemoteBlob
+    :noindex:
+
+Getting a remote blob from vineyard using the given object ID.
+
+Note that getting remote blobs requires network transfer and may yields significate
+overhead.
+
+Parameters:
+    object_id: ObjectID
+        The remote blob to get.
+    unsafe: bool
+        :code:`unsafe` means getting the blob even the blob is not sealed yet.
+        Default is :code:`False`.
+
+Returns:
+    RemoteBlob
+
+See Also:
+    IPCClient.get_blob
+    IPCClient.get_blobs
+    RPCClient.get_remote_blobs
+''',
+)
+
+
+add_doc(
+    RPCClient.get_remote_blobs,
+    r'''
+.. method:: get_remote_blobs(object_ids: List[ObjectID], unsafe: bool = false)
+        -> List[RemoteBlob]
+    :noindex:
+
+Getting remote blobs from vineyard using the given object IDs.
+
+Note that getting remote blobs requires network transfer and may yields significate
+overhead.
+
+Parameters:
+    object_ids: List[ObjectID]
+        The remote blobs to get.
+    unsafe: bool
+        :code:`unsafe` means getting the blob even the blob is not sealed yet.
+        Default is :code:`False`.
+
+Returns:
+    List[RemoteBlob]
+
+See Also:
+    IPCClient.get_blob
+    IPCClient.get_blobs
+    RPCClient.get_remote_blob
 ''',
 )
 
@@ -1075,7 +1220,7 @@ add_doc(
 
 Get metadatas of multiple objects from vineyard.
 
-Paramters:
+Parameters:
     object_ids: List[ObjectID]
 
 Returns:
@@ -1246,9 +1391,16 @@ Size of the blob.
 )
 
 add_doc(
-    Blob.empty,
+    Blob.is_empty,
     r'''
 Whether the blob is an empty blob, i.e., the size of this blob is 0.
+''',
+)
+
+add_doc(
+    Blob.empty,
+    r'''
+Create an empty blob (with size as :code:`0`).
 ''',
 )
 
@@ -1269,7 +1421,7 @@ The memory address value of this blob.
 add_doc(
     Blob.buffer,
     r'''
-The readonly buffer hebind this blob. The result buffer has type
+The readonly buffer behind this blob. The result buffer has type
 :code:`pyarrow::Buffer`.
 ''',
 )
@@ -1330,7 +1482,114 @@ The memory address value of this blob builder.
 add_doc(
     BlobBuilder.buffer,
     r'''
-The writeable buffer hebind this blob builder. The result buffer has type
+The writeable buffer behind this blob builder. The result buffer has type
+:code:`pyarrow::Buffer`, and it is a mutable one.
+''',
+)
+
+add_doc(
+    RemoteBlob,
+    r'''
+:class:`RemoteBlob` is a holder for :class:`Blob` in cases like the :class:`Blob`
+doesn't exist in the local vineyardd instance but the client still want th access
+the data with a tolerable network-transfer overhead.
+''',
+)
+
+add_doc(
+    RemoteBlob.size,
+    r'''
+Object ID of the remote blob.
+''',
+)
+
+add_doc(
+    RemoteBlob.instance_id,
+    r'''
+The instance ID where the blob is actually placed at.
+''',
+)
+
+add_doc(
+    RemoteBlob.is_empty,
+    r'''
+Whether the blob is an empty blob, i.e., the size of this blob is 0.
+''',
+)
+
+add_doc(
+    RemoteBlob.__len__,
+    r'''
+The size of this blob.
+''',
+)
+
+add_doc(
+    RemoteBlob.address,
+    r'''
+The memory address value of this blob.
+''',
+)
+
+add_doc(
+    RemoteBlob.buffer,
+    r'''
+The readonly buffer behind this blob. The result buffer has type
+:code:`pyarrow::Buffer`.
+''',
+)
+
+add_doc(
+    RemoteBlobBuilder,
+    r'''
+:class:`RemoteBlobBuilder` is the builder for creating a finally immutable blob in
+vineyard server over a RPC client.
+
+A :class:`RemoteBlobBuilder` can only be explicitly initialized using
+:meth:`RemoteBlobBuilder`, then be filled the content and finally be sent to remote
+vineyard instance over the network.
+
+See Also:
+    IPCClient.create_blob
+    IPCClient.create_empty_blob
+''',
+)
+
+add_doc(
+    RemoteBlobBuilder.size,
+    r'''
+Size of this blob builder.
+''',
+)
+
+add_doc(
+    RemoteBlobBuilder.abort,
+    r'''
+Abort the blob builder if it is not sealed yet.
+''',
+)
+
+add_doc(
+    RemoteBlobBuilder.copy,
+    r'''
+.. method:: copy(self, offset: int, ptr: int, size: int)
+    :noindex:
+
+Copy the given address to the given offset.
+''',
+)
+
+add_doc(
+    RemoteBlobBuilder.address,
+    r'''
+The memory address value of this blob builder.
+''',
+)
+
+add_doc(
+    RemoteBlobBuilder.buffer,
+    r'''
+The writeable buffer behind this blob builder. The result buffer has type
 :code:`pyarrow::Buffer`, and it is a mutable one.
 ''',
 )

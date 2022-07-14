@@ -38,7 +38,7 @@ in case the etcd servers are not started on the cluster.
 Connecting to vineyard
 ----------------------
 
-Vineyard deamon serves clients via UNIX domain socket:
+Vineyard daemon serves clients via UNIX domain socket:
 
 .. code:: python
 
@@ -177,17 +177,6 @@ Open a local file as a dataframe stream
 
 In practice, the file may be stored in an NFS, and we want to read the file in
 parallel to further speed up the IO process.
-
-Open a file in NFS in parallel as a parallel stream
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code:: python
-
-     >>> stream = open('file://twitter.e', num_workers=16)
-     >>> stream.typename
-     vineyard::ParallelStream
-     >>> stream.get_stream_num()
-     16
 
 To further understand the implementation of the driver ``open``, and the underlying
 registration mechanism for drivers in vineyard, see also :ref:`divein-driver-label`.

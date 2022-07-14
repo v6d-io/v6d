@@ -62,7 +62,7 @@ def test_recordbatch_stream(vineyard_client):
         while True:
             try:
                 chunk = reader.next()
-                pd.testing.assert_frame_equal(produced[index], chunk)
+                pd.testing.assert_frame_equal(produced[index][1], chunk)
             except StopIteration:
                 break
             index += 1
