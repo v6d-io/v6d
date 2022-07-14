@@ -20,6 +20,10 @@ important features and will be hopefully release in the later Aug, 2022:
   from blobs to general objects with a carefully concurrency-control design.
 - Transparent object spilling: objects in vineyard can be spilled to disk
   when they are too large to fit in memory.
+- Sharing GPU memory between processes of different compute engines: we are
+  working on shared memory on devices to enable boarder applications that
+  can benefit from the shared vineyard store, especially for deep learning
+  frameworks and GNN frameworks.
 
 v0.7.0
 ------
