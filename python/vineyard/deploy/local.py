@@ -266,7 +266,7 @@ def shutdown():
     """
     global __default_instance_contexts
     if __default_instance_contexts:
-        for ipc_socket in reversed(__default_instance_contexts):
+        for ipc_socket in reversed(__default_instance_contexts.keys()):
             __default_instance_contexts[ipc_socket][0].__exit__(None, None, None)
         # NB. don't pop pre-existing env if we not launch
         os.environ.pop('VINEYARD_IPC_SOCKET', None)

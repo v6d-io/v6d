@@ -17,9 +17,5 @@
 #
 
 from . import distributed
+from . import kubernetes
 from . import local
-
-try:
-    from . import kubernetes
-except ImportError:
-    pass

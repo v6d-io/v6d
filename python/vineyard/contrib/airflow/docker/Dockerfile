@@ -6,5 +6,8 @@ USER airflow
 
 RUN pip install --no-cache-dir \
     numpy \
+    pandas \
+    vineyard==0.6.0 \
+    vineyard-migrate==0.6.0 \
     airflow-provider-vineyard==0.6.0
 ENV AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
