@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
     ret = test_func<int32_t>(client);
     if (ret) {
       LOG(INFO) << "Failed case index type: int32_t" << std::endl;
-      goto fail;
+      goto out;
     }
   }
 
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
     ret = test_func<int64_t>(client);
     if (ret) {
       LOG(INFO) << "Failed case index type: int64_t" << std::endl;
-      goto fail;
+      goto out;
     }
   }
 
@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
     ret = test_func<uint32_t>(client);
     if (ret) {
       LOG(INFO) << "Failed case index type: uint32_t" << std::endl;
-      goto fail;
+      goto out;
     }
   }
 
@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
     ret = test_func<uint64_t>(client);
     if (ret) {
       LOG(INFO) << "Failed case index type: uint64_t" << std::endl;
-      goto fail;
+      goto out;
     }
   }
 
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
     ret = test_func<double>(client);
     if (ret) {
       LOG(INFO) << "Failed case index type: double" << std::endl;
-      goto fail;
+      goto out;
     }
   }
 
@@ -190,11 +190,11 @@ int main(int argc, char** argv) {
     ret = test_func<float>(client);
     if (ret) {
       LOG(INFO) << "Failed case index type: float" << std::endl;
-      goto fail;
+      goto out;
     }
   }
 
-fail:
+out:
   if (ret)
     LOG(INFO) << "Hosseinmoein dataframe test:" << COLOR_RED << " FAIL"
               << COLOR_WHITE << std::endl;
