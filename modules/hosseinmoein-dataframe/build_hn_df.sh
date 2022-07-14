@@ -1,5 +1,4 @@
-rm -r DataFrame/build
-mkdir DataFrame/build
+mkdir -p ./DataFrame/build
 cd DataFrame/build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make
