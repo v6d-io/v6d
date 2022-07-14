@@ -101,7 +101,7 @@ class FormatAndLint(Command):
     def lint_current_repo(self, cmd):
         targets = [
             'python/',
-            'modules/',
+            'modules/io/python',
             'setup.py',
             'setup_airflow.py',
             'setup_dask.py',
