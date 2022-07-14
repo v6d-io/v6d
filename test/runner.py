@@ -359,6 +359,7 @@ def run_single_vineyardd_tests(tests):
         run_test(tests, 'tensor_test')
         run_test(tests, 'typename_test')
         run_test(tests, 'version_test')
+        run_test(tests, 'hosseinmoein_dataframe_test')
 
         # test invalid inputs from client
         run_invalid_client_test(tests, '127.0.0.1', rpc_socket_port)
