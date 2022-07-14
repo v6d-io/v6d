@@ -34,23 +34,10 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "common/util/logging.h"
 #include "common/util/uuid.h"
-#include <iostream>
-#include <unordered_map>
- 
-
 namespace vineyard {
 
 namespace fuse {
-template<typename K, typename V>
-std::ostream &operator<<(std::ostream &os,
-                        const std::unordered_map<K, V> &m) {
-        os<< "{";
-    for (const std::pair<K, V> &p: m) {
-        os << p.first;
-    }
-     os<< "}";
-    return os;
-}
+
 struct fs::fs_state_t fs::state {};
 
 int fs::fuse_getattr(const char* path, struct stat* stbuf,
@@ -115,9 +102,9 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
 
   auto loc = state.views.find(target);
   std::shared_ptr<arrow::Buffer> buffer_;
-  VLOG(2)<<"state view"<<state.views;
+  VLOG(1)<<"data type"<< typeName;
   if (loc == state.views.end()) {
-      VLOG(2)<<"taregt: "<<target<<" ObjectID is not Found";
+      VLOG(2)<<"taregt ObjectID is not Found";
 
     if (typeName == "vineyard::Dataframe") {
       VLOG(1)<<"access a datarame";
@@ -128,17 +115,34 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
       buffer_ = fuse::parquet_view(object);
 
       
-    } else {
-      VLOG(1)<<"access a numpy array";
+    } else if (typeName == "vineyard::NumericArray<int64>"){
+      VLOG(1)<<"access a numpy double array";
         auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
       state.client->GetObject(target));
       buffer_ = fuse::arrow_ipc_view(arr);
+    }
+    // else if(typeName == "vineyard::NumericArray<double>") {
+    //   VLOG(1)<<"access a numpy double array";
+    //     auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<double>>(
+    //   state.client->GetObject(target));
+    //   buffer_ = fuse::arrow_ipc_view(arr);
       
+    // }
+    else if(typeName == "vineyard::BooleanArray"){
+      VLOG(1)<<"access a numpy boolean array";
+        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<bool>>(
+      state.client->GetObject(target));
+      buffer_ = fuse::arrow_ipc_view(arr);
+    }else if(typeName == "vineyard::BaseBinaryArray<arrow::LargeStringArray>"){
+      VLOG(1)<<"access a string array";
+        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<bool>>(
+      state.client->GetObject(target));
+      buffer_ = fuse::arrow_ipc_view(arr);
     }
     
     state.views[target] = buffer_;
   }else{
-      VLOG(2)<<"taregt: "<<target<<" ObjectID is Found";
+      VLOG(2)<<"taregt ObjectID is Found";
 
   }
 
@@ -156,22 +160,12 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
           << " bytes";
 
   auto target = ObjectIDFromString(path + 1);
-  VLOG(3) <<" read target "<<target;
-  VLOG(2)<<"state view"<<state.views;
-
   auto loc = state.views.find(target);
   if (loc == state.views.end()) {
-    VLOG(3) <<" target "<<target <<" is not found";
-
     return -ENOENT;
   }
-
   auto buffer = loc->second;
-    VLOG(3) <<" target size: " << buffer->size();
-
   if (offset >= buffer->size()) {
-    VLOG(2) << "finished transferring" ;
-
     return 0;
   } else {
     size_t slice = size;
@@ -179,7 +173,6 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
       slice = buffer->size() - offset;
     }
     memcpy(buf, buffer->data() + offset, slice);
-    VLOG(2) << "copied data"<<slice;
     return slice;
   }
 }
@@ -213,7 +206,7 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 
   if (strcmp(path, "/") != 0) {
     return -ENOENT;
-  } 
+  }
 
   filler(buf, ".", NULL, 0, fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
   filler(buf, "..", NULL, 0, fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);

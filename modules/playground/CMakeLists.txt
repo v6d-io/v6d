@@ -1,4 +1,5 @@
+include_directories(/home/sitan/v6d)
 set(SS)
 list(APPEND SS "playground.cc")
-add_executable(playy ${SS} )
-target_link_libraries(playy vineyard_basic)
+add_executable(play ${SS} )
+target_link_libraries(play vineyard_basic)

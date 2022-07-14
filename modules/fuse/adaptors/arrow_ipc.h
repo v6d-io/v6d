@@ -29,7 +29,8 @@ std::shared_ptr<arrow::Buffer> arrow_ipc_view(
 // template <typename T>
 std::shared_ptr<arrow::Buffer> arrow_ipc_view(
     std::shared_ptr<vineyard::NumericArray<int64_t>>& arr);
-
+std::shared_ptr<arrow::Buffer> arrow_ipc_view(
+    std::shared_ptr<vineyard::NumericArray<bool>>& arr);
 }  // namespace fuse
 }  // namespace vineyard
 
