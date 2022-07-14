@@ -27,8 +27,8 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 
-using namespace vineyard;   // NOLINT(build/namespaces)
-using namespace hmdf;       // NOLINT(build/namespaces)
+using namespace vineyard;  // NOLINT(build/namespaces)
+using namespace hmdf;      // NOLINT(build/namespaces)
 
 #define ACCEPT_TYPE double, float, int32_t, int64_t, uint32_t, uint64_t
 
