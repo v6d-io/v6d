@@ -30,4 +30,6 @@
 	path = thirdparty/ctti
 	url = https://github.com/Manu343726/ctti.git
 	shallow = true
-
+[submodule "modules/hosseinmoein-dataframe/thirdparty/DataFrame"]
+	path = modules/hosseinmoein-dataframe/thirdparty/DataFrame
+	url = https://github.com/hosseinmoein/DataFrame.git
