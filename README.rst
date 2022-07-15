@@ -32,7 +32,7 @@ Table of Contents
   * `Pipelining using stream <#stream-pipelining>`_
   * `I/O Drivers <#drivers>`_
 
-* `Getting started <#try-vineyard>`_
+* `Getting started with vineyard <#try-vineyard>`_
 * `Vineyard on Kubernetes <#integrate-with-kubernetes>`_
 
   * `Deploying on Kubernetes <#deployment-on-kubernetes>`_
