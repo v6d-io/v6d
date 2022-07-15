@@ -50,6 +50,13 @@ static Status ReadRecordBatchesFromVineyardStreamImpl(
   size_t end_to_read =
       std::min(local_streams.size(), (part_id + 1) * split_size);
 
+  DLOG(INFO) << "reading recordbatches from vineyard: total chunks = "
+             << local_streams.size() << ", part id = " << part_id
+             << ", part num = " << part_num
+             << ", start to read = " << start_to_read
+             << ", end to read = " << end_to_read
+             << ", split size = " << split_size;
+
   std::mutex mutex_for_results;
 
   auto reader = [&client, &local_streams, &mutex_for_results,
@@ -59,7 +66,7 @@ static Status ReadRecordBatchesFromVineyardStreamImpl(
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
 
     auto& stream = local_streams[idx];
-    VINEYARD_CHECK_OK(stream->OpenReader(&local_client));
+    RETURN_ON_ERROR(stream->OpenReader(&local_client));
     std::vector<std::shared_ptr<arrow::RecordBatch>> read_batches;
     RETURN_ON_ERROR(stream->ReadRecordBatches(read_batches));
     {
@@ -79,6 +86,13 @@ static Status ReadRecordBatchesFromVineyardStreamImpl(
   for (auto const& status : readers_status) {
     RETURN_ON_ERROR(status);
   }
+#if !defined(NDEBUG)
+  size_t total_rows = 0;
+  for (auto const& batch : batches) {
+    total_rows += batch->num_rows();
+  }
+  LOG(INFO) << "read record batch from vineyard: total rows = " << total_rows;
+#endif
   return Status::OK();
 }
 
@@ -120,6 +134,13 @@ Status ReadRecordBatchesFromVineyardDataFrame(
   for (int idx = start_to_read; idx != end_to_read; ++idx) {
     batches.emplace_back(local_chunks[idx]->AsBatch(true));
   }
+#if !defined(NDEBUG)
+  size_t total_rows = 0;
+  for (auto const& batch : batches) {
+    total_rows += batch->num_rows();
+  }
+  LOG(INFO) << "read record batch from vineyard: total rows = " << total_rows;
+#endif
   return Status::OK();
 }
 
@@ -127,6 +148,8 @@ Status ReadRecordBatchesFromVineyard(
     Client& client, const ObjectID object_id,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
     int part_num) {
+  DLOG(INFO) << "loading table from vineyard: " << ObjectIDToString(object_id)
+             << ", part id = " << part_id << ", part num = " << part_num;
   auto source = client.GetObject(object_id);
   RETURN_ON_ASSERT(source != nullptr,
                    "Object not exists: " + ObjectIDToString(object_id));
@@ -152,6 +175,14 @@ static Status ReadTableFromVineyardStreamImpl(
                       (local_streams.size() % part_num == 0 ? 0 : 1);
   int start_to_read = part_id * split_size;
   int end_to_read = std::min(local_streams.size(), (part_id + 1) * split_size);
+
+  DLOG(INFO) << "reading table from vineyard: total chunks = "
+             << local_streams.size() << ", part id = " << part_id
+             << ", part num = " << part_num
+             << ", start to read = " << start_to_read
+             << ", end to read = " << end_to_read
+             << ", split size = " << split_size;
+
   std::mutex mutex_for_results;
   std::vector<std::shared_ptr<arrow::Table>> tables;
   auto reader = [&client, &local_streams, &mutex_for_results,
@@ -161,7 +192,7 @@ static Status ReadTableFromVineyardStreamImpl(
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
 
     auto const& stream = local_streams[idx];
-    VINEYARD_CHECK_OK(local_streams[idx]->OpenReader(&local_client));
+    RETURN_ON_ERROR(local_streams[idx]->OpenReader(&local_client));
     std::shared_ptr<arrow::Table> table;
     RETURN_ON_ERROR(stream->ReadTable(table));
     if (table == nullptr) {
@@ -188,6 +219,13 @@ static Status ReadTableFromVineyardStreamImpl(
   } else {
     table = ConcatenateTables(tables);
   }
+#if !defined(NDEBUG)
+  if (table != nullptr) {
+    LOG(INFO) << "read table from vineyard: total rows = " << table->num_rows();
+  } else {
+    LOG(INFO) << "read table from vineyard: total rows = " << 0;
+  }
+#endif
   return Status::OK();
 }
 
@@ -239,9 +277,21 @@ Status ReadTableFromVineyardDataFrame(Client& client,
   }
   if (batches.empty()) {
     table = nullptr;
+#if !defined(NDEBUG)
+    LOG(INFO) << "read table from vineyard: total rows = " << 0;
+#endif
     return Status::OK();
   } else {
-    return RecordBatchesToTable(batches, &table);
+    auto status = RecordBatchesToTable(batches, &table);
+#if !defined(NDEBUG)
+    if (status.ok()) {
+      LOG(INFO) << "read table from vineyard: total rows = "
+                << table->num_rows();
+    } else {
+      LOG(INFO) << "read table from vineyard: total rows = " << 0;
+    }
+#endif
+    return status;
   }
 }
 
@@ -251,6 +301,8 @@ Status ReadTableFromVineyardDataFrame(Client& client,
 Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
                              std::shared_ptr<arrow::Table>& table, int part_id,
                              int part_num) {
+  DLOG(INFO) << "loading table from vineyard: " << ObjectIDToString(object_id)
+             << ", part id = " << part_id << ", part num = " << part_num;
   auto source = client.GetObject(object_id);
   RETURN_ON_ASSERT(source != nullptr,
                    "Object not exists: " + ObjectIDToString(object_id));
