@@ -10,7 +10,7 @@ image:
   tag: ""
 
 metricImage:
-  repository: docker.pkg.github.com/v6d-io/v6d/vineyardd-grok-exporter
+  repository: vineyardcloudnative/vineyardd-grok-exporter
   pullPolicy: Never
   # Overrides the image tag whose default is the chart appVersion.
   tagPrefix: ""

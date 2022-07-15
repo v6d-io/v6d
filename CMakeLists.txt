@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.3)
 
 set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 6)
-set(VINEYARD_PATCH_VERSION 0)
+set(VINEYARD_PATCH_VERSION 1)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
 message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
@@ -41,7 +41,7 @@ option(BUILD_VINEYARD_MALLOC "Build vineyard's implementation for client-side ma
 option(BUILD_VINEYARD_MIGRATION "Enable vineyard's object migration support" ON)
 option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
-option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" ON)
+option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
