@@ -3,7 +3,7 @@ Shared Data Accessing
 
 Vineyard supports distributed object sharing by-design, and provides both the IPCClient
 and RPCClient for data accessing. You would learn how accessing objects inside vineyard in
-various ways. For a basis about vineyard objects, please refer to :ref:`metadata-and-payloads`.
+various ways. For vineyard objects basics, please refer to :ref:`metadata-and-payloads`.
 
 .. figure:: ../images/vineyard_deployment.jpg
    :alt: Data Partitioning in Vineyard
@@ -17,11 +17,11 @@ partitioned into three chunks and each instance hold one chunk of type :code:`Te
 
 **From the perspective of computing engines**, the distributed computing engines launches
 workers upon the vineyard instances. Each worker connects the co-located local instance and
-is responsible for chunks in the local instance. E.g., we start a Dask cluster on vineyard
-cluster illustrated in the picture above, and each Dask worker is responsible for executing
-computation on its local chunks. Some computing tasks require communication between workers,
-e.g., aggregation. In such cases the communication is performed by the computing engines
-itself (here the Dask cluster).
+is responsible for processing chunks in the local instance. E.g., we start a Dask cluster on
+vineyard cluster illustrated in the picture above, and each Dask worker is responsible for
+executing computation on its local chunks. Some computing tasks require communication between
+workers, e.g., aggregation. In such cases the communication is performed by the computing
+engines itself (here the Dask cluster).
 
 .. tip::
 
@@ -65,7 +65,7 @@ Creating and accessing local objects in vineyard is easy as :code:`put` and :cod
     >>> import pandas as pd
     >>> import vineyard
     >>>
-    >>> vineyard_ipc_client = vineyard_ipc_client = vineyard.connect("/tmp/vineyard.sock")
+    >>> vineyard_ipc_client = vineyard.connect("/tmp/vineyard.sock")
     >>>
     >>> df = pd.DataFrame(np.random.rand(10, 2))
     >>>
@@ -178,7 +178,7 @@ cluster with network transferring cost.
 Accessing object metadata using RPCClient
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The method :meth:`vineyard.RPCClient.get_meta` can be used to accessing the object metadata,
+The method :meth:`vineyard.RPCClient.get_meta` can be used to access the object metadata,
 like :meth:`vineyard.IPCClient.get_meta`, but could be used over the connection to a remote
 instance,
 
@@ -188,6 +188,7 @@ instance,
     >>> import vineyard
     >>> vineyard_rpc_client = vineyard.connect("localhost", 9600)
     >>>
+    >>> # the `r` from the above "Local Objects" section 
     >>> meta = vineyard_rpc_client.get_meta(r)
     >>> meta.id
     o00053008257020f8
