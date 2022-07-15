@@ -13,9 +13,12 @@ fi
 
 docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:$version
 docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
+docker pull docker.pkg.github.com/v6d-io/v6d/vineyard-controller:nightly
 
 docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:$version vineyardcloudnative/vineyardd:$version
 docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:latest vineyardcloudnative/vineyardd:latest
+docker tag docker.pkg.github.com/v6d-io/v6d/vineyard-controller:nightly vineyardcloudnative/vineyard-controller:nightly
 
 docker push vineyardcloudnative/vineyardd:$version
 docker push vineyardcloudnative/vineyardd:latest
+docker push vineyardcloudnative/vineyard-controller:nightly

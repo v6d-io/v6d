@@ -34,7 +34,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     env:
-      IMG: vineyardcloudnative/vineyard-controller
+      IMG: docker.pkg.github.com/v6d-io/v6d/vineyard-controller
     strategy:
       matrix:
         os: [ubuntu-20.04]
