@@ -21,7 +21,8 @@ spec:
         effect: NoSchedule
       containers:
       - name: vineyard
-        image: docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
+        image: vineyardcloudnative/vineyardd:latest
+        command: ["/usr/local/bin/vineyardd"]
         args:
         - "--socket"
         - "{Socket}"
@@ -31,10 +32,10 @@ spec:
         - "{Size}"
         resources:
           limits:
-            memory: 200m
+            memory: 1024Mi
           requests:
             cpu: 100m
-            memory: 200m
+            memory: 512Mi
         volumeMounts:
         - name: varrun
           mountPath: /var/run

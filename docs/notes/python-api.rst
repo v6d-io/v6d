@@ -94,6 +94,8 @@ Shared memory
 .. autoclass:: vineyard.shared_memory.ShareableList
     :members:
 
+.. _vineyard-python-deployment-api:
+
 Deployment
 ----------
 
@@ -103,6 +105,8 @@ Deployment
 .. autofunction:: vineyard.get_current_socket
 .. autofunction:: vineyard.deploy.local.start_vineyardd
 .. autofunction:: vineyard.deploy.distributed.start_vineyardd
+.. autofunction:: vineyard.deploy.kubernetes.start_vineyardd
+.. autofunction:: vineyard.deploy.kubernetes.delete_kubernetes_objects
 
 I/O Drivers
 -----------

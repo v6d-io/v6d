@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: docker.pkg.github.com/v6d-io/v6d/vineyardd
+  repository: vineyardcloudnative/vineyardd
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tagPrefix: ""

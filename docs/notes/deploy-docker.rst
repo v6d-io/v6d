@@ -9,13 +9,13 @@ on the Github Packages and can be pulled from:
 
 .. code:: shell
 
-    docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
+    docker pull vineyardcloudnative/vineyardd:latest
 
 The docker images can be used in the following way
 
 .. code:: shell
 
-    docker run --rm -it docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
+    docker run --rm -it vineyardcloudnative/vineyardd:latest
 
 Just like what you can do with a locally installed vineyard package.
 See also `Deploying on Linux/MacOS <https://v6d.io/v6d/notes/deploy-docker.html>`_.

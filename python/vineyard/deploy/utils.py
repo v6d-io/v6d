@@ -29,6 +29,11 @@ import time
 import pkg_resources
 import psutil
 
+try:
+    import kubernetes
+except ImportError:
+    kubernetes = None
+
 logger = logging.getLogger('vineyard')
 
 
@@ -231,3 +236,18 @@ def start_etcd(host=None, etcd_executable=None):
         logging.info('Etcd being killed...')
         if proc is not None and proc.poll() is None:
             proc.terminate()
+
+
+def ensure_kubernetes_namespace(namespace, k8s_client=None):
+    if kubernetes is None:
+        raise RuntimeError('Please install the package python "kubernetes" first')
+    if k8s_client is None:
+        kubernetes.config.load_kube_config()
+        k8s_client = kubernetes.client.ApiClient()
+    corev1 = kubernetes.client.CoreV1Api(k8s_client)
+    try:
+        corev1.read_namespace(namespace)
+    except kubernetes.client.rest.ApiException:
+        corev1.create_namespace(
+            kubernetes.client.V1Namespace(metadata={'name': namespace})
+        )

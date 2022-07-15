@@ -37,8 +37,6 @@ limitations under the License.
 #include "basic/stream/recordbatch_stream.h"
 #include "client/client.h"
 
-#define HASH_PARTITION
-
 namespace vineyard {
 
 template <typename LocalStreamT>

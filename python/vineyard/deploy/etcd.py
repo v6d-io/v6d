@@ -120,11 +120,12 @@ def start_etcd(host=None, etcd_executable=None, data_dir=None):
             pass
 
 
-def start_etcd_k8s(namespace):
+def start_etcd_k8s(namespace, k8s_client=None):
     if kubernetes is None:
-        raise RuntimeError('Please install the kubernetes python first')
-    kubernetes.config.load_kube_config()
-    k8s_client = kubernetes.client.ApiClient()
+        raise RuntimeError('Please install the package python "kubernetes" first')
+    if k8s_client is None:
+        kubernetes.config.load_kube_config()
+        k8s_client = kubernetes.client.ApiClient()
     return kubernetes.utils.create_from_yaml(
         k8s_client,
         os.path.join(os.path.dirname(__file__), 'etcd.yaml'),

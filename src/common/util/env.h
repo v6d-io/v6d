@@ -30,6 +30,7 @@ has the following license header originally:
 #include <unistd.h>
 
 #include <string>
+#include <thread>
 
 namespace vineyard {
 
@@ -73,6 +74,8 @@ inline std::string get_nodename() {
 }
 
 inline int get_pid() { return static_cast<int>(getpid()); }
+
+inline std::thread::id get_tid() { return std::this_thread::get_id(); }
 
 /**
  * @brief Returns the current resident set size (physical memory use) measured
