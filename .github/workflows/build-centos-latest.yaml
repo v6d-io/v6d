@@ -198,7 +198,7 @@ jobs:
                    -DBUILD_VINEYARD_IO=ON \
                    -DBUILD_VINEYARD_IO_KAFKA=ON \
                    -DBUILD_VINEYARD_MIGRATION=ON \
-                   -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+                   -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 
       - name: Build
