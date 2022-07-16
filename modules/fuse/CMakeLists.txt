@@ -1,10 +1,9 @@
 # build vineyard-fuse
 set(FUSE_SRC_FILES)
-list(APPEND FUSE_SRC_FILES "adaptors/orc.cc")
-list(APPEND FUSE_SRC_FILES "adaptors/parquet.cc")
-list(APPEND FUSE_SRC_FILES "adaptors/arrow_ipc.cc")
+list(APPEND FUSE_SRC_FILES "deserializer/orc.cc")
+list(APPEND FUSE_SRC_FILES "deserializer/parquet.cc")
+list(APPEND FUSE_SRC_FILES "deserializer/arrow_ipc.cc")
 list(APPEND FUSE_SRC_FILES "fused.cc")
-
 add_library(vineyard_fuse ${FUSE_SRC_FILES})
 target_link_libraries(vineyard_fuse PUBLIC vineyard_client
                                            vineyard_basic
