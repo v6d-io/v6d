@@ -13,55 +13,70 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef SRC_SERVER_UTIL_FILE_IO_H_
-#define SRC_SERVER_UTIL_FILE_IO_H_
+#ifndef SRC_SERVER_UTIL_SPILL_FILE_H_
+#define SRC_SERVER_UTIL_SPILL_FILE_H_
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <string>
+#include "common/memory/payload.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 #include "io/io/i_io_adaptor.h"
 #include "io/io/io_factory.h"
 #include "io/io/local_io_adaptor.h"
+#include "server/util/file_io_adaptor.h"
 
 namespace util {
-constexpr auto spill_path_prefix = "tmp/spilled/";
 class SpillWriteFile {
  public:
-  SpillWriteFile(const std::string& file_name) {
-    spill_path_ = spill_path_prefix + file_name;
-  };
+  SpillWriteFile() = delete;
+
+  explicit SpillWriteFile(const std::string& spill_path)
+      : spill_path_(spill_path) {}
 
   SpillWriteFile(const SpillWriteFile&) = delete;
-  SpillWriteFile& operator=(const SpillWriteFile&) = delete;
-  ~SpillWriteFile() = default;
 
-  vineyard::Status Open();
-  vineyard::Status Write(const char* data, const size_t& size,
-                         const vineyard::ObjectID& object_id);
+  SpillWriteFile& operator=(const SpillWriteFile&) = delete;
+
+  ~SpillWriteFile() {
+    if (io_adaptor_) {
+      io_adaptor_->Flush();
+    }
+  }
+
+  vineyard::Status Write(const std::shared_ptr<vineyard::Payload>& payload);
   vineyard::Status Sync();
 
  private:
+  // TODO(ZjuYTW): change to string_view
+  void Init(uint64_t object_id);
   std::string spill_path_;
-  std::unique_ptr<vineyard::IIOAdaptor> io_adaptor_ = nullptr;
+  std::unique_ptr<util::FileIOAdaptor> io_adaptor_ = nullptr;
 };
 
 class SpillReadFile {
  public:
-  SpillReadFile(const std::string& file_name) {
-    spill_path_ = spill_path_prefix + file_name;
-  }
+  SpillReadFile() = delete;
+
+  explicit SpillReadFile(const std::string& spill_path)
+      : spill_path_(spill_path) {}
 
   SpillReadFile(const SpillReadFile&) = delete;
+
   SpillReadFile& operator=(const SpillReadFile&) = delete;
+
   ~SpillReadFile() = default;
 
-  vineyard::Status Open();
-  vineyard::Status Read(size_t n, char* result);
+  vineyard::Status Read(std::shared_ptr<vineyard::Payload>& payload,
+                        std::shared_ptr<vineyard::BulkStore> bulk_store_ptr);
 
  private:
+  void Init(uint64_t object_id);
+
   std::string spill_path_;
-  std::unique_ptr<vineyard::IIOAdaptor> io_adaptor_ = nullptr;
+  std::unique_ptr<util::FileIOAdaptor> io_adaptor_ = nullptr;
 };
 
 void PutFixed32(std::string* dst, uint32_t value);
@@ -113,4 +128,4 @@ inline uint64_t DecodeFixed64(const char* ptr) {
 }
 
 }  // namespace util
-#endif
+#endif  // SRC_SERVER_UTIL_SPILL_FILE_H_

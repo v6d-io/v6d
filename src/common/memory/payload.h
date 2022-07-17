@@ -39,6 +39,7 @@ struct Payload {
   uint8_t* pointer;  // the direct pointer for this blob on the server side
   bool is_sealed;
   bool is_owner;
+  bool is_spilled;
 
   Payload()
       : object_id(EmptyBlobID()),
@@ -50,7 +51,8 @@ struct Payload {
         ref_cnt(0),
         pointer(nullptr),
         is_sealed(0),
-        is_owner(1) {}
+        is_owner(1),
+        is_spilled(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize,
           ptrdiff_t offset)
@@ -63,7 +65,8 @@ struct Payload {
         ref_cnt(0),
         pointer(ptr),
         is_sealed(0),
-        is_owner(1) {}
+        is_owner(1),
+        is_spilled(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
           int64_t msize, ptrdiff_t offset)
@@ -76,9 +79,10 @@ struct Payload {
         ref_cnt(0),
         pointer(ptr),
         is_sealed(0),
-        is_owner(1) {}
-  
-  virtual ~Payload() = default;
+        is_owner(1),
+        is_spilled(0) {}
+
+  ~Payload() = default;
 
   static std::shared_ptr<Payload> MakeEmpty() {
     static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
@@ -101,11 +105,7 @@ struct Payload {
 
   inline bool IsOwner() { return is_owner; }
 
-  virtual bool IsSpilled();
-
-  virtual Status Spill();
-
-  virtual Status ReloadFromSpill(std::shared_ptr<BulkStore> bulk_store_ptr);
+  bool IsSpilled() { return is_spilled; }
 
   json ToJSON() const;
 

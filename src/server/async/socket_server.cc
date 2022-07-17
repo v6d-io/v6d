@@ -334,6 +334,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::IncreaseReferenceCountRequest: {
     return doIncreaseReferenceCount(root);
   }
+  case CommandType::IsSpilledRequest: {
+    return doIsSpilled(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -1396,6 +1399,19 @@ bool SocketConnection::doIsInUse(json const& root) {
   return false;
 }
 
+bool SocketConnection::doIsSpilled(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;  // Must be a blob id.
+  TRY_READ_REQUEST(ReadIsSpilledRequest, root, id);
+  bool is_spilled = false;
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetBulkStore<ObjectID>()->IsSpilled(id, is_spilled));
+  std::string message_out;
+  WriteIsSpilledReply(is_spilled, message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
 bool SocketConnection::doIncreaseReferenceCount(json const& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
@@ -1508,7 +1524,7 @@ void SocketServer::RemoveConnection(int conn_id) {
     }
 
     if (AliveConnections() == 0 && closable_.load()) {
-      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->OnDelete(vs_ptr_->session_id()));
+      VINEYARD_CHECK_OK(vs_ptr_->GetRunner()->Delete(vs_ptr_->session_id()));
     }
   }
 }

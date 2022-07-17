@@ -32,6 +32,8 @@ DEFINE_string(meta, "etcd", "Metadata storage, can be one of: etcd, local");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
+DEFINE_string(spill_path, "/tmp/spill_path/",
+              "path of spilling temporary files");
 
 // share memory
 DEFINE_string(size, "256Mi",
@@ -95,6 +97,7 @@ json BulkstoreSpecResolver::resolve() const {
   size_t bulkstore_limit = parseMemoryLimit(FLAGS_size);
   spec["memory_size"] = bulkstore_limit;
   spec["stream_threshold"] = FLAGS_stream_threshold;
+  spec["spill_path"] = FLAGS_spill_path;
   // if need to config the spill threshold, add json option here
   // spec["memory_spill_threshold"]
   return spec;

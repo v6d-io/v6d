@@ -86,6 +86,7 @@ enum class CommandType {
   DelDataWithFeedbacksRequest = 52,
   IsInUseRequest = 53,
   IncreaseReferenceCountRequest = 54,
+  IsSpilledRequest = 55,
 };
 
 enum class StoreType {
@@ -541,6 +542,14 @@ Status ReadIsInUseRequest(json const& root, ObjectID& id);
 void WriteIsInUseReply(const bool is_in_use, std::string& msg);
 
 Status ReadIsInUseReply(json const& root, bool& is_in_use);
+
+void WriteIsSpilledRequest(const ObjectID& id, std::string& msg);
+
+Status ReadIsSpilledRequest(json const& root, ObjectID& id);
+
+void WriteIsSpilledReply(const bool is_spilled, std::string& msg);
+
+Status ReadIsSpilledReply(json const& root, bool& is_spilled);
 
 void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
                                         std::string& msg);

@@ -43,8 +43,6 @@
 #include "common/util/status.h"
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"
-#include "server/memory/spillable_payload.h"
-#include "server/util/file_io.h"
 
 namespace vineyard {
 
@@ -135,7 +133,6 @@ std::set<ID> BulkStoreBase<ID, P>::Arena::spans{};
 
 template <typename ID, typename P>
 BulkStoreBase<ID, P>::~BulkStoreBase() {
-  //TODO: Make sure here we could remove all the spilled file in bulk_store
   std::vector<ID> object_ids;
   object_ids.reserve(objects_.size());
   for (auto iter = objects_.begin(); iter != objects_.end(); iter++) {
@@ -250,7 +247,7 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
     return Status::OK();
   }
 
-  if(object->IsSpilled()) {
+  if (object->IsSpilled()) {
     objects_.erase(accessor);
     return Status::OK();
   }
@@ -464,8 +461,8 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
         std::to_string(Footprint()) + " are already in use");
   }
   object_id = GenerateBlobID<ObjectID>(pointer);
-  object = std::make_shared<SpillablePayload>(object_id, data_size, pointer, fd,
-                                              map_size, offset);
+  object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
+                                     map_size, offset);
   objects_.emplace(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
@@ -498,7 +495,7 @@ Status BulkStore::FetchAndModify(const ObjectID& id, int64_t& ref_cnt,
 }
 
 Status BulkStore::OnDelete(ObjectID const& id) {
-  RETURN_ON_ERROR(this->RemoveFromColdList(id));
+  RETURN_ON_ERROR(this->RemoveFromColdList(id, true));
   return Delete(id);
 }
 

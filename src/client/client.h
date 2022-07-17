@@ -622,6 +622,14 @@ class Client : public BasicIPCClient,
   bool IsInUse(ObjectID const& id);
 
   /**
+   * @brief Check if the blob is a spilled blob (those no client is using and be
+   * dumped on disk).
+   *
+   * Return true if the the blob is spilled.
+   */
+  bool IsSpilled(ObjectID const& id);
+
+  /**
    * Get the allocated size for the given object.
    */
   Status AllocatedSize(const ObjectID id, size_t& size);

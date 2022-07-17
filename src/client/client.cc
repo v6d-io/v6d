@@ -897,6 +897,23 @@ bool Client::IsInUse(ObjectID const& id) {
   return is_in_use;
 }
 
+bool Client::IsSpilled(ObjectID const& id) {
+  if (!this->connected_) {
+    VINEYARD_CHECK_OK(Status::ConnectionError("Client is not connected"));
+  }
+  std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
+
+  std::string message_out;
+  WriteIsSpilledRequest(id, message_out);
+  VINEYARD_CHECK_OK(doWrite(message_out));
+
+  json message_in;
+  bool is_spilled = false;
+  VINEYARD_CHECK_OK(doRead(message_in));
+  VINEYARD_CHECK_OK(ReadIsSpilledReply(message_in, is_spilled));
+  return is_spilled;
+}
+
 PlasmaClient::~PlasmaClient() {}
 
 // dummy implementation

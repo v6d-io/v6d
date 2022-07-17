@@ -54,21 +54,6 @@ Payload Payload::FromJSON1(const json& tree) {
   return payload;
 }
 
-inline bool Payload::IsSpilled() {
-  LOG(INFO) << "Unimplemented IsSpilled()";
-  return false;
-}
-
-inline Status Payload::Spill() {
-  LOG(INFO) << "Unimplemented Spill() in Payload";
-  return Status::Invalid();
-}
-
-inline Status Payload::ReloadFromSpill(std::shared_ptr<BulkStore> bulk_store_ptr) {
-  LOG(INFO) << "Unimplemented ReloadFromSpill() in Payload";
-  return Status::Invalid();
-}
-
 json PlasmaPayload::ToJSON() const {
   json payload;
   this->ToJSON(payload);

@@ -46,14 +46,6 @@ void BasicTest() {
       CHECK(lru_.CheckExist(i));
     }
   }
-  {
-    // Pop and check if id pops from 999 to 0
-    for (int i = 0; i < 1000; i++) {
-      auto ret = lru_.PopLeastUsed();
-      CHECK(ret.first.ok());
-      CHECK(ret.second.first == static_cast<uint64_t>(i));
-    }
-  }
 }
 
 int main(int argc, char** argv) {
