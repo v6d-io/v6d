@@ -367,7 +367,7 @@ def run_single_vineyardd_tests(tests):
         'http://localhost:%d' % etcd_port,
         'vineyard_test_%s' % time.time(),
         2048,
-        default_ipc_socket=VINEYARD_CI_IPC_SOCKET, 
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ):
         run_test(tests, 'spill_test')
 

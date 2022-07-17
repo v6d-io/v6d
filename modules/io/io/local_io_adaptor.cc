@@ -569,7 +569,7 @@ Status LocalIOAdaptor::Read(void* buffer, size_t size) {
   }
 }
 
-Status LocalIOAdaptor::Write(const void* buffer, size_t size) {
+Status LocalIOAdaptor::Write(void* buffer, size_t size) {
   if (ofp_ == nullptr) {
     return Status::IOError("The file hasn't been opened in write mode: " +
                            location_);

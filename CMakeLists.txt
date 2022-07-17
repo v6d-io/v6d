@@ -805,10 +805,6 @@ if(BUILD_VINEYARD_TESTS)
             target_link_libraries(${T_NAME} PRIVATE TBB::tbb)
         endif()
 
-        if(${T_NAME} STREQUAL "spillable_payload_test")
-            target_link_libraries(${T_NAME} PRIVATE TBB::tbb vineyard_server)
-        endif()
-
         if(${T_NAME} STREQUAL "allocator_test"
                 OR ${T_NAME} STREQUAL "arena_test"
                 OR ${T_NAME} STREQUAL "jemalloc_test")

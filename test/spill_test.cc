@@ -66,17 +66,18 @@ void BasicTest(Client& client) {
     ArrayBuilder<double> builder2(client, double_array);
     auto sealed_double_array2 =
         std::dynamic_pointer_cast<Array<double>>(builder2.Seal(client));
-  } catch (std::runtime_error e) { flag = true; }
+  } catch (std::runtime_error& e) { flag = true; }
   CHECK(flag);
   VINEYARD_CHECK_OK(client.Release({id1, blob_id}));
   CHECK(!client.IsInUse(blob_id));
   ArrayBuilder<double> builder3(client, double_array);
   auto sealed_double_array3 =
       std::dynamic_pointer_cast<Array<double>>(builder3.Seal(client));
+  auto id2 = sealed_double_array3->id();
   auto blob_id2 = GetObjectID(sealed_double_array3);
   CHECK(client.IsSpilled(blob_id));
   CHECK(client.IsInUse(blob_id2));
-  client.Disconnect();
+  VINEYARD_CHECK_OK(client.Release({id2, blob_id2}));
   LOG(INFO) << "Finish Basic Test...";
 }
 
@@ -162,6 +163,7 @@ int main(int argc, char** argv) {
 
   BasicTest(client1);
   ReloadTest(client2);
+  // TODO(ZjuYTW): add more complex tests...
 
   LOG(INFO) << "Passed spill tests ...";
 
