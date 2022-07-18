@@ -89,13 +89,17 @@ static const struct fuse_operations vineyard_fuse_operations = {
     .getattr = vineyard::fuse::fs::fuse_getattr,
     .open = vineyard::fuse::fs::fuse_open,
     .read = vineyard::fuse::fs::fuse_read,
+    .write = vineyard::fuse::fs::fuse_write,
     .statfs = vineyard::fuse::fs::fuse_statfs,
+    .flush = vineyard::fuse::fs::fuse_flush,
     .release = vineyard::fuse::fs::fuse_release,
+    .getxattr = vineyard::fuse::fs::fuse_getxattr,
     .opendir = vineyard::fuse::fs::fuse_opendir,
     .readdir = vineyard::fuse::fs::fuse_readdir,
     .init = vineyard::fuse::fs::fuse_init,
     .destroy = vineyard::fuse::fs::fuse_destroy,
     .access = vineyard::fuse::fs::fuse_access,
+    .create = vineyard::fuse::fs::fuse_create,
 };
 
 int main(int argc, char* argv[]) {
@@ -107,11 +111,16 @@ int main(int argc, char* argv[]) {
   vineyard::logging::InitGoogleLogging("vineyard");
   vineyard::logging::InstallFailureSignalHandler();
 
+  // process common args
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
   int ret = process_args(args, argc, argv);
   if (ret != 0) {
     return ret;
   }
+  // process conn args
+  struct fuse_conn_info_opts* conn_opts = fuse_parse_conn_info_opts(&args);
+  vineyard::fuse::fs::state.conn_opts = conn_opts;
+
   LOG(INFO) << "Starting vineyard fuse driver ...";
   ret = fuse_main(args.argc, args.argv, &vineyard_fuse_operations, NULL);
   fuse_opt_free_args(&args);

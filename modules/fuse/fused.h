@@ -17,6 +17,7 @@ limitations under the License.
 #define MODULES_FUSE_FUSED_H_
 
 #include <memory>
+#include <mutex>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -26,7 +27,11 @@ limitations under the License.
 
 #define FUSE_USE_VERSION 32
 #include "fuse3/fuse.h"
+#include "fuse3/fuse_common.h"
 #include "fuse3/fuse_lowlevel.h"
+
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "client/client.h"
 
@@ -40,9 +45,13 @@ namespace fuse {
 
 struct fs {
   static struct fs_state_t {
+    struct fuse_conn_info_opts* conn_opts;
     std::string vineyard_socket;
     std::shared_ptr<Client> client;
-    std::unordered_map<ObjectID, std::shared_ptr<arrow::Buffer>> views;
+    std::unordered_map<std::string, std::shared_ptr<arrow::Buffer>> views;
+    std::unordered_map<std::string, std::shared_ptr<arrow::BufferBuilder>>
+        mutable_views;
+    std::mutex mtx_;
   } state;
 
   static int fuse_getattr(const char* path, struct stat* stbuf,
@@ -53,9 +62,16 @@ struct fs {
   static int fuse_read(const char* path, char* buf, size_t size, off_t offset,
                        struct fuse_file_info* fi);
 
-  static int fuse_release(const char* path, struct fuse_file_info*);
+  static int fuse_write(const char* path, const char* buf, size_t size,
+                        off_t offset, struct fuse_file_info* fi);
 
   static int fuse_statfs(const char* path, struct statvfs*);
+
+  static int fuse_flush(const char* path, struct fuse_file_info*);
+
+  static int fuse_release(const char* path, struct fuse_file_info*);
+
+  static int fuse_getxattr(const char* path, const char* name, char*, size_t);
 
   static int fuse_opendir(const char* path, struct fuse_file_info* info);
 
@@ -68,6 +84,8 @@ struct fs {
   static void fuse_destroy(void* private_data);
 
   static int fuse_access(const char* path, int mode);
+
+  static int fuse_create(const char* path, mode_t, struct fuse_file_info*);
 };
 
 }  // namespace fuse
