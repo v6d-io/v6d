@@ -679,16 +679,19 @@ void bind_client(py::module& mod) {
           "object_ids"_a)
       .def(
           "get_meta",
-          [](RPCClient* self, ObjectIDWrapper const& object_id) -> ObjectMeta {
+          [](RPCClient* self, ObjectIDWrapper const& object_id,
+             bool const sync_remote) -> ObjectMeta {
             ObjectMeta meta;
-            throw_on_error(self->GetMetaData(object_id, meta, true));
+            throw_on_error(self->GetMetaData(object_id, meta, sync_remote));
             return meta;
           },
-          "object_id"_a)
+          "object_id"_a,
+          py::arg("sync_remote") =
+              true /* rpc client will sync remote meta by default */)
       .def(
           "get_metas",
-          [](RPCClient* self, std::vector<ObjectIDWrapper> const& object_ids)
-              -> std::vector<ObjectMeta> {
+          [](RPCClient* self, std::vector<ObjectIDWrapper> const& object_ids,
+             bool const sync_remote) -> std::vector<ObjectMeta> {
             std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
             for (size_t idx = 0; idx < object_ids.size(); ++idx) {
               unwrapped_object_ids[idx] = object_ids[idx];
@@ -698,7 +701,9 @@ void bind_client(py::module& mod) {
                 self->GetMetaData(unwrapped_object_ids, metas, true));
             return metas;
           },
-          "object_ids"_a)
+          "object_ids"_a,
+          py::arg("sync_remote") =
+              true /* rpc client will sync remote meta by default */)
       .def("list_objects", &RPCClient::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5)
       .def("list_metadatas", &RPCClient::ListObjectMeta, "pattern"_a,
@@ -710,10 +715,10 @@ void bind_client(py::module& mod) {
                  self->RPCEndpoint());
            })
       .def("fork",
-           [](Client* self) {
-             std::shared_ptr<Client> client(new Client());
-             throw_on_error(self->Fork(*client));
-             return client;
+           [](RPCClient* self) {
+             std::shared_ptr<RPCClient> rpc_client(new RPCClient());
+             throw_on_error(self->Fork(*rpc_client));
+             return rpc_client;
            })
       .def_property_readonly("remote_instance_id",
                              &RPCClient::remote_instance_id)
