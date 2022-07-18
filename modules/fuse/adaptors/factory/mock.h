@@ -5,8 +5,9 @@ namespace fuse {
 class Mock : public FuseAdaptorRegistered<Mock> {
   public:
   static void* deserialize(void* k){
+                int* a = new int(2);
                         std::clog<<"deserialized is sucessfully called"<<std::endl; 
-                return nullptr;
+                return (void*)a;
                 };
 };
 }  // namespace fuse
