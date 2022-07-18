@@ -1,6 +1,7 @@
 # build vineyard-fuse
 set(FUSE_SRC_FILES)
 list(APPEND FUSE_SRC_FILES "fused.cc")
+list(APPEND FUSE_SRC_FILES "adaptors/arrow.cc")
 list(APPEND FUSE_SRC_FILES "adaptors/orc.cc")
 list(APPEND FUSE_SRC_FILES "adaptors/parquet.cc")
 
