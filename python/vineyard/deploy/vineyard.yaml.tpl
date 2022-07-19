@@ -21,7 +21,10 @@ spec:
         effect: NoSchedule
       containers:
       - name: vineyard
-        image: vineyardcloudnative/vineyardd:latest
+        image: {Image}
+        imagePullPolicy: {ImagePullPolicy}
+        imagePullSecrets:
+        - name: {ImagePullSecrets}
         command: ["/usr/local/bin/vineyardd"]
         args:
         - "--socket"
