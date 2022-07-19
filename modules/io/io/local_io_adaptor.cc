@@ -480,7 +480,7 @@ Status LocalIOAdaptor::WriteTable(std::shared_ptr<arrow::Table> table) {
   return Status::NotImplemented();
 #else
   arrow::csv::WriteOptions options;
-  options.include_header = false;
+  options.include_header = true;
   RETURN_ON_ARROW_ERROR(arrow::csv::WriteCSV(*table, options, ofp_.get()));
   return Status::OK();
 #endif
