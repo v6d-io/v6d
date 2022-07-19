@@ -92,7 +92,10 @@ void* BulkAllocator::Init(const size_t size) {
   return Allocator::Init(size);
 #endif
 #if defined(WITH_JEMALLOC)
-  return allocator_.Init(size);
+  // jemalloc requires some memory for its internal use (arena metadata and
+  // padding).
+  size_t arena_metadata_size = 16 * 1024 * 1024;
+  return allocator_.Init(size + arena_metadata_size);
 #endif
 }
 
@@ -107,7 +110,9 @@ void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
 #if defined(WITH_JEMALLOC)
   void* mem = allocator_.Allocate(bytes, alignment);
 #endif
-  allocated_ += bytes;
+  if (mem != nullptr) {
+    allocated_ += bytes;
+  }
   return mem;
 }
 
