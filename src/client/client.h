@@ -28,6 +28,7 @@ limitations under the License.
 #include "client/client_base.h"
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
+#include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
 #include "common/util/lifecycle.h"
 #include "common/util/protocols.h"
@@ -726,6 +727,19 @@ class Client final : public BasicIPCClient,
    */
   Status DelData(const std::vector<ObjectID>& ids, const bool force = false,
                  const bool deep = true);
+
+  Status CreateGPUBuffer(const size_t size, ObjectID& id, Payload& payload,
+                         std::shared_ptr<GPUUnifiedAddress>& gua);
+  /**
+   * @brief Get a set of blobs from vineyard server. See also `GetBuffer`.
+   *
+   * @param ids Object ids for the blobs to get.
+   * @param buffers: The result result cudaIpcMemhandles related to GPU blobs.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
+                       std::map<ObjectID, GPUUnifiedAddress>& guas);
 
  protected:
   /**

@@ -27,10 +27,14 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
+#include "boost/asio.hpp"
+
+#include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
 #include "common/util/asio.h"
 #include "common/util/callback.h"
 #include "common/util/logging.h"
+#include "common/util/protocols.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -159,6 +163,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doIncreaseReferenceCount(json const& root);
 
   bool doIsSpilled(json const& root);
+
+  bool doCreateGPUBuffer(json const& root);
+
+  bool doGetGPUBuffers(json const& root);
 
  protected:
   template <typename FROM, typename TO>

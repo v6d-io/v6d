@@ -335,6 +335,12 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::IsSpilledRequest: {
     return doIsSpilled(root);
   }
+  case CommandType::CreateGPUBufferRequest: {
+    return doCreateGPUBuffer(root);
+  }
+  case CommandType::GetGPUBuffersRequest: {
+    return doGetGPUBuffers(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -512,6 +518,79 @@ bool SocketConnection::doCreateBuffer(const json& root) {
       send_fd(self->nativeHandle(), fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                bulk_store_->Footprint());
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doGetGPUBuffers(json const& root) {
+#ifndef ENABLE_GPU
+  return false;
+#endif
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool unsafe = false;
+  std::vector<std::shared_ptr<Payload>> objects;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadGetGPUBuffersRequest, root, ids, unsafe);
+  RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
+
+  // get the uva of the objects.
+  std::vector<std::vector<int64_t>> handle_to_send;
+  for (auto object : objects) {
+    GPUUnifiedAddress gua(true);
+    gua.setGPUMemPtr(object->pointer);
+    std::vector<int64_t> handle_vec = gua.getIpcHandleVec();
+    handle_to_send.emplace_back(handle_vec);
+  }
+  WriteGetGPUBuffersReply(objects, handle_to_send, message_out);
+
+  /* NOTE: Here we send the file descriptor after the objects.
+   *       We are using sendmsg to send the file descriptor
+   *       which is a sync method. In theory, this might cause
+   *       the server to block, but currently this seems to be
+   *       the only method that are widely used in practice, e.g.,
+   *       boost and Plasma, and actually the file descriptor is
+   *       a very short message.
+   *
+   *       We will examine other methods later, such as using
+   *       explicit file descritors.
+   */
+  this->doWrite(message_out,
+                [self, objects, handle_to_send](const Status& status) {
+                  // for (int store_fd : fd_to_send) {
+                  //   send_fd(self->nativeHandle(), store_fd);
+                  // }
+                  return Status::OK();
+                });
+  return false;
+}
+
+bool SocketConnection::doCreateGPUBuffer(json const& root) {
+#ifndef ENABLE_GPU
+  return false;
+#endif
+  auto self(shared_from_this());
+
+  size_t size;
+  std::shared_ptr<Payload> object;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadCreateGPUBufferRequest, root, size);
+  ObjectID object_id;
+  RESPONSE_ON_ERROR(bulk_store_->CreateGPU(size, object_id, object));
+  if (!object->IsGPU() || object->pointer == nullptr) {
+    LOG(ERROR) << "invalid GPU memory pointer" << std::endl;
+    return false;
+  }
+  // cudaIpcMemHandle_t cuda_handle;
+  GPUUnifiedAddress gua(true, reinterpret_cast<void*>(object->pointer));
+  WriteGPUCreateBufferReply(object_id, object, gua, message_out);
+
+  this->doWrite(message_out, [this, self](const Status& status) {
+    LOG_SUMMARY("instances_gpu_memory_usage_bytes", server_ptr_->instance_id(),
                 bulk_store_->Footprint());
     return Status::OK();
   });

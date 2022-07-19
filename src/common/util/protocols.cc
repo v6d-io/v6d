@@ -137,6 +137,10 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::IncreaseReferenceCountRequest;
   } else if (str_type == "is_spilled_request") {
     return CommandType::IsSpilledRequest;
+  } else if (str_type == "create_gpu_buffer_request") {
+    return CommandType::CreateGPUBufferRequest;
+  } else if (str_type == "get_gpu_buffers_request") {
+    return CommandType::GetGPUBuffersRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -340,6 +344,111 @@ Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
   id = root["id"].get<ObjectID>();
   object.FromJSON(tree);
   fd_sent = root.value("fd", -1);
+  return Status::OK();
+}
+
+// GPU related implementations
+void WriteCreateGPUBufferRequest(const size_t size, std::string& msg) {
+  json root;
+  root["type"] = "create_gpu_buffer_request";
+  root["size"] = size;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateGPUBufferRequest(const json& root, size_t& size) {
+  RETURN_ON_ASSERT(root["type"] == "create_gpu_buffer_request");
+  size = root["size"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteGPUCreateBufferReply(const ObjectID id,
+                               const std::shared_ptr<Payload>& object,
+                               GPUUnifiedAddress uva, std::string& msg) {
+  json root;
+  root["type"] = "create_gpu_buffer_reply";
+  root["id"] = id;
+  std::cout << std::endl;
+  root["handle"] = uva.getIpcHandleVec();
+  json tree;
+  object->ToJSON(tree);
+  root["created"] = tree;
+  encode_msg(root, msg);
+}
+
+Status ReadGPUCreateBufferReply(
+    const json& root, ObjectID& id, Payload& Object,
+    std::shared_ptr<vineyard::GPUUnifiedAddress> uva) {
+  json tree = root["created"];
+  id = root["id"].get<ObjectID>();
+  Object.FromJSON(tree);
+  std::vector<int64_t> handle_vec = root["handle"].get<std::vector<int64_t>>();
+  uva->setIpcHandleVec(handle_vec);
+  uva->setSize(Object.data_size);
+  return Status::OK();
+}
+
+void WriteGetGPUBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
+                               std::string& msg) {
+  json root;
+  root["type"] = "get_gpu_buffers_request";
+  int idx = 0;
+  for (auto const& id : ids) {
+    root[std::to_string(idx++)] = id;
+  }
+  root["num"] = ids.size();
+  root["unsafe"] = unsafe;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetGPUBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                                bool& unsafe) {
+  RETURN_ON_ASSERT(root["type"] == "get_gpu_buffers_request");
+  size_t num = root["num"].get<size_t>();
+  for (size_t i = 0; i < num; ++i) {
+    ids.push_back(root[std::to_string(i)].get<ObjectID>());
+  }
+  unsafe = root.value("unsafe", false);
+  return Status::OK();
+}
+
+void WriteGetGPUBuffersReply(
+    const std::vector<std::shared_ptr<Payload>>& objects,
+    const std::vector<std::vector<int64_t>>& handle_to_send, std::string& msg) {
+  json root;
+  root["type"] = "get_gpu_buffers_reply";
+  for (size_t i = 0; i < objects.size(); ++i) {
+    json tree;
+    objects[i]->ToJSON(tree);
+    root[std::to_string(i)] = tree;
+  }
+  root["handles"] = handle_to_send;
+  root["num"] = objects.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
+                              std::vector<GPUUnifiedAddress>& gua_sent) {
+  RETURN_ON_ASSERT(root["type"] == "get_gpu_buffers_reply");
+  for (size_t i = 0; i < root["num"]; ++i) {
+    json tree = root[std::to_string(i)];
+    Payload object;
+    object.FromJSON(tree);
+    objects.emplace_back(object);
+  }
+  std::vector<std::vector<int64_t>> handle_vec;
+  if (root.contains("handles")) {
+    handle_vec = root["handles"].get<std::vector<std::vector<int64_t>>>();
+  }
+  // get cuda handle
+  for (size_t i = 0; i < root["num"]; i++) {
+    GPUUnifiedAddress gua(false);
+    gua.setIpcHandleVec(handle_vec[i]);
+    gua.setSize(objects[i].data_size);
+    gua_sent.emplace_back(gua);
+  }
   return Status::OK();
 }
 

@@ -40,6 +40,7 @@ struct Payload {
   bool is_sealed;
   bool is_owner;
   bool is_spilled;
+  bool is_gpu;  // indicate if the Object is on the GPU
 
   Payload()
       : object_id(EmptyBlobID()),
@@ -52,7 +53,8 @@ struct Payload {
         pointer(nullptr),
         is_sealed(0),
         is_owner(1),
-        is_spilled(0) {}
+        is_spilled(0),
+        is_gpu(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize,
           ptrdiff_t offset)
@@ -66,7 +68,8 @@ struct Payload {
         pointer(ptr),
         is_sealed(0),
         is_owner(1),
-        is_spilled(0) {}
+        is_spilled(0),
+        is_gpu(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
           int64_t msize, ptrdiff_t offset)
@@ -80,9 +83,8 @@ struct Payload {
         pointer(ptr),
         is_sealed(0),
         is_owner(1),
-        is_spilled(0) {}
-
-  ~Payload() = default;
+        is_spilled(0),
+        is_gpu(0) {}
 
   static std::shared_ptr<Payload> MakeEmpty() {
     static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
@@ -106,6 +108,8 @@ struct Payload {
   inline bool IsOwner() { return is_owner; }
 
   bool IsSpilled() { return is_spilled; }
+
+  inline bool IsGPU() { return is_gpu; }
 
   json ToJSON() const;
 

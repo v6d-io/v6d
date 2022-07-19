@@ -25,6 +25,7 @@ option(USE_ASAN "Using address sanitizer to check memory accessing" OFF)
 option(USE_LIBUNWIND "Using libunwind to retrieve the stack backtrace when exception occurs" ON)
 option(USE_INCLUDE_WHAT_YOU_USE "Simply the intra-module dependencies with iwyu" OFF)
 option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of metadata" OFF)
+option(USE_GPU "Using gpu support" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
@@ -436,6 +437,14 @@ macro(find_pthread)
     find_package(Threads)
 endmacro()
 
+macro(find_cuda)
+  #find cuda
+  enable_language(CUDA)
+  include(CheckLanguage)
+  check_language(CUDA)
+  find_package(CUDA REQUIRED)
+endmacro(find_cuda)
+
 macro(find_common_libraries)
     find_apache_arrow()
     find_boost()
@@ -574,7 +583,10 @@ if(BUILD_VINEYARD_SERVER)
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
+                                       "src/common/memory/gpu/*.cc"
+                                       
     )
+
     add_executable(vineyardd ${SERVER_SRC_FILES})
     target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
     target_link_libraries(vineyardd PRIVATE ${Boost_LIBRARIES}
@@ -591,6 +603,14 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PUBLIC ${ARROW_SHARED_LIB})
     else()
         target_link_libraries(vineyardd PUBLIC ${ARROW_STATIC_LIB})
+    endif()
+
+    if(USE_GPU)
+        enable_language(CUDA)
+        find_package(CUDA REQUIRED)
+        add_definitions(-DENABLE_GPU)
+        include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) 
+        target_link_libraries(vineyardd PUBLIC ${CUDA_LIBRARIES})
     endif()
 
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
@@ -668,13 +688,18 @@ if(BUILD_VINEYARD_CLIENT)
                                "src/client/ds/*.cc"
                                "src/common/memory/*.cc"
                                "src/common/util/*.cc"
+                               "src/common/memory/gpu/*.cc"
     )
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
     add_library(vineyard_client ${CLIENT_SRC_FILES})
-    target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
-                                                 Threads::Threads
-                                                 nlohmann_json::nlohmann_json
+    if(USE_GPU)
+        find_package(CUDA REQUIRED)
+        target_link_libraries(vineyard_client PUBLIC ${CUDA_LIBRARIES})
+    endif()
+        target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
+                                                     Threads::Threads
+                                                     nlohmann_json::nlohmann_json                                          
     )
     # make sure `vineyard_internal_registry` been built.
     add_dependencies(vineyard_client vineyard_internal_registry)
@@ -783,10 +808,10 @@ if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_hosseinmoein_dataframe)
 endif()
 
+
 if(BUILD_VINEYARD_TESTS)
     add_subdirectory(test)
 endif()
-
 if(BUILD_VINEYARD_BENCHMARKS)
     add_subdirectory(benchmark)
 endif()
