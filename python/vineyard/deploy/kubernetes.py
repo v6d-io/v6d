@@ -38,6 +38,9 @@ def start_vineyardd(
     size='512Mi',
     socket='/var/run/vineyard.sock',
     rpc_socket_port=9600,
+    vineyard_image='vineyardcloudnative/vineyardd:latest',
+    vineyard_image_pull_policy='IfNotPresent',
+    vineyard_image_pull_secrets=None,
     k8s_client=None,
 ):
     """Launch a vineyard cluster on kubernetes.
@@ -68,6 +71,12 @@ def start_vineyardd(
         k8s_client: kubernetes.client.api.ApiClient
             A kubernetes client. If not specified, vineyard will try to resolve the
             kubernetes configuration from current context.
+        vineyard_image: str
+            The docker image of vineyardd to launch the daemonset.
+        vineyard_image_pull_policy: str
+            The docker image pull policy of vineyardd.
+        vineyard_image_pull_secrets: str
+            The docker image pull secrets of vineyardd.
 
     Returns:
         A list of created kubernetes resources during the deploying process. The
@@ -92,9 +101,18 @@ def start_vineyardd(
         'r',
         encoding='utf-8',
     ) as fp:
-        definitions = fp.read().format(
-            Namespace=namespace, Size=size, Socket=socket, Port=rpc_socket_port
-        )
+        formatter = {
+            'Namespace': namespace,
+            'Size': size,
+            'Socket': socket,
+            'Port': rpc_socket_port,
+            'Image': vineyard_image,
+            'ImagePullPolicy': vineyard_image_pull_policy,
+            'ImagePullSecrets': vineyard_image_pull_secrets
+            if vineyard_image_pull_secrets
+            else 'none',
+        }
+        definitions = fp.read().format(**formatter)
 
     with tempfile.NamedTemporaryFile(
         mode='w', encoding='utf-8', delete=False
