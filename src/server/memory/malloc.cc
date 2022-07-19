@@ -104,8 +104,8 @@ void GetMallocMapinfo(void* addr, int* fd, int64_t* map_size,
       return;
     }
   }
-  LOG(INFO) << "fd not found... for  " << addr
-            << ", size = " << mmap_records.size();
+  LOG(INFO) << "fd not found for " << addr
+            << ", mmap records size = " << mmap_records.size();
   *fd = -1;
   *map_size = 0;
   *offset = 0;
