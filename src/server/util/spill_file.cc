@@ -30,11 +30,6 @@ namespace util {
 using vineyard::BulkStore;
 using vineyard::Payload;
 using vineyard::Status;
-void PutFixed32(std::string* dst, uint32_t value) {
-  char buf[sizeof(value)];
-  EncodeFixed32(buf, value);
-  dst->append(buf, sizeof(buf));
-}
 
 void PutFixed64(std::string* dst, uint64_t value) {
   char buf[sizeof(value)];
@@ -42,12 +37,14 @@ void PutFixed64(std::string* dst, uint64_t value) {
   dst->append(buf, sizeof(buf));
 }
 
-void SpillWriteFile::Init(uint64_t object_id) {
+Status SpillWriteFile::Init(uint64_t object_id) {
   if (io_adaptor_) {
-    LOG(WARNING) << "Warning: may not flushed before io_adaptor_ is overwriten";
+    return Status::Invalid(
+        "Warning: may not flushed before io_adaptor_ is overwriten");
   }
   io_adaptor_ =
       std::make_unique<FileIOAdaptor>(spill_path_ + std::to_string(object_id));
+  return Status::OK();
 }
 
 Status SpillWriteFile::Write(const std::shared_ptr<Payload>& payload) {
@@ -70,17 +67,19 @@ Status SpillWriteFile::Sync() {
   return Status::OK();
 }
 
-void SpillReadFile::Init(uint64_t object_id) {
+Status SpillReadFile::Init(uint64_t object_id) {
   if (io_adaptor_) {
-    LOG(WARNING) << "Warning: may not flushed before io_adaptor_ is overwriten";
+    return Status::Invalid(
+        "Warning: may not flushed before io_adaptor_ is overwriten");
   }
   io_adaptor_ =
       std::make_unique<FileIOAdaptor>(spill_path_ + std::to_string(object_id));
+  return Status::OK();
 }
 
 Status SpillReadFile::Read(std::shared_ptr<Payload>& payload,
                            std::shared_ptr<BulkStore> bulk_store_ptr) {
-  Init(payload->object_id);
+  RETURN_ON_ERROR(Init(payload->object_id));
   // reload 1. object_id 2. data_size 3. content
   if (io_adaptor_ == nullptr) {
     return Status::IOError("Can't open io_adaptor");
@@ -111,6 +110,18 @@ Status SpillReadFile::Read(std::shared_ptr<Payload>& payload,
                                    " while reload spilling file");
   }
   RETURN_ON_ERROR(io_adaptor_->Read(payload->pointer, payload->data_size));
+  std::cout << "Gonna Delete File" << std::endl;
+  RETURN_ON_ERROR(Delete_(payload->object_id));
+  std::cout << "Finish Delete" << std::endl;
+  io_adaptor_ = nullptr;
+  return Status::OK();
+}
+
+Status SpillReadFile::Delete_(const vineyard::ObjectID& id) {
+  if (!io_adaptor_) {
+    return Status::Invalid("io_adaptor_ is not initialized");
+  }
+  // RETURN_ON_ERROR(io_adaptor_->RemoveFile(spill_path_ + std::to_string(id)));
   return Status::OK();
 }
 

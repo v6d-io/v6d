@@ -118,10 +118,13 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   } else if (bulk_store_type_ == StoreType::kDefault) {
     bulk_store_ = std::make_shared<BulkStore>();
     auto mem_limit = spec_["bulkstore_spec"]["memory_size"].get<size_t>();
+    auto spill_low_bound_rate =
+        spec_["bulkstore_spec"]["spill_low_bound_rate"].get<double>();
+    auto spill_up_bound_rate =
+        spec_["bulkstore_spec"]["spill_up_bound_rate"].get<double>();
     RETURN_ON_ERROR(bulk_store_->PreAllocate(mem_limit));
-    // we should set the threshold as a portion of mem limit
-    // TODO: Maybe someday we should make SpillSize a configurable option
-    bulk_store_->SetMemSpillSize(mem_limit / 3);
+    bulk_store_->SetMemSpillUpBound(mem_limit * spill_up_bound_rate);
+    bulk_store_->SetMemSpillLowBound(mem_limit * spill_low_bound_rate);
     bulk_store_->SetSpillPath(
         spec_["bulkstore_spec"]["spill_path"].get<std::string>());
     stream_store_ = std::make_shared<StreamStore>(

@@ -82,6 +82,7 @@ void BasicTest(Client& client) {
 }
 
 void ReloadTest(Client& client) {
+  LOG(INFO) << "Start Reload Test...";
   auto double_array = InitArray<double>(10, [](int i) { return i; });
   auto string_array1 =
       InitArray<std::string>(50, [](int i) { return to_string(i + 100000); });

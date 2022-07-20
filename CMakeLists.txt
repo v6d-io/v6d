@@ -560,8 +560,13 @@ if(BUILD_VINEYARD_SERVER)
                                            ${OPENSSL_LIBRARIES}
                                            nlohmann_json::nlohmann_json
                                            TBB::tbb
-                                           vineyard_io
     )
+    if(ARROW_SHARED_LIB)
+        target_link_libraries(vineyardd PUBLIC ${ARROW_SHARED_LIB})
+    else()
+        target_link_libraries(vineyardd PUBLIC ${ARROW_STATIC_LIB})
+    endif()
+
     target_include_directories(vineyardd PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>)
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})

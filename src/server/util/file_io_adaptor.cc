@@ -118,6 +118,7 @@ Status FileIOAdaptor::RemoveFiles(const std::vector<std::string>& paths) {
 }
 
 Status FileIOAdaptor::RemoveFile(const std::string& path) {
+  // FIXME: here will encounter a double-free bug
   return Status::ArrowError(fs_->DeleteFile(path));
 }
 

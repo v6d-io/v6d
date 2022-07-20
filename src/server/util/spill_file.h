@@ -50,8 +50,8 @@ class SpillWriteFile {
   vineyard::Status Sync();
 
  private:
+  vineyard::Status Init(uint64_t object_id);
   // TODO(ZjuYTW): change to string_view
-  void Init(uint64_t object_id);
   std::string spill_path_;
   std::unique_ptr<util::FileIOAdaptor> io_adaptor_ = nullptr;
 };
@@ -73,24 +73,15 @@ class SpillReadFile {
                         std::shared_ptr<vineyard::BulkStore> bulk_store_ptr);
 
  private:
-  void Init(uint64_t object_id);
+  vineyard::Status Init(uint64_t object_id);
 
+  // Delete should be called after Init()
+  vineyard::Status Delete_(const vineyard::ObjectID& id);
   std::string spill_path_;
   std::unique_ptr<util::FileIOAdaptor> io_adaptor_ = nullptr;
 };
 
-void PutFixed32(std::string* dst, uint32_t value);
-
 void PutFixed64(std::string* dst, uint64_t value);
-
-inline void EncodeFixed32(char* dst, uint32_t value) {
-  uint8_t* const buffer = reinterpret_cast<uint8_t*>(dst);
-
-  buffer[0] = static_cast<uint8_t>(value);
-  buffer[1] = static_cast<uint8_t>(value >> 8);
-  buffer[2] = static_cast<uint8_t>(value >> 16);
-  buffer[3] = static_cast<uint8_t>(value >> 24);
-}
 
 inline void EncodeFixed64(char* dst, uint64_t value) {
   uint8_t* const buffer = reinterpret_cast<uint8_t*>(dst);
@@ -103,15 +94,6 @@ inline void EncodeFixed64(char* dst, uint64_t value) {
   buffer[5] = static_cast<uint8_t>(value >> 40);
   buffer[6] = static_cast<uint8_t>(value >> 48);
   buffer[7] = static_cast<uint8_t>(value >> 56);
-}
-
-inline uint32_t DecodeFixed32(const char* src) {
-  const uint8_t* const buffer = reinterpret_cast<const uint8_t*>(src);
-
-  return (static_cast<uint32_t>(buffer[0])) |
-         (static_cast<uint32_t>(buffer[1]) << 8) |
-         (static_cast<uint32_t>(buffer[2]) << 16) |
-         (static_cast<uint32_t>(buffer[3]) << 24);
 }
 
 inline uint64_t DecodeFixed64(const char* ptr) {

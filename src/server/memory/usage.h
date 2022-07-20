@@ -248,6 +248,8 @@ class ColdObjectTracker
         }
         if (!fast_delete) {
           RETURN_ON_ERROR(store_ptr->ReloadPayload_(id, it->second));
+        } else {
+          store_ptr->DeletePayloadFile_(id);
         }
         spilled_obj_.erase(it);
         return Status::OK();
@@ -352,10 +354,11 @@ class ColdObjectTracker
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
     if (payload->IsSealed()) {
       cold_obj_lru_.Ref(id, payload);
-    } else {
-      LOG(WARNING) << "Not Sealed, Object ID: " << id;
+      return Status::OK();
     }
-    return Status::OK();
+    std::string err_msg = "Not Sealed, Object ID: " + std::to_string(id);
+    LOG(WARNING) << err_msg;
+    return Status::ObjectNotSealed(err_msg);
   }
 
   /**
@@ -387,9 +390,11 @@ class ColdObjectTracker
    * to disk till memory usage back to allowed watermark.
    * @param sz spilled size
    */
-  Status SpillColdObject() {
-    return cold_obj_lru_.Spill(Self().mem_spill_size_,
-                               Self().shared_from_this());
+  Status SpillColdObject(int64_t sz) {
+    if (sz <= 0) {
+      return Status::NotEnoughMemory("Nothing will be spilled");
+    }
+    return cold_obj_lru_.Spill(sz, Self().shared_from_this());
   }
 
   /**
@@ -402,14 +407,22 @@ class ColdObjectTracker
                                    ptrdiff_t* offset) {
     uint8_t* pointer = nullptr;
     pointer = Self().AllocateMemory(size, fd, map_size, offset);
-    if (pointer == nullptr) {
+    if (pointer == nullptr ||
+        BulkAllocator::Allocated() >=
+            static_cast<int64_t>(Self().mem_spill_up_bound_)) {
       std::unique_lock<std::mutex> locked(spill_mu_);
       // if already got someone spilled, then we should allocate normally
-      pointer = Self().AllocateMemory(size, fd, map_size, offset);
+      if (pointer == nullptr)
+        pointer = Self().AllocateMemory(size, fd, map_size, offset);
 
-      if (pointer == nullptr) {
-        if (SpillColdObject().ok()) {
-          pointer = Self().AllocateMemory(size, fd, map_size, offset);
+      if (pointer == nullptr ||
+          BulkAllocator::Allocated() >=
+              static_cast<int64_t>(Self().mem_spill_up_bound_)) {
+        int64_t spill_size =
+            BulkAllocator::Allocated() - Self().mem_spill_low_bound_;
+        if (SpillColdObject(spill_size).ok()) {
+          pointer = pointer ? pointer
+                            : Self().AllocateMemory(size, fd, map_size, offset);
         }
       }
     }
@@ -442,6 +455,12 @@ class ColdObjectTracker
     assert(payload->is_spilled == true);
     util::SpillReadFile read_file(spill_path_);
     RETURN_ON_ERROR(read_file.Read(payload, Self().shared_from_this()));
+    return Status::OK();
+  }
+
+  Status DeletePayloadFile_(const ID& id) {
+    util::FileIOAdaptor io_adaptor(spill_path_);
+    RETURN_ON_ERROR(io_adaptor.RemoveFile(spill_path_ + std::to_string(id)));
     return Status::OK();
   }
 
