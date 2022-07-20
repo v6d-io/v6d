@@ -93,7 +93,7 @@ jobs:
           sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
 
           # install linters
-          sudo pip3 install auditwheel black isort flake8
+          sudo pip3 install auditwheel black isort flake8 twine
 
           # install clang-format
           sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
@@ -285,6 +285,7 @@ jobs:
           done
 
           # install python packages
+          twine check dist/*.whl
           sudo pip3 install dist/*.whl -U
 
       - name: Get Test Data
@@ -308,7 +309,7 @@ jobs:
           python3 test/runner.py --with-deployment
 
       - name: Setup tmate session
-        if: false
+        if: true
         uses: mxschmitt/action-tmate@v2
 
       - name: Run Python Tests with Debug
@@ -363,6 +364,11 @@ jobs:
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
           python3 test/runner.py --with-io --with-migration
+
+      - name: Find vineyard using CMake
+        run: |
+          cmake -S test/vineyard-cmake-example -B build/vineyard-cmake-example
+          cmake --build build/vineyard-cmake-example
 
       - name: Setup tmate session
         if: false

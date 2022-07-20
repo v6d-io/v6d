@@ -527,7 +527,7 @@ class Client : public BasicIPCClient,
   }
 
   /**
-   * @brief Get multiple objects from vineayrd.
+   * @brief Get multiple objects from vineyard.
    *
    * @param ids The object IDs to get.
    *
