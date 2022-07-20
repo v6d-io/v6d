@@ -1,4 +1,4 @@
-#include "arrow/array.h"
+/* #include "arrow/array.h"
 #include "arrow/buffer.h"
 
  std::shared_ptr<arrow::Buffer> vineyard::fuse::NumericArrayAdaptor::Deserialize(
@@ -40,3 +40,4 @@
                 }
             
         
+ */

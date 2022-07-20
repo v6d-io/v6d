@@ -1,9 +1,19 @@
-#include "common/util/logging.h"
-#include "client/client.h"
-#include "basic/ds/arrow.h"
+// #include "common/util/logging.h"
+// #include "client/client.h"
+// #include "basic/ds/arrow.h"
+#include "common/util/typename.h"
+
 #include <iostream>
+typedef struct{
+  using inttype = int;
+} T;
 int main() {
-  std::string ipc_socket = "/var/run/vineyard.sock";
+  std::cout<<type_name<T::inttype>();
+  return 0;
+}
+
+/* void play_ipc(){
+    std::string ipc_socket = "/var/run/vineyard.sock";
   vineyard::logging::InitGoogleLogging("vineyard");
   vineyard::Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
@@ -36,5 +46,4 @@ int main() {
   // VLOG(0) << "this is level 0";
   // VLOG(2) << "this is level 2";
   // VLOG(4) << "this is level 4";
-  return 0;
-}
+} */
