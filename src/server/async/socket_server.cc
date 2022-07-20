@@ -27,6 +27,7 @@ limitations under the License.
 #include "common/util/callback.h"
 #include "common/util/functions.h"
 #include "common/util/json.h"
+#include "server/server/vineyard_server.h"
 #include "server/util/metrics.h"
 
 namespace vineyard {
@@ -37,7 +38,17 @@ SocketConnection::SocketConnection(stream_protocol::socket socket,
     : socket_(std::move(socket)),
       server_ptr_(server_ptr),
       socket_server_ptr_(socket_server_ptr),
-      conn_id_(conn_id) {}
+      conn_id_(conn_id) {
+  // hold the references of bulkstore using `shared_from_this()`.
+  auto bulk_store = server_ptr_->GetBulkStore();
+  if (bulk_store != nullptr) {
+    bulk_store_ = bulk_store->shared_from_this();
+  }
+  auto plasma_bulk_store = server_ptr_->GetBulkStore<PlasmaID>();
+  if (plasma_bulk_store != nullptr) {
+    plasma_bulk_store_ = plasma_bulk_store->shared_from_this();
+  }
+}
 
 bool SocketConnection::Start() {
   running_.store(true);
@@ -55,8 +66,7 @@ bool SocketConnection::Stop() {
   auto self(shared_from_this());
   if (server_ptr_->GetBulkStoreType() == StoreType::kDefault) {
     std::unordered_set<ObjectID> ids;
-    auto status =
-        server_ptr_->GetBulkStore()->ReleaseConnection(this->getConnId());
+    auto status = bulk_store_->ReleaseConnection(this->getConnId());
     if (!status.ok()) {
       LOG(INFO) << "No dependent objects, conn_id: " << this->getConnId()
                 << ", status: " << status.ToString();
@@ -413,9 +423,8 @@ bool SocketConnection::doGetBuffers(const json& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids, unsafe);
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->GetUnsafe(ids, unsafe, objects));
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
+  RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
 
   std::vector<int> fd_to_send;
@@ -456,9 +465,8 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe);
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->GetUnsafe(ids, unsafe, objects));
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
+  RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, message_out);
 
@@ -484,8 +492,7 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
   ObjectID object_id;
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->Create(size, object_id, object));
+  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
 
   int fd_to_send = -1;
   if (object->data_size > 0 &&
@@ -501,7 +508,7 @@ bool SocketConnection::doCreateBuffer(const json& root) {
       send_fd(self->nativeHandle(), fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                server_ptr_->GetBulkStore()->Footprint());
+                bulk_store_->Footprint());
     return Status::OK();
   });
   return false;
@@ -514,9 +521,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
 
   TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size);
   ObjectID object_id;
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->Create(size, object_id, object));
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Seal(object_id));
+  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+  RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
 
   boost::system::error_code ec;
   this->recvRemoteBufferHelper(
@@ -528,14 +534,13 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
           WriteCreateBufferReply(object->object_id, object, -1, message_out);
         } else {
           // cleanup
-          VINEYARD_DISCARD(
-              self->server_ptr_->GetBulkStore()->Delete(object->object_id));
+          VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
         LOG_SUMMARY("instances_memory_usage_bytes",
                     self->server_ptr_->instance_id(),
-                    self->server_ptr_->GetBulkStore()->Footprint());
+                    self->bulk_store_->Footprint());
         return Status::OK();
       });
   return false;
@@ -546,7 +551,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   ObjectID object_id = InvalidObjectID();
   TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
   // Delete ignore reference count.
-  auto status = server_ptr_->GetBulkStore()->Delete(object_id);
+  auto status = bulk_store_->Delete(object_id);
   std::string message_out;
   if (status.ok()) {
     WriteDropBufferReply(message_out);
@@ -555,7 +560,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   }
   this->doWrite(message_out);
   LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-              server_ptr_->GetBulkStore()->Footprint());
+              bulk_store_->Footprint());
   return false;
 }
 
@@ -803,8 +808,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
         std::string message_out;
         if (status.ok()) {
           std::shared_ptr<Payload> object;
-          RETURN_ON_ERROR(self->server_ptr_->GetBulkStore()->GetUnsafe(
-              chunk, true, object));
+          RETURN_ON_ERROR(self->bulk_store_->GetUnsafe(chunk, true, object));
           int store_fd = object->store_fd, fd_to_send = -1;
           int data_size = object->data_size;
           if (data_size > 0 &&
@@ -1029,12 +1033,11 @@ bool SocketConnection::doMakeArena(const json& root) {
 
   TRY_READ_REQUEST(ReadMakeArenaRequest, root, size);
   if (size == std::numeric_limits<size_t>::max()) {
-    size = server_ptr_->GetBulkStore()->FootprintLimit();
+    size = bulk_store_->FootprintLimit();
   }
   int store_fd = -1, fd_to_send = -1;
   uintptr_t base = reinterpret_cast<uintptr_t>(nullptr);
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->MakeArena(size, store_fd, base));
+  RESPONSE_ON_ERROR(bulk_store_->MakeArena(size, store_fd, base));
   WriteMakeArenaReply(store_fd, size, base, message_out);
 
   if (self->used_fds_.find(store_fd) == self->used_fds_.end()) {
@@ -1058,8 +1061,7 @@ bool SocketConnection::doFinalizeArena(const json& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadFinalizeArenaRequest, root, fd, offsets, sizes);
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->FinalizeArena(fd, offsets, sizes));
+  RESPONSE_ON_ERROR(bulk_store_->FinalizeArena(fd, offsets, sizes));
   WriteFinalizeArenaReply(message_out);
 
   this->doWrite(message_out);
@@ -1151,8 +1153,8 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
                    plasma_size);
 
   std::string message_out;
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Create(
-      size, plasma_size, plasma_id, object_id, plasma_object));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->Create(size, plasma_size, plasma_id,
+                                               object_id, plasma_object));
 
   int store_fd = plasma_object->store_fd, fd_to_send = -1;
   int data_size = plasma_object->data_size;
@@ -1171,7 +1173,7 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
       send_fd(self->nativeHandle(), fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                server_ptr_->GetBulkStore<PlasmaID>()->Footprint());
+                plasma_bulk_store_->Footprint());
     return Status::OK();
   });
   return false;
@@ -1185,9 +1187,9 @@ bool SocketConnection::doGetBuffersByPlasma(json const& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids, unsafe);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->GetUnsafe(
-      plasma_ids, unsafe, plasma_objects));
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->AddDependency(
+  RESPONSE_ON_ERROR(
+      plasma_bulk_store_->GetUnsafe(plasma_ids, unsafe, plasma_objects));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->AddDependency(
       std::unordered_set<PlasmaID>(plasma_ids.begin(), plasma_ids.end()),
       getConnId()));
   WriteGetBuffersByPlasmaReply(plasma_objects, message_out);
@@ -1222,9 +1224,8 @@ bool SocketConnection::doSealBlob(json const& root) {
   auto self(shared_from_this());
   ObjectID id;
   TRY_READ_REQUEST(ReadSealRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->Seal(id));
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore()->AddDependency(id, getConnId()));
+  RESPONSE_ON_ERROR(bulk_store_->Seal(id));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -1235,9 +1236,8 @@ bool SocketConnection::doSealPlasmaBlob(json const& root) {
   auto self(shared_from_this());
   PlasmaID id;
   TRY_READ_REQUEST(ReadPlasmaSealRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Seal(id));
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore<PlasmaID>()->AddDependency(id, getConnId()));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->Seal(id));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -1248,8 +1248,7 @@ bool SocketConnection::doPlasmaRelease(json const& root) {
   auto self(shared_from_this());
   PlasmaID id;
   TRY_READ_REQUEST(ReadPlasmaReleaseRequest, root, id);
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore<PlasmaID>()->Release(id, getConnId()));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->Release(id, getConnId()));
   std::string message_out;
   WritePlasmaReleaseReply(message_out);
   this->doWrite(message_out);
@@ -1262,7 +1261,7 @@ bool SocketConnection::doPlasmaDelData(json const& root) {
   TRY_READ_REQUEST(ReadPlasmaDelDataRequest, root, id);
 
   /// Plasma Data are not composable, so we do not have to wrestle with meta.
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore<PlasmaID>()->Delete(id));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->Delete(id));
 
   std::string message_out;
   WritePlasmaDelDataReply(message_out);
@@ -1306,12 +1305,45 @@ bool SocketConnection::doMoveBuffersOwnership(json const& root) {
   return false;
 }
 
+template <typename FROM, typename TO>
+Status SocketConnection::MoveBuffers(std::map<FROM, TO> mapping,
+                                     vs_ptr_t& source_session) {
+  std::set<FROM> ids;
+  for (auto const& item : mapping) {
+    ids.insert(item.first);
+  }
+
+  std::map<FROM, typename ID_traits<FROM>::P> successed_ids;
+  RETURN_ON_ERROR(source_session->GetBulkStore<FROM>()->RemoveOwnership(
+      ids, successed_ids));
+
+  std::map<TO, typename ID_traits<TO>::P> to_process_ids;
+  for (auto& item : successed_ids) {
+    typename ID_traits<TO>::P payload(item.second);
+    payload.Reset();
+    to_process_ids.emplace(mapping.at(item.first), payload);
+  }
+
+  RETURN_ON_ERROR(
+      server_ptr_->GetBulkStore<TO>()->MoveOwnership(to_process_ids));
+
+  // FIXME: this is a hack to make sure Moved buffers will never be released.
+  int64_t ref_cnt;
+  for (auto const& item : mapping) {
+    VINEYARD_CHECK_OK(source_session->GetBulkStore<FROM>()->FetchAndModify(
+        item.first, ref_cnt, 1));
+    VINEYARD_CHECK_OK(server_ptr_->GetBulkStore<TO>()->FetchAndModify(
+        item.second, ref_cnt, 1));
+  }
+
+  return Status::OK();
+}
+
 bool SocketConnection::doRelease(json const& root) {
   auto self(shared_from_this());
   ObjectID id;  // Must be a blob id.
   TRY_READ_REQUEST(ReadReleaseRequest, root, id);
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore<ObjectID>()->Release(id, getConnId()));
+  RESPONSE_ON_ERROR(bulk_store_->Release(id, getConnId()));
   std::string message_out;
   WriteReleaseReply(message_out);
   this->doWrite(message_out);
@@ -1357,8 +1389,7 @@ bool SocketConnection::doIsInUse(json const& root) {
   ObjectID id;  // Must be a blob id.
   TRY_READ_REQUEST(ReadIsInUseRequest, root, id);
   bool is_in_use = false;
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore<ObjectID>()->IsInUse(id, is_in_use));
+  RESPONSE_ON_ERROR(bulk_store_->IsInUse(id, is_in_use));
   std::string message_out;
   WriteIsInUseReply(is_in_use, message_out);
   this->doWrite(message_out);
@@ -1369,7 +1400,7 @@ bool SocketConnection::doIncreaseReferenceCount(json const& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   TRY_READ_REQUEST(ReadIncreaseReferenceCountRequest, root, ids);
-  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->AddDependency(
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   std::string message_out;
   WriteIncreaseReferenceCountReply(message_out);

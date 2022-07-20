@@ -29,9 +29,9 @@ limitations under the License.
 
 #include "boost/asio.hpp"
 
+#include "common/util/callback.h"
 #include "common/util/logging.h"
 #include "common/util/protocols.h"
-#include "server/server/vineyard_server.h"
 
 namespace vineyard {
 
@@ -39,6 +39,10 @@ namespace asio = boost::asio;
 using boost::asio::generic::stream_protocol;
 
 class SocketServer;
+class BulkStore;
+class PlasmaBulkStore;
+class VineyardServer;
+using vs_ptr_t = std::shared_ptr<VineyardServer>;
 
 using socket_message_queue_t = std::deque<std::string>;
 
@@ -157,37 +161,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
  protected:
   template <typename FROM, typename TO>
-  Status MoveBuffers(std::map<FROM, TO> mapping, vs_ptr_t& source_session) {
-    std::set<FROM> ids;
-    for (auto const& item : mapping) {
-      ids.insert(item.first);
-    }
-
-    std::map<FROM, typename ID_traits<FROM>::P> successed_ids;
-    RETURN_ON_ERROR(source_session->GetBulkStore<FROM>()->RemoveOwnership(
-        ids, successed_ids));
-
-    std::map<TO, typename ID_traits<TO>::P> to_process_ids;
-    for (auto& item : successed_ids) {
-      typename ID_traits<TO>::P payload(item.second);
-      payload.Reset();
-      to_process_ids.emplace(mapping.at(item.first), payload);
-    }
-
-    RETURN_ON_ERROR(
-        server_ptr_->GetBulkStore<TO>()->MoveOwnership(to_process_ids));
-
-    // FIXME: this is a hack to make sure Moved buffers will never be released.
-    int64_t ref_cnt;
-    for (auto const& item : mapping) {
-      VINEYARD_CHECK_OK(source_session->GetBulkStore<FROM>()->FetchAndModify(
-          item.first, ref_cnt, 1));
-      VINEYARD_CHECK_OK(server_ptr_->GetBulkStore<TO>()->FetchAndModify(
-          item.second, ref_cnt, 1));
-    }
-
-    return Status::OK();
-  }
+  Status MoveBuffers(std::map<FROM, TO> mapping, vs_ptr_t& source_session);
 
  private:
   int nativeHandle() { return socket_.native_handle(); }
@@ -235,6 +209,11 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   stream_protocol::socket socket_;
   vs_ptr_t server_ptr_;
   SocketServer* socket_server_ptr_;
+
+  // hold a reference of the bulkstore to aovid dtor conflicits.
+  std::shared_ptr<BulkStore> bulk_store_;
+  std::shared_ptr<PlasmaBulkStore> plasma_bulk_store_;
+
   int conn_id_;
   std::atomic_bool running_;
 
