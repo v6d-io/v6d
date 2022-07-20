@@ -115,8 +115,8 @@ def start_vineyardd(
     size=3 * 1024 * 1024 * 1024,
     default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     idx=None,
-    spill_up_rate = 0.5,
-    spill_low_rate = 0.8,
+    spill_upper_rate=0.8,
+    spill_lower_rate=0.3,
     **kw,
 ):
     rpc_socket_port = find_port()
@@ -137,10 +137,10 @@ def start_vineyardd(
             etcd_endpoints,
             '--etcd_prefix',
             etcd_prefix,
-            '--spill_low_rate',
-            str(spill_low_rate),
-            '--spill_up_rate',
-            str(spill_up_rate),
+            '--spill_lower_rate',
+            str(spill_lower_rate),
+            '--spill_upper_rate',
+            str(spill_upper_rate),
             verbose=True,
             **kw,
         )

@@ -110,9 +110,7 @@ Status SpillReadFile::Read(std::shared_ptr<Payload>& payload,
                                    " while reload spilling file");
   }
   RETURN_ON_ERROR(io_adaptor_->Read(payload->pointer, payload->data_size));
-  std::cout << "Gonna Delete File" << std::endl;
   RETURN_ON_ERROR(Delete_(payload->object_id));
-  std::cout << "Finish Delete" << std::endl;
   io_adaptor_ = nullptr;
   return Status::OK();
 }
@@ -121,7 +119,7 @@ Status SpillReadFile::Delete_(const vineyard::ObjectID& id) {
   if (!io_adaptor_) {
     return Status::Invalid("io_adaptor_ is not initialized");
   }
-  // RETURN_ON_ERROR(io_adaptor_->RemoveFile(spill_path_ + std::to_string(id)));
+  RETURN_ON_ERROR(io_adaptor_->RemoveFile(spill_path_ + std::to_string(id)));
   return Status::OK();
 }
 

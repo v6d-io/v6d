@@ -34,8 +34,8 @@ DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
 DEFINE_string(spill_path, "/tmp/spill_path/",
               "path of spilling temporary files");
-DEFINE_double(spill_low_rate, 0.5, "low watermark of spilling memory");
-DEFINE_double(spill_up_rate, 0.9, "high watermark of triggering spiling");
+DEFINE_double(spill_lower_rate, 0.5, "low watermark of spilling memory");
+DEFINE_double(spill_upper_rate, 0.9, "high watermark of triggering spiling");
 
 // share memory
 DEFINE_string(size, "256Mi",
@@ -100,8 +100,8 @@ json BulkstoreSpecResolver::resolve() const {
   spec["memory_size"] = bulkstore_limit;
   spec["stream_threshold"] = FLAGS_stream_threshold;
   spec["spill_path"] = FLAGS_spill_path;
-  spec["spill_low_bound_rate"] = FLAGS_spill_low_rate;
-  spec["spill_up_bound_rate"] = FLAGS_spill_up_rate;
+  spec["spill_lower_bound_rate"] = FLAGS_spill_lower_rate;
+  spec["spill_upper_bound_rate"] = FLAGS_spill_upper_rate;
   // if need to config the spill threshold, add json option here
   // spec["memory_spill_threshold"]
   return spec;

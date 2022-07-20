@@ -409,7 +409,7 @@ class ColdObjectTracker
     pointer = Self().AllocateMemory(size, fd, map_size, offset);
     if (pointer == nullptr ||
         BulkAllocator::Allocated() >=
-            static_cast<int64_t>(Self().mem_spill_up_bound_)) {
+            static_cast<int64_t>(Self().mem_spill_upper_bound_)) {
       std::unique_lock<std::mutex> locked(spill_mu_);
       // if already got someone spilled, then we should allocate normally
       if (pointer == nullptr)
@@ -417,9 +417,9 @@ class ColdObjectTracker
 
       if (pointer == nullptr ||
           BulkAllocator::Allocated() >=
-              static_cast<int64_t>(Self().mem_spill_up_bound_)) {
+              static_cast<int64_t>(Self().mem_spill_upper_bound_)) {
         int64_t spill_size =
-            BulkAllocator::Allocated() - Self().mem_spill_low_bound_;
+            BulkAllocator::Allocated() - Self().mem_spill_lower_bound_;
         if (SpillColdObject(spill_size).ok()) {
           pointer = pointer ? pointer
                             : Self().AllocateMemory(size, fd, map_size, offset);
