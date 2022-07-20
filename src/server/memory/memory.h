@@ -109,6 +109,7 @@ class BulkStoreBase {
 
 class BulkStore
     : public BulkStoreBase<ObjectID, Payload>,
+      public std::enable_shared_from_this<BulkStore>,
       protected detail::ColdObjectTracker<ObjectID, Payload, BulkStore> {
  public:
   /*
@@ -151,6 +152,7 @@ class BulkStore
  */
 class PlasmaBulkStore
     : public BulkStoreBase<PlasmaID, PlasmaPayload>,
+      public std::enable_shared_from_this<PlasmaBulkStore>,
       protected detail::DependencyTracker<PlasmaID, PlasmaPayload,
                                           PlasmaBulkStore> {
  public:

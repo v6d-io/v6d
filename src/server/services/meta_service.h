@@ -124,11 +124,13 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     callback_t<const json&, const std::string&> watcher;
     std::string tag;
   };
-  virtual ~IMetaService() { LOG(INFO) << "dtor the metadata service"; }
+
   explicit IMetaService(vs_ptr_t& server_ptr)
       : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("/meta_sync_lock") {
     stopped_.store(false);
   }
+
+  virtual ~IMetaService();
 
   static std::shared_ptr<IMetaService> Get(vs_ptr_t);
 
@@ -162,7 +164,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     return Status::OK();
   }
 
-  virtual inline void Stop() { LOG(INFO) << "meta service is stopping ..."; }
+  virtual void Stop();
 
  public:
   inline void RequestToBulkUpdate(

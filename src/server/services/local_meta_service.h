@@ -46,11 +46,9 @@ class LocalLock : public ILock {
  */
 class LocalMetaService : public IMetaService {
  public:
-  inline void Stop() override {
-    if (stopped_.exchange(true)) {
-      return;
-    }
-  }
+  inline void Stop() override;
+
+  ~LocalMetaService() override {}
 
  protected:
   explicit LocalMetaService(vs_ptr_t& server_ptr) : IMetaService(server_ptr) {}

@@ -21,6 +21,13 @@ limitations under the License.
 
 namespace vineyard {
 
+inline void LocalMetaService::Stop() {
+  if (stopped_.exchange(true)) {
+    return;
+  }
+  IMetaService::Stop();
+}
+
 void LocalMetaService::requestLock(
     std::string lock_name,
     callback_t<std::shared_ptr<ILock>> callback_after_locked) {

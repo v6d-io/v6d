@@ -169,11 +169,11 @@ class DependencyTracker
  * @brief ColdObjectTracker is a CRTP class record non-in-use object in a list
  * for its derived classes. It requires the derived class to implement the:
  *  - `OnRelease(ID)` method to describe what will happens when `ref_count`
- * reaches zero.
+ *    reaches zero.
  *  - `OnDelete(ID)` method to describe what will happens when `ref_count`
- * reaches zero and the object is marked as to be deleted.
+ *    reaches zero and the object is marked as to be deleted.
  *  - `FetchAndModify(ID, int, int)` method to fetch the current `ref_count` and
- * modify it by the given value.
+ *    modify it by the given value.
  */
 template <typename ID, typename P, typename Der>
 class ColdObjectTracker
@@ -195,8 +195,10 @@ class ColdObjectTracker
     using lru_map_t =
         std::unordered_map<ID, typename std::list<value_t>::iterator>;
     using lru_list_t = std::list<value_t>;
+
     LRU() = default;
     ~LRU() = default;
+
     void Ref(ID id, std::shared_ptr<P> payload) {
       std::unique_lock<decltype(mu_)> locked;
       auto it = map_.find(id);
