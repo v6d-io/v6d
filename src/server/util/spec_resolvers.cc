@@ -34,8 +34,8 @@ DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
 DEFINE_string(spill_path, "/tmp/spill_path/",
               "path of spilling temporary files");
-DEFINE_double(spill_lower_rate, 0.5, "low watermark of spilling memory");
-DEFINE_double(spill_upper_rate, 0.9, "high watermark of triggering spiling");
+DEFINE_double(spill_lower_rate, 0.3, "low watermark of spilling memory");
+DEFINE_double(spill_upper_rate, 0.8, "high watermark of triggering spiling");
 
 // share memory
 DEFINE_string(size, "256Mi",
