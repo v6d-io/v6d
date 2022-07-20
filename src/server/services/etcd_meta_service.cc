@@ -131,6 +131,8 @@ void EtcdMetaService::Stop() {
   if (stopped_.exchange(true)) {
     return;
   }
+  // invoke parent's stop method
+  IMetaService::Stop();
   if (backoff_timer_) {
     boost::system::error_code ec;
     backoff_timer_->cancel(ec);

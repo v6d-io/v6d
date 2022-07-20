@@ -40,6 +40,10 @@ std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t server_ptr) {
   return nullptr;
 }
 
+IMetaService::~IMetaService() { this->Stop(); }
+
+void IMetaService::Stop() { LOG(INFO) << "meta service is stopping ..."; }
+
 /** Note [Deleting objects and blobs]
  *
  * Blob is special: suppose A -> B and A -> C, where A is an object, B is an
