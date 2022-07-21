@@ -49,11 +49,6 @@ if(BUILD_VINEYARD_IO AND BUILD_VINEYARD_IO_KAFKA)
     find_dependency(Rdkafka)
 endif()
 
-if(BUILD_VINEYARD_FUSE)
-    list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-    find_dependency(FUSE3)
-endif()
-
 set(VINEYARD_HOME "${CMAKE_CURRENT_LIST_DIR}/../../..")
 include("${CMAKE_CURRENT_LIST_DIR}/vineyard-targets.cmake")
 
