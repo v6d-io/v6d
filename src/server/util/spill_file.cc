@@ -1,4 +1,4 @@
-/** Copyright 2020-2021 Alibaba Group Holding Limited.
+/** Copyright 2020-2022 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ limitations under the License.
 #include "common/util/base64.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
-#include "io/io/local_io_adaptor.h"
 #include "server/memory/memory.h"
 #include "server/util/file_io_adaptor.h"
 

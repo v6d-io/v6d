@@ -1404,8 +1404,7 @@ bool SocketConnection::doIsSpilled(json const& root) {
   ObjectID id;  // Must be a blob id.
   TRY_READ_REQUEST(ReadIsSpilledRequest, root, id);
   bool is_spilled = false;
-  RESPONSE_ON_ERROR(
-      server_ptr_->GetBulkStore<ObjectID>()->IsSpilled(id, is_spilled));
+  RESPONSE_ON_ERROR(bulk_store_->IsSpilled(id, is_spilled));
   std::string message_out;
   WriteIsSpilledReply(is_spilled, message_out);
   this->doWrite(message_out);

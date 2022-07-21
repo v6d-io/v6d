@@ -115,6 +115,7 @@ def start_vineyardd(
     size=3 * 1024 * 1024 * 1024,
     default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     idx=None,
+    spill_path="",
     spill_upper_rate=0.8,
     spill_lower_rate=0.3,
     **kw,
@@ -137,6 +138,8 @@ def start_vineyardd(
             etcd_endpoints,
             '--etcd_prefix',
             etcd_prefix,
+            '--spill_path',
+            spill_path,
             '--spill_lower_rate',
             str(spill_lower_rate),
             '--spill_upper_rate',
@@ -374,6 +377,7 @@ def run_single_vineyardd_tests(tests):
         'vineyard_test_%s' % time.time(),
         2048,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+        spill_path="/tmp/spill_path",
     ):
         run_test(tests, 'spill_test')
 

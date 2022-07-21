@@ -1,4 +1,4 @@
-/** Copyright 2020-2021 Alibaba Group Holding Limited.
+/** Copyright 2020-2022 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ limitations under the License.
 #include <vector>
 
 #include "arrow/filesystem/filesystem.h"
-#include "basic/ds/arrow_utils.h"
+#include "common/util/arrow.h"
 
 namespace util {
 using vineyard::Status;

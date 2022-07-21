@@ -266,7 +266,6 @@ class ColdObjectTracker
       auto it = list_.rbegin();
       while (it != list_.rend()) {
         st = bulk_store_ptr->SpillPayload_(it->second);
-        // st = it->second->Spill();
         if (!st.ok()) {
           LOG(ERROR) << st.ToString();
           break;
@@ -313,9 +312,10 @@ class ColdObjectTracker
 
   ColdObjectTracker() {}
   ~ColdObjectTracker() {
-    // here we directly clean the whole spill_path_
-    util::FileIOAdaptor io_adaptor(spill_path_);
-    io_adaptor.DeleteDir();
+    if (!spill_path.empty()) {
+      util::FileIOAdaptor io_adaptor(spill_path);
+      io_adaptor.DeleteDir();
+    }
   }
 
   /**
@@ -398,15 +398,22 @@ class ColdObjectTracker
   }
 
   /**
-   * @brief if exceed memory limit, we try to spill cold object onto external
-   * memory
-   * @return if succeed to spill and allocate the memory, then return pointer,
-   * else return nullptr
+   * @brief If spill_path is set, then spill will be conducted if memory
+   * threshold is triggered or we got an empty pointer
+   *
+   * @return - If spill is disable, then just allocate memory and return
+   * whatever we got
+   *  - If spill is allowed, then we shall conduct spilling and trying to give a
+   * non-nullptr pointer
    */
   uint8_t* AllocateMemoryWithSpill(size_t size, int* fd, int64_t* map_size,
                                    ptrdiff_t* offset) {
     uint8_t* pointer = nullptr;
     pointer = Self().AllocateMemory(size, fd, map_size, offset);
+    // no spill will be conducted
+    if (spill_path.empty()) {
+      return pointer;
+    }
     if (pointer == nullptr ||
         BulkAllocator::Allocated() >=
             static_cast<int64_t>(Self().mem_spill_upper_bound_)) {
@@ -441,7 +448,7 @@ class ColdObjectTracker
  protected:
   Status SpillPayload_(std::shared_ptr<P>& payload) {
     assert(payload->is_sealed);
-    util::SpillWriteFile write_file(spill_path_);
+    util::SpillWriteFile write_file(spill_path);
     RETURN_ON_ERROR(write_file.Write(payload));
     RETURN_ON_ERROR(write_file.Sync());
     BulkAllocator::Free(payload->pointer, payload->data_size);
@@ -453,28 +460,40 @@ class ColdObjectTracker
 
   Status ReloadPayload_(const ID& id, std::shared_ptr<P>& payload) {
     assert(payload->is_spilled == true);
-    util::SpillReadFile read_file(spill_path_);
+    util::SpillReadFile read_file(spill_path);
     RETURN_ON_ERROR(read_file.Read(payload, Self().shared_from_this()));
     return Status::OK();
   }
 
   Status DeletePayloadFile_(const ID& id) {
-    util::FileIOAdaptor io_adaptor(spill_path_);
-    RETURN_ON_ERROR(io_adaptor.RemoveFile(spill_path_ + std::to_string(id)));
+    util::FileIOAdaptor io_adaptor(spill_path);
+    RETURN_ON_ERROR(io_adaptor.RemoveFile(spill_path + std::to_string(id)));
     return Status::OK();
   }
 
   void SetSpillPath(const std::string& spill_path) {
-    spill_path_ = spill_path;
-    if (spill_path_.empty() || spill_path_.back() != '/') {
-      spill_path_.push_back('/');
+    this->spill_path = spill_path;
+    if(spill_path.empty()){
+      LOG(ERROR) << "No spill path set, disable spill...";
+      return;
+    }
+    if (spill_path.back() != '/') {
+      this->spill_path.push_back('/');
+    }
+    util::FileIOAdaptor io_adaptor(this->spill_path + "test");
+    if (io_adaptor.Open("w").ok()) {
+      io_adaptor.RemoveFile(this->spill_path + "test");
+    } else {
+      LOG(ERROR) << "No such directory " << this->spill_path;
+      LOG(ERROR) << "So disable spill...";
+      this->spill_path.clear();
     }
   }
 
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
   lru_t cold_obj_lru_;
-  std::string spill_path_;
+  std::string spill_path;
   std::mutex spill_mu_;
 };
 

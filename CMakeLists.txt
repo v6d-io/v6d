@@ -542,7 +542,6 @@ include("cmake/GenerateVineyardJava.cmake")
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
-    set(BUILD_VINEYARD_IO)
     find_openssl_libraries(REQUIRED)
     find_etcd_cpp_apiv3()
     find_intel_tbb()
@@ -567,7 +566,6 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PUBLIC ${ARROW_STATIC_LIB})
     endif()
 
-    target_include_directories(vineyardd PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>)
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})

@@ -1,4 +1,4 @@
-/** Copyright 2020-2021 Alibaba Group Holding Limited.
+/** Copyright 2020-2022 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,12 +23,16 @@ limitations under the License.
 #include "common/memory/payload.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
-#include "io/io/i_io_adaptor.h"
-#include "io/io/io_factory.h"
-#include "io/io/local_io_adaptor.h"
 #include "server/util/file_io_adaptor.h"
 
 namespace util {
+
+/*
+  For each spilled file, the disk-format is:
+    - object_id: uint64
+    - data_size: uint64
+    - content: uint8[data_size]
+*/
 class SpillWriteFile {
  public:
   SpillWriteFile() = delete;

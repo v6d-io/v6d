@@ -32,8 +32,7 @@ DEFINE_string(meta, "etcd", "Metadata storage, can be one of: etcd, local");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
-DEFINE_string(spill_path, "/tmp/spill_path/",
-              "path of spilling temporary files");
+DEFINE_string(spill_path, "", "path of spilling temporary files");
 DEFINE_double(spill_lower_rate, 0.3, "low watermark of spilling memory");
 DEFINE_double(spill_upper_rate, 0.8, "high watermark of triggering spiling");
 
@@ -102,8 +101,6 @@ json BulkstoreSpecResolver::resolve() const {
   spec["spill_path"] = FLAGS_spill_path;
   spec["spill_lower_bound_rate"] = FLAGS_spill_lower_rate;
   spec["spill_upper_bound_rate"] = FLAGS_spill_upper_rate;
-  // if need to config the spill threshold, add json option here
-  // spec["memory_spill_threshold"]
   return spec;
 }
 

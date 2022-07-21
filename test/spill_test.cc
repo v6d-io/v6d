@@ -31,7 +31,7 @@ limitations under the License.
 using namespace vineyard;  // NOLINT
 using namespace std;       // NOLINT
 
-double delta = 1E-10;
+constexpr double delta = 1E-10;
 
 template <typename T>
 ObjectID GetObjectID(const std::shared_ptr<Array<T>>& sealed_array) {
