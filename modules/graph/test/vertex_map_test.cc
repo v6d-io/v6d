@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "client/client.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
+#include "graph/vertex_map/arrow_vertex_map_builder.h"
 #include "io/io/i_io_adaptor.h"
 #include "io/io/io_factory.h"
 

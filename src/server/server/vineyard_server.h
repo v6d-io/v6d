@@ -101,12 +101,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 #endif
   inline StoreType GetBulkStoreType() { return bulk_store_type_; }
 
-  template <typename T = ObjectID>
-  auto GetBulkStore() {
-    return static_if<std::is_same<T, ObjectID>{}>(
-        [this]() { return bulk_store_; },
-        [this]() { return plasma_bulk_store_; })();
-  }
+  template <typename ObjectIDType = ObjectID>
+  std::shared_ptr<typename detail::bulk_store_t<ObjectIDType>::type>
+  GetBulkStore();
 
   inline std::shared_ptr<StreamStore> GetStreamStore() { return stream_store_; }
   inline std::shared_ptr<VineyardRunner> GetRunner() { return runner_; }

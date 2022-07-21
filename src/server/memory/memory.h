@@ -195,6 +195,23 @@ class PlasmaBulkStore
   friend class SocketConnection;
 };
 
+namespace detail {
+
+template <typename ObjectIDType>
+struct bulk_store_t {};
+
+template <>
+struct bulk_store_t<ObjectID> {
+  using type = BulkStore;
+};
+
+template <>
+struct bulk_store_t<PlasmaID> {
+  using type = PlasmaBulkStore;
+};
+
+}  // namespace detail
+
 }  // namespace vineyard
 
 #endif  // SRC_SERVER_MEMORY_MEMORY_H_

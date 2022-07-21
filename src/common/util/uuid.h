@@ -63,26 +63,6 @@ using SessionID = int64_t;
  */
 using PlasmaID = std::string;
 
-template <typename T, typename F>
-auto static_if(std::true_type, T t, F f) {
-  return t;
-}
-
-template <typename T, typename F>
-auto static_if(std::false_type, T t, F f) {
-  return f;
-}
-
-template <bool B, typename T, typename F>
-auto static_if(T t, F f) {
-  return static_if(std::integral_constant<bool, B>{}, t, f);
-}
-
-template <bool B, typename T>
-auto static_if(T t) {
-  return static_if(std::integral_constant<bool, B>{}, t, [](auto&&...) {});
-}
-
 /*
  *  @brief Make empty blob and preallocate blob always mapping to the same place
  *         Others will be mapped randomly between
@@ -211,19 +191,21 @@ inline InstanceID UnspecifiedInstanceID() {
 }
 
 template <typename ID>
-inline ID GenerateBlobID(uintptr_t ptr) {
-  uint64_t ans = GenerateBlobID(ptr);
-  return static_if<std::is_same<ID, ObjectID>{}>(
-      [&]() { return ObjectID(ans); },
-      [&]() { return PlasmaIDFromString(ObjectIDToString(ObjectID(ans))); })();
+inline ID GenerateBlobID(uintptr_t ptr);
+
+template <>
+inline ObjectID GenerateBlobID<ObjectID>(uintptr_t ptr) {
+  return GenerateBlobID(ptr);
+}
+
+template <>
+inline PlasmaID GenerateBlobID<PlasmaID>(uintptr_t ptr) {
+  return PlasmaIDFromString(ObjectIDToString(ObjectID(GenerateBlobID(ptr))));
 }
 
 template <typename ID>
 inline ID GenerateBlobID(const void* ptr) {
-  uint64_t ans = GenerateBlobID(reinterpret_cast<const uintptr_t>(ptr));
-  return static_if<std::is_same<ID, ObjectID>{}>(
-      [&]() { return ObjectID(ans); },
-      [&]() { return PlasmaIDFromString(ObjectIDToString(ObjectID(ans))); })();
+  return GenerateBlobID(reinterpret_cast<uintptr_t>(ptr));
 }
 
 template <typename ID = ObjectID>
@@ -232,10 +214,16 @@ ID EmptyBlobID() {
 }
 
 template <typename ID>
-std::string IDToString(ID id) {
-  return static_if<std::is_same<ID, ObjectID>{}>(
-      [](ObjectID& id) { return ObjectIDToString(id); },
-      [](PlasmaID& id) { return PlasmaIDToString(id); })(id);
+std::string IDToString(ID id);
+
+template <>
+inline std::string IDToString<ObjectID>(ObjectID id) {
+  return ObjectIDToString(id);
+}
+
+template <>
+inline std::string IDToString<PlasmaID>(PlasmaID id) {
+  return PlasmaIDToString(id);
 }
 
 }  // namespace vineyard
