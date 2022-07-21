@@ -473,7 +473,7 @@ class ColdObjectTracker
 
   void SetSpillPath(const std::string& spill_path) {
     this->spill_path = spill_path;
-    if(spill_path.empty()){
+    if (spill_path.empty()) {
       LOG(ERROR) << "No spill path set, disable spill...";
       return;
     }

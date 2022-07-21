@@ -377,7 +377,7 @@ def run_single_vineyardd_tests(tests):
         'vineyard_test_%s' % time.time(),
         2048,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
-        spill_path="/tmp/spill_path",
+        spill_path='/tmp/spill_path',
     ):
         run_test(tests, 'spill_test')
 
