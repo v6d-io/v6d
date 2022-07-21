@@ -13,22 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "hosseinmoein-dataframe/hosseinmoein_dataframe.h"
+#include <iostream>
 
-namespace vineyard {
+#include "vineyard/client/client.h"
 
-template class HDataFrame<int32_t>;
-template class HDataFrame<int64_t>;
-template class HDataFrame<uint32_t>;
-template class HDataFrame<uint64_t>;
-template class HDataFrame<float>;
-template class HDataFrame<double>;
-
-template class HDataFrameBuilder<int32_t>;
-template class HDataFrameBuilder<int64_t>;
-template class HDataFrameBuilder<uint32_t>;
-template class HDataFrameBuilder<uint64_t>;
-template class HDataFrameBuilder<float>;
-template class HDataFrameBuilder<double>;
-
-}  // namespace vineyard
+int main() {
+  vineyard::Client& client = vineyard::Client::Default();
+  std::cout << "Connect to vineyard at: " << client.IPCSocket() << std::endl;
+  return 0;
+}

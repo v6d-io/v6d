@@ -58,7 +58,7 @@ class RPCClient : public ClientBase {
    * @brief Connect to vineyardd using the given TCP `host` and `port`.
    *
    * @param host The host of vineyard server.
-   * @param port The TCP port of vineayrd server's RPC service.
+   * @param port The TCP port of vineyard server's RPC service.
    *
    * @return Status that indicates whether the connect has succeeded.
    */
@@ -127,7 +127,7 @@ class RPCClient : public ClientBase {
   Status GetObject(const ObjectID id, std::shared_ptr<Object>& object);
 
   /**
-   * @brief Get multiple objects from vineayrd.
+   * @brief Get multiple objects from vineyard.
    *
    * @param ids The object IDs to get.
    *

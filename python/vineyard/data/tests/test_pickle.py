@@ -46,10 +46,10 @@ values = [
     (b1m, np.bool_(False)),
     (b1m, (np.bool_(True), np.bool_(False))),
     (b1m, [np.bool_(True), np.bool_(False)]),
-    (b1m, np.arange(1024 * 1024 * 400)),
+    (b1m, np.arange(1024 * 1024 * 4)),
     (b16m, np.zeros((1024, 1024, 48), dtype='bool')),
     (b16m, np.zeros((1024, 1024, 48))),
-    (b64m, np.zeros((1024, 1024, 512))),
+    (b64m, np.zeros((1024, 1024, 64))),
     (
         b1m,
         pd.DataFrame(

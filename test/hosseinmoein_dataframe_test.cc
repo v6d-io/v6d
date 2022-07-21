@@ -16,12 +16,14 @@ limitations under the License.
 #include <ctime>
 #include <iostream>
 
+#include "DataFrame/DataFrame.h"
+
 #include "client/client.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
 #include "hosseinmoein-dataframe/hosseinmoein_dataframe.h"
 
-#include "DataFrame/DataFrame.h"
+using namespace vineyard;  // NOLINT(build/namespaces)
 
 #define COLOR_GREEN "\033[32m"
 #define COLOR_RED "\033[31m"
@@ -41,7 +43,7 @@ int row;
 template <typename T>
 std::ostream& operator<<(std::ostream& o, std::vector<T>& vec) {
   o << "[";
-  for (int i = 0; i < vec.size(); i++) {
+  for (size_t i = 0; i < vec.size(); i++) {
     o << " " << vec[i] << ",";
   }
   o << CUR_BACK << " ]";

@@ -751,12 +751,12 @@ endif()
 if(BUILD_VINEYARD_FUSE)
     find_fuse()
     add_subdirectory(modules/fuse)
-    list(APPEND VINEYARD_INSTALL_LIBS vineyard_fuse)
+    # don't includes vineyard_fuse to "VINEYARD_LIBRARIES"
 endif()
 
 if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
     add_subdirectory(modules/hosseinmoein-dataframe)
-    list(APPEND VINEYARD_INSTALL_LIBS hosseinmoein_dataframe)
+    list(APPEND VINEYARD_INSTALL_LIBS vineyard_hosseinmoein_dataframe)
 endif()
 
 if(BUILD_VINEYARD_TESTS)

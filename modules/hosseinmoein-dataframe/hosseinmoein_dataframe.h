@@ -12,7 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#pragma once
+
+#ifndef MODULES_HOSSEINMOEIN_DATAFRAME_HOSSEINMOEIN_DATAFRAME_H_
+#define MODULES_HOSSEINMOEIN_DATAFRAME_HOSSEINMOEIN_DATAFRAME_H_
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -27,8 +30,7 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 
-using namespace vineyard;  // NOLINT(build/namespaces)
-using namespace hmdf;      // NOLINT(build/namespaces)
+using namespace hmdf;  // NOLINT(build/namespaces)
 
 #define ACCEPT_TYPE double, float, int32_t, int64_t, uint32_t, uint64_t
 
@@ -61,6 +63,8 @@ using namespace hmdf;      // NOLINT(build/namespaces)
                     ->data();                                        \
     memcpy(data, vec.data(), vec.size() * sizeof(type));             \
   } while (0)
+
+namespace vineyard {
 
 template <typename T>
 class HDataFrameBuilder;
@@ -135,7 +139,7 @@ StdDataFrame<T> HDataFrame<T>::Resolve(Client& client) {
   }
 
   /* Fill the column data from vineyard::DataFrame to StdDataFrame. */
-  for (int i = 0; i < num_columns; i++) {
+  for (size_t i = 0; i < num_columns; i++) {
     auto cname = vineyard_df->Columns()[i];
     std::string field_name;
     if (cname.is_string()) {
@@ -229,3 +233,7 @@ std::shared_ptr<Object> HDataFrameBuilder<T>::_Seal(Client& client) {
   VINEYARD_CHECK_OK(client.CreateMetaData(hn_df->meta_, hn_df->id_));
   return hn_df;
 }
+
+}  // namespace vineyard
+
+#endif  // MODULES_HOSSEINMOEIN_DATAFRAME_HOSSEINMOEIN_DATAFRAME_H_
