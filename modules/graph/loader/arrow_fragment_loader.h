@@ -40,6 +40,7 @@ limitations under the License.
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
+#include "graph/fragment/arrow_fragment_modifier.h"
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"

@@ -46,6 +46,7 @@ limitations under the License.
 #include "graph/utils/error.h"
 #include "graph/utils/thread_group.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
+#include "graph/vertex_map/arrow_vertex_map_builder.h"
 
 namespace vineyard {
 

@@ -24,7 +24,7 @@ limitations under the License.
 
 #include "client/client.h"
 
-#include "graph/fragment/arrow_fragment.h"
+#include "graph/fragment/arrow_fragment.vineyard.h"
 #include "graph/fragment/property_graph_types.h"
 
 namespace vineyard {

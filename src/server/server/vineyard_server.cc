@@ -79,6 +79,16 @@ VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
       ready_(0) {
 }
 
+template <>
+std::shared_ptr<BulkStore> VineyardServer::GetBulkStore<ObjectID>() {
+  return bulk_store_;
+}
+
+template <>
+std::shared_ptr<PlasmaBulkStore> VineyardServer::GetBulkStore<PlasmaID>() {
+  return plasma_bulk_store_;
+}
+
 Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   stopped_.store(false);
   this->bulk_store_type_ = bulk_store_type;
