@@ -880,38 +880,30 @@ Status Client::ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
   return Status::OK();
 }
 
-bool Client::IsInUse(ObjectID const& id) {
-  if (!this->connected_) {
-    VINEYARD_CHECK_OK(Status::ConnectionError("Client is not connected"));
-  }
-  std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
+Status Client::IsInUse(ObjectID const& id, bool& is_in_use) {
+  ENSURE_CONNECTED(this);
 
   std::string message_out;
   WriteIsInUseRequest(id, message_out);
   VINEYARD_CHECK_OK(doWrite(message_out));
 
   json message_in;
-  bool is_in_use = false;
   VINEYARD_CHECK_OK(doRead(message_in));
   VINEYARD_CHECK_OK(ReadIsInUseReply(message_in, is_in_use));
-  return is_in_use;
+  return Status::OK();
 }
 
-bool Client::IsSpilled(ObjectID const& id) {
-  if (!this->connected_) {
-    VINEYARD_CHECK_OK(Status::ConnectionError("Client is not connected"));
-  }
-  std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
+Status Client::IsSpilled(ObjectID const& id, bool& is_spilled) {
+  ENSURE_CONNECTED(this);
 
   std::string message_out;
   WriteIsSpilledRequest(id, message_out);
   VINEYARD_CHECK_OK(doWrite(message_out));
 
   json message_in;
-  bool is_spilled = false;
   VINEYARD_CHECK_OK(doRead(message_in));
   VINEYARD_CHECK_OK(ReadIsSpilledReply(message_in, is_spilled));
-  return is_spilled;
+  return Status::OK();
 }
 
 PlasmaClient::~PlasmaClient() {}

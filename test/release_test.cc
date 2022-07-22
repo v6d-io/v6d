@@ -63,22 +63,29 @@ int main(int argc, char** argv) {
   }
 
   {  // basic
-    CHECK(client1.IsInUse(blob_id));
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client1.Release({id, blob_id}));
-    CHECK(!client1.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(!is_in_use);
   }
 
   {  // single client
+    bool is_in_use{false};
     auto obj = client1.GetObject(id);
     CHECK(obj != nullptr);
-    CHECK(client1.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
     auto blob = client1.GetObject(blob_id);
     CHECK(blob != nullptr);
 
     VINEYARD_CHECK_OK(client1.Release({id}));
-    CHECK(client1.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client1.Release({blob_id}));
-    CHECK(!client1.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(!is_in_use);
   }
 
   {  // multiple clients
@@ -87,9 +94,12 @@ int main(int argc, char** argv) {
     auto blob2 = client2.GetObject(blob_id);
     CHECK(blob2 != nullptr);
     VINEYARD_CHECK_OK(client1.Release({blob_id}));
-    CHECK(client1.IsInUse(blob_id));
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client2.Release({blob_id}));
-    CHECK(!client2.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client2.IsInUse(blob_id, is_in_use));
+    CHECK(!is_in_use);
   }
 
   {  // diamond reference count
@@ -103,21 +113,28 @@ int main(int argc, char** argv) {
     pair_builder1.SetValue(1, obj2);
     auto wrapper = pair_builder1.Seal(client1);
     CHECK(wrapper != nullptr);
+    bool is_in_use{false};
     VINEYARD_CHECK_OK(client1.Release({wrapper->id()}));
-    CHECK(client1.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client1.Release({id}));
-    CHECK(client1.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client1.Release({copy_id}));
-    CHECK(!client1.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
+    CHECK(!is_in_use);
   }
 
   {  // auto release in disconnection
     auto obj = client1.GetObject(id);
     CHECK(obj != nullptr);
-    CHECK(client2.IsInUse(blob_id));
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client2.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
     client1.Disconnect();
     sleep(5);
-    CHECK(!client2.IsInUse(blob_id));
+    VINEYARD_CHECK_OK(client2.IsInUse(blob_id, is_in_use));
+    CHECK(!is_in_use);
   }
 
   LOG(INFO) << "Passed release tests...";

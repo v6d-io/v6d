@@ -58,7 +58,11 @@ void BasicTest(Client& client) {
   ObjectID id1 = sealed_double_array->id();
   auto blob_id = GetObjectID(sealed_double_array);
   CHECK(blob_id != InvalidObjectID());
-  CHECK(client.IsInUse(blob_id));
+  {
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client.IsInUse(blob_id, is_in_use));
+    CHECK(is_in_use);
+  }
 
   // Here we need a CHECK_FATAL
   bool flag = false;
@@ -68,15 +72,20 @@ void BasicTest(Client& client) {
         std::dynamic_pointer_cast<Array<double>>(builder2.Seal(client));
   } catch (std::runtime_error& e) { flag = true; }
   CHECK(flag);
+  bool is_spilled{false};
+  bool is_in_use{false};
   VINEYARD_CHECK_OK(client.Release({id1, blob_id}));
-  CHECK(!client.IsInUse(blob_id));
+  VINEYARD_CHECK_OK(client.IsInUse(blob_id, is_in_use));
+  CHECK(!is_in_use);
   ArrayBuilder<double> builder3(client, double_array);
   auto sealed_double_array3 =
       std::dynamic_pointer_cast<Array<double>>(builder3.Seal(client));
   auto id2 = sealed_double_array3->id();
   auto blob_id2 = GetObjectID(sealed_double_array3);
-  CHECK(client.IsSpilled(blob_id));
-  CHECK(client.IsInUse(blob_id2));
+  VINEYARD_CHECK_OK(client.IsSpilled(blob_id, is_spilled));
+  CHECK(is_spilled);
+  VINEYARD_CHECK_OK(client.IsInUse(blob_id2, is_in_use));
+  CHECK(is_in_use);
   VINEYARD_CHECK_OK(client.Release({id2, blob_id2}));
   LOG(INFO) << "Finish Basic Test...";
 }
@@ -98,7 +107,9 @@ void ReloadTest(Client& client) {
     id = sealed_double_array->id();
     bid = GetObjectID(sealed_double_array);
     CHECK(bid != InvalidObjectID());
-    CHECK(client.IsInUse(bid));
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client.IsInUse(bid, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id, bid}));
   }
   {
@@ -108,7 +119,9 @@ void ReloadTest(Client& client) {
     id1 = sealed_string_array->id();
     bid1 = GetObjectID(sealed_string_array);
     CHECK(bid1 != InvalidObjectID());
-    CHECK(client.IsInUse(bid1));
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client.IsInUse(bid1, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id1, bid1}));
   }
   {
@@ -118,7 +131,9 @@ void ReloadTest(Client& client) {
     id2 = sealed_string_array->id();
     bid2 = GetObjectID(sealed_string_array);
     CHECK(bid2 != InvalidObjectID());
-    CHECK(client.IsInUse(bid2));
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client.IsInUse(bid2, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id2, bid2}));
   }
   {
@@ -128,12 +143,16 @@ void ReloadTest(Client& client) {
     id3 = sealed_string_array->id();
     bid3 = GetObjectID(sealed_string_array);
     CHECK(bid3 != InvalidObjectID());
-    CHECK(client.IsInUse(bid3));
+    bool is_in_use{false};
+    VINEYARD_CHECK_OK(client.IsInUse(bid3, is_in_use));
+    CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id3, bid3}));
   }
   // now check for double_array
   {
-    CHECK(client.IsSpilled(bid));
+    bool is_spilled{false};
+    VINEYARD_CHECK_OK(client.IsSpilled(bid, is_spilled));
+    CHECK(is_spilled);
     auto double_array_copy = client.GetObject<Array<double>>(id);
     CHECK(double_array_copy->size() == double_array.size());
     for (size_t i = 0; i < double_array.size(); i++) {
@@ -141,7 +160,9 @@ void ReloadTest(Client& client) {
     }
   }
   {
-    CHECK(client.IsSpilled(bid1));
+    bool is_spilled{false};
+    VINEYARD_CHECK_OK(client.IsSpilled(bid1, is_spilled));
+    CHECK(is_spilled);
     auto str_array_copy = client.GetObject<Array<std::string>>(id1);
     CHECK(str_array_copy->size() == string_array1.size());
     for (size_t i = 0; i < string_array1.size(); i++) {

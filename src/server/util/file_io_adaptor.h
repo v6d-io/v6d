@@ -11,15 +11,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-The implementation of `get_rss`, `get_shared_rss` and `get_peek_rss`
-are referred from https://stackoverflow.com/a/14927379/5080177, which
-has the following license header originally:
-
-  * Author:  David Robert Nadeau
-  * Site:    http://NadeauSoftware.com/
-  * License: Creative Commons Attribution 3.0 Unported License
-  *          http://creativecommons.org/licenses/by/3.0/deed.en_US
 */
 
 #ifndef SRC_SERVER_UTIL_FILE_IO_ADAPTOR_H_
@@ -29,11 +20,11 @@ has the following license header originally:
 #include <string>
 #include <unordered_set>
 #include <vector>
+
 #include "arrow/api.h"
 #include "arrow/filesystem/api.h"
 #include "arrow/io/api.h"
 #include "arrow/io/interfaces.h"
-
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 

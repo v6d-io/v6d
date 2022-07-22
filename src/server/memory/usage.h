@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_USAGE_H_
 #define SRC_SERVER_MEMORY_USAGE_H_
 
-#include <glog/logging.h>
 #include <atomic>
 #include <list>
 #include <map>

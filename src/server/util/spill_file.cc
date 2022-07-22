@@ -14,12 +14,13 @@ limitations under the License.
 */
 
 #include "server/util/spill_file.h"
-#include <glog/logging.h>
 
 #include <memory>
 #include <string>
+
 #include "common/memory/payload.h"
 #include "common/util/base64.h"
+#include "common/util/logging.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 #include "server/memory/memory.h"

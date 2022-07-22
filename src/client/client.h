@@ -619,7 +619,7 @@ class Client : public BasicIPCClient,
    *
    * Return true if the the blob is in-use.
    */
-  bool IsInUse(ObjectID const& id);
+  Status IsInUse(ObjectID const& id, bool& is_in_use);
 
   /**
    * @brief Check if the blob is a spilled blob (those no client is using and be
@@ -627,7 +627,7 @@ class Client : public BasicIPCClient,
    *
    * Return true if the the blob is spilled.
    */
-  bool IsSpilled(ObjectID const& id);
+  Status IsSpilled(ObjectID const& id, bool& is_spilled);
 
   /**
    * Get the allocated size for the given object.
