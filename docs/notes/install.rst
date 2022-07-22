@@ -11,6 +11,11 @@ and can be easily installed with :code:`pip`:
 
     pip3 install vineyard
 
+Install etcd
+------------
+
+Vineyard is based on `etcd <https://etcd.io/>`_, please refer the `doc <https://etcd.io/docs/latest/install/>`_ to install it.
+
 Install from source
 -------------------
 
