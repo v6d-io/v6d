@@ -316,28 +316,30 @@ macro(find_jemalloc)
         # see also: https://github.com/jemalloc/jemalloc/issues/231
         set(JEMALLOC_INSTALL_CMD echo "Installing jemalloc." && ${CMAKE_MAKE_PROGRAM} install_bin install_include install_lib)
     endif()
-    ExternalProject_Add(libjemalloc
-        SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"
-        BUILD_IN_SOURCE 1
-        BUILD_ALWAYS 1
-        CONFIGURE_COMMAND "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/autogen.sh"
-            --prefix=${CMAKE_INSTALL_PREFIX}
-            --disable-shared
-            --enable-static
-            --disable-cxx
-            --enable-stats
-            --disable-initial-exec-tls
-            --with-jemalloc-prefix=vineyard_je_
-        BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
-        INSTALL_COMMAND ${JEMALLOC_INSTALL_CMD}
-    )
+    if(NOT TARGET jemalloc)
+        ExternalProject_Add(libjemalloc
+            SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"
+            BUILD_IN_SOURCE 1
+            BUILD_ALWAYS 1
+            CONFIGURE_COMMAND "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/autogen.sh"
+                --prefix=${CMAKE_INSTALL_PREFIX}
+                --disable-shared
+                --enable-static
+                --disable-cxx
+                --enable-stats
+                --disable-initial-exec-tls
+                --with-jemalloc-prefix=vineyard_je_
+            BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
+            INSTALL_COMMAND ${JEMALLOC_INSTALL_CMD}
+        )
 
-    add_library(jemalloc STATIC IMPORTED)
-    add_dependencies(jemalloc libjemalloc)
-    set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION
-                                              ${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/lib/libjemalloc_pic.a)
-    set_target_properties(jemalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                              ${PROJECT_SOURCE_DIR}/thirdparty)
+        add_library(jemalloc STATIC IMPORTED)
+        add_dependencies(jemalloc libjemalloc)
+        set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION
+                                                  ${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/lib/libjemalloc_pic.a)
+        set_target_properties(jemalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                                  ${PROJECT_SOURCE_DIR}/thirdparty)
+    endif()
 endmacro(find_jemalloc)
 
 macro(find_glog)

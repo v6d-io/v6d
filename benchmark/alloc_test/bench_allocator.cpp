@@ -47,26 +47,28 @@
 #include "glog/logging.h"
 
 #include "basic/ds/array.h"
-#include "client/allocator.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/env.h"
+#include "common/util/likely.h"
 #include "common/util/functions.h"
 
 #define JEMALLOC_NO_DEMANGLE
 #include "jemalloc/include/jemalloc/jemalloc.h"
 #undef JEMALLOC_NO_DEMANGLE
 
-#include "malloc/allocator.h"
+// #include "malloc/allocator.h"
+// #include "malloc/arena_allocator.h"
+#include "malloc/malloc_wrapper.h"
 
 #include "alloc_test.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
-// #define BENCH_VINEYARD
-// #define BENCH_JEMALLOC
 // #define BENCH_SYSTEM
-#define BENCH_ARENA
+// #define BENCH_JEMALLOC
+// #define BENCH_VINEYARD
+// #define BENCH_VINEYARD_ARENA
 
 size_t GetMillisecondCount() {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -74,10 +76,11 @@ size_t GetMillisecondCount() {
       .count();
 }
 
+size_t iterCount = 100000000;
+
 void bench() {
   size_t start = GetMillisecondCount();
 
-  size_t iterCount = 100000000;
   size_t maxItems = 1 << 18;   // 512 KB
   size_t maxItemSizeExp = 10;  // 1K
 
@@ -108,7 +111,7 @@ void bench() {
 #elif defined(BENCH_VINEYARD)
   baseBuff =
       reinterpret_cast<TestBin*>(vineyard_malloc(maxItems * sizeof(TestBin)));
-#elif defined(BENCH_ARENA)
+#elif defined(BENCH_VINEYARD_ARENA)
   baseBuff = reinterpret_cast<TestBin*>(
       vineyard_arena_malloc(maxItems * sizeof(TestBin)));
 #else
@@ -132,7 +135,7 @@ void bench() {
         vineyard_je_free(baseBuff[idx].ptr);
 #elif defined(BENCH_VINEYARD)
         vineyard_free(baseBuff[idx].ptr);
-#elif defined(BENCH_ARENA)
+#elif defined(BENCH_VINEYARD_ARENA)
         vineyard_arena_free(baseBuff[idx].ptr);
 #else
         free(baseBuff[idx].ptr);
@@ -149,12 +152,15 @@ void bench() {
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_je_malloc(sz));
 #elif defined(BENCH_VINEYARD)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_malloc(sz));
-#elif defined(BENCH_ARENA)
+#elif defined(BENCH_VINEYARD_ARENA)
         baseBuff[idx].ptr =
             reinterpret_cast<uint8_t*>(vineyard_arena_malloc(sz));
 #else
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(malloc(sz));
 #endif
+        if (unlikely(baseBuff[idx].ptr == nullptr)) {
+          LOG(FATAL) << "Failed to allocate memory";
+        }
         memset(baseBuff[idx].ptr, (uint8_t) sz, sz);
       }
     }
@@ -166,8 +172,11 @@ void bench() {
 
 int main(int argc, char** argv) {
   if (argc < 1) {
-    printf("usage ./bench_allocator");
+    printf("usage ./bench_allocator [<iterations>]");
     return 1;
+  }
+  if (argc >= 2) {
+    iterCount = static_cast<size_t>(atoll(argv[1]));
   }
 
   bench();
