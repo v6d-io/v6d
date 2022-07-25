@@ -28,7 +28,6 @@ limitations under the License.
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "server/util/spill_file.h"
 
 #ifdef __APPLE__
 #include "boost/thread/shared_mutex.hpp"
@@ -42,6 +41,7 @@ limitations under the License.
 #include "common/util/status.h"
 #include "server/memory/allocator.h"
 #include "server/util/file_io_adaptor.h"
+#include "server/util/spill_file.h"
 
 namespace vineyard {
 
@@ -246,9 +246,9 @@ class ColdObjectTracker
           return Status::OK();
         }
         if (!fast_delete) {
-          RETURN_ON_ERROR(store_ptr->ReloadPayload_(id, it->second));
+          RETURN_ON_ERROR(store_ptr->ReloadPayload(id, it->second));
         } else {
-          store_ptr->DeletePayloadFile_(id);
+          store_ptr->DeletePayloadFile(id);
         }
         spilled_obj_.erase(it);
         return Status::OK();
@@ -264,7 +264,7 @@ class ColdObjectTracker
       auto st = Status::OK();
       auto it = list_.rbegin();
       while (it != list_.rend()) {
-        st = bulk_store_ptr->SpillPayload_(it->second);
+        st = bulk_store_ptr->SpillPayload(it->second);
         if (!st.ok()) {
           LOG(ERROR) << st.ToString();
           break;
@@ -311,8 +311,8 @@ class ColdObjectTracker
 
   ColdObjectTracker() {}
   ~ColdObjectTracker() {
-    if (!spill_path.empty()) {
-      util::FileIOAdaptor io_adaptor(spill_path);
+    if (!spill_path_.empty()) {
+      util::FileIOAdaptor io_adaptor(spill_path_);
       io_adaptor.DeleteDir();
     }
   }
@@ -410,7 +410,7 @@ class ColdObjectTracker
     uint8_t* pointer = nullptr;
     pointer = Self().AllocateMemory(size, fd, map_size, offset);
     // no spill will be conducted
-    if (spill_path.empty()) {
+    if (spill_path_.empty()) {
       return pointer;
     }
     if (pointer == nullptr ||
@@ -445,9 +445,9 @@ class ColdObjectTracker
   Status OnDelete(ID const& id) { return Self().OnDelete(id); }
 
  protected:
-  Status SpillPayload_(std::shared_ptr<P>& payload) {
+  Status SpillPayload(std::shared_ptr<P>& payload) {
     assert(payload->is_sealed);
-    util::SpillWriteFile write_file(spill_path);
+    util::SpillWriteFile write_file(spill_path_);
     RETURN_ON_ERROR(write_file.Write(payload));
     RETURN_ON_ERROR(write_file.Sync());
     BulkAllocator::Free(payload->pointer, payload->data_size);
@@ -457,42 +457,43 @@ class ColdObjectTracker
     return Status::OK();
   }
 
-  Status ReloadPayload_(const ID& id, std::shared_ptr<P>& payload) {
+  Status ReloadPayload(const ID& id, std::shared_ptr<P>& payload) {
     assert(payload->is_spilled == true);
-    util::SpillReadFile read_file(spill_path);
+    util::SpillReadFile read_file(spill_path_);
     RETURN_ON_ERROR(read_file.Read(payload, Self().shared_from_this()));
     return Status::OK();
   }
 
-  Status DeletePayloadFile_(const ID& id) {
-    util::FileIOAdaptor io_adaptor(spill_path);
-    RETURN_ON_ERROR(io_adaptor.RemoveFile(spill_path + std::to_string(id)));
+  Status DeletePayloadFile(const ID& id) {
+    util::FileIOAdaptor io_adaptor(spill_path_);
+    RETURN_ON_ERROR(io_adaptor.RemoveFile(spill_path_ + std::to_string(id)));
     return Status::OK();
   }
 
   void SetSpillPath(const std::string& spill_path) {
-    this->spill_path = spill_path;
+    spill_path_ = spill_path;
     if (spill_path.empty()) {
-      LOG(ERROR) << "No spill path set, disable spill...";
+      LOG(INFO) << "No spill path set, disable spill...";
       return;
     }
     if (spill_path.back() != '/') {
-      this->spill_path.push_back('/');
+      spill_path_.push_back('/');
     }
-    util::FileIOAdaptor io_adaptor(this->spill_path + "test");
+    util::FileIOAdaptor io_adaptor(spill_path_ + "test");
     if (io_adaptor.Open("w").ok()) {
-      io_adaptor.RemoveFile(this->spill_path + "test");
+      io_adaptor.RemoveFile(spill_path_ + "test");
     } else {
-      LOG(ERROR) << "No such directory " << this->spill_path;
-      LOG(ERROR) << "So disable spill...";
-      this->spill_path.clear();
+      LOG(WARNING)
+          << "Disabling spilling as the specified spill directory doesn't "
+             "exist, or vineyardd doesn't have the permission to write it";
+      spill_path_.clear();
     }
   }
 
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
   lru_t cold_obj_lru_;
-  std::string spill_path;
+  std::string spill_path_;
   std::mutex spill_mu_;
 };
 

@@ -28,6 +28,7 @@ limitations under the License.
 #include "glog/logging.h"
 
 #include "basic/ds/types.h"
+#include "common/util/arrow.h"
 #include "common/util/status.h"
 
 namespace vineyard {
@@ -56,15 +57,6 @@ struct RefString;
     if (!status.ok()) {                              \
       return ::vineyard::Status::ArrowError(status); \
     }                                                \
-  } while (0)
-
-#define RETURN_ON_ARROW_ERROR_AND_ASSIGN(lhs, expr)           \
-  do {                                                        \
-    auto result = (expr);                                     \
-    if (!result.status().ok()) {                              \
-      return ::vineyard::Status::ArrowError(result.status()); \
-    }                                                         \
-    lhs = std::move(result).ValueOrDie();                     \
   } while (0)
 
 template <typename T>
