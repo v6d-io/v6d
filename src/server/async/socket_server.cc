@@ -334,6 +334,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::IncreaseReferenceCountRequest: {
     return doIncreaseReferenceCount(root);
   }
+  case CommandType::IsSpilledRequest: {
+    return doIsSpilled(root);
+  }
   default: {
     LOG(ERROR) << "Got unexpected command: " << type;
     return false;
@@ -551,7 +554,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   ObjectID object_id = InvalidObjectID();
   TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
   // Delete ignore reference count.
-  auto status = bulk_store_->Delete(object_id);
+  auto status = bulk_store_->OnDelete(object_id);
   std::string message_out;
   if (status.ok()) {
     WriteDropBufferReply(message_out);
@@ -1261,7 +1264,7 @@ bool SocketConnection::doPlasmaDelData(json const& root) {
   TRY_READ_REQUEST(ReadPlasmaDelDataRequest, root, id);
 
   /// Plasma Data are not composable, so we do not have to wrestle with meta.
-  RESPONSE_ON_ERROR(plasma_bulk_store_->Delete(id));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->OnDelete(id));
 
   std::string message_out;
   WritePlasmaDelDataReply(message_out);
@@ -1392,6 +1395,18 @@ bool SocketConnection::doIsInUse(json const& root) {
   RESPONSE_ON_ERROR(bulk_store_->IsInUse(id, is_in_use));
   std::string message_out;
   WriteIsInUseReply(is_in_use, message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doIsSpilled(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;  // Must be a blob id.
+  TRY_READ_REQUEST(ReadIsSpilledRequest, root, id);
+  bool is_spilled = false;
+  RESPONSE_ON_ERROR(bulk_store_->IsSpilled(id, is_spilled));
+  std::string message_out;
+  WriteIsSpilledReply(is_spilled, message_out);
   this->doWrite(message_out);
   return false;
 }

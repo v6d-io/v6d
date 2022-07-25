@@ -19,11 +19,14 @@ limitations under the License.
 #include <memory>
 
 #include "common/util/json.h"
+#include "common/util/status.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
 
 struct PlasmaPayload;
+
+class BulkStore;
 
 struct Payload {
   ObjectID object_id;
@@ -36,6 +39,7 @@ struct Payload {
   uint8_t* pointer;  // the direct pointer for this blob on the server side
   bool is_sealed;
   bool is_owner;
+  bool is_spilled;
 
   Payload()
       : object_id(EmptyBlobID()),
@@ -47,7 +51,8 @@ struct Payload {
         ref_cnt(0),
         pointer(nullptr),
         is_sealed(0),
-        is_owner(1) {}
+        is_owner(1),
+        is_spilled(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize,
           ptrdiff_t offset)
@@ -60,7 +65,8 @@ struct Payload {
         ref_cnt(0),
         pointer(ptr),
         is_sealed(0),
-        is_owner(1) {}
+        is_owner(1),
+        is_spilled(0) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
           int64_t msize, ptrdiff_t offset)
@@ -73,7 +79,10 @@ struct Payload {
         ref_cnt(0),
         pointer(ptr),
         is_sealed(0),
-        is_owner(1) {}
+        is_owner(1),
+        is_spilled(0) {}
+
+  ~Payload() = default;
 
   static std::shared_ptr<Payload> MakeEmpty() {
     static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
@@ -95,6 +104,8 @@ struct Payload {
   inline void RemoveOwner() { is_owner = false; }
 
   inline bool IsOwner() { return is_owner; }
+
+  bool IsSpilled() { return is_spilled; }
 
   json ToJSON() const;
 

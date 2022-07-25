@@ -560,6 +560,12 @@ if(BUILD_VINEYARD_SERVER)
                                            nlohmann_json::nlohmann_json
                                            TBB::tbb
     )
+    if(ARROW_SHARED_LIB)
+        target_link_libraries(vineyardd PUBLIC ${ARROW_SHARED_LIB})
+    else()
+        target_link_libraries(vineyardd PUBLIC ${ARROW_STATIC_LIB})
+    endif()
+
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})

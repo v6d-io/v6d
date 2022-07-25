@@ -115,6 +115,9 @@ def start_vineyardd(
     size=3 * 1024 * 1024 * 1024,
     default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     idx=None,
+    spill_path="",
+    spill_upper_rate=0.8,
+    spill_lower_rate=0.3,
     **kw,
 ):
     rpc_socket_port = find_port()
@@ -135,6 +138,12 @@ def start_vineyardd(
             etcd_endpoints,
             '--etcd_prefix',
             etcd_prefix,
+            '--spill_path',
+            spill_path,
+            '--spill_lower_rate',
+            str(spill_lower_rate),
+            '--spill_upper_rate',
+            str(spill_upper_rate),
             verbose=True,
             **kw,
         )
@@ -363,6 +372,14 @@ def run_single_vineyardd_tests(tests):
 
         # test invalid inputs from client
         run_invalid_client_test(tests, '127.0.0.1', rpc_socket_port)
+    with start_vineyardd(
+        'http://localhost:%d' % etcd_port,
+        'vineyard_test_%s' % time.time(),
+        2048,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+        spill_path='/tmp/spill_path',
+    ):
+        run_test(tests, 'spill_test')
 
 
 def run_scale_in_out_tests(etcd_endpoints, instance_size=4):

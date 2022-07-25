@@ -139,6 +139,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::IsInUseRequest;
   } else if (str_type == "increase_reference_count_request") {
     return CommandType::IncreaseReferenceCountRequest;
+  } else if (str_type == "is_spilled_request") {
+    return CommandType::IsSpilledRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1565,6 +1567,33 @@ void WriteIsInUseReply(const bool is_in_use, std::string& msg) {
 Status ReadIsInUseReply(json const& root, bool& is_in_use) {
   RETURN_ON_ASSERT(root["type"] == "is_in_use_reply");
   is_in_use = root["is_in_use"].get<bool>();
+  return Status::OK();
+}
+
+// IsSpilled
+void WriteIsSpilledRequest(const ObjectID& id, std::string& msg) {
+  json root;
+  root["type"] = "is_spilled_request";
+  root["id"] = id;
+  encode_msg(root, msg);
+}
+
+Status ReadIsSpilledRequest(json const& root, ObjectID& id) {
+  RETURN_ON_ASSERT(root["type"] == "is_spilled_request");
+  id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteIsSpilledReply(const bool is_spilled, std::string& msg) {
+  json root;
+  root["type"] = "is_spilled_reply";
+  root["is_spilled"] = is_spilled;
+  encode_msg(root, msg);
+}
+
+Status ReadIsSpilledReply(json const& root, bool& is_spilled) {
+  RETURN_ON_ASSERT(root["type"] == "is_spilled_reply");
+  is_spilled = root["is_spilled"].get<bool>();
   return Status::OK();
 }
 

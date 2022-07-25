@@ -29,6 +29,8 @@
 #ifndef SRC_SERVER_MEMORY_MEMORY_H_
 #define SRC_SERVER_MEMORY_MEMORY_H_
 
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
@@ -92,6 +94,13 @@ class BulkStoreBase {
   Status RemoveOwnership(std::set<ID> const& ids,
                          std::map<ID, P>& successed_ids);
 
+  void SetMemSpillUpBound(size_t mem_spill_upper_bound) {
+    mem_spill_upper_bound_ = mem_spill_upper_bound;
+  }
+  void SetMemSpillLowBound(size_t mem_spill_lower_bound) {
+    mem_spill_lower_bound_ = mem_spill_lower_bound;
+  }
+
  protected:
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
                           ptrdiff_t* offset);
@@ -105,12 +114,16 @@ class BulkStoreBase {
   std::unordered_map<int /* fd */, Arena> arenas_;
 
   object_map_t objects_;
+
+  size_t mem_spill_upper_bound_;
+
+  size_t mem_spill_lower_bound_;
 };
 
 class BulkStore
     : public BulkStoreBase<ObjectID, Payload>,
-      public std::enable_shared_from_this<BulkStore>,
-      protected detail::ColdObjectTracker<ObjectID, Payload, BulkStore> {
+      public detail::ColdObjectTracker<ObjectID, Payload, BulkStore>,
+      public std::enable_shared_from_this<BulkStore> {
  public:
   /*
    * @brief Allocate space for a new blob.
@@ -144,6 +157,7 @@ class BulkStore
 
   friend class detail::ColdObjectTracker<ObjectID, Payload, BulkStore>;
   friend class SocketConnection;
+  friend class VineyardServer;
 };
 
 /**

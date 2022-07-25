@@ -31,13 +31,16 @@
 #include <sys/mman.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 #include "common/util/logging.h"
+#include "common/util/status.h"
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"
 
@@ -244,6 +247,11 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
     return Status::OK();
   }
 
+  if (object->IsSpilled()) {
+    objects_.erase(accessor);
+    return Status::OK();
+  }
+
   if (object->arena_fd == -1) {
     auto buff_size = object->data_size;
     BulkAllocator::Free(object->pointer, buff_size);
@@ -444,7 +452,7 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   int64_t map_size = 0;
   ptrdiff_t offset = 0;
   uint8_t* pointer = nullptr;
-  pointer = AllocateMemory(data_size, &fd, &map_size, &offset);
+  pointer = AllocateMemoryWithSpill(data_size, &fd, &map_size, &offset);
   if (pointer == nullptr) {
     return Status::NotEnoughMemory(
         "Failed to allocate memory of size " + std::to_string(data_size) +
@@ -486,7 +494,10 @@ Status BulkStore::FetchAndModify(const ObjectID& id, int64_t& ref_cnt,
   return Status::OK();
 }
 
-Status BulkStore::OnDelete(ObjectID const& id) { return Delete(id); }
+Status BulkStore::OnDelete(ObjectID const& id) {
+  RETURN_ON_ERROR(this->RemoveFromColdList(id, true));
+  return Delete(id);
+}
 
 // implementation for PlasmaBulkStore
 Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,

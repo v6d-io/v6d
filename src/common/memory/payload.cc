@@ -14,8 +14,9 @@ limitations under the License.
 */
 
 #include "common/memory/payload.h"
-
 #include <cstdint>
+#include <string>
+#include "common/util/logging.h"
 
 namespace vineyard {
 
