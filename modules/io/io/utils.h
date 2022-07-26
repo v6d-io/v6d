@@ -21,7 +21,8 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "common/util/boost.h"
+#include "common/util/json.h"
+#include "common/util/logging.h"
 
 namespace vineyard {
 

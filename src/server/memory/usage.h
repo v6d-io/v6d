@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneapi/tbb/concurrent_hash_map.h"
 
 #include "common/memory/payload.h"
+#include "common/util/arrow.h"
 #include "common/util/lifecycle.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
@@ -248,7 +249,7 @@ class ColdObjectTracker
         if (!fast_delete) {
           RETURN_ON_ERROR(store_ptr->ReloadPayload(id, it->second));
         } else {
-          store_ptr->DeletePayloadFile(id);
+          RETURN_ON_ERROR(store_ptr->DeletePayloadFile(id));
         }
         spilled_obj_.erase(it);
         return Status::OK();
@@ -313,7 +314,7 @@ class ColdObjectTracker
   ~ColdObjectTracker() {
     if (!spill_path_.empty()) {
       util::FileIOAdaptor io_adaptor(spill_path_);
-      io_adaptor.DeleteDir();
+      DISCARD_ARROW_ERROR(io_adaptor.DeleteDir());
     }
   }
 
@@ -481,7 +482,7 @@ class ColdObjectTracker
     }
     util::FileIOAdaptor io_adaptor(spill_path_ + "test");
     if (io_adaptor.Open("w").ok()) {
-      io_adaptor.RemoveFile(spill_path_ + "test");
+      DISCARD_ARROW_ERROR(io_adaptor.RemoveFile(spill_path_ + "test"));
     } else {
       LOG(WARNING)
           << "Disabling spilling as the specified spill directory doesn't "

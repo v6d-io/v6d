@@ -16,7 +16,6 @@ limitations under the License.
 #include "server/util/etcd_launcher.h"
 
 #include <netdb.h>
-
 #include <sys/types.h>
 
 #include <memory>

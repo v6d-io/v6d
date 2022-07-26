@@ -24,7 +24,6 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/rpc_client.h"
-#include "common/util/boost.h"
 #include "common/util/flags.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"

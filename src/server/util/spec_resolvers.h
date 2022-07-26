@@ -18,8 +18,7 @@ limitations under the License.
 
 #include <string>
 
-#include "gflags/gflags.h"
-
+#include "common/util/flags.h"
 #include "common/util/json.h"
 
 namespace vineyard {

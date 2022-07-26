@@ -30,11 +30,10 @@ limitations under the License.
 #include "arrow/filesystem/api.h"
 #include "arrow/io/api.h"
 #include "arrow/util/uri.h"
-
 #include "boost/algorithm/string.hpp"
-#include "glog/logging.h"
 
 #include "basic/ds/arrow_utils.h"
+#include "common/util/logging.h"
 
 namespace vineyard {
 LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
