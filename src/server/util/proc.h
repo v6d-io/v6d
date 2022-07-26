@@ -24,7 +24,6 @@ limitations under the License.
 #include "boost/filesystem.hpp"
 #include "boost/process.hpp"
 
-#include "common/util/boost.h"
 #include "common/util/callback.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"

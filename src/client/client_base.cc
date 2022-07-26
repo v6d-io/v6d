@@ -15,11 +15,11 @@ limitations under the License.
 
 #include "client/client_base.h"
 
+#include <sys/socket.h>
+
 #include <future>
 #include <iostream>
 #include <utility>
-
-#include "boost/range/combine.hpp"
 
 #include "client/client.h"
 #include "client/io.h"

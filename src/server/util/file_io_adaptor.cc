@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "server/util/file_io_adaptor.h"
 
+#include <unistd.h>
+
 #include <vector>
 
 #include "arrow/filesystem/filesystem.h"

@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef SRC_CLIENT_CLIENT_BASE_H_
 #define SRC_CLIENT_CLIENT_BASE_H_
 
-#include <sys/mman.h>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -25,7 +24,6 @@ limitations under the License.
 #include <vector>
 
 #include "client/ds/object_meta.h"
-#include "common/util/boost.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 #include "common/util/version.h"

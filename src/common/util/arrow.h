@@ -15,9 +15,50 @@ limitations under the License.
 
 #ifndef SRC_COMMON_UTIL_ARROW_H_
 #define SRC_COMMON_UTIL_ARROW_H_
+
 #include <utility>
 
+#include "arrow/api.h"
+#include "arrow/io/api.h"
+
+#include "common/util/status.h"
+
 namespace vineyard {
+
+#ifndef CHECK_ARROW_ERROR
+#define CHECK_ARROW_ERROR(expr) \
+  VINEYARD_CHECK_OK(::vineyard::Status::ArrowError(expr))
+#endif  // CHECK_ARROW_ERROR
+
+// discard and ignore the error status.
+#ifndef DISCARD_ARROW_ERROR
+#define DISCARD_ARROW_ERROR(expr)                               \
+  do {                                                          \
+    auto status = (expr);                                       \
+    if (!status.ok()) {} /* NOLINT(whitespace/empty_if_body) */ \
+  } while (0)
+#endif  // DISCARD_ARROW_ERROR
+
+#ifndef CHECK_ARROW_ERROR_AND_ASSIGN
+#define CHECK_ARROW_ERROR_AND_ASSIGN(lhs, expr) \
+  do {                                          \
+    auto status = (expr);                       \
+    CHECK_ARROW_ERROR(status.status());         \
+    lhs = std::move(status).ValueOrDie();       \
+  } while (0)
+#endif  // CHECK_ARROW_ERROR_AND_ASSIGN
+
+#ifndef RETURN_ON_ARROW_ERROR
+#define RETURN_ON_ARROW_ERROR(expr)                  \
+  do {                                               \
+    auto status = (expr);                            \
+    if (!status.ok()) {                              \
+      return ::vineyard::Status::ArrowError(status); \
+    }                                                \
+  } while (0)
+#endif  // RETURN_ON_ARROW_ERROR
+
+#ifndef RETURN_ON_ARROW_ERROR_AND_ASSIGN
 #define RETURN_ON_ARROW_ERROR_AND_ASSIGN(lhs, expr)           \
   do {                                                        \
     auto result = (expr);                                     \
@@ -26,6 +67,8 @@ namespace vineyard {
     }                                                         \
     lhs = std::move(result).ValueOrDie();                     \
   } while (0)
+#endif  // RETURN_ON_ARROW_ERROR_AND_ASSIGN
+
 }  // namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_ARROW_H_

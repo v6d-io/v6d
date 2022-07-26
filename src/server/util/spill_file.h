@@ -22,6 +22,7 @@ limitations under the License.
 #include <string>
 
 #include "common/memory/payload.h"
+#include "common/util/arrow.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 #include "server/util/file_io_adaptor.h"
@@ -47,7 +48,7 @@ class SpillWriteFile {
 
   ~SpillWriteFile() {
     if (io_adaptor_) {
-      io_adaptor_->Flush();
+      DISCARD_ARROW_ERROR(io_adaptor_->Flush());
     }
   }
 

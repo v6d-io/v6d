@@ -48,7 +48,7 @@ Status SpillWriteFile::Init(uint64_t object_id) {
 }
 
 Status SpillWriteFile::Write(const std::shared_ptr<Payload>& payload) {
-  Init(payload->object_id);
+  RETURN_ON_ERROR(Init(payload->object_id));
   if (io_adaptor_ == nullptr) {
     return Status::IOError("Can't open io_adaptor");
   }

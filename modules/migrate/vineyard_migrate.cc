@@ -24,7 +24,6 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/rpc_client.h"
-#include "common/util/boost.h"
 #include "common/util/flags.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
@@ -32,7 +31,6 @@ limitations under the License.
 namespace vineyard {
 
 namespace asio = boost::asio;
-using boost::asio::generic::stream_protocol;
 
 DEFINE_bool(client, false, "Run as the client");
 DEFINE_bool(server, false, "Run as the server");

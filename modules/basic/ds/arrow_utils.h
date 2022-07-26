@@ -25,10 +25,10 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
-#include "glog/logging.h"
 
 #include "basic/ds/types.h"
 #include "common/util/arrow.h"
+#include "common/util/logging.h"
 #include "common/util/status.h"
 
 namespace vineyard {
@@ -40,24 +40,6 @@ using EIDT = uint64_t;
 }  // namespace arrow_types
 
 struct RefString;
-
-#define CHECK_ARROW_ERROR(expr) \
-  VINEYARD_CHECK_OK(::vineyard::Status::ArrowError(expr))
-
-#define CHECK_ARROW_ERROR_AND_ASSIGN(lhs, expr) \
-  do {                                          \
-    auto status = (expr);                       \
-    CHECK_ARROW_ERROR(status.status());         \
-    lhs = std::move(status).ValueOrDie();       \
-  } while (0)
-
-#define RETURN_ON_ARROW_ERROR(expr)                  \
-  do {                                               \
-    auto status = (expr);                            \
-    if (!status.ok()) {                              \
-      return ::vineyard::Status::ArrowError(status); \
-    }                                                \
-  } while (0)
 
 template <typename T>
 struct ConvertToArrowType {};
