@@ -220,8 +220,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   callback_t<std::string const&> callback_;
 
   std::shared_ptr<IMetaService> meta_service_ptr_;
-  std::unique_ptr<IPCServer> ipc_server_ptr_;
-  std::unique_ptr<RPCServer> rpc_server_ptr_;
+  std::shared_ptr<IPCServer> ipc_server_ptr_;
+  std::shared_ptr<RPCServer> rpc_server_ptr_;
 
   std::list<DeferredReq> deferred_;
 

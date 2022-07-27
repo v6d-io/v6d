@@ -94,13 +94,11 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
 
   // Initialize the ipc/rpc server ptr first to get self endpoints when
   // initializing the metadata service.
-  ipc_server_ptr_ =
-      std::unique_ptr<IPCServer>(new IPCServer(shared_from_this()));
+  ipc_server_ptr_ = std::make_shared<IPCServer>(shared_from_this());
   if (session_id_ == RootSessionID() && spec_["rpc_spec"]["rpc"].get<bool>()) {
     // TODO: the rpc won't be enabled for child sessions as we are unsure
     // about how to select the port.
-    rpc_server_ptr_ =
-        std::unique_ptr<RPCServer>(new RPCServer(shared_from_this()));
+    rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
   }
 
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
@@ -1039,8 +1037,8 @@ void VineyardServer::Stop() {
   }
 
   // cleanup
-  this->ipc_server_ptr_.reset(nullptr);
-  this->rpc_server_ptr_.reset(nullptr);
+  this->ipc_server_ptr_.reset();
+  this->rpc_server_ptr_.reset();
   this->meta_service_ptr_.reset();
   this->stream_store_.reset();
   this->bulk_store_.reset();
