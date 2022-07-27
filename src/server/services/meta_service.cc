@@ -26,7 +26,8 @@ limitations under the License.
 
 namespace vineyard {
 
-std::shared_ptr<IMetaService> IMetaService::Get(vs_ptr_t server_ptr) {
+std::shared_ptr<IMetaService> IMetaService::Get(
+    std::shared_ptr<VineyardServer> server_ptr) {
   std::string meta = server_ptr->GetSpec()["metastore_spec"]["meta"]
                          .get_ref<const std::string&>();
   VINEYARD_ASSERT(meta == "etcd" || meta == "local",
@@ -273,9 +274,7 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
     subobjects_.erase(object_id);
     supobjects_.erase(object_id);
   }
-  if (initial_delete_set.find(object_id) != initial_delete_set.end()) {
-    initial_delete_set.erase(object_id);
-  }
+  initial_delete_set.erase(object_id);
 }
 
 void IMetaService::findDeleteSet(std::vector<ObjectID> const& object_ids,

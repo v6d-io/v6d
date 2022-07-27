@@ -22,7 +22,6 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
-#include "common/util/boost.h"
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"
@@ -420,7 +419,7 @@ Status VineyardServer::CreateData(
   // update meta into json
   meta_service_ptr_->RequestToBulkUpdate(
       [this, id, decorated_tree](const Status& status, const json& meta,
-                                 std::vector<IMetaService::op_t>& ops,
+                                 std::vector<meta_tree::op_t>& ops,
                                  InstanceID& computed_instance_id) {
         if (status.ok()) {
           return CATCH_JSON_ERROR(
@@ -440,7 +439,7 @@ Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
   RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be persisted");
   meta_service_ptr_->RequestToPersist(
       [this, id](const Status& status, const json& meta,
-                 std::vector<IMetaService::op_t>& ops) {
+                 std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
           auto status = CATCH_JSON_ERROR(
               meta_tree::PersistOps(meta, this->instance_name(), id, ops));
@@ -527,7 +526,7 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
   ObjectID target_id = GenerateObjectID();
   meta_service_ptr_->RequestToShallowCopy(
       [id, extra_metadata, target_id](const Status& status, const json& meta,
-                                      std::vector<IMetaService::op_t>& ops,
+                                      std::vector<meta_tree::op_t>& ops,
                                       bool& transient) {
         if (status.ok()) {
           return CATCH_JSON_ERROR(meta_tree::ShallowCopyOps(
@@ -641,7 +640,7 @@ Status VineyardServer::DelData(
       ids, force, deep,
       [](const Status& status, const json& meta,
          std::vector<ObjectID> const& ids_to_delete,
-         std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
+         std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
         if (status.ok()) {
           auto status = CATCH_JSON_ERROR(
               meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
@@ -687,7 +686,7 @@ Status VineyardServer::PutName(const ObjectID object_id,
   ENSURE_VINEYARDD_READY();
   meta_service_ptr_->RequestToPersist(
       [object_id, name](const Status& status, const json& meta,
-                        std::vector<IMetaService::op_t>& ops) {
+                        std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
           // TODO: do proper validation:
           // 1. global objects can have name, local ones cannot.
@@ -715,9 +714,8 @@ Status VineyardServer::PutName(const ObjectID object_id,
                 "transient objects cannot have name, please persist it first");
           }
 
-          ops.emplace_back(
-              IMetaService::op_t::Put("/names/" + name, object_id));
-          ops.emplace_back(IMetaService::op_t::Put(
+          ops.emplace_back(meta_tree::op_t::Put("/names/" + name, object_id));
+          ops.emplace_back(meta_tree::op_t::Put(
               "/data/" + ObjectIDToString(object_id) + "/__name",
               meta_tree::EncodeValue(name)));
           return Status::OK();
@@ -775,20 +773,20 @@ Status VineyardServer::DropName(const std::string& name,
   ENSURE_VINEYARDD_READY();
   meta_service_ptr_->RequestToPersist(
       [name](const Status& status, const json& meta,
-             std::vector<IMetaService::op_t>& ops) {
+             std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
           auto names = meta.value("names", json(nullptr));
           if (names.is_object()) {
             auto iter = names.find(name);
             if (iter != names.end()) {
-              ops.emplace_back(IMetaService::op_t::Del("/names/" + name));
+              ops.emplace_back(meta_tree::op_t::Del("/names/" + name));
               auto object_id = iter->get<ObjectID>();
               // delete the name in the object meta as well.
               bool exists = false;
               VINEYARD_DISCARD(
                   CATCH_JSON_ERROR(meta_tree::Exists(meta, object_id, exists)));
               if (exists) {
-                ops.emplace_back(IMetaService::op_t::Del(
+                ops.emplace_back(meta_tree::op_t::Del(
                     "/data/" + ObjectIDToString(object_id) + "/__name"));
               }
             }
@@ -844,7 +842,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
             self->meta_service_ptr_->RequestToPersist(
                 [self, object_id, result_id](
                     const Status& status, const json& meta,
-                    std::vector<IMetaService::op_t>& ops) {
+                    std::vector<meta_tree::op_t>& ops) {
                   // get signature
                   json tree;
                   VINEYARD_SUPPRESS(CATCH_JSON_ERROR(meta_tree::GetData(
@@ -853,7 +851,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
                   VLOG(2) << "migrate: original " << ObjectIDToString(object_id)
                           << " -> " << SignatureToString(sig);
                   // put signature
-                  ops.emplace_back(IMetaService::op_t::Put(
+                  ops.emplace_back(meta_tree::op_t::Put(
                       "/signatures/" + self->instance_name() + "/" +
                           SignatureToString(sig),
                       ObjectIDToString(result_id)));

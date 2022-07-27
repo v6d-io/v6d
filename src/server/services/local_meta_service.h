@@ -51,7 +51,8 @@ class LocalMetaService : public IMetaService {
   ~LocalMetaService() override {}
 
  protected:
-  explicit LocalMetaService(vs_ptr_t& server_ptr) : IMetaService(server_ptr) {}
+  explicit LocalMetaService(std::shared_ptr<VineyardServer>& server_ptr)
+      : IMetaService(server_ptr) {}
 
   void requestLock(
       std::string lock_name,

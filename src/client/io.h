@@ -16,13 +16,6 @@ limitations under the License.
 #ifndef SRC_CLIENT_IO_H_
 #define SRC_CLIENT_IO_H_
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
-
 #include <string>
 
 #include "common/util/status.h"

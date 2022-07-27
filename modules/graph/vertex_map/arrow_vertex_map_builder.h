@@ -25,7 +25,6 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
-#include "basic/ds/array.h"
 #include "basic/ds/arrow.h"
 #include "basic/ds/hashmap.h"
 #include "client/client.h"
@@ -33,7 +32,6 @@ limitations under the License.
 #include "common/util/typename.h"
 
 #include "graph/fragment/property_graph_types.h"
-#include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/thread_group.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 

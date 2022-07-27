@@ -31,7 +31,7 @@ from vineyard.data.dataframe import make_global_dataframe
 from vineyard.data.tensor import make_global_tensor
 
 
-def dask_array_builder(client, value, _builder, **kw):
+def dask_array_builder(client, value, builder, **kw):  # pylint: disable=unused-argument
     def put_partition(v, block_id=None):
         client = vineyard.connect()
         obj_id = client.put(v, partition_index=block_id)
@@ -43,7 +43,9 @@ def dask_array_builder(client, value, _builder, **kw):
     return make_global_tensor(client, blocks)
 
 
-def dask_dataframe_builder(client, value, _builder, **kw):
+def dask_dataframe_builder(
+    client, value, builder, **kw
+):  # pylint: disable=unused-argument
     def put_partition(v, partition_info=None):
         client = vineyard.connect()
         obj_id = client.put(v, partition_index=(partition_info['number'], 0))

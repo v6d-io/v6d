@@ -43,10 +43,10 @@ limitations under the License.
 #include "common/util/functions.h"
 #include "common/util/typename.h"
 
+#include "graph/fragment/arrow_fragment_base.h"
 #include "graph/fragment/fragment_traits.h"
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
-#include "graph/utils/context_protocols.h"
 #include "graph/utils/error.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
@@ -69,48 +69,6 @@ inline std::string generate_name_with_suffix(
     property_graph_types::LABEL_ID_TYPE e_label) {
   return prefix + "_" + std::to_string(v_label) + "_" + std::to_string(e_label);
 }
-
-class ArrowFragmentBase : public vineyard::Object {
- public:
-  using prop_id_t = property_graph_types::PROP_ID_TYPE;
-  using label_id_t = property_graph_types::LABEL_ID_TYPE;
-
-  virtual ~ArrowFragmentBase() = default;
-
-  virtual boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
-      vineyard::Client& client,
-      const std::map<
-          label_id_t,
-          std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
-          columns,
-      bool replace = false) {
-    VINEYARD_ASSERT(false, "Not implemented");
-    return vineyard::InvalidObjectID();
-  }
-
-  virtual boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
-      vineyard::Client& client,
-      const std::map<label_id_t,
-                     std::vector<std::pair<
-                         std::string, std::shared_ptr<arrow::ChunkedArray>>>>
-          columns,
-      bool replace = false) {
-    VINEYARD_ASSERT(false, "Not implemented");
-    return vineyard::InvalidObjectID();
-  }
-
-  virtual vineyard::ObjectID vertex_map_id() const = 0;
-
-  virtual const PropertyGraphSchema& schema() const = 0;
-
-  virtual bool directed() const = 0;
-
-  virtual bool is_multigraph() const = 0;
-
-  virtual const std::string vid_typename() const = 0;
-
-  virtual const std::string oid_typename() const = 0;
-};
 
 template <typename OID_T, typename VID_T>
 class ArrowFragmentBaseBuilder;

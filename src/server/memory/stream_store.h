@@ -22,6 +22,8 @@ limitations under the License.
 #include <unordered_map>
 #include <utility>
 
+#include "boost/optional/optional.hpp"
+
 #include "common/util/callback.h"
 #include "server/memory/memory.h"
 
@@ -29,7 +31,6 @@ namespace vineyard {
 
 // forward declarations.
 class VineyardServer;
-using vs_ptr_t = std::shared_ptr<VineyardServer>;
 
 /**
  * @brief StreamHolder aims to maintain all chunks for a single stream.
@@ -53,8 +54,8 @@ struct StreamHolder {
  */
 class StreamStore {
  public:
-  StreamStore(vs_ptr_t server, std::shared_ptr<BulkStore> store,
-              size_t const stream_threshold)
+  StreamStore(std::shared_ptr<VineyardServer> server,
+              std::shared_ptr<BulkStore> store, size_t const stream_threshold)
       : server_(server), store_(store), threshold_(stream_threshold) {}
 
   Status Create(ObjectID const stream_id);
@@ -102,7 +103,7 @@ class StreamStore {
   // protect the stream store
   std::recursive_mutex mutex_;
 
-  vs_ptr_t server_;
+  std::shared_ptr<VineyardServer> server_;
   std::shared_ptr<BulkStore> store_;
   size_t threshold_;
   std::unordered_map<ObjectID, std::shared_ptr<StreamHolder>> streams_;

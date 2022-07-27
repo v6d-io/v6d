@@ -36,11 +36,10 @@ limitations under the License.
 #include "grape/utils/vertex_array.h"
 #include "grape/worker/comm_spec.h"
 
+#include "basic/ds/hashmap.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/utils/error.h"
 #include "graph/utils/mpi_utils.h"
-
-#include "basic/ds/hashmap.h"
 
 namespace vineyard {
 

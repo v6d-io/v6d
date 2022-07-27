@@ -15,7 +15,6 @@ limitations under the License.
 
 #include "server/services/etcd_meta_service.h"
 
-#include <server/util/metrics.h>
 #include <chrono>
 #include <mutex>
 #include <string>
@@ -23,11 +22,13 @@ limitations under the License.
 #include <vector>
 
 #include "boost/asio/steady_timer.hpp"
-
+#include "etcd/Client.hpp"
+#include "etcd/Watcher.hpp"
 #include "etcd/v3/Transaction.hpp"
 
-#include "common/util/boost.h"
 #include "common/util/logging.h"
+#include "server/util/etcd_launcher.h"
+#include "server/util/metrics.h"
 
 #define BACKOFF_RETRY_TIME 10
 
@@ -51,7 +52,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     head_rev = resp.events().back().kv().modified_index();
   }
 
-  std::vector<EtcdMetaService::op_t> ops;
+  std::vector<IMetaService::op_t> ops;
   ops.reserve(resp.events().size());
   for (auto const& event : resp.events()) {
     std::string const& key = event.kv().key();
@@ -64,17 +65,17 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
       // FIXME: for simplicity, we don't care the instance-lock related keys.
       continue;
     }
-    EtcdMetaService::op_t op;
+    IMetaService::op_t op;
     std::string op_key = boost::algorithm::erase_head_copy(key, prefix_.size());
     switch (event.event_type()) {
     case etcd::Event::EventType::PUT: {
-      auto op = EtcdMetaService::op_t::Put(op_key, event.kv().as_string(),
-                                           event.kv().modified_index());
+      auto op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
+                                        event.kv().modified_index());
       ops.emplace_back(op);
       break;
     }
     case etcd::Event::EventType::DELETE_: {
-      auto op = EtcdMetaService::op_t::Del(op_key, event.kv().modified_index());
+      auto op = IMetaService::op_t::Del(op_key, event.kv().modified_index());
       ops.emplace_back(op);
       break;
     }
@@ -119,8 +120,8 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
           if (iter.first > rev) {
             break;
           }
-          this->ctx_.post(boost::bind(
-              iter.second, status, std::vector<EtcdMetaService::op_t>{}, rev));
+          this->ctx_.post(boost::bind(iter.second, status,
+                                      std::vector<IMetaService::op_t>{}, rev));
           this->registered_callbacks_.pop();
         }
         return Status::OK();
@@ -252,7 +253,7 @@ void EtcdMetaService::commitUpdates(
 
 void EtcdMetaService::requestAll(
     const std::string& prefix, unsigned base_rev,
-    callback_t<const std::vector<IMetaService::op_t>&, unsigned> callback) {
+    callback_t<const std::vector<op_t>&, unsigned> callback) {
   auto self(shared_from_base());
   etcd_->ls(prefix_ + prefix)
       .then([self, callback](pplx::task<etcd::Response> resp_task) {
@@ -264,7 +265,7 @@ void EtcdMetaService::requestAll(
                  << " microseconds for " << resp.keys().size() << " keys";
         LOG_SUMMARY("etcd_request_duration_microseconds", "ls",
                     resp.duration().count());
-        std::vector<IMetaService::op_t> ops(resp.keys().size());
+        std::vector<op_t> ops(resp.keys().size());
         for (size_t i = 0; i < resp.keys().size(); ++i) {
           if (resp.key(i).empty()) {
             continue;
@@ -276,8 +277,7 @@ void EtcdMetaService::requestAll(
           }
           std::string op_key = boost::algorithm::erase_head_copy(
               resp.key(i), self->prefix_.size());
-          auto op = EtcdMetaService::op_t::Put(
-              op_key, resp.value(i).as_string(), resp.index());
+          auto op = op_t::Put(op_key, resp.value(i).as_string(), resp.index());
           ops.emplace_back(op);
         }
         auto status =
@@ -377,6 +377,15 @@ void EtcdMetaService::retryDaeminWatch(
       self->startDaemonWatch(prefix, self->handled_rev_.load(), callback);
     }
   });
+}
+
+Status EtcdMetaService::probe() {
+  if (EtcdLauncher::probeEtcdServer(etcd_, prefix_)) {
+    return Status::OK();
+  } else {
+    return Status::Invalid(
+        "Failed to startup meta service, please check your etcd");
+  }
 }
 
 Status EtcdMetaService::preStart() {

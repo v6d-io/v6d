@@ -27,13 +27,14 @@ limitations under the License.
 #include "common/util/callback.h"
 #include "common/util/functions.h"
 #include "common/util/json.h"
+#include "common/util/protocols.h"
 #include "server/server/vineyard_server.h"
 #include "server/util/metrics.h"
 
 namespace vineyard {
 
 SocketConnection::SocketConnection(stream_protocol::socket socket,
-                                   vs_ptr_t server_ptr,
+                                   std::shared_ptr<VineyardServer> server_ptr,
                                    SocketServer* socket_server_ptr, int conn_id)
     : socket_(std::move(socket)),
       server_ptr_(server_ptr),
@@ -1285,7 +1286,7 @@ bool SocketConnection::doMoveBuffersOwnership(json const& root) {
     return false;
   }
 
-  vs_ptr_t source_session;
+  std::shared_ptr<VineyardServer> source_session;
   RESPONSE_ON_ERROR(server_ptr_->GetRunner()->Get(session_id, source_session));
 
   if (source_session->GetBulkStoreType() == StoreType::kDefault) {
@@ -1309,8 +1310,9 @@ bool SocketConnection::doMoveBuffersOwnership(json const& root) {
 }
 
 template <typename FROM, typename TO>
-Status SocketConnection::MoveBuffers(std::map<FROM, TO> mapping,
-                                     vs_ptr_t& source_session) {
+Status SocketConnection::MoveBuffers(
+    std::map<FROM, TO> mapping,
+    std::shared_ptr<VineyardServer>& source_session) {
   std::set<FROM> ids;
   for (auto const& item : mapping) {
     ids.insert(item.first);
@@ -1488,7 +1490,7 @@ void SocketConnection::doAsyncWrite(std::string&& buf, callback_t<> callback) {
                     });
 }
 
-SocketServer::SocketServer(vs_ptr_t vs_ptr)
+SocketServer::SocketServer(std::shared_ptr<VineyardServer> vs_ptr)
     : vs_ptr_(vs_ptr), next_conn_id_(0) {}
 
 void SocketServer::Start() {

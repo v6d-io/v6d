@@ -103,9 +103,6 @@ Status EtcdLauncher::LaunchEtcdServer(
   parseEndpoint();
   initHostInfo();
 
-  std::vector<std::string> local_host_names = {"localhost", "127.0.0.1",
-                                               "0.0.0.0"};
-
   bool try_launch = false;
   if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
       local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {

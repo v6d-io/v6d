@@ -34,7 +34,6 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 #include "common/util/status.h"
 #include "graph/fragment/property_graph_types.h"
-#include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/error.h"
 #include "graph/utils/thread_group.h"
 

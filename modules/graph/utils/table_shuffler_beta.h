@@ -28,14 +28,13 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
-#include "boost/leaf.hpp"
 
 #include "grape/communication/sync_comm.h"
 #include "grape/utils/concurrent_queue.h"
 #include "grape/worker/comm_spec.h"
 
 #include "basic/ds/arrow_utils.h"
-#include "graph/fragment/property_graph_utils.h"
+#include "graph/fragment/property_graph_types.h"
 #include "graph/utils/error.h"
 
 namespace vineyard {

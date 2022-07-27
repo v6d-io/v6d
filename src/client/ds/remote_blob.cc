@@ -21,6 +21,9 @@ limitations under the License.
 #include <limits>
 #include <memory>
 
+#include "arrow/api.h"
+#include "arrow/io/api.h"
+
 #include "client/rpc_client.h"
 #include "common/memory/payload.h"
 #include "common/util/status.h"

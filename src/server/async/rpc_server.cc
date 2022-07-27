@@ -22,10 +22,11 @@ limitations under the License.
 
 #include "common/util/json.h"
 #include "common/util/logging.h"
+#include "server/server/vineyard_server.h"
 
 namespace vineyard {
 
-RPCServer::RPCServer(vs_ptr_t vs_ptr)
+RPCServer::RPCServer(std::shared_ptr<VineyardServer> vs_ptr)
     : SocketServer(vs_ptr),
       rpc_spec_(vs_ptr_->GetSpec()["rpc_spec"]),
       acceptor_(vs_ptr_->GetContext()),

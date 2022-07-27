@@ -17,7 +17,6 @@ limitations under the License.
 #define SRC_COMMON_UTIL_BASE64_H_
 
 #include <string>
-#include <vector>
 
 namespace vineyard {
 

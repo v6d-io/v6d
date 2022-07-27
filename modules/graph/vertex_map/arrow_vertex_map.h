@@ -17,15 +17,11 @@ limitations under the License.
 #define MODULES_GRAPH_VERTEX_MAP_ARROW_VERTEX_MAP_H_
 
 #include <algorithm>
-#include <atomic>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
-#include "basic/ds/array.h"
 #include "basic/ds/arrow.h"
 #include "basic/ds/hashmap.h"
 #include "client/client.h"
