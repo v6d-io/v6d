@@ -27,7 +27,7 @@ from .launcher import LauncherStatus
 logger = logging.getLogger('vineyard')
 
 
-class ScriptLauncher(Launcher):
+class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
     """Launch the job by executing a script.
 
     The output of script must be printed to stdout, rather than stderr.
@@ -80,7 +80,7 @@ class ScriptLauncher(Launcher):
                 env[key] = value
         logger.debug('command is: %s', ' '.join(cmd))
         self._cmd = cmd
-        self._proc = subprocess.Popen(
+        self._proc = subprocess.Popen(  # pylint: disable=consider-using-with
             cmd,
             env=env,
             universal_newlines=True,
@@ -175,7 +175,7 @@ class ScriptLauncher(Launcher):
 
     def dispose(self, desired=True):
         if self._stopped:
-            return
+            return None
         self._stopped = True
 
         if self._status == LauncherStatus.RUNNING:

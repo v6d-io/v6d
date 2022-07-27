@@ -21,9 +21,9 @@ import numpy as np
 import pytest
 
 try:
-    import nvidia.dali as dali
-    import nvidia.dali.types as types
-    from nvidia.dali import pipeline_def
+    from nvidia import dali  # pylint: disable=import-error
+    from nvidia.dali import pipeline_def  # pylint: disable=import-error
+    from nvidia.dali import types  # pylint: disable=import-error
 except ImportError:
     dali = None
 
@@ -56,9 +56,11 @@ def test_dali_tensor(vineyard_client):
         flabel = types.Constant(label)
         return fdata, flabel
 
-    pipeline = pipe(device_id=device_id, num_threads=num_threads, batch_size=batch_size)
-    pipeline.build()
-    pipe_out = pipeline.run()
+    pipeline = pipe(  # pylint: disable=unexpected-keyword-arg
+        device_id=device_id, num_threads=num_threads, batch_size=batch_size
+    )
+    pipeline.build()  # pylint: disable=no-member
+    pipe_out = pipeline.run()  # pylint: disable=no-member
     object_id = vineyard_client.put(pipe_out)
     pipe_vin = vineyard_client.get(object_id)
     assert pipe_vin[0][0].as_array().shape == pipe_out[0].as_array().shape

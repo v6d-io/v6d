@@ -24,8 +24,6 @@ import subprocess
 import tempfile
 import textwrap
 import time
-from posixpath import join
-from sys import path
 
 try:
     import kubernetes
@@ -116,7 +114,7 @@ def start_etcd(host=None, etcd_executable=None, data_dir=None):
                 shutil.rmtree(data_dir_base)
             else:
                 shutil.rmtree(data_dir)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
 

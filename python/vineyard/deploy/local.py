@@ -105,7 +105,7 @@ def start_vineyardd(
 
     if etcd_endpoints is None:
         etcd_ctx = start_etcd()
-        etcd_proc, etcd_endpoints = etcd_ctx.__enter__()  # pylint: disable=no-member
+        _etcd_proc, etcd_endpoints = etcd_ctx.__enter__()  # pylint: disable=no-member
     else:
         etcd_ctx = None
 
@@ -167,7 +167,7 @@ def start_vineyardd(
             proc.wait()
         try:
             shutil.rmtree(socket)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         if etcd_ctx is not None:
             etcd_ctx.__exit__(None, None, None)  # pylint: disable=no-member
@@ -219,7 +219,7 @@ def init(num_instances=1, **kw):
         ctx = start_vineyardd(
             etcd_endpoints=etcd_endpoints, etcd_prefix=etcd_prefix, rpc=False, **kw
         )
-        _, ipc_socket, etcd_endpoints = ctx.__enter__()
+        _, ipc_socket, etcd_endpoints = ctx.__enter__()  # pylint: disable=no-member
         client = connect(ipc_socket)
         __default_instance_contexts[ipc_socket] = (ctx, client)
         if idx == 0:
@@ -240,7 +240,7 @@ def get_current_client():
             'Vineyard has not been initialized, '
             'use vineyard.init() to launch vineyard instances'
         )
-    clients = [__default_instance_contexts[k][1] for k in __default_instance_contexts]
+    clients = [v[1] for _, v in __default_instance_contexts.items()]
     return clients if len(clients) > 1 else clients[0]
 
 

@@ -18,7 +18,6 @@
 
 import vineyard
 
-from ..._C import ObjectMeta
 from ..._C import RemoteBlobBuilder
 from ...core import default_builder_context
 from ...core import default_resolver_context
@@ -64,7 +63,7 @@ def test_remote_blob_get(vineyard_client, vineyard_endpoint):
     assert memoryview(remote_blob) == memoryview(payload)
 
 
-def test_remote_blob_create_and_get(vineyard_client, vineyard_endpoint):
+def test_remote_blob_create_and_get(vineyard_endpoint):
     vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
 
     buffer_writer = RemoteBlobBuilder(len(payload))

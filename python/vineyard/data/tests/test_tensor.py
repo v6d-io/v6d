@@ -17,17 +17,15 @@
 #
 
 import numpy as np
-import pandas as pd
 
 try:
     import scipy as sp
-    import scipy.sparse
+    import scipy.sparse  # pylint: disable=unused-import
 except ImportError:
     sp = None
 
 import pytest
 
-import vineyard
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types

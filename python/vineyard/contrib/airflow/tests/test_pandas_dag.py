@@ -42,7 +42,7 @@ class TestAirflowPandasDag(TestPythonBase):
 
         @task_decorator(multiple_outputs=True)
         def return_dict(number: int):
-            return {'number': x, '43': y}
+            return {'number': x, '43': y, 'original_argument': number}
 
         test_number = 10
         with self.dag:
@@ -55,7 +55,9 @@ class TestAirflowPandasDag(TestPythonBase):
             state=State.RUNNING,
         )
 
-        dag_node.operator.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE)
+        dag_node.operator.run(  # pylint: disable=no-member
+            start_date=DEFAULT_DATE, end_date=DEFAULT_DATE
+        )
 
         ti = dr.get_task_instances()[0]
 

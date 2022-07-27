@@ -61,9 +61,9 @@ def test_tf_dataframe(vineyard_client):
     dataset = tf.data.Dataset.from_tensor_slices((dict(df), labels))
     object_id = vineyard_client.put(dataset)
     dtrain = vineyard_client.get(object_id)
-    for x, y in dataset.take(1):
+    for x, _y in dataset.take(1):
         data_ncols = len(list(x.keys()))
-    for x, y in dtrain.take(1):
+    for x, _y in dtrain.take(1):
         dtrain_ncols = len(list(x.keys()))
     assert len(dataset) == len(dtrain)
     assert data_ncols == dtrain_ncols
@@ -78,7 +78,7 @@ def test_tf_record_batch(vineyard_client):
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'label'])
     object_id = vineyard_client.put(batch)
     dtrain = vineyard_client.get(object_id)
-    for x, y in dtrain.take(1):
+    for x, _y in dtrain.take(1):
         ncols = len(list(x.keys()))
     assert ncols == 2
     assert len(dtrain) == 4
@@ -91,7 +91,7 @@ def test_tf_table(vineyard_client):
     table = pa.Table.from_batches(batches)
     object_id = vineyard_client.put(table)
     dtrain = vineyard_client.get(object_id)
-    for x, y in dtrain.take(1):
+    for x, _y in dtrain.take(1):
         ncols = len(list(x.keys()))
     assert ncols == 2
     assert len(dtrain) == 8

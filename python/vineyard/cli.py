@@ -24,9 +24,6 @@ import json
 import os
 import sys
 
-import numpy as np
-import pandas as pd
-
 import argcomplete
 import treelib
 
@@ -74,7 +71,7 @@ Some examples on how to use vineyard-ctl:
 """
 
 
-def vineyard_argument_parser():
+def vineyard_argument_parser():  # pylint: disable=too-many-statements
     """Utility to create a command line Argument Parser."""
     parser = argparse.ArgumentParser(
         prog='vineyard-ctl',
@@ -644,6 +641,8 @@ def put_object(client, args):
             ) from exc
     elif args.file is not None:
         try:
+            import pandas as pd  # pylint: disable=import-outside-toplevel
+
             value = pd.read_csv(
                 args.file, sep=args.sep, delimiter=args.delimiter, header=args.header
             )
@@ -661,6 +660,8 @@ def put_object(client, args):
 def head(client, args):
     """Utility to print the first n lines of a vineyard object."""
     try:
+        import pandas as pd  # pylint: disable=import-outside-toplevel
+
         value = client.get(as_object_id(args.object_id))
         if isinstance(value, pd.DataFrame):
             print(value.head(args.limit))
@@ -763,7 +764,7 @@ def get_memory_used(meta):
     return total_bytes
 
 
-def pretty_format_memory(nbytes):
+def pretty_format_memory(nbytes: int) -> str:
     """Utility to return memory with appropriate unit."""
     if nbytes < (1 << 10):
         return f'{nbytes} bytes'
@@ -773,6 +774,7 @@ def pretty_format_memory(nbytes):
         return f'{nbytes / (1 << 20)} MB'
     if nbytes > (1 << 30):
         return f'{nbytes / (1 << 30)} GB'
+    return f'{nbytes} bytes'
 
 
 def config(args):
@@ -818,7 +820,7 @@ def start_vineyardd(args):
         )
 
 
-def main():
+def main():  # pylint: disable=too-many-return-statements
     """Main function for vineyard-ctl."""
     args = optparser.parse_args()
     if args.cmd is None:

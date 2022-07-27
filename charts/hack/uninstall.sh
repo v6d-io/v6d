@@ -1,7 +1,5 @@
 #!/bin/bash
 
-ROOT=$(dirname "${BASH_SOURCE[0]}")/..
-
 helm uninstall vineyard -n vineyard-system
 
 kubectl -n vineyard-system delete localobjects --all 2>/dev/null || true

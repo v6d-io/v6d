@@ -21,8 +21,8 @@ import pandas as pd
 import pyarrow as pa
 
 import pytest
-import torch
-from torch.utils.data import Dataset
+import torch  # pylint: disable=import-error
+from torch.utils.data import Dataset  # pylint: disable=import-error
 
 from vineyard.contrib.ml.pytorch import register_torch_types
 from vineyard.core.builder import builder_context

@@ -111,7 +111,7 @@ class VineyardXCom(BaseXCom):
         Called by the ORM after the instance has been loaded from the DB or otherwise
         reconstituted i.e automatically deserialize Xcom value when loading from DB.
         """
-        self.value = super(VineyardXCom, self).init_on_load()
+        self.value = super().init_on_load()
 
     @classmethod
     @provide_session
@@ -128,7 +128,10 @@ class VineyardXCom(BaseXCom):
         map_index: int = -1,
     ) -> None:
         """:sphinx-autoapi-skip:"""
+        # pylint: disable=import-outside-toplevel
         from airflow.models.dagrun import DagRun
+
+        # pylint: enable=import-outside-toplevel
 
         if not exactly_one(execution_date is not None, run_id is not None):
             raise ValueError(
@@ -188,7 +191,7 @@ class VineyardXCom(BaseXCom):
                 cls.run_id == run_id,
                 cls.task_id == task_id,
                 cls.dag_id == dag_id,
-                cls.map_index == map_index,
+                cls.map_index == map_index,  # pylint: disable=no-member
             )
 
         # remove from vineyard
@@ -200,7 +203,7 @@ class VineyardXCom(BaseXCom):
             try:
                 client = vineyard.connect(cls.options()['ipc_socket'])
                 client.delete(targets)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 logger.error('Failed to drop duplicates from vineyard: %s', e)
 
         # remove from the underlying xcom db
@@ -209,7 +212,7 @@ class VineyardXCom(BaseXCom):
 
         if LooseVersion(airflow.__version__) < LooseVersion('2.3.0b1'):
             # Work around Mypy complaining model not defining '__init__'.
-            new = cast(Any, cls)(
+            new = cast(Any, cls)(  # pylint: disable=unexpected-keyword-arg
                 dag_run_id=dag_run_id,
                 key=key,
                 value=value,
@@ -219,7 +222,7 @@ class VineyardXCom(BaseXCom):
             )
         else:
             # Work around Mypy complaining model not defining '__init__'.
-            new = cast(Any, cls)(
+            new = cast(Any, cls)(  # pylint: disable=unexpected-keyword-arg
                 dag_run_id=dag_run_id,
                 key=key,
                 value=value,

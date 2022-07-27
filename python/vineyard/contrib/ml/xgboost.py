@@ -24,7 +24,7 @@ from vineyard.core.resolver import default_resolver_context
 from vineyard.core.resolver import resolver_context
 
 
-def xgb_builder(client, value, builder, **kw):
+def xgb_builder(client, value, builder, **kw):  # pylint: disable=unused-argument
     # TODO: build DMatrix to vineyard objects
     pass
 
@@ -47,7 +47,7 @@ def xgb_dataframe_resolver(obj, **kw):
     return xgb.DMatrix(df, feature_names=df.columns)
 
 
-def xgb_recordBatch_resolver(obj, **kw):
+def xgb_recordbatch_resolver(obj, **kw):
     with resolver_context(base=default_resolver_context) as resolver:
         rb = resolver(obj, **kw)
     # FIXME to_pandas is not zero_copy guaranteed
@@ -77,5 +77,5 @@ def register_xgb_types(builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', xgb_tensor_resolver)
         resolver_ctx.register('vineyard::DataFrame', xgb_dataframe_resolver)
-        resolver_ctx.register('vineyard::RecordBatch', xgb_recordBatch_resolver)
+        resolver_ctx.register('vineyard::RecordBatch', xgb_recordbatch_resolver)
         resolver_ctx.register('vineyard::Table', xgb_table_resolver)

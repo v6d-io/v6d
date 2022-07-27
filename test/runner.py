@@ -7,8 +7,10 @@ import os
 import platform
 import socket
 import subprocess
+import sys
 import time
 from argparse import ArgumentParser
+from typing import Union
 
 VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.%s.sock' % time.time()
 
@@ -238,9 +240,9 @@ def run_test(
     nproc=1,
     capture=False,
     vineyard_ipc_socket=VINEYARD_CI_IPC_SOCKET,
-):
+) -> Union[int, str]:
     if not include_test(tests, test_name):
-        return
+        return None
     print(
         f'running test case -*-*-*-*-*-  {test_name}  -*-*-*-*-*-*-*-',
         flush=True,
@@ -263,13 +265,15 @@ def run_test(
         ]
         + arg_reps
     )
+    output = None
     if capture:
-        return subprocess.check_output(cmdargs)
+        output = subprocess.check_output(cmdargs)
     else:
-        subprocess.check_call(
+        output = subprocess.check_call(
             cmdargs, cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
         )
     time.sleep(1)
+    return output
 
 
 def get_data_path(name):
@@ -323,7 +327,7 @@ def run_invalid_client_test(tests, host, port):
 
 def run_single_vineyardd_tests(tests):
     etcd_port = find_port()
-    [find_port() for _ in range(10)]  # skip some ports
+    _ = [find_port() for _ in range(10)]  # skip some ports
     with start_vineyardd(
         'http://localhost:%d' % etcd_port,
         'vineyard_test_%s' % time.time(),
@@ -408,7 +412,7 @@ def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
-    ) as instances:
+    ) as instances:  # pylint: disable=unused-variable
         time.sleep(5)
 
 
@@ -483,7 +487,7 @@ def run_python_contrib_dask_tests(etcd_endpoints):
         default_ipc_socket=ipc_socket_tpl,
         instance_size=instance_size,
         nowait=True,
-    ) as instances:  # noqa: F841
+    ) as instances:  # noqa: F841, pylint: disable=unused-variable
         vineyard_ipc_sockets = ','.join(
             ['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)]
         )
@@ -521,7 +525,7 @@ def run_python_deploy_tests(etcd_endpoints, with_migration):
         default_ipc_socket=ipc_socket_tpl,
         instance_size=instance_size,
         nowait=True,
-    ) as instances:  # noqa: F841
+    ) as instances:  # noqa: F841, pylint: disable=unused-variable
         vineyard_ipc_sockets = ','.join(
             ['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)]
         )
@@ -547,7 +551,7 @@ def run_python_deploy_tests(etcd_endpoints, with_migration):
         )
 
 
-def run_io_adaptor_tests(etcd_endpoints, with_migration):
+def run_io_adaptor_tests(etcd_endpoints):
     etcd_prefix = 'vineyard_test_%s' % time.time()
 
     with start_vineyardd(
@@ -693,7 +697,7 @@ def execute_tests(args):
 
     if args.with_io:
         with start_etcd() as (_, etcd_endpoints):
-            run_io_adaptor_tests(etcd_endpoints, args.with_migration)
+            run_io_adaptor_tests(etcd_endpoints)
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_distributed_tests(etcd_endpoints, args.with_migration)
 
@@ -721,7 +725,7 @@ def main():
             'to be specified\n'
         )
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
     built_shared_libs = os.path.join(os.path.abspath(args.build_dir), 'shared-lib')
     with envvars('LD_LIBRARY_PATH', built_shared_libs, append=True):

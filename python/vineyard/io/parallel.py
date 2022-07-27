@@ -18,7 +18,6 @@
 
 import logging
 
-import vineyard
 from vineyard.core.resolver import resolver_context
 
 logger = logging.getLogger("vineyard")
@@ -35,6 +34,6 @@ def parallel_stream_resolver(obj):
         ]
 
 
-def register_parallel_stream_types(builder_ctx, resolver_ctx):
+def register_parallel_stream_types(_builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::ParallelStream', parallel_stream_resolver)

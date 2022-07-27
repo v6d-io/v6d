@@ -63,7 +63,9 @@ def test_migration(vineyard_ipc_sockets):
 
 
 @pytest.mark.skip_without_migration()
-def test_migration_and_deletion(vineyard_ipc_sockets):
+def test_migration_and_deletion(
+    vineyard_ipc_sockets,
+):  # pylint: disable=too-many-statements
     vineyard_ipc_sockets = list(
         itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2)
     )

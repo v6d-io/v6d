@@ -67,7 +67,7 @@ def read(path, *args, handlers=None, **kwargs):
                 )
                 if r is not None:
                     return r
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 errors.append('%s: %s' % (reader.__name__, traceback.format_exc()))
         raise RuntimeError(
             'Unable to find a proper IO driver for %s, potential causes are:\n %s'
@@ -111,7 +111,7 @@ def write(path, stream, *args, handlers=None, **kwargs):
                     handlers=handlers,
                     **proc_kwargs
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 errors.append('%s: %s' % (writer.__name__, traceback.format_exc()))
                 continue
             else:
@@ -341,7 +341,7 @@ def stream_collection_resolver(obj):
     return StreamCollection(meta, [ObjectID(s) for s in streams])
 
 
-def register_stream_collection_types(builder_ctx, resolver_ctx):
+def register_stream_collection_types(_builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::StreamCollection', stream_collection_resolver)
 

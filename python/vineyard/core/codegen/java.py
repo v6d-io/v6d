@@ -52,7 +52,7 @@ def find_ffi_binding_generator():
 
 
 def codegen(
-    root_directory,
+    root_directory,  # pylint: disable=unused-argument
     source,
     target,
     package,
@@ -60,7 +60,7 @@ def codegen(
     includes=None,
     extra_flags=None,
     build_directory=None,
-    verbose=None,
+    verbose=None,  # pylint: disable=unused-argument
     package_name=None,
     ffilibrary_name=None,
     excludes=None,
@@ -114,7 +114,7 @@ def codegen(
 
     proc = None
     try:
-        proc = subprocess.run(cmd)
+        proc = subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
         print(e, file=sys.stderr)
         sys.exit(-1)

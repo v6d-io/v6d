@@ -93,7 +93,7 @@ def parse_readable_size(size):
 
 class BaseStreamExecutor:
     def execute(self):
-        """ """
+        """Execute the action on stream chunks."""
 
 
 class ThreadStreamExecutor:

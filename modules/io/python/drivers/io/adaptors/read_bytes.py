@@ -22,8 +22,6 @@ import sys
 import traceback
 from typing import Dict
 
-import pyarrow as pa
-
 import fsspec
 from fsspec.core import split_protocol
 from fsspec.utils import read_block
@@ -45,7 +43,7 @@ if ossfs:
     fsspec.register_implementation("oss", ossfs.OSSFileSystem)
 
 
-def read_bytes(  # noqa: C901
+def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     vineyard_socket: str,
     path: str,
     storage_options: Dict,
@@ -88,7 +86,7 @@ def read_bytes(  # noqa: C901
     try:
         protocol = split_protocol(path)[0]
         fs = fsspec.filesystem(protocol, **storage_options)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_error(
             f"Cannot initialize such filesystem for '{path}', "
             f"exception is:\n{traceback.format_exc()}"
@@ -101,17 +99,20 @@ def read_bytes(  # noqa: C901
         try:
             files = fs.glob(path + '*')
             assert files, f"Cannot find such files: {path}"
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             report_error(f"Cannot find such files for '{path}'")
             sys.exit(-1)
-    ''' Note [Semantic of read_block with delimiter]:
 
-    read_block(fp, begin, size, delimiter) will:
-
-        - find the first `delimiter` from `begin`, then starts read
-        - after `size`, go through util the next `delimiter` or EOF, then finishes read.
-            Note that the returned size may exceed `size`.
-    '''
+    # Note [Semantic of read_block with delimiter]:
+    #
+    # read_block(fp, begin, size, delimiter) will:
+    #
+    #    - find the first `delimiter` from `begin`, then starts read
+    #    - after `size`, go through util the next `delimiter` or EOF,
+    #      then finishes read.
+    #
+    # Note that the returned size may exceed `size`.
+    #
 
     stream, writer = None, None
     if 'chunk_size' in storage_options:
@@ -162,7 +163,7 @@ def read_bytes(  # noqa: C901
                         chunk = writer.next(size)
                         vineyard.memory_copy(chunk, 0, buffer)
         writer.finish()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         if writer is not None:
             writer.fail()
@@ -175,7 +176,7 @@ def main():
             "usage: ./read_bytes <ipc_socket> <path> <storage_options> <read_options> "
             "<proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
     storage_options = json.loads(

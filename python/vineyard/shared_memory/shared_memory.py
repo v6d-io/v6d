@@ -27,6 +27,8 @@ a explictly ``seal`` or ``close`` operation is needed.
 Refer to the documentation of multiprocessing.shared_memory for details.
 '''
 
+# pylint: skip-file
+
 try:
     import multiprocessing.shared_memory as shm
 except ImportError:

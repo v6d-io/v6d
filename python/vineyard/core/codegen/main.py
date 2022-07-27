@@ -55,7 +55,7 @@ def codegen(
         )
         return
 
-    content, to_reflect, _, _ = parse_module(
+    content, to_reflect, _, _ = parse_module(  # pylint: disable=too-many-function-args
         root_directory=root_directory,
         source=source,
         target=target,
@@ -70,7 +70,9 @@ def codegen(
     if language == 'cpp':
         cppgen(root_directory, content, to_reflect, source, target, verbose)
     elif language == 'python':
-        pythongen(root_directory, content, to_reflect, source, target, verbose)
+        pythongen(  # pylint: disable=too-many-function-args
+            root_directory, content, to_reflect, source, target, verbose
+        )
     else:
         raise ValueError('Not supported language: %s' % language)
 

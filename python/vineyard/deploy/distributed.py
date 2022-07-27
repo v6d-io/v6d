@@ -83,7 +83,7 @@ def start_vineyardd(
 
     if etcd_endpoints is None:
         etcd_ctx = start_etcd(host=hosts[0])
-        etcd_proc, etcd_endpoints = etcd_ctx.__enter__()  # pylint: disable=no-member
+        _etcd_proc, etcd_endpoints = etcd_ctx.__enter__()  # pylint: disable=no-member
     else:
         etcd_ctx = None
 

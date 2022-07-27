@@ -16,9 +16,6 @@
 # limitations under the License.
 #
 
-import json
-
-import numpy as np
 import pandas as pd
 
 from vineyard._C import ObjectMeta

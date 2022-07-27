@@ -30,7 +30,7 @@ from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import expand_full_path
 
 
-def orc_type(field):
+def orc_type(field):  # pylint: disable=too-many-return-statements
     if pa.types.is_boolean(field):
         return pyorc.Boolean()
     elif pa.types.is_int8(field):
@@ -66,7 +66,7 @@ def write_orc(
     path,
     stream_id,
     storage_options,
-    write_options,
+    _write_options,
     proc_num,
     proc_index,
 ):
@@ -104,7 +104,7 @@ def main():
             "usage: ./write_hdfs_orc <ipc_socket> <path> <stream id> "
             "<storage_options> <write_options> <proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
     stream_id = sys.argv[3]

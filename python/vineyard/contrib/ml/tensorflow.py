@@ -55,14 +55,14 @@ def tf_dataframe_builder(client, value, builder, **kw):
         cols = list(feat.keys())
     cols.append('label')
     meta['columns_'] = to_json(cols)
-    for i in range(len(cols)):
+    for i, col in enumerate(cols):
         ls = []
         for feat, labels in value.take(len(value)):
-            if cols[i] == 'label':
+            if col == 'label':
                 ls.append(labels.numpy())
             else:
-                ls.append(feat[cols[i]].numpy())
-        meta['__values_-key-%d' % i] = to_json(cols[i])
+                ls.append(feat[col].numpy())
+        meta['__values_-key-%d' % i] = to_json(col)
         meta.add_member('__values_-value-%d' % i, builder.run(client, ls))
     meta['__values_-size'] = len(cols)
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
@@ -72,26 +72,30 @@ def tf_dataframe_builder(client, value, builder, **kw):
 
 
 def tf_builder(client, value, builder, **kw):
-    for x, y in value.take(1):
+    for x, _y in value.take(1):
         if isinstance(x, dict):
             return tf_dataframe_builder(client, value, builder, **kw)
         else:
             return tf_tensor_builder(client, value, **kw)
 
 
-def tf_create_global_tensor(client, value, builder, **kw):
+def tf_create_global_tensor(
+    client, value, builder, **kw
+):  # pylint: disable=unused-argument
     # TODO
     pass
 
 
-def tf_create_global_dataframe(client, value, builder, **kw):
+def tf_create_global_dataframe(
+    client, value, builder, **kw
+):  # pylint: disable=unused-argument
     # TODO
     pass
 
 
 def tf_tensor_resolver(obj):
     meta = obj.meta
-    num = from_json(meta['num'])  # noqa: F841
+    _num = from_json(meta['num'])  # noqa: F841
     data_shape = from_json(meta['data_shape_'])
     label_shape = from_json(meta['label_shape_'])
     data_name = meta['data_type_']
@@ -138,7 +142,7 @@ def tf_table_resolver(obj, resolver):
     return tf_data
 
 
-def tf_global_tensor_resolver(obj, resolver, **kw):
+def tf_global_tensor_resolver(obj, resolver, **_kw):
     meta = obj.meta
     num = int(meta['partitions_-size'])
     data = []

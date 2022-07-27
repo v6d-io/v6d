@@ -24,14 +24,14 @@ import pandas as pd
 import dask
 import dask.array as da
 import dask.dataframe as dd
-from dask.distributed import Client
+from dask.distributed import Client  # pylint: disable=no-name-in-module
 
 import vineyard
 from vineyard.data.dataframe import make_global_dataframe
 from vineyard.data.tensor import make_global_tensor
 
 
-def dask_array_builder(client, value, builder, **kw):
+def dask_array_builder(client, value, _builder, **kw):
     def put_partition(v, block_id=None):
         client = vineyard.connect()
         obj_id = client.put(v, partition_index=block_id)
@@ -43,7 +43,7 @@ def dask_array_builder(client, value, builder, **kw):
     return make_global_tensor(client, blocks)
 
 
-def dask_dataframe_builder(client, value, builder, **kw):
+def dask_dataframe_builder(client, value, _builder, **kw):
     def put_partition(v, partition_info=None):
         client = vineyard.connect()
         obj_id = client.put(v, partition_index=(partition_info['number'], 0))
@@ -57,7 +57,7 @@ def dask_dataframe_builder(client, value, builder, **kw):
     return make_global_dataframe(client, blocks)
 
 
-def dask_array_resolver(obj, resolver, **kw):
+def dask_array_resolver(obj, resolver, **kw):  # pylint: disable=unused-argument
     def get_partition(obj_id):
         client = vineyard.connect()
         np_value = client.get(obj_id)
@@ -105,7 +105,7 @@ def dask_array_resolver(obj, resolver, **kw):
     return da.vstack(arrays)
 
 
-def dask_dataframe_resolver(obj, resolver, **kw):
+def dask_dataframe_resolver(obj, resolver, **kw):  # pylint: disable=unused-argument
     def get_partition(obj_id):
         client = vineyard.connect()
         df = client.get(obj_id)

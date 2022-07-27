@@ -16,18 +16,9 @@
 # limitations under the License.
 #
 
-import numpy as np
-
-try:
-    import scipy as sp
-    import scipy.sparse
-except ImportError:
-    sp = None
-
 import pickle
 
-if pickle.HIGHEST_PROTOCOL < 5:
-    import pickle5 as pickle
+import numpy as np
 
 from vineyard._C import Object
 from vineyard._C import ObjectID
@@ -38,6 +29,15 @@ from .utils import from_json
 from .utils import normalize_cpptype
 from .utils import normalize_dtype
 from .utils import to_json
+
+try:
+    import scipy as sp
+    import scipy.sparse  # pylint: disable=unused-import
+except ImportError:
+    sp = None
+
+if pickle.HIGHEST_PROTOCOL < 5:
+    import pickle5 as pickle  # pylint: disable=import-error
 
 
 # Enable dynamic attribute on numpy.ndarray.

@@ -16,8 +16,7 @@
 # limitations under the License.
 #
 
-import vineyard
-import vineyard.shared_memory as shared_memory
+from vineyard import shared_memory
 
 
 def test_shareable_list(vineyard_client):
