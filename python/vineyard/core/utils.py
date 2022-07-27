@@ -43,7 +43,7 @@ class ReprableString(str):
     exceptions.
     """
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pylint: disable=invalid-repr-returned
         return self
 
 

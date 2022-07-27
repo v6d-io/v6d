@@ -33,8 +33,6 @@ limitations under the License.
 
 #include "basic/ds/dataframe.h"
 #include "basic/ds/tensor.h"
-#include "basic/stream/parallel_stream.h"
-#include "basic/stream/recordbatch_stream.h"
 #include "client/client.h"
 #include "io/io/io_factory.h"
 
@@ -54,6 +52,10 @@ limitations under the License.
 #define HASH_PARTITION
 
 namespace vineyard {
+
+class DataframeStream;
+class RecordBatchStream;
+class ParallelStream;
 
 Status ReadRecordBatchesFromVineyardStream(
     Client& client, std::shared_ptr<ParallelStream>& pstream,

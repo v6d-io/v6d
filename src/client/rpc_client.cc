@@ -22,12 +22,10 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
-#include "client/ds/blob.h"
 #include "client/ds/object_factory.h"
 #include "client/ds/remote_blob.h"
 #include "client/io.h"
 #include "client/utils.h"
-#include "common/util/boost.h"
 #include "common/util/env.h"
 #include "common/util/protocols.h"
 

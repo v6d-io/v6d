@@ -42,7 +42,7 @@ def write_bytes(
     path,
     stream_id,
     storage_options,
-    write_options,
+    _write_options,
     proc_num,
     proc_index,
 ):
@@ -74,7 +74,7 @@ def write_bytes(
     try:
         reader = instream.open_reader(client)
         of = fsspec.open(f"{path}_{proc_index}", "wb", **storage_options)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         sys.exit(-1)
 
@@ -95,7 +95,7 @@ def main():
             "usage: ./write_bytes <ipc_socket> <path> <stream_id> "
             "<storage_options> <write_options> <proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
     stream_id = sys.argv[3]

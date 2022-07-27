@@ -339,7 +339,7 @@ def test_oss_read(
 
 
 @pytest.mark.skip("oss not available at github ci")
-def test_oss_io(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
+def test_oss_io(vineyard_ipc_socket, vineyard_endpoint):
     accessKeyID = os.environ["ACCESS_KEY_ID"]
     accessKeySecret = os.environ["SECRET_ACCESS_KEY"]
     endpoint = os.environ.get("ENDPOINT", "http://oss-cn-hangzhou.aliyuncs.com")
@@ -401,7 +401,7 @@ def test_s3_read(
 
 
 @pytest.mark.skip("s3 not available at github ci")
-def test_s3_io(vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp):
+def test_s3_io(vineyard_ipc_socket, vineyard_endpoint):
     accessKeyID = os.environ["ACCESS_KEY_ID"]
     accessKeySecret = os.environ["SECRET_ACCESS_KEY"]
     region_name = os.environ.get("REGION", "us-east-1")

@@ -25,7 +25,7 @@ import sys
 from queue import Empty as QueueEmptyException
 from queue import Queue as ConcurrentQueue
 from typing import Dict
-from typing import Tuple
+from typing import Tuple  # pylint: disable=unused-import
 
 import fsspec
 from fsspec.core import split_protocol
@@ -38,7 +38,6 @@ from vineyard.io.stream import StreamCollection
 from vineyard.io.utils import BaseStreamExecutor
 from vineyard.io.utils import ThreadStreamExecutor
 from vineyard.io.utils import expand_full_path
-from vineyard.io.utils import report_error
 from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
 
@@ -84,7 +83,7 @@ def read_byte_stream(
                     chunk = writer.next(len(buffer))
                     vineyard.memory_copy(chunk, 0, buffer)
                     begin += len(buffer)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             report_exception()
             writer.fail()
             sys.exit(-1)
@@ -210,7 +209,7 @@ def main():
             "usage: ./read_bytes_collection <ipc_socket> <prefix> <storage_options> "
             "<proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     prefix = expand_full_path(sys.argv[2])
     storage_options = json.loads(

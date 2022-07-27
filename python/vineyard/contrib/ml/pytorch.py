@@ -18,10 +18,10 @@
 
 import numpy as np
 
-import torch
-from torch.utils.data import ConcatDataset
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
+import torch  # pylint: disable=import-error
+from torch.utils.data import ConcatDataset  # pylint: disable=import-error
+from torch.utils.data import DataLoader  # pylint: disable=import-error
+from torch.utils.data import Dataset  # pylint: disable=import-error
 
 from vineyard._C import ObjectMeta
 from vineyard.core.resolver import default_resolver_context
@@ -57,14 +57,14 @@ def torch_dataframe_builder(client, value, builder, **kw):
     label = kw.get('label')
     meta['label'] = to_json(label)
     meta['columns_'] = to_json(cols)
-    for i in range(len(cols)):
+    for i, col in enumerate(cols):
         ls = []
         for x, y in value:
-            if cols[i] == label:
+            if col == label:
                 ls.append(y.numpy())
             else:
                 ls.append(x[i].numpy())
-        meta['__values_-key-%d' % i] = to_json(cols[i])
+        meta['__values_-key-%d' % i] = to_json(col)
         meta.add_member('__values_-value-%d' % i, builder.run(client, ls))
     meta['__values_-size'] = len(cols)
     meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
@@ -83,12 +83,16 @@ def torch_builder(client, value, builder, **kw):
         raise TypeError("Only Tensor and Dataframe type supported")
 
 
-def torch_create_global_tensor(client, value, builder, **kw):
+def torch_create_global_tensor(
+    client, value, builder, **kw
+):  # pylint: disable=unused-argument
     # TODO
     pass
 
 
-def torch_create_global_dataframe(client, value, builder, **kw):
+def torch_create_global_dataframe(
+    client, value, builder, **kw
+):  # pylint: disable=unused-argument
     # TODO
     pass
 
@@ -121,6 +125,7 @@ def torch_dataframe_resolver(obj, **kw):
         target = torch.tensor(df[kw['label']].values.astype(np.float32))
         ds = torch.tensor(df.drop(kw['label'], axis=1).values.astype(np.float32))
         return torch.utils.data.TensorDataset(ds, target)
+    raise ValueError("'label' not presented in kwargs")
 
 
 def torch_record_batch_resolver(obj, **kw):
@@ -131,6 +136,7 @@ def torch_record_batch_resolver(obj, **kw):
         target = torch.tensor(records[kw['label']].values)
         ds = torch.tensor(records.drop(kw['label'], axis=1).values)
         return torch.utils.data.TensorDataset(ds, target)
+    raise ValueError("'label' not presented in kwargs")
 
 
 def torch_table_resolver(obj, **kw):
@@ -141,9 +147,10 @@ def torch_table_resolver(obj, **kw):
         target = torch.tensor(table[kw['label']].values)
         ds = torch.tensor(table.drop(kw['label'], axis=1).values)
         return torch.utils.data.TensorDataset(ds, target)
+    raise ValueError("'label' not presented in kwargs")
 
 
-def torch_global_tensor_resolver(obj, resolver, **kw):
+def torch_global_tensor_resolver(obj, resolver, **_kw):
     meta = obj.meta
     num = int(meta['partitions_-size'])
     data = []
@@ -153,7 +160,7 @@ def torch_global_tensor_resolver(obj, resolver, **kw):
     return ConcatDataset(data)
 
 
-def torch_global_dataframe_resolver(obj, resolver, **kw):
+def torch_global_dataframe_resolver(obj, resolver, **_kw):
     meta = obj.meta
     num = int(meta['partitions_-size'])
     data = []

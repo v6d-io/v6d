@@ -25,6 +25,8 @@ limitations under the License.
 
 #include "boost/lexical_cast.hpp"
 
+#include "server/util/metrics.h"
+
 namespace boost {
 // Makes the behaviour of lexical_cast compatibile with boost::property_tree.
 template <>
@@ -396,17 +398,17 @@ Status ListAllData(const json& tree, std::vector<ObjectID>& objects) {
   return Status::OK();
 }
 
-Status DelDataOps(const json& tree, const ObjectID id,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
+Status DelDataOps(const json& tree, const ObjectID id, std::vector<op_t>& ops,
+                  bool& sync_remote) {
   if (IsBlob(id)) {
-    ops.emplace_back(IMetaService::op_t::Del("/data/" + ObjectIDToString(id)));
+    ops.emplace_back(op_t::Del("/data/" + ObjectIDToString(id)));
     return Status::OK();
   }
   return DelDataOps(tree, ObjectIDToString(id), ops, sync_remote);
 }
 
 Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
+                  std::vector<op_t>& ops, bool& sync_remote) {
   for (auto const& id : ids) {
     auto s = DelDataOps(tree, id, ops, sync_remote);
     if (!s.ok() && !IsBlob(id)) {
@@ -418,7 +420,7 @@ Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
 }
 
 Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
+                  std::vector<op_t>& ops, bool& sync_remote) {
   for (auto const& id : ids) {
     auto s = DelDataOps(tree, id, ops, sync_remote);
     if (!s.ok() && !IsBlob(id)) {
@@ -430,7 +432,7 @@ Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
 }
 
 Status DelDataOps(const json& tree, const std::string& name,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote) {
+                  std::vector<op_t>& ops, bool& sync_remote) {
   std::string data_prefix = "/data";
   auto json_path = json::json_pointer(data_prefix);
   if (tree.contains(json_path)) {
@@ -442,15 +444,15 @@ Status DelDataOps(const json& tree, const std::string& name,
       if (!sync_remote && !data.value("transient", true)) {
         sync_remote = true;
       }
-      ops.emplace_back(IMetaService::op_t::Del(data_prefix + "/" + name));
+      ops.emplace_back(op_t::Del(data_prefix + "/" + name));
 
       // delete signature as well
       std::string instance_name =
           std::to_string(data["instance_id"].get<InstanceID>());
       std::string signature =
           SignatureToString(data["signature"].get<Signature>());
-      ops.emplace_back(IMetaService::op_t::Del("/signatures/i" + instance_name +
-                                               "/" + signature));
+      ops.emplace_back(
+          op_t::Del("/signatures/i" + instance_name + "/" + signature));
       // record deletion of object
       LOG_SUMMARY(
           "object",
@@ -465,8 +467,7 @@ Status DelDataOps(const json& tree, const std::string& name,
 
 static void generate_put_ops(const json& meta, std::string const& instance_name,
                              const json& diff, const json& signatures,
-                             const std::string& name,
-                             std::vector<IMetaService::op_t>& ops) {
+                             const std::string& name, std::vector<op_t>& ops) {
   if (!diff.is_object() || diff.empty()) {
     return;
   }
@@ -492,7 +493,7 @@ static void generate_put_ops(const json& meta, std::string const& instance_name,
             SignatureToString(signatures[sub_name].get<Signature>());
         std::string sub_loc =
             "i" + std::to_string(item.value()["instance_id"].get<InstanceID>());
-        ops.emplace_back(IMetaService::op_t::Put(
+        ops.emplace_back(op_t::Put(
             signature_key_prefix + sub_loc + "/" + sig_as_name, sub_name));
         sub_name = sig_as_name;
       }
@@ -505,8 +506,7 @@ static void generate_put_ops(const json& meta, std::string const& instance_name,
       }
       std::string encoded_value;
       encode_value(NodeType::Link, link, encoded_value);
-      ops.emplace_back(
-          IMetaService::op_t::Put(key_prefix + item.key(), encoded_value));
+      ops.emplace_back(op_t::Put(key_prefix + item.key(), encoded_value));
     } else {
       // don't repeat "id" in the etcd kvs.
       if (item.key() == "id") {
@@ -517,9 +517,9 @@ static void generate_put_ops(const json& meta, std::string const& instance_name,
         std::string encoded_value;
         encode_value(NodeType::Value,
                      item.value().get_ref<std::string const&>(), encoded_value);
-        ops.emplace_back(IMetaService::op_t::Put(key, encoded_value));
+        ops.emplace_back(op_t::Put(key, encoded_value));
       } else {
-        ops.emplace_back(IMetaService::op_t::Put(key, item.value()));
+        ops.emplace_back(op_t::Put(key, item.value()));
       }
     }
   }
@@ -527,7 +527,7 @@ static void generate_put_ops(const json& meta, std::string const& instance_name,
 
 static void generate_persist_ops(json& diff, const std::string& instance_name,
                                  const std::string& name,
-                                 std::vector<IMetaService::op_t>& ops,
+                                 std::vector<op_t>& ops,
                                  std::set<std::string>& dedup) {
   std::string data_key = "/data" + std::string("/") + name;
   if (dedup.find(data_key) != dedup.end()) {
@@ -552,8 +552,8 @@ static void generate_persist_ops(json& diff, const std::string& instance_name,
         // the different key.
         if (dedup.find(sub_sig) == dedup.end()) {
           dedup.emplace(sub_sig);
-          ops.emplace_back(IMetaService::op_t::Put(
-              "/signatures/" + sub_loc + "/" + sub_sig, sub_name));
+          ops.emplace_back(
+              op_t::Put("/signatures/" + sub_loc + "/" + sub_sig, sub_name));
         }
         sub_name = sub_sig;
       }
@@ -588,7 +588,7 @@ static void generate_persist_ops(json& diff, const std::string& instance_name,
   }
   // don't repeat "id" in the etcd kvs.
   diff.erase("id");
-  ops.emplace_back(IMetaService::op_t::Put(data_key, diff));
+  ops.emplace_back(op_t::Put(data_key, diff));
   dedup.emplace(data_key);
 }
 
@@ -822,8 +822,7 @@ static void persist_meta_tree(const json& sub_tree, json& diff) {
 
 Status PutDataOps(const json& tree, std::string const& instance_name,
                   const ObjectID id, const json& sub_tree,
-                  std::vector<IMetaService::op_t>& ops,
-                  InstanceID& computed_instance_id) {
+                  std::vector<op_t>& ops, InstanceID& computed_instance_id) {
   json diff;
   json signatures;
   std::string name = ObjectIDToString(id);
@@ -844,7 +843,7 @@ Status PutDataOps(const json& tree, std::string const& instance_name,
 }
 
 Status PersistOps(const json& tree, const std::string& instance_name,
-                  const ObjectID id, std::vector<IMetaService::op_t>& ops) {
+                  const ObjectID id, std::vector<op_t>& ops) {
   json sub_tree, diff;
   Status status = GetData(tree, instance_name, id, sub_tree);
   if (!status.ok()) {
@@ -870,7 +869,7 @@ Status Exists(const json& tree, const ObjectID id, bool& exists) {
 
 Status ShallowCopyOps(const json& tree, const ObjectID id,
                       const json& extra_metadata, const ObjectID target,
-                      std::vector<IMetaService::op_t>& ops, bool& transient) {
+                      std::vector<op_t>& ops, bool& transient) {
   std::string name = ObjectIDToString(id);
   json tmp_tree;
   RETURN_ON_ERROR(get_sub_tree(tree, "/data", name, tmp_tree));
@@ -896,8 +895,7 @@ Status ShallowCopyOps(const json& tree, const ObjectID id,
   std::string key_prefix =
       "/data" + std::string("/") + ObjectIDToString(target) + "/";
   for (auto const& item : tmp_tree.items()) {
-    ops.emplace_back(
-        IMetaService::op_t::Put(key_prefix + item.key(), item.value()));
+    ops.emplace_back(op_t::Put(key_prefix + item.key(), item.value()));
   }
   return Status::OK();
 }
@@ -932,7 +930,7 @@ Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
 
 Status DecodeObjectID(const json& tree, const std::string& instance_name,
                       const std::string& value, ObjectID& object_id) {
-  meta_tree::NodeType type;
+  NodeType type;
   std::string link_value;
   decode_value(value, type, link_value);
   if (type == NodeType::Link) {

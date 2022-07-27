@@ -66,7 +66,7 @@ def write_byte_stream(client, stream: ByteStream, prefix: str, storage_options: 
     try:
         reader = stream.open_reader(client)
         of = fsspec.open(os.path.join(prefix, path), "wb", **storage_options)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         sys.exit(-1)
 
@@ -172,7 +172,7 @@ def main():
             "usage: ./write_bytes_collection <ipc_socket> <prefix> <stream_id> "
             "<storage_options> <proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     prefix = expand_full_path(sys.argv[2])
     stream_id = sys.argv[3]

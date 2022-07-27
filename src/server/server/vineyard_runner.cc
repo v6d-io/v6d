@@ -78,8 +78,8 @@ Status VineyardRunner::Serve() {
 
 Status VineyardRunner::Finalize() { return Status::OK(); }
 
-Status VineyardRunner::GetRootSession(vs_ptr_t& vs_ptr) {
-  session_map_t::const_accessor accessor;
+Status VineyardRunner::GetRootSession(std::shared_ptr<VineyardServer>& vs_ptr) {
+  session_dict_t::const_accessor accessor;
   if (!sessions_.find(accessor, RootSessionID())) {
     return Status::Invalid("No root session.");
   }
@@ -107,7 +107,7 @@ Status VineyardRunner::CreateNewSession(
 }
 
 Status VineyardRunner::Delete(SessionID const& sid) {
-  session_map_t::const_accessor accessor;
+  session_dict_t::const_accessor accessor;
   if (!sessions_.find(accessor, sid)) {
     return Status::OK();
   }
@@ -117,8 +117,9 @@ Status VineyardRunner::Delete(SessionID const& sid) {
   return Status::OK();
 }
 
-Status VineyardRunner::Get(SessionID const& sid, vs_ptr_t& session) {
-  session_map_t::const_accessor accessor;
+Status VineyardRunner::Get(SessionID const& sid,
+                           std::shared_ptr<VineyardServer>& session) {
+  session_dict_t::const_accessor accessor;
   if (sessions_.find(accessor, sid)) {
     session = accessor->second;
     return Status::OK();
@@ -129,7 +130,7 @@ Status VineyardRunner::Get(SessionID const& sid, vs_ptr_t& session) {
 }
 
 bool VineyardRunner::Exists(SessionID const& sid) {
-  session_map_t::const_accessor accessor;
+  session_dict_t::const_accessor accessor;
   return sessions_.find(accessor, sid);
 }
 

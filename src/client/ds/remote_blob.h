@@ -18,19 +18,18 @@ limitations under the License.
 
 #include <cstdint>
 #include <limits>
-#include <map>
 #include <memory>
-#include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
-
-#include "arrow/api.h"
-#include "arrow/io/api.h"
 
 #include "client/ds/i_object.h"
 #include "common/memory/payload.h"
 #include "common/util/uuid.h"
+
+namespace arrow {
+class Buffer;
+class MutableBuffer;
+}  // namespace arrow
 
 namespace vineyard {
 

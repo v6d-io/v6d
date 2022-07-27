@@ -25,8 +25,8 @@ import sys
 from queue import Empty as QueueEmptyException
 from queue import Queue as ConcurrentQueue
 from typing import Dict
-from typing import Tuple
-from typing import Union
+from typing import Tuple  # pylint: disable=unused-import
+from typing import Union  # pylint: disable=unused-import
 
 import vineyard
 from vineyard._C import Blob
@@ -51,7 +51,7 @@ def decompress_chunk(blob: memoryview, serialization_options: Dict[str, str]):
     if serialization_options:
         method = serialization_options.get('compression_method', None)
         if method == 'zstd':
-            import zstd
+            import zstd  # pylint: disable=import-outside-toplevel
 
             return zstd.decompress(bytes(blob))
 
@@ -218,14 +218,14 @@ def deserialize(vineyard_socket, object_id, proc_num, proc_index):
 def main():
     if len(sys.argv) < 5:
         print("usage: ./deserializer <ipc_socket> <object_id> <proc_num> <proc_index>")
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     object_id = vineyard.ObjectID(sys.argv[2])
     proc_num = int(sys.argv[3])
     proc_index = int(sys.argv[4])
     try:
         deserialize(ipc_socket, object_id, proc_num, proc_index)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         sys.exit(-1)
 

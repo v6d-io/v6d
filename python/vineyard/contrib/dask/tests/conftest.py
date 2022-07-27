@@ -16,4 +16,4 @@
 # limitations under the License.
 #
 
-from vineyard.conftest import vineyard_ipc_sockets
+from vineyard.conftest import vineyard_ipc_sockets  # pylint: disable=unused-import

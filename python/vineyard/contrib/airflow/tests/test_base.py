@@ -26,7 +26,7 @@ from datetime import timedelta
 
 from airflow.models import DAG
 from airflow.models import DagRun
-from airflow.models import TaskInstance as TI
+from airflow.models import TaskInstance
 from airflow.utils import timezone
 from airflow.utils.session import create_session
 
@@ -54,7 +54,7 @@ class TestPythonBase(unittest.TestCase):
 
         with create_session() as session:
             session.query(DagRun).delete()
-            session.query(TI).delete()
+            session.query(TaskInstance).delete()
 
     def setUp(self):
         super().setUp()
@@ -70,7 +70,7 @@ class TestPythonBase(unittest.TestCase):
 
         with create_session() as session:
             session.query(DagRun).delete()
-            session.query(TI).delete()
+            session.query(TaskInstance).delete()
 
     def clear_run(self):
         self.run = False

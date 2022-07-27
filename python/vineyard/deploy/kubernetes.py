@@ -192,11 +192,15 @@ def delete_kubernetes_object(
             The kubernetes client. If not specified, vineyard will try to resolve
             the kubernetes configuration from current context.
         verbose: bool
-            Whether to print the deletion logs.
+            If True, print confirmation from the delete action. Defaults to False.
         wait: bool
-            Whether to wait for the deletion to complete.
+            Whether to wait for the deletion to complete. Defaults to False.
         timeout_seconds: int
-            The timeout in seconds for waiting for the deletion to complete.
+            The timeout in seconds for waiting for the deletion to complete. Defaults
+            to 60.
+
+    Returns:
+        Status: Return status for calls kubernetes delete method.
 
     See Also:
         vineyard.deploy.kubernetes.start_vineyardd
@@ -214,20 +218,6 @@ def delete_kubernetes_object(
         kubernetes.config.load_kube_config()
         k8s_client = kubernetes.client.ApiClient()
 
-    """Perform a delete action on valid kubernetes API object (i.e. List, Service, etc).
-    Args:
-        api_client: ApiClient
-            An kubernetes ApiClient object, initialized with the client args.
-        target: A valid kubernetes object.
-        verbose: bool, optional
-            If True, print confirmation from the delete action. Defaults to False.
-        wait: bool, optional
-            Waiting for delete object. Defaults to False.
-        timeout_seconds: int, optional
-            If waiting for delete timeout, just print a error message. Defaults to 60.
-    Returns:
-        Status: Return status for calls kubernetes delete method.
-    """
     group, _, version = target.api_version.partition("/")
     if version == "":
         version = group
@@ -259,9 +249,9 @@ def delete_kubernetes_object(
             resp = getattr(k8s_api, "delete_{0}".format(kind))(**kwargs)
     except kubernetes.client.rest.ApiException:
         # Object already deleted.
-        pass
+        return None
     else:
-        # waiting for delete
+        # Waiting for delete
         if wait:
             start_time = time.time()
             if hasattr(k8s_api, "read_namespaced_{0}".format(kind)):
@@ -271,18 +261,17 @@ def delete_kubernetes_object(
                     except kubernetes.client.rest.ApiException as ex:
                         if ex.status != 404:
                             logger.error(
-                                "Deleting {0} {1} failed: {2}".format(
-                                    kind, target.metadata.name, str(ex)
-                                )
+                                "Deleting %s %s failed: %s",
+                                kind,
+                                target.metadata.name,
+                                str(ex),
                             )
                         break
                     else:
                         time.sleep(1)
                         if time.time() - start_time > timeout_seconds:
                             logger.info(
-                                "Deleting {0} {1} timeout".format(
-                                    kind, target.metadata.name
-                                )
+                                "Deleting %s/%s timeout", kind, target.metadata.name
                             )
         if verbose:
             msg = "{0}/{1} deleted.".format(kind, target.metadata.name)

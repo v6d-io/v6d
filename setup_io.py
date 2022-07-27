@@ -81,24 +81,24 @@ setup(
     cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},
     entry_points={
         'console_scripts': [
-            'vineyard_deserializer=' 'vineyard.drivers.io.adaptors.deserializer:main',
+            'vineyard_deserializer=vineyard.drivers.io.adaptors.deserializer:main',
             'vineyard_dump_dataframe='
             'vineyard.drivers.io.adaptors.dump_dataframe:main',
             'vineyard_parse_bytes_to_dataframe='
             'vineyard.drivers.io.adaptors.parse_bytes_to_dataframe:main',
             'vineyard_parse_dataframe_to_bytes='
             'vineyard.drivers.io.adaptors.parse_dataframe_to_bytes:main',
-            'vineyard_read_bytes=' 'vineyard.drivers.io.adaptors.read_bytes:main',
+            'vineyard_read_bytes=vineyard.drivers.io.adaptors.read_bytes:main',
             'vineyard_read_bytes_collection='
             'vineyard.drivers.io.adaptors.read_bytes_collection:main',
-            'vineyard_read_orc=' 'vineyard.drivers.io.adaptors.read_orc:main',
+            'vineyard_read_orc=vineyard.drivers.io.adaptors.read_orc:main',
             'vineyard_read_vineyard_dataframe='
             'vineyard.drivers.io.adaptors.read_vineyard_dataframe:main',
-            'vineyard_serializer=' 'vineyard.drivers.io.adaptors.serializer:main',
-            'vineyard_write_bytes=' 'vineyard.drivers.io.adaptors.write_bytes:main',
+            'vineyard_serializer=vineyard.drivers.io.adaptors.serializer:main',
+            'vineyard_write_bytes=vineyard.drivers.io.adaptors.write_bytes:main',
             'vineyard_write_bytes_collection='
             'vineyard.drivers.io.adaptors.write_bytes_collection:main',
-            'vineyard_write_orc=' 'vineyard.drivers.io.adaptors.write_orc:main',
+            'vineyard_write_orc=vineyard.drivers.io.adaptors.write_orc:main',
             'vineyard_write_vineyard_dataframe='
             'vineyard.drivers.io.adaptors.write_vineyard_dataframe:main',
         ],

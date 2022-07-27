@@ -28,7 +28,6 @@ limitations under the License.
 #include "arrow/io/api.h"
 
 #include "client/ds/core_types.h"
-#include "common/util/boost.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"

@@ -6,7 +6,7 @@ set -o pipefail
 
 ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
-helm install vineyard $ROOT/vineyard/ -n vineyard-system \
+helm install vineyard "$ROOT/vineyard/" -n vineyard-system \
     --set image.repository="registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyardd" \
     --set image.tagPrefix=ubuntu \
     --set serviceAccountName=vineyard-server \

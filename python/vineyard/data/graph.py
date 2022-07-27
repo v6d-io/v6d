@@ -17,7 +17,6 @@
 #
 
 from vineyard._C import Object
-from vineyard._C import ObjectMeta
 
 
 class Graph:
@@ -35,6 +34,6 @@ def vineyard_graph_resolver(obj):
     return Graph(obj)
 
 
-def register_graph_types(builder_ctx, resolver_ctx):
+def register_graph_types(_builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Graph', vineyard_graph_resolver)

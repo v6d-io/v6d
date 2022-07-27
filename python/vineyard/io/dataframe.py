@@ -75,7 +75,7 @@ from io import BytesIO
 from typing import Dict
 
 import pyarrow as pa
-import pyarrow.ipc
+import pyarrow.ipc  # pylint: disable=unused-import
 
 from .._C import ObjectID
 from .._C import ObjectMeta
@@ -107,9 +107,7 @@ class DataframeStream(BaseStream):
 
     class Reader(BaseStream.Reader):
         def __init__(self, client, stream: ObjectID):
-            self._client = client
-            self._stream = stream
-            self._client.open_stream(stream, 'r')
+            super().__init__(client, stream)
 
         def next(self) -> pa.RecordBatch:
             try:
@@ -130,9 +128,7 @@ class DataframeStream(BaseStream):
 
     class Writer(BaseStream.Writer):
         def __init__(self, client, stream: ObjectID):
-            self._client = client
-            self._stream = stream
-            self._client.open_stream(stream, 'w')
+            super().__init__(client, stream)
 
             self._buffer = BytesIO()
 
@@ -171,6 +167,6 @@ def dataframe_stream_resolver(obj):
     return DataframeStream(obj.meta, params)
 
 
-def register_dataframe_stream_types(builder_ctx, resolver_ctx):
+def register_dataframe_stream_types(_builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::DataframeStream', dataframe_stream_resolver)

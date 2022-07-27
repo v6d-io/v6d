@@ -112,9 +112,7 @@ class ByteStream(BaseStream):
 
     class Reader(BaseStream.Reader):
         def __init__(self, client, stream: ObjectID):
-            self._client = client
-            self._stream = stream
-            self._client.open_stream(stream, 'r')
+            super().__init__(client, stream)
 
         def next(self) -> memoryview:
             try:
@@ -124,9 +122,7 @@ class ByteStream(BaseStream):
 
     class Writer(BaseStream.Writer):
         def __init__(self, client, stream: ObjectID):
-            self._client = client
-            self._stream = stream
-            self._client.open_stream(stream, 'w')
+            super().__init__(client, stream)
 
             self._buffer_size_limit = 1024 * 1024 * 256
             self._buffer = BytesIO()
@@ -174,6 +170,6 @@ def byte_stream_resolver(obj):
     return ByteStream(obj.meta, params)
 
 
-def register_byte_stream_types(builder_ctx, resolver_ctx):
+def register_byte_stream_types(_builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::ByteStream', byte_stream_resolver)

@@ -21,13 +21,11 @@ import json
 import logging
 import multiprocessing
 import random
-import threading
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-import pandas as pd
 
 import pytest
 
@@ -228,7 +226,9 @@ def test_concurrent_meta(vineyard_ipc_sockets):  # noqa: C901
             pytest.fail("Failed to execute tests ...")
 
 
-def test_concurrent_meta_mp(vineyard_ipc_sockets):  # noqa: C901
+def test_concurrent_meta_mp(  # noqa: C901, pylint: disable=too-many-statements
+    vineyard_ipc_sockets,
+):
     num_proc = 8
     job_per_proc = 64
 
@@ -354,7 +354,9 @@ def test_concurrent_meta_mp(vineyard_ipc_sockets):  # noqa: C901
             pytest.fail(message)
 
 
-def test_concurrent_persist(vineyard_ipc_sockets):  # noqa: C901
+def test_concurrent_persist(  # noqa: C901, pylint: disable=too-many-statements
+    vineyard_ipc_sockets,
+):
     clients = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
 
     def job1(client):
@@ -436,7 +438,9 @@ def test_concurrent_persist(vineyard_ipc_sockets):  # noqa: C901
             pytest.fail("Failed to execute tests ...")
 
 
-def test_concurrent_meta_sync(vineyard_ipc_sockets):  # noqa: C901
+def test_concurrent_meta_sync(  # noqa: C901, pylint: disable=too-many-statements
+    vineyard_ipc_sockets,
+):
     num_proc = 8
     job_per_proc = 128
 

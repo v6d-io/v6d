@@ -30,7 +30,6 @@ limitations under the License.
 #include "boost/bind.hpp"
 #include "boost/range/iterator_range.hpp"
 
-#include "common/util/boost.h"
 #include "common/util/callback.h"
 #include "common/util/env.h"
 #include "common/util/functions.h"
@@ -38,6 +37,7 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "common/util/status.h"
 #include "server/server/vineyard_server.h"
+#include "server/util/meta_tree.h"
 #include "server/util/metrics.h"
 
 #define HEARTBEAT_TIME 60
@@ -69,53 +69,8 @@ class ILock {
  */
 class IMetaService : public std::enable_shared_from_this<IMetaService> {
  public:
-  struct kv_t {
-    std::string key;
-    std::string value;
-    unsigned rev;
-  };
-
-  struct op_t {
-    enum op_type_t : unsigned { kPut = 0, kDel = 1 } op;
-    kv_t kv;
-    std::string ToString() const {
-      std::stringstream ss;
-      ss.str("");
-      ss.clear();
-      ss << ((op == kPut) ? "put " : "del ");
-      ss << "[" << kv.rev << "] " << kv.key << " -> " << kv.value;
-      return ss.str();
-    }
-
-    static op_t Del(std::string const& key) {
-      return op_t{.op = op_type_t::kDel,
-                  .kv = kv_t{.key = key, .value = "", .rev = 0}};
-    }
-    static op_t Del(std::string const& key, unsigned const rev) {
-      return op_t{.op = op_type_t::kDel,
-                  .kv = kv_t{.key = key, .value = "", .rev = rev}};
-    }
-    // send to etcd
-    template <typename T>
-    static op_t Put(std::string const& key, T const& value) {
-      return op_t{
-          .op = op_type_t::kPut,
-          .kv =
-              kv_t{.key = key, .value = json_to_string(json(value)), .rev = 0}};
-    }
-    template <typename T>
-    static op_t Put(std::string const& key, json const& value) {
-      return op_t{
-          .op = op_type_t::kPut,
-          .kv = kv_t{.key = key, .value = json_to_string(value), .rev = 0}};
-    }
-    // receive from etcd
-    static op_t Put(std::string const& key, std::string const& value,
-                    unsigned const rev) {
-      return op_t{.op = op_type_t::kPut,
-                  .kv = kv_t{.key = key, .value = value, .rev = rev}};
-    }
-  };
+  using kv_t = meta_tree::kv_t;
+  using op_t = meta_tree::op_t;
 
   struct watcher_t {
     watcher_t(callback_t<const json&, const std::string&> w,
@@ -125,14 +80,15 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     std::string tag;
   };
 
-  explicit IMetaService(vs_ptr_t& server_ptr)
+  explicit IMetaService(std::shared_ptr<VineyardServer>& server_ptr)
       : server_ptr_(server_ptr), rev_(0), meta_sync_lock_("/meta_sync_lock") {
     stopped_.store(false);
   }
 
   virtual ~IMetaService();
 
-  static std::shared_ptr<IMetaService> Get(vs_ptr_t);
+  static std::shared_ptr<IMetaService> Get(
+      std::shared_ptr<VineyardServer> vs_ptr);
 
   inline Status Start() {
     LOG(INFO) << "meta service is starting ...";
@@ -373,7 +329,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
           } else {
             self->RequestToPersist(
                 [self, ops](const Status& status, const json& meta,
-                            std::vector<IMetaService::op_t>& persist_ops) {
+                            std::vector<op_t>& persist_ops) {
                   if (self->stopped_.load()) {
                     return Status::AlreadyStopped("etcd metadata service");
                   }
@@ -667,7 +623,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   std::atomic<bool> stopped_;
   json meta_;
-  vs_ptr_t server_ptr_;
+  std::shared_ptr<VineyardServer> server_ptr_;
 
   unsigned rev_;
   bool backend_retrying_;

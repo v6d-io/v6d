@@ -39,6 +39,8 @@
 # limitations under the License.
 #
 
+# pylint: skip-file
+
 import itertools
 import logging
 import os

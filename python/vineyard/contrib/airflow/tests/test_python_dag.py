@@ -49,7 +49,9 @@ class TestAirflowPandasDag(TestPythonBase):
             state=State.RUNNING,
         )
 
-        dag_node.operator.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE)
+        dag_node.operator.run(  # pylint: disable=no-member
+            start_date=DEFAULT_DATE, end_date=DEFAULT_DATE
+        )
 
         ti = dr.get_task_instances()[0]
         assert ti.xcom_pull(key='number') == test_number + 1

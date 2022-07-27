@@ -25,17 +25,15 @@ limitations under the License.
 #include <mutex>
 #include <set>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
-#include "boost/range/combine.hpp"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
 
 #include "client/ds/blob.h"
 #include "client/io.h"
 #include "client/utils.h"
 #include "common/memory/fling.h"
-#include "common/util/boost.h"
-#include "common/util/logging.h"
 #include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
@@ -1329,6 +1327,88 @@ ObjectID SharedMemoryManager::resolveObjectID(const uintptr_t target,
   } else {
     return InvalidObjectID();
   }
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::FetchOnLocal(ID const& id, P& payload) {
+  auto elem = object_in_use_.find(id);
+  if (elem != object_in_use_.end()) {
+    payload = *(elem->second);
+    if (payload.IsSealed()) {
+      return Status::OK();
+    } else {
+      return Status::ObjectNotSealed();
+    }
+  }
+  return Status::ObjectNotExists();
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::SealUsage(ID const& id) {
+  auto elem = object_in_use_.find(id);
+  if (elem != object_in_use_.end()) {
+    elem->second->is_sealed = true;
+    return Status::OK();
+  }
+  return Status::ObjectNotExists();
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::AddUsage(ID const& id, P const& payload) {
+  auto elem = object_in_use_.find(id);
+  if (elem == object_in_use_.end()) {
+    object_in_use_[id] = std::make_shared<P>(payload);
+    object_in_use_[id]->ref_cnt = 0;
+  }
+  return this->IncreaseReferenceCount(id);
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::RemoveUsage(ID const& id) {
+  return this->DecreaseReferenceCount(id);
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::DeleteUsage(ID const& id) {
+  auto elem = object_in_use_.find(id);
+  if (elem != object_in_use_.end()) {
+    object_in_use_.erase(elem);
+    return Status::OK();
+  }
+  // May already be deleted when `ref_cnt == 0`
+  return Status::OK();
+}
+
+template <typename ID, typename P, typename Der>
+void UsageTracker<ID, P, Der>::ClearCache() {
+  base_t::ClearCache();
+  object_in_use_.clear();
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::FetchAndModify(ID const& id, int64_t& ref_cnt,
+                                                int64_t change) {
+  auto elem = object_in_use_.find(id);
+  if (elem != object_in_use_.end()) {
+    elem->second->ref_cnt += change;
+    ref_cnt = elem->second->ref_cnt;
+    return Status::OK();
+  }
+  return Status::ObjectNotExists();
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::OnRelease(ID const& id) {
+  // N.B.: Once reference count reaches zero, the accessibility of the object
+  // cannot be guaranteed (may trigger spilling in server-side), thus this
+  // blob should be regard as not-in-use.
+  RETURN_ON_ERROR(DeleteUsage(id));
+  return this->Self().OnRelease(id);
+}
+
+template <typename ID, typename P, typename Der>
+Status UsageTracker<ID, P, Der>::OnDelete(ID const& id) {
+  return Self().OnDelete(id);
 }
 
 }  // namespace detail

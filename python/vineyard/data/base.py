@@ -55,13 +55,13 @@ def string_builder(client, value, **kwargs):
     return client.create_metadata(meta)
 
 
-def bytes_builder(client, value, **kwargs):
+def bytes_builder(client, value, **_kwargs):
     buffer = client.create_blob(len(value))
     buffer.copy(0, value)
     return buffer.seal(client)
 
 
-def memoryview_builder(client, value, **kwargs):
+def memoryview_builder(client, value, **_kwargs):
     buffer = client.create_blob(len(value))
     buffer.copy(0, bytes(value))
     return buffer.seal(client)
@@ -87,7 +87,7 @@ def scalar_resolver(obj):
         return meta['value_']
     if typename == 'vineyard::Scalar<int>':
         return int(meta['value_'])
-    if typename == 'vineyard::Scalar<float>' or typename == 'vineyard::Scalar<double>':
+    if typename in ['vineyard::Scalar<float>', 'vineyard::Scalar<double>']:
         return float(meta['value_'])
     return None
 

@@ -19,9 +19,9 @@
 import numpy as np
 
 try:
-    import nvidia.dali as dali
-    import nvidia.dali.types as types
-    from nvidia.dali import pipeline_def
+    from nvidia import dali  # pylint: disable=import-error
+    from nvidia.dali import pipeline_def  # pylint: disable=import-error
+    from nvidia.dali import types  # pylint: disable=import-error
 except ImportError:
     dali = None
 
@@ -63,7 +63,7 @@ def dali_tensor_builder(client, value, **kw):
     return client.create_metadata(meta)
 
 
-def dali_tensor_resolver(obj, **kw):
+def dali_tensor_resolver(obj, **_kw):
     assert dali is not None, "Nvidia DALI is not available"
     meta = obj.meta
     data_shape = from_json(meta['data_shape_'])
@@ -78,18 +78,18 @@ def dali_tensor_resolver(obj, **kw):
     label = np.frombuffer(
         memoryview(obj.member('buffer_label_')), dtype=label_type
     ).reshape(label_shape)
-    pipe_out = dali_pipe(
+    pipe_out = dali_pipe(  # pylint: disable=unexpected-keyword-arg
         data, label, device_id=device_id, num_threads=num_threads, batch_size=batch_size
     )
-    pipe_out.build()
-    pipe_output = pipe_out.run()
+    pipe_out.build()  # pylint: disable=no-member
+    pipe_output = pipe_out.run()  # pylint: disable=no-member
     return pipe_output
 
 
 def register_dali_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(
-            nvidia.dali.backend.TensorListCPU, dali_tensor_builder  # noqa: F821
+            dali.backend.TensorListCPU, dali_tensor_builder  # noqa: F821
         )
 
     if resolver_ctx is not None:

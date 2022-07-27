@@ -25,8 +25,6 @@ limitations under the License.
 #include "boost/filesystem.hpp"
 #include "boost/process.hpp"
 
-#include "common/util/boost.h"
-
 namespace vineyard {
 
 #if BOOST_VERSION >= 106600

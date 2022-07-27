@@ -15,9 +15,14 @@ limitations under the License.
 
 #include "client/io.h"
 
+#include <arpa/inet.h>
 #include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
+
 #include <iostream>
 
 namespace vineyard {

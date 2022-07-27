@@ -25,7 +25,7 @@ import sys
 from queue import Empty as QueueEmptyException
 from queue import Queue as ConcurrentQueue
 from typing import Dict
-from typing import Tuple
+from typing import Tuple  # pylint: disable=unused-import
 
 import vineyard
 from vineyard._C import ObjectID
@@ -91,7 +91,7 @@ class SerializeExecutor(BaseStreamExecutor):
         method = self._serialization_options.get('compression_method', None)
         level = self._serialization_options.get('compression_level', None)
         if method == 'zstd':
-            import zstd
+            import zstd  # pylint: disable=import-outside-toplevel
 
             if level is None:
                 return zstd.compress(bytes(blob))
@@ -195,7 +195,7 @@ def serialize(vineyard_socket, object_id, serialization_options):
 def main():
     if len(sys.argv) < 3:
         print("usage: ./serializer <ipc_socket> <object_id> [<serialization_options>]")
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     object_id = vineyard.ObjectID(sys.argv[2])
     if len(sys.argv) >= 4:
@@ -208,7 +208,7 @@ def main():
         serialization_options['compression_method'] = 'zstd'
     try:
         serialize(ipc_socket, object_id, serialization_options)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         sys.exit(-1)
 

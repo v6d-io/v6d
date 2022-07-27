@@ -25,7 +25,6 @@ limitations under the License.
 #include <vector>
 
 #include "common/memory/payload.h"
-#include "common/util/boost.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"

@@ -150,7 +150,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         for proc in self._procs:
             proc.dispose()
 
-    def wait(
+    def wait(  # pylint: disable=arguments-differ
         self,
         timeout=None,
         aggregator: Callable[
@@ -419,7 +419,7 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
 
 
 def create_global_dataframe(
-    vineyard_endpoint: str, results: List[List[ObjectID]], name: str, **kwargs
+    vineyard_endpoint: str, results: List[List[ObjectID]], name: str, **_kwargs
 ) -> ObjectID:
     # use the partial_id_matrix and the name in **kwargs to create a global
     # dataframe.

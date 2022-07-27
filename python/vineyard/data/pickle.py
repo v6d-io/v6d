@@ -24,7 +24,7 @@ import pickle
 from io import BytesIO
 
 if pickle.HIGHEST_PROTOCOL < 5:
-    import pickle5 as pickle
+    import pickle5 as pickle  # pylint: disable=import-error
 
 
 class PickledReader:

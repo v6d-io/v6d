@@ -24,6 +24,8 @@
 # may be used to endorse or promote products derived from this software
 # without specific prior written permission.
 
+# pylint: skip-file
+
 import datetime
 import io
 import os

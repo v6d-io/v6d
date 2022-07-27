@@ -25,35 +25,34 @@ limitations under the License.
 #include <vector>
 
 #include "boost/asio.hpp"
+#include "oneapi/tbb/concurrent_hash_map.h"
 
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
-
 #include "server/memory/memory.h"
-#include "server/memory/stream_store.h"
-
-#include "oneapi/tbb/concurrent_hash_map.h"
 
 namespace vineyard {
 
 namespace asio = boost::asio;
-using session_map_t = tbb::concurrent_hash_map<SessionID, vs_ptr_t>;
 
 class VineyardServer;
+
+using session_dict_t =
+    tbb::concurrent_hash_map<SessionID, std::shared_ptr<VineyardServer>>;
 
 class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
  public:
   static std::shared_ptr<VineyardRunner> Get(const json& spec);
   Status Serve();
   Status Finalize();
-  Status GetRootSession(vs_ptr_t& vs_ptr);
+  Status GetRootSession(std::shared_ptr<VineyardServer>& vs_ptr);
   Status CreateNewSession(StoreType const& bulk_store_type,
                           callback_t<std::string const&> callback);
   Status Delete(SessionID const& sid);
-  Status Get(SessionID const& sid, vs_ptr_t& session);
+  Status Get(SessionID const& sid, std::shared_ptr<VineyardServer>& session);
   bool Exists(SessionID const& sid);
   void Stop();
   bool Running() const;
@@ -76,7 +75,7 @@ class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
   ctx_guard guard_, meta_guard_;
   std::vector<std::thread> workers_;
 
-  session_map_t sessions_;
+  session_dict_t sessions_;
   std::atomic_bool stopped_;
 };
 

@@ -29,9 +29,10 @@ limitations under the License.
 
 #include "boost/asio.hpp"
 
+#include "common/memory/payload.h"
 #include "common/util/callback.h"
 #include "common/util/logging.h"
-#include "common/util/protocols.h"
+#include "common/util/uuid.h"
 
 namespace vineyard {
 
@@ -42,7 +43,6 @@ class SocketServer;
 class BulkStore;
 class PlasmaBulkStore;
 class VineyardServer;
-using vs_ptr_t = std::shared_ptr<VineyardServer>;
 
 using socket_message_queue_t = std::deque<std::string>;
 
@@ -52,7 +52,8 @@ using socket_message_queue_t = std::deque<std::string>;
  */
 class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
  public:
-  SocketConnection(stream_protocol::socket socket, vs_ptr_t server_ptr,
+  SocketConnection(stream_protocol::socket socket,
+                   std::shared_ptr<VineyardServer> server_ptr,
                    SocketServer* socket_server_ptr, int conn_id);
 
   bool Start();
@@ -163,7 +164,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
  protected:
   template <typename FROM, typename TO>
-  Status MoveBuffers(std::map<FROM, TO> mapping, vs_ptr_t& source_session);
+  Status MoveBuffers(std::map<FROM, TO> mapping,
+                     std::shared_ptr<VineyardServer>& source_session);
 
  private:
   int nativeHandle() { return socket_.native_handle(); }
@@ -209,7 +211,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
       callback_t<std::shared_ptr<Payload> const&> callback_after_finish);
 
   stream_protocol::socket socket_;
-  vs_ptr_t server_ptr_;
+  std::shared_ptr<VineyardServer> server_ptr_;
   SocketServer* socket_server_ptr_;
 
   // hold a reference of the bulkstore to aovid dtor conflicits.
@@ -235,7 +237,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
  */
 class SocketServer {
  public:
-  explicit SocketServer(vs_ptr_t vs_ptr);
+  explicit SocketServer(std::shared_ptr<VineyardServer> vs_ptr);
   virtual ~SocketServer() {}
 
   virtual void Start();
@@ -276,7 +278,7 @@ class SocketServer {
   std::atomic_bool stopped_;  // if the socket server being stopped.
 
   std::atomic_bool closable_;  // if client want to close the session,
-  vs_ptr_t vs_ptr_;
+  std::shared_ptr<VineyardServer> vs_ptr_;
   int next_conn_id_;
   std::unordered_map<int, std::shared_ptr<SocketConnection>> connections_;
   mutable std::recursive_mutex connections_mutex_;  // protect `connections_`

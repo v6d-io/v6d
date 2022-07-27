@@ -80,7 +80,7 @@ def read_single_orc(path, fs, writer):
 
     with fs.open(path, "rb") as f:
         reader = pyorc.Reader(f)
-        fields = reader.schema.fields
+        fields = reader.schema.fields  # pylint: disable=no-member
         schema = []
         for c in fields:
             schema.append((c, arrow_type(fields[c])))
@@ -98,7 +98,7 @@ def read_orc(
     path,
     storage_options: Dict,
     read_options: Dict,
-    proc_num,
+    _proc_num,
     proc_index,
 ):
     # This method is to read the data files of a specific hive table
@@ -155,7 +155,7 @@ def main():
             "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> "
             "<read_options> <proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     path = expand_full_path(sys.argv[2])
     storage_options = json.loads(

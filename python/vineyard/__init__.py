@@ -19,6 +19,7 @@
 import contextlib
 import logging
 import os
+import sys
 import traceback
 
 from .version import __version__
@@ -32,6 +33,8 @@ out-of-the-box high-level abstraction and zero-copy in-memory
 sharing for distributed data in big data tasks, such as graph analytics
 (e.g., GraphScope), numerical computing (e.g., Mars), and machine learning.
 """
+
+# pylint: disable=import-outside-toplevel,wrong-import-position
 
 
 @contextlib.contextmanager
@@ -76,8 +79,7 @@ def envvars(key, value=None, append=False):
 
 
 def _init_global_context():
-    import os as _dl_flags
-    import sys
+    import os as _dl_flags  # pylint: disable=reimported
 
     if sys.platform == 'linux':
         registry = os.path.join(
@@ -100,7 +102,7 @@ def _init_global_context():
     if not hasattr(_dl_flags, 'RTLD_GLOBAL') or not hasattr(_dl_flags, 'RTLD_LAZY'):
         try:
             # next try if DLFCN exists
-            import DLFCN as _dl_flags
+            import DLFCN as _dl_flags  # noqa: N811
         except ImportError:
             _dl_flags = None
 
@@ -127,6 +129,15 @@ del _init_global_context
 
 
 from . import _vineyard_docs
+
+del _vineyard_docs
+
+from . import core
+from . import data
+from . import deploy
+from . import io
+from . import launcher
+from . import shared_memory
 from ._C import ArrowErrorException
 from ._C import AssertionFailedException
 from ._C import Blob
@@ -170,15 +181,6 @@ from ._C import UserInputErrorException
 from ._C import VineyardServerNotReadyException
 from ._C import connect
 from ._C import memory_copy
-
-del _vineyard_docs
-
-from . import core
-from . import data
-from . import deploy
-from . import io
-from . import launcher
-from . import shared_memory
 from .core import builder_context
 from .core import default_builder_context
 from .core import default_driver_context
@@ -212,10 +214,8 @@ def _init_vineyard_modules():  # noqa: C901
 
     import glob
     import importlib.util
-    import os
     import pkgutil
     import site
-    import sys
     import sysconfig
 
     def _import_module_from_file(filepath):
@@ -235,7 +235,7 @@ def _init_vineyard_modules():  # noqa: C901
     def _import_module_from_qualified_name(module):
         try:
             importlib.import_module(module)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.debug(
                 'Failed to load module %s: %s\n%s', module, e, traceback.format_exc()
             )
@@ -284,6 +284,6 @@ def _init_vineyard_modules():  # noqa: C901
 
 try:
     _init_vineyard_modules()
-except Exception:
+except Exception:  # pylint: disable=broad-except
     pass
 del _init_vineyard_modules

@@ -117,16 +117,16 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
 
   std::string path_string(path);
   ObjectID target = InvalidObjectID();
-  VINEYARD_CHECK_OK(state.client->GetName(name_from_path(path), target));
+  VINEYARD_CHECK_OK(state.client->GetName(name_from_path(path_string), target));
 
   auto object = state.client->GetObject(target);
   if (object == nullptr) {
     return -ENOENT;
   }
-  auto loc = state.views.find(path);
+  auto loc = state.views.find(path_string);
   if (loc == state.views.end()) {
     auto buffer = generate_fuse_view(state.client->GetObject(target));
-    state.views[path] = buffer;
+    state.views[path_string] = buffer;
   }
   // bypass kernel's page cache to avoid knowing the size in `getattr`.
   //

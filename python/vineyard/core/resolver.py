@@ -25,7 +25,6 @@ from sortedcontainers import SortedDict
 from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
-from vineyard._C import ObjectMeta
 from vineyard._C import RPCClient
 from vineyard.core.driver import get_current_drivers
 from vineyard.core.utils import find_most_precise_match
@@ -57,14 +56,14 @@ class ResolverContext:
                     else:
                         value = resolver(obj)
                 except Exception:
-                    raise RuntimeError(
+                    raise RuntimeError(  # pylint: disable=raise-missing-from
                         'Unable to construct the object using resolver: '
                         'typename is %s, resolver is %s' % (obj.meta.typename, resolver)
                     )
             if value is None:
                 # if the obj has been resolved by pybind types, and there's no proper
                 # resolver, it shouldn't be an error
-                if type(obj) is not Object:
+                if type(obj) is not Object:  # pylint: disable=unidiomatic-typecheck
                     return obj
 
                 # we might `client.put(None)`
@@ -89,7 +88,9 @@ class ResolverContext:
 
     def extend(self, resolvers=None):
         resolver = ResolverContext()
-        resolver.__factory = self.__factory.copy()
+        resolver.__factory = (  # pylint: disable=unused-private-member
+            self.__factory.copy()
+        )
         if resolvers:
             resolver.__factory.update(resolvers)
         return resolver

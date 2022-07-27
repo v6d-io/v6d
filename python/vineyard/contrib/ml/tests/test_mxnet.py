@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-import mxnet as mx
+import mxnet as mx  # pylint: disable=import-error
 import pytest
 
 from vineyard.contrib.ml.mxnet import register_mxnet_types

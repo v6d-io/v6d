@@ -18,10 +18,13 @@
 
 import contextlib
 
+# pylint: disable=import-error
 import ray
 from ray.remote_function import RemoteFunction
 from ray.util.placement_group import placement_group
 from ray.util.placement_group import remove_placement_group
+
+# pylint: enable=import-error
 
 
 @contextlib.contextmanager

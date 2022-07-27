@@ -23,11 +23,15 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "boost/process.hpp"
 #include "etcd/Client.hpp"
-#include "etcd/Watcher.hpp"
 
 #include "server/services/meta_service.h"
-#include "server/util/etcd_launcher.h"
+
+namespace etcd {
+class Client;
+class Watcher;
+}  // namespace etcd
 
 namespace vineyard {
 
@@ -131,7 +135,7 @@ class EtcdMetaService : public IMetaService {
   ~EtcdMetaService() override {}
 
  protected:
-  explicit EtcdMetaService(vs_ptr_t& server_ptr)
+  explicit EtcdMetaService(std::shared_ptr<VineyardServer>& server_ptr)
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
         prefix_(etcd_spec_["etcd_prefix"].get<std::string>() + "/" +
@@ -164,14 +168,7 @@ class EtcdMetaService : public IMetaService {
       callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
           callback);
 
-  Status probe() override {
-    if (EtcdLauncher::probeEtcdServer(etcd_, prefix_)) {
-      return Status::OK();
-    } else {
-      return Status::Invalid(
-          "Failed to startup meta service, please check your etcd");
-    }
-  }
+  Status probe() override;
 
   const json etcd_spec_;
   const std::string prefix_;

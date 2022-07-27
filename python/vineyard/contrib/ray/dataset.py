@@ -18,20 +18,20 @@
 
 import pyarrow as pa
 
-import ray
-import ray.data
-import ray.data.read_api
-from ray.data.block import Block
-from ray.data.block import BlockAccessor
-from ray.data.dataset import Dataset
-from ray.data.impl.block_list import BlockList
-from ray.data.impl.remote_fn import cached_remote_fn
+import ray  # pylint: disable=import-error
+import ray.data  # pylint: disable=import-error
+import ray.data.read_api  # pylint: disable=import-error
+from ray.data.block import Block  # pylint: disable=import-error
+from ray.data.block import BlockAccessor  # pylint: disable=import-error
+from ray.data.dataset import Dataset  # pylint: disable=import-error
+from ray.data.impl.block_list import BlockList  # pylint: disable=import-error
+from ray.data.impl.remote_fn import cached_remote_fn  # pylint: disable=import-error
 
 import vineyard
 from vineyard.data.dataframe import make_global_dataframe
 
-from .actor import spread
-from .actor import spread_and_get
+from .actor import spread  # pylint: disable=unused-import
+from .actor import spread_and_get  # pylint: disable=unused-import
 from .actor import spread_to_all_nodes
 
 
@@ -101,10 +101,10 @@ def from_vineyard(object_id):
             instances[instance] = index
 
         blocks, metadatas = [], []
-        for object_id, location in chunks.items():
+        for chunk_object_id, location in chunks.items():
             block, metadata = vineyard_to_block.options(
                 placement_group=pg, placement_group_bundle_index=instances[location]
-            ).remote(vineyard.ObjectID(object_id))
+            ).remote(vineyard.ObjectID(chunk_object_id))
             blocks.append(block)
             metadatas.append(metadata)
 

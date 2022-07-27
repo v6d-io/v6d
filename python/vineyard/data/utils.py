@@ -18,16 +18,17 @@
 
 import json
 import pickle
-import platform
 
 import numpy as np
 import pyarrow as pa
 
 if pickle.HIGHEST_PROTOCOL < 5:
-    import pickle5 as pickle
+    import pickle5 as pickle  # pylint: disable=import-error
 
 
-def normalize_dtype(dtype, dtype_meta=None):
+def normalize_dtype(
+    dtype, dtype_meta=None
+):  # pylint: disable=too-many-return-statements
     '''Normalize a descriptive C++ type to numpy.dtype.'''
     if isinstance(dtype, np.dtype):
         return dtype
@@ -50,7 +51,7 @@ def normalize_dtype(dtype, dtype_meta=None):
     return dtype
 
 
-def normalize_cpptype(dtype):
+def normalize_cpptype(dtype):  # pylint: disable=too-many-return-statements
     if dtype.name == 'int32':
         return 'int'
     if dtype.name == 'uint32':
@@ -66,7 +67,9 @@ def normalize_cpptype(dtype):
     return dtype.name
 
 
-def normalize_arrow_dtype(dtype):  # noqa: C901
+def normalize_arrow_dtype(  # noqa: C901, pylint: disable=too-many-return-statements
+    dtype,
+):
     if dtype in ['bool']:
         return pa.bool_()
     if dtype in ['int8_t', 'int8', 'byte']:

@@ -22,7 +22,6 @@
 import json
 from typing import Dict
 
-from .._C import ObjectID
 from .._C import ObjectMeta
 from .stream import BaseStream
 
@@ -51,7 +50,7 @@ class RecordBatchStream(BaseStream):
         return RecordBatchStream(meta, params)
 
 
-def recordbatch_stream_resolver(obj, resolver):
+def recordbatch_stream_resolver(obj, resolver):  # pylint: disable=unused-argument
     meta = obj.meta
     if 'params_' in meta:
         params = json.loads(meta['params_'])
@@ -60,7 +59,7 @@ def recordbatch_stream_resolver(obj, resolver):
     return RecordBatchStream(meta, params)
 
 
-def register_recordbatch_stream_types(builder_ctx, resolver_ctx):
+def register_recordbatch_stream_types(_builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register(
             'vineyard::RecordBatchStream', recordbatch_stream_resolver

@@ -25,9 +25,6 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
 #include "client/client_base.h"
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
@@ -36,6 +33,11 @@ limitations under the License.
 #include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
+
+namespace arrow {
+class Buffer;
+class MutableBuffer;
+}  // namespace arrow
 
 namespace vineyard {
 
@@ -149,18 +151,7 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
    * @param payload The payload of the object.
    * @returns Status::OK() if the reference count is increased successfully.
    */
-  Status FetchOnLocal(ID const& id, P& payload) {
-    auto elem = object_in_use_.find(id);
-    if (elem != object_in_use_.end()) {
-      payload = *(elem->second);
-      if (payload.IsSealed()) {
-        return Status::OK();
-      } else {
-        return Status::ObjectNotSealed();
-      }
-    }
-    return Status::ObjectNotExists();
-  }
+  Status FetchOnLocal(ID const& id, P& payload);
 
   /**
    * @brief Mark the blob in the client-side cache as sealed, to keep
@@ -168,82 +159,43 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
    *
    * @param id The object id.
    */
-  Status SealUsage(ID const& id) {
-    auto elem = object_in_use_.find(id);
-    if (elem != object_in_use_.end()) {
-      elem->second->is_sealed = true;
-      return Status::OK();
-    }
-    return Status::ObjectNotExists();
-  }
+  Status SealUsage(ID const& id);
 
   /**
    * @brief Increase the Reference Count, add it to cache if not exists.
    *
    * @param id The object id.
    */
-  Status AddUsage(ID const& id, P const& payload) {
-    auto elem = object_in_use_.find(id);
-    if (elem == object_in_use_.end()) {
-      object_in_use_[id] = std::make_shared<P>(payload);
-      object_in_use_[id]->ref_cnt = 0;
-    }
-    return this->IncreaseReferenceCount(id);
-  }
+  Status AddUsage(ID const& id, P const& payload);
 
   /**
    * @brief Decrease the Reference Count.
    *
    * @param id The object id.
    */
-  Status RemoveUsage(ID const& id) { return this->DecreaseReferenceCount(id); }
+  Status RemoveUsage(ID const& id);
 
   /**
    * @brief Try to delete the blob from the client-side cache.
    *
    * @param id The object id.
    */
-  Status DeleteUsage(ID const& id) {
-    auto elem = object_in_use_.find(id);
-    if (elem != object_in_use_.end()) {
-      object_in_use_.erase(elem);
-      return Status::OK();
-    }
-    // May already be deleted when `ref_cnt == 0`
-    return Status::OK();
-  }
+  Status DeleteUsage(ID const& id);
 
-  void ClearCache() {
-    base_t::ClearCache();
-    object_in_use_.clear();
-  }
+  void ClearCache();
 
- public:
   /**
    * @brief change the reference count of the object on the client-side cache.
    */
-  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change) {
-    auto elem = object_in_use_.find(id);
-    if (elem != object_in_use_.end()) {
-      elem->second->ref_cnt += change;
-      ref_cnt = elem->second->ref_cnt;
-      return Status::OK();
-    }
-    return Status::ObjectNotExists();
-  }
+  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change);
 
-  Status OnRelease(ID const& id) {
-    // N.B.: Once reference count reaches zero, the accessibility of the object
-    // cannot be guaranteed (may trigger spilling in server-side), thus this
-    // blob should be regard as not-in-use.
-    RETURN_ON_ERROR(DeleteUsage(id));
-    return this->Self().OnRelease(id);
-  }
+  Status OnRelease(ID const& id);
 
-  Status OnDelete(ID const& id) { return Self().OnDelete(id); }
+  Status OnDelete(ID const& id);
 
  private:
   inline Der& Self() { return static_cast<Der&>(*this); }
+
   // Track the objects' usage.
   std::unordered_map<ID, std::shared_ptr<P>> object_in_use_;
 

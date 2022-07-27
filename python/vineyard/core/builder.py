@@ -83,7 +83,9 @@ class BuilderContext:
 
     def extend(self, builders=None):
         builder = BuilderContext()
-        builder.__factory = copy.copy(self.__factory)
+        builder.__factory = copy.copy(  # pylint: disable=unused-private-member
+            self.__factory
+        )
         if builders:
             builder.__factory.update(builders)
         return builder
@@ -161,6 +163,8 @@ def put(client, value, builder=None, **kw):
     # :class:`Object` (in the `bytes_builder` and `memoryview` builder).
     if meta:
         return meta.id
+    else:
+        return meta  # None
 
 
 setattr(IPCClient, 'put', put)

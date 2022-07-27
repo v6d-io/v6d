@@ -29,10 +29,10 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
-#include "boost/leaf.hpp"
 
 #include "common/util/json.h"
 #include "graph/fragment/property_graph_types.h"
+#include "graph/utils/error.h"
 
 namespace vineyard {
 

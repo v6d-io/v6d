@@ -24,7 +24,7 @@ limitations under the License.
 #include <type_traits>
 #include <typeinfo>
 
-#include "backtrace.hpp"
+#include "common/backtrace/backtrace.hpp"
 
 namespace vineyard {
 

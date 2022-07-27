@@ -283,7 +283,6 @@ def null_array_resolver(obj):
 
 def boolean_array_resolver(obj):
     meta = obj.meta
-    typename = obj.typename  # noqa: F841
     buffer = as_arrow_buffer(obj.member('buffer_'))
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
     length = int(meta['length_'])
@@ -319,7 +318,6 @@ def schema_proxy_resolver(obj):
 
 def record_batch_resolver(obj, resolver):
     meta = obj.meta
-    nrows, ncolumns = int(meta['row_num_']), int(meta['column_num_'])  # noqa: F841
     schema = resolver.run(obj.member('schema_'))
     columns = []
     for idx in range(int(meta['__columns_-size'])):

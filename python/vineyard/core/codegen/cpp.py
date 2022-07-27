@@ -21,7 +21,6 @@ import os
 import textwrap
 
 from .parsing import check_class
-from .parsing import dump_ast
 from .parsing import find_distributed_field
 from .parsing import find_fields
 from .parsing import generate_template_header
@@ -844,7 +843,9 @@ def generate_streamable(header, name, name_elaborated, verbose=False):
     return codegen_streamable_builder(header, name, name_elaborated)
 
 
-def codegen(root_directory, content, to_reflect, source, target=None, verbose=False):
+def codegen(  # pylint: disable=too-many-statements
+    root_directory, content, to_reflect, source, target=None, verbose=False
+):
     logging.info('Generating for %s ...', os.path.basename(source))
 
     filename, _ = os.path.splitext(source)

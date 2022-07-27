@@ -32,7 +32,7 @@ class LauncherStatus(Enum):
     SUCCEED = 3
 
 
-class Launcher(object):
+class Launcher:
     """:code:`Launcher` is an abstraction about a managed vineyard job.
 
     :code:`Launcher` provides a unified interface for users to invoke a vineyard
@@ -40,7 +40,7 @@ class Launcher(object):
 
     To implements a user-defined launcher, the developer needs to implements:
 
-        - __init__: configure the launcher by ad-hoc paramters
+        - __init__: configure the launcher by ad-hoc parameters
         - launch: launch the job
         - wait: wait and block until the job complete, if the job has already
           finished, return the result immediately
@@ -113,7 +113,7 @@ class Launcher(object):
         """
         raise NotImplementedError
 
-    def parse(self, line):
+    def parse(self, line):  # pylint: disable=too-many-return-statements
         """Parse job message. The messages should statisfy the following spec:
 
         ..code-block:

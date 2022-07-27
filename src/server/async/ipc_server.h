@@ -19,17 +19,15 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
 #include "boost/asio.hpp"
 
 #include "common/util/protocols.h"
 #include "server/async/socket_server.h"
 #include "server/memory/memory.h"
-#include "server/server/vineyard_server.h"
 
 namespace vineyard {
+
+class VineyardServer;
 
 /**
  * @brief The server for inter-process communication (IPC)
@@ -37,7 +35,7 @@ namespace vineyard {
  */
 class IPCServer : public SocketServer {
  public:
-  explicit IPCServer(vs_ptr_t vs_ptr);
+  explicit IPCServer(std::shared_ptr<VineyardServer> vs_ptr);
 
   ~IPCServer() override;
 

@@ -16,15 +16,17 @@ limitations under the License.
 #ifndef SRC_SERVER_ASYNC_RPC_SERVER_H_
 #define SRC_SERVER_ASYNC_RPC_SERVER_H_
 
+#include <memory>
 #include <string>
 
 #include "boost/asio.hpp"
 
 #include "common/util/env.h"
 #include "server/async/socket_server.h"
-#include "server/server/vineyard_server.h"
 
 namespace vineyard {
+
+class VineyardServer;
 
 /**
  * @brief A kind of server that supports remote procedure call (RPC)
@@ -32,7 +34,7 @@ namespace vineyard {
  */
 class RPCServer : public SocketServer {
  public:
-  explicit RPCServer(vs_ptr_t vs_ptr);
+  explicit RPCServer(std::shared_ptr<VineyardServer> vs_ptr);
 
   ~RPCServer() override;
 

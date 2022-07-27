@@ -37,7 +37,7 @@ def dump_dataframe(vineyard_socket, stream_id):
 def main():
     if len(sys.argv) < 5:
         print("usage: ./dump_dataframe <ipc_socket> <stream_id>")
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     dump_dataframe(ipc_socket, stream_id)

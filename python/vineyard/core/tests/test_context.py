@@ -24,7 +24,7 @@ from ...data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-def fake_sequence_resolver(obj, resolver):
+def fake_sequence_resolver(obj, resolver):  # pylint: disable=unused-argument
     return 'faked sequence'
 
 

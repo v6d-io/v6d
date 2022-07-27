@@ -18,15 +18,17 @@ limitations under the License.
 #include <mutex>
 #include <string>
 #include <utility>
+
 #include "boost/filesystem/operations.hpp"
 #include "boost/filesystem/path.hpp"
 
 #include "common/util/json.h"
 #include "common/util/logging.h"
+#include "server/server/vineyard_server.h"
 
 namespace vineyard {
 
-IPCServer::IPCServer(vs_ptr_t vs_ptr)
+IPCServer::IPCServer(std::shared_ptr<VineyardServer> vs_ptr)
     : SocketServer(vs_ptr),
       ipc_spec_(vs_ptr_->GetSpec()["ipc_spec"]),
       acceptor_(vs_ptr_->GetContext(), getEndpoint(vs_ptr_->GetContext())),

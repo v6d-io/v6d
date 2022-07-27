@@ -16,13 +16,11 @@
 # limitations under the License.
 #
 
-import json
 import logging
 import sys
-import traceback
 
 import pyarrow as pa
-import pyarrow.csv
+import pyarrow.csv  # pylint: disable=unused-import
 
 import vineyard
 from vineyard.data.utils import normalize_arrow_dtype
@@ -40,7 +38,9 @@ def parse_dataframe_blocks(content, read_options, parse_options, convert_options
     return pa.csv.read_csv(reader, read_options, parse_options, convert_options)
 
 
-def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):  # noqa: C901
+def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
+    vineyard_socket, stream_id, proc_num, proc_index
+):
     client = vineyard.connect(vineyard_socket)
 
     # get input streams
@@ -140,7 +140,7 @@ def parse_bytes(vineyard_socket, stream_id, proc_num, proc_index):  # noqa: C901
             )
             # write recordbatches
             stream_writer.write_table(table)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         stream_writer.fail()
         sys.exit(-1)
@@ -152,7 +152,7 @@ def main():
             "usage: ./parse_bytes_to_dataframe.py <ipc_socket> <stream_id> "
             "<proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     proc_num = int(sys.argv[3])

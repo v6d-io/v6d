@@ -16,12 +16,8 @@
 # limitations under the License.
 #
 
-import numpy as np
 import pyarrow as pa
 
-import pytest
-
-import vineyard
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -70,7 +66,7 @@ def test_record_batch(vineyard_client):
         pa.array([True, None, False, True]),
     ]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
-    object_id = vineyard_client.put(batch)  # noqa: F841
+    _object_id = vineyard_client.put(batch)  # noqa: F841
     # processing tables that contains string is not roundtrip, as StringArray
     # will be transformed to LargeStringArray
     #
@@ -86,7 +82,7 @@ def test_table(vineyard_client):
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
     batches = [batch] * 5
     table = pa.Table.from_batches(batches)
-    object_id = vineyard_client.put(table)  # noqa: F841
+    _object_id = vineyard_client.put(table)  # noqa: F841
     # processing tables that contains string is not roundtrip, as StringArray
     # will be transformed to LargeStringArray
     #

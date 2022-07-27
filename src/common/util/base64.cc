@@ -14,6 +14,8 @@ limitations under the License.
 */
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include "common/util/base64.h"
 

@@ -250,8 +250,6 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::string nodename_;
 };
 
-using vs_ptr_t = std::shared_ptr<VineyardServer>;
-
 }  // namespace vineyard
 
 #endif  // SRC_SERVER_SERVER_VINEYARD_SERVER_H_

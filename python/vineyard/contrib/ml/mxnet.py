@@ -18,7 +18,7 @@
 
 import numpy as np
 
-import mxnet as mx
+import mxnet as mx  # pylint: disable=import-error
 
 from vineyard._C import ObjectMeta
 from vineyard.core.resolver import default_resolver_context
@@ -73,9 +73,10 @@ def mxnet_builder(client, value, builder, **kw):
         return mxnet_tensor_builder(client, value, **kw)
     elif typename == 'DataFrame':
         return mxnet_dataframe_builder(client, value, builder, **kw)
+    raise ValueError("Unknown type: %s" % typename)
 
 
-def mxnet_tensor_resolver(obj, resolver, **kw):
+def mxnet_tensor_resolver(obj, resolver, **_kw):  # pylint: disable=unused-argument
     meta = obj.meta
     data_shape = from_json(meta['data_shape_'])
     label_shape = from_json(meta['label_shape_'])
@@ -92,36 +93,39 @@ def mxnet_tensor_resolver(obj, resolver, **kw):
     return mx.gluon.data.ArrayDataset((data, label))
 
 
-def mxnet_dataframe_resolver(obj, resolver, **kw):
-    with resolver_context(base=default_resolver_context) as resolver:
-        df = resolver(obj, **kw)
+def mxnet_dataframe_resolver(obj, resolver, **kw):  # pylint: disable=unused-argument
+    with resolver_context(base=default_resolver_context) as current_resolver:
+        df = current_resolver(obj, **kw)
     if 'label' in kw:
         target = df[kw['label']].values.astype(np.float32)
         data = df.drop(kw['label'], axis=1).values.astype(np.float32)
         return mx.gluon.data.ArrayDataset((data, target))
+    raise ValueError("'label' not presented in kwargs")
 
 
 def mxnet_record_batch_resolver(obj, **kw):
-    with resolver_context(base=default_resolver_context) as resolver:
-        records = resolver(obj, **kw)
+    with resolver_context(base=default_resolver_context) as current_resolver:
+        records = current_resolver(obj, **kw)
     records = records.to_pandas()
     if 'label' in kw:
         target = records[kw['label']].values.astype(np.float32)
         data = records.drop(kw['label'], axis=1).values.astype(np.float32)
         return mx.gluon.data.ArrayDataset((data, target))
+    raise ValueError("'label' not presented in kwargs")
 
 
 def mxnet_table_resolver(obj, **kw):
-    with resolver_context(base=default_resolver_context) as resolver:
-        table = resolver(obj, **kw)
+    with resolver_context(base=default_resolver_context) as current_resolver:
+        table = current_resolver(obj, **kw)
     table = table.to_pandas()
     if 'label' in kw:
         target = table[kw['label']].values.astype(np.float32)
         data = table.drop(kw['label'], axis=1).values.astype(np.float32)
         return mx.gluon.data.ArrayDataset((data, target))
+    raise ValueError("'label' not presented in kwargs")
 
 
-def mxnet_global_tensor_resolver(obj, resolver, **kw):
+def mxnet_global_tensor_resolver(obj, resolver, **_kw):
     meta = obj.meta
     num = int(meta['partitions_-size'])
     data = []
@@ -134,7 +138,7 @@ def mxnet_global_tensor_resolver(obj, resolver, **kw):
     return mx.gluon.data.ArrayDataset((data, label))
 
 
-def mxnet_global_dataframe_resolver(obj, resolver, **kw):
+def mxnet_global_dataframe_resolver(obj, resolver, **_kw):
     meta = obj.meta
     num = int(meta['partitions_-size'])
     data = []

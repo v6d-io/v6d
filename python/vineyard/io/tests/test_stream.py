@@ -27,8 +27,8 @@ import pandas as pd
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
-from vineyard.io.byte import ByteStream
-from vineyard.io.dataframe import DataframeStream
+from vineyard.io.byte import ByteStream  # pylint: disable=unused-import
+from vineyard.io.dataframe import DataframeStream  # pylint: disable=unused-import
 from vineyard.io.recordbatch import RecordBatchStream
 
 register_builtin_types(default_builder_context, default_resolver_context)

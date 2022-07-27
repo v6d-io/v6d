@@ -133,8 +133,8 @@ def taskflow_v6d():
     kickoff_dag = DummyOperator(task_id="kickoff_dag")
     complete_dag = DummyOperator(task_id="complete_dag")
 
-    kickoff_dag >> build_raw_df
-    load_results_r >> complete_dag
+    kickoff_dag >> build_raw_df  # pylint: disable=pointless-statement
+    load_results_r >> complete_dag  # pylint: disable=pointless-statement
 
 
 taskflow_v6d_dag = taskflow_v6d()

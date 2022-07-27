@@ -16,11 +16,7 @@
 # limitations under the License.
 #
 
-import json
 import sys
-import traceback
-
-import pyarrow as pa
 
 import vineyard
 from vineyard.io.byte import ByteStream
@@ -66,7 +62,7 @@ def parse_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
             if len(csv_content) > 0:
                 chunk = stream_writer.next(len(csv_content))
                 vineyard.memory_copy(chunk, 0, csv_content)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         stream_writer.fail()
         sys.exit(-1)
@@ -78,7 +74,7 @@ def main():
             "usage: ./parse_dataframe_to_bytes <ipc_socket> <stream_id> <proc_num> "
             "<proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     proc_num = int(sys.argv[3])

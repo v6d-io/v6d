@@ -18,8 +18,8 @@
 
 import pytest
 
-from vineyard.conftest import vineyard_endpoints
-from vineyard.conftest import vineyard_ipc_sockets
+from vineyard.conftest import vineyard_endpoints  # pylint: disable=unused-import
+from vineyard.conftest import vineyard_ipc_sockets  # pylint: disable=unused-import
 
 
 def pytest_addoption(parser):

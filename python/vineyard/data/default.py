@@ -18,10 +18,10 @@
 
 import pickle
 
-if pickle.HIGHEST_PROTOCOL < 5:
-    import pickle5 as pickle
-
 from vineyard._C import ObjectMeta
+
+if pickle.HIGHEST_PROTOCOL < 5:
+    import pickle5 as pickle  # pylint: disable=import-error
 
 
 def default_builder(client, value, **kwargs):

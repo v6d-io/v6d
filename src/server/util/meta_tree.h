@@ -21,11 +21,61 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "server/services/meta_service.h"
+#include "common/util/json.h"
+#include "common/util/logging.h"
+#include "common/util/status.h"
+#include "common/util/uuid.h"
 
 namespace vineyard {
 
 namespace meta_tree {
+
+struct kv_t {
+  std::string key;
+  std::string value;
+  unsigned rev;
+};
+
+struct op_t {
+  enum op_type_t : unsigned { kPut = 0, kDel = 1 } op;
+  kv_t kv;
+  std::string ToString() const {
+    std::stringstream ss;
+    ss.str("");
+    ss.clear();
+    ss << ((op == kPut) ? "put " : "del ");
+    ss << "[" << kv.rev << "] " << kv.key << " -> " << kv.value;
+    return ss.str();
+  }
+
+  static op_t Del(std::string const& key) {
+    return op_t{.op = op_type_t::kDel,
+                .kv = kv_t{.key = key, .value = "", .rev = 0}};
+  }
+  static op_t Del(std::string const& key, unsigned const rev) {
+    return op_t{.op = op_type_t::kDel,
+                .kv = kv_t{.key = key, .value = "", .rev = rev}};
+  }
+  // send to etcd
+  template <typename T>
+  static op_t Put(std::string const& key, T const& value) {
+    return op_t{
+        .op = op_type_t::kPut,
+        .kv = kv_t{.key = key, .value = json_to_string(json(value)), .rev = 0}};
+  }
+  template <typename T>
+  static op_t Put(std::string const& key, json const& value) {
+    return op_t{
+        .op = op_type_t::kPut,
+        .kv = kv_t{.key = key, .value = json_to_string(value), .rev = 0}};
+  }
+  // receive from etcd
+  static op_t Put(std::string const& key, std::string const& value,
+                  unsigned const rev) {
+    return op_t{.op = op_type_t::kPut,
+                .kv = kv_t{.key = key, .value = value, .rev = rev}};
+  }
+};
 
 enum class NodeType {
   Value = 0,
@@ -48,27 +98,26 @@ Status Exists(const json& tree, const ObjectID id, bool& exists);
 
 Status PutDataOps(const json& tree, const std::string& instance_name,
                   const ObjectID id, const json& sub_tree,
-                  std::vector<IMetaService::op_t>& ops,
-                  InstanceID& computed_instance_id);
+                  std::vector<op_t>& ops, InstanceID& computed_instance_id);
 
 Status PersistOps(const json& tree, const std::string& instance_name,
-                  const ObjectID id, std::vector<IMetaService::op_t>& ops);
+                  const ObjectID id, std::vector<op_t>& ops);
 
-Status DelDataOps(const json& tree, const ObjectID id,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
+Status DelDataOps(const json& tree, const ObjectID id, std::vector<op_t>& ops,
+                  bool& sync_remote);
 
 Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
+                  std::vector<op_t>& ops, bool& sync_remote);
 
 Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
+                  std::vector<op_t>& ops, bool& sync_remote);
 
 Status DelDataOps(const json& tree, const std::string& name,
-                  std::vector<IMetaService::op_t>& ops, bool& sync_remote);
+                  std::vector<op_t>& ops, bool& sync_remote);
 
 Status ShallowCopyOps(const json& tree, const ObjectID id,
                       const json& extra_metadata, const ObjectID target,
-                      std::vector<IMetaService::op_t>& ops, bool& transient);
+                      std::vector<op_t>& ops, bool& transient);
 
 Status FilterAtInstance(const json& tree, const InstanceID& instance_id,
                         std::vector<ObjectID>& objects);

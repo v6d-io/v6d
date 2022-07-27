@@ -33,13 +33,15 @@ DEP_MISSING_ERROR = '''
 '''
 
 try:
-    import clang.cindex as cindex
+    from clang import cindex
     from clang.cindex import Cursor
     from clang.cindex import CursorKind
     from clang.cindex import Type
     from clang.cindex import TypeKind
 except ImportError:
-    raise RuntimeError(DEP_MISSING_ERROR.format(dep='libclang'))
+    raise RuntimeError(  # pylint: disable=raise-missing-from
+        DEP_MISSING_ERROR.format(dep='libclang')
+    )
 
 ###############################################################################
 #
@@ -133,7 +135,7 @@ def unpack_pointer_type(node_type: Type) -> Tuple[Type, str, str]:
         basename = node_type.spelling.split('<')[0]
         namespace = figure_out_namespace(node_type.get_declaration())
 
-        if (
+        if (  # pylint: disable=too-many-boolean-expressions
             basename == 'std::shared_ptr'
             or namespace in ['std', 'std::__1']
             and basename == 'shared_ptr'
@@ -195,10 +197,9 @@ def is_list_type(namespace: str, basename: str) -> bool:
 
 def is_dict_type(namespace: str, basename: str) -> bool:
     return (
-        basename == 'vineyard::Map'
-        or basename == 'vineyard::UnorderedMap'
+        basename in ['vineyard::Map', 'vineyard::UnorderedMap']
         or namespace == 'vineyard'
-        and (basename == 'Map' or basename == 'UnorderedMap')
+        and basename in ['Map', 'UnorderedMap']
     )
 
 
@@ -666,9 +667,9 @@ def generate_parsing_flags(
 
 
 def parse_module(  # noqa: C901
-    root_directory,
+    root_directory,  # pylint: disable=unused-argument
     source,
-    target=None,
+    target=None,  # pylint: disable=unused-argument
     system_includes=None,
     includes=None,
     extra_flags=None,

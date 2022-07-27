@@ -30,7 +30,7 @@ from vineyard.io.utils import report_success
 
 
 def read_vineyard_dataframe(
-    vineyard_socket, path, storage_options, read_options, proc_num, proc_index
+    vineyard_socket, path, storage_options, read_options, _proc_num, _proc_index
 ):
     client = vineyard.connect(vineyard_socket)
     params = dict()
@@ -49,7 +49,7 @@ def read_vineyard_dataframe(
     # the "name" part in URL can be a name, or an ObjectID for convenience.
     try:
         df_id = client.get_name(name)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         df_id = vineyard.ObjectID(name)
     dataframes = client.get(df_id)
 
@@ -60,7 +60,7 @@ def read_vineyard_dataframe(
             batch = pa.RecordBatch.from_pandas(df)
             writer.write(batch)
         writer.finish()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         report_exception()
         writer.fail()
         sys.exit(-1)
@@ -72,7 +72,7 @@ def main():
             "usage: ./read_vineyard_dataframe <ipc_socket> <vineyard_address> "
             "<storage_options> <read_options> <proc num> <proc index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     path = sys.argv[2]
     storage_options = json.loads(

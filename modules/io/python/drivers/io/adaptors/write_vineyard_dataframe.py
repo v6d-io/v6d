@@ -16,10 +16,7 @@
 # limitations under the License.
 #
 
-import json
 import sys
-
-import pyarrow as pa
 
 import vineyard
 from vineyard.io.dataframe import DataframeStream
@@ -40,7 +37,7 @@ def write_vineyard_dataframe(vineyard_socket, stream_id, proc_num, proc_index):
     while True:
         try:
             batch = stream_reader.next()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             break
         df = batch.to_pandas()
         df_id = client.put(
@@ -57,7 +54,7 @@ def main():
             "usage: ./write_vineyard_dataframe <ipc_socket> <stream_id> "
             "<proc_num> <proc_index>"
         )
-        exit(1)
+        sys.exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
     proc_num = int(sys.argv[3])

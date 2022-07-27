@@ -21,6 +21,8 @@ import subprocess
 import sys
 import textwrap
 from distutils.cmd import Command
+from distutils.util import strtobool
+from typing import List
 
 from setuptools import Extension
 from setuptools import find_packages
@@ -33,9 +35,15 @@ from wheel.bdist_wheel import bdist_wheel
 repo_root = os.path.dirname(os.path.abspath(__file__))
 
 
+def value_to_bool(val):
+    if isinstance(val, str):
+        return strtobool(val)
+    return val
+
+
 class CopyCMakeExtension(Extension):
     def __init__(self, name):
-        super(CopyCMakeExtension, self).__init__(name, sources=[])
+        super().__init__(name, sources=[])
 
 
 class build_ext_with_precompiled(build_ext):
@@ -87,41 +95,66 @@ class FormatAndLint(Command):
     description = 'format and lint code'
     user_options = []
 
-    user_options = [('inplace=', 'i', 'Run code formatter and linter inplace')]
+    user_options = [
+        ('inplace=', 'i', 'Run code formatter and linter inplace'),
+        ('pylint=', None, 'Run the pylint checker'),
+        ('flake8=', None, 'Run the flake8 checker'),
+    ]
 
     def initialize_options(self):
         self.inplace = False
+        self.pylint = False
+        self.flake8 = True
 
     def finalize_options(self):
-        if self.inplace or self.inplace == 'True' or self.inplace == 'true':
-            self.inplace = True
-        else:
-            self.inplace = False
+        self.inplace = value_to_bool(self.inplace)
+        self.pylint = value_to_bool(self.pylint)
+        self.flake8 = value_to_bool(self.flake8)
 
-    def lint_current_repo(self, cmd):
-        targets = [
-            'python/',
-            'modules/io/python',
-            'setup.py',
-            'setup_airflow.py',
-            'setup_dask.py',
-            'setup_io.py',
-            'setup_migrate.py',
-            'setup_ml.py',
-            'setup_ray.py',
-            'test/runner.py',
-        ]
-        subprocess.check_call(cmd + targets, cwd=repo_root)
+    linter_targets = [
+        'python/',
+        'modules/io/python',
+        'setup.py',
+        'setup_airflow.py',
+        'setup_dask.py',
+        'setup_io.py',
+        'setup_migrate.py',
+        'setup_ml.py',
+        'setup_ray.py',
+        'test/runner.py',
+    ]
+
+    def extend_cmd_as_import(self, cmd) -> List[str]:
+        if not isinstance(cmd, (list, tuple)):
+            cmd = [cmd]
+        return [sys.executable, '-m'] + cmd
+
+    def linter(self, cmd):
+        cmd = self.extend_cmd_as_import(cmd)
+        subprocess.check_call(cmd + self.linter_targets, cwd=repo_root)
+
+    def linter_pylint(self, cmd):
+        cmd = self.extend_cmd_as_import(cmd)
+        # lint misc
+        subprocess.check_call(cmd + self.linter_targets[1:], cwd=repo_root)
+        # lint main package
+        subprocess.check_call(cmd + ['vineyard'], cwd=os.path.join(repo_root, 'python'))
 
     def run(self):
         if self.inplace:
-            self.lint_current_repo([sys.executable, '-m', 'isort'])
-            self.lint_current_repo([sys.executable, '-m', 'black'])
-            self.lint_current_repo([sys.executable, '-m', 'flake8'])
+            self.linter(['isort'])
+            self.linter(['black'])
+            self.linter(['flake8'])
         else:
-            self.lint_current_repo([sys.executable, '-m', 'isort', '--check', '--diff'])
-            self.lint_current_repo([sys.executable, '-m', 'black', '--check', '--diff'])
-            self.lint_current_repo([sys.executable, '-m', 'flake8'])
+            self.linter(['isort', '--check', '--diff'])
+            self.linter(['black', '--check', '--diff'])
+            self.linter(['flake8'])
+        if self.pylint:
+            self.linter_pylint(
+                ['pylint', '--rcfile=%s' % os.path.join(repo_root, '.pylintrc')]
+            )
+        if self.flake8:
+            self.linter(['flake8'])
 
 
 def find_core_packages(root):
