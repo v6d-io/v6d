@@ -22,7 +22,7 @@ The artifacts will be placed under the `./bin/` directory:
 ### Build with debugging information:
 
 ```
-make -j$(nproc) DEBUG=1
+make -j$(nproc) DEBUG=true
 ```
 
 The artifacts built with `-g -ggdb -O2` will be placed under the `./bin/` directory, with a `_dbg` suffix:
