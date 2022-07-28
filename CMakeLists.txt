@@ -14,7 +14,6 @@ if(POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
 endif()
 project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
-
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
