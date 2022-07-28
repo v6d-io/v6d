@@ -30,6 +30,8 @@ AnyType ParseAnyType(const std::string& type_name) {
     return AnyType::UInt64;
   } else if (type_name == "float") {
     return AnyType::Float;
+  } else if (type_name == "float64") {
+    return AnyType::Double;
   } else if (type_name == "double") {
     return AnyType::Double;
   } else if (type_name == "string") {
