@@ -116,7 +116,7 @@ class DependencyTracker
   Status RemoveDependency(ID const& id, int conn) {
     typename dependency_map_t::accessor accessor;
     if (!dependency_.find(accessor, conn)) {
-      return Status::Invalid("connection not exist.");
+      return Status::KeyError("connection not exist.");
     } else {
       auto& objects = accessor->second;
       if (objects.find(id) == objects.end()) {
@@ -146,7 +146,7 @@ class DependencyTracker
   Status ReleaseConnection(int conn) {
     typename dependency_map_t::const_accessor accessor;
     if (!dependency_.find(accessor, conn)) {
-      return Status::Invalid("connection not exist.");
+      return Status::KeyError("connection doesn't exist.");
     } else {
       auto& objects = accessor->second;
       for (auto& elem : objects) {

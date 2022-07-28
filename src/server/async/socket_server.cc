@@ -68,9 +68,9 @@ bool SocketConnection::Stop() {
   if (server_ptr_->GetBulkStoreType() == StoreType::kDefault) {
     std::unordered_set<ObjectID> ids;
     auto status = bulk_store_->ReleaseConnection(this->getConnId());
-    if (!status.ok()) {
-      LOG(INFO) << "No dependent objects, conn_id: " << this->getConnId()
-                << ", status: " << status.ToString();
+    if (!status.ok() && !status.IsKeyError()) {
+      LOG(WARNING) << "Failed to release the connction '" << this->getConnId()
+                   << "' from object dependency: " << status.ToString();
     }
   }
 

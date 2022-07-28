@@ -29,6 +29,21 @@ A vineyard daemon server will be launched on the underlying machine with default
 settings. The default ``socket`` is ``/var/run/vineyard.sock``, and it is
 listened by the server for ipc connections. 
 
+.. tip::
+
+  If you encounter errors like
+  :code:`cannot launch vineyardd on '/var/run/vineyard.sock': Permission denied,`,
+  that means you don't have the permission to create a UNIX-domain socket at
+  :code:`/var/run/vineyard.sock`, you could either
+
+  - run vineyard as root, using :code:`sudo`
+  - or change the socket path to a different one, with the :code:`--socket` command
+    line option, like
+
+    .. code:: console
+     
+       $ python3 -m vineyard --socket /tmp/vineyard.sock
+
 A vineyard daemon server is a vineyard instance in a vineyard cluster. Thus, to
 start a vineyard cluster, we can simply start ``vineyardd`` over all the
 machines in the cluster, and make sure these vineyard instances can register to 
