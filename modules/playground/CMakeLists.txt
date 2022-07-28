@@ -1,4 +1,6 @@
 set(SS)
 list(APPEND SS "playground.cc")
+add_executable(register "register.cc")
 add_executable(play ${SS} )
 target_link_libraries(play vineyard_basic)
+target_link_libraries(register vineyard_basic)
