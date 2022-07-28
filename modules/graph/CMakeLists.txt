@@ -98,6 +98,11 @@ endif()
 install_vineyard_target(vineyard_graph)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
+# add the vineyard-graph-loader target
+add_executable(vineyard-graph-loader "${CMAKE_CURRENT_SOURCE_DIR}/tools/graph_loader.cc")
+target_link_libraries(vineyard-graph-loader PRIVATE vineyard_graph)
+install_vineyard_target(vineyard-graph-loader)
+
 if(BUILD_VINEYARD_TESTS)
     enable_testing()
     file(GLOB TEST_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/test" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc")
