@@ -33,7 +33,8 @@ class VineyardServer;
  * @brief The server for inter-process communication (IPC)
  *
  */
-class IPCServer : public SocketServer {
+class IPCServer : public SocketServer,
+                  public std::enable_shared_from_this<IPCServer> {
  public:
   explicit IPCServer(std::shared_ptr<VineyardServer> vs_ptr);
 

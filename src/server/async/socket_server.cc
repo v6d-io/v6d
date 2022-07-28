@@ -33,9 +33,9 @@ limitations under the License.
 
 namespace vineyard {
 
-SocketConnection::SocketConnection(stream_protocol::socket socket,
-                                   std::shared_ptr<VineyardServer> server_ptr,
-                                   SocketServer* socket_server_ptr, int conn_id)
+SocketConnection::SocketConnection(
+    stream_protocol::socket socket, std::shared_ptr<VineyardServer> server_ptr,
+    std::shared_ptr<SocketServer> socket_server_ptr, int conn_id)
     : socket_(std::move(socket)),
       server_ptr_(server_ptr),
       socket_server_ptr_(socket_server_ptr),

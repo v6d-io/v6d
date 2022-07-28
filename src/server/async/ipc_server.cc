@@ -110,22 +110,27 @@ void IPCServer::doAccept() {
   if (!acceptor_.is_open()) {
     return;
   }
-  acceptor_.async_accept(socket_, [this](boost::system::error_code ec) {
+  auto self(shared_from_this());
+  acceptor_.async_accept(socket_, [self](boost::system::error_code ec) {
     if (!ec) {
-      std::shared_ptr<SocketConnection> conn =
-          std::make_shared<SocketConnection>(std::move(this->socket_), vs_ptr_,
-                                             this, next_conn_id_);
-      conn->Start();
       std::lock_guard<std::recursive_mutex> scope_lock(
-          this->connections_mutex_);
-      connections_.emplace(next_conn_id_, conn);
-      ++next_conn_id_;
+          self->connections_mutex_);
+      if (self->stopped_.load() || self->closable_.load()) {
+        return;
+      }
+      std::shared_ptr<SocketConnection> conn =
+          std::make_shared<SocketConnection>(std::move(self->socket_),
+                                             self->vs_ptr_, self,
+                                             self->next_conn_id_);
+      conn->Start();
+      self->connections_.emplace(self->next_conn_id_, conn);
+      ++self->next_conn_id_;
     }
     // don't continue when the iocontext being cancelled or the session is going
     // to close.
     if (!ec || ec != boost::system::errc::operation_canceled) {
-      if (!stopped_.load() || !closable_.load()) {
-        doAccept();
+      if (!self->stopped_.load() || !self->closable_.load()) {
+        self->doAccept();
       }
     }
   });

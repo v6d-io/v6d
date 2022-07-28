@@ -32,7 +32,8 @@ class VineyardServer;
  * @brief A kind of server that supports remote procedure call (RPC)
  *
  */
-class RPCServer : public SocketServer {
+class RPCServer : public SocketServer,
+                  public std::enable_shared_from_this<RPCServer> {
  public:
   explicit RPCServer(std::shared_ptr<VineyardServer> vs_ptr);
 

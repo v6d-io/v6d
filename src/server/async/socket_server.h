@@ -54,7 +54,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
  public:
   SocketConnection(stream_protocol::socket socket,
                    std::shared_ptr<VineyardServer> server_ptr,
-                   SocketServer* socket_server_ptr, int conn_id);
+                   std::shared_ptr<SocketServer> socket_server_ptr,
+                   int conn_id);
 
   bool Start();
 
@@ -192,9 +193,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   /**
    * Being called when the encounter a socket error (in read/write), or by
-   * plasma "conn->Stop()".
+   * external "conn->Stop()" (from the `SocketServer`.).
    *
-   * Just do some clean up and won't remove connecion from parent's pool.
+   * Just do some clean up and won't remove connection from parent's pool.
    */
   void doStop();
 
@@ -212,9 +213,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   stream_protocol::socket socket_;
   std::shared_ptr<VineyardServer> server_ptr_;
-  SocketServer* socket_server_ptr_;
+  std::shared_ptr<SocketServer> socket_server_ptr_;
 
-  // hold a reference of the bulkstore to aovid dtor conflicits.
+  // hold a reference of the bulkstore to avoid dtor conflict.
   std::shared_ptr<BulkStore> bulk_store_;
   std::shared_ptr<PlasmaBulkStore> plasma_bulk_store_;
 
@@ -238,6 +239,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 class SocketServer {
  public:
   explicit SocketServer(std::shared_ptr<VineyardServer> vs_ptr);
+
+  /**
+   * Stop the acceptor.
+   */
   virtual ~SocketServer() {}
 
   virtual void Start();
@@ -248,7 +253,8 @@ class SocketServer {
   void Stop();
 
   /**
-   * ready to stop the session.
+   * Cancel the "async_accept" action on the acceptor to stop accepting
+   * further connections.
    */
   virtual void Close() { closable_.store(true); }
 
