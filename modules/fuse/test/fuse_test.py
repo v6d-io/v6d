@@ -93,20 +93,45 @@ def assert_array(stored_arr:pa.Array, extracted_array:pa.Array):
     assert stored_arr.equals(extracted_array), "array unmatch"
 
 def read_data_from_fuse(vid):
-    print(vid)
-
     with open(os.path.join(test_mount_dir,vid), 'rb') as source:
         with pa.ipc.open_stream(source) as reader:
             data = reader.read_all()
             return data
+
 def test_fuse_array(data,client):
     id = client.put(data)
     extracted_data = read_data_from_fuse(str(id)[11:28])
     print("data: ")
     print(data)
     print("extracted data: ")
-    print(extracted_data.column("a").chunk(0))
-    assert_array(data,extracted_data.column("a").chunk(0))
+    extracted_data = extracted_data.column("a").chunk(0)
+    print(extracted_data)
+    assert_array(data,extracted_data)
+
+def test_fuse_string_array(data,client):
+    id = client.put(data)
+    extracted_data = read_data_from_fuse(str(id)[11:28])
+    print("data: ")
+    print(data)
+    print("extracted data: ")
+    extracted_data = extracted_data.column("a").chunk(0)
+    print(extracted_data)
+    assert compare_two_string_array(data,extracted_data), "string array not the same"
+
+def compare_two_string_array(arr_str_1,arr_str_2):
+    a = arr_str_1
+    b = arr_str_2
+    if(len(a) != len(b)):
+        return False
+    else:
+        for i,j in zip(a,b):
+            if str(i)!= str(j):
+                print("they are different")
+                print(i)
+                print(j)
+                return False
+    return True
+
 def test_fuse_df(data,client):
     id = client.put(data)
     extracted_data = read_data_from_fuse(str(id)[11:28])
@@ -132,8 +157,9 @@ if __name__ == "__main__":
     test_fuse_array(int_array,client)
     double_array = generate_array(Type.DOUBLE)
     test_fuse_array(double_array,client)
-    # string_array = generate_array(Type.STRING)
-    # test_fuse_array(string_array,client) 
+    
+    string_array = generate_array(Type.STRING)
+    test_fuse_string_array(string_array,client) 
     print("array_test passed")
 # test df
     int_df = generate_dataframe()

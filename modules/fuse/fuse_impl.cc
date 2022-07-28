@@ -13,16 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fuse/fused.h"
-#include "fuse/adaptors/formats.h"
+#include "modules/fuse/fuse_impl.h"
 
 #include <limits>
 #include <unordered_map>
 
-#include "arrow/status.h"
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 #include "arrow/result.h"
+#include "arrow/status.h"
 #include "arrow/util/key_value_metadata.h"
 #include "arrow/util/macros.h"
 
@@ -61,8 +60,9 @@ static std::shared_ptr<arrow::Buffer> generate_fuse_view(
 
 int fs::fuse_getattr(const char* path, struct stat* stbuf,
                      struct fuse_file_info*) {
-  VLOG(2) << "fuse: getattr on " << path;
-  std::lock_guard<std::mutex> guard(state.mtx_);
+  // VLOG(2) << "fuse: getattr on " << path;
+  // std::lock_guard<std::mutex> guard(state.mtx_);
+  LOG(INFO) << "fuse: getattr on " << path;
 
   memset(stbuf, 0, sizeof(struct stat));
   if (strcmp(path, "/") == 0) {
@@ -122,8 +122,8 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
               << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)   \
               << std::endl;                                              \
       return -ECANCELED;                                                 \
-    }                                                                   \
-  }while (0)                                                            
+    }                                                                    \
+  } while (0)
 // ECANCELED 125 Operation canceled
 
 #define FUSE_ASSIGN_OR_RAISE_IMPL(result_name, lhs, rexpr) \
@@ -136,10 +136,11 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
       ARROW_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, rexpr);
 #endif
 int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
-  VLOG(2) << "fuse: open " << path << " with mode " << fi->flags;
+  LOG(INFO) << "fuse: open " << path << " with mode " << fi->flags;
   if ((fi->flags & O_ACCMODE) != O_RDONLY) {
     return -EACCES;
   }
+<<<<<<< HEAD:modules/fuse/fused.cc
 <<<<<<< HEAD
   std::lock_guard<std::mutex> guard(state.mtx_);
 
@@ -148,11 +149,14 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
  
 
   VLOG(2)<<"initialized the variables";
+=======
+  auto target = ObjectIDFromString(path + 1);
+  LOG(INFO) << "converted objectID" << target;
+>>>>>>> refactor: beautify the repo:modules/fuse/fuse_impl.cc
 
   auto loc = state.views.find(target);
-  std::shared_ptr<arrow::Buffer> buffer_;
-  VLOG(1)<<"data type"<< typeName;
   if (loc == state.views.end()) {
+<<<<<<< HEAD:modules/fuse/fused.cc
       VLOG(2)<<"taregt ObjectID is not Found";
 
     if (typeName == "vineyard::Dataframe") {
@@ -194,6 +198,13 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
       VLOG(2)<<"taregt ObjectID is Found";
 
 >>>>>>> dev_expr: learn fuse usage
+=======
+    auto obj = state.client->GetObject(target);
+    auto d = fs::state.ipc_desearilizer_registry.at(obj->meta().GetTypeName());
+    state.views[target] = d(obj);
+  } else {
+    LOG(INFO) << "taregt ObjectID content is Found";
+>>>>>>> refactor: beautify the repo:modules/fuse/fuse_impl.cc
   }
 
   // bypass kernel's page cache to avoid knowing the size in `getattr`.
@@ -205,6 +216,7 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
 
 int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
                   struct fuse_file_info* fi) {
+<<<<<<< HEAD:modules/fuse/fused.cc
   VLOG(2) << "fuse: read " << path << " from " << offset << ", expect " << size
           << " bytes";
   std::unordered_map<std::string,
@@ -213,6 +225,13 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
     std::lock_guard<std::mutex> guard(state.mtx_);
     loc = state.views.find(path);
   }
+=======
+  LOG(INFO) << "fuse: read " << path << " from " << offset << ", expect "
+            << size << " bytes";
+
+  auto target = ObjectIDFromString(path + 1);
+  auto loc = state.views.find(target);
+>>>>>>> refactor: beautify the repo:modules/fuse/fuse_impl.cc
   if (loc == state.views.end()) {
     return -ENOENT;
   }
@@ -229,10 +248,15 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
   }
 }
 
+<<<<<<< HEAD:modules/fuse/fused.cc
 int fs::fuse_write(const char* path, const char* buf, size_t size, off_t offset,
                    struct fuse_file_info* fi) {
   VLOG(2) << "fuse: write " << path << " from " << offset << ", expect " << size
           << " bytes";
+=======
+int fs::fuse_release(const char* path, struct fuse_file_info*) {
+  LOG(INFO) << "fuse: release " << path;
+>>>>>>> refactor: beautify the repo:modules/fuse/fuse_impl.cc
 
   auto loc = state.mutable_views.find(path);
   if (loc == state.mutable_views.end()) {
@@ -248,7 +272,7 @@ int fs::fuse_write(const char* path, const char* buf, size_t size, off_t offset,
 }
 
 int fs::fuse_statfs(const char* path, struct statvfs*) {
-  VLOG(2) << "fuse: statfs " << path;
+  LOG(INFO) << "fuse: statfs " << path;
   return 0;
 }
 
@@ -289,14 +313,14 @@ int fs::fuse_getxattr(const char* path, const char* name, char*, size_t) {
 }
 
 int fs::fuse_opendir(const char* path, struct fuse_file_info* info) {
-  VLOG(2) << "fuse: opendir " << path;
+  LOG(INFO) << "fuse: opendir " << path;
   return 0;
 }
 
 int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
                      off_t offset, struct fuse_file_info* fi,
                      enum fuse_readdir_flags flags) {
-  VLOG(2) << "fuse: readdir " << path;
+  LOG(INFO) << "fuse: readdir " << path;
 
   if (strcmp(path, "/") != 0) {
     return -ENOENT;
@@ -325,7 +349,7 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 }
 
 void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
-  VLOG(2) << "fuse: initfs with vineyard socket " << state.vineyard_socket;
+  LOG(INFO) << "fuse: initfs with vineyard socket " << state.vineyard_socket;
 
   state.client.reset(new vineyard::Client());
   state.client->Connect(state.vineyard_socket);
@@ -338,7 +362,7 @@ void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
 }
 
 void fs::fuse_destroy(void* private_data) {
-  VLOG(2) << "fuse: destroy";
+  LOG(INFO) << "fuse: destroy";
 
   state.views.clear();
   state.client->Disconnect();

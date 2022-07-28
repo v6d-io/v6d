@@ -1,1 +1,0 @@
-setup GLOG_logtostderr to 1 in env var

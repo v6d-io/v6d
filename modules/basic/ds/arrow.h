@@ -274,11 +274,7 @@ inline std::shared_ptr<ObjectBuilder> BuildNumericArray(
 
 inline std::shared_ptr<ObjectBuilder> BuildSimpleArray(
     Client& client, std::shared_ptr<arrow::Array> array) {
-  // if (auto arr = std::dynamic_pointer_cast<ConvertToArrowType<bool>::ArrayType>(
-  //             array)){
-  //         return BuildNumericArray<bool>
-  //             }
-  if (auto arr =
+        if (auto arr =
           std::dynamic_pointer_cast<ConvertToArrowType<int8_t>::ArrayType>(
               array)) {
     return BuildNumericArray<int8_t>(client, arr);
