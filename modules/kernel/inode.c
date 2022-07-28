@@ -1,4 +1,6 @@
+#include <linux/stat.h>
 #include "vineyard_fs.h"
+#include "vineyard_i.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("yuansm");
@@ -49,11 +51,11 @@ static int vineyard_remount(struct super_block *sb, int *a, char *b)
 	return -1;
 }
 
-static int vineyard_show_options(struct seq_file *sf, struct dentry *d)
-{
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-	return 0;
-}
+// static int vineyard_show_options(struct seq_file *sf, struct dentry *d)
+// {
+// 	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+// 	return 0;
+// }
 
 static const struct super_operations vineyard_super_ops = {
 	.alloc_inode	= vineyard_alloc_inode,
@@ -64,7 +66,7 @@ static const struct super_operations vineyard_super_ops = {
 	.statfs		= vineyard_statfs,
 	.remount_fs	= vineyard_remount,
 
-	.show_options	= vineyard_show_options,
+	// .show_options	= vineyard_show_options,
 };
 
 static void vineyard_free_fsc(struct fs_context *fsc)
@@ -107,7 +109,7 @@ static int vineyard_xattr_set(const struct xattr_handler *handler,
 }
 
 static const struct xattr_handler vineyard_xattr_handler = {
-	.prefix = "",
+	.prefix = "vineyardfs",
 	.get    = vineyard_xattr_get,
 	.set    = vineyard_xattr_set,
 };
@@ -137,30 +139,53 @@ int _open(struct inode *, struct file *)
 	return -1;
 }
 
+static void vineyard_fs_init_inode(struct inode *inode, struct vineyard_attr *attr)
+{
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+    inode->i_mode = attr->mode;
+	inode->i_ino = attr->ino;
+	inode->i_size = attr->size;
+	inode->i_mtime.tv_sec  = attr->mtime;
+	inode->i_mtime.tv_nsec = attr->mtimensec;
+	inode->i_ctime.tv_sec  = attr->ctime;
+	inode->i_ctime.tv_nsec = attr->ctimensec;
+
+	if (S_ISREG(inode->i_mode)) {
+		printk(KERN_INFO PREFIX "Hello! File inode\n");
+		vineyard_fs_init_file_inode(inode);
+	} else if (S_ISDIR(inode->i_mode)) {
+		printk(KERN_INFO PREFIX "Hello! Dir inode\n");
+		vineyard_fs_init_dir_inode(inode);
+	} else {
+		printk(KERN_INFO PREFIX "What the fucking type :%d in %s: %d\n", inode->i_mode, __func__, __LINE__);
+	}
+}
+
+struct inode *vineyard_fs_iget(struct super_block *sb, u64 nodeid,
+			int generation, struct vineyard_attr *attr)
+{
+	struct inode *inode;
+
+	inode = new_inode(sb);
+
+	if (inode)
+		vineyard_fs_init_inode(inode, attr);
+
+	inode->i_generation = generation;
+	return inode;
+}
+
 static struct inode *vineyard_get_root_inode(struct super_block *sb)
 {
     struct vineyard_attr attr;
-    struct inode *inode;
 
 	printk(KERN_INFO PREFIX "%s\n", __func__);
     memset(&attr, 0, sizeof(attr));
 
     attr.mode = S_IFDIR;
     attr.ino = 1;
-    attr.nlink = 1;
 
-    inode = new_inode(sb);
-    if (!inode)
-        return NULL;
-
-    inode->i_mode = attr.mode;
-	inode->i_size = attr.size;
-	inode->i_mtime.tv_sec  = attr.mtime;
-	inode->i_mtime.tv_nsec = attr.mtimensec;
-	inode->i_ctime.tv_sec  = attr.ctime;
-	inode->i_ctime.tv_nsec = attr.ctimensec;
-
-    return inode;
+	return vineyard_fs_iget(sb, 1, 0, &attr);
 }
 
 int vineyard_set_super_block(struct super_block *sb, struct fs_context *fsc)
