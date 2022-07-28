@@ -91,6 +91,11 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::AsBatch(bool copy) const {
 
     columns[i] = arrow::MakeArray(arrow::ArrayData::Make(
         FromAnyType(df_col->value_type()), num_rows, {nullptr, copied_buffer}));
+
+    std::shared_ptr<arrow::Scalar> sca;
+    CHECK_ARROW_ERROR_AND_ASSIGN(sca, columns[i]->GetScalar(0));
+    std::clog<<"at column"<< i <<" start element : " <<sca->ToString()<<std::endl;
+
     fields[i] = std::make_shared<arrow::Field>(
         field_name, FromAnyType(df_col->value_type()));
   }
