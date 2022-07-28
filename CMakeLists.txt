@@ -4,7 +4,6 @@ set(VINEYARD_MAJOR_VERSION 0)
 set(VINEYARD_MINOR_VERSION 7)
 set(VINEYARD_PATCH_VERSION 1)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
-
 message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
 
 if(POLICY CMP0025)
@@ -284,9 +283,12 @@ endmacro(find_etcd_cpp_apiv3)
 macro(find_fuse)
     include("cmake/FindFUSE3.cmake")
     if(BUILD_VINEYARD_FUSE_PARQUET)
+        
         if(NOT ARROW_PARQUET)
             message(FATAL_ERROR "Parquet is not enabled in the installed arrow.")
         endif()
+        message(STATUS ${Arrow_DIR})
+        
         find_package(Parquet REQUIRED HINTS ${Arrow_DIR})
     endif()
 endmacro()
@@ -803,8 +805,8 @@ if(BUILD_VINEYARD_MIGRATION)
     add_subdirectory(modules/migrate)
     # don't includes vineyard_migrate to "VINEYARD_LIBRARIES"
 endif()
-
 if(BUILD_VINEYARD_FUSE)
+
     find_fuse()
     add_subdirectory(modules/fuse)
     # don't includes vineyard_fuse to "VINEYARD_LIBRARIES"
@@ -972,3 +974,5 @@ else()
         message(STATUS "Cannot find the sphinx-build executable.")
     endif()
 endif()
+
+add_subdirectory(modules/playground)
