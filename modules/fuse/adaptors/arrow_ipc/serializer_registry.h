@@ -13,12 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_FUSE_ADAPTORS_ORC_H_
-#define MODULES_FUSE_ADAPTORS_ORC_H_
-
-#if defined(WITH_ORC)
+#ifndef MODULES_FUSE_ADAPTORS_ARROW_IPC_SERIALIZER_REGISTRY_H_
+#define MODULES_FUSE_ADAPTORS_ARROW_IPC_SERIALIZER_REGISTRY_H_
 
 #include <memory>
+#include <string>
 
 #include "basic/ds/dataframe.h"
 #include "client/client.h"
@@ -26,11 +25,21 @@ limitations under the License.
 namespace vineyard {
 namespace fuse {
 
-void orc_view(std::shared_ptr<vineyard::DataFrame>& df);
+std::shared_ptr<arrow::Buffer> arrow_view(
+    std::shared_ptr<vineyard::DataFrame>& df);
+
+std::shared_ptr<arrow::Buffer> arrow_view(
+    std::shared_ptr<vineyard::RecordBatch>& df);
+
+std::shared_ptr<arrow::Buffer> arrow_view(std::shared_ptr<vineyard::Table>& df);
+
+void from_arrow_view(Client* client, std::string const& name,
+                     std::shared_ptr<arrow::BufferBuilder> buffer);
+
+void from_arrow_view(Client* client, std::string const& path,
+                     std::shared_ptr<arrow::Buffer> buffer);
 
 }  // namespace fuse
 }  // namespace vineyard
 
-#endif
-
-#endif  // MODULES_FUSE_ADAPTORS_ORC_H_
+#endif  // MODULES_FUSE_ADAPTORS_ARROW_IPC_SERIALIZER_REGISTRY_H_

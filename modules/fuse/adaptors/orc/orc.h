@@ -13,11 +13,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_FUSE_ADAPTORS_FORMATS_H_
-#define MODULES_FUSE_ADAPTORS_FORMATS_H_
+#ifndef MODULES_FUSE_ADAPTORS_ORC_ORC_H_
+#define MODULES_FUSE_ADAPTORS_ORC_ORC_H_
 
-#include "fuse/adaptors/arrow.h"
-#include "fuse/adaptors/orc.h"
-#include "fuse/adaptors/parquet.h"
+#if defined(WITH_ORC)
 
-#endif  // MODULES_FUSE_ADAPTORS_FORMATS_H_
+#include <memory>
+
+#include "basic/ds/dataframe.h"
+#include "client/client.h"
+
+namespace vineyard {
+namespace fuse {
+
+void orc_view(std::shared_ptr<vineyard::DataFrame>& df);
+
+}  // namespace fuse
+}  // namespace vineyard
+
+#endif
+
+#endif  // MODULES_FUSE_ADAPTORS_ORC_ORC_H_

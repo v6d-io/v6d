@@ -72,6 +72,7 @@ def find_executable(name, search_paths=None):
 def start_program(
     name, *args, verbose=False, nowait=False, search_paths=None, shell=False, **kwargs
 ):
+    # actually start a new program that will be running forever
     env, cmdargs = os.environ.copy(), list(args)
     for k, v in kwargs.items():
         if k[0].isupper():

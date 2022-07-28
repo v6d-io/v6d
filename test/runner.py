@@ -19,6 +19,7 @@ else:
     VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.%s.sock' % time.time()
 
 
+VINEYARD_FUSE_MOUNT_DIR = '/tmp/vineyard_fuse.%s' % time.time()
 find_executable_generic = None
 start_program_generic = None
 find_port = None
@@ -88,6 +89,31 @@ def start_program(*args, **kwargs):
     binary_dir = os.environ.get('VINEYARD_EXECUTABLE_DIR', default_builder_dir)
     print('binary_dir = ', binary_dir)
     return start_program_generic(*args, search_paths=[binary_dir], **kwargs)
+
+
+@contextlib.contextmanager
+def start_fuse():
+    if platform.system() != 'Linux':
+        print('can not mount fuse on the non-linux system yet')
+        return
+    with contextlib.ExitStack() as stack:
+        vfm = find_executable("vineyard-fusermount")
+        os.mkdir(VINEYARD_FUSE_MOUNT_DIR)
+
+        proc = start_program(
+            vfm,
+            '-f',
+            '-s',
+            '--vineyard-socket=%s' % VINEYARD_CI_IPC_SOCKET,
+            VINEYARD_FUSE_MOUNT_DIR,
+        )
+        yield stack.enter_context(proc)
+
+        # cleanup
+        try:
+            subprocess.run(['umount', '-f', '-l', VINEYARD_FUSE_MOUNT_DIR])
+        except Exception:  # pylint: disable=board-except
+            pass
 
 
 @contextlib.contextmanager
@@ -431,6 +457,33 @@ def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
         time.sleep(5)
 
 
+def run_fuse_test(etcd_endpoints):
+    etcd_prefix = 'vineyard_test_%s' % time.time()
+
+    with start_vineyardd(
+        etcd_endpoints, etcd_prefix, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
+    ) as (_, rpc_socket_port), start_fuse() as _:
+        start_time = time.time()
+        subprocess.check_call(
+            [
+                'pytest',
+                '-s',
+                '-vvv',
+                '--durations=0',
+                '--log-cli-level',
+                'DEBUG',
+                'modules/fuse/tests',
+                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
+                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
+                '--vineyard-fuse-mount-dir=%s' % VINEYARD_FUSE_MOUNT_DIR,
+            ],
+            cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+        )
+        print(
+            'running fuse tests use %s seconds' % (time.time() - start_time),
+        )
+
+
 def run_python_tests(etcd_endpoints, tests):
     etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_vineyardd(
@@ -689,6 +742,13 @@ def parse_sys_args():
         default=False,
         help="Whether to run python contrib tests",
     )
+
+    arg_parser.add_argument(
+        '--with-fuse',
+        action='store_true',
+        default=False,
+        help="whether to run fuse test",
+    )
     arg_parser.add_argument(
         '--tests',
         action='extend',
@@ -696,6 +756,7 @@ def parse_sys_args():
         type=str,
         help="Specify tests cases ro run",
     )
+
     return arg_parser, arg_parser.parse_args()
 
 
@@ -727,13 +788,17 @@ def execute_tests(args):
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_distributed_tests(etcd_endpoints, args.with_migration)
 
+    if args.with_fuse:
+        with start_etcd() as (_, etcd_endpoints):
+            run_fuse_test(etcd_endpoints)
+
 
 def main():
     parser, args = parse_sys_args()
 
-    if not (args.with_cpp or args.with_python or args.with_io):
+    if not (args.with_cpp or args.with_python or args.with_io or args.with_fuse):
         print(
-            'Error: \n\tat least one of of --with-{cpp,python,io} needs '
+            'Error: \n\tat least one of of --with-{cpp,python,io,fuse} needs '
             'to be specified\n'
         )
         parser.print_help()

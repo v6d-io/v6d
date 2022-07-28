@@ -121,6 +121,7 @@ class FormatAndLint(Command):
         'setup_ml.py',
         'setup_ray.py',
         'test/runner.py',
+        'modules/fuse/tests',
     ]
 
     def extend_cmd_as_import(self, cmd) -> List[str]:

@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_FUSE_FUSED_H_
-#define MODULES_FUSE_FUSED_H_
+#ifndef MODULES_FUSE_FUSE_IMPL_H_
+#define MODULES_FUSE_FUSE_IMPL_H_
 
 #include <memory>
 #include <mutex>
@@ -35,6 +35,8 @@ limitations under the License.
 
 #include "client/client.h"
 
+#include "adaptors/arrow_ipc/deserializer_registry.h"
+
 namespace arrow {
 class Buffer;
 }
@@ -48,10 +50,12 @@ struct fs {
     struct fuse_conn_info_opts* conn_opts;
     std::string vineyard_socket;
     std::shared_ptr<Client> client;
+    std::mutex mtx_;
     std::unordered_map<std::string, std::shared_ptr<arrow::Buffer>> views;
     std::unordered_map<std::string, std::shared_ptr<arrow::BufferBuilder>>
         mutable_views;
-    std::mutex mtx_;
+    std::unordered_map<std::string, vineyard::fuse::vineyard_deserializer_nt>
+        ipc_desearilizer_registry;
   } state;
 
   static int fuse_getattr(const char* path, struct stat* stbuf,
@@ -92,4 +96,4 @@ struct fs {
 
 }  // namespace vineyard
 
-#endif  // MODULES_FUSE_FUSED_H_
+#endif  // MODULES_FUSE_FUSE_IMPL_H_

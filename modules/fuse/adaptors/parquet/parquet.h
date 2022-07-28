@@ -13,11 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_FUSE_ADAPTORS_ARROW_H_
-#define MODULES_FUSE_ADAPTORS_ARROW_H_
+#ifndef MODULES_FUSE_ADAPTORS_PARQUET_PARQUET_H_
+#define MODULES_FUSE_ADAPTORS_PARQUET_PARQUET_H_
+
+#if defined(WITH_PARQUET)
 
 #include <memory>
-#include <string>
 
 #include "basic/ds/dataframe.h"
 #include "client/client.h"
@@ -25,21 +26,12 @@ limitations under the License.
 namespace vineyard {
 namespace fuse {
 
-std::shared_ptr<arrow::Buffer> arrow_view(
+std::shared_ptr<arrow::Buffer> parquet_view(
     std::shared_ptr<vineyard::DataFrame>& df);
-
-std::shared_ptr<arrow::Buffer> arrow_view(
-    std::shared_ptr<vineyard::RecordBatch>& df);
-
-std::shared_ptr<arrow::Buffer> arrow_view(std::shared_ptr<vineyard::Table>& df);
-
-void from_arrow_view(Client* client, std::string const& name,
-                     std::shared_ptr<arrow::BufferBuilder> buffer);
-
-void from_arrow_view(Client* client, std::string const& path,
-                     std::shared_ptr<arrow::Buffer> buffer);
 
 }  // namespace fuse
 }  // namespace vineyard
 
-#endif  // MODULES_FUSE_ADAPTORS_ARROW_H_
+#endif
+
+#endif  // MODULES_FUSE_ADAPTORS_PARQUET_PARQUET_H_
