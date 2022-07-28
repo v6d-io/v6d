@@ -55,7 +55,21 @@ def numeric_array_builder(client, array, builder):
     meta['nbytes'] = array.nbytes
     return client.create_metadata(meta)
 
+def boolean_array_builder(client, array, builder):
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::BooleanArray'
+    meta['length_'] = len(array)
+    meta['null_count_'] = array.null_count
+    meta['offset_'] = array.offset
 
+    null_bitmap = buffer_builder(client, array.buffers()[0], builder)
+    buffer = buffer_builder(client, array.buffers()[1], builder)
+
+    meta.add_member('buffer_', buffer)
+    meta.add_member('null_bitmap_', null_bitmap)
+    meta['nbytes'] = array.nbytes
+    return client.create_metadata(meta)
+    
 def fixed_size_binary_array_builder(client, array, builder):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::FixedSizeBinaryArray'
@@ -130,20 +144,7 @@ def null_array_builder(client, array):
     return client.create_metadata(meta)
 
 
-def boolean_array_builder(client, array, builder):
-    meta = ObjectMeta()
-    meta['typename'] = 'vineyard::BooleanArray'
-    meta['length_'] = len(array)
-    meta['null_count_'] = array.null_count
-    meta['offset_'] = array.offset
 
-    null_bitmap = buffer_builder(client, array.buffers()[0], builder)
-    buffer = buffer_builder(client, array.buffers()[1], builder)
-
-    meta.add_member('buffer_', buffer)
-    meta.add_member('null_bitmap_', null_bitmap)
-    meta['nbytes'] = array.nbytes
-    return client.create_metadata(meta)
 
 
 def _resize_arrow_type(t):
