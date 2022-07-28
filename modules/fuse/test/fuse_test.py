@@ -1,6 +1,6 @@
 from enum import Enum
 import os
-from signal import SIGINT
+from signal import SIGINT, SIGTERM
 import sys
 from time import sleep
 from pyrfc3339 import generate
@@ -49,7 +49,7 @@ async def start_fuse_server():
     fuse_dir = [test_mount_dir]
     cmd  = fuse_bin+ fuse_param+ fuse_dir
     cmd = ' '.join(cmd)
-    logger.debug("initilize fuse by " + cmd)
+    print("initilize fuse by " + cmd)
     proc = await asyncio.create_subprocess_shell(
         cmd,
         stdout=sys.stdout)
@@ -60,7 +60,7 @@ def connect_to_server():
     return client
 def interrupt_proc(proc:asyncio.subprocess.Process):
     print("interrupt")
-    proc.send_signal(SIGINT)
+    proc.send_signal(SIGTERM)
 def generate_dataframe(size = (15,4)):
     height,width = size
     df = pd.DataFrame(np.random.randint(0,100,size=(height, width)), columns=list('ABCD'))
@@ -141,7 +141,7 @@ def test_fuse_df(data,client):
 # print(int_array)
 if __name__ == "__main__":
     
-    logger.basicConfig(filename='my.log', level=logger.DEBUG)
+    # logger.basicConfig(filename='test.log', level=logger.DEBUG)
     print("started")
 
     # vineyard_server = start_vineyard_server()
