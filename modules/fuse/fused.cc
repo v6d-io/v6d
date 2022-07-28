@@ -14,19 +14,26 @@ limitations under the License.
 */
 
 #include "fuse/fused.h"
+#include "fuse/adaptors/formats.h"
 
 #include <limits>
 #include <unordered_map>
+
+#include "arrow/status.h"
+#include "arrow/api.h"
+#include "arrow/io/api.h"
+#include "arrow/result.h"
+#include "arrow/util/key_value_metadata.h"
+#include "arrow/util/macros.h"
 
 #include "basic/ds/array.h"
 #include "basic/ds/dataframe.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/core_types.h"
 #include "client/ds/i_object.h"
 #include "common/util/logging.h"
 #include "common/util/uuid.h"
-#include "fuse/adaptors/formats.h"
-
 namespace vineyard {
 
 namespace fuse {
@@ -55,22 +62,90 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
   stbuf->st_size = 0;  // not used, as we use `direct_io` in `open`.
   return 0;
 }
+#ifdef sdf
+#define FUSE_CHECK_OK(status)                                            \
+  do {                                                                   \
+    auto _ret = (status);                                                \
+    if (!_ret.ok()) {                                                    \
+      VLOG(0) << "[error] Check failed: " << _ret.ToString() << " in \"" \
+              << #status << "\""                                         \
+              << ", in function " << __PRETTY_FUNCTION__ << ", file "    \
+              << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)   \
+              << std::endl;                                              \
+      return -ECANCELED;                                                 \
+    }                                                                   \
+  }while (0)                                                            
+// ECANCELED 125 Operation canceled
 
+#define FUSE_ASSIGN_OR_RAISE_IMPL(result_name, lhs, rexpr) \
+  auto&& result_name = (rexpr);                            \
+  FUSE_CHECK_OK((result_name).status());                   \
+  lhs = std::move(result_name).ValueUnsafe();
+
+#define FUSE_ASSIGN_OR_RAISE(lhs, rexpr) \
+  FUSE_ASSIGN_OR_RAISE_IMPL(             \
+      ARROW_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, rexpr);
+#endif
 int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
   VLOG(2) << "fuse: open " << path << " with mode " << fi->flags;
-
   if ((fi->flags & O_ACCMODE) != O_RDONLY) {
     return -EACCES;
   }
   auto target = ObjectIDFromString(path + 1);
-  auto object = state.client->GetObject<vineyard::DataFrame>(target);
-  if (object == nullptr) {
-    return -ENOENT;
-  }
+  VLOG(2) << "converted objectID" << target;
+  std::unique_ptr<ObjectMeta> omp(new ObjectMeta{});
+  VINEYARD_CHECK_OK(state.client->GetMetaData(target, *omp));
+  auto typeName = omp.get()->GetTypeName();
+ 
+
+  VLOG(2)<<"initialized the variables";
+
   auto loc = state.views.find(target);
+  std::shared_ptr<arrow::Buffer> buffer_;
+  VLOG(1)<<"data type"<< typeName;
   if (loc == state.views.end()) {
-    state.views[target] = fuse::parquet_view(object);
+      VLOG(2)<<"taregt ObjectID is not Found";
+
+    if (typeName == "vineyard::Dataframe") {
+      VLOG(1)<<"access a datarame";
+      auto object = state.client->GetObject<vineyard::DataFrame>(target);
+      if (object == nullptr) {
+        return -ENOENT;
+      }
+      buffer_ = fuse::parquet_view(object);
+
+      
+    } else if (typeName == "vineyard::NumericArray<int64>"){
+      VLOG(1)<<"access a numpy double array";
+        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
+      state.client->GetObject(target));
+      buffer_ = fuse::arrow_ipc_view(arr);
+    }
+    // else if(typeName == "vineyard::NumericArray<double>") {
+    //   VLOG(1)<<"access a numpy double array";
+    //     auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<double>>(
+    //   state.client->GetObject(target));
+    //   buffer_ = fuse::arrow_ipc_view(arr);
+      
+    // }
+    else if(typeName == "vineyard::BooleanArray"){
+      VLOG(1)<<"access a numpy boolean array";
+        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<bool>>(
+      state.client->GetObject(target));
+      buffer_ = fuse::arrow_ipc_view(arr);
+    }else if(typeName == "vineyard::BaseBinaryArray<arrow::LargeStringArray>"){
+      VLOG(1)<<"access a string array";
+        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<bool>>(
+      state.client->GetObject(target));
+      buffer_ = fuse::arrow_ipc_view(arr);
+    }
+    
+    state.views[target] = buffer_;
+  }else{
+      VLOG(2)<<"taregt ObjectID is Found";
+
   }
+
   // bypass kernel's page cache to avoid knowing the size in `getattr`.
   //
   // see also:
@@ -137,8 +212,11 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
   filler(buf, "..", NULL, 0, fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
 
   std::unordered_map<ObjectID, json> metas{};
+  // VINEYARD_CHECK_OK(state.client->ListData(
+  //     "vineyard::DataFrame", false, std::numeric_limits<size_t>::max(),
+  //     metas));
   VINEYARD_CHECK_OK(state.client->ListData(
-      "vineyard::DataFrame", false, std::numeric_limits<size_t>::max(), metas));
+      ".*", true, std::numeric_limits<size_t>::max(), metas));
   for (auto const& item : metas) {
     std::string base = ObjectIDToString(item.first).c_str();
     filler(buf, base.c_str(), NULL, 0, fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
