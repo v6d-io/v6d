@@ -279,9 +279,9 @@ jobs:
 
           echo "Installing apache-arrow ..."
           cd /tmp
-          curl -L https://github.com/apache/arrow/archive/apache-arrow-1.0.1.tar.gz --output apache-arrow-1.0.1.tar.gz
-          tar zxf apache-arrow-1.0.1.tar.gz
-          cd arrow-apache-arrow-1.0.1
+          curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.1.tar.gz --output apache-arrow-8.0.1.tar.gz
+          tar zxf apache-arrow-8.0.1.tar.gz
+          cd arrow-apache-arrow-8.0.1
           mkdir -p build-dir
           cd build-dir
           cmake ../cpp \
