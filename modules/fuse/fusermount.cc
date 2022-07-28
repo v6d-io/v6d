@@ -20,9 +20,10 @@ limitations under the License.
 #include <string>
 #include <thread>
 
+#include "adaptors/arrow_ipc/deserializer_registry.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
-#include "fuse/fused.h"
+#include "fuse/fuse_impl.h"
 
 /*
  * Command line options
@@ -56,11 +57,14 @@ static void print_help(const char* progname) {
 static int process_args(struct fuse_args& args, int argc, char** argv) {
   // Set defaults -- we have to use strdup so that fuse_opt_parse can free
   // the defaults if other values are specified.
-  // std::string env = vineyard::read_env("VINEYARD_IPC_SOCKET");
+  if (!options.vineyard_socket) {
+    // std::string env = vineyard::read_env("VINEYARD_IPC_SOCKET");
+
     std::string env = "/var/run/vineyard.sock";
 
-  options.vineyard_socket = strdup(env.c_str());
-  LOG(INFO)<<env;
+    options.vineyard_socket = strdup(env.c_str());
+  }
+
   /* Parse options */
   if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1) {
     LOG(ERROR) << "Failed to parse command line options.";
@@ -84,6 +88,10 @@ static int process_args(struct fuse_args& args, int argc, char** argv) {
 
   // populate state
   vineyard::fuse::fs::state.vineyard_socket = options.vineyard_socket;
+  LOG(INFO) << "prepare to conncet to socket" << vineyard::fuse::fs::state.vineyard_socket;
+
+  vineyard::fuse::fs::state.ipc_desearilizer_registry =
+      vineyard::fuse::arrow_ipc_register_once();
   return 0;
 }
 
@@ -114,6 +122,7 @@ int main(int argc, char* argv[]) {
   if (ret != 0) {
     return ret;
   }
+
   LOG(INFO) << "Starting vineyard fuse driver ...";
   ret = fuse_main(args.argc, args.argv, &vineyard_fuse_operations, NULL);
   fuse_opt_free_args(&args);

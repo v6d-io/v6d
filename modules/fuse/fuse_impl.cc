@@ -13,16 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fuse/fused.h"
-#include "fuse/adaptors/formats.h"
+#include "modules/fuse/fuse_impl.h"
 
 #include <limits>
 #include <unordered_map>
 
-#include "arrow/status.h"
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 #include "arrow/result.h"
+#include "arrow/status.h"
 #include "arrow/util/key_value_metadata.h"
 #include "arrow/util/macros.h"
 
@@ -42,7 +41,7 @@ struct fs::fs_state_t fs::state {};
 
 int fs::fuse_getattr(const char* path, struct stat* stbuf,
                      struct fuse_file_info*) {
-  VLOG(2) << "fuse: getattr on " << path;
+  LOG(INFO) << "fuse: getattr on " << path;
 
   memset(stbuf, 0, sizeof(struct stat));
   if (strcmp(path, "/") == 0) {
@@ -73,8 +72,8 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
               << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)   \
               << std::endl;                                              \
       return -ECANCELED;                                                 \
-    }                                                                   \
-  }while (0)                                                            
+    }                                                                    \
+  } while (0)
 // ECANCELED 125 Operation canceled
 
 #define FUSE_ASSIGN_OR_RAISE_IMPL(result_name, lhs, rexpr) \
@@ -87,63 +86,20 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
       ARROW_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, rexpr);
 #endif
 int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
-  VLOG(2) << "fuse: open " << path << " with mode " << fi->flags;
+  LOG(INFO) << "fuse: open " << path << " with mode " << fi->flags;
   if ((fi->flags & O_ACCMODE) != O_RDONLY) {
     return -EACCES;
   }
   auto target = ObjectIDFromString(path + 1);
-  VLOG(2) << "converted objectID" << target;
-  std::unique_ptr<ObjectMeta> omp(new ObjectMeta{});
-  VINEYARD_CHECK_OK(state.client->GetMetaData(target, *omp));
-  auto typeName = omp.get()->GetTypeName();
- 
-
-  VLOG(2)<<"initialized the variables";
+  LOG(INFO) << "converted objectID" << target;
 
   auto loc = state.views.find(target);
-  std::shared_ptr<arrow::Buffer> buffer_;
-  VLOG(1)<<"data type"<< typeName;
   if (loc == state.views.end()) {
-      VLOG(2)<<"taregt ObjectID is not Found";
-
-    if (typeName == "vineyard::Dataframe") {
-      VLOG(1)<<"access a datarame";
-      auto object = state.client->GetObject<vineyard::DataFrame>(target);
-      if (object == nullptr) {
-        return -ENOENT;
-      }
-      buffer_ = fuse::parquet_view(object);
-
-      
-    } else if (typeName == "vineyard::NumericArray<int64>"){
-      VLOG(1)<<"access a numpy double array";
-        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<int64_t>>(
-      state.client->GetObject(target));
-      buffer_ = fuse::arrow_ipc_view(arr);
-    }
-    // else if(typeName == "vineyard::NumericArray<double>") {
-    //   VLOG(1)<<"access a numpy double array";
-    //     auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<double>>(
-    //   state.client->GetObject(target));
-    //   buffer_ = fuse::arrow_ipc_view(arr);
-      
-    // }
-    else if(typeName == "vineyard::BooleanArray"){
-      VLOG(1)<<"access a numpy boolean array";
-        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<bool>>(
-      state.client->GetObject(target));
-      buffer_ = fuse::arrow_ipc_view(arr);
-    }else if(typeName == "vineyard::BaseBinaryArray<arrow::LargeStringArray>"){
-      VLOG(1)<<"access a string array";
-        auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<bool>>(
-      state.client->GetObject(target));
-      buffer_ = fuse::arrow_ipc_view(arr);
-    }
-    
-    state.views[target] = buffer_;
-  }else{
-      VLOG(2)<<"taregt ObjectID is Found";
-
+    auto obj = state.client->GetObject(target);
+    auto d = fs::state.ipc_desearilizer_registry.at(obj->meta().GetTypeName());
+    state.views[target] = d(obj);
+  } else {
+    LOG(INFO) << "taregt ObjectID content is Found";
   }
 
   // bypass kernel's page cache to avoid knowing the size in `getattr`.
@@ -156,8 +112,8 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
 
 int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
                   struct fuse_file_info* fi) {
-  VLOG(2) << "fuse: read " << path << " from " << offset << ", expect " << size
-          << " bytes";
+  LOG(INFO) << "fuse: read " << path << " from " << offset << ", expect "
+            << size << " bytes";
 
   auto target = ObjectIDFromString(path + 1);
   auto loc = state.views.find(target);
@@ -178,7 +134,7 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
 }
 
 int fs::fuse_release(const char* path, struct fuse_file_info*) {
-  VLOG(2) << "fuse: release " << path;
+  LOG(INFO) << "fuse: release " << path;
 
   auto target = ObjectIDFromString(path + 1);
   auto loc = state.views.find(target);
@@ -190,19 +146,19 @@ int fs::fuse_release(const char* path, struct fuse_file_info*) {
 }
 
 int fs::fuse_statfs(const char* path, struct statvfs*) {
-  VLOG(2) << "fuse: statfs " << path;
+  LOG(INFO) << "fuse: statfs " << path;
   return 0;
 }
 
 int fs::fuse_opendir(const char* path, struct fuse_file_info* info) {
-  VLOG(2) << "fuse: opendir " << path;
+  LOG(INFO) << "fuse: opendir " << path;
   return 0;
 }
 
 int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
                      off_t offset, struct fuse_file_info* fi,
                      enum fuse_readdir_flags flags) {
-  VLOG(2) << "fuse: readdir " << path;
+  LOG(INFO) << "fuse: readdir " << path;
 
   if (strcmp(path, "/") != 0) {
     return -ENOENT;
@@ -225,7 +181,7 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 }
 
 void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
-  VLOG(2) << "fuse: initfs with vineyard socket " << state.vineyard_socket;
+  LOG(INFO) << "fuse: initfs with vineyard socket " << state.vineyard_socket;
 
   state.client.reset(new vineyard::Client());
   state.client->Connect(state.vineyard_socket);
@@ -236,7 +192,7 @@ void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
 }
 
 void fs::fuse_destroy(void* private_data) {
-  VLOG(2) << "fuse: destroy";
+  LOG(INFO) << "fuse: destroy";
 
   state.views.clear();
   state.client->Disconnect();

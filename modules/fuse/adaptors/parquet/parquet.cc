@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fuse/adaptors/parquet.h"
+#include "fuse/adaptors/parquet/parquet.h"
 
 #if defined(WITH_PARQUET)
 

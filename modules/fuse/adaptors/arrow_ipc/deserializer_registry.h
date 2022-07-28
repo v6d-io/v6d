@@ -103,6 +103,7 @@ std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
   CHECK_ARROW_ERROR_AND_ASSIGN(writer,
                                arrow::ipc::MakeStreamWriter(ssink, schema));
+
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   LOG(INFO) << "table is written";
   writer->Close();
@@ -224,13 +225,13 @@ arrow_ipc_register_once() {
         type_name<vineyard::BaseBinaryArray<arrow::LargeStringArray>>();
     LOG(INFO) << "register type: " << t_name << std::endl;
 
-    d_array_registry.emplace(t_name, &bool_array_arrow_ipc_view);
+    d_array_registry.emplace(t_name, &string_array_arrow_ipc_view);
   }
   {
     std::string t_name = type_name<vineyard::DataFrame>();
     LOG(INFO) << "register type: " << t_name << std::endl;
 
-    d_array_registry.emplace(t_name, &bool_array_arrow_ipc_view);
+    d_array_registry.emplace(t_name, &dataframe_arrow_ipc_view);
   }
   return d_array_registry;
 }

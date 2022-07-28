@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_FUSE_ADAPTORS_PARQUET_H_
-#define MODULES_FUSE_ADAPTORS_PARQUET_H_
+#ifndef MODULES_FUSE_ADAPTORS_PARQUETS_PARQUET_H_
+#define MODULES_FUSE_ADAPTORS_PARQUETS_PARQUET_H_
 
 #if defined(WITH_PARQUET)
 
@@ -34,4 +34,4 @@ std::shared_ptr<arrow::Buffer> parquet_view(
 
 #endif
 
-#endif  // MODULES_FUSE_ADAPTORS_PARQUET_H_
+#endif  // MODULES_FUSE_ADAPTORS_PARQUETS_PARQUET_H_
