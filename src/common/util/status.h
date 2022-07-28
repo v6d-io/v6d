@@ -285,6 +285,9 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return an error status for failed key lookups (e.g. column name in a
   /// table).
   static Status KeyError() { return Status(StatusCode::kKeyError, ""); }
+  static Status KeyError(std::string const& msg) {
+    return Status(StatusCode::kKeyError, msg);
+  }
 
   /// Return an error status for type errors (such as mismatching data types).
   static Status TypeError() { return Status(StatusCode::kTypeError, ""); }

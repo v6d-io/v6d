@@ -76,8 +76,16 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
   if (access(ipc_socket.c_str(), F_OK) == 0) {
     // first check if the socket file is writable
     if (access(ipc_socket.c_str(), W_OK) != 0) {
-      throw std::invalid_argument("Cannot launch vineyardd on " + ipc_socket +
-                                  ": " + strerror(errno));
+      std::string reason = strerror(errno);
+      if (errno == EACCES) {
+        reason +=
+            ",\n\n  - please run vineyardd as root using 'sudo',\n"
+            "  - or use another IPC socket path to start vineyardd,\n\n"
+            "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
+            "  for more vineyardd options, see also: vineyard --help";
+      }
+      throw std::invalid_argument("cannot launch vineyardd on '" + ipc_socket +
+                                  "': " + reason);
     }
     // then check if the socket file is used by another process, if not, unlink
     // it first, otherwise raise an exception.
@@ -85,17 +93,26 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     boost::system::error_code ec;
     socket.connect(endpoint, ec);
     if (!ec) {
+      std::string message =
+          "the UNIX-domain socket '" + ipc_socket +
+          "' has already been listened on,\n\n"
+          "  - please use another IPC socket path to start vineyardd,\n\n"
+          "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
+          "  for more vineyardd options, see also: vineyard --help\n\n";
       throw boost::system::system_error(
-          asio::error::make_error_code(asio::error::address_in_use));
+          asio::error::make_error_code(asio::error::address_in_use), message);
     }
   } else if (errno == ENOENT) {
     // create parent directory
-    auto socket_path = boost::filesystem::path(ipc_socket);
+    auto socket_path =
+        boost::filesystem::absolute(boost::filesystem::path(ipc_socket));
     boost::system::error_code ec;
     boost::filesystem::create_directories(socket_path.parent_path(), ec);
     if (ec) {
-      throw boost::system::system_error(
-          ec, "Failed to create parent directory for specific socket path");
+      std::string message = "Failed to create parent directory '" +
+                            socket_path.parent_path().string() +
+                            "' for specific socket path";
+      throw boost::system::system_error(ec, message);
     }
   } else {
     throw boost::system::system_error(

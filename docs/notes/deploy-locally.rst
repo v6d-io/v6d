@@ -14,7 +14,15 @@ Command-line arguments
 ----------------------
 
 Various command-line arguments are supported to configure the behaviors of the
-vineyard server:
+vineyard server, noteably,
+
+- :code:`--socket <PATH>` to specify the path of UNIX-domain socket that vineyardd will
+  bind to
+- :code:`--size <SIZE>` to specify the upper limit of shared memory, can be in human
+  readable format, e.g. :code:`256M`, :code:`1G`, etc.
+- :code:`--etcd_endpoint <ENDPOINT>` to specify the etcd endpoint to connect
+
+The full list of command-line arguments is as follows:
 
 .. code:: shell
 
