@@ -16,7 +16,7 @@ int main(){
     LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
   
     // vineyard::ObjectID bool_id = 0x0000044b814c2f84;
-    vineyard::ObjectID int_id = 0x0002075bb6bcf532;
+    vineyard::ObjectID int_id = 0x00020e02666c8964;
     // vineyard::ObjectID string_id = 0x00000f00815840fc;
     auto r =client.GetObject(int_id);
     // auto r_bool = std::dynamic_pointer_cast<vineyard::BooleanArray>(client.GetObject(bool_id));
