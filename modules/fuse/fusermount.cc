@@ -108,6 +108,8 @@ static const struct fuse_operations vineyard_fuse_operations = {
     .readdir = vineyard::fuse::fs::fuse_readdir,
     .init = vineyard::fuse::fs::fuse_init,
     .destroy = vineyard::fuse::fs::fuse_destroy,
+    .create = vineyard::fuse::fs::fuse_create,
+
     // .access = vineyard::fuse::fs::fuse_access,
 };
 
@@ -127,9 +129,8 @@ int main(int argc, char* argv[]) {
     return ret;
   }
   // process conn args
-  struct fuse_conn_info_opts* conn_opts = fuse_parse_conn_info_opts(&args);
+   struct fuse_conn_info_opts* conn_opts = fuse_parse_conn_info_opts(&args);
   vineyard::fuse::fs::state.conn_opts = conn_opts;
-
   LOG(INFO) << "Starting vineyard fuse driver ...";
   ret = fuse_main(args.argc, args.argv, &vineyard_fuse_operations, NULL);
   fuse_opt_free_args(&args);

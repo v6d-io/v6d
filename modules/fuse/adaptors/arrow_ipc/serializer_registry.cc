@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fuse/adaptors/arrow.h"
+#include "fuse/adaptors/arrow_ipc/serializer_registry.h"
 
 #include <algorithm>
 #include <limits>

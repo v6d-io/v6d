@@ -1,6 +1,8 @@
 # build vineyard-fuse
 set(FUSE_SRC_FILES)
 
+list(APPEND FUSE_SRC_FILES "adaptors/arrow_ipc/deserializer_registry.cc")
+list(APPEND FUSE_SRC_FILES "adaptors/arrow_ipc/serializer_registry.cc")
 list(APPEND FUSE_SRC_FILES "fuse_impl.cc")
 
 add_library(vineyard_fuse ${FUSE_SRC_FILES})

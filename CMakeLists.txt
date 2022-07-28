@@ -974,4 +974,3 @@ else()
     endif()
 endif()
 
-add_subdirectory(modules/playground)

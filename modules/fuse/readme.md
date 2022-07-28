@@ -2,7 +2,7 @@
 run 
 ``` shell
 cd build
-cmake ..
+ cmake .. -DBUILD_VINEYARD_FUSE=ON -DBUILD_VINEYARD_GRAPH=OFF
 make vineyard-fusermount
 sudo -E python3 ../modules/fuse/ltest/fuse_test.py 
 ```
