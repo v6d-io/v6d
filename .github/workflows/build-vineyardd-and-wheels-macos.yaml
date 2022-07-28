@@ -91,7 +91,7 @@ jobs:
               -DARROW_CSV=OFF \
               -DARROW_CUDA=OFF \
               -DARROW_DATASET=OFF \
-              -DARROW_FILESYSTEM=OFF \
+              -DARROW_FILESYSTEM=ON \
               -DARROW_FLIGHT=OFF \
               -DARROW_GANDIVA=OFF \
               -DARROW_GANDIVA_JAVA=OFF \

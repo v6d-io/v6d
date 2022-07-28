@@ -14,7 +14,7 @@
 
 FROM quay.io/pypa/manylinux2010_x86_64_centos6_no_vsyscall
 
-# target: docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:20210929
+# target: docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:20220728
 
 SHELL ["/bin/bash", "-c"]
 
@@ -59,7 +59,7 @@ RUN cd /tmp && \
         -DARROW_CSV=ON \
         -DARROW_CUDA=OFF \
         -DARROW_DATASET=OFF \
-        -DARROW_FILESYSTEM=OFF \
+        -DARROW_FILESYSTEM=ON \
         -DARROW_FLIGHT=OFF \
         -DARROW_GANDIVA=OFF \
         -DARROW_GANDIVA_JAVA=OFF \
@@ -98,7 +98,7 @@ RUN cd /tmp && \
 
 # install boost
 RUN cd /tmp && \
-    wget https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz && \
+    wget -q https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz && \
     tar zxf boost_1_75_0.tar.gz && \
     cd boost_1_75_0 && \
     ./bootstrap.sh && \
@@ -115,7 +115,7 @@ RUN cd /tmp && \
 
 # install gflags
 RUN cd /tmp && \
-    wget https://github.com/gflags/gflags/archive/v2.2.2.tar.gz -O gflags-v2.2.2.tar.gz && \
+    wget -q https://github.com/gflags/gflags/archive/v2.2.2.tar.gz -O gflags-v2.2.2.tar.gz && \
     tar zxf gflags-v2.2.2.tar.gz && \
     cd gflags-2.2.2 && \
     mkdir build && \
@@ -127,7 +127,7 @@ RUN cd /tmp && \
 
 # install glog
 RUN cd /tmp && \
-    wget https://github.com/google/glog/archive/v0.5.0.tar.gz -O glog-v0.5.0.tar.gz && \
+    wget -q https://github.com/google/glog/archive/v0.5.0.tar.gz -O glog-v0.5.0.tar.gz && \
     tar zxf glog-v0.5.0.tar.gz && \
     cd glog-0.5.0/ && \
     mkdir build && \
@@ -141,20 +141,20 @@ RUN cd /tmp && \
 #
 # note: remove shared libs
 RUN cd /tmp && \
-    wget https://zlib.net/zlib-1.2.11.tar.gz && \
-    tar zxf zlib-1.2.11.tar.gz && \
-    cd zlib-1.2.11 && \
+    wget -q https://zlib.net/zlib-1.2.12.tar.gz && \
+    tar zxf zlib-1.2.12.tar.gz && \
+    cd zlib-1.2.12 && \
     mkdir build && \
     cd build && \
     cmake .. -DBUILD_SHARED_LIBS=OFF && \
     make install -j`nproc` && \
     rm -rf /usr/local/lib/libz.so* && \
     cd /tmp && \
-    rm -rf zlib-1.2.11.tar.gz zlib-1.2.11
+    rm -rf zlib-1.2.12.tar.gz zlib-1.2.12
 
 # install openssl: boringssl doesn't bring headers when installing
 RUN cd /tmp && \
-    wget https://www.openssl.org/source/openssl-1.1.1j.tar.gz && \
+    wget -q --no-check-certificate https://www.openssl.org/source/openssl-1.1.1j.tar.gz && \
     tar zxf openssl-1.1.1j.tar.gz && \
     cd openssl-1.1.1j && \
     ./config -no-shared -no-tests && \
@@ -188,7 +188,7 @@ RUN cd /tmp && \
 
 # install autoconf (requires 2.68)
 RUN cd /tmp && \
-    wget http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz && \
+    wget -q http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz && \
     tar zxf autoconf-2.69.tar.gz && \
     cd autoconf-2.69 && \
     ./configure && \

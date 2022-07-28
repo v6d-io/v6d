@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:20210929 as builder
+FROM docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:20220728 as builder
 
 # target: docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
 

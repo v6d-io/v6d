@@ -40,3 +40,6 @@ docs/_build/
 
 # go vendor
 vendor/
+
+# artifacts
+wheels/
