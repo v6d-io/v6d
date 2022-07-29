@@ -78,12 +78,15 @@ target_include_directories(vineyard_graph PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(vineyard_graph vineyard_client
-                                     vineyard_basic
-                                     vineyard_io
-                                     ${ARROW_SHARED_LIB}
-                                     ${MPI_CXX_LIBRARIES}
+target_link_libraries(vineyard_graph PUBLIC vineyard_client
+                                            vineyard_basic
+                                            vineyard_io
+                                            ${ARROW_SHARED_LIB}
+                                            ${MPI_CXX_LIBRARIES}
 )
+if(${LIBUNWIND_FOUND})
+    target_link_libraries(vineyard_graph PUBLIC ${LIBUNWIND_LIBRARIES})
+endif()
 if(APPLE)
     target_compile_options(vineyard_graph PUBLIC -Wno-unused-result)
 endif()
@@ -97,6 +100,11 @@ endif()
 
 install_vineyard_target(vineyard_graph)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
+
+# add the vineyard-graph-loader target
+add_executable(vineyard-graph-loader "${CMAKE_CURRENT_SOURCE_DIR}/tools/graph_loader.cc")
+target_link_libraries(vineyard-graph-loader PRIVATE vineyard_graph)
+install_vineyard_target(vineyard-graph-loader)
 
 if(BUILD_VINEYARD_TESTS)
     enable_testing()
