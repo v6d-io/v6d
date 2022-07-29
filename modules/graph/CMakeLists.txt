@@ -78,11 +78,11 @@ target_include_directories(vineyard_graph PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(vineyard_graph vineyard_client
-                                     vineyard_basic
-                                     vineyard_io
-                                     ${ARROW_SHARED_LIB}
-                                     ${MPI_CXX_LIBRARIES}
+target_link_libraries(vineyard_graph PUBLIC vineyard_client
+                                            vineyard_basic
+                                            vineyard_io
+                                            ${ARROW_SHARED_LIB}
+                                            ${MPI_CXX_LIBRARIES}
 )
 if(${LIBUNWIND_FOUND})
     target_link_libraries(vineyard_graph PUBLIC ${LIBUNWIND_LIBRARIES})
