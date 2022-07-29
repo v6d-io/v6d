@@ -111,6 +111,19 @@
   } while (0)
 #endif  // RETURN_ON_ERROR
 
+// return a null pointer if the status is not OK.
+#ifndef RETURN_NULL_ON_ERROR
+#define RETURN_NULL_ON_ERROR(status)                                       \
+  do {                                                                     \
+    auto _ret = (status);                                                  \
+    if (!_ret.ok()) {                                                      \
+      std::clog << "[error] Check failed: " << _ret.ToString() << " in \"" \
+                << #status << "\"" << std::endl;                           \
+      return nullptr;                                                      \
+    }                                                                      \
+  } while (0)
+#endif  // RETURN_NULL_ON_ERROR
+
 // return the status if the status is not OK.
 #ifndef RETURN_ON_ASSERT_NO_VERBOSE
 #define RETURN_ON_ASSERT_NO_VERBOSE(condition)                \
@@ -138,6 +151,40 @@
             RETURN_ON_ASSERT_NO_VERBOSE)           \
   (__VA_ARGS__)
 #endif  // RETURN_ON_ASSERT
+
+// return a null pointer if the status is not OK.
+#ifndef RETURN_NULL_ON_ASSERT_NO_VERBOSE
+#define RETURN_NULL_ON_ASSERT_NO_VERBOSE(condition)                       \
+  do {                                                                    \
+    if (!(condition)) {                                                   \
+      std::clog << "[error] Assertion failed in \"" #condition "\""       \
+                << ", in function '" << __PRETTY_FUNCTION__ << "', file " \
+                << __FILE__ << ", line " << VINEYARD_TO_STRING(__LINE__)  \
+                << std::endl;                                             \
+    }                                                                     \
+  } while (0)
+#endif  // RETURN_NULL_ON_ASSERT_NO_VERBOSE
+
+// return a null pointer if the status is not OK.
+#ifndef RETURN_NULL_ON_ASSERT_VERBOSE
+#define RETURN_NULL_ON_ASSERT_VERBOSE(condition, message)                     \
+  do {                                                                        \
+    if (!(condition)) {                                                       \
+      std::clog << "[error] Assertion failed in \"" #condition "\": "         \
+                << std::string(message) << ", in function '"                  \
+                << __PRETTY_FUNCTION__ << "', file " << __FILE__ << ", line " \
+                << VINEYARD_TO_STRING(__LINE__) << std::endl;                 \
+    }                                                                         \
+  } while (0)
+#endif  // RETURN_NULL_ON_ASSERT_VERBOSE
+
+// return a null pointer if the status is not OK.
+#ifndef RETURN_NULL_ON_ASSERT
+#define RETURN_NULL_ON_ASSERT(...)                      \
+  GET_MACRO(__VA_ARGS__, RETURN_NULL_ON_ASSERT_VERBOSE, \
+            RETURN_NULL_ON_ASSERT_NO_VERBOSE)           \
+  (__VA_ARGS__)
+#endif  // RETURN_NULL_ON_ASSERT
 
 // discard and ignore the error status.
 #ifndef VINEYARD_DISCARD
