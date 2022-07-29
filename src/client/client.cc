@@ -302,8 +302,8 @@ Status Client::PullNextStreamChunk(ObjectID const id,
 
 std::shared_ptr<Object> Client::GetObject(const ObjectID id) {
   ObjectMeta meta;
-  VINEYARD_CHECK_OK(this->GetMetaData(id, meta, true));
-  VINEYARD_ASSERT(!meta.MetaData().empty());
+  RETURN_NULL_ON_ERROR(this->GetMetaData(id, meta, true));
+  RETURN_NULL_ON_ASSERT(!meta.MetaData().empty());
   auto object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
     object = std::unique_ptr<Object>(new Object());
@@ -326,22 +326,25 @@ Status Client::GetObject(const ObjectID id, std::shared_ptr<Object>& object) {
 
 std::vector<std::shared_ptr<Object>> Client::GetObjects(
     const std::vector<ObjectID>& ids) {
+  std::vector<std::shared_ptr<Object>> objects(ids.size());
   std::vector<ObjectMeta> metas;
-  VINEYARD_CHECK_OK(this->GetMetaData(ids, metas, true));
-  for (auto const& meta : metas) {
-    if (meta.MetaData().empty()) {
-      VINEYARD_ASSERT(!meta.MetaData().empty());
+  if (!this->GetMetaData(ids, metas, true).ok()) {
+    for (size_t index = 0; index < ids.size(); ++index) {
+      objects[index] = nullptr;
     }
+    return objects;
   }
-  std::vector<std::shared_ptr<Object>> objects;
-  objects.reserve(ids.size());
-  for (auto const& meta : metas) {
-    auto object = ObjectFactory::Create(meta.GetTypeName());
-    if (object == nullptr) {
-      object = std::unique_ptr<Object>(new Object());
+  for (size_t index = 0; index < metas.size(); ++index) {
+    if (metas[index].MetaData().empty()) {
+      objects[index] = nullptr;
+    } else {
+      auto object = ObjectFactory::Create(metas[index].GetTypeName());
+      if (object == nullptr) {
+        object = std::unique_ptr<Object>(new Object());
+      }
+      object->Construct(metas[index]);
+      objects[index] = std::shared_ptr<Object>(object.release());
     }
-    object->Construct(meta);
-    objects.emplace_back(std::shared_ptr<Object>(object.release()));
   }
   return objects;
 }
