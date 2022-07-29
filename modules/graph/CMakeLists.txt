@@ -84,6 +84,9 @@ target_link_libraries(vineyard_graph vineyard_client
                                      ${ARROW_SHARED_LIB}
                                      ${MPI_CXX_LIBRARIES}
 )
+if(${LIBUNWIND_FOUND})
+    target_link_libraries(vineyard_graph PUBLIC ${LIBUNWIND_LIBRARIES})
+endif()
 if(APPLE)
     target_compile_options(vineyard_graph PUBLIC -Wno-unused-result)
 endif()
