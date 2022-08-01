@@ -95,7 +95,7 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::AsBatch(bool copy) const {
     std::shared_ptr<arrow::Scalar> sca;
     CHECK_ARROW_ERROR_AND_ASSIGN(sca, columns[i]->GetScalar(0));
 
-    std::clog << "at column" << i << " start element : " << sca->ToString()
+    DLOG(INFO) << "at column" << i << " start element : " << sca->ToString()
               << " value type: " << df_col->value_type()
               << " meta data type name:" << df_col->meta().GetTypeName()
               << std::endl;
