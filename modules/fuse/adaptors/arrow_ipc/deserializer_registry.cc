@@ -1,4 +1,18 @@
-#include "deserializer_registry.h"
+/** Copyright 2020-2021 Alibaba Group Holding Limited.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "fuse/adaptors/arrow_ipc/deserializer_registry.h"
 
 namespace vineyard {
 namespace fuse {
@@ -85,7 +99,6 @@ std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
 std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto arr = std::dynamic_pointer_cast<vineyard::BooleanArray>(p);
-  // std::clog << "new registry way" << std::endl;
   LOG(INFO) << "bool_array_arrow_ipc_view is called";
   std::shared_ptr<arrow::io::BufferOutputStream> ssink;
 
@@ -123,18 +136,7 @@ std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
 
 std::shared_ptr<arrow::Buffer> dataframe_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
-  // Add writer properties
   auto df = std::dynamic_pointer_cast<vineyard::DataFrame>(p);
-
-  // ::parquet::WriterProperties::Builder builder;
-  // builder.encoding(::parquet::Encoding::PLAIN);
-  // builder.disable_dictionary();
-  // builder.compression(::parquet::Compression::UNCOMPRESSED);
-  // builder.disable_statistics();
-  // builder.write_batch_size(std::numeric_limits<size_t>::max());
-  // builder.max_row_group_length(std::numeric_limits<size_t>::max());
-  // std::shared_ptr<::parquet::WriterProperties> props = builder.build();
-
   auto batch = df->AsBatch(true);
   std::shared_ptr<arrow::Table> table;
   VINEYARD_CHECK_OK(RecordBatchesToTable({batch}, &table));
@@ -144,13 +146,9 @@ std::shared_ptr<arrow::Buffer> dataframe_arrow_ipc_view(
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
   CHECK_ARROW_ERROR_AND_ASSIGN(
       writer, arrow::ipc::MakeStreamWriter(sink, batch->schema()));
-
   VINEYARD_CHECK_OK(writer->WriteTable(*table));
-  // ::parquet::arrow::WriteTable(*table, arrow::default_memory_pool(), sink,
-  //                             std::numeric_limits<size_t>::max(), props);
   std::shared_ptr<arrow::Buffer> buffer;
   writer->Close();
-
   CHECK_ARROW_ERROR_AND_ASSIGN(buffer, sink->Finish());
   return buffer;
 }
@@ -159,27 +157,32 @@ std::unordered_map<std::string, vineyard::fuse::vineyard_deserializer_nt>
 arrow_ipc_register_once() {
   std::unordered_map<std::string, vineyard::fuse::vineyard_deserializer_nt>
       d_array_registry;
-  // std::string array_prefix = "vineyard::NumericArray";
-#define MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(T)                                                    \
-  {                                                                         \
-    std::string array_type = "vineyard::NumericArray";                      \
-    array_type.append("<").append(type_name<T>()).append(">");              \
-    LOG(INFO) << "register type: " << array_type << std::endl;              \
-    d_array_registry.emplace(array_type, &numeric_array_arrow_ipc_view<T>); \
+#define MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER( \
+    T)                                                                         \
+  {                                                                            \
+    std::string array_type = "vineyard::NumericArray";                         \
+    array_type.append("<").append(type_name<T>()).append(">");                 \
+    LOG(INFO) << "register type: " << array_type << std::endl;                 \
+    d_array_registry.emplace(array_type, &numeric_array_arrow_ipc_view<T>);    \
   }
 
-
   MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(int8_t);
-  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(int32_t);
-  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(int16_t);
-  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(int64_t);
-  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(uint16_t);
-  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(uint8_t);
-  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(uint32_t);
-  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(uint64_t);
+  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(
+      int32_t);
+  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(
+      int16_t);
+  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(
+      int64_t);
+  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(
+      uint16_t);
+  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(
+      uint8_t);
+  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(
+      uint32_t);
+  MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(
+      uint64_t);
   MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(float);
   MODULES_FUSE_ADAPTORS_ARROW_IPC_DESERIALIZER_REGISTRY_H_FUSE_REGSITER(double);
-  // d_array_registry.emplace(type_name<vineyard::NumericArray<int64_t>>(),&arrow_ipc_view<vineyard::NumericArray<int64_t>>);
 
   {
     std::string t_name = type_name<vineyard::BooleanArray>();

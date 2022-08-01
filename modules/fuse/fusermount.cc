@@ -88,7 +88,8 @@ static int process_args(struct fuse_args& args, int argc, char** argv) {
 
   // populate state
   vineyard::fuse::fs::state.vineyard_socket = options.vineyard_socket;
-  LOG(INFO) << "prepare to conncet to socket" << vineyard::fuse::fs::state.vineyard_socket;
+  LOG(INFO) << "prepare to conncet to socket"
+            << vineyard::fuse::fs::state.vineyard_socket;
 
   vineyard::fuse::fs::state.ipc_desearilizer_registry =
       vineyard::fuse::arrow_ipc_register_once();
@@ -129,7 +130,7 @@ int main(int argc, char* argv[]) {
     return ret;
   }
   // process conn args
-   struct fuse_conn_info_opts* conn_opts = fuse_parse_conn_info_opts(&args);
+  struct fuse_conn_info_opts* conn_opts = fuse_parse_conn_info_opts(&args);
   vineyard::fuse::fs::state.conn_opts = conn_opts;
   LOG(INFO) << "Starting vineyard fuse driver ...";
   ret = fuse_main(args.argc, args.argv, &vineyard_fuse_operations, NULL);

@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_FUSE_ADAPTORS_ARROW_H_
-#define MODULES_FUSE_ADAPTORS_ARROW_H_
+#ifndef MODULES_FUSE_ADAPTORS_ARROW_IPC_SERIALIZER_REGISTRY_H_
+#define MODULES_FUSE_ADAPTORS_ARROW_IPC_SERIALIZER_REGISTRY_H_
 
 #include <memory>
 #include <string>
@@ -42,4 +42,4 @@ void from_arrow_view(Client* client, std::string const& path,
 }  // namespace fuse
 }  // namespace vineyard
 
-#endif  // MODULES_FUSE_ADAPTORS_ARROW_H_
+#endif  // MODULES_FUSE_ADAPTORS_ARROW_IPC_SERIALIZER_REGISTRY_H_

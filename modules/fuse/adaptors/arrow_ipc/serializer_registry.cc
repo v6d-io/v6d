@@ -104,14 +104,14 @@ static void from_arrow_view(Client* client, std::string const& path,
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
 
   VINEYARD_CHECK_OK(reader->ReadAll(&batches));
-  
+
   VINEYARD_CHECK_OK(RecordBatchesToTable(batches, &table));
 
   // build it into vineyard
   TableBuilder builder(*client, table);
   auto tb = builder.Seal(*client);
   // VINEYARD_CHECK_OK(client->Persist(tb->id()));
-  LOG(INFO)<<tb->meta().ToString();
+  LOG(INFO) << tb->meta().ToString();
   VINEYARD_CHECK_OK(client->PutName(
       tb->id(), path.substr(1, path.length() - 6 /* .arrow */ - 1)));
 }

@@ -50,7 +50,7 @@ namespace vineyard {
 namespace fuse {
 
 struct fs {
-   static struct fs_state_t {
+  static struct fs_state_t {
     struct fuse_conn_info_opts* conn_opts;
     std::string vineyard_socket;
     std::shared_ptr<Client> client;
@@ -62,38 +62,38 @@ struct fs {
         ipc_desearilizer_registry;
   } state;
 
-   static int fuse_getattr(const char* path, struct stat* stbuf,
+  static int fuse_getattr(const char* path, struct stat* stbuf,
                           struct fuse_file_info*);
 
-   static int fuse_open(const char* path, struct fuse_file_info* fi);
+  static int fuse_open(const char* path, struct fuse_file_info* fi);
 
-   static int fuse_read(const char* path, char* buf, size_t size, off_t offset,
+  static int fuse_read(const char* path, char* buf, size_t size, off_t offset,
                        struct fuse_file_info* fi);
 
-   static int fuse_write(const char* path, const char* buf, size_t size,
+  static int fuse_write(const char* path, const char* buf, size_t size,
                         off_t offset, struct fuse_file_info* fi);
 
-   static int fuse_statfs(const char* path, struct statvfs*);
+  static int fuse_statfs(const char* path, struct statvfs*);
 
-   static int fuse_flush(const char* path, struct fuse_file_info*);
+  static int fuse_flush(const char* path, struct fuse_file_info*);
 
-   static int fuse_release(const char* path, struct fuse_file_info*);
+  static int fuse_release(const char* path, struct fuse_file_info*);
 
-   static int fuse_getxattr(const char* path, const char* name, char*, size_t);
+  static int fuse_getxattr(const char* path, const char* name, char*, size_t);
 
-   static int fuse_opendir(const char* path, struct fuse_file_info* info);
+  static int fuse_opendir(const char* path, struct fuse_file_info* info);
 
-   static int fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
+  static int fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info* fi,
                           enum fuse_readdir_flags flags);
 
-   static void* fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg);
+  static void* fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg);
 
-   static void fuse_destroy(void* private_data);
+  static void fuse_destroy(void* private_data);
 
-   static int fuse_access(const char* path, int mode);
+  static int fuse_access(const char* path, int mode);
 
-   static int fuse_create(const char* path, mode_t, struct fuse_file_info*);
+  static int fuse_create(const char* path, mode_t, struct fuse_file_info*);
 };
 
 }  // namespace fuse
