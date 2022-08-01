@@ -4,7 +4,7 @@ run
 cd build
  cmake .. -DBUILD_VINEYARD_FUSE=ON -DBUILD_VINEYARD_GRAPH=OFF
 make vineyard-fusermount
-sudo -E python3 ../modules/fuse/ltest/fuse_test.py 
+sudo -E python3 ../modules/fuse/test/fuse_test.py 
 ```
 to test the fuse implemenetation on the fuse,if it is error in the middle, run
 ``` shell

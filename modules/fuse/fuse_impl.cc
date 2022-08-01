@@ -63,9 +63,7 @@ struct fs::fs_state_t fs::state {};
 
   int fs::fuse_getattr(const char* path, struct stat* stbuf,
                      struct fuse_file_info*) {
-  // VLOG(2) << "fuse: getattr on " << path;
-  // std::lock_guard<std::mutex> guard(state.mtx_);
-  LOG(INFO) << "fuse: getattr on " << path;
+   VLOG(2) << "fuse: getattr on " << path;
   std::lock_guard<std::mutex> guard(state.mtx_);
 
   memset(stbuf, 0, sizeof(struct stat));
@@ -99,19 +97,34 @@ struct fs::fs_state_t fs::state {};
       return -ENOENT;
     }
     ObjectID target = InvalidObjectID();
-    auto status = state.client->GetName(name_from_path(path), target);
-    if (!status.ok()) {
-      return -ENOENT;
-    }
+    auto prefix = name_from_path(path);
+    auto status = state.client->GetName(prefix, target);
+    if (status.ok()) {
+     
     bool exists = false;
     VINEYARD_CHECK_OK(state.client->Exists(target, exists));
     if (!exists) {
       return -ENOENT;
     }
-
-    auto buffer = generate_fuse_view(state.client->GetObject(target));
-    state.views.emplace(path, buffer);
+    auto obj = state.client->GetObject(target);
+    auto d = fs::state.ipc_desearilizer_registry.at(obj->meta().GetTypeName());
+    auto buffer = d(obj);
+    state.views[path_string] = buffer ;
+    // auto buffer = generate_fuse_view(state.client->GetObject(target));
+    // state.views.emplace(path, buffer);
     stbuf->st_size = buffer->size();
+    }else{
+      auto obj = state.client->GetObject(ObjectIDFromString( prefix));
+      if(obj == nullptr){
+        return -ENOENT;
+      }
+       auto d = fs::state.ipc_desearilizer_registry.at(obj->meta().GetTypeName());
+    auto buffer = d(obj);
+    state.views[path_string] = buffer ;
+      // auto buffer = generate_fuse_view(obj);
+      // state.views.emplace(path, buffer);
+      stbuf->st_size = buffer->size();
+    }
     return 0;
   }
 }
@@ -119,7 +132,7 @@ struct fs::fs_state_t fs::state {};
 int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
 
   LOG(INFO) << "fuse: open " << path << " with mode " << fi->flags;
-  if ((fi->flags & O_ACCMODE) != O_RDONLY) {
+  if (((fi->flags & O_ACCMODE) & (O_RDONLY|O_WRONLY))) {
     return -EACCES;
   }
 
@@ -133,14 +146,12 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
   // the opened file referenced by the user-defined name 
   auto filename = name_from_path(path);
   auto target = InvalidObjectID(); 
-  auto loc = state.views.find(filename);
+  auto loc = state.views.find(path);
   std::string path_string(path);
   std::shared_ptr<vineyard::Object> object = nullptr;
   if(loc == state.views.end()){
-        if(!state.client->GetName(filename,target).ok()){
-          
-                object  = state.client->GetObject(target);
-          
+        if(state.client->GetName(filename,target).ok()){
+            object  = state.client->GetObject(target);
         };
      
       if(object == nullptr){
@@ -165,8 +176,8 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
                   struct fuse_file_info* fi){
   VLOG(2) << "fuse: read " << path << " from " << offset << ", expect " << size
           << " bytes";
-  std::unordered_map<std::string,
-                     std::shared_ptr<arrow::Buffer>>::const_iterator loc;
+
+  std::unordered_map<std::string, std::shared_ptr<arrow::Buffer>>::const_iterator loc;
   {
     std::lock_guard<std::mutex> guard(state.mtx_);
     loc = state.views.find(path);
@@ -191,8 +202,13 @@ int fs::fuse_write(const char* path, const char* buf, size_t size, off_t offset,
                    struct fuse_file_info* fi) {
   VLOG(2) << "fuse: write " << path << " from " << offset << ", expect " << size
           << " bytes";
+  std::unordered_map<std::string, std::shared_ptr<arrow::BufferBuilder>>::const_iterator loc;
 
-  auto loc = state.mutable_views.find(path);
+  {
+  std::lock_guard<std::mutex> guard(state.mtx_);
+  
+  loc = state.mutable_views.find(path);
+  }
   if (loc == state.mutable_views.end()) {
     return -ENOENT;
   }
@@ -276,11 +292,14 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
     // fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
     if (item.second.contains("__name")) {
       std::string base = item.second["__name"].get<std::string>() + ".arrow";
+      LOG(INFO)<<"open object with name"<<base;
       filler(buf, base.c_str(), NULL, 0,
              fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
     }else{
       std::string base = ObjectIDToString(item.first).c_str();
       base.append(".arrow");
+      LOG(INFO)<<"open object without name"<< base; 
+
       filler(buf, base.c_str(), NULL, 0, fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
     }
   }
@@ -290,11 +309,11 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
   LOG(INFO) << "fuse: initfs with vineyard socket " << state.vineyard_socket;
 
- state.client.reset(new vineyard::Client());
+  state.client.reset(new vineyard::Client());
   state.client->Connect(state.vineyard_socket);
 
   fuse_apply_conn_info_opts(state.conn_opts, conn);
-  conn->max_read = conn->max_readahead;
+  // conn->max_read = conn->max_readahead;
 
   cfg->kernel_cache = 0;
   return NULL;

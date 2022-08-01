@@ -63,6 +63,7 @@ def interrupt_proc(proc:asyncio.subprocess.Process):
     proc.send_signal(SIGTERM)
 def generate_dataframe(size = (15,4)):
     height,width = size
+    # alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
     df = pd.DataFrame(np.random.randint(0,100,size=(height, width)), columns=list('ABCD'))
     return df
 def generate_string_array(length = 20):
@@ -100,7 +101,7 @@ def read_data_from_fuse(vid):
 
 def test_fuse_array(data,client):
     id = client.put(data)
-    extracted_data = read_data_from_fuse(str(id)[11:28])
+    extracted_data = read_data_from_fuse(str(id)[11:28]+".arrow")
     print("data: ")
     print(data)
     print("extracted data: ")
@@ -110,7 +111,7 @@ def test_fuse_array(data,client):
 
 def test_fuse_string_array(data,client):
     id = client.put(data)
-    extracted_data = read_data_from_fuse(str(id)[11:28])
+    extracted_data = read_data_from_fuse(str(id)[11:28]+".arrow")
     print("data: ")
     print(data)
     print("extracted data: ")
@@ -134,7 +135,7 @@ def compare_two_string_array(arr_str_1,arr_str_2):
 
 def test_fuse_df(data,client):
     id = client.put(data)
-    extracted_data = read_data_from_fuse(str(id)[11:28])
+    extracted_data = read_data_from_fuse(str(id)[11:28]+".arrow")
     assert_dataframe(data,extracted_data)
 # string_array = generate_array(Type.STRING)
 # int_array =generate_array(Type.INT64)
