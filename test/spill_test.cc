@@ -64,14 +64,13 @@ void BasicTest(Client& client) {
     CHECK(is_in_use);
   }
 
-  // Here we need a CHECK_FATAL
-  bool flag = false;
-  try {
-    ArrayBuilder<double> builder2(client, double_array);
-    auto sealed_double_array2 =
-        std::dynamic_pointer_cast<Array<double>>(builder2.Seal(client));
-  } catch (std::runtime_error& e) { flag = true; }
-  CHECK(flag);
+  {
+    std::unique_ptr<BlobWriter> buffer_writer_;
+    auto status =
+        client.CreateBlob(double_array.size() * sizeof(double), buffer_writer_);
+    CHECK(status.IsNotEnoughMemory());
+  }
+
   bool is_spilled{false};
   bool is_in_use{false};
   VINEYARD_CHECK_OK(client.Release({id1, blob_id}));

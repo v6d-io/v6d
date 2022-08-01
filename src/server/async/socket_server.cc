@@ -190,6 +190,20 @@ void SocketConnection::doReadBody() {
   } while (0)
 #endif  // RESPONSE_ON_ERROR
 
+#ifndef RESPONSE_ON_ERROR_NO_PANIC
+#define RESPONSE_ON_ERROR_NO_PANIC(status)                                 \
+  do {                                                                     \
+    auto exec_status = (status);                                           \
+    if (!exec_status.ok()) {                                               \
+      LOG(INFO) << "Request is not completed: " << exec_status.ToString(); \
+      std::string error_message_out;                                       \
+      WriteErrorReply(exec_status, error_message_out);                     \
+      self->doWrite(error_message_out);                                    \
+      return false;                                                        \
+    }                                                                      \
+  } while (0)
+#endif  // RESPONSE_ON_ERROR_NO_PANIC
+
 bool SocketConnection::processMessage(const std::string& message_in) {
   json root;
   std::istringstream is(message_in);
@@ -496,7 +510,7 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
   ObjectID object_id;
-  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+  RESPONSE_ON_ERROR_NO_PANIC(bulk_store_->Create(size, object_id, object));
 
   int fd_to_send = -1;
   if (object->data_size > 0 &&
