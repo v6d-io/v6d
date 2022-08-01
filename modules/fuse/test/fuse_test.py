@@ -61,11 +61,11 @@ def connect_to_server():
 def interrupt_proc(proc:asyncio.subprocess.Process):
     print("interrupt")
     proc.send_signal(SIGTERM)
-def generate_dataframe(size = (15,4)):
+def generate_dataframe(size = (3,4)):
     height,width = size
-    # alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-    df = pd.DataFrame(np.random.randint(0,100,size=(height, width)), columns=list('ABCD'))
-    return df
+    ldf = pd.DataFrame(np.random.randint(0,100,size=(height, width))*2.3, columns=[''.join(['a']*i) for i in range(1,width+1)])
+    rdf =  pd.DataFrame(np.random.randint(0,100,size=(height, width)), columns=[''.join(['b']*i) for i in range(1,width+1)])
+    return pd.concat([ldf, rdf], axis=1, join="inner")
 def generate_string_array(length = 20):
     res = []
     alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' ']

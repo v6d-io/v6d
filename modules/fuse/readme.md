@@ -8,7 +8,7 @@ sudo -E python3 ../modules/fuse/test/fuse_test.py
 ```
 to test the fuse implemenetation on the fuse,if it is error in the middle, run
 ``` shell
- sudo pkill -f vineyard* 
+ sudo pkill -f vineyard
 ```
 warning: it will kill all the process has pattern vineyard*
 
