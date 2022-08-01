@@ -1,4 +1,6 @@
 #include <linux/stat.h>
+#include <linux/atmioc.h>
+#include <linux/slab.h>
 #include "vineyard_fs.h"
 #include "vineyard_i.h"
 
@@ -10,6 +12,20 @@ MODULE_VERSION("0.01");
 struct vineyard_fs_context {
     int key:1;
 };
+
+struct vineyard_sb_info {
+
+};
+
+static inline void vineyard_lock_build_inode(struct vineyard_sb_info *sbi)
+{
+	// TBD
+}
+
+static inline void vineyard_unlock_build_inode(struct vineyard_sb_info *sbi)
+{
+	// TBD
+}
 
 static struct inode *vineyard_alloc_inode(struct super_block *sb)
 {
@@ -80,8 +96,8 @@ static void vineyard_free_fsc(struct fs_context *fsc)
 
 static int vineyard_parse_param(struct fs_context *fsc, struct fs_parameter *param)
 {
-    printk(KERN_INFO PREFIX "%s\n", __func__);
-    return 0;
+	printk(KERN_INFO "fake %s\n", __func__);
+	return 0;
 }
 
 const struct dentry_operations vineyard_root_dentry_operations = {
@@ -161,8 +177,7 @@ static void vineyard_fs_init_inode(struct inode *inode, struct vineyard_attr *at
 	}
 }
 
-struct inode *vineyard_fs_iget(struct super_block *sb, u64 nodeid,
-			int generation, struct vineyard_attr *attr)
+struct inode *vineyard_fs_iget(struct super_block *sb, struct vineyard_attr *attr)
 {
 	struct inode *inode;
 
@@ -171,7 +186,6 @@ struct inode *vineyard_fs_iget(struct super_block *sb, u64 nodeid,
 	if (inode)
 		vineyard_fs_init_inode(inode, attr);
 
-	inode->i_generation = generation;
 	return inode;
 }
 
@@ -185,7 +199,7 @@ static struct inode *vineyard_get_root_inode(struct super_block *sb)
     attr.mode = S_IFDIR;
     attr.ino = 1;
 
-	return vineyard_fs_iget(sb, 1, 0, &attr);
+	return vineyard_fs_iget(sb, &attr);
 }
 
 int vineyard_set_super_block(struct super_block *sb, struct fs_context *fsc)
@@ -201,6 +215,29 @@ int vineyard_set_super_block(struct super_block *sb, struct fs_context *fsc)
     sb->s_blocksize_bits = PAGE_SHIFT;
 
     return 0;
+}
+
+uint64_t get_next_vineyard_ino(void)
+{
+	static uint64_t ino = 1;
+	// TODO: atomic ins
+	ino++;
+	return ino;
+}
+
+struct inode *vineyard_fs_build_inode(struct super_block *sb)
+{
+	struct inode *inode;
+	struct vineyard_attr attr;
+
+	attr.mode = S_IFREG;
+	attr.ino = get_next_vineyard_ino();
+	vineyard_lock_build_inode(NULL);
+
+	inode = vineyard_fs_iget(sb, &attr);
+
+	vineyard_unlock_build_inode(NULL);
+	return inode;
 }
 
 static int vineyard_get_tree(struct fs_context *fsc)

@@ -8,6 +8,8 @@
 #include <linux/fs_context.h>
 #include <linux/xattr.h>
 #include <linux/exportfs.h>
+#include <linux/mm.h>
+#include <linux/mman.h>
 
 #define PREFIX "[vineyardfs]"
 #define VINEYARD_SUPER_MAGIC 0xabcdef
