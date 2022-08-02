@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2021 Alibaba Group Holding Limited.
@@ -15,14 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
 import sys
 
 import pyarrow as pa
 
 filename = sys.argv[1]
-# file_dir = os.path.abspath()
 with open(filename, 'rb') as source:
     with pa.ipc.open_stream(source) as reader:
         data = reader.read_all()
         print(data)
+        

@@ -11,16 +11,14 @@ to test the fuse implemenetation on the fuse,if it is error in the middle, run
  sudo pkill -f vineyard
 ```
 warning: it will kill all the process has pattern vineyard*
-
-explanation 
-## folders:
-
+## folders 
 ### ./adaptors  
-only arrow_ipc implemented,  deserializer_registry.h contains all the searilizer and desearilizer, note that to enable the searilization, array is stored in  1*n table and under the column "a". it also has some misc files for dev_use. 
-
+only arrow_ipc implemented,  deserializer_registry.h contains all the desearilizer, note that to enable the searilization in this PR, array is stored in  1*n table and under the column "a", and serializer_registry.h is for future, now the write is disabled. 
 ### ./test
-    it contains two python scripts, one is adaptor, another is adaptor
-## files:
+
+it contains 1 python file, and another two debugging assistanct files, they read and write the arrow_ipc format.
+## files 
+
 fuse_impl.cc and fuse_impl.h is simply the impemenation of fuse3 interface
 
 ## linter
@@ -28,8 +26,3 @@ fuse_impl.cc and fuse_impl.h is simply the impemenation of fuse3 interface
 python3 -m isort --profile black --python-version 38 .
 ```
 fusermount.cc is the mount file. 
-
-
-
-
-

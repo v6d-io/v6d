@@ -173,7 +173,7 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
 int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
                   struct fuse_file_info* fi) {
   DLOG(INFO) << "fuse: read " << path << " from " << offset << ", expect "
-            << size << " bytes";
+             << size << " bytes";
 
   std::unordered_map<std::string,
                      std::shared_ptr<arrow::Buffer>>::const_iterator loc;
@@ -200,7 +200,7 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
 int fs::fuse_write(const char* path, const char* buf, size_t size, off_t offset,
                    struct fuse_file_info* fi) {
   DLOG(INFO) << "fuse: write " << path << " from " << offset << ", expect "
-            << size << " bytes";
+             << size << " bytes";
   std::unordered_map<std::string,
                      std::shared_ptr<arrow::BufferBuilder>>::const_iterator loc;
 

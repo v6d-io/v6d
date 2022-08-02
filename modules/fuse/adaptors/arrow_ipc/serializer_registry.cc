@@ -93,8 +93,6 @@ static void from_arrow_view(Client* client, std::string const& path,
   CHECK_ARROW_ERROR_AND_ASSIGN(reader,
                                arrow::ipc::RecordBatchStreamReader::Open(fp));
 
-
-
   std::shared_ptr<arrow::Table> table;
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
 

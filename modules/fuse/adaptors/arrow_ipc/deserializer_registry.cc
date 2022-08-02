@@ -16,27 +16,31 @@ limitations under the License.
 
 namespace vineyard {
 namespace fuse {
-
-template <typename T>
-std::shared_ptr<arrow::Buffer> numeric_array_arrow_ipc_view(
-    const std::shared_ptr<vineyard::Object>& p) {
-  auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<T>>(p);
-  DLOG(INFO) << "numeric_array_arrow_ipc_view" << type_name<T>() << " is called";
-  std::shared_ptr<arrow::io::BufferOutputStream> ssink;
-
-  CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
-  DLOG(INFO) << "buffer successfully created";
-
+std::shared_ptr<arrow::KeyValueMetadata> extractVineyardMetaToArrowMeta(
+    std::shared_ptr<vineyard::Object> obj) {
   auto kvmeta = std::shared_ptr<arrow::KeyValueMetadata>(
       new arrow::KeyValueMetadata({}, {}));
 
-  auto meta = arr->meta();
+  auto meta = obj->meta();
 
   for (auto i : meta) {
     std::string v = i.value().dump();
     kvmeta->Append(i.key(), v);
   }
+  return kvmeta;
+}
+template <typename T>
+std::shared_ptr<arrow::Buffer> numeric_array_arrow_ipc_view(
+    const std::shared_ptr<vineyard::Object>& p) {
+  auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<T>>(p);
+  DLOG(INFO) << "numeric_array_arrow_ipc_view" << type_name<T>()
+             << " is called";
+  std::shared_ptr<arrow::io::BufferOutputStream> ssink;
 
+  CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
+  DLOG(INFO) << "buffer successfully created";
+
+  auto kvmeta = extractVineyardMetaToArrowMeta(arr);
   auto schema = arrow::schema(
       {arrow::field("a", ConvertToArrowType<T>::TypeValue())}, kvmeta);
   std::shared_ptr<arrow::Table> my_table =
@@ -66,16 +70,7 @@ std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
   CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
   DLOG(INFO) << "buffer successfully created";
 
-  auto kvmeta = std::shared_ptr<arrow::KeyValueMetadata>(
-      new arrow::KeyValueMetadata({}, {}));
-
-  auto meta = arr->meta();
-
-  for (auto i : meta) {
-    std::string v = i.value().dump();
-    kvmeta->Append(i.key(), v);
-  }
-
+  auto kvmeta = extractVineyardMetaToArrowMeta(arr);
   auto schema = arrow::schema(
       {arrow::field("a", ConvertToArrowType<std::string>::TypeValue())},
       kvmeta);
@@ -101,19 +96,9 @@ std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
   auto arr = std::dynamic_pointer_cast<vineyard::BooleanArray>(p);
   DLOG(INFO) << "bool_array_arrow_ipc_view is called";
   std::shared_ptr<arrow::io::BufferOutputStream> ssink;
-
+  auto kvmeta = extractVineyardMetaToArrowMeta(arr);
   CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
   DLOG(INFO) << "buffer successfully created";
-
-  auto kvmeta = std::shared_ptr<arrow::KeyValueMetadata>(
-      new arrow::KeyValueMetadata({}, {}));
-
-  auto meta = arr->meta();
-
-  for (auto i : meta) {
-    std::string v = i.value().dump();
-    kvmeta->Append(i.key(), v);
-  }
 
   auto schema = arrow::schema(
       {arrow::field("a", ConvertToArrowType<bool>::TypeValue())}, kvmeta);
@@ -137,6 +122,8 @@ std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
 std::shared_ptr<arrow::Buffer> dataframe_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto df = std::dynamic_pointer_cast<vineyard::DataFrame>(p);
+  auto kvmeta = extractVineyardMetaToArrowMeta(df);
+
   auto batch = df->AsBatch(true);
   std::shared_ptr<arrow::Table> table;
   VINEYARD_CHECK_OK(RecordBatchesToTable({batch}, &table));
@@ -162,7 +149,7 @@ arrow_ipc_register_once() {
   {                                                                            \
     std::string array_type = "vineyard::NumericArray";                         \
     array_type.append("<").append(type_name<T>()).append(">");                 \
-    DLOG(INFO) << "register type: " << array_type << std::endl;                 \
+    DLOG(INFO) << "register type: " << array_type << std::endl;                \
     d_array_registry.emplace(array_type, &numeric_array_arrow_ipc_view<T>);    \
   }
 

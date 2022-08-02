@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2021 Alibaba Group Holding Limited.
@@ -21,11 +21,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-import vineyard as vy
 
-# default_socket = "/var/run/vineyard.sock"
-
-# client = vy.connect(default_socket);
 filename = sys.argv[1]
 height,width = 5,4
 df = pd.DataFrame(np.random.randint(0,100,size=(height, width)), columns=list('ABCD'))
