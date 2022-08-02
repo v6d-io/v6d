@@ -319,13 +319,13 @@ listening to ipc_socket ``/var/run/vineyard.sock2``.
     >>> client1 = vineyard.connect('/var/run/vineyard.sock1')
     >>> id1 = client1.put(np.zeros(8))
     >>> # persist the object to make it visible to form the global object
-    >>> client.persist(id1)
+    >>> client1.persist(id1)
 
     >>> # build the second array in the second vineyard instance
     >>> client2 = vineyard.connect('/var/run/vineyard.sock2')
     >>> id2 = client2.put(np.ones(4))
     >>> # persist the object to make it visible to form the global object
-    >>> client.persist(id2)
+    >>> client2.persist(id2)
 
     >>> # build the pair from client1
     >>> obj1 = client1.get_object(id1)

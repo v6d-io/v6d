@@ -64,6 +64,7 @@ Creating and accessing local objects in vineyard is easy as :code:`put` and :cod
 
     >>> import pandas as pd
     >>> import vineyard
+    >>> import numpy as np
     >>>
     >>> vineyard_ipc_client = vineyard.connect("/tmp/vineyard.sock")
     >>>

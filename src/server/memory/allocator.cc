@@ -45,6 +45,10 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include "server/memory/jemalloc.h"
 #endif
 
+#if defined(WITH_MIMALLOC)
+#include "server/memory/mimalloc.h"
+#endif
+
 #if defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
 #include <sys/mount.h>
@@ -57,6 +61,10 @@ int64_t BulkAllocator::allocated_ = 0;
 
 #if defined(WITH_JEMALLOC)
 BulkAllocator::Allocator BulkAllocator::allocator_{};
+#endif
+
+#if defined(WITH_MIMALLOC)
+BulkAllocator::Allocator BulkAllocator::miallocator_{};
 #endif
 
 void* BulkAllocator::Init(const size_t size) {
@@ -97,6 +105,15 @@ void* BulkAllocator::Init(const size_t size) {
   size_t arena_metadata_size = 16 * 1024 * 1024;
   return allocator_.Init(size + arena_metadata_size);
 #endif
+#if defined(WITH_MIMALLOC)
+  // mimalloc requires 64MB aligned
+  size_t arena_aligned_size = 64 * 1024 * 1024;
+  if (size < arena_aligned_size) {
+    return miallocator_.Init(size + arena_aligned_size * 8);
+  } else {
+    return miallocator_.Init(size + arena_aligned_size);
+  }
+#endif
 }
 
 void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
@@ -110,6 +127,9 @@ void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
 #if defined(WITH_JEMALLOC)
   void* mem = allocator_.Allocate(bytes, alignment);
 #endif
+#if defined(WITH_MIMALLOC)
+  void* mem = miallocator_.Allocate(bytes, alignment);
+#endif
   if (mem != nullptr) {
     allocated_ += bytes;
   }
@@ -122,6 +142,9 @@ void BulkAllocator::Free(void* mem, size_t bytes) {
 #endif
 #if defined(WITH_JEMALLOC)
   allocator_.Free(mem);
+#endif
+#if defined(WITH_MIMALLOC)
+  miallocator_.Free(mem);
 #endif
   allocated_ -= bytes;
 }

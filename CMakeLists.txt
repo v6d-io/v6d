@@ -111,7 +111,7 @@ set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
     STRING "Choose the allocator for vineyard server (vineyardd)."
 )
 set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
-    "dlmalloc" "jemalloc"
+    "dlmalloc" "jemalloc" "mimalloc"
 )
 message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
@@ -342,6 +342,25 @@ macro(find_jemalloc)
     endif()
 endmacro(find_jemalloc)
 
+macro(find_mimalloc)
+    if(NOT TARGET mimalloc)
+    ExternalProject_Add(libmimalloc
+        SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/mimalloc"
+        BUILD_ALWAYS 1
+        PATCH_COMMAND make -p out/release
+        BINARY_DIR "${PROJECT_SOURCE_DIR}/thirdparty/mimalloc/out/release"
+        BUILD_COMMAND cmake -DMI_OVERRIDE=OFF ../.. 
+        INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM}
+    )
+    add_library(mimalloc STATIC IMPORTED)
+    add_dependencies(mimalloc libmimalloc)
+    set_target_properties(mimalloc PROPERTIES IMPORTED_LOCATION
+                                                  ${PROJECT_SOURCE_DIR}/thirdparty/mimalloc/out/release/libmimalloc.a)
+    set_target_properties(mimalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                              ${PROJECT_SOURCE_DIR}/thirdparty)
+    endif()
+endmacro(find_mimalloc)
+
 macro(find_glog)
     include("cmake/FindGlog.cmake")
 endmacro(find_glog)
@@ -527,12 +546,20 @@ if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUIL
 endif()
 
 if(BUILD_VINEYARD_MALLOC)
-    find_jemalloc()
+    if(WITH_ALLOCATOR STREQUAL "mimalloc")
+        find_mimalloc()
+    else()
+        find_jemalloc()
+    endif()
     set(BUILD_VINEYARD_CLIENT ON)
 endif()
 
 if(WITH_ALLOCATOR STREQUAL "jemalloc")
     find_jemalloc()
+endif()
+
+if(WITH_ALLOCATOR STREQUAL "mimalloc")
+    find_mimalloc()
 endif()
 
 add_custom_target(vineyard_tests)
@@ -593,6 +620,9 @@ if(BUILD_VINEYARD_SERVER)
     elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
         target_link_libraries(vineyardd PRIVATE jemalloc ${CMAKE_DL_LIBS})
         target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
+    elseif(WITH_ALLOCATOR STREQUAL "mimalloc")
+        target_link_libraries(vineyardd PRIVATE mimalloc ${CMAKE_DL_LIBS})
+        target_compile_options(vineyardd PRIVATE -DWITH_MIMALLOC)
     else()
         message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
     endif()
@@ -670,9 +700,14 @@ if(BUILD_VINEYARD_CLIENT)
         target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
     endif()
 
-    if(BUILD_VINEYARD_MALLOC OR WITH_ALLOCATOR STREQUAL "jemalloc")
-        target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
-        target_compile_options(vineyard_client PRIVATE -DWITH_JEMALLOC)
+    if(BUILD_VINEYARD_MALLOC)
+        if(WITH_ALLOCATOR STREQUAL "mimalloc")
+            target_link_libraries(vineyard_client PRIVATE mimalloc ${CMAKE_DL_LIBS})
+            target_compile_options(vineyard_client PRIVATE -DWITH_MIMALLOC)
+        else()
+            target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
+            target_compile_options(vineyard_client PRIVATE -DWITH_JEMALLOC)
+        endif()
     endif()
 
     if(BUILD_VINEYARD_PYPI_PACKAGES)
