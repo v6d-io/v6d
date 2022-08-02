@@ -131,7 +131,7 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
 
 int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
   DLOG(INFO) << "fuse: open " << path << " with mode " << fi->flags;
-  if (((fi->flags & O_ACCMODE) & (O_RDONLY | O_WRONLY))) {
+  if (((fi->flags & O_ACCMODE) & (O_RDONLY))) {
     return -EACCES;
   }
 
