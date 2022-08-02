@@ -15,19 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from enum import Enum
-import os
-from signal import SIGINT, SIGTERM
-import sys
-from time import sleep
-import vineyard as vy
-import pandas as pd
-import pyarrow as pa
-import numpy as np
-import subprocess as sp
 import asyncio
 import logging as logger
+import os
+import subprocess as sp
+import sys
 import time
+from enum import Enum
+from signal import SIGINT
+from signal import SIGTERM
+from time import sleep
+
+import numpy as np
+import pandas as pd
+import pyarrow as pa
+
+import vineyard as vy
+
 socket_name = ""
 timestamp = int(time.time())
 socket_name = "/var/run/%dvineyard.sock"%(timestamp) 

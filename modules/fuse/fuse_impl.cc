@@ -62,7 +62,7 @@ std::shared_ptr<arrow::Buffer> generate_fuse_view(
 
 int fs::fuse_getattr(const char* path, struct stat* stbuf,
                      struct fuse_file_info*) {
-  LOG(INFO) << "fuse: getattr on " << path;
+  DLOG(INFO) << "fuse: getattr on " << path;
   std::lock_guard<std::mutex> guard(state.mtx_);
 
   memset(stbuf, 0, sizeof(struct stat));
@@ -105,7 +105,7 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
         return -ENOENT;
       }
       auto obj = state.client->GetObject(target);
-      LOG(INFO) << "tryting to deserialize" << obj->meta().GetTypeName();
+      DLOG(INFO) << "tryting to deserialize" << obj->meta().GetTypeName();
       auto d =
           fs::state.ipc_desearilizer_registry.at(obj->meta().GetTypeName());
       auto buffer = d(obj);
@@ -114,7 +114,7 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
       stbuf->st_size = buffer->size();
     } else {
       auto obj = state.client->GetObject(ObjectIDFromString(prefix));
-      LOG(INFO) << "trying to deserialize " << obj->meta().GetTypeName();
+      DLOG(INFO) << "trying to deserialize " << obj->meta().GetTypeName();
 
       if (obj == nullptr) {
         return -ENOENT;
@@ -130,7 +130,7 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
 }
 
 int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
-  LOG(INFO) << "fuse: open " << path << " with mode " << fi->flags;
+  DLOG(INFO) << "fuse: open " << path << " with mode " << fi->flags;
   if (((fi->flags & O_ACCMODE) & (O_RDONLY | O_WRONLY))) {
     return -EACCES;
   }
@@ -172,7 +172,7 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
 
 int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
                   struct fuse_file_info* fi) {
-  LOG(INFO) << "fuse: read " << path << " from " << offset << ", expect "
+  DLOG(INFO) << "fuse: read " << path << " from " << offset << ", expect "
             << size << " bytes";
 
   std::unordered_map<std::string,
@@ -199,7 +199,7 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
 
 int fs::fuse_write(const char* path, const char* buf, size_t size, off_t offset,
                    struct fuse_file_info* fi) {
-  LOG(INFO) << "fuse: write " << path << " from " << offset << ", expect "
+  DLOG(INFO) << "fuse: write " << path << " from " << offset << ", expect "
             << size << " bytes";
   std::unordered_map<std::string,
                      std::shared_ptr<arrow::BufferBuilder>>::const_iterator loc;
@@ -222,17 +222,17 @@ int fs::fuse_write(const char* path, const char* buf, size_t size, off_t offset,
 }
 
 int fs::fuse_statfs(const char* path, struct statvfs*) {
-  LOG(INFO) << "fuse: statfs " << path;
+  DLOG(INFO) << "fuse: statfs " << path;
   return 0;
 }
 
 int fs::fuse_flush(const char* path, struct fuse_file_info*) {
-  LOG(INFO) << "fuse: flush " << path;
+  DLOG(INFO) << "fuse: flush " << path;
   return 0;
 }
 
 int fs::fuse_release(const char* path, struct fuse_file_info*) {
-  LOG(INFO) << "fuse: release " << path;
+  DLOG(INFO) << "fuse: release " << path;
 
   {
       // TODO: ref count should be used
@@ -258,19 +258,19 @@ int fs::fuse_release(const char* path, struct fuse_file_info*) {
 }
 
 int fs::fuse_getxattr(const char* path, const char* name, char*, size_t) {
-  LOG(INFO) << "fuse: getxattr " << path << ": name";
+  DLOG(INFO) << "fuse: getxattr " << path << ": name";
   return 0;
 }
 
 int fs::fuse_opendir(const char* path, struct fuse_file_info* info) {
-  LOG(INFO) << "fuse: opendir " << path;
+  DLOG(INFO) << "fuse: opendir " << path;
   return 0;
 }
 
 int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
                      off_t offset, struct fuse_file_info* fi,
                      enum fuse_readdir_flags flags) {
-  LOG(INFO) << "fuse: readdir " << path;
+  DLOG(INFO) << "fuse: readdir " << path;
 
   if (strcmp(path, "/") != 0) {
     return -ENOENT;
@@ -286,13 +286,13 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
   for (auto const& item : metas) {
     if (item.second.contains("__name")) {
       std::string base = item.second["__name"].get<std::string>() + ".arrow";
-      LOG(INFO) << "open object with name" << base;
+      DLOG(INFO) << "open object with name" << base;
       filler(buf, base.c_str(), NULL, 0,
              fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
     } else {
       std::string base = ObjectIDToString(item.first).c_str();
       base.append(".arrow");
-      LOG(INFO) << "open object without name" << base;
+      DLOG(INFO) << "open object without name" << base;
 
       filler(buf, base.c_str(), NULL, 0,
              fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS);
@@ -302,7 +302,7 @@ int fs::fuse_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 }
 
 void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
-  LOG(INFO) << "fuse: initfs with vineyard socket " << state.vineyard_socket;
+  DLOG(INFO) << "fuse: initfs with vineyard socket " << state.vineyard_socket;
 
   state.client.reset(new vineyard::Client());
   state.client->Connect(state.vineyard_socket);
@@ -315,7 +315,7 @@ void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
 }
 
 void fs::fuse_destroy(void* private_data) {
-  LOG(INFO) << "fuse: destroy";
+  DLOG(INFO) << "fuse: destroy";
 
   state.views.clear();
   state.mutable_views.clear();
@@ -323,18 +323,18 @@ void fs::fuse_destroy(void* private_data) {
 }
 
 int fs::fuse_access(const char* path, int mode) {
-  LOG(INFO) << "fuse: access " << path << " with mode " << mode;
+  DLOG(INFO) << "fuse: access " << path << " with mode " << mode;
 
   return mode;
 }
 
 int fs::fuse_create(const char* path, mode_t mode, struct fuse_file_info*) {
-  LOG(INFO) << "fuse: create " << path << " with mode " << mode;
+  DLOG(INFO) << "fuse: create " << path << " with mode " << mode;
   if (state.mutable_views.find(path) != state.mutable_views.end()) {
     LOG(ERROR) << "fuse: create: file already exists" << path;
     return EEXIST;
   }
-  LOG(INFO) << "creating " << path;
+  DLOG(INFO) << "creating " << path;
   state.mutable_views.emplace(
       path, std::shared_ptr<arrow::BufferBuilder>(new arrow::BufferBuilder()));
   return 0;

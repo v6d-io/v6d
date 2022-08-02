@@ -21,11 +21,11 @@ template <typename T>
 std::shared_ptr<arrow::Buffer> numeric_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<T>>(p);
-  LOG(INFO) << "numeric_array_arrow_ipc_view" << type_name<T>() << " is called";
+  DLOG(INFO) << "numeric_array_arrow_ipc_view" << type_name<T>() << " is called";
   std::shared_ptr<arrow::io::BufferOutputStream> ssink;
 
   CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
-  LOG(INFO) << "buffer successfully created";
+  DLOG(INFO) << "buffer successfully created";
 
   auto kvmeta = std::shared_ptr<arrow::KeyValueMetadata>(
       new arrow::KeyValueMetadata({}, {}));
@@ -47,12 +47,12 @@ std::shared_ptr<arrow::Buffer> numeric_array_arrow_ipc_view(
                                arrow::ipc::MakeStreamWriter(ssink, schema));
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
-  LOG(INFO) << "table is written";
+  DLOG(INFO) << "table is written";
   writer->Close();
   std::shared_ptr<arrow::Buffer> buffer_;
-  LOG(INFO) << "writer is closed";
+  DLOG(INFO) << "writer is closed";
   CHECK_ARROW_ERROR_AND_ASSIGN(buffer_, ssink->Finish());
-  LOG(INFO) << "buffer is extracted";
+  DLOG(INFO) << "buffer is extracted";
   return buffer_;
 }
 
@@ -60,11 +60,11 @@ std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto arr = std::dynamic_pointer_cast<
       vineyard::BaseBinaryArray<arrow::LargeStringArray>>(p);
-  LOG(INFO) << "string_array_arrow_ipc_view is called";
+  DLOG(INFO) << "string_array_arrow_ipc_view is called";
   std::shared_ptr<arrow::io::BufferOutputStream> ssink;
 
   CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
-  LOG(INFO) << "buffer successfully created";
+  DLOG(INFO) << "buffer successfully created";
 
   auto kvmeta = std::shared_ptr<arrow::KeyValueMetadata>(
       new arrow::KeyValueMetadata({}, {}));
@@ -87,23 +87,23 @@ std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
                                arrow::ipc::MakeStreamWriter(ssink, schema));
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
-  LOG(INFO) << "table is written";
+  DLOG(INFO) << "table is written";
   writer->Close();
   std::shared_ptr<arrow::Buffer> buffer_;
-  LOG(INFO) << "writer is closed";
+  DLOG(INFO) << "writer is closed";
   CHECK_ARROW_ERROR_AND_ASSIGN(buffer_, ssink->Finish());
-  LOG(INFO) << "buffer is extracted";
+  DLOG(INFO) << "buffer is extracted";
   return buffer_;
 }
 
 std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto arr = std::dynamic_pointer_cast<vineyard::BooleanArray>(p);
-  LOG(INFO) << "bool_array_arrow_ipc_view is called";
+  DLOG(INFO) << "bool_array_arrow_ipc_view is called";
   std::shared_ptr<arrow::io::BufferOutputStream> ssink;
 
   CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
-  LOG(INFO) << "buffer successfully created";
+  DLOG(INFO) << "buffer successfully created";
 
   auto kvmeta = std::shared_ptr<arrow::KeyValueMetadata>(
       new arrow::KeyValueMetadata({}, {}));
@@ -125,12 +125,12 @@ std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
                                arrow::ipc::MakeStreamWriter(ssink, schema));
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
-  LOG(INFO) << "table is written";
+  DLOG(INFO) << "table is written";
   writer->Close();
   std::shared_ptr<arrow::Buffer> buffer_;
-  LOG(INFO) << "writer is closed";
+  DLOG(INFO) << "writer is closed";
   CHECK_ARROW_ERROR_AND_ASSIGN(buffer_, ssink->Finish());
-  LOG(INFO) << "buffer is extracted";
+  DLOG(INFO) << "buffer is extracted";
   return buffer_;
 }
 
@@ -162,7 +162,7 @@ arrow_ipc_register_once() {
   {                                                                            \
     std::string array_type = "vineyard::NumericArray";                         \
     array_type.append("<").append(type_name<T>()).append(">");                 \
-    LOG(INFO) << "register type: " << array_type << std::endl;                 \
+    DLOG(INFO) << "register type: " << array_type << std::endl;                 \
     d_array_registry.emplace(array_type, &numeric_array_arrow_ipc_view<T>);    \
   }
 
@@ -186,7 +186,7 @@ arrow_ipc_register_once() {
 
   {
     std::string t_name = type_name<vineyard::BooleanArray>();
-    LOG(INFO) << "register type: " << t_name << std::endl;
+    DLOG(INFO) << "register type: " << t_name << std::endl;
 
     d_array_registry.emplace(t_name, &bool_array_arrow_ipc_view);
   }
@@ -194,13 +194,13 @@ arrow_ipc_register_once() {
   {
     std::string t_name =
         type_name<vineyard::BaseBinaryArray<arrow::LargeStringArray>>();
-    LOG(INFO) << "register type: " << t_name << std::endl;
+    DLOG(INFO) << "register type: " << t_name << std::endl;
 
     d_array_registry.emplace(t_name, &string_array_arrow_ipc_view);
   }
   {
     std::string t_name = type_name<vineyard::DataFrame>();
-    LOG(INFO) << "register type: " << t_name << std::endl;
+    DLOG(INFO) << "register type: " << t_name << std::endl;
 
     d_array_registry.emplace(t_name, &dataframe_arrow_ipc_view);
   }

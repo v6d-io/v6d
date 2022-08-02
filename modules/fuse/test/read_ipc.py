@@ -15,9 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import sys
 import os
+import sys
+
 import pyarrow as pa
+
 filename = sys.argv[1]
 # file_dir = os.path.abspath()
 with open(filename, 'rb') as source:

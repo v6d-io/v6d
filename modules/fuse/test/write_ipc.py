@@ -15,11 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import vineyard as vy
-import pyarrow as pa
+import sys
+
 import numpy as np
 import pandas as pd
-import sys
+import pyarrow as pa
+
+import vineyard as vy
+
 # default_socket = "/var/run/vineyard.sock"
 
 # client = vy.connect(default_socket);

@@ -93,12 +93,7 @@ static void from_arrow_view(Client* client, std::string const& path,
   CHECK_ARROW_ERROR_AND_ASSIGN(reader,
                                arrow::ipc::RecordBatchStreamReader::Open(fp));
 
-  // std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-  // for (int64_t index = 0; index < reader->(); ++index) {
-  //   std::shared_ptr<arrow::RecordBatch> batch;
-  //   CHECK_ARROW_ERROR_AND_ASSIGN(batch, reader->ReadRecordBatch(index));
-  //   batches.emplace_back(batch);
-  // }
+
 
   std::shared_ptr<arrow::Table> table;
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
@@ -110,8 +105,8 @@ static void from_arrow_view(Client* client, std::string const& path,
   // build it into vineyard
   TableBuilder builder(*client, table);
   auto tb = builder.Seal(*client);
-  // VINEYARD_CHECK_OK(client->Persist(tb->id()));
-  LOG(INFO) << tb->meta().ToString();
+  VINEYARD_CHECK_OK(client->Persist(tb->id()));
+  DLOG(INFO) << tb->meta().ToString();
   VINEYARD_CHECK_OK(client->PutName(
       tb->id(), path.substr(1, path.length() - 6 /* .arrow */ - 1)));
 }
