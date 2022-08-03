@@ -12,5 +12,10 @@ if(WITH_ALLOCATOR STREQUAL "jemalloc")
     target_compile_options(vineyard_malloc PRIVATE -DWITH_JEMALLOC)
 endif()
 
+if(WITH_ALLOCATOR STREQUAL "mimalloc")
+    target_link_libraries(vineyard_malloc PRIVATE mimalloc-static ${CMAKE_DL_LIBS})
+    target_compile_options(vineyard_malloc PRIVATE -DWITH_MIMALLOC)
+endif()
+
 install_vineyard_target(vineyard_malloc)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")

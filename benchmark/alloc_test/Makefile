@@ -22,7 +22,7 @@ endif
 
 DIST_BIN_DIR			:= bin/
 
-all: bench_system bench_jemalloc bench_vineyard bench_vineyard_arena
+all: bench_system bench_jemalloc bench_mimalloc bench_vineyard bench_vineyard_arena
 
 dist:
 	mkdir -p $(DIST_BIN_DIR)
@@ -37,6 +37,9 @@ bench_system: dist alloc_test.h bench_allocator.cpp
 
 bench_jemalloc: dist alloc_test.h bench_allocator.cpp
 	g++ bench_allocator.cpp -D BENCH_JEMALLOC -o $(DIST_BIN_DIR)/bench_allocator_jemalloc$(SUFFIX) $(BENCH_CPP_FLAGS)
+
+bench_mimalloc: dist alloc_test.h bench_allocator.cpp
+	g++ bench_allocator.cpp -D BENCH_MIMALLOC -o $(DIST_BIN_DIR)/bench_allocator_mimalloc$(SUFFIX) $(BENCH_CPP_FLAGS)
 
 bench_vineyard: dist alloc_test.h bench_allocator.cpp
 	g++ bench_allocator.cpp -D BENCH_VINEYARD -o $(DIST_BIN_DIR)/bench_allocator_vineyard$(SUFFIX) $(BENCH_CPP_FLAGS)
