@@ -29,7 +29,12 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
+#if defined(WITH_JEMALLOC)
 #include "malloc/allocator.h"
+#endif
+#if defined(WITH_MIMALLOC)
+#include "malloc/mimalloc_allocator.h"
+#endif
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
