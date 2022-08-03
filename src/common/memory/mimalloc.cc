@@ -17,9 +17,10 @@ limitations under the License.
 
 #include <iostream>
 
+#include "mimalloc/include/mimalloc.h"
+
 #include "common/memory/mimalloc.h"
 #include "common/util/status.h"
-#include "mimalloc/include/mimalloc.h"
 #include "server/memory/malloc.h"
 
 namespace vineyard {

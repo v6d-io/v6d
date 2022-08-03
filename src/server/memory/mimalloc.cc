@@ -15,12 +15,14 @@ limitations under the License.
 
 #if defined(WITH_MIMALLOC)
 
-#include "server/memory/mimalloc.h"
-#include <stdio.h>
 #include <sys/mman.h>
+
+#include <stdio.h>
+
 #include "common/util/status.h"
 #include "mimalloc/include/mimalloc.h"
 #include "server/memory/malloc.h"
+#include "server/memory/mimalloc.h"
 
 namespace vineyard {
 
@@ -33,8 +35,6 @@ void* MimallocAllocator::Init(const size_t size) {
   if (space == nullptr) {
     return space;
   }
-  assert((reinterpret_cast<uintptr_t>(space) % MIMALLOC_SEGMENT_ALIGNED_SIZE) !=
-         0);
 
   // the addr must be 64MB aligned(required by mimalloc)
   // this will cause some loss of memory, and the maximum does not exceed 64MB
@@ -43,9 +43,9 @@ void* MimallocAllocator::Init(const size_t size) {
       ~(MIMALLOC_SEGMENT_ALIGNED_SIZE - 1));
   size_t real_size = size - ((size_t) addr - (size_t) space);
 
-  MmapRecord& record = mmap_records[addr];
+  MmapRecord& record = mmap_records[space];
   record.fd = fd;
-  record.size = real_size;
+  record.size = size;
 
   return Mimalloc::Init(addr, real_size);
 }

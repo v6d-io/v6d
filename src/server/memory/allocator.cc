@@ -27,15 +27,14 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 // under the License.
  */
 
-#include "server/memory/allocator.h"
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+#include <sys/mount.h>
+#endif
 
 #include <cstdio>
 #include <cstring>
 #include <string>
-
-#include "common/util/env.h"
-#include "common/util/logging.h"
-#include "server/memory/malloc.h"
 
 #if defined(WITH_DLMALLOC)
 #include "server/memory/dlmalloc.h"
@@ -49,10 +48,10 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include "server/memory/mimalloc.h"
 #endif
 
-#if defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-#include <sys/mount.h>
-#endif
+#include "common/util/env.h"
+#include "common/util/logging.h"
+#include "server/memory/allocator.h"
+#include "server/memory/malloc.h"
 
 namespace vineyard {
 
@@ -106,13 +105,10 @@ void* BulkAllocator::Init(const size_t size) {
   return allocator_.Init(size + arena_metadata_size);
 #endif
 #if defined(WITH_MIMALLOC)
-  // mimalloc requires 64MB aligned
-  size_t arena_aligned_size = 64 * 1024 * 1024;
-  if (size < arena_aligned_size) {
-    return miallocator_.Init(size + arena_aligned_size * 8);
-  } else {
-    return miallocator_.Init(size + arena_aligned_size);
-  }
+  // mimalloc requires 64MB (segment aligned) for each thread
+  size_t arena_aligned_size =
+      64 * 1024 * 1024 * std::thread::hardware_concurrency();
+  return miallocator_.Init(size + arena_aligned_size);
 #endif
 }
 
