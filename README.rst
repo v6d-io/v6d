@@ -276,16 +276,17 @@ Acknowledgements
 
 We thank the following excellent open-source projects:
 
-- `apache-arrow <https://github.com/apache/arrow>`_, a cross-language development platform for in-memory analytics;
-- `boost-leaf <https://github.com/boostorg/leaf>`_, a C++ lightweight error augmentation framework;
-- `ctti <https://github.com/Manu343726/ctti>`_, a C++ compile-time type information library;
-- `dlmalloc <http://gee.cs.oswego.edu/dl/html/malloc.htmlp>`_, Doug Lea's memory allocator;
-- `etcd-cpp-apiv3 <https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3>`_, a C++ API for etcd's v3 client API;
-- `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation;
-- `wyhash <https://github.com/alainesp/wy>`_, C++ wrapper around wyhash and wyrand;
-- `jemalloc <https://github.com/jemalloc/jemalloc>`_ a general purpose ``malloc(3)`` implementation.
+- `apache-arrow <https://github.com/apache/arrow>`_, a cross-language development platform for in-memory analytics.
+- `boost-leaf <https://github.com/boostorg/leaf>`_, a C++ lightweight error augmentation framework.
+- `ctti <https://github.com/Manu343726/ctti>`_, a C++ compile-time type information library.
+- `dlmalloc <http://gee.cs.oswego.edu/dl/html/malloc.htmlp>`_, Doug Lea's memory allocator.
+- `etcd-cpp-apiv3 <https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3>`_, a C++ API for etcd's v3 client API.
+- `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation.
+- `wyhash <https://github.com/alainesp/wy>`_, C++ wrapper around wyhash and wyrand.
+- `jemalloc <https://github.com/jemalloc/jemalloc>`_, a general purpose ``malloc(3)`` implementation.
+- `mimalloc <https://github.com/microsoft/mimalloc>`_, a general purpose allocator with excellent performance characteristics.
 - `nlohmann/json <https://github.com/nlohmann/json>`_, a json library for modern c++.
-- `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python;
+- `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python.
 - `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
 - `tbb <https://github.com/oneapi-src/oneTBB>`_ a C++ library for threading building blocks.
 

@@ -29,7 +29,12 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
+#if defined(WITH_JEMALLOC)
 #include "malloc/allocator.h"
+#endif
+#if defined(WITH_MIMALLOC)
+#include "malloc/mimalloc_allocator.h"
+#endif
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -47,6 +52,20 @@ int main(int argc, char** argv) {
 #if defined(WITH_JEMALLOC)
 
   VineyardAllocator<void> allocator(client);
+
+  void* p1 = allocator.Allocate(1025);
+  allocator.Free(p1);
+
+  void* p2 = allocator.Allocate(1026);
+  allocator.Freeze(p2);
+
+  VINEYARD_CHECK_OK(allocator.Release());
+
+#endif
+
+#if defined(WITH_MIMALLOC)
+
+  VineyardMimallocAllocator<void> allocator(client);
 
   void* p1 = allocator.Allocate(1025);
   allocator.Free(p1);

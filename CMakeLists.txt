@@ -111,7 +111,7 @@ set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
     STRING "Choose the allocator for vineyard server (vineyardd)."
 )
 set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
-    "dlmalloc" "jemalloc"
+    "dlmalloc" "jemalloc" "mimalloc"
 )
 message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
@@ -342,6 +342,12 @@ macro(find_jemalloc)
     endif()
 endmacro(find_jemalloc)
 
+macro(find_mimalloc)
+    set(CMAKE_BUILD_TYPE Release)
+    option(MI_OVERRIDE OFF)
+    add_subdirectory(thirdparty/mimalloc)
+endmacro(find_mimalloc)
+
 macro(find_glog)
     include("cmake/FindGlog.cmake")
 endmacro(find_glog)
@@ -527,12 +533,23 @@ if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUIL
 endif()
 
 if(BUILD_VINEYARD_MALLOC)
-    find_jemalloc()
+    if(WITH_ALLOCATOR STREQUAL "mimalloc")
+        find_mimalloc()
+    else()
+        find_jemalloc()
+    endif()
     set(BUILD_VINEYARD_CLIENT ON)
 endif()
 
 if(WITH_ALLOCATOR STREQUAL "jemalloc")
     find_jemalloc()
+endif()
+
+if(WITH_ALLOCATOR STREQUAL "mimalloc")
+    #run only once
+    if(NOT BUILD_VINEYARD_MALLOC)
+        find_mimalloc()
+    endif()
 endif()
 
 add_custom_target(vineyard_tests)
@@ -593,6 +610,9 @@ if(BUILD_VINEYARD_SERVER)
     elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
         target_link_libraries(vineyardd PRIVATE jemalloc ${CMAKE_DL_LIBS})
         target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
+    elseif(WITH_ALLOCATOR STREQUAL "mimalloc")
+        target_link_libraries(vineyardd PRIVATE mimalloc-static ${CMAKE_DL_LIBS})
+        target_compile_options(vineyardd PRIVATE -DWITH_MIMALLOC)
     else()
         message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
     endif()
@@ -670,9 +690,14 @@ if(BUILD_VINEYARD_CLIENT)
         target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
     endif()
 
-    if(BUILD_VINEYARD_MALLOC OR WITH_ALLOCATOR STREQUAL "jemalloc")
-        target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
-        target_compile_options(vineyard_client PRIVATE -DWITH_JEMALLOC)
+    if(BUILD_VINEYARD_MALLOC)
+        if(WITH_ALLOCATOR STREQUAL "mimalloc")
+            target_link_libraries(vineyard_client PRIVATE mimalloc-static ${CMAKE_DL_LIBS})
+            target_compile_options(vineyard_client PRIVATE -DWITH_MIMALLOC)
+        else()
+            target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
+            target_compile_options(vineyard_client PRIVATE -DWITH_JEMALLOC)
+        endif()
     endif()
 
     if(BUILD_VINEYARD_PYPI_PACKAGES)
@@ -816,6 +841,9 @@ if(BUILD_VINEYARD_TESTS)
             if(WITH_ALLOCATOR STREQUAL "jemalloc")
                 target_compile_options(${T_NAME} PRIVATE -DWITH_JEMALLOC)
             endif()
+            if(WITH_ALLOCATOR STREQUAL "mimalloc")
+                target_compile_options(${T_NAME} PRIVATE -DWITH_MIMALLOC)
+        endif()
         endif()
 
         if(${T_NAME} STREQUAL "hosseinmoein_dataframe_test")

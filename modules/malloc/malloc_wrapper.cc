@@ -24,6 +24,7 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "malloc/allocator.h"
 #include "malloc/arena_allocator.h"
+#include "malloc/mimalloc_allocator.h"
 
 namespace vineyard {
 
@@ -43,6 +44,14 @@ static VineyardArenaAllocator<void>& _ArenaAllocator() {
 }
 #endif
 
+#if defined(WITH_MIMALLOC)
+static VineyardMimallocAllocator<void>& _DefaultAllocator() {
+  static VineyardMimallocAllocator<void>* default_allocator =
+      new VineyardMimallocAllocator<void>{};
+  return *default_allocator;
+}
+#endif
+
 static std::mutex allocator_mutex;
 
 }  // namespace detail
@@ -51,6 +60,8 @@ static std::mutex allocator_mutex;
 
 void* vineyard_malloc(__attribute__((unused)) size_t size) {
 #if defined(WITH_JEMALLOC)
+  return vineyard::detail::_DefaultAllocator().Allocate(size);
+#elif defined(WITH_MIMALLOC)
   return vineyard::detail::_DefaultAllocator().Allocate(size);
 #else
   return nullptr;
@@ -61,6 +72,8 @@ void* vineyard_calloc(__attribute__((unused)) size_t num,
                       __attribute__((unused)) size_t size) {
 #if defined(WITH_JEMALLOC)
   return vineyard::detail::_DefaultAllocator().Allocate(num * size);
+#elif defined(WITH_MIMALLOC)
+  return vineyard::detail::_DefaultAllocator().Allocate(num * size);
 #else
   return nullptr;
 #endif
@@ -70,6 +83,8 @@ void* vineyard_realloc(__attribute__((unused)) void* pointer,
                        __attribute__((unused)) size_t size) {
 #if defined(WITH_JEMALLOC)
   return vineyard::detail::_DefaultAllocator().Reallocate(pointer, size);
+#elif defined(WITH_MIMALLOC)
+  return vineyard::detail::_DefaultAllocator().Reallocate(pointer, size);
 #else
   return nullptr;
 #endif
@@ -77,6 +92,8 @@ void* vineyard_realloc(__attribute__((unused)) void* pointer,
 
 void vineyard_free(__attribute__((unused)) void* pointer) {
 #if defined(WITH_JEMALLOC)
+  vineyard::detail::_DefaultAllocator().Free(pointer);
+#elif defined(WITH_MIMALLOC)
   vineyard::detail::_DefaultAllocator().Free(pointer);
 #else
   (void) pointer;
@@ -88,12 +105,26 @@ void vineyard_freeze(__attribute__((unused)) void* pointer) {
   std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
   vineyard::detail::_DefaultAllocator().Freeze(pointer);
 #endif
+#if defined(WITH_MIMALLOC)
+  std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
+  vineyard::detail::_DefaultAllocator().Freeze(pointer);
+#endif
 }
 
 void vineyard_allocator_finalize(__attribute__((unused)) int renew) {
 #if defined(WITH_JEMALLOC)
   std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
   vineyard::VineyardAllocator<void>& default_allocator =
+      vineyard::detail::_DefaultAllocator();
+  if (renew) {
+    VINEYARD_CHECK_OK(default_allocator.Renew());
+  } else {
+    VINEYARD_CHECK_OK(default_allocator.Release());
+  }
+#endif
+#if defined(WITH_MIMALLOC)
+  std::lock_guard<std::mutex> lock(vineyard::detail::allocator_mutex);
+  vineyard::VineyardMimallocAllocator<void>& default_allocator =
       vineyard::detail::_DefaultAllocator();
   if (renew) {
     VINEYARD_CHECK_OK(default_allocator.Renew());

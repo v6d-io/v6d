@@ -31,7 +31,6 @@
 
 #include <inttypes.h>
 #include <stddef.h>
-
 #include <unordered_map>
 
 namespace vineyard {

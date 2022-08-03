@@ -27,15 +27,14 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 // under the License.
  */
 
-#include "server/memory/allocator.h"
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+#include <sys/mount.h>
+#endif
 
 #include <cstdio>
 #include <cstring>
 #include <string>
-
-#include "common/util/env.h"
-#include "common/util/logging.h"
-#include "server/memory/malloc.h"
 
 #if defined(WITH_DLMALLOC)
 #include "server/memory/dlmalloc.h"
@@ -45,10 +44,14 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include "server/memory/jemalloc.h"
 #endif
 
-#if defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-#include <sys/mount.h>
+#if defined(WITH_MIMALLOC)
+#include "server/memory/mimalloc.h"
 #endif
+
+#include "common/util/env.h"
+#include "common/util/logging.h"
+#include "server/memory/allocator.h"
+#include "server/memory/malloc.h"
 
 namespace vineyard {
 
@@ -57,6 +60,10 @@ int64_t BulkAllocator::allocated_ = 0;
 
 #if defined(WITH_JEMALLOC)
 BulkAllocator::Allocator BulkAllocator::allocator_{};
+#endif
+
+#if defined(WITH_MIMALLOC)
+BulkAllocator::Allocator BulkAllocator::miallocator_{};
 #endif
 
 void* BulkAllocator::Init(const size_t size) {
@@ -97,6 +104,12 @@ void* BulkAllocator::Init(const size_t size) {
   size_t arena_metadata_size = 16 * 1024 * 1024;
   return allocator_.Init(size + arena_metadata_size);
 #endif
+#if defined(WITH_MIMALLOC)
+  // mimalloc requires 64MB (segment aligned) for each thread
+  size_t arena_aligned_size =
+      64 * 1024 * 1024 * (std::thread::hardware_concurrency() + 1);
+  return miallocator_.Init(size + arena_aligned_size);
+#endif
 }
 
 void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
@@ -110,6 +123,9 @@ void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
 #if defined(WITH_JEMALLOC)
   void* mem = allocator_.Allocate(bytes, alignment);
 #endif
+#if defined(WITH_MIMALLOC)
+  void* mem = miallocator_.Allocate(bytes, alignment);
+#endif
   if (mem != nullptr) {
     allocated_ += bytes;
   }
@@ -122,6 +138,9 @@ void BulkAllocator::Free(void* mem, size_t bytes) {
 #endif
 #if defined(WITH_JEMALLOC)
   allocator_.Free(mem);
+#endif
+#if defined(WITH_MIMALLOC)
+  miallocator_.Free(mem);
 #endif
   allocated_ -= bytes;
 }
