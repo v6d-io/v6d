@@ -42,21 +42,29 @@ void* Mimalloc::Init(void* addr, const size_t size) {
   // no associated numa node
   int numa_node = -1;
 
+  void* new_addr = addr;
+  size_t new_size = size;
+
   // the addr must be 64MB aligned(required by mimalloc)
-  assert((reinterpret_cast<uintptr_t>(addr) % MIMALLOC_SEGMENT_ALIGNED_SIZE) !=
-         0);
+  if ((reinterpret_cast<uintptr_t>(addr) % MIMALLOC_SEGMENT_ALIGNED_SIZE) !=
+      0) {
+    new_addr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) +
+                                        MIMALLOC_SEGMENT_ALIGNED_SIZE - 1) &
+                                       ~(MIMALLOC_SEGMENT_ALIGNED_SIZE - 1));
+    new_size = size - ((size_t) new_addr - (size_t) addr);
+  }
 
   // do not use OS memory for allocation (but only pre-allocated arena)
   mi_option_set_default(mi_option_limit_os_alloc, 1);
 
-  bool success = mi_manage_os_memory(addr, size, is_committed, is_large,
+  bool success = mi_manage_os_memory(new_addr, new_size, is_committed, is_large,
                                      is_zero, numa_node);
   if (!success) {
-    std::clog << "[error] mimalloc failed to create the arena at " << addr
+    std::clog << "[error] mimalloc failed to create the arena at " << new_addr
               << std::endl;
     return nullptr;
   }
-  return addr;
+  return new_addr;
 }
 
 void* Mimalloc::Allocate(const size_t bytes, const size_t alignment) {
