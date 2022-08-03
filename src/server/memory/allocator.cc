@@ -107,7 +107,7 @@ void* BulkAllocator::Init(const size_t size) {
 #if defined(WITH_MIMALLOC)
   // mimalloc requires 64MB (segment aligned) for each thread
   size_t arena_aligned_size =
-      64 * 1024 * 1024 * std::thread::hardware_concurrency();
+      64 * 1024 * 1024 * (std::thread::hardware_concurrency() + 1);
   return miallocator_.Init(size + arena_aligned_size);
 #endif
 }
