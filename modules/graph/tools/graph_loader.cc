@@ -226,6 +226,7 @@ int main(int argc, char** argv) {
   }
   if ((std::string(argv[current_index]) == "--config") ||
       (std::string(argv[current_index]) == "-config")) {
+    current_index++;
     if (!vineyard::detail::parse_options_from_config_json(
             options, argv[current_index])) {
       exit(-1);
