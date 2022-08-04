@@ -94,7 +94,7 @@ def normalize_arrow_dtype(  # noqa: C901, pylint: disable=too-many-return-statem
         return pa.float32()
     if dtype in ['double', 'float64']:
         return pa.float64()
-    if dtype in ['string', 'std::string', 'std::__1::string', 'str']:
+    if dtype in ['string', 'std::string', 'std::__1::string', 'std::__cxx11::string', 'str']:
         return pa.large_string()
     if dtype in ['large_list<item: int32>']:
         return pa.large_list(pa.int32())

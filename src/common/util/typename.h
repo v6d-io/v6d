@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include <string>
+#include <vector>
 
 // See also: https://stackoverflow.com/a/55926503/5080177
 //
@@ -62,8 +63,13 @@ inline const std::string typename_unpack_args() {
 #elif defined(__GNUC__) && !defined(__clang__)
 #define __TYPENAME_FROM_FUNCTION_PREFIX \
   "const string vineyard::detail::__typename_from_function() [with T = "
+#if defined(_GLIBCXX_USE_CXX11_ABI) && _GLIBCXX_USE_CXX11_ABI
+#define __TYPENAME_FROM_FUNCTION_SUFFIX \
+  "; std::__cxx11::string = std::__cxx11::basic_string<char>]"
+#else
 #define __TYPENAME_FROM_FUNCTION_SUFFIX \
   "; std::string = std::basic_string<char>]"
+#endif
 #else
 #error "No support for this compiler."
 #endif
@@ -137,13 +143,22 @@ inline const std::string __type_name() {
 template <typename T>
 inline const std::string type_name() {
   std::string name = __type_name<T>();
-  // drop the `std::__1::` namespace for libc++
-  // erase std::__1:: and std:: difference: to make the object can be get by
-  // clients that linked against different STL libraries.
-  const std::string marker = "std::__1::";
-  for (std::string::size_type p = name.find(marker); p != std::string::npos;
-       p = name.find(marker)) {
-    name.replace(p, marker.size(), "std::");
+  // drop the `std::__1::` namespace for libc++ and `std::__cxx11::` for some
+  // version of libstdc++
+  //
+  // erase std::__1::/std::__cxx11:: and std:: difference: to make the object
+  // can be get by clients that linked against different STL libraries.
+  static const std::vector<std::string> stdmarkers{
+    "std::__1::",
+#if defined(_GLIBCXX_USE_CXX11_ABI) && _GLIBCXX_USE_CXX11_ABI
+    "std::__cxx11::"
+#endif
+  };
+  for (auto const& marker : stdmarkers) {
+    for (std::string::size_type p = name.find(marker); p != std::string::npos;
+         p = name.find(marker)) {
+      name.replace(p, marker.size(), "std::");
+    }
   }
   return name;
 }

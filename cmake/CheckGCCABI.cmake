@@ -1,0 +1,18 @@
+macro(check_gcc_cxx11abi)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -v
+                        OUTPUT_VARIABLE GCC_VERSION_OUT
+                        ERROR_VARIABLE GCC_VERSION_ERR)
+        if(GCC_VERSION_OUT MATCHES ".*with-default-libstdcxx-abi=new.*" OR GCC_VERSION_ERR MATCHES ".*with-default-libstdcxx-abi=new.*")
+            set(GCC_USE_CXX11_ABI 1)
+        else()
+            if(GCC_VERSION_OUT MATCHES ".*gcc4-compatible.*" OR GCC_VERSION_ERR MATCHES ".*gcc4-compatible.*")
+                set(GCC_USE_CXX11_ABI 0)
+            else()
+                set(GCC_USE_CXX11_ABI 1)
+            endif()
+        endif()
+    else()
+        set(GCC_USE_CXX11_ABI 1)
+    endif()
+endmacro(check_gcc_cxx11abi)

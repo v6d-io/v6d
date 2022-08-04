@@ -115,6 +115,13 @@ set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
 )
 message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
+# check the cxx abi
+include(cmake/CheckGCCABI.cmake)
+check_gcc_cxx11abi()
+if(GCC_USE_CXX11_ABI EQUAL 1)
+    add_compile_options(-D_GLIBCXX_USE_CXX11_ABI=1)
+endif()
+
 # disables messages from sub_directory, see also: https://stackoverflow.com/a/38983571/5080177
 function(message)
     if (NOT MESSAGE_QUIET)
@@ -924,6 +931,7 @@ configure_file("${PROJECT_SOURCE_DIR}/vineyard-config-version.in.cmake"
 install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindArrow.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/CheckCXXABI.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindFUSE3.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGFlags.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGlog.cmake"
