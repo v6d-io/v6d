@@ -2,7 +2,7 @@
 
 Performance testing or system benchmarks for jemalloc
 
-Referred from https://github.com/daanx/mimalloc-bench/blob/master/bench/alloc-test/allocator_tester.h
+Referred from <https://github.com/daanx/mimalloc-bench/blob/master/bench/alloc-test/allocator_tester.h>
 
 ## Building & run the benchmark
 
@@ -122,7 +122,6 @@ Run the mimalloc benchmark test, and the argument is the iteration count.
 The next table is benchmark test result in the machine which has 8 physical cores and 64GB of memory.
 
 > nil means the allocator can't malloc the memory.
-
 
 | iteration count | jemalloc | v6d_jemalloc | mimalloc | v6d_mimalloc |
 | --------------- | -------- | ------------ | -------- | ------------ |
