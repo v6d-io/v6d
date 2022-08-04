@@ -9,6 +9,7 @@ BENCH_CPP_FLAGS 		+= -L../../build/shared-lib
 BENCH_CPP_FLAGS 		+= -L../../build/static-lib
 BENCH_CPP_FLAGS 		+= -lvineyard_client
 BENCH_CPP_FLAGS 		+= -lvineyard_malloc
+BENCH_CPP_FLAGS 		+= -lmimalloc
 BENCH_CPP_FLAGS 		+= -lglog
 
 BENCH_CPP_FLAGS 		+= -lpthread

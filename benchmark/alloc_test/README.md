@@ -67,6 +67,12 @@ export vineyard_socket=[please create a socket file here]
 ./vineyardd -socket=$(vineyard_socket) -size=8G
 ```
 
+Set the dynamic library path as follows.
+
+```sh
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:[v6d root directory]/build/shared-lib
+```
+
 Build the jemalloc benchmark test.
 
 ```sh
@@ -101,6 +107,12 @@ export vineyard_socket=[please create a socket file here]
 ./vineyardd -socket=$(vineyard_socket) -size=8G
 ```
 
+Set the dynamic library path as follows.
+
+```sh
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:[v6d root directory]/build/shared-lib
+```
+
 Build the mimalloc benchmark test.
 
 ```sh
@@ -129,6 +141,6 @@ The next table is benchmark test result in the machine which has 8 physical core
 | 1000            | 3        | 9            | 3        | 4            |
 | 2000            | 3        | 13           | 3        | 4            |
 | 5000            | 3        | 27           | 3        | 4            |
-| 10000           | 3        | nil          | 3        | 5            |
-| 100000          | 3        | nil          | 3        | 12           |
-| 1000000         | 9        | nil          | 8        | 92           |
+| 10000           | 3        | nil          | 3        | 4            |
+| 100000          | 3        | nil          | 3        | 4            |
+| 1000000         | 9        | nil          | 8        | 10           |
