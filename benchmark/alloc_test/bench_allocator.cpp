@@ -34,7 +34,6 @@
 #include <sys/mman.h>
 
 #include <time.h>
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -46,27 +45,32 @@
 #include "arrow/io/api.h"
 #include "glog/logging.h"
 
+#if defined(BENCH_JEMALLOC)
+#define JEMALLOC_NO_DEMANGLE
+#include "jemalloc/include/jemalloc/jemalloc.h"
+#undef JEMALLOC_NO_DEMANGLE
+#endif
+
+#if defined(BENCH_MIMALLOC)
+#include "mimalloc/include/mimalloc.h"
+#endif
+
+#include "alloc_test.h"
 #include "basic/ds/array.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/env.h"
-#include "common/util/likely.h"
 #include "common/util/functions.h"
-
-#define JEMALLOC_NO_DEMANGLE
-#include "jemalloc/include/jemalloc/jemalloc.h"
-#undef JEMALLOC_NO_DEMANGLE
-
-// #include "malloc/allocator.h"
-// #include "malloc/arena_allocator.h"
+#include "common/util/likely.h"
+#include "malloc/allocator.h"
+#include "malloc/arena_allocator.h"
 #include "malloc/malloc_wrapper.h"
-
-#include "alloc_test.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 // #define BENCH_SYSTEM
 // #define BENCH_JEMALLOC
+// #define BENCH_MIMALLOC
 // #define BENCH_VINEYARD
 // #define BENCH_VINEYARD_ARENA
 
@@ -108,6 +112,8 @@ void bench() {
 #elif defined(BENCH_JEMALLOC)
   baseBuff = reinterpret_cast<TestBin*>(
       vineyard_je_malloc(maxItems * sizeof(TestBin)));
+#elif defined(BENCH_MIMALLOC)
+  baseBuff = reinterpret_cast<TestBin*>(mi_malloc(maxItems * sizeof(TestBin)));
 #elif defined(BENCH_VINEYARD)
   baseBuff =
       reinterpret_cast<TestBin*>(vineyard_malloc(maxItems * sizeof(TestBin)));
@@ -124,7 +130,7 @@ void bench() {
   PRNG rng;
 
   for (size_t k = 0; k < 32; ++k) {
-    for (size_t j = 0; j < iterCount >> 5; ++j) {
+    for (size_t j = 0; j<iterCount>> 5; ++j) {
       uint32_t rnum1 = rng.rng32();
       uint32_t rnum2 = rng.rng32();
       size_t idx = Pareto_80_20_6_Rand(paretoData, rnum1, rnum2);
@@ -133,6 +139,8 @@ void bench() {
         free(baseBuff[idx].ptr);
 #elif defined(BENCH_JEMALLOC)
         vineyard_je_free(baseBuff[idx].ptr);
+#elif defined(BENCH_MIMALLOC)
+        mi_free(baseBuff[idx].ptr);
 #elif defined(BENCH_VINEYARD)
         vineyard_free(baseBuff[idx].ptr);
 #elif defined(BENCH_VINEYARD_ARENA)
@@ -150,6 +158,8 @@ void bench() {
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(malloc(sz));
 #elif defined(BENCH_JEMALLOC)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_je_malloc(sz));
+#elif defined(BENCH_MIMALLOC)
+        baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(mi_malloc(sz));
 #elif defined(BENCH_VINEYARD)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_malloc(sz));
 #elif defined(BENCH_VINEYARD_ARENA)

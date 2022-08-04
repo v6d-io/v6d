@@ -35,7 +35,7 @@ class Jemalloc {
 
   void* Init(void* space, const size_t size);
 
-  void* Allocate(const size_t bytes, const size_t alignment = Alignment);
+  void* Allocate(const size_t bytes, const size_t alignment = 0);
 
   void* Reallocate(void* pointer, size_t size);
 
@@ -48,8 +48,6 @@ class Jemalloc {
   size_t EstimateAllocatedSize(const size_t size);
 
   void Traverse();
-
-  static constexpr size_t Alignment = 1 * 1024 * 1024;  // 1MB
 
   struct arena_t {
     uintptr_t base_pointer_ = reinterpret_cast<uintptr_t>(nullptr);

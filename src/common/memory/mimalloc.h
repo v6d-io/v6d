@@ -31,15 +31,13 @@ class Mimalloc {
 
   void* Init(void* addr, const size_t size);
 
-  void* Allocate(const size_t bytes, const size_t alignment = Alignment);
+  void* Allocate(const size_t bytes, const size_t alignment = 0);
 
   void* Reallocate(void* pointer, size_t size);
 
   void Free(void* pointer, size_t = 0);
 
   size_t GetAllocatedSize(void* pointer);
-
-  static constexpr size_t Alignment = 1 * 1024 * 1024;  // 1MB
 };
 
 }  // namespace memory

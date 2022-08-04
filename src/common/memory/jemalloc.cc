@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "common/memory/jemalloc.h"
 #include "common/util/functions.h"
+#include "common/util/likely.h"
 
 extern const extent_hooks_t je_ehooks_default_extent_hooks;
 
@@ -111,7 +112,11 @@ void* Jemalloc::Init(void* space, const size_t size) {
 }
 
 void* Jemalloc::Allocate(const size_t bytes, const size_t alignment) {
-  return vineyard_je_mallocx(std::max(bytes, alignment), flags_);
+  if (unlikely(alignment)) {
+    return vineyard_je_mallocx(std::max(bytes, alignment), flags_);
+  } else {
+    return vineyard_je_mallocx(std::max(bytes, alignment), flags_);
+  }
 }
 
 void* Jemalloc::Reallocate(void* pointer, size_t size) {
@@ -119,7 +124,7 @@ void* Jemalloc::Reallocate(void* pointer, size_t size) {
 }
 
 void Jemalloc::Free(void* pointer, size_t) {
-  if (pointer) {
+  if (likely(pointer)) {
     vineyard_je_dallocx(pointer, flags_);
   }
 }
