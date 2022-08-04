@@ -83,8 +83,13 @@ Status SerializeRecordBatch(std::shared_ptr<arrow::RecordBatch>& batch,
   std::shared_ptr<arrow::io::BufferOutputStream> out_stream;
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_stream,
                                    arrow::io::BufferOutputStream::Create(1024));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
       {batch}, arrow::ipc::IpcOptions::Defaults(), out_stream.get()));
+#else
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      {batch}, arrow::ipc::IpcWriteOptions::Defaults(), out_stream.get()));
+#endif
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(*buffer, out_stream->Finish());
   return Status::OK();
 }
@@ -107,8 +112,13 @@ Status SerializeRecordBatchesToAllocatedBuffer(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::Buffer>* buffer) {
   arrow::io::FixedSizeBufferWriter stream(*buffer);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
       batches, arrow::ipc::IpcOptions::Defaults(), &stream));
+#else
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      batches, arrow::ipc::IpcWriteOptions::Defaults(), &stream));
+#endif
   return Status::OK();
 }
 
@@ -118,8 +128,13 @@ Status SerializeRecordBatches(
   std::shared_ptr<arrow::io::BufferOutputStream> out_stream;
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_stream,
                                    arrow::io::BufferOutputStream::Create(1024));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
       batches, arrow::ipc::IpcOptions::Defaults(), out_stream.get()));
+#else
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      batches, arrow::ipc::IpcWriteOptions::Defaults(), out_stream.get()));
+#endif
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(*buffer, out_stream->Finish());
   return Status::OK();
 }
