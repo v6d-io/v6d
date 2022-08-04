@@ -148,12 +148,8 @@ inline const std::string type_name() {
   //
   // erase std::__1::/std::__cxx11:: and std:: difference: to make the object
   // can be get by clients that linked against different STL libraries.
-  static const std::vector<std::string> stdmarkers{
-    "std::__1::",
-#if defined(_GLIBCXX_USE_CXX11_ABI) && _GLIBCXX_USE_CXX11_ABI
-    "std::__cxx11::"
-#endif
-  };
+  static const std::vector<std::string> stdmarkers{"std::__1::",
+                                                   "std::__cxx11::"};
   for (auto const& marker : stdmarkers) {
     for (std::string::size_type p = name.find(marker); p != std::string::npos;
          p = name.find(marker)) {
