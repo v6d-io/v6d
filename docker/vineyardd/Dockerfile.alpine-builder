@@ -54,7 +54,7 @@ RUN cd /tmp && \
     mkdir build && \
     cd build && \
     cmake ../cpp \
-        -DARROW_COMPUTE=OFF \
+        -DARROW_COMPUTE=ON \
         -DARROW_WITH_UTF8PROC=OFF \
         -DARROW_CSV=ON \
         -DARROW_CUDA=OFF \
