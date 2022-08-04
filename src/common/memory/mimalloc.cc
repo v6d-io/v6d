@@ -20,6 +20,7 @@ limitations under the License.
 #include "mimalloc/include/mimalloc.h"
 
 #include "common/memory/mimalloc.h"
+#include "common/util/likely.h"
 #include "common/util/status.h"
 #include "server/memory/malloc.h"
 
@@ -68,12 +69,16 @@ void* Mimalloc::Init(void* addr, const size_t size) {
 }
 
 void* Mimalloc::Allocate(const size_t bytes, const size_t alignment) {
-  return mi_malloc_aligned(bytes, alignment);
+  if (unlikely(alignment)) {
+    return mi_malloc_aligned(bytes, alignment);
+  } else {
+    return mi_malloc(bytes);
+  }
 }
 
 void Mimalloc::Free(void* pointer, size_t size) {
-  if (pointer) {
-    if (size != 0) {
+  if (likely(pointer)) {
+    if (unlikely(size)) {
       mi_free_size(pointer, size);
     } else {
       mi_free(pointer);

@@ -8,12 +8,12 @@ target_link_libraries(vineyard_malloc PUBLIC vineyard_client
 )
 
 if(WITH_ALLOCATOR STREQUAL "jemalloc")
-    target_link_libraries(vineyard_malloc PRIVATE jemalloc ${CMAKE_DL_LIBS})
+    target_link_libraries(vineyard_malloc PRIVATE -Wl,--whole-archive jemalloc -Wl,--no-whole-archive ${CMAKE_DL_LIBS})
     target_compile_options(vineyard_malloc PRIVATE -DWITH_JEMALLOC)
 endif()
 
 if(WITH_ALLOCATOR STREQUAL "mimalloc")
-    target_link_libraries(vineyard_malloc PRIVATE mimalloc-static ${CMAKE_DL_LIBS})
+    target_link_libraries(vineyard_malloc PRIVATE -Wl,--whole-archive mimalloc-static -Wl,--no-whole-archive ${CMAKE_DL_LIBS})
     target_compile_options(vineyard_malloc PRIVATE -DWITH_MIMALLOC)
 endif()
 

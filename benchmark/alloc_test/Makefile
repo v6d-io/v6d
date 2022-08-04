@@ -1,14 +1,17 @@
 BENCH_CPP_FLAGS 		:= -std=c++11
+
 BENCH_CPP_FLAGS 		+= -I../../src
 BENCH_CPP_FLAGS 		+= -I../../modules
 BENCH_CPP_FLAGS 		+= -I../../thirdparty
 BENCH_CPP_FLAGS 		+= -I../../thirdparty/ctti/include
+
 BENCH_CPP_FLAGS 		+= -L../../build/shared-lib
 BENCH_CPP_FLAGS 		+= -L../../build/static-lib
 BENCH_CPP_FLAGS 		+= -lvineyard_client
 BENCH_CPP_FLAGS 		+= -lvineyard_malloc
 BENCH_CPP_FLAGS 		+= -lglog
 
+BENCH_CPP_FLAGS 		+= -lpthread
 DEBUG_CPP_FLAGS			:= -g -ggdb -O0
 RELEASE_CPP_FLAGS		:= -O2 -DNDEBUG
 
