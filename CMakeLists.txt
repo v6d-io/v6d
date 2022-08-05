@@ -115,6 +115,13 @@ set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
 )
 message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
+# check the cxx abi
+include(cmake/CheckGCCABI.cmake)
+check_gcc_cxx11abi()
+if(GCC_USE_CXX11_ABI EQUAL 1)
+    add_compile_options(-D_GLIBCXX_USE_CXX11_ABI=1)
+endif()
+
 # disables messages from sub_directory, see also: https://stackoverflow.com/a/38983571/5080177
 function(message)
     if (NOT MESSAGE_QUIET)
@@ -146,6 +153,7 @@ check_cxx_compiler_flag(-Wno-error=c++11-narrowing W_NO_ERROR_CXX11_NARROWING)
 check_cxx_compiler_flag(-Wno-format-truncation W_NO_FORMAT_TRUNCATION)
 check_cxx_compiler_flag(-Wno-unused-but-set-parameter W_NO_UNUSED_BUT_SET_PARAMETER)
 check_cxx_compiler_flag(-Wno-unused-private-field W_NO_UNUSED_PRIVATE_FIELD)
+check_cxx_compiler_flag(-Wno-noexcept-type W_NO_NOEXCEPT_TYPE)
 if(W_NO_CLASS_MEMACCESS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-class-memaccess")
 endif()
@@ -166,6 +174,9 @@ if(W_NO_UNUSED_BUT_SET_PARAMETER)
 endif()
 if(W_NO_UNUSED_PRIVATE_FIELD)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-private-field")
+endif()
+if(W_NO_NOEXCEPT_TYPE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
@@ -924,6 +935,7 @@ configure_file("${PROJECT_SOURCE_DIR}/vineyard-config-version.in.cmake"
 install(FILES "${PROJECT_BINARY_DIR}/vineyard-config.cmake"
               "${PROJECT_BINARY_DIR}/vineyard-config-version.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindArrow.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/CheckGCCABI.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindFUSE3.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGFlags.cmake"
               "${PROJECT_SOURCE_DIR}/cmake/FindGlog.cmake"

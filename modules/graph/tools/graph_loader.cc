@@ -33,6 +33,7 @@ namespace vineyard {
 namespace detail {
 
 struct loader_options {
+  std::string vineyard_ipc_socket;
   std::vector<std::string> efiles;
   std::vector<std::string> vfiles;
   bool directed = true;
@@ -136,7 +137,8 @@ static void loading_vineyard_graph(
   grape::CommSpec comm_spec;
   comm_spec.Init(MPI_COMM_WORLD);
 
-  vineyard::Client& client = vineyard::Client::Default();
+  vineyard::Client client;
+  VINEYARD_CHECK_OK(client.Connect(options.vineyard_ipc_socket));
 
   MPI_Barrier(comm_spec.comm());
   vineyard::ObjectID fragment_group_id;
@@ -210,19 +212,20 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::string ipc_socket;
   struct vineyard::detail::loader_options options;
 
   int current_index = 1;
   if ((std::string(argv[current_index]) == "--socket") ||
       (std::string(argv[current_index]) == "-socket")) {
     current_index++;
-    ipc_socket = argv[current_index++];
-    LOG(INFO) << "Using vineyard IPC socket '" << ipc_socket << "'";
+    options.vineyard_ipc_socket = argv[current_index++];
+    LOG(INFO) << "Using vineyard IPC socket '" << options.vineyard_ipc_socket
+              << "'";
   } else {
     LOG(INFO) << "Resolve vineyard IPC socket from environment variable "
                  "'VINEYARD_IPC_SOCKET': '"
               << vineyard::read_env("VINEYARD_IPC_SOCKET") << "'";
+    options.vineyard_ipc_socket = vineyard::read_env("VINEYARD_IPC_SOCKET");
   }
   if ((std::string(argv[current_index]) == "--config") ||
       (std::string(argv[current_index]) == "-config")) {

@@ -383,7 +383,7 @@ std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
   } else if (name == "double") {
     return vineyard::ConvertToArrowType<double>::TypeValue();
   } else if (name == "string" || name == "std::string" || name == "str" ||
-             name == "std::__1::string") {
+             name == "std::__1::string" || name == "std::__cxx11::string") {
     return vineyard::ConvertToArrowType<std::string>::TypeValue();
   } else if (name == "large_list<item: int32>") {
     return arrow::large_list(arrow::int32());
