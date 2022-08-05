@@ -54,7 +54,7 @@ endif()
 
 if(USE_LIBUNWIND)
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-    find_dependency(LibUnwind)
+    find_package(LibUnwind QUIET)
 endif()
 
 set(VINEYARD_HOME "${CMAKE_CURRENT_LIST_DIR}/../../..")
