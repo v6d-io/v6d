@@ -1,6 +1,7 @@
 #include <linux/stat.h>
 #include <linux/atmioc.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include "vineyard_fs.h"
 #include "vineyard_i.h"
 
@@ -8,6 +9,20 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("yuansm");
 MODULE_DESCRIPTION("Vineyard filesystem for Linux.");
 MODULE_VERSION("0.01");
+
+#define PAGE_NUM	(1024 * 1024)
+#define TOTAL_SIZE (PAGE_NUM * PAGE_SIZE)
+static struct page **pages;
+static void *vineyard_storage_kernel_addr;
+static void *vineyard_msg_buffer_kernel_addr;
+static void *vineyard_result_buffer_kernel_addr;
+
+struct mount_data {
+	unsigned long this_addr;
+	unsigned long vineyard_storage_user_addr;
+	unsigned long vineyard_msg_buffer_user_addr;
+	unsigned long vineyard_result_buffer_user_addr;
+};
 
 struct vineyard_fs_context {
     int key:1;
@@ -98,6 +113,112 @@ static int vineyard_parse_param(struct fs_context *fsc, struct fs_parameter *par
 {
 	printk(KERN_INFO "fake %s\n", __func__);
 	return 0;
+}
+
+static int map_vineyard_user_storage_buffer(unsigned long user_addr)
+{
+	struct vm_area_struct *user_vma;
+	int i;
+	int ret;
+
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+	pages = vmalloc(PAGE_NUM * sizeof(struct page *));
+	memset(pages, 0, sizeof(struct page *) * PAGE_NUM);
+
+	user_vma = find_vma(current->mm, user_addr);
+	printk(KERN_INFO "addr: %lx\n", user_addr);
+	ret = get_user_pages_fast(user_addr, PAGE_NUM, 1, pages);
+	if (ret < 0) {
+		printk(KERN_INFO "pined page error %d\n", ret);
+		vfree(pages);
+		return -1;
+	}
+
+	vineyard_storage_kernel_addr = vmap(pages, PAGE_NUM, VM_MAP, PAGE_KERNEL);
+
+	// test write data
+	if (vineyard_storage_kernel_addr) {
+		for (i = 0; i < TOTAL_SIZE / sizeof(int); i++) {
+			((int *)vineyard_storage_kernel_addr)[i] = i;
+		}
+		printk(KERN_INFO PREFIX "number:%lu\n", TOTAL_SIZE / sizeof(int));
+	} else {
+		printk(KERN_INFO PREFIX "map error!\n");
+		for (i = 0; i < ret; i++) {
+			put_page(pages[i]);
+		}
+		vfree(pages);
+		return -1;
+	}
+
+	return 0;
+}
+
+static unsigned long prepare_user_buffer(void **kernel_addr)
+{
+	unsigned long user_addr;
+	struct vm_area_struct *vma;
+	int i;
+
+	*kernel_addr = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!vineyard_msg_buffer_kernel_addr) {
+		return 0;
+	}
+
+	user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
+			    PROT_READ | PROT_WRITE,
+			    MAP_SHARED, 0);
+	vma = find_vma(current->mm, user_addr);
+	remap_pfn_range(vma, user_addr, PFN_DOWN(__pa(*kernel_addr)), PAGE_SIZE, vma->vm_page_prot);
+
+	//for test
+	for (i = 0; i < 100; i++) {
+		((int *)(*kernel_addr))[i] = i;
+	}
+
+	return user_addr;
+}
+
+static void unmap_vineyard_msg_result_buffer(void)
+{
+	kfree(vineyard_msg_buffer_kernel_addr);
+	kfree(vineyard_result_buffer_kernel_addr);
+}
+
+static void unmap_vineyard_user_storage_buffer(void)
+{
+	int i;
+
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+	if (vineyard_storage_kernel_addr) {
+		printk(KERN_INFO "unmap and put pages\n");
+		vunmap(vineyard_storage_kernel_addr);
+		for (i = 0; i < PAGE_NUM; i++) {
+			put_page(pages[i]);
+		}
+		vfree(pages);
+		vineyard_storage_kernel_addr = NULL;
+	}
+}
+
+static int vineyard_parse_monolithic(struct fs_context *fsc, void *data)
+{
+	int err = 0;
+	struct mount_data *mount_data;
+
+    printk(KERN_INFO PREFIX "%s\n", __func__);
+	mount_data = (struct mount_data *)data;
+
+	if (mount_data) {
+		// map user buffer to kernel
+		err = map_vineyard_user_storage_buffer(mount_data->vineyard_storage_user_addr);
+		mount_data->vineyard_msg_buffer_user_addr = prepare_user_buffer(&vineyard_msg_buffer_kernel_addr);
+		mount_data->vineyard_result_buffer_user_addr = prepare_user_buffer(&vineyard_msg_buffer_kernel_addr);
+		err = copy_to_user((void *)(mount_data->this_addr), mount_data, sizeof(struct mount_data));
+		printk(KERN_INFO PREFIX "%lx %lx %lx %lx\n", mount_data->this_addr, mount_data->vineyard_storage_user_addr, mount_data->vineyard_msg_buffer_user_addr, mount_data->vineyard_result_buffer_user_addr);
+	}
+
+    return err;
 }
 
 const struct dentry_operations vineyard_root_dentry_operations = {
@@ -263,6 +384,7 @@ static int vineyard_get_tree(struct fs_context *fsc)
 
 static const struct fs_context_operations vineyard_context_ops = {
 	.free		= vineyard_free_fsc,
+	.parse_monolithic	= vineyard_parse_monolithic,
 	.parse_param	= vineyard_parse_param,
 	.get_tree	= vineyard_get_tree,
 };
@@ -291,6 +413,8 @@ void fake_kill_sb(struct super_block *sb)
 static void vineyard_kill_sb(struct super_block *sb)
 {
 	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+	unmap_vineyard_user_storage_buffer();
+	unmap_vineyard_msg_result_buffer();
 }
 
 static struct file_system_type vineyard_fs_type = {
