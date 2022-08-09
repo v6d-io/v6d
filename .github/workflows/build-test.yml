@@ -28,6 +28,10 @@ jobs:
         with:
           submodules: true
 
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.18.0'
+
       - name: Generate Summary for Submodules
         run: |
           git submodule > git-modules.txt
@@ -254,6 +258,26 @@ jobs:
               echo "| The tool black can be installed by"
               echo "|"
               echo "|    pip3 install black isort flake8"
+              echo "|"
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              exit -1
+          fi
+
+      - name: Golang format and lint
+        run: |
+          cd k8s
+          make golint
+          if [ $? -ne ]; then
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              echo "| black (golang format) failures found!"
+              echo "|"
+              echo "|    ${GOPATH}/bin/golangci-lint run ./... --fix"
+              echo "|"
+              echo "| to fix this error."
+              echo "|"
+              echo "| The tool black can be installed by"
+              echo "|"
+              echo "|    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
               echo "|"
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               exit -1

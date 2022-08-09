@@ -34,7 +34,8 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme = runtime.NewScheme()
+	// nolint: unused
 	setupLog = ctrl.Log.WithName("scheduler")
 )
 
@@ -45,6 +46,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
+// nolint: unused
 func startScheduler(channel chan struct{}) {
 	command := app.NewSchedulerCommand(
 		app.WithPlugin(Name, New),
@@ -63,6 +65,7 @@ func startScheduler(channel chan struct{}) {
 	close(channel)
 }
 
+// nolint: unused,deadcode
 func main() {
 	opts := zap.Options{
 		Development: true,

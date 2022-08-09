@@ -39,8 +39,6 @@ type GlobalObjectReconciler struct {
 func (r *GlobalObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("globalobject", req.NamespacedName)
 
-	// your logic here
-
 	return ctrl.Result{}, nil
 }
 

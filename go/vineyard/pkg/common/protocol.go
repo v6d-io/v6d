@@ -17,6 +17,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 const (
@@ -152,14 +153,18 @@ func WriteRegisterRequest(msg *string) {
 	register.Type = REGISTER_REQUEST
 	register.Version = "0.2.4"
 
-	encodeMsg(register, msg)
+	if err := encodeMsg(register, msg); err != nil {
+		fmt.Println("WriteRegisterRequest failed: ", err.Error())
+	}
 }
 
 func WriteExitRequest(msg *string) {
 	var exit ExitRequest
 	exit.Type = EXIT_REQUEST
 
-	encodeMsg(exit, msg)
+	if err := encodeMsg(exit, msg); err != nil {
+		fmt.Println("WriteExitRequest failed: ", err.Error())
+	}
 }
 
 func WritePersistRequest(id ObjectID, msg *string) {
@@ -167,7 +172,9 @@ func WritePersistRequest(id ObjectID, msg *string) {
 	persist.Type = PERSIST_REQUEST
 	persist.ID = id
 
-	encodeMsg(persist, msg)
+	if err := encodeMsg(persist, msg); err != nil {
+		fmt.Println("WritePersistRequest failed: ", err.Error())
+	}
 }
 
 func WritePutNameRequest(id ObjectID, name string, msg *string) {
@@ -176,7 +183,9 @@ func WritePutNameRequest(id ObjectID, name string, msg *string) {
 	putNameReq.ReqObjectID = id
 	putNameReq.Name = name
 
-	encodeMsg(putNameReq, msg)
+	if err := encodeMsg(putNameReq, msg); err != nil {
+		fmt.Println("WritePutNameRequest failed: ", err.Error())
+	}
 }
 
 func WriteGetNameRequest(name string, wait bool, msg *string) {
@@ -185,7 +194,9 @@ func WriteGetNameRequest(name string, wait bool, msg *string) {
 	getNameReq.Name = name
 	getNameReq.Wait = wait
 
-	encodeMsg(getNameReq, msg)
+	if err := encodeMsg(getNameReq, msg); err != nil {
+		fmt.Println("WriteGetNameRequest failed: ", err.Error())
+	}
 }
 
 func WriteDropNameRequest(name string, msg *string) {
@@ -193,7 +204,9 @@ func WriteDropNameRequest(name string, msg *string) {
 	dropNameReq.Type = DROP_NAME_REQUEST
 	dropNameReq.Name = name
 
-	encodeMsg(dropNameReq, msg)
+	if err := encodeMsg(dropNameReq, msg); err != nil {
+		fmt.Println("WriteDropNameRequest failed: ", err.Error())
+	}
 }
 
 func WriteCreateBufferRequest(size int, msg *string) {
@@ -201,7 +214,9 @@ func WriteCreateBufferRequest(size int, msg *string) {
 	createBufferReq.Type = CREAT_BUFFER_REQUEST
 	createBufferReq.Size = size
 
-	encodeMsg(createBufferReq, msg)
+	if err := encodeMsg(createBufferReq, msg); err != nil {
+		fmt.Println("WriteCreateBufferRequest failed: ", err.Error())
+	}
 }
 
 func WriteGetDataRequest(id ObjectID, syncRemote bool, wait bool, msg *string) {
@@ -210,7 +225,9 @@ func WriteGetDataRequest(id ObjectID, syncRemote bool, wait bool, msg *string) {
 	getDataReq.SyncRemote = syncRemote
 	getDataReq.Wait = wait
 
-	encodeMsg(getDataReq, msg)
+	if err := encodeMsg(getDataReq, msg); err != nil {
+		fmt.Println("WriteGetDataRequest failed: ", err.Error())
+	}
 }
 
 func WriteCreateDataRequest(content interface{}, msg *string) {
@@ -218,5 +235,7 @@ func WriteCreateDataRequest(content interface{}, msg *string) {
 	createDataReq.Type = CREAT_DATA_REQUEST
 	createDataReq.Content = content
 
-	encodeMsg(createDataReq, msg)
+	if err := encodeMsg(createDataReq, msg); err != nil {
+		fmt.Println("WriteCreateDataRequest failed: ", err.Error())
+	}
 }

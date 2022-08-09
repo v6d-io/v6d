@@ -31,8 +31,7 @@ func (r *VineyardJob) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
+//nolint: lll
 //+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-vineyardjob,mutating=true,failurePolicy=fail,groups=k8s.v6d.io,resources=vineyardjobs,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1;v1beta1,sideEffects=NoneOnDryRun,name=mvineyardjob.kb.io
 
 var _ webhook.Defaulter = &VineyardJob{}
@@ -44,7 +43,7 @@ func (r *VineyardJob) Default() {
 	// TODO(user): fill in your defaulting logic.
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+//nolint: lll
 //+kubebuilder:webhook:verbs=create;update,path=/validate-k8s-v6d-io-v1alpha1-vineyardjob,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=vineyardjobs,versions=v1alpha1,admissionReviewVersions=v1;v1beta1,sideEffects=NoneOnDryRun,name=vvineyardjob.kb.io
 
 var _ webhook.Validator = &VineyardJob{}
@@ -53,7 +52,6 @@ var _ webhook.Validator = &VineyardJob{}
 func (r *VineyardJob) ValidateCreate() error {
 	vineyardjoblog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
@@ -61,7 +59,6 @@ func (r *VineyardJob) ValidateCreate() error {
 func (r *VineyardJob) ValidateUpdate(old runtime.Object) error {
 	vineyardjoblog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
 	return nil
 }
 
@@ -69,6 +66,5 @@ func (r *VineyardJob) ValidateUpdate(old runtime.Object) error {
 func (r *VineyardJob) ValidateDelete() error {
 	vineyardjoblog.Info("validate delete", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
