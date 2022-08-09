@@ -265,7 +265,8 @@ jobs:
 
       - name: Golang format and lint
         run: |
-          cd go/vineyard && make golint && cd ../../k8s && make golint
+          cd k8s
+          make golint
           if [ $? -ne ]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               echo "| black (golang format) failures found!"
