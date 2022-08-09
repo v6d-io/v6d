@@ -83,9 +83,7 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	klog.V(5).Infof("job %v requires objects %v", job, globalObjects)
 	localsigs := make([]string, 0)
 	for _, globalObject := range globalObjects {
-		for _, sig := range globalObject.Spec.Members {
-			localsigs = append(localsigs, sig)
-		}
+		localsigs = append(localsigs, globalObject.Spec.Members...)
 	}
 	localObjects, err := ss.getLocalObjectsBySignatures(ctx, localsigs)
 	if err != nil {
@@ -241,7 +239,6 @@ func (vs *VineyardScheduling) PreFilterExtensions() framework.PreFilterExtension
 }
 
 // Score compute the score for a pod based on the status of required vineyard objects.
-//
 func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
 	// nodeInfo, err := ps.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
 	// if err != nil {

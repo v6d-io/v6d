@@ -16,11 +16,10 @@ limitations under the License.
 package ds
 
 import (
-	"errors"
 	"fmt"
+
 	"github.com/apache/arrow/go/arrow/memory"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
-	//x	"github.com/apache/arrow/go/arrow"
 )
 
 type Blob struct {
@@ -35,8 +34,8 @@ func (b *Blob) Size() int {
 
 func (b *Blob) Data() ([]byte, error) {
 	if b.size > 0 && len(b.buffer) == 0 {
-		return nil, errors.New(fmt.Sprintf("The object might be a (partially) remote object "+
-			"and the payload data is not locally available: %d", b.id))
+		return nil, fmt.Errorf("The object might be a (partially) remote object "+
+			"and the payload data is not locally available: %d", b.id)
 	}
 	return b.buffer, nil
 }

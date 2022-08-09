@@ -40,8 +40,6 @@ func (r *LocalObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	_ = context.Background()
 	_ = r.Log.WithValues("localobject", req.NamespacedName)
 
-	// your logic here
-
 	return ctrl.Result{}, nil
 }
 

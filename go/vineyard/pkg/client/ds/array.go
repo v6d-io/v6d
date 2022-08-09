@@ -2,6 +2,7 @@ package ds
 
 import (
 	"fmt"
+
 	"github.com/apache/arrow/go/arrow/array"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
@@ -25,11 +26,11 @@ type ArrayBuilder struct {
 	Client     IIPCClient
 	blobWriter BlobWriter
 
-	length     int
-	nullCount  int
-	offset     int
-	buffer     []byte
-	nullBitmap []byte
+	length    int
+	nullCount int
+	offset    int
+	buffer    []byte
+	//nullBitmap []byte
 }
 
 func (a *ArrayBuilder) Init(client IIPCClient, array *array.FixedSizeList) {
@@ -42,7 +43,9 @@ func (a *ArrayBuilder) Seal() {
 		fmt.Println("The builder has been already been sealed")
 		return
 	}
-	a.Build()
+	if err := a.Build(); err != nil {
+		fmt.Println("ArrayBuilder Build Failed: ", err)
+	}
 
 	a.SetSeal(true)
 }

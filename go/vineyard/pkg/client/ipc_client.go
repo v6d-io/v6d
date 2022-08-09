@@ -23,6 +23,7 @@ package vineyard
 
 #include "fling.h"
 */
+// nolint: typecheck
 import "C"
 import (
 	"encoding/json"

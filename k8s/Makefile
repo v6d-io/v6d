@@ -23,6 +23,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version)
+
 all: manager
 
 # Run tests
@@ -88,6 +90,15 @@ unsample:
 modules	= ./api/... \
 		  ./controllers/... \
 		  ./schedulers/...
+
+# Run golangci-lint
+golint: 
+    ifeq (${GOLINT},)
+		@echo "golangci-lint not exist, installing it..."
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+    endif
+	${GOBIN}/golangci-lint run ./...
+.PHONY: golint
 
 # Run go fmt against code
 fmt:

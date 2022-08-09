@@ -16,8 +16,9 @@ limitations under the License.
 package ds
 
 import (
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 	"strconv"
+
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
 )
 
 type ObjectMeta struct {
