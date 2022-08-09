@@ -7,6 +7,7 @@ maintainers are listed in the [GOVERNANCE.md](GOVERNANCE.md) file.
 
 | Name         | GitHub ID                                       | Affiliation | Email                                                                     |
 | ------------ | ----------------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| Ye Cao       | [dashanji](https://github.com/dashanji)         | Alibaba     | [caoye.cao@alibaba-inc.com](mailto:caoye.cao@alibaba-inc.com)             |
 | Tao He       | [sighingnow](https://github.com/sighingnow)     | Alibaba     | [linzhu.ht@alibaba-inc.com](mailto:linzhu.ht@alibaba-inc.com)             |
 | Xiaojian Luo | [luoxiaojian](https://github.com/luoxiaojian)   | Alibaba     | [lxj193371@alibaba-inc.com](mailto:lxj193371@alibaba-inc.com)             |
 | Ke Meng      | [septicmk](https://github.com/septicmk)         | Alibaba     | [mengke.mk@alibaba-inc.com](mailto:mengke.mk@alibaba-inc.com)             |
