@@ -2,8 +2,11 @@
 #include <linux/atmioc.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#include <linux/futex.h>
+#include <linux/wait.h>
 #include "vineyard_fs.h"
 #include "vineyard_i.h"
+#include "msg_mgr.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("yuansm");
@@ -13,9 +16,16 @@ MODULE_VERSION("0.01");
 #define PAGE_NUM	(1024 * 1024)
 #define TOTAL_SIZE (PAGE_NUM * PAGE_SIZE)
 static struct page **pages;
-static void *vineyard_storage_kernel_addr;
-static void *vineyard_msg_buffer_kernel_addr;
-static void *vineyard_result_buffer_kernel_addr;
+void *vineyard_storage_kernel_addr = NULL;
+void *vineyard_msg_mem_kernel_addr = NULL;
+void *vineyard_result_mem_kernel_addr = NULL;
+
+struct vineyard_msg_mem_header *vineyard_msg_mem_header;
+struct vineyard_result_mem_header *vineyard_result_mem_header;
+void *vineyard_msg_buffer_addr;
+void *vineyard_result_buffer_addr;
+
+DECLARE_WAIT_QUEUE_HEAD(vineyard_fs_wait);
 
 struct mount_data {
 	unsigned long this_addr;
@@ -158,10 +168,10 @@ static unsigned long prepare_user_buffer(void **kernel_addr)
 {
 	unsigned long user_addr;
 	struct vm_area_struct *vma;
-	int i;
 
-	*kernel_addr = kmalloc(PAGE_SIZE, GFP_KERNEL);
-	if (!vineyard_msg_buffer_kernel_addr) {
+	*kernel_addr = kzalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!(*kernel_addr)) {
+		printk(KERN_INFO PREFIX "kmalloc error!\n");
 		return 0;
 	}
 
@@ -170,19 +180,15 @@ static unsigned long prepare_user_buffer(void **kernel_addr)
 			    MAP_SHARED, 0);
 	vma = find_vma(current->mm, user_addr);
 	remap_pfn_range(vma, user_addr, PFN_DOWN(__pa(*kernel_addr)), PAGE_SIZE, vma->vm_page_prot);
-
-	//for test
-	for (i = 0; i < 100; i++) {
-		((int *)(*kernel_addr))[i] = i;
-	}
+	printk(KERN_INFO PREFIX "kern:%p\n", kernel_addr);
 
 	return user_addr;
 }
 
 static void unmap_vineyard_msg_result_buffer(void)
 {
-	kfree(vineyard_msg_buffer_kernel_addr);
-	kfree(vineyard_result_buffer_kernel_addr);
+	kfree(vineyard_msg_mem_kernel_addr);
+	kfree(vineyard_result_mem_kernel_addr);
 }
 
 static void unmap_vineyard_user_storage_buffer(void)
@@ -212,8 +218,14 @@ static int vineyard_parse_monolithic(struct fs_context *fsc, void *data)
 	if (mount_data) {
 		// map user buffer to kernel
 		err = map_vineyard_user_storage_buffer(mount_data->vineyard_storage_user_addr);
-		mount_data->vineyard_msg_buffer_user_addr = prepare_user_buffer(&vineyard_msg_buffer_kernel_addr);
-		mount_data->vineyard_result_buffer_user_addr = prepare_user_buffer(&vineyard_msg_buffer_kernel_addr);
+		mount_data->vineyard_msg_buffer_user_addr = prepare_user_buffer(&vineyard_msg_mem_kernel_addr);
+		mount_data->vineyard_result_buffer_user_addr = prepare_user_buffer(&vineyard_result_mem_kernel_addr);
+
+		vineyard_msg_mem_header = vineyard_msg_mem_kernel_addr;
+		vineyard_result_mem_header = vineyard_result_mem_kernel_addr;
+		vineyard_msg_buffer_addr = vineyard_msg_mem_kernel_addr + sizeof(*vineyard_msg_mem_header);
+		vineyard_result_buffer_addr = vineyard_result_mem_kernel_addr + sizeof(*vineyard_result_mem_header);
+
 		err = copy_to_user((void *)(mount_data->this_addr), mount_data, sizeof(struct mount_data));
 		printk(KERN_INFO PREFIX "%lx %lx %lx %lx\n", mount_data->this_addr, mount_data->vineyard_storage_user_addr, mount_data->vineyard_msg_buffer_user_addr, mount_data->vineyard_result_buffer_user_addr);
 	}
@@ -413,6 +425,12 @@ void fake_kill_sb(struct super_block *sb)
 static void vineyard_kill_sb(struct super_block *sb)
 {
 	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+
+	vineyard_spin_lock(&vineyard_msg_mem_header->lock);
+	vineyard_msg_mem_header->close = 1;
+	vineyard_msg_mem_header->has_msg = 1;
+	vineyard_spin_unlock(&vineyard_msg_mem_header->lock);
+	wake_up(&vineyard_msg_wait);
 	unmap_vineyard_user_storage_buffer();
 	unmap_vineyard_msg_result_buffer();
 }
@@ -431,6 +449,9 @@ static int __init init_vineyard_fs(void) {
 
     printk(KERN_INFO PREFIX "Hello, World!\n");
 	err = register_filesystem(&vineyard_fs_type);
+	if (!err) {
+		err = net_link_init();
+	}
 
     printk(KERN_INFO PREFIX "err num:%d\n", err);
     return err;
@@ -439,6 +460,7 @@ static int __init init_vineyard_fs(void) {
 static void __exit vineyard_fs_exit(void) {
     printk(KERN_INFO PREFIX "Goodbye, World!\n");
     unregister_filesystem(&vineyard_fs_type);
+	net_link_release();
 }
 
 module_init(init_vineyard_fs);

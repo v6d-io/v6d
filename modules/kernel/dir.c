@@ -1,6 +1,9 @@
 #include <linux/string.h>
+#include <linux/futex.h>
+#include <linux/wait.h>
 #include "vineyard_fs.h"
 #include "vineyard_i.h"
+#include "msg_mgr.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("yuansm");
@@ -69,7 +72,26 @@ get_new:
 
 out:
     dput(dentry);
-    return ret;
+
+    // for test
+    if (!list_empty(&vineyard_msg_wait.head)) {
+        vineyard_spin_lock(&vineyard_msg_mem_header->lock);
+        vineyard_msg_mem_header->has_msg = 1;
+        vineyard_spin_unlock(&vineyard_msg_mem_header->lock);
+
+        wake_up(&vineyard_msg_wait);
+        printk(KERN_INFO PREFIX "readdir sleep\n");
+        ret = wait_event_interruptible(vineyard_fs_wait, vineyard_result_mem_header->has_msg);
+        if (ret == -ERESTARTSYS) {
+            return 0;
+        }
+        printk(KERN_INFO PREFIX "readdir awake\n");
+
+        vineyard_spin_lock(&vineyard_result_mem_header->lock);
+        vineyard_result_mem_header->has_msg = 0;
+        vineyard_spin_unlock(&vineyard_result_mem_header->lock);
+    }
+    return 0;
 }
 
 // static int vineyard_fs_dir_release(struct inode *inode, struct file *file)
