@@ -86,6 +86,8 @@ CONVERT_TO_ARROW_TYPE(RefString, arrow::LargeStringArray,
                       arrow::LargeStringBuilder, arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(std::string, arrow::LargeStringArray,
                       arrow::LargeStringBuilder, arrow::large_utf8())
+CONVERT_TO_ARROW_TYPE(arrow::util::string_view, arrow::LargeStringArray,
+                      arrow::LargeStringBuilder, arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(arrow::TimestampType, arrow::TimestampArray,
                       arrow::TimestampBuilder,
                       arrow::timestamp(arrow::TimeUnit::MILLI))
