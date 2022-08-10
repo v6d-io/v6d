@@ -367,7 +367,7 @@ class BasicEVFragmentLoader {
           auto edge_table = item.second;
           static_if<is_local_vertex_map<vertex_map_t>::value>(
               [&](auto& processed_table_list, auto& edge_table) {
-
+                processed_table_list.push_back(edge_table);
               })(processed_table_list, edge_table);
           static_if<!is_local_vertex_map<vertex_map_t>::value>(
               [&](auto& item, auto& processed_table_list) {
