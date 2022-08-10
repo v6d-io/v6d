@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <sys/stat.h>
+
 #include <stdio.h>
 
 #include <fstream>
@@ -63,10 +65,36 @@ void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
   }
 }
 
-int main(int argc, char** argv) {
-  grape::InitMPIComm();
+static void _mkdir(const char* dir) {
+  char tmp[256];
+  char* p = NULL;
+  size_t len;
+
+  snprintf(tmp, sizeof(tmp), "%s", dir);
+  len = strlen(tmp);
+  if (tmp[len - 1] == '/') {
+    tmp[len - 1] = 0;
+  }
+  for (p = tmp + 1; *p; p++) {
+    if (*p == '/') {
+      *p = 0;
+      mkdir(tmp, S_IRWXU);
+      *p = '/';
+    }
+  }
+  mkdir(tmp, S_IRWXU);
+}
+
+int test_traverse_loaded_graph(int argc, const char** argv) {
   grape::CommSpec comm_spec;
   comm_spec.Init(MPI_COMM_WORLD);
+
+  if (argc < 3) {
+    printf(
+        "usage ./load_arrow_fragment_test <ipc_socket> <fragment id 0> "
+        "[<fragment id 1>] ...\n");
+    return 1;
+  }
 
   std::string ipc_socket = std::string(argv[1]);
   std::string object_id_str = std::string(argv[2 + comm_spec.fid()]);
@@ -75,16 +103,29 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
 
   ObjectID object_id = ObjectIDFromString(object_id_str);
+  bool exists = false;
+  if (!client.Exists(object_id, exists).ok() || !exists) {
+    object_id = std::strtoll(object_id_str.c_str(), nullptr, 10);
+  }
 
   std::shared_ptr<GraphType> graph =
       std::dynamic_pointer_cast<GraphType>(client.GetObject(object_id));
-  std::cout << "loaded graph...";
+  LOG(INFO) << "loaded graph ...";
 
-  traverse_graph(graph, "./xx/output_graph_" + std::to_string(graph->fid()));
-
-  grape::FinalizeMPIComm();
+  _mkdir("./graph_dumpped");
+  traverse_graph(
+      graph, "./graph_dumpped/output_graph_" + std::to_string(graph->fid()));
+  LOG(INFO) << "dumpped graph to ./graph_dumpped/... ...";
 
   LOG(INFO) << "Passed arrow fragment test...";
+  return 0;
+}
+
+int main(int argc, const char** argv) {
+  grape::InitMPIComm();
+
+  { test_traverse_loaded_graph(argc, argv); }
+  grape::FinalizeMPIComm();
 
   return 0;
 }
