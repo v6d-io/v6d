@@ -1,7 +1,7 @@
-#! /usr/bin/env python3
+#!/usr/env/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Alibaba Group Holding Limited.
+# Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,4 +24,3 @@ with open(filename, 'rb') as source:
     with pa.ipc.open_stream(source) as reader:
         data = reader.read_all()
         print(data)
-        

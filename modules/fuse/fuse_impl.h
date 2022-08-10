@@ -1,10 +1,4 @@
 /** Copyright 2020-2022 Alibaba Group Holding Limited.
-=======
-// accredit to the hdfs fuse file strcuture design, nice design
-=======
->>>>>>> update LOG to DLOG/ run python3 -m isort --profile black --python-version 38 . against v6d/modules/fuse/test / add fuse_tes.py  to the setup.py
-/** Copyright 2020-2021 Alibaba Group Holding Limited.
->>>>>>> refactor: beautify the repo:modules/fuse/fuse_impl.h
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

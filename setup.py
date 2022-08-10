@@ -123,6 +123,8 @@ class FormatAndLint(Command):
         'setup_ray.py',
         'test/runner.py',
         'modules/fuse/test/fuse_test.py',
+        'modules/fuse/test/read_ipc.py',
+        'modules/fuse/test/write_ipc.py',
     ]
 
     def extend_cmd_as_import(self, cmd) -> List[str]:

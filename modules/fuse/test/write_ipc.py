@@ -1,7 +1,7 @@
-#! /usr/bin/env python3
+#!/usr/env/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Alibaba Group Holding Limited.
+# Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,12 +21,11 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-
 filename = sys.argv[1]
-height,width = 5,4
-df = pd.DataFrame(np.random.randint(0,100,size=(height, width)), columns=list('ABCD'))
+height, width = 5, 4
+df = pd.DataFrame(np.random.randint(0, 100, size=(height, width)), columns=list('ABCD'))
 pdf = pa.Table.from_pandas(df)
 
 with open(filename, 'wb') as source:
-    with pa.ipc.RecordBatchStreamWriter(source,pdf.schema) as writer:
+    with pa.ipc.RecordBatchStreamWriter(source, pdf.schema) as writer:
         data = writer.write(pdf)
