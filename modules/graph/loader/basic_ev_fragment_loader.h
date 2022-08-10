@@ -364,17 +364,17 @@ class BasicEVFragmentLoader {
         auto& edge_table_list = ordered_edge_tables_[e_label];
         std::vector<std::shared_ptr<arrow::Table>> processed_table_list;
         for (auto& item : edge_table_list) {
-          auto edge_table = item.second;
+          // auto edge_table = item.second;
           static_if<is_local_vertex_map<vertex_map_t>::value>(
-              [&](auto& processed_table_list, auto& edge_table) {
-                processed_table_list.push_back(edge_table);
-              })(processed_table_list, edge_table);
+              [&](auto& item, auto& processed_table_list, auto& edge_table) {
+                processed_table_list.push_back(item.second);
+              })(item, processed_table_list);
           static_if<!is_local_vertex_map<vertex_map_t>::value>(
               [&](auto& item, auto& processed_table_list) {
                 label_id_t src_label = item.first.first;
                 label_id_t dst_label = item.first.second;
                 BOOST_LEAF_AUTO(tmp_table,
-                                edgesId2Gid(edge_table, src_label, dst_label));
+                                edgesId2Gid(item.second, src_label, dst_label));
                 processed_table_list.push_back(tmp_table);
               })(item, processed_table_list);
         }
