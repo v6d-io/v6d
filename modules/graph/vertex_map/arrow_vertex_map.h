@@ -29,13 +29,6 @@ limitations under the License.
 
 #include "graph/fragment/property_graph_types.h"
 
-namespace gs {
-
-template <typename OID_T, typename VID_T>
-class ArrowProjectedVertexMap;
-
-}  // namespace gs
-
 namespace vineyard {
 
 template <typename OID_T, typename VID_T>
@@ -325,21 +318,38 @@ class ArrowVertexMap<arrow_string_view, VID_T>
 
  private:
   void initHashmaps() {
+    int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
+    int thread_num = std::min(
+        static_cast<int>(std::thread::hardware_concurrency()), task_num);
+    std::atomic<int> task_id(0);
+    std::vector<std::thread> threads(thread_num);
     o2g_.resize(fnum_);
     for (fid_t i = 0; i < fnum_; ++i) {
       o2g_[i].resize(label_num_);
-      for (label_id_t j = 0; j < label_num_; ++j) {
-        auto array = oid_arrays_[i][j];
-        auto& map = o2g_[i][j];
-        {
-          vid_t cur_gid = id_parser_.GenerateId(i, j, 0);
+    }
+    for (int i = 0; i < thread_num; ++i) {
+      threads[i] = std::thread([&]() {
+        while (true) {
+          int got_task_id = task_id.fetch_add(1);
+          if (got_task_id >= task_num) {
+            break;
+          }
+          fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
+          label_id_t cur_label =
+              static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
+          auto array = oid_arrays_[cur_fid][cur_label];
+          auto& map = o2g_[cur_fid][cur_label];
+          vid_t cur_gid = id_parser_.GenerateId(cur_fid, cur_label, 0);
           int64_t vnum = array->length();
           for (int64_t k = 0; k < vnum; ++k) {
             map.emplace(array->GetView(k), cur_gid);
             ++cur_gid;
           }
         }
-      }
+      });
+    }
+    for (auto& thrd : threads) {
+      thrd.join();
     }
   }
 
