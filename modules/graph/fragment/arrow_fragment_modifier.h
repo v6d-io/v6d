@@ -55,8 +55,8 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename VID_T>
-void ArrowFragment<OID_T, VID_T>::PrepareToRunApp(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::PrepareToRunApp(
     const grape::CommSpec& comm_spec, grape::PrepareConf conf) {
   if (conf.message_strategy ==
       grape::MessageStrategy::kAlongEdgeToOuterVertex) {
@@ -70,8 +70,8 @@ void ArrowFragment<OID_T, VID_T>::PrepareToRunApp(
   }
 }
 
-template <typename OID_T, typename VID_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddVerticesAndEdges(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVerticesAndEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
@@ -109,8 +109,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddVerticesAndEdges(
                                 concurrency);
 }
 
-template <typename OID_T, typename VID_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddVertices(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertices(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     ObjectID vm_id) {
@@ -130,8 +130,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddVertices(
   return AddNewVertexLabels(client, std::move(vertex_tables), vm_id);
 }
 
-template <typename OID_T, typename VID_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddEdges(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
@@ -156,9 +156,9 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddEdges(
 /// Add a set of new vertex labels and a set of new edge labels to graph.
 /// Vertex label id started from vertex_label_num_, and edge label id
 /// started from edge_label_num_.
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T>::AddNewVertexEdgeLabels(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, ObjectID vm_id,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
@@ -559,8 +559,8 @@ ArrowFragment<OID_T, VID_T>::AddNewVertexEdgeLabels(
 
 /// Add a set of new vertex labels to graph. Vertex label id started from
 /// vertex_label_num_.
-template <typename OID_T, typename VID_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddNewVertexLabels(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     ObjectID vm_id) {
   int extra_vertex_label_num = vertex_tables.size();
@@ -686,8 +686,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddNewVertexLabels(
 
 /// Add a set of new edge labels to graph. Edge label id started from
 /// edge_label_num_.
-template <typename OID_T, typename VID_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddNewEdgeLabels(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
         edge_relations,
@@ -1008,8 +1008,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddNewEdgeLabels(
   return builder.Seal(client)->id();
 }
 
-template <typename OID_T, typename VID_T>
-boost::leaf::result<vineyard::ObjectID> ArrowFragment<OID_T, VID_T>::Project(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+boost::leaf::result<vineyard::ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
     vineyard::Client& client,
     std::map<label_id_t, std::vector<label_id_t>> vertices,
     std::map<label_id_t, std::vector<label_id_t>> edges) {
@@ -1096,9 +1096,9 @@ boost::leaf::result<vineyard::ObjectID> ArrowFragment<OID_T, VID_T>::Project(
   return builder.Seal(client)->id();
 }
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T>::TransformDirection(vineyard::Client& client,
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(vineyard::Client& client,
                                                 int concurrency) {
   ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
   builder.set_directed_(!directed_);
@@ -1135,8 +1135,8 @@ ArrowFragment<OID_T, VID_T>::TransformDirection(vineyard::Client& client,
   return builder.Seal(client)->id();
 }
 
-template <typename OID_T, typename VID_T>
-void ArrowFragment<OID_T, VID_T>::initDestFidList(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initDestFidList(
     bool in_edge, bool out_edge,
     std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
     std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset) {
@@ -1191,8 +1191,8 @@ void ArrowFragment<OID_T, VID_T>::initDestFidList(
   }
 }
 
-template <typename OID_T, typename VID_T>
-void ArrowFragment<OID_T, VID_T>::directedCSR2Undirected(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::directedCSR2Undirected(
     std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>&
         oe_lists,
     std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>&

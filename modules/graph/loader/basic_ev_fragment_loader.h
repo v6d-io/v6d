@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "grape/worker/comm_spec.h"
 
+#include "common/util/static_if.h"
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
 #include "graph/fragment/property_graph_types.h"
@@ -108,11 +109,8 @@ class BasicEVFragmentLoader {
 
     output_vertex_tables_.resize(vertex_label_num_);
 
-    constructVerticesImpl(
-        vm_id,
-        std::is_same<
-            vertex_map_t,
-            ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>{});
+    constructVerticesImpl(vm_id,
+        std::integral_constant<bool, is_local_vertex_map<vertex_map_t>::value>{});
     return {};
   }
 
@@ -366,7 +364,7 @@ class BasicEVFragmentLoader {
         for (auto& item : edge_table_list) {
           // auto edge_table = item.second;
           static_if<is_local_vertex_map<vertex_map_t>::value>(
-              [&](auto& item, auto& processed_table_list, auto& edge_table) {
+              [&](auto& item, auto& processed_table_list) -> void {
                 processed_table_list.push_back(item.second);
               })(item, processed_table_list);
           static_if<!is_local_vertex_map<vertex_map_t>::value>(
@@ -708,7 +706,7 @@ class BasicEVFragmentLoader {
 
   // constructVertices implementation for ArrowVertexMap
   boost::leaf::result<void> constructVerticesImpl(ObjectID vm_id,
-                                                  std::true_type) {
+                                                  std::false_type) {
     std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_lists(
         vertex_label_num_);
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -786,7 +784,7 @@ class BasicEVFragmentLoader {
 
   // constructVertices implementation for ArrowLocalVertexMap
   boost::leaf::result<void> constructVerticesImpl(ObjectID vm_id,
-                                                  std::false_type) {
+                                                  std::true_type) {
     local_vm_builder_ =
         std::make_shared<ArrowLocalVertexMapBuilder<internal_oid_t, vid_t>>(
             client_, comm_spec_.fnum(), comm_spec_.fid(), vertex_label_num_);

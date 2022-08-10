@@ -23,6 +23,7 @@ limitations under the License.
 #include <mutex>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "basic/ds/array.h"
@@ -30,7 +31,6 @@ limitations under the License.
 #include "basic/ds/hashmap.h"
 #include "client/client.h"
 #include "common/util/functions.h"
-#include "common/util/static_if.h"
 #include "common/util/typename.h"
 
 #include "graph/fragment/property_graph_types.h"
