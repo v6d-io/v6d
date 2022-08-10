@@ -71,7 +71,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::PrepareToRunApp(
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVerticesAndEdges(
+boost::leaf::result<ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVerticesAndEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
@@ -110,7 +111,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVert
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertices(
+boost::leaf::result<ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertices(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     ObjectID vm_id) {
@@ -131,7 +133,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVert
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdges(
+boost::leaf::result<ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
@@ -560,7 +563,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
 /// Add a set of new vertex labels to graph. Vertex label id started from
 /// vertex_label_num_.
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
+boost::leaf::result<ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     ObjectID vm_id) {
   int extra_vertex_label_num = vertex_tables.size();
@@ -687,7 +691,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewV
 /// Add a set of new edge labels to graph. Edge label id started from
 /// edge_label_num_.
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
+boost::leaf::result<ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
         edge_relations,
@@ -1009,7 +1014,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewE
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-boost::leaf::result<vineyard::ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
     vineyard::Client& client,
     std::map<label_id_t, std::vector<label_id_t>> vertices,
     std::map<label_id_t, std::vector<label_id_t>> edges) {
@@ -1098,8 +1104,8 @@ boost::leaf::result<vineyard::ObjectID> ArrowFragment<OID_T, VID_T, VERTEX_MAP_T
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(vineyard::Client& client,
-                                                int concurrency) {
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
+    vineyard::Client& client, int concurrency) {
   ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
   builder.set_directed_(!directed_);
 

@@ -109,8 +109,10 @@ class BasicEVFragmentLoader {
 
     output_vertex_tables_.resize(vertex_label_num_);
 
-    constructVerticesImpl(vm_id,
-        std::integral_constant<bool, is_local_vertex_map<vertex_map_t>::value>{});
+    constructVerticesImpl(
+        vm_id,
+        std::integral_constant<bool,
+                               is_local_vertex_map<vertex_map_t>::value>{});
     return {};
   }
 
