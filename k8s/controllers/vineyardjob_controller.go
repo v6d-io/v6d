@@ -49,9 +49,6 @@ type VineyardJobReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardjobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardjobs/status,verbs=get;update;patch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-
 func (r *VineyardJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("vineyardjob", req.NamespacedName)
 	log.Info("start reconcilering ...")
