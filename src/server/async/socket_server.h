@@ -99,8 +99,6 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doShallowCopy(json const& root);
 
-  bool doDeepCopy(json const& root);
-
   bool doDelData(json const& root);
 
   bool doCreateStream(json const& root);

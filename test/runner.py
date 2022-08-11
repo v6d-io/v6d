@@ -341,7 +341,6 @@ def run_single_vineyardd_tests(tests):
         run_test(tests, 'clear_test')
         run_test(tests, 'custom_vector_test')
         run_test(tests, 'dataframe_test')
-        run_test(tests, 'deep_copy_test')
         run_test(tests, 'delete_test')
         run_test(tests, 'get_wait_test')
         run_test(tests, 'get_object_test')

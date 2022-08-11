@@ -65,7 +65,6 @@ enum class CommandType {
   DropBufferRequest = 32,
   MakeArenaRequest = 33,
   FinalizeArenaRequest = 34,
-  DeepCopyRequest = 35,
   ClearRequest = 36,
   PushNextStreamChunkRequest = 37,
   NewSessionRequest = 38,
@@ -353,17 +352,6 @@ Status ReadShallowCopyRequest(const json& root, ObjectID& id,
 void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
 
 Status ReadShallowCopyReply(const json& root, ObjectID& target_id);
-
-void WriteDeepCopyRequest(const ObjectID object_id, std::string const& peer,
-                          std::string const& peer_rpc_endpoint,
-                          std::string& msg);
-
-Status ReadDeepCopyRequest(const json& root, ObjectID& object_id,
-                           std::string& peer, std::string& peer_rpc_endpoint);
-
-void WriteDeepCopyReply(const ObjectID& object_id, std::string& msg);
-
-Status ReadDeepCopyReply(const json& root, ObjectID& object_id);
 
 void WriteMakeArenaRequest(const size_t size, std::string& msg);
 

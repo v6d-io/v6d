@@ -261,15 +261,6 @@ void bind_client(py::module& mod) {
           },
           "object_id"_a, "extra_metadata"_a)
       .def(
-          "deep_copy",
-          [](ClientBase* self,
-             const ObjectIDWrapper object_id) -> ObjectIDWrapper {
-            ObjectID target_id;
-            throw_on_error(self->DeepCopy(object_id, target_id));
-            return target_id;
-          },
-          "object_id"_a)
-      .def(
           "put_name",
           [](ClientBase* self, const ObjectIDWrapper object_id,
              std::string const& name) {
