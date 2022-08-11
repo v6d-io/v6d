@@ -13,8 +13,6 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 IMG ?= registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-controller:latest
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:crdVersions=v1,maxDescLen=0"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -75,10 +73,7 @@ dry-run: manifests kustomize
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./api/..." output:crd:artifacts:config=config/crd/bases
-
-	sed -i -r 's/- protocol//' config/crd/bases/k8s.v6d.io_vineyardjobs.yaml
-	sed -i -r 's/group: k8s.v6d.io/group: k8s.v6d.io\n  preserveUnknownFields: false/' config/crd/bases/k8s.v6d.io_vineyardjobs.yaml
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 sample: predeploy
 	$(KUSTOMIZE) build config/samples | kubectl apply -f -
@@ -131,6 +126,10 @@ docker-build:
 docker-push:
 	docker push ${IMG}
 
+## Tool Versions
+KUSTOMIZE_VERSION ?= v4@v4.5.5
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
+
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:
@@ -140,7 +139,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0 ;\
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
@@ -155,7 +154,7 @@ ifeq (, $(shell which kustomize))
 	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go install sigs.k8s.io/kustomize/kustomize/v3@v3.10.0 ;\
+	go install sigs.k8s.io/kustomize/kustomize/$(KUSTOMIZE_VERSION) ;\
 	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
 	}
 KUSTOMIZE=$(GOBIN)/kustomize

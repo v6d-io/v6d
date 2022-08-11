@@ -6,7 +6,6 @@ metadata:
     app: busybox
 spec:
   replicas: 3
-
   # workload is a pod
   template:
     metadata:

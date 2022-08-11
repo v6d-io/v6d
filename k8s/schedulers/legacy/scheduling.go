@@ -28,9 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"k8s.io/component-helpers/scheduling/corev1"
+
 	listerv1 "k8s.io/client-go/listers/core/v1"
-	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
-	framework "k8s.io/kubernetes/pkg/scheduler/framework/v1alpha1"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
 
 	v1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
 	clientset "github.com/v6d-io/v6d/k8s/generated/clientset/versioned"
@@ -172,18 +173,15 @@ func (ss *SchedulerState) getLocalObjectsBySignatures(ctx context.Context, signa
 
 // VineyardScheduling is a plugin that schedules pods that requires vineyard objects as inputs.
 type VineyardScheduling struct {
-	handle          framework.FrameworkHandle
+	framework.PreFilterPlugin
+	framework.ScorePlugin
+	framework.PostBindPlugin
+	handle          framework.Handle
 	podLister       listerv1.PodLister
 	scheduleTimeout *time.Duration
 	state           map[string]*SchedulerState
 	client          *clientset.Clientset
 }
-
-var _ framework.ScorePlugin = &VineyardScheduling{}
-var _ framework.PreFilterPlugin = &VineyardScheduling{}
-
-// var _ framework.PermitPlugin = &VineyardScheduling{}
-var _ framework.PostBindPlugin = &VineyardScheduling{}
 
 const (
 	// Name is the name of the plugin used in Registry and configurations.
@@ -200,7 +198,7 @@ const (
 
 // New initializes a vineyard scheduler
 // func New(configuration *runtime.Unknown, handle framework.FrameworkHandle) (framework.Plugin, error) {
-func New(obj runtime.Object, handle framework.FrameworkHandle) (framework.Plugin, error) {
+func New(obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	klog.Info("Initializing the vineyard scheduler plugin ...")
 	timeout := Timeout * time.Second
 	state := make(map[string]*SchedulerState)
@@ -223,8 +221,8 @@ func (vs *VineyardScheduling) Name() string {
 // Less compares the priority of two
 // func (vs *VineyardScheduling) Less(pod1, pod2 *framework.QueuedPodInfo) bool {
 func (vs *VineyardScheduling) Less(pod1, pod2 *framework.PodInfo) bool {
-	prio1 := podutil.GetPodPriority(pod1.Pod)
-	prio2 := podutil.GetPodPriority(pod2.Pod)
+	prio1 := corev1.PodPriority(pod1.Pod)
+	prio2 := corev1.PodPriority(pod2.Pod)
 	return prio1 > prio2
 }
 
