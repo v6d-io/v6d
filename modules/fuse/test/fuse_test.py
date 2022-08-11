@@ -28,6 +28,8 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
+import psutil
+
 import vineyard as vy
 
 socket_name = ""
@@ -220,14 +222,12 @@ def test_cache_manager(data, client, fuse_process):
     for _ in range(1, 100):
         id = client.put(data)
         _ = read_data_from_fuse(str(id)[11:28] + ".arrow")
-    import psutil
 
     memory_usage_before = psutil.Process(fuse_process.pid).memory_info().rss / 1024**2
 
     for _ in range(1, 100):
         id = client.put(data)
         _ = read_data_from_fuse(str(id)[11:28] + ".arrow")
-    import psutil
 
     memory_usage_after = psutil.Process(fuse_process.pid).memory_info().rss / 1024**2
     if abs((memory_usage_before) - (memory_usage_after)) > 0.0001:
