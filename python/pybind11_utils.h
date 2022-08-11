@@ -68,50 +68,34 @@ namespace pybind11 {
 
 namespace detail {
 
-/// Extends pybind11::detail::iterator_state to holds reference to a
-/// stable (unchanged) globally available "argument".
-template <typename Iterator, typename Sentinel, typename Arg, bool KeyIterator,
-          return_value_policy Policy>
-struct iterator_state_ext {
-  Iterator it;
-  Sentinel end;
-  bool first_or_done;
-  Arg arg;
-};
-
-}  // namespace detail
-
 /// Makes a python iterator from a first and past-the-end C++ InputIterator.
-template <return_value_policy Policy = return_value_policy::reference_internal,
-          typename Iterator, typename Sentinel, typename F, typename Arg,
-          typename... Args, typename... Extra>
-iterator make_iterator_fmap(Iterator first, Sentinel last, F functor, Arg arg,
-                            Extra&&... extra) {
-  using state =
-      detail::iterator_state_ext<Iterator, Sentinel, Arg, false, Policy>;
-
-  if (!detail::get_type_info(typeid(state), false)) {
-    class_<state>(handle(), "iterator", pybind11::module_local())
-        .def("__iter__", [](state& s) -> state& { return s; })
+template <py::return_value_policy Policy =
+              py::return_value_policy::reference_internal,
+          typename IteratorState, typename F, typename... Extra>
+py::iterator make_iterator_fmap(IteratorState const& state, F functor,
+                                Extra&&... extra) {
+  if (!py::detail::get_type_info(typeid(IteratorState), false)) {
+    py::class_<IteratorState>(py::handle(), "iterator",
+                              pybind11::module_local())
+        .def("__iter__", [](IteratorState& s) -> IteratorState& { return s; })
         .def(
             "__next__",
-            [functor](state& s) -> object {
+            [functor](IteratorState& s) -> py::object {
               if (!s.first_or_done)
                 ++s.it;
               else
                 s.first_or_done = false;
               if (s.it == s.end) {
                 s.first_or_done = true;
-                throw stop_iteration();
+                throw py::stop_iteration();
               }
               return functor(s.arg, s.it);
             },
             std::forward<Extra>(extra)..., Policy);
   }
-
-  return cast(state{first, last, true, std::forward<Arg>(arg)});
+  return py::cast(state);
 }
-
+}  // namespace detail
 }  // namespace pybind11
 
 namespace vineyard {

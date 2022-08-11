@@ -169,7 +169,7 @@ Status ReadRegisterRequest(const json& root, std::string& version,
 
   // When the "version" field is missing from the client, we treat it
   // as default unknown version number: 0.0.0.
-  version = root.value<std::string>("version", "0.0.0");
+  version = root.value<std::string>("version", std::string("0.0.0"));
 
   // Keep backwards compatibility.
   if (root.contains("store_type")) {
@@ -177,7 +177,7 @@ Status ReadRegisterRequest(const json& root, std::string& version,
       store_type = root.value("store_type", /* default */ StoreType::kDefault);
     } else {
       std::string store_type_name =
-          root.value("store_type", /* default */ "Normal");
+          root.value("store_type", /* default */ std::string("Normal"));
       if (store_type_name == "Plasma") {
         store_type = StoreType::kPlasma;
       } else {
@@ -216,7 +216,7 @@ Status ReadRegisterReply(const json& root, std::string& ipc_socket,
 
   // When the "version" field is missing from the server, we treat it
   // as default unknown version number: 0.0.0.
-  version = root.value<std::string>("version", "0.0.0");
+  version = root.value<std::string>("version", std::string("0.0.0"));
   store_match = root["store_match"].get<bool>();
   return Status::OK();
 }

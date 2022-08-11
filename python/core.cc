@@ -35,6 +35,18 @@ using namespace py::literals;  // NOLINT(build/namespaces_literals)
 
 namespace vineyard {
 
+namespace detail {
+/// Extends pybind11::detail::iterator_state to holds reference to a
+/// stable (unchanged) globally available "argument".
+template <typename Arg>
+struct metadata_iterator_state {
+  ObjectMeta::const_iterator it;
+  ObjectMeta::const_iterator end;
+  bool first_or_done;
+  Arg arg;
+};
+}  // namespace detail
+
 void bind_core(py::module& mod) {
   // ObjectIDWrapper
   py::class_<ObjectIDWrapper>(mod, "ObjectID")
@@ -285,8 +297,9 @@ void bind_core(py::module& mod) {
                 fn = [](std::true_type, ObjectMeta::const_iterator& iter) {
                   return py::cast(iter.key());
                 };
-            return py::make_iterator_fmap(meta.begin(), meta.end(), fn,
-                                          std::true_type{});
+            using state_t = detail::metadata_iterator_state<std::true_type>;
+            return py::detail::make_iterator_fmap(
+                state_t{meta.begin(), meta.end(), true, std::true_type{}}, fn);
           },
           py::keep_alive<0, 1>())
       .def(
@@ -304,8 +317,9 @@ void bind_core(py::module& mod) {
                     iter.key(), detail::from_json(iter.value())));
               }
             };
-            return py::make_iterator_fmap(meta.begin(), meta.end(), fn,
-                                          std::cref(meta));
+            using state_t = detail::metadata_iterator_state<const ObjectMeta&>;
+            return py::detail::make_iterator_fmap(
+                state_t{meta.begin(), meta.end(), true, std::cref(meta)}, fn);
           },
           py::keep_alive<0, 1>())
       .def("__repr__",
