@@ -20,6 +20,7 @@ import os
 import sys
 import time
 from enum import Enum
+from logging import fatal
 from signal import SIGTERM
 from time import sleep
 
@@ -32,7 +33,7 @@ import vineyard as vy
 socket_name = ""
 timestamp = int(time.time())
 socket_name = "/var/run/%dvineyard.sock" % (timestamp)
-
+default_cache_size = 1024 * 1024  # unit: byte
 test_mount_dir = "/tmp/vyfs-test%d" % (timestamp)
 
 
@@ -50,6 +51,7 @@ async def start_vineyard_server():
     print("initilize vineyard by " + cmd)
 
     proc = await asyncio.create_subprocess_shell(cmd, stdout=sys.stdout)
+
     return proc
 
 
@@ -66,7 +68,12 @@ async def start_fuse_server():
             "vineyard-fusermount",
         )
     ]
-    fuse_param = ["-f", "-s", "--vineyard-socket=" + socket_name]
+    fuse_param = [
+        "-f",
+        "-s",
+        "--vineyard-socket=" + socket_name,
+        "--max-cache-size=%d" % default_cache_size,
+    ]
     os.mkdir(test_mount_dir)
     fuse_dir = [test_mount_dir]
     cmd = fuse_bin + fuse_param + fuse_dir
@@ -131,7 +138,7 @@ def generate_string_array(length=20):
         ' ',
     ]
 
-    for _ in range(1,length):
+    for _ in range(1, length):
         s_length = np.random.randint(1, length)
         res.append(''.join(np.random.choice(alphabet, s_length)))
 
@@ -208,9 +215,30 @@ def test_fuse_df(data, client):
 
 # string_array = generate_array(Type.STRING)
 
+
+def test_cache_manager(data, client, fuse_process):
+    for _ in range(1, 100):
+        id = client.put(data)
+        _ = read_data_from_fuse(str(id)[11:28] + ".arrow")
+    import psutil
+
+    memory_usage_before = psutil.Process(fuse_process.pid).memory_info().rss / 1024**2
+
+    for _ in range(1, 100):
+        id = client.put(data)
+        _ = read_data_from_fuse(str(id)[11:28] + ".arrow")
+    import psutil
+
+    memory_usage_after = psutil.Process(fuse_process.pid).memory_info().rss / 1024**2
+    if abs((memory_usage_before) - (memory_usage_after)) > 0.0001:
+        fatal("memory usage changed")
+    print("cache manager test passed")
+
+
 if __name__ == "__main__":
 
     # logger.basicConfig(filename='test.log', level=logger.DEBUG)
+
     print("started")
     vineyard_server = asyncio.run(start_vineyard_server())
     print(vineyard_server)
@@ -219,6 +247,7 @@ if __name__ == "__main__":
     sleep(2)
     print("server started")
     client = connect_to_server()
+
     # test array
     int_array = generate_array(Type.INT64)
     test_fuse_array(int_array, client)
@@ -229,8 +258,12 @@ if __name__ == "__main__":
     test_fuse_string_array(string_array, client)
     print("array_test passed")
     # test df
-    int_df = generate_dataframe()
-    test_fuse_df(int_df, client)
+    double_df = generate_dataframe()
+    test_fuse_df(double_df, client)
     print("df_test_passed")
+
+    test_cache_manager(double_df, client, fuse_server)
+
     interrupt_proc(fuse_server)
     interrupt_proc(vineyard_server)
+    print("all passed")
