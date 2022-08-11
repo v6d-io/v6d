@@ -131,9 +131,9 @@ def generate_string_array(length=20):
         ' ',
     ]
 
-    for _ in range(length):
-        length = np.random.randint(1, length)
-        res.append(''.join(np.random.choice(alphabet, length)))
+    for _ in range(1,length):
+        s_length = np.random.randint(1, length)
+        res.append(''.join(np.random.choice(alphabet, s_length)))
 
     return res
 
