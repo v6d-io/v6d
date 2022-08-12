@@ -115,7 +115,7 @@ func (c *FakeLocalObjects) UpdateStatus(ctx context.Context, localObject *v1alph
 // Delete takes name of the localObject and deletes it. Returns an error if one occurs.
 func (c *FakeLocalObjects) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(localobjectsResource, c.ns, name), &v1alpha1.LocalObject{})
+		Invokes(testing.NewDeleteActionWithOptions(localobjectsResource, c.ns, name, opts), &v1alpha1.LocalObject{})
 
 	return err
 }

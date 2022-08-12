@@ -33,17 +33,4 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1beta1
-- api:
-    crdVersion: v1beta1
-    namespaced: true
-  controller: true
-  domain: v6d.io
-  group: k8s
-  kind: VineyardJob
-  path: github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1
-  version: v1alpha1
-  webhooks:
-    defaulting: true
-    validation: true
-    webhookVersion: v1beta1
 version: "3"

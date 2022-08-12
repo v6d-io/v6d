@@ -115,7 +115,7 @@ func (c *FakeGlobalObjects) UpdateStatus(ctx context.Context, globalObject *v1al
 // Delete takes name of the globalObject and deletes it. Returns an error if one occurs.
 func (c *FakeGlobalObjects) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(globalobjectsResource, c.ns, name), &v1alpha1.GlobalObject{})
+		Invokes(testing.NewDeleteActionWithOptions(globalobjectsResource, c.ns, name, opts), &v1alpha1.GlobalObject{})
 
 	return err
 }

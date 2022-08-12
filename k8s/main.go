@@ -17,12 +17,16 @@ package main
 
 import (
 	"flag"
+	"math/rand"
 	"os"
+	"time"
 
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -45,24 +49,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
-
-	//rand.Seed(time.Now().UnixNano())
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+func startManager(channel chan struct{}, metricsAddr string, probeAddr string, enableLeaderElection bool) {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -93,21 +80,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalObject")
 		os.Exit(1)
 	}
-	if err = (&controllers.VineyardJobReconciler{
-		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("VineyardJob"),
-		Scheme:    mgr.GetScheme(),
-		Recorder:  mgr.GetEventRecorderFor("VineyardJob"),
-		Scheduler: schedulers.New(ctrl.Log.WithName("scheduler")),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "VineyardJob")
-		os.Exit(1)
-	}
 	if os.Getenv("ENABLE_WEBHOOKS") == "true" {
-		if err = (&k8sv1alpha1.VineyardJob{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "VineyardJob")
-			os.Exit(1)
-		}
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
 			os.Exit(1)
@@ -133,4 +106,51 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func startScheduler(channel chan struct{}) {
+	command := app.NewSchedulerCommand(
+		app.WithPlugin(schedulers.Name, schedulers.New),
+	)
+
+	args := make([]string, 4)
+	args[0] = "-v"
+	args[1] = "5"
+	args[2] = "--config"
+	args[3] = "/etc/kubernetes/scheduler.yaml"
+	command.SetArgs(args)
+	if err := command.Execute(); err != nil {
+		setupLog.Error(err, "problem running scheduler")
+		os.Exit(1)
+	}
+	close(channel)
+}
+
+func main() {
+	var metricsAddr string
+	var enableLeaderElection bool
+	var probeAddr string
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	opts := zap.Options{
+		Development: true,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
+	}
+	opts.BindFlags(flag.CommandLine)
+	flag.Parse()
+
+	rand.Seed(time.Now().UnixNano())
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	scheduler := make(chan struct{})
+	go startScheduler(scheduler)
+
+	manager := make(chan struct{})
+	go startManager(manager, metricsAddr, probeAddr, enableLeaderElection)
+
+	<-scheduler
+	<-manager
 }
