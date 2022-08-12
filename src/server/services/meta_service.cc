@@ -339,7 +339,15 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
         }
       }
     }
-    meta_[json::json_pointer(kv.key)] = value;
+    // NB: inserting (with `operator[]`) using json pointer is truely unsafe.
+    Status status;
+    CATCH_JSON_ERROR_STATEMENT(status,
+                               meta_[json::json_pointer(kv.key)] = value);
+    if (!status.ok()) {
+      return Status::Invalid("Failed to insert to metadata: key = '" + kv.key +
+                             "', value = '" + value.dump(4) +
+                             "', reason: " + status.ToString());
+    }
     return Status::OK();
   };
 
@@ -362,9 +370,13 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
   // update signatures
   if (boost::algorithm::starts_with(kv.key, "/signatures/")) {
     if (!from_remote || !meta_.contains(json::json_pointer(kv.key))) {
-      VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
+      Status status;
+      CATCH_JSON_ERROR(status, upsert_to_meta());
+      VINEYARD_LOG_ERROR(status);
     }
-    VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_sig_to_meta()));
+    Status status;
+    CATCH_JSON_ERROR(status, upsert_sig_to_meta());
+    VINEYARD_LOG_ERROR(status);
     return;
   }
 
@@ -373,12 +385,16 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
     if (!from_remote && meta_.contains(json::json_pointer(kv.key))) {
       LOG(WARNING) << "Warning: name got overwritten: " << kv.key;
     }
-    VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
+    Status status;
+    CATCH_JSON_ERROR(status, upsert_to_meta());
+    VINEYARD_LOG_ERROR(status);
     return;
   }
 
   // update ordinary data
-  VINEYARD_LOG_ERROR(CATCH_JSON_ERROR(upsert_to_meta()));
+  Status status;
+  CATCH_JSON_ERROR(status, upsert_to_meta());
+  VINEYARD_LOG_ERROR(status);
 }
 
 void IMetaService::delVal(std::string const& key) {
@@ -407,7 +423,11 @@ void IMetaService::delVal(ObjectID const& target, std::set<ObjectID>& blobs) {
     delVal(targetkey);
   } else if (target != InvalidObjectID()) {
     // mark as transient
-    meta_[targetkey]["transient"] = true;
+    if (meta_.contains(targetkey)) {
+      meta_[targetkey]["transient"] = true;
+    } else {
+      LOG(ERROR) << "invalid metatree state: '" << targetkey << "' not found";
+    }
   }
 }
 

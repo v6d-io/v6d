@@ -34,5 +34,13 @@ namespace vineyard {
 #define VINEYARD_MUST_USE_TYPE
 #endif
 
+#ifndef GET_MACRO
+#define GET_MACRO(_1, _2, NAME, ...) NAME
+#endif
+
+#ifndef GET_MACRO2
+#define GET_MACRO2(_1, _2, _3, NAME, ...) NAME
+#endif
+
 }  // namespace vineyard
 #endif  // SRC_COMMON_UTIL_MACROS_H_

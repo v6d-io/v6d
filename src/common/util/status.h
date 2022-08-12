@@ -38,8 +38,6 @@
 #include "common/util/json.h"
 #include "common/util/macros.h"
 
-#define GET_MACRO(_1, _2, NAME, ...) NAME
-
 // raise a std::runtime_error (inherits std::exception), don't FATAL
 #ifndef VINEYARD_CHECK_OK
 #define VINEYARD_CHECK_OK(status)                                             \
