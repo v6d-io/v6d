@@ -241,8 +241,9 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
               if (IsBlob(id)) {
                 exists = this->bulk_store_->Exists(id);
               } else {
-                VINEYARD_SUPPRESS(
-                    CATCH_JSON_ERROR(meta_tree::Exists(meta, id, exists)));
+                Status status;
+                CATCH_JSON_ERROR(status, meta_tree::Exists(meta, id, exists));
+                VINEYARD_SUPPRESS(status);
               }
               if (!exists) {
                 return exists;
@@ -270,8 +271,10 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                            << ", reason: " << status.ToString();
                 }
               } else {
-                auto s = CATCH_JSON_ERROR(meta_tree::GetData(
-                    meta, this->instance_name(), id, sub_tree, instance_id_));
+                Status s;
+                CATCH_JSON_ERROR(
+                    s, meta_tree::GetData(meta, this->instance_name(), id,
+                                          sub_tree, instance_id_));
                 if (s.IsMetaTreeInvalid()) {
                   LOG(WARNING) << "Found errors in metadata: " << s.ToString();
                 }
@@ -313,9 +316,10 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
                                               const json& meta) {
         if (status.ok()) {
           json sub_tree_group;
-          auto s = CATCH_JSON_ERROR(
-              meta_tree::ListData(meta, this->instance_name(), pattern, regex,
-                                  limit, sub_tree_group));
+          Status s;
+          CATCH_JSON_ERROR(
+              s, meta_tree::ListData(meta, this->instance_name(), pattern,
+                                     regex, limit, sub_tree_group));
           if (!s.ok()) {
             return callback(s, sub_tree_group);
           }
@@ -359,7 +363,8 @@ Status VineyardServer::ListAllData(
       [this, callback](const Status& status, const json& meta) {
         if (status.ok()) {
           std::vector<ObjectID> objects;
-          auto s = CATCH_JSON_ERROR(meta_tree::ListAllData(meta, objects));
+          Status s;
+          CATCH_JSON_ERROR(s, meta_tree::ListAllData(meta, objects));
           if (!s.ok()) {
             return callback(s, objects);
           }
@@ -420,9 +425,11 @@ Status VineyardServer::CreateData(
                                  std::vector<meta_tree::op_t>& ops,
                                  InstanceID& computed_instance_id) {
         if (status.ok()) {
-          return CATCH_JSON_ERROR(
-              meta_tree::PutDataOps(meta, this->instance_name(), id,
-                                    decorated_tree, ops, computed_instance_id));
+          Status s;
+          CATCH_JSON_ERROR(s, meta_tree::PutDataOps(meta, this->instance_name(),
+                                                    id, decorated_tree, ops,
+                                                    computed_instance_id));
+          return s;
         } else {
           LOG(ERROR) << status.ToString();
           return status;
@@ -439,20 +446,23 @@ Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
       [this, id](const Status& status, const json& meta,
                  std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
-          auto status = CATCH_JSON_ERROR(
-              meta_tree::PersistOps(meta, this->instance_name(), id, ops));
-          if (this->spec_["sync_crds"].get<bool>() && status.ok() &&
-              !ops.empty()) {
+          Status s;
+          CATCH_JSON_ERROR(
+              s, meta_tree::PersistOps(meta, this->instance_name(), id, ops));
+          if (status.ok() && !ops.empty() &&
+              this->spec_["sync_crds"].get<bool>()) {
             json tree;
-            VINEYARD_SUPPRESS(CATCH_JSON_ERROR(
-                meta_tree::GetData(meta, this->instance_name(), id, tree)));
+            Status s;
+            CATCH_JSON_ERROR(
+                s, meta_tree::GetData(meta, this->instance_name(), id, tree));
+            VINEYARD_SUPPRESS(s);
             if (tree.is_object() && !tree.empty()) {
               auto kube = std::make_shared<Kubectl>(this->GetMetaContext());
               kube->ApplyObject(meta["instances"], tree);
               kube->Finish();
             }
           }
-          return status;
+          return s;
         } else {
           LOG(ERROR) << status.ToString();
           return status;
@@ -483,7 +493,8 @@ Status VineyardServer::IfPersist(const ObjectID id,
       false, [id, callback](const Status& status, const json& meta) {
         if (status.ok()) {
           bool persist = false;
-          auto s = CATCH_JSON_ERROR(meta_tree::IfPersist(meta, id, persist));
+          Status s;
+          CATCH_JSON_ERROR(s, meta_tree::IfPersist(meta, id, persist));
           return callback(s, persist);
         } else {
           LOG(ERROR) << status.ToString();
@@ -506,7 +517,8 @@ Status VineyardServer::Exists(const ObjectID id,
       true, [id, callback](const Status& status, const json& meta) {
         if (status.ok()) {
           bool exists = false;
-          auto s = CATCH_JSON_ERROR(meta_tree::Exists(meta, id, exists));
+          Status s;
+          CATCH_JSON_ERROR(s, meta_tree::Exists(meta, id, exists));
           return callback(s, exists);
         } else {
           LOG(ERROR) << status.ToString();
@@ -527,8 +539,12 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
                                       std::vector<meta_tree::op_t>& ops,
                                       bool& transient) {
         if (status.ok()) {
-          return CATCH_JSON_ERROR(meta_tree::ShallowCopyOps(
-              meta, id, extra_metadata, target_id, ops, transient));
+          Status s;
+
+          CATCH_JSON_ERROR(
+              s, meta_tree::ShallowCopyOps(meta, id, extra_metadata, target_id,
+                                           ops, transient));
+          return s;
         } else {
           LOG(ERROR) << status.ToString();
           return status;
@@ -574,13 +590,13 @@ Status VineyardServer::DelData(
          std::vector<ObjectID> const& ids_to_delete,
          std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
         if (status.ok()) {
-          auto status = CATCH_JSON_ERROR(
-              meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
-          if (status.IsMetaTreeSubtreeNotExists()) {
-            return Status::ObjectNotExists("failed to delete: " +
-                                           status.ToString());
+          Status s;
+          CATCH_JSON_ERROR(
+              s, meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
+          if (s.IsMetaTreeSubtreeNotExists()) {
+            return Status::ObjectNotExists("failed to delete: " + s.ToString());
           }
-          return status;
+          return s;
         } else {
           LOG(ERROR) << status.ToString();
           return status;
@@ -600,8 +616,9 @@ Status VineyardServer::DeleteBlobBatch(const std::set<ObjectID>& ids) {
 Status VineyardServer::DeleteAllAt(const json& meta,
                                    InstanceID const instance_id) {
   std::vector<ObjectID> objects_to_cleanup;
-  auto status = CATCH_JSON_ERROR(
-      meta_tree::FilterAtInstance(meta, instance_id, objects_to_cleanup));
+  Status status;
+  CATCH_JSON_ERROR(status, meta_tree::FilterAtInstance(meta, instance_id,
+                                                       objects_to_cleanup));
   RETURN_ON_ERROR(status);
   return this->DelData(objects_to_cleanup, true, true, false /* fastpath */,
                        [](Status const& status) -> Status {
@@ -630,8 +647,11 @@ Status VineyardServer::PutName(const ObjectID object_id,
           }
 
           bool exists = false;
-          VINEYARD_DISCARD(
-              CATCH_JSON_ERROR(meta_tree::Exists(meta, object_id, exists)));
+          {
+            Status s;
+            CATCH_JSON_ERROR(s, meta_tree::Exists(meta, object_id, exists));
+            VINEYARD_DISCARD(s);
+          }
           if (!exists) {
             return Status::ObjectNotExists("failed to put name: object " +
                                            ObjectIDToString(object_id) +
@@ -639,8 +659,11 @@ Status VineyardServer::PutName(const ObjectID object_id,
           }
 
           bool persist = false;
-          VINEYARD_DISCARD(
-              CATCH_JSON_ERROR(meta_tree::IfPersist(meta, object_id, persist)));
+          {
+            Status s;
+            CATCH_JSON_ERROR(s, meta_tree::IfPersist(meta, object_id, persist));
+            VINEYARD_DISCARD(s);
+          }
           if (!persist) {
             return Status::Invalid(
                 "transient objects cannot have name, please persist it first");
@@ -715,8 +738,12 @@ Status VineyardServer::DropName(const std::string& name,
               auto object_id = iter->get<ObjectID>();
               // delete the name in the object meta as well.
               bool exists = false;
-              VINEYARD_DISCARD(
-                  CATCH_JSON_ERROR(meta_tree::Exists(meta, object_id, exists)));
+              {
+                Status s;
+                CATCH_JSON_ERROR(s, meta_tree::Exists(meta, object_id, exists));
+                VINEYARD_DISCARD(s);
+              }
+
               if (exists) {
                 ops.emplace_back(meta_tree::op_t::Del(
                     "/data/" + ObjectIDToString(object_id) + "/__name"));
@@ -777,8 +804,11 @@ Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
                     std::vector<meta_tree::op_t>& ops) {
                   // get signature
                   json tree;
-                  VINEYARD_SUPPRESS(CATCH_JSON_ERROR(meta_tree::GetData(
-                      meta, self->instance_name(), object_id, tree)));
+                  Status s;
+                  CATCH_JSON_ERROR(
+                      s, meta_tree::GetData(meta, self->instance_name(),
+                                            object_id, tree));
+                  VINEYARD_SUPPRESS(s);
                   Signature sig = tree["signature"].get<Signature>();
                   VLOG(2) << "migrate: original " << ObjectIDToString(object_id)
                           << " -> " << SignatureToString(sig);

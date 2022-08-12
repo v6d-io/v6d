@@ -24,28 +24,57 @@ limitations under the License.
 
 #include "nlohmann/json.hpp"
 
+#include "common/util/macros.h"
+
 namespace vineyard {
 
 using json = nlohmann::json;
 
 // Any operation on meta_tree (json) shouldn't break down the vineyard server
 #ifndef CATCH_JSON_ERROR
-#if defined(NDEBUG)
-#define CATCH_JSON_ERROR(expr)                                  \
-  [&]() {                                                       \
-    try {                                                       \
-      return (expr);                                            \
-    } catch (std::out_of_range const& err) {                    \
-      std::clog << "[error] json: " << err.what() << std::endl; \
-      return vineyard::Status::MetaTreeInvalid();               \
-    } catch (vineyard::json::exception const& err) {            \
-      std::clog << "[error] json: " << err.what() << std::endl; \
-      return vineyard::Status::MetaTreeInvalid();               \
-    }                                                           \
-  }()
-#else
-#define CATCH_JSON_ERROR(expr) expr
-#endif  // NDEBUG
+#define CATCH_JSON_ERROR_RETURN_ANY(var, status, expr)                  \
+  do {                                                                  \
+    try {                                                               \
+      var = expr;                                                       \
+    } catch (std::out_of_range const& err) {                            \
+      std::clog << "[error] json: out of range: " << err.what()         \
+                << ("in '" #expr "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (std::invalid_argument const& err) {                        \
+      std::clog << "[error] json: invalid argument: " << err.what()     \
+                << ("in '" #expr "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (vineyard::json::exception const& err) {                    \
+      std::clog << "[error] json: " << err.what() << ("in '" #expr "'") \
+                << std::endl;                                           \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    }                                                                   \
+  } while (0)
+#define CATCH_JSON_ERROR_STATEMENT(status, stmt)                        \
+  do {                                                                  \
+    try {                                                               \
+      stmt;                                                             \
+    } catch (std::out_of_range const& err) {                            \
+      std::clog << "[error] json: out of range: " << err.what()         \
+                << ("in '" #stmt "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (std::invalid_argument const& err) {                        \
+      std::clog << "[error] json: invalid argument: " << err.what()     \
+                << ("in '" #stmt "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (vineyard::json::exception const& err) {                    \
+      std::clog << "[error] json: " << err.what() << ("in '" #stmt "'") \
+                << std::endl;                                           \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    }                                                                   \
+  } while (0)
+
+#define CATCH_JSON_ERROR_RETURN_STATUS(var, expr) \
+  CATCH_JSON_ERROR_RETURN_ANY(var, var, expr)
+#define CATCH_JSON_ERROR(...)                          \
+  GET_MACRO2(__VA_ARGS__, CATCH_JSON_ERROR_RETURN_ANY, \
+             CATCH_JSON_ERROR_RETURN_STATUS)           \
+  (__VA_ARGS__)
 #endif  // CATCH_JSON_ERROR
 
 template <typename... Args>

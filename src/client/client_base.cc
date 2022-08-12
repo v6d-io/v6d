@@ -442,10 +442,7 @@ Status ClientBase::doRead(json& root) {
     connected_ = false;
     return status;
   }
-  status = CATCH_JSON_ERROR([&]() -> Status {
-    root = json::parse(message_in);
-    return Status::OK();
-  }());
+  CATCH_JSON_ERROR(root, status, json::parse(message_in));
   if (!status.ok()) {
     connected_ = false;
   }
