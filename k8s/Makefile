@@ -21,7 +21,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version)
+GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version || shell ${GOBIN}/golangci-lint --version)
 
 all: manager
 

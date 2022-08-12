@@ -19,5 +19,3 @@ package v1alpha1
 type GlobalObjectExpansion interface{}
 
 type LocalObjectExpansion interface{}
-
-type VineyardJobExpansion interface{}

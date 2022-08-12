@@ -47,27 +47,6 @@ webhooks:
     resources:
     - localobjects
   sideEffects: NoneOnDryRun
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-k8s-v6d-io-v1alpha1-vineyardjob
-  failurePolicy: Fail
-  name: mvineyardjob.kb.io
-  rules:
-  - apiGroups:
-    - k8s.v6d.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - vineyardjobs
-  sideEffects: NoneOnDryRun
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -116,25 +95,4 @@ webhooks:
     - UPDATE
     resources:
     - localobjects
-  sideEffects: NoneOnDryRun
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-k8s-v6d-io-v1alpha1-vineyardjob
-  failurePolicy: Fail
-  name: vvineyardjob.kb.io
-  rules:
-  - apiGroups:
-    - k8s.v6d.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - vineyardjobs
   sideEffects: NoneOnDryRun
