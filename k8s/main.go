@@ -27,9 +27,11 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/controllers"
@@ -49,20 +51,8 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-func startManager(channel chan struct{}, metricsAddr string, probeAddr string, enableLeaderElection bool) {
-
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "5fa514f1.v6d.io",
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
+func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string, probeAddr string, enableLeaderElection bool) {
+	var err error
 
 	if err = (&controllers.LocalObjectReconciler{
 		Client: mgr.GetClient(),
@@ -108,9 +98,13 @@ func startManager(channel chan struct{}, metricsAddr string, probeAddr string, e
 	}
 }
 
-func startScheduler(channel chan struct{}) {
+func startScheduler(channel chan struct{}, mgr manager.Manager) {
 	command := app.NewSchedulerCommand(
-		app.WithPlugin(schedulers.Name, schedulers.New),
+		app.WithPlugin(schedulers.Name,
+			func(obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
+				return schedulers.New(mgr.GetClient(), mgr.GetConfig(), obj, handle)
+			},
+		),
 	)
 
 	args := make([]string, 4)
@@ -145,11 +139,24 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		Port:                   9443,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "5fa514f1.v6d.io",
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to setup the manager")
+		os.Exit(1)
+	}
+
 	scheduler := make(chan struct{})
-	go startScheduler(scheduler)
+	go startScheduler(scheduler, mgr)
 
 	manager := make(chan struct{})
-	go startManager(manager, metricsAddr, probeAddr, enableLeaderElection)
+	go startManager(manager, mgr, metricsAddr, probeAddr, enableLeaderElection)
 
 	<-scheduler
 	<-manager
