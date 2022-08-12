@@ -23,14 +23,18 @@ import (
 
 	"k8s.io/klog/v2"
 
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/component-helpers/scheduling/corev1"
 
 	listerv1 "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 
 	"github.com/pkg/errors"
@@ -174,6 +178,7 @@ func (ss *SchedulerState) getLocalObjectsBySignatures(ctx context.Context, signa
 
 // VineyardScheduling is a plugin that schedules pods that requires vineyard objects as inputs.
 type VineyardScheduling struct {
+	client.Client
 	framework.PreFilterPlugin
 	framework.ScorePlugin
 	framework.PostBindPlugin
@@ -181,7 +186,7 @@ type VineyardScheduling struct {
 	podLister       listerv1.PodLister
 	scheduleTimeout *time.Duration
 	state           map[string]*SchedulerState
-	client          *clientset.Clientset
+	clientset       *clientset.Clientset
 }
 
 const (
@@ -199,17 +204,18 @@ const (
 
 // New initializes a vineyard scheduler
 // func New(configuration *runtime.Unknown, handle framework.FrameworkHandle) (framework.Plugin, error) {
-func New(obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
+func New(client client.Client, config *rest.Config, obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	klog.Info("Initializing the vineyard scheduler plugin ...")
 	timeout := Timeout * time.Second
 	state := make(map[string]*SchedulerState)
-	client := clientset.NewForConfigOrDie(ctrl.GetConfigOrDie())
+	clientset := clientset.NewForConfigOrDie(config)
 	scheduling := &VineyardScheduling{
+		Client:          client,
 		handle:          handle,
 		podLister:       handle.SharedInformerFactory().Core().V1().Pods().Lister(),
 		scheduleTimeout: &timeout,
 		state:           state,
-		client:          client,
+		clientset:       clientset,
 	}
 	return scheduling, nil
 }
@@ -307,8 +313,8 @@ func (vs *VineyardScheduling) PostBind(ctx context.Context, _ *framework.CycleSt
 func (vs *VineyardScheduling) MakeSchedulerStateForNamespace(namespace string) *SchedulerState {
 	if _, ok := vs.state[namespace]; !ok {
 		state := make(map[string]map[string]string)
-		localctl := vs.client.K8sV1alpha1().LocalObjects(namespace)
-		globalctl := vs.client.K8sV1alpha1().GlobalObjects(namespace)
+		localctl := vs.clientset.K8sV1alpha1().LocalObjects(namespace)
+		globalctl := vs.clientset.K8sV1alpha1().GlobalObjects(namespace)
 		vs.state[namespace] = &SchedulerState{
 			state:     state,
 			localctl:  localctl,
@@ -335,6 +341,47 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int64, error) {
 			return -1, errors.Wrapf(err, "Failed to parse the replica to int: '%s'", jobReplica)
 		} else {
 			return int64(val), nil
+		}
+	}
+
+	// infer from the ownership
+	ctx := context.TODO()
+	for _, owner := range pod.GetOwnerReferences() {
+		name := types.NamespacedName{Namespace: pod.Namespace, Name: owner.Name}
+
+		switch owner.Kind {
+		case "ReplicaSet":
+			replicaset := &appsv1.ReplicaSet{}
+			if err := vs.Get(ctx, name, replicaset); err == nil {
+				return int64(*replicaset.Spec.Replicas), nil
+			}
+		case "DaemonSet":
+			daemonset := &appsv1.DaemonSet{}
+			if err := vs.Get(ctx, name, daemonset); err == nil {
+				return int64(daemonset.Spec.Size()), nil
+			}
+		case "StatefulSet":
+			statefulset := &appsv1.StatefulSet{}
+			if err := vs.Get(ctx, name, statefulset); err == nil {
+				return int64(*statefulset.Spec.Replicas), nil
+			}
+		case "Job":
+			job := &batchv1.Job{}
+			if err := vs.Get(ctx, name, job); err == nil {
+				return int64(*job.Spec.Parallelism), nil
+			}
+		case "CronJob":
+			crobjob := &batchv1.CronJob{}
+			if err := vs.Get(ctx, name, crobjob); err == nil {
+				return int64(crobjob.Spec.Size()), nil
+			}
+		case "Deployment":
+			deployment := &appsv1.Deployment{}
+			if err := vs.Get(ctx, name, deployment); err == nil {
+				return int64(*deployment.Spec.Replicas), nil
+			}
+		default:
+			klog.V(5).Infof("Unable to infer the job replica, unknown owner kind: %v", owner.Kind)
 		}
 	}
 
