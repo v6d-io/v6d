@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_MIMALLOC_H_
 #define SRC_SERVER_MEMORY_MIMALLOC_H_
 
-#if defined(WITH_MIMALLOC)
-
 #include "common/memory/mimalloc.h"
 
 namespace vineyard {
@@ -26,13 +24,11 @@ namespace memory {
 
 class MimallocAllocator : public Mimalloc {
  public:
-  void* Init(const size_t size);
+  static void* Init(const size_t size);
 };
 
 }  // namespace memory
 
 }  // namespace vineyard
-
-#endif  // WITH_MIMALLOC
 
 #endif  // SRC_SERVER_MEMORY_MIMALLOC_H_

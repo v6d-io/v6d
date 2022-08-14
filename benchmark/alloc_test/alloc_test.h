@@ -31,8 +31,8 @@
  *
  * -------------------------------------------------------------------------------*/
 
-#ifndef ALLOC_TEST_H
-#define ALLOC_TEST_H
+#ifndef BENCHMARK_ALLOC_TEST_ALLOC_TEST_H_
+#define BENCHMARK_ALLOC_TEST_ALLOC_TEST_H_
 
 #include <stdio.h>
 
@@ -47,7 +47,7 @@ class PRNG {
 
  public:
   PRNG() { seedVal = 0; }
-  PRNG(size_t seed_) { seedVal = seed_; }
+  explicit PRNG(size_t seed_) { seedVal = seed_; }
   void seed(size_t seed_) { seedVal = seed_; }
 
   /*FORCE_INLINE uint32_t rng32( uint32_t x )
@@ -92,8 +92,7 @@ FORCE_INLINE size_t calcSizeWithStatsAdjustment(uint64_t randNum,
   uint32_t statClassBase = (randNum & ((1 << maxSizeExp) - 1)) +
                            1;  // adding 1 to avoid dealing with 0
   randNum >>= maxSizeExp;
-  unsigned long idx;
-  idx = __builtin_ctzll(statClassBase);
+  int32_t idx = __builtin_ctzll(statClassBase);
   assert(idx <= maxSizeExp);
   idx += 2;
   size_t szMask = (1 << idx) - 1;
@@ -103,7 +102,7 @@ FORCE_INLINE size_t calcSizeWithStatsAdjustment(uint64_t randNum,
 inline void testDistribution() {
   constexpr size_t exp = 16;
   constexpr size_t testCnt = 0x100000;
-  size_t bins[exp + 1];
+  size_t bins[exp + 1];  // NOLINT(runtime/arrays)
   memset(bins, 0, sizeof(bins));
   size_t total = 0;
 
@@ -112,12 +111,15 @@ inline void testDistribution() {
   for (size_t i = 0; i < testCnt; ++i) {
     size_t val = calcSizeWithStatsAdjustment(rng.rng64(), exp);
     assert(val);
-    if (val <= 8)
+    if (val <= 8) {
       bins[3] += 1;
-    else
-      for (size_t j = 4; j <= exp; ++j)
-        if (val <= (((size_t) 1) << j) && val > (((size_t) 1) << (j - 1)))
+    } else {
+      for (size_t j = 4; j <= exp; ++j) {
+        if (val <= (((size_t) 1) << j) && val > (((size_t) 1) << (j - 1))) {
           bins[j] += 1;
+        }
+      }
+    }
   }
   // printf( "<=3: %zd\n", bins[0] + bins[1] + bins[2] + bins[3] );
   total = 0;
@@ -139,17 +141,18 @@ struct Pareto_80_20_6_Data {
 
 FORCE_INLINE
 void Pareto_80_20_6_Init(Pareto_80_20_6_Data& data, uint32_t itemCount) {
-  data.probabilityRanges[0] = (uint32_t) (UINT32_MAX * Pareto_80_20_6[0]);
-  data.probabilityRanges[5] =
-      (uint32_t) (UINT32_MAX * (1. - Pareto_80_20_6[6]));
-  for (size_t i = 1; i < 5; ++i)
+  data.probabilityRanges[0] = (uint32_t)(UINT32_MAX * Pareto_80_20_6[0]);
+  data.probabilityRanges[5] = (uint32_t)(UINT32_MAX * (1. - Pareto_80_20_6[6]));
+  for (size_t i = 1; i < 5; ++i) {
     data.probabilityRanges[i] = data.probabilityRanges[i - 1] +
-                                (uint32_t) (UINT32_MAX * Pareto_80_20_6[i]);
+                                (uint32_t)(UINT32_MAX * Pareto_80_20_6[i]);
+  }
   data.offsets[0] = 0;
   data.offsets[7] = itemCount;
-  for (size_t i = 0; i < 6; ++i)
+  for (size_t i = 0; i < 6; ++i) {
     data.offsets[i + 1] =
-        data.offsets[i] + (uint32_t) (itemCount * Pareto_80_20_6[6 - i]);
+        data.offsets[i] + (uint32_t)(itemCount * Pareto_80_20_6[6 - i]);
+  }
 }
 
 FORCE_INLINE
@@ -173,4 +176,4 @@ size_t Pareto_80_20_6_Rand(const Pareto_80_20_6_Data& data, uint32_t rnum1,
   return data.offsets[idx] + offsetInRange;
 }
 
-#endif
+#endif  // BENCHMARK_ALLOC_TEST_ALLOC_TEST_H_

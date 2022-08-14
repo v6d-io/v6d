@@ -26,12 +26,13 @@
 // under the License.
  */
 
+#include "server/memory/malloc.h"
+
 #include <stddef.h>
 #include <string>
 #include <vector>
 
 #include "common/util/logging.h"
-#include "server/memory/malloc.h"
 
 namespace vineyard {
 

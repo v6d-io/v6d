@@ -37,14 +37,17 @@ option(BUILD_VINEYARD_JAVA "Build vineyard's java SDK" OFF)
 option(BUILD_VINEYARD_BASIC "Build vineyard's basic data structures" ON)
 option(BUILD_VINEYARD_IO "Enable vineyard's IOAdaptor support" ON)
 option(BUILD_VINEYARD_GRAPH "Enable vineyard's graph data structures" ON)
-option(BUILD_VINEYARD_MALLOC "Build vineyard's implementation for client-side malloc" OFF)
+option(BUILD_VINEYARD_MALLOC "Build vineyard's implementation for client-side malloc" ON)
+option(BUILD_VINEYARD_MALLOC_OVERRIDE "Using the client-side malloc to override the default ones" OFF)
 option(BUILD_VINEYARD_MIGRATION "Enable vineyard's object migration support" ON)
 option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
-option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" ON)
+option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
+option(BUILD_VINEYARD_BENCHMARKS "Generate make targets for vineyard benchmarks" ON)
+option(BUILD_VINEYARD_BENCHMARKS_ALL "Include make targets for vineyard benchmarks to ALL" OFF)
 option(BUILD_VINEYARD_COVERAGE "Build vineyard with coverage information, requires build with Debug" OFF)
 option(BUILD_VINEYARD_PROFILING "Build vineyard with profiling information" OFF)
 
@@ -111,7 +114,7 @@ set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
     STRING "Choose the allocator for vineyard server (vineyardd)."
 )
 set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
-    "dlmalloc" "jemalloc" "mimalloc"
+    "dlmalloc" "mimalloc"
 )
 message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
@@ -215,7 +218,7 @@ macro(add_subdirectory_shared directory)
     add_subdirectory(${directory} ${ARGN})
     set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
     set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE_SAVED}")
-endmacro(add_subdirectory_shared)
+endmacro()
 
 macro(add_subdirectory_static directory)
     set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
@@ -225,7 +228,27 @@ macro(add_subdirectory_static directory)
     add_subdirectory(${directory} ${ARGN})
     set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
     set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE_SAVED}")
-endmacro(add_subdirectory_static)
+endmacro()
+
+macro(add_subdirectory_shared_debug directory)
+    set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
+    set(BUILD_SHARED_LIBS ON)
+    set(CMAKE_BUILD_TYPE_SAVED "${CMAKE_BUILD_TYPE}")
+    set(CMAKE_BUILD_TYPE Debug)
+    add_subdirectory(${directory} ${ARGN})
+    set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
+    set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE_SAVED}")
+endmacro()
+
+macro(add_subdirectory_static_debug directory)
+    set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
+    set(BUILD_SHARED_LIBS OFF)
+    set(CMAKE_BUILD_TYPE_SAVED "${CMAKE_BUILD_TYPE}")
+    set(CMAKE_BUILD_TYPE Debug)
+    add_subdirectory(${directory} ${ARGN})
+    set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
+    set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE_SAVED}")
+endmacro()
 
 macro(find_apache_arrow)
     # workaround for: https://issues.apache.org/jira/browse/ARROW-11836
@@ -261,13 +284,15 @@ macro(find_boost)
     add_compile_options(-DBOOST_SYSTEM_NO_DEPRECATED)
     # eliminate a lot of warnings for newer version of boost library.
     add_compile_options(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
-endmacro(find_boost)
+endmacro()
 
 macro(find_ctti)
     set(MESSAGE_QUIET ON)
+    set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
     add_subdirectory_static(thirdparty/ctti)
     unset(MESSAGE_QUIET)
-endmacro(find_ctti)
+    set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
+endmacro()
 
 macro(find_etcd_cpp_apiv3)
     if(USE_EXTERNAL_ETCD_LIBS)
@@ -279,7 +304,7 @@ macro(find_etcd_cpp_apiv3)
     else()
         include("cmake/BuildEtcdCpp.cmake")
     endif()
-endmacro(find_etcd_cpp_apiv3)
+endmacro()
 
 macro(find_fuse)
     include("cmake/FindFUSE3.cmake")
@@ -321,68 +346,38 @@ macro(find_intel_tbb)
     endif()
 endmacro(find_intel_tbb)
 
-macro(find_jemalloc)
-    # ./configure --disable-shared --enable-static --disable-cxx --enable-stats --disable-initial-exec-tls --with-jemalloc-prefix=vineyard_je_
-    #
-    # see: https://github.com/jemalloc/jemalloc/issues/1237
-
-    # install jemalloc when building static libs
-    if(BUILD_SHARED_LIBS)
-        set(JEMALLOC_INSTALL_CMD echo "No need to install for jemalloc.")
-    else()
-        # see also: https://github.com/jemalloc/jemalloc/issues/231
-        set(JEMALLOC_INSTALL_CMD echo "Installing jemalloc." && ${CMAKE_MAKE_PROGRAM} install_bin install_include install_lib)
-    endif()
-    if(NOT TARGET jemalloc)
-        ExternalProject_Add(libjemalloc
-            SOURCE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc"
-            BUILD_IN_SOURCE 1
-            BUILD_ALWAYS 1
-            CONFIGURE_COMMAND "${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/autogen.sh"
-                --prefix=${CMAKE_INSTALL_PREFIX}
-                --disable-shared
-                --enable-static
-                --disable-cxx
-                --enable-stats
-                --disable-initial-exec-tls
-                --with-jemalloc-prefix=vineyard_je_
-            BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
-            INSTALL_COMMAND ${JEMALLOC_INSTALL_CMD}
-        )
-
-        add_library(jemalloc STATIC IMPORTED)
-        add_dependencies(jemalloc libjemalloc)
-        set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION
-                                                  ${PROJECT_SOURCE_DIR}/thirdparty/jemalloc/lib/libjemalloc_pic.a)
-        set_target_properties(jemalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                  ${PROJECT_SOURCE_DIR}/thirdparty)
-    endif()
-endmacro(find_jemalloc)
-
 macro(find_mimalloc)
     set(MI_OVERRIDE OFF CACHE INTERNAL "")
+    set(MI_OSX_INTERPOSE OFF CACHE INTERNAL "")
+    set(MI_OSX_ZONE OFF CACHE INTERNAL "")
     set(MI_DEBUG_FULL OFF CACHE INTERNAL "")
     set(MI_BUILD_SHARED OFF CACHE INTERNAL "")
     set(MI_BUILD_STATIC ON CACHE INTERNAL "")
     set(MI_BUILD_TESTS OFF CACHE INTERNAL "")
     if(NOT TARGET mimalloc-static)
-        add_subdirectory(thirdparty/mimalloc EXCLUDE_FROM_ALL)
+        add_subdirectory_static(thirdparty/mimalloc EXCLUDE_FROM_ALL)
+        # Its a hack that expose the internal API symbols inside the mimalloc library, even when
+        # we are building a static library.
+        #
+        # I have checked the source of all usages of the following two macros and it is safe to
+        # enable them on Linux and MacOS.
+        target_compile_options(mimalloc-static PRIVATE -DMI_SHARED_LIB -DMI_SHARED_LIB_EXPORT)
     endif()
-endmacro(find_mimalloc)
+endmacro()
 
 macro(find_glog)
     include("cmake/FindGlog.cmake")
-endmacro(find_glog)
+endmacro()
 
 macro(find_gflags)
     include("cmake/FindGFlags.cmake")
-endmacro(find_gflags)
+endmacro()
 
 macro(find_libunwind)
     if(USE_LIBUNWIND)
         include("cmake/FindLibUnwind.cmake")
     endif()
-endmacro(find_libunwind)
+endmacro()
 
 macro(find_nlohmann_json)
     # include nlohmann/json
@@ -406,7 +401,7 @@ macro(find_nlohmann_json)
             add_subdirectory_static(thirdparty/nlohmann-json)
         endif()
     endif()
-endmacro(find_nlohmann_json)
+endmacro()
 
 macro(find_openssl_libraries)
     if (APPLE)
@@ -429,14 +424,14 @@ macro(find_openssl_libraries)
     if (OPENSSL_FOUND)
         include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
     endif()
-endmacro(find_openssl_libraries)
+endmacro()
 
 macro(find_pthread)
     # find pthread
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     set(THREADS_PREFER_PTHREAD_FLAG TRUE)
     find_package(Threads)
-endmacro(find_pthread)
+endmacro()
 
 macro(find_common_libraries)
     find_apache_arrow()
@@ -452,7 +447,7 @@ macro(find_common_libraries)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
     include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
     include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
-endmacro(find_common_libraries)
+endmacro()
 
 # find openssl first since apache-arrow may requires that (on MacOS, installed by brew)
 find_openssl_libraries(QUIET)
@@ -555,26 +550,12 @@ if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUIL
 endif()
 
 if(BUILD_VINEYARD_MALLOC)
-    if(WITH_ALLOCATOR STREQUAL "mimalloc")
-        find_mimalloc()
-    else()
-        find_jemalloc()
-    endif()
+    find_mimalloc()
     set(BUILD_VINEYARD_CLIENT ON)
 endif()
 
-if(WITH_ALLOCATOR STREQUAL "jemalloc")
-    find_jemalloc()
-endif()
-
-if(WITH_ALLOCATOR STREQUAL "mimalloc")
-    #run only once
-    if(NOT BUILD_VINEYARD_MALLOC)
-        find_mimalloc()
-    endif()
-endif()
-
 add_custom_target(vineyard_tests)
+add_custom_target(vineyard_benchmarks)
 add_custom_target(vineyard_codegen)
 add_custom_target(vineyard_codegen_java)
 
@@ -629,14 +610,12 @@ if(BUILD_VINEYARD_SERVER)
     if(WITH_ALLOCATOR STREQUAL "dlmalloc")
         # use dlmalloc
         target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
-    elseif(WITH_ALLOCATOR STREQUAL "jemalloc")
-        target_link_libraries(vineyardd PRIVATE jemalloc ${CMAKE_DL_LIBS})
-        target_compile_options(vineyardd PRIVATE -DWITH_JEMALLOC)
-    elseif(WITH_ALLOCATOR STREQUAL "mimalloc")
-        target_link_libraries(vineyardd PRIVATE mimalloc-static ${CMAKE_DL_LIBS})
+    endif()
+    if(WITH_ALLOCATOR STREQUAL "mimalloc")
+        # use mimalloc
+        find_mimalloc()
         target_compile_options(vineyardd PRIVATE -DWITH_MIMALLOC)
-    else()
-        message(FATAL "The allocator '${WITH_ALLOCATOR}' is not supported")
+        target_link_libraries(vineyardd PRIVATE mimalloc-static)
     endif()
 
     file(GLOB_RECURSE VINEYARD_CLIENT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/src"
@@ -712,16 +691,6 @@ if(BUILD_VINEYARD_CLIENT)
         target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
     endif()
 
-    if(BUILD_VINEYARD_MALLOC)
-        if(WITH_ALLOCATOR STREQUAL "mimalloc")
-            target_link_libraries(vineyard_client PRIVATE mimalloc-static ${CMAKE_DL_LIBS})
-            target_compile_options(vineyard_client PRIVATE -DWITH_MIMALLOC)
-        else()
-            target_link_libraries(vineyard_client PRIVATE jemalloc ${CMAKE_DL_LIBS})
-            target_compile_options(vineyard_client PRIVATE -DWITH_JEMALLOC)
-        endif()
-    endif()
-
     if(BUILD_VINEYARD_PYPI_PACKAGES)
         target_compile_options(vineyard_client PRIVATE -Os)
         target_add_link_options(vineyard_client PRIVATE OPTIONS -Os)
@@ -783,7 +752,6 @@ if(BUILD_VINEYARD_BASIC)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_basic)
 endif()
 
-
 if(BUILD_VINEYARD_IO)
     add_subdirectory(modules/io)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_io)
@@ -816,73 +784,24 @@ if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
 endif()
 
 if(BUILD_VINEYARD_TESTS)
-    enable_testing()
-    file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test"
-                                  "${PROJECT_SOURCE_DIR}/test/*.cc"
-    )
-    foreach(f ${TEST_FILES})
-        string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${f})
-        set(T_NAME ${CMAKE_MATCH_1})
-        message(STATUS "Found unit_test - " ${T_NAME})
+    add_subdirectory(test)
+endif()
 
-        if(${T_NAME} STREQUAL "hosseinmoein_dataframe_test")
-            set(CMAKE_CXX_STANDARD 17)
-        endif()
-
-        if(BUILD_VINEYARD_TESTS_ALL)
-            add_executable(${T_NAME} test/${T_NAME}.cc)
-        else()
-            add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
-        endif()
-
-        target_link_libraries(${T_NAME} PRIVATE ${VINEYARD_INSTALL_LIBS})
-        if(ARROW_SHARED_LIB)
-            target_link_libraries(${T_NAME} PRIVATE ${ARROW_SHARED_LIB})
-        else()
-            target_link_libraries(${T_NAME} PRIVATE ${ARROW_STATIC_LIB})
-        endif()
-
-        if(${LIBUNWIND_FOUND})
-            target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})
-        endif()
-
-        add_test(${T_NAME}, ${T_NAME})
-        add_dependencies(vineyard_tests ${T_NAME})
-
-        if(${T_NAME} STREQUAL "delete_test" OR ${T_NAME} STREQUAL "rpc_delete_test")
-            target_compile_options(${T_NAME} PRIVATE "-fno-access-control")
-        endif()
-
-        if(${T_NAME} STREQUAL "lru_test")
-            target_link_libraries(${T_NAME} PRIVATE TBB::tbb)
-        endif()
-
-        if(${T_NAME} STREQUAL "allocator_test"
-                OR ${T_NAME} STREQUAL "arena_test"
-                OR ${T_NAME} STREQUAL "jemalloc_test")
-            if(WITH_ALLOCATOR STREQUAL "jemalloc")
-                target_compile_options(${T_NAME} PRIVATE -DWITH_JEMALLOC)
-            endif()
-            if(WITH_ALLOCATOR STREQUAL "mimalloc")
-                target_compile_options(${T_NAME} PRIVATE -DWITH_MIMALLOC)
-        endif()
-        endif()
-
-        if(${T_NAME} STREQUAL "hosseinmoein_dataframe_test")
-            set(CMAKE_CXX_STANDARD 14)
-        endif()
-    endforeach()
+if(BUILD_VINEYARD_BENCHMARKS)
+    add_subdirectory(benchmark)
 endif()
 
 file(GLOB_RECURSE FILES_NEED_FORMAT "src/*.cc" "src/*.h" "src/*.hpp" "src/*.vineyard-mod"
                                     "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
                                     "python/*.cc" "python/*.h"
                                     "test/*.cc"
+                                    "benchmark/*.h" "benchmark/*.cc" "benchmark/*.cpp"
 )
 file(GLOB_RECURSE FILES_NEED_LINT "src/*.cc" "src/*.h" "src/*.hpp"
                                   "modules/*.cc" "modules/*.h"
                                   "python/*.cc" "python/*.h"
                                   "test/*.cc"
+                                  "benchmark/*.h" "benchmark/*.cc" "benchmark/*.cpp"
 )
 
 foreach (file_path ${FILES_NEED_FORMAT})

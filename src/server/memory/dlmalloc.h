@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_DLMALLOC_H_
 #define SRC_SERVER_MEMORY_DLMALLOC_H_
 
-#if defined(WITH_DLMALLOC)
-
 #include "common/util/status.h"
 
 namespace vineyard {
@@ -38,7 +36,5 @@ class DLmallocAllocator {
 }  // namespace memory
 
 }  // namespace vineyard
-
-#endif  // WITH_DLMALLOC
 
 #endif  // SRC_SERVER_MEMORY_DLMALLOC_H_

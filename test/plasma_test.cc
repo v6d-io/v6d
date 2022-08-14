@@ -80,8 +80,7 @@ int main(int argc, char** argv) {
     if (!check_seal) {
       VINEYARD_CHECK_OK(status);
     } else {
-      LOG(INFO) << "status should be not sealed: " << status.ToString()
-                << std::endl;
+      LOG(INFO) << "status should be unsealed: " << status.ToString();
       CHECK(status.IsObjectNotSealed());
       return results;
     }

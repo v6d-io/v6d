@@ -125,8 +125,7 @@ int main(int argc, char** argv) {
   auto vec =
       std::dynamic_pointer_cast<Vector<int>>(client.GetObject(result->id()));
   for (size_t index = 0; index < vec->length(); ++index) {
-    std::cout << "element at " << index << " is: " << (*vec)[index]
-              << std::endl;
+    LOG(INFO) << "element at " << index << " is: " << (*vec)[index];
   }
 
   LOG(INFO) << "Passed custom vector tests...";

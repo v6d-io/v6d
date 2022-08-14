@@ -24,7 +24,9 @@ limitations under the License.
 
 #include "boost/bind.hpp"
 
-#include "common/util//logging.h"
+#include "common/util/json.h"
+#include "common/util/likely.h"
+#include "common/util/logging.h"
 #include "server/server/vineyard_server.h"
 
 namespace vineyard {
@@ -81,7 +83,7 @@ Status VineyardRunner::Finalize() { return Status::OK(); }
 Status VineyardRunner::GetRootSession(std::shared_ptr<VineyardServer>& vs_ptr) {
   session_dict_t::const_accessor accessor;
   if (!sessions_.find(accessor, RootSessionID())) {
-    return Status::Invalid("No root session.");
+    return Status::Invalid("Cannot find the root session.");
   }
   vs_ptr = accessor->second;
   return Status::OK();
@@ -101,8 +103,8 @@ Status VineyardRunner::CreateNewSession(
   auto vs_ptr = std::make_shared<VineyardServer>(
       spec, session_id, shared_from_this(), context_, meta_context_, callback);
   sessions_.emplace(session_id, vs_ptr);
-  LOG(INFO) << "Vineyard creates a new session with SessionID = "
-            << SessionIDToString(session_id) << std::endl;
+  LOG(INFO) << "Vineyard creates a new session with '"
+            << SessionIDToString(session_id) << "'";
   return vs_ptr->Serve(bulk_store_type);
 }
 
@@ -113,7 +115,9 @@ Status VineyardRunner::Delete(SessionID const& sid) {
   }
   accessor->second->Stop();
   sessions_.erase(accessor);
-  LOG(INFO) << "Delete session : " << SessionIDToString(sid) << std::endl;
+  if (unlikely(sid != RootSessionID())) {
+    LOG(INFO) << "Deleting session : " << SessionIDToString(sid);
+  }
   return Status::OK();
 }
 

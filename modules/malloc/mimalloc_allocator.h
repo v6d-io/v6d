@@ -26,13 +26,26 @@ limitations under the License.
 
 #include "client/client.h"
 #include "client/ds/blob.h"
-#include "common/memory/jemalloc.h"
-#include "common/memory/mimalloc.h"
 
 namespace vineyard {
 
+namespace memory {
+namespace detail {
+
+// avoid requires mimalloc's headers in the public interfaces of vineyard
+
+Status _initialize(Client& client, int& fd, size_t& size, uintptr_t& base,
+                   uintptr_t& space, size_t requested_size);
+void* _allocate(size_t size);
+void* _reallocate(void* pointer, size_t size);
+void _deallocate(void* pointer, size_t size);
+size_t _allocated_size(void* pointer);
+
+}  // namespace detail
+}  // namespace memory
+
 template <typename T>
-struct VineyardMimallocAllocator : public memory::Mimalloc {
+struct VineyardMimallocAllocator {
  public:
   using value_type = T;
   using size_type = std::size_t;
@@ -41,16 +54,11 @@ struct VineyardMimallocAllocator : public memory::Mimalloc {
   using difference_type =
       typename std::pointer_traits<pointer>::difference_type;
 
-  explicit VineyardMimallocAllocator(
-      const size_t size = std::numeric_limits<size_t>::max())
-      : client_(vineyard::Client::Default()) {
-    VINEYARD_CHECK_OK(_initialize_arena(size));
-  }
-
-  VineyardMimallocAllocator(
-      Client& client, const size_t size = std::numeric_limits<size_t>::max())
-      : client_(client) {
-    VINEYARD_CHECK_OK(_initialize_arena(size));
+  // returns a singleton instance
+  static VineyardMimallocAllocator<T>* Create(Client& client) {
+    static VineyardMimallocAllocator<T>* allocator =
+        new VineyardMimallocAllocator<T>(client);
+    return allocator;
   }
 
   ~VineyardMimallocAllocator() noexcept { VINEYARD_DISCARD(Release()); }
@@ -58,37 +66,34 @@ struct VineyardMimallocAllocator : public memory::Mimalloc {
   template <typename U>
   VineyardMimallocAllocator(const VineyardMimallocAllocator<U>&) noexcept {}
 
-  T* allocate(size_t size, const void* = nullptr) {
-    return reinterpret_cast<T*>(Mimalloc::Allocate(size));
+  T* allocate(size_t size, const void* hint = nullptr) {
+    return reinterpret_cast<T*>(memory::detail::_allocate(size));
   }
 
-  void deallocate(T* ptr, size_t size) {
-    if (freezed_.find(reinterpret_cast<uintptr_t>(ptr)) != freezed_.end()) {
-      Mimalloc::Free(ptr, size);
-    }
+  T* reallocate(void* pointer, size_t size) {
+    return reinterpret_cast<T*>(memory::detail::_reallocate(pointer, size));
+  }
+
+  void deallocate(T* ptr, size_t size = 0) {
+    memory::detail::_deallocate(ptr, size);
   }
 
   std::shared_ptr<Blob> Freeze(T* ptr) {
-    size_t allocated_size = Mimalloc::GetAllocatedSize(ptr);
-    std::clog << "freeze the pointer " << ptr << " of size " << allocated_size
+    size_t size = memory::detail::_allocated_size(ptr);
+    std::clog << "freezing the pointer " << ptr << " of size " << size
               << std::endl;
     offsets_.emplace_back(reinterpret_cast<uintptr_t>(ptr) - space_);
-    sizes_.emplace_back(allocated_size);
+    sizes_.emplace_back(size);
     freezed_.emplace(reinterpret_cast<uintptr_t>(ptr));
     ObjectID id = base_ + (reinterpret_cast<uintptr_t>(ptr) - space_);
     return Blob::FromAllocator(client_, id, reinterpret_cast<uintptr_t>(ptr),
-                               allocated_size);
+                               size);
   }
 
   Status Release() {
     std::clog << "mimalloc arena finalized: of " << offsets_.size()
               << " blocks are in use." << std::endl;
     return client_.ReleaseArena(fd_, offsets_, sizes_);
-  }
-
-  Status Renew() {
-    RETURN_ON_ERROR(client_.ReleaseArena(fd_, offsets_, sizes_));
-    return _initialize_arena(available_size_);
   }
 
   template <typename U>
@@ -99,36 +104,37 @@ struct VineyardMimallocAllocator : public memory::Mimalloc {
  private:
   Client& client_;
   int fd_;
-  uintptr_t base_, space_;
-  size_t available_size_;
-  std::vector<size_t> offsets_, sizes_;
+  size_t size_;
+  uintptr_t base_;
+  uintptr_t space_;
+  std::vector<size_t> offsets_;
+  std::vector<size_t> sizes_;
   std::set<uintptr_t> freezed_;
 
-  Status _initialize_arena(size_t size) {
-    std::clog << "make arena: " << size << std::endl;
-    RETURN_ON_ERROR(
-        client_.CreateArena(size, fd_, available_size_, base_, space_));
-    Mimalloc::Init(reinterpret_cast<void*>(space_), available_size_);
-    std::clog << "mimalloc arena initialized: " << available_size_ << ", at "
-              << reinterpret_cast<void*>(space_) << std::endl;
+  explicit VineyardMimallocAllocator(
+      Client& client, const size_t size = std::numeric_limits<size_t>::max())
+      : client_(client) {
+    VINEYARD_CHECK_OK(
+        memory::detail::_initialize(client_, fd_, size_, base_, space_, size));
 
     // reset the context
     offsets_.clear();
     sizes_.clear();
     freezed_.clear();
-    return Status::OK();
   }
 };
 
 template <typename T, typename U>
 constexpr bool operator==(const VineyardMimallocAllocator<T>&,
                           const VineyardMimallocAllocator<U>&) noexcept {
+  // singleton
   return true;
 }
 
 template <typename T, typename U>
 constexpr bool operator!=(const VineyardMimallocAllocator<T>&,
                           const VineyardMimallocAllocator<U>&) noexcept {
+  // singleton
   return false;
 }
 

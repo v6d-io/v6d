@@ -24,8 +24,8 @@ limitations under the License.
 #define LRU \
   detail::ColdObjectTracker<uint64_t, std::string, decltype(nullptr)>::LRU
 
-using namespace vineyard;  // NOLINT
-using namespace std;       // NOLINT
+using namespace vineyard;  // NOLINT(build/namespaces)
+using namespace std;       // NOLINT(build/namespaces)
 
 void BasicTest() {
   LRU lru_;

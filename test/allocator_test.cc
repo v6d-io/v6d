@@ -21,17 +21,10 @@ limitations under the License.
 #include <string>
 #include <thread>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
-#include "basic/ds/array.h"
 #include "client/client.h"
-#include "client/ds/object_meta.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
-#if defined(WITH_JEMALLOC)
-#include "malloc/allocator.h"
-#endif
+
 #if defined(WITH_MIMALLOC)
 #include "malloc/mimalloc_allocator.h"
 #endif
@@ -49,32 +42,17 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-#if defined(WITH_JEMALLOC)
-
-  VineyardAllocator<void> allocator(client);
-
-  void* p1 = allocator.Allocate(1025);
-  allocator.Free(p1);
-
-  void* p2 = allocator.Allocate(1026);
-  allocator.Freeze(p2);
-
-  VINEYARD_CHECK_OK(allocator.Release());
-
-#endif
-
 #if defined(WITH_MIMALLOC)
+  VineyardMimallocAllocator<void>* allocator =
+      VineyardMimallocAllocator<void>::Create(client);
 
-  VineyardMimallocAllocator<void> allocator(client);
+  void* p1 = allocator->allocate(1025);
+  allocator->deallocate(p1);
 
-  void* p1 = allocator.Allocate(1025);
-  allocator.Free(p1);
+  void* p2 = allocator->allocate(1026);
+  allocator->Freeze(p2);
 
-  void* p2 = allocator.Allocate(1026);
-  allocator.Freeze(p2);
-
-  VINEYARD_CHECK_OK(allocator.Release());
-
+  VINEYARD_CHECK_OK(allocator->Release());
 #endif
 
   LOG(INFO) << "Passed allocator tests...";

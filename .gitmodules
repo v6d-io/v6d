@@ -10,10 +10,6 @@
 	path = thirdparty/cpprestsdk
 	url = https://github.com/microsoft/cpprestsdk.git
 	shallow = true
-[submodule "thirdparty/boost-leaf"]
-	path = modules/graph/thirdparty/boost-leaf
-	url = https://github.com/boostorg/leaf.git
-	shallow = true
 [submodule "thirdparty/nlohmann-json"]
 	path = thirdparty/nlohmann-json
 	url = https://github.com/nlohmann/json.git
@@ -22,17 +18,19 @@
 	path = thirdparty/intel-tbb
 	url = https://github.com/oneapi-src/oneTBB.git
 	shallow = true
-[submodule "thirdparty/jemalloc"]
-	path = thirdparty/jemalloc
-	url = https://github.com/jemalloc/jemalloc.git
-	shallow = true
 [submodule "thirdparty/ctti"]
 	path = thirdparty/ctti
 	url = https://github.com/Manu343726/ctti.git
 	shallow = true
-[submodule "modules/hosseinmoein-dataframe/thirdparty/DataFrame"]
-	path = modules/hosseinmoein-dataframe/thirdparty/DataFrame
-	url = https://github.com/hosseinmoein/DataFrame.git
 [submodule "thirdparty/mimalloc"]
 	path = thirdparty/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
+	shallow = true
+[submodule "thirdparty/boost-leaf"]
+	path = modules/graph/thirdparty/boost-leaf
+	url = https://github.com/boostorg/leaf.git
+	shallow = true
+[submodule "modules/hosseinmoein-dataframe/thirdparty/DataFrame"]
+	path = modules/hosseinmoein-dataframe/thirdparty/DataFrame
+	url = https://github.com/hosseinmoein/DataFrame.git
+	shallow = true

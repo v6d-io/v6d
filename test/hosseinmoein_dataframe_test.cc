@@ -16,12 +16,14 @@ limitations under the License.
 #include <ctime>
 #include <iostream>
 
-#include "DataFrame/DataFrame.h"
-
 #include "client/client.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
+
+#if defined(WITH_HOSSEINMOEIN_DATAFRAME)
+#include "DataFrame/DataFrame.h"
 #include "hosseinmoein-dataframe/hosseinmoein_dataframe.h"
+#endif
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -36,7 +38,6 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 #define OFF 0
 #define ON 1
-#define OUTPUT_SWITCH ON
 
 int row;
 
@@ -64,6 +65,7 @@ void fill_random_data(std::vector<T>& vec) {
 
 template <typename T>
 int test_func(Client& client) {
+#if defined(WITH_HOSSEINMOEIN_DATAFRAME)
   auto builder = HDataFrameBuilder<T>();
   StdDataFrame<T> data_frame_input;
   StdDataFrame<T> data_frame_output;
@@ -85,16 +87,14 @@ int test_func(Client& client) {
   fill_random_data(double_col);
   fill_random_data(float_col);
 
-#if OUTPUT_SWITCH == ON
-  std::cout << "Write:" << std::endl;
-  std::cout << "idx_col:" << std::endl << idx_col << std::endl;
-  std::cout << "int32_col:" << std::endl << int32_col << std::endl;
-  std::cout << "int64_col:" << std::endl << int64_col << std::endl;
-  std::cout << "uint32_col:" << std::endl << uint32_col << std::endl;
-  std::cout << "uint64_col:" << std::endl << uint64_col << std::endl;
-  std::cout << "double_col:" << std::endl << double_col << std::endl;
-  std::cout << "float_col:" << std::endl << float_col << std::endl;
-#endif
+  DLOG(INFO) << "Write:";
+  DLOG(INFO) << "idx_col:" << std::endl << idx_col;
+  DLOG(INFO) << "int32_col:" << std::endl << int32_col;
+  DLOG(INFO) << "int64_col:" << std::endl << int64_col;
+  DLOG(INFO) << "uint32_col:" << std::endl << uint32_col;
+  DLOG(INFO) << "uint64_col:" << std::endl << uint64_col;
+  DLOG(INFO) << "double_col:" << std::endl << double_col;
+  DLOG(INFO) << "float_col:" << std::endl << float_col;
 
   data_frame_input.load_data(std::move(idx_col),
                              std::make_pair("int32_col", int32_col),
@@ -124,16 +124,14 @@ int test_func(Client& client) {
       data_frame_output.template get_column<double>("double_col");
   float_col_result = data_frame_output.template get_column<float>("float_col");
 
-#if OUTPUT_SWITCH == ON
-  std::cout << "Read:" << std::endl;
-  std::cout << "idx_col:" << std::endl << idx_col_result << std::endl;
-  std::cout << "int32_col:" << std::endl << int32_col_result << std::endl;
-  std::cout << "int64_col:" << std::endl << int64_col_result << std::endl;
-  std::cout << "uint32_col:" << std::endl << uint32_col_result << std::endl;
-  std::cout << "uint64_col:" << std::endl << uint64_col_result << std::endl;
-  std::cout << "double_col:" << std::endl << double_col_result << std::endl;
-  std::cout << "float_col:" << std::endl << float_col_result << std::endl;
-#endif
+  DLOG(INFO) << "Read:";
+  DLOG(INFO) << "idx_col:" << std::endl << idx_col_result;
+  DLOG(INFO) << "int32_col:" << std::endl << int32_col_result;
+  DLOG(INFO) << "int64_col:" << std::endl << int64_col_result;
+  DLOG(INFO) << "uint32_col:" << std::endl << uint32_col_result;
+  DLOG(INFO) << "uint64_col:" << std::endl << uint64_col_result;
+  DLOG(INFO) << "double_col:" << std::endl << double_col_result;
+  DLOG(INFO) << "float_col:" << std::endl << float_col_result;
 
   for (int i = 0; i < row; i++) {
     if (idx_col_result[i] != idx_col[i] ||
@@ -147,11 +145,62 @@ int test_func(Client& client) {
     }
   }
 
+#endif  // WITH_HOSSEINMOEIN_DATAFRAME
+  return 0;
+}
+
+int test_different_types(Client& client) {
+  {
+    int ret = test_func<int32_t>(client);
+    if (ret) {
+      LOG(INFO) << "Failed case index type: int32_t";
+      return ret;
+    }
+  }
+
+  {
+    int ret = test_func<int64_t>(client);
+    if (ret) {
+      LOG(INFO) << "Failed case index type: int64_t";
+      return ret;
+    }
+  }
+
+  {
+    int ret = test_func<uint32_t>(client);
+    if (ret) {
+      LOG(INFO) << "Failed case index type: uint32_t";
+      return ret;
+    }
+  }
+
+  {
+    int ret = test_func<uint64_t>(client);
+    if (ret) {
+      LOG(INFO) << "Failed case index type: uint64_t";
+      return ret;
+    }
+  }
+
+  {
+    int ret = test_func<double>(client);
+    if (ret) {
+      LOG(INFO) << "Failed case index type: double";
+      return ret;
+    }
+  }
+
+  {
+    int ret = test_func<float>(client);
+    if (ret) {
+      LOG(INFO) << "Failed case index type: float";
+      return ret;
+    }
+  }
   return 0;
 }
 
 int main(int argc, char** argv) {
-  int ret = 0;
   if (argc < 2) {
     printf("usage ./hosseinmoein_dataframe_test <ipc_socket>");
     return 1;
@@ -162,61 +211,15 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   init();
-  {
-    ret = test_func<int32_t>(client);
-    if (ret) {
-      LOG(INFO) << "Failed case index type: int32_t" << std::endl;
-      goto out;
-    }
-  }
 
-  {
-    ret = test_func<int64_t>(client);
-    if (ret) {
-      LOG(INFO) << "Failed case index type: int64_t" << std::endl;
-      goto out;
-    }
-  }
-
-  {
-    ret = test_func<uint32_t>(client);
-    if (ret) {
-      LOG(INFO) << "Failed case index type: uint32_t" << std::endl;
-      goto out;
-    }
-  }
-
-  {
-    ret = test_func<uint64_t>(client);
-    if (ret) {
-      LOG(INFO) << "Failed case index type: uint64_t" << std::endl;
-      goto out;
-    }
-  }
-
-  {
-    ret = test_func<double>(client);
-    if (ret) {
-      LOG(INFO) << "Failed case index type: double" << std::endl;
-      goto out;
-    }
-  }
-
-  {
-    ret = test_func<float>(client);
-    if (ret) {
-      LOG(INFO) << "Failed case index type: float" << std::endl;
-      goto out;
-    }
-  }
-
-out:
-  if (ret)
+  int ret = test_different_types(client);
+  if (ret) {
     LOG(INFO) << "Hosseinmoein dataframe test:" << COLOR_RED << " FAIL"
-              << COLOR_WHITE << std::endl;
-  else
+              << COLOR_WHITE;
+  } else {
     LOG(INFO) << "Hosseinmoein dataframe test:" << COLOR_GREEN << " PASS"
-              << COLOR_WHITE << std::endl;
+              << COLOR_WHITE;
+  }
 
   client.Disconnect();
   return ret;
