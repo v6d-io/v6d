@@ -4,6 +4,10 @@
 
 #pragma once
 
+// Avoid include "flat_hash_map.hpp" more than once and conflicts
+// with the ska::flat_hash_map bundled in other libraries.
+#ifndef SKA_NOINLINE
+
 #include <cstdint>
 #include <cstddef>
 #include <functional>
@@ -1617,3 +1621,5 @@ struct power_of_two_std_hash : std::hash<T>
 };
 
 } // end namespace ska
+
+#endif  // SKA_NOINLINE

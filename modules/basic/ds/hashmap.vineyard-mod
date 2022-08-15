@@ -56,6 +56,29 @@ struct prime_hash_policy {
   size_t current_prime_;
 };
 
+// Using prime_hash_policy in flat_hash_map.
+#if defined(USE_WY_HASH)
+template <typename T>
+struct prime_number_hash : wy::hash<T> {
+  typedef ska::prime_number_hash_policy hash_policy;
+};
+
+template <typename U>
+struct typename_t<prime_number_hash<U>> {
+  inline static const std::string name() { return type_name<wy::hash<U>>(); }
+};
+#else
+template <typename T>
+struct prime_number_hash : std::hash<T> {
+  typedef ska::prime_number_hash_policy hash_policy;
+};
+
+template <typename U>
+struct typename_t<prime_number_hash<U>> {
+  inline static const std::string name() { return type_name<std::hash<U>>(); }
+};
+#endif
+
 template <typename K, typename V, typename H, typename E>
 class HashmapBaseBuilder;
 
@@ -67,22 +90,13 @@ class HashmapBaseBuilder;
  * @tparam std::hash<K> The hash function for the key.
  * @tparam std::equal_to<K> The compare function for the key.
  */
-template <typename K, typename V,
-#if defined(USE_WY_HASH)
-          typename H = wy::hash<K>,
-#else
-          typename H = std::hash<K>,
-#endif
+template <typename K, typename V, typename H = prime_number_hash<K>,
           typename E = std::equal_to<K>>
 class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
                              public H,
                              public E {
  public:
-#if defined(USE_WY_HASH)
-  using KeyHash = typename wy::hash<K>;
-#else
-  using KeyHash = typename std::hash<K>;
-#endif
+  using KeyHash = prime_number_hash<K>;
   using KeyEqual = typename std::equal_to<K>;
 
   using T = std::pair<K, V>;
