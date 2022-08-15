@@ -3,18 +3,18 @@
 file(GLOB_RECURSE BASIC_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "*.cc")
 
 add_library(vineyard_malloc ${BASIC_SRC_FILES})
-target_link_libraries(vineyard_malloc PUBLIC vineyard_client
-                                             ${ARROW_SHARED_LIB}
-)
+target_link_libraries(vineyard_malloc PUBLIC vineyard_client)
 
-if(WITH_ALLOCATOR STREQUAL "jemalloc")
-    target_link_libraries(vineyard_malloc PRIVATE -Wl,--whole-archive jemalloc -Wl,--no-whole-archive ${CMAKE_DL_LIBS})
-    target_compile_options(vineyard_malloc PRIVATE -DWITH_JEMALLOC)
+# requires mimalloc
+if(APPLE)
+    target_link_libraries(vineyard_malloc PRIVATE -Wl,-all_load mimalloc-static)
+else()
+    target_link_libraries(vineyard_malloc PRIVATE -Wl,--whole-archive mimalloc-static -Wl,--no-whole-archive)
 endif()
 
-if(WITH_ALLOCATOR STREQUAL "mimalloc")
-    target_link_libraries(vineyard_malloc PRIVATE -Wl,--whole-archive mimalloc-static -Wl,--no-whole-archive ${CMAKE_DL_LIBS})
-    target_compile_options(vineyard_malloc PRIVATE -DWITH_MIMALLOC)
+if(BUILD_VINEYARD_MALLOC_OVERRIDE)
+    # TODO(not implemented yet)
+    target_compile_options(vineyard_malloc PRIVATE -DVINEYARD_MALLOC_OVERRIDE)
 endif()
 
 install_vineyard_target(vineyard_malloc)

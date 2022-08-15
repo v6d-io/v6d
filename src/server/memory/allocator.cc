@@ -36,35 +36,22 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include <cstring>
 #include <string>
 
-#if defined(WITH_DLMALLOC)
-#include "server/memory/dlmalloc.h"
-#endif
-
-#if defined(WITH_JEMALLOC)
-#include "server/memory/jemalloc.h"
-#endif
-
-#if defined(WITH_MIMALLOC)
-#include "server/memory/mimalloc.h"
-#endif
-
 #include "common/util/env.h"
 #include "common/util/logging.h"
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"
 
+#if defined(WITH_DLMALLOC)
+#include "server/memory/dlmalloc.h"
+#endif
+#if defined(WITH_MIMALLOC)
+#include "server/memory/mimalloc.h"
+#endif
+
 namespace vineyard {
 
 int64_t BulkAllocator::footprint_limit_ = 0;
 int64_t BulkAllocator::allocated_ = 0;
-
-#if defined(WITH_JEMALLOC)
-BulkAllocator::Allocator BulkAllocator::allocator_{};
-#endif
-
-#if defined(WITH_MIMALLOC)
-BulkAllocator::Allocator BulkAllocator::miallocator_{};
-#endif
 
 void* BulkAllocator::Init(const size_t size) {
 #if __linux__
@@ -77,12 +64,11 @@ void* BulkAllocator::Init(const size_t size) {
   if (shmmax < static_cast<float>(size)) {
     LOG(WARNING)
         << "The 'size' is greater than the maximum shared memory size ("
-        << shmmax << ")";
-    LOG(WARNING) << std::endl;
+        << shmmax << ")" << std::endl;
     LOG(WARNING)
         << "    If you are inside a Docker container, please pass the argument "
-           "'--shm-size' when 'docker run'.";
-    LOG(WARNING) << std::endl;
+           "'--shm-size' when 'docker run'."
+        << std::endl;
 
     // try remount
     //
@@ -98,17 +84,13 @@ void* BulkAllocator::Init(const size_t size) {
 #if defined(WITH_DLMALLOC)
   return Allocator::Init(size);
 #endif
-#if defined(WITH_JEMALLOC)
-  // jemalloc requires some memory for its internal use (arena metadata and
-  // padding).
-  size_t arena_metadata_size = 16 * 1024 * 1024;
-  return allocator_.Init(size + arena_metadata_size);
-#endif
 #if defined(WITH_MIMALLOC)
   // mimalloc requires 64MB (segment aligned) for each thread
-  size_t arena_aligned_size =
-      64 * 1024 * 1024 * (std::thread::hardware_concurrency() + 1);
-  return miallocator_.Init(size + arena_aligned_size);
+  size_t mimalloc_meta_size =
+      MIMALLOC_SEGMENT_ALIGNED_SIZE * (std::thread::hardware_concurrency() + 1);
+  // leave spaces for memory fragmentation
+  return Allocator::Init(static_cast<size_t>(static_cast<double>(size) * 1.2) +
+                         mimalloc_meta_size);
 #endif
 }
 
@@ -117,15 +99,7 @@ void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
     return nullptr;
   }
 
-#if defined(WITH_DLMALLOC)
   void* mem = Allocator::Allocate(bytes, alignment);
-#endif
-#if defined(WITH_JEMALLOC)
-  void* mem = allocator_.Allocate(bytes, alignment);
-#endif
-#if defined(WITH_MIMALLOC)
-  void* mem = miallocator_.Allocate(bytes, alignment);
-#endif
   if (mem != nullptr) {
     allocated_ += bytes;
   }
@@ -133,15 +107,7 @@ void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
 }
 
 void BulkAllocator::Free(void* mem, size_t bytes) {
-#if defined(WITH_DLMALLOC)
-  Allocator::Free(mem);
-#endif
-#if defined(WITH_JEMALLOC)
-  allocator_.Free(mem);
-#endif
-#if defined(WITH_MIMALLOC)
-  miallocator_.Free(mem);
-#endif
+  Allocator::Free(mem, bytes);
   allocated_ -= bytes;
 }
 

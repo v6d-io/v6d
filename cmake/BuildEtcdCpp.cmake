@@ -21,6 +21,11 @@ add_subdirectory_static(thirdparty/cpprestsdk EXCLUDE_FROM_ALL)
 set(CPPREST_INCLUDE_DIR thirdparty/cpprestsdk/Release/include)
 set(CPPREST_LIB cpprest)
 
+# disable a warning message inside cpprestsdk on Mac with llvm/clang
+if(W_NO_UNUSED_BUT_SET_PARAMETER)
+    target_compile_options(cpprest PRIVATE -Wno-unused-but-set-parameter)
+endif()
+
 # build etcd-cpp-apiv3
 add_subdirectory_static(thirdparty/etcd-cpp-apiv3 EXCLUDE_FROM_ALL)
 set(ETCD_CPP_LIBRARIES etcd-cpp-api)

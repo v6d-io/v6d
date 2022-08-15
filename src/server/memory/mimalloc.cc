@@ -13,16 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#if defined(WITH_MIMALLOC)
+#include "server/memory/mimalloc.h"
 
 #include <sys/mman.h>
 
 #include <stdio.h>
 
 #include "common/util/status.h"
-#include "mimalloc/include/mimalloc.h"
 #include "server/memory/malloc.h"
-#include "server/memory/mimalloc.h"
+
+#if defined(WITH_MIMALLOC)
 
 namespace vineyard {
 

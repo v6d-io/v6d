@@ -2,14 +2,13 @@
 file(GLOB DATAFRAME_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}"
                               "*.cc")
 
-set(CMAKE_CXX_STANDARD 17)
-
 set(HMDF_TESTING OFF CACHE BOOL "Build tests of hosseinmoein/dataframe")
 set(HMDF_EXAMPLES OFF CACHE BOOL "Build examples of hosseinmoein/dataframe")
 set(HMDF_BENCHMARKS OFF CACHE BOOL "Build benchmarks of hosseinmoein/dataframe")
 add_subdirectory_static(thirdparty/DataFrame EXCLUDE_FROM_ALL)
 
 add_library(vineyard_hosseinmoein_dataframe ${DATAFRAME_SRC_FILES})
+set_property(TARGET vineyard_hosseinmoein_dataframe PROPERTY CXX_STANDARD 17)
 target_link_libraries(vineyard_hosseinmoein_dataframe PUBLIC vineyard_client
                                                              vineyard_basic)
 target_link_libraries(vineyard_hosseinmoein_dataframe PRIVATE DataFrame::DataFrame)

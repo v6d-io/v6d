@@ -36,7 +36,6 @@ namespace vineyard {
 
 namespace memory {
 class DLmallocAllocator;
-class JemallocAllocator;
 class MimallocAllocator;
 }  // namespace memory
 
@@ -78,10 +77,6 @@ class BulkAllocator {
   using Allocator = vineyard::memory::DLmallocAllocator;
 #endif
 
-#if defined(WITH_JEMALLOC)
-  using Allocator = vineyard::memory::JemallocAllocator;
-#endif
-
 #if defined(WITH_MIMALLOC)
   using Allocator = vineyard::memory::MimallocAllocator;
 #endif
@@ -89,14 +84,6 @@ class BulkAllocator {
  private:
   static int64_t allocated_;
   static int64_t footprint_limit_;
-
-#if defined(WITH_JEMALLOC)
-  static Allocator allocator_;
-#endif
-
-#if defined(WITH_MIMALLOC)
-  static Allocator miallocator_;
-#endif
 };
 
 }  // namespace vineyard

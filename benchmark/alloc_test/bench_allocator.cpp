@@ -41,38 +41,19 @@
 #include <string>
 #include <thread>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-#include "glog/logging.h"
+#include "alloc_test.h"  // NOLINT(build/include_subdir)
 
-#if defined(BENCH_JEMALLOC)
-#define JEMALLOC_NO_DEMANGLE
-#include "jemalloc/include/jemalloc/jemalloc.h"
-#undef JEMALLOC_NO_DEMANGLE
-#endif
+#include "common/util/likely.h"
+#include "malloc/malloc_wrapper.h"
 
 #if defined(BENCH_MIMALLOC)
+#include "malloc/mimalloc_allocator.h"
 #include "mimalloc/include/mimalloc.h"
 #endif
 
-#include "alloc_test.h"
-#include "basic/ds/array.h"
-#include "client/client.h"
-#include "client/ds/object_meta.h"
-#include "common/util/env.h"
-#include "common/util/functions.h"
-#include "common/util/likely.h"
-#include "malloc/allocator.h"
-#include "malloc/arena_allocator.h"
-#include "malloc/malloc_wrapper.h"
-
-using namespace vineyard;  // NOLINT(build/namespaces)
-
 // #define BENCH_SYSTEM
-// #define BENCH_JEMALLOC
 // #define BENCH_MIMALLOC
 // #define BENCH_VINEYARD
-// #define BENCH_VINEYARD_ARENA
 
 size_t GetMillisecondCount() {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -109,19 +90,13 @@ void bench() {
   TestBin* baseBuff = nullptr;
 #if defined(BENCH_SYSTEM)
   baseBuff = reinterpret_cast<TestBin*>(malloc(maxItems * sizeof(TestBin)));
-#elif defined(BENCH_JEMALLOC)
-  baseBuff = reinterpret_cast<TestBin*>(
-      vineyard_je_malloc(maxItems * sizeof(TestBin)));
 #elif defined(BENCH_MIMALLOC)
   baseBuff = reinterpret_cast<TestBin*>(mi_malloc(maxItems * sizeof(TestBin)));
 #elif defined(BENCH_VINEYARD)
   baseBuff =
       reinterpret_cast<TestBin*>(vineyard_malloc(maxItems * sizeof(TestBin)));
-#elif defined(BENCH_VINEYARD_ARENA)
-  baseBuff = reinterpret_cast<TestBin*>(
-      vineyard_arena_malloc(maxItems * sizeof(TestBin)));
 #else
-  baseBuff = reinterpret_cast<TestBin*>(malloc(maxItems * sizeof(TestBin)));
+#error "One of BENCH_SYSTEM, BENCH_MIMALLOC, BENCH_VINEYARD must be defined"
 #endif
   assert(baseBuff);
   allocatedSz += maxItems * sizeof(TestBin);
@@ -137,18 +112,13 @@ void bench() {
       if (baseBuff[idx].ptr) {
 #if defined(BENCH_SYSTEM)
         free(baseBuff[idx].ptr);
-#elif defined(BENCH_JEMALLOC)
-        vineyard_je_free(baseBuff[idx].ptr);
 #elif defined(BENCH_MIMALLOC)
         mi_free(baseBuff[idx].ptr);
 #elif defined(BENCH_VINEYARD)
         vineyard_free(baseBuff[idx].ptr);
-#elif defined(BENCH_VINEYARD_ARENA)
-        vineyard_arena_free(baseBuff[idx].ptr);
 #else
-        free(baseBuff[idx].ptr);
+#error "One of BENCH_SYSTEM, BENCH_MIMALLOC, BENCH_VINEYARD must be defined"
 #endif
-
         baseBuff[idx].ptr = 0;
       } else {
         size_t sz = calcSizeWithStatsAdjustment(rng.rng64(), maxItemSizeExp);
@@ -156,20 +126,16 @@ void bench() {
 
 #if defined(BENCH_SYSTEM)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(malloc(sz));
-#elif defined(BENCH_JEMALLOC)
-        baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_je_malloc(sz));
 #elif defined(BENCH_MIMALLOC)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(mi_malloc(sz));
 #elif defined(BENCH_VINEYARD)
         baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(vineyard_malloc(sz));
-#elif defined(BENCH_VINEYARD_ARENA)
-        baseBuff[idx].ptr =
-            reinterpret_cast<uint8_t*>(vineyard_arena_malloc(sz));
 #else
-        baseBuff[idx].ptr = reinterpret_cast<uint8_t*>(malloc(sz));
+#error "One of BENCH_SYSTEM, BENCH_MIMALLOC, BENCH_VINEYARD must be defined"
 #endif
         if (unlikely(baseBuff[idx].ptr == nullptr)) {
-          LOG(FATAL) << "Failed to allocate memory";
+          std::cerr << "Failed to allocate memory" << std::endl;
+          std::abort();
         }
         memset(baseBuff[idx].ptr, (uint8_t) sz, sz);
       }
@@ -177,7 +143,7 @@ void bench() {
   }
 
   size_t elapsed = GetMillisecondCount() - start;
-  LOG(INFO) << "usage: " << elapsed << " milliseconds";
+  std::cout << "usage: " << elapsed << " milliseconds" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -191,6 +157,6 @@ int main(int argc, char** argv) {
 
   bench();
 
-  LOG(INFO) << "Finish allocator benchmarks...";
+  std::cout << "Finish allocator benchmarks..." << std::endl;
   return 0;
 }

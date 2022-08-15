@@ -45,7 +45,27 @@ jobs:
 
       - uses: actions/setup-go@v2
         with:
-          go-version: '^1.15.0' # The Go version to download (if necessary) and use.
+          go-version: '^1.18.0'
+
+      - name: Golang format and lint
+        run: |
+          cd k8s
+          make golint
+          if [ $? -ne ]; then
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              echo "| golangci-lint (golang format) failures found!"
+              echo "|"
+              echo "|    ${GOPATH}/bin/golangci-lint run ./... --fix"
+              echo "|"
+              echo "| to fix this error."
+              echo "|"
+              echo "| The tool golangci-lint can be installed by"
+              echo "|"
+              echo "|    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
+              echo "|"
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              exit -1
+          fi
 
       - name: Operator
         run: |

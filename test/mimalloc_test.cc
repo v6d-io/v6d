@@ -21,52 +21,42 @@ limitations under the License.
 #include <string>
 #include <thread>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
-#include "basic/ds/array.h"
-#include "client/client.h"
-#include "client/ds/object_meta.h"
-#include "common/memory/arena.h"
-#include "common/memory/mimalloc.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
 
-#include "malloc/allocator.h"
+#if defined(WITH_MIMALLOC)
+#include "common/memory/mimalloc.h"
+#endif
+
+using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
 #if defined(WITH_MIMALLOC)
+  size_t mimalloc_meta_size =
+      MIMALLOC_SEGMENT_ALIGNED_SIZE * (std::thread::hardware_concurrency() + 1);
+  size_t expected_heap_size = 64 * 1024 * 1024;
+  size_t reserved_size = expected_heap_size + mimalloc_meta_size;
 
-  void* base = malloc(20 * 1024 * 1024);
+  void* base = malloc(reserved_size);
+  LOG(INFO) << "initializing mimalloc with preallocated pointer " << base;
 
-  auto* mimalloc_allocator = new vineyard::memory::Mimalloc();
-
-  void* space = mimalloc_allocator->Init(base, 20 * 1024 * 1024);
+  void* space = memory::Mimalloc::Init(base, reserved_size);
   if (nullptr == space) {
-    LOG(INFO) << "init failed";
-    return 0;
+    LOG(FATAL) << "failed to initialize mimalloc";
+    return -1;
   }
 
-  void* p1 = mimalloc_allocator->Allocate(1 * 1024 * 1024);
-
-  LOG(INFO) << "p1 " << mimalloc_allocator->GetAllocatedSize(p1);
-  mimalloc_allocator->Free(p1);
-
-  void* p2 = mimalloc_allocator->Allocate(2 * 1024 * 1024);
-  LOG(INFO) << "p2 " << mimalloc_allocator->GetAllocatedSize(p2);
-  mimalloc_allocator->Free(p2);
-
-  void* p3 = mimalloc_allocator->Allocate(4 * 1024 * 1024);
-  LOG(INFO) << "p3 " << mimalloc_allocator->GetAllocatedSize(p3);
-  mimalloc_allocator->Free(p3);
-
-  void* p4 = mimalloc_allocator->Allocate(8 * 1024 * 1024);
-  LOG(INFO) << "p4 " << mimalloc_allocator->GetAllocatedSize(p4);
-  mimalloc_allocator->Free(p4);
-
-  void* p5 = mimalloc_allocator->Allocate(16 * 1024 * 1024);
-  LOG(INFO) << "p5 " << mimalloc_allocator->GetAllocatedSize(p5);
-  mimalloc_allocator->Free(p5);
+  for (int k = 1; k <= 16; k *= 2) {
+    void* pointer = memory::Mimalloc::Allocate(k * 1024 * 1024);
+    LOG(INFO) << "pointer " << pointer << ", of size "
+              << memory::Mimalloc::GetAllocatedSize(pointer);
+    if (pointer == nullptr) {
+      LOG(FATAL) << "failed to allocate (" << k << ") " << k * 1024 * 1024
+                 << " bytes";
+      return -1;
+    }
+    memory::Mimalloc::Free(pointer);
+  }
 
 #endif  // WITH_MIMALLOC
 

@@ -19,17 +19,16 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '!rust/**'
+    paths:
+      - 'rust/**'
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '!rust/**'
+    paths:
+      - 'rust/**'
 
 jobs:
   check:
-    name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

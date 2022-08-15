@@ -16,28 +16,95 @@ limitations under the License.
 #ifndef SRC_COMMON_MEMORY_MIMALLOC_H_
 #define SRC_COMMON_MEMORY_MIMALLOC_H_
 
-#include "server/memory/malloc.h"
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
 
+#include "mimalloc/include/mimalloc.h"
+
+#include "common/util/likely.h"
+#include "common/util/logging.h"
+
+#ifndef MIMALLOC_SEGMENT_ALIGNED_SIZE
 #define MIMALLOC_SEGMENT_ALIGNED_SIZE ((uintptr_t) 1 << 26)
+#endif
 
 namespace vineyard {
 
 namespace memory {
 
+/**
+ * Use a header only class to avoid depends mimalloc library in vineyard_client.
+ */
 class Mimalloc {
  public:
   Mimalloc();
   ~Mimalloc();
 
-  void* Init(void* addr, const size_t size);
+  /**
+   * @brief Manages a particular memory arena.
+   */
+  static void* Init(void* addr, const size_t size) {
+    // no committed area (mmaped area)
+    bool is_committed = true;
+    // does't consist of large OS pages
+    bool is_large = false;
+    // does't consist of zero's
+    bool is_zero = false;
+    // no associated numa node
+    int numa_node = -1;
 
-  void* Allocate(const size_t bytes, const size_t alignment = 0);
+    void* new_addr = addr;
+    size_t new_size = size;
 
-  void* Reallocate(void* pointer, size_t size);
+    // the addr must be 64MB aligned(required by mimalloc)
+    if ((reinterpret_cast<uintptr_t>(addr) % MIMALLOC_SEGMENT_ALIGNED_SIZE) !=
+        0) {
+      new_addr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) +
+                                          MIMALLOC_SEGMENT_ALIGNED_SIZE - 1) &
+                                         ~(MIMALLOC_SEGMENT_ALIGNED_SIZE - 1));
+      new_size = size - ((size_t) new_addr - (size_t) addr);
+    }
 
-  void Free(void* pointer, size_t = 0);
+    // do not use OS memory for allocation (but only pre-allocated arena)
+    mi_option_set(mi_option_limit_os_alloc, 1);
 
-  size_t GetAllocatedSize(void* pointer);
+    bool success = mi_manage_os_memory(new_addr, new_size, is_committed,
+                                       is_large, is_zero, numa_node);
+    if (!success) {
+      std::clog << "[error] mimalloc failed to create the arena at " << new_addr
+                << std::endl;
+      return nullptr;
+    }
+    return new_addr;
+  }
+
+  static void* Allocate(const size_t bytes, const size_t alignment = 0) {
+    if (unlikely(alignment)) {
+      return mi_malloc_aligned(bytes, alignment);
+    } else {
+      return mi_malloc(bytes);
+    }
+  }
+
+  static void* Reallocate(void* pointer, size_t size) {
+    return mi_realloc(pointer, size);
+  }
+
+  static void Free(void* pointer, size_t size = 0) {
+    if (likely(pointer)) {
+      if (unlikely(size)) {
+        mi_free_size(pointer, size);
+      } else {
+        mi_free(pointer);
+      }
+    }
+  }
+
+  static size_t GetAllocatedSize(void* pointer) {
+    return mi_usable_size(pointer);
+  }
 };
 
 }  // namespace memory

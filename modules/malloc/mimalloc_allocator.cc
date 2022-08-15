@@ -21,4 +21,38 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 
-namespace vineyard {}  // namespace vineyard
+#include "common/memory/mimalloc.h"
+
+namespace vineyard {
+
+namespace memory {
+namespace detail {
+
+Status _initialize(Client& client, int& fd, size_t& size, uintptr_t& base,
+                   uintptr_t& space, size_t requested_size) {
+  std::clog << "making arena: " << size << std::endl;
+  RETURN_ON_ERROR(client.CreateArena(requested_size, fd, size, base, space));
+
+  Mimalloc::Init(reinterpret_cast<void*>(space), size);
+  std::clog << "mimalloc arena initialized: " << size << ", at "
+            << reinterpret_cast<void*>(space) << std::endl;
+
+  return Status::OK();
+}
+
+void* _allocate(size_t size) { return Mimalloc::Allocate(size); }
+
+void* _reallocate(void* pointer, size_t size) {
+  return Mimalloc::Reallocate(pointer, size);
+}
+
+void _deallocate(void* pointer, size_t size) { Mimalloc::Free(pointer, size); }
+
+size_t _allocated_size(void* pointer) {
+  return Mimalloc::GetAllocatedSize(pointer);
+}
+
+}  // namespace detail
+}  // namespace memory
+
+}  // namespace vineyard
