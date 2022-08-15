@@ -22,7 +22,7 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "flat_hash_map/flat_hash_map.hpp"
+#include "flat_hash_map/flat_hash_map_vineyard.hpp"
 #if defined(USE_WY_HASH)
 #include "wyhash/wyhash.hpp"
 #endif
@@ -87,11 +87,13 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 
   using T = std::pair<K, V>;
 
-  using Entry = ska::detailv3::sherwood_v3_entry<T>;
+  using Entry = vineyard::ska::detailv3::sherwood_v3_entry<T>;
   using EntryPointer = const Entry*;
 
-  using Hasher = ska::detailv3::KeyOrValueHasher<K, std::pair<K, V>, H>;
-  using Equal = ska::detailv3::KeyOrValueEquality<K, std::pair<K, V>, E>;
+  using Hasher =
+      vineyard::ska::detailv3::KeyOrValueHasher<K, std::pair<K, V>, H>;
+  using Equal =
+      vineyard::ska::detailv3::KeyOrValueEquality<K, std::pair<K, V>, E>;
 
   /**
    * @brief Set the hash policy after the construction of the HashMap.
@@ -111,10 +113,10 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   using pointer = value_type*;
   using const_pointer = value_type*;
 
-  using flat_hash_table_type = ska::detailv3::sherwood_v3_table<
+  using flat_hash_table_type = vineyard::ska::detailv3::sherwood_v3_table<
       T, K, H, Hasher, E, Equal, std::allocator<T>,
       typename std::allocator_traits<std::allocator<T>>::template rebind_alloc<
-          ska::detailv3::sherwood_v3_entry<T>>>;
+          vineyard::ska::detailv3::sherwood_v3_entry<T>>>;
 
   /**
    * @brief The iterator to iterate key-value mappings in the HashMap.

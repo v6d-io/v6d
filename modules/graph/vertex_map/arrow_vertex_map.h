@@ -348,7 +348,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
 
   // frag->label->oid
   std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays_;
-  std::vector<std::vector<ska::flat_hash_map<oid_t, vid_t>>> o2g_;
+  std::vector<std::vector<vineyard::ska::flat_hash_map<oid_t, vid_t>>> o2g_;
 
   friend class ArrowVertexMapBuilder<arrow::util::string_view, VID_T>;
 

@@ -2,6 +2,8 @@
 // Distributed under the Boost Software License, Version 1.0.
 //    (See http://www.boost.org/LICENSE_1_0.txt)
 
+#ifndef __VINEYARD_SKA_FLAT_HASH_MAP_HPP__
+#define __VINEYARD_SKA_FLAT_HASH_MAP_HPP__
 #pragma once
 
 #include <cstdint>
@@ -18,6 +20,10 @@
 #else
 #define SKA_NOINLINE(...) __VA_ARGS__ __attribute__((noinline))
 #endif
+
+// Adding a `vineyard::` namespace prefix to avoid conflicts with the
+// ska::flat_hash_map bundled in other libraries.
+namespace vineyard {
 
 namespace ska
 {
@@ -1616,4 +1622,7 @@ struct power_of_two_std_hash : std::hash<T>
     typedef ska::power_of_two_hash_policy hash_policy;
 };
 
-} // end namespace ska
+}  // end namespace ska
+}  // end namespace vineyard
+
+#endif  // __VINEYARD_SKA_FLAT_HASH_MAP_HPP__

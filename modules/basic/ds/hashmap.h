@@ -22,7 +22,7 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "flat_hash_map/flat_hash_map.hpp"
+#include "flat_hash_map/flat_hash_map_vineyard.hpp"
 #if defined(USE_WY_HASH)
 #include "wyhash/wyhash.hpp"
 #endif
@@ -57,7 +57,7 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
       : HashmapBaseBuilder<K, V, H, E>(client) {}
 
   explicit HashmapBuilder(Client& client,
-                          ska::flat_hash_map<K, V, H, E>&& hashmap)
+                          vineyard::ska::flat_hash_map<K, V, H, E>&& hashmap)
       : HashmapBaseBuilder<K, V, H, E>(client), hashmap_(std::move(hashmap)) {}
 
   /**
@@ -115,7 +115,7 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    * @brief Return the beginning iterator.
    *
    */
-  typename ska::flat_hash_map<K, V, H, E>::iterator begin() {
+  typename vineyard::ska::flat_hash_map<K, V, H, E>::iterator begin() {
     return hashmap_.begin();
   }
 
@@ -123,7 +123,8 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    * @brief Return the const beginning iterator.
    *
    */
-  typename ska::flat_hash_map<K, V, H, E>::const_iterator begin() const {
+  typename vineyard::ska::flat_hash_map<K, V, H, E>::const_iterator begin()
+      const {
     return hashmap_.begin();
   }
 
@@ -131,7 +132,8 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    * @brief Return the const beginning iterator.
    *
    */
-  typename ska::flat_hash_map<K, V, H, E>::const_iterator cbegin() const {
+  typename vineyard::ska::flat_hash_map<K, V, H, E>::const_iterator cbegin()
+      const {
     return hashmap_.cbegin();
   }
 
@@ -139,7 +141,7 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    * @brief Return the ending iterator
    *
    */
-  typename ska::flat_hash_map<K, V, H, E>::iterator end() {
+  typename vineyard::ska::flat_hash_map<K, V, H, E>::iterator end() {
     return hashmap_.end();
   }
 
@@ -147,7 +149,8 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    * @brief Return the const ending iterator.
    *
    */
-  typename ska::flat_hash_map<K, V, H, E>::const_iterator end() const {
+  typename vineyard::ska::flat_hash_map<K, V, H, E>::const_iterator end()
+      const {
     return hashmap_.end();
   }
 
@@ -155,7 +158,8 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    * @brief Return the const ending iterator.
    *
    */
-  typename ska::flat_hash_map<K, V, H, E>::const_iterator cend() const {
+  typename vineyard::ska::flat_hash_map<K, V, H, E>::const_iterator cend()
+      const {
     return hashmap_.cend();
   }
 
@@ -163,7 +167,8 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    * @brief Find the value by key.
    *
    */
-  typename ska::flat_hash_map<K, V, H, E>::iterator find(const K& key) {
+  typename vineyard::ska::flat_hash_map<K, V, H, E>::iterator find(
+      const K& key) {
     return hashmap_.find(key);
   }
 
@@ -187,7 +192,7 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
   }
 
  private:
-  ska::flat_hash_map<K, V, H, E> hashmap_;
+  vineyard::ska::flat_hash_map<K, V, H, E> hashmap_;
 };
 
 }  // namespace vineyard
