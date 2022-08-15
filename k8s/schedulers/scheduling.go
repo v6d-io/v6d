@@ -232,7 +232,7 @@ func (vs *VineyardScheduling) Less(pod1, pod2 *framework.PodInfo) bool {
 
 // PreFilter for a pod
 func (vs *VineyardScheduling) PreFilter(ctx context.Context, state *framework.CycleState, pod *v1.Pod) (*framework.PreFilterResult, *framework.Status) {
-	return framework.NewStatus(framework.Success, "")
+	return nil, framework.NewStatus(framework.Success, "")
 }
 
 // PreFilterExtensions is None
