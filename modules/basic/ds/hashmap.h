@@ -44,12 +44,7 @@ namespace vineyard {
  * @tparam std::hash<K> The hash function for the key.
  * @tparam std::equal_to<K> The compare function for the key.
  */
-template <typename K, typename V,
-#if defined(USE_WY_HASH)
-          typename H = wy::hash<K>,
-#else
-          typename H = std::hash<K>,
-#endif
+template <typename K, typename V, typename H = prime_number_hash<K>,
           typename E = std::equal_to<K>>
 class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
  public:
