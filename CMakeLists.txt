@@ -121,8 +121,13 @@ message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 # check the cxx abi
 include(cmake/CheckGCCABI.cmake)
 check_gcc_cxx11abi()
-if(GCC_USE_CXX11_ABI EQUAL 1)
-    add_compile_options(-D_GLIBCXX_USE_CXX11_ABI=1)
+
+get_directory_property(CURRENT_DEFINITIONS COMPILE_DEFINITIONS)
+if(NOT ("${CURRENT_DEFINITIONS} ${CMAKE_CXX_FLAGS}" MATCHES ".*_GLIBCXX_USE_CXX11_ABI.*"))
+    if(GCC_USE_CXX11_ABI EQUAL 1)
+       message("GCC_USE_CXX11_ABI .... = ${GCC_USE_CXX11_ABI}")
+       add_compile_options(-D_GLIBCXX_USE_CXX11_ABI=1)
+    endif()
 endif()
 
 # disables messages from sub_directory, see also: https://stackoverflow.com/a/38983571/5080177
