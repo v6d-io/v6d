@@ -21,7 +21,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "flat_hash_map/flat_hash_map_vineyard.hpp"
+#include "flat_hash_map/flat_hash_map.hpp"
 
 #include "graph/fragment/property_graph_types.h"
 
@@ -139,7 +139,7 @@ class SegmentedPartitioner {
 
  private:
   fid_t fnum_;
-  vineyard::ska::flat_hash_map<OID_T, fid_t> o2f_;
+  ska::flat_hash_map<OID_T, fid_t> o2f_;
 };
 
 }  // namespace vineyard

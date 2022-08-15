@@ -26,7 +26,7 @@ limitations under the License.
 #include <vector>
 
 #include "boost/functional/hash.hpp"
-#include "flat_hash_map/flat_hash_map_vineyard.hpp"
+#include "flat_hash_map/flat_hash_map.hpp"
 
 namespace grape {
 
@@ -413,7 +413,7 @@ struct hash<grape::RefString> {
   size_t operator()(const grape::RefString& rs) const noexcept {
     return boost::hash_range(rs.str, rs.str + rs.len);
   }
-  // using hash_policy = vineyard::ska::prime_number_hash_policy;
+  // using hash_policy = ska::prime_number_hash_policy;
 };
 
 }  // namespace std

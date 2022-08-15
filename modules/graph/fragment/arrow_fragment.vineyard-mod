@@ -96,8 +96,7 @@ class [[vineyard]] ArrowFragment
   using vertex_t = grape::Vertex<vid_t>;
 
   using ovg2l_map_t =
-      vineyard::ska::flat_hash_map<vid_t, vid_t,
-                                   typename Hashmap<vid_t, vid_t>::KeyHash>;
+      ska::flat_hash_map<vid_t, vid_t, typename Hashmap<vid_t, vid_t>::KeyHash>;
 
   using vid_array_t = typename vineyard::ConvertToArrowType<vid_t>::ArrayType;
   using vid_vineyard_array_t =
