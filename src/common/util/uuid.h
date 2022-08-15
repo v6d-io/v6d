@@ -19,7 +19,7 @@ limitations under the License.
 // The __VPP macro is used to avoid including <x86intrin.h> when parsing
 // and coding with libclang/clang tooling.
 #include <cstdint>
-#if defined(__x86_64__) && !defined(__VPP)
+#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
 #include <x86intrin.h>
 #endif
 
@@ -73,7 +73,7 @@ inline ObjectID GenerateBlobID(const uintptr_t ptr) {
       ptr == std::numeric_limits<uintptr_t>::max()) {
     return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
   }
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
   auto rd = __rdtsc() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
   return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(rd)) |
          0x8000000000000000UL;
@@ -86,7 +86,7 @@ inline ObjectID GenerateBlobID(const uintptr_t ptr) {
 }
 
 inline SessionID GenerateSessionID() {
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
   return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
 #else
   return 0x7FFFFFFFFFFFFFFFUL &
@@ -95,7 +95,7 @@ inline SessionID GenerateSessionID() {
 }
 
 inline ObjectID GenerateObjectID() {
-#if defined(__x86_64__) && !defined(__VPP)
+#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
   return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
 #else
   return 0x7FFFFFFFFFFFFFFFUL &
@@ -104,7 +104,7 @@ inline ObjectID GenerateObjectID() {
 }
 
 inline ObjectID GenerateSignature() {
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
   return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
 #else
   return 0x7FFFFFFFFFFFFFFFUL &
