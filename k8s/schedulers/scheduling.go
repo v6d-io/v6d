@@ -179,9 +179,6 @@ func (ss *SchedulerState) getLocalObjectsBySignatures(ctx context.Context, signa
 // VineyardScheduling is a plugin that schedules pods that requires vineyard objects as inputs.
 type VineyardScheduling struct {
 	client.Client
-	framework.PreFilterPlugin
-	framework.ScorePlugin
-	framework.PostBindPlugin
 	handle          framework.Handle
 	podLister       listerv1.PodLister
 	scheduleTimeout *time.Duration
@@ -234,7 +231,7 @@ func (vs *VineyardScheduling) Less(pod1, pod2 *framework.PodInfo) bool {
 }
 
 // PreFilter for a pod
-func (vs *VineyardScheduling) PreFilter(ctx context.Context, state *framework.CycleState, pod *v1.Pod) *framework.Status {
+func (vs *VineyardScheduling) PreFilter(ctx context.Context, state *framework.CycleState, pod *v1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	return framework.NewStatus(framework.Success, "")
 }
 
