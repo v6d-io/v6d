@@ -32,6 +32,8 @@ RUN cd /tmp && \
     chmod +x wait-for-it.sh && \
     curl -LO https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz && \
     tar zxvf etcd-v3.4.13-linux-amd64.tar.gz && \
+    curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl && \
+    chmod +x kubectl && \
     cd /work/v6d && \
     mkdir -p /work/v6d/build && \
     cd /work/v6d/build && \
@@ -60,6 +62,7 @@ RUN apk add --no-cache bash sudo
 COPY --from=builder /tmp/dumb-init_1.2.2_amd64 /usr/bin/dumb-init
 COPY --from=builder /tmp/wait-for-it.sh /usr/bin/wait-for-it.sh
 COPY --from=builder /tmp/etcd-v3.4.13-linux-amd64/etcd /usr/bin/etcd
+COPY --from=builder /tmp/kubectl /usr/bin/kubectl
 COPY --from=builder /work/v6d/build/bin/vineyardd /usr/local/bin/vineyardd
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]

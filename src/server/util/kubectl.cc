@@ -61,7 +61,7 @@ static std::string generate_local_object(
   std::string crd = "\n"
                     "\n---"
                     "\n"
-                    "\napiVersion: k8s.v6d.io/v1beta1"
+                    "\napiVersion: k8s.v6d.io/v1alpha1"
                     "\nkind: LocalObject"
                     "\nmetadata:"
                     "\n  name: " + object_id +
@@ -101,7 +101,7 @@ static std::string generate_global_object(
   std::string crd = "\n"
                     "\n---"
                     "\n"
-                    "apiVersion: k8s.v6d.io/v1beta1"
+                    "apiVersion: k8s.v6d.io/v1alpha1"
                     "\nkind: GlobalObject"
                     "\nmetadata:"
                     "\n  name: " + object_id +

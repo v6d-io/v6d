@@ -51,6 +51,9 @@ vineyard:
   volumeType: hostPath
   size: 1Mi
 
+  # Synchronize CRDs when persisting objects
+  syncCRDs: ""
+
   # PVC name if volume type is persistentVolumeClaim
   persistVolumeClaimName: "vineyard-domain-socket"
   accessModes:

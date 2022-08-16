@@ -62,7 +62,11 @@ spec:
               -log_dir /var/log/vineyard/ \
           {{- end }} 
               --etcd_endpoint \
-              http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379
+              http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379 \
+          {{- if .Values.vineyard.syncCRDs }}
+              --sync_crds \
+              {{ .Values.vineyard.syncCRDs }}
+          {{- end }}
           env:
             - name: MY_NODE_NAME
               valueFrom:
