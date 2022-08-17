@@ -45,20 +45,18 @@ class Mimalloc {
   /**
    * @brief Manages a particular memory arena.
    */
-  static void* Init(void* addr, const size_t size) {
-    // no committed area (mmaped area)
-    bool is_committed = true;
+  static void* Init(void* addr, const size_t size,
+                    const bool is_committed = false,
+                    const bool is_zero = true) {
     // does't consist of large OS pages
     bool is_large = false;
-    // does't consist of zero's
-    bool is_zero = false;
     // no associated numa node
     int numa_node = -1;
 
     void* new_addr = addr;
     size_t new_size = size;
 
-    // the addr must be 64MB aligned(required by mimalloc)
+    // the addr must be 64MB aligned (required by mimalloc)
     if ((reinterpret_cast<uintptr_t>(addr) % MIMALLOC_SEGMENT_ALIGNED_SIZE) !=
         0) {
       new_addr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) +

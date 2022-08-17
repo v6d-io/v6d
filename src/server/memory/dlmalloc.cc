@@ -28,12 +28,9 @@
 
 #if defined(WITH_DLMALLOC)
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <string>
 #include <vector>
-
-#include "gflags/gflags.h"
 
 #include "common/util/logging.h"
 #include "server/memory/dlmalloc.h"
@@ -72,90 +69,18 @@ int fake_munmap(void*, int64_t);
 #undef DEBUG
 #endif
 
-/// Gap between two consecutive mmap regions allocated by fake_mmap.
-/// This ensures that the segments of memory returned by
-/// fake_mmap are never contiguous and dlmalloc does not coalesce it
-/// (in the client we cannot guarantee that these mmaps are contiguous).
-constexpr int64_t kMmapRegionsGap = sizeof(size_t);
-
 constexpr int GRANULARITY_MULTIPLIER = 2;
 
-// Fine-grained control for whether we need pre-populate the shared memory.
-//
-// Usually it causes a long wait time at the start up, but it could improved
-// the performance of visiting shared memory.
-//
-// In cases that the startup time doesn't much matter, e.g., in kubernetes
-// environment, pre-populate will archive a win.
-DEFINE_bool(reserve_memory, false, "Pre-reserving enough memory pages");
-
-static void* pointer_advance(void* p, ptrdiff_t n) {
-  return (unsigned char*) p + n;
-}
-
-static void* pointer_retreat(void* p, ptrdiff_t n) {
-  return (unsigned char*) p - n;
-}
-
 void* fake_mmap(size_t size) {
-  // Add kMmapRegionsGap so that the returned pointer is deliberately not
-  // page-aligned. This ensures that the segments of memory returned by
-  // fake_mmap are never contiguous.
-  size += kMmapRegionsGap;
-
-  int fd = create_buffer(size);
-  CHECK_GE(fd, 0) << "Failed to create buffer during mmap";
-  // MAP_POPULATE can be used to pre-populate the page tables for this memory
-  // region
-  // which avoids work when accessing the pages later. However it causes long
-  // pauses
-  // when mmapping the files. Only supported on Linux.
-
-  int mmap_flag = MAP_SHARED;
-  if (FLAGS_reserve_memory) {
-#ifdef __linux__
-    mmap_flag |= MAP_POPULATE;
-#endif
-  }
-
-  void* pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, mmap_flag, fd, 0);
-  if (pointer == MAP_FAILED) {
-    LOG(ERROR) << "mmap failed with error: " << strerror(errno);
-    return pointer;
-  }
-
   // Increase dlmalloc's allocation granularity directly.
   mparams.granularity *= GRANULARITY_MULTIPLIER;
 
-  MmapRecord& record = mmap_records[pointer];
-  record.fd = fd;
-  record.size = size;
-
-  // We lie to dlmalloc about where mapped memory actually lives.
-  pointer = pointer_advance(pointer, kMmapRegionsGap);
-  return pointer;
+  bool is_committed = false;
+  bool is_zero = true;
+  return mmap_buffer(size, &is_committed, &is_zero);
 }
 
-int fake_munmap(void* addr, int64_t size) {
-  addr = pointer_retreat(addr, kMmapRegionsGap);
-  size += kMmapRegionsGap;
-
-  auto entry = mmap_records.find(addr);
-
-  if (entry == mmap_records.end() || entry->second.size != size) {
-    // Reject requests to munmap that don't directly match previous
-    // calls to mmap, to prevent dlmalloc from trimming.
-    return -1;
-  }
-
-  int r = munmap(addr, size);
-  if (r == 0) {
-    close(entry->second.fd);
-  }
-
-  mmap_records.erase(entry);
-  return r;
-}
+int fake_munmap(void* addr, int64_t size) { return munmap_buffer(addr, size); }
 
 void* DLmallocAllocator::Init(const size_t size) {
   // We are using a single memory-mapped file by mallocing and freeing a single

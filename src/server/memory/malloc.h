@@ -59,6 +59,12 @@ extern std::unordered_map<void*, MmapRecord> mmap_records;
 // Returns a fd as expected.
 int create_buffer(int64_t size);
 
+// Create a buffer, and mmap the buffer as the shared memory space.
+void* mmap_buffer(int64_t size, bool* is_committed, bool* is_zero);
+
+// Unmap the buffer.
+int munmap_buffer(void* addr, int64_t size);
+
 }  // namespace memory
 
 }  // namespace vineyard
