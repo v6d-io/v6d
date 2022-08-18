@@ -31,7 +31,7 @@ void vineyard_spin_unlock(volatile int *addr)
     *addr = 0;
 }
 
-int send_msg(char *pbuf, uint16_t len)
+int send_msg(void *pbuf, uint16_t len)
 {
     struct sk_buff *nl_skb;
     struct nlmsghdr *nlh;
@@ -54,44 +54,113 @@ int send_msg(char *pbuf, uint16_t len)
     return ret;
 }
 
+static inline int msg_empty(int head, int tail)
+{
+    return head == tail;
+}
+
+static inline int msg_full(int head, int tail, int capacity)
+{
+    if (tail == capacity) {
+        return head == 0;
+    }
+    return head == (tail - 1);
+} 
+
+static void handle_init(void)
+{
+    struct vineyard_kern_user_msg msg;
+
+    msg.opt = VSET;
+    msg.request_mem = (unsigned long)vineyard_msg_mem_header;
+    msg.result_mem = (unsigned long)vineyard_result_mem_header;
+
+    send_msg(&msg, sizeof(msg));
+}
+
+static void handle_wait(void)
+{
+    int ret;
+    struct vineyard_kern_user_msg msg;
+
+    // TODO: add signal handler
+    do {
+        ret = wait_event_interruptible(vineyard_msg_wait, (!msg_empty(vineyard_msg_mem_header->head_point, vineyard_msg_mem_header->tail_point)) | vineyard_msg_mem_header->close);
+    } while (ret != 0);
+
+    if (vineyard_msg_mem_header->close) {
+        msg.opt = VEXIT;
+    } else {
+        msg.opt = VFOPT;
+    }
+    send_msg(&msg, sizeof(msg));
+    printk(KERN_INFO PREFIX "wait end!\n");
+}
+
+static void handle_fopt(void)
+{
+    printk(KERN_INFO PREFIX "fopt is not support now!\n");
+    //1. send handler result to user
+
+    //2. call handler_wait
+    handle_wait();
+}
+
 static void netlink_rcv_msg(struct sk_buff *skb)
 {
     struct nlmsghdr *nlh = NULL;
-    void *umsg = NULL;
+    struct vineyard_kern_user_msg *umsg = NULL;
 
-    wake_up(&vineyard_fs_wait);
+    // wake_up(&vineyard_fs_wait);
 
-    printk(KERN_INFO PREFIX "vineyardd thread wait\n");
-    wait_event_interruptible(vineyard_msg_wait, vineyard_msg_mem_header->has_msg);
-    printk(KERN_INFO PREFIX "vineyardd thread wake\n");
+    // printk(KERN_INFO PREFIX "vineyardd thread wait\n");
+    // wait_event_interruptible(vineyard_msg_wait, vineyard_msg_mem_header->has_msg);
+    // printk(KERN_INFO PREFIX "vineyardd thread wake\n");
 
-    printk(KERN_INFO PREFIX "process pid:%d\n", current->pid);
+    // printk(KERN_INFO PREFIX "process pid:%d\n", current->pid);
 
-    vineyard_spin_lock(&vineyard_msg_mem_header->lock);
-    vineyard_msg_mem_header->has_msg = 0;
+    // vineyard_spin_lock(&vineyard_msg_mem_header->lock);
+    // vineyard_msg_mem_header->has_msg = 0;
 
-    if (vineyard_msg_mem_header->close) {
-        vineyard_spin_lock(&vineyard_result_mem_header->lock);
-        vineyard_result_mem_header->has_msg = 1;
-        vineyard_spin_unlock(&vineyard_result_mem_header->lock);
-        send_msg("bye user", strlen("bye user"));
-        return;
-    }
-    vineyard_spin_unlock(&vineyard_msg_mem_header->lock);
+    // if (vineyard_msg_mem_header->close) {
+    //     vineyard_spin_lock(&vineyard_result_mem_header->lock);
+    //     vineyard_result_mem_header->has_msg = 1;
+    //     vineyard_spin_unlock(&vineyard_result_mem_header->lock);
+    //     send_msg("bye user", strlen("bye user"));
+    //     return;
+    // }
+    // vineyard_spin_unlock(&vineyard_msg_mem_header->lock);
 
     if (skb->len >= nlmsg_total_size(0)) {
         nlh = nlmsg_hdr(skb);
-        umsg = NLMSG_DATA(nlh);
+        umsg = (struct vineyard_kern_user_msg *)NLMSG_DATA(nlh);
         if (umsg)
         {
             printk(KERN_INFO PREFIX "Kernel recv from user %s\n", (char *)umsg);
-            send_msg("hello user", strlen("hello user"));
+
+            switch(umsg->opt) {
+            case VINIT:
+                printk(KERN_INFO PREFIX "Receive opt: VINT\n");
+                handle_init();
+                break;
+            case VWAIT:
+                printk(KERN_INFO PREFIX "Receive opt: VWAIT\n");
+                handle_wait();
+                break;
+            case VFOPT:
+                printk(KERN_INFO PREFIX "Receive opt: VFOPT\n");
+                handle_fopt();
+                break;
+            default:
+                printk(KERN_INFO PREFIX "error!\n");
+                break;
+            }
         }
     }
 
-    vineyard_spin_lock(&vineyard_result_mem_header->lock);
-    vineyard_result_mem_header->has_msg = 1;
-    vineyard_spin_unlock(&vineyard_result_mem_header->lock);
+    // vineyard_spin_lock(&vineyard_result_mem_header->lock);
+    // vineyard_result_mem_header->has_msg = 1;
+    // vineyard_spin_unlock(&vineyard_result_mem_header->lock);
 }
 
 struct netlink_kernel_cfg cfg = {

@@ -28,6 +28,7 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "server/async/ipc_server.h"
 #include "server/async/rpc_server.h"
+#include "server/async/netlink_server.h"
 #include "server/services/meta_service.h"
 #include "server/util/kubectl.h"
 #include "server/util/meta_tree.h"
@@ -97,6 +98,7 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     // about how to select the port.
     rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
   }
+  nl_server_ptr_ = std::make_shared<NetLinkServer>(shared_from_this());
 
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
@@ -173,6 +175,21 @@ void VineyardServer::BackendReady() {
     context_.stop();
     return;
   }
+
+  try {
+    if (nl_server_ptr_) {
+      nl_server_ptr_->Start();
+    } else {
+      LOG(INFO) << "threre is no nl server";
+      NetLinkReady();
+    }
+  } catch (std::exception const& ex) {
+    LOG(ERROR) << "Failed to start vineyard net link server: " << ex.what();
+    serve_status_ = Status::IOError();
+    VINEYARD_DISCARD(callback_(serve_status_, IPCSocket()));
+    context_.stop();
+    return;
+  }
 }
 
 void VineyardServer::MetaReady() {
@@ -208,6 +225,13 @@ void VineyardServer::IPCReady() {
 void VineyardServer::RPCReady() {
   VINEYARD_ASSERT(!(ready_ & kRPC), "A component can't be initialized twice!");
   ready_ |= kRPC;
+  if (ready_ == kReady) {
+    Ready();
+  }
+}
+
+void VineyardServer::NetLinkReady() {
+  ready_ |= kNetLink;
   if (ready_ == kReady) {
     Ready();
   }
