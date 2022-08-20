@@ -105,7 +105,7 @@ void bench() {
   PRNG rng;
 
   for (size_t k = 0; k < 32; ++k) {
-    for (size_t j = 0; j<iterCount>> 5; ++j) {
+    for (size_t j = 0; j<iterCount> > 5; ++j) {
       uint32_t rnum1 = rng.rng32();
       uint32_t rnum2 = rng.rng32();
       size_t idx = Pareto_80_20_6_Rand(paretoData, rnum1, rnum2);

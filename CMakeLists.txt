@@ -19,6 +19,8 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
+option(USE_EXTERNAL_REDIS_LIBS "Build with external redis-plus-plus library rather than the submodule one" ON)
+option(USE_EXTERNAL_HIREDIS_LIBS "Build with external hiredis library rather than the submodule one" ON)
 option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" OFF)
 option(USE_EXTERNAL_NLOHMANN_JSON_LIBS "Build with external nlohmann-json library rather than the submodule one" ON)
 option(USE_ASAN "Using address sanitizer to check memory accessing" OFF)
@@ -28,6 +30,7 @@ option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of met
 option(USE_GPU "Using gpu support" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
+option(BUILD_VINEYARD_SERVER_REDIS "Enable redis as the metadta backend" OFF)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
@@ -310,6 +313,41 @@ macro(find_etcd_cpp_apiv3)
     endif()
 endmacro()
 
+macro(find_hiredis)
+    if(USE_EXTERNAL_HIREDIS_LIBS)
+    # not use find_package, because maybe we don't have hiredis-config.cmake
+        find_path(HIREDIS_HEADER_PATH hiredis)
+        find_library(HIREDIS_LIBRARY hiredis)
+        if(HIREDIS_HEADER_PATH AND HIREDIS_LIBRARY)
+            set(HIREDIS_INCLUDE_DIR ${HIREDIS_HEADER_PATH})
+            set(HIREDIS_LIBRARIES ${HIREDIS_LIBRARY})
+        else()
+            message(WARNING "hiredis not found, will use the bundled one from git submodules.")
+            include("cmake/BuildHiredis.cmake")
+        endif()
+    else()
+        include("cmake/BuildHiredis.cmake")
+    endif()
+endmacro()
+
+macro(find_redis_plus_plus)
+	set(REDIS_PLUS_PLUS_CXX_STANDARD 11)
+    if(USE_EXTERNAL_REDIS_LIBS)
+        # not use find_package, because of hiredis
+        find_path(REDIS_PLUS_PLUS_HEADER sw)
+        find_library(REDIS_PLUS_PLUS_LIB redis++)
+        if(REDIS_PLUS_PLUS_HEADER AND REDIS_PLUS_PLUS_LIB)
+            set(REDIS_PLUS_PLUS_INCLUDE_DIR "${REDIS_PLUS_PLUS_HEADER}/sw")
+            set(REDIS_PLUS_PLUS_LIBRARIES ${REDIS_PLUS_PLUS_LIB})
+        else()
+            message(WARNING "redis-plus-plus not found, will use the bundled one from git submodules.")
+            include("cmake/BuildRedisCpp.cmake")
+        endif()
+    else()
+        include("cmake/BuildRedisCpp.cmake")
+    endif()
+endmacro()
+
 macro(find_fuse)
     include("cmake/FindFUSE3.cmake")
     if(BUILD_VINEYARD_FUSE_PARQUET)
@@ -580,13 +618,19 @@ if(BUILD_VINEYARD_SERVER)
     find_etcd_cpp_apiv3()
     find_intel_tbb()
     find_mimalloc()
+    if(BUILD_VINEYARD_SERVER_REDIS)
+        find_hiredis()
+        find_redis_plus_plus()
+    endif()
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
                                        "src/common/memory/gpu/*.cc"
                                        
     )
-
+    if(BUILD_VINEYARD_SERVER_REDIS)
+        list(APPEND SERVER_SRC_FILES "thirdparty/redis-plus-plus-shim/recipes/redlock.cpp")
+    endif()
     add_executable(vineyardd ${SERVER_SRC_FILES})
     target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
     target_link_libraries(vineyardd PRIVATE ${Boost_LIBRARIES}
@@ -599,6 +643,14 @@ if(BUILD_VINEYARD_SERVER)
                                             nlohmann_json::nlohmann_json
                                             TBB::tbb
     )
+    if(BUILD_VINEYARD_SERVER_REDIS)
+        target_link_libraries(vineyardd PUBLIC TBB::tbb
+                                               ${HIREDIS_LIBRARIES}
+                                               ${REDIS_PLUS_PLUS_LIBRARIES}
+                                               uv
+        )
+        target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_REDIS)
+    endif()
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyardd PUBLIC ${ARROW_SHARED_LIB})
     else()
@@ -614,6 +666,11 @@ if(BUILD_VINEYARD_SERVER)
     endif()
 
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
+    if(BUILD_VINEYARD_SERVER_REDIS)
+        target_include_directories(vineyardd PRIVATE ${HIREDIS_INCLUDE_DIR}
+                                                     ${REDIS_PLUS_PLUS_INCLUDE_DIR}
+        )
+    endif()
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()

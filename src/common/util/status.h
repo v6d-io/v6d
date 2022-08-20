@@ -248,6 +248,7 @@ enum class StatusCode : unsigned char {
   kConnectionError = 34,
   kEtcdError = 35,
   kAlreadyStopped = 36,
+  kRedisError = 37,
 
   kNotEnoughMemory = 41,
   kStreamDrained = 42,
@@ -501,6 +502,33 @@ class VINEYARD_MUST_USE_TYPE Status {
     }
     return Status(StatusCode::kEtcdError, error_message + ", error code: " +
                                               std::to_string(error_code));
+  }
+
+  /// Return an error when the vineyard server meets an redis related error.
+  static Status RedisError(std::string const& error_message) {
+    return Status(StatusCode::kRedisError, error_message);
+  }
+
+  /// Return an error when the vineyard server meets an redis related error,
+  /// with redis error code embeded.
+  static Status RedisError(int error_code, std::string const& error_message) {
+    if (error_code == 0) {
+      return Status::OK();
+    }
+    return Status(StatusCode::kRedisError, error_message + ", error code: " +
+                                               std::to_string(error_code));
+  }
+
+  /// Return an error when the vineyard server meets an redis related error,
+  /// with redis error code embeded, with redis error type embeded.
+  static Status RedisError(int error_code, std::string const& error_message,
+                           std::string const& error_type) {
+    if (error_code == 0) {
+      return Status::OK();
+    }
+    return Status(StatusCode::kRedisError,
+                  error_message + error_type +
+                      ", error code: " + std::to_string(error_code));
   }
 
   static Status AlreadyStopped(std::string const& component = "") {

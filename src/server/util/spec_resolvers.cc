@@ -29,10 +29,14 @@ namespace vineyard {
 DEFINE_string(deployment, "local", "deployment mode: local, distributed");
 
 // meta data
-DEFINE_string(meta, "etcd", "Metadata storage, can be one of: etcd, local");
+DEFINE_string(meta, "etcd",
+              "Metadata storage, can be one of: etcd, redis, local");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
+DEFINE_string(redis_endpoint, "http://127.0.0.1:6379", "endpoint of redis");
+DEFINE_string(redis_prefix, "vineyard", "path prefix in redis");
+DEFINE_string(redis_cmd, "", "path of redis executable");
 
 // share memory
 DEFINE_string(size, "256Mi",
@@ -106,6 +110,11 @@ json MetaStoreSpecResolver::resolve() const {
   spec["etcd_prefix"] = FLAGS_etcd_prefix;
   spec["etcd_endpoint"] = FLAGS_etcd_endpoint;
   spec["etcd_cmd"] = FLAGS_etcd_cmd;
+
+  // resolve for redis
+  spec["redis_prefix"] = FLAGS_redis_prefix;
+  spec["redis_endpoint"] = FLAGS_redis_endpoint;
+  spec["redis_cmd"] = FLAGS_redis_cmd;
   return spec;
 }
 

@@ -159,6 +159,9 @@ std::string Status::CodeAsString() const {
   case StatusCode::kEtcdError:
     type = "Etcd error";
     break;
+  case StatusCode::kRedisError:
+    type = "Redis error";
+    break;
   case StatusCode::kNotEnoughMemory:
     type = "Not enough memory";
     break;
