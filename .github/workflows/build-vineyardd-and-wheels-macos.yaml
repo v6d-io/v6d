@@ -151,7 +151,6 @@ jobs:
             -DBUILD_VINEYARD_BASIC=OFF \
             -DBUILD_VINEYARD_GRAPH=OFF \
             -DBUILD_VINEYARD_IO=OFF \
-            -DBUILD_VINEYARD_MIGRATION=OFF \
             -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
             -DBUILD_VINEYARD_TESTS=OFF \
             -DBUILD_VINEYARD_TESTS_ALL=OFF \
@@ -347,7 +346,6 @@ jobs:
                    -DBUILD_VINEYARD_BASIC=OFF \
                    -DBUILD_VINEYARD_IO=OFF \
                    -DBUILD_VINEYARD_GRAPH=OFF \
-                   -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
                    -DBUILD_VINEYARD_TESTS=OFF \
                    -DBUILD_VINEYARD_TESTS_ALL=OFF \
@@ -355,10 +353,9 @@ jobs:
                    -DBUILD_VINEYARD_PROFILING=OFF \
                    -DCMAKE_BUILD_TYPE=Release \
                    -DPYTHON_EXECUTABLE=`which python`
-          make vineyard_client_python vineyard_migrate_python -j`nproc`
+          make vineyard_client_python -j`nproc`
           cd ..
           python setup.py bdist_wheel
-          python setup_migrate.py bdist_wheel --plat macosx_10_15_x86_64
           export LD_LIBRARY_PATH=`pwd`/build/lib:$LD_LIBRARY_PATH
           for wheel in `ls dist/*`; do delocate-wheel -w fixed_wheels -v $wheel; done
           ls -la ./fixed_wheels

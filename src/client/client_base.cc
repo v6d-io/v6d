@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <future>
 #include <iostream>
+#include <set>
 #include <utility>
 
 #include "client/client.h"
@@ -309,28 +310,86 @@ Status ClientBase::DropName(const std::string& name) {
   return Status::OK();
 }
 
-Status ClientBase::MigrateStream(const ObjectID stream_id,
-                                 ObjectID& result_id) {
-  return MigrateObject(stream_id, result_id, true);
+Status ClientBase::collectRemoteBlobs(const json& tree,
+                                      std::set<ObjectID>& blobs) {
+  if (tree.empty()) {
+    return Status::OK();
+  }
+  ObjectID member_id =
+      ObjectIDFromString(tree["id"].get_ref<std::string const&>());
+  if (IsBlob(member_id)) {
+#ifndef NDEBUG
+    std::clog << "[migration] instance id for blob " << member_id << " is "
+              << tree["instance_id"].get<InstanceID>() << std::endl;
+#endif
+    blobs.emplace(member_id);
+  } else {
+    for (auto& item : tree) {
+      if (item.is_object()) {
+        RETURN_ON_ERROR(collectRemoteBlobs(item, blobs));
+      }
+    }
+  }
+  return Status::OK();
 }
 
-Status ClientBase::MigrateObject(const ObjectID object_id, ObjectID& result_id,
-                                 bool is_stream) {
+Status ClientBase::recreateMetadata(ClientBase& client,
+                                    ObjectMeta const& metadata,
+                                    ObjectMeta& target,
+                                    std::map<ObjectID, ObjectID> result_blobs) {
+  for (auto const& kv : metadata) {
+    if (kv.value().is_object()) {
+      ObjectMeta member = metadata.GetMemberMeta(kv.key());
+      if (member.GetTypeName() == type_name<Blob>()) {
+        ObjectMeta blob_meta;
+        blob_meta.SetId(result_blobs.at(member.GetId()));
+        blob_meta.SetTypeName(type_name<Blob>());
+        blob_meta.SetInstanceId(client.remote_instance_id());
+        target.AddMember(kv.key(), blob_meta);
+      } else {
+        ObjectMeta subtarget;
+        RETURN_ON_ERROR(
+            recreateMetadata(client, member, subtarget, result_blobs));
+        target.AddMember(kv.key(), subtarget);
+      }
+    } else {
+      if (kv.value().is_string()) {
+        target.AddKeyValue(kv.key(), kv.value().get_ref<std::string const&>());
+      } else if (kv.value().is_boolean()) {
+        target.AddKeyValue(kv.key(), kv.value().get<bool>());
+      } else if (kv.value().is_number_integer()) {
+        target.AddKeyValue(kv.key(), kv.value().get<int64_t>());
+      } else if (kv.value().is_number_float()) {
+        target.AddKeyValue(kv.key(), kv.value().get<double>());
+      } else {
+        target.AddKeyValue(kv.key(), kv.value());
+      }
+    }
+  }
+  ObjectID target_id = InvalidObjectID();
+  RETURN_ON_ERROR(client.CreateMetaData(target, target_id));
+  target.SetId(target_id);
+  return Status::OK();
+}
+
+Status ClientBase::MigrateObject(const ObjectID object_id,
+                                 ObjectID& result_id) {
   ENSURE_CONNECTED(this);
 
   // query the object location info
   ObjectMeta meta;
   RETURN_ON_ERROR(this->GetMetaData(object_id, meta, true));
-#ifndef NDEBUG
-  std::clog << "migrate local: " << this->instance_id()
-            << ", remote: " << meta.GetInstanceId() << std::endl;
-#endif
-  if (meta.GetInstanceId() == this->instance_id()) {
+  if (meta.IsGlobal() || meta.GetInstanceId() == this->instance_id()) {
     result_id = object_id;
     return Status::OK();
   }
 
-  // findout remote server
+#ifndef NDEBUG
+  std::clog << "[migration] local: " << this->instance_id()
+            << ", remote: " << meta.GetInstanceId() << std::endl;
+#endif
+
+  // find the remote server
   std::map<InstanceID, json> cluster;
   RETURN_ON_ERROR(this->ClusterInfo(cluster));
   auto selfhost =
@@ -339,43 +398,24 @@ Status ClientBase::MigrateObject(const ObjectID object_id, ObjectID& result_id,
                        .get_ref<std::string const&>();
   auto otherEndpoint = cluster.at(meta.GetInstanceId())["rpc_endpoint"]
                            .get_ref<std::string const&>();
+  RPCClient rpc_client;
+  RETURN_ON_ERROR(rpc_client.Connect(otherEndpoint));
 
-  // launch remote migrate sender
-  auto sender = std::async(std::launch::async, [&]() -> Status {
-    RPCClient other;
-    RETURN_ON_ERROR(other.Connect(otherEndpoint));
-    ObjectID dummy = InvalidObjectID();
-    RETURN_ON_ERROR(other.migrateObjectImpl(object_id, dummy, true, is_stream,
-                                            selfhost, otherEndpoint));
-    return Status::OK();
-  });
+  // inspect the metadata to collect buffers
+  std::set<ObjectID> blobs;
+  RETURN_ON_ERROR(this->collectRemoteBlobs(meta.MetaData(), blobs));
 
-  // local migrate receiver
-  auto receiver = std::async(std::launch::async, [&]() -> Status {
-    RETURN_ON_ERROR(this->migrateObjectImpl(
-        object_id, result_id, false, is_stream, otherHost, otherEndpoint));
-#ifndef NDEBUG
-    std::clog << "receive from migration: " << ObjectIDToString(object_id)
-              << " -> " << ObjectIDToString(result_id) << std::endl;
-#endif
-    return Status::OK();
-  });
+  // migrate all the blobs from remote server
+  std::map<ObjectID, ObjectID> result_blobs;
+  RETURN_ON_ERROR(this->migrateBuffers(rpc_client, blobs, result_blobs));
 
-  return sender.get() & receiver.get();
-}
+  // rebuild the metadata on the local server
+  ObjectMeta result;
+  RETURN_ON_ERROR(this->recreateMetadata(*this, meta, result, result_blobs));
+  RETURN_ON_ERROR(this->Persist(result.GetId()));
 
-Status ClientBase::migrateObjectImpl(const ObjectID object_id,
-                                     ObjectID& result_id, bool const local,
-                                     bool const is_stream,
-                                     std::string const& peer,
-                                     std::string const& peer_rpc_endpoint) {
-  std::string message_out;
-  WriteMigrateObjectRequest(object_id, local, is_stream, peer,
-                            peer_rpc_endpoint, message_out);
-  RETURN_ON_ERROR(doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadMigrateObjectReply(message_in, result_id));
+  // finishes
+  result_id = result.GetId();
   return Status::OK();
 }
 

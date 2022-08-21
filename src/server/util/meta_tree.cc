@@ -528,7 +528,8 @@ static void generate_put_ops(const json& meta, std::string const& instance_name,
 static void generate_persist_ops(json& diff, const std::string& instance_name,
                                  const std::string& name,
                                  std::vector<op_t>& ops,
-                                 std::set<std::string>& dedup) {
+                                 std::set<std::string>& dedup,
+                                 const bool toplevel = false) {
   std::string data_key = "/data" + std::string("/") + name;
   if (dedup.find(data_key) != dedup.end()) {
     return;
@@ -562,7 +563,8 @@ static void generate_persist_ops(json& diff, const std::string& instance_name,
       if (item.value()["transient"].get<bool>() &&
           sub_type != "vineyard::Blob") {
         // otherwise, skip recursively generate ops
-        generate_persist_ops(item.value(), instance_name, sub_name, ops, dedup);
+        generate_persist_ops(item.value(), instance_name, sub_name, ops, dedup,
+                             false);
       }
       std::string link;
       if (sub_type == "vineyard::Blob") {
@@ -590,6 +592,14 @@ static void generate_persist_ops(json& diff, const std::string& instance_name,
   diff.erase("id");
   ops.emplace_back(op_t::Put(data_key, diff));
   dedup.emplace(data_key);
+
+  // persist the signature for the top-level object
+  if (toplevel && !global_object && diff.contains("signature")) {
+    ops.emplace_back(
+        op_t::Put("/signatures/" + instance_name + "/" +
+                      SignatureToString(diff["signature"].get<Signature>()),
+                  name));
+  }
 }
 
 /**
@@ -857,7 +867,7 @@ Status PersistOps(const json& tree, const std::string& instance_name,
 
   std::string name = ObjectIDToString(id);
   std::set<std::string> dedup;
-  generate_persist_ops(diff, instance_name, name, ops, dedup);
+  generate_persist_ops(diff, instance_name, name, ops, dedup, true);
   return Status::OK();
 }
 
@@ -960,14 +970,22 @@ bool HasEquivalent(const json& tree, ObjectID const object_id,
   if (!tree.contains(path)) {
     return false;
   }
-  std::string signature = SignatureToString(tree[path].get<Signature>());
+  return HasEquivalentWithSignature(tree, tree[path].get<Signature>(),
+                                    object_id, equivalent);
+}
+
+bool HasEquivalentWithSignature(const json& tree, Signature const signature,
+                                ObjectID const object_id,
+                                ObjectID& equivalent) {
+  std::string signature_key = SignatureToString(signature);
+  std::string object_name = ObjectIDToString(object_id);
   json::const_iterator signatures = tree.find("signatures");
   if (signatures == tree.end()) {
     return false;
   }
   bool found = false;
   for (auto const& item : signatures->items()) {
-    auto val = item.value().find(signature);
+    auto val = item.value().find(signature_key);
     if (val != item.value().end()) {
       std::string const& val_ref = val->get_ref<std::string const&>();
       if (val_ref != object_name) {

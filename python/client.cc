@@ -345,14 +345,6 @@ void bind_client(py::module& mod) {
             return target_id;
           },
           "object_id"_a)
-      .def(
-          "migrate_stream",
-          [](ClientBase* self, const ObjectID object_id) -> ObjectIDWrapper {
-            ObjectID target_id = InvalidObjectID();
-            throw_on_error(self->MigrateStream(object_id, target_id));
-            return target_id;
-          },
-          "object_id"_a)
       .def("clear", [](ClientBase* self) { throw_on_error(self->Clear()); })
       .def("reset", [](ClientBase* self) { throw_on_error(self->Clear()); })
       .def_property_readonly("connected", &Client::Connected)
@@ -489,13 +481,17 @@ void bind_client(py::module& mod) {
           "object_ids"_a, py::arg("unsafe") = false)
       .def(
           "get_object",
-          [](Client* self, const ObjectIDWrapper object_id) {
+          [](Client* self, const ObjectIDWrapper object_id, bool const fetch) {
             // receive the status to throw a more precise exception when failed.
             std::shared_ptr<Object> object;
-            throw_on_error(self->GetObject(object_id, object));
+            if (fetch) {
+              throw_on_error(self->FetchAndGetObject(object_id, object));
+            } else {
+              throw_on_error(self->GetObject(object_id, object));
+            }
             return object;
           },
-          "object_id"_a)
+          "object_id"_a, py::arg("fetch") = false)
       .def(
           "get_objects",
           [](Client* self, const std::vector<ObjectIDWrapper>& object_ids) {
@@ -509,14 +505,20 @@ void bind_client(py::module& mod) {
       .def(
           "get_meta",
           [](Client* self, ObjectIDWrapper const& object_id,
-             bool const sync_remote) -> ObjectMeta {
+             bool const sync_remote, bool const fetch) -> ObjectMeta {
             ObjectMeta meta;
             // FIXME: do we really not need to sync from etcd? We assume the
             // object is a local object
-            throw_on_error(self->GetMetaData(object_id, meta, sync_remote));
+            if (fetch) {
+              throw_on_error(
+                  self->FetchAndGetMetaData(object_id, meta, sync_remote));
+            } else {
+              throw_on_error(self->GetMetaData(object_id, meta, sync_remote));
+            }
             return meta;
           },
-          "object_id"_a, py::arg("sync_remote") = false)
+          "object_id"_a, py::arg("sync_remote") = false,
+          py::arg("fetch") = false)
       .def(
           "get_metas",
           [](Client* self, std::vector<ObjectIDWrapper> const& object_ids,

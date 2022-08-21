@@ -24,9 +24,9 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
-#include "boost/asio.hpp"
 #include "oneapi/tbb/concurrent_hash_map.h"
 
+#include "common/util/asio.h"
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/protocols.h"
@@ -64,16 +64,15 @@ class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
 
   unsigned int concurrency_;
 
+  asio::io_context context_, meta_context_, io_context_;
 #if BOOST_VERSION >= 106600
-  asio::io_context context_, meta_context_;
   using ctx_guard = asio::executor_work_guard<asio::io_context::executor_type>;
 #else
-  asio::io_service context_, meta_context_;
-  using ctx_guard = std::unique_ptr<boost::asio::io_service::work>;
+  using ctx_guard = std::unique_ptr<asio::io_context::work>;
 #endif
 
-  ctx_guard guard_, meta_guard_;
-  std::vector<std::thread> workers_;
+  ctx_guard guard_, meta_guard_, io_guard_;
+  std::vector<std::thread> workers_, io_workers_;
 
   session_dict_t sessions_;
   std::atomic_bool stopped_;

@@ -31,6 +31,10 @@ const std::string ObjectIDToString(const ObjectID id) {
   return std::string(buffer);
 }
 
+const std::string ObjectIDToString(const PlasmaID id) {
+  return "<plasmaid>" + id;
+}
+
 const std::string SignatureToString(const Signature id) {
   thread_local char buffer[18] = {'\0'};
   std::snprintf(buffer, sizeof(buffer), "s%016" PRIx64, id);

@@ -20,18 +20,15 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "boost/asio.hpp"
 #include "boost/bind.hpp"
 #include "boost/filesystem.hpp"
 #include "boost/process.hpp"
 
+#include "common/util/asio.h"
+
 namespace vineyard {
 
-#if BOOST_VERSION >= 106600
 Kubectl::Kubectl(asio::io_context& context) : proc_(new Process(context)) {
-#else
-Kubectl::Kubectl(asio::io_service& context) : proc_(new Process(context)) {
-#endif
   proc_->Start("kubectl", {"apply", "-f", "-"},
                [](Status const&, const std::string&) { return Status::OK(); });
 }

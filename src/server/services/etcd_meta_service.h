@@ -61,11 +61,7 @@ class EtcdMetaService;
 class EtcdWatchHandler {
  public:
   EtcdWatchHandler(const std::shared_ptr<EtcdMetaService>& meta_service_ptr,
-#if BOOST_VERSION >= 106600
                    asio::io_context& ctx,
-#else
-                   asio::io_service& ctx,
-#endif
                    callback_t<const std::vector<IMetaService::op_t>&, unsigned,
                               callback_t<unsigned>>
                        callback,
@@ -80,19 +76,14 @@ class EtcdWatchHandler {
         filter_prefix_(filter_prefix),
         registered_callbacks_(registered_callbacks),
         handled_rev_(handled_rev),
-        registered_callbacks_mutex_(registered_callbacks_mutex) {
-  }
+        registered_callbacks_mutex_(registered_callbacks_mutex) {}
 
   void operator()(pplx::task<etcd::Response> const& resp_task);
   void operator()(etcd::Response const& task);
 
  private:
   const std::shared_ptr<EtcdMetaService> meta_service_ptr_;
-#if BOOST_VERSION >= 106600
   asio::io_context& ctx_;
-#else
-  asio::io_service& ctx_;
-#endif
   const callback_t<const std::vector<IMetaService::op_t>&, unsigned,
                    callback_t<unsigned>>
       callback_;

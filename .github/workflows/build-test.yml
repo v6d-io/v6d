@@ -185,7 +185,6 @@ jobs:
                    -DBUILD_VINEYARD_IO=ON \
                    -DBUILD_VINEYARD_IO_KAFKA=ON \
                    -DBUILD_VINEYARD_MALLOC=ON \
-                   -DBUILD_VINEYARD_MIGRATION=ON \
                    -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=ON \
                    -DBUILD_VINEYARD_FUSE=ON \
                    -DBUILD_VINEYARD_FUSE_PARQUET=ON \
@@ -280,7 +279,7 @@ jobs:
           rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
 
-          for pkg in airflow dask io migrate ml; do
+          for pkg in airflow dask io ml; do
             rm -rf build/lib* build/bdist.*
             python3 setup_${pkg}.py bdist_wheel
           done
@@ -306,8 +305,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-cpp
-          python3 test/runner.py --with-deployment
+          python3 test/runner.py --with-cpp --with-deployment
 
       - name: Setup tmate session
         if: false

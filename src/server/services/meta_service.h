@@ -25,11 +25,11 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "boost/asio.hpp"
 #include "boost/asio/steady_timer.hpp"
 #include "boost/bind.hpp"
 #include "boost/range/iterator_range.hpp"
 
+#include "common/util/asio.h"
 #include "common/util/callback.h"
 #include "common/util/env.h"
 #include "common/util/functions.h"
@@ -396,6 +396,11 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
             self->server_ptr_->set_hostname(hostname);
             self->server_ptr_->set_nodename(nodename);
 
+            // store an entry in the meta tree
+            self->meta_["my_instance_id"] = rank;
+            self->meta_["my_hostname"] = hostname;
+            self->meta_["my_nodename"] = nodename;
+
             self->instances_list_.emplace(rank);
             std::string key =
                 "/instances/" + self->server_ptr_->instance_name();
@@ -737,7 +742,6 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     }
 
     // apply drop datas
-
     {
       // 1. collect all ids
       std::set<ObjectID> initial_delete_set;

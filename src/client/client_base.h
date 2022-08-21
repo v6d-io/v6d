@@ -19,6 +19,7 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -29,6 +30,9 @@ limitations under the License.
 #include "common/util/version.h"
 
 namespace vineyard {
+
+class Client;
+class RPCClient;
 
 enum class StreamOpenMode {
   read = 1,
@@ -378,28 +382,15 @@ class ClientBase {
   Status DropName(const std::string& name);
 
   /**
-   * @brief Migrate remote object to local.
+   * @brief Migrate remote object to connected instance.
    *
    * @param object_id The existing object that will be migrated to current
    * vineyardd.
    * @param result_id Record the result object id.
-   * @param is_stream Indicates whether the migrated object is a stream
    *
    * @return Status that indicates if the migration success.
    */
-  Status MigrateObject(const ObjectID object_id, ObjectID& result_id,
-                       bool is_stream = false);
-
-  /**
-   * @brief Migrate remote stream to local.
-   *
-   * @param object_id The existing stream that will be migrated to current
-   * vineyardd.
-   * @param result_id Record the result stream id.
-   *
-   * @return Status that indicates if the migration success.
-   */
-  Status MigrateStream(const ObjectID object_id, ObjectID& result_id);
+  Status MigrateObject(const ObjectID object_id, ObjectID& result_id);
 
   /**
    * @brief Clear all objects _that are visible to current instances_ in
@@ -456,6 +447,16 @@ class ClientBase {
    * @return The vineyard server's instance id.
    */
   const InstanceID instance_id() const { return instance_id_; }
+
+  /**
+   * @brief Get the remote instance id of the connected vineyard server.
+   *
+   * Note that for RPC client the instance id is not available, thus we have
+   * the "remote instance id" to indicate which server we are connecting to.
+   *
+   * @return The vineyard server's instance id.
+   */
+  virtual const InstanceID remote_instance_id() const { return instance_id(); }
 
   /**
    * @brief Get the session id of the connected vineyard server.
@@ -523,14 +524,23 @@ class ClientBase {
   Status doRead(json& root);
 
   /**
-   * @brief Implementation for migrate remote object to local.
+   * @brief Migrate remote buffers to connected instance.
+   *
+   * @param remote The RPC client that will be used to fetch remote buffers.
+   * @param blobs The existing blobs that will be migrated to current instance.
+   * @param results Record the result blob id mapping.
    *
    * @return Status that indicates if the migration success.
    */
-  Status migrateObjectImpl(const ObjectID object_id, ObjectID& result_id,
-                           bool const local, bool const is_stream,
-                           std::string const& peer,
-                           std::string const& peer_rpc_endpoint);
+  virtual Status migrateBuffers(RPCClient& remote,
+                                const std::set<ObjectID> blobs,
+                                std::map<ObjectID, ObjectID>& results) = 0;
+
+  Status collectRemoteBlobs(const json& tree, std::set<ObjectID>& blobs);
+
+  Status recreateMetadata(ClientBase& client, ObjectMeta const& metadata,
+                          ObjectMeta& target,
+                          std::map<ObjectID, ObjectID> result_blobs);
 
   mutable bool connected_;
   std::string ipc_socket_;

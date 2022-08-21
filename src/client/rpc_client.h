@@ -16,7 +16,9 @@ limitations under the License.
 #ifndef SRC_CLIENT_RPC_CLIENT_H_
 #define SRC_CLIENT_RPC_CLIENT_H_
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -32,7 +34,7 @@ namespace vineyard {
 class Blob;
 class BlobWriter;
 
-class RPCClient : public ClientBase {
+class RPCClient final : public ClientBase {
  public:
   ~RPCClient() override;
 
@@ -225,7 +227,9 @@ class RPCClient : public ClientBase {
    *
    * @return The vineyard server's instance id.
    */
-  const InstanceID remote_instance_id() const { return remote_instance_id_; }
+  const InstanceID remote_instance_id() const override {
+    return remote_instance_id_;
+  }
 
   Status CreateRemoteBlob(std::shared_ptr<RemoteBlobWriter> const& buffer,
                           ObjectID& id);
@@ -266,6 +270,11 @@ class RPCClient : public ClientBase {
 
  private:
   InstanceID remote_instance_id_;
+
+  Status migrateBuffers(RPCClient& remote, const std::set<ObjectID> blobs,
+                        std::map<ObjectID, ObjectID>& results) override;
+
+  friend class Client;
 };
 
 }  // namespace vineyard

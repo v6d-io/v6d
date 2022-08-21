@@ -32,11 +32,7 @@ namespace vineyard {
 
 class Kubectl {
  public:
-#if BOOST_VERSION >= 106600
   explicit Kubectl(asio::io_context& context);
-#else
-  explicit Kubectl(asio::io_service& context);
-#endif
 
   ~Kubectl();
 

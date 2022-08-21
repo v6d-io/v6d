@@ -55,11 +55,7 @@ void RPCServer::Start() {
             << rpc_spec_["port"].get<uint32_t>() << " for RPC";
 }
 
-#if BOOST_VERSION >= 106600
 asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_context&) {
-#else
-asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_service&) {
-#endif
   uint32_t port = rpc_spec_["port"].get<uint32_t>();
   return asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port);
 }

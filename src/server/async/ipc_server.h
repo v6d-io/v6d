@@ -19,8 +19,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "boost/asio.hpp"
-
+#include "common/util/asio.h"
 #include "common/util/protocols.h"
 #include "server/async/socket_server.h"
 #include "server/memory/memory.h"
@@ -49,11 +48,7 @@ class IPCServer : public SocketServer,
   }
 
  private:
-#if BOOST_VERSION >= 106600
   asio::local::stream_protocol::endpoint getEndpoint(asio::io_context&);
-#else
-  asio::local::stream_protocol::endpoint getEndpoint(asio::io_service&);
-#endif
 
   void doAccept() override;
 

@@ -89,8 +89,8 @@ void* BulkAllocator::Init(const size_t size) {
   size_t mimalloc_meta_size =
       MIMALLOC_SEGMENT_ALIGNED_SIZE * (std::thread::hardware_concurrency() + 1);
   // leave spaces for memory fragmentation
-  return Allocator::Init(static_cast<size_t>(static_cast<double>(size) * 1.2) +
-                         mimalloc_meta_size);
+  return Allocator::Init(static_cast<size_t>(
+      static_cast<double>(size + mimalloc_meta_size) * 1.5));
 #endif
 }
 

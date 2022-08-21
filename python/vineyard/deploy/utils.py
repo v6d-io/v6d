@@ -70,7 +70,7 @@ def find_executable(name, search_paths=None):
 
 @contextlib.contextmanager
 def start_program(
-    name, *args, verbose=False, nowait=False, search_paths=None, **kwargs
+    name, *args, verbose=False, nowait=False, search_paths=None, shell=False, **kwargs
 ):
     env, cmdargs = os.environ.copy(), list(args)
     for k, v in kwargs.items():
@@ -88,7 +88,9 @@ def start_program(
             out, err = sys.stdout, sys.stderr
         else:
             out, err = subprocess.PIPE, subprocess.PIPE
-        proc = subprocess.Popen([prog] + cmdargs, env=env, stdout=out, stderr=err)
+        proc = subprocess.Popen(
+            [prog] + cmdargs, env=env, stdout=out, stderr=err, shell=shell
+        )
         if not nowait:
             time.sleep(1)
         rc = proc.poll()
@@ -106,16 +108,22 @@ def start_program(
                 proc.wait()
 
 
+def port_is_inuse(port):
+    try:
+        if port not in [conn.laddr.port for conn in psutil.net_connections()]:
+            return False
+    except (psutil.AccessDenied, RuntimeError):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', port)) != 0:
+                return False
+    return True
+
+
 def find_port_probe(start=2048, end=20480):
     '''Find an available port in range [start, end)'''
     for port in range(start, end):
-        try:
-            if port not in [conn.laddr.port for conn in psutil.net_connections()]:
-                yield port
-        except (psutil.AccessDenied, RuntimeError):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                if s.connect_ex(('localhost', port)) != 0:
-                    yield port
+        if not port_is_inuse(port):
+            yield port
 
 
 ipc_port_finder = find_port_probe()
