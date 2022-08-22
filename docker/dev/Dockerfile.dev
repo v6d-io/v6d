@@ -1,0 +1,19 @@
+FROM ubuntu:20.04
+
+RUN chmod 1777 /tmp
+
+RUN mkdir -p /workspace/build_scripts
+
+COPY ./build_scripts/install-deps.sh /workspace/build_scripts
+RUN cd /workspace && bash ./build_scripts/install-deps.sh
+
+COPY ./build_scripts/install-arrow.sh /workspace/build_scripts
+RUN cd /workspace && bash ./build_scripts/install-arrow.sh
+
+COPY ./build_scripts/install-miscs.sh /workspace/build_scripts
+COPY ./build_scripts/requirements.txt /workspace/build_scripts
+RUN cd /workspace && bash ./build_scripts/install-miscs.sh
+
+COPY ./build_scripts/install-libgrape-lite.sh /workspace/build_scripts
+RUN cd /workspace && bash ./build_scripts/install-libgrape-lite.sh
+
