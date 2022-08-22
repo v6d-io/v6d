@@ -90,10 +90,13 @@ inline boost::leaf::result<std::shared_ptr<arrow::Schema>> TypeLoosen(
 
   for (int i = 0; i < field_num; ++i) {
     lossen_fields[i] = fields[i][0];
-    if (fields[i][0]->type() == arrow::null()) {
+    auto res = fields[i][0]->type();
+    if (res == arrow::null()) {
       continue;
     }
-    auto res = fields[i][0]->type();
+    if (res->Equals(arrow::boolean())) {
+      res = arrow::int32();
+    }
     if (res->Equals(arrow::date32())) {
       res = arrow::int32();
     }
