@@ -25,6 +25,17 @@ and the following python packages that can be easily installed using `pip`:
 - libclang
 - parsec
 
+Developing vineyard using Docker
+--------------------------------
+
+To simplify the dependency installation process, we have provided a docker
+image with all requirements installed. The docker image can be found from
+`vineyardcloudnative/vineyard-dev <https://hub.docker.com/r/vineyardcloudnative/vineyard-dev/tags>`_.
+
+.. code:: shell
+
+    docker pull vineyardcloudnative/vineyard-dev:latest 
+
 Build the source
 ----------------
 
