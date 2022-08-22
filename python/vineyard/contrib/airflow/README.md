@@ -122,7 +122,7 @@ enables airflow to exchange **complex** and **big** data without modify the DAG 
 Deploy using Docker Compose <a name="deploy-using-docker-compose"/>
 ---------------------------
 
-We provide a reference docker compose settings (see [docker-compose.yaml](./docker-compose.yaml))
+We provide a reference docker compose settings (see [docker-compose.yaml](./docker/docker-compose.yaml))
 for deploying airflow with vineyard as the XCom backend on Docker Compose.
 
 The docker compose containers cloud be deployed as
@@ -132,7 +132,7 @@ $ cd docker/
 $ docker compose up
 ```
 
-We have also included a diff file [docker-compose.yaml.diff](./docker-compose.yaml.diff) that shows
+We have also included a diff file [docker-compose.yaml.diff](./docker/docker-compose.yaml.diff) that shows
 the changed pieces that can be introduced into your own docker compose deployment.
 
 Deploy on Kubernetes <a name="deploy-on-kubernetes"/>
