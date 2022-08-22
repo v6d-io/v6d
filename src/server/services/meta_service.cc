@@ -141,7 +141,8 @@ void IMetaService::IncRef(std::string const& instance_name,
 
 void IMetaService::CloneRef(ObjectID const target, ObjectID const mirror) {
   // avoid repeatedly clone
-  VLOG(10) << "clone ref: " << ObjectIDToString(target) << " -> "
+  VLOG(10) << "[" << server_ptr_->instance_id() << "] clone ref: "
+           << ": " << ObjectIDToString(target) << " -> "
            << ObjectIDToString(mirror);
   if (supobjects_.find(mirror) != supobjects_.end()) {
     return;
@@ -357,7 +358,10 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
       ObjectID object_id =
           ObjectIDFromString(value.get_ref<std::string const&>());
       ObjectID equivalent = InvalidObjectID();
-      if (meta_tree::HasEquivalent(meta_, object_id, equivalent)) {
+      std::string signature_key = kv.key.substr(kv.key.find_last_of("/") + 1);
+      if (meta_tree::HasEquivalentWithSignature(
+              meta_, SignatureFromString(signature_key), object_id,
+              equivalent)) {
         CloneRef(equivalent, object_id);
       }
     } else {

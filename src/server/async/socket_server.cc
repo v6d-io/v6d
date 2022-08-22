@@ -360,6 +360,9 @@ void SocketConnection::sendRemoteBufferHelper(
     boost::system::error_code const ec, callback_t<> callback_after_finish) {
   auto self(shared_from_this());
   if (!ec && index < objects.size()) {
+    while (objects[index]->data_size == 0) {
+      index += 1;
+    }
     boost::asio::async_write(
         socket_,
         boost::asio::buffer(objects[index]->pointer, objects[index]->data_size),
@@ -930,42 +933,10 @@ bool SocketConnection::doDropName(const json& root) {
 
 bool SocketConnection::doMigrateObject(const json& root) {
   auto self(shared_from_this());
-  ObjectID object_id;
-  bool local;
-  bool is_stream;
-  std::string peer, peer_rpc_endpoint;
-  TRY_READ_REQUEST(ReadMigrateObjectRequest, root, object_id, local, is_stream,
-                   peer, peer_rpc_endpoint);
-  if (is_stream) {
-    RESPONSE_ON_ERROR(server_ptr_->MigrateStream(
-        object_id, local, peer, peer_rpc_endpoint,
-        [self](const Status& status, const ObjectID& target) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteMigrateObjectReply(target, message_out);
-          } else {
-            LOG(ERROR) << "Failed to start migrating stream: "
-                       << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  } else {
-    RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
-        object_id, local, peer, peer_rpc_endpoint,
-        [self](const Status& status, const ObjectID& target) {
-          std::string message_out;
-          if (status.ok()) {
-            WriteMigrateObjectReply(target, message_out);
-          } else {
-            LOG(ERROR) << "Failed to migrate object: " << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        }));
-  }
+  std::string message_out;
+  WriteErrorReply(Status::Invalid("Migrate request has been deprecated"),
+                  message_out);
+  self->doWrite(message_out);
   return false;
 }
 

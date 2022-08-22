@@ -243,8 +243,8 @@ class PlasmaClient;
  *        vineyard server. Vineyard's IPC Client talks to vineyard server
  *        and manipulate objects in vineyard.
  */
-class Client : public BasicIPCClient,
-               protected detail::UsageTracker<ObjectID, Payload, Client> {
+class Client final : public BasicIPCClient,
+                     protected detail::UsageTracker<ObjectID, Payload, Client> {
  public:
   Client() {}
 
@@ -310,6 +310,20 @@ class Client : public BasicIPCClient,
                      const bool sync_remote = false) override;
 
   /**
+   * @brief Obtain metadata from vineyard server.
+   *
+   * @param id The object id to get.
+   * @param meta_data The result metadata will be store in `meta_data` as return
+   * value.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific metadata. Default is false.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status FetchAndGetMetaData(const ObjectID id, ObjectMeta& meta_data,
+                             const bool sync_remote = false);
+
+  /**
    * @brief Obtain multiple metadatas from vineyard server.
    *
    * @param ids The object ids to get.
@@ -320,7 +334,7 @@ class Client : public BasicIPCClient,
    *
    * @return Status that indicates whether the get action has succeeded.
    */
-  Status GetMetaData(const std::vector<ObjectID>& id, std::vector<ObjectMeta>&,
+  Status GetMetaData(const std::vector<ObjectID>& ids, std::vector<ObjectMeta>&,
                      const bool sync_remote = false);
 
   /**
@@ -424,12 +438,36 @@ class Client : public BasicIPCClient,
    * resolve the constructor of the object.
    *
    * @param id The object id to get.
+   *
+   * @return A std::shared_ptr<Object> that can be safely cast to the underlying
+   * concrete object type. When the object doesn't exists an std::runtime_error
+   * exception will be raised.
+   */
+  std::shared_ptr<Object> FetchAndGetObject(const ObjectID id);
+
+  /**
+   * @brief Get an object from vineyard. The ObjectFactory will be used to
+   * resolve the constructor of the object.
+   *
+   * @param id The object id to get.
    * @param object The result object will be set in parameter `object`.
    *
    * @return When errors occur during the request, this method won't throw
    * exceptions, rather, it results a status to represents the error.
    */
   Status GetObject(const ObjectID id, std::shared_ptr<Object>& object);
+
+  /**
+   * @brief Get an object from vineyard. The ObjectFactory will be used to
+   * resolve the constructor of the object.
+   *
+   * @param id The object id to get.
+   * @param object The result object will be set in parameter `object`.
+   *
+   * @return When errors occur during the request, this method won't throw
+   * exceptions, rather, it results a status to represents the error.
+   */
+  Status FetchAndGetObject(const ObjectID id, std::shared_ptr<Object>& object);
 
   /**
    * @brief Get an object from vineyard. The type parameter `T` will be used to
@@ -443,6 +481,21 @@ class Client : public BasicIPCClient,
    */
   template <typename T>
   std::shared_ptr<T> GetObject(const ObjectID id) {
+    return std::dynamic_pointer_cast<T>(GetObject(id));
+  }
+
+  /**
+   * @brief Get an object from vineyard. The type parameter `T` will be used to
+   * resolve the constructor of the object.
+   *
+   * @param id The object id to get.
+   *
+   * @return A std::shared_ptr<Object> that can be safely cast to the underlying
+   * concrete object type. When the object doesn't exists an std::runtime_error
+   * exception will be raised.
+   */
+  template <typename T>
+  std::shared_ptr<T> FetchAndGetObject(const ObjectID id) {
     return std::dynamic_pointer_cast<T>(GetObject(id));
   }
 
@@ -469,6 +522,38 @@ class Client : public BasicIPCClient,
   Status GetObject(const ObjectID id, std::shared_ptr<T>& object) {
     std::shared_ptr<Object> _object;
     RETURN_ON_ERROR(GetObject(id, _object));
+    object = std::dynamic_pointer_cast<T>(_object);
+    if (object == nullptr) {
+      return Status::ObjectNotExists("object not exists: " +
+                                     ObjectIDToString(id));
+    } else {
+      return Status::OK();
+    }
+  }
+
+  /**
+   * @brief Get an object from vineyard. The type parameter `T` will be used to
+   * resolve the constructor of the object.
+   *
+   * This method can be used to get concrete object from vineyard without
+   * explicitly `dynamic_cast`, and the template type parameter can be deduced
+   * in many situations:
+   *
+   * \code{.cpp}
+   *    std::shared_ptr<Array<int>> int_array;
+   *    client.FetchAndGetObject(id, int_array);
+   * \endcode
+   *
+   * @param id The object id to get.
+   * @param object The result object will be set in parameter `object`.
+   *
+   * @return When errors occur during the request, this method won't throw
+   * exceptions, rather, it results a status to represents the error.
+   */
+  template <typename T>
+  Status FetchAndGetObject(const ObjectID id, std::shared_ptr<T>& object) {
+    std::shared_ptr<Object> _object;
+    RETURN_ON_ERROR(FetchAndGetObject(id, _object));
     object = std::dynamic_pointer_cast<T>(_object);
     if (object == nullptr) {
       return Status::ObjectNotExists("object not exists: " +
@@ -728,13 +813,16 @@ class Client : public BasicIPCClient,
   Status GetBufferSizes(const std::set<ObjectID>& ids, const bool unsafe,
                         std::map<ObjectID, size_t>& sizes);
 
+  Status migrateBuffers(RPCClient& remote, const std::set<ObjectID> blobs,
+                        std::map<ObjectID, ObjectID>& results) override;
+
   friend class Blob;
   friend class BlobWriter;
   friend class ObjectBuilder;
   friend class detail::UsageTracker<ObjectID, Payload, Client>;
 };
 
-class PlasmaClient
+class PlasmaClient final
     : public BasicIPCClient,
       public detail::UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient> {
  public:
@@ -837,6 +925,9 @@ class PlasmaClient
   Status GetBuffers(
       std::set<PlasmaID> const& plasma_ids, const bool unsafe,
       std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
+
+  Status migrateBuffers(RPCClient& remote, const std::set<ObjectID> blobs,
+                        std::map<ObjectID, ObjectID>& results) override;
 
   friend class detail::UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient>;
 };

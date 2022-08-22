@@ -25,7 +25,7 @@ import vineyard
 import vineyard.io
 
 
-@pytest.mark.skip_without_migration()
+@pytest.mark.skip(reason="not ready for testing")
 def test_migrate_stream(
     vineyard_ipc_sockets, vineyard_endpoint, test_dataset, test_dataset_tmp
 ):

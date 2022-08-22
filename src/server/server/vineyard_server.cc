@@ -61,22 +61,18 @@ bool DeferredReq::TestThenCall(const json& meta) const {
 
 VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
                                std::shared_ptr<VineyardRunner> runner,
-#if BOOST_VERSION >= 106600
                                asio::io_context& context,
                                asio::io_context& meta_context,
-#else
-                               asio::io_service& context,
-                               asio::io_service& meta_context,
-#endif
+                               asio::io_context& io_context,
                                callback_t<std::string const&> callback)
     : spec_(spec),
       session_id_(session_id),
       context_(context),
       meta_context_(meta_context),
+      io_context_(io_context),
       callback_(callback),
       runner_(runner),
-      ready_(0) {
-}
+      ready_(0) {}
 
 template <>
 std::shared_ptr<BulkStore> VineyardServer::GetBulkStore<ObjectID>() {
@@ -757,166 +753,6 @@ Status VineyardServer::DropName(const std::string& name,
         }
       },
       callback);
-  return Status::OK();
-}
-
-Status VineyardServer::MigrateObject(const ObjectID object_id, const bool local,
-                                     const std::string& peer,
-                                     const std::string& peer_rpc_endpoint,
-                                     callback_t<const ObjectID&> callback) {
-  ENSURE_VINEYARDD_READY();
-  RETURN_ON_ASSERT(!IsBlob(object_id), "The blobs cannot be migrated");
-  auto self(shared_from_this());
-  static const std::string migrate_process = "vineyard-migrate";
-
-  if (!local) {
-    std::vector<std::string> args = {
-        "--client",       "true",
-        "--ipc_socket",   IPCSocket(),
-        "--rpc_endpoint", peer_rpc_endpoint,
-        "--host",         peer,
-        "--id",           ObjectIDToString(object_id)};
-    auto proc = std::make_shared<Process>(context_);
-    proc->Start(
-        migrate_process, args,
-        [self, callback, proc, object_id](Status const& status,
-                                          std::string const& line) {
-          if (status.ok()) {
-            proc->Wait();
-            if (proc->ExitCode() != 0) {
-              return callback(
-                  Status::IOError("The migration client exit abnormally"),
-                  InvalidObjectID());
-            }
-
-            ObjectID result_id = ObjectIDFromString(line);
-
-            // associate the signature.
-            //
-            // Note: here we assume the object been migrated is a member of
-            // global object. The assumption. is not always holds, but we have
-            // no way (or too hard) to decide if an object is a member of global
-            // object.
-            //
-            self->meta_service_ptr_->RequestToPersist(
-                [self, object_id, result_id](
-                    const Status& status, const json& meta,
-                    std::vector<meta_tree::op_t>& ops) {
-                  // get signature
-                  json tree;
-                  Status s;
-                  CATCH_JSON_ERROR(
-                      s, meta_tree::GetData(meta, self->instance_name(),
-                                            object_id, tree));
-                  VINEYARD_SUPPRESS(s);
-                  Signature sig = tree["signature"].get<Signature>();
-                  VLOG(2) << "migrate: original " << ObjectIDToString(object_id)
-                          << " -> " << SignatureToString(sig);
-                  // put signature
-                  ops.emplace_back(meta_tree::op_t::Put(
-                      "/signatures/" + self->instance_name() + "/" +
-                          SignatureToString(sig),
-                      ObjectIDToString(result_id)));
-                  VLOG(2) << "migrate: becomes " << ObjectIDToString(object_id)
-                          << " -> " << SignatureToString(sig);
-                  return Status::OK();
-                },
-                [callback, result_id](const Status& status) {
-                  return callback(Status::OK(), result_id);
-                });
-          } else {
-            proc->Terminate();
-            return callback(status, InvalidObjectID());
-          }
-          return Status::OK();
-        });
-  } else {
-    std::vector<std::string> args = {"--server",       "true",
-                                     "--ipc_socket",   IPCSocket(),
-                                     "--rpc_endpoint", peer_rpc_endpoint,
-                                     "--host",         "0.0.0.0"};
-    auto proc = std::make_shared<Process>(context_);
-    proc->Start(
-        migrate_process, args,
-        [callback, proc, object_id](Status const& status,
-                                    std::string const& line) {
-          if (status.ok()) {
-            proc->Wait();
-            if (proc->ExitCode() != 0) {
-              return callback(
-                  Status::IOError("The migration server exit abnormally"),
-                  InvalidObjectID());
-            } else {
-              return callback(Status::OK(), object_id);
-            }
-          } else {
-            proc->Terminate();
-            return callback(status, InvalidObjectID());
-          }
-        });
-  }
-  return Status::OK();
-}
-
-Status VineyardServer::MigrateStream(const ObjectID stream_id, const bool local,
-                                     const std::string& peer,
-                                     const std::string& peer_rpc_endpoint,
-                                     callback_t<const ObjectID&> callback) {
-  ENSURE_VINEYARDD_READY();
-  RETURN_ON_ASSERT(!IsBlob(stream_id), "The blobs cannot be migrated");
-  auto self(shared_from_this());
-  static const std::string migrate_process = "vineyard-migrate-stream";
-
-  if (local) {
-    std::vector<std::string> args = {
-        "--client",       "true",
-        "--ipc_socket",   IPCSocket(),
-        "--rpc_endpoint", peer_rpc_endpoint,
-        "--host",         peer,
-        "--id",           ObjectIDToString(stream_id)};
-    auto proc = std::make_shared<Process>(context_);
-    proc->Start(
-        migrate_process, args,
-        [self, callback, proc, stream_id](Status const& status,
-                                          std::string const& line) {
-          if (status.ok()) {
-            VINEYARD_DISCARD(callback(Status::OK(), stream_id));
-            if (!proc->Running() && proc->ExitCode() != 0) {
-              return Status::IOError("The migration client exit abnormally");
-            }
-            proc->Detach();
-            return Status::OK();
-          } else {
-            proc->Terminate();
-            return callback(status, InvalidObjectID());
-          }
-          return Status::OK();
-        });
-  } else {
-    std::vector<std::string> args = {
-        "--server",       "true",
-        "--ipc_socket",   IPCSocket(),
-        "--rpc_endpoint", peer_rpc_endpoint,
-        "--host",         "0.0.0.0",
-        "--id",           ObjectIDToString(stream_id)};
-    auto proc = std::make_shared<Process>(context_);
-    proc->Start(
-        migrate_process, args,
-        [callback, proc](Status const& status, std::string const& line) {
-          if (status.ok()) {
-            ObjectID result_id = ObjectIDFromString(line);
-            VINEYARD_DISCARD(callback(Status::OK(), result_id));
-            if (!proc->Running() && proc->ExitCode() != 0) {
-              return Status::IOError("The migration server exit abnormally");
-            }
-            proc->Detach();
-            return Status::OK();
-          } else {
-            proc->Terminate();
-            return callback(status, InvalidObjectID());
-          }
-        });
-  }
   return Status::OK();
 }
 

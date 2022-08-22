@@ -128,6 +128,9 @@ Status DecodeObjectID(const json& tree, const std::string& instance_name,
 bool HasEquivalent(const json& tree, ObjectID const object_id,
                    ObjectID& equivalent);
 
+bool HasEquivalentWithSignature(const json& tree, Signature const signature,
+                                ObjectID const object_id, ObjectID& equivalent);
+
 bool MatchTypeName(bool regex, std::string const& pattern,
                    std::string const& type);
 

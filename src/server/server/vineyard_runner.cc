@@ -36,15 +36,10 @@ VineyardRunner::VineyardRunner(const json& spec)
       concurrency_(std::thread::hardware_concurrency()),
       context_(concurrency_),
       meta_context_(),
-#if BOOST_VERSION >= 106600
+      io_context_(concurrency_),
       guard_(asio::make_work_guard(context_)),
-      meta_guard_(asio::make_work_guard(meta_context_))
-#else
-      guard_(new boost::asio::io_service::work(context_)),
-      meta_guard_(new boost::asio::io_service::work(context_))
-#endif
-{
-}
+      meta_guard_(asio::make_work_guard(meta_context_)),
+      io_guard_(asio::make_work_guard(io_context_)) {}
 
 std::shared_ptr<VineyardRunner> VineyardRunner::Get(const json& spec) {
   return std::shared_ptr<VineyardRunner>(new VineyardRunner(spec));
@@ -55,23 +50,24 @@ bool VineyardRunner::Running() const { return !stopped_.load(); }
 Status VineyardRunner::Serve() {
   stopped_.store(false);
 
-  VINEYARD_ASSERT(sessions_.empty(), "Vineyard Runner already started");
+  VINEYARD_ASSERT(sessions_.empty(), "Vineyard runner already started");
   auto root_vs = std::make_shared<VineyardServer>(
       spec_template_, RootSessionID(), shared_from_this(), context_,
-      meta_context_, [](Status const& s, std::string const&) { return s; });
+      meta_context_, io_context_,
+      [](Status const& s, std::string const&) { return s; });
   sessions_.emplace(RootSessionID(), root_vs);
 
   // start a root session
   VINEYARD_CHECK_OK(root_vs->Serve(StoreType::kDefault));
 
   for (unsigned int idx = 0; idx < concurrency_; ++idx) {
-#if BOOST_VERSION >= 106600
     workers_.emplace_back(
         boost::bind(&boost::asio::io_context::run, &context_));
-#else
-    workers_.emplace_back(
-        boost::bind(&boost::asio::io_service::run, &context_));
-#endif
+  }
+
+  for (unsigned int idx = 0; idx < concurrency_; ++idx) {
+    io_workers_.emplace_back(
+        boost::bind(&boost::asio::io_context::run, &context_));
   }
 
   meta_context_.run();
@@ -101,7 +97,8 @@ Status VineyardRunner::CreateNewSession(
       default_ipc_socket + "." + SessionIDToString(session_id);
 
   auto vs_ptr = std::make_shared<VineyardServer>(
-      spec, session_id, shared_from_this(), context_, meta_context_, callback);
+      spec, session_id, shared_from_this(), context_, meta_context_,
+      io_context_, callback);
   sessions_.emplace(session_id, vs_ptr);
   LOG(INFO) << "Vineyard creates a new session with '"
             << SessionIDToString(session_id) << "'";
@@ -155,10 +152,12 @@ void VineyardRunner::Stop() {
 
   guard_.reset();
   meta_guard_.reset();
+  io_guard_.reset();
 
   // stop the asio context at last
-  context_.stop();
+  io_context_.stop();
   meta_context_.stop();
+  context_.stop();
 
   // wait for the IO context finishes.
   for (auto& worker : workers_) {

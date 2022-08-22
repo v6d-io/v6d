@@ -19,8 +19,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "boost/asio.hpp"
-
+#include "common/util/asio.h"
 #include "common/util/env.h"
 #include "server/async/socket_server.h"
 
@@ -46,11 +45,7 @@ class RPCServer : public SocketServer,
   }
 
  private:
-#if BOOST_VERSION >= 106600
   asio::ip::tcp::endpoint getEndpoint(asio::io_context&);
-#else
-  asio::ip::tcp::endpoint getEndpoint(asio::io_service&);
-#endif
 
   void doAccept() override;
 

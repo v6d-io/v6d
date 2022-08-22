@@ -39,8 +39,12 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name) {
   auto creator = known_types.find(type_name);
   if (creator == known_types.end()) {
 #ifndef NDEBUG
-    std::clog << "[debug] create an instance with the unknown typename: "
-              << type_name << std::endl;
+    static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
+    if (__trace) {
+      std::clog << "[debug] create an instance with the unknown typename: "
+                << type_name << std::endl;
+    }
+
 #endif
     return nullptr;
   } else {
@@ -58,8 +62,11 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name,
   auto creator = known_types.find(type_name);
   if (creator == known_types.end()) {
 #ifndef NDEBUG
-    std::clog << "[debug] create an instance with the unknown typename: "
-              << type_name << std::endl;
+    static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
+    if (__trace) {
+      std::clog << "[debug] create an instance with the unknown typename: "
+                << type_name << std::endl;
+    }
 #endif
     return nullptr;
   } else {
@@ -88,8 +95,11 @@ static void* __try_load_internal_registry(std::string const& location,
     if (err) {
       error_message = err;
 #ifndef NDEBUG
-      // See: Note [std::cerr instead of DVLOG()]
-      std::clog << "vineyard: error in loading: " << err << std::endl;
+      static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
+      if (__trace) {
+        // See: Note [std::cerr instead of DVLOG()]
+        std::clog << "vineyard: error in loading: " << err << std::endl;
+      }
 #endif
     }
   }
@@ -159,8 +169,11 @@ static vineyard_registry_getter_t __find_global_registry_entry(
     if (err) {
       error_message = err;
 #ifndef NDEBUG
-      // See: Note [std::clog instead of DVLOG()]
-      std::clog << "vineyard: error in resolving: " << err << std::endl;
+      static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
+      if (__trace) {
+        // See: Note [std::clog instead of DVLOG()]
+        std::clog << "vineyard: error in resolving: " << err << std::endl;
+      }
 #endif
     }
   }
@@ -175,18 +188,24 @@ __instantize__registry(vineyard_registry_handler_t& handler,
 
     // load from the global scope
 #ifndef NDEBUG
-    // See: Note [std::clog instead of DVLOG()]
-    std::clog << "vineyard: looking up vineyard registry from the global scope"
-              << std::endl;
+    static bool __trace = !read_env("VINEYARD_TRACE_REGISTRY").empty();
+    if (__trace) {
+      // See: Note [std::clog instead of DVLOG()]
+      std::clog
+          << "vineyard: looking up vineyard registry from the global scope"
+          << std::endl;
+    }
 #endif
     getter = detail::__find_global_registry_entry(error_message);
 
     // load the shared library, then search from the global scope
     if (getter == nullptr) {
 #ifndef NDEBUG
-      // See: Note [std::clog instead of DVLOG()]
-      std::clog << "vineyard: loading the vineyard registry library"
-                << std::endl;
+      if (__trace) {
+        // See: Note [std::clog instead of DVLOG()]
+        std::clog << "vineyard: loading the vineyard registry library"
+                  << std::endl;
+      }
 #endif
       handler = detail::__load_internal_registry(error_message);
       VINEYARD_ASSERT(handler != nullptr,
@@ -196,9 +215,11 @@ __instantize__registry(vineyard_registry_handler_t& handler,
       // load from the global scope, again
 #ifndef NDEBUG
       // See: Note [std::clog instead of DVLOG()]
-      std::clog << "vineyard: looking up vineyard registry from the global "
-                   "scope again"
-                << std::endl;
+      if (__trace) {
+        std::clog << "vineyard: looking up vineyard registry from the global "
+                     "scope again"
+                  << std::endl;
+      }
 #endif
       getter = detail::__find_global_registry_entry(error_message);
     }

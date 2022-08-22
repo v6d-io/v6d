@@ -27,9 +27,8 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
-#include "boost/asio.hpp"
-
 #include "common/memory/payload.h"
+#include "common/util/asio.h"
 #include "common/util/callback.h"
 #include "common/util/logging.h"
 #include "common/util/uuid.h"

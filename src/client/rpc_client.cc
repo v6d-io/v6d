@@ -16,7 +16,9 @@ limitations under the License.
 #include "client/rpc_client.h"
 
 #include <iostream>
+#include <map>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -210,6 +212,41 @@ std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
   return objects;
 }
 
+Status RPCClient::migrateBuffers(RPCClient& remote,
+                                 const std::set<ObjectID> blobs,
+                                 std::map<ObjectID, ObjectID>& results) {
+  ENSURE_CONNECTED(this);
+
+  std::vector<Payload> payloads;
+  std::vector<int> fd_sent;
+
+  std::string message_out;
+  WriteGetRemoteBuffersRequest(blobs, false, message_out);
+  RETURN_ON_ERROR(remote.doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(remote.doRead(message_in));
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+  RETURN_ON_ASSERT(payloads.size() == blobs.size(),
+                   "The result size doesn't match with the requested sizes: " +
+                       std::to_string(payloads.size()) + " vs. " +
+                       std::to_string(blobs.size()));
+
+  for (auto const& payload : payloads) {
+    if (payload.data_size == 0) {
+      results[payload.object_id] = EmptyBlobID();
+      continue;
+    }
+    auto remote_blob_writer = std::shared_ptr<RemoteBlobWriter>(
+        new RemoteBlobWriter(payload.data_size));
+    RETURN_ON_ERROR(recv_bytes(remote.vineyard_conn_,
+                               remote_blob_writer->data(), payload.data_size));
+    ObjectID target_blob_id = InvalidObjectID();
+    RETURN_ON_ERROR(this->CreateRemoteBlob(remote_blob_writer, target_blob_id));
+    results[payload.object_id] = target_blob_id;
+  }
+  return Status::OK();
+}
+
 Status RPCClient::CreateRemoteBlob(
     std::shared_ptr<RemoteBlobWriter> const& buffer, ObjectID& id) {
   ENSURE_CONNECTED(this);
@@ -245,7 +282,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
   std::vector<int> fd_sent;
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest({id}, unsafe, message_out);
+  WriteGetRemoteBuffersRequest(std::set<ObjectID>{id}, unsafe, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -281,7 +318,9 @@ Status RPCClient::GetRemoteBlobs(
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
   RETURN_ON_ASSERT(payloads.size() == id_set.size(),
-                   "The result size doesn't match with the requested sizes");
+                   "The result size doesn't match with the requested sizes: " +
+                       std::to_string(payloads.size()) + " vs. " +
+                       std::to_string(id_set.size()));
 
   std::unordered_map<ObjectID, std::shared_ptr<RemoteBlob>> id_payload_map;
   for (auto const& payload : payloads) {
@@ -295,7 +334,7 @@ Status RPCClient::GetRemoteBlobs(
   remote_blobs.clear();
   for (auto const& id : ids) {
     auto it = id_payload_map.find(id);
-    if (it != id_payload_map.end()) {
+    if (it == id_payload_map.end()) {
       remote_blobs.emplace_back(nullptr);
     } else {
       remote_blobs.emplace_back(it->second);

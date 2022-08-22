@@ -27,20 +27,16 @@ limitations under the License.
 #include <unistd.h>
 #endif
 
-#include "boost/asio.hpp"
 #include "boost/bind.hpp"
 #include "boost/filesystem.hpp"
 #include "boost/process.hpp"
 
+#include "common/util/asio.h"
+
 namespace vineyard {
 
-#if BOOST_VERSION >= 106600
 Process::Process(asio::io_context& context)
-#else
-Process::Process(asio::io_service& context)
-#endif
-    : stdin_pipe_(context), stdout_pipe_(context), stderr_pipe_(context) {
-}
+    : stdin_pipe_(context), stdout_pipe_(context), stderr_pipe_(context) {}
 
 Process::~Process() {
   this->Terminate();

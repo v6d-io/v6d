@@ -373,6 +373,20 @@ void WriteGetBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
   encode_msg(root, msg);
 }
 
+void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                            const bool unsafe, std::string& msg) {
+  json root;
+  root["type"] = "get_buffers_request";
+  int idx = 0;
+  for (auto const& id : ids) {
+    root[std::to_string(idx++)] = id;
+  }
+  root["num"] = ids.size();
+  root["unsafe"] = unsafe;
+
+  encode_msg(root, msg);
+}
+
 Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
                              bool& unsafe) {
   RETURN_ON_ASSERT(root["type"] == "get_buffers_request");
@@ -403,7 +417,8 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
 Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
                            std::vector<int>& fd_sent) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
-  for (size_t i = 0; i < root["num"]; ++i) {
+
+  for (size_t i = 0; i < root.value("num", 0); ++i) {
     json tree = root[std::to_string(i)];
     Payload object;
     object.FromJSON(tree);
@@ -413,6 +428,20 @@ Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
     fd_sent = root["fds"].get<std::vector<int>>();
   }
   return Status::OK();
+}
+
+void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
+                                  const bool unsafe, std::string& msg) {
+  json root;
+  root["type"] = "get_remote_buffers_request";
+  int idx = 0;
+  for (auto const& id : ids) {
+    root[std::to_string(idx++)] = id;
+  }
+  root["num"] = ids.size();
+  root["unsafe"] = unsafe;
+
+  encode_msg(root, msg);
 }
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,

@@ -63,13 +63,8 @@ void IPCServer::Close() {
   }
 }
 
-#if BOOST_VERSION >= 106600
 asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     asio::io_context& context) {
-#else
-asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
-    asio::io_service& context) {
-#endif
   std::string const& ipc_socket =
       ipc_spec_["socket"].get_ref<std::string const&>();
   auto endpoint = asio::local::stream_protocol::endpoint(ipc_socket);

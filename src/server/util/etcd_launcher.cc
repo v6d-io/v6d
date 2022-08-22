@@ -23,8 +23,8 @@ limitations under the License.
 #include <vector>
 
 #include "boost/algorithm/string.hpp"
-#include "boost/asio.hpp"
 
+#include "common/util/asio.h"
 #include "common/util/env.h"
 
 namespace vineyard {
@@ -64,13 +64,8 @@ static bool validate_advertise_hostname(std::string& ipaddress,
   return true;
 }
 
-static bool check_port_in_use(
-#if BOOST_VERSION >= 106600
-    boost::asio::io_context& context,
-#else
-    boost::asio::io_service& context,
-#endif
-    unsigned short port) {
+static bool check_port_in_use(boost::asio::io_context& context,
+                              unsigned short port) {
   boost::system::error_code ec;
 
   boost::asio::ip::tcp::acceptor acceptor(context);
@@ -151,11 +146,7 @@ Status EtcdLauncher::LaunchEtcdServer(
     host_to_advertise = "127.0.0.1";
   }
 
-#if BOOST_VERSION >= 106600
   boost::asio::io_context context;
-#else
-  boost::asio::io_service context;
-#endif
   unsigned int etcd_peer_port = endpoint_port_ + 1;
   while (check_port_in_use(context, etcd_peer_port)) {
     etcd_peer_port += 1;

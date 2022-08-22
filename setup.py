@@ -118,7 +118,6 @@ class FormatAndLint(Command):
         'setup_airflow.py',
         'setup_dask.py',
         'setup_io.py',
-        'setup_migrate.py',
         'setup_ml.py',
         'setup_ray.py',
         'test/runner.py',

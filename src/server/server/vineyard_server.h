@@ -24,14 +24,12 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
-#include "boost/asio.hpp"
-
+#include "common/util/asio.h"
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
-
 #include "server/memory/memory.h"
 #include "server/memory/stream_store.h"
 #include "server/server/vineyard_runner.h"
@@ -77,13 +75,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
  public:
   explicit VineyardServer(const json& spec, const SessionID& session_id,
                           std::shared_ptr<VineyardRunner> runner,
-#if BOOST_VERSION >= 106600
                           asio::io_context& context,
                           asio::io_context& meta_context,
-#else
-                          asio::io_service& context,
-                          asio::io_service& meta_context,
-#endif
+                          asio::io_context& io_context,
                           callback_t<std::string const&> callback);
   Status Serve(StoreType const& bulk_store_type);
   Status Finalize();
@@ -92,13 +86,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     return spec_["deployment"].get_ref<std::string const&>();
   }
 
-#if BOOST_VERSION >= 106600
   inline asio::io_context& GetContext() { return context_; }
   inline asio::io_context& GetMetaContext() { return meta_context_; }
-#else
-  inline asio::io_service& GetContext() { return context_; }
-  inline asio::io_service& GetMetaContext() { return meta_context_; }
-#endif
+  inline asio::io_context& GetIOContext() { return io_context_; }
   inline StoreType GetBulkStoreType() { return bulk_store_type_; }
 
   template <typename ObjectIDType = ObjectID>
@@ -158,16 +148,6 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status DropName(const std::string& name, callback_t<> callback);
 
-  Status MigrateObject(const ObjectID object_id, const bool local,
-                       const std::string& peer,
-                       const std::string& peer_rpc_endpoint,
-                       callback_t<const ObjectID&> callback);
-
-  Status MigrateStream(const ObjectID object_id, const bool local,
-                       const std::string& peer,
-                       const std::string& peer_rpc_endpoint,
-                       callback_t<const ObjectID&> callback);
-
   Status ClusterInfo(callback_t<const json&> callback);
 
   Status InstanceStatus(callback_t<const json&> callback);
@@ -206,13 +186,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   json spec_;
   SessionID session_id_;
 
-#if BOOST_VERSION >= 106600
   asio::io_context& context_;
   asio::io_context& meta_context_;
-#else
-  asio::io_service& context_;
-  asio::io_service& meta_context_;
-#endif
+  asio::io_context& io_context_;
   callback_t<std::string const&> callback_;
 
   std::shared_ptr<IMetaService> meta_service_ptr_;

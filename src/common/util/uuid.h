@@ -116,6 +116,8 @@ inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
 
 const std::string ObjectIDToString(const ObjectID id);
 
+const std::string ObjectIDToString(const PlasmaID id);
+
 inline std::string const PlasmaIDToString(PlasmaID const plasma_id) {
   return base64_decode(std::string(plasma_id));
 }

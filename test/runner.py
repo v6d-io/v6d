@@ -13,12 +13,16 @@ import time
 from argparse import ArgumentParser
 from typing import Union
 
-VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.%s.sock' % time.time()
+if 'NON_RANDOM_IPC_SOCKET' in os.environ:
+    VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.sock'
+else:
+    VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.%s.sock' % time.time()
 
 
 find_executable_generic = None
 start_program_generic = None
 find_port = None
+port_is_inuse = None
 
 
 def prepare_runner_environment():
@@ -37,9 +41,11 @@ def prepare_runner_environment():
     global find_executable_generic
     global start_program_generic
     global find_port
+    global port_is_inuse
     find_executable_generic = getattr(mod, 'find_executable')
     start_program_generic = getattr(mod, 'start_program')
     find_port = getattr(mod, 'find_port')
+    port_is_inuse = getattr(mod, 'port_is_inuse')
 
 
 prepare_runner_environment()
@@ -107,8 +113,16 @@ def start_etcd():
             'default=http://127.0.0.1:%d' % peer_port,
             '--initial-advertise-peer-urls',
             'http://127.0.0.1:%d' % peer_port,
+            verbose=True,
         )
-        yield stack.enter_context(proc), 'http://127.0.0.1:%d' % client_port
+        ctx_entered = stack.enter_context(proc)
+        # waiting for etcd to be ready
+        print('waiting for etcd to be ready .')
+        while not port_is_inuse(client_port):
+            time.sleep(1)
+            print('.', end='')
+        print('', end='\n')
+        yield ctx_entered, 'http://127.0.0.1:%d' % client_port
 
 
 @contextlib.contextmanager
@@ -195,6 +209,7 @@ def start_kafka_server():
         proc = start_program(
             kafka_dir + '/bin/kafka-server-start.sh',
             kafka_dir + 'config/zookeeper.properties',
+            verbose=True,
         )
         yield stack.enter_context(proc)
 
@@ -478,18 +493,17 @@ def run_python_contrib_ml_tests(etcd_endpoints):
 
 
 def run_python_contrib_dask_tests(etcd_endpoints):
-    ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
     instance_size = 4
     etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_multiple_vineyardd(
         etcd_endpoints,
         etcd_prefix,
-        default_ipc_socket=ipc_socket_tpl,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
     ) as instances:  # noqa: F841, pylint: disable=unused-variable
         vineyard_ipc_sockets = ','.join(
-            ['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)]
+            ['%s.%d' % (VINEYARD_CI_IPC_SOCKET, i) for i in range(instance_size)]
         )
         start_time = time.time()
         subprocess.check_call(
@@ -513,7 +527,6 @@ def run_python_contrib_dask_tests(etcd_endpoints):
 
 
 def run_python_deploy_tests(etcd_endpoints, with_migration):
-    ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
     instance_size = 4
     extra_args = []
     if with_migration:
@@ -522,12 +535,12 @@ def run_python_deploy_tests(etcd_endpoints, with_migration):
     with start_multiple_vineyardd(
         etcd_endpoints,
         etcd_prefix,
-        default_ipc_socket=ipc_socket_tpl,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
     ) as instances:  # noqa: F841, pylint: disable=unused-variable
         vineyard_ipc_sockets = ','.join(
-            ['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)]
+            ['%s.%d' % (VINEYARD_CI_IPC_SOCKET, i) for i in range(instance_size)]
         )
         start_time = time.time()
         subprocess.check_call(
@@ -581,7 +594,6 @@ def run_io_adaptor_tests(etcd_endpoints):
 
 def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
     etcd_prefix = 'vineyard_test_%s' % time.time()
-    ipc_socket_tpl = '/tmp/vineyard.ci.dist.%s' % time.time()
     instance_size = 2
     extra_args = []
     if with_migration:
@@ -590,12 +602,12 @@ def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
     with start_multiple_vineyardd(
         etcd_endpoints,
         etcd_prefix,
-        default_ipc_socket=ipc_socket_tpl,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
     ) as instances:
         vineyard_ipc_sockets = ','.join(
-            ['%s.%d' % (ipc_socket_tpl, i) for i in range(instance_size)]
+            ['%s.%d' % (VINEYARD_CI_IPC_SOCKET, i) for i in range(instance_size)]
         )
         rpc_socket_port = instances[0][1]
         start_time = time.time()
@@ -691,9 +703,23 @@ def execute_tests(args):
     if args.with_cpp:
         run_single_vineyardd_tests(args.tests)
 
+        if args.with_deployment:
+            with start_etcd() as (_, etcd_endpoints):
+                run_scale_in_out_tests(etcd_endpoints, instance_size=4)
+
     if args.with_python:
         with start_etcd() as (_, etcd_endpoints):
             run_python_tests(etcd_endpoints, args.tests)
+
+        if args.with_contrib:
+            with start_etcd() as (_, etcd_endpoints):
+                run_python_contrib_ml_tests(etcd_endpoints)
+            with start_etcd() as (_, etcd_endpoints):
+                run_python_contrib_dask_tests(etcd_endpoints)
+
+        if args.with_deployment:
+            with start_etcd() as (_, etcd_endpoints):
+                run_python_deploy_tests(etcd_endpoints, args.with_migration)
 
     if args.with_io:
         with start_etcd() as (_, etcd_endpoints):
@@ -701,27 +727,13 @@ def execute_tests(args):
         with start_etcd() as (_, etcd_endpoints):
             run_io_adaptor_distributed_tests(etcd_endpoints, args.with_migration)
 
-    if args.with_deployment:
-        with start_etcd() as (_, etcd_endpoints):
-            run_scale_in_out_tests(etcd_endpoints, instance_size=4)
-
-        if args.with_python:
-            with start_etcd() as (_, etcd_endpoints):
-                run_python_deploy_tests(etcd_endpoints, args.with_migration)
-
-    if args.with_python and args.with_contrib:
-        with start_etcd() as (_, etcd_endpoints):
-            run_python_contrib_ml_tests(etcd_endpoints)
-        with start_etcd() as (_, etcd_endpoints):
-            run_python_contrib_dask_tests(etcd_endpoints)
-
 
 def main():
     parser, args = parse_sys_args()
 
-    if not (args.with_cpp or args.with_python or args.with_io or args.with_deployment):
+    if not (args.with_cpp or args.with_python or args.with_io):
         print(
-            'Error: \n\tat least one of of --with-{cpp,python,io,deployment} needs '
+            'Error: \n\tat least one of of --with-{cpp,python,io} needs '
             'to be specified\n'
         )
         parser.print_help()

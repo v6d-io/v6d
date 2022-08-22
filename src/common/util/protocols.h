@@ -219,6 +219,9 @@ Status ReadCreateRemoteBufferRequest(const json& root, size_t& size);
 void WriteGetBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
                             std::string& msg);
 
+void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                            const bool unsafe, std::string& msg);
+
 Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
                              bool& unsafe);
 
@@ -227,6 +230,9 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
 
 Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
                            std::vector<int>& fd_sent);
+
+void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
+                                  const bool unsafe, std::string& msg);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   const bool unsafe, std::string& msg);
