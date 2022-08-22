@@ -215,7 +215,10 @@ Status EmptyTableBuilder::Build(const std::shared_ptr<arrow::Schema>& schema,
     std::shared_ptr<arrow::Array> dummy;
     auto type = schema->field(i)->type();
 
-    if (type == arrow::uint64()) {
+    if (type == arrow::boolean()) {
+      arrow::BooleanBuilder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type == arrow::uint64()) {
       arrow::UInt64Builder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
     } else if (type == arrow::int64()) {
