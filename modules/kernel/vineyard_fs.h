@@ -10,6 +10,7 @@
 #include <linux/exportfs.h>
 #include <linux/mm.h>
 #include <linux/mman.h>
+#include "msg_mgr.h"
 
 #define PREFIX "[vineyardfs]"
 #define VINEYARD_SUPER_MAGIC 0xabcdef
@@ -31,4 +32,11 @@ struct vineyard_attr {
 	uint32_t	rdev;
 	uint32_t	blksize;
 	uint32_t	flags;
+};
+
+struct vineyard_entry {
+	uint64_t			obj_id; // as name
+	uint64_t			file_size;
+	enum OBJECT_TYPE	type;
+	unsigned long 		inode_id;
 };

@@ -10,18 +10,60 @@ MODULE_AUTHOR("yuansm");
 MODULE_DESCRIPTION("Vineyard filesystem for Linux.");
 MODULE_VERSION("0.01");
 
-static inline int vineyard_get_entry(struct file *dir_file, int *cpos)
+void inline vineyard_read_lock(struct vineyard_rw_lock *rw_lock)
 {
-    // TODO: communicate with vineyard
-    // temp code for test
-    int ret = 0;
-    if ((*cpos) == 2) {
-        ret = 0;
-    } else {
-        ret = -1;
+    vineyard_spin_lock(&rw_lock->w_lock);
+    rw_lock->r_lock++;
+    printk(KERN_INFO PREFIX "now there exist(s) %d readder\n", rw_lock->r_lock);
+    vineyard_spin_unlock(&rw_lock->w_lock);
+}
+
+void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock)
+{
+    rw_lock->r_lock--;
+    printk(KERN_INFO PREFIX "now there exist(s) %d readder\n", rw_lock->r_lock);
+}
+
+static void translate_u64_to_char(uint64_t num, char *name)
+{
+    int i = 0, j = 0;
+    int temp;
+    char c;
+
+    while(num) {
+        temp = num % 10;
+        num /= 10;
+        name[i] = temp + '0';
+        i++;
     }
 
-    return ret;
+    for (; j < i / 2; j++) {
+        c = name[j];
+        name[j] = name[i - j - 1];
+        name[i - j - 1] = c;
+    }
+}
+
+static inline int vineyard_get_entry(struct file *dir_file, int *cpos, struct vineyard_entry **entry, char *name)
+{
+    // TODO: communicate with vineyard
+    struct vineyard_entry *entrys;
+
+    // TODO: need a machinasm to find out file pos. Now we suppose that
+    // vineyard will not delete object.
+    printk(KERN_INFO PREFIX "%s\n", __func__);
+    if (*cpos < vineyard_object_info_header->total_file) {
+        entrys = (struct vineyard_entry *)vineyard_object_info_buffer_addr;
+        *entry = &(entrys[(*cpos)]);
+        printk(KERN_INFO "id:%llu \n", (*entry)->obj_id);
+        if ((*entry)->inode_id == 0) {
+            (*entry)->inode_id = get_next_vineyard_ino();
+        }
+        *cpos = *cpos + 1;
+        translate_u64_to_char((*entry)->obj_id, name);
+        return 0;
+    }
+    return -1;
 }
 
 static int vineyard_fs_dir_read(struct file *file, struct dir_context *ctx)
@@ -31,7 +73,10 @@ static int vineyard_fs_dir_read(struct file *file, struct dir_context *ctx)
     const unsigned char *path;
     struct inode *temp, *dir_i;
     struct super_block *sb;
+    struct vineyard_entry *entry;
+    char name[32] = { 0 };
     int cpos = 0;
+    int find = 0;
     ret = 0;
 
     printk(KERN_INFO PREFIX "fake %s\n", __func__);
@@ -49,49 +94,34 @@ static int vineyard_fs_dir_read(struct file *file, struct dir_context *ctx)
         return -ENOENT;
     }
 
+    // fake . and ..
     cpos = ctx->pos;
-    ret = dir_emit_dots(file, ctx);
-    
+    printk(KERN_INFO PREFIX "cpos:%d\n", cpos);
+    // if(!dir_emit_dots(file, ctx)) {
+    //     goto out;
+    // }
 
+    vineyard_read_lock(&vineyard_object_info_header->rw_lock);
 get_new:
-    if (vineyard_get_entry(file, &cpos) == -1) {
+    if (vineyard_get_entry(file, &cpos, &entry, name) == -1) {
+        if (!find)
+            ret = -1;
         goto out;
     }
+    find = 1;
 
-    // temp code for test
-    if (cpos == 2) {
-        temp = vineyard_fs_build_inode(sb);
-        if (temp) {
-            dir_emit(ctx, "a", cpos + 1, temp->i_ino, DT_REG);
-        }
-        cpos++;
-    }
+    // we suppose that vineyard just contain file.
+    dir_emit(ctx, name, strlen(name), entry->inode_id, DT_REG);
 
     ctx->pos = cpos;
     goto get_new;
 
 out:
+    vineyard_read_unlock(&vineyard_object_info_header->rw_lock);
     dput(dentry);
 
-    // for test
-    // if (!list_empty(&vineyard_msg_wait.head)) {
-    //     vineyard_spin_lock(&vineyard_msg_mem_header->lock);
-    //     vineyard_msg_mem_header->has_msg = 1;
-    //     vineyard_spin_unlock(&vineyard_msg_mem_header->lock);
-
-    //     wake_up(&vineyard_msg_wait);
-    //     printk(KERN_INFO PREFIX "readdir sleep\n");
-    //     ret = wait_event_interruptible(vineyard_fs_wait, vineyard_result_mem_header->has_msg);
-    //     if (ret == -ERESTARTSYS) {
-    //         return 0;
-    //     }
-    //     printk(KERN_INFO PREFIX "readdir awake\n");
-
-    //     vineyard_spin_lock(&vineyard_result_mem_header->lock);
-    //     vineyard_result_mem_header->has_msg = 0;
-    //     vineyard_spin_unlock(&vineyard_result_mem_header->lock);
-    // }
-    return 0;
+    printk(KERN_INFO PREFIX "ret : %d\n", ret);
+    return ret;
 }
 
 // static int vineyard_fs_dir_release(struct inode *inode, struct file *file)
@@ -109,6 +139,8 @@ static int vineyard_fs_dir_fsync(struct file *file, loff_t start, loff_t end, in
 static struct dentry *vineyard_fs_dir_lookup(struct inode *inode, struct dentry *dentry, unsigned int flags)
 {
     printk(KERN_INFO PREFIX "fake %s\n", __func__);
+    printk(KERN_INFO PREFIX "inode no:%lu\n", inode->i_ino);
+    printk(KERN_INFO PREFIX "name:%s\n", dentry->d_name.name);
     return NULL;
 }
 

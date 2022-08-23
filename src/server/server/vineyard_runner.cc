@@ -157,6 +157,7 @@ void VineyardRunner::Stop() {
   for (auto const& item : session_ids) {
     VINEYARD_DISCARD(Delete(item));  // trigger item->stop()
   }
+  BulkAllocator::DeInit();
 
   guard_.reset();
   meta_guard_.reset();

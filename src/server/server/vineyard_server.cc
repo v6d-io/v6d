@@ -139,6 +139,11 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   return serve_status_;
 }
 
+void VineyardServer::RefreshLists() {
+  if (nl_server_ptr_)
+    nl_server_ptr_->RefreshObjectList();
+}
+
 Status VineyardServer::Finalize() { return Status::OK(); }
 
 void VineyardServer::Ready() {

@@ -26,6 +26,7 @@ limitations under the License.
 #include "common/util/json.h"
 #include "common/util/logging.h"
 #include "server/server/vineyard_server.h"
+#include "common/util/protocols.h"
 
 namespace vineyard {
 
@@ -33,7 +34,8 @@ NetLinkServer::NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
     : SocketServer(vs_ptr),
       nlh(nullptr),
       req_mem(nullptr),
-      result_mem(nullptr) {
+      result_mem(nullptr),
+      obj_info_mem(nullptr) {
   LOG(INFO) << __func__;
 }
 
@@ -96,6 +98,7 @@ void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct 
   memset(&res_msg, 0, sizeof(res_msg));
   res_msg.opt = INIT;
 
+  ns_ptr->RefreshObjectList();
   while(1) {
     memcpy(NLMSG_DATA(nlh), &res_msg, sizeof(res_msg));
     ret = sendto(socket_fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&daddr, sizeof(struct sockaddr_nl));
@@ -122,8 +125,10 @@ void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct 
       break;
     case USER_KERN_OPT::FOPT:
       res_msg.opt = FOPT;
+      res_msg.ret = ns_ptr->HandleFops();
       break;
     case USER_KERN_OPT::EXIT:
+      // It will be executed when umount is called.
       LOG(INFO) << "Bye! Handler thread exit!";
       goto out;
     default:
@@ -135,6 +140,60 @@ out:
   return;
 }
 
+void ShowInfo(const json &tree)
+{
+  LOG(INFO) << __func__;
+  for (auto iter = tree.begin(); iter != tree.end(); iter++) {
+    LOG(INFO) << *iter;
+  }
+}
+
+void NetLinkServer::FillFileMsg(const json &tree, enum OBJECT_TYPE type)
+{
+  LOG(INFO) << __func__;
+  vineyard_object_info_header *header;
+  vineyard_entry *entrys;
+  int i;
+
+  header = (vineyard_object_info_header *)obj_info_mem;
+  entrys = (vineyard_entry *)(header + 1);
+  i = header->total_file;
+  LOG(INFO) << tree;
+
+  if (type == OBJECT_TYPE::BLOB) {
+    for (auto iter = tree.begin(); iter != tree.end(); iter++) {
+      entrys[i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
+      LOG(INFO) << entrys[i].obj_id;
+      entrys[i].file_size = (*iter)["length"].get<uint64_t>();
+      entrys[i].type = type;
+      i++;
+    }
+  }
+  header->total_file = i;
+}
+
+void NetLinkServer::RefreshObjectList() {
+  LOG(INFO) << __func__;
+  // std::unordered_map<ObjectID, json> metas{};
+  vineyard_object_info_header *header;
+
+  header = (vineyard_object_info_header *)obj_info_mem;
+  if (header) {
+    vineyard_write_lock(&header->rw_lock.r_lock, &header->rw_lock.w_lock);
+    header->total_file = 0;
+    vs_ptr_->ListData(
+        "vineyard::Blob", false, std::numeric_limits<size_t>::max(), [this](const Status& status, const json& tree) {
+          if(!tree.empty()) {
+            // ReadGetDataReply(tree, metas);
+            ShowInfo(tree);
+            this->FillFileMsg(tree, OBJECT_TYPE::BLOB);
+          }
+          return Status::OK();
+        });
+     vineyard_write_unlock(&header->rw_lock.w_lock);
+  }
+}
+
 void NetLinkServer::doAccept() {
   LOG(INFO) << __func__;
 }
@@ -143,6 +202,7 @@ int NetLinkServer::HandleSet(struct vineyard_kern_user_msg *msg) {
   LOG(INFO) << __func__;
   req_mem = (void *)(msg->request_mem);
   result_mem = (void *)(msg->result_mem);
+  obj_info_mem = (void *)(msg->obj_info_mem);
   return 0;
 }
 
@@ -158,7 +218,39 @@ int NetLinkServer::HandleWrite() {
   return 0;
 }
 
-int NetLinkServer::HandleCloseAndFsync() {
+int NetLinkServer::HandleCloseOrFsync() {
+  return 0;
+}
+
+int NetLinkServer::HandleReadDir() {
+  RefreshObjectList();
+  return 0;
+}
+
+int NetLinkServer::HandleFops() {
+  vineyard_msg_mem_header *request_header;
+  vineyard_request_msg *msg;
+
+  request_header = (struct vineyard_msg_mem_header *)req_mem;
+
+  while((msg = vineyard_get_request_msg(request_header)) != NULL) {
+    switch(msg->opt) {
+    case REQUEST_OPT::OPEN:
+      HandleOpen();
+      break;
+    case REQUEST_OPT::READ:
+      HandleRead();
+      break;
+    case REQUEST_OPT::WRITE:
+      HandleWrite();
+      break;
+    case REQUEST_OPT::CLOSE:
+    case REQUEST_OPT::FSYNC:
+      HandleCloseOrFsync();
+      break;
+    }
+  }
+
   return 0;
 }
 

@@ -18,14 +18,18 @@ static unsigned long page_num;
 void *vineyard_storage_kernel_addr = NULL;
 void *vineyard_msg_mem_kernel_addr = NULL;
 void *vineyard_result_mem_kernel_addr = NULL;
+void *vineyard_object_info_kernel_addr = NULL;
 
 void *vineyard_msg_mem_user_addr = NULL;
 void *vineyard_result_mem_user_addr = NULL;
+void *vineyard_object_info_user_addr = NULL;
 
 struct vineyard_msg_mem_header *vineyard_msg_mem_header;
 struct vineyard_result_mem_header *vineyard_result_mem_header;
+struct vineyard_object_info_header *vineyard_object_info_header;
 void *vineyard_msg_buffer_addr;
 void *vineyard_result_buffer_addr;
+void *vineyard_object_info_buffer_addr;
 
 DECLARE_WAIT_QUEUE_HEAD(vineyard_fs_wait);
 
@@ -165,22 +169,22 @@ static int map_vineyard_user_storage_buffer(unsigned long user_addr)
 	return 0;
 }
 
-static unsigned long prepare_user_buffer(void **kernel_addr)
+static unsigned long prepare_user_buffer(void **kernel_addr, size_t size)
 {
 	unsigned long user_addr;
 	struct vm_area_struct *vma;
 
-	*kernel_addr = kzalloc(PAGE_SIZE, GFP_KERNEL);
+	*kernel_addr = kzalloc(size, GFP_KERNEL);
 	if (!(*kernel_addr)) {
 		printk(KERN_INFO PREFIX "kmalloc error!\n");
 		return 0;
 	}
 
-	user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
+	user_addr = vm_mmap(NULL, 0, size,
 			    PROT_READ | PROT_WRITE,
 			    MAP_SHARED, 0);
 	vma = find_vma(current->mm, user_addr);
-	remap_pfn_range(vma, user_addr, PFN_DOWN(__pa(*kernel_addr)), PAGE_SIZE, vma->vm_page_prot);
+	remap_pfn_range(vma, user_addr, PFN_DOWN(__pa(*kernel_addr)), size, vma->vm_page_prot);
 	printk(KERN_INFO PREFIX "kern:%p\n", kernel_addr);
 
 	return user_addr;
@@ -190,6 +194,7 @@ static void unmap_vineyard_msg_result_buffer(void)
 {
 	kfree(vineyard_msg_mem_kernel_addr);
 	kfree(vineyard_result_mem_kernel_addr);
+	kfree(vineyard_object_info_kernel_addr);
 }
 
 static void unmap_vineyard_user_storage_buffer(void)
@@ -222,13 +227,18 @@ static int vineyard_parse_monolithic(struct fs_context *fsc, void *data)
 		page_num = mount_data->page_num;
 		printk(KERN_INFO PREFIX "page_num:%lu size:%lu\n", page_num, page_num * 0x1000);
 		err = map_vineyard_user_storage_buffer(mount_data->vineyard_storage_user_addr);
-		vineyard_msg_mem_user_addr = (void *)prepare_user_buffer(&vineyard_msg_mem_kernel_addr);
-		vineyard_result_mem_user_addr = (void *)prepare_user_buffer(&vineyard_result_mem_kernel_addr);
+
+		// map kernel buffer to user
+		vineyard_msg_mem_user_addr = (void *)prepare_user_buffer(&vineyard_msg_mem_kernel_addr, PAGE_SIZE);
+		vineyard_result_mem_user_addr = (void *)prepare_user_buffer(&vineyard_result_mem_kernel_addr, PAGE_SIZE);
+		vineyard_object_info_user_addr = (void *)prepare_user_buffer(&vineyard_object_info_kernel_addr, PAGE_SIZE);
 
 		vineyard_msg_mem_header = vineyard_msg_mem_kernel_addr;
 		vineyard_result_mem_header = vineyard_result_mem_kernel_addr;
+		vineyard_object_info_header = vineyard_object_info_kernel_addr;
 		vineyard_msg_buffer_addr = vineyard_msg_mem_kernel_addr + sizeof(*vineyard_msg_mem_header);
 		vineyard_result_buffer_addr = vineyard_result_mem_kernel_addr + sizeof(*vineyard_result_mem_header);
+		vineyard_object_info_buffer_addr = vineyard_object_info_kernel_addr + sizeof(*vineyard_object_info_header);
 
 		err = copy_to_user((void *)(mount_data->this_addr), mount_data, sizeof(struct mount_data));
 		printk(KERN_INFO PREFIX "%lx %lx\n", mount_data->this_addr, mount_data->vineyard_storage_user_addr);
@@ -356,9 +366,8 @@ int vineyard_set_super_block(struct super_block *sb, struct fs_context *fsc)
 
 uint64_t get_next_vineyard_ino(void)
 {
-	static uint64_t ino = 1;
-	// TODO: atomic ins
-	ino++;
+	static volatile uint64_t ino = 1;
+	ino = __sync_fetch_and_add(&ino, 1);
 	return ino;
 }
 

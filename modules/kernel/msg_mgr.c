@@ -72,8 +72,9 @@ static void handle_init(void)
     struct vineyard_kern_user_msg msg;
 
     msg.opt = VSET;
-    msg.request_mem = (unsigned long)vineyard_msg_mem_header;
-    msg.result_mem = (unsigned long)vineyard_result_mem_header;
+    msg.request_mem = (uint64_t)vineyard_msg_mem_user_addr;
+    msg.result_mem = (uint64_t)vineyard_result_mem_user_addr;
+    msg.obj_info_mem = (uint64_t)vineyard_object_info_user_addr;
 
     send_msg(&msg, sizeof(msg));
 }

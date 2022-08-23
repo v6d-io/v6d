@@ -94,6 +94,15 @@ void* BulkAllocator::Init(const size_t size, std::string const& allocator) {
   }
 }
 
+void BulkAllocator::DeInit() {
+#if __linux__
+  int r;
+  LOG(INFO) << __func__;
+  r = umount("/home/yuansm/mount-point");
+  LOG(INFO) << "r:" << r;
+#endif
+}
+
 void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
   if (allocated_ + static_cast<int64_t>(bytes) > footprint_limit_) {
     return nullptr;

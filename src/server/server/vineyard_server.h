@@ -108,6 +108,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   void BackendReady();
   void Ready();
 
+  void RefreshLists();
+
   Status GetData(const std::vector<ObjectID>& ids, const bool sync_remote,
                  const bool wait,
                  DeferredReq::alive_t alive,  // if connection is still alive

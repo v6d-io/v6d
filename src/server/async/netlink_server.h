@@ -33,7 +33,7 @@ class VineyardServer;
 #define NETLINK_VINEYARD  22
 #define NETLINK_PORT      100
 
-enum REQUEST_TYPE {
+enum OBJECT_TYPE {
   BLOB = 1,
 };
 
@@ -68,7 +68,7 @@ struct vineyard_request_msg {
     uint64_t          obj_id;
     uint64_t          offset;
     // open
-    enum REQUEST_TYPE type;
+    enum OBJECT_TYPE type;
   } _fopt_param;
 };
 
@@ -76,6 +76,7 @@ struct vineyard_kern_user_msg {
     enum USER_KERN_OPT  opt;
     uint64_t            request_mem;
     uint64_t            result_mem;
+    uint64_t            obj_info_mem;
 };
 
 struct kmsg {
@@ -98,9 +99,64 @@ struct vineyard_result_mem_header {
   int tail_point;
 };
 
-static inline bool msg_empty(int head_point, int tail_point)
+struct vineyard_rw_lock {
+    int r_lock;
+    int w_lock;
+};
+
+struct vineyard_object_info_header {
+    struct vineyard_rw_lock rw_lock;
+    int total_file;
+};
+
+struct vineyard_entry {
+	uint64_t			obj_id; // as name
+	uint64_t			file_size;
+	enum OBJECT_TYPE	type;
+	unsigned long 		inode_id;
+};
+
+static inline bool MsgEmpty(int head_point, int tail_point)
 {
   return head_point == tail_point;
+}
+
+static inline void vineyard_spin_lock(volatile int *addr)
+{
+  while(!__sync_bool_compare_and_swap(addr, 0, 1));
+}
+
+static inline void vineyard_spin_unlock(volatile int *addr)
+{
+  *addr = 0;
+}
+
+static inline void vineyard_write_lock(volatile int *rlock, volatile int *wlock)
+{
+  vineyard_spin_lock(wlock);
+  while(*rlock);
+}
+
+static inline void vineyard_write_unlock(volatile int *wlock)
+{
+  *wlock = 0;
+}
+
+static vineyard_request_msg *vineyard_get_request_msg(vineyard_msg_mem_header *header)
+{
+  struct vineyard_request_msg *entrys;
+  struct vineyard_request_msg *entry = NULL;
+
+  entrys = (struct vineyard_request_msg *)(header + 1);
+  vineyard_spin_lock(&header->lock);
+  if (!MsgEmpty(header->head_point, header->tail_point)) {
+    entry = &(entrys[header->tail_point]);
+    header->tail_point++;
+    // TODO: ring buffer reset pointer.
+  }
+  vineyard_spin_unlock(&header->lock);
+
+  return entry;
 }
 
 class NetLinkServer : public SocketServer,
@@ -118,6 +174,8 @@ class NetLinkServer : public SocketServer,
     return std::string("");
   }
 
+  void RefreshObjectList();
+
  private:
   void doAccept() override;
 
@@ -131,7 +189,17 @@ class NetLinkServer : public SocketServer,
 
   int HandleWrite();
 
-  int HandleCloseAndFsync();
+  int HandleCloseOrFsync();
+
+  int HandleReadDir();
+
+  int HandleFops();
+
+  void FillFileMsg(const json &tree, enum OBJECT_TYPE type);
+
+  int ReadRequestMsg();
+
+  int WriteResultMsg();
 
   int socket_fd;
   struct sockaddr_nl saddr, daddr;
@@ -139,6 +207,7 @@ class NetLinkServer : public SocketServer,
   std::thread *work;
   void *req_mem;
   void *result_mem;
+  void *obj_info_mem;
 };/*  */
 
 }

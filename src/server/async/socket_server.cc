@@ -1255,6 +1255,7 @@ bool SocketConnection::doSealBlob(json const& root) {
   TRY_READ_REQUEST(ReadSealRequest, root, id);
   RESPONSE_ON_ERROR(bulk_store_->Seal(id));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(id, getConnId()));
+  server_ptr_->RefreshLists();
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -1522,6 +1523,7 @@ void SocketServer::Start() {
   stopped_.store(false);
   closable_.store(false);
   doAccept();
+  LOG(INFO) << "socket server do accept end";
 }
 
 void SocketServer::Stop() {

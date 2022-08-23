@@ -4,7 +4,7 @@
 #define NETLINK_VINEYARD  22
 #define NETLINK_PORT      100
 
-enum REQUEST_TYPE {
+enum OBJECT_TYPE {
   BLOB = 1,
 };
 
@@ -14,6 +14,7 @@ enum REQUEST_OPT {
     VWRITE,
     VCLOSE,
     VFSYNC,
+    VREADDIR,
 };
 
 enum USER_KERN_OPT {
@@ -39,7 +40,7 @@ struct vineyard_request_msg {
         uint64_t          obj_id;
         uint64_t          offset;
         // open
-        enum REQUEST_TYPE type;
+        enum OBJECT_TYPE type;
     } _fopt_param;
 };
 
@@ -47,6 +48,7 @@ struct vineyard_kern_user_msg {
     enum USER_KERN_OPT  opt;
     uint64_t            request_mem;
     uint64_t            result_mem;
+    uint64_t            obj_info_mem;
 };
 
 struct vineyard_msg_mem_header {
@@ -64,16 +66,29 @@ struct vineyard_result_mem_header {
     int     tail_point;
 };
 
+struct vineyard_rw_lock {
+    int r_lock;
+    int w_lock;
+};
+
+struct vineyard_object_info_header {
+    struct vineyard_rw_lock rw_lock;
+    int total_file;
+};
+
 // kernel space
 extern void *vineyard_storage_kernel_addr;
 extern struct vineyard_msg_mem_header *vineyard_msg_mem_header;
 extern struct vineyard_result_mem_header *vineyard_result_mem_header;
+extern struct vineyard_object_info_header *vineyard_object_info_header;
 extern void *vineyard_msg_buffer_addr;
 extern void *vineyard_result_buffer_addr;
+extern void *vineyard_object_info_buffer_addr;
 
 // user space
 extern void *vineyard_msg_mem_user_addr;
 extern void *vineyard_result_mem_user_addr;
+extern void *vineyard_object_info_user_addr;
 
 extern struct wait_queue_head vineyard_msg_wait;
 extern struct wait_queue_head vineyard_fs_wait;
