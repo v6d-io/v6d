@@ -7,7 +7,6 @@ spec:
   id: o123
   signature: s111
   typename: vineyard::GlobalTensor
-  instance_id: 0
   members:
   - a1
   - a2

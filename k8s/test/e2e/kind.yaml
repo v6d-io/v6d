@@ -13,28 +13,14 @@
 # limitations under the License.
 #
 
-run:
-  deadline: 10m
-  skip-dirs:
-    - config
-    - generated
-linters:
-  enable:
-    - deadcode
-    - errcheck
-    - goconst
-    - ineffassign
-    - lll
-    - misspell
-    - unconvert
-    - varcheck
-    - govet
-    - goimports
-    - prealloc
-    - unused
-    - staticcheck
-    - gosimple
-    - megacheck
-linters-settings:
-  lll:
-    line-length: 160
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  image: kindest/node:v1.24.0
+- role: worker
+  image: kindest/node:v1.24.0
+- role: worker
+  image: kindest/node:v1.24.0
+- role: worker
+  image: kindest/node:v1.24.0

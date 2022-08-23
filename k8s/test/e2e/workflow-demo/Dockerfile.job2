@@ -11,30 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-run:
-  deadline: 10m
-  skip-dirs:
-    - config
-    - generated
-linters:
-  enable:
-    - deadcode
-    - errcheck
-    - goconst
-    - ineffassign
-    - lll
-    - misspell
-    - unconvert
-    - varcheck
-    - govet
-    - goimports
-    - prealloc
-    - unused
-    - staticcheck
-    - gosimple
-    - megacheck
-linters-settings:
-  lll:
-    line-length: 160
+FROM  vineyardcloudnative/vineyard-python:latest
+
+WORKDIR /
+
+COPY ./job2.py /
+
+ENTRYPOINT [ "python3" ]
+
+CMD [ "job2.py" ]
