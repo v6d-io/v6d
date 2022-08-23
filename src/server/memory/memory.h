@@ -34,6 +34,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -42,6 +43,7 @@
 
 #include "common/memory/payload.h"
 #include "common/util/logging.h"
+#include "common/util/macros.h"
 #include "common/util/status.h"
 #include "server/memory/usage.h"
 
@@ -84,7 +86,13 @@ class BulkStoreBase {
 
   Status MakeArena(size_t const size, int& fd, uintptr_t& base);
 
-  Status PreAllocate(size_t const size);
+  Status PreAllocate(
+      size_t const size,
+#if defined(DEFAULT_ALLOCATOR)
+      std::string const& allocator = VINEYARD_TO_STRING(DEFAULT_ALLOCATOR));
+#else
+      std::string const& allocator = "mimalloc");
+#endif
 
   Status FinalizeArena(int const fd, std::vector<size_t> const& offsets,
                        std::vector<size_t> const& sizes);

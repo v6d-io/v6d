@@ -31,6 +31,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+
+#include "common/util/macros.h"
 
 namespace vineyard {
 
@@ -41,7 +44,13 @@ class MimallocAllocator;
 
 class BulkAllocator {
  public:
-  static void* Init(const size_t size);
+  static void* Init(
+      const size_t size,
+#if defined(DEFAULT_ALLOCATOR)
+      std::string const& allocator = VINEYARD_TO_STRING(DEFAULT_ALLOCATOR));
+#else
+      std::string const& allocator = "mimalloc");
+#endif
 
   /// Allocates size bytes and returns a pointer to the allocated memory. The
   /// memory address will be a multiple of alignment, which must be a power of
@@ -73,15 +82,11 @@ class BulkAllocator {
   /// \return Number of bytes allocated by Plasma so far.
   static int64_t Allocated();
 
-#if defined(WITH_DLMALLOC)
-  using Allocator = vineyard::memory::DLmallocAllocator;
-#endif
-
-#if defined(WITH_MIMALLOC)
-  using Allocator = vineyard::memory::MimallocAllocator;
-#endif
+  using DLmallocAllocator = vineyard::memory::DLmallocAllocator;
+  using MimallocAllocator = vineyard::memory::MimallocAllocator;
 
  private:
+  static bool use_mimalloc_;
   static int64_t allocated_;
   static int64_t footprint_limit_;
 };

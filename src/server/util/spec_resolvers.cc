@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "common/util/env.h"
 #include "common/util/logging.h"
+#include "common/util/macros.h"
 #include "server/util/spec_resolvers.h"
 
 namespace vineyard {
@@ -32,16 +33,31 @@ DEFINE_string(meta, "etcd", "Metadata storage, can be one of: etcd, local");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
-DEFINE_string(spill_path, "", "path of spilling temporary files");
-DEFINE_double(spill_lower_rate, 0.3, "low watermark of spilling memory");
-DEFINE_double(spill_upper_rate, 0.8, "high watermark of triggering spiling");
 
 // share memory
 DEFINE_string(size, "256Mi",
               "shared memory size for vineyardd, the format could be 1024M, "
               "1024000, 1G, or 1Gi");
+DEFINE_string(allocator,
+#if defined(DEFAULT_ALLOCATOR)
+              VINEYARD_TO_STRING(DEFAULT_ALLOCATOR),
+#else
+              "dlmalloc",
+#endif
+              "allocator for shared memory allocation, can be one of: "
+              "'dlmalloc', 'mimalloc'");
+
 DEFINE_int64(stream_threshold, 80,
              "memory threshold of streams (percentage of total memory)");
+
+// shared memory spilling
+DEFINE_string(
+    spill_path, "",
+    "path to spill temporary files, if not set, spilling will be disabled");
+DEFINE_double(spill_lower_rate, 0.3,
+              "low watermark of triggering memory spilling");
+DEFINE_double(spill_upper_rate, 0.8,
+              "high watermark of triggering memory spilling");
 
 // ipc
 DEFINE_string(socket, "/var/run/vineyard.sock", "IPC socket file location");
@@ -97,6 +113,7 @@ json BulkstoreSpecResolver::resolve() const {
   json spec;
   size_t bulkstore_limit = parseMemoryLimit(FLAGS_size);
   spec["memory_size"] = bulkstore_limit;
+  spec["allocator"] = FLAGS_allocator;
   spec["stream_threshold"] = FLAGS_stream_threshold;
   spec["spill_path"] = FLAGS_spill_path;
   spec["spill_lower_bound_rate"] = FLAGS_spill_lower_rate;

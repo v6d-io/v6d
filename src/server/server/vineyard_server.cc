@@ -100,26 +100,31 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
+  auto memory_limit = spec_["bulkstore_spec"]["memory_size"].get<size_t>();
+  auto allocator = spec_["bulkstore_spec"]["allocator"].get<std::string>();
+
   if (bulk_store_type_ == StoreType::kPlasma) {
     plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
-    RETURN_ON_ERROR(plasma_bulk_store_->PreAllocate(
-        spec_["bulkstore_spec"]["memory_size"].get<size_t>()));
+    RETURN_ON_ERROR(plasma_bulk_store_->PreAllocate(memory_limit, allocator));
 
     // TODO(mengke.mk): Currently we do not allow streamming in plasma
     // bulkstore, anyway, we can templatize stream store to solve this.
     stream_store_ = nullptr;
   } else if (bulk_store_type_ == StoreType::kDefault) {
     bulk_store_ = std::make_shared<BulkStore>();
-    auto mem_limit = spec_["bulkstore_spec"]["memory_size"].get<size_t>();
     auto spill_lower_bound_rate =
         spec_["bulkstore_spec"]["spill_lower_bound_rate"].get<double>();
     auto spill_upper_bound_rate =
         spec_["bulkstore_spec"]["spill_upper_bound_rate"].get<double>();
-    RETURN_ON_ERROR(bulk_store_->PreAllocate(mem_limit));
-    bulk_store_->SetMemSpillUpBound(mem_limit * spill_upper_bound_rate);
-    bulk_store_->SetMemSpillLowBound(mem_limit * spill_lower_bound_rate);
+    RETURN_ON_ERROR(bulk_store_->PreAllocate(memory_limit, allocator));
+
+    // setup spill
+    bulk_store_->SetMemSpillUpBound(memory_limit * spill_upper_bound_rate);
+    bulk_store_->SetMemSpillLowBound(memory_limit * spill_lower_bound_rate);
     bulk_store_->SetSpillPath(
         spec_["bulkstore_spec"]["spill_path"].get<std::string>());
+
+    // setup stream store
     stream_store_ = std::make_shared<StreamStore>(
         shared_from_this(), bulk_store_,
         spec_["bulkstore_spec"]["stream_threshold"].get<size_t>());

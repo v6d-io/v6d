@@ -334,9 +334,10 @@ Status BulkStoreBase<ID, P>::MakeArena(size_t const size, int& fd,
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::PreAllocate(const size_t size) {
+Status BulkStoreBase<ID, P>::PreAllocate(const size_t size,
+                                         std::string const& allocator) {
   BulkAllocator::SetFootprintLimit(size);
-  void* pointer = BulkAllocator::Init(size);
+  void* pointer = BulkAllocator::Init(size, allocator);
 
   if (pointer == nullptr) {
     return Status::NotEnoughMemory("mmap failed, size = " +
