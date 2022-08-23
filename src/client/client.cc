@@ -1443,7 +1443,7 @@ Status UsageTracker<ID, P, Der>::DeleteUsage(ID const& id) {
 
 template <typename ID, typename P, typename Der>
 void UsageTracker<ID, P, Der>::ClearCache() {
-  base_t::ClearCache();
+  VINEYARD_DISCARD(base_t::ClearCache());
   object_in_use_.clear();
 }
 

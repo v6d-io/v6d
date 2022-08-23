@@ -416,7 +416,7 @@ Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
                            std::vector<int>& fd_sent) {
   CHECK_IPC_ERROR(root, "get_buffers_reply");
 
-  for (size_t i = 0; i < root.value("num", 0); ++i) {
+  for (size_t i = 0; i < root.value("num", static_cast<size_t>(0)); ++i) {
     json tree = root[std::to_string(i)];
     Payload object;
     object.FromJSON(tree);

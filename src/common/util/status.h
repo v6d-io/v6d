@@ -314,6 +314,7 @@ class VINEYARD_MUST_USE_TYPE Status {
   inline Status operator&(Status&& s) const noexcept;
   inline Status& operator&=(const Status& s) noexcept;
   inline Status& operator&=(Status&& s) noexcept;
+  inline Status& operator+=(const Status& s) noexcept;
 
   /// Return a success status
   inline static Status OK() { return Status(); }
@@ -680,7 +681,8 @@ class VINEYARD_MUST_USE_TYPE Status {
     state_ = nullptr;
   }
   void CopyFrom(const Status& s);
-  inline void MoveFrom(Status& s);
+  void MoveFrom(Status& s);
+  void MergeFrom(const Status& s);
 };
 
 static inline std::ostream& operator<<(std::ostream& os, const Status& x) {
@@ -708,12 +710,6 @@ Status& Status::operator<<(const T& s) {
   tmp << s;
   state_->msg.append(tmp.str());
   return *this;
-}
-
-void Status::MoveFrom(Status& s) {
-  delete state_;
-  state_ = s.state_;
-  s.state_ = nullptr;
 }
 
 Status::Status(const Status& s)
@@ -767,6 +763,14 @@ Status& Status::operator&=(Status&& s) noexcept {
   }
   return *this;
 }
+
+Status& Status::operator+=(const Status& s) noexcept {
+  if (!s.ok()) {
+    MergeFrom(s);
+  }
+  return *this;
+}
+
 /// \endcond
 
 }  // namespace vineyard

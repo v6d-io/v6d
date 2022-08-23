@@ -354,11 +354,10 @@ class ColdObjectTracker
   Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
     if (payload->IsSealed()) {
       cold_obj_lru_.Ref(id, payload);
-      return Status::OK();
     }
-    std::string err_msg = "Not Sealed, Object ID: " + std::to_string(id);
-    LOG(WARNING) << err_msg;
-    return Status::ObjectNotSealed(err_msg);
+    // n.b.: unseal blobs shouldn't be spilled, as will be re-get by clients
+    // with a "unsafe" argument.
+    return Status::OK();
   }
 
   /**
