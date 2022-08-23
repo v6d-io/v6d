@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2020-2022 Alibaba Group Holding Limited.
@@ -16,9 +16,9 @@
 # limitations under the License.
 #
 
+import time
 import numpy as np
 import vineyard
-import time
 
 client = vineyard.connect('/var/run/vineyard.sock')
 

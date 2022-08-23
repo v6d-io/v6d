@@ -421,7 +421,7 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int64, error) {
 	return -1, fmt.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
 }
 
-// Record every worker node's name except the control plane
+// GetAllWorkerNodes records every worker node's name except the control plane
 func GetAllWorkerNodes(client client.Client) []string {
 	nodesList := v1.NodeList{}
 	nodes := []string{}
