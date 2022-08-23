@@ -106,7 +106,6 @@ static std::string generate_global_object(
                     "\n  id: " + object_id +
                     "\n  signature: " + signature +
                     "\n  typename: " + type_name +
-                    "\n  instance_id: " + std::to_string(instance_id) +
                     "\n  metadata: " + type_name +
                     "\n  members:";
   /* clang-format on */

@@ -1,3 +1,6 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,28 +16,21 @@
 # limitations under the License.
 #
 
-run:
-  deadline: 10m
-  skip-dirs:
-    - config
-    - generated
-linters:
-  enable:
-    - deadcode
-    - errcheck
-    - goconst
-    - ineffassign
-    - lll
-    - misspell
-    - unconvert
-    - varcheck
-    - govet
-    - goimports
-    - prealloc
-    - unused
-    - staticcheck
-    - gosimple
-    - megacheck
-linters-settings:
-  lll:
-    line-length: 160
+import numpy as np
+import vineyard
+import os
+import time
+
+env_dist = os.environ
+client = vineyard.connect('/var/run/vineyard.sock')
+
+hostname = env_dist['NODENAME']
+metaid = env_dist.get(hostname)
+meta = client.get_meta(vineyard._C.ObjectID(metaid))
+value = client.get(meta['buffer_'].id)
+
+sum = np.sum(value)
+print(sum,flush=True)
+
+# avoid CrashLoopBackOff
+time.sleep(600)

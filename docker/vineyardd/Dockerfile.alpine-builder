@@ -14,7 +14,7 @@
 
 FROM quay.io/pypa/manylinux2010_x86_64_centos6_no_vsyscall
 
-# target: docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:20220728
+# target: docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:builder-latest
 
 SHELL ["/bin/bash", "-c"]
 

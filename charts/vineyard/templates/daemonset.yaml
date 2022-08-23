@@ -48,25 +48,21 @@ spec:
           {{- end }}
           command:
           - /bin/bash
-          - "-c"
-          - |
+          - -c
+          - >
             /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379;
             sleep 1;
-            /usr/local/bin/vineyardd \
-          {{- if .Values.vineyard.sharedMemorySize }}
-              --size \
-              {{ .Values.vineyard.sharedMemorySize }} \
-          {{- end }}
-          {{- if .Values.vineyard.metrics }}
-              --metrics \
-              -log_dir /var/log/vineyard/ \
-          {{- end }} 
-              --etcd_endpoint \
-              http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379 \
-          {{- if .Values.vineyard.syncCRDs }}
-              --sync_crds \
-              {{ .Values.vineyard.syncCRDs }}
-          {{- end }}
+            /usr/local/bin/vineyardd
+            {{- if .Values.vineyard.sharedMemorySize -}}
+             --size {{ .Values.vineyard.sharedMemorySize }} 
+            {{- end }}
+            {{- if .Values.vineyard.metrics }}
+            --metrics -log_dir /var/log/vineyard/
+            {{- end }} 
+            --etcd_endpoint http://etcd-for-vineyard.{{ .Release.Namespace }}.svc.cluster.local:2379
+            {{- if .Values.vineyard.syncCRDs }}
+            --sync_crds {{ .Values.vineyard.syncCRDs }}
+            {{- end }}
           env:
             - name: MY_NODE_NAME
               valueFrom:

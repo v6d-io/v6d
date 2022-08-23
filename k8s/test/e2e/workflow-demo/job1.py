@@ -1,3 +1,6 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,28 +16,21 @@
 # limitations under the License.
 #
 
-run:
-  deadline: 10m
-  skip-dirs:
-    - config
-    - generated
-linters:
-  enable:
-    - deadcode
-    - errcheck
-    - goconst
-    - ineffassign
-    - lll
-    - misspell
-    - unconvert
-    - varcheck
-    - govet
-    - goimports
-    - prealloc
-    - unused
-    - staticcheck
-    - gosimple
-    - megacheck
-linters-settings:
-  lll:
-    line-length: 160
+import numpy as np
+import vineyard
+import time
+
+client = vineyard.connect('/var/run/vineyard.sock')
+
+object = client.put(np.arange(10))
+meta = vineyard.ObjectMeta()
+meta['typename'] = 'vineyard::Sequence'
+meta['size_'] = 1
+meta.set_global(True)
+meta.add_member('__elements_-0', object)
+meta['__elements_-size'] = 1
+tup = client.create_metadata(meta)
+client.persist(tup)
+
+# avoid CrashLoopBackOff
+time.sleep(600)
