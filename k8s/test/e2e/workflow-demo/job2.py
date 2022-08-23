@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2020-2022 Alibaba Group Holding Limited.
@@ -22,8 +22,8 @@ import numpy as np
 import vineyard
 
 
-env_dist = os.environ
 client = vineyard.connect('/var/run/vineyard.sock')
+env_dist = os.environ
 
 hostname = env_dist['NODENAME']
 metaid = env_dist.get(hostname)

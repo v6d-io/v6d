@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2020-2022 Alibaba Group Holding Limited.
