@@ -55,6 +55,25 @@ void Status::CopyFrom(const Status& s) {
   }
 }
 
+void Status::MoveFrom(Status& s) {
+  delete state_;
+  state_ = s.state_;
+  s.state_ = nullptr;
+}
+
+void Status::MergeFrom(const Status& s) {
+  delete state_;
+  if (state_ == nullptr) {
+    if (s.state_ != nullptr) {
+      state_ = new State(*s.state_);
+    }
+  } else {
+    if (s.state_ != nullptr) {
+      state_->msg += "; " + s.state_->msg;
+    }
+  }
+}
+
 std::string Status::CodeAsString() const {
   if (state_ == nullptr) {
     return "OK";

@@ -60,14 +60,14 @@ class LifeCycleTracker {
     }
 
     // If reaches zero, trigger `OnRelease` behavior.
-    VINEYARD_CHECK_OK(Self().OnRelease(id));
+    auto s = Self().OnRelease(id);
 
     // If the object is marked as to be deleted, trigger `OnDelete` behavior.
     if (pending_to_delete_.count(id) > 0) {
       pending_to_delete_.erase(id);
-      VINEYARD_CHECK_OK(Self().OnDelete(id));
+      s += Self().OnDelete(id);
     }
-    return Status::OK();
+    return s;
   }
 
   /**
@@ -79,16 +79,18 @@ class LifeCycleTracker {
     if (ref_cnt != 0) {
       pending_to_delete_.emplace(id);
     } else {
-      VINEYARD_CHECK_OK(Self().OnDelete(id));
+      RETURN_ON_ERROR(Self().OnDelete(id));
     }
     return Status::OK();
   }
 
-  void ClearCache() {
+  Status ClearCache() {
+    Status s;
     for (auto const& id : pending_to_delete_) {
-      VINEYARD_CHECK_OK(Self().OnDelete(id));
+      s += (Self().OnDelete(id));
     }
     pending_to_delete_.clear();
+    return s;
   }
 
  protected:
