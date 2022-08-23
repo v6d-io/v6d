@@ -1,5 +1,5 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
+#! /usr/bin/env python3 # pylint: disable=missing-module-docstring
+# -*- coding: utf-8 -*- 
 #
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
