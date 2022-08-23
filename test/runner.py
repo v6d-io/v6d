@@ -111,8 +111,8 @@ def start_fuse():
 
         # cleanup
         try:
-            subprocess.run(['umount', '-f', '-l', VINEYARD_FUSE_MOUNT_DIR])
-        except Exception:  # pylint: disable=board-except
+            subprocess.run(['umount', '-f', '-l', VINEYARD_FUSE_MOUNT_DIR], check=False)
+        except Exception:  # pylint: disable=broad-except
             pass
 
 
