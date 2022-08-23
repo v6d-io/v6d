@@ -41,19 +41,16 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"
 
-#if defined(WITH_DLMALLOC)
 #include "server/memory/dlmalloc.h"
-#endif
-#if defined(WITH_MIMALLOC)
 #include "server/memory/mimalloc.h"
-#endif
 
 namespace vineyard {
 
+bool BulkAllocator::use_mimalloc_ = false;
 int64_t BulkAllocator::footprint_limit_ = 0;
 int64_t BulkAllocator::allocated_ = 0;
 
-void* BulkAllocator::Init(const size_t size) {
+void* BulkAllocator::Init(const size_t size, std::string const& allocator) {
 #if __linux__
   // Seems that mac os doesn't respect the sysctl configuration.
   //
@@ -81,17 +78,18 @@ void* BulkAllocator::Init(const size_t size) {
   }
 #endif
 
-#if defined(WITH_DLMALLOC)
-  return Allocator::Init(size);
-#endif
-#if defined(WITH_MIMALLOC)
-  // mimalloc requires 64MB (segment aligned) for each thread
-  size_t mimalloc_meta_size =
-      MIMALLOC_SEGMENT_ALIGNED_SIZE * (std::thread::hardware_concurrency() + 1);
-  // leave spaces for memory fragmentation
-  return Allocator::Init(static_cast<size_t>(
-      static_cast<double>(size + mimalloc_meta_size) * 1.5));
-#endif
+  if (allocator == "dlmalloc") {
+    use_mimalloc_ = false;
+    return DLmallocAllocator::Init(size);
+  } else {
+    use_mimalloc_ = true;
+    // mimalloc requires 64MB (segment aligned) for each thread
+    size_t mimalloc_meta_size = MIMALLOC_SEGMENT_ALIGNED_SIZE *
+                                (std::thread::hardware_concurrency() + 1);
+    // leave spaces for memory fragmentation
+    return MimallocAllocator::Init(static_cast<size_t>(
+        static_cast<double>(size + mimalloc_meta_size) * 1.5));
+  }
 }
 
 void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
@@ -99,7 +97,13 @@ void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
     return nullptr;
   }
 
-  void* mem = Allocator::Allocate(bytes, alignment);
+  void* mem = nullptr;
+  if (use_mimalloc_) {
+    mem = MimallocAllocator::Allocate(bytes, alignment);
+
+  } else {
+    mem = DLmallocAllocator::Allocate(bytes, alignment);
+  }
   if (mem != nullptr) {
     allocated_ += bytes;
   }
@@ -107,7 +111,11 @@ void* BulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
 }
 
 void BulkAllocator::Free(void* mem, size_t bytes) {
-  Allocator::Free(mem, bytes);
+  if (use_mimalloc_) {
+    MimallocAllocator::Free(mem, bytes);
+  } else {
+    DLmallocAllocator::Free(mem, bytes);
+  }
   allocated_ -= bytes;
 }
 

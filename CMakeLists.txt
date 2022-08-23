@@ -570,20 +570,22 @@ if(BUILD_VINEYARD_SERVER)
     find_openssl_libraries(REQUIRED)
     find_etcd_cpp_apiv3()
     find_intel_tbb()
+    find_mimalloc()
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
     )
     add_executable(vineyardd ${SERVER_SRC_FILES})
     target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
-    target_link_libraries(vineyardd PUBLIC ${Boost_LIBRARIES}
-                                           ${CPPREST_LIB}
-                                           ${ETCD_CPP_LIBRARIES}
-                                           ${GFLAGS_LIBRARIES}
-                                           ${GLOG_LIBRARIES}
-                                           ${OPENSSL_LIBRARIES}
-                                           nlohmann_json::nlohmann_json
-                                           TBB::tbb
+    target_link_libraries(vineyardd PRIVATE ${Boost_LIBRARIES}
+                                            ${CPPREST_LIB}
+                                            ${ETCD_CPP_LIBRARIES}
+                                            ${GFLAGS_LIBRARIES}
+                                            ${GLOG_LIBRARIES}
+                                            ${OPENSSL_LIBRARIES}
+                                            mimalloc-static
+                                            nlohmann_json::nlohmann_json
+                                            TBB::tbb
     )
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyardd PUBLIC ${ARROW_SHARED_LIB})
@@ -609,16 +611,16 @@ if(BUILD_VINEYARD_SERVER)
         target_include_directories(vineyardd PRIVATE ${Gperftools_INCLUDE_DIRS})
         target_link_libraries(vineyardd PRIVATE ${Gperftools_LIBRARIES})
     endif()
-    message(STATUS "Vineyard will use '${WITH_ALLOCATOR}' for shared memory allocation")
+
+    message(STATUS "Vineyard will use '${WITH_ALLOCATOR}' by default for shared memory allocation")
+    # bundle dlmalloc and mimalloc at the same time
+    target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC -DWITH_MIMALLOC)
+
     if(WITH_ALLOCATOR STREQUAL "dlmalloc")
-        # use dlmalloc
-        target_compile_options(vineyardd PRIVATE -DWITH_DLMALLOC)
+        target_compile_options(vineyardd PRIVATE -DDEFAULT_ALLOCATOR=dlmalloc)
     endif()
     if(WITH_ALLOCATOR STREQUAL "mimalloc")
-        # use mimalloc
-        find_mimalloc()
-        target_compile_options(vineyardd PRIVATE -DWITH_MIMALLOC)
-        target_link_libraries(vineyardd PRIVATE mimalloc-static)
+        target_compile_options(vineyardd PRIVATE -DDEFAULT_ALLOCATOR=mimalloc)
     endif()
 
     file(GLOB_RECURSE VINEYARD_CLIENT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/src"
