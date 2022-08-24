@@ -78,3 +78,9 @@ def vineyard_client(request):
 
 
 pytest_plugins = []
+
+
+# suppress "no test selected error"
+def pytest_sessionfinish(session, exitstatus):
+    if exitstatus == 5:
+        session.exitstatus = 0

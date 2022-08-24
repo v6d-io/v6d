@@ -51,9 +51,7 @@ class RedisLauncher {
                                std::unique_ptr<redis::Redis>& syncredis_client);
 
  private:
-  void parseEndpoint();
-
-  void initHostInfo();
+  Status parseEndpoint();
 
   const json redis_spec_;
   std::string endpoint_host_;

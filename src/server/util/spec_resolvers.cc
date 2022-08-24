@@ -26,17 +26,24 @@ limitations under the License.
 namespace vineyard {
 
 // deployment
-DEFINE_string(deployment, "local", "deployment mode: local, distributed");
+DEFINE_string(deployment, "local", "deployment mode: 'local', 'distributed'");
 
 // meta data
 DEFINE_string(meta, "etcd",
-              "Metadata storage, can be one of: etcd, redis, local");
+              "Metadata storage, can be one of: 'etcd'"
+#if defined(BUILD_VINEYARDD_REDIS)
+              ", 'redis'"
+#endif
+              " and 'local'");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
-DEFINE_string(etcd_prefix, "vineyard", "path prefix in etcd");
+DEFINE_string(etcd_prefix, "vineyard", "metadata path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
-DEFINE_string(redis_endpoint, "http://127.0.0.1:6379", "endpoint of redis");
-DEFINE_string(redis_prefix, "vineyard", "path prefix in redis");
+
+#if defined(BUILD_VINEYARDD_REDIS)
+DEFINE_string(redis_endpoint, "redis://127.0.0.1:6379", "endpoint of redis");
+DEFINE_string(redis_prefix, "vineyard", "metadata path prefix in redis");
 DEFINE_string(redis_cmd, "", "path of redis executable");
+#endif
 
 // share memory
 DEFINE_string(size, "256Mi",
@@ -112,9 +119,11 @@ json MetaStoreSpecResolver::resolve() const {
   spec["etcd_cmd"] = FLAGS_etcd_cmd;
 
   // resolve for redis
+#if defined(BUILD_VINEYARDD_REDIS)
   spec["redis_prefix"] = FLAGS_redis_prefix;
   spec["redis_endpoint"] = FLAGS_redis_endpoint;
   spec["redis_cmd"] = FLAGS_redis_cmd;
+#endif
   return spec;
 }
 

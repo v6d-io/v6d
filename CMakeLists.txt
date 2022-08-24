@@ -331,7 +331,6 @@ macro(find_hiredis)
 endmacro()
 
 macro(find_redis_plus_plus)
-	set(REDIS_PLUS_PLUS_CXX_STANDARD 11)
     if(USE_EXTERNAL_REDIS_LIBS)
         # not use find_package, because of hiredis
         find_path(REDIS_PLUS_PLUS_HEADER sw)
@@ -647,7 +646,6 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PUBLIC TBB::tbb
                                                ${HIREDIS_LIBRARIES}
                                                ${REDIS_PLUS_PLUS_LIBRARIES}
-                                               uv
         )
         target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_REDIS)
     endif()
