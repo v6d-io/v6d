@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"net/http"
 
-	v1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/generated/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )

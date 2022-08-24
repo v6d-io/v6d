@@ -19,7 +19,7 @@ package fake
 import (
 	"context"
 
-	v1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/controllers"
+	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/schedulers"
 	// +kubebuilder:scaffold:imports
 )

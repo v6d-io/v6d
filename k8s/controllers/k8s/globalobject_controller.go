@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package k8s
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
 // GlobalObjectReconciler reconciles a GlobalObject object
