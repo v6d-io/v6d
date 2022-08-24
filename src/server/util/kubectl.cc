@@ -82,7 +82,6 @@ static std::string generate_global_object(
   std::string signature =
       SignatureToString(object["signature"].get<Signature>());
   std::string type_name = object["typename"].get_ref<std::string const&>();
-  InstanceID instance_id = object["instance_id"].get<InstanceID>();
   std::vector<std::string> members;
 
   std::string crds;

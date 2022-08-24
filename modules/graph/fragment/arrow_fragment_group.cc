@@ -113,16 +113,25 @@ boost::leaf::result<ObjectID> ConstructFragmentGroup(
 
     ArrowFragmentGroupBuilder builder;
     builder.set_total_frag_num(comm_spec.fnum());
-    auto fragment =
-        std::dynamic_pointer_cast<ArrowFragmentBase>(client.GetObject(frag_id));
-    auto& meta = fragment->meta();
+    typename ArrowFragmentBase::label_id_t vertex_label_num = 0,
+                                           edge_label_num = 0;
 
-    builder.set_vertex_label_num(
-        meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
-            "vertex_label_num_"));
-    builder.set_edge_label_num(
-        meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
-            "edge_label_num_"));
+    ObjectMeta meta;
+    if (client.GetMetaData(frag_id, meta).ok()) {
+      if (meta.Haskey("vertex_label_num_")) {
+        vertex_label_num =
+            meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
+                "vertex_label_num_");
+      }
+      if (meta.Haskey("edge_label_num_")) {
+        edge_label_num =
+            meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
+                "edge_label_num_");
+      }
+    }
+
+    builder.set_vertex_label_num(vertex_label_num);
+    builder.set_edge_label_num(edge_label_num);
     for (fid_t i = 0; i < comm_spec.fnum(); ++i) {
       builder.AddFragmentObject(
           i, gathered_object_ids[comm_spec.FragToWorker(i)],
