@@ -82,7 +82,7 @@ unsample:
 	$(KUSTOMIZE) build config/samples | kubectl delete -f -
 
 # Go modules
-modules	= ./api/... \
+modules	= ./apis/... \
 		  ./controllers/... \
 		  ./schedulers/...
 
@@ -109,7 +109,7 @@ vet:
 
 # Generate code
 generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/..."
 .PHONY: generate
 
 # Vendor modules for code-generate
