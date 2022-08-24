@@ -78,9 +78,8 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
   stbuf->st_nlink = 1;
 
   {
-    auto iter = state.views.find(path);
-    if (iter != state.views.end()) {
-      stbuf->st_size = iter->second->size();
+    if (state.views.has(path)) {
+      stbuf->st_size = state.views.get(path)->size();
       return 0;
     }
   }
@@ -111,8 +110,7 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
       auto d =
           fs::state.ipc_desearilizer_registry.at(obj->meta().GetTypeName());
       auto buffer = d(obj);
-      state.views[path_string] = buffer;
-
+      state.views.put(path_string, buffer);
       stbuf->st_size = buffer->size();
     } else {
       auto obj = state.client->GetObject(ObjectIDFromString(prefix));
@@ -124,7 +122,7 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
       auto d =
           fs::state.ipc_desearilizer_registry.at(obj->meta().GetTypeName());
       auto buffer = d(obj);
-      state.views[path_string] = buffer;
+      state.views.put(path_string, buffer);
       stbuf->st_size = buffer->size();
     }
     return 0;
@@ -145,10 +143,9 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
   // the opened file referenced by the user-defined name
   auto filename = name_from_path(path);
   auto target = InvalidObjectID();
-  auto loc = state.views.find(path);
   std::string path_string(path);
   std::shared_ptr<vineyard::Object> object = nullptr;
-  if (loc == state.views.end()) {
+  if (!state.views.has(path)) {
     if (state.client->GetName(filename, target).ok()) {
       object = state.client->GetObject(target);
     }
@@ -161,7 +158,7 @@ int fs::fuse_open(const char* path, struct fuse_file_info* fi) {
     } else {
       auto d =
           fs::state.ipc_desearilizer_registry.at(object->meta().GetTypeName());
-      state.views[path_string] = d(object);
+      state.views.put(path_string, d(object));
     }
   }
 
@@ -177,16 +174,17 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
   DLOG(INFO) << "fuse: read " << path << " from " << offset << ", expect "
              << size << " bytes";
 
-  std::unordered_map<std::string,
-                     std::shared_ptr<arrow::Buffer>>::const_iterator loc;
+  std::shared_ptr<arrow::Buffer> buffer;
   {
     std::lock_guard<std::mutex> guard(state.mtx_);
-    loc = state.views.find(path);
+
+    std::string path_string(path);
+
+    if (!state.views.has(path)) {
+      return -ENOENT;
+    }
+    buffer = state.views[path_string];
   }
-  if (loc == state.views.end()) {
-    return -ENOENT;
-  }
-  auto buffer = loc->second;
   if (offset >= buffer->size()) {
     return 0;
   } else {
@@ -319,7 +317,7 @@ void* fs::fuse_init(struct fuse_conn_info* conn, struct fuse_config* cfg) {
 void fs::fuse_destroy(void* private_data) {
   DLOG(INFO) << "fuse: destroy";
 
-  state.views.clear();
+  state.views.destroy();
   state.mutable_views.clear();
   state.client->Disconnect();
 }

@@ -24,6 +24,7 @@ limitations under the License.
 #include "common/util/env.h"
 #include "common/util/logging.h"
 #include "fuse/fuse_impl.h"
+#include "modules/fuse/cache_manager/manager.h"
 
 /*
  * Command line options
@@ -34,6 +35,7 @@ limitations under the License.
  */
 static struct options {
   const char* vineyard_socket;
+  size_t cache_size;
   int show_help;
 } options;
 
@@ -42,14 +44,16 @@ static struct options {
 
 static const struct fuse_opt option_spec[] = {
     OPTION("--vineyard-socket=%s", vineyard_socket),
-    OPTION("--help", show_help), OPTION("-h", show_help), FUSE_OPT_END};
-
+    OPTION("--max-cache-size=%d", cache_size), OPTION("--help", show_help),
+    OPTION("-h", show_help), FUSE_OPT_END};
 static void print_help(const char* progname) {
   printf("usage: %s [options] <mountpoint>\n\n", progname);
   printf(
       "Vineyard specific options:\n"
       "    --vineyard-socket=<s>  Path of UNIX-domain socket of vineyard "
       "server\n"
+      "    --max-cache-size=<size>   Size of cache in bytes\n"
+
       "                           (default: \"$VINEYARD_IPC_SOCKET\")\n"
       "\n");
 }
@@ -61,6 +65,9 @@ static int process_args(struct fuse_args& args, int argc, char** argv) {
     std::string env = vineyard::read_env("VINEYARD_IPC_SOCKET");
 
     options.vineyard_socket = strdup(env.c_str());
+  }
+  if (!options.cache_size) {
+    options.cache_size = 1 * 1024 * 1024 * 1024;
   }
 
   /* Parse options */
@@ -86,9 +93,10 @@ static int process_args(struct fuse_args& args, int argc, char** argv) {
 
   // populate state
   vineyard::fuse::fs::state.vineyard_socket = options.vineyard_socket;
+  vineyard::fuse::fs::state.views.resize(options.cache_size);
   LOG(INFO) << "prepare to conncet to socket"
-            << vineyard::fuse::fs::state.vineyard_socket;
-
+            << vineyard::fuse::fs::state.vineyard_socket << " with cache size "
+            << options.cache_size;
   vineyard::fuse::fs::state.ipc_desearilizer_registry =
       vineyard::fuse::arrow_ipc_register_once();
   return 0;

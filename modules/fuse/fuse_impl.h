@@ -37,10 +37,8 @@ limitations under the License.
 
 #include "adaptors/arrow_ipc/deserializer_registry.h"
 
-namespace arrow {
-class Buffer;
-}
-
+#include "cache_manager/manager.h"
+#include "cache_manager/manager.hpp"
 namespace vineyard {
 
 namespace fuse {
@@ -51,7 +49,9 @@ struct fs {
     std::string vineyard_socket;
     std::shared_ptr<Client> client;
     std::mutex mtx_;
-    std::unordered_map<std::string, std::shared_ptr<arrow::Buffer>> views;
+    cache_manager::CacheManager<
+        cache_manager::KeyValue<std::string, arrow::Buffer>>
+        views;
     std::unordered_map<std::string, std::shared_ptr<arrow::BufferBuilder>>
         mutable_views;
     std::unordered_map<std::string, vineyard::fuse::vineyard_deserializer_nt>

@@ -46,6 +46,17 @@ def pytest_addoption(parser):
         default='/tmp/vineyard_fuse.default',
         help='fusermount directory',
     )
+    parser.addoption(
+        '--vineyard-fuse-process-pid',
+        action='store',
+        default=None,
+        help='fusermount directory',
+    )
+
+
+@pytest.fixture(scope='session')
+def vineyard_fuse_process_pid(request):
+    return request.config.option.vineyard_fuse_process_pid
 
 
 @pytest.fixture(scope='session')
