@@ -20,9 +20,10 @@ limitations under the License.
 #include <string>
 #include <thread>
 
+#include "adaptors/arrow_ipc/deserializer_registry.h"
 #include "common/util/env.h"
 #include "common/util/logging.h"
-#include "fuse/fused.h"
+#include "fuse/fuse_impl.h"
 
 /*
  * Command line options
@@ -56,8 +57,11 @@ static void print_help(const char* progname) {
 static int process_args(struct fuse_args& args, int argc, char** argv) {
   // Set defaults -- we have to use strdup so that fuse_opt_parse can free
   // the defaults if other values are specified.
-  std::string env = vineyard::read_env("VINEYARD_IPC_SOCKET");
-  options.vineyard_socket = strdup(env.c_str());
+  if (!options.vineyard_socket) {
+    std::string env = vineyard::read_env("VINEYARD_IPC_SOCKET");
+
+    options.vineyard_socket = strdup(env.c_str());
+  }
 
   /* Parse options */
   if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1) {
@@ -82,6 +86,11 @@ static int process_args(struct fuse_args& args, int argc, char** argv) {
 
   // populate state
   vineyard::fuse::fs::state.vineyard_socket = options.vineyard_socket;
+  LOG(INFO) << "prepare to conncet to socket"
+            << vineyard::fuse::fs::state.vineyard_socket;
+
+  vineyard::fuse::fs::state.ipc_desearilizer_registry =
+      vineyard::fuse::arrow_ipc_register_once();
   return 0;
 }
 
@@ -98,8 +107,9 @@ static const struct fuse_operations vineyard_fuse_operations = {
     .readdir = vineyard::fuse::fs::fuse_readdir,
     .init = vineyard::fuse::fs::fuse_init,
     .destroy = vineyard::fuse::fs::fuse_destroy,
-    .access = vineyard::fuse::fs::fuse_access,
     .create = vineyard::fuse::fs::fuse_create,
+
+    // .access = vineyard::fuse::fs::fuse_access,
 };
 
 int main(int argc, char* argv[]) {
@@ -120,7 +130,6 @@ int main(int argc, char* argv[]) {
   // process conn args
   struct fuse_conn_info_opts* conn_opts = fuse_parse_conn_info_opts(&args);
   vineyard::fuse::fs::state.conn_opts = conn_opts;
-
   LOG(INFO) << "Starting vineyard fuse driver ...";
   ret = fuse_main(args.argc, args.argv, &vineyard_fuse_operations, NULL);
   fuse_opt_free_args(&args);

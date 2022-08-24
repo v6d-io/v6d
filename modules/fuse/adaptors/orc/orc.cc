@@ -13,25 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <stdio.h>
+#include "modules/fuse/adaptors/orc/orc.h"
 
-#include <memory>
-#include <string>
-#include <thread>
+#if defined(WITH_ORC)
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
+#include "parquet/file_writer.h"
 
-#include "basic/ds/array.h"
-#include "client/client.h"
-#include "client/ds/object_meta.h"
-#include "common/util/logging.h"
-#include "fuse/fused.h"
+namespace vineyard {
+namespace fuse {
 
-using namespace vineyard;  // NOLINT(build/namespaces)
+void orc_view(std::shared_ptr<vineyard::DataFrame>& df) {}
 
-int main() {
-  printf("%d%d\n", FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
-  printf("%d\n", fuse_version());
-  return 0;
-}
+}  // namespace fuse
+}  // namespace vineyard
+
+#endif
