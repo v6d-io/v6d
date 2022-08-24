@@ -80,6 +80,8 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
   {
     auto iter = state.views.find(path);
     if (iter != state.views.end()) {
+      DLOG(INFO) << "fuse: getattr found " << path;
+
       stbuf->st_size = iter->second->size();
       return 0;
     }
@@ -95,12 +97,14 @@ int fs::fuse_getattr(const char* path, struct stat* stbuf,
   {
     std::string path_string(path);
     if (!boost::algorithm::ends_with(path_string, ".arrow")) {
+      DLOG(INFO) << path_string << "should end with arrow";
       return -ENOENT;
     }
     ObjectID target = InvalidObjectID();
     auto prefix = name_from_path(path);
     auto status = state.client->GetName(prefix, target);
     if (status.ok()) {
+      DLOG(INFO) << "get attr name not exists";
       bool exists = false;
       VINEYARD_CHECK_OK(state.client->Exists(target, exists));
       if (!exists) {
@@ -177,8 +181,8 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
   DLOG(INFO) << "fuse: read " << path << " from " << offset << ", expect "
              << size << " bytes";
 
-  std::unordered_map<std::string,
-                     std::shared_ptr<arrow::Buffer>>::const_iterator loc;
+  std::unordered_map<
+      std::string, std::shared_ptr<internal::ChunkBuffer>>::const_iterator loc;
   {
     std::lock_guard<std::mutex> guard(state.mtx_);
     loc = state.views.find(path);
@@ -186,17 +190,9 @@ int fs::fuse_read(const char* path, char* buf, size_t size, off_t offset,
   if (loc == state.views.end()) {
     return -ENOENT;
   }
-  auto buffer = loc->second;
-  if (offset >= buffer->size()) {
-    return 0;
-  } else {
-    size_t slice = size;
-    if (slice > static_cast<size_t>(buffer->size() - offset)) {
-      slice = buffer->size() - offset;
-    }
-    memcpy(buf, buffer->data() + offset, slice);
-    return slice;
-  }
+  auto cbuffer = loc->second;
+  auto readByte = cbuffer->readAt(offset, size, buf);
+  return readByte;
 }
 
 int fs::fuse_write(const char* path, const char* buf, size_t size, off_t offset,

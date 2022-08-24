@@ -36,7 +36,7 @@ limitations under the License.
 #include "client/client.h"
 
 #include "adaptors/arrow_ipc/deserializer_registry.h"
-
+#include "adaptors/chunk_buffer/chunk_buffer.h"
 namespace arrow {
 class Buffer;
 }
@@ -51,7 +51,8 @@ struct fs {
     std::string vineyard_socket;
     std::shared_ptr<Client> client;
     std::mutex mtx_;
-    std::unordered_map<std::string, std::shared_ptr<arrow::Buffer>> views;
+    std::unordered_map<std::string, std::shared_ptr<internal::ChunkBuffer>>
+        views;
     std::unordered_map<std::string, std::shared_ptr<arrow::BufferBuilder>>
         mutable_views;
     std::unordered_map<std::string, vineyard::fuse::vineyard_deserializer_nt>
