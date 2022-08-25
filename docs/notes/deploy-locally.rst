@@ -22,6 +22,46 @@ vineyard server, noteably,
   readable format, e.g. :code:`256M`, :code:`1G`, etc.
 - :code:`--etcd_endpoint <ENDPOINT>` to specify the etcd endpoint to connect
 
+Vineyard a systemd service
+--------------------------
+
+Vineyard can be installed and deployed as a `systemd service <https://www.freedesktop.org/software/systemd/man/systemd.service.html>`_
+on Linux. After installing vineyard using pip, the service initialized can be done by
+
+.. code:: shell
+
+    python -m vineyard.systemd install
+
+If you could like to install vineyard as a service for current user, you could
+
+.. code:: shell
+
+    python -m vineyard.systemd --user install
+
+.. warning::
+
+    When installing vineyard as a user service, you may also need the following
+    command to prevent vineyard been shutdown after your session close:
+
+
+    .. code:: shell
+
+        sudo loginctl enable-linger $USER
+
+After installing vineyard as a service, :code:`vineyardd` will try to resolve configuration
+from :code:`/etc/vineyard.conf` (for system-level service) or :code:`~/.config/vineyard.conf`
+(for user-level service). The configuration file follows the :code:`-flagfile` format of
+gflags, see also `GFlags Special Flags <https://gflags.github.io/gflags/>`_.
+
+For more detailed arguments about the systemd service deployment, please refer to
+
+.. code::
+
+    python -m vineyard.systemd --help
+
+Fill command-line arguments list
+--------------------------------
+
 The full list of command-line arguments is as follows:
 
 .. code:: shell
