@@ -30,13 +30,14 @@ limitations under the License.
 #include "common/util/status.h"
 
 namespace vineyard {
+
 class EtcdLauncher {
  public:
-  explicit EtcdLauncher(const json& etcd_spec) : etcd_spec_(etcd_spec) {}
+  explicit EtcdLauncher(const json& etcd_spec);
+  ~EtcdLauncher();
 
   Status LaunchEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
-                          std::string& sync_lock,
-                          std::unique_ptr<boost::process::child>& etcd_proc);
+                          std::string& sync_lock);
 
   // Check if the etcd server available, return True if succeed, otherwise
   // False.
@@ -44,16 +45,20 @@ class EtcdLauncher {
                               std::string const& key);
 
  private:
-  void parseEndpoint();
+  Status parseEndpoint();
 
-  void initHostInfo();
+  Status initHostInfo();
 
   const json etcd_spec_;
   std::string endpoint_host_;
+  std::string etcd_data_dir_;
   int endpoint_port_;
   std::set<std::string> local_hostnames_;
   std::set<std::string> local_ip_addresses_;
+
+  std::unique_ptr<boost::process::child> etcd_proc_;
 };
+
 }  // namespace vineyard
 
 #endif  // SRC_SERVER_UTIL_ETCD_LAUNCHER_H_

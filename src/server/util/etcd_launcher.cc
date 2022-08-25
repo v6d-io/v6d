@@ -74,9 +74,23 @@ static bool check_port_in_use(boost::asio::io_context& context,
   return ec == boost::asio::error::address_in_use;
 }
 
+EtcdLauncher::EtcdLauncher(const json& etcd_spec) : etcd_spec_(etcd_spec) {}
+
+EtcdLauncher::~EtcdLauncher() {
+  if (etcd_proc_) {
+    std::error_code err;
+    etcd_proc_->terminate(err);
+    kill(etcd_proc_->id(), SIGTERM);
+    etcd_proc_->wait(err);
+  }
+  if (!etcd_data_dir_.empty()) {
+    boost::system::error_code err;
+    boost::filesystem::remove_all(boost::filesystem::path(etcd_data_dir_), err);
+  }
+}
+
 Status EtcdLauncher::LaunchEtcdServer(
-    std::unique_ptr<etcd::Client>& etcd_client, std::string& sync_lock,
-    std::unique_ptr<boost::process::child>& etcd_proc) {
+    std::unique_ptr<etcd::Client>& etcd_client, std::string& sync_lock) {
   std::string const& etcd_endpoint =
       etcd_spec_["etcd_endpoint"].get_ref<std::string const&>();
   etcd_client.reset(new etcd::Client(etcd_endpoint));
@@ -95,8 +109,8 @@ Status EtcdLauncher::LaunchEtcdServer(
   }
   LOG(INFO) << "Found etcd at: " << etcd_cmd;
 
-  parseEndpoint();
-  initHostInfo();
+  RETURN_ON_ERROR(parseEndpoint());
+  RETURN_ON_ERROR(initHostInfo());
 
   bool try_launch = false;
   if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
@@ -169,6 +183,17 @@ Status EtcdLauncher::LaunchEtcdServer(
   args.emplace_back("--initial-advertise-peer-urls");
   args.emplace_back(peer_endpoint);
 
+  // use a random etcd data dir
+  std::string file_template = "/tmp/vineyard-etcd-XXXXXX";
+  char* data_dir = mktemp(const_cast<char*>(file_template.c_str()));
+  if (data_dir == nullptr) {
+    return Status::EtcdError(
+        "Failed to create a temporary directory for etcd data");
+  }
+  etcd_data_dir_ = data_dir;
+  args.emplace_back("--data-dir");
+  args.emplace_back(etcd_data_dir_);
+
   auto env = boost::this_process::environment();
   // n.b., avoid using `[]` operator to update env, see boostorg/process#122.
 #ifndef NDEBUG
@@ -185,19 +210,19 @@ Status EtcdLauncher::LaunchEtcdServer(
 
   DLOG(INFO) << "Launching etcd with: " << boost::algorithm::join(args, " ");
   std::error_code ec;
-  etcd_proc = std::make_unique<boost::process::child>(
+  etcd_proc_ = std::unique_ptr<boost::process::child>(new boost::process::child(
       etcd_cmd, boost::process::args(args), boost::process::std_out > stdout,
-      boost::process::std_err > stderr, env, ec);
+      boost::process::std_err > stderr, env, ec));
   if (ec) {
     LOG(ERROR) << "Failed to launch etcd: " << ec.message();
     return Status::EtcdError("Failed to launch etcd: " + ec.message());
   } else {
-    LOG(INFO) << "Etcd launched: pid = " << etcd_proc->id() << ", listen on "
+    LOG(INFO) << "Etcd launched: pid = " << etcd_proc_->id() << ", listen on "
               << endpoint_port_;
 
     int retries = 0;
     std::error_code err;
-    while (etcd_proc && etcd_proc->running(err) && !err &&
+    while (etcd_proc_ && etcd_proc_->running(err) && !err &&
            retries < max_probe_retries) {
       etcd_client.reset(new etcd::Client(etcd_endpoint));
       if (probeEtcdServer(etcd_client, sync_lock)) {
@@ -206,7 +231,7 @@ Status EtcdLauncher::LaunchEtcdServer(
       retries += 1;
       sleep(1);
     }
-    if (!etcd_proc) {
+    if (!etcd_proc_) {
       return Status::IOError(
           "Failed to wait until etcd ready: operation has been interrupted");
     } else if (err) {
@@ -221,18 +246,27 @@ Status EtcdLauncher::LaunchEtcdServer(
   }
 }
 
-void EtcdLauncher::parseEndpoint() {
+Status EtcdLauncher::parseEndpoint() {
   std::string const& etcd_endpoint =
       etcd_spec_["etcd_endpoint"].get_ref<std::string const&>();
   size_t port_pos = etcd_endpoint.find_last_of(':');
-  endpoint_port_ = std::stoi(
-      etcd_endpoint.substr(port_pos + 1, etcd_endpoint.size() - port_pos - 1));
+  std::string endpoint_port_string =
+      etcd_endpoint.substr(port_pos + 1, etcd_endpoint.size() - port_pos - 1);
+  if (endpoint_port_string.empty()) {
+    return Status::Invalid("The etcd endpoint '" + etcd_endpoint +
+                           "' is invalid");
+  }
+  endpoint_port_ = std::atoi(endpoint_port_string.c_str());
   size_t prefix = etcd_endpoint.find_last_of('/');
   endpoint_host_ = etcd_endpoint.substr(prefix + 1, port_pos - prefix - 1);
-  return;
+  if (endpoint_host_.empty()) {
+    return Status::Invalid("The etcd endpoint '" + etcd_endpoint +
+                           "' is invalid");
+  }
+  return Status::OK();
 }
 
-void EtcdLauncher::initHostInfo() {
+Status EtcdLauncher::initHostInfo() {
   local_hostnames_.emplace("localhost");
   local_ip_addresses_.emplace("127.0.0.1");
   local_ip_addresses_.emplace("0.0.0.0");
@@ -240,8 +274,8 @@ void EtcdLauncher::initHostInfo() {
   local_hostnames_.emplace(hostname_value);
   struct hostent* host_entry = gethostbyname(hostname_value.c_str());
   if (host_entry == nullptr) {
-    LOG(ERROR) << "Failed in gethostbyname: " << hstrerror(h_errno);
-    return;
+    LOG(WARNING) << "Failed in gethostbyname: " << hstrerror(h_errno);
+    return Status::OK();
   }
   {
     size_t index = 0;
@@ -262,6 +296,7 @@ void EtcdLauncher::initHostInfo() {
           inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[index++])));
     }
   }
+  return Status::OK();
 }
 
 bool EtcdLauncher::probeEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
