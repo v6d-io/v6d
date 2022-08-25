@@ -37,9 +37,17 @@ VineyardRunner::VineyardRunner(const json& spec)
       context_(concurrency_),
       meta_context_(),
       io_context_(concurrency_),
+#if BOOST_VERSION < 106600
+      guard_(new asio::io_service::work(context_)),
+      meta_guard_(new asio::io_service::work(context_)),
+      io_guard_(new asio::io_service::work(context_))
+#else
       guard_(asio::make_work_guard(context_)),
       meta_guard_(asio::make_work_guard(meta_context_)),
-      io_guard_(asio::make_work_guard(io_context_)) {}
+      io_guard_(asio::make_work_guard(io_context_))
+#endif
+{
+}
 
 std::shared_ptr<VineyardRunner> VineyardRunner::Get(const json& spec) {
   return std::shared_ptr<VineyardRunner>(new VineyardRunner(spec));
