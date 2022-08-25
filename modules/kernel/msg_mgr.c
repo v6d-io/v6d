@@ -20,13 +20,20 @@ struct sock *nl_socket = NULL;
 extern struct net init_net;
 
 DECLARE_WAIT_QUEUE_HEAD(vineyard_msg_wait);
-
-void vineyard_spin_lock(volatile int *addr)
+static int count = 0;
+void vineyard_spin_lock(volatile unsigned int *addr)
 {
-    while(!__sync_bool_compare_and_swap(addr, 0, 1));
+    while(!(__sync_bool_compare_and_swap(addr, 0, 1))) {
+        // for test dead lock
+        if (count == 80) {
+            printk(KERN_INFO "what the fuck?\n");
+            break;
+        }
+        count++;
+    }
 }
 
-void vineyard_spin_unlock(volatile int *addr)
+void vineyard_spin_unlock(volatile unsigned int *addr)
 {
     *addr = 0;
 }
@@ -52,11 +59,6 @@ int send_msg(void *pbuf, uint16_t len)
     ret = netlink_unicast(nl_socket, nl_skb, USER_PORT, MSG_DONTWAIT);
 
     return ret;
-}
-
-static inline int msg_empty(int head, int tail)
-{
-    return head == tail;
 }
 
 static inline int msg_full(int head, int tail, int capacity)
@@ -90,8 +92,10 @@ static void handle_wait(void)
     } while (ret != 0);
 
     if (vineyard_msg_mem_header->close) {
+        printk(KERN_INFO PREFIX "receive exit\n");
         msg.opt = VEXIT;
     } else {
+        printk(KERN_INFO PREFIX "receive fopt\n");
         msg.opt = VFOPT;
     }
     send_msg(&msg, sizeof(msg));
@@ -102,7 +106,7 @@ static void handle_fopt(void)
 {
     printk(KERN_INFO PREFIX "fopt is not support now!\n");
     //1. send handler result to user
-
+    wake_up(&vineyard_fs_wait);
     //2. call handler_wait
     handle_wait();
 }

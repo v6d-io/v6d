@@ -28,7 +28,12 @@ limitations under the License.
 #include "server/server/vineyard_server.h"
 #include "common/util/protocols.h"
 
+#define PAGE_SIZE (0x1000)
+#define PAGE_DOWN(x) (x & (~(PAGE_SIZE - 1)))
 namespace vineyard {
+
+static uint64_t base_object_id = std::numeric_limits<uintptr_t>::max();
+static void *base_pointer;
 
 NetLinkServer::NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
     : SocketServer(vs_ptr),
@@ -46,6 +51,9 @@ NetLinkServer::~NetLinkServer() {
 
 void NetLinkServer::Start() {
   LOG(INFO) << __func__;
+  std::vector<ObjectID> ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+
   socket_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_VINEYARD);
   if (socket_fd < 0) {
     LOG(INFO) << "NetLinkServer start error";
@@ -75,6 +83,12 @@ void NetLinkServer::Start() {
   nlh->nlmsg_seq = 0;
   nlh->nlmsg_pid = saddr.nl_pid; //self port
 
+  ids.push_back(base_object_id);
+  vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
+  if (!objects.empty()) {
+    base_pointer = objects[0]->pointer;
+    LOG(INFO) << "base_pointer" << base_pointer;
+  }
   LOG(INFO) << socket_fd << " " << &saddr << " " << &daddr << " " << nlh;
   // std::thread t(thread_routine, socket_fd, saddr, daddr, nlh);
   work = new std::thread(thread_routine, this, socket_fd, saddr, daddr, nlh);
@@ -210,7 +224,57 @@ int NetLinkServer::HandleOpen() {
   return 0;
 }
 
-int NetLinkServer::HandleRead() {
+int NetLinkServer::HandleRead(vineyard_request_msg *msg) {
+  LOG(INFO) << __func__;
+  ObjectID id;
+  uint64_t offset;
+  uint64_t length;
+  OBJECT_TYPE type;
+  vineyard_msg_mem_header *header;
+  vineyard_request_msg *msgs;
+  vineyard_result_mem_header *rheader;
+  vineyard_result_msg *rmsgs;
+  std::vector<ObjectID> ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+  void *pointer;
+  uint64_t file_size;
+
+  header = (vineyard_msg_mem_header *)this->req_mem;
+  msgs = (vineyard_request_msg *)((uint64_t)this->req_mem + sizeof(vineyard_msg_mem_header));
+  rheader = (vineyard_result_mem_header *)this->result_mem;
+  rmsgs = (vineyard_result_msg *)((uint64_t)this->result_mem + sizeof(vineyard_result_mem_header));
+  vineyard_spin_lock(&header->lock);
+  id = msg->_fopt_param.obj_id;
+  type = msg->_fopt_param.type;
+  offset = msg->_fopt_param.offset;
+  length = msg->_fopt_param.length;
+  LOG(INFO) << "id: "<< id << " type " << type << " offset " << offset << " length " << length << " header->tail " << header->tail_point;
+  vineyard_spin_unlock(&header->lock);
+
+  ids.push_back(id);
+  vs_ptr_->GetData(
+      ids, false, false, []() { return true; },
+      [](const Status& status, const json& tree) {
+        LOG(INFO) << tree;
+        return Status::OK();
+      });
+  vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
+  for (auto iter = objects.begin(); iter != objects.end(); iter++) {
+    LOG(INFO) << "pointer:";
+    printf("%p\n", (*iter)->pointer);
+    pointer = (*iter)->pointer;
+    file_size = (*iter)->data_size;
+    printf("page down:%p\n", PAGE_DOWN((uint64_t)(base_pointer)));
+    printf("file size:%llu\n", file_size);
+  }
+
+  vineyard_spin_lock(&rheader->lock);
+  rmsgs[rheader->head_point].obj_id = id;
+  rmsgs[rheader->head_point].offset = (uint64_t)pointer - PAGE_DOWN((uint64_t)(base_pointer));
+  rmsgs[rheader->head_point].ret = 0;
+  rmsgs[rheader->head_point].size = file_size;
+  rheader->head_point++;
+  vineyard_spin_unlock(&rheader->lock);
   return 0;
 }
 
@@ -233,13 +297,14 @@ int NetLinkServer::HandleFops() {
 
   request_header = (struct vineyard_msg_mem_header *)req_mem;
 
-  while((msg = vineyard_get_request_msg(request_header)) != NULL) {
+  msg = vineyard_get_request_msg(request_header);
+  while(msg != NULL) {
     switch(msg->opt) {
     case REQUEST_OPT::OPEN:
       HandleOpen();
       break;
     case REQUEST_OPT::READ:
-      HandleRead();
+      HandleRead(msg);
       break;
     case REQUEST_OPT::WRITE:
       HandleWrite();
@@ -249,6 +314,7 @@ int NetLinkServer::HandleFops() {
       HandleCloseOrFsync();
       break;
     }
+    msg = vineyard_get_request_msg(request_header);
   }
 
   return 0;

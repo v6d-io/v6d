@@ -1,6 +1,7 @@
 #include <linux/string.h>
 #include <linux/futex.h>
 #include <linux/wait.h>
+#include <linux/mutex.h>
 #include "vineyard_fs.h"
 #include "vineyard_i.h"
 #include "msg_mgr.h"
@@ -9,6 +10,8 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("yuansm");
 MODULE_DESCRIPTION("Vineyard filesystem for Linux.");
 MODULE_VERSION("0.01");
+
+#define VINEYARD_SB(x) ((struct vineyard_sb_info *)x->s_fs_info)
 
 void inline vineyard_read_lock(struct vineyard_rw_lock *rw_lock)
 {
@@ -22,26 +25,6 @@ void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock)
 {
     rw_lock->r_lock--;
     printk(KERN_INFO PREFIX "now there exist(s) %d readder\n", rw_lock->r_lock);
-}
-
-static void translate_u64_to_char(uint64_t num, char *name)
-{
-    int i = 0, j = 0;
-    int temp;
-    char c;
-
-    while(num) {
-        temp = num % 10;
-        num /= 10;
-        name[i] = temp + '0';
-        i++;
-    }
-
-    for (; j < i / 2; j++) {
-        c = name[j];
-        name[j] = name[i - j - 1];
-        name[i - j - 1] = c;
-    }
 }
 
 static inline int vineyard_get_entry(struct file *dir_file, int *cpos, struct vineyard_entry **entry, char *name)
@@ -71,7 +54,7 @@ static int vineyard_fs_dir_read(struct file *file, struct dir_context *ctx)
     int ret;
     struct dentry *dentry;
     const unsigned char *path;
-    struct inode *temp, *dir_i;
+    struct inode *dir_i;
     struct super_block *sb;
     struct vineyard_entry *entry;
     char name[32] = { 0 };
@@ -97,15 +80,13 @@ static int vineyard_fs_dir_read(struct file *file, struct dir_context *ctx)
     // fake . and ..
     cpos = ctx->pos;
     printk(KERN_INFO PREFIX "cpos:%d\n", cpos);
-    // if(!dir_emit_dots(file, ctx)) {
-    //     goto out;
-    // }
+    // dir_emit_dots(file, ctx);
 
     vineyard_read_lock(&vineyard_object_info_header->rw_lock);
 get_new:
     if (vineyard_get_entry(file, &cpos, &entry, name) == -1) {
         if (!find)
-            ret = -1;
+            ret = 0;
         goto out;
     }
     find = 1;
@@ -136,18 +117,46 @@ static int vineyard_fs_dir_fsync(struct file *file, loff_t start, loff_t end, in
     return -1;
 }
 
-static struct dentry *vineyard_fs_dir_lookup(struct inode *inode, struct dentry *dentry, unsigned int flags)
+static int vineyard_find(struct inode *dir, struct qstr d_name)
 {
-    printk(KERN_INFO PREFIX "fake %s\n", __func__);
-    printk(KERN_INFO PREFIX "inode no:%lu\n", inode->i_ino);
-    printk(KERN_INFO PREFIX "name:%s\n", dentry->d_name.name);
-    return NULL;
+    return 0;
 }
 
-static int vineyard_fs_dir_setattr(struct user_namespace *mnt_userns, struct dentry * entry, struct iattr *attr)
+static struct dentry *vineyard_fs_dir_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
 {
+    struct super_block *sb;
+    struct inode *inode;
+    int err;
+
     printk(KERN_INFO PREFIX "fake %s\n", __func__);
-    return -1;
+    printk(KERN_INFO PREFIX "inode no:%lu\n", dir->i_ino);
+    printk(KERN_INFO PREFIX "name:%s\n", dentry->d_name.name);
+
+    sb = dir->i_sb;
+    mutex_lock(&(VINEYARD_SB(sb)->s_lock));
+
+    // check if there exists a file in the file system
+    err = vineyard_find(dir, dentry->d_name);
+    if (err) {
+        if (err == -ENOENT) {
+            inode = NULL;
+            goto out;
+        }
+        goto error;
+    }
+
+    inode = vineyard_fs_build_inode(sb, dentry->d_name.name);
+	if (IS_ERR(inode)) {
+		err = PTR_ERR(inode);
+		goto error;
+	}
+
+out:
+    mutex_unlock(&(VINEYARD_SB(sb)->s_lock));
+    return d_splice_alias(inode, dentry);
+error:
+    mutex_unlock(&VINEYARD_SB(sb)->s_lock);
+    return ERR_PTR(err);
 }
 
 static int vineyard_fs_dir_create(struct user_namespace *mnt_userns, struct inode *dir, struct dentry *entry, umode_t mode, bool excl)
@@ -159,22 +168,6 @@ static int vineyard_fs_dir_create(struct user_namespace *mnt_userns, struct inod
 static int vineyard_fs_dir_permission(struct user_namespace *mnt_userns, struct inode *inode, int mask)
 {
     printk(KERN_INFO PREFIX "fake %s\n", __func__);
-    return 0;
-}
-
-static int vineyard_fs_dir_getattr(struct user_namespace *mnt_userns, const struct path *path, struct kstat *stat, u32 mask, unsigned int flags)
-{
-    struct inode *inode;
-
-    printk(KERN_INFO PREFIX "fake %s\n", __func__);
-    inode = d_inode(path->dentry);
-    if (!mask) {
-        stat->result_mask = 0;
-        return 0;
-    }
-
-    if (stat)
-        generic_fillattr(mnt_userns, inode, stat);
     return 0;
 }
 
@@ -204,10 +197,10 @@ static const struct file_operations vineyard_fs_dir_operations = {
 
 static const struct inode_operations vineyard_dir_inode_operations = {
 	.lookup		= vineyard_fs_dir_lookup,
-	.setattr	= vineyard_fs_dir_setattr,
 	.create		= vineyard_fs_dir_create,
 	.permission	= vineyard_fs_dir_permission,
-	.getattr	= vineyard_fs_dir_getattr,
+	.setattr	= vineyard_setattr,
+	.getattr	= vineyard_getattr,
 	.listxattr	= vineyard_fs_dir_listxattr,
 	.fileattr_get	= vineyard_fs_dir_fileattr_get,
 	.fileattr_set	= vineyard_fs_dir_fileattr_set,

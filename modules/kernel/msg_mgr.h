@@ -37,10 +37,11 @@ struct vineyard_request_msg {
     enum REQUEST_OPT  opt;
     struct fopt_param {
         // read/write/sync
-        uint64_t          obj_id;
-        uint64_t          offset;
+        uint64_t            obj_id;
+        uint64_t            offset;
         // open
-        enum OBJECT_TYPE type;
+        enum OBJECT_TYPE    type;
+        uint64_t            length;
     } _fopt_param;
 };
 
@@ -52,23 +53,23 @@ struct vineyard_kern_user_msg {
 };
 
 struct vineyard_msg_mem_header {
-    int     has_msg;
-    int     lock;
-    int     head_point;
-    int     tail_point;
-    int     close;
+    int             has_msg;
+    unsigned int    lock;
+    int             head_point;
+    int             tail_point;
+    int             close;
 };
 
 struct vineyard_result_mem_header {
-    int     has_msg;
-    int     lock;
-    int     head_point;
-    int     tail_point;
+    int             has_msg;
+    unsigned int    lock;
+    int             head_point;
+    int             tail_point;
 };
 
 struct vineyard_rw_lock {
-    int r_lock;
-    int w_lock;
+    unsigned int r_lock;
+    unsigned int w_lock;
 };
 
 struct vineyard_object_info_header {
@@ -95,5 +96,10 @@ extern struct wait_queue_head vineyard_fs_wait;
 
 int net_link_init(void);
 void net_link_release(void);
-void vineyard_spin_lock(volatile int *addr);
-void vineyard_spin_unlock(volatile int *addr);
+void vineyard_spin_lock(volatile unsigned int *addr);
+void vineyard_spin_unlock(volatile unsigned int *addr);
+
+static inline int msg_empty(int head, int tail)
+{
+    return head == tail;
+}

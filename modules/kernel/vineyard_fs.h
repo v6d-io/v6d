@@ -10,11 +10,13 @@
 #include <linux/exportfs.h>
 #include <linux/mm.h>
 #include <linux/mman.h>
+#include <linux/list.h>
 #include "msg_mgr.h"
 
 #define PREFIX "[vineyardfs]"
 #define VINEYARD_SUPER_MAGIC 0xabcdef
 
+#define VINEYARD_HASHSIZE (1 << 8)
 struct vineyard_attr {
 	uint64_t	ino;
 	uint64_t	size;
@@ -40,3 +42,8 @@ struct vineyard_entry {
 	enum OBJECT_TYPE	type;
 	unsigned long 		inode_id;
 };
+
+void translate_u64_to_char(uint64_t num, char *name);
+uint64_t translate_char_to_u64(const char *name);
+int vineyard_setattr(struct user_namespace *mnt_userns, struct dentry * entry, struct iattr *attr);
+int vineyard_getattr(struct user_namespace *mnt_userns, const struct path *path, struct kstat *stat, u32 mask, unsigned int flags);

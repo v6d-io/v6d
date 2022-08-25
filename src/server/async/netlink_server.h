@@ -68,7 +68,8 @@ struct vineyard_request_msg {
     uint64_t          obj_id;
     uint64_t          offset;
     // open
-    enum OBJECT_TYPE type;
+    enum OBJECT_TYPE  type;
+    uint64_t          length;
   } _fopt_param;
 };
 
@@ -85,23 +86,23 @@ struct kmsg {
 };
 
 struct vineyard_msg_mem_header {
-  int has_msg;
-  int lock;
-  int head_point;
-  int tail_point;
-  int close;
+  int           has_msg;
+  unsigned int  lock;
+  int           head_point;
+  int           tail_point;
+  int           close;
 };
 
 struct vineyard_result_mem_header {
-  int has_msg;
-  int lock;
-  int head_point;
-  int tail_point;
+  int           has_msg;
+  unsigned int  lock;
+  int           head_point;
+  int           tail_point;
 };
 
 struct vineyard_rw_lock {
-    int r_lock;
-    int w_lock;
+  unsigned int r_lock;
+  unsigned int w_lock;
 };
 
 struct vineyard_object_info_header {
@@ -144,11 +145,15 @@ static inline void vineyard_write_unlock(volatile int *wlock)
 
 static vineyard_request_msg *vineyard_get_request_msg(vineyard_msg_mem_header *header)
 {
+  LOG(INFO) << __func__;
   struct vineyard_request_msg *entrys;
   struct vineyard_request_msg *entry = NULL;
 
   entrys = (struct vineyard_request_msg *)(header + 1);
   vineyard_spin_lock(&header->lock);
+  LOG(INFO) << header->head_point << " " << header->tail_point;
+  if (header->tail_point == 10)
+    return NULL;
   if (!MsgEmpty(header->head_point, header->tail_point)) {
     entry = &(entrys[header->tail_point]);
     header->tail_point++;
@@ -185,7 +190,7 @@ class NetLinkServer : public SocketServer,
 
   int HandleOpen();
 
-  int HandleRead();
+  int HandleRead(vineyard_request_msg *msg);
 
   int HandleWrite();
 
