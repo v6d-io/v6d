@@ -236,7 +236,7 @@ static Status get_type(const json& tree, std::string& type,
   // type: get the typename
   json::const_iterator type_iter = tree.find("typename");
   if (type_iter == tree.end()) {
-    return Status::MetaTreeNameNotExists("in metadata: " + tree.dump(4));
+    return Status::MetaTreeTypeNotExists("in metadata: " + tree.dump(4));
   }
   if (type_iter->is_object()) {
     LOG(ERROR) << "meta tree typename invalid. " << *type_iter;
@@ -365,8 +365,12 @@ Status ListData(const json& tree, const std::string& instance_name,
     }
 
     if (!item.value().is_object() || item.value().empty()) {
-      LOG(INFO) << "Object meta shouldn't be empty";
-      return Status::MetaTreeInvalid();
+#ifndef NDEBUG
+      DLOG(WARNING) << "Object meta shouldn't be empty: "
+                    << item.value().dump(4);
+#endif
+      // skip invalid metadata entries when listing
+      continue;
     }
     std::string type;
     RETURN_ON_ERROR(get_type(item.value(), type, true));
@@ -375,9 +379,11 @@ Status ListData(const json& tree, const std::string& instance_name,
     if (MatchTypeName(regex, pattern, type)) {
       found += 1;
       json object_meta_tree;
-      RETURN_ON_ERROR(
-          GetData(tree, instance_name, item.key(), object_meta_tree));
-      tree_group[item.key()] = object_meta_tree;
+      // skip invalid metadata entries when listing, rather than returning an
+      // error
+      if (GetData(tree, instance_name, item.key(), object_meta_tree).ok()) {
+        tree_group[item.key()] = object_meta_tree;
+      }
     }
   }
   return Status::OK();
