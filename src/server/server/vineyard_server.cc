@@ -16,6 +16,7 @@ limitations under the License.
 #include "server/server/vineyard_server.h"
 
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <set>
 #include <string>
@@ -332,6 +333,16 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
             for (auto const& item : blobs) {
               if (current >= limit) {
                 break;
+              }
+              if (!item.second->IsSealed()) {
+                // skip unsealed blobs, otherwise `GetBuffers()` will fail on
+                // client after `ListData()`.
+                continue;
+              }
+              if (item.first ==
+                  GenerateBlobID(std::numeric_limits<uintptr_t>::max())) {
+                // skip the dummy blob with the initialized blob id
+                continue;
               }
               std::string sub_tree_key = ObjectIDToString(item.first);
               json sub_tree;
