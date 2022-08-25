@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 
-	v1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	clientset "github.com/v6d-io/v6d/k8s/generated/clientset/versioned"
 	clientsetv1alpha1 "github.com/v6d-io/v6d/k8s/generated/clientset/versioned/typed/k8s/v1alpha1"
 

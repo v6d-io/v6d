@@ -20,7 +20,7 @@ import (
 	"context"
 	time "time"
 
-	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/api/k8s/v1alpha1"
+	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	versioned "github.com/v6d-io/v6d/k8s/generated/clientset/versioned"
 	internalinterfaces "github.com/v6d-io/v6d/k8s/generated/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/v6d-io/v6d/k8s/generated/listers/k8s/v1alpha1"

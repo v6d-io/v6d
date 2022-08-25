@@ -23,48 +23,47 @@ import (
 )
 
 // log is for logging in this package.
-var globalobjectlog = logf.Log.WithName("globalobject-resource")
+var localobjectlog = logf.Log.WithName("localobject-resource")
 
-func (r *GlobalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *LocalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
 }
 
 //nolint: lll
-//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-globalobject,mutating=true,failurePolicy=fail,groups=k8s.v6d.io,resources=globalobjects,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1;v1beta1,sideEffects=NoneOnDryRun,name=mglobalobject.kb.io
+//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-localobject,mutating=true,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=NoneOnDryRun,name=mlocalobject.kb.io
 
-var _ webhook.Defaulter = &GlobalObject{}
+var _ webhook.Defaulter = &LocalObject{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *GlobalObject) Default() {
-	globalobjectlog.Info("default", "name", r.Name)
+func (r *LocalObject) Default() {
+	localobjectlog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
 }
 
 //nolint: lll
-//+kubebuilder:webhook:verbs=create;update,path=/validate-k8s-v6d-io-v1alpha1-globalobject,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=globalobjects,versions=v1alpha1,admissionReviewVersions=v1;v1beta1,sideEffects=NoneOnDryRun,name=vglobalobject.kb.io
+//+kubebuilder:webhook:verbs=create;update,path=/validate-k8s-v6d-io-v1alpha1-localobject,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=NoneOnDryRun,name=vlocalobject.kb.io
 
-var _ webhook.Validator = &GlobalObject{}
+var _ webhook.Validator = &LocalObject{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *GlobalObject) ValidateCreate() error {
-	globalobjectlog.Info("validate create", "name", r.Name)
+func (r *LocalObject) ValidateCreate() error {
+	localobjectlog.Info("validate create", "name", r.Name)
 
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *GlobalObject) ValidateUpdate(old runtime.Object) error {
-	globalobjectlog.Info("validate update", "name", r.Name)
+func (r *LocalObject) ValidateUpdate(old runtime.Object) error {
+	localobjectlog.Info("validate update", "name", r.Name)
 
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *GlobalObject) ValidateDelete() error {
-	globalobjectlog.Info("validate delete", "name", r.Name)
+func (r *LocalObject) ValidateDelete() error {
+	localobjectlog.Info("validate delete", "name", r.Name)
 
 	return nil
 }
