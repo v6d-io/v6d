@@ -350,10 +350,10 @@ Status BulkStoreBase<ID, P>::PreAllocate(const size_t size,
   int64_t map_size = 0;
   ptrdiff_t offset = 0;
   GetMallocMapinfo(pointer, &fd, &map_size, &offset);
-  objects_.emplace(
-      object_id,
-      std::make_shared<P>(object_id, size, static_cast<uint8_t*>(pointer), fd,
-                          map_size, offset));
+  auto payload = std::make_shared<P>(
+      object_id, size, static_cast<uint8_t*>(pointer), fd, map_size, offset);
+  payload->is_sealed = true;
+  objects_.emplace(object_id, payload);
   return Status::OK();
 }
 

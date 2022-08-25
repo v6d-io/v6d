@@ -365,15 +365,19 @@ Status ListData(const json& tree, const std::string& instance_name,
     }
 
     if (!item.value().is_object() || item.value().empty()) {
-#ifndef NDEBUG
-      DLOG(WARNING) << "Object meta shouldn't be empty: "
-                    << item.value().dump(4);
-#endif
+      VLOG(10) << "list metadata: object meta shouldn't be empty: "
+               << item.value().dump(4);
       // skip invalid metadata entries when listing
       continue;
     }
     std::string type;
-    RETURN_ON_ERROR(get_type(item.value(), type, true));
+    auto s = get_type(item.value(), type, true);
+    if (!s.ok()) {
+      VLOG(10) << "list metadata: object meta has invalid type, "
+               << s.ToString() << ": " << item.value().dump(4);
+      // skip invalid metadata entries when listing
+      continue;
+    }
 
     // match type on pattern
     if (MatchTypeName(regex, pattern, type)) {
