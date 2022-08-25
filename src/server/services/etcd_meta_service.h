@@ -27,6 +27,7 @@ limitations under the License.
 #include "etcd/Client.hpp"
 
 #include "server/services/meta_service.h"
+#include "server/util/etcd_launcher.h"
 
 namespace etcd {
 class Client;
@@ -175,7 +176,7 @@ class EtcdMetaService : public IMetaService {
   std::shared_ptr<etcd::Watcher> watcher_;
   std::shared_ptr<EtcdWatchHandler> handler_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
-  std::unique_ptr<boost::process::child> etcd_proc_;
+  std::unique_ptr<EtcdLauncher> etcd_launcher_;
 
   callback_task_queue_t registered_callbacks_;
   std::atomic<unsigned> handled_rev_;

@@ -143,11 +143,8 @@ void EtcdMetaService::Stop() {
       watcher_->Cancel();
     } catch (...) {}
   }
-  if (etcd_proc_) {
-    std::error_code err;
-    etcd_proc_->terminate(err);
-    kill(etcd_proc_->id(), SIGTERM);
-    etcd_proc_->wait(err);
+  if (etcd_launcher_) {
+    etcd_launcher_.reset();
   }
 }
 
@@ -389,8 +386,8 @@ Status EtcdMetaService::probe() {
 }
 
 Status EtcdMetaService::preStart() {
-  auto launcher = EtcdLauncher(etcd_spec_);
-  return launcher.LaunchEtcdServer(etcd_, meta_sync_lock_, etcd_proc_);
+  etcd_launcher_ = std::unique_ptr<EtcdLauncher>(new EtcdLauncher(etcd_spec_));
+  return etcd_launcher_->LaunchEtcdServer(etcd_, meta_sync_lock_);
 }
 
 }  // namespace vineyard
