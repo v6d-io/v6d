@@ -83,12 +83,14 @@ void* BulkAllocator::Init(const size_t size, std::string const& allocator) {
     return DLmallocAllocator::Init(size);
   } else {
     use_mimalloc_ = true;
+    // leave enough space for alignment
+    size_t space_size = MIMALLOC_SEGMENT_ALIGNED_SIZE + size;
     // mimalloc requires 64MB (segment aligned) for each thread
     size_t mimalloc_meta_size = MIMALLOC_SEGMENT_ALIGNED_SIZE *
                                 (std::thread::hardware_concurrency() + 1);
     // leave spaces for memory fragmentation
     return MimallocAllocator::Init(static_cast<size_t>(
-        static_cast<double>(size + mimalloc_meta_size) * 1.5));
+        static_cast<double>(space_size + mimalloc_meta_size) * 2));
   }
 }
 
