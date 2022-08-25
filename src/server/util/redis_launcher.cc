@@ -97,7 +97,7 @@ bool RedisLauncher::probeRedisServer(
     auto task = redis_client->ping();
     auto response = task.get();
     auto sync_response = syncredis_client->ping();
-    redis_client->command<int64_t>("SETNX", "redis_revision", 0).get();
+    redis_client->command<long long>("SETNX", "redis_revision", 0).get();
     return redis_client && syncredis_client && (response == "PONG") &&
            (sync_response == "PONG");
   } catch (...) { return false; }

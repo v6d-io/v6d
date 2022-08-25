@@ -331,7 +331,7 @@ void RedisMetaService::commitUpdates(
   // delete keys
   if (keys.size() > 0) {
     redis_->del(keys.begin(), keys.end(),
-                [self](redis::Future<int64_t>&& resp) {
+                [self](redis::Future<long long>&& resp) {
                   try {
                     resp.get();
                   } catch (...) {
@@ -358,7 +358,7 @@ void RedisMetaService::commitUpdates(
           self->redis_->hset(
               op_prefix, ops.begin(), ops.end(),
               [self, callback_after_updated, op_prefix,
-               irev](redis::Future<int64_t>&& resp) {
+               irev](redis::Future<long long>&& resp) {
                 try {
                   resp.get();
                 } catch (...) {
@@ -366,10 +366,10 @@ void RedisMetaService::commitUpdates(
                   self->cUErrms = "redis commitUpdates error:";
                   self->cUErrType += " hset error";
                 }
-                self->redis_->command<int64_t>(
+                self->redis_->command<long long>(
                     "RPUSH", "opslist", op_prefix,
                     [self, callback_after_updated,
-                     irev](redis::Future<int64_t>&& resp) {
+                     irev](redis::Future<long long>&& resp) {
                       try {
                         resp.get();
                       } catch (...) {
@@ -377,10 +377,10 @@ void RedisMetaService::commitUpdates(
                         self->cUErrms = "redis commitUpdates error:";
                         self->cUErrType += " rpush error";
                       }
-                      self->redis_->command<int64_t>(
+                      self->redis_->command<long long>(
                           "INCR", "redis_revision",
                           [self, callback_after_updated,
-                           irev](redis::Future<int64_t>&& resp) {
+                           irev](redis::Future<long long>&& resp) {
                             try {
                               resp.get();
                             } catch (...) {
@@ -388,10 +388,10 @@ void RedisMetaService::commitUpdates(
                               self->cUErrms = "redis commitUpdates error:";
                               self->cUErrType += " incr error";
                             }
-                            self->redis_->command<int64_t>(
+                            self->redis_->command<long long>(
                                 "PUBLISH", "operations", irev,
                                 [self, callback_after_updated,
-                                 irev](redis::Future<int64_t>&& resp) {
+                                 irev](redis::Future<long long>&& resp) {
                                   try {
                                     resp.get();
                                   } catch (...) {
