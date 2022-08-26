@@ -48,6 +48,7 @@ namespace vineyard {
 
 using memory::GetMallocMapinfo;
 using memory::kBlockSize;
+constexpr int64_t gpukBlockSize = 64;
 
 namespace memory {
 
@@ -140,6 +141,7 @@ BulkStoreBase<ID, P>::~BulkStoreBase() {
   }
   for (auto const& item : object_ids) {
     VINEYARD_DISCARD(Delete(item));
+    VINEYARD_DISCARD(DeleteGPU(item));
   }
 }
 
@@ -154,6 +156,17 @@ uint8_t* BulkStoreBase<ID, P>::AllocateMemory(size_t size, int* fd,
       reinterpret_cast<uint8_t*>(BulkAllocator::Memalign(size, kBlockSize));
   if (pointer) {
     GetMallocMapinfo(pointer, fd, map_size, offset);
+  }
+  return pointer;
+}
+
+template <typename ID, typename P>
+uint8_t* BulkStoreBase<ID, P>::AllocateMemoryGPU(size_t size) {
+  uint8_t* pointer = nullptr;
+  pointer = reinterpret_cast<uint8_t*>(
+      GPUBulkAllocator::Memalign(size, gpukBlockSize));
+  if (pointer == nullptr) {
+    LOG(ERROR) << "Failed to allocate GPU memory......" << std::endl;
   }
   return pointer;
 }
@@ -251,7 +264,10 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
     objects_.erase(accessor);
     return Status::OK();
   }
-
+  // DeleteGPU will deal with GPU object
+  if (object->IsGPU()) {
+    return Status::OK();
+  }
   if (object->arena_fd == -1) {
     auto buff_size = object->data_size;
     BulkAllocator::Free(object->pointer, buff_size);
@@ -302,6 +318,37 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
 }
 
 template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::DeleteGPU(ID const& object_id) {
+#ifndef ENABLE_GPU
+  return Status::NotImplemented("GPU support is to be implemented...");
+#endif
+  if (object_id == EmptyBlobID<ID>() ||
+      object_id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
+    return Status::OK();
+  }
+  typename object_map_t::const_accessor accessor;
+  if (!objects_.find(accessor, object_id)) {
+    return Status::ObjectNotExists("delete: id = " + IDToString(object_id));
+  }
+
+  auto& object = accessor->second;
+  if (!object->IsOwner()) {
+    return Status::OK();
+  }
+  if (!object->IsGPU()) {
+    return Status::OK();
+  }
+  if (object->arena_fd == -1) {
+    auto buff_size = object->data_size;
+    GPUBulkAllocator::Free(object->pointer, buff_size);
+    DVLOG(10) << "after free: " << IDToString(object_id) << ": "
+              << FootprintGPU() << "(" << FootprintLimitGPU() << ")";
+  }
+  objects_.erase(accessor);
+  return Status::OK();
+}
+
+template <typename ID, typename P>
 bool BulkStoreBase<ID, P>::Exists(const ID& object_id) {
   typename object_map_t::const_accessor accessor;
   return objects_.find(accessor, object_id);
@@ -313,10 +360,19 @@ size_t BulkStoreBase<ID, P>::Footprint() const {
 }
 
 template <typename ID, typename P>
+size_t BulkStoreBase<ID, P>::FootprintGPU() const {
+  return GPUBulkAllocator::Allocated();
+}
+
+template <typename ID, typename P>
 size_t BulkStoreBase<ID, P>::FootprintLimit() const {
   return BulkAllocator::GetFootprintLimit();
 }
 
+template <typename ID, typename P>
+size_t BulkStoreBase<ID, P>::FootprintLimitGPU() const {
+  return GPUBulkAllocator::GetFootprintLimit();
+}
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::MakeArena(size_t const size, int& fd,
                                        uintptr_t& base) {
@@ -500,6 +556,45 @@ Status BulkStore::OnDelete(ObjectID const& id) {
   return Delete(id);
 }
 
+Status BulkStore::CreateGPU(const size_t data_size, ObjectID& object_id,
+                            std::shared_ptr<Payload>& object) {
+#ifndef ENABLE_GPU
+  return Status::NotImplemented("GPU support is to be implemented...");
+#endif
+  if (data_size == 0) {
+    object_id = EmptyBlobID<ObjectID>();
+    object = Payload::MakeEmpty();
+    return Status::OK();
+  }
+  int fd = -1;
+  int64_t map_size = 0;
+  ptrdiff_t offset = 0;
+  uint8_t* pointer = nullptr;
+  pointer = AllocateMemoryGPU(data_size);
+
+  if (pointer == nullptr) {
+    return Status::NotEnoughMemory(
+        "Failed to allocate memory of size " + std::to_string(data_size) +
+        ", total available memory size are " +
+        std::to_string(FootprintLimit()) + ", and " +
+        std::to_string(Footprint()) + " are already in use");
+  }
+  object_id = GenerateBlobID<ObjectID>(pointer);
+  object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
+                                     map_size, offset);
+  object->is_gpu = 1;  // set the GPU object flag
+  objects_.emplace(object_id, object);
+  DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
+            << FootprintGPU() << "(" << FootprintLimitGPU() << ")";
+  return Status::OK();
+}
+
+Status BulkStore::Release_GPU(ObjectID const& id, int conn) {
+#ifndef ENABLE_GPU
+  return Status::NotImplemented("GPU support is to be implemented...");
+#endif
+  return this->RemoveDependency(id, conn);
+}
 // implementation for PlasmaBulkStore
 Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
                                PlasmaID const& plasma_id, ObjectID& object_id,
@@ -561,5 +656,6 @@ Status PlasmaBulkStore::OnDelete(PlasmaID const& id) {
 Status PlasmaBulkStore::Delete(PlasmaID const& id) {
   return this->PreDelete(id);
 }
+//
 
 }  // namespace vineyard

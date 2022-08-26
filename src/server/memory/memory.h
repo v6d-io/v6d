@@ -41,10 +41,12 @@
 
 #include "oneapi/tbb/concurrent_hash_map.h"
 
+#include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
 #include "common/util/logging.h"
 #include "common/util/macros.h"
 #include "common/util/status.h"
+#include "server/memory/gpu/gpuallocator.h"
 #include "server/memory/usage.h"
 
 namespace vineyard {
@@ -79,10 +81,14 @@ class BulkStoreBase {
 
   Status Delete(ID const& object_id);
 
+  Status DeleteGPU(ID const& object_id);
+
   object_map_t const& List() const { return objects_; }
 
   size_t Footprint() const;
   size_t FootprintLimit() const;
+  size_t FootprintGPU() const;
+  size_t FootprintLimitGPU() const;
 
   Status MakeArena(size_t const size, int& fd, uintptr_t& base);
 
@@ -112,6 +118,14 @@ class BulkStoreBase {
  protected:
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
                           ptrdiff_t* offset);
+  /**
+   * @brief Allocate memory on GPU
+   *
+   * @param size the size of memory
+   * @return uint8_t*
+   */
+  uint8_t* AllocateMemoryGPU(size_t size);
+
   struct Arena {
     int fd;
     size_t size;
@@ -145,6 +159,19 @@ class BulkStore
    */
   Status Release(ObjectID const& id, int conn);
 
+  /*
+   * @brief Allocate space for a new blob on gpu.
+   */
+  Status CreateGPU(const size_t size, ObjectID& object_id,
+                   std::shared_ptr<Payload>& object);
+
+  /*
+   * @brief Decrease the reference count of a blob, when its reference count
+   * reaches zero. It will trigger `OnRelease` behavior. See ColdObjectTracker
+   * Not support on GPU for now
+   */
+  Status Release_GPU(ObjectID const& id, int conn);
+
  protected:
   /**
    * @brief change the reference count of the object on the client-side cache.
@@ -168,10 +195,6 @@ class BulkStore
   friend class VineyardServer;
 };
 
-/**
- * @brief A wrapper of `BulkStore` that provides a simple interface to act like
- * a Plasma mock.
- */
 class PlasmaBulkStore
     : public BulkStoreBase<PlasmaID, PlasmaPayload>,
       public std::enable_shared_from_this<PlasmaBulkStore>,
@@ -217,6 +240,10 @@ class PlasmaBulkStore
   friend class SocketConnection;
 };
 
+/**
+ * @brief A wrapper of `BulkStore` that provides a simple interface to act like
+ * a Plasma mock.
+ */
 namespace detail {
 
 template <typename ObjectIDType>

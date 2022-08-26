@@ -24,10 +24,15 @@ endmacro()
 
 file(GLOB TEST_FILES RELATIVE "${PROJECT_SOURCE_DIR}/test"
                               "${PROJECT_SOURCE_DIR}/test/*.cc"
+                              "${PROJECT_SOURCE_DIR}/test/*.cu"
 )
 foreach(testfile ${TEST_FILES})
     string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${testfile})
     set(testname ${CMAKE_MATCH_1})
+
+    if(${testname} STREQUAL "gpumalloc_test" AND NOT USE_GPU)
+      continue()
+    endif()
 
     message(STATUS "Found unit_test - " ${testname})
     add_test_case(${testname} ${testfile})

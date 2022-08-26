@@ -35,6 +35,7 @@ void Payload::ToJSON(json& tree) const {
   tree["pointer"] = reinterpret_cast<uintptr_t>(pointer);
   tree["is_sealed"] = is_sealed;
   tree["is_owner"] = is_owner;
+  tree["is_gpu"] = is_gpu;
 }
 
 void Payload::FromJSON(const json& tree) {
@@ -46,6 +47,7 @@ void Payload::FromJSON(const json& tree) {
   pointer = reinterpret_cast<uint8_t*>(tree["pointer"].get<uintptr_t>());
   is_sealed = tree["is_sealed"].get<bool>();
   is_owner = tree["is_owner"].get<bool>();
+  is_gpu = tree["is_gpu"].get<bool>();
 }
 
 Payload Payload::FromJSON1(const json& tree) {

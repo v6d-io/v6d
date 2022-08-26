@@ -375,6 +375,8 @@ def run_single_vineyardd_tests(tests):
         'vineyard_test_%s' % time.time(),
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
+        # enable when USE_GPU is defined
+        # run_test(tests, 'gpumalloc_test')
         run_test(tests, 'array_test')
         run_test(tests, 'array_two_clients_test')
         # FIXME: cannot be safely dtor after #350 and #354.

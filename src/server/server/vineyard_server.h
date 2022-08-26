@@ -31,6 +31,7 @@ limitations under the License.
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 #include "server/memory/memory.h"
+
 #include "server/memory/stream_store.h"
 #include "server/server/vineyard_runner.h"
 

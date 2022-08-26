@@ -586,6 +586,45 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   return Status::OK();
 }
 
+Status Client::CreateGPUBuffer(const size_t size, ObjectID& id,
+                               Payload& payload,
+                               std::shared_ptr<GPUUnifiedAddress>& gua) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteCreateGPUBufferRequest(size, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  gua = std::make_shared<GPUUnifiedAddress>(false);
+  RETURN_ON_ERROR(ReadGPUCreateBufferReply(message_in, id, payload, gua));
+  RETURN_ON_ASSERT(static_cast<size_t>(payload.data_size) == size);
+
+  return Status::OK();
+}
+
+Status Client::GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
+                             std::map<ObjectID, GPUUnifiedAddress>& guas) {
+  if (ids.empty()) {
+    return Status::OK();
+  }
+  ENSURE_CONNECTED(this);
+
+  // get the memory handles on server side
+  std::string message_out;
+  WriteGetGPUBuffersRequest(ids, unsafe, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  std::vector<Payload> payloads;
+  std::vector<GPUUnifiedAddress> gua_vec;
+  RETURN_ON_ERROR(ReadGetGPUBuffersReply(message_in, payloads, gua_vec));
+  for (size_t i = 0; i < payloads.size(); i++) {
+    guas.emplace(payloads[i].object_id, gua_vec[i]);
+  }
+
+  return Status::OK();
+}
+
 Status Client::GetBuffer(const ObjectID id,
                          std::shared_ptr<arrow::Buffer>& buffer) {
   std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;

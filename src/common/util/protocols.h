@@ -24,6 +24,7 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
+#include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
@@ -85,6 +86,8 @@ enum class CommandType {
   IsInUseRequest = 53,
   IncreaseReferenceCountRequest = 54,
   IsSpilledRequest = 55,
+  CreateGPUBufferRequest = 56,
+  GetGPUBuffersRequest = 57,
 };
 
 enum class StoreType {
@@ -204,6 +207,31 @@ Status ReadInstanceStatusReply(const json& root, json& content);
 void WriteCreateBufferRequest(const size_t size, std::string& msg);
 
 Status ReadCreateBufferRequest(const json& root, size_t& size);
+
+void WriteCreateGPUBufferRequest(const size_t size, std::string& msg);
+
+Status ReadCreateGPUBufferRequest(const json& root, size_t& size);
+
+void WriteGPUCreateBufferReply(const ObjectID id,
+                               const std::shared_ptr<Payload>& object,
+                               GPUUnifiedAddress uva, std::string& msg);
+
+Status ReadGPUCreateBufferReply(
+    const json& root, ObjectID& id, Payload& Object,
+    std::shared_ptr<vineyard::GPUUnifiedAddress> uva);
+
+void WriteGetGPUBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
+                               std::string& msg);
+
+Status ReadGetGPUBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                                bool& unsafe);
+
+void WriteGetGPUBuffersReply(
+    const std::vector<std::shared_ptr<Payload>>& objects,
+    const std::vector<std::vector<int64_t>>& handle_to_send, std::string& msg);
+
+Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
+                              std::vector<GPUUnifiedAddress>& uva_sent);
 
 void WriteCreateBufferReply(const ObjectID id,
                             const std::shared_ptr<Payload>& object,

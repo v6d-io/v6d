@@ -40,6 +40,9 @@ namespace vineyard {
 namespace memory {
 class DLmallocAllocator;
 class MimallocAllocator;
+#if defined(WITH_GPUALLOCATOR)
+class GPUAllocator;
+#endif
 }  // namespace memory
 
 class BulkAllocator {
