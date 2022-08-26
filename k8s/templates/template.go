@@ -7,8 +7,7 @@ import (
 )
 
 //go:embed vineyardd
-// F is the embed.FileSystem
-var F embed.FS
+var fs embed.FS
 
 // EmbedTemplate is only used for implementing the interface
 type EmbedTemplate struct{}
@@ -20,13 +19,13 @@ func NewEmbedTemplate() *EmbedTemplate {
 
 // ReadFile reads a file from the embed.FS
 func (e *EmbedTemplate) ReadFile(path string) ([]byte, error) {
-	return F.ReadFile(path)
+	return fs.ReadFile(path)
 }
 
 // GetFilesRecursive returns all files in a directory
 func (e *EmbedTemplate) GetFilesRecursive(dir string) ([]string, error) {
 	path := filepath.Join(filepath.Dir(dir), dir)
-	fd, err := F.ReadDir(path)
+	fd, err := fs.ReadDir(path)
 	if err != nil {
 		return []string{}, fmt.Errorf("ReadDir Error: %v", err)
 	}
