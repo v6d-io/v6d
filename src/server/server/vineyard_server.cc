@@ -141,7 +141,7 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
 
 void VineyardServer::RefreshLists() {
   if (nl_server_ptr_)
-    nl_server_ptr_->RefreshObjectList();
+    nl_server_ptr_->SyncObjectEntryList();
 }
 
 Status VineyardServer::Finalize() { return Status::OK(); }

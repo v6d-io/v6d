@@ -32,15 +32,21 @@ limitations under the License.
 #define PAGE_DOWN(x) (x & (~(PAGE_SIZE - 1)))
 namespace vineyard {
 
-static uint64_t base_object_id = std::numeric_limits<uintptr_t>::max();
-static void *base_pointer;
+void PrintJsonElement(const json &tree)
+{
+  LOG(INFO) << __func__;
+  for (auto iter = tree.begin(); iter != tree.end(); iter++) {
+    LOG(INFO) << *iter;
+  }
+}
 
 NetLinkServer::NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
     : SocketServer(vs_ptr),
       nlh(nullptr),
       req_mem(nullptr),
       result_mem(nullptr),
-      obj_info_mem(nullptr) {
+      obj_info_mem(nullptr),
+      base_object_id(std::numeric_limits<uintptr_t>::max()) {
   LOG(INFO) << __func__;
 }
 
@@ -49,11 +55,7 @@ NetLinkServer::~NetLinkServer() {
   free(nlh);
 }
 
-void NetLinkServer::Start() {
-  LOG(INFO) << __func__;
-  std::vector<ObjectID> ids;
-  std::vector<std::shared_ptr<Payload>> objects;
-
+void NetLinkServer::InitNetLink() {
   socket_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_VINEYARD);
   if (socket_fd < 0) {
     LOG(INFO) << "NetLinkServer start error";
@@ -83,14 +85,29 @@ void NetLinkServer::Start() {
   nlh->nlmsg_seq = 0;
   nlh->nlmsg_pid = saddr.nl_pid; //self port
 
+  LOG(INFO) << socket_fd << " " << &saddr << " " << &daddr << " " << nlh;
+}
+
+void NetLinkServer::InitialBulkField()
+{
+  std::vector<ObjectID> ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+
   ids.push_back(base_object_id);
   vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
   if (!objects.empty()) {
-    base_pointer = objects[0]->pointer;
+    base_pointer = (void *)PAGE_DOWN((uint64_t)(objects[0]->pointer));
     LOG(INFO) << "base_pointer" << base_pointer;
   }
-  LOG(INFO) << socket_fd << " " << &saddr << " " << &daddr << " " << nlh;
-  // std::thread t(thread_routine, socket_fd, saddr, daddr, nlh);
+}
+
+void NetLinkServer::Start() {
+  LOG(INFO) << __func__;
+
+  InitNetLink();
+
+  InitialBulkField();
+
   work = new std::thread(thread_routine, this, socket_fd, saddr, daddr, nlh);
   vs_ptr_->NetLinkReady();
 }
@@ -100,19 +117,197 @@ void NetLinkServer::Close() {
   close(socket_fd);
 }
 
+void NetLinkServer::SyncObjectEntryList() {
+  LOG(INFO) << __func__;
+  // std::unordered_map<ObjectID, json> metas{};
+  vineyard_object_info_header *header;
+
+  header = (vineyard_object_info_header *)obj_info_mem;
+  if (header) {
+    VineyardWriteLock(&header->rw_lock.r_lock, &header->rw_lock.w_lock);
+    header->total_file = 0;
+    vs_ptr_->ListData(
+        "vineyard::Blob", false, std::numeric_limits<size_t>::max(), [this](const Status& status, const json& tree) {
+          if(!tree.empty()) {
+            PrintJsonElement(tree);
+            this->FillFileEntryInfo(tree, OBJECT_TYPE::BLOB);
+          }
+          return Status::OK();
+        });
+     VineyardWriteUnlock(&header->rw_lock.w_lock);
+  }
+}
+
+void NetLinkServer::doAccept() {
+  LOG(INFO) << __func__;
+}
+
+int NetLinkServer::HandleSet(struct vineyard_kern_user_msg *msg) {
+  LOG(INFO) << __func__;
+  req_mem = (void *)(msg->request_mem);
+  result_mem = (void *)(msg->result_mem);
+  obj_info_mem = (void *)(msg->obj_info_mem);
+  return 0;
+}
+
+int NetLinkServer::HandleOpen() {
+  return 0;
+}
+
+int NetLinkServer::HandleRead(fopt_param &param) {
+  LOG(INFO) << __func__;
+  std::vector<ObjectID> ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+  vineyard_result_msg rmsg;
+  void *pointer = NULL;
+  uint64_t file_size = 0;
+
+  LOG(INFO) << "id: "<< param.obj_id << " type " << param.type << " offset " << param.offset << " length " << param.length;
+
+  ids.push_back(param.obj_id);
+  vs_ptr_->GetData(
+      ids, false, false, []() { return true; },
+      [](const Status& status, const json& tree) {
+        LOG(INFO) << tree;
+        return Status::OK();
+      });
+
+  vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
+  for (auto iter = objects.begin(); iter != objects.end(); iter++) {
+    LOG(INFO) << "pointer:";
+    printf("%p\n", (*iter)->pointer);
+    pointer = (*iter)->pointer;
+    file_size = (*iter)->data_size;
+    printf("pointer:%p\n", pointer);
+    printf("file size:%lu\n", file_size);
+  }
+
+  if (pointer) {
+    rmsg.offset = (uint64_t)pointer - (uint64_t)base_pointer;
+    rmsg.ret = 0;
+    rmsg.size = file_size;
+  } else {
+    rmsg.ret = -1;
+  }
+  VineyardSetResultMsg(rmsg);
+
+  return 0;
+}
+
+int NetLinkServer::HandleWrite() {
+  return 0;
+}
+
+int NetLinkServer::HandleCloseOrFsync() {
+  SyncObjectEntryList();
+  return 0;
+}
+
+int NetLinkServer::HandleReadDir() {
+  SyncObjectEntryList();
+  return 0;
+}
+
+int NetLinkServer::HandleFops() {
+  vineyard_msg_mem_header *request_header;
+  vineyard_request_msg msg;
+
+  request_header = (struct vineyard_msg_mem_header *)req_mem;
+
+  while(VineyardGetRequestMsg(request_header, &msg)) {
+    switch(msg.opt) {
+    case REQUEST_OPT::OPEN:
+      HandleOpen();
+      break;
+    case REQUEST_OPT::READ:
+      HandleRead(msg._fopt_param);
+      break;
+    case REQUEST_OPT::WRITE:
+      HandleWrite();
+      break;
+    case REQUEST_OPT::CLOSE:
+    case REQUEST_OPT::FSYNC:
+      HandleCloseOrFsync();
+      break;
+    }
+  }
+  return 0;
+}
+
+void NetLinkServer::FillFileEntryInfo(const json &tree, enum OBJECT_TYPE type)
+{
+  LOG(INFO) << __func__;
+  vineyard_object_info_header *header;
+  vineyard_entry *entrys;
+  int i;
+
+  header = (vineyard_object_info_header *)obj_info_mem;
+  entrys = (vineyard_entry *)(header + 1);
+  i = header->total_file;
+  LOG(INFO) << tree;
+
+  if (type == OBJECT_TYPE::BLOB) {
+    for (auto iter = tree.begin(); iter != tree.end(); iter++) {
+      entrys[i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
+      LOG(INFO) << entrys[i].obj_id;
+      entrys[i].file_size = (*iter)["length"].get<uint64_t>();
+      entrys[i].type = type;
+      i++;
+    }
+  }
+  header->total_file = i;
+}
+
+bool NetLinkServer::VineyardGetRequestMsg(vineyard_msg_mem_header *header, vineyard_request_msg *msg)
+{
+  LOG(INFO) << __func__;
+  struct vineyard_request_msg *entrys;
+  struct vineyard_request_msg *entry = NULL;
+
+  entrys = (struct vineyard_request_msg *)(header + 1);
+  VineyardSpinLock(&header->lock);
+  LOG(INFO) << header->head_point << " " << header->tail_point;
+  if (!MsgEmpty(header->head_point, header->tail_point)) {
+    entry = &(entrys[header->tail_point]);
+    memcpy(msg, entry, sizeof(*msg));
+    header->tail_point++;
+    // TODO: ring buffer reset pointer.
+  }
+
+  VineyardSpinUnlock(&header->lock);
+  if (entry)
+    return true;
+  return false;
+}
+
+int NetLinkServer::VineyardSetResultMsg(vineyard_result_msg &rmsg)
+{
+  vineyard_result_mem_header *rheader;
+  vineyard_result_msg *rmsgs;
+  rheader = (vineyard_result_mem_header *)result_mem;
+  rmsgs = (vineyard_result_msg *)((uint64_t)result_mem + sizeof(vineyard_result_mem_header));
+
+  VineyardSpinLock(&rheader->lock);
+  memcpy(&rmsgs[rheader->head_point], &rmsg, sizeof(vineyard_result_msg));
+  rheader->head_point++;
+  VineyardSpinUnlock(&rheader->lock);
+
+  return 0;
+}
+
 void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct sockaddr_nl saddr, struct sockaddr_nl daddr, struct nlmsghdr *nlh) {
   LOG(INFO) << __func__;
   int ret;
   socklen_t len;
   kmsg kmsg;
-  // char const *umsg = "hello netlink!!";
   vineyard_result_msg res_msg;
 
   LOG(INFO) << socket_fd << " " << &saddr << " " << &daddr << " " << nlh;
   memset(&res_msg, 0, sizeof(res_msg));
   res_msg.opt = INIT;
 
-  ns_ptr->RefreshObjectList();
+  ns_ptr->SyncObjectEntryList();
+
   while(1) {
     memcpy(NLMSG_DATA(nlh), &res_msg, sizeof(res_msg));
     ret = sendto(socket_fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&daddr, sizeof(struct sockaddr_nl));
@@ -142,7 +337,6 @@ void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct 
       res_msg.ret = ns_ptr->HandleFops();
       break;
     case USER_KERN_OPT::EXIT:
-      // It will be executed when umount is called.
       LOG(INFO) << "Bye! Handler thread exit!";
       goto out;
     default:
@@ -152,172 +346,6 @@ void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct 
 
 out:
   return;
-}
-
-void ShowInfo(const json &tree)
-{
-  LOG(INFO) << __func__;
-  for (auto iter = tree.begin(); iter != tree.end(); iter++) {
-    LOG(INFO) << *iter;
-  }
-}
-
-void NetLinkServer::FillFileMsg(const json &tree, enum OBJECT_TYPE type)
-{
-  LOG(INFO) << __func__;
-  vineyard_object_info_header *header;
-  vineyard_entry *entrys;
-  int i;
-
-  header = (vineyard_object_info_header *)obj_info_mem;
-  entrys = (vineyard_entry *)(header + 1);
-  i = header->total_file;
-  LOG(INFO) << tree;
-
-  if (type == OBJECT_TYPE::BLOB) {
-    for (auto iter = tree.begin(); iter != tree.end(); iter++) {
-      entrys[i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
-      LOG(INFO) << entrys[i].obj_id;
-      entrys[i].file_size = (*iter)["length"].get<uint64_t>();
-      entrys[i].type = type;
-      i++;
-    }
-  }
-  header->total_file = i;
-}
-
-void NetLinkServer::RefreshObjectList() {
-  LOG(INFO) << __func__;
-  // std::unordered_map<ObjectID, json> metas{};
-  vineyard_object_info_header *header;
-
-  header = (vineyard_object_info_header *)obj_info_mem;
-  if (header) {
-    vineyard_write_lock(&header->rw_lock.r_lock, &header->rw_lock.w_lock);
-    header->total_file = 0;
-    vs_ptr_->ListData(
-        "vineyard::Blob", false, std::numeric_limits<size_t>::max(), [this](const Status& status, const json& tree) {
-          if(!tree.empty()) {
-            // ReadGetDataReply(tree, metas);
-            ShowInfo(tree);
-            this->FillFileMsg(tree, OBJECT_TYPE::BLOB);
-          }
-          return Status::OK();
-        });
-     vineyard_write_unlock(&header->rw_lock.w_lock);
-  }
-}
-
-void NetLinkServer::doAccept() {
-  LOG(INFO) << __func__;
-}
-
-int NetLinkServer::HandleSet(struct vineyard_kern_user_msg *msg) {
-  LOG(INFO) << __func__;
-  req_mem = (void *)(msg->request_mem);
-  result_mem = (void *)(msg->result_mem);
-  obj_info_mem = (void *)(msg->obj_info_mem);
-  return 0;
-}
-
-int NetLinkServer::HandleOpen() {
-  return 0;
-}
-
-int NetLinkServer::HandleRead(vineyard_request_msg *msg) {
-  LOG(INFO) << __func__;
-  ObjectID id;
-  uint64_t offset;
-  uint64_t length;
-  OBJECT_TYPE type;
-  vineyard_msg_mem_header *header;
-  vineyard_request_msg *msgs;
-  vineyard_result_mem_header *rheader;
-  vineyard_result_msg *rmsgs;
-  std::vector<ObjectID> ids;
-  std::vector<std::shared_ptr<Payload>> objects;
-  void *pointer;
-  uint64_t file_size;
-
-  header = (vineyard_msg_mem_header *)this->req_mem;
-  msgs = (vineyard_request_msg *)((uint64_t)this->req_mem + sizeof(vineyard_msg_mem_header));
-  rheader = (vineyard_result_mem_header *)this->result_mem;
-  rmsgs = (vineyard_result_msg *)((uint64_t)this->result_mem + sizeof(vineyard_result_mem_header));
-  vineyard_spin_lock(&header->lock);
-  id = msg->_fopt_param.obj_id;
-  type = msg->_fopt_param.type;
-  offset = msg->_fopt_param.offset;
-  length = msg->_fopt_param.length;
-  LOG(INFO) << "id: "<< id << " type " << type << " offset " << offset << " length " << length << " header->tail " << header->tail_point;
-  vineyard_spin_unlock(&header->lock);
-
-  ids.push_back(id);
-  vs_ptr_->GetData(
-      ids, false, false, []() { return true; },
-      [](const Status& status, const json& tree) {
-        LOG(INFO) << tree;
-        return Status::OK();
-      });
-  vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
-  for (auto iter = objects.begin(); iter != objects.end(); iter++) {
-    LOG(INFO) << "pointer:";
-    printf("%p\n", (*iter)->pointer);
-    pointer = (*iter)->pointer;
-    file_size = (*iter)->data_size;
-    printf("page down:%p\n", PAGE_DOWN((uint64_t)(base_pointer)));
-    printf("file size:%llu\n", file_size);
-  }
-
-  vineyard_spin_lock(&rheader->lock);
-  rmsgs[rheader->head_point].obj_id = id;
-  rmsgs[rheader->head_point].offset = (uint64_t)pointer - PAGE_DOWN((uint64_t)(base_pointer));
-  rmsgs[rheader->head_point].ret = 0;
-  rmsgs[rheader->head_point].size = file_size;
-  rheader->head_point++;
-  vineyard_spin_unlock(&rheader->lock);
-  return 0;
-}
-
-int NetLinkServer::HandleWrite() {
-  return 0;
-}
-
-int NetLinkServer::HandleCloseOrFsync() {
-  return 0;
-}
-
-int NetLinkServer::HandleReadDir() {
-  RefreshObjectList();
-  return 0;
-}
-
-int NetLinkServer::HandleFops() {
-  vineyard_msg_mem_header *request_header;
-  vineyard_request_msg *msg;
-
-  request_header = (struct vineyard_msg_mem_header *)req_mem;
-
-  msg = vineyard_get_request_msg(request_header);
-  while(msg != NULL) {
-    switch(msg->opt) {
-    case REQUEST_OPT::OPEN:
-      HandleOpen();
-      break;
-    case REQUEST_OPT::READ:
-      HandleRead(msg);
-      break;
-    case REQUEST_OPT::WRITE:
-      HandleWrite();
-      break;
-    case REQUEST_OPT::CLOSE:
-    case REQUEST_OPT::FSYNC:
-      HandleCloseOrFsync();
-      break;
-    }
-    msg = vineyard_get_request_msg(request_header);
-  }
-
-  return 0;
 }
 
 }

@@ -61,16 +61,18 @@ struct vineyard_result_msg {
   int             ret;
 };
 
+struct fopt_param {
+  // read/write/sync
+  uint64_t          obj_id;
+  uint64_t          offset;
+  // open
+  enum OBJECT_TYPE  type;
+  uint64_t          length;
+};
+
 struct vineyard_request_msg {
   enum REQUEST_OPT  opt;
-  struct fopt_param {
-    // read/write/sync
-    uint64_t          obj_id;
-    uint64_t          offset;
-    // open
-    enum OBJECT_TYPE  type;
-    uint64_t          length;
-  } _fopt_param;
+  struct fopt_param _fopt_param;
 };
 
 struct vineyard_kern_user_msg {
@@ -122,46 +124,25 @@ static inline bool MsgEmpty(int head_point, int tail_point)
   return head_point == tail_point;
 }
 
-static inline void vineyard_spin_lock(volatile int *addr)
+static inline void VineyardSpinLock(volatile unsigned int *addr)
 {
   while(!__sync_bool_compare_and_swap(addr, 0, 1));
 }
 
-static inline void vineyard_spin_unlock(volatile int *addr)
+static inline void VineyardSpinUnlock(volatile unsigned int *addr)
 {
   *addr = 0;
 }
 
-static inline void vineyard_write_lock(volatile int *rlock, volatile int *wlock)
+static inline void VineyardWriteLock(volatile unsigned int *rlock, volatile unsigned int *wlock)
 {
-  vineyard_spin_lock(wlock);
+  VineyardSpinLock(wlock);
   while(*rlock);
 }
 
-static inline void vineyard_write_unlock(volatile int *wlock)
+static inline void VineyardWriteUnlock(volatile unsigned int *wlock)
 {
   *wlock = 0;
-}
-
-static vineyard_request_msg *vineyard_get_request_msg(vineyard_msg_mem_header *header)
-{
-  LOG(INFO) << __func__;
-  struct vineyard_request_msg *entrys;
-  struct vineyard_request_msg *entry = NULL;
-
-  entrys = (struct vineyard_request_msg *)(header + 1);
-  vineyard_spin_lock(&header->lock);
-  LOG(INFO) << header->head_point << " " << header->tail_point;
-  if (header->tail_point == 10)
-    return NULL;
-  if (!MsgEmpty(header->head_point, header->tail_point)) {
-    entry = &(entrys[header->tail_point]);
-    header->tail_point++;
-    // TODO: ring buffer reset pointer.
-  }
-  vineyard_spin_unlock(&header->lock);
-
-  return entry;
 }
 
 class NetLinkServer : public SocketServer,
@@ -179,18 +160,20 @@ class NetLinkServer : public SocketServer,
     return std::string("");
   }
 
-  void RefreshObjectList();
+  void SyncObjectEntryList();
 
  private:
-  void doAccept() override;
+  void InitNetLink();
 
-  static void thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct sockaddr_nl saddr, struct sockaddr_nl daddr, struct nlmsghdr *nlh);
+  void InitialBulkField();
+
+  void doAccept() override;
 
   int HandleSet(struct vineyard_kern_user_msg *msg);
 
   int HandleOpen();
 
-  int HandleRead(vineyard_request_msg *msg);
+  int HandleRead(fopt_param &param);
 
   int HandleWrite();
 
@@ -200,19 +183,29 @@ class NetLinkServer : public SocketServer,
 
   int HandleFops();
 
-  void FillFileMsg(const json &tree, enum OBJECT_TYPE type);
+  void FillFileEntryInfo(const json &tree, enum OBJECT_TYPE type);
 
   int ReadRequestMsg();
 
   int WriteResultMsg();
 
+  bool VineyardGetRequestMsg(vineyard_msg_mem_header *header, vineyard_request_msg *msg);
+
+  int VineyardSetResultMsg(vineyard_result_msg &rmsg);
+
+  static void thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct sockaddr_nl saddr, struct sockaddr_nl daddr, struct nlmsghdr *nlh);
+
   int socket_fd;
   struct sockaddr_nl saddr, daddr;
   struct nlmsghdr *nlh;
   std::thread *work;
+
   void *req_mem;
   void *result_mem;
   void *obj_info_mem;
+
+  uint64_t base_object_id;
+  void *base_pointer;
 };/*  */
 
 }
