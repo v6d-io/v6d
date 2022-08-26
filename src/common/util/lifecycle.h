@@ -60,12 +60,12 @@ class LifeCycleTracker {
     }
 
     // If reaches zero, trigger `OnRelease` behavior.
-    auto s = Self().OnRelease(id);
+    auto s = self().OnRelease(id);
 
     // If the object is marked as to be deleted, trigger `OnDelete` behavior.
     if (pending_to_delete_.count(id) > 0) {
       pending_to_delete_.erase(id);
-      s += Self().OnDelete(id);
+      s += self().OnDelete(id);
     }
     return s;
   }
@@ -79,7 +79,7 @@ class LifeCycleTracker {
     if (ref_cnt != 0) {
       pending_to_delete_.emplace(id);
     } else {
-      RETURN_ON_ERROR(Self().OnDelete(id));
+      RETURN_ON_ERROR(self().OnDelete(id));
     }
     return Status::OK();
   }
@@ -87,7 +87,7 @@ class LifeCycleTracker {
   Status ClearCache() {
     Status s;
     for (auto const& id : pending_to_delete_) {
-      s += (Self().OnDelete(id));
+      s += (self().OnDelete(id));
     }
     pending_to_delete_.clear();
     return s;
@@ -95,7 +95,7 @@ class LifeCycleTracker {
 
  protected:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t change) {
-    return Self().FetchAndModify(id, ref_cnt, change);
+    return self().FetchAndModify(id, ref_cnt, change);
   }
 
   bool IsInDeletion(ID const& id) {
@@ -103,7 +103,8 @@ class LifeCycleTracker {
   }
 
  private:
-  inline Derived& Self() { return static_cast<Derived&>(*this); }
+  inline Derived& self() { return static_cast<Derived&>(*this); }
+
   /// Cache the objects that client wants to delete but `ref_count > 0`
   /// Race condition should be settled by Der.
   std::unordered_set<ID> pending_to_delete_;

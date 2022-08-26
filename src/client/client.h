@@ -195,7 +195,7 @@ class UsageTracker : public LifeCycleTracker<ID, P, UsageTracker<ID, P, Der>> {
   Status OnDelete(ID const& id);
 
  private:
-  inline Der& Self() { return static_cast<Der&>(*this); }
+  inline Der& self() { return static_cast<Der&>(*this); }
 
   // Track the objects' usage.
   std::unordered_map<ID, std::shared_ptr<P>> object_in_use_;

@@ -160,15 +160,16 @@ class DependencyTracker
 
  public:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {
-    return Self().FetchAndModify(id, ref_cnt, changes);
+    return self().FetchAndModify(id, ref_cnt, changes);
   }
 
-  Status OnRelease(ID const& id) { return Self().OnRelease(id); }
+  Status OnRelease(ID const& id) { return self().OnRelease(id); }
 
-  Status OnDelete(ID const& id) { return Self().OnDelete(id); }
+  Status OnDelete(ID const& id) { return self().OnDelete(id); }
 
  private:
-  inline Der& Self() { return static_cast<Der&>(*this); }
+  inline Der& self() { return static_cast<Der&>(*this); }
+
   dependency_map_t dependency_;
 };
 
@@ -221,11 +222,7 @@ class ColdObjectTracker
 
     bool CheckExist(ID id) const {
       std::shared_lock<decltype(mu_)> shared_locked;
-      auto it = map_.find(id);
-      if (it == map_.end()) {
-        return false;
-      }
-      return true;
+      return map_.find(id) != map_.end();
     }
 
     /**
@@ -253,10 +250,11 @@ class ColdObjectTracker
         }
         spilled_obj_.erase(it);
         return Status::OK();
+      } else {
+        list_.erase(it->second);
+        map_.erase(it);
+        return Status::OK();
       }
-      list_.erase(it->second);
-      map_.erase(it);
-      return Status::OK();
     }
 
     Status Spill(size_t sz, std::shared_ptr<Der> bulk_store_ptr) {
@@ -325,8 +323,7 @@ class ColdObjectTracker
    * @param is_delete Indicates if is to delete or for later reference.
    */
   Status RemoveFromColdList(ID const& id, bool is_delete) {
-    RETURN_ON_ERROR(
-        cold_obj_lru_.Unref(id, is_delete, Self().shared_from_this()));
+    RETURN_ON_ERROR(cold_obj_lru_.Unref(id, is_delete, shared_from_self()));
     return Status::OK();
   }
 
@@ -393,7 +390,7 @@ class ColdObjectTracker
     if (sz <= 0) {
       return Status::NotEnoughMemory("Nothing will be spilled");
     }
-    return cold_obj_lru_.Spill(sz, Self().shared_from_this());
+    return cold_obj_lru_.Spill(sz, shared_from_self());
   }
 
   /**
@@ -408,27 +405,27 @@ class ColdObjectTracker
   uint8_t* AllocateMemoryWithSpill(size_t size, int* fd, int64_t* map_size,
                                    ptrdiff_t* offset) {
     uint8_t* pointer = nullptr;
-    pointer = Self().AllocateMemory(size, fd, map_size, offset);
+    pointer = self().AllocateMemory(size, fd, map_size, offset);
     // no spill will be conducted
     if (spill_path_.empty()) {
       return pointer;
     }
     if (pointer == nullptr ||
         BulkAllocator::Allocated() >=
-            static_cast<int64_t>(Self().mem_spill_upper_bound_)) {
+            static_cast<int64_t>(self().mem_spill_upper_bound_)) {
       std::unique_lock<std::mutex> locked(spill_mu_);
       // if already got someone spilled, then we should allocate normally
       if (pointer == nullptr)
-        pointer = Self().AllocateMemory(size, fd, map_size, offset);
+        pointer = self().AllocateMemory(size, fd, map_size, offset);
 
       if (pointer == nullptr ||
           BulkAllocator::Allocated() >=
-              static_cast<int64_t>(Self().mem_spill_upper_bound_)) {
+              static_cast<int64_t>(self().mem_spill_upper_bound_)) {
         int64_t spill_size =
-            BulkAllocator::Allocated() - Self().mem_spill_lower_bound_;
+            BulkAllocator::Allocated() - self().mem_spill_lower_bound_;
         if (SpillColdObject(spill_size).ok()) {
           pointer = pointer ? pointer
-                            : Self().AllocateMemory(size, fd, map_size, offset);
+                            : self().AllocateMemory(size, fd, map_size, offset);
         }
       }
     }
@@ -437,12 +434,12 @@ class ColdObjectTracker
 
  public:
   Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {
-    return Self().FetchAndModify(id, ref_cnt, changes);
+    return self().FetchAndModify(id, ref_cnt, changes);
   }
 
-  Status OnRelease(ID const& id) { return Self().OnRelease(id); }
+  Status OnRelease(ID const& id) { return self().OnRelease(id); }
 
-  Status OnDelete(ID const& id) { return Self().OnDelete(id); }
+  Status OnDelete(ID const& id) { return self().OnDelete(id); }
 
  protected:
   Status SpillPayload(std::shared_ptr<P>& payload) {
@@ -460,7 +457,7 @@ class ColdObjectTracker
   Status ReloadPayload(const ID& id, std::shared_ptr<P>& payload) {
     assert(payload->is_spilled == true);
     util::SpillReadFile read_file(spill_path_);
-    RETURN_ON_ERROR(read_file.Read(payload, Self().shared_from_this()));
+    RETURN_ON_ERROR(read_file.Read(payload, shared_from_self()));
     return Status::OK();
   }
 
@@ -491,7 +488,9 @@ class ColdObjectTracker
   }
 
  private:
-  inline Der& Self() { return static_cast<Der&>(*this); }
+  inline Der& self() { return static_cast<Der&>(*this); }
+  virtual std::shared_ptr<Der> shared_from_self() = 0;
+
   lru_t cold_obj_lru_;
   std::string spill_path_;
   std::mutex spill_mu_;

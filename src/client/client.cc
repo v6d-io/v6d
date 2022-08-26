@@ -1504,12 +1504,12 @@ Status UsageTracker<ID, P, Der>::OnRelease(ID const& id) {
   // cannot be guaranteed (may trigger spilling in server-side), thus this
   // blob should be regard as not-in-use.
   RETURN_ON_ERROR(DeleteUsage(id));
-  return this->Self().OnRelease(id);
+  return this->self().OnRelease(id);
 }
 
 template <typename ID, typename P, typename Der>
 Status UsageTracker<ID, P, Der>::OnDelete(ID const& id) {
-  return Self().OnDelete(id);
+  return self().OnDelete(id);
 }
 
 }  // namespace detail
