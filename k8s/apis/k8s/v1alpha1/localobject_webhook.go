@@ -25,6 +25,7 @@ import (
 // log is for logging in this package.
 var localobjectlog = logf.Log.WithName("localobject-resource")
 
+// SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *LocalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).

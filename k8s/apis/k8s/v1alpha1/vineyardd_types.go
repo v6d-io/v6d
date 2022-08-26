@@ -81,7 +81,7 @@ type ServiceConfig struct {
 	Port int `json:"port,omitempty"`
 }
 
-// PVC holds all configuration about PersistentVolumeClaim
+// PVCConfig holds all configuration about PersistentVolumeClaim
 type PVCConfig struct {
 	// PVC name
 	// +kubebuilder:validation:Optional
