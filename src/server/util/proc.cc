@@ -83,7 +83,7 @@ void Process::Start(const std::string& command,
 }
 
 void Process::AsyncWrite(std::string const& content, callback_t<> callback) {
-  auto self(this->shared_from_this());
+  auto self(shared_from_this());
   asio::async_write(
       stdin_pipe_, boost::asio::buffer(content.data(), content.size()),
       [self, callback](const boost::system::error_code& ec, std::size_t) {
@@ -100,7 +100,7 @@ void Process::AsyncRead(boost::process::async_pipe& pipe,
                         asio::streambuf& buffer,
                         callback_t<const std::string&> callback, bool once,
                         bool processed, const char delimeter) {
-  auto self(this->shared_from_this());
+  auto self(shared_from_this());
   asio::async_read_until(
       pipe, buffer, delimeter,
       [self, &pipe, &buffer, callback, delimeter, once, processed](

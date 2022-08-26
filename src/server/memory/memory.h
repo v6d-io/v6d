@@ -190,6 +190,11 @@ class BulkStore
    */
   Status OnDelete(ObjectID const& id);
 
+ private:
+  inline std::shared_ptr<BulkStore> shared_from_self() override {
+    return shared_from_this();
+  }
+
   friend class detail::ColdObjectTracker<ObjectID, Payload, BulkStore>;
   friend class SocketConnection;
   friend class VineyardServer;
@@ -235,6 +240,7 @@ class PlasmaBulkStore
    */
   Status OnDelete(PlasmaID const& id);
 
+ private:
   friend class detail::DependencyTracker<PlasmaID, PlasmaPayload,
                                          PlasmaBulkStore>;
   friend class SocketConnection;

@@ -185,7 +185,7 @@ Status EtcdLauncher::LaunchEtcdServer(
 
   // use a random etcd data dir
   std::string file_template = "/tmp/vineyard-etcd-XXXXXX";
-  char* data_dir = mktemp(const_cast<char*>(file_template.c_str()));
+  char* data_dir = mkdtemp(const_cast<char*>(file_template.c_str()));
   if (data_dir == nullptr) {
     return Status::EtcdError(
         "Failed to create a temporary directory for etcd data");
