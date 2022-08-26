@@ -27,12 +27,11 @@ setup:
         kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
         kind load docker-image docker.pkg.github.com/v6d-io/v6d/job1
         kind load docker-image docker.pkg.github.com/v6d-io/v6d/job2
-    - name: install vineyardd
+    - name: install cert-manager
       command: |
-        kubectl create namespace vineyard-system
-        helm install vineyard -f k8s/test/e2e/helm-values.yaml ./charts/vineyard -n vineyard-system
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
       wait:
-        - namespace: vineyard-system
+        - namespace: cert-manager
           resource: pod
           for: condition=Ready
     - name: install scheduler-plugin and operator
@@ -45,10 +44,17 @@ setup:
         - namespace: vineyard-system
           resource: deployment/vineyard-controller-manager
           for: condition=Available
+    - name: install vineyardd
+      command: |
+        kubectl apply -f k8s/test/e2e/vineyardd.yaml
+      wait:
+        - namespace: vineyard-system
+          resource: pod
+          for: condition=Ready
     - name: install job1
       command: |
         kubectl create namespace vineyard-job
-        kubectl apply -f k8s/test/e2e/workflow-job1.yaml
+        sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-sample/' k8s/test/e2e/workflow-job1.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job1-deployment
@@ -65,7 +71,7 @@ setup:
         kubectl label globalobjects --overwrite --selector=job=none job=v6d-workflow-demo-job1 -n vineyard-system
     - name: install job2
       command: |
-        kubectl apply -f k8s/test/e2e/workflow-job2.yaml
+        sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-smample/' k8s/test/e2e/workflow-job2.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job2-deployment

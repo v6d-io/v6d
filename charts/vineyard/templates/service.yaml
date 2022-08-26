@@ -8,8 +8,8 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: vineyard-ipc
+      targetPort: vineyard-rpc
       protocol: TCP
-      name: vineyard-ipc
+      name: vineyard-rpc
   selector:
     {{- include "vineyard.selectorLabels" . | nindent 4 }}

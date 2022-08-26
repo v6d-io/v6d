@@ -64,6 +64,7 @@ static std::string generate_local_object(
                     "\n  name: " + object_id +
                     "\n  labels:"
                     "\n    k8s.v6d.io/signature: " + signature +
+                    "\n    job: none"
                     "\nspec:"
                     "\n  id: " + object_id +
                     "\n  signature: " + signature +
@@ -101,6 +102,8 @@ static std::string generate_global_object(
                     "\nkind: GlobalObject"
                     "\nmetadata:"
                     "\n  name: " + object_id +
+                    "\n  labels:"
+                    "\n    job: none"
                     "\nspec:"
                     "\n  id: " + object_id +
                     "\n  signature: " + signature +

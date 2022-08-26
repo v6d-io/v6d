@@ -1,0 +1,28 @@
+{{- if .Spec.PVCConfig.Name }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Spec.PVCConfig.Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Name }}
+    app.kubernetes.io/version: {{ .Spec.Version }}
+    app.kubernetes.io/instance: vineyardd
+    app.kubernetes.io/component: PersistentVolumeClaim
+spec:
+  volumeMode: Filesystem
+  {{if .Spec.PVCConfig.Resources }}
+  {{ .Spec.PVCConfig.Resources }}
+  {{ end }}
+  storageClassName: {{ .Spec.PVCConfig.StorageClass }}
+  accessModes:
+  {{ range .Spec.PVCConfig.AccessModes }}
+  - {{ . }}
+  {{ end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Name }}
+      app.kubernetes.io/version: {{ .Spec.Version }}
+      app.kubernetes.io/instance: vineyardd
+      app.kubernetes.io/component: PersistentVolumeClaim
+{{- end }}

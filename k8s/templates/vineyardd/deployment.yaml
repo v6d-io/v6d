@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels: 
+    app.kubernetes.io/name: {{ .Name }}
+    app.kubernetes.io/version: {{ .Spec.Version }}
+    app.kubernetes.io/instance: vineyardd
+    app.kubernetes.io/component: deployment
+spec:
+  replicas: {{ .Spec.Replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Name }}
+      app.kubernetes.io/instance: vineyardd
+  template:
+    metadata: 
+      labels:
+        app.kubernetes.io/name: {{ .Name }}
+        app.kubernetes.io/version: {{ .Spec.Version }}
+        app.kubernetes.io/instance: vineyardd
+        app.kubernetes.io/component: deployment
+    spec:
+      serviceAccountName: {{ .Name }}
+      containers:
+        - name: vineyardd
+          image: {{ .Spec.Image }}
+          {{ if .Spec.ImagePullPolicy }}  
+          imagePullPolicy: {{ .Spec.ImagePullPolicy }}
+          {{ else }}
+          imagePullPolicy: IfNotPresent
+          {{ end }}
+          command:
+          - /bin/bash
+          - -c
+          - >
+            /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379;
+            sleep 1;
+            /usr/local/bin/vineyardd
+            {{- if .Spec.Config.SharedMemorySize }}
+             --size {{ .Spec.Config.SharedMemorySize }} 
+            {{- end }}
+            {{- if .Spec.Config.EnableMetrics }}
+            --metrics -log_dir /var/log/vineyard/
+            {{- end }} 
+            --etcd_endpoint http://etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379
+            {{- if .Spec.Config.SyncCRDs }}
+            --sync_crds {{ .Spec.Config.SyncCRDs }}
+            {{- end }}
+          env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: MY_HOST_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: USER
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{range .Spec.Env}}
+            - name: {{ .Name }}
+              value: {{ .Value }}
+            {{end}}
+          ports:
+            - name: rpc
+              containerPort: 9600
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 9600
+            periodSeconds: 60
+          readinessProbe:
+            exec:
+              command:
+              - ls
+              - /var/run/vineyard.sock
+          volumeMounts:
+            - name: run
+              mountPath: /var/run
+            - name: shm
+              mountPath: /dev/shm
+            - name: log
+              mountPath: /var/log/vineyard
+        {{- if .Spec.Metric.Image }}
+        - name: metrics
+          image : {{ .Spec.Metric.Image }}:latest
+          imagePullPolicy: {{ .Spec.Metric.ImagePullPolicy }}
+          command: ["./grok_exporter"]
+          args: ["-config", "grok_exporter.yml", "-disable-exporter-metrics", "&"]
+          ports:
+            - name: exporter
+              containerPort: 9144
+              protocol: TCP
+          volumeMounts:
+          - name: log
+            mountPath: /var/log/vineyard
+        {{- end }}   
+      volumes:
+      - name: run
+        {{- if .Spec.PVCConfig.Name }}
+        persistentVolumeClaim:
+          claimName: {{ .Spec.PVCConfig.Name }}
+        {{- else if .Spec.Config.Socket }}
+        hostPath:
+          path: {{ .Spec.Config.Socket }}
+        {{- else }}
+        hostPath:
+          path: /var/run/vineyard-{{ .Namespace }}-{{ .Name }}
+        {{- end }}
+      - name: shm
+        emptyDir:
+          medium: Memory
+      - name: log
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                     - vineyardd
+              topologyKey: "kubernetes.io/hostname"  

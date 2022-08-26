@@ -23,47 +23,47 @@ import (
 )
 
 // log is for logging in this package.
-var localobjectlog = logf.Log.WithName("localobject-resource")
+var vineyarddlog = logf.Log.WithName("vineyardd-resource")
 
-func (r *LocalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *Vineyardd) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
 }
 
 //nolint: lll
-//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-localobject,mutating=true,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=None,name=mlocalobject.kb.io
+//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-vineyardd,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=vineyardds,verbs=create;update,versions=v1alpha1,name=mvineyardd.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Defaulter = &LocalObject{}
+var _ webhook.Defaulter = &Vineyardd{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *LocalObject) Default() {
-	localobjectlog.Info("default", "name", r.Name)
+func (r *Vineyardd) Default() {
+	vineyarddlog.Info("default", "name", r.Name)
 
 }
 
 //nolint: lll
-//+kubebuilder:webhook:verbs=create;update,path=/validate-k8s-v6d-io-v1alpha1-localobject,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=None,name=vlocalobject.kb.io
+//+kubebuilder:webhook:path=/validate-k8s-v6d-io-v1alpha1-vineyardd,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=vineyardds,verbs=create;update,versions=v1alpha1,name=vvineyardd.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &LocalObject{}
+var _ webhook.Validator = &Vineyardd{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *LocalObject) ValidateCreate() error {
-	localobjectlog.Info("validate create", "name", r.Name)
+func (r *Vineyardd) ValidateCreate() error {
+	vineyarddlog.Info("validate create", "name", r.Name)
 
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *LocalObject) ValidateUpdate(old runtime.Object) error {
-	localobjectlog.Info("validate update", "name", r.Name)
+func (r *Vineyardd) ValidateUpdate(old runtime.Object) error {
+	vineyarddlog.Info("validate update", "name", r.Name)
 
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *LocalObject) ValidateDelete() error {
-	localobjectlog.Info("validate delete", "name", r.Name)
+func (r *Vineyardd) ValidateDelete() error {
+	vineyarddlog.Info("validate delete", "name", r.Name)
 
 	return nil
 }

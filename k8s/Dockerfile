@@ -17,6 +17,7 @@ COPY controllers/ controllers/
 COPY generated/ generated/
 COPY hack/ hack/
 COPY schedulers/ schedulers/
+COPY templates/ templates/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \

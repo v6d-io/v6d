@@ -1,0 +1,21 @@
+# referred from https://github.com/etcd-io/etcd/blob/master/hack/kubernetes-deploy/etcd.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    etcd_node: etcd1
+  name: etcd1
+  namespace: {{ .Namespace }}
+spec:
+  ports:
+  - name: client
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  - name: server
+    port: 2380
+    protocol: TCP
+    targetPort: 2380
+  selector:
+    etcd_node: etcd1

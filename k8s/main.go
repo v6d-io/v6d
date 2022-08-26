@@ -35,7 +35,9 @@ import (
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
+	k8scontrollers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/schedulers"
+	"github.com/v6d-io/v6d/k8s/templates"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -70,6 +72,15 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalObject")
 		os.Exit(1)
 	}
+	if err = (&k8scontrollers.VineyarddReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Template: templates.NewEmbedTemplate(),
+		Recorder: mgr.GetEventRecorderFor("vineyardd-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Vineyardd")
+		os.Exit(1)
+	}
 	if os.Getenv("ENABLE_WEBHOOKS") == "true" {
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
@@ -77,6 +88,10 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		}
 		if err = (&k8sv1alpha1.GlobalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "GlobalObject")
+			os.Exit(1)
+		}
+		if err = (&k8sv1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Vineyardd")
 			os.Exit(1)
 		}
 	}
