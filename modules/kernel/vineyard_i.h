@@ -18,10 +18,15 @@ struct vineyard_inode_info {
     struct list_head    inode_list_node;
 };
 
-uint64_t get_next_vineyard_ino(void);
-void vineyard_fs_init_file_inode(struct inode *inode);
-void vineyard_fs_init_dir_inode(struct inode *inode);
+#define VINEYARD_SB_INFO(x) ((struct vineyard_sb_info *)x->s_fs_info)
 
+// inode.c
+uint64_t get_next_vineyard_ino(void);
 struct inode *vineyard_fs_build_inode(struct super_block *sb, const char *name);
-struct inode *vineyard_fs_iget(struct super_block *sb, struct vineyard_attr *attr);
 struct vineyard_inode_info *get_vineyard_inode_info(struct inode *inode);
+
+// file.c
+void vineyard_fs_init_file_inode(struct inode *inode);
+
+// dir.c
+void vineyard_fs_init_dir_inode(struct inode *inode);

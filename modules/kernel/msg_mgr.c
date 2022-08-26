@@ -20,25 +20,10 @@ struct sock *nl_socket = NULL;
 extern struct net init_net;
 
 DECLARE_WAIT_QUEUE_HEAD(vineyard_msg_wait);
-static int count = 0;
-void vineyard_spin_lock(volatile unsigned int *addr)
-{
-    while(!(__sync_bool_compare_and_swap(addr, 0, 1))) {
-        // for test dead lock
-        if (count == 80) {
-            printk(KERN_INFO "what the fuck?\n");
-            break;
-        }
-        count++;
-    }
-}
+DECLARE_WAIT_QUEUE_HEAD(vineyard_fs_wait);
 
-void vineyard_spin_unlock(volatile unsigned int *addr)
-{
-    *addr = 0;
-}
-
-int send_msg(void *pbuf, uint16_t len)
+// tools
+static int send_msg(void *pbuf, uint16_t len)
 {
     struct sk_buff *nl_skb;
     struct nlmsghdr *nlh;
@@ -84,18 +69,20 @@ static void handle_init(void)
 static void handle_wait(void)
 {
     int ret;
+    struct vineyard_msg_mem_header *header;
     struct vineyard_kern_user_msg msg;
 
-    // TODO: add signal handler
+    header = (struct vineyard_msg_mem_header *)vineyard_msg_mem_header;
+
+    // It is broken up by signal when the return value is negative.
     do {
-        ret = wait_event_interruptible(vineyard_msg_wait, (!msg_empty(vineyard_msg_mem_header->head_point, vineyard_msg_mem_header->tail_point)) | vineyard_msg_mem_header->close);
+        ret = wait_event_interruptible(vineyard_msg_wait,
+                                       !msg_empty(header->head_point,header->tail_point));
     } while (ret != 0);
 
-    if (vineyard_msg_mem_header->close) {
-        printk(KERN_INFO PREFIX "receive exit\n");
+    if (unlikely(header->close)) {
         msg.opt = VEXIT;
     } else {
-        printk(KERN_INFO PREFIX "receive fopt\n");
         msg.opt = VFOPT;
     }
     send_msg(&msg, sizeof(msg));
@@ -104,7 +91,7 @@ static void handle_wait(void)
 
 static void handle_fopt(void)
 {
-    printk(KERN_INFO PREFIX "fopt is not support now!\n");
+    printk(KERN_INFO PREFIX "%s\n", __func__);
     //1. send handler result to user
     wake_up(&vineyard_fs_wait);
     //2. call handler_wait
@@ -115,26 +102,6 @@ static void netlink_rcv_msg(struct sk_buff *skb)
 {
     struct nlmsghdr *nlh = NULL;
     struct vineyard_kern_user_msg *umsg = NULL;
-
-    // wake_up(&vineyard_fs_wait);
-
-    // printk(KERN_INFO PREFIX "vineyardd thread wait\n");
-    // wait_event_interruptible(vineyard_msg_wait, vineyard_msg_mem_header->has_msg);
-    // printk(KERN_INFO PREFIX "vineyardd thread wake\n");
-
-    // printk(KERN_INFO PREFIX "process pid:%d\n", current->pid);
-
-    // vineyard_spin_lock(&vineyard_msg_mem_header->lock);
-    // vineyard_msg_mem_header->has_msg = 0;
-
-    // if (vineyard_msg_mem_header->close) {
-    //     vineyard_spin_lock(&vineyard_result_mem_header->lock);
-    //     vineyard_result_mem_header->has_msg = 1;
-    //     vineyard_spin_unlock(&vineyard_result_mem_header->lock);
-    //     send_msg("bye user", strlen("bye user"));
-    //     return;
-    // }
-    // vineyard_spin_unlock(&vineyard_msg_mem_header->lock);
 
     if (skb->len >= nlmsg_total_size(0)) {
         nlh = nlmsg_hdr(skb);
@@ -162,10 +129,6 @@ static void netlink_rcv_msg(struct sk_buff *skb)
             }
         }
     }
-
-    // vineyard_spin_lock(&vineyard_result_mem_header->lock);
-    // vineyard_result_mem_header->has_msg = 1;
-    // vineyard_spin_unlock(&vineyard_result_mem_header->lock);
 }
 
 struct netlink_kernel_cfg cfg = {
@@ -189,4 +152,84 @@ void net_link_release(void)
         netlink_kernel_release(nl_socket);
         nl_socket = NULL;
     }
+}
+
+// interfaces
+static int count = 0;
+void vineyard_spin_lock(volatile unsigned int *addr)
+{
+    while(!(__sync_bool_compare_and_swap(addr, 0, 1))) {
+        // for test dead lock
+        if (count == 80) {
+            printk(KERN_INFO "what the fuck?\n");
+            break;
+        }
+        count++;
+    }
+}
+
+void vineyard_spin_unlock(volatile unsigned int *addr)
+{
+    *addr = 0;
+}
+
+void inline vineyard_read_lock(struct vineyard_rw_lock *rw_lock)
+{
+    vineyard_spin_lock(&rw_lock->w_lock);
+    rw_lock->r_lock++;
+    printk(KERN_INFO PREFIX "now there exist(s) %d readder\n", rw_lock->r_lock);
+    vineyard_spin_unlock(&rw_lock->w_lock);
+}
+
+void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock)
+{
+    rw_lock->r_lock--;
+    printk(KERN_INFO PREFIX "now there exist(s) %d readder\n", rw_lock->r_lock);
+}
+
+void send_request_msg(struct vineyard_request_msg *msg)
+{
+    struct vineyard_request_msg *msgs;
+    struct vineyard_msg_mem_header *header;
+    msgs = (struct vineyard_request_msg *)(uint64_t)vineyard_msg_buffer_addr;
+    header = (struct vineyard_msg_mem_header *)vineyard_msg_mem_header;
+
+    vineyard_spin_lock(&header->lock);
+    // TODO: ring buffer reset header point, judge that if the buffer is full.
+    memcpy(&msgs[header->head_point], msg, sizeof(*msg));
+    header->head_point++;
+    vineyard_spin_unlock(&header->lock);
+
+    wake_up(&vineyard_msg_wait);
+}
+
+void send_exit_msg(void)
+{
+    struct vineyard_msg_mem_header *header;
+    header = (struct vineyard_msg_mem_header *)vineyard_msg_mem_header;
+
+    vineyard_spin_lock(&header->lock);
+    // TODO: ring buffer reset header point, judge that if the buffer is full.
+    header->close = 1;
+    header->head_point++;
+    vineyard_spin_unlock(&header->lock);
+
+    wake_up(&vineyard_msg_wait);
+}
+
+void receive_result_msg(struct vineyard_result_msg *rmsg)
+{
+    struct vineyard_result_msg *rmsgs;
+    struct vineyard_result_mem_header *rheader;
+    rmsgs = (struct vineyard_result_msg *)vineyard_result_buffer_addr;
+    rheader = (struct vineyard_result_mem_header *)vineyard_result_mem_header;
+
+    // TODO: muti thread will failed
+    wait_event_interruptible(vineyard_fs_wait, (!msg_empty(rheader->head_point, rheader->tail_point)));
+
+    vineyard_spin_lock(&rheader->lock);
+    memcpy(rmsg, &rmsgs[rheader->tail_point], sizeof(*rmsg));
+    printk(KERN_INFO PREFIX "%s %llu", __func__, rmsgs[rheader->tail_point].offset);
+    rheader->tail_point++;
+    vineyard_spin_unlock(&rheader->lock);
 }

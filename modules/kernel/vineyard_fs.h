@@ -20,20 +20,7 @@
 struct vineyard_attr {
 	uint64_t	ino;
 	uint64_t	size;
-	uint64_t	blocks;
-	uint64_t	atime;
-	uint64_t	mtime;
-	uint64_t	ctime;
-	uint32_t	atimensec;
-	uint32_t	mtimensec;
-	uint32_t	ctimensec;
 	uint32_t	mode;
-	uint32_t	nlink;
-	uint32_t	uid;
-	uint32_t	gid;
-	uint32_t	rdev;
-	uint32_t	blksize;
-	uint32_t	flags;
 };
 
 struct vineyard_entry {
@@ -42,6 +29,23 @@ struct vineyard_entry {
 	enum OBJECT_TYPE	type;
 	unsigned long 		inode_id;
 };
+
+// kernel space
+extern void *vineyard_storage_kernel_addr;
+extern struct vineyard_msg_mem_header *vineyard_msg_mem_header;
+extern struct vineyard_result_mem_header *vineyard_result_mem_header;
+extern struct vineyard_object_info_header *vineyard_object_info_header;
+extern void *vineyard_msg_buffer_addr;
+extern void *vineyard_result_buffer_addr;
+extern void *vineyard_object_info_buffer_addr;
+
+// user space
+extern void *vineyard_msg_mem_user_addr;
+extern void *vineyard_result_mem_user_addr;
+extern void *vineyard_object_info_user_addr;
+
+extern struct wait_queue_head vineyard_msg_wait;
+extern struct wait_queue_head vineyard_fs_wait;
 
 void translate_u64_to_char(uint64_t num, char *name);
 uint64_t translate_char_to_u64(const char *name);

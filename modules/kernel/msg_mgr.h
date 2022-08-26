@@ -14,7 +14,6 @@ enum REQUEST_OPT {
     VWRITE,
     VCLOSE,
     VFSYNC,
-    VREADDIR,
 };
 
 enum USER_KERN_OPT {
@@ -33,16 +32,18 @@ struct vineyard_result_msg {
     int             ret;
 };
 
+struct fopt_param {
+    // read/write/sync
+    uint64_t            obj_id;
+    uint64_t            offset;
+    // open
+    enum OBJECT_TYPE    type;
+    uint64_t            length;
+};
+
 struct vineyard_request_msg {
     enum REQUEST_OPT  opt;
-    struct fopt_param {
-        // read/write/sync
-        uint64_t            obj_id;
-        uint64_t            offset;
-        // open
-        enum OBJECT_TYPE    type;
-        uint64_t            length;
-    } _fopt_param;
+    struct fopt_param _fopt_param;
 };
 
 struct vineyard_kern_user_msg {
@@ -77,27 +78,16 @@ struct vineyard_object_info_header {
     int total_file;
 };
 
-// kernel space
-extern void *vineyard_storage_kernel_addr;
-extern struct vineyard_msg_mem_header *vineyard_msg_mem_header;
-extern struct vineyard_result_mem_header *vineyard_result_mem_header;
-extern struct vineyard_object_info_header *vineyard_object_info_header;
-extern void *vineyard_msg_buffer_addr;
-extern void *vineyard_result_buffer_addr;
-extern void *vineyard_object_info_buffer_addr;
-
-// user space
-extern void *vineyard_msg_mem_user_addr;
-extern void *vineyard_result_mem_user_addr;
-extern void *vineyard_object_info_user_addr;
-
-extern struct wait_queue_head vineyard_msg_wait;
-extern struct wait_queue_head vineyard_fs_wait;
-
+// msg_mgr.c
 int net_link_init(void);
 void net_link_release(void);
 void vineyard_spin_lock(volatile unsigned int *addr);
 void vineyard_spin_unlock(volatile unsigned int *addr);
+void inline vineyard_read_lock(struct vineyard_rw_lock *rw_lock);
+void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock);
+void send_exit_msg(void);
+void send_request_msg(struct vineyard_request_msg *msg);
+void receive_result_msg(struct vineyard_result_msg *msg);
 
 static inline int msg_empty(int head, int tail)
 {

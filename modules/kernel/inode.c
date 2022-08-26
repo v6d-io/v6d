@@ -12,27 +12,34 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("yuansm");
 MODULE_DESCRIPTION("Vineyard filesystem for Linux.");
 MODULE_VERSION("0.01");
+MODULE_ALIAS_FS("vineyardfs");
 
 static struct page **pages;
 static unsigned long page_num;
+// vineyard bulk
 void *vineyard_storage_kernel_addr = NULL;
-void *vineyard_msg_mem_kernel_addr = NULL;
-void *vineyard_result_mem_kernel_addr = NULL;
-void *vineyard_object_info_kernel_addr = NULL;
 
+// request msg buffer
+void *vineyard_msg_mem_kernel_addr = NULL;
+struct vineyard_msg_mem_header *vineyard_msg_mem_header;
+void *vineyard_msg_buffer_addr;
+
+// result msg buffer
+void *vineyard_result_mem_kernel_addr = NULL;
+struct vineyard_result_mem_header *vineyard_result_mem_header;
+void *vineyard_result_buffer_addr;
+
+// file entry buffer
+void *vineyard_object_info_kernel_addr = NULL;
+struct vineyard_object_info_header *vineyard_object_info_header;
+void *vineyard_object_info_buffer_addr;
+
+// buffer address in user vineyardd
 void *vineyard_msg_mem_user_addr = NULL;
 void *vineyard_result_mem_user_addr = NULL;
 void *vineyard_object_info_user_addr = NULL;
 
-struct vineyard_msg_mem_header *vineyard_msg_mem_header;
-struct vineyard_result_mem_header *vineyard_result_mem_header;
-struct vineyard_object_info_header *vineyard_object_info_header;
-void *vineyard_msg_buffer_addr;
-void *vineyard_result_buffer_addr;
-void *vineyard_object_info_buffer_addr;
-
-DECLARE_WAIT_QUEUE_HEAD(vineyard_fs_wait);
-
+// mount param
 struct mount_data {
 	unsigned long this_addr;
 	unsigned long vineyard_storage_user_addr;
@@ -40,13 +47,12 @@ struct mount_data {
 };
 
 struct vineyard_fs_context {
-    int key:1;
+    int place_holder;
 };
 
-struct vineyard_inode_info *get_vineyard_inode_info(struct inode *inode)
-{
-	return container_of(inode, struct vineyard_inode_info, vfs_inode);
-}
+// tools
+
+
 
 static inline void vineyard_lock_build_inode(struct vineyard_sb_info *sbi)
 {
@@ -56,85 +62,6 @@ static inline void vineyard_lock_build_inode(struct vineyard_sb_info *sbi)
 static inline void vineyard_unlock_build_inode(struct vineyard_sb_info *sbi)
 {
 	// TBD
-}
-
-static struct inode *vineyard_alloc_inode(struct super_block *sb)
-{
-	struct vineyard_inode_info *info;
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-	info = kzalloc(sizeof(struct inode), GFP_KERNEL);
-	if (!info) {
-		return NULL;
-	}
-	INIT_LIST_HEAD(&info->inode_list_node);
-	return &info->vfs_inode;
-}
-
-static void vineyard_free_inode(struct inode *inode)
-{
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-	return kfree(inode);
-}
-
-static int vineyard_write_inode(struct inode *inode, struct writeback_control *wbc)
-{
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-	return 0;
-}
-
-static void vineyard_evict_inode(struct inode *inode)
-{
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-}
-
-static void vineyard_put_super(struct super_block * sb)
-{
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-}
-
-static int vineyard_statfs(struct dentry *d_entry, struct kstatfs *kstatfs)
-{
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-	return 0;
-}
-
-static int vineyard_remount(struct super_block *sb, int *a, char *b)
-{
-	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-	return -1;
-}
-
-// static int vineyard_show_options(struct seq_file *sf, struct dentry *d)
-// {
-// 	printk(KERN_INFO PREFIX "fake %s\n", __func__);
-// 	return 0;
-// }
-
-static const struct super_operations vineyard_super_ops = {
-	.alloc_inode	= vineyard_alloc_inode,
-	.free_inode	= vineyard_free_inode,
-	.write_inode	= vineyard_write_inode,
-	.evict_inode	= vineyard_evict_inode,
-	.put_super	= vineyard_put_super,
-	.statfs		= vineyard_statfs,
-	.remount_fs	= vineyard_remount,
-
-	// .show_options	= vineyard_show_options,
-};
-
-static void vineyard_free_fsc(struct fs_context *fsc)
-{
-    struct vineyard_fs_context *ctx;
-
-    printk(KERN_INFO PREFIX "%s\n", __func__);
-	ctx = fsc->fs_private;
-    kfree(ctx);
-}
-
-static int vineyard_parse_param(struct fs_context *fsc, struct fs_parameter *param)
-{
-	printk(KERN_INFO "fake %s\n", __func__);
-	return 0;
 }
 
 static int map_vineyard_user_storage_buffer(unsigned long user_addr)
@@ -220,49 +147,136 @@ static void unmap_vineyard_user_storage_buffer(void)
 	}
 }
 
-static int vineyard_parse_monolithic(struct fs_context *fsc, void *data)
+const struct dentry_operations vineyard_root_dentry_operations = { };
+
+static const struct export_operations vineyard_export_operations = { };
+
+static void vineyard_fs_init_inode(struct inode *inode, struct vineyard_attr *attr)
 {
-	int err = 0;
-	struct mount_data *mount_data;
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+    inode->i_mode = attr->mode;
+	inode->i_ino = attr->ino;
+	inode->i_size = attr->size;
 
-    printk(KERN_INFO PREFIX "%s\n", __func__);
-	mount_data = (struct mount_data *)data;
-
-	if (mount_data) {
-		// map user buffer to kernel
-		printk(KERN_INFO PREFIX "%lx\n", mount_data->vineyard_storage_user_addr);
-		page_num = mount_data->page_num;
-		printk(KERN_INFO PREFIX "page_num:%lu size:%lu\n", page_num, page_num * 0x1000);
-		err = map_vineyard_user_storage_buffer(mount_data->vineyard_storage_user_addr);
-
-		// map kernel buffer to user
-		vineyard_msg_mem_user_addr = (void *)prepare_user_buffer(&vineyard_msg_mem_kernel_addr, PAGE_SIZE);
-		vineyard_result_mem_user_addr = (void *)prepare_user_buffer(&vineyard_result_mem_kernel_addr, PAGE_SIZE);
-		vineyard_object_info_user_addr = (void *)prepare_user_buffer(&vineyard_object_info_kernel_addr, PAGE_SIZE);
-
-		vineyard_msg_mem_header = vineyard_msg_mem_kernel_addr;
-		vineyard_result_mem_header = vineyard_result_mem_kernel_addr;
-		vineyard_object_info_header = vineyard_object_info_kernel_addr;
-		vineyard_msg_buffer_addr = (void *)((uint64_t)vineyard_msg_mem_kernel_addr + sizeof(struct vineyard_msg_mem_header));
-		vineyard_result_buffer_addr = (void *)((uint64_t)vineyard_result_mem_kernel_addr + sizeof(struct vineyard_result_mem_header));
-		vineyard_object_info_buffer_addr = (void *)((uint64_t)vineyard_object_info_kernel_addr + sizeof(struct vineyard_object_info_header));
-
-		printk(KERN_INFO PREFIX "%p\n", &vineyard_msg_buffer_addr);
-		printk(KERN_INFO PREFIX "headsize:%lu, rheadsize:%lu\n", sizeof(struct vineyard_msg_mem_header), sizeof(struct vineyard_result_mem_header));
-		printk(KERN_INFO PREFIX "msg:%px, rmsg:%px, header:%px, rheader:%px\n", vineyard_msg_buffer_addr, vineyard_result_buffer_addr, vineyard_msg_mem_kernel_addr, vineyard_result_mem_kernel_addr);
-		err = copy_to_user((void *)(mount_data->this_addr), mount_data, sizeof(struct mount_data));
-		printk(KERN_INFO PREFIX "%lx %lx\n", mount_data->this_addr, mount_data->vineyard_storage_user_addr);
+	if (S_ISREG(inode->i_mode)) {
+		printk(KERN_INFO PREFIX "Hello! File inode\n");
+		vineyard_fs_init_file_inode(inode);
+	} else if (S_ISDIR(inode->i_mode)) {
+		printk(KERN_INFO PREFIX "Hello! Dir inode\n");
+		vineyard_fs_init_dir_inode(inode);
+	} else {
+		printk(KERN_INFO PREFIX "What the fucking type :%d in %s: %d\n", inode->i_mode, __func__, __LINE__);
 	}
-
-    return err;
 }
 
-const struct dentry_operations vineyard_root_dentry_operations = {
+static struct inode *vineyard_fs_iget(struct super_block *sb, struct vineyard_attr *attr)
+{
+	struct inode *inode;
+
+	inode = new_inode(sb);
+
+	if (inode)
+		vineyard_fs_init_inode(inode, attr);
+
+	return inode;
+}
+
+static struct inode *vineyard_get_root_inode(struct super_block *sb)
+{
+    struct vineyard_attr attr;
+
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+    memset(&attr, 0, sizeof(attr));
+
+    attr.mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH;
+    attr.ino = 1;
+
+	return vineyard_fs_iget(sb, &attr);
+}
+
+static struct inode *vineyard_fs_search_inode(struct super_block *sb, const char *name)
+{
+	struct vineyard_sb_info *sbi;
+	struct vineyard_inode_info *i_info;
+	// struct 
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+	sbi = VINEYARD_SB_INFO(sb);
+	list_for_each_entry(i_info, &sbi->inode_list_head, inode_list_node) {
+		if (i_info->obj_id == translate_char_to_u64(name)) {
+			printk(KERN_INFO PREFIX "find:%llu\n", i_info->obj_id);
+			return &i_info->vfs_inode;
+		}
+	}
+	return NULL;
+}
+
+static void vineyard_attach_node(struct super_block *sb, struct inode *inode)
+{
+	struct vineyard_sb_info *sbi;
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+
+	sbi = sb->s_fs_info;
+	list_add(&get_vineyard_inode_info(inode)->inode_list_node, &sbi->inode_list_head);
+}
+
+// vineyard inode operations
+static struct inode *vineyard_alloc_inode(struct super_block *sb)
+{
+	struct vineyard_inode_info *info;
+	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+	info = kzalloc(sizeof(struct inode), GFP_KERNEL);
+	if (!info) {
+		return NULL;
+	}
+	INIT_LIST_HEAD(&info->inode_list_node);
+	return &info->vfs_inode;
+}
+
+static void vineyard_free_inode(struct inode *inode)
+{
+	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+	return kfree(inode);
+}
+
+static int vineyard_write_inode(struct inode *inode, struct writeback_control *wbc)
+{
+	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+	return 0;
+}
+
+static void vineyard_evict_inode(struct inode *inode)
+{
+	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+}
+
+static void vineyard_put_super(struct super_block * sb)
+{
+	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+}
+
+static int vineyard_statfs(struct dentry *d_entry, struct kstatfs *kstatfs)
+{
+	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+	return 0;
+}
+
+static int vineyard_remount(struct super_block *sb, int *a, char *b)
+{
+	printk(KERN_INFO PREFIX "fake %s\n", __func__);
+	return -1;
+}
+
+static const struct super_operations vineyard_super_ops = {
+	.alloc_inode	= vineyard_alloc_inode,
+	.free_inode	= vineyard_free_inode,
+	.write_inode	= vineyard_write_inode,
+	.evict_inode	= vineyard_evict_inode,
+	.put_super	= vineyard_put_super,
+	.statfs		= vineyard_statfs,
+	.remount_fs	= vineyard_remount,
 };
 
-static const struct export_operations vineyard_export_operations = {
-};
-
+// vineyard xattr operations
 static int vineyard_xattr_get(const struct xattr_handler *handler,
 			 struct dentry *dentry, struct inode *inode,
 			 const char *name, void *value, size_t size)
@@ -292,7 +306,7 @@ const struct xattr_handler *vineyard_xattr_handlers[] = {
 	NULL
 };
 
-void vineyard_sb_defaults(struct super_block *sb)
+static void vineyard_sb_defaults(struct super_block *sb)
 {
 	sb->s_magic = VINEYARD_SUPER_MAGIC;
 	sb->s_op = &vineyard_super_ops;
@@ -306,60 +320,7 @@ void vineyard_sb_defaults(struct super_block *sb)
 	sb->s_flags &= ~(SB_NOSEC | SB_I_VERSION);
 }
 
-int _open(struct inode *, struct file *)
-{
-	printk(KERN_INFO "%s\n", __func__);
-	return -1;
-}
-
-static void vineyard_fs_init_inode(struct inode *inode, struct vineyard_attr *attr)
-{
-	printk(KERN_INFO PREFIX "%s\n", __func__);
-    inode->i_mode = attr->mode;
-	inode->i_ino = attr->ino;
-	inode->i_size = attr->size;
-	inode->i_mtime.tv_sec  = attr->mtime;
-	inode->i_mtime.tv_nsec = attr->mtimensec;
-	inode->i_ctime.tv_sec  = attr->ctime;
-	inode->i_ctime.tv_nsec = attr->ctimensec;
-
-	if (S_ISREG(inode->i_mode)) {
-		printk(KERN_INFO PREFIX "Hello! File inode\n");
-		vineyard_fs_init_file_inode(inode);
-	} else if (S_ISDIR(inode->i_mode)) {
-		printk(KERN_INFO PREFIX "Hello! Dir inode\n");
-		vineyard_fs_init_dir_inode(inode);
-	} else {
-		printk(KERN_INFO PREFIX "What the fucking type :%d in %s: %d\n", inode->i_mode, __func__, __LINE__);
-	}
-}
-
-struct inode *vineyard_fs_iget(struct super_block *sb, struct vineyard_attr *attr)
-{
-	struct inode *inode;
-
-	inode = new_inode(sb);
-
-	if (inode)
-		vineyard_fs_init_inode(inode, attr);
-
-	return inode;
-}
-
-static struct inode *vineyard_get_root_inode(struct super_block *sb)
-{
-    struct vineyard_attr attr;
-
-	printk(KERN_INFO PREFIX "%s\n", __func__);
-    memset(&attr, 0, sizeof(attr));
-
-    attr.mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH;
-    attr.ino = 1;
-
-	return vineyard_fs_iget(sb, &attr);
-}
-
-int vineyard_set_super_block(struct super_block *sb, struct fs_context *fsc)
+static int vineyard_set_super_block(struct super_block *sb, struct fs_context *fsc)
 {
     struct vineyard_fs_context *ctx;
 
@@ -374,64 +335,54 @@ int vineyard_set_super_block(struct super_block *sb, struct fs_context *fsc)
     return 0;
 }
 
-uint64_t get_next_vineyard_ino(void)
+// vineayrd fs context operations
+static void vineyard_free_fsc(struct fs_context *fsc)
 {
-	static volatile uint64_t ino = 1;
-	ino = __sync_fetch_and_add(&ino, 1);
-	return ino;
+    struct vineyard_fs_context *ctx;
+
+    printk(KERN_INFO PREFIX "%s\n", __func__);
+	ctx = fsc->fs_private;
+    kfree(ctx);
 }
 
-static struct inode *vineyard_fs_search_inode(struct super_block *sb, const char *name)
+static int vineyard_parse_param(struct fs_context *fsc, struct fs_parameter *param)
 {
-	struct vineyard_sb_info *sbi;
-	struct vineyard_inode_info *i_info;
-	// struct 
-	printk(KERN_INFO PREFIX "%s\n", __func__);
-	sbi = sb->s_fs_info;
-	list_for_each_entry(i_info, &sbi->inode_list_head, inode_list_node) {
-		if (i_info->obj_id == translate_char_to_u64(name)) {
-			printk(KERN_INFO PREFIX "find:%llu\n", i_info->obj_id);
-			return &i_info->vfs_inode;
-		}
+	printk(KERN_INFO "fake %s\n", __func__);
+	return 0;
+}
+
+static int vineyard_parse_monolithic(struct fs_context *fsc, void *data)
+{
+	int err = 0;
+	struct mount_data *mount_data;
+
+    printk(KERN_INFO PREFIX "%s\n", __func__);
+	mount_data = (struct mount_data *)data;
+
+	if (mount_data) {
+		// map user buffer to kernel
+		printk(KERN_INFO PREFIX "%lx\n", mount_data->vineyard_storage_user_addr);
+		page_num = mount_data->page_num;
+		printk(KERN_INFO PREFIX "page_num:%lu size:%lu\n", page_num, page_num * 0x1000);
+		err = map_vineyard_user_storage_buffer(mount_data->vineyard_storage_user_addr);
+
+		// map kernel buffer to user
+		vineyard_msg_mem_user_addr = (void *)prepare_user_buffer(&vineyard_msg_mem_kernel_addr, PAGE_SIZE);
+		vineyard_result_mem_user_addr = (void *)prepare_user_buffer(&vineyard_result_mem_kernel_addr, PAGE_SIZE);
+		vineyard_object_info_user_addr = (void *)prepare_user_buffer(&vineyard_object_info_kernel_addr, PAGE_SIZE);
+
+		vineyard_msg_mem_header = vineyard_msg_mem_kernel_addr;
+		vineyard_result_mem_header = vineyard_result_mem_kernel_addr;
+		vineyard_object_info_header = vineyard_object_info_kernel_addr;
+		vineyard_msg_buffer_addr = vineyard_msg_mem_kernel_addr + sizeof(struct vineyard_msg_mem_header);
+		vineyard_result_buffer_addr = vineyard_result_mem_kernel_addr + sizeof(struct vineyard_result_mem_header);
+		vineyard_object_info_buffer_addr = vineyard_object_info_kernel_addr + sizeof(struct vineyard_object_info_header);
+
+		err = copy_to_user((void *)(mount_data->this_addr), mount_data, sizeof(struct mount_data));
+		printk(KERN_INFO PREFIX "%lx %lx\n", mount_data->this_addr, mount_data->vineyard_storage_user_addr);
 	}
-	return NULL;
-}
 
-static void vineyard_attach_node(struct super_block *sb, struct inode *inode)
-{
-	struct vineyard_sb_info *sbi;
-	printk(KERN_INFO PREFIX "%s\n", __func__);
-
-	sbi = sb->s_fs_info;
-	list_add(&get_vineyard_inode_info(inode)->inode_list_node, &sbi->inode_list_head);
-}
-
-struct inode *vineyard_fs_build_inode(struct super_block *sb, const char *name)
-{
-	struct inode *inode;
-	struct vineyard_attr attr;
-	struct vineyard_inode_info *i_info;
-
-	printk(KERN_INFO PREFIX "%s\n", __func__);
-	inode = vineyard_fs_search_inode(sb, name);
-	if (inode)
-		goto out;
-
-	// TODO: We suppose that the file in vineyard is all regular file.
-	attr.mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-	attr.ino = get_next_vineyard_ino();
-	vineyard_lock_build_inode(NULL);
-
-	inode = vineyard_fs_iget(sb, &attr);
-
-	vineyard_attach_node(sb, inode);
-	i_info = get_vineyard_inode_info(inode);
-	i_info->obj_id = translate_char_to_u64(name);
-	printk(KERN_INFO PREFIX "trans id:%llu\n", i_info->obj_id);
-	printk(KERN_INFO PREFIX "trans name:%s\n", name);
-	vineyard_unlock_build_inode(NULL);
-out:
-	return inode;
+    return err;
 }
 
 static void vineyard_init_sbi(struct vineyard_sb_info *sbi)
@@ -466,12 +417,13 @@ static int vineyard_get_tree(struct fs_context *fsc)
 }
 
 static const struct fs_context_operations vineyard_context_ops = {
-	.free		= vineyard_free_fsc,
+	.free				= vineyard_free_fsc,
 	.parse_monolithic	= vineyard_parse_monolithic,
-	.parse_param	= vineyard_parse_param,
-	.get_tree	= vineyard_get_tree,
+	.parse_param		= vineyard_parse_param,
+	.get_tree			= vineyard_get_tree,
 };
 
+// vineyard file system type operations.
 static int vineyard_init_fs_context(struct fs_context *fsc)
 {
 	struct vineyard_fs_context *ctx;
@@ -487,23 +439,15 @@ static int vineyard_init_fs_context(struct fs_context *fsc)
 	return 0;
 }
 
-void fake_kill_sb(struct super_block *sb)
-{
-    printk(KERN_INFO PREFIX "fake kill sb for unmount\n");
-	kfree(sb->s_fs_info);
-    kfree(sb);
-}
-
 static void vineyard_kill_sb(struct super_block *sb)
 {
 	printk(KERN_INFO PREFIX "fake %s\n", __func__);
 
-	vineyard_spin_lock(&vineyard_msg_mem_header->lock);
-	vineyard_msg_mem_header->close = 1;
-	vineyard_spin_unlock(&vineyard_msg_mem_header->lock);
-	wake_up(&vineyard_msg_wait);
+	send_exit_msg();
 	unmap_vineyard_user_storage_buffer();
 	unmap_vineyard_msg_result_buffer();
+
+	kfree(sb->s_fs_info);
 }
 
 static struct file_system_type vineyard_fs_type = {
@@ -513,7 +457,49 @@ static struct file_system_type vineyard_fs_type = {
 	.kill_sb	= vineyard_kill_sb,
 	.fs_flags	= 0,
 };
-MODULE_ALIAS_FS("vineyardfs");
+
+// interfaces
+uint64_t get_next_vineyard_ino(void)
+{
+	static volatile uint64_t ino = 1;
+	ino = __sync_fetch_and_add(&ino, 1);
+	return ino;
+}
+
+struct vineyard_inode_info *get_vineyard_inode_info(struct inode *inode)
+{
+	return container_of(inode, struct vineyard_inode_info, vfs_inode);
+}
+
+struct inode *vineyard_fs_build_inode(struct super_block *sb, const char *name)
+{
+	struct inode *inode;
+	struct vineyard_attr attr;
+	struct vineyard_inode_info *i_info;
+	struct vineyard_sb_info *sbi;
+
+	printk(KERN_INFO PREFIX "%s\n", __func__);
+	inode = vineyard_fs_search_inode(sb, name);
+	if (inode)
+		goto out;
+
+	sbi = sb->s_fs_info;
+	// TODO: We suppose that the file in vineyard is all regular file.
+	attr.mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+	attr.ino = get_next_vineyard_ino();
+	vineyard_lock_build_inode(sbi);
+
+	inode = vineyard_fs_iget(sb, &attr);
+
+	vineyard_attach_node(sb, inode);
+	i_info = get_vineyard_inode_info(inode);
+	i_info->obj_id = translate_char_to_u64(name);
+	printk(KERN_INFO PREFIX "trans id:%llu\n", i_info->obj_id);
+	printk(KERN_INFO PREFIX "trans name:%s\n", name);
+	vineyard_unlock_build_inode(sbi);
+out:
+	return inode;
+}
 
 static int __init init_vineyard_fs(void) {
     int err;
