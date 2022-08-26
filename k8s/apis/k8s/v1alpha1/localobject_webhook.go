@@ -40,7 +40,6 @@ var _ webhook.Defaulter = &LocalObject{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *LocalObject) Default() {
 	localobjectlog.Info("default", "name", r.Name)
-
 }
 
 //nolint: lll

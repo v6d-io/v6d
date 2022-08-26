@@ -40,7 +40,8 @@ var _ webhook.Defaulter = &Vineyardd{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Vineyardd) Default() {
 	vineyarddlog.Info("default", "name", r.Name)
-
+	// check the image、version and replicas
+	r.check()
 }
 
 //nolint: lll
@@ -51,6 +52,8 @@ var _ webhook.Validator = &Vineyardd{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *Vineyardd) ValidateCreate() error {
 	vineyarddlog.Info("validate create", "name", r.Name)
+	// check the image、version and replicas
+	r.check()
 
 	return nil
 }
@@ -58,6 +61,8 @@ func (r *Vineyardd) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Vineyardd) ValidateUpdate(old runtime.Object) error {
 	vineyarddlog.Info("validate update", "name", r.Name)
+	// check the image、version and replicas
+	r.check()
 
 	return nil
 }
@@ -67,4 +72,24 @@ func (r *Vineyardd) ValidateDelete() error {
 	vineyarddlog.Info("validate delete", "name", r.Name)
 
 	return nil
+}
+
+// Make sure the image is valid
+func (r *Vineyardd) check() {
+	vineyarddlog.Info("validate image", "name", r.Name)
+	defaultImage := "docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest"
+	defaultVersion := "0.7.2"
+	defaultReplicas := 3
+	if r.Spec.Image == "" {
+		vineyarddlog.Info("the image is absent, use the default image", "name", defaultImage)
+		r.Spec.Image = defaultImage
+	}
+	if r.Spec.Version == "" {
+		vineyarddlog.Info("the version is absent, use the default version", "name", defaultVersion)
+		r.Spec.Version = defaultVersion
+	}
+	if r.Spec.Replicas == 0 {
+		vineyarddlog.Info("the replicas is absent, use the default replicas", "name", 1)
+		r.Spec.Replicas = defaultReplicas
+	}
 }
