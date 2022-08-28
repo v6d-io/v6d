@@ -752,9 +752,9 @@ if(BUILD_VINEYARD_CLIENT)
         find_package(CUDA REQUIRED)
         target_link_libraries(vineyard_client PUBLIC ${CUDA_LIBRARIES})
     endif()
-        target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
-                                                     Threads::Threads
-                                                     nlohmann_json::nlohmann_json                                          
+    target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
+                                                 Threads::Threads
+                                                 nlohmann_json::nlohmann_json
     )
     # make sure `vineyard_internal_registry` been built.
     add_dependencies(vineyard_client vineyard_internal_registry)
@@ -867,6 +867,7 @@ endif()
 if(BUILD_VINEYARD_TESTS)
     add_subdirectory(test)
 endif()
+
 if(BUILD_VINEYARD_BENCHMARKS)
     add_subdirectory(benchmark)
 endif()

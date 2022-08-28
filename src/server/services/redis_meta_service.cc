@@ -42,12 +42,26 @@ void RedisWatchHandler::operator()(std::unique_ptr<redis::AsyncRedis>& redis,
   std::vector<std::string> puts;
   std::vector<std::string> dels;
   std::vector<IMetaService::op_t> ops;
-  int irev = 0;
+  unsigned irev = 0;
   try {
-    irev = std::stoi(rev);
-    auto resp =
-        redis->lrange<std::vector<std::string>>("opslist", handled_rev_, irev);
-    for (auto const& item : resp.get()) {
+    irev = static_cast<unsigned>(std::stol(rev));
+  } catch (...) {
+    stateCode = UNNAMED_ERROR;
+    errMsg = "redis watchHandler error:";
+    errType += " resolve redis_revision error";
+  }
+  std::vector<std::string> operations;
+  try {
+    operations =
+        redis->lrange<std::vector<std::string>>("opslist", handled_rev_, irev)
+            .get();
+  } catch (...) {
+    stateCode = UNNAMED_ERROR;
+    errMsg = "redis watchHandler error:";
+    errType += " lrange error";
+  }
+  try {
+    for (auto const& item : operations) {
       auto hresp = redis->hgetall<std::vector<std::string>>(item);
       auto const& vec = hresp.get();
       int j;
@@ -62,32 +76,40 @@ void RedisWatchHandler::operator()(std::unique_ptr<redis::AsyncRedis>& redis,
         }
       }
     }
-
-    if (puts.size() > 0) {
-      auto mresp =
-          redis->mget<std::vector<std::string>>(puts.begin(), puts.end());
-      auto const& vals = mresp.get();
-      for (size_t i = 0; i < vals.size(); ++i) {
-        ops.emplace_back(IMetaService::op_t::Put(
-            boost::algorithm::erase_head_copy(puts[i], prefix_.size()), vals[i],
-            irev + 1));
-      }
-    }
-
-    for (auto const& item : dels) {
-      ops.emplace_back(IMetaService::op_t::Del(item, irev + 1));
-    }
   } catch (...) {
     stateCode = UNNAMED_ERROR;
-    errms = "redis watch handler error";
+    errMsg = "redis watchHandler error:";
+    errType += " hgetall error";
+  }
+
+  if (puts.size() > 0) {
+    auto mresp = redis->mget<std::vector<redis::OptionalString>>(puts.begin(),
+                                                                 puts.end());
+    try {
+      auto const& vals = mresp.get();
+      for (size_t i = 0; i < vals.size(); ++i) {
+        if (vals[i]) {
+          ops.emplace_back(IMetaService::op_t::Put(
+              boost::algorithm::erase_head_copy(puts[i], prefix_.size()),
+              *vals[i], irev + 1));
+        }
+      }
+    } catch (...) {
+      stateCode = UNNAMED_ERROR;
+      errMsg = "redis watchHandler error:";
+      errType += " mget error";
+    }
+  }
+
+  for (auto const& item : dels) {
+    ops.emplace_back(IMetaService::op_t::Del(item, irev + 1));
   }
 
 #ifndef NDEBUG
   static unsigned processed = 0;
 #endif
 
-  auto status = Status::RedisError(stateCode, errms);
-
+  auto status = Status::RedisError(stateCode, errMsg, errType);
   ctx_.post(boost::bind(
       callback_, status, ops, irev + 1,
       [this, status](Status const&, unsigned rev) -> Status {
@@ -146,14 +168,14 @@ void RedisMetaService::requestLock(
     callback_t<std::shared_ptr<ILock>> callback_after_locked) {
   auto self(shared_from_base());
   pplx::create_task([self]() {
-    int irev = 0;
+    unsigned irev = 0;
     try {
-      self->redlock_->try_lock(std::chrono::seconds(30));
+      self->redlock_->try_lock(std::chrono::seconds(10));
       auto val = *(self->redis_->get("redis_revision").get());
-      irev = std::stoi(val);
+      irev = static_cast<unsigned>(std::stol(val));
     } catch (...) {
       self->rLStateCode = UNNAMED_ERROR;
-      self->rLErrms = "redis requestLock error:";
+      self->rLErrMsg = "redis requestLock error:";
       self->rLErrType += " try_lock error or get redis_revision error";
     }
     return irev;
@@ -166,13 +188,13 @@ void RedisMetaService::requestLock(
             self->redlock_->unlock();
           } catch (...) {
             self->rLStateCode = UNNAMED_ERROR;
-            self->rLErrms = "redis requestLock error:";
+            self->rLErrMsg = "redis requestLock error:";
             self->rLErrType += " unlock error";
           }
           if (self->stopped_.load()) {
             return Status::AlreadyStopped("redis metadata service");
           }
-          return Status::RedisError(self->rLStateCode, self->rLErrms,
+          return Status::RedisError(self->rLStateCode, self->rLErrMsg,
                                     self->rLErrType);
         },
         val);
@@ -180,8 +202,8 @@ void RedisMetaService::requestLock(
     if (self->stopped_.load()) {
       status = Status::AlreadyStopped("redis metadata service");
     } else {
-      status =
-          Status::RedisError(self->rLStateCode, self->rLErrms, self->rLErrType);
+      status = Status::RedisError(self->rLStateCode, self->rLErrMsg,
+                                  self->rLErrType);
     }
     self->server_ptr_->GetMetaContext().post(
         boost::bind(callback_after_locked, status, lock_ptr));
@@ -202,16 +224,16 @@ void RedisMetaService::requestAll(
     val = *redis_->get("redis_revision").get();
   } catch (...) {
     rAStateCode = UNNAMED_ERROR;
-    rAErrms = "redis requestAll error:";
+    rAErrMsg = "redis requestAll error:";
     rAErrType += " get redis_revision error";
   }
   redis_->command<std::vector<std::string>>(
       "KEYS", "vineyard/*",
       [self, callback, val](redis::Future<std::vector<std::string>>&& resp) {
         std::vector<std::string> keys;
-        int rev = 0;
+        unsigned rev = 0;
         try {
-          rev = std::stoi(val);
+          rev = static_cast<unsigned>(std::stol(val));
           auto const& vec = resp.get();
           keys.emplace_back("MGET");
           for (size_t i = 0; i < vec.size(); ++i) {
@@ -223,15 +245,15 @@ void RedisMetaService::requestAll(
           }
         } catch (...) {
           self->rAStateCode = UNNAMED_ERROR;
-          self->rAErrms = "redis requestAll error:";
+          self->rAErrMsg = "redis requestAll error:";
           self->rAErrType += " keys* error";
         }
         if (keys.size() > 1) {
           // mget
-          self->redis_->command<std::vector<std::string>>(
+          self->redis_->command<std::vector<redis::OptionalString>>(
               keys.begin(), keys.end(),
               [self, keys, callback,
-               rev](redis::Future<std::vector<std::string>>&& resp) {
+               rev](redis::Future<std::vector<redis::OptionalString>>&& resp) {
                 std::string op_key;
                 std::vector<op_t> ops;
                 try {
@@ -239,23 +261,25 @@ void RedisMetaService::requestAll(
                   ops.reserve(vals.size());
                   // collect kvs
                   for (size_t i = 1; i < keys.size(); ++i) {
-                    op_key = boost::algorithm::erase_head_copy(
-                        keys[i], self->prefix_.size());
-                    ops.emplace_back(op_t::Put(op_key, vals[i - 1], rev));
+                    if (vals[i - 1]) {
+                      op_key = boost::algorithm::erase_head_copy(
+                          keys[i], self->prefix_.size());
+                      ops.emplace_back(op_t::Put(op_key, *vals[i - 1], rev));
+                    }
                   }
                 } catch (...) {
                   self->rAStateCode = UNNAMED_ERROR;
-                  self->rAErrms = "redis requestAll error:";
+                  self->rAErrMsg = "redis requestAll error:";
                   self->rAErrType += " mget error";
                 }
                 auto status = Status::RedisError(
-                    self->rAStateCode, self->rAErrms, self->rAErrType);
+                    self->rAStateCode, self->rAErrMsg, self->rAErrType);
                 self->server_ptr_->GetMetaContext().post(
                     boost::bind(callback, status, ops, rev));
               });
         } else {
           std::vector<op_t> ops;
-          auto status = Status::RedisError(self->rAStateCode, self->rAErrms,
+          auto status = Status::RedisError(self->rAStateCode, self->rAErrMsg,
                                            self->rAErrType);
           self->server_ptr_->GetMetaContext().post(
               boost::bind(callback, status, ops, rev));
@@ -300,15 +324,15 @@ void RedisMetaService::commitUpdates(
   // happened.
   std::string rev;
   std::string op_prefix;
-  int irev = 0;
+  unsigned irev = 0;
   try {
     // the operation number is ready to publish
     rev = *redis_->get("redis_revision").get();
     op_prefix = "op" + rev;
-    irev = std::stoi(rev);
+    irev = static_cast<unsigned>(std::stol(rev));
   } catch (...) {
     cUStateCode = UNNAMED_ERROR;
-    cUErrms = "redis commitUpdates error:";
+    cUErrMsg = "redis commitUpdates error:";
     cUErrType += " get redis_revision error";
   }
 
@@ -336,7 +360,7 @@ void RedisMetaService::commitUpdates(
                     resp.get();
                   } catch (...) {
                     self->cUStateCode = UNNAMED_ERROR;
-                    self->cUErrms = "redis commitUpdates error:";
+                    self->cUErrMsg = "redis commitUpdates error:";
                     self->cUErrType += " del keys error";
                   }
                 });
@@ -344,89 +368,21 @@ void RedisMetaService::commitUpdates(
 
   // mset kvs
   if (kvs.size() > 2) {
-    redis_->command<void>(
-        kvs.begin(), kvs.end(),
-        [self, callback_after_updated, ops, op_prefix,
-         irev](redis::Future<void>&& resp) {
-          try {
-            resp.get();
-          } catch (...) {
-            self->cUStateCode = UNNAMED_ERROR;
-            self->cUErrms = "redis commitUpdates error:";
-            self->cUErrType += " mset error";
-          }
-          self->redis_->hset(
-              op_prefix, ops.begin(), ops.end(),
-              [self, callback_after_updated, op_prefix,
-               irev](redis::Future<long long>&& resp) {
-                try {
-                  resp.get();
-                } catch (...) {
-                  self->cUStateCode = UNNAMED_ERROR;
-                  self->cUErrms = "redis commitUpdates error:";
-                  self->cUErrType += " hset error";
-                }
-                self->redis_->command<long long>(
-                    "RPUSH", "opslist", op_prefix,
-                    [self, callback_after_updated,
-                     irev](redis::Future<long long>&& resp) {
-                      try {
-                        resp.get();
-                      } catch (...) {
-                        self->cUStateCode = UNNAMED_ERROR;
-                        self->cUErrms = "redis commitUpdates error:";
-                        self->cUErrType += " rpush error";
-                      }
-                      self->redis_->command<long long>(
-                          "INCR", "redis_revision",
-                          [self, callback_after_updated,
-                           irev](redis::Future<long long>&& resp) {
+    redis_->command<void>(kvs.begin(), kvs.end(),
+                          [self, callback_after_updated, ops, op_prefix,
+                           irev](redis::Future<void>&& resp) {
                             try {
                               resp.get();
                             } catch (...) {
                               self->cUStateCode = UNNAMED_ERROR;
-                              self->cUErrms = "redis commitUpdates error:";
-                              self->cUErrType += " incr error";
+                              self->cUErrMsg = "redis commitUpdates error:";
+                              self->cUErrType += " mset error";
                             }
-                            self->redis_->command<long long>(
-                                "PUBLISH", "operations", irev,
-                                [self, callback_after_updated,
-                                 irev](redis::Future<long long>&& resp) {
-                                  try {
-                                    resp.get();
-                                  } catch (...) {
-                                    self->cUStateCode = UNNAMED_ERROR;
-                                    self->cUErrms =
-                                        "redis commitUpdates error:";
-                                    self->cUErrType += " publish error";
-                                  }
-                                  Status status;
-                                  if (self->stopped_.load()) {
-                                    status = Status::AlreadyStopped(
-                                        "redis metadata service");
-                                  } else {
-                                    status = Status::RedisError(
-                                        self->cUStateCode, self->cUErrms,
-                                        self->cUErrType);
-                                  }
-                                  self->server_ptr_->GetMetaContext().post(
-                                      boost::bind(callback_after_updated,
-                                                  status, irev));
-                                });
+                            self->operationUpdates(callback_after_updated, ops,
+                                                   op_prefix, irev);
                           });
-                    });
-              });
-        });
-  } else {
-    Status status;
-    if (self->stopped_.load()) {
-      status = Status::AlreadyStopped("redis metadata service");
-    } else {
-      status =
-          Status::RedisError(self->cUStateCode, self->cUErrms, self->cUErrType);
-    }
-    self->server_ptr_->GetMetaContext().post(
-        boost::bind(callback_after_updated, status, irev));
+  } else if (keys.size() > 0) {
+    operationUpdates(callback_after_updated, ops, op_prefix, irev);
   }
 }
 

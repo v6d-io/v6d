@@ -89,8 +89,9 @@ class RedisWatchHandler {
 
   // TODO: more error codes
   enum { OK = 0, UNNAMED_ERROR = 1 };
-  std::string errms;
+  std::string errMsg;
   int stateCode = OK;
+  std::string errType;
 };
 /**
  * @brief RedisLock is designed as the lock for accessing redis
@@ -186,18 +187,84 @@ class RedisMetaService : public IMetaService {
   enum { OK = 0, UNNAMED_ERROR = 1 };
   // requestAll error
   int rAStateCode = OK;
-  std::string rAErrms;
+  std::string rAErrMsg;
   std::string rAErrType;
   // commitUpdates error
   int cUStateCode = OK;
-  std::string cUErrms;
+  std::string cUErrMsg;
   std::string cUErrType;
   // requestLock error
   int rLStateCode = OK;
-  std::string rLErrms;
+  std::string rLErrMsg;
   std::string rLErrType;
 
   friend class IMetaService;
+
+  void operationUpdates(callback_t<unsigned> callback_after_updated,
+                        std::unordered_map<std::string, unsigned> ops,
+                        std::string op_prefix, unsigned irev) {
+    auto self(shared_from_base());
+    redis_->hset(op_prefix, ops.begin(), ops.end(),
+                 [self, callback_after_updated, op_prefix,
+                  irev](redis::Future<long long>&& resp) {
+                   try {
+                     resp.get();
+                   } catch (...) {
+                     self->cUStateCode = UNNAMED_ERROR;
+                     self->cUErrMsg = "redis commitUpdates error:";
+                     self->cUErrType += " hset error";
+                   }
+                   self->redis_->command<long long>(
+                       "RPUSH", "opslist", op_prefix,
+                       [self, callback_after_updated,
+                        irev](redis::Future<long long>&& resp) {
+                         try {
+                           resp.get();
+                         } catch (...) {
+                           self->cUStateCode = UNNAMED_ERROR;
+                           self->cUErrMsg = "redis commitUpdates error:";
+                           self->cUErrType += " rpush error";
+                         }
+                         self->redis_->command<long long>(
+                             "PUBLISH", "operations", irev,
+                             [self, callback_after_updated,
+                              irev](redis::Future<long long>&& resp) {
+                               try {
+                                 resp.get();
+                               } catch (...) {
+                                 self->cUStateCode = UNNAMED_ERROR;
+                                 self->cUErrMsg = "redis commitUpdates error:";
+                                 self->cUErrType += " publish error";
+                               }
+                               self->redis_->command<long long>(
+                                   "INCR", "redis_revision",
+                                   [self, callback_after_updated,
+                                    irev](redis::Future<long long>&& resp) {
+                                     try {
+                                       resp.get();
+                                     } catch (...) {
+                                       self->cUStateCode = UNNAMED_ERROR;
+                                       self->cUErrMsg =
+                                           "redis commitUpdates error:";
+                                       self->cUErrType += " incr error";
+                                     }
+                                     Status status;
+                                     if (self->stopped_.load()) {
+                                       status = Status::AlreadyStopped(
+                                           "redis metadata service");
+                                     } else {
+                                       status = Status::RedisError(
+                                           self->cUStateCode, self->cUErrMsg,
+                                           self->cUErrType);
+                                     }
+                                     self->server_ptr_->GetMetaContext().post(
+                                         boost::bind(callback_after_updated,
+                                                     status, irev + 1));
+                                   });
+                             });
+                       });
+                 });
+  }
 };
 
 }  // namespace vineyard
