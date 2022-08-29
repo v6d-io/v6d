@@ -466,6 +466,27 @@ class [[vineyard]] ArrowFragment
    * N.B.: as an temporary solution, for POC of graph-learn, will be removed
    * later.
    */
+
+  inline const int64_t* GetIncomingOffsetArray(
+      label_id_t v_label, label_id_t e_label) const {
+    return ie_offsets_ptr_lists_[v_label][e_label];
+  }
+
+  inline const int64_t* GetOutgoingOffsetArray(
+      label_id_t v_label, label_id_t e_label) const {
+    return oe_offsets_ptr_lists_[v_label][e_label];
+  }
+
+  inline int64_t GetIncomingOffsetLength(
+      label_id_t v_label, label_id_t e_label) const {
+    return ie_offsets_lists_[v_label][e_label]->length();
+  }
+
+  inline int64_t GetOutgoingOffsetLength(
+      label_id_t v_label, label_id_t e_label) const {
+    return oe_offsets_lists_[v_label][e_label]->length();
+  }
+
   inline std::pair<int64_t, int64_t> GetOutgoingAdjOffsets(
       const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
