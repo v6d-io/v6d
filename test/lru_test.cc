@@ -21,11 +21,11 @@ limitations under the License.
 
 #include "server/memory/usage.h"
 
-#define LRU \
-  detail::ColdObjectTracker<uint64_t, std::string, decltype(nullptr)>::LRU
-
 using namespace vineyard;  // NOLINT(build/namespaces)
 using namespace std;       // NOLINT(build/namespaces)
+
+using LRU =
+    detail::ColdObjectTracker<uint64_t, std::string, decltype(nullptr)>::LRU;
 
 void BasicTest() {
   LRU lru_;

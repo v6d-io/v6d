@@ -22,6 +22,7 @@ limitations under the License.
 #include <memory>
 
 #include "client/client.h"
+#include "common/memory/memcpy.h"
 #include "common/memory/payload.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
@@ -178,7 +179,8 @@ std::shared_ptr<Blob> Blob::FromPointer(Client& client, const uintptr_t pointer,
   } else {
     std::unique_ptr<BlobWriter> writer;
     VINEYARD_CHECK_OK(client.CreateBlob(size, writer));
-    memcpy(writer->data(), reinterpret_cast<uint8_t*>(pointer), size);
+    memory::inline_memcpy(writer->data(), reinterpret_cast<uint8_t*>(pointer),
+                          size);
     return std::dynamic_pointer_cast<Blob>(writer->Seal(client));
   }
 }

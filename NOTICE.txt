@@ -47,3 +47,7 @@ This product includes software from the s3fs project
 This product includes software from the omniscidb project
  * Copyright 2019 OmniSci, Inc.
  * https://github.com/omnisci/omniscidb
+
+This product includes software from the ClickHouse project
+ * Copyright 2016-2022 ClickHouse, Inc.
+ * https://github.com/ClickHouse/ClickHouse
