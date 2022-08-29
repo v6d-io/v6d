@@ -21,6 +21,7 @@ limitations under the License.
 #include <unordered_map>
 #include <utility>
 
+#include "common/memory/memcpy.h"
 #include "common/util/json.h"
 
 #include "pybind11/pybind11.h"
@@ -200,8 +201,8 @@ Status copy_memoryview(PyObject* src, void* dst, size_t const size,
   {
     py::gil_scoped_release release;
     // memcpy
-    memcpy(reinterpret_cast<uint8_t*>(dst) + offset, src_buffer.data(),
-           src_buffer.size());
+    memory::inline_memcpy(reinterpret_cast<uint8_t*>(dst) + offset,
+                          src_buffer.data(), src_buffer.size());
   }
 
   return Status::OK();
@@ -255,7 +256,8 @@ Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
   {
     py::gil_scoped_release release;
     // memcpy
-    memcpy(dst_buffer.data() + offset, src_buffer.data(), src_buffer.size());
+    memory::inline_memcpy(dst_buffer.data() + offset, src_buffer.data(),
+                          src_buffer.size());
   }
 
   return Status::OK();
