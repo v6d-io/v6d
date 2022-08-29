@@ -486,7 +486,7 @@ class [[vineyard]] ArrowFragment
       const {
     return oe_offsets_lists_[v_label][e_label]->length();
   }
- 
+
   inline std::pair<int64_t, int64_t> GetOutgoingAdjOffsets(
       const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
