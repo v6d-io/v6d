@@ -474,7 +474,7 @@ def run_fuse_test(etcd_endpoints):
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
-                'modules/fuse/tests',
+                'modules/fuse/test',
                 '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                 '--vineyard-fuse-mount-dir=%s' % VINEYARD_FUSE_MOUNT_DIR,

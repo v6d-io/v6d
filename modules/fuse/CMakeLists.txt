@@ -1,9 +1,11 @@
 # build vineyard-fuse
 set(FUSE_SRC_FILES)
-
 list(APPEND FUSE_SRC_FILES "adaptors/arrow_ipc/deserializer_registry.cc")
 list(APPEND FUSE_SRC_FILES "adaptors/arrow_ipc/serializer_registry.cc")
+list(APPEND FUSE_SRC_FILES "adaptors/chunk_buffer/chunk_buffer.cc")
+
 list(APPEND FUSE_SRC_FILES "fuse_impl.cc")
+
 
 add_library(vineyard_fuse ${FUSE_SRC_FILES})
 target_link_libraries(vineyard_fuse PUBLIC vineyard_client
@@ -22,6 +24,8 @@ if(BUILD_VINEYARD_FUSE_PARQUET)
     endif()
 endif()
 target_include_directories(vineyard_fuse PRIVATE ${CMAKE_SOURCE_DIR})
+
+target_compile_options(vineyard_fuse PRIVATE -DDEFAULT_ALLOCATOR=dlmalloc)
 
 install_vineyard_target(vineyard_fuse)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
@@ -46,13 +50,11 @@ if(BUILD_VINEYARD_TESTS)
         else()
             add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
         endif()
+        target_include_directories(${T_NAME} PRIVATE ${CMAKE_SOURCE_DIR})
         target_link_libraries(${T_NAME} PRIVATE
                               vineyard_fuse
                               ${ARROW_SHARED_LIB}
                               ${MPI_CXX_LIBRARIES})
-        if(${LIBUNWIND_FOUND})
-            target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})
-        endif()
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_tests ${T_NAME})
     endforeach()
