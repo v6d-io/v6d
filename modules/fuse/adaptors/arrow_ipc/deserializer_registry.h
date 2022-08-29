@@ -44,20 +44,22 @@ limitations under the License.
 #include "common/util/typename.h"
 #include "common/util/uuid.h"
 
+#include "fuse/adaptors/chunk_buffer/chunk_buffer.h"
+
 namespace vineyard {
 namespace fuse {
 
-using vineyard_deserializer_nt = std::shared_ptr<arrow::Buffer> (*)(
+using vineyard_deserializer_nt = std::shared_ptr<internal::ChunkBuffer> (*)(
     const std::shared_ptr<vineyard::Object>&);
 
 template <typename T>
-std::shared_ptr<arrow::Buffer> numeric_array_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> numeric_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p);
-std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> string_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p);
-std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> bool_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p);
-std::shared_ptr<arrow::Buffer> dataframe_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> dataframe_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p);
 std::unordered_map<std::string, vineyard::fuse::vineyard_deserializer_nt>
 arrow_ipc_register_once();

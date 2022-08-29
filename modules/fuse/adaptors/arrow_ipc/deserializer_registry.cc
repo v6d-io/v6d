@@ -14,7 +14,6 @@ limitations under the License.
 */
 
 #include "fuse/adaptors/arrow_ipc/deserializer_registry.h"
-
 namespace vineyard {
 namespace fuse {
 
@@ -33,14 +32,12 @@ std::shared_ptr<arrow::KeyValueMetadata> extractVineyardMetaToArrowMeta(
 }
 
 template <typename T>
-std::shared_ptr<arrow::Buffer> numeric_array_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> numeric_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto arr = std::dynamic_pointer_cast<vineyard::NumericArray<T>>(p);
   DLOG(INFO) << "numeric_array_arrow_ipc_view" << type_name<T>()
              << " is called";
-  std::shared_ptr<arrow::io::BufferOutputStream> ssink;
-
-  CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
+  auto cbuffer = std::make_shared<internal::ChunkBuffer>();
   DLOG(INFO) << "buffer successfully created";
 
   auto kvmeta = extractVineyardMetaToArrowMeta(arr);
@@ -48,29 +45,24 @@ std::shared_ptr<arrow::Buffer> numeric_array_arrow_ipc_view(
       {arrow::field("a", ConvertToArrowType<T>::TypeValue())}, kvmeta);
   std::shared_ptr<arrow::Table> my_table =
       arrow::Table::Make(schema, {arr->GetArray()});
-
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
   CHECK_ARROW_ERROR_AND_ASSIGN(writer,
-                               arrow::ipc::MakeFileWriter(ssink, schema));
+                               arrow::ipc::MakeFileWriter(cbuffer, schema));
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   DLOG(INFO) << "table is written";
   writer->Close();
-  std::shared_ptr<arrow::Buffer> buffer_;
-  DLOG(INFO) << "writer is closed";
-  CHECK_ARROW_ERROR_AND_ASSIGN(buffer_, ssink->Finish());
   DLOG(INFO) << "buffer is extracted";
-  return buffer_;
+  return cbuffer;
 }
 
-std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> string_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto arr = std::dynamic_pointer_cast<
       vineyard::BaseBinaryArray<arrow::LargeStringArray>>(p);
   DLOG(INFO) << "string_array_arrow_ipc_view is called";
-  std::shared_ptr<arrow::io::BufferOutputStream> ssink;
+  auto cbuffer = std::make_shared<internal::ChunkBuffer>();
 
-  CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
   DLOG(INFO) << "buffer successfully created";
 
   auto kvmeta = extractVineyardMetaToArrowMeta(arr);
@@ -82,25 +74,22 @@ std::shared_ptr<arrow::Buffer> string_array_arrow_ipc_view(
 
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
   CHECK_ARROW_ERROR_AND_ASSIGN(writer,
-                               arrow::ipc::MakeFileWriter(ssink, schema));
+                               arrow::ipc::MakeFileWriter(cbuffer, schema));
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   DLOG(INFO) << "table is written";
   writer->Close();
-  std::shared_ptr<arrow::Buffer> buffer_;
+  std::shared_ptr<internal::ChunkBuffer> buffer_;
   DLOG(INFO) << "writer is closed";
-  CHECK_ARROW_ERROR_AND_ASSIGN(buffer_, ssink->Finish());
-  DLOG(INFO) << "buffer is extracted";
-  return buffer_;
+  return cbuffer;
 }
 
-std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> bool_array_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto arr = std::dynamic_pointer_cast<vineyard::BooleanArray>(p);
   DLOG(INFO) << "bool_array_arrow_ipc_view is called";
-  std::shared_ptr<arrow::io::BufferOutputStream> ssink;
+  auto cbuffer = std::make_shared<internal::ChunkBuffer>();
   auto kvmeta = extractVineyardMetaToArrowMeta(arr);
-  CHECK_ARROW_ERROR_AND_ASSIGN(ssink, arrow::io::BufferOutputStream::Create());
   DLOG(INFO) << "buffer successfully created";
 
   auto schema = arrow::schema(
@@ -110,19 +99,16 @@ std::shared_ptr<arrow::Buffer> bool_array_arrow_ipc_view(
 
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
   CHECK_ARROW_ERROR_AND_ASSIGN(writer,
-                               arrow::ipc::MakeFileWriter(ssink, schema));
+                               arrow::ipc::MakeFileWriter(cbuffer, schema));
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   DLOG(INFO) << "table is written";
   writer->Close();
-  std::shared_ptr<arrow::Buffer> buffer_;
-  DLOG(INFO) << "writer is closed";
-  CHECK_ARROW_ERROR_AND_ASSIGN(buffer_, ssink->Finish());
-  DLOG(INFO) << "buffer is extracted";
-  return buffer_;
+
+  return cbuffer;
 }
 
-std::shared_ptr<arrow::Buffer> dataframe_arrow_ipc_view(
+std::shared_ptr<internal::ChunkBuffer> dataframe_arrow_ipc_view(
     const std::shared_ptr<vineyard::Object>& p) {
   auto df = std::dynamic_pointer_cast<vineyard::DataFrame>(p);
   auto kvmeta = extractVineyardMetaToArrowMeta(df);
@@ -130,17 +116,15 @@ std::shared_ptr<arrow::Buffer> dataframe_arrow_ipc_view(
   auto batch = df->AsBatch(true);
   std::shared_ptr<arrow::Table> table;
   VINEYARD_CHECK_OK(RecordBatchesToTable({batch}, &table));
-  std::shared_ptr<arrow::io::BufferOutputStream> sink;
-  CHECK_ARROW_ERROR_AND_ASSIGN(sink, arrow::io::BufferOutputStream::Create());
+  auto cbuffer = std::make_shared<internal::ChunkBuffer>();
   std::clog << batch->column_data(2)->GetValues<_Float64>(1) << std::endl;
   std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
   CHECK_ARROW_ERROR_AND_ASSIGN(
-      writer, arrow::ipc::MakeFileWriter(sink, batch->schema()));
+      writer, arrow::ipc::MakeFileWriter(cbuffer, batch->schema()));
   VINEYARD_CHECK_OK(writer->WriteTable(*table));
-  std::shared_ptr<arrow::Buffer> buffer;
+  std::shared_ptr<internal::ChunkBuffer> buffer;
   writer->Close();
-  CHECK_ARROW_ERROR_AND_ASSIGN(buffer, sink->Finish());
-  return buffer;
+  return cbuffer;
 }
 
 std::unordered_map<std::string, vineyard::fuse::vineyard_deserializer_nt>
