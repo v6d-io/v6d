@@ -1,4 +1,4 @@
-/** Copyright 2020-2021 Alibaba Group Holding Limited.
+/** Copyright 2020-2022 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@ limitations under the License.
 */
 
 #include "common/memory/gpu/unified_memory.h"
+
 namespace vineyard {
 
 std::string guaErrorToString(GUAError_t error) {

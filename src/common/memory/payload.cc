@@ -45,9 +45,9 @@ void Payload::FromJSON(const json& tree) {
   data_size = tree["data_size"].get<int64_t>();
   map_size = tree["map_size"].get<int64_t>();
   pointer = reinterpret_cast<uint8_t*>(tree["pointer"].get<uintptr_t>());
-  is_sealed = tree["is_sealed"].get<bool>();
-  is_owner = tree["is_owner"].get<bool>();
-  is_gpu = tree["is_gpu"].get<bool>();
+  is_sealed = tree.value("is_sealed", false);
+  is_owner = tree.value("is_owner", true);
+  is_gpu = tree.value("is_gpu", false);
 }
 
 Payload Payload::FromJSON1(const json& tree) {
@@ -86,8 +86,8 @@ void PlasmaPayload::FromJSON(const json& tree) {
   map_size = tree["map_size"].get<int64_t>();
   ref_cnt = tree["ref_cnt"].get<int64_t>();
   pointer = reinterpret_cast<uint8_t*>(tree["pointer"].get<uintptr_t>());
-  is_sealed = tree["is_sealed"].get<bool>();
-  is_owner = tree["is_owner"].get<bool>();
+  is_sealed = tree.value("is_sealed", false);
+  is_owner = tree.value("is_owner", true);
   pointer = nullptr;
 }
 

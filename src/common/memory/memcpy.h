@@ -18,8 +18,8 @@
 #ifndef SRC_COMMON_MEMORY_MEMCPY_H_
 #define SRC_COMMON_MEMORY_MEMCPY_H_
 
-#include <malloc.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 namespace vineyard {
 

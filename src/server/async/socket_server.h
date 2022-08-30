@@ -27,8 +27,6 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
-#include "boost/asio.hpp"
-
 #include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
 #include "common/util/asio.h"

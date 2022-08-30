@@ -51,10 +51,10 @@ struct Payload {
         map_size(0),
         ref_cnt(0),
         pointer(nullptr),
-        is_sealed(0),
-        is_owner(1),
-        is_spilled(0),
-        is_gpu(0) {}
+        is_sealed(false),
+        is_owner(true),
+        is_spilled(false),
+        is_gpu(false) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize,
           ptrdiff_t offset)
@@ -66,10 +66,10 @@ struct Payload {
         map_size(msize),
         ref_cnt(0),
         pointer(ptr),
-        is_sealed(0),
-        is_owner(1),
-        is_spilled(0),
-        is_gpu(0) {}
+        is_sealed(false),
+        is_owner(true),
+        is_spilled(false),
+        is_gpu(false) {}
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
           int64_t msize, ptrdiff_t offset)
@@ -81,10 +81,10 @@ struct Payload {
         map_size(msize),
         ref_cnt(0),
         pointer(ptr),
-        is_sealed(0),
-        is_owner(1),
-        is_spilled(0),
-        is_gpu(0) {}
+        is_sealed(false),
+        is_owner(true),
+        is_spilled(false),
+        is_gpu(false) {}
 
   static std::shared_ptr<Payload> MakeEmpty() {
     static std::shared_ptr<Payload> payload = std::make_shared<Payload>();

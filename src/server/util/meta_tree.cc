@@ -706,16 +706,16 @@ static Status diff_data_meta_tree(const json& meta,
           }
 
           if (require_update) {
-            VLOG(10) << "DIFF: " << item.key() << ": " << old_value << " -> "
-                     << new_value;
+            DVLOG(10) << "DIFF: " << item.key() << ": " << old_value << " -> "
+                      << new_value;
             diff[item.key()] = new_value;
           }
         } else {
-          VLOG(10) << "DIFF: " << item.key() << ": [none] -> " << new_value;
+          DVLOG(10) << "DIFF: " << item.key() << ": [none] -> " << new_value;
           diff[item.key()] = new_value;
         }
       } else if (status.IsMetaTreeSubtreeNotExists()) {
-        VLOG(10) << "DIFF: " << item.key() << ": [none] -> " << new_value;
+        DVLOG(10) << "DIFF: " << item.key() << ": [none] -> " << new_value;
         diff[item.key()] = new_value;
       } else {
         return status;
