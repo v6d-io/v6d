@@ -1,4 +1,4 @@
-/** Copyright 2020-2021 Alibaba Group Holding Limited.
+/** Copyright 2020-2022 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,17 +14,12 @@ limitations under the License.
 */
 #ifndef SRC_COMMON_MEMORY_GPU_UNIFIED_MEMORY_H_
 #define SRC_COMMON_MEMORY_GPU_UNIFIED_MEMORY_H_
+
 #include <cstdint>
-#include <map>
 #include <memory>
-#include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include "arrow/api.h"
-#include "arrow/io/api.h"
 
 #ifdef ENABLE_GPU
 #include <cuda.h>
