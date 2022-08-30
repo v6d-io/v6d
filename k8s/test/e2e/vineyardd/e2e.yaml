@@ -49,12 +49,13 @@ setup:
         kubectl apply -f k8s/test/e2e/vineyardd.yaml
       wait:
         - namespace: vineyard-system
-          resource: pod
-          for: condition=Ready
+          resource: vineyardd/vineyardd-sample
+          for: condition=Available
     - name: install job1
       command: |
         kubectl create namespace vineyard-job
-        sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-sample/' k8s/test/e2e/workflow-job1.yaml | kubectl apply -f -
+        kubectl apply -f k8s/test/e2e/workflow-job1.yaml
+        #sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-sample/' k8s/test/e2e/workflow-job1.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job1-deployment
@@ -71,7 +72,8 @@ setup:
         kubectl label globalobjects --overwrite --selector=job=none job=v6d-workflow-demo-job1 -n vineyard-system
     - name: install job2
       command: |
-        sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-smample/' k8s/test/e2e/workflow-job2.yaml | kubectl apply -f -
+        kubectl apply -f k8s/test/e2e/workflow-job2.yaml
+        #sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-smample/' k8s/test/e2e/workflow-job2.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job2-deployment
@@ -96,3 +98,10 @@ verify:
   cases:
     - query: 'kubectl get po -l app=v6d-workflow-demo-job2 -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
       expected: ../verify/values.yaml
+    # test the job can only be scheduled on the nodes with the vineyardd
+    - query: |
+        export job1_nodes=$(kubectl get po -l app=v6d-workflow-demo-job1 -nvineyard-job -o=custom-columns=NODE:.spec.nodeName | awk 'NR != 1' | sort | tr '\n' ' ')
+        export job2_nodes=$(kubectl get po -l app=v6d-workflow-demo-job2 -nvineyard-job -o=custom-columns=NODE:.spec.nodeName | awk 'NR != 1' | sort | tr '\n' ' ')
+        export vineyardd_nodes=$(kubectl get po -l app.kubernetes.io/instance=vineyardd -n vineyard-system -o=custom-columns=NODE:.spec.nodeName | awk 'NR != 1' | sort | tr '\n' ' ')
+        if [ $job1_nodes = $vineyardd_nodes ] && [ $job2_nodes = $vineyardd_nodes ]; then echo '{"AllJobInVineyarddNodes":"true"}' | yq e 'to_entries' -; fi
+      expected: ../verify/nodes.yaml

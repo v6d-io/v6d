@@ -148,7 +148,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchExpressions:
-                  - key: app.kubernetes.io/name
+                  - key: app.kubernetes.io/instance
                     operator: In
                     values:
                      - vineyardd

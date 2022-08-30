@@ -13,23 +13,7 @@
 # limitations under the License.
 #
 
-apiVersion: k8s.v6d.io/v1alpha1
-kind: Vineyardd
-metadata:
-  name: vineyardd-sample
-  # don't use default namespace
-  namespace: vineyard-system
-spec:
-  image: docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-  version: 0.7.2
-  replicas: 2 
-  imagePullPolicy: IfNotPresent
-  # vineyardd's configuration
-  config:
-    syncCRDs: true
-    enableMetrics: false
-  etcd:
-    instances: 3
-  service:
-    type: ClusterIP
-    port: 9600
+{{- contains . }}
+- key: AllJobInVineyarddNodes
+  value: true
+{{- end }}

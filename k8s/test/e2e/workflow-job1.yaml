@@ -27,6 +27,8 @@ spec:
     metadata:
       labels:
         app: v6d-workflow-demo-job1
+        # this label represents the vineyardd's name that need to be used
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
         scheduling.k8s.v6d.io/required: none
         scheduling.k8s.v6d.io/job: v6d-workflow-demo-job1
     spec:
@@ -41,4 +43,4 @@ spec:
       volumes:
       - name: vineyard-sock
         hostPath:
-          path: /var/run/vineyard-vineyard-system-vineyard
+          path: /var/run/vineyard-vineyard-system-vineyardd-sample
