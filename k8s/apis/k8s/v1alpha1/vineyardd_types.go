@@ -97,6 +97,13 @@ type PVCConfig struct {
 	StorageClassName *string `json:"storageClassName,omitempty"`
 }
 
+// Etcd holds all configuration about Etcd
+type Etcd struct {
+	// Etcd instances
+	// +kubebuilder:validation:Optional
+	Instances int `json:"instances,omitempty"`
+}
+
 // VineyarddSpec holds all configuration about vineyardd
 type VineyarddSpec struct {
 	// represent the vineyardd's image
@@ -126,6 +133,9 @@ type VineyarddSpec struct {
 	// PVCCofnig holds all persistent configuration about socket file
 	// +kubebuilder:validation:Optional
 	PVCConfig PVCConfig `json:"pvcConfig,omitempty"`
+	// Etcd describe the etcd instances
+	// +kubebuilder:validation:Optional
+	Etcd Etcd `json:"etcd,omitempty"`
 }
 
 // VineyarddStatus defines the observed state of Vineyardd

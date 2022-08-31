@@ -1,29 +1,32 @@
 # referred from https://github.com/etcd-io/etcd/blob/master/hack/kubernetes-deploy/etcd.yml
 
+{{- $etcd := getEtcdConfig }}
 apiVersion: v1
 kind: Pod
 metadata:
   labels:
     app: etcd
-    etcd_node: etcd2
-  name: etcd2
-  namespace: {{ .Namespace }}
+    etcd_node: etcd {{- $etcd.Rank }}
+  #annotations:
+  #  app: etcd
+  name: etcd {{- $etcd.Rank }}
+  namespace: {{ $etcd.Namespace }}
 spec:
   containers:
   - command:
     - /usr/local/bin/etcd
     - --name
-    - etcd2
+    - etcd {{- $etcd.Rank}}
     - --initial-advertise-peer-urls
-    - http://etcd2:2380
+    - http://etcd{{- $etcd.Rank -}} :2380
     - --listen-peer-urls
     - http://0.0.0.0:2380
     - --listen-client-urls
     - http://0.0.0.0:2379
     - --advertise-client-urls
-    - http://etcd2:2379
+    - http://etcd{{- $etcd.Rank}}:2379
     - --initial-cluster
-    - etcd0=http://etcd0:2380,etcd1=http://etcd1:2380,etcd2=http://etcd2:2380
+    - {{ $etcd.Endpoints }}
     - --initial-cluster-state
     - new
     image: quay.io/coreos/etcd:v3.4.16

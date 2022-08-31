@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-//go:embed vineyardd
+//go:embed vineyardd etcd
 var fs embed.FS
 
 // EmbedTemplate is only used for implementing the interface

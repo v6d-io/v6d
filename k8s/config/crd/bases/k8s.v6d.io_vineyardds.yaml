@@ -193,6 +193,13 @@ spec:
                   - name
                   type: object
                 type: array
+              etcd:
+                description: Etcd describe the etcd instances
+                properties:
+                  instances:
+                    description: Etcd instances
+                    type: integer
+                type: object
               image:
                 description: represent the vineyardd's image
                 type: string

@@ -1,12 +1,13 @@
 # referred from https://github.com/etcd-io/etcd/blob/master/hack/kubernetes-deploy/etcd.yml
 
+{{- $etcd := getEtcdConfig }}
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    etcd_node: etcd2
-  name: etcd2
-  namespace: {{ .Namespace }}
+    etcd_node: etcd {{- $etcd.Rank }}
+  name: etcd {{- $etcd.Rank }}
+  namespace: {{ $etcd.Namespace }}
 spec:
   ports:
   - name: client
@@ -18,4 +19,4 @@ spec:
     protocol: TCP
     targetPort: 2380
   selector:
-    etcd_node: etcd2
+    etcd_node: etcd {{- $etcd.Rank }}
