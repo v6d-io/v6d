@@ -30,8 +30,13 @@ struct vineyard_entry {
 	unsigned long 		inode_id;
 };
 
+struct vineyard_private_data {
+	void 		*pointer;
+	uint64_t 	size;
+};
+
 // kernel space
-extern void *vineyard_storage_kernel_addr;
+extern void *vineyard_bulk_kernel_addr;
 extern struct vineyard_msg_mem_header *vineyard_msg_mem_header;
 extern struct vineyard_result_mem_header *vineyard_result_mem_header;
 extern struct vineyard_object_info_header *vineyard_object_info_header;
@@ -40,8 +45,6 @@ extern void *vineyard_result_buffer_addr;
 extern void *vineyard_object_info_buffer_addr;
 
 // user space
-extern void *vineyard_msg_mem_user_addr;
-extern void *vineyard_result_mem_user_addr;
 extern void *vineyard_object_info_user_addr;
 
 extern struct wait_queue_head vineyard_msg_wait;

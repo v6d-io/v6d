@@ -1,35 +1,42 @@
 #pragma once
 #include <linux/wait.h>
 
-#define NETLINK_VINEYARD  22
-#define NETLINK_PORT      100
-
 enum OBJECT_TYPE {
   BLOB = 1,
 };
 
-enum REQUEST_OPT {
-    VOPEN,
-    VREAD,
-    VWRITE,
-    VCLOSE,
-    VFSYNC,
+enum MSG_OPT {
+    VINEYARD_WAIT,
+    VINEYARD_MOUNT,
+    VINEYARD_SET_BULK_ADDR,
+    VINEYARD_EXIT,
+    VINEYARD_OPEN,
+    VINEYARD_READ,
+    VINEYARD_WRITE,
+    VINEYARD_CLOSE,
+    VINEYARD_FSYNC,
 };
 
-enum USER_KERN_OPT {
-    VSET,
-    VINIT,
-    VWAIT,
-    VFOPT,
-    VEXIT,
+struct fopt_ret {
+    uint64_t    obj_id;
+    uint64_t    offset;
+    uint64_t    size;
+    int         ret;
+};
+
+struct set_ret {
+    uint64_t    bulk_addr;
+    uint64_t    bulk_size;
+    int         ret;
 };
 
 struct vineyard_result_msg {
-    enum USER_KERN_OPT opt;
-    uint64_t        obj_id;
-    uint64_t        offset;
-    uint64_t        size;
-    int             ret;
+    enum MSG_OPT    opt;
+    int             has_msg;
+    union {
+        struct fopt_ret _fopt_ret;
+        struct set_ret  _set_ret;
+    } ret;
 };
 
 struct fopt_param {
@@ -41,31 +48,17 @@ struct fopt_param {
     uint64_t            length;
 };
 
+struct set_param {
+    uint64_t    obj_info_mem;
+};
+
 struct vineyard_request_msg {
-    enum REQUEST_OPT  opt;
-    struct fopt_param _fopt_param;
-};
-
-struct vineyard_kern_user_msg {
-    enum USER_KERN_OPT  opt;
-    uint64_t            request_mem;
-    uint64_t            result_mem;
-    uint64_t            obj_info_mem;
-};
-
-struct vineyard_msg_mem_header {
+    enum MSG_OPT    opt;
     int             has_msg;
-    unsigned int    lock;
-    int             head_point;
-    int             tail_point;
-    int             close;
-};
-
-struct vineyard_result_mem_header {
-    int             has_msg;
-    unsigned int    lock;
-    int             head_point;
-    int             tail_point;
+    union {
+        struct fopt_param   _fopt_param;
+        struct set_param    _set_param;
+    } param;
 };
 
 struct vineyard_rw_lock {
@@ -78,6 +71,13 @@ struct vineyard_object_info_header {
     int total_file;
 };
 
+struct vineyard_msg {
+    union {
+        struct vineyard_request_msg request;
+        struct vineyard_result_msg  result;
+    } msg;
+};
+
 // msg_mgr.c
 int net_link_init(void);
 void net_link_release(void);
@@ -88,6 +88,8 @@ void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock);
 void send_exit_msg(void);
 void send_request_msg(struct vineyard_request_msg *msg);
 void receive_result_msg(struct vineyard_result_msg *msg);
+
+extern int vineyard_connect;
 
 static inline int msg_empty(int head, int tail)
 {

@@ -55,8 +55,6 @@ class BulkAllocator {
       std::string const& allocator = "mimalloc");
 #endif
 
-  static void DeInit();
-
   /// Allocates size bytes and returns a pointer to the allocated memory. The
   /// memory address will be a multiple of alignment, which must be a power of
   /// two.

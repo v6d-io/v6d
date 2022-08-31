@@ -49,37 +49,47 @@ uint64_t translate_char_to_u64(const char *name)
 static int vineyard_fs_open(struct inode *inode, struct file *file)
 {
     struct vineyard_inode_info *i_info;
+    struct vineyard_request_msg msg;
+    struct vineyard_result_msg rmsg;
+    struct vineyard_private_data *data;
     printk(KERN_INFO PREFIX "fake %s\n", __func__);
 
     i_info = get_vineyard_inode_info(inode);
     printk(KERN_INFO PREFIX "open: %llu\n", i_info->obj_id);
-    return 0;
-}
 
-static ssize_t vineyard_fs_read(struct file *file, char __user *user, size_t length, loff_t *start)
-{
-    struct vineyard_request_msg msg;
-    struct vineyard_result_msg rmsg;
-    struct vineyard_inode_info *i_info;
-    size_t size;
-    int ret;
-    printk(KERN_INFO PREFIX "fake %s\n", __func__);
-
-    i_info = get_vineyard_inode_info(file_inode(file));
-
-    // TODO: ring buffer reset header point
-    msg.opt = VREAD;
-    msg._fopt_param.obj_id = i_info->obj_id;
-    msg._fopt_param.type = i_info->obj_type;
-    msg._fopt_param.offset = *start;
-    msg._fopt_param.length = length;
+    msg.opt = VINEYARD_OPEN;
+    msg.param._fopt_param.obj_id = i_info->obj_id;
+    msg.param._fopt_param.type = i_info->obj_type;
     send_request_msg(&msg);
 
     receive_result_msg(&rmsg);
 
-    size = rmsg.size > length ? length : rmsg.size;
-    printk(KERN_INFO PREFIX "size:%lu, offset:%llu\n", size, rmsg.offset);
-    ret = copy_to_user(user, vineyard_storage_kernel_addr + rmsg.offset, size);
+    if (rmsg.ret._fopt_ret.ret == 0) {
+        data = (struct vineyard_private_data *)kmalloc(sizeof(struct vineyard_private_data), GFP_KERNEL);
+        data->pointer = vineyard_bulk_kernel_addr + rmsg.ret._fopt_ret.offset;
+        data->size = rmsg.ret._fopt_ret.size;
+        file->private_data = (void *)data;
+        printk(KERN_INFO PREFIX "open:%llx %llu\n", (uint64_t)data->pointer, data->size);
+        return 0;
+    }
+    return -1;
+}
+
+static ssize_t vineyard_fs_read(struct file *file, char __user *user, size_t length, loff_t *start)
+{
+    struct vineyard_private_data *data;
+    size_t size = 0;
+    int ret;
+    printk(KERN_INFO PREFIX "fake %s\n", __func__);
+
+    data = (struct vineyard_private_data *)file->private_data;
+    printk(KERN_INFO PREFIX "read:%llx %llu %lld\n", (uint64_t)data->pointer, data->size, *start);
+    if (*start >= data->size)
+        return 0;
+
+    size = length + *start > data->size ? length + *start - data->size : length;
+    printk(KERN_INFO PREFIX "read size:%lu bulk addr:%px, read addr:%px\n", size, vineyard_bulk_kernel_addr, data->pointer);
+    ret = copy_to_user(user, data->pointer, size);
     if (ret)
         return ret;
     return size;
@@ -100,6 +110,8 @@ static int vineyard_fs_flush(struct file *file, fl_owner_t id)
 int vineyard_fs_release(struct inode *inode, struct file *file)
 {
     printk(KERN_INFO PREFIX "fake %s\n", __func__);
+    if (file->private_data)
+        kfree(file->private_data);
     return 0;
 }
 

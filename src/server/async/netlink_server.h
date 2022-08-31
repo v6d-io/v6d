@@ -30,35 +30,47 @@ namespace vineyard {
 
 class VineyardServer;
 
-#define NETLINK_VINEYARD  22
-#define NETLINK_PORT      100
+// It is a user value.
+#define NETLINK_VINEYARD  23
+#define NETLINK_PORT      101
 
 enum OBJECT_TYPE {
   BLOB = 1,
 };
 
-enum REQUEST_OPT {
-  OPEN,
-  READ,
-  WRITE,
-  CLOSE,
-  FSYNC,
+enum MSG_OPT {
+  VINEYARD_WAIT,
+  VINEYARD_MOUNT,
+  VINEYARD_SET_BULK_ADDR,
+  VINEYARD_EXIT,
+  VINEYARD_OPEN,
+  VINEYARD_READ,
+  VINEYARD_WRITE,
+  VINEYARD_CLOSE,
+  VINEYARD_FSYNC,
+  VINEYARD_TEST,
 };
 
-enum USER_KERN_OPT {
-  SET,
-  INIT,
-  WAIT,
-  FOPT,
-  EXIT,
+struct fopt_ret {
+  uint64_t    obj_id;
+  uint64_t    offset;
+  uint64_t    size;
+  int         ret;
+};
+
+struct set_ret {
+  uint64_t    bulk_addr;
+  uint64_t    bulk_size;
+  int         ret;
 };
 
 struct vineyard_result_msg {
-  enum USER_KERN_OPT opt;
-  uint64_t        obj_id;
-  uint64_t        offset;
-  uint64_t        size;
-  int             ret;
+  enum MSG_OPT  opt;
+  int           has_msg;
+  union {
+      struct fopt_ret _fopt_ret;
+      struct set_ret  _set_ret;
+  } ret;
 };
 
 struct fopt_param {
@@ -70,36 +82,18 @@ struct fopt_param {
   uint64_t          length;
 };
 
+struct set_param {
+  uint64_t  obj_info_mem;
+};
+
+
 struct vineyard_request_msg {
-  enum REQUEST_OPT  opt;
-  struct fopt_param _fopt_param;
-};
-
-struct vineyard_kern_user_msg {
-    enum USER_KERN_OPT  opt;
-    uint64_t            request_mem;
-    uint64_t            result_mem;
-    uint64_t            obj_info_mem;
-};
-
-struct kmsg {
-  struct nlmsghdr hdr;
-  struct vineyard_kern_user_msg msg;
-};
-
-struct vineyard_msg_mem_header {
+  enum MSG_OPT  opt;
   int           has_msg;
-  unsigned int  lock;
-  int           head_point;
-  int           tail_point;
-  int           close;
-};
-
-struct vineyard_result_mem_header {
-  int           has_msg;
-  unsigned int  lock;
-  int           head_point;
-  int           tail_point;
+  union {
+    struct fopt_param   _fopt_param;
+    struct set_param    _set_param;
+  } param;
 };
 
 struct vineyard_rw_lock {
@@ -110,6 +104,18 @@ struct vineyard_rw_lock {
 struct vineyard_object_info_header {
     struct vineyard_rw_lock rw_lock;
     int total_file;
+};
+
+struct vineyard_msg {
+    union {
+        struct vineyard_request_msg request;
+        struct vineyard_result_msg  result;
+    } msg;
+};
+
+struct kmsg {
+  struct nlmsghdr hdr;
+  struct vineyard_msg msg;
 };
 
 struct vineyard_entry {
@@ -165,33 +171,33 @@ class NetLinkServer : public SocketServer,
  private:
   void InitNetLink();
 
+  uint64_t GetServerBulkField();
+
+  uint64_t GetServerBulkSize();
+
   void InitialBulkField();
 
   void doAccept() override;
 
-  int HandleSet(struct vineyard_kern_user_msg *msg);
+  int HandleSet(struct vineyard_request_msg *msg);
 
-  int HandleOpen();
+  fopt_ret HandleOpen(fopt_param &param);
 
-  int HandleRead(fopt_param &param);
+  fopt_ret HandleRead(fopt_param &param);
 
-  int HandleWrite();
+  fopt_ret HandleWrite();
 
-  int HandleCloseOrFsync();
+  fopt_ret HandleCloseOrFsync();
 
-  int HandleReadDir();
+  fopt_ret HandleReadDir();
 
-  int HandleFops();
+  fopt_ret HandleFops(vineyard_request_msg *msg);
 
   void FillFileEntryInfo(const json &tree, enum OBJECT_TYPE type);
 
   int ReadRequestMsg();
 
   int WriteResultMsg();
-
-  bool VineyardGetRequestMsg(vineyard_msg_mem_header *header, vineyard_request_msg *msg);
-
-  int VineyardSetResultMsg(vineyard_result_msg &rmsg);
 
   static void thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct sockaddr_nl saddr, struct sockaddr_nl daddr, struct nlmsghdr *nlh);
 
@@ -200,8 +206,6 @@ class NetLinkServer : public SocketServer,
   struct nlmsghdr *nlh;
   std::thread *work;
 
-  void *req_mem;
-  void *result_mem;
   void *obj_info_mem;
 
   uint64_t base_object_id;
