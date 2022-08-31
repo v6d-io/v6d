@@ -248,7 +248,10 @@ static int vineyard_get_tree(struct fs_context *fsc)
     printk(KERN_INFO PREFIX "%s\n", __func__);
 
 	msg.opt = VINEYARD_MOUNT;
-	send_request_msg(&msg);
+	err = send_request_msg(&msg);
+	if (err)
+		return err;
+
 	receive_result_msg(&rmsg);
 
 	if (rmsg.ret._set_ret.ret != 0) {
@@ -303,11 +306,8 @@ static void vineyard_kill_sb(struct super_block *sb)
 	struct vineyard_request_msg msg;
 	printk(KERN_INFO PREFIX "fake %s\n", __func__);
 
-	if (vineyard_connect) {
-		msg.opt = VINEYARD_EXIT;
-		send_request_msg(&msg);
-		vineyard_connect = 0;
-	}
+	msg.opt = VINEYARD_EXIT;
+	send_request_msg(&msg);
 
 	kfree(sb->s_fs_info);
 }

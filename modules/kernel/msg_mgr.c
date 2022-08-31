@@ -170,6 +170,7 @@ static void init_object_info_buffer(void)
 static void handle_wait(void)
 {
     int ret;
+
     if (unlikely(vineyard_connect == 0))
         vineyard_connect = 1;
 
@@ -178,8 +179,10 @@ static void handle_wait(void)
     } while (ret != 0);
 
     if (unlikely(global_msg.opt == VINEYARD_EXIT)) {
+        vineyard_connect = 0;
         unmap_vineyard_user_storage_buffer();
 	    unmap_vineyard_msg_result_buffer();
+        vineyard_spin_unlock(&msg_lock);
     } else if (unlikely(global_msg.opt == VINEYARD_MOUNT)) {
         init_object_info_buffer();
     }
@@ -317,12 +320,17 @@ void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock)
     printk(KERN_INFO PREFIX "now there exist(s) %d readder\n", rw_lock->r_lock);
 }
 
-void send_request_msg(struct vineyard_request_msg *msg)
+int send_request_msg(struct vineyard_request_msg *msg)
 {
+    if (!vineyard_connect) {
+        return -1;
+    }
     vineyard_spin_lock(&msg_lock);
     memcpy(&global_msg, msg, sizeof(*msg));
     global_msg.has_msg = 1;
     wake_up(&vineyard_msg_wait);
+
+    return 0;
 }
 
 void receive_result_msg(struct vineyard_result_msg *rmsg)

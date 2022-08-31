@@ -56,6 +56,7 @@ NetLinkServer::NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
 
 NetLinkServer::~NetLinkServer() {
   LOG(INFO) << __func__;
+  close(socket_fd);
   free(nlh);
 }
 
@@ -120,7 +121,6 @@ uint64_t NetLinkServer::GetServerBulkSize()
 void NetLinkServer::InitialBulkField()
 {
   base_pointer = (void *)GetServerBulkField();
-  LOG(INFO) << "base_pointer" << base_pointer;
 }
 
 void NetLinkServer::Start() {
@@ -133,7 +133,6 @@ void NetLinkServer::Start() {
 
 void NetLinkServer::Close() {
   LOG(INFO) << __func__;
-  close(socket_fd);
 }
 
 void NetLinkServer::SyncObjectEntryList() {

@@ -52,6 +52,7 @@ static int vineyard_fs_open(struct inode *inode, struct file *file)
     struct vineyard_request_msg msg;
     struct vineyard_result_msg rmsg;
     struct vineyard_private_data *data;
+    int ret;
     printk(KERN_INFO PREFIX "fake %s\n", __func__);
 
     i_info = get_vineyard_inode_info(inode);
@@ -60,7 +61,9 @@ static int vineyard_fs_open(struct inode *inode, struct file *file)
     msg.opt = VINEYARD_OPEN;
     msg.param._fopt_param.obj_id = i_info->obj_id;
     msg.param._fopt_param.type = i_info->obj_type;
-    send_request_msg(&msg);
+    ret = send_request_msg(&msg);
+    if (ret)
+        return ret;
 
     receive_result_msg(&rmsg);
 

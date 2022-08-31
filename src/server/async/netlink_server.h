@@ -48,7 +48,6 @@ enum MSG_OPT {
   VINEYARD_WRITE,
   VINEYARD_CLOSE,
   VINEYARD_FSYNC,
-  VINEYARD_TEST,
 };
 
 struct fopt_ret {
@@ -124,11 +123,6 @@ struct vineyard_entry {
 	enum OBJECT_TYPE	type;
 	unsigned long 		inode_id;
 };
-
-static inline bool MsgEmpty(int head_point, int tail_point)
-{
-  return head_point == tail_point;
-}
 
 static inline void VineyardSpinLock(volatile unsigned int *addr)
 {

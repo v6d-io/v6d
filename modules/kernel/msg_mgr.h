@@ -86,12 +86,5 @@ void vineyard_spin_unlock(volatile unsigned int *addr);
 void inline vineyard_read_lock(struct vineyard_rw_lock *rw_lock);
 void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock);
 void send_exit_msg(void);
-void send_request_msg(struct vineyard_request_msg *msg);
+int send_request_msg(struct vineyard_request_msg *msg);
 void receive_result_msg(struct vineyard_result_msg *msg);
-
-extern int vineyard_connect;
-
-static inline int msg_empty(int head, int tail)
-{
-    return head == tail;
-}
