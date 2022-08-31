@@ -22,7 +22,6 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -44,10 +43,9 @@ type VineyarddReconciler struct {
 
 // EtcdConfig holds all configuration about etcd
 type EtcdConfig struct {
-	Namespace      string
-	Rank           int
-	Endpoints      string
-	OwnerReference metav1.OwnerReference
+	Namespace string
+	Rank      int
+	Endpoints string
 }
 
 // Etcd contains the configuration about etcd
@@ -80,6 +78,11 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		ctrl.Log.Error(err, "failed to load vineyardd templates")
 		return ctrl.Result{}, err
 	}
+	etcdFile, err := r.Template.GetFilesRecursive("etcd")
+	if err != nil {
+		ctrl.Log.Error(err, "failed to load etcd templates")
+		return ctrl.Result{}, err
+	}
 	// deploy the vineyardd
 	vineyarddApp := kubernetes.Application{
 		Client:   r.Client,
@@ -98,28 +101,17 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	// set up the etcd
 	Etcd.Namespace = vineyardd.Namespace
+	Etcd.Endpoints = ""
 	instances := vineyardd.Spec.Etcd.Instances
 	for i := 0; i < instances; i++ {
 		Etcd.Endpoints = Etcd.Endpoints + "etcd" + strconv.Itoa(i) + "=http://etcd" + strconv.Itoa(i) + ":2380,"
 	}
 	Etcd.Endpoints = Etcd.Endpoints[:len(Etcd.Endpoints)-1]
-	Etcd.OwnerReference = metav1.OwnerReference{
-		APIVersion: vineyardd.APIVersion,
-		Kind:       vineyardd.Kind,
-		Name:       vineyardd.Name,
-		UID:        vineyardd.UID,
-	}
 
 	for i := 0; i < instances; i++ {
 		Etcd.Rank = i
-		_, err := etcdApp.Apply(ctx, "etcd/etcd.yaml", ctrl.Log, true)
-		if err != nil {
-			ctrl.Log.V(1).Error(err, "failed to apply etcd pod")
-			return ctrl.Result{}, err
-		}
-		_, err = etcdApp.Apply(ctx, "etcd/service.yaml", ctrl.Log, true)
-		if err != nil {
-			ctrl.Log.V(1).Error(err, "failed to apply etcd service")
+		if err := etcdApp.ApplyAll(ctx, etcdFile, ctrl.Log); err != nil {
+			ctrl.Log.Error(err, "failed to apply etcd resources")
 			return ctrl.Result{}, err
 		}
 	}
