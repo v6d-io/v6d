@@ -22,6 +22,11 @@ metadata:
     etcd_node: etcd {{- $etcd.Rank }}
   name: etcd {{- $etcd.Rank }}
   namespace: {{ $etcd.Namespace }}
+  ownerReferences:
+  - apiVersion: {{ $etcd.OwnerReference.APIVersion }}
+    kind: {{ $etcd.OwnerReference.Kind }}
+    name: {{ $etcd.OwnerReference.Name }}
+    uid: {{ $etcd.OwnerReference.UID }}
 spec:
   containers:
   - command:
