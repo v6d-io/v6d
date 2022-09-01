@@ -98,7 +98,10 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     // about how to select the port.
     rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
   }
+
+#ifdef __linux__
   nl_server_ptr_ = std::make_shared<NetLinkServer>(shared_from_this());
+#endif
 
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
