@@ -174,9 +174,13 @@ static void handle_wait(void)
     if (unlikely(vineyard_connect == 0))
         vineyard_connect = 1;
 
-    do {
-        ret = wait_event_interruptible(vineyard_msg_wait, global_msg.has_msg);
-    } while (ret != 0);
+    // do {
+    ret = wait_event_interruptible(vineyard_msg_wait, global_msg.has_msg);
+    // } while (ret != 0);
+    if (ret < 0) {
+        global_msg.opt = VINEYARD_EXIT;
+        global_msg.has_msg = 1;
+    }
 
     if (unlikely(global_msg.opt == VINEYARD_EXIT)) {
         vineyard_connect = 0;
@@ -206,7 +210,9 @@ static void handle_set_bulk(struct vineyard_result_msg *rmsg)
     err = map_vineyard_user_storage_buffer(PAGE_DOWN(bulk_addr));
 
     vineyard_bulk_kernel_addr = bulk_addr - PAGE_DOWN(bulk_addr) + vineyard_storage_kernel_addr;
+    printk(KERN_INFO PREFIX "vineyard kernel addr:%px storage:%px\n", vineyard_bulk_kernel_addr, vineyard_storage_kernel_addr);
     printk(KERN_INFO PREFIX "err:%d\n", err);
+    printk(KERN_INFO PREFIX "data:%llu\n", *(uint64_t *)vineyard_bulk_kernel_addr);
 
     memcpy(&global_rmsg, rmsg, sizeof(*rmsg));
     global_rmsg.has_msg = 1;
