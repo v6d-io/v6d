@@ -78,11 +78,7 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		ctrl.Log.Error(err, "failed to load vineyardd templates")
 		return ctrl.Result{}, err
 	}
-	etcdFile, err := r.Template.GetFilesRecursive("etcd")
-	if err != nil {
-		ctrl.Log.Error(err, "failed to load etcd templates")
-		return ctrl.Result{}, err
-	}
+
 	// deploy the vineyardd
 	vineyarddApp := kubernetes.Application{
 		Client:   r.Client,
@@ -110,8 +106,12 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	for i := 0; i < instances; i++ {
 		Etcd.Rank = i
-		if err := etcdApp.ApplyAll(ctx, etcdFile, ctrl.Log); err != nil {
-			ctrl.Log.Error(err, "failed to apply etcd resources")
+		if _, err := etcdApp.Apply(ctx, "etcd/etcd.yaml", ctrl.Log, true); err != nil {
+			ctrl.Log.Error(err, "failed to apply etcd pod")
+			return ctrl.Result{}, err
+		}
+		if _, err := etcdApp.Apply(ctx, "etcd/service.yaml", ctrl.Log, true); err != nil {
+			ctrl.Log.Error(err, "failed to apply etcd service")
 			return ctrl.Result{}, err
 		}
 	}
