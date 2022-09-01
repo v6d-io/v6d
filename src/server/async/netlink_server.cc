@@ -17,27 +17,26 @@ limitations under the License.
 
 #include <mutex>
 #include <string>
-#include <utility>
 #include <thread>
+#include <utility>
 
 #include "boost/filesystem/operations.hpp"
 #include "boost/filesystem/path.hpp"
 
 #include "common/util/json.h"
 #include "common/util/logging.h"
-#include "server/server/vineyard_server.h"
 #include "common/util/protocols.h"
+#include "server/server/vineyard_server.h"
 
 #define OFF (0)
-#define ON  (1)
+#define ON (1)
 #define DEBUG OFF
 #define PAGE_SIZE (0x1000)
 #define PAGE_DOWN(x) ((x) & (~(PAGE_SIZE - 1)))
 namespace vineyard {
 
 // Debug tools
-static void PrintJsonElement(const json &tree)
-{
+static void PrintJsonElement(const json& tree) {
 #if DEBUG == ON
   LOG(INFO) << __func__;
   for (auto iter = tree.begin(); iter != tree.end(); iter++) {
@@ -73,7 +72,7 @@ void NetLinkServer::InitNetLink() {
   saddr.nl_pid = NETLINK_PORT;
   saddr.nl_groups = 0;
 
-  if(bind(socket_fd, (struct sockaddr *)&saddr, sizeof(saddr)) != 0) {
+  if (bind(socket_fd, (struct sockaddr*) &saddr, sizeof(saddr)) != 0) {
     LOG(INFO) << "NetLinkServer start error";
     return;
   }
@@ -84,7 +83,7 @@ void NetLinkServer::InitNetLink() {
   daddr.nl_groups = 0;
 
   size = sizeof(vineyard_msg);
-  nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(size));
+  nlh = (struct nlmsghdr*) malloc(NLMSG_SPACE(size));
   memset(nlh, 0, sizeof(struct nlmsghdr));
   nlh->nlmsg_len = NLMSG_SPACE(size);
   nlh->nlmsg_flags = 0;
@@ -93,8 +92,7 @@ void NetLinkServer::InitNetLink() {
   nlh->nlmsg_pid = saddr.nl_pid;
 }
 
-uint64_t NetLinkServer::GetServerBulkField()
-{
+uint64_t NetLinkServer::GetServerBulkField() {
   // FIXME: it is temp implement.
   std::vector<ObjectID> ids;
   std::vector<std::shared_ptr<Payload>> objects;
@@ -106,8 +104,7 @@ uint64_t NetLinkServer::GetServerBulkField()
   return 0;
 }
 
-uint64_t NetLinkServer::GetServerBulkSize()
-{
+uint64_t NetLinkServer::GetServerBulkSize() {
   std::vector<ObjectID> ids;
   std::vector<std::shared_ptr<Payload>> objects;
 
@@ -118,9 +115,8 @@ uint64_t NetLinkServer::GetServerBulkSize()
   return 0;
 }
 
-void NetLinkServer::InitialBulkField()
-{
-  base_pointer = (void *)GetServerBulkField();
+void NetLinkServer::InitialBulkField() {
+  base_pointer = (void*) GetServerBulkField();
 }
 
 void NetLinkServer::Start() {
@@ -131,47 +127,44 @@ void NetLinkServer::Start() {
   vs_ptr_->NetLinkReady();
 }
 
-void NetLinkServer::Close() {
-  LOG(INFO) << __func__;
-}
+void NetLinkServer::Close() { LOG(INFO) << __func__; }
 
 void NetLinkServer::SyncObjectEntryList() {
-  vineyard_object_info_header *header;
+  vineyard_object_info_header* header;
 
-  header = (vineyard_object_info_header *)obj_info_mem;
+  header = (vineyard_object_info_header*) obj_info_mem;
   if (header) {
     VineyardWriteLock(&header->rw_lock.r_lock, &header->rw_lock.w_lock);
     header->total_file = 0;
-    vs_ptr_->ListData(
-        "vineyard::Blob", false, std::numeric_limits<size_t>::max(), [this](const Status& status, const json& tree) {
-          if(!tree.empty()) {
-            PrintJsonElement(tree);
-            this->FillFileEntryInfo(tree, OBJECT_TYPE::BLOB);
-          }
-          return Status::OK();
-        });
-     VineyardWriteUnlock(&header->rw_lock.w_lock);
+    vs_ptr_->ListData("vineyard::Blob", false,
+                      std::numeric_limits<size_t>::max(),
+                      [this](const Status& status, const json& tree) {
+                        if (!tree.empty()) {
+                          PrintJsonElement(tree);
+                          this->FillFileEntryInfo(tree, OBJECT_TYPE::BLOB);
+                        }
+                        return Status::OK();
+                      });
+    VineyardWriteUnlock(&header->rw_lock.w_lock);
   }
 }
 
-void NetLinkServer::doAccept() {
-  LOG(INFO) << __func__;
-}
+void NetLinkServer::doAccept() { LOG(INFO) << __func__; }
 
-int NetLinkServer::HandleSet(vineyard_request_msg *msg) {
+int NetLinkServer::HandleSet(vineyard_request_msg* msg) {
   LOG(INFO) << __func__;
-  obj_info_mem = (void *)(msg->param._set_param.obj_info_mem);
+  obj_info_mem = (void*) (msg->param._set_param.obj_info_mem);
   SyncObjectEntryList();
   return 0;
 }
 
-fopt_ret NetLinkServer::HandleOpen(fopt_param &param) {
+fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
   LOG(INFO) << __func__;
 
   std::vector<ObjectID> ids;
   std::vector<std::shared_ptr<Payload>> objects;
   fopt_ret ret;
-  void *pointer = NULL;
+  void* pointer = NULL;
   uint64_t file_size = 0;
 
   ret.ret = -1;
@@ -190,7 +183,7 @@ fopt_ret NetLinkServer::HandleOpen(fopt_param &param) {
   }
 
   if (pointer) {
-    ret.offset = (uint64_t)pointer - (uint64_t)base_pointer;
+    ret.offset = (uint64_t) pointer - (uint64_t) base_pointer;
     ret.ret = 0;
     ret.size = file_size;
   }
@@ -198,7 +191,7 @@ fopt_ret NetLinkServer::HandleOpen(fopt_param &param) {
   return ret;
 }
 
-fopt_ret NetLinkServer::HandleRead(fopt_param &param) {
+fopt_ret NetLinkServer::HandleRead(fopt_param& param) {
   LOG(INFO) << __func__;
   fopt_ret ret;
   ret.ret = 0;
@@ -226,9 +219,9 @@ fopt_ret NetLinkServer::HandleReadDir() {
   return ret;
 }
 
-fopt_ret NetLinkServer::HandleFops(vineyard_request_msg *msg) {
+fopt_ret NetLinkServer::HandleFops(vineyard_request_msg* msg) {
   fopt_ret ret;
-  switch(msg->opt) {
+  switch (msg->opt) {
   case MSG_OPT::VINEYARD_OPEN:
     return HandleOpen(msg->param._fopt_param);
   case MSG_OPT::VINEYARD_READ:
@@ -244,15 +237,14 @@ fopt_ret NetLinkServer::HandleFops(vineyard_request_msg *msg) {
   }
 }
 
-void NetLinkServer::FillFileEntryInfo(const json &tree, enum OBJECT_TYPE type)
-{
+void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
   LOG(INFO) << __func__;
-  vineyard_object_info_header *header;
-  vineyard_entry *entrys;
+  vineyard_object_info_header* header;
+  vineyard_entry* entrys;
   int i = 0;
 
-  header = (vineyard_object_info_header *)obj_info_mem;
-  entrys = (vineyard_entry *)(header + 1);
+  header = (vineyard_object_info_header*) obj_info_mem;
+  entrys = (vineyard_entry*) (header + 1);
   PrintJsonElement(tree);
 
   if (type == OBJECT_TYPE::BLOB) {
@@ -266,7 +258,10 @@ void NetLinkServer::FillFileEntryInfo(const json &tree, enum OBJECT_TYPE type)
   header->total_file = i;
 }
 
-void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct sockaddr_nl saddr, struct sockaddr_nl daddr, struct nlmsghdr *nlh) {
+void NetLinkServer::thread_routine(NetLinkServer* ns_ptr, int socket_fd,
+                                   struct sockaddr_nl saddr,
+                                   struct sockaddr_nl daddr,
+                                   struct nlmsghdr* nlh) {
   LOG(INFO) << __func__;
   int ret;
   socklen_t len;
@@ -277,9 +272,10 @@ void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct 
   memset(&umsg, 0, sizeof(umsg));
   umsg.opt = MSG_OPT::VINEYARD_WAIT;
 
-  while(1) {
+  while (1) {
     memcpy(NLMSG_DATA(nlh), &umsg, sizeof(umsg));
-    ret = sendto(socket_fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&daddr, sizeof(struct sockaddr_nl));
+    ret = sendto(socket_fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr*) &daddr,
+                 sizeof(struct sockaddr_nl));
     if (!ret) {
       LOG(INFO) << "NetLinkServer send msg error";
       goto out;
@@ -287,14 +283,14 @@ void NetLinkServer::thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct 
 
     memset(&kmsg, 0, sizeof(kmsg));
     len = sizeof(struct sockaddr_nl);
-    ret = recvfrom(socket_fd, &kmsg, sizeof(kmsg), 0, (struct sockaddr *)&daddr, &len);
-    if(!ret)
-    {
-        LOG(INFO) << "Recv form kernel error\n";
-        goto out;
+    ret = recvfrom(socket_fd, &kmsg, sizeof(kmsg), 0, (struct sockaddr*) &daddr,
+                   &len);
+    if (!ret) {
+      LOG(INFO) << "Recv form kernel error\n";
+      goto out;
     }
 
-    switch(kmsg.msg.msg.request.opt) {
+    switch (kmsg.msg.msg.request.opt) {
     case MSG_OPT::VINEYARD_MOUNT:
       ns_ptr->HandleSet(&kmsg.msg.msg.request);
       umsg.ret._set_ret.bulk_addr = ns_ptr->GetServerBulkField();
@@ -323,4 +319,4 @@ out:
   return;
 }
 
-}
+}  // namespace vineyard

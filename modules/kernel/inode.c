@@ -69,7 +69,7 @@ static struct inode *vineyard_fs_search_inode(struct super_block *sb, const char
 {
 	struct vineyard_sb_info *sbi;
 	struct vineyard_inode_info *i_info;
-	// struct 
+
 	printk(KERN_INFO PREFIX "%s\n", __func__);
 	sbi = VINEYARD_SB_INFO(sb);
 	list_for_each_entry(i_info, &sbi->inode_list_head, inode_list_node) {

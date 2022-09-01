@@ -1523,7 +1523,6 @@ void SocketServer::Start() {
   stopped_.store(false);
   closable_.store(false);
   doAccept();
-  LOG(INFO) << "socket server do accept end";
 }
 
 void SocketServer::Stop() {

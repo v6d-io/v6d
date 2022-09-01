@@ -15,10 +15,10 @@ limitations under the License.
 #ifndef SRC_SERVER_ASYNC_NL_SERVER_H_
 #define SRC_SERVER_ASYNC_NL_SERVER_H_
 
-#include <memory>
-#include <string>
 #include <linux/netlink.h>
 #include <sys/socket.h>
+#include <memory>
+#include <string>
 
 #include "boost/asio.hpp"
 
@@ -31,8 +31,8 @@ namespace vineyard {
 class VineyardServer;
 
 // It is a user value.
-#define NETLINK_VINEYARD  23
-#define NETLINK_PORT      101
+#define NETLINK_VINEYARD 23
+#define NETLINK_PORT 101
 
 enum OBJECT_TYPE {
   BLOB = 1,
@@ -51,47 +51,46 @@ enum MSG_OPT {
 };
 
 struct fopt_ret {
-  uint64_t    obj_id;
-  uint64_t    offset;
-  uint64_t    size;
-  int         ret;
+  uint64_t obj_id;
+  uint64_t offset;
+  uint64_t size;
+  int ret;
 };
 
 struct set_ret {
-  uint64_t    bulk_addr;
-  uint64_t    bulk_size;
-  int         ret;
+  uint64_t bulk_addr;
+  uint64_t bulk_size;
+  int ret;
 };
 
 struct vineyard_result_msg {
-  enum MSG_OPT  opt;
-  int           has_msg;
+  enum MSG_OPT opt;
+  int has_msg;
   union {
-      struct fopt_ret _fopt_ret;
-      struct set_ret  _set_ret;
+    struct fopt_ret _fopt_ret;
+    struct set_ret _set_ret;
   } ret;
 };
 
 struct fopt_param {
   // read/write/sync
-  uint64_t          obj_id;
-  uint64_t          offset;
+  uint64_t obj_id;
+  uint64_t offset;
   // open
-  enum OBJECT_TYPE  type;
-  uint64_t          length;
+  enum OBJECT_TYPE type;
+  uint64_t length;
 };
 
 struct set_param {
-  uint64_t  obj_info_mem;
+  uint64_t obj_info_mem;
 };
 
-
 struct vineyard_request_msg {
-  enum MSG_OPT  opt;
-  int           has_msg;
+  enum MSG_OPT opt;
+  int has_msg;
   union {
-    struct fopt_param   _fopt_param;
-    struct set_param    _set_param;
+    struct fopt_param _fopt_param;
+    struct set_param _set_param;
   } param;
 };
 
@@ -101,15 +100,15 @@ struct vineyard_rw_lock {
 };
 
 struct vineyard_object_info_header {
-    struct vineyard_rw_lock rw_lock;
-    int total_file;
+  struct vineyard_rw_lock rw_lock;
+  int total_file;
 };
 
 struct vineyard_msg {
-    union {
-        struct vineyard_request_msg request;
-        struct vineyard_result_msg  result;
-    } msg;
+  union {
+    struct vineyard_request_msg request;
+    struct vineyard_result_msg result;
+  } msg;
 };
 
 struct kmsg {
@@ -118,35 +117,34 @@ struct kmsg {
 };
 
 struct vineyard_entry {
-	uint64_t			obj_id; // as name
-	uint64_t			file_size;
-	enum OBJECT_TYPE	type;
-	unsigned long 		inode_id;
+  uint64_t obj_id;  // as name
+  uint64_t file_size;
+  enum OBJECT_TYPE type;
+  unsigned long inode_id;
 };
 
-static inline void VineyardSpinLock(volatile unsigned int *addr)
-{
-  while(!__sync_bool_compare_and_swap(addr, 0, 1));
+static inline void VineyardSpinLock(volatile unsigned int* addr) {
+  while (!__sync_bool_compare_and_swap(addr, 0, 1))
+    ;
 }
 
-static inline void VineyardSpinUnlock(volatile unsigned int *addr)
-{
+static inline void VineyardSpinUnlock(volatile unsigned int* addr) {
   *addr = 0;
 }
 
-static inline void VineyardWriteLock(volatile unsigned int *rlock, volatile unsigned int *wlock)
-{
+static inline void VineyardWriteLock(volatile unsigned int* rlock,
+                                     volatile unsigned int* wlock) {
   VineyardSpinLock(wlock);
-  while(*rlock);
+  while (*rlock)
+    ;
 }
 
-static inline void VineyardWriteUnlock(volatile unsigned int *wlock)
-{
+static inline void VineyardWriteUnlock(volatile unsigned int* wlock) {
   *wlock = 0;
 }
 
 class NetLinkServer : public SocketServer,
-                      public std::enable_shared_from_this<NetLinkServer>{
+                      public std::enable_shared_from_this<NetLinkServer> {
  public:
   explicit NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr);
 
@@ -156,9 +154,7 @@ class NetLinkServer : public SocketServer,
 
   void Close() override;
 
-  std::string Socket() {
-    return std::string("");
-  }
+  std::string Socket() { return std::string(""); }
 
   void SyncObjectEntryList();
 
@@ -173,11 +169,11 @@ class NetLinkServer : public SocketServer,
 
   void doAccept() override;
 
-  int HandleSet(struct vineyard_request_msg *msg);
+  int HandleSet(struct vineyard_request_msg* msg);
 
-  fopt_ret HandleOpen(fopt_param &param);
+  fopt_ret HandleOpen(fopt_param& param);
 
-  fopt_ret HandleRead(fopt_param &param);
+  fopt_ret HandleRead(fopt_param& param);
 
   fopt_ret HandleWrite();
 
@@ -185,27 +181,29 @@ class NetLinkServer : public SocketServer,
 
   fopt_ret HandleReadDir();
 
-  fopt_ret HandleFops(vineyard_request_msg *msg);
+  fopt_ret HandleFops(vineyard_request_msg* msg);
 
-  void FillFileEntryInfo(const json &tree, enum OBJECT_TYPE type);
+  void FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type);
 
   int ReadRequestMsg();
 
   int WriteResultMsg();
 
-  static void thread_routine(NetLinkServer *ns_ptr, int socket_fd, struct sockaddr_nl saddr, struct sockaddr_nl daddr, struct nlmsghdr *nlh);
+  static void thread_routine(NetLinkServer* ns_ptr, int socket_fd,
+                             struct sockaddr_nl saddr, struct sockaddr_nl daddr,
+                             struct nlmsghdr* nlh);
 
   int socket_fd;
   struct sockaddr_nl saddr, daddr;
-  struct nlmsghdr *nlh;
-  std::thread *work;
+  struct nlmsghdr* nlh;
+  std::thread* work;
 
-  void *obj_info_mem;
+  void* obj_info_mem;
 
   uint64_t base_object_id;
-  void *base_pointer;
-};/*  */
+  void* base_pointer;
+}; /*  */
 
-}
+}  // namespace vineyard
 
 #endif
