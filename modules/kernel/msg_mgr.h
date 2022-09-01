@@ -78,6 +78,8 @@ struct vineyard_msg {
     } msg;
 };
 
+extern int vineyard_connect;
+
 // msg_mgr.c
 int net_link_init(void);
 void net_link_release(void);

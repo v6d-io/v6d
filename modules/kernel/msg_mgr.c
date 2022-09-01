@@ -90,7 +90,7 @@ static int map_vineyard_user_storage_buffer(unsigned long user_addr)
 
 	user_vma = find_vma(current->mm, user_addr);
 	printk(KERN_INFO "addr: %lx\n", user_addr);
-	ret = get_user_pages_fast(user_addr, page_num, 1, pages);
+	ret = get_user_pages_fast(user_addr, page_num, 0, pages);
 	if (ret < 0) {
 		printk(KERN_INFO "pined page error %d\n", ret);
 		vfree(pages);
@@ -99,13 +99,7 @@ static int map_vineyard_user_storage_buffer(unsigned long user_addr)
 
 	vineyard_storage_kernel_addr = vmap(pages, page_num, VM_MAP, PAGE_KERNEL);
 
-	// test write data
-	if (vineyard_storage_kernel_addr) {
-		for (i = 0; i < page_num * PAGE_SIZE / sizeof(int); i++) {
-			((int *)vineyard_storage_kernel_addr)[i] = i;
-		}
-		printk(KERN_INFO PREFIX "number:%lu\n", page_num * PAGE_SIZE / sizeof(int));
-	} else {
+	if(!vineyard_storage_kernel_addr) {
 		printk(KERN_INFO PREFIX "map error!\n");
 		for (i = 0; i < ret; i++) {
 			put_page(pages[i]);
@@ -212,7 +206,6 @@ static void handle_set_bulk(struct vineyard_result_msg *rmsg)
     vineyard_bulk_kernel_addr = bulk_addr - PAGE_DOWN(bulk_addr) + vineyard_storage_kernel_addr;
     printk(KERN_INFO PREFIX "vineyard kernel addr:%px storage:%px\n", vineyard_bulk_kernel_addr, vineyard_storage_kernel_addr);
     printk(KERN_INFO PREFIX "err:%d\n", err);
-    printk(KERN_INFO PREFIX "data:%llu\n", *(uint64_t *)vineyard_bulk_kernel_addr);
 
     memcpy(&global_rmsg, rmsg, sizeof(*rmsg));
     global_rmsg.has_msg = 1;

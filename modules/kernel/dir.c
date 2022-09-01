@@ -20,6 +20,10 @@ static inline int vineyard_get_entry(struct file *dir_file, int *cpos, struct vi
     // TODO: need a machinasm to find out file pos. Now we suppose that
     // vineyard will not delete object.
     printk(KERN_INFO PREFIX "%s\n", __func__);
+    if (!vineyard_connect) {
+        return -1;
+    }
+
     if (*cpos < vineyard_object_info_header->total_file) {
         entrys = (struct vineyard_entry *)vineyard_object_info_buffer_addr;
         *entry = &(entrys[(*cpos)]);
