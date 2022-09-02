@@ -35,6 +35,7 @@ namespace vineyard {
 Status RedisLauncher::LaunchRedisServer(
     std::unique_ptr<redis::AsyncRedis>& redis_client,
     std::unique_ptr<redis::Redis>& syncredis_client,
+    std::unique_ptr<redis::Redis>& watch_client,
     std::shared_ptr<redis::RedMutex>& mtx,
     std::shared_ptr<redis::RedLock<redis::RedMutex>>& redlock,
     std::unique_ptr<boost::process::child>& redis_proc) {
@@ -49,11 +50,13 @@ Status RedisLauncher::LaunchRedisServer(
   redis_client.reset(new redis::AsyncRedis(opts, pool_opts));
   // sync redis client
   syncredis_client.reset(new redis::Redis(opts, pool_opts));
+  // watch sync redis client
+  watch_client.reset(new redis::Redis(opts, pool_opts));
 
   mtx.reset(new redis::RedMutex(*syncredis_client, "resource"));
   redlock.reset(new redis::RedLock<redis::RedMutex>(*mtx, std::defer_lock));
 
-  if (probeRedisServer(redis_client, syncredis_client)) {
+  if (probeRedisServer(redis_client, syncredis_client, watch_client)) {
     return Status::OK();
   }
 
@@ -92,14 +95,16 @@ Status RedisLauncher::parseEndpoint() {
 
 bool RedisLauncher::probeRedisServer(
     std::unique_ptr<redis::AsyncRedis>& redis_client,
-    std::unique_ptr<redis::Redis>& syncredis_client) {
+    std::unique_ptr<redis::Redis>& syncredis_client,
+    std::unique_ptr<redis::Redis>& watch_client) {
   try {
     auto task = redis_client->ping();
     auto response = task.get();
     auto sync_response = syncredis_client->ping();
+    auto watch_response = watch_client->ping();
     redis_client->command<long long>("SETNX", "redis_revision", 0).get();
     return redis_client && syncredis_client && (response == "PONG") &&
-           (sync_response == "PONG");
+           (sync_response == "PONG") && (watch_response == "PONG");
   } catch (...) { return false; }
 }
 

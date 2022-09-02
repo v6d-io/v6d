@@ -49,23 +49,20 @@ class RedisWatchHandler {
                     callback_t<const std::vector<IMetaService::op_t>&, unsigned,
                                callback_t<unsigned>>
                         callback,
-                    std::string const& prefix, std::string const& filter_prefix,
+                    std::string const& prefix,
                     callback_task_queue_t& registered_callbacks,
                     std::atomic<unsigned>& handled_rev,
-                    std::mutex& registered_callbacks_mutex,
-                    std::mutex& watch_mutex)
+                    std::mutex& registered_callbacks_mutex)
       : meta_service_ptr_(meta_service_ptr),
         ctx_(ctx),
         callback_(callback),
         prefix_(prefix),
-        filter_prefix_(filter_prefix),
         registered_callbacks_(registered_callbacks),
         handled_rev_(handled_rev),
-        registered_callbacks_mutex_(registered_callbacks_mutex),
-        watch_mutex_(watch_mutex) {
+        registered_callbacks_mutex_(registered_callbacks_mutex) {
   }
 
-  void operator()(std::unique_ptr<redis::AsyncRedis>&, std::string);
+  void operator()(std::unique_ptr<redis::Redis>&, std::string);
 
  private:
   const std::shared_ptr<RedisMetaService> meta_service_ptr_;
@@ -77,12 +74,11 @@ class RedisWatchHandler {
   const callback_t<const std::vector<IMetaService::op_t>&, unsigned,
                    callback_t<unsigned>>
       callback_;
-  std::string const prefix_, filter_prefix_;
+  std::string const prefix_;
 
   callback_task_queue_t& registered_callbacks_;
   std::atomic<unsigned>& handled_rev_;
   std::mutex& registered_callbacks_mutex_;
-  std::mutex& watch_mutex_;
 
   const std::string kPut = "0";
   const std::string kDel = "1";
@@ -170,18 +166,17 @@ class RedisMetaService : public IMetaService {
 
   std::unique_ptr<redis::AsyncRedis> redis_;
   std::unique_ptr<redis::Redis> syncredis_;
+  std::unique_ptr<redis::Redis> watch_client_;
   std::shared_ptr<redis::RedMutex> mtx_;
   std::shared_ptr<redis::RedLock<redis::RedMutex>> redlock_;
   std::shared_ptr<redis::AsyncSubscriber> watcher_;
   std::shared_ptr<RedisWatchHandler> handler_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
-  std::unique_ptr<boost::process::child>
-      redis_proc_;  // create child process when launching a redis server
+  std::unique_ptr<boost::process::child> redis_proc_;
 
   callback_task_queue_t registered_callbacks_;
   std::atomic<unsigned> handled_rev_;
   std::mutex registered_callbacks_mutex_;
-  std::mutex watch_mutex_;
 
   // TODO: more error codes
   enum { OK = 0, UNNAMED_ERROR = 1 };
@@ -200,70 +195,57 @@ class RedisMetaService : public IMetaService {
 
   friend class IMetaService;
 
-  void operationUpdates(callback_t<unsigned> callback_after_updated,
-                        std::unordered_map<std::string, unsigned> ops,
-                        std::string op_prefix, unsigned irev) {
+  inline void operationUpdates(
+      callback_t<unsigned> callback_after_updated,
+      const std::unordered_map<std::string, unsigned> ops,
+      std::string op_prefix, unsigned irev) {
     auto self(shared_from_base());
-    redis_->hset(op_prefix, ops.begin(), ops.end(),
-                 [self, callback_after_updated, op_prefix,
-                  irev](redis::Future<long long>&& resp) {
-                   try {
-                     resp.get();
-                   } catch (...) {
-                     self->cUStateCode = UNNAMED_ERROR;
-                     self->cUErrMsg = "redis commitUpdates error:";
-                     self->cUErrType += " hset error";
-                   }
-                   self->redis_->command<long long>(
-                       "RPUSH", "opslist", op_prefix,
-                       [self, callback_after_updated,
-                        irev](redis::Future<long long>&& resp) {
-                         try {
-                           resp.get();
-                         } catch (...) {
-                           self->cUStateCode = UNNAMED_ERROR;
-                           self->cUErrMsg = "redis commitUpdates error:";
-                           self->cUErrType += " rpush error";
-                         }
-                         self->redis_->command<long long>(
-                             "PUBLISH", "operations", irev,
-                             [self, callback_after_updated,
-                              irev](redis::Future<long long>&& resp) {
-                               try {
-                                 resp.get();
-                               } catch (...) {
-                                 self->cUStateCode = UNNAMED_ERROR;
-                                 self->cUErrMsg = "redis commitUpdates error:";
-                                 self->cUErrType += " publish error";
-                               }
-                               self->redis_->command<long long>(
-                                   "INCR", "redis_revision",
-                                   [self, callback_after_updated,
-                                    irev](redis::Future<long long>&& resp) {
-                                     try {
-                                       resp.get();
-                                     } catch (...) {
-                                       self->cUStateCode = UNNAMED_ERROR;
-                                       self->cUErrMsg =
-                                           "redis commitUpdates error:";
-                                       self->cUErrType += " incr error";
-                                     }
-                                     Status status;
-                                     if (self->stopped_.load()) {
-                                       status = Status::AlreadyStopped(
-                                           "redis metadata service");
-                                     } else {
-                                       status = Status::RedisError(
-                                           self->cUStateCode, self->cUErrMsg,
-                                           self->cUErrType);
-                                     }
-                                     self->server_ptr_->GetMetaContext().post(
-                                         boost::bind(callback_after_updated,
-                                                     status, irev + 1));
-                                   });
-                             });
-                       });
-                 });
+    redis_->hset(
+        op_prefix, ops.begin(), ops.end(),
+        [self, callback_after_updated, op_prefix,
+         irev](redis::Future<long long>&& resp) {
+          try {
+            resp.get();
+          } catch (...) {
+            self->cUStateCode = UNNAMED_ERROR;
+            self->cUErrMsg = "redis commitUpdates error:";
+            self->cUErrType += " hset error";
+          }
+          self->redis_->command<long long>(
+              "RPUSH", "opslist", op_prefix,
+              [self, callback_after_updated,
+               irev](redis::Future<long long>&& resp) {
+                try {
+                  resp.get();
+                } catch (...) {
+                  self->cUStateCode = UNNAMED_ERROR;
+                  self->cUErrMsg = "redis commitUpdates error:";
+                  self->cUErrType += " rpush error";
+                }
+                self->redis_->command<long long>(
+                    "PUBLISH", "operations", irev,
+                    [self, callback_after_updated,
+                     irev](redis::Future<long long>&& resp) {
+                      try {
+                        resp.get();
+                      } catch (...) {
+                        self->cUStateCode = UNNAMED_ERROR;
+                        self->cUErrMsg = "redis commitUpdates error:";
+                        self->cUErrType += " publish error";
+                      }
+                      Status status;
+                      if (self->stopped_.load()) {
+                        status =
+                            Status::AlreadyStopped("redis metadata service");
+                      } else {
+                        status = Status::RedisError(
+                            self->cUStateCode, self->cUErrMsg, self->cUErrType);
+                      }
+                      self->server_ptr_->GetMetaContext().post(boost::bind(
+                          callback_after_updated, status, irev + 1));
+                    });
+              });
+        });
   }
 };
 
