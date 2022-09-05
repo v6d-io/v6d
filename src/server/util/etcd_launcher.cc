@@ -93,8 +93,15 @@ Status EtcdLauncher::LaunchEtcdServer(
     std::unique_ptr<etcd::Client>& etcd_client, std::string& sync_lock) {
   std::string const& etcd_endpoint =
       etcd_spec_["etcd_endpoint"].get_ref<std::string const&>();
-  etcd_client.reset(new etcd::Client(etcd_endpoint));
+  RETURN_ON_ERROR(parseEndpoint());
 
+  std::string etcd_endpoint_ip;
+  if (!validate_advertise_hostname(etcd_endpoint_ip, endpoint_host_)) {
+    return Status::Invalid("Cannot resolve the etcd endpoint '" +
+                           endpoint_host_ + "'");
+  }
+
+  etcd_client.reset(new etcd::Client(etcd_endpoint));
   if (probeEtcdServer(etcd_client, sync_lock)) {
     return Status::OK();
   }
@@ -109,9 +116,7 @@ Status EtcdLauncher::LaunchEtcdServer(
   }
   LOG(INFO) << "Found etcd at: " << etcd_cmd;
 
-  RETURN_ON_ERROR(parseEndpoint());
   RETURN_ON_ERROR(initHostInfo());
-
   bool try_launch = false;
   if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
       local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {
