@@ -17,6 +17,7 @@ limitations under the License.
 #include <mutex>
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -195,15 +196,14 @@ class RedisMetaService : public IMetaService {
 
   friend class IMetaService;
 
-  inline void operationUpdates(
-      callback_t<unsigned> callback_after_updated,
-      const std::unordered_map<std::string, unsigned> ops,
-      std::string op_prefix, unsigned irev) {
+  inline void operationUpdates(callback_t<unsigned> callback_after_updated,
+                               std::unordered_map<std::string, unsigned> ops,
+                               std::string op_prefix, unsigned irev) {
     auto self(shared_from_base());
     redis_->hset(
         op_prefix, ops.begin(), ops.end(),
         [self, callback_after_updated, op_prefix,
-         irev](redis::Future<long long>&& resp) {
+         irev](redis::Future<long long>&& resp) {  // NOLINT(runtime/int)
           try {
             resp.get();
           } catch (...) {
@@ -211,10 +211,10 @@ class RedisMetaService : public IMetaService {
             self->cUErrMsg = "redis commitUpdates error:";
             self->cUErrType += " hset error";
           }
-          self->redis_->command<long long>(
+          self->redis_->command<long long>(  // NOLINT(runtime/int)
               "RPUSH", "opslist", op_prefix,
               [self, callback_after_updated,
-               irev](redis::Future<long long>&& resp) {
+               irev](redis::Future<long long>&& resp) {  // NOLINT(runtime/int)
                 try {
                   resp.get();
                 } catch (...) {
@@ -222,10 +222,11 @@ class RedisMetaService : public IMetaService {
                   self->cUErrMsg = "redis commitUpdates error:";
                   self->cUErrType += " rpush error";
                 }
-                self->redis_->command<long long>(
+                self->redis_->command<long long>(  // NOLINT(runtime/int)
                     "PUBLISH", "operations", irev,
                     [self, callback_after_updated,
-                     irev](redis::Future<long long>&& resp) {
+                     irev](redis::Future<long long>&&  // NOLINT(runtime/int)
+                               resp) {                 // NOLINT(runtime/int)
                       try {
                         resp.get();
                       } catch (...) {
