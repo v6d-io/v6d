@@ -212,7 +212,7 @@ class NetLinkServer : public SocketServer,
  public:
   void SyncObjectEntryList() {}
 };
-}
+}  // namespace vineyard
 
 #endif
 #endif
