@@ -66,7 +66,8 @@ void NetLinkServer::InitNetLink() {
   size_t size;
   socket_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_VINEYARD);
   if (socket_fd < 0) {
-    LOG(INFO) << "NetLinkServer start error";
+    LOG(INFO) << "If you want to use netlink server, please insert kernel "
+                 "module first!";
     return;
   }
   memset(&saddr, 0, sizeof(saddr));
@@ -271,6 +272,10 @@ void NetLinkServer::thread_routine(NetLinkServer* ns_ptr, int socket_fd,
   kmsg kmsg;
   vineyard_result_msg umsg;
   fopt_ret _fopt_ret;
+
+  if (socket_fd < 0) {
+    return;
+  }
 
   memset(&umsg, 0, sizeof(umsg));
   umsg.opt = MSG_OPT::VINEYARD_WAIT;

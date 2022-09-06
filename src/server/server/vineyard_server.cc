@@ -99,10 +99,6 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
   }
 
-#if BUILD_NETLINK_SERVER == ON
-  nl_server_ptr_ = std::make_shared<NetLinkServer>(shared_from_this());
-#endif
-
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
   RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
@@ -117,6 +113,10 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     // bulkstore, anyway, we can templatize stream store to solve this.
     stream_store_ = nullptr;
   } else if (bulk_store_type_ == StoreType::kDefault) {
+#if BUILD_NETLINK_SERVER == ON
+    nl_server_ptr_ = std::make_shared<NetLinkServer>(shared_from_this());
+#endif
+
     bulk_store_ = std::make_shared<BulkStore>();
     auto spill_lower_bound_rate =
         spec_["bulkstore_spec"]["spill_lower_bound_rate"].get<double>();
