@@ -27,7 +27,7 @@ struct vineyard_entry {
 	uint64_t			obj_id; // as name
 	uint64_t			file_size;
 	enum OBJECT_TYPE	type;
-	unsigned long 		inode_id;
+	uint64_t 		inode_id;
 };
 
 struct vineyard_private_data {

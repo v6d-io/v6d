@@ -12,11 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef SRC_SERVER_ASYNC_NL_SERVER_H_
-#define SRC_SERVER_ASYNC_NL_SERVER_H_
-#ifdef __linux__
-#include <linux/netlink.h>
-#include <sys/socket.h>
+#ifndef SRC_SERVER_ASYNC_NETLINK_SERVER_H_
+#define SRC_SERVER_ASYNC_NETLINK_SERVER_H_
+
 #include <memory>
 #include <string>
 
@@ -25,6 +23,10 @@ limitations under the License.
 #include "common/util/protocols.h"
 #include "server/async/socket_server.h"
 #include "server/memory/memory.h"
+
+#ifdef __linux__
+#include <linux/netlink.h>
+#include <sys/socket.h>
 
 namespace vineyard {
 
@@ -120,12 +122,11 @@ struct vineyard_entry {
   uint64_t obj_id;  // as name
   uint64_t file_size;
   enum OBJECT_TYPE type;
-  unsigned long inode_id;
+  uint64_t inode_id;
 };
 
 static inline void VineyardSpinLock(volatile unsigned int* addr) {
-  while (!__sync_bool_compare_and_swap(addr, 0, 1))
-    ;
+  while (!__sync_bool_compare_and_swap(addr, 0, 1)) {}
 }
 
 static inline void VineyardSpinUnlock(volatile unsigned int* addr) {
@@ -135,8 +136,7 @@ static inline void VineyardSpinUnlock(volatile unsigned int* addr) {
 static inline void VineyardWriteLock(volatile unsigned int* rlock,
                                      volatile unsigned int* wlock) {
   VineyardSpinLock(wlock);
-  while (*rlock)
-    ;
+  while (*rlock) {}
 }
 
 static inline void VineyardWriteUnlock(volatile unsigned int* wlock) {
@@ -215,4 +215,4 @@ class NetLinkServer : public SocketServer,
 }  // namespace vineyard
 
 #endif
-#endif
+#endif  // SRC_SERVER_ASYNC_NETLINK_SERVER_H_

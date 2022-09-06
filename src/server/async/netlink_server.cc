@@ -15,10 +15,12 @@ limitations under the License.
 #ifdef __linux__
 #include "server/async/netlink_server.h"
 
+#include <limits>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include "boost/filesystem/operations.hpp"
 #include "boost/filesystem/path.hpp"
@@ -116,7 +118,7 @@ uint64_t NetLinkServer::GetServerBulkSize() {
 }
 
 void NetLinkServer::InitialBulkField() {
-  base_pointer = (void*) GetServerBulkField();
+  base_pointer = reinterpret_cast<void*>(GetServerBulkField());
 }
 
 void NetLinkServer::Start() {
@@ -132,7 +134,7 @@ void NetLinkServer::Close() { LOG(INFO) << __func__; }
 void NetLinkServer::SyncObjectEntryList() {
   vineyard_object_info_header* header;
 
-  header = (vineyard_object_info_header*) obj_info_mem;
+  header = reinterpret_cast<vineyard_object_info_header*>(obj_info_mem);
   if (header) {
     VineyardWriteLock(&header->rw_lock.r_lock, &header->rw_lock.w_lock);
     header->total_file = 0;
@@ -153,7 +155,7 @@ void NetLinkServer::doAccept() { LOG(INFO) << __func__; }
 
 int NetLinkServer::HandleSet(vineyard_request_msg* msg) {
   LOG(INFO) << __func__;
-  obj_info_mem = (void*) (msg->param._set_param.obj_info_mem);
+  obj_info_mem = reinterpret_cast<void*>(msg->param._set_param.obj_info_mem);
   SyncObjectEntryList();
   return 0;
 }
@@ -243,8 +245,8 @@ void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
   vineyard_entry* entrys;
   int i = 0;
 
-  header = (vineyard_object_info_header*) obj_info_mem;
-  entrys = (vineyard_entry*) (header + 1);
+  header = reinterpret_cast<vineyard_object_info_header*>(obj_info_mem);
+  entrys = reinterpret_cast<vineyard_entry*>(header + 1);
   PrintJsonElement(tree);
 
   if (type == OBJECT_TYPE::BLOB) {
