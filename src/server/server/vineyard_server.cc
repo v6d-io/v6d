@@ -99,7 +99,7 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
   }
 
-#ifdef __linux__
+#if BUILD_NETLINK_SERVER == ON
   nl_server_ptr_ = std::make_shared<NetLinkServer>(shared_from_this());
 #endif
 

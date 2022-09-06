@@ -24,6 +24,7 @@ limitations under the License.
 #include "server/async/socket_server.h"
 #include "server/memory/memory.h"
 
+#if BUILD_NETLINK_SERVER == ON
 #ifdef __linux__
 #include <linux/netlink.h>
 #include <sys/socket.h>
@@ -214,5 +215,6 @@ class NetLinkServer : public SocketServer,
 };
 }  // namespace vineyard
 
-#endif
+#endif  // __linux__
+#endif  // BUILD_NETLINK_SERVER
 #endif  // SRC_SERVER_ASYNC_NETLINK_SERVER_H_

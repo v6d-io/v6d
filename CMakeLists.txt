@@ -28,6 +28,7 @@ option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of met
 option(USE_GPU "Using gpu support" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
+option(BUILD_NETLINK_SERVER "Build netlink server" OFF)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)

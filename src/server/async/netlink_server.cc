@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#if BUILD_NETLINK_SERVER == ON
 #ifdef __linux__
 #include "server/async/netlink_server.h"
 
@@ -275,6 +276,11 @@ void NetLinkServer::thread_routine(NetLinkServer* ns_ptr, int socket_fd,
   umsg.opt = MSG_OPT::VINEYARD_WAIT;
 
   while (1) {
+    if (!nlh) {
+      LOG(INFO) << "If you want to use netlink server, please insert kernel "
+                   "module first!";
+      goto out;
+    }
     memcpy(NLMSG_DATA(nlh), &umsg, sizeof(umsg));
     ret = sendto(socket_fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr*) &daddr,
                  sizeof(struct sockaddr_nl));
@@ -322,4 +328,5 @@ out:
 }
 
 }  // namespace vineyard
-#endif
+#endif  // __linux__
+#endif  // BUILD_NETLINK_SERVER
