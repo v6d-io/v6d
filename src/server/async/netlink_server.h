@@ -216,7 +216,7 @@ class NetLinkServer : public SocketServer,
 
   ~NetLinkServer() override {}
 
-  void Start() override {}
+  void Start() override { vs_ptr_->NetLinkReady(); }
 
   void Close() override {}
 
