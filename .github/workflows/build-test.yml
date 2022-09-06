@@ -76,7 +76,7 @@ jobs:
                               librdkafka-dev \
                               libssl-dev \
                               libunwind-dev \
-                              libuv-dev \
+                              libuv1-dev \
                               libxml2-dev \
                               libz-dev \
                               lsb-release \

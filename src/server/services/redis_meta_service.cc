@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <chrono>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "pplx/pplxtasks.h"
@@ -354,17 +355,16 @@ void RedisMetaService::commitUpdates(
   auto self(shared_from_base());
   // delete keys
   if (keys.size() > 0) {
-    redis_->del(
-        keys.begin(), keys.end(),
-        [self](redis::Future<long long>&& resp) {  // NOLINT(runtime/int)
-          try {
-            resp.get();
-          } catch (...) {
-            self->cUStateCode = UNNAMED_ERROR;
-            self->cUErrMsg = "redis commitUpdates error:";
-            self->cUErrType += " del keys error";
-          }
-        });
+    redis_->del(keys.begin(), keys.end(),
+                [self](redis::Future<long long>&& resp) {
+                  try {
+                    resp.get();
+                  } catch (...) {
+                    self->cUStateCode = UNNAMED_ERROR;
+                    self->cUErrMsg = "redis commitUpdates error:";
+                    self->cUErrType += " del keys error";
+                  }
+                });
   }
 
   // mset kvs
