@@ -211,20 +211,21 @@ namespace vineyard {
 class NetLinkServer : public SocketServer,
                       public std::enable_shared_from_this<NetLinkServer> {
  public:
-  explicit NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr) 
-      : SocketServer(vs_ptr) { }
+  explicit NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
+      : SocketServer(vs_ptr) {}
 
-  ~NetLinkServer() override { }
+  ~NetLinkServer() override {}
 
-  void Start() override { }
+  void Start() override {}
 
-  void Close() override { }
+  void Close() override {}
 
   std::string Socket() { return std::string(""); }
 
-  void SyncObjectEntryList() { }
+  void SyncObjectEntryList() {}
+
  private:
-  void doAccept() override { }
+  void doAccept() override {}
 };
 }  // namespace vineyard
 
