@@ -10,6 +10,63 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/**
+ * @brief Vineyard implements the metadata service using redis as the backend
+ * now. Actually redis_meta_service takes etcd_meta_service as a reference.
+ * But due to the differences of commands between redis and etcd and
+ * the limits of the redis client API, threre are still some differences of
+ * implementing the metadata service. For example, we used a hash list to save
+ * all changes of key-value(put or delete) from every vineyard server rather
+ * than getting changes directly through etcd watch. In redis_meta_sevrice, we
+ * used a key redis_revision to record every change after every commitUpdate by
+ * increasing redis_revision. To further introduce the implementation of redis
+ * metadata service, let's explain some important keys meaning first. They play
+ * a key role to make redis as backend come true.
+ *
+ * - redis_revision: the key represented the latest revision of commitUpdates
+ * - op + redis_revision: the key for hash data structure, which is about the
+ * every operation to commitUpdate
+ * - opslist: the key for list data structure, we can get any operation from the
+ * list
+ *
+ *                    hashlist for saving operations
+ *                   -------------------------------
+ *                   | ops | key  | operation type |
+ *                   -------------------------------
+ *                   |     | key1 |       PUT      |
+ *                   | op0 | key2 |       PUT      |
+ *                   |     | key3 |       DEL      |
+ *                   -------------------------------
+ *                   |     | key1 |       PUT      |
+ *                   | op1 | key2 |       DEL      |
+ *                   |     | key3 |       PUT      |
+ *                   -------------------------------
+ *                   | ... | ...  |       ...      |
+ *                   -------------------------------
+ *                               opslist
+ *            ----------------------------------------------
+ *            | op0 | op1 | op2 | op3 | op4 | op5 | ...... |
+ *            ----------------------------------------------
+ *
+ * - operations: the key is used to publish and subscribe, publish to every
+ * server who subscribed the key when the operation is updated
+ * - resource: the name of distributed lock
+ *
+ * Let's see how they collaborate together to work.
+ * First, the redis_revision is set to zero when the first server starts up.
+ * Other servers won't change it, because we use 'SETNX' command. The vineyard
+ * server who wants to commit it's kvs changes to redis have to get the
+ * distributed lock named resource. It gets to know it's operation revision by
+ * redis_revision and it increased the redis_revision before it puts down the
+ * lock, which prevents the changes disappearing when other server tried to
+ * commit it's changes. The reason why we used a lot of callbacks in
+ * commitUpdates function is that redis client API now doesn't support txn for
+ * async_clinet and we must ensure operations are already in hashlist when ops
+ * appear in opslist. So PUBLISH can notice other servers after all changes are
+ * ready in redis.
+ *
+ */
+
 #ifndef SRC_SERVER_SERVICES_REDIS_META_SERVICE_H_
 #define SRC_SERVER_SERVICES_REDIS_META_SERVICE_H_
 
@@ -17,6 +74,7 @@ limitations under the License.
 #include <mutex>
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -110,8 +168,8 @@ class RedisLock : public ILock {
 };
 
 /**
- * @brief
- *
+ * @brief RedisMetaService provides meta services in regards to redis, e.g.
+ * requesting and committing udpates
  */
 class RedisMetaService : public IMetaService {
  public:
@@ -203,7 +261,7 @@ class RedisMetaService : public IMetaService {
     redis_->hset(
         op_prefix, ops.begin(), ops.end(),
         [self, callback_after_updated, op_prefix,
-         irev](redis::Future<long long>&& resp) {
+         irev](redis::Future<long long>&& resp) {  // NOLINT(runtime/int)
           try {
             resp.get();
           } catch (...) {
@@ -211,10 +269,10 @@ class RedisMetaService : public IMetaService {
             self->cUErrMsg = "redis commitUpdates error:";
             self->cUErrType += " hset error";
           }
-          self->redis_->command<long long>(
+          self->redis_->command<long long>(  // NOLINT(runtime/int)
               "RPUSH", "opslist", op_prefix,
               [self, callback_after_updated,
-               irev](redis::Future<long long>&& resp) {
+               irev](redis::Future<long long>&& resp) {  // NOLINT(runtime/int)
                 try {
                   resp.get();
                 } catch (...) {
@@ -222,10 +280,11 @@ class RedisMetaService : public IMetaService {
                   self->cUErrMsg = "redis commitUpdates error:";
                   self->cUErrType += " rpush error";
                 }
-                self->redis_->command<long long>(
+                self->redis_->command<long long>(  // NOLINT(runtime/int)
                     "PUBLISH", "operations", irev,
                     [self, callback_after_updated,
-                     irev](redis::Future<long long>&& resp) {
+                     irev](redis::Future<long long>&&  // NOLINT(runtime/int)
+                               resp) {
                       try {
                         resp.get();
                       } catch (...) {
