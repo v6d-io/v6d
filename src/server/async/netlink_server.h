@@ -14,7 +14,7 @@ limitations under the License.
 */
 #ifndef SRC_SERVER_ASYNC_NL_SERVER_H_
 #define SRC_SERVER_ASYNC_NL_SERVER_H_
-
+#ifdef __linux__
 #include <linux/netlink.h>
 #include <sys/socket.h>
 #include <memory>
@@ -205,5 +205,14 @@ class NetLinkServer : public SocketServer,
 }; /*  */
 
 }  // namespace vineyard
+#else
+namespace vineyard {
+class NetLinkServer : public SocketServer,
+                      public std::enable_shared_from_this<NetLinkServer> {
+ public:
+  void SyncObjectEntryList() {}
+};
+}
 
+#endif
 #endif

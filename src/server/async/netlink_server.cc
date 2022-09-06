@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#ifdef __linux__
 #include "server/async/netlink_server.h"
 
 #include <mutex>
@@ -320,3 +320,4 @@ out:
 }
 
 }  // namespace vineyard
+#endif
