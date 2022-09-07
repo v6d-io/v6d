@@ -661,11 +661,11 @@ if(BUILD_VINEYARD_SERVER)
     if(VINEYARD_JAVA_GENERATES)
         add_dependencies(vineyard_codegen_java vineyard_client_gen_java)
     endif()
-endif()
 
-# vineyard netlink server
-if(BUILD_NETLINK_SERVER)
-    target_compile_options(vineyardd PRIVATE -DBUILD_NETLINK_SERVER=1)
+    # vineyard netlink server
+    if(BUILD_NETLINK_SERVER)
+        target_compile_options(vineyardd PRIVATE -DBUILD_NETLINK_SERVER=1)
+    endif()
 endif()
 
 # build vineyard-client
