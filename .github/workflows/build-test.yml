@@ -319,7 +319,7 @@ jobs:
           python3 test/runner.py $RUNNER_ARGS --with-cpp --with-deployment
 
       - name: Setup tmate session
-        if: false
+        if: true
         uses: mxschmitt/action-tmate@v2
 
       - name: Run Python Tests with Debug
