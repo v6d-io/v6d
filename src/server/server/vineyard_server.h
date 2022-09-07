@@ -43,6 +43,7 @@ class IMetaService;
 
 class IPCServer;
 class RPCServer;
+class NetLinkServer;
 
 /**
  * @brief DeferredReq aims to defer a socket request such that the request
@@ -103,6 +104,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   void BulkReady();
   void IPCReady();
   void RPCReady();
+  void NetLinkReady();
   void BackendReady();
   void Ready();
 
@@ -195,6 +197,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::shared_ptr<IMetaService> meta_service_ptr_;
   std::shared_ptr<IPCServer> ipc_server_ptr_;
   std::shared_ptr<RPCServer> rpc_server_ptr_;
+  std::shared_ptr<NetLinkServer> nl_server_ptr_;
 
   std::list<DeferredReq> deferred_;
 
@@ -211,8 +214,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     kBulk = 0b10,
     kIPC = 0b100,
     kRPC = 0b1000,
+    kNetLink = 0b10000,
     kBackendReady = 0b11,  // then we can serve ipc/rpc.
-    kReady = 0b1111,
+    kReady = 0b11111,
   };
   unsigned char ready_;
   std::atomic_bool stopped_;  // avoid invoke Stop() twice.
