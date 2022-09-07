@@ -823,7 +823,7 @@ if(BUILD_VINEYARD_BENCHMARKS)
 endif()
 
 file(GLOB_RECURSE FILES_NEED_FORMAT "src/*.cc" "src/*.h" "src/*.hpp" "src/*.vineyard-mod"
-                                    "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
+                                    "modules/*.c" "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
                                     "python/*.cc" "python/*.h"
                                     "test/*.cc"
                                     "benchmark/*.h" "benchmark/*.cc" "benchmark/*.cpp"
