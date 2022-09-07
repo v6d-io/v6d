@@ -28,6 +28,7 @@ option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of met
 option(USE_GPU "Using gpu support" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
+option(BUILD_NETLINK_SERVER "Build netlink server" OFF)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
@@ -660,6 +661,11 @@ if(BUILD_VINEYARD_SERVER)
     if(VINEYARD_JAVA_GENERATES)
         add_dependencies(vineyard_codegen_java vineyard_client_gen_java)
     endif()
+
+    # vineyard netlink server
+    if(BUILD_NETLINK_SERVER)
+        target_compile_options(vineyardd PRIVATE -DBUILD_NETLINK_SERVER=1)
+    endif()
 endif()
 
 # build vineyard-client
@@ -817,7 +823,7 @@ if(BUILD_VINEYARD_BENCHMARKS)
 endif()
 
 file(GLOB_RECURSE FILES_NEED_FORMAT "src/*.cc" "src/*.h" "src/*.hpp" "src/*.vineyard-mod"
-                                    "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
+                                    "modules/*.c" "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
                                     "python/*.cc" "python/*.h"
                                     "test/*.cc"
                                     "benchmark/*.h" "benchmark/*.cc" "benchmark/*.cpp"
@@ -839,7 +845,8 @@ endforeach ()
 foreach (file_path ${FILES_NEED_LINT})
     if (${file_path} MATCHES ".*vineyard.h" OR
         ${file_path} MATCHES ".*memcpy.h" OR
-        ${file_path} MATCHES ".*thirdparty.*")
+        ${file_path} MATCHES ".*thirdparty.*" OR
+        ${file_path} MATCHES "modules/kernel/*")
         list(REMOVE_ITEM FILES_NEED_LINT ${file_path})
     endif ()
 endforeach ()
