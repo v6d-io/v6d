@@ -252,6 +252,7 @@ static void netlink_rcv_msg(struct sk_buff *skb)
             case VINEYARD_WRITE:
             case VINEYARD_CLOSE:
             case VINEYARD_FSYNC:
+            case VINEYARD_READDIR:
                 printk(KERN_INFO PREFIX "Receive opt: VFOPT\n");
                 handle_fopt(&rmsg->msg.result);
                 break;
@@ -287,17 +288,9 @@ void net_link_release(void)
 }
 
 // interfaces
-static int count = 0;
 void vineyard_spin_lock(volatile unsigned int *addr)
 {
-    while(!(__sync_bool_compare_and_swap(addr, 0, 1))) {
-        // for test dead lock
-        if (count == 80) {
-            printk(KERN_INFO "There must be something wrong?\n");
-            break;
-        }
-        count++;
-    }
+    while(!(__sync_bool_compare_and_swap(addr, 0, 1))) { }
 }
 
 void vineyard_spin_unlock(volatile unsigned int *addr)
@@ -332,15 +325,19 @@ int send_request_msg(struct vineyard_request_msg *msg)
     return 0;
 }
 
-void receive_result_msg(struct vineyard_result_msg *rmsg)
+int receive_result_msg(struct vineyard_result_msg *rmsg)
 {
-    int ret;
+    int ret = 0;
 
-    do {
-        ret = wait_event_interruptible(vineyard_fs_wait, global_rmsg.has_msg);
-    } while(ret != 0);
+    ret = wait_event_interruptible(vineyard_fs_wait, global_rmsg.has_msg);
+    if (ret != 0) {
+        global_rmsg.has_msg = 0;
+        vineyard_spin_unlock(&msg_lock);
+        return ret;
+    }
 
     memcpy(rmsg, &global_rmsg, sizeof(*rmsg));
     global_rmsg.has_msg = 0;
     vineyard_spin_unlock(&msg_lock);
+    return ret;
 }

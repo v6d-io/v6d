@@ -664,7 +664,7 @@ if(BUILD_VINEYARD_SERVER)
 endif()
 
 # vineyard netlink server
-if (BUILD_NETLINK_SERVER)
+if(BUILD_NETLINK_SERVER)
     target_compile_options(vineyardd PRIVATE -DBUILD_NETLINK_SERVER=1)
 endif()
 

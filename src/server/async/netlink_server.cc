@@ -12,10 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if defined(BUILD_NETLINK_SERVER) && BUILD_NETLINK_SERVER
-#ifdef __linux__
 #include "server/async/netlink_server.h"
 
+#if defined(BUILD_NETLINK_SERVER) && BUILD_NETLINK_SERVER
+#ifdef __linux__
 #include <limits>
 #include <mutex>
 #include <string>
@@ -128,7 +128,6 @@ void NetLinkServer::Start() {
   InitialBulkField();
 
   work = new std::thread(thread_routine, this, socket_fd, saddr, daddr, nlh);
-  vs_ptr_->NetLinkReady();
 }
 
 void NetLinkServer::Close() { LOG(INFO) << __func__; }
@@ -139,17 +138,18 @@ void NetLinkServer::SyncObjectEntryList() {
   header = reinterpret_cast<vineyard_object_info_header*>(obj_info_mem);
   if (header) {
     VineyardWriteLock(&header->rw_lock.r_lock, &header->rw_lock.w_lock);
-    header->total_file = 0;
     vs_ptr_->ListData("vineyard::Blob", false,
                       std::numeric_limits<size_t>::max(),
-                      [this](const Status& status, const json& tree) {
+                      [this, header](const Status& status, const json& tree) {
                         if (!tree.empty()) {
                           PrintJsonElement(tree);
                           this->FillFileEntryInfo(tree, OBJECT_TYPE::BLOB);
+                        } else {
+                          header->total_file = 0;
                         }
+                        VineyardWriteUnlock(&header->rw_lock.w_lock);
                         return Status::OK();
                       });
-    VineyardWriteUnlock(&header->rw_lock.w_lock);
   }
 }
 
@@ -210,7 +210,6 @@ fopt_ret NetLinkServer::HandleWrite() {
 }
 
 fopt_ret NetLinkServer::HandleCloseOrFsync() {
-  SyncObjectEntryList();
   fopt_ret ret;
   ret.ret = 0;
   return ret;
@@ -235,6 +234,8 @@ fopt_ret NetLinkServer::HandleFops(vineyard_request_msg* msg) {
   case MSG_OPT::VINEYARD_CLOSE:
   case MSG_OPT::VINEYARD_FSYNC:
     return HandleCloseOrFsync();
+  case MSG_OPT::VINEYARD_READDIR:
+    return HandleReadDir();
   default:
     LOG(INFO) << "Error opt!";
     return ret;
@@ -314,17 +315,11 @@ void NetLinkServer::thread_routine(NetLinkServer* ns_ptr, int socket_fd,
     case MSG_OPT::VINEYARD_EXIT:
       LOG(INFO) << "Bye! Handler thread exit!";
       goto out;
-    case MSG_OPT::VINEYARD_OPEN:
-    case MSG_OPT::VINEYARD_READ:
-    case MSG_OPT::VINEYARD_WRITE:
-    case MSG_OPT::VINEYARD_CLOSE:
-    case MSG_OPT::VINEYARD_FSYNC:
+    default:
       _fopt_ret = ns_ptr->HandleFops(&kmsg.msg.msg.request);
       memcpy(&umsg.ret._fopt_ret, &_fopt_ret, sizeof(fopt_ret));
-      umsg.opt = MSG_OPT::VINEYARD_OPEN;
+      umsg.opt = kmsg.msg.msg.request.opt;
       break;
-    default:
-      LOG(INFO) << "Error opt";
     }
   }
 

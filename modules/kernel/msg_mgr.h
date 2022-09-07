@@ -15,6 +15,7 @@ enum MSG_OPT {
     VINEYARD_WRITE,
     VINEYARD_CLOSE,
     VINEYARD_FSYNC,
+    VINEYARD_READDIR,
 };
 
 struct fopt_ret {
@@ -89,4 +90,4 @@ void inline vineyard_read_lock(struct vineyard_rw_lock *rw_lock);
 void inline vineyard_read_unlock(struct vineyard_rw_lock *rw_lock);
 void send_exit_msg(void);
 int send_request_msg(struct vineyard_request_msg *msg);
-void receive_result_msg(struct vineyard_result_msg *msg);
+int receive_result_msg(struct vineyard_result_msg *msg);

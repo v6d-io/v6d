@@ -179,11 +179,13 @@ void VineyardServer::BackendReady() {
     return;
   }
 
+#if defined(BUILD_NETLINK_SERVER) && BUILD_NETLINK_SERVER
   try {
     if (nl_server_ptr_) {
       nl_server_ptr_->Start();
+      NetLinkReady();
     } else {
-      LOG(INFO) << "threre is no nl server";
+      LOG(INFO) << "Threre is no nl server";
       NetLinkReady();
     }
   } catch (std::exception const& ex) {
@@ -193,6 +195,10 @@ void VineyardServer::BackendReady() {
     context_.stop();
     return;
   }
+#else
+  LOG(INFO) << "Threre is no nl server";
+  NetLinkReady();
+#endif
 }
 
 void VineyardServer::MetaReady() {

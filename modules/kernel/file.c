@@ -65,7 +65,9 @@ static int vineyard_fs_open(struct inode *inode, struct file *file)
     if (ret)
         return ret;
 
-    receive_result_msg(&rmsg);
+    ret = receive_result_msg(&rmsg);
+    if (ret)
+        return ret;
 
     if (rmsg.ret._fopt_ret.ret == 0) {
         data = (struct vineyard_private_data *)kmalloc(sizeof(struct vineyard_private_data), GFP_KERNEL);

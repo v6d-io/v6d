@@ -252,7 +252,9 @@ static int vineyard_get_tree(struct fs_context *fsc)
 	if (err)
 		return err;
 
-	receive_result_msg(&rmsg);
+	err = receive_result_msg(&rmsg);
+	if (err)
+		return err;
 
 	if (rmsg.ret._set_ret.ret != 0) {
 		return rmsg.ret._set_ret.ret;

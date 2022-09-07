@@ -51,6 +51,7 @@ enum MSG_OPT {
   VINEYARD_WRITE,
   VINEYARD_CLOSE,
   VINEYARD_FSYNC,
+  VINEYARD_READDIR,
 };
 
 struct fopt_ret {
@@ -216,7 +217,7 @@ class NetLinkServer : public SocketServer,
 
   ~NetLinkServer() override {}
 
-  void Start() override { vs_ptr_->NetLinkReady(); }
+  void Start() override {}
 
   void Close() override {}
 
