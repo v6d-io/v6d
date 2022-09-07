@@ -80,6 +80,7 @@ jobs:
                               libxml2-dev \
                               libz-dev \
                               lsb-release \
+                              redis-server \
                               pandoc \
                               protobuf-compiler-grpc \
                               python3-pip \
