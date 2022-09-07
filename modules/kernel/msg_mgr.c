@@ -9,7 +9,7 @@
 #include "msg_mgr.h"
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("yuansm");
+MODULE_AUTHOR("Vineyard authors");
 MODULE_DESCRIPTION("Vineyard filesystem for Linux.");
 MODULE_VERSION("0.01");
 
