@@ -113,7 +113,7 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     // bulkstore, anyway, we can templatize stream store to solve this.
     stream_store_ = nullptr;
   } else if (bulk_store_type_ == StoreType::kDefault) {
-#if BUILD_NETLINK_SERVER == ON
+#if defined(BUILD_NETLINK_SERVER) && BUILD_NETLINK_SERVER
     nl_server_ptr_ = std::make_shared<NetLinkServer>(shared_from_this());
 #endif
 
@@ -140,11 +140,6 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
 
   serve_status_ = Status::OK();
   return serve_status_;
-}
-
-void VineyardServer::RefreshLists() {
-  if (nl_server_ptr_)
-    nl_server_ptr_->SyncObjectEntryList();
 }
 
 Status VineyardServer::Finalize() { return Status::OK(); }

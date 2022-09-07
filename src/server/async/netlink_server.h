@@ -24,7 +24,7 @@ limitations under the License.
 #include "server/async/socket_server.h"
 #include "server/memory/memory.h"
 
-#if BUILD_NETLINK_SERVER == ON
+#if defined(BUILD_NETLINK_SERVER) && BUILD_NETLINK_SERVER
 #ifdef __linux__
 #include <linux/netlink.h>
 #include <sys/socket.h>

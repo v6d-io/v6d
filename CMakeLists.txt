@@ -663,6 +663,11 @@ if(BUILD_VINEYARD_SERVER)
     endif()
 endif()
 
+# vineyard netlink server
+if (BUILD_NETLINK_SERVER)
+    target_compile_options(vineyardd PRIVATE -DBUILD_NETLINK_SERVER=1)
+endif()
+
 # build vineyard-client
 if(BUILD_VINEYARD_CLIENT)
     # build vineyard registry library, it can only be a shared library, as a singleton.

@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if BUILD_NETLINK_SERVER == ON
+#if defined(BUILD_NETLINK_SERVER) && BUILD_NETLINK_SERVER
 #ifdef __linux__
 #include "server/async/netlink_server.h"
 
