@@ -297,13 +297,9 @@ void RedisMetaService::requestUpdates(
           std::lock_guard<std::mutex> scope_lock(
               self->registered_callbacks_mutex_);
           auto handled_rev = self->handled_rev_.load();
-          if (head_rev <= handled_rev) {
+          if (head_rev <= handled_rev + 1) {
             self->server_ptr_->GetMetaContext().post(boost::bind(
                 callback, Status::OK(), std::vector<op_t>{}, handled_rev));
-            return;
-          } else if (head_rev == handled_rev + 1) {
-            self->server_ptr_->GetMetaContext().post(boost::bind(
-                callback, Status::OK(), std::vector<op_t>{}, handled_rev + 1));
             return;
           }
           // all updates through publish
