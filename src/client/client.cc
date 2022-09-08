@@ -258,6 +258,47 @@ Status Client::GetBlobs(std::vector<ObjectID> const ids, const bool unsafe,
   return Status::OK();
 }
 
+Status Client::CreateDiskBlob(size_t size, const std::string& path,
+                              std::unique_ptr<BlobWriter>& blob) {
+  ENSURE_CONNECTED(this);
+
+  ObjectID object_id = InvalidObjectID();
+  Payload payload;
+
+  std::string message_out;
+  WriteCreateDiskBufferRequest(size, path, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  int fd_sent = -1, fd_recv = -1;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(
+      ReadCreateDiskBufferReply(message_in, object_id, payload, fd_sent));
+
+  uint8_t *shared = nullptr, *dist = nullptr;
+  if (payload.data_size > 0) {
+    fd_recv = shm_->PreMmap(payload.store_fd);
+    if (message_in.contains("fd") && fd_recv != fd_sent) {
+      json error = json::object();
+      error["error"] =
+          "CreateDiskBuffer: the fd is not matched between client and server";
+      error["fd_sent"] = fd_sent;
+      error["fd_recv"] = fd_recv;
+      error["response"] = message_in;
+      return Status::Invalid(error.dump());
+    }
+
+    RETURN_ON_ERROR(shm_->Mmap(
+        payload.store_fd, payload.object_id, payload.map_size,
+        payload.data_size, payload.data_offset,
+        payload.pointer - payload.data_offset, false, false, &shared));
+    dist = shared + payload.data_offset;
+  }
+  auto buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
+  blob.reset(new BlobWriter(object_id, payload, buffer));
+  RETURN_ON_ERROR(AddUsage(object_id, payload));
+  return Status::OK();
+}
+
 Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
                                   std::unique_ptr<arrow::MutableBuffer>& blob) {
   ENSURE_CONNECTED(this);

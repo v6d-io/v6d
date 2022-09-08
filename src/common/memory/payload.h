@@ -42,6 +42,13 @@ struct Payload {
   bool is_spilled;
   bool is_gpu;  // indicate if the Object is on the GPU
 
+  enum class Kind {
+    kMalloc = 0,
+    kAllocator = 1,
+    kDiskMMap = 2,
+  };
+  Kind kind = Kind::kMalloc;
+
   Payload()
       : object_id(EmptyBlobID()),
         store_fd(-1),

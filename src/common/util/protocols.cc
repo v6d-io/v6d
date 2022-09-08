@@ -63,6 +63,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::ListDataRequest;
   } else if (str_type == "create_buffer_request") {
     return CommandType::CreateBufferRequest;
+  } else if (str_type == "create_disk_buffer_request") {
+    return CommandType::CreateDiskBufferRequest;
   } else if (str_type == "get_buffers_request") {
     return CommandType::GetBuffersRequest;
   } else if (str_type == "create_stream_request") {
@@ -340,6 +342,48 @@ void WriteCreateBufferReply(const ObjectID id,
 Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
                              int& fd_sent) {
   CHECK_IPC_ERROR(root, "create_buffer_reply");
+  json tree = root["created"];
+  id = root["id"].get<ObjectID>();
+  object.FromJSON(tree);
+  fd_sent = root.value("fd", -1);
+  return Status::OK();
+}
+
+void WriteCreateDiskBufferRequest(const size_t size, const std::string& path,
+                                  std::string& msg) {
+  json root;
+  root["type"] = "create_disk_buffer_request";
+  root["size"] = size;
+  root["path"] = path;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateDiskBufferRequest(const json& root, size_t& size,
+                                   std::string& path) {
+  RETURN_ON_ASSERT(root["type"] == "create_disk_buffer_request");
+  size = root["size"].get<size_t>();
+  path = root["path"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteCreateDiskBufferReply(const ObjectID id,
+                                const std::shared_ptr<Payload>& object,
+                                const int fd_to_send, std::string& msg) {
+  json root;
+  root["type"] = "create_disk_buffer_reply";
+  root["id"] = id;
+  root["fd"] = fd_to_send;
+  json tree;
+  object->ToJSON(tree);
+  root["created"] = tree;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateDiskBufferReply(const json& root, ObjectID& id,
+                                 Payload& object, int& fd_sent) {
+  CHECK_IPC_ERROR(root, "create_disk_buffer_reply");
   json tree = root["created"];
   id = root["id"].get<ObjectID>();
   object.FromJSON(tree);

@@ -31,6 +31,8 @@
 
 #include <inttypes.h>
 #include <stddef.h>
+
+#include <string>
 #include <unordered_map>
 
 namespace vineyard {
@@ -57,10 +59,16 @@ extern std::unordered_map<void*, MmapRecord> mmap_records;
 // immediately unlinking it so we do not leave traces in the system.
 //
 // Returns a fd as expected.
-int create_buffer(int64_t size);
+int create_buffer(int64_t size, bool memory = true);
+
+// Returns a fd of the corresponding path as expected.
+int create_buffer(int64_t size, std::string const& path);
 
 // Create a buffer, and mmap the buffer as the shared memory space.
 void* mmap_buffer(int64_t size, bool* is_committed, bool* is_zero);
+
+// Create a buffer, and mmap the buffer as the shared memory space.
+void* mmap_buffer(int fd, int64_t size, bool* is_committed, bool* is_zero);
 
 // Unmap the buffer.
 int munmap_buffer(void* addr, int64_t size);

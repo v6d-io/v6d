@@ -225,16 +225,16 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
       // When object not exists, we return an empty json, rather than
       // the status to indicate the error.
 #if !defined(NDEBUG)
-          if (VLOG_IS_ON(10)) {
-            VLOG(10) << "Got request from client to get data, dump json:";
+          if (VLOG_IS_ON(100)) {
+            DVLOG(100) << "Got request from client to get data, dump json:";
             std::cerr << meta.dump(4) << std::endl;
-            VLOG(10) << "=========================================";
+            DVLOG(100) << "=========================================";
             std::stringstream ss;
             for (auto const& id : ids) {
               ss << id << "(" << ObjectIDToString(id) << "), ";
             }
-            VLOG(10) << "Requesting objects: " << ss.str();
-            VLOG(10) << "=========================================";
+            DVLOG(100) << "Requesting objects: " << ss.str();
+            DVLOG(100) << "=========================================";
           }
 #endif
           auto test_task = [this, ids](const json& meta) -> bool {
@@ -281,10 +281,10 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                   LOG(WARNING) << "Found errors in metadata: " << s.ToString();
                 }
 #if !defined(NDEBUG)
-                if (VLOG_IS_ON(10)) {
-                  VLOG(10) << "Got request response:";
+                if (VLOG_IS_ON(100)) {
+                  DVLOG(100) << "Got request response:";
                   std::cerr << sub_tree.dump(4) << std::endl;
-                  VLOG(10) << "=========================================";
+                  DVLOG(100) << "=========================================";
                 }
 #endif
               }
@@ -399,12 +399,12 @@ Status VineyardServer::CreateData(
   ENSURE_VINEYARDD_READY();
   ObjectID id = GenerateObjectID();
 #if !defined(NDEBUG)
-  if (VLOG_IS_ON(10)) {
-    VLOG(10) << "Got request from client to create data:";
+  if (VLOG_IS_ON(100)) {
+    DVLOG(100) << "Got request from client to create data:";
     // NB: glog has limit on maximum lines.
     std::cerr << id << " " << ObjectIDToString(id) << " " << tree.dump(4)
               << std::endl;
-    VLOG(10) << "=========================================";
+    DVLOG(100) << "=========================================";
   }
 #endif
   // validate typename

@@ -84,6 +84,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
    */
   bool doCreateRemoteBuffer(json const& root);
 
+  bool doCreateDiskBuffer(json const& root);
+
   bool doDropBuffer(json const& root);
 
   bool doGetData(json const& root);
