@@ -622,7 +622,6 @@ Status BulkStore::CreateDisk(const size_t data_size, const std::string& path,
                                      data_size, 0);
   object->kind = Payload::Kind::kDiskMMap;
   objects_.emplace(object_id, object);
-  LOG(INFO) << "create disk: " << object->ToJSON().dump(4);
   return Status::OK();
 }
 

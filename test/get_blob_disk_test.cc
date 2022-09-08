@@ -99,9 +99,8 @@ void testNamedDiskBlob(Client& client1, Client& client2) {
   rewind(fileptr);  // Jump back to the beginning of the file
   char* fbuffer = static_cast<char*>(
       malloc(filelen * sizeof(char)));  // Enough memory for the file
-  CHECK_EQ(filelen,
-           fread(fbuffer, filelen, 1, fileptr));  // Read in the entire file
-  fclose(fileptr);                                // Close the file
+  CHECK_EQ(1, fread(fbuffer, filelen, 1, fileptr));  // Read in the entire file
+  fclose(fileptr);                                   // Close the file
 
   for (size_t i = 0; i < 1024; ++i) {
     CHECK_EQ(blob_writer->data()[i], fbuffer[i]);
