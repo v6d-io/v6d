@@ -270,9 +270,15 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
   }
   if (object->arena_fd == -1) {
     auto buff_size = object->data_size;
-    BulkAllocator::Free(object->pointer, buff_size);
-    DVLOG(10) << "after free: " << IDToString(object_id) << ": " << Footprint()
-              << "(" << FootprintLimit() << ")";
+    switch (object->kind) {
+    case Payload::Kind::kMalloc: {
+      BulkAllocator::Free(object->pointer, buff_size);
+      DVLOG(10) << "after free: " << IDToString(object_id) << ": "
+                << Footprint() << "(" << FootprintLimit() << ")";
+    }
+    default: {
+    }
+    }
   } else {
     static size_t page_size = memory::system_page_size();
     uintptr_t pointer = reinterpret_cast<uintptr_t>(object->pointer);
@@ -586,6 +592,36 @@ Status BulkStore::CreateGPU(const size_t data_size, ObjectID& object_id,
   objects_.emplace(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << FootprintGPU() << "(" << FootprintLimitGPU() << ")";
+  return Status::OK();
+}
+
+Status BulkStore::CreateDisk(const size_t data_size, const std::string& path,
+                             ObjectID& object_id,
+                             std::shared_ptr<Payload>& object) {
+  bool is_committed = false, is_zero = false;
+  int fd = -1;
+  if (path.empty()) {
+    fd = memory::create_buffer(data_size, false);
+  } else {
+    fd = memory::create_buffer(data_size, path);
+  }
+  uint8_t* pointer = static_cast<uint8_t*>(
+      memory::mmap_buffer(fd, data_size, &is_committed, &is_zero));
+  if (data_size == 0) {
+    object_id = EmptyBlobID<ObjectID>();
+    object = Payload::MakeEmpty();
+    return Status::OK();
+  }
+  if (pointer == nullptr) {
+    return Status::Invalid(
+        std::string("Failed to create shared memory backed by file on disk: ") +
+        strerror(errno));
+  }
+  object_id = GenerateBlobID<ObjectID>(pointer);
+  object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
+                                     data_size, 0);
+  object->kind = Payload::Kind::kDiskMMap;
+  objects_.emplace(object_id, object);
   return Status::OK();
 }
 

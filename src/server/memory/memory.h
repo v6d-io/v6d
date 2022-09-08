@@ -56,7 +56,7 @@ class BulkStoreBase {
  public:
   using object_map_t = tbb::concurrent_hash_map<ID, std::shared_ptr<P>>;
 
-  ~BulkStoreBase();
+  virtual ~BulkStoreBase();
 
   Status Get(ID const& id, std::shared_ptr<P>& object);
 
@@ -164,6 +164,12 @@ class BulkStore
    */
   Status CreateGPU(const size_t size, ObjectID& object_id,
                    std::shared_ptr<Payload>& object);
+
+  /*
+   * @brief Allocate space for a new blob on disk.
+   */
+  Status CreateDisk(const size_t size, const std::string& path,
+                    ObjectID& object_id, std::shared_ptr<Payload>& object);
 
   /*
    * @brief Decrease the reference count of a blob, when its reference count

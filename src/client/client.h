@@ -391,6 +391,26 @@ class Client final : public BasicIPCClient,
                   std::vector<std::shared_ptr<Blob>>& blobs);
 
   /**
+   * @brief Claim a shared blob that backed by a file on disk. Users need to
+   * provide either a filename to mmap, or an expected size to allocate the
+   * file on disk.
+   *
+   * When mapping existing file as a blob, if the existing file size is
+   * smaller than specified "size", the file will be enlarged using
+   * ftruncate().
+   *
+   * Note that when deleting the blob that backed by files, the file won't
+   * be automatically deleted by vineyard.
+   *
+   * @param size expected file size to allocate.
+   * @param path use existing file as the mmap buffer.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status CreateDiskBlob(size_t size, const std::string& path,
+                        std::unique_ptr<BlobWriter>& blob);
+
+  /**
    * @brief Allocate a chunk of given size in vineyard for a stream. When the
    * request cannot be statisfied immediately, e.g., vineyard doesn't have
    * enough memory or the specified has accumulated too many chunks, the request

@@ -88,6 +88,7 @@ enum class CommandType {
   IsSpilledRequest = 55,
   CreateGPUBufferRequest = 56,
   GetGPUBuffersRequest = 57,
+  CreateDiskBufferRequest = 58,
 };
 
 enum class StoreType {
@@ -208,6 +209,13 @@ void WriteCreateBufferRequest(const size_t size, std::string& msg);
 
 Status ReadCreateBufferRequest(const json& root, size_t& size);
 
+void WriteCreateBufferReply(const ObjectID id,
+                            const std::shared_ptr<Payload>& object,
+                            const int fd_to_send, std::string& msg);
+
+Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
+                             int& fd_sent);
+
 void WriteCreateGPUBufferRequest(const size_t size, std::string& msg);
 
 Status ReadCreateGPUBufferRequest(const json& root, size_t& size);
@@ -219,6 +227,19 @@ void WriteGPUCreateBufferReply(const ObjectID id,
 Status ReadGPUCreateBufferReply(
     const json& root, ObjectID& id, Payload& Object,
     std::shared_ptr<vineyard::GPUUnifiedAddress> uva);
+
+void WriteCreateDiskBufferRequest(const size_t size, const std::string& path,
+                                  std::string& msg);
+
+Status ReadCreateDiskBufferRequest(const json& root, size_t& size,
+                                   std::string& path);
+
+void WriteCreateDiskBufferReply(const ObjectID id,
+                                const std::shared_ptr<Payload>& object,
+                                const int fd_to_send, std::string& msg);
+
+Status ReadCreateDiskBufferReply(const json& root, ObjectID& id,
+                                 Payload& object, int& fd_sent);
 
 void WriteGetGPUBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
                                std::string& msg);
@@ -232,13 +253,6 @@ void WriteGetGPUBuffersReply(
 
 Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
                               std::vector<GPUUnifiedAddress>& uva_sent);
-
-void WriteCreateBufferReply(const ObjectID id,
-                            const std::shared_ptr<Payload>& object,
-                            const int fd_to_send, std::string& msg);
-
-Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
-                             int& fd_sent);
 
 void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
 

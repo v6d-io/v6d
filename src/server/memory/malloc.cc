@@ -28,6 +28,7 @@
 
 #include "server/memory/malloc.h"
 
+#include <fcntl.h>
 #include <sys/mman.h>
 
 #include <stddef.h>
@@ -72,7 +73,7 @@ static ptrdiff_t pointer_distance(void const* pfrom, void const* pto) {
 
 // Create a buffer. This is creating a temporary file and then
 // immediately unlinking it so we do not leave traces in the system.
-int create_buffer(int64_t size) {
+int create_buffer(int64_t size, bool memory) {
   int fd = -1;
 #ifdef _WIN32
   if (!CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
@@ -80,23 +81,31 @@ int create_buffer(int64_t size) {
                          (DWORD)(uint64_t) size, NULL)) {
     fd = -1;
   }
-#else
+
+#else  // _WIN32
+
   // directory where to create the memory-backed file
 #ifdef __linux__
-  std::string file_template = "/dev/shm/vineyard-bulk-XXXXXX";
+  std::string file_template;
+  if (memory) {
+    file_template = "/dev/shm/vineyard-bulk-XXXXXX";
+  } else {
+    file_template = "/tmp/vineyard-bulk-XXXXXX";
+  }
 #else
+  // macos: use `/tmp` directly
   std::string file_template = "/tmp/vineyard-bulk-XXXXXX";
 #endif
   std::vector<char> file_name(file_template.begin(), file_template.end());
   file_name.push_back('\0');
   fd = mkstemp(&file_name[0]);
   if (fd < 0) {
-    LOG(FATAL) << "create_buffer failed to open file " << &file_name[0];
+    LOG(ERROR) << "create_buffer failed to open file " << &file_name[0];
     return -1;
   }
   // Immediately unlink the file so we do not leave traces in the system.
   if (unlink(&file_name[0]) != 0) {
-    LOG(FATAL) << "failed to unlink file " << &file_name[0];
+    LOG(ERROR) << "failed to unlink file " << &file_name[0];
     return -1;
   }
   if (true) {
@@ -104,11 +113,29 @@ int create_buffer(int64_t size) {
     // needed for files that are backed by the huge page fs, see also
     // http://www.mail-archive.com/kvm-devel@lists.sourceforge.net/msg14737.html
     if (ftruncate(fd, (off_t) size) != 0) {
-      LOG(FATAL) << "failed to ftruncate file " << &file_name[0];
+      LOG(ERROR) << "failed to ftruncate file " << &file_name[0];
       return -1;
     }
   }
-#endif
+#endif  // _WIN32
+  // return the created fd
+  return fd;
+}
+
+int create_buffer(int64_t size, std::string const& path) {
+  int fd = open(path.c_str(), O_RDWR | O_CREAT | O_NONBLOCK, 0666);
+  if (fd < 0) {
+    LOG(ERROR) << "failed to open file '" << path << "', " << strerror(errno);
+    return fd;
+  }
+  off_t fsize = lseek(fd, 0, SEEK_END);
+  if (fsize < size) {
+    if (ftruncate(fd, (off_t) size) != 0) {
+      LOG(ERROR) << "failed to ftruncate file '" << path << "', "
+                 << strerror(errno);
+      return -1;
+    }
+  }
   return fd;
 }
 
@@ -119,7 +146,14 @@ void* mmap_buffer(int64_t size, bool* is_committed, bool* is_zero) {
   size += kMmapRegionsGap;
 
   int fd = create_buffer(size);
-  CHECK_GE(fd, 0) << "Failed to create buffer during mmap";
+  return mmap_buffer(fd, size, is_committed, is_zero);
+}
+
+void* mmap_buffer(int fd, int64_t size, bool* is_committed, bool* is_zero) {
+  if (fd < 0) {
+    LOG(ERROR) << "failed to create buffer during mmap: " << strerror(errno);
+    return nullptr;
+  }
   // MAP_POPULATE can be used to pre-populate the page tables for this memory
   // region
   // which avoids work when accessing the pages later. However it causes long

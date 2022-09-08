@@ -387,6 +387,8 @@ def run_single_vineyardd_tests(tests):
         run_test(tests, 'dataframe_test')
         run_test(tests, 'delete_test')
         run_test(tests, 'get_wait_test')
+        run_test(tests, 'get_blob_test')
+        run_test(tests, 'get_blob_disk_test')
         run_test(tests, 'get_object_test')
         run_test(tests, 'global_object_test')
         run_test(tests, 'hashmap_test')

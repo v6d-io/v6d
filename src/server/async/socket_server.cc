@@ -215,6 +215,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::CreateRemoteBufferRequest: {
     return doCreateRemoteBuffer(root);
   }
+  case CommandType::CreateDiskBufferRequest: {
+    return doCreateDiskBuffer(root);
+  }
   case CommandType::DropBufferRequest: {
     return doDropBuffer(root);
   }
@@ -626,6 +629,43 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
                     self->bulk_store_->Footprint());
         return Status::OK();
       });
+  return false;
+}
+
+bool SocketConnection::doCreateDiskBuffer(const json& root) {
+  auto self(shared_from_this());
+  size_t size = 0;
+  std::string path;
+  std::shared_ptr<Payload> object;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadCreateDiskBufferRequest, root, size, path);
+
+  if (size == 0 && path.empty()) {
+    RESPONSE_ON_ERROR(Status::Invalid(
+        "create disk buffer: one of 'size' and 'path' must be specified"));
+  }
+
+  ObjectID object_id;
+  RESPONSE_ON_ERROR(bulk_store_->CreateDisk(size, path, object_id, object));
+
+  int fd_to_send = -1;
+  if (object->data_size > 0 &&
+      self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
+    this->used_fds_.emplace(object->store_fd);
+    fd_to_send = object->store_fd;
+  }
+
+  WriteCreateDiskBufferReply(object_id, object, fd_to_send, message_out);
+
+  this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
+    if (fd_to_send != -1) {
+      send_fd(self->nativeHandle(), fd_to_send);
+    }
+    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                bulk_store_->Footprint());
+    return Status::OK();
+  });
   return false;
 }
 
