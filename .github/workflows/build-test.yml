@@ -212,7 +212,7 @@ jobs:
               echo "|"
               echo "| Ensure you are working with clang-format-8, which can be obtained from"
               echo "|"
-              echo "|    https://github.com/muttleyxd/clang-tools-static-binaries/releases"
+              echo "|    https://github.com/muttleyxd/clang-tools-static-binaries/releases "
               echo "|"
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               exit -1

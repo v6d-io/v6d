@@ -42,17 +42,17 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<BlobWriter> blob_writer;
   VINEYARD_CHECK_OK(client1.CreateBlob(1024, blob_writer));
-  CHECK_NE(blob_writer, nullptr);
+  VINEYARD_ASSERT(blob_writer != nullptr);
 
   std::shared_ptr<Blob> blob;
 
   // safe get
   CHECK(client2.GetBlob(blob_writer->id(), blob).IsObjectNotSealed());
-  CHECK_EQ(blob, nullptr);
+  VINEYARD_ASSERT(blob == nullptr);
 
   // unsafe get
   VINEYARD_CHECK_OK(client2.GetBlob(blob_writer->id(), true, blob));
-  CHECK_NE(blob, nullptr);
+  VINEYARD_ASSERT(blob != nullptr);
   CHECK_EQ(blob_writer->id(), blob->id());
 
   LOG(INFO) << "Passed various ways to get blob tests...";

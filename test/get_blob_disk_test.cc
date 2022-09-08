@@ -32,17 +32,17 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 void testAnonymousDiskBlob(Client& client1, Client& client2) {
   std::unique_ptr<BlobWriter> blob_writer;
   VINEYARD_CHECK_OK(client1.CreateDiskBlob(1024, "", blob_writer));
-  CHECK_NE(blob_writer, nullptr);
+  VINEYARD_ASSERT(blob_writer != nullptr);
 
   std::shared_ptr<Blob> blob;
 
   // safe get
   CHECK(client2.GetBlob(blob_writer->id(), blob).IsObjectNotSealed());
-  CHECK_EQ(blob, nullptr);
+  VINEYARD_ASSERT(blob == nullptr);
 
   // unsafe get
   VINEYARD_CHECK_OK(client2.GetBlob(blob_writer->id(), true, blob));
-  CHECK_NE(blob, nullptr);
+  VINEYARD_ASSERT(blob != nullptr);
   CHECK_EQ(blob_writer->id(), blob->id());
 
   // write to blob
@@ -64,17 +64,17 @@ void testNamedDiskBlob(Client& client1, Client& client2) {
 
   std::unique_ptr<BlobWriter> blob_writer;
   VINEYARD_CHECK_OK(client1.CreateDiskBlob(1024, path, blob_writer));
-  CHECK_NE(blob_writer, nullptr);
+  VINEYARD_ASSERT(blob_writer != nullptr);
 
   std::shared_ptr<Blob> blob;
 
   // safe get
   CHECK(client2.GetBlob(blob_writer->id(), blob).IsObjectNotSealed());
-  CHECK_EQ(blob, nullptr);
+  VINEYARD_ASSERT(blob == nullptr);
 
   // unsafe get
   VINEYARD_CHECK_OK(client2.GetBlob(blob_writer->id(), true, blob));
-  CHECK_NE(blob, nullptr);
+  VINEYARD_ASSERT(blob != nullptr);
   CHECK_EQ(blob_writer->id(), blob->id());
 
   // write to blob
@@ -99,7 +99,7 @@ void testNamedDiskBlob(Client& client1, Client& client2) {
   rewind(fileptr);  // Jump back to the beginning of the file
   char* fbuffer = static_cast<char*>(
       malloc(filelen * sizeof(char)));  // Enough memory for the file
-  fread(fbuffer, filelen, 1, fileptr);  // Read in the entire file
+  CHECK_EQ(filelen, fread(fbuffer, filelen, 1, fileptr));  // Read in the entire file
   fclose(fileptr);                      // Close the file
 
   for (size_t i = 0; i < 1024; ++i) {
