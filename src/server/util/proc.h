@@ -24,13 +24,12 @@ limitations under the License.
 #include "boost/filesystem.hpp"
 #include "boost/process.hpp"
 
+#include "common/util/asio.h"
 #include "common/util/callback.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
 
 namespace vineyard {
-
-namespace asio = boost::asio;
 
 class Process : public std::enable_shared_from_this<Process> {
  public:

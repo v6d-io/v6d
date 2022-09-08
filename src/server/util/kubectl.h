@@ -21,6 +21,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "common/util/asio.h"
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"
