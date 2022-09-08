@@ -86,10 +86,11 @@ int create_buffer(int64_t size, bool memory) {
 
   // directory where to create the memory-backed file
 #ifdef __linux__
+  std::string file_template;
   if (memory) {
-    std::string file_template = "/dev/shm/vineyard-bulk-XXXXXX";
+    file_template = "/dev/shm/vineyard-bulk-XXXXXX";
   } else {
-    std::string file_template = "/tmp/vineyard-bulk-XXXXXX";
+    file_template = "/tmp/vineyard-bulk-XXXXXX";
   }
 #else
   // macos: use `/tmp` directly
