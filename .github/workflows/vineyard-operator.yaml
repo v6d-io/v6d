@@ -69,11 +69,6 @@ jobs:
               exit -1
           fi
 
-      - name: Operator
-        run: |
-          cd k8s
-          make
-
       - name: Login docker registry
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |

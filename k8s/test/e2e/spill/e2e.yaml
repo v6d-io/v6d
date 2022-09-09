@@ -25,7 +25,7 @@ setup:
     - name: pull docker image
       command: |
         docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        docker pull docker.pkg.github.com/v6d-io/v6d/serialize
+        docker pull docker.pkg.github.com/v6d-io/v6d/spill
         kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
         kind load docker-image docker.pkg.github.com/v6d-io/v6d/spill
     - name: install cert-manager
