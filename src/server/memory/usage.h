@@ -29,10 +29,6 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#ifdef __APPLE__
-#include "boost/thread/shared_mutex.hpp"
-#endif
-
 #include "oneapi/tbb/concurrent_hash_map.h"
 
 #include "common/memory/payload.h"
@@ -208,7 +204,7 @@ class ColdObjectTracker
     ~LRU() = default;
 
     void Ref(ID id, std::shared_ptr<P> payload) {
-      std::unique_lock<decltype(mu_)> locked(mu_);
+      std::lock_guard<decltype(mu_)> locked(mu_);
       auto it = map_.find(id);
       if (it == map_.end()) {
         list_.emplace_front(id, payload);
@@ -221,7 +217,7 @@ class ColdObjectTracker
     }
 
     bool CheckExist(ID id) const {
-      std::shared_lock<decltype(mu_)> shared_locked(mu_);
+      std::lock_guard<decltype(mu_)> locked(mu_);
       return map_.find(id) != map_.end();
     }
 
@@ -236,7 +232,7 @@ class ColdObjectTracker
      */
     Status Unref(const ID& id, bool fast_delete,
                  std::shared_ptr<Der> store_ptr) {
-      std::unique_lock<decltype(mu_)> locked(mu_);
+      std::lock_guard<decltype(mu_)> locked(mu_);
       auto it = map_.find(id);
       if (it == map_.end()) {
         auto it = spilled_obj_.find(id);
@@ -258,7 +254,7 @@ class ColdObjectTracker
     }
 
     Status Spill(size_t sz, std::shared_ptr<Der> bulk_store_ptr) {
-      std::unique_lock<decltype(mu_)> locked(mu_);
+      std::lock_guard<decltype(mu_)> locked(mu_);
       size_t spilled_sz = 0;
       auto st = Status::OK();
       auto it = list_.rbegin();
@@ -287,16 +283,12 @@ class ColdObjectTracker
     }
 
     bool CheckSpilled(const ID& id) {
-      std::shared_lock<decltype(mu_)> lock(mu_);
+      std::lock_guard<decltype(mu_)> locked(mu_);
       return spilled_obj_.find(id) != spilled_obj_.end();
     }
 
    private:
-#if __APPLE__
-    mutable boost::shared_mutex mu_;
-#else
-    mutable std::shared_timed_mutex mu_;
-#endif
+    mutable std::recursive_mutex mu_;
     // protected by mu_
     lru_map_t map_;
     lru_list_t list_;
