@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package template contains all template related functions
+// Package templates contains all template related functions
 package templates
 
 import (
