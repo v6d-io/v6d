@@ -208,7 +208,7 @@ class ColdObjectTracker
     ~LRU() = default;
 
     void Ref(ID id, std::shared_ptr<P> payload) {
-      std::unique_lock<decltype(mu_)> locked;
+      std::unique_lock<decltype(mu_)> locked(mu_);
       auto it = map_.find(id);
       if (it == map_.end()) {
         list_.emplace_front(id, payload);
@@ -221,7 +221,7 @@ class ColdObjectTracker
     }
 
     bool CheckExist(ID id) const {
-      std::shared_lock<decltype(mu_)> shared_locked;
+      std::shared_lock<decltype(mu_)> shared_locked(mu_);
       return map_.find(id) != map_.end();
     }
 
@@ -236,7 +236,7 @@ class ColdObjectTracker
      */
     Status Unref(const ID& id, bool fast_delete,
                  std::shared_ptr<Der> store_ptr) {
-      std::unique_lock<decltype(mu_)> locked;
+      std::unique_lock<decltype(mu_)> locked(mu_);
       auto it = map_.find(id);
       if (it == map_.end()) {
         auto it = spilled_obj_.find(id);
@@ -258,7 +258,7 @@ class ColdObjectTracker
     }
 
     Status Spill(size_t sz, std::shared_ptr<Der> bulk_store_ptr) {
-      std::unique_lock<decltype(mu_)> locked;
+      std::unique_lock<decltype(mu_)> locked(mu_);
       size_t spilled_sz = 0;
       auto st = Status::OK();
       auto it = list_.rbegin();
@@ -287,7 +287,7 @@ class ColdObjectTracker
     }
 
     bool CheckSpilled(const ID& id) {
-      std::shared_lock<decltype(mu_)> lock;
+      std::shared_lock<decltype(mu_)> lock(mu_);
       return spilled_obj_.find(id) != spilled_obj_.end();
     }
 
