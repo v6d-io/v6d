@@ -62,8 +62,8 @@ spec:
             {{- if .Spec.Config.EnablePrometheus }}
             --prometheus {{ .Spec.Config.EnablePrometheus }}
             {{- end }}
-            {{- if .Spec.Config.SocketConfig.Path }}
-            --socket {{ .Spec.Config.SocketConfig.Path }}
+            {{- if .Spec.Config.Socket }}
+            --socket {{ .Spec.Config.Socket }}
             {{- end }}
             {{- if .Spec.Config.SpillConfig.Path }}
             --spill_path {{ .Spec.Config.SpillConfig.Path }}
