@@ -13,22 +13,20 @@
 # limitations under the License.
 #
 
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Name }}-rpc
-  namespace: {{ .Namespace }}
-  labels:
-    app.kubernetes.io/name: {{ .Name }}
-    app.kubernetes.io/version: {{ .Spec.Version }}
-    app.kubernetes.io/instance: vineyardd
-    app.kubernetes.io/component: service
-spec:
-  type: {{ .Spec.Service.Type }}
-  ports:
-    - port: {{ .Spec.Service.Port }}
-      protocol: TCP
-      name: vineyard-rpc
-  selector:
-    app.kubernetes.io/name: {{ .Name }}
-    app.kubernetes.io/instance: vineyardd
+REGISTRY := docker.pkg.github.com/v6d-io/v6d
+TAG      := latest
+
+all: build-spill build-serialize docker-push
+	
+build-spill:
+	cd ../../../../ && docker build -f k8s/test/e2e/checkpoint-demo/Dockerfile.spill -t docker.pkg.github.com/v6d-io/v6d/spill:latest .
+.PHONY: build-spill
+
+build-serialize:
+	docker build . -f Dockerfile.serialize -t $(REGISTRY)/serialize:$(TAG)
+.PHONY: build-serialize
+
+docker-push: build-spill build-serialize
+	docker push $(REGISTRY)/serialize:$(TAG)
+	docker push $(REGISTRY)/spill:$(TAG)
+.PHONY: docker-push

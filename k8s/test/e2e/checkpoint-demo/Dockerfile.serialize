@@ -11,24 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Name }}-rpc
-  namespace: {{ .Namespace }}
-  labels:
-    app.kubernetes.io/name: {{ .Name }}
-    app.kubernetes.io/version: {{ .Spec.Version }}
-    app.kubernetes.io/instance: vineyardd
-    app.kubernetes.io/component: service
-spec:
-  type: {{ .Spec.Service.Type }}
-  ports:
-    - port: {{ .Spec.Service.Port }}
-      protocol: TCP
-      name: vineyard-rpc
-  selector:
-    app.kubernetes.io/name: {{ .Name }}
-    app.kubernetes.io/instance: vineyardd
+FROM  vineyardcloudnative/vineyard-python:latest
+
+WORKDIR /
+
+COPY ./serialize.py /
+
+ENTRYPOINT [ "python3" ]
+
+CMD [ "serialize.py" ]

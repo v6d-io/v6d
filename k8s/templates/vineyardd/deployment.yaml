@@ -53,13 +53,41 @@ spec:
             /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379;
             sleep 1;
             /usr/local/bin/vineyardd
+            {{- if .Spec.Config.EtcdCmd }}
+            --etcd_cmd {{ .Spec.Config.EtcdCmd }}
+            {{- end }}
+            {{- if .Spec.Config.EtcdPrefix }}
+            --etcd_prefix {{ .Spec.Config.EtcdPrefix }}
+            {{- end }}
+            {{- if .Spec.Config.EnablePrometheus }}
+            --prometheus {{ .Spec.Config.EnablePrometheus }}
+            {{- end }}
+            {{- if .Spec.Config.SocketConfig.Path }}
+            --socket {{ .Spec.Config.SocketConfig.Path }}
+            {{- end }}
+            {{- if .Spec.Config.SpillConfig.Path }}
+            --spill_path {{ .Spec.Config.SpillConfig.Path }}
+            {{- end }}
+            {{- if .Spec.Config.SpillConfig.SpillLowerRate }}
+            --spill_lower_rate {{ .Spec.Config.SpillConfig.SpillLowerRate }}
+            {{- end }}
+            {{- if .Spec.Config.SpillConfig.SpillUpperRate }}
+            --spill_upper_rate {{ .Spec.Config.SpillConfig.SpillUpperRate }}
+            {{- end }}
+            {{- if .Spec.Config.StreamThreshold }}
+            --stream_threshold {{ .Spec.Config.StreamThreshold }}
+            {{- end }}
             {{- if .Spec.Config.SharedMemorySize }}
-             --size {{ .Spec.Config.SharedMemorySize }} 
+            --size {{ .Spec.Config.SharedMemorySize }} 
             {{- end }}
             {{- if .Spec.Config.EnableMetrics }}
             --metrics -log_dir /var/log/vineyard/
             {{- end }} 
+            {{- if .Spec.Config.EtcdEndpoint }}
+            --etcd_endpoint {{ .Spec.Config.EtcdEndpoint }}
+            {{ else}}
             --etcd_endpoint http://etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379
+            {{- end }}
             {{- if .Spec.Config.SyncCRDs }}
             --sync_crds {{ .Spec.Config.SyncCRDs }}
             {{- end }}
@@ -112,6 +140,14 @@ spec:
           volumeMounts:
             - name: run
               mountPath: /var/run
+            {{- if .Spec.Config.SpillConfig.Name }}
+            - name: {{ .Spec.Config.SpillConfig.Name }}
+              mountPath: {{ .Spec.Config.SpillConfig.Path }}
+            {{- end }}
+            {{- if .Spec.Config.SerializeConfig.Name }}
+            - name: {{ .Spec.Config.SerializeConfig.Name }}
+              mountPath: {{ .Spec.Config.SerializeConfig.Path }}
+            {{- end }}
             - name: shm
               mountPath: /dev/shm
             - name: log
@@ -132,16 +168,22 @@ spec:
         {{- end }}   
       volumes:
       - name: run
-        {{- if .Spec.PVCConfig.Name }}
-        persistentVolumeClaim:
-          claimName: {{ .Spec.PVCConfig.Name }}
-        {{- else if .Spec.Config.Socket }}
         hostPath:
+          {{- if .Spec.Config.Socket }}
           path: {{ .Spec.Config.Socket }}
-        {{- else }}
-        hostPath:
+          {{ else }}
           path: /var/run/vineyard-{{ .Namespace }}-{{ .Name }}
-        {{- end }}
+          {{- end }}
+      {{- if .Spec.Config.SpillConfig.Name }}
+      - name: {{ .Spec.Config.SpillConfig.Name }}
+        persistentVolumeClaim:
+          claimName: {{ .Spec.Config.SpillConfig.Name }}
+      {{- end }}
+      {{- if .Spec.Config.SerializeConfig.Name }}
+      - name: {{ .Spec.Config.SerializeConfig.Name }}
+        persistentVolumeClaim:
+          claimName: {{ .Spec.Config.SerializeConfig.Name }}
+      {{- end }}
       - name: shm
         emptyDir:
           medium: Memory

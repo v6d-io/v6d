@@ -55,7 +55,6 @@ setup:
       command: |
         kubectl create namespace vineyard-job
         kubectl apply -f k8s/test/e2e/workflow-job1.yaml
-        #sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-sample/' k8s/test/e2e/workflow-job1.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job1-deployment
@@ -73,7 +72,6 @@ setup:
     - name: install job2
       command: |
         kubectl apply -f k8s/test/e2e/workflow-job2.yaml
-        #sed 's/vineyard-vineyard-system-vineyard/vineyard-vineyard-system-vineyardd-smample/' k8s/test/e2e/workflow-job2.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job2-deployment

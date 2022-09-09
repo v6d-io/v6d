@@ -13,31 +13,48 @@
 # limitations under the License.
 #
 
-{{- if .Spec.PVCConfig.Name }}
+{{- if .Spec.Config.SerializeConfig.Name }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Spec.PVCConfig.Name }}
+  name: {{ .Spec.Config.SerializeConfig.Name }}
   namespace: {{ .Namespace }}
   labels:
-    app.kubernetes.io/name: {{ .Name }}
+    app.kubernetes.io/name: {{ .Spec.Config.SerializeConfig.Name }}
     app.kubernetes.io/version: {{ .Spec.Version }}
     app.kubernetes.io/instance: vineyardd
     app.kubernetes.io/component: PersistentVolumeClaim
 spec:
-  volumeMode: Filesystem
-  {{if .Spec.PVCConfig.Resources }}
-  {{ .Spec.PVCConfig.Resources }}
-  {{ end }}
-  storageClassName: {{ .Spec.PVCConfig.StorageClass }}
+  {{- if .Spec.Config.SerializeConfig.PersistentVolumeClaimSpec }}
+  {{ $spec := .Spec.Config.SerializeConfig.PersistentVolumeClaimSpec }}
+  {{- if $spec.AccessModes }}
   accessModes:
-  {{ range .Spec.PVCConfig.AccessModes }}
-  - {{ . }}
-  {{ end }}
+    {{- range $spec.AccessModes }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  {{- if $spec.Resources }}
+  resources:
+    {{- if $spec.Resources.Requests }}
+    requests:
+      {{- if $spec.Resources.Requests.Storage }}
+      storage: {{ $spec.Resources.Requests.Storage }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if $spec.VolumeName }}
+  volumeName: {{ $spec.VolumeName }}
+  {{- end }}
+  {{- if $spec.StorageClassName }}
+  storageClassName: {{ $spec.StorageClassName }}
+  {{- end }}
+  {{- if $spec.VolumeMode }}
+  volumeMode: {{ $spec.VolumeMode }}
+  {{- end }}
+  {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ .Name }}
+      app.kubernetes.io/name: {{ .Spec.Config.SerializeConfig.Name }}
       app.kubernetes.io/version: {{ .Spec.Version }}
       app.kubernetes.io/instance: vineyardd
-      app.kubernetes.io/component: PersistentVolumeClaim
 {{- end }}

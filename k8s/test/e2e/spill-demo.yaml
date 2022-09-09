@@ -16,41 +16,39 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: v6d-workflow-demo-job2-deployment
-  namespace: vineyard-job
+  name: spill-demo-deployment
+  # please make the namespace the same as the vineyardd's namespace
+  # as the pod should use the vineyardd's pvc and pvc is namespace scoped
+  namespace: vineyard-system
 spec:
   selector:
     matchLabels:
-      app: v6d-workflow-demo-job2
-  replicas: 3
+      app: spill-demo
+  replicas: 1
   template:
     metadata:
       labels:
-        app: v6d-workflow-demo-job2
+        app: spill-demo
         # this label represents the vineyardd's name that need to be used
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
-        scheduling.k8s.v6d.io/required: v6d-workflow-demo-job1
-        scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
+        scheduling.k8s.v6d.io/required: none
+        scheduling.k8s.v6d.io/job: spill-demo
     spec:
       schedulerName: vineyard-scheduler
       containers:
-      - name: job2
-        image: docker.pkg.github.com/v6d-io/v6d/job2
+      - name: spill-demo
+        image: docker.pkg.github.com/v6d-io/v6d/spill
+        command: ["/work/v6d/build/bin/spill_test", "/var/run/vineyard.sock"]
         imagePullPolicy: IfNotPresent
-        env:
-        # pass node name to the environment
-        - name: NODENAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        # TODO: could we make it more native?
-        envFrom:
-          - configMapRef:
-              name: v6d-workflow-demo-job1
         volumeMounts:
         - mountPath: /var/run
           name: vineyard-sock
+        - mountPath: /var/vineyard/spill
+          name: spill-pvc
       volumes:
       - name: vineyard-sock
         hostPath:
           path: /var/run/vineyard-vineyard-system-vineyardd-sample
+      - name: spill-pvc
+        persistentVolumeClaim:
+          claimName: spill-path

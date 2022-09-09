@@ -51,15 +51,12 @@ type VineyarddConfig struct {
 	// ipc socket file location
 	// +kubebuilder:validation:Optional
 	Socket string `json:"socket,omitempty"`
-	// path of spilling temporary files
+	// the configuration of spilling
 	// +kubebuilder:validation:Optional
-	SpillPath string `json:"spillPath,omitempty"`
-	// low watermark of spilling memory
+	SpillConfig SpillConfig `json:"spillConfig,omitempty"`
+	// the configuration of serialization
 	// +kubebuilder:validation:Optional
-	SpillLowerRate string `json:"spillLowerRate,omitempty"`
-	// high watermark of triggering spiling
-	// +kubebuilder:validation:Optional
-	SpillUpperRate string `json:"spillUpperRate,omitempty"`
+	SerializeConfig SerializeConfig `json:"serializeConfig,omitempty"`
 	// memory threshold of streams (percentage of total memory)
 	// +kubebuilder:validation:Optional
 	StreamThreshold int64 `json:"streamThreshold,omitempty"`
@@ -71,6 +68,44 @@ type VineyarddConfig struct {
 	SyncCRDs bool `json:"syncCRDs,omitempty"`
 }
 
+// SpillConfig holds all configuration about spilling
+type SpillConfig struct {
+	// the name of the spill config
+	// +kubebuilder:validation:Optional
+	Name string `json:"name,omitempty"`
+	// the path of spilling
+	// +kubebuilder:validation:Optional
+	Path string `json:"path,omitempty"`
+	// low watermark of spilling memory
+	// +kubebuilder:validation:Optional
+	SpillLowerRate string `json:"spillLowerRate,omitempty"`
+	// high watermark of triggering spiling
+	// +kubebuilder:validation:Optional
+	SpillUpperRate string `json:"spillUpperRate,omitempty"`
+	// the PersistentVolumeSpec of the spilling PV
+	// +kubebuilder:validation:Optional
+	PersistentVolumeSpec corev1.PersistentVolumeSpec `json:"persistentVolumeSpec,omitempty"`
+	// the PersistentVolumeClaimSpec of the spill file
+	// +kubebuilder:validation:Optional
+	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
+}
+
+// SerializeConfig holds all configuration about serializetion
+type SerializeConfig struct {
+	// the name of the serialization config
+	// +kubebuilder:validation:Optional
+	Name string `json:"name,omitempty"`
+	// the path of serializetion
+	// +kubebuilder:validation:Optional
+	Path string `json:"path,omitempty"`
+	// the configuration of the serialization PV
+	// +kubebuilder:validation:Optional
+	PersistentVolumeSpec corev1.PersistentVolumeSpec `json:"persistentVolumeSpec,omitempty"`
+	// the PersistentVolumeClaimSpec of the serializtion
+	// +kubebuilder:validation:Optional
+	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
+}
+
 // ServiceConfig holds all service configuration about vineyardd
 type ServiceConfig struct {
 	// service type
@@ -79,22 +114,6 @@ type ServiceConfig struct {
 	// service port
 	// +kubebuilder:validation:Required
 	Port int `json:"port,omitempty"`
-}
-
-// PVCConfig holds all configuration about PersistentVolumeClaim
-type PVCConfig struct {
-	// PVC name
-	// +kubebuilder:validation:Optional
-	Name string `json:"name,omitempty"`
-	// Resources describes the compute resource requirements.
-	// +kubebuilder:validation:Optional
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	// accessModes contains the actual access modes the volume backing the PVC has.
-	// +kubebuilder:validation:Optional
-	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
-	// storageClassName is the name of the StorageClass required by the claim.
-	// +kubebuilder:validation:Optional
-	StorageClassName *string `json:"storageClassName,omitempty"`
 }
 
 // Etcd holds all configuration about Etcd
@@ -130,9 +149,6 @@ type VineyarddSpec struct {
 	// vineyardd's service
 	// +kubebuilder:validation:Optional
 	Service ServiceConfig `json:"service,omitempty"`
-	// PVCCofnig holds all persistent configuration about socket file
-	// +kubebuilder:validation:Optional
-	PVCConfig PVCConfig `json:"pvcConfig,omitempty"`
 	// Etcd describe the etcd instances
 	// +kubebuilder:validation:Optional
 	Etcd Etcd `json:"etcd,omitempty"`
@@ -148,8 +164,8 @@ type VineyarddStatus struct {
 	Conditions []appsv1.DeploymentCondition `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Running",type=string,JSONPath=`.status.running`
 // +kubebuilder:printcolumn:name="Required",type=string,JSONPath=`.status.required`
 
@@ -162,7 +178,7 @@ type Vineyardd struct {
 	Status VineyarddStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // VineyarddList contains a list of Vineyardd
 type VineyarddList struct {
