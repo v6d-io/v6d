@@ -38,7 +38,7 @@ spec:
       containers:
       - name: spill-demo
         image: docker.pkg.github.com/v6d-io/v6d/spill
-        command: ["/work/v6d/build/bin/spill_test", "/var/run/vineyard.sock"]
+        command: ["spill_test", "/var/run/vineyard.sock"]
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - mountPath: /var/run

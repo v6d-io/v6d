@@ -127,7 +127,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-      - name: Run E2E Test(vineyardd)
+      - name: Run E2E Test(serialize)
         uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
         with:
           e2e-file: k8s/test/e2e/serialize/e2e.yaml
@@ -149,7 +149,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-      - name: Run E2E Test(vineyardd)
+      - name: Run E2E Test(spill)
         uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
         with:
           e2e-file: k8s/test/e2e/spill/e2e.yaml

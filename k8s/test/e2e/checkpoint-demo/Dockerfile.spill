@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:20.04
+FROM ubuntu:20.04 as builder
 
 ADD . /work/v6d
 
@@ -90,23 +90,35 @@ RUN git clone https://github.com/ContinuumIO/libhdfs3-downstream.git &&\
 
 # build vineyard
 RUN cd /work/v6d &&\ 
-    mv k8s/test/e2e/checkpoint-demo/spill.cpp test/spill_test.cc &&\
+    mv k8s/test/e2e/checkpoint-demo/spill.cc test/spill_test.cc &&\
     mkdir build &&\
     cd build &&\
     cmake .. -DCMAKE_BUILD_TYPE=Release \
-             -DBUILD_SHARED_LIBS=ON \
-             -DUSE_ASAN=ON \
-             -DWITH_ALLOCATOR=MIMALLOC \
-             -DBUILD_VINEYARD_COVERAGE=ON \
-             -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
-             -DBUILD_VINEYARD_BASIC=ON \
-             -DBUILD_VINEYARD_IO=ON \
-             -DBUILD_VINEYARD_IO_KAFKA=ON \
-             -DBUILD_VINEYARD_MALLOC=ON \
-             -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=ON \
-             -DBUILD_VINEYARD_FUSE=ON \
-             -DBUILD_VINEYARD_FUSE_PARQUET=ON \
+             -DBUILD_SHARED_LIBS=OFF \
              -DBUILD_VINEYARD_TESTS_ALL=ON &&\
-    make -j`nproc` 
+    make -j`nproc`  
+
+FROM ubuntu:20.04 
+
+ENV DEBIAN_FRONTEND noninteractive
+
+COPY --from=builder /work/v6d/build/bin/spill_test /usr/local/bin/spill_test
+COPY --from=builder /work/v6d/build/shared-lib/* /lib/
+
+# build environment
+RUN chmod -R a+wrx /tmp &&\
+    apt-get update -y && \
+    apt install -y ca-certificates \
+                    libunwind-dev \
+                    libgoogle-glog-dev \
+                    curl \
+                    wget \
+                    uuid-dev \
+                    lsb-release && \
+    # install apache-arrow
+    wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb &&\
+    apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb &&\
+    apt update &&\
+    apt install -y libarrow-dev=3.0.0-1 libparquet-dev=3.0.0-1 
 
 ENTRYPOINT ["/bin/bash", "-l", "-c" ]
