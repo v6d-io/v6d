@@ -23,6 +23,12 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         malloc: [dlmalloc, mimalloc]
+        metadata: [etcd, redis]
+        exclude:
+          - malloc: mimalloc
+            metadata: redis
+    env:
+      RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -39,7 +45,7 @@ jobs:
           path: ~/.ccache
           key: ${{ runner.os }}-${{ matrix.malloc }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.malloc }}-ccache-
+            ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-
 
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'
@@ -70,9 +76,11 @@ jobs:
                               librdkafka-dev \
                               libssl-dev \
                               libunwind-dev \
+                              libuv1-dev \
                               libxml2-dev \
                               libz-dev \
                               lsb-release \
+                              redis-server \
                               pandoc \
                               protobuf-compiler-grpc \
                               python3-pip \
@@ -190,6 +198,10 @@ jobs:
                    -DBUILD_VINEYARD_FUSE_PARQUET=ON \
                    -DBUILD_VINEYARD_TESTS=ON
 
+          if [ "${{ matrix.metadata }}" == "redis" ]; then
+            cmake .. -DBUILD_VINEYARD_SERVER_REDIS=ON
+          fi
+
       - name: Cpp format and lint
         run: |
           cd build
@@ -305,7 +317,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-cpp --with-deployment
+          python3 test/runner.py $RUNNER_ARGS --with-cpp --with-deployment
 
       - name: Setup tmate session
         if: false
@@ -328,7 +340,7 @@ jobs:
 
             rm -rf default.etcd
             rm -rf /dev/shm/etcd*
-            python3 test/runner.py --with-python --with-migration --with-deployment --with-contrib
+            python3 test/runner.py $RUNNER_ARGS --with-python --with-migration --with-deployment --with-contrib
 
       - name: Run Python Tests
         if: ${{ github.event_name == 'pull_request' }}
@@ -345,7 +357,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-python --with-migration --with-deployment --with-contrib
+          python3 test/runner.py $RUNNER_ARGS --with-python --with-migration --with-deployment --with-contrib
 
       - name: Setup tmate session
         if: false
@@ -362,7 +374,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-io --with-migration
+          python3 test/runner.py $RUNNER_ARGS --with-io --with-migration
           
       - name: Run FUSE Tests
         run: |
@@ -374,7 +386,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py --with-fuse
+          python3 test/runner.py $RUNNER_ARGS --with-fuse
         
       - name: Find vineyard using CMake
         run: |

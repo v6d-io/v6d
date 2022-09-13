@@ -24,6 +24,7 @@ find_executable_generic = None
 start_program_generic = None
 find_port = None
 port_is_inuse = None
+build_artifact_directory = None
 
 
 def prepare_runner_environment():
@@ -75,18 +76,16 @@ def envvars(key, value=None, append=False):
 
 
 def find_executable(name):
-    default_builder_dir = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '..', 'build', 'bin'
+    binary_dir = os.environ.get(
+        'VINEYARD_EXECUTABLE_DIR', os.path.join(build_artifact_directory, 'bin')
     )
-    binary_dir = os.environ.get('VINEYARD_EXECUTABLE_DIR', default_builder_dir)
     return find_executable_generic(name, search_paths=[binary_dir])
 
 
 def start_program(*args, **kwargs):
-    default_builder_dir = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '..', 'build', 'bin'
+    binary_dir = os.environ.get(
+        'VINEYARD_EXECUTABLE_DIR', os.path.join(build_artifact_directory, 'bin')
     )
-    binary_dir = os.environ.get('VINEYARD_EXECUTABLE_DIR', default_builder_dir)
     print('binary_dir = ', binary_dir)
     return start_program_generic(*args, search_paths=[binary_dir], **kwargs)
 
@@ -152,9 +151,59 @@ def start_etcd():
 
 
 @contextlib.contextmanager
+def start_redis():
+    with contextlib.ExitStack() as stack:
+        redis_port = find_port()
+        proc = start_program(
+            'redis-server',
+            '--port',
+            str(redis_port),
+            verbose=True,
+        )
+        ctx_entered = stack.enter_context(proc)
+        # waiting for redis to be ready
+        print('waiting for redis to be ready .')
+        while not port_is_inuse(redis_port):
+            time.sleep(1)
+            print('.', end='')
+        print('', end='\n')
+        yield ctx_entered, 'redis://127.0.0.1:%d' % redis_port
+
+
+@contextlib.contextmanager
+def start_metadata_engine(meta):
+    with contextlib.ExitStack() as stack:
+        meta_engine = None
+        if meta == 'etcd':
+            meta_engine = start_etcd()
+        if meta == 'redis':
+            meta_engine = start_redis()
+        if meta_engine is not None:
+            yield stack.enter_context(meta_engine)
+        else:
+            yield None, None
+
+
+def make_metadata_settings(meta, endpoint, prefix):
+    if meta == 'local':
+        return ['--meta', 'local']
+    if meta == 'etcd':
+        return ['--meta', 'etcd', '--etcd_endpoint', endpoint, '--etcd_prefix', prefix]
+    if meta == 'redis':
+        return [
+            '--meta',
+            'redis',
+            '--redis_endpoint',
+            endpoint,
+            '--redis_prefix',
+            prefix,
+        ]
+    raise ValueError("invalid argument: unknown metadata backend: '%s'" % meta)
+
+
+@contextlib.contextmanager
 def start_vineyardd(
-    etcd_endpoints,
-    etcd_prefix,
+    metadata_settings,
     size=3 * 1024 * 1024 * 1024,
     default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     idx=None,
@@ -177,10 +226,7 @@ def start_vineyardd(
             socket,
             '--rpc_socket_port',
             str(rpc_socket_port),
-            '--etcd_endpoint',
-            etcd_endpoints,
-            '--etcd_prefix',
-            etcd_prefix,
+            *metadata_settings,
             '--spill_path',
             spill_path,
             '--spill_lower_rate',
@@ -195,8 +241,7 @@ def start_vineyardd(
 
 @contextlib.contextmanager
 def start_multiple_vineyardd(
-    etcd_endpoints,
-    etcd_prefix,
+    metadata_settings,
     size=1 * 1024 * 1024 * 1024,
     default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     instance_size=1,
@@ -206,8 +251,7 @@ def start_multiple_vineyardd(
         jobs = []
         for idx in range(instance_size):
             job = start_vineyardd(
-                etcd_endpoints,
-                etcd_prefix,
+                metadata_settings,
                 size=size,
                 default_ipc_socket=default_ipc_socket,
                 idx=idx,
@@ -238,13 +282,6 @@ def start_kafka_server():
             verbose=True,
         )
         yield stack.enter_context(proc)
-
-
-def wait_etcd_ready():
-    etcdctl = find_executable('etcdctl')
-    probe_cmd = [etcdctl, 'get', '""', '--prefix', '--limit', '1']
-    while subprocess.call(probe_cmd) != 0:
-        time.sleep(1)
 
 
 def resolve_mpiexec_cmdargs():
@@ -367,12 +404,11 @@ def run_invalid_client_test(tests, host, port):
     send_garbage_bytes(b'\xFF' * 100000)
 
 
-def run_single_vineyardd_tests(tests):
-    etcd_port = find_port()
-    _ = [find_port() for _ in range(10)]  # skip some ports
+def run_single_vineyardd_tests(meta, endpoints, tests):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
-        'http://localhost:%d' % etcd_port,
-        'vineyard_test_%s' % time.time(),
+        metadata_settings,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         # enable when USE_GPU is defined
@@ -421,28 +457,27 @@ def run_single_vineyardd_tests(tests):
 
         # test invalid inputs from client
         run_invalid_client_test(tests, '127.0.0.1', rpc_socket_port)
+
     with start_vineyardd(
-        'http://localhost:%d' % etcd_port,
-        'vineyard_test_%s' % time.time(),
-        2048,
+        metadata_settings,
+        size=2048,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         spill_path='/tmp/spill_path',
     ):
         run_test(tests, 'spill_test')
 
 
-def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
-    etcd_prefix = 'vineyard_test_%s' % time.time()
+def run_scale_in_out_tests(meta, endpoints, instance_size=4):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_multiple_vineyardd(
-        etcd_endpoints,
-        etcd_prefix,
+        metadata_settings,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
     ) as instances:
         time.sleep(5)
         with start_vineyardd(
-            etcd_endpoints,
-            etcd_prefix,
+            metadata_settings,
             default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
             idx=instance_size,
         ):
@@ -452,8 +487,7 @@ def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
 
     # run with serious contention on etcd.
     with start_multiple_vineyardd(
-        etcd_endpoints,
-        etcd_prefix,
+        metadata_settings,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
@@ -461,11 +495,12 @@ def run_scale_in_out_tests(etcd_endpoints, instance_size=4):
         time.sleep(5)
 
 
-def run_fuse_test(etcd_endpoints):
-    etcd_prefix = 'vineyard_test_%s' % time.time()
+def run_fuse_test(meta, endpoints):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
 
     with start_vineyardd(
-        etcd_endpoints, etcd_prefix, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
+        metadata_settings, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
     ) as (_, rpc_socket_port), start_fuse() as _:
         start_time = time.time()
         subprocess.check_call(
@@ -488,10 +523,12 @@ def run_fuse_test(etcd_endpoints):
         )
 
 
-def run_python_tests(etcd_endpoints, tests):
-    etcd_prefix = 'vineyard_test_%s' % time.time()
+def run_python_tests(meta, endpoints, tests):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
     with start_vineyardd(
-        etcd_endpoints, etcd_prefix, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
+        metadata_settings, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
     ) as (_, rpc_socket_port):
         start_time = time.time()
         test_args = []
@@ -522,10 +559,12 @@ def run_python_tests(etcd_endpoints, tests):
         )
 
 
-def run_python_contrib_ml_tests(etcd_endpoints):
-    etcd_prefix = 'vineyard_test_%s' % time.time()
+def run_python_contrib_ml_tests(meta, endpoints):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
     with start_vineyardd(
-        etcd_endpoints, etcd_prefix, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
+        metadata_settings, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
     ) as (_, rpc_socket_port):
         start_time = time.time()
         subprocess.check_call(
@@ -549,12 +588,13 @@ def run_python_contrib_ml_tests(etcd_endpoints):
         )
 
 
-def run_python_contrib_dask_tests(etcd_endpoints):
+def run_python_contrib_dask_tests(meta, endpoints):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
     instance_size = 4
-    etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_multiple_vineyardd(
-        etcd_endpoints,
-        etcd_prefix,
+        metadata_settings,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
@@ -583,15 +623,16 @@ def run_python_contrib_dask_tests(etcd_endpoints):
         )
 
 
-def run_python_deploy_tests(etcd_endpoints, with_migration):
+def run_python_deploy_tests(meta, endpoints, with_migration):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
     instance_size = 4
     extra_args = []
     if with_migration:
         extra_args.append('--with-migration')
-    etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_multiple_vineyardd(
-        etcd_endpoints,
-        etcd_prefix,
+        metadata_settings,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
@@ -621,11 +662,12 @@ def run_python_deploy_tests(etcd_endpoints, with_migration):
         )
 
 
-def run_io_adaptor_tests(etcd_endpoints):
-    etcd_prefix = 'vineyard_test_%s' % time.time()
+def run_io_adaptor_tests(meta, endpoints):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
 
     with start_vineyardd(
-        etcd_endpoints, etcd_prefix, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
+        metadata_settings, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
     ) as (_, rpc_socket_port):
         start_time = time.time()
         subprocess.check_call(
@@ -649,16 +691,16 @@ def run_io_adaptor_tests(etcd_endpoints):
         )
 
 
-def run_io_adaptor_distributed_tests(etcd_endpoints, with_migration):
-    etcd_prefix = 'vineyard_test_%s' % time.time()
+def run_io_adaptor_distributed_tests(meta, endpoints, with_migration):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
     instance_size = 2
     extra_args = []
     if with_migration:
         extra_args.append('--with-migration')
-    etcd_prefix = 'vineyard_test_%s' % time.time()
     with start_multiple_vineyardd(
-        etcd_endpoints,
-        etcd_prefix,
+        metadata_settings,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
@@ -709,6 +751,13 @@ def parse_sys_args():
         type=str,
         default=default_builder_dir,
         help='Directory where the build artifacts are generated',
+    )
+    arg_parser.add_argument(
+        '-m',
+        '--meta',
+        type=str,
+        default='etcd',
+        help='Metadata backend to testing, could be "etcd", "redis", or "local"',
     )
     arg_parser.add_argument(
         '--with-cpp',
@@ -766,35 +815,36 @@ def parse_sys_args():
 
 def execute_tests(args):
     if args.with_cpp:
-        run_single_vineyardd_tests(args.tests)
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_single_vineyardd_tests(args.meta, endpoints, args.tests)
 
         if args.with_deployment:
-            with start_etcd() as (_, etcd_endpoints):
-                run_scale_in_out_tests(etcd_endpoints, instance_size=4)
+            with start_metadata_engine(args.meta) as (_, endpoints):
+                run_scale_in_out_tests(args.meta, endpoints, instance_size=4)
 
     if args.with_python:
-        with start_etcd() as (_, etcd_endpoints):
-            run_python_tests(etcd_endpoints, args.tests)
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_python_tests(args.meta, endpoints, args.tests)
 
         if args.with_contrib:
-            with start_etcd() as (_, etcd_endpoints):
-                run_python_contrib_ml_tests(etcd_endpoints)
-            with start_etcd() as (_, etcd_endpoints):
-                run_python_contrib_dask_tests(etcd_endpoints)
+            with start_metadata_engine(args.meta) as (_, endpoints):
+                run_python_contrib_ml_tests(args.meta, endpoints)
+            with start_metadata_engine(args.meta) as (_, endpoints):
+                run_python_contrib_dask_tests(args.meta, endpoints)
 
         if args.with_deployment:
-            with start_etcd() as (_, etcd_endpoints):
-                run_python_deploy_tests(etcd_endpoints, args.with_migration)
+            with start_metadata_engine(args.meta) as (_, endpoints):
+                run_python_deploy_tests(args.meta, endpoints, args.with_migration)
 
     if args.with_io:
-        with start_etcd() as (_, etcd_endpoints):
-            run_io_adaptor_tests(etcd_endpoints)
-        with start_etcd() as (_, etcd_endpoints):
-            run_io_adaptor_distributed_tests(etcd_endpoints, args.with_migration)
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_io_adaptor_tests(args.meta, endpoints)
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_io_adaptor_distributed_tests(args.meta, endpoints, args.with_migration)
 
     if args.with_fuse:
-        with start_etcd() as (_, etcd_endpoints):
-            run_fuse_test(etcd_endpoints)
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_fuse_test(args.meta, endpoints)
 
 
 def main():
@@ -807,6 +857,9 @@ def main():
         )
         parser.print_help()
         sys.exit(1)
+
+    global build_artifact_directory
+    build_artifact_directory = args.build_dir
 
     built_shared_libs = os.path.join(os.path.abspath(args.build_dir), 'shared-lib')
     with envvars('LD_LIBRARY_PATH', built_shared_libs, append=True):

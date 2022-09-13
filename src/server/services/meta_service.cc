@@ -22,6 +22,9 @@ limitations under the License.
 
 #include "server/services/etcd_meta_service.h"
 #include "server/services/local_meta_service.h"
+#if defined(BUILD_VINEYARDD_REDIS)
+#include "server/services/redis_meta_service.h"
+#endif  // BUILD_VINEYARDD_REDIS
 #include "server/util/meta_tree.h"
 
 namespace vineyard {
@@ -30,11 +33,16 @@ std::shared_ptr<IMetaService> IMetaService::Get(
     std::shared_ptr<VineyardServer> server_ptr) {
   std::string meta = server_ptr->GetSpec()["metastore_spec"]["meta"]
                          .get_ref<const std::string&>();
-  VINEYARD_ASSERT(meta == "etcd" || meta == "local",
+  VINEYARD_ASSERT(meta == "etcd" || meta == "redis" || meta == "local",
                   "Invalid metastore: " + meta);
   if (meta == "etcd") {
     return std::shared_ptr<IMetaService>(new EtcdMetaService(server_ptr));
   }
+#if defined(BUILD_VINEYARDD_REDIS)
+  if (meta == "redis") {
+    return std::shared_ptr<IMetaService>(new RedisMetaService(server_ptr));
+  }
+#endif  // BUILD_VINEYARDD_REDIS
   if (meta == "local") {
     return std::shared_ptr<IMetaService>(new LocalMetaService(server_ptr));
   }
