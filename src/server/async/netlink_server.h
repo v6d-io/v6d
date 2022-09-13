@@ -14,7 +14,7 @@ limitations under the License.
 */
 #ifndef SRC_SERVER_ASYNC_NETLINK_SERVER_H_
 #define SRC_SERVER_ASYNC_NETLINK_SERVER_H_
-
+#define BUILD_NETLINK_SERVER (1)
 #include <memory>
 #include <string>
 
@@ -39,6 +39,7 @@ class VineyardServer;
 
 enum OBJECT_TYPE {
   BLOB = 1,
+  TENSOR = 2,
 };
 
 enum MSG_OPT {
@@ -56,8 +57,11 @@ enum MSG_OPT {
 
 struct fopt_ret {
   uint64_t obj_id;
-  uint64_t offset;
-  uint64_t size;
+  uint64_t data_offset;
+  uint64_t header_offset;
+  uint64_t data_size;
+  uint64_t header_size;
+  enum OBJECT_TYPE type;
   int ret;
 };
 
@@ -201,9 +205,17 @@ class NetLinkServer : public SocketServer,
   std::thread* work;
 
   void* obj_info_mem;
+  unsigned int obj_info_lock;
+  unsigned char sync_ready;
 
   uint64_t base_object_id;
   void* base_pointer;
+
+  enum _ready {
+    Blob = 0b1,
+    Tensor = 0b10,
+    Ready = 0b11,
+  };
 }; /*  */
 
 }  // namespace vineyard
@@ -220,8 +232,8 @@ class NetLinkServer : public SocketServer,
   void Start() override {}
 
   void Close() override {}
-
   std::string Socket() { return std::string(""); }
+
 
   void SyncObjectEntryList() {}
 

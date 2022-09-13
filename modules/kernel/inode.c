@@ -357,12 +357,24 @@ struct vineyard_inode_info *get_vineyard_inode_info(struct inode *inode)
 	return container_of(inode, struct vineyard_inode_info, vfs_inode);
 }
 
+static const char *get_name_postfix(const char *name)
+{
+	const char *postfix;
+
+	postfix = name;
+	while (*postfix != 0 && ((*postfix) <= '9' && (*postfix >= '0'))) {
+		postfix++;
+	}
+	return postfix;
+}
+
 struct inode *vineyard_fs_build_inode(struct super_block *sb, const char *name)
 {
 	struct inode *inode;
 	struct vineyard_attr attr;
 	struct vineyard_inode_info *i_info;
 	struct vineyard_sb_info *sbi;
+	const char *temp;
 
 	printk(KERN_INFO PREFIX "%s\n", __func__);
 	inode = vineyard_fs_search_inode(sb, name);
@@ -379,6 +391,16 @@ struct inode *vineyard_fs_build_inode(struct super_block *sb, const char *name)
 	vineyard_attach_node(sb, inode);
 	i_info = get_vineyard_inode_info(inode);
 	i_info->obj_id = translate_char_to_u64(name);
+
+	temp = get_name_postfix(name);
+	printk(KERN_INFO PREFIX "%s\n", temp);
+	if (strcmp(temp, ".npy") == 0) {
+		printk(KERN_INFO PREFIX "TENSOR\n");
+		i_info->obj_type = TENSOR;
+	} else {
+		printk(KERN_INFO PREFIX "BLOB\n");
+		i_info->obj_type = BLOB;
+	}
 	printk(KERN_INFO PREFIX "trans id:%llu\n", i_info->obj_id);
 	printk(KERN_INFO PREFIX "trans name:%s\n", name);
 out:

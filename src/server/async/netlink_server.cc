@@ -16,6 +16,7 @@ limitations under the License.
 
 #if defined(BUILD_NETLINK_SERVER) && BUILD_NETLINK_SERVER
 #ifdef __linux__
+#include <iostream>
 #include <limits>
 #include <mutex>
 #include <string>
@@ -33,9 +34,16 @@ limitations under the License.
 
 #define OFF (0)
 #define ON (1)
-#define DEBUG OFF
+#define DEBUG ON
 #define PAGE_SIZE (0x1000)
 #define PAGE_DOWN(x) ((x) & (~(PAGE_SIZE - 1)))
+
+#define MAGIC ("\x93NUMPY")
+#define descr           ("'descr': ")
+#define fortran_order   ("'fortran_order': ")
+#define shape           ("'shape': ")
+int8_t majorVersion = 1;
+int8_t minorVersion = 0;
 namespace vineyard {
 
 // Debug tools
@@ -48,10 +56,107 @@ static void PrintJsonElement(const json& tree) {
 #endif
 }
 
+std::pair<char *, int> ConstructHeader(int type, std::string &tensor_shape, bool order)
+{
+    char *ret;
+    char *temp;
+    int16_t header_len;
+    int16_t total_len;
+    int16_t shape_len;
+    char descr_str[17] = { 0 };
+    char fortran_order_str[25] = {0};
+    char *shape_str;
+
+    // type
+    // we now suppose that the platform is little endian
+    strcpy(descr_str, descr);
+    switch(type) {
+    case 1:
+        strcpy(descr_str + strlen(descr), "'<i8', ");
+        break;
+    case 2:
+        strcpy(descr_str + strlen(descr), "'<u8', ");
+        break;
+    default:
+        break;
+    }
+
+    //fortran
+    strcpy(fortran_order_str, fortran_order);
+    if(order) {
+        strcpy(fortran_order_str + strlen(fortran_order), "True, ");
+    } else {
+        strcpy(fortran_order_str + strlen(fortran_order), "False, ");
+    }
+
+
+    //shape
+    shape_len = tensor_shape.length() + strlen(shape) + 3;
+    shape_str = (char *)malloc(sizeof(char) * shape_len);
+    memset(shape_str, 0, shape_len);
+    strcpy(shape_str, shape);
+    strcpy(shape_str + strlen(shape), tensor_shape.c_str());
+    shape_str[shape_len - 3] = ',';
+    shape_str[shape_len - 2] = ' ';
+
+    total_len = strlen(descr_str) + strlen(fortran_order_str) + strlen(shape_str) + 12;
+    total_len = (total_len + 63) & 0xFFC0;
+    header_len = total_len - 10;
+
+    ret = (char *)malloc(sizeof(char) * total_len);
+    temp = ret;
+
+
+    memcpy(temp, MAGIC, strlen(MAGIC));
+    temp += strlen(MAGIC);
+    memcpy(temp, &majorVersion, sizeof(majorVersion));
+    temp += sizeof(majorVersion);
+    memcpy(temp, &minorVersion, sizeof(minorVersion));
+    temp += sizeof(minorVersion);
+    memcpy(temp, &header_len, sizeof(header_len));
+    temp += sizeof(header_len);
+
+    *temp = '{';
+    temp++;
+    memcpy(temp, descr_str, strlen(descr_str));
+    temp += strlen(descr_str);
+    memcpy(temp, fortran_order_str, strlen(fortran_order_str));
+    temp += strlen(fortran_order_str);
+    memcpy(temp, shape_str, strlen(shape_str));
+    temp += strlen(shape_str);
+    *temp = '}';
+    temp++;
+
+    while (temp - ret < total_len - 1) {
+        *temp = ' ';
+        temp++;
+    }
+    *temp = '\n';
+
+    free(shape_str);
+    return std::pair<char *, int>(ret, total_len);
+}
+
+std::string ConstructTensorShape(std::vector<int> &tensor_shape)
+{
+  std::string ret;
+  ret.push_back('(');
+  for (auto iter = tensor_shape.begin(); iter != tensor_shape.end(); iter++) {
+    ret.push_back(*iter + '0');
+    if (iter + 1 != tensor_shape.end()) {
+      ret.push_back(',');
+      ret.push_back(' ');
+    }
+  }
+  ret.push_back(')');
+  return ret;
+}
+
 NetLinkServer::NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
     : SocketServer(vs_ptr),
       nlh(nullptr),
       obj_info_mem(nullptr),
+      obj_info_lock(0),
       base_object_id(std::numeric_limits<uintptr_t>::max()) {
   LOG(INFO) << __func__;
 }
@@ -134,20 +239,43 @@ void NetLinkServer::Close() { LOG(INFO) << __func__; }
 
 void NetLinkServer::SyncObjectEntryList() {
   vineyard_object_info_header* header;
+  sync_ready = 0;
+  LOG(INFO) << __func__;
 
   header = reinterpret_cast<vineyard_object_info_header*>(obj_info_mem);
   if (header) {
     VineyardWriteLock(&header->rw_lock.r_lock, &header->rw_lock.w_lock);
+    header->total_file = 0;
     vs_ptr_->ListData("vineyard::Blob", false,
                       std::numeric_limits<size_t>::max(),
                       [this, header](const Status& status, const json& tree) {
+                        LOG(INFO) << "blob";
                         if (!tree.empty()) {
                           PrintJsonElement(tree);
                           this->FillFileEntryInfo(tree, OBJECT_TYPE::BLOB);
-                        } else {
-                          header->total_file = 0;
                         }
-                        VineyardWriteUnlock(&header->rw_lock.w_lock);
+                        this->sync_ready |= _ready::Blob;
+                        if (this->sync_ready == _ready::Ready) {
+                          LOG(INFO) << "Unlock";
+                          VineyardWriteUnlock(&header->rw_lock.w_lock);
+                          this->sync_ready = 0;
+                        }
+                        return Status::OK();
+                      });
+    vs_ptr_->ListData("vineyard::Tensor*", false,
+                      std::numeric_limits<size_t>::max(),
+                      [this, header](const Status& status, const json& tree) {
+                        LOG(INFO) << "tensor";
+                        if (!tree.empty()) {
+                          // PrintJsonElement(tree);
+                          this->FillFileEntryInfo(tree, OBJECT_TYPE::TENSOR);
+                        }
+                        this->sync_ready |= _ready::Tensor;
+                        if (this->sync_ready == _ready::Ready) {
+                          LOG(INFO) << "Unlock";
+                          VineyardWriteUnlock(&header->rw_lock.w_lock);
+                          this->sync_ready = 0;
+                        }
                         return Status::OK();
                       });
   }
@@ -158,7 +286,6 @@ void NetLinkServer::doAccept() { LOG(INFO) << __func__; }
 int NetLinkServer::HandleSet(vineyard_request_msg* msg) {
   LOG(INFO) << __func__;
   obj_info_mem = reinterpret_cast<void*>(msg->param._set_param.obj_info_mem);
-  SyncObjectEntryList();
   return 0;
 }
 
@@ -170,27 +297,95 @@ fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
   fopt_ret ret;
   void* pointer = NULL;
   uint64_t file_size = 0;
+  unsigned int sync_val = 0;
 
   ret.ret = -1;
   ids.push_back(param.obj_id);
-  vs_ptr_->GetData(
-      ids, false, false, []() { return true; },
-      [](const Status& status, const json& tree) {
-        LOG(INFO) << tree;
-        return Status::OK();
-      });
+  LOG(INFO) << param.type;
+  // TODO: Use a more elegent way to sync result.
+  VineyardSpinLock(&sync_val);
+  if (param.type == OBJECT_TYPE::TENSOR) {
+    vs_ptr_->GetData(
+        ids, false, false, []() { return true; },
+        [&sync_val, this, &ret](const Status& status, const json& tree) {
+          uint64_t bulk_id;
+          if (!tree.empty()) {
+            std::vector<ObjectID> ids;
+            std::vector<std::shared_ptr<Payload>> objects;
+            std::vector<int> tensor_shape;
+            std::string tensor_shape_string;
+            std::pair<char *, int> header;
 
-  vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
-  for (auto iter = objects.begin(); iter != objects.end(); iter++) {
-    pointer = (*iter)->pointer;
-    file_size = (*iter)->data_size;
-  }
+            auto iter = tree.begin();
+            LOG(INFO) << *iter;
+            LOG(INFO) << tree;
+            LOG(INFO) << "=========";
+            bulk_id = ObjectIDFromString((*iter)["buffer_"]["id"].get<std::string>());
+            // tensor_shape = (*iter)["shape_"].get<std::vector<uint64_t>>();
+            get_container(*iter, "shape_", tensor_shape);
+            for (auto it = tensor_shape.begin(); it != tensor_shape.end(); it++) {
+              LOG(INFO) << *it;
+            }
+            tensor_shape_string = ConstructTensorShape(tensor_shape);
+            header = ConstructHeader(2, tensor_shape_string, false);
+            for (int i = 0; i < header.second; i++) {
+              std::cout << *(header.first + i) << " ";
+            }
+            std::cout << std::endl;
 
-  if (pointer) {
-    ret.offset = (uint64_t) pointer - (uint64_t) base_pointer;
-    ret.ret = 0;
-    ret.size = file_size;
+            LOG(INFO) << bulk_id;
+            ids.push_back(bulk_id);
+            this->vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
+            //FIXME: maybe there exist more than one blob to store the data.
+            for (auto iter = objects.begin(); iter != objects.end(); iter++) {
+              LOG(INFO) << "find!";
+              LOG(INFO) << (uint64_t)(*iter)->pointer;
+              LOG(INFO) << (*iter)->data_size;
+              ret.data_offset = (uint64_t)(*iter)->pointer - (uint64_t) base_pointer;
+              ret.data_size = (*iter)->data_size;
+
+              // construct npy header
+              ObjectID object_id;
+              std::shared_ptr<Payload> object;
+              this->vs_ptr_->GetBulkStore()->Create(header.second, object_id, object);
+              memcpy(object->pointer, header.first, header.second);
+              for (int i = 0; i < header.second; i++) {
+                std::cout << *(object->pointer + i);
+              }
+              std::cout << std::endl;
+              LOG(INFO) << object_id;
+              ret.header_offset = (uint64_t)object->pointer - (uint64_t) base_pointer;
+              ret.header_size = object->data_size;
+              LOG(INFO) << "header size: " << object->data_size;
+              ret.type = OBJECT_TYPE::TENSOR;
+              ret.ret = 0;
+              // It should not be seen by client.
+              // this->vs_ptr_->GetBulkStore()->Seal(object_id);
+            }
+          }
+          VineyardSpinUnlock(&sync_val);
+          return Status::OK();
+        });
+  } else if (param.type == OBJECT_TYPE::BLOB) {
+    vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
+    for (auto iter = objects.begin(); iter != objects.end(); iter++) {
+      pointer = (*iter)->pointer;
+      file_size = (*iter)->data_size;
+    }
+    if (pointer) {
+      ret.data_offset = (uint64_t) pointer - (uint64_t) base_pointer;
+      ret.ret = 0;
+      ret.data_size = file_size;
+      ret.type = OBJECT_TYPE::BLOB;
+    }
+    VineyardSpinUnlock(&sync_val);
+  } else {
+    VineyardSpinUnlock(&sync_val);
   }
+  // for sync test
+  VineyardSpinLock(&sync_val);
+  VineyardSpinUnlock(&sync_val);
+  LOG(INFO) << "test";
 
   return ret;
 }
@@ -223,6 +418,7 @@ fopt_ret NetLinkServer::HandleReadDir() {
 }
 
 fopt_ret NetLinkServer::HandleFops(vineyard_request_msg* msg) {
+  LOG(INFO) << __func__;
   fopt_ret ret;
   switch (msg->opt) {
   case MSG_OPT::VINEYARD_OPEN:
@@ -247,20 +443,40 @@ void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
   vineyard_object_info_header* header;
   vineyard_entry* entrys;
   int i = 0;
+  int current_file_num;
 
+  VineyardSpinLock(&obj_info_lock);
+  current_file_num = header->total_file;
   header = reinterpret_cast<vineyard_object_info_header*>(obj_info_mem);
   entrys = reinterpret_cast<vineyard_entry*>(header + 1);
+  current_file_num = header->total_file;
   PrintJsonElement(tree);
 
   if (type == OBJECT_TYPE::BLOB) {
     for (auto iter = tree.begin(); iter != tree.end(); iter++) {
-      entrys[i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
-      entrys[i].file_size = (*iter)["length"].get<uint64_t>();
-      entrys[i].type = type;
+      entrys[current_file_num + i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
+      entrys[current_file_num + i].file_size = (*iter)["length"].get<uint64_t>();
+      entrys[current_file_num + i].type = type;
       i++;
     }
   }
-  header->total_file = i;
+
+  if (type == OBJECT_TYPE::TENSOR) {
+    for (auto iter = tree.begin(); iter != tree.end(); iter++) {
+      LOG(INFO) << *iter;
+      LOG(INFO) << ObjectIDFromString((*iter)["id"].get<std::string>());
+      LOG(INFO) << (*iter)["nbytes"].get<uint64_t>();
+      LOG(INFO) << ObjectIDFromString((*iter)["buffer_"]["id"].get<std::string>());
+      
+      entrys[header->total_file + i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
+      entrys[header->total_file + i].file_size = (*iter)["nbytes"].get<uint64_t>();
+      entrys[header->total_file + i].type = type;
+      i++;
+    }
+  }
+  header->total_file = current_file_num + i;
+  LOG(INFO) << "total file " << header->total_file;
+  VineyardSpinUnlock(&obj_info_lock);
 }
 
 void NetLinkServer::thread_routine(NetLinkServer* ns_ptr, int socket_fd,

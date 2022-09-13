@@ -45,8 +45,11 @@ struct vineyard_entry {
 };
 
 struct vineyard_private_data {
-	void *pointer;
-	uint64_t size;
+	enum OBJECT_TYPE type;
+	void *data_pointer;
+	void *header_pointer;
+	uint64_t data_size;
+	uint64_t header_size;
 };
 
 // kernel space
