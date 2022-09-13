@@ -86,6 +86,7 @@ limitations under the License.
 
 #include "server/services/etcd_meta_service.h"
 #include "server/services/meta_service.h"
+#include "server/util/redis_launcher.h"
 
 namespace vineyard {
 
@@ -93,7 +94,7 @@ namespace redis = sw::redis;
 
 class RedisMetaService;
 /**
- * @brief RedisWatchHandler manages the watch on etcd
+ * @brief RedisWatchHandler manages the watch on redis
  *
  */
 class RedisWatchHandler {
@@ -230,7 +231,7 @@ class RedisMetaService : public IMetaService {
   std::shared_ptr<redis::AsyncSubscriber> watcher_;
   std::shared_ptr<RedisWatchHandler> handler_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
-  std::unique_ptr<boost::process::child> redis_proc_;
+  std::unique_ptr<RedisLauncher> redis_launcher_;
 
   callback_task_queue_t registered_callbacks_;
   std::atomic<unsigned> handled_rev_;

@@ -32,13 +32,26 @@ limitations under the License.
 
 namespace vineyard {
 
+constexpr int max_probe_retries = 10;
+
+RedisLauncher::RedisLauncher(const json& redis_spec)
+    : redis_spec_(redis_spec) {}
+
+RedisLauncher::~RedisLauncher() {
+  if (redis_proc_) {
+    std::error_code err;
+    redis_proc_->terminate(err);
+    kill(redis_proc_->id(), SIGTERM);
+    redis_proc_->wait(err);
+  }
+}
+
 Status RedisLauncher::LaunchRedisServer(
     std::unique_ptr<redis::AsyncRedis>& redis_client,
     std::unique_ptr<redis::Redis>& syncredis_client,
     std::unique_ptr<redis::Redis>& watch_client,
     std::shared_ptr<redis::RedMutex>& mtx,
-    std::shared_ptr<redis::RedLock<redis::RedMutex>>& redlock,
-    std::unique_ptr<boost::process::child>& redis_proc) {
+    std::shared_ptr<redis::RedLock<redis::RedMutex>>& redlock) {
   RETURN_ON_ERROR(parseEndpoint());
   redis::ConnectionOptions opts;
   opts.host = endpoint_host_;
@@ -60,10 +73,117 @@ Status RedisLauncher::LaunchRedisServer(
     return Status::OK();
   }
 
-  // TODO: launch redis server when redis doesn't startup.
-  return Status::RedisError(
-      "Failed to connect to redis, startup redis manually first, or check your "
-      "redis_endpoint.");
+  LOG(INFO) << "Starting the redis server";
+
+  // resolve redis binary
+  std::string redis_cmd =
+      redis_spec_["redis_cmd"].get_ref<std::string const&>();
+  if (redis_cmd.empty()) {
+    setenv("LC_ALL", "C", 1);  // makes boost's path works as expected.
+    redis_cmd = boost::process::search_path("redis-server").string();
+  }
+  LOG(INFO) << "Found redis at: " << redis_cmd;
+
+  RETURN_ON_ERROR(initHostInfo());
+  bool try_launch = false;
+  if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
+      local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {
+    try_launch = true;
+  }
+
+  if (!try_launch) {
+    LOG(INFO) << "Will not launch a redis instance.";
+    int retries = 0;
+    while (retries < max_probe_retries) {
+      if (probeRedisServer(redis_client, syncredis_client, watch_client)) {
+        break;
+      }
+      retries += 1;
+      sleep(1);
+    }
+    if (retries >= max_probe_retries) {
+      return Status::RedisError(
+          "Redis has been launched but failed to connect to it");
+    } else {
+      return Status::OK();
+    }
+  }
+
+  std::vector<std::string> args;
+  args.emplace_back("--port");
+  args.emplace_back(std::to_string(endpoint_port_));
+
+  auto env = boost::this_process::environment();
+
+  DLOG(INFO) << "Launching redis with: " << boost::algorithm::join(args, " ");
+  std::error_code ec;
+  redis_proc_ = std::unique_ptr<boost::process::child>(
+      new boost::process::child(redis_cmd, boost::process::args(args),
+                                boost::process::std_out > stdout,
+                                boost::process::std_err > stderr, env, ec));
+  if (ec) {
+    LOG(ERROR) << "Failed to launch redis: " << ec.message();
+    return Status::RedisError("Failed to launch redis: " + ec.message());
+  } else {
+    LOG(INFO) << "redis launched: pid = " << redis_proc_->id() << ", listen on "
+              << endpoint_port_;
+
+    int retries = 0;
+    std::error_code err;
+    while (redis_proc_ && redis_proc_->running(err) && !err &&
+           retries < max_probe_retries) {
+      if (probeRedisServer(redis_client, syncredis_client, watch_client)) {
+        break;
+      }
+      retries += 1;
+      sleep(1);
+    }
+    if (!redis_proc_) {
+      return Status::IOError(
+          "Failed to wait until redis ready: operation has been interrupted");
+    } else if (err) {
+      return Status::IOError("Failed to check the process status: " +
+                             err.message());
+    } else if (retries >= max_probe_retries) {
+      return Status::RedisError(
+          "Redis has been launched but failed to connect to it");
+    } else {
+      return Status::OK();
+    }
+  }
+}
+
+Status RedisLauncher::initHostInfo() {
+  local_hostnames_.emplace("localhost");
+  local_ip_addresses_.emplace("127.0.0.1");
+  local_ip_addresses_.emplace("0.0.0.0");
+  std::string hostname_value = get_hostname();
+  local_hostnames_.emplace(hostname_value);
+  struct hostent* host_entry = gethostbyname(hostname_value.c_str());
+  if (host_entry == nullptr) {
+    LOG(WARNING) << "Failed in gethostbyname: " << hstrerror(h_errno);
+    return Status::OK();
+  }
+  {
+    size_t index = 0;
+    while (true) {
+      if (host_entry->h_aliases[index] == nullptr) {
+        break;
+      }
+      local_hostnames_.emplace(host_entry->h_aliases[index++]);
+    }
+  }
+  {
+    size_t index = 0;
+    while (true) {
+      if (host_entry->h_addr_list[index] == nullptr) {
+        break;
+      }
+      local_ip_addresses_.emplace(
+          inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[index++])));
+    }
+  }
+  return Status::OK();
 }
 
 Status RedisLauncher::parseEndpoint() {
@@ -97,11 +217,12 @@ bool RedisLauncher::probeRedisServer(
     std::unique_ptr<redis::AsyncRedis>& redis_client,
     std::unique_ptr<redis::Redis>& syncredis_client,
     std::unique_ptr<redis::Redis>& watch_client) {
+  LOG(INFO) << "Waiting for the redis server response ...";
   try {
+    auto watch_response = watch_client->ping();
     auto task = redis_client->ping();
     auto response = task.get();
     auto sync_response = syncredis_client->ping();
-    auto watch_response = watch_client->ping();
     redis_client
         ->command<long long>("SETNX",  // NOLINT(runtime/int)
                              "redis_revision", 0)

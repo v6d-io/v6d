@@ -38,15 +38,15 @@ namespace redis = sw::redis;
 
 class RedisLauncher {
  public:
-  explicit RedisLauncher(const json& redis_spec) : redis_spec_(redis_spec) {}
+  explicit RedisLauncher(const json& redis_spec);
+  ~RedisLauncher();
 
   Status LaunchRedisServer(
       std::unique_ptr<redis::AsyncRedis>& redis_client,
       std::unique_ptr<redis::Redis>& syncredis_client,
       std::unique_ptr<redis::Redis>& watch_client,
       std::shared_ptr<redis::RedMutex>& mtx,
-      std::shared_ptr<redis::RedLock<redis::RedMutex>>& lock,
-      std::unique_ptr<boost::process::child>& redis_proc);
+      std::shared_ptr<redis::RedLock<redis::RedMutex>>& lock);
 
   static bool probeRedisServer(std::unique_ptr<redis::AsyncRedis>& redis_client,
                                std::unique_ptr<redis::Redis>& syncredis_client,
@@ -55,11 +55,15 @@ class RedisLauncher {
  private:
   Status parseEndpoint();
 
+  Status initHostInfo();
+
   const json redis_spec_;
   std::string endpoint_host_;
   int endpoint_port_;
   std::set<std::string> local_hostnames_;
   std::set<std::string> local_ip_addresses_;
+
+  std::unique_ptr<boost::process::child> redis_proc_;
 };
 }  // namespace vineyard
 

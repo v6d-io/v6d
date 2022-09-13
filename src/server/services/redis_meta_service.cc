@@ -141,6 +141,8 @@ void RedisMetaService::Stop() {
   if (stopped_.exchange(true)) {
     return;
   }
+  // invoke parent's stop method
+  IMetaService::Stop();
   if (backoff_timer_) {
     boost::system::error_code ec;
     backoff_timer_->cancel(ec);
@@ -150,11 +152,8 @@ void RedisMetaService::Stop() {
       watcher_->unsubscribe();
     } catch (...) {}
   }
-  if (redis_proc_) {
-    std::error_code err;
-    redis_proc_->terminate(err);
-    kill(redis_proc_->id(), SIGTERM);
-    redis_proc_->wait(err);
+  if (redis_launcher_) {
+    redis_launcher_.reset();
   }
 }
 
@@ -443,9 +442,10 @@ Status RedisMetaService::probe() {
 }
 
 Status RedisMetaService::preStart() {
-  RedisLauncher launcher(redis_spec_);
-  return launcher.LaunchRedisServer(redis_, syncredis_, watch_client_, mtx_,
-                                    redlock_, redis_proc_);
+  redis_launcher_ =
+      std::unique_ptr<RedisLauncher>(new RedisLauncher(redis_spec_));
+  return redis_launcher_->LaunchRedisServer(redis_, syncredis_, watch_client_,
+                                            mtx_, redlock_);
 }
 
 }  // namespace vineyard
