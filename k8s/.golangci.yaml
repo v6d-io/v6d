@@ -20,14 +20,12 @@ run:
     - generated
 linters:
   enable:
-    - deadcode
     - errcheck
     - goconst
     - ineffassign
     - lll
     - misspell
     - unconvert
-    - varcheck
     - govet
     - goimports
     - prealloc

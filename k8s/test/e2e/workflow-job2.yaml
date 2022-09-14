@@ -27,6 +27,8 @@ spec:
     metadata:
       labels:
         app: v6d-workflow-demo-job2
+        # this label represents the vineyardd's name that need to be used
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
         scheduling.k8s.v6d.io/required: v6d-workflow-demo-job1
         scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
     spec:
@@ -41,6 +43,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        # TODO: could we make it more native?
         envFrom:
           - configMapRef:
               name: v6d-workflow-demo-job1
@@ -50,4 +53,4 @@ spec:
       volumes:
       - name: vineyard-sock
         hostPath:
-          path: /var/run/vineyard-vineyard-system-vineyard
+          path: /var/run/vineyard-vineyard-system-vineyardd-sample

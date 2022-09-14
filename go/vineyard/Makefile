@@ -7,6 +7,9 @@ endif
 
 GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version)
 
+## Tool Versions
+GOLANGCI_LINT_VERSION ?= v1.49.0
+
 CC				?= gcc
 AR				?= ar
 
@@ -23,7 +26,7 @@ cgo: pkg/common/memory/libfling.a
 golint: 
     ifeq (${GOLINT},)
 		@echo "golangci-lint not exist, installing it..."
-		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
 	${GOBIN}/golangci-lint run ./...
 .PHONY: golint

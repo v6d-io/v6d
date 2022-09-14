@@ -54,6 +54,10 @@ static std::string generate_local_object(
       SignatureToString(object["signature"].get<Signature>());
   std::string type_name = object["typename"].get_ref<std::string const&>();
   InstanceID instance_id = object["instance_id"].get<InstanceID>();
+  std::string vineyardd_name = getenv("VINEYARDD_NAME");
+  std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
+  std::string uid = getenv("VINEYARDD_UID");
+
   /* clang-format off */
   std::string crd = "\n"
                     "\n---"
@@ -62,8 +66,15 @@ static std::string generate_local_object(
                     "\nkind: LocalObject"
                     "\nmetadata:"
                     "\n  name: " + object_id +
+                    "\n  namespace: " + namespace_ +
                     "\n  labels:"
                     "\n    k8s.v6d.io/signature: " + signature +
+                    "\n    job: none"
+                    "\n  ownerReferences:"
+                    "\n    - apiVersion: k8s.v6d.io/v1alpha1"
+                    "\n      kind: Vineyardd"
+                    "\n      name: " + vineyardd_name +
+                    "\n      uid: " + uid +
                     "\nspec:"
                     "\n  id: " + object_id +
                     "\n  signature: " + signature +
@@ -84,6 +95,10 @@ static std::string generate_global_object(
   std::string type_name = object["typename"].get_ref<std::string const&>();
   std::vector<std::string> members;
 
+  std::string vineyardd_name = getenv("VINEYARDD_NAME");
+  std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
+  std::string uid = getenv("VINEYARDD_UID");
+
   std::string crds;
   for (auto const& kv : object.items()) {
     if (kv.value().is_object() && !kv.value().empty()) {
@@ -101,6 +116,14 @@ static std::string generate_global_object(
                     "\nkind: GlobalObject"
                     "\nmetadata:"
                     "\n  name: " + object_id +
+                    "\n  namespace: " + namespace_ +
+                    "\n  labels:"
+                    "\n    job: none"
+                    "\n  ownerReferences:"
+                    "\n    - apiVersion: k8s.v6d.io/v1alpha1"
+                    "\n      kind: Vineyardd"
+                    "\n      name: " + vineyardd_name +
+                    "\n      uid: " + uid +
                     "\nspec:"
                     "\n  id: " + object_id +
                     "\n  signature: " + signature +

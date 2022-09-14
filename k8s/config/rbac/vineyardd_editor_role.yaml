@@ -1,0 +1,24 @@
+# permissions for end users to edit vineyardds.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vineyardd-editor-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - vineyardds
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - vineyardds/status
+  verbs:
+  - get

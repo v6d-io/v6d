@@ -22,6 +22,7 @@ on:
       - 'v*'
     paths:
       - 'k8s/**'
+      - 'src/server/util/kubectl*'
   pull_request:
     branches:
       - main
@@ -29,6 +30,7 @@ on:
       - 'v*'
     paths:
       - 'k8s/**'
+      - 'src/server/util/kubectl*'
 
 jobs:
   build:
@@ -67,11 +69,6 @@ jobs:
               exit -1
           fi
 
-      - name: Operator
-        run: |
-          cd k8s
-          make
-
       - name: Login docker registry
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
@@ -91,8 +88,8 @@ jobs:
           sudo make docker-push IMG=${IMG}:${{ github.sha }}
           sudo docker push ${IMG}:nightly
 
-  e2e-tests:
-    name: e2e tests(scheduler-plugin)
+  vineyardd-e2e-tests:
+    name: e2e tests(vineyardd)
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
@@ -108,7 +105,51 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-      - name: Run E2E Test(scheduler-plugin)
+      - name: Run E2E Test(vineyardd)
         uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
         with:
-          e2e-file: k8s/test/e2e/scheduler-plugin/e2e.yaml
+          e2e-file: k8s/test/e2e/vineyardd/e2e.yaml
+  
+  serialize-e2e-tests:
+    name: e2e tests(serialize)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+        id: go
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Run E2E Test(serialize)
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
+        with:
+          e2e-file: k8s/test/e2e/serialize/e2e.yaml
+
+  spill-e2e-tests:
+    name: e2e tests(spill)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+        id: go
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Run E2E Test(spill)
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
+        with:
+          e2e-file: k8s/test/e2e/spill/e2e.yaml

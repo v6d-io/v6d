@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -250,7 +251,6 @@ type VineyardScheduling struct {
 	scheduleTimeout *time.Duration
 	state           map[string]*SchedulerState
 	podRank         map[string]map[string]int64
-	nodes           []string
 	clientset       *clientset.Clientset
 }
 
@@ -269,6 +269,8 @@ const (
 	ControlPlaneLabel = "node-role.kubernetes.io/control-plane"
 	// VineyardSystemNamespace is the default system namespace
 	VineyardSystemNamespace = "vineyard-system"
+	// VineyarddName is the name of the vineyardd
+	VineyarddName = "scheduling.k8s.v6d.io/vineyardd"
 )
 
 // New initializes a vineyard scheduler
@@ -285,7 +287,6 @@ func New(client client.Client, config *rest.Config, obj runtime.Object, handle f
 		scheduleTimeout: &timeout,
 		state:           state,
 		podRank:         map[string]map[string]int64{},
-		nodes:           GetAllWorkerNodes(client),
 		clientset:       clientset,
 	}
 	return scheduling, nil
@@ -307,7 +308,7 @@ func (vs *VineyardScheduling) Less(pod1, pod2 *framework.PodInfo) bool {
 func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
 	klog.V(5).Infof("scoring for pod %v on node %v", GetNamespacedName(pod), nodeName)
 
-	job, replica, requires, err := vs.GetVineyardLabels(pod)
+	job, replica, requires, vineyardd, err := vs.GetVineyardLabels(pod)
 	if err != nil {
 		return 0, framework.NewStatus(framework.Unschedulable, err.Error())
 	}
@@ -316,8 +317,9 @@ func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleS
 
 	schedulerState := vs.MakeSchedulerStateForNamespace(VineyardSystemNamespace)
 	podRank := vs.GetPodRank(pod, replica)
+	nodes := vs.GetAllWorkerNodes(vineyardd)
 
-	score, err := schedulerState.Compute(ctx, job, replica, podRank, vs.nodes, requires, nodeName, pod)
+	score, err := schedulerState.Compute(ctx, job, replica, podRank, nodes, requires, nodeName, pod)
 	if err != nil {
 		return 0, framework.NewStatus(framework.Unschedulable, err.Error())
 	}
@@ -421,19 +423,25 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int64, error) {
 	return -1, fmt.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
 }
 
-// GetAllWorkerNodes records every worker node's name except the control plane
-func GetAllWorkerNodes(client client.Client) []string {
-	nodesList := v1.NodeList{}
+// GetAllWorkerNodes records every worker node which deployed vineyardd.
+func (vs *VineyardScheduling) GetAllWorkerNodes(vineyardd string) []string {
 	nodes := []string{}
-	if err := client.List(context.TODO(), &nodesList); err != nil {
-		klog.V(5).Infof("Failed to list all nodes: %v", err)
+
+	podList := v1.PodList{}
+	option := &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labels.Set{
+			"app.kubernetes.io/name":     vineyardd,
+			"app.kubernetes.io/instance": "vineyardd",
+		}),
+	}
+	if err := vs.Client.List(context.TODO(), &podList, option); err != nil {
+		klog.V(5).Infof("Failed to list all pods with the specific label: %v", err)
 	}
 
-	for _, node := range nodesList.Items {
-		if _, exist := node.Labels[ControlPlaneLabel]; !exist {
-			nodes = append(nodes, node.Name)
-		}
+	for _, pod := range podList.Items {
+		nodes = append(nodes, pod.Spec.NodeName)
 	}
+
 	return nodes
 }
 
@@ -451,21 +459,25 @@ func (vs *VineyardScheduling) getRequiredJob(pod *v1.Pod) ([]string, error) {
 	return strings.Split(objects, "."), nil
 }
 
-// GetVineyardLabels requires (job, replica, requires) information of a pod.
-func (vs *VineyardScheduling) GetVineyardLabels(pod *v1.Pod) (string, int64, []string, error) {
+// GetVineyardLabels requires (job, replica, requires, vineyardd) information of a pod.
+func (vs *VineyardScheduling) GetVineyardLabels(pod *v1.Pod) (string, int64, []string, string, error) {
 	job, err := vs.getJobName(pod)
 	if err != nil {
-		return "", 0, nil, err
+		return "", 0, nil, "", err
 	}
 	replica, err := vs.getJobReplica(pod)
 	if err != nil {
-		return "", 0, nil, err
+		return "", 0, nil, "", err
 	}
 	requires, err := vs.getRequiredJob(pod)
 	if err != nil {
-		return "", 0, nil, err
+		return "", 0, nil, "", err
 	}
-	return job, replica, requires, nil
+	vineyardd, exist := pod.Labels[VineyarddName]
+	if !exist {
+		klog.V(5).Infof("VineyarddName does't exist!")
+	}
+	return job, replica, requires, vineyardd, nil
 }
 
 // GetPodRank returns the rank of this pod

@@ -25,6 +25,7 @@ import (
 // log is for logging in this package.
 var globalobjectlog = logf.Log.WithName("globalobject-resource")
 
+// SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *GlobalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
@@ -32,7 +33,7 @@ func (r *GlobalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 //nolint: lll
-//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-globalobject,mutating=true,failurePolicy=fail,groups=k8s.v6d.io,resources=globalobjects,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=NoneOnDryRun,name=mglobalobject.kb.io
+//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-globalobject,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=globalobjects,verbs=create;update,versions=v1alpha1,name=mglobalobject.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &GlobalObject{}
 
@@ -44,7 +45,7 @@ func (r *GlobalObject) Default() {
 }
 
 //nolint: lll
-//+kubebuilder:webhook:verbs=create;update,path=/validate-k8s-v6d-io-v1alpha1-globalobject,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=globalobjects,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=NoneOnDryRun,name=vglobalobject.kb.io
+//+kubebuilder:webhook:path=/validate-k8s-v6d-io-v1alpha1-globalobject,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=globalobjects,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=None,name=vglobalobject.kb.io
 
 var _ webhook.Validator = &GlobalObject{}
 

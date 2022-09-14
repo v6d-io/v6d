@@ -25,6 +25,7 @@ import (
 // log is for logging in this package.
 var localobjectlog = logf.Log.WithName("localobject-resource")
 
+// SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *LocalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
@@ -32,18 +33,17 @@ func (r *LocalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 //nolint: lll
-//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-localobject,mutating=true,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=NoneOnDryRun,name=mlocalobject.kb.io
+//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-localobject,mutating=true,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,verbs=create;update,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=None,name=mlocalobject.kb.io
 
 var _ webhook.Defaulter = &LocalObject{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *LocalObject) Default() {
 	localobjectlog.Info("default", "name", r.Name)
-
 }
 
 //nolint: lll
-//+kubebuilder:webhook:verbs=create;update,path=/validate-k8s-v6d-io-v1alpha1-localobject,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=NoneOnDryRun,name=vlocalobject.kb.io
+//+kubebuilder:webhook:verbs=create;update,path=/validate-k8s-v6d-io-v1alpha1-localobject,mutating=false,failurePolicy=fail,groups=k8s.v6d.io,resources=localobjects,versions=v1alpha1,admissionReviewVersions=v1,sideEffects=None,name=vlocalobject.kb.io
 
 var _ webhook.Validator = &LocalObject{}
 

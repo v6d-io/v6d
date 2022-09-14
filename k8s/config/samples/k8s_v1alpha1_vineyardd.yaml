@@ -1,0 +1,39 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Vineyardd
+metadata:
+  name: vineyardd-sample
+  # don't use default namespace
+  namespace: vineyard-system
+spec:
+  image: docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
+  version: 0.8.2
+  replicas: 2
+  imagePullPolicy: IfNotPresent
+  # vineyardd's configuration
+  config:
+    sharedMemorySize: 256Mi
+    syncCRDs: true
+    enableMetrics: false
+    spillConfig:
+      name: spill-path
+      path: /var/checkpoint/spill
+      persistentVolumeSpec:
+        storageClassName: manual
+        capacity:
+          storage: 1Gi
+        accessModes:
+          - ReadWriteOnce
+        hostPath:
+          path: /var/vineyard/spill
+      persistentVolumeClaimSpec:
+        storageClassName: manual
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 256Mi
+  etcd:
+    instances: 3
+  service:
+    type: ClusterIP
+    port: 9600

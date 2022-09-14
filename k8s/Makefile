@@ -1,3 +1,18 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 # Current Operator version
 VERSION ?= 0.0.1
 # Default bundle image tag
@@ -22,6 +37,11 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version || shell ${GOBIN}/golangci-lint --version)
+
+## Tool Versions
+KUSTOMIZE_VERSION ?= v4@v4.5.5
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
+GOLANGCI_LINT_VERSION ?= v1.49.0
 
 all: manager
 
@@ -90,7 +110,7 @@ modules	= ./apis/... \
 golint: 
     ifeq (${GOLINT},)
 		@echo "golangci-lint not exist, installing it..."
-		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
 	${GOBIN}/golangci-lint run ./...
 .PHONY: golint
@@ -109,7 +129,7 @@ vet:
 
 # Generate code
 generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 .PHONY: generate
 
 # Vendor modules for code-generate
@@ -125,10 +145,6 @@ docker-build:
 # Push the docker image
 docker-push:
 	docker push ${IMG}
-
-## Tool Versions
-KUSTOMIZE_VERSION ?= v4@v4.5.5
-CONTROLLER_TOOLS_VERSION ?= v0.9.2
 
 # find or download controller-gen
 # download controller-gen if necessary

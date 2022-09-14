@@ -32,8 +32,8 @@ metricImage:
   tag: "latest"
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: "vineyardd-sample"
+fullnameOverride: "vineyardd-sample"
 
 podAnnotations: {}
 
@@ -59,6 +59,7 @@ nodeSelector: {}
 affinity: {}
 
 vineyard:
+  
   sharedMemorySize: ""
 
   # volumeType controls the type of UNIX-domain socket volume, can
