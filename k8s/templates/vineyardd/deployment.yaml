@@ -92,6 +92,12 @@ spec:
             --sync_crds {{ .Spec.Config.SyncCRDs }}
             {{- end }}
           env:
+            - name: VINEYARDD_UID
+              value: {{ .UID }}
+            - name: VINEYARDD_NAME
+              value: {{ .Name }}
+            - name: VINEYARDD_NAMESPACE
+              value: {{ .Namespace }}
             - name: MY_NODE_NAME
               valueFrom:
                 fieldRef:

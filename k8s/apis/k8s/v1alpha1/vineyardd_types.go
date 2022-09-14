@@ -99,9 +99,6 @@ type SerializeConfig struct {
 	// the path of serializetion
 	// +kubebuilder:validation:Optional
 	Path string `json:"path,omitempty"`
-	// the configuration of the serialization PV
-	// +kubebuilder:validation:Optional
-	PersistentVolumeSpec corev1.PersistentVolumeSpec `json:"persistentVolumeSpec,omitempty"`
 	// the PersistentVolumeClaimSpec of the serializtion
 	// +kubebuilder:validation:Optional
 	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`

@@ -47,6 +47,7 @@ setup:
           for: condition=Available
     - name: install vineyardd
       command: |
+        kubectl apply -f k8s/test/e2e/serialize-pv.yaml
         kubectl apply -f k8s/test/e2e/vineyardd-with-serialization.yaml
       wait:
         - namespace: vineyard-system

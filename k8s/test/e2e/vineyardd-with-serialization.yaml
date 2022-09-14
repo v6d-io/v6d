@@ -34,14 +34,6 @@ spec:
       name: serialize-path
       # please make sure the path exists
       path: /var/vineyard/serialize
-      persistentVolumeSpec:
-        storageClassName: manual
-        capacity:
-          storage: 1Gi
-        accessModes:
-          - ReadWriteOnce
-        hostPath:
-          path: /var/vineyard/serialize
       persistentVolumeClaimSpec:
         storageClassName: manual
         accessModes:

@@ -19,7 +19,6 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <vector>
-#
 
 #include "boost/bind.hpp"
 #include "boost/filesystem.hpp"
@@ -55,9 +54,9 @@ static std::string generate_local_object(
       SignatureToString(object["signature"].get<Signature>());
   std::string type_name = object["typename"].get_ref<std::string const&>();
   InstanceID instance_id = object["instance_id"].get<InstanceID>();
-  std::string pod_name = getenv("MY_POD_NAME");
-  std::string namespace_ = getenv("MY_POD_NAMESPACE");
-  std::string uid = getenv("MY_UID");
+  std::string vineyardd_name = getenv("VINEYARDD_NAME");
+  std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
+  std::string uid = getenv("VINEYARDD_UID");
 
   /* clang-format off */
   std::string crd = "\n"
@@ -72,9 +71,9 @@ static std::string generate_local_object(
                     "\n    k8s.v6d.io/signature: " + signature +
                     "\n    job: none"
                     "\n  ownerReferences:"
-                    "\n    - apiVersion: v1"
-                    "\n      kind: Pod"
-                    "\n      name: " + pod_name +
+                    "\n    - apiVersion: k8s.v6d.io/v1alpha1"
+                    "\n      kind: Vineyardd"
+                    "\n      name: " + vineyardd_name +
                     "\n      uid: " + uid +
                     "\nspec:"
                     "\n  id: " + object_id +
@@ -96,9 +95,9 @@ static std::string generate_global_object(
   std::string type_name = object["typename"].get_ref<std::string const&>();
   std::vector<std::string> members;
 
-  std::string pod_name = getenv("MY_POD_NAME");
-  std::string namespace_ = getenv("MY_POD_NAMESPACE");
-  std::string uid = getenv("MY_UID");
+  std::string vineyardd_name = getenv("VINEYARDD_NAME");
+  std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
+  std::string uid = getenv("VINEYARDD_UID");
 
   std::string crds;
   for (auto const& kv : object.items()) {
@@ -121,9 +120,9 @@ static std::string generate_global_object(
                     "\n  labels:"
                     "\n    job: none"
                     "\n  ownerReferences:"
-                    "\n    - apiVersion: v1"
-                    "\n      kind: Pod"
-                    "\n      name: " + pod_name +
+                    "\n    - apiVersion: k8s.v6d.io/v1alpha1"
+                    "\n      kind: Vineyardd"
+                    "\n      name: " + vineyardd_name +
                     "\n      uid: " + uid +
                     "\nspec:"
                     "\n  id: " + object_id +
