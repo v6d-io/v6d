@@ -55,9 +55,6 @@ type VineyarddConfig struct {
 	// the configuration of spilling
 	// +kubebuilder:validation:Optional
 	SpillConfig SpillConfig `json:"spillConfig,omitempty"`
-	// the configuration of serialization
-	// +kubebuilder:validation:Optional
-	SerializeConfig SerializeConfig `json:"serializeConfig,omitempty"`
 	// memory threshold of streams (percentage of total memory)
 	// +kubebuilder:validation:Optional
 	StreamThreshold int64 `json:"streamThreshold,omitempty"`
@@ -87,19 +84,6 @@ type SpillConfig struct {
 	// +kubebuilder:validation:Optional
 	PersistentVolumeSpec corev1.PersistentVolumeSpec `json:"persistentVolumeSpec,omitempty"`
 	// the PersistentVolumeClaimSpec of the spill file
-	// +kubebuilder:validation:Optional
-	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
-}
-
-// SerializeConfig holds all configuration about serializetion
-type SerializeConfig struct {
-	// the name of the serialization config
-	// +kubebuilder:validation:Optional
-	Name string `json:"name,omitempty"`
-	// the path of serializetion
-	// +kubebuilder:validation:Optional
-	Path string `json:"path,omitempty"`
-	// the PersistentVolumeClaimSpec of the serializtion
 	// +kubebuilder:validation:Optional
 	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
 }

@@ -32,16 +32,6 @@ spec:
         resources:
           requests:
             storage: 256Mi
-    serializeConfig:
-      name: serialize-path
-      path: /var/vineyard/serialize
-      persistentVolumeClaimSpec:
-        storageClassName: manual
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 512Mi
   etcd:
     instances: 3
   service:

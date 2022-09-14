@@ -29,18 +29,6 @@ spec:
     sharedMemorySize: 256Mi
     syncCRDs: true
     enableMetrics: false
-    # serialization configuration
-    serializeConfig:
-      name: serialize-path
-      # please make sure the path exists
-      path: /var/vineyard/serialize
-      persistentVolumeClaimSpec:
-        storageClassName: manual
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 512Mi
   etcd:
     instances: 3
   service:

@@ -150,10 +150,6 @@ spec:
             - name: {{ .Spec.Config.SpillConfig.Name }}
               mountPath: {{ .Spec.Config.SpillConfig.Path }}
             {{- end }}
-            {{- if .Spec.Config.SerializeConfig.Name }}
-            - name: {{ .Spec.Config.SerializeConfig.Name }}
-              mountPath: {{ .Spec.Config.SerializeConfig.Path }}
-            {{- end }}
             - name: shm
               mountPath: /dev/shm
             - name: log
@@ -184,11 +180,6 @@ spec:
       - name: {{ .Spec.Config.SpillConfig.Name }}
         persistentVolumeClaim:
           claimName: {{ .Spec.Config.SpillConfig.Name }}
-      {{- end }}
-      {{- if .Spec.Config.SerializeConfig.Name }}
-      - name: {{ .Spec.Config.SerializeConfig.Name }}
-        persistentVolumeClaim:
-          claimName: {{ .Spec.Config.SerializeConfig.Name }}
       {{- end }}
       - name: shm
         emptyDir:
