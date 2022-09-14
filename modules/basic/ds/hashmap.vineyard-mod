@@ -23,9 +23,7 @@ limitations under the License.
 #include <utility>
 
 #include "flat_hash_map/flat_hash_map.hpp"
-#if defined(USE_WY_HASH)
 #include "wyhash/wyhash.hpp"
-#endif
 
 #include "basic/ds/array.vineyard.h"
 #include "client/ds/blob.h"
@@ -57,17 +55,7 @@ struct prime_hash_policy {
 };
 
 // Using prime_hash_policy in flat_hash_map.
-#if defined(USE_WY_HASH)
-template <typename T>
-struct prime_number_hash : wy::hash<T> {
-  typedef ska::prime_number_hash_policy hash_policy;
-};
 
-template <typename U>
-struct typename_t<prime_number_hash<U>> {
-  inline static const std::string name() { return type_name<wy::hash<U>>(); }
-};
-#else
 template <typename T>
 struct prime_number_hash : std::hash<T> {
   typedef ska::prime_number_hash_policy hash_policy;
@@ -77,7 +65,16 @@ template <typename U>
 struct typename_t<prime_number_hash<U>> {
   inline static const std::string name() { return type_name<std::hash<U>>(); }
 };
-#endif
+
+template <typename T>
+struct prime_number_hash_wy : wy::hash<T> {
+  typedef ska::prime_number_hash_policy hash_policy;
+};
+
+template <typename U>
+struct typename_t<prime_number_hash_wy<U>> {
+  inline static const std::string name() { return type_name<wy::hash<U>>(); }
+};
 
 template <typename K, typename V, typename H, typename E>
 class HashmapBaseBuilder;
@@ -90,14 +87,14 @@ class HashmapBaseBuilder;
  * @tparam std::hash<K> The hash function for the key.
  * @tparam std::equal_to<K> The compare function for the key.
  */
-template <typename K, typename V, typename H = prime_number_hash<K>,
+template <typename K, typename V, typename H = prime_number_hash_wy<K>,
           typename E = std::equal_to<K>>
 class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
                              public H,
                              public E {
  public:
-  using KeyHash = prime_number_hash<K>;
-  using KeyEqual = typename std::equal_to<K>;
+  using KeyHash = H;
+  using KeyEqual = E;
 
   using T = std::pair<K, V>;
 
@@ -224,6 +221,28 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
    *
    */
   size_t size() const { return num_elements_; }
+
+  /**
+   * @brief Return the max size of the HashMap, i.e., the number of allocated
+   * cells for elements stored in the HashMap.
+   *
+   */
+  size_t bucket_count() const {
+    return num_slots_minus_one_ ? num_slots_minus_one_ + 1 : 0;
+  }
+
+  /**
+   * @brief Return the load factor of the HashMap.
+   *
+   */
+  float load_factor() const {
+    size_t bucket_count = num_slots_minus_one_ ? num_slots_minus_one_ + 1 : 0;
+    if (bucket_count) {
+      return static_cast<float>(num_elements_) / bucket_count;
+    } else {
+      return 0.0f;
+    }
+  }
 
   /**
    * @brief Check whether the HashMap is empty.

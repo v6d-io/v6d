@@ -152,6 +152,7 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::AddNewVertexLabels(
   new_meta.SetNBytes(nbytes);
   ObjectID ret;
   VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+  VLOG(2) << "vertex map memory usage: " << new_meta.MemoryUsage() << " bytes";
   return ret;
 }
 
@@ -229,6 +230,7 @@ ObjectID ArrowVertexMap<arrow::util::string_view, VID_T>::AddNewVertexLabels(
   new_meta.SetNBytes(nbytes);
   ObjectID ret;
   VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+  VLOG(2) << "vertex map memory usage: " << new_meta.MemoryUsage() << " bytes";
   return ret;
 }
 
@@ -279,6 +281,9 @@ std::shared_ptr<vineyard::Object> ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
   vertex_map->meta_.SetNBytes(nbytes);
 
   VINEYARD_CHECK_OK(client.CreateMetaData(vertex_map->meta_, vertex_map->id_));
+  VLOG(2) << "vertex map memory usage: " << vertex_map->meta_.MemoryUsage()
+          << " bytes";
+
   // mark the builder as sealed
   this->set_sealed(true);
 
@@ -326,6 +331,9 @@ ArrowVertexMapBuilder<arrow::util::string_view, VID_T>::_Seal(
 
   vertex_map->meta_.SetNBytes(nbytes);
   VINEYARD_CHECK_OK(client.CreateMetaData(vertex_map->meta_, vertex_map->id_));
+  VLOG(2) << "vertex map memory usage: " << vertex_map->meta_.MemoryUsage()
+          << " bytes";
+
   // mark the builder as sealed
   this->set_sealed(true);
 

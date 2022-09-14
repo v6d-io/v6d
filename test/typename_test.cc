@@ -61,7 +61,7 @@ int main(int, const char**) {
   {
     const auto type = type_name<Hashmap<int64_t, double>>();
     CHECK_EQ(type,
-             "vineyard::Hashmap<int64,double,std::hash<int64>,std::equal_to<"
+             "vineyard::Hashmap<int64,double,wy::hash<int64>,std::equal_to<"
              "int64>>");
   }
 
@@ -82,7 +82,7 @@ int main(int, const char**) {
   {
     const auto type = type_name<my_hashmap<int64_t, double>>();
     CHECK_EQ(type,
-             "vineyard::Hashmap<int64,double,std::hash<int64>,std::equal_to<"
+             "vineyard::Hashmap<int64,double,wy::hash<int64>,std::equal_to<"
              "int64>>");
   }
   {
@@ -101,6 +101,10 @@ int main(int, const char**) {
   {
     const auto type = type_name<std::hash<int>>();
     CHECK_EQ(type, "std::hash<int>");
+  }
+  {
+    const auto type = type_name<wy::hash<int>>();
+    CHECK_EQ(type, "wy::hash<int>");
   }
   {
     const auto type = type_name<std::equal_to<int64_t>>();
