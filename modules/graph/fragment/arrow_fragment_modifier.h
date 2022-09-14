@@ -1136,6 +1136,112 @@ ArrowFragment<OID_T, VID_T>::TransformDirection(vineyard::Client& client,
 }
 
 template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragment<OID_T, VID_T>::ConsolidateVertexColumns(
+    vineyard::Client& client, const label_id_t vlabel,
+    std::vector<std::string> const& prop_names,
+    std::string const& consolidate_name) {
+  std::vector<prop_id_t> props;
+  for (auto const& name : prop_names) {
+    int prop = schema_.GetVertexPropertyId(vlabel, name);
+    if (prop == -1) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "Vertex property '" + name + "' not found");
+    }
+    props.push_back(prop);
+  }
+  return ConsolidateVertexColumns(client, vlabel, props, consolidate_name);
+}
+
+template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragment<OID_T, VID_T>::ConsolidateVertexColumns(
+    vineyard::Client& client, const label_id_t vlabel,
+    std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
+  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  auto schema = schema_;
+
+  auto& table = this->vertex_tables_[vlabel];
+  vineyard::TableConsolidator consolidator(client, table);
+  VY_OK_OR_RAISE(consolidator.ConsodilateColumns(
+      client, std::vector<int64_t>{props.begin(), props.end()},
+      consolidate_name));
+  auto new_table =
+      std::dynamic_pointer_cast<vineyard::Table>(consolidator.Seal(client));
+  builder.set_vertex_tables_(vlabel, new_table);
+  auto& entry = schema.GetMutableEntry(vlabel, "VERTEX");
+
+  // update schema: remove old props and add new merged props
+  std::vector<prop_id_t> sorted_props = props;
+  std::sort(sorted_props.begin(), sorted_props.end());
+  for (size_t index = 0; index < sorted_props.size(); ++index) {
+    entry.RemoveProperty(sorted_props[sorted_props.size() - 1 - index]);
+  }
+  entry.AddProperty(consolidate_name,
+                    new_table->field(new_table->num_columns() - 1)->type());
+
+  std::string error_message;
+  if (!schema.Validate(error_message)) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
+  }
+  builder.set_schema_json_(schema.ToJSON());
+  return builder.Seal(client)->id();
+}
+
+template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragment<OID_T, VID_T>::ConsolidateEdgeColumns(
+    vineyard::Client& client, const label_id_t elabel,
+    std::vector<std::string> const& prop_names,
+    std::string const& consolidate_name) {
+  std::vector<prop_id_t> props;
+  for (auto const& name : prop_names) {
+    int prop = schema_.GetEdgePropertyId(elabel, name);
+    if (prop == -1) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "Edge property '" + name + "' not found");
+    }
+    props.push_back(prop);
+  }
+  return ConsolidateEdgeColumns(client, elabel, props, consolidate_name);
+}
+
+template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragment<OID_T, VID_T>::ConsolidateEdgeColumns(
+    vineyard::Client& client, const label_id_t elabel,
+    std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
+  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  auto schema = schema_;
+
+  auto& table = this->edge_tables_[elabel];
+  vineyard::TableConsolidator consolidator(client, table);
+  VY_OK_OR_RAISE(consolidator.ConsodilateColumns(
+      client, std::vector<int64_t>{props.begin(), props.end()},
+      consolidate_name));
+  auto new_table =
+      std::dynamic_pointer_cast<vineyard::Table>(consolidator.Seal(client));
+  builder.set_edge_tables_(elabel, new_table);
+  auto& entry = schema.GetMutableEntry(elabel, "EDGE");
+
+  // update schema: remove old props and add new merged props
+  std::vector<prop_id_t> sorted_props = props;
+  std::sort(sorted_props.begin(), sorted_props.end());
+  for (size_t index = 0; index < sorted_props.size(); ++index) {
+    entry.RemoveProperty(sorted_props[sorted_props.size() - 1 - index]);
+  }
+  entry.AddProperty(consolidate_name,
+                    new_table->field(new_table->num_columns() - 1)->type());
+
+  std::string error_message;
+  if (!schema.Validate(error_message)) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
+  }
+  builder.set_schema_json_(schema.ToJSON());
+  return builder.Seal(client)->id();
+}
+
+template <typename OID_T, typename VID_T>
 void ArrowFragment<OID_T, VID_T>::initDestFidList(
     bool in_edge, bool out_edge,
     std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
@@ -1235,6 +1341,7 @@ void ArrowFragment<OID_T, VID_T>::directedCSR2Undirected(
     }
   }
 }
+
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MODIFIER_H_

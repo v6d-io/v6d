@@ -22,6 +22,7 @@ limitations under the License.
 #include "arrow/stl.h"
 
 #include "basic/ds/arrow.h"
+#include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
@@ -393,6 +394,18 @@ int main(int argc, char** argv) {
 
     auto r4 = std::dynamic_pointer_cast<RecordBatch>(client.GetObject(id3));
     CHECK(r4->GetRecordBatch()->Equals(*batch));
+
+    LOG(INFO) << "#########  Record Batch Consolidator Test #######";
+    RecordBatchConsolidator consolidator(client, r3);
+    VINEYARD_CHECK_OK(consolidator.ConsodilateColumns(
+        client, std::vector<std::string>{"f2", "f8"}, "merged"));
+    auto r5 = std::dynamic_pointer_cast<RecordBatch>(consolidator.Seal(client));
+    VINEYARD_CHECK_OK(client.Persist(r5->id()));
+    ObjectID id5 = r5->id();
+
+    auto r6 = std::dynamic_pointer_cast<RecordBatch>(client.GetObject(id5));
+    CHECK_EQ(r6->schema()->num_fields(), 7);
+
     LOG(INFO) << "Passed record batch wrapper tests...";
   }
 
@@ -446,6 +459,21 @@ int main(int argc, char** argv) {
         table, table->AddColumn(table->num_columns(), field, chunked_array2));
     auto r4 = std::dynamic_pointer_cast<Table>(client.GetObject(id3));
     CHECK(r4->GetTable()->Equals(*table));
+
+    LOG(INFO) << "#########  Table Consolidator Test #############";
+    TableConsolidator consolidator(client, r3);
+    VINEYARD_CHECK_OK(consolidator.ConsodilateColumns(
+        client, std::vector<std::string>{"f1", "f8"}, "merged"));
+    auto r5 = std::dynamic_pointer_cast<Table>(consolidator.Seal(client));
+    VINEYARD_CHECK_OK(client.Persist(r5->id()));
+    ObjectID id5 = r5->id();
+
+    auto r6 = std::dynamic_pointer_cast<Table>(client.GetObject(id5));
+    CHECK_EQ(r6->schema()->num_fields(), 3);
+
+    // validate the content of the table
+    //
+    // LOG(INFO) << r6->GetTable()->ToString();
 
     LOG(INFO) << "Passed Table wrapper tests...";
   }

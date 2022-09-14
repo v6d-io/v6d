@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_ARROW_H_
 #define MODULES_BASIC_DS_ARROW_H_
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -32,6 +33,14 @@ limitations under the License.
 #include "client/ds/blob.h"
 
 namespace vineyard {
+
+namespace detail {
+std::shared_ptr<ObjectBuilder> BuildSimpleArray(
+    Client& client, std::shared_ptr<arrow::Array> array);
+
+std::shared_ptr<ObjectBuilder> BuildArray(Client& client,
+                                          std::shared_ptr<arrow::Array> array);
+}  // namespace detail
 
 #ifndef BUILD_NULL_BITMAP
 #define BUILD_NULL_BITMAP(builder, array)                                \
@@ -263,90 +272,6 @@ class NullArrayBuilder : public NullArrayBaseBuilder {
   std::shared_ptr<arrow::NullArray> array_;
 };
 
-namespace detail {
-
-template <typename T>
-inline std::shared_ptr<ObjectBuilder> BuildNumericArray(
-    Client& client,
-    std::shared_ptr<typename ConvertToArrowType<T>::ArrayType> arr) {
-  return std::make_shared<NumericArrayBuilder<T>>(client, arr);
-}
-
-inline std::shared_ptr<ObjectBuilder> BuildSimpleArray(
-    Client& client, std::shared_ptr<arrow::Array> array) {
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<int8_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<int8_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<uint8_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<uint8_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<int16_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<int16_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<uint16_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<uint16_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<int32_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<int32_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<uint32_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<uint32_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<int64_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<int64_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<uint64_t>::ArrayType>(
-              array)) {
-    return BuildNumericArray<uint64_t>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<float>::ArrayType>(
-              array)) {
-    return BuildNumericArray<float>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<ConvertToArrowType<double>::ArrayType>(
-              array)) {
-    return BuildNumericArray<double>(client, arr);
-  }
-  if (auto arr = std::dynamic_pointer_cast<arrow::BooleanArray>(array)) {
-    return std::make_shared<BooleanArrayBuilder>(client, arr);
-  }
-  if (auto arr =
-          std::dynamic_pointer_cast<arrow::FixedSizeBinaryArray>(array)) {
-    return std::make_shared<FixedSizeBinaryArrayBuilder>(client, arr);
-  }
-  if (auto arr = std::dynamic_pointer_cast<arrow::StringArray>(array)) {
-    return std::make_shared<StringArrayBuilder>(client, arr);
-  }
-  if (auto arr = std::dynamic_pointer_cast<arrow::LargeStringArray>(array)) {
-    return std::make_shared<LargeStringArrayBuilder>(client, arr);
-  }
-  if (auto arr = std::dynamic_pointer_cast<arrow::NullArray>(array)) {
-    return std::make_shared<NullArrayBuilder>(client, arr);
-  }
-  VINEYARD_ASSERT(nullptr != nullptr,
-                  "Unsupported array type: " + array->type()->ToString());
-  return nullptr;
-}
-
-}  // namespace detail
-
 /**
  * @brief BaseListArrayBuilder is designed for constructing  Arrow arrays of
  * list data type
@@ -391,20 +316,36 @@ class BaseListArrayBuilder : public BaseListArrayBaseBuilder<ArrayType> {
 using ListArrayBuilder = BaseListArrayBuilder<arrow::ListArray>;
 using LargeListArrayBuilder = BaseListArrayBuilder<arrow::LargeListArray>;
 
-#undef BUILD_NULL_BITMAP
+/**
+ * @brief FixedSizeListArrayBuilder is designed for constructing  Arrow arrays
+ * of fixed-size list data type
+ *
+ */
+class FixedSizeListArrayBuilder : public FixedSizeListArrayBaseBuilder {
+ public:
+  FixedSizeListArrayBuilder(Client& client,
+                            std::shared_ptr<arrow::FixedSizeListArray> array)
+      : FixedSizeListArrayBaseBuilder(client), array_(array) {}
 
-namespace detail {
-inline std::shared_ptr<ObjectBuilder> BuildArray(
-    Client& client, std::shared_ptr<arrow::Array> array) {
-  if (auto arr = std::dynamic_pointer_cast<arrow::ListArray>(array)) {
-    return std::make_shared<ListArrayBuilder>(client, arr);
+  std::shared_ptr<arrow::FixedSizeListArray> GetArray() { return array_; }
+
+  Status Build(Client& client) override {
+    {
+      // Assuming the list is not nested.
+      // We need to split the definition to .cc if someday we need to consider
+      // nested list in list case.
+      this->set_values_(detail::BuildSimpleArray(client, array_->values()));
+    }
+    this->set_length_(array_->length());
+    this->set_list_size_(array_->list_type()->list_size());
+    return Status::OK();
   }
-  if (auto arr = std::dynamic_pointer_cast<arrow::LargeListArray>(array)) {
-    return std::make_shared<LargeListArrayBuilder>(client, arr);
-  }
-  return BuildSimpleArray(client, array);
-}
-}  // namespace detail
+
+ private:
+  std::shared_ptr<arrow::FixedSizeListArray> array_;
+};
+
+#undef BUILD_NULL_BITMAP
 
 /**
  * @brief SchemaProxyBuilder is used for initiating proxies for the schemas
@@ -508,6 +449,86 @@ class RecordBatchExtender : public RecordBatchBaseBuilder {
     for (size_t idx = 0; idx < arrow_columns_.size(); ++idx) {
       this->add_columns_(detail::BuildArray(client, arrow_columns_[idx]));
     }
+    return Status::OK();
+  }
+
+ private:
+  size_t row_num_ = 0, column_num_ = 0;
+  std::shared_ptr<arrow::Schema> schema_;
+  std::vector<std::shared_ptr<arrow::Array>> arrow_columns_;
+};
+
+class RecordBatchConsolidator : public RecordBatchBaseBuilder {
+ public:
+  RecordBatchConsolidator(Client& client, std::shared_ptr<RecordBatch> batch)
+      : RecordBatchBaseBuilder(client) {
+    row_num_ = batch->num_rows();
+    column_num_ = batch->num_columns();
+    schema_ = batch->schema();
+    for (auto const& column : batch->columns()) {
+      this->add_columns_(column);
+    }
+    for (auto const& column : batch->arrow_columns()) {
+      arrow_columns_.push_back(column);
+    }
+  }
+
+  size_t num_rows() const { return row_num_; }
+
+  std::shared_ptr<arrow::Schema> schema() const { return schema_; }
+
+  Status ConsodilateColumns(Client& client,
+                            std::vector<std::string> const& columns,
+                            std::string const& consolidate_name) {
+    std::vector<int64_t> column_indexes;
+    for (auto const& column : columns) {
+      auto index = schema_->GetFieldIndex(column);
+      if (index < 0) {
+        return Status::Invalid("The column name '" + column +
+                               "' is not found in the schema");
+      }
+      column_indexes.push_back(index);
+    }
+    return ConsodilateColumns(client, column_indexes, consolidate_name);
+  }
+
+  Status ConsodilateColumns(Client& client, std::vector<int64_t> const& columns,
+                            std::string const& consolidate_name) {
+    std::vector<std::shared_ptr<arrow::Array>> columns_to_consolidate;
+    for (int64_t const& column : columns) {
+      columns_to_consolidate.push_back(this->arrow_columns_[column]);
+    }
+    std::shared_ptr<arrow::Array> consolidated_column;
+    RETURN_ON_ERROR(
+        ConsolidateColumns(columns_to_consolidate, consolidated_column));
+
+    this->column_num_ -= (columns.size() - 1);
+    std::vector<int64_t> sorted_column_indexes(columns);
+    std::sort(sorted_column_indexes.begin(), sorted_column_indexes.end());
+    for (size_t index = 0; index < sorted_column_indexes.size(); ++index) {
+      size_t index_to_remove =
+          sorted_column_indexes[sorted_column_indexes.size() - 1 - index];
+      this->remove_columns_(index_to_remove);
+      this->arrow_columns_.erase(this->arrow_columns_.begin() +
+                                 index_to_remove);
+      RETURN_ON_ARROW_ERROR_AND_ASSIGN(schema_,
+                                       schema_->RemoveField(index_to_remove));
+    }
+    this->arrow_columns_.emplace_back(consolidated_column);
+    this->add_columns_(detail::BuildArray(client, consolidated_column));
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+        schema_,
+        schema_->AddField(
+            schema_->num_fields(),
+            ::arrow::field(consolidate_name, consolidated_column->type())));
+    return Status::OK();
+  }
+
+ public:
+  Status Build(Client& client) override {
+    this->set_row_num_(row_num_);
+    this->set_column_num_(column_num_);
+    this->set_schema_(std::make_shared<SchemaProxyBuilder>(client, schema_));
     return Status::OK();
   }
 
@@ -627,6 +648,67 @@ class TableExtender : public TableBaseBuilder {
   size_t row_num_ = 0, column_num_ = 0;
   std::shared_ptr<arrow::Schema> schema_;
   std::vector<std::shared_ptr<RecordBatchExtender>> record_batch_extenders_;
+};
+
+class TableConsolidator : public TableBaseBuilder {
+ public:
+  TableConsolidator(Client& client, std::shared_ptr<Table> table)
+      : TableBaseBuilder(client) {
+    row_num_ = table->num_rows();
+    column_num_ = table->num_columns();
+    schema_ = table->schema();
+    for (auto const& batch : table->batches()) {
+      record_batch_consolidators_.push_back(
+          std::make_shared<RecordBatchConsolidator>(client, batch));
+    }
+  }
+
+  Status ConsodilateColumns(Client& client,
+                            std::vector<std::string> const& columns,
+                            std::string const& consolidate_name) {
+    std::vector<int64_t> column_indexes;
+    for (auto const& column : columns) {
+      auto index = schema_->GetFieldIndex(column);
+      if (index < 0) {
+        return Status::Invalid("The column name '" + column +
+                               "' is not found in the schema");
+      }
+      column_indexes.push_back(index);
+    }
+    return ConsodilateColumns(client, column_indexes, consolidate_name);
+  }
+
+  Status ConsodilateColumns(Client& client, std::vector<int64_t> const& columns,
+                            std::string const& consolidate_name) {
+    for (auto& consolidator : record_batch_consolidators_) {
+      RETURN_ON_ERROR(
+          consolidator->ConsodilateColumns(client, columns, consolidate_name));
+    }
+    column_num_ -= (columns.size() - 1);
+    return Status::OK();
+  }
+
+  Status Build(Client& client) override {
+    this->set_batch_num_(record_batch_consolidators_.size());
+    this->set_num_rows_(row_num_);
+    this->set_num_columns_(column_num_);
+    for (auto const& extender : record_batch_consolidators_) {
+      this->add_batches_(extender);
+    }
+    if (record_batch_consolidators_.empty()) {
+      this->set_schema_(std::make_shared<SchemaProxyBuilder>(client, schema_));
+    } else {
+      this->set_schema_(std::make_shared<SchemaProxyBuilder>(
+          client, record_batch_consolidators_[0]->schema()));
+    }
+    return Status::OK();
+  }
+
+ private:
+  size_t row_num_ = 0, column_num_ = 0;
+  std::shared_ptr<arrow::Schema> schema_;
+  std::vector<std::shared_ptr<RecordBatchConsolidator>>
+      record_batch_consolidators_;
 };
 
 }  // namespace vineyard

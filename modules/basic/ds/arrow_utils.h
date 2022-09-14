@@ -241,6 +241,31 @@ std::string type_name_from_arrow_type(
 
 const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array);
 
+Status ConsolidateColumns(
+    const std::vector<std::shared_ptr<arrow::Array>>& columns,
+    std::shared_ptr<arrow::Array>& out);
+
+Status ConsolidateColumns(
+    const std::vector<std::shared_ptr<arrow::ChunkedArray>>& columns,
+    std::shared_ptr<arrow::ChunkedArray>& out);
+
+/**
+ * @brief Consolidate columns in an arrow table into one column
+ * (FixedSizeListArray).
+ *
+ * Note that the bitmap in the given columns will be discard.
+ *
+ * @param table
+ * @return boost::leaf::result<std::shared_ptr<arrow::Table>>
+ */
+Status ConsolidateColumns(const std::shared_ptr<arrow::Table>& table,
+                          std::vector<std::string> const& column_names,
+                          std::string const& consolidated_column_name,
+                          std::shared_ptr<arrow::Table>& out);
+
+Status ConsolidateColumns(const std::shared_ptr<arrow::Table>& table,
+                          std::shared_ptr<arrow::Table>& out);
+
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_ARROW_UTILS_H_

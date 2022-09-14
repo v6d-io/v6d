@@ -28,6 +28,7 @@ limitations under the License.
 #include "arrow/compute/api.h"
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
+#include "boost/algorithm/string.hpp"
 #include "boost/leaf.hpp"
 
 #include "grape/serialization/in_archive.h"

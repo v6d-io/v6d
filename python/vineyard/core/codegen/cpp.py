@@ -485,6 +485,9 @@ field_setter_list_tpl = '''
     void add_{field_name}(std::shared_ptr<ObjectBase> const &{field_name}_) {{
         this->{field_name}.emplace_back({field_name}_);
     }}
+    void remove_{field_name}(const size_t {field_name}_index_) {{
+        this->{field_name}.erase(this->{field_name}.begin() + {field_name}_index_);
+    }}
 '''
 
 field_setter_dlist_tpl = '''
@@ -510,6 +513,13 @@ field_setter_dlist_tpl = '''
     void add_{field_name}(std::vector<std::shared_ptr<ObjectBase>> const &{field_name}_) {{
         this->{field_name}.emplace_back({field_name}_);
     }}
+    void remove_{field_name}(const size_t {field_name}_index_) {{
+        this->{field_name}.erase(this->{field_name}.begin() + {field_name}_index_);
+    }}
+    void remove_{field_name}(const size_t {field_name}_index_, const size_t {field_name}_inner_index_) {{
+        auto &{field_name}_inner_ = this->{field_name}[{field_name}_index_];
+        {field_name}_inner_.erase({field_name}_inner_.begin() + {field_name}_inner_index_);
+    }}
 '''
 
 field_setter_set_tpl = '''
@@ -529,6 +539,9 @@ field_setter_dict_tpl = '''
     void set_{field_name}({field_key_type} const &{field_name}_key_,
                            std::shared_ptr<ObjectBase> {field_name}_value_) {{
         this->{field_name}.emplace({field_name}_key_, {field_name}_value_);
+    }}
+    void remove_{field_name}({field_key_type} const &{field_name}_key_) {{
+        this->{field_name}.erase({field_name}_key_);
     }}
 '''
 

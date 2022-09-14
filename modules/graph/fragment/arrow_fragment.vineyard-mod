@@ -659,6 +659,24 @@ class [[vineyard]] ArrowFragment
   boost::leaf::result<vineyard::ObjectID> TransformDirection(
       vineyard::Client & client, int concurrency);
 
+  boost::leaf::result<vineyard::ObjectID> ConsolidateVertexColumns(
+      vineyard::Client & client, const label_id_t vlabel,
+      std::vector<std::string> const& prop_names,
+      std::string const& consolidate_name);
+
+  boost::leaf::result<vineyard::ObjectID> ConsolidateVertexColumns(
+      vineyard::Client & client, const label_id_t vlabel,
+      std::vector<prop_id_t> const& props, std::string const& consolidate_name);
+
+  boost::leaf::result<vineyard::ObjectID> ConsolidateEdgeColumns(
+      vineyard::Client & client, const label_id_t elabel,
+      std::vector<std::string> const& prop_names,
+      std::string const& consolidate_name);
+
+  boost::leaf::result<vineyard::ObjectID> ConsolidateEdgeColumns(
+      vineyard::Client & client, const label_id_t elabel,
+      std::vector<prop_id_t> const& props, std::string const& consolidate_name);
+
  private:
   void initPointers() {
     edge_tables_columns_.resize(edge_label_num_);

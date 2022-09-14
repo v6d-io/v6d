@@ -238,6 +238,9 @@ inline std::shared_ptr<arrow::Array> ConstructArray(
   if (auto arr = std::dynamic_pointer_cast<LargeStringArray>(obj)) {
     return arr->GetArray();
   }
+  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(obj)) {
+    return arr->GetArray();
+  }
   if (auto arr = std::dynamic_pointer_cast<NullArray>(obj)) {
     return arr->GetArray();
   }
@@ -292,6 +295,37 @@ class [[vineyard]] BaseListArray : public ArrowArray,
 using ListArray = BaseListArray<arrow::ListArray>;
 using LargeListArray = BaseListArray<arrow::LargeListArray>;
 
+class FixedSizeListArrayBaseBuilder;
+
+class [[vineyard]] FixedSizeListArray : public ArrowArray,
+                                        public Registered<FixedSizeListArray> {
+ public:
+  void PostConstruct(const ObjectMeta& meta) override {
+    auto arr = detail::ConstructArray(values_);
+    this->array_ = std::make_shared<arrow::FixedSizeListArray>(
+        arrow::fixed_size_list(arr->type(), this->list_size_), this->length_,
+        arr);
+  }
+
+  std::shared_ptr<arrow::FixedSizeListArray> GetArray() const { return array_; }
+
+  std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
+
+  const uint8_t* GetBase() const {
+    return array_->values()->data()->buffers[1]->data();
+  }
+
+ private:
+  [[shared]] size_t length_;
+  [[shared]] size_t list_size_;
+  [[shared]] std::shared_ptr<Object> values_;
+
+  std::shared_ptr<arrow::FixedSizeListArray> array_;
+
+  friend class Client;
+  friend class FixedSizeListArrayBaseBuilder;
+};
+
 class SchemaProxyBaseBuilder;
 
 class [[vineyard]] SchemaProxy : public Registered<SchemaProxy> {
@@ -339,6 +373,10 @@ class [[vineyard(streamable)]] RecordBatch : public Registered<RecordBatch> {
 
   std::vector<std::shared_ptr<Object>> const& columns() const {
     return columns_;
+  }
+
+  std::vector<std::shared_ptr<arrow::Array>> const& arrow_columns() const {
+    return arrow_columns_;
   }
 
  private:

@@ -84,6 +84,8 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
             (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
         meta_.emplace("include_all_columns",
                       std::to_string(include_all_columns_));
+      } else if (kv_pair[0] == "consolidate") {
+        meta_.emplace("consolidate", kv_pair[1]);
       } else if (kv_pair.size() > 1) {
         meta_.emplace(kv_pair[0], kv_pair[1]);
       }

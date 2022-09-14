@@ -128,6 +128,7 @@ class ArrowFragmentLoader {
   using vertex_map_t = ArrowVertexMap<internal_oid_t, vid_t>;
   // These consts represent the key in the path of vfile/efile
   static constexpr const char* LABEL_TAG = "label";
+  static constexpr const char* CONSOLIDATE_TAG = "consolidate";
   static constexpr const char* SRC_LABEL_TAG = "src_label";
   static constexpr const char* DST_LABEL_TAG = "dst_label";
 
@@ -373,7 +374,6 @@ class ArrowFragmentLoader {
         VY_OK_OR_RAISE(io_adaptor->ReadTable(&table));
         return table;
       };
-
       BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
 
       auto sync_schema_procedure =
@@ -381,21 +381,30 @@ class ArrowFragmentLoader {
         return SyncSchema(table, comm_spec_);
       };
 
+      // normailize the schema of this distributed table
       BOOST_LEAF_AUTO(normalized_table,
                       sync_gs_error(comm_spec_, sync_schema_procedure));
 
+      auto adaptor_meta = io_adaptor->GetMeta();
       auto meta = std::make_shared<arrow::KeyValueMetadata>();
 
-      auto adaptor_meta = io_adaptor->GetMeta();
       // Check if label name is in meta
-      if (adaptor_meta.find(LABEL_TAG) == adaptor_meta.end()) {
+      auto it = adaptor_meta.find(LABEL_TAG);
+      if (it == adaptor_meta.end()) {
         RETURN_GS_ERROR(
             ErrorCode::kIOError,
             "Metadata of input vertex files should contain label name");
       }
-      auto v_label_name = adaptor_meta.find(LABEL_TAG)->second;
+      auto v_label_name = it->second;
+
+      it = adaptor_meta.find(CONSOLIDATE_TAG);
+      std::string consolidate_columns;
+      if (it != adaptor_meta.end()) {
+        consolidate_columns = it->second;
+      }
 
       CHECK_ARROW_ERROR(meta->Set(LABEL_TAG, v_label_name));
+      CHECK_ARROW_ERROR(meta->Set(CONSOLIDATE_TAG, consolidate_columns));
 
       tables[label_id] = normalized_table->ReplaceSchemaMetadata(meta);
     }
@@ -429,6 +438,7 @@ class ArrowFragmentLoader {
           };
           BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
 
+          // normailize the schema of this distributed table
           auto sync_schema_procedure =
               [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
             return SyncSchema(table, comm_spec_);
@@ -436,10 +446,9 @@ class ArrowFragmentLoader {
           BOOST_LEAF_AUTO(normalized_table,
                           sync_gs_error(comm_spec_, sync_schema_procedure));
 
-          std::shared_ptr<arrow::KeyValueMetadata> meta(
-              new arrow::KeyValueMetadata());
-
           auto adaptor_meta = io_adaptor->GetMeta();
+          auto meta = std::make_shared<arrow::KeyValueMetadata>();
+
           auto it = adaptor_meta.find(LABEL_TAG);
           if (it == adaptor_meta.end()) {
             RETURN_GS_ERROR(
@@ -464,9 +473,16 @@ class ArrowFragmentLoader {
           }
           std::string dst_label_name = it->second;
 
+          it = adaptor_meta.find(CONSOLIDATE_TAG);
+          std::string consolidate_columns;
+          if (it != adaptor_meta.end()) {
+            consolidate_columns = it->second;
+          }
+
           CHECK_ARROW_ERROR(meta->Set(LABEL_TAG, edge_label_name));
           CHECK_ARROW_ERROR(meta->Set(SRC_LABEL_TAG, src_label_name));
           CHECK_ARROW_ERROR(meta->Set(DST_LABEL_TAG, dst_label_name));
+          CHECK_ARROW_ERROR(meta->Set(CONSOLIDATE_TAG, consolidate_columns));
 
           tables[label_id].emplace_back(
               normalized_table->ReplaceSchemaMetadata(meta));
