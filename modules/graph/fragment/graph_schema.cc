@@ -25,87 +25,21 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
-#include "glog/logging.h"
 
+#include "basic/ds/arrow_utils.h"
 #include "common/util/json.h"
+#include "common/util/logging.h"
 
 namespace vineyard {
 
 namespace detail {
 
 std::string PropertyTypeToString(PropertyType type) {
-  if (arrow::boolean()->Equals(type)) {
-    return "BOOL";
-  } else if (arrow::int16()->Equals(type)) {
-    return "SHORT";
-  } else if (arrow::int32()->Equals(type)) {
-    return "INT";
-  } else if (arrow::int64()->Equals(type)) {
-    return "LONG";
-  } else if (arrow::float32()->Equals(type)) {
-    return "FLOAT";
-  } else if (arrow::float64()->Equals(type)) {
-    return "DOUBLE";
-  } else if (arrow::utf8()->Equals(type)) {
-    return "STRING";
-  } else if (arrow::large_utf8()->Equals(type)) {
-    return "STRING";
-  } else if (arrow::large_list(arrow::int32())->Equals(type)) {
-    return "LISTINT";
-  } else if (arrow::large_list(arrow::int64())->Equals(type)) {
-    return "LISTLONG";
-  } else if (arrow::large_list(arrow::float32())->Equals(type)) {
-    return "LISTFLOAT";
-  } else if (arrow::large_list(arrow::float64())->Equals(type)) {
-    return "LISTDOUBLE";
-  } else if (arrow::large_list(arrow::large_utf8())->Equals(type)) {
-    return "LISTSTRING";
-  } else if (arrow::null()->Equals(type)) {
-    return "NULL";
-  }
-  LOG(ERROR) << "Unsupported arrow type " << type->ToString();
-  return "NULL";
-}
-
-std::string toupper(const std::string& s) {
-  std::string upper_s = s;
-  std::transform(s.begin(), s.end(), upper_s.begin(),
-                 [](unsigned char c) { return std::toupper(c); });
-  return upper_s;
+  return type_name_from_arrow_type(type);
 }
 
 PropertyType PropertyTypeFromString(const std::string& type) {
-  auto type_upper = toupper(type);
-  if (type_upper == "BOOL") {
-    return arrow::boolean();
-  } else if (type_upper == "SHORT") {
-    return arrow::int16();
-  } else if (type_upper == "INT") {
-    return arrow::int32();
-  } else if (type_upper == "LONG") {
-    return arrow::int64();
-  } else if (type_upper == "FLOAT") {
-    return arrow::float32();
-  } else if (type_upper == "DOUBLE") {
-    return arrow::float64();
-  } else if (type_upper == "STRING") {
-    return arrow::large_utf8();
-  } else if (type_upper == "LISTINT") {
-    return arrow::large_list(arrow::int32());
-  } else if (type_upper == "LISTLONG") {
-    return arrow::large_list(arrow::int64());
-  } else if (type_upper == "LISTFLOAT") {
-    return arrow::large_list(arrow::float32());
-  } else if (type_upper == "LISTDOUBLE") {
-    return arrow::large_list(arrow::float64());
-  } else if (type_upper == "LISTSTRING") {
-    return arrow::large_list(arrow::large_utf8());
-  } else if (type_upper == "NULL") {
-    return arrow::null();
-  } else {
-    LOG(ERROR) << "Unsupported property type " << type;
-  }
-  return arrow::null();
+  return type_name_to_arrow_type(type);
 }
 
 }  // namespace detail
@@ -130,6 +64,20 @@ void Entry::AddProperty(const std::string& name, PropertyType type) {
   props_.emplace_back(PropertyDef{
       .id = static_cast<int>(props_.size()), .name = name, .type = type});
   valid_properties.push_back(1);
+}
+
+void Entry::RemoveProperty(const std::string& name) {
+  for (auto const& prop : props_) {
+    if (prop.name == name) {
+      this->RemoveProperty(prop.id);
+      break;
+    }
+  }
+}
+
+void Entry::RemoveProperty(const size_t index) {
+  props_.erase(props_.begin() + index);
+  valid_properties.erase(valid_properties.begin() + index);
 }
 
 void Entry::AddPrimaryKey(const std::string& key_name) {
@@ -394,6 +342,73 @@ Entry* PropertyGraphSchema::CreateEntry(const std::string& name,
     valid_edges_.push_back(1);
     return &*edge_entries_.rbegin();
   }
+}
+
+void PropertyGraphSchema::AddEntry(const Entry& entry) {
+  if (entry.type == "VERTEX") {
+    vertex_entries_.push_back(entry);
+    valid_vertices_.push_back(1);
+  } else {
+    edge_entries_.push_back(entry);
+    valid_edges_.push_back(1);
+  }
+}
+
+const Entry& PropertyGraphSchema::GetEntry(LabelId label_id,
+                                           const std::string& type) const {
+  if (type == "VERTEX") {
+    return vertex_entries_[label_id];
+  } else {
+    return edge_entries_[label_id];
+  }
+}
+
+Entry& PropertyGraphSchema::GetMutableEntry(const std::string& label,
+                                            const std::string& type) {
+  if (type == "VERTEX") {
+    for (auto& entry : vertex_entries_) {
+      if (entry.label == label) {
+        return entry;
+      }
+    }
+  } else {
+    for (auto& entry : edge_entries_) {
+      if (entry.label == label) {
+        return entry;
+      }
+    }
+  }
+  throw std::runtime_error("Not found the entry of label " + type + " " +
+                           label);
+}
+
+Entry& PropertyGraphSchema::GetMutableEntry(const LabelId label_id,
+                                            const std::string& type) {
+  if (type == "VERTEX") {
+    return vertex_entries_[label_id];
+  } else {
+    return edge_entries_[label_id];
+  }
+}
+
+std::vector<Entry> PropertyGraphSchema::vertex_entries() const {
+  std::vector<Entry> res;
+  for (size_t i = 0; i < valid_vertices_.size(); ++i) {
+    if (valid_vertices_[i]) {
+      res.push_back(vertex_entries_[i]);
+    }
+  }
+  return res;
+}
+
+std::vector<Entry> PropertyGraphSchema::edge_entries() const {
+  std::vector<Entry> res;
+  for (size_t i = 0; i < valid_edges_.size(); ++i) {
+    if (valid_edges_[i]) {
+      res.push_back(edge_entries_[i]);
+    }
+  }
+  return res;
 }
 
 std::vector<std::string> PropertyGraphSchema::GetVertexLabels() const {

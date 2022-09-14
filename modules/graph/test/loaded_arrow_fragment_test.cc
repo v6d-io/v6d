@@ -20,9 +20,8 @@ limitations under the License.
 #include <fstream>
 #include <string>
 
-#include "glog/logging.h"
-
 #include "client/client.h"
+#include "common/util/logging.h"
 
 #include "graph/fragment/arrow_fragment.h"
 

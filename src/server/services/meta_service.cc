@@ -18,7 +18,7 @@ limitations under the License.
 #include <algorithm>
 #include <memory>
 
-#include "glog/logging.h"
+#include "common/util/logging.h"
 
 #include "server/services/etcd_meta_service.h"
 #include "server/services/local_meta_service.h"

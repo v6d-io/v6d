@@ -63,6 +63,9 @@ class Entry {
   std::vector<int> reverse_mapping;  // new prop id -> old prop id
 
   void AddProperty(const std::string& name, PropertyType type);
+  void RemoveProperty(const std::string& name);
+  void RemoveProperty(const size_t index);
+
   void AddPrimaryKey(const std::string& key_name);
   void AddPrimaryKeys(const std::vector<std::string>& key_name_list);
   void AddPrimaryKeys(size_t key_count,
@@ -110,49 +113,13 @@ class PropertyGraphSchema {
 
   Entry* CreateEntry(const std::string& name, const std::string& type);
 
-  void AddEntry(const Entry& entry) {
-    if (entry.type == "VERTEX") {
-      vertex_entries_.push_back(entry);
-      valid_vertices_.push_back(1);
-    } else {
-      edge_entries_.push_back(entry);
-      valid_edges_.push_back(1);
-    }
-  }
+  void AddEntry(const Entry& entry);
 
-  const Entry& GetEntry(LabelId label_id, const std::string& type) const {
-    if (type == "VERTEX") {
-      return vertex_entries_[label_id];
-    } else {
-      return edge_entries_[label_id];
-    }
-  }
+  const Entry& GetEntry(LabelId label_id, const std::string& type) const;
 
-  Entry& GetMutableEntry(const std::string& label, const std::string& type) {
-    if (type == "VERTEX") {
-      for (auto& entry : vertex_entries_) {
-        if (entry.label == label) {
-          return entry;
-        }
-      }
-    } else {
-      for (auto& entry : edge_entries_) {
-        if (entry.label == label) {
-          return entry;
-        }
-      }
-    }
-    throw std::runtime_error("Not found the entry of label " + type + " " +
-                             label);
-  }
+  Entry& GetMutableEntry(const std::string& label, const std::string& type);
 
-  Entry& GetMutableEntry(const LabelId label_id, const std::string& type) {
-    if (type == "VERTEX") {
-      return vertex_entries_[label_id];
-    } else {
-      return edge_entries_[label_id];
-    }
-  }
+  Entry& GetMutableEntry(const LabelId label_id, const std::string& type);
 
   json ToJSON() const;
   void ToJSON(json& root) const;
@@ -164,25 +131,9 @@ class PropertyGraphSchema {
   void set_fnum(size_t fnum) { fnum_ = fnum; }
   size_t fnum() const { return fnum_; }
 
-  std::vector<Entry> vertex_entries() const {
-    std::vector<Entry> res;
-    for (size_t i = 0; i < valid_vertices_.size(); ++i) {
-      if (valid_vertices_[i]) {
-        res.push_back(vertex_entries_[i]);
-      }
-    }
-    return res;
-  }
+  std::vector<Entry> vertex_entries() const;
 
-  std::vector<Entry> edge_entries() const {
-    std::vector<Entry> res;
-    for (size_t i = 0; i < valid_edges_.size(); ++i) {
-      if (valid_edges_[i]) {
-        res.push_back(edge_entries_[i]);
-      }
-    }
-    return res;
-  }
+  std::vector<Entry> edge_entries() const;
 
   std::vector<std::string> GetVertexLabels() const;
 

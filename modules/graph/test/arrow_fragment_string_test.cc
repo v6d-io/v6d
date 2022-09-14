@@ -18,12 +18,11 @@ limitations under the License.
 #include <fstream>
 #include <string>
 
-#include "glog/logging.h"
-
 #include "grape/grape.h"
 #include "grape/util.h"
 
 #include "client/client.h"
+#include "common/util/logging.h"
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/loader/arrow_fragment_loader.h"
 

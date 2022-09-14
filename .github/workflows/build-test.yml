@@ -43,7 +43,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ${{ runner.os }}-${{ matrix.malloc }}-ccache-${{ hashFiles('**/git-modules.txt') }}
+          key: ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-
 

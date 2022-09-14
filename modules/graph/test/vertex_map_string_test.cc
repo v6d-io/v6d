@@ -22,9 +22,9 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
-#include "glog/logging.h"
 
 #include "client/client.h"
+#include "common/util/logging.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 #include "graph/vertex_map/arrow_vertex_map_builder.h"
 #include "io/io/i_io_adaptor.h"
