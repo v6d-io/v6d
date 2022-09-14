@@ -18,10 +18,7 @@ kind: PersistentVolume
 metadata:
   name: serialize-path
   labels:
-    app.kubernetes.io/name: serialize-path
-    app.kubernetes.io/version: 0.8.2
-    app.kubernetes.io/instance: vineyardd
-    app.kubernetes.io/component: PersistentVolume
+    app: serialize-demo
   namespace: vineyard-system
 spec:
   capacity:
