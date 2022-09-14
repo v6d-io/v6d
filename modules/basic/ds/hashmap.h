@@ -23,9 +23,7 @@ limitations under the License.
 #include <utility>
 
 #include "flat_hash_map/flat_hash_map.hpp"
-#if defined(USE_WY_HASH)
 #include "wyhash/wyhash.hpp"
-#endif
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.vineyard.h"
@@ -44,7 +42,7 @@ namespace vineyard {
  * @tparam std::hash<K> The hash function for the key.
  * @tparam std::equal_to<K> The compare function for the key.
  */
-template <typename K, typename V, typename H = prime_number_hash<K>,
+template <typename K, typename V, typename H = prime_number_hash_wy<K>,
           typename E = std::equal_to<K>>
 class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
  public:
@@ -99,6 +97,19 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    *
    */
   void reserve(size_t size) { hashmap_.reserve(size); }
+
+  /**
+   * @brief Return the maximum possible size of the HashMap, i.e., the number
+   * of elements that can be stored in the HashMap.
+   *
+   */
+  size_t bucket_count() const { return hashmap_.bucket_count(); }
+
+  /**
+   * @brief Return the load factor of the HashMap.
+   *
+   */
+  float load_factor() const { return hashmap_.load_factor(); }
 
   /**
    * @brief Check whether the hashmap is empty.
