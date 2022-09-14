@@ -23,6 +23,18 @@ from containers in the same pod, or pods on the same hosts.
 Deploying with Helm
 ^^^^^^^^^^^^^^^^^^^
 
+Before installing the vineyard operator, you should install creat-manager at first.
+
+.. code:: shell
+
+   helm repo add jetstack https://charts.jetstack.io
+   helm install \
+      cert-manager jetstack/cert-manager \
+      --namespace cert-manager \
+      --create-namespace \
+      --version v1.9.1 \
+      --set installCRDs=true
+
 Vineyard also has tight integration with Kubernetes and Helm. Vineyard can be deployed
 with ``helm``:
 
@@ -31,9 +43,11 @@ with ``helm``:
     helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
     helm install vineyard vineyard/vineyard
 
-In the further vineyard will improve the integration with Kubernetes by abstract
-vineyard objects as as Kubernetes resources (i.e., CRDs), and leverage a vineyard
-operator to operate vineyard cluster.
+Install vineyardd as follows.
+
+.. code:: shell
+
+   curl https://raw.githubusercontent.com/v6d-io/v6d/main/k8s/test/e2e/vineyardd.yaml | kubectl apply -f -
 
 Deploying using Python API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

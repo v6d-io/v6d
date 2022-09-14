@@ -1,6 +1,6 @@
 apiVersion: v2
-name: vineyard
-description: Vineyard is an in-memory immutable data manager.
+name: vineyard-operator
+description: Vineyard Operator manages all relavant compenents about vineyard.
 
 home: https://v6d.io
 
@@ -8,14 +8,8 @@ sources:
   - https://github.com/v6d-io/v6d
 
 keywords:
-  - vineyard
-  - distributed-systems
-  - distributed
-  - shared-memory
-  - graph-analytics
-  - in-memory-storage
-  - big-data-analytics
-  - distributed-computation
+  - operator
+  - vineyard compenents
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -30,10 +24,9 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.8.2
+version: 0.1.0
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 appVersion: 0.8.2
-
