@@ -48,7 +48,7 @@ setup:
             --create-namespace
       wait:
         - namespace: vineyard-system
-          resource: deployment/vineyard-controller-manager
+          resource: deployment/vineyard-operator
           for: condition=Available
     - name: install vineyardd
       command: |
