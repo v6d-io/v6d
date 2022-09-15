@@ -44,7 +44,7 @@ setup:
       command: |
         helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
         helm install vineyard-operator vineyard/vineyard-operator \
-            --namespace cert-manager \
+            --namespace vineyard-system \
             --create-namespace
       wait:
         - namespace: vineyard-system
