@@ -9,7 +9,7 @@
 # when the hash of the last commit in the branch you set up changes. This does
 # NOT apply to ownership claim operations, which are processed immediately.
 #
-repositoryID: ee1ccf13-0703-4a39-bf71-129c24da07c0ls
+repositoryID: ee1ccf13-0703-4a39-bf71-129c24da07c0
 owners: # (optional, used to claim repository ownership)
   - name: Tao He
     email: sighingnow@email.com
