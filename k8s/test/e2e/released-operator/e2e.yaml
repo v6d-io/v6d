@@ -43,7 +43,9 @@ setup:
     - name: install the released operator
       command: |
         helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
-        helm install vineyard-operator vineyard/vineyard-operator -n vineyard-system
+        helm install vineyard-operator vineyard/vineyard-operator \
+            --namespace cert-manager \
+            --create-namespace
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-controller-manager
