@@ -23,7 +23,7 @@ from containers in the same pod, or pods on the same hosts.
 Deploying with Helm
 ^^^^^^^^^^^^^^^^^^^
 
-Before installing the vineyard operator, you should install creat-manager at first.
+Before installing the vineyard operator, you should install cert-manager at first.
 
 .. code:: shell
 
@@ -35,13 +35,12 @@ Before installing the vineyard operator, you should install creat-manager at fir
       --version v1.9.1 \
       --set installCRDs=true
 
-Vineyard also has tight integration with Kubernetes and Helm. Vineyard can be deployed
-with ``helm``:
+Vineyard operator has been integrated with `Helm <https://helm.sh/>`_. Deploy it as follows.
 
 .. code:: shell
 
-    helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
-    helm install vineyard vineyard/vineyard
+   helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
+   helm install vineyard-operator vineyard/vineyard-operator
 
 Install vineyardd as follows.
 

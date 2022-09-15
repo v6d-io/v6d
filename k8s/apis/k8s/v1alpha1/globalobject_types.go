@@ -21,9 +21,6 @@ import (
 
 // GlobalObjectSpec defines the desired state of GlobalObject
 type GlobalObjectSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	ObjectID  string   `json:"id"`
 	Name      string   `json:"name,omitempty"`
 	Signature string   `json:"signature"`
@@ -34,8 +31,6 @@ type GlobalObjectSpec struct {
 
 // GlobalObjectStatus defines the observed state of GlobalObject
 type GlobalObjectStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true

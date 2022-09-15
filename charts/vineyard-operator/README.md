@@ -13,6 +13,12 @@ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
 helm install vineyard-operator vineyard/vineyard-operator
 ```
 
+Install vineyardd as follows.
+
+.. code:: shell
+
+   curl https://raw.githubusercontent.com/v6d-io/v6d/main/k8s/test/e2e/vineyardd.yaml | kubectl apply -f -
+
 ## Uninstall
 
 The installed charts can be removed with

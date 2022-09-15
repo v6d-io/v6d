@@ -227,10 +227,10 @@ from containers in the same pod, or pods on the same hosts.
 Deployment with Helm
 ^^^^^^^^^^^^^^^^^^^^
 
-Before installing the vineyard operator, you should install creat-manager at first.
+Before installing the vineyard operator, you should install cert-manager at first.
 
 .. code:: shell
-   
+
    helm repo add jetstack https://charts.jetstack.io
    helm install \
       cert-manager jetstack/cert-manager \
@@ -239,8 +239,7 @@ Before installing the vineyard operator, you should install creat-manager at fir
       --version v1.9.1 \
       --set installCRDs=true
 
-Vineyard also has tight integration with Kubernetes and Helm. Vineyard can be deployed
-with ``helm``:
+Vineyard operator has been integrated with `Helm <https://helm.sh/>`_. Deploy it as follows.
 
 .. code:: shell
 
