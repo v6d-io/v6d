@@ -477,7 +477,7 @@ class RecordBatchConsolidator : public RecordBatchBaseBuilder {
 
   std::shared_ptr<arrow::Schema> schema() const { return schema_; }
 
-  Status ConsodilateColumns(Client& client,
+  Status ConsolidateColumns(Client& client,
                             std::vector<std::string> const& columns,
                             std::string const& consolidate_name) {
     std::vector<int64_t> column_indexes;
@@ -489,18 +489,18 @@ class RecordBatchConsolidator : public RecordBatchBaseBuilder {
       }
       column_indexes.push_back(index);
     }
-    return ConsodilateColumns(client, column_indexes, consolidate_name);
+    return ConsolidateColumns(client, column_indexes, consolidate_name);
   }
 
-  Status ConsodilateColumns(Client& client, std::vector<int64_t> const& columns,
+  Status ConsolidateColumns(Client& client, std::vector<int64_t> const& columns,
                             std::string const& consolidate_name) {
     std::vector<std::shared_ptr<arrow::Array>> columns_to_consolidate;
     for (int64_t const& column : columns) {
       columns_to_consolidate.push_back(this->arrow_columns_[column]);
     }
     std::shared_ptr<arrow::Array> consolidated_column;
-    RETURN_ON_ERROR(
-        ConsolidateColumns(columns_to_consolidate, consolidated_column));
+    RETURN_ON_ERROR(vineyard::ConsolidateColumns(columns_to_consolidate,
+                                                 consolidated_column));
 
     this->column_num_ -= (columns.size() - 1);
     std::vector<int64_t> sorted_column_indexes(columns);
@@ -663,7 +663,7 @@ class TableConsolidator : public TableBaseBuilder {
     }
   }
 
-  Status ConsodilateColumns(Client& client,
+  Status ConsolidateColumns(Client& client,
                             std::vector<std::string> const& columns,
                             std::string const& consolidate_name) {
     std::vector<int64_t> column_indexes;
@@ -675,14 +675,14 @@ class TableConsolidator : public TableBaseBuilder {
       }
       column_indexes.push_back(index);
     }
-    return ConsodilateColumns(client, column_indexes, consolidate_name);
+    return ConsolidateColumns(client, column_indexes, consolidate_name);
   }
 
-  Status ConsodilateColumns(Client& client, std::vector<int64_t> const& columns,
+  Status ConsolidateColumns(Client& client, std::vector<int64_t> const& columns,
                             std::string const& consolidate_name) {
     for (auto& consolidator : record_batch_consolidators_) {
       RETURN_ON_ERROR(
-          consolidator->ConsodilateColumns(client, columns, consolidate_name));
+          consolidator->ConsolidateColumns(client, columns, consolidate_name));
     }
     column_num_ -= (columns.size() - 1);
     return Status::OK();
