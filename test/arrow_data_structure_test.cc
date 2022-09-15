@@ -397,7 +397,7 @@ int main(int argc, char** argv) {
 
     LOG(INFO) << "#########  Record Batch Consolidator Test #######";
     RecordBatchConsolidator consolidator(client, r3);
-    VINEYARD_CHECK_OK(consolidator.ConsodilateColumns(
+    VINEYARD_CHECK_OK(consolidator.ConsolidateColumns(
         client, std::vector<std::string>{"f2", "f8"}, "merged"));
     auto r5 = std::dynamic_pointer_cast<RecordBatch>(consolidator.Seal(client));
     VINEYARD_CHECK_OK(client.Persist(r5->id()));
@@ -462,7 +462,7 @@ int main(int argc, char** argv) {
 
     LOG(INFO) << "#########  Table Consolidator Test #############";
     TableConsolidator consolidator(client, r3);
-    VINEYARD_CHECK_OK(consolidator.ConsodilateColumns(
+    VINEYARD_CHECK_OK(consolidator.ConsolidateColumns(
         client, std::vector<std::string>{"f1", "f8"}, "merged"));
     auto r5 = std::dynamic_pointer_cast<Table>(consolidator.Seal(client));
     VINEYARD_CHECK_OK(client.Persist(r5->id()));

@@ -1163,7 +1163,7 @@ ArrowFragment<OID_T, VID_T>::ConsolidateVertexColumns(
 
   auto& table = this->vertex_tables_[vlabel];
   vineyard::TableConsolidator consolidator(client, table);
-  VY_OK_OR_RAISE(consolidator.ConsodilateColumns(
+  VY_OK_OR_RAISE(consolidator.ConsolidateColumns(
       client, std::vector<int64_t>{props.begin(), props.end()},
       consolidate_name));
   auto new_table =
@@ -1216,7 +1216,7 @@ ArrowFragment<OID_T, VID_T>::ConsolidateEdgeColumns(
 
   auto& table = this->edge_tables_[elabel];
   vineyard::TableConsolidator consolidator(client, table);
-  VY_OK_OR_RAISE(consolidator.ConsodilateColumns(
+  VY_OK_OR_RAISE(consolidator.ConsolidateColumns(
       client, std::vector<int64_t>{props.begin(), props.end()},
       consolidate_name));
   auto new_table =
