@@ -85,10 +85,11 @@ static int vineyard_fs_open(struct inode *inode, struct file *file)
 	if (rmsg.ret._fopt_ret.ret == 0) {
 		data = (struct vineyard_private_data *)kmalloc(
 			sizeof(struct vineyard_private_data), GFP_KERNEL);
-		data->data_pointer =
-			vineyard_bulk_kernel_addr + rmsg.ret._fopt_ret.data_offset;
+		data->data_pointer = vineyard_bulk_kernel_addr +
+				     rmsg.ret._fopt_ret.data_offset;
 		data->data_size = rmsg.ret._fopt_ret.data_size;
-		data->header_pointer = vineyard_bulk_kernel_addr + rmsg.ret._fopt_ret.header_offset;
+		data->header_pointer = vineyard_bulk_kernel_addr +
+				       rmsg.ret._fopt_ret.header_offset;
 		data->header_size = rmsg.ret._fopt_ret.header_size;
 		data->type = rmsg.ret._fopt_ret.type;
 		file->private_data = (void *)data;
@@ -116,37 +117,50 @@ static ssize_t vineyard_fs_read(struct file *file, char __user *user,
 		if (*start >= data->data_size)
 			return 0;
 
-		size = length + *start > data->data_size ? length + *start - data->data_size :
-							length;
-		printk(KERN_INFO PREFIX "read size:%lu bulk addr:%px, read addr:%px\n",
-			size, vineyard_bulk_kernel_addr, data->data_pointer);
+		size = length + *start > data->data_size ?
+			       length + *start - data->data_size :
+			       length;
+		printk(KERN_INFO PREFIX
+		       "read size:%lu bulk addr:%px, read addr:%px\n",
+		       size, vineyard_bulk_kernel_addr, data->data_pointer);
 		ret = copy_to_user(user, data->data_pointer + *start, size);
 		if (ret)
 			return ret;
 	} else if (data->type == TENSOR) {
 		file_size = data->data_size + data->header_size;
-		printk(KERN_INFO PREFIX "file size:%ld start:%lld\n", file_size, *start);
+		printk(KERN_INFO PREFIX "file size:%ld start:%lld\n", file_size,
+		       *start);
 		if (*start >= file_size) {
 			return 0;
 		} else if (*start >= data->header_size) {
-			size = length + *start > file_size ? file_size - *start : length;
+			size = length + *start > file_size ?
+				       file_size - *start :
+				       length;
 			printk(KERN_INFO PREFIX "read size:%lu\n", size);
 			ret = copy_to_user(user, data->data_pointer, size);
 			if (ret)
 				return ret;
 		} else {
-			size = length + *start > file_size ? file_size - *start : length;
+			size = length + *start > file_size ?
+				       file_size - *start :
+				       length;
 			printk(KERN_INFO PREFIX "read size:%lu\n", size);
 			if (size + *start > data->header_size) {
 				phase1_size = data->header_size - *start;
-				ret = copy_to_user(user, data->header_pointer + *start, phase1_size);
+				ret = copy_to_user(
+					user, data->header_pointer + *start,
+					phase1_size);
 				if (ret)
 					return ret;
-				ret = copy_to_user(user + phase1_size, data->data_pointer, size - phase1_size);
+				ret = copy_to_user(user + phase1_size,
+						   data->data_pointer,
+						   size - phase1_size);
 				if (ret)
 					return ret;
 			} else {
-				ret = copy_to_user(user, data->header_pointer + *start, size);
+				ret = copy_to_user(
+					user, data->header_pointer + *start,
+					size);
 				if (ret)
 					return ret;
 			}
@@ -215,7 +229,7 @@ static const struct file_operations vineyard_file_operations = {
 	.write = vineyard_fs_write,
 	.flush = vineyard_fs_flush,
 	.release = vineyard_fs_release,
-	.llseek	= generic_file_llseek,
+	.llseek = generic_file_llseek,
 };
 
 static const struct inode_operations vineyard_file_inode_operations = {

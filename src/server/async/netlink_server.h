@@ -15,6 +15,7 @@ limitations under the License.
 #ifndef SRC_SERVER_ASYNC_NETLINK_SERVER_H_
 #define SRC_SERVER_ASYNC_NETLINK_SERVER_H_
 
+#include <map>
 #include <memory>
 #include <string>
 
@@ -36,15 +37,6 @@ class VineyardServer;
 // It is a user value.
 #define NETLINK_VINEYARD 23
 #define NETLINK_PORT 101
-
-enum DTYPE {
-  i8 = 1,
-  u8 = 2,
-  i4 = 3,
-  u4 = 4,
-  f4 = 5,
-  f8 = 6
-};
 
 enum OBJECT_TYPE {
   BLOB = 1,
@@ -183,9 +175,9 @@ class NetLinkServer : public SocketServer,
 
   void SyncObjectEntryList();
 
-  object_info *SearchHeaderInfo(ObjectID id);
+  object_info* SearchHeaderInfo(ObjectID id);
 
-  bool InsertHeaderInfo(ObjectID id, object_info &header);
+  bool InsertHeaderInfo(ObjectID id, object_info& header);
 
  private:
   void InitNetLink();
@@ -234,7 +226,7 @@ class NetLinkServer : public SocketServer,
   uint64_t base_object_id;
   void* base_pointer;
 
-  std::map<ObjectID, object_info *> object_to_header;
+  std::map<ObjectID, object_info*> object_to_header;
 
   enum _ready {
     Blob = 0b1,
@@ -258,7 +250,6 @@ class NetLinkServer : public SocketServer,
 
   void Close() override {}
   std::string Socket() { return std::string(""); }
-
 
   void SyncObjectEntryList() {}
 

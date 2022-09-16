@@ -39,9 +39,9 @@ limitations under the License.
 #define PAGE_DOWN(x) ((x) & (~(PAGE_SIZE - 1)))
 
 #define MAGIC ("\x93NUMPY")
-#define descr           ("'descr': ")
-#define fortran_order   ("'fortran_order': ")
-#define shape           ("'shape': ")
+#define descr ("'descr': ")
+#define fortran_order ("'fortran_order': ")
+#define shape ("'shape': ")
 int8_t majorVersion = 1;
 int8_t minorVersion = 0;
 namespace vineyard {
@@ -56,96 +56,95 @@ static void PrintJsonElement(const json& tree) {
 #endif
 }
 
-std::pair<char *, int> ConstructHeader(std::string &dtype_string, std::string &tensor_shape, bool order)
-{
-    char *ret;
-    char *temp;
-    int16_t header_len;
-    int16_t total_len;
-    int16_t shape_len;
-    char descr_str[17] = { 0 };
-    char fortran_order_str[25] = {0};
-    char *shape_str;
+std::pair<char*, int> ConstructHeader(std::string& dtype_string,
+                                      std::string& tensor_shape, bool order) {
+  char* ret;
+  char* temp;
+  int16_t header_len;
+  int16_t total_len;
+  int16_t shape_len;
+  char descr_str[17] = {0};
+  char fortran_order_str[25] = {0};
+  char* shape_str;
 
-    // type
-    // we now suppose that the platform is little endian
-    strcpy(descr_str, descr);
+  // type
+  // we now suppose that the platform is little endian
+  strncpy(descr_str, descr, strlen(descr) + 1);
 
-    if (!dtype_string.compare("uint64")) {
-      strcpy(descr_str + strlen(descr), "'<i8', ");
-    } else if(!dtype_string.compare("int64")) {
-      strcpy(descr_str + strlen(descr), "'<u8', ");
-    } else if(!dtype_string.compare("uint32")) {
-      strcpy(descr_str + strlen(descr), "'<i4', ");
-    } else if(!dtype_string.compare("int32")) {
-      strcpy(descr_str + strlen(descr), "'<u4', ");
-    } else if(!dtype_string.compare("float")) {
-      strcpy(descr_str + strlen(descr), "'<f4', ");
-    } else if(!dtype_string.compare("double")) {
-      strcpy(descr_str + strlen(descr), "'<f8', ");
-    } else {
-      LOG(INFO) << "Unknow type:" << dtype_string << ". Think of it as uint64.";
-      strcpy(descr_str + strlen(descr), "'<i8', ");
-    }
+  if (!dtype_string.compare("uint64")) {
+    strncpy(descr_str + strlen(descr), "'<i8', ", 8);
+  } else if (!dtype_string.compare("int64")) {
+    strncpy(descr_str + strlen(descr), "'<u8', ", 8);
+  } else if (!dtype_string.compare("uint32")) {
+    strncpy(descr_str + strlen(descr), "'<i4', ", 8);
+  } else if (!dtype_string.compare("int32")) {
+    strncpy(descr_str + strlen(descr), "'<u4', ", 8);
+  } else if (!dtype_string.compare("float")) {
+    strncpy(descr_str + strlen(descr), "'<f4', ", 8);
+  } else if (!dtype_string.compare("double")) {
+    strncpy(descr_str + strlen(descr), "'<f8', ", 8);
+  } else {
+    LOG(INFO) << "Unknow type:" << dtype_string << ". Think of it as uint64.";
+    strncpy(descr_str + strlen(descr), "'<i8', ", 8);
+  }
 
-    //fortran
-    strcpy(fortran_order_str, fortran_order);
-    if(order) {
-        strcpy(fortran_order_str + strlen(fortran_order), "True, ");
-    } else {
-        strcpy(fortran_order_str + strlen(fortran_order), "False, ");
-    }
+  // fortran
+  strncpy(fortran_order_str, fortran_order, strlen(fortran_order) + 1);
+  if (order) {
+    strncpy(fortran_order_str + strlen(fortran_order), "True, ", 7);
+  } else {
+    strncpy(fortran_order_str + strlen(fortran_order), "False, ", 8);
+  }
 
+  // shape
+  shape_len = tensor_shape.length() + strlen(shape) + 3;
+  shape_str = reinterpret_cast<char*>(malloc(sizeof(char) * shape_len));
+  memset(shape_str, 0, shape_len);
+  strncpy(shape_str, shape, strlen(shape) + 1);
+  strncpy(shape_str + strlen(shape), tensor_shape.c_str(),
+          tensor_shape.length() + 1);
+  shape_str[shape_len - 3] = ',';
+  shape_str[shape_len - 2] = ' ';
 
-    //shape
-    shape_len = tensor_shape.length() + strlen(shape) + 3;
-    shape_str = (char *)malloc(sizeof(char) * shape_len);
-    memset(shape_str, 0, shape_len);
-    strcpy(shape_str, shape);
-    strcpy(shape_str + strlen(shape), tensor_shape.c_str());
-    shape_str[shape_len - 3] = ',';
-    shape_str[shape_len - 2] = ' ';
+  total_len =
+      strlen(descr_str) + strlen(fortran_order_str) + strlen(shape_str) + 12;
+  total_len = (total_len + 63) & 0xFFC0;
+  header_len = total_len - 10;
 
-    total_len = strlen(descr_str) + strlen(fortran_order_str) + strlen(shape_str) + 12;
-    total_len = (total_len + 63) & 0xFFC0;
-    header_len = total_len - 10;
+  ret = reinterpret_cast<char*>(malloc(sizeof(char) * total_len));
+  temp = ret;
 
-    ret = (char *)malloc(sizeof(char) * total_len);
-    temp = ret;
+  memcpy(temp, MAGIC, strlen(MAGIC));
+  temp += strlen(MAGIC);
+  memcpy(temp, &majorVersion, sizeof(majorVersion));
+  temp += sizeof(majorVersion);
+  memcpy(temp, &minorVersion, sizeof(minorVersion));
+  temp += sizeof(minorVersion);
+  memcpy(temp, &header_len, sizeof(header_len));
+  temp += sizeof(header_len);
 
+  *temp = '{';
+  temp++;
+  memcpy(temp, descr_str, strlen(descr_str));
+  temp += strlen(descr_str);
+  memcpy(temp, fortran_order_str, strlen(fortran_order_str));
+  temp += strlen(fortran_order_str);
+  memcpy(temp, shape_str, strlen(shape_str));
+  temp += strlen(shape_str);
+  *temp = '}';
+  temp++;
 
-    memcpy(temp, MAGIC, strlen(MAGIC));
-    temp += strlen(MAGIC);
-    memcpy(temp, &majorVersion, sizeof(majorVersion));
-    temp += sizeof(majorVersion);
-    memcpy(temp, &minorVersion, sizeof(minorVersion));
-    temp += sizeof(minorVersion);
-    memcpy(temp, &header_len, sizeof(header_len));
-    temp += sizeof(header_len);
-
-    *temp = '{';
+  while (temp - ret < total_len - 1) {
+    *temp = ' ';
     temp++;
-    memcpy(temp, descr_str, strlen(descr_str));
-    temp += strlen(descr_str);
-    memcpy(temp, fortran_order_str, strlen(fortran_order_str));
-    temp += strlen(fortran_order_str);
-    memcpy(temp, shape_str, strlen(shape_str));
-    temp += strlen(shape_str);
-    *temp = '}';
-    temp++;
+  }
+  *temp = '\n';
 
-    while (temp - ret < total_len - 1) {
-        *temp = ' ';
-        temp++;
-    }
-    *temp = '\n';
-
-    free(shape_str);
-    return std::pair<char *, int>(ret, total_len);
+  free(shape_str);
+  return std::pair<char*, int>(ret, total_len);
 }
 
-std::string ConstructTensorShape(std::vector<int> &tensor_shape)
-{
+std::string ConstructTensorShape(std::vector<int>& tensor_shape) {
   std::string ret;
   ret.push_back('(');
   for (auto iter = tensor_shape.begin(); iter != tensor_shape.end(); iter++) {
@@ -164,8 +163,7 @@ NetLinkServer::NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
       nlh(nullptr),
       obj_info_mem(nullptr),
       obj_info_lock(0),
-      base_object_id(std::numeric_limits<uintptr_t>::max()) {
-}
+      base_object_id(std::numeric_limits<uintptr_t>::max()) {}
 
 NetLinkServer::~NetLinkServer() {}
 
@@ -242,7 +240,8 @@ void NetLinkServer::Close() { LOG(INFO) << __func__; }
 void NetLinkServer::Exit() {
   close(socket_fd);
   free(nlh);
-  for (auto iter = object_to_header.begin(); iter != object_to_header.end(); iter++) {
+  for (auto iter = object_to_header.begin(); iter != object_to_header.end();
+       iter++) {
     delete iter->second;
   }
 }
@@ -286,7 +285,7 @@ void NetLinkServer::SyncObjectEntryList() {
   }
 }
 
-object_info *NetLinkServer::SearchHeaderInfo(ObjectID id) {
+object_info* NetLinkServer::SearchHeaderInfo(ObjectID id) {
   auto header = object_to_header.find(id);
   if (header != object_to_header.end()) {
     return header->second;
@@ -294,15 +293,15 @@ object_info *NetLinkServer::SearchHeaderInfo(ObjectID id) {
   return NULL;
 }
 
-bool NetLinkServer::InsertHeaderInfo(ObjectID id, object_info &header) {
-  object_info *new_header;
+bool NetLinkServer::InsertHeaderInfo(ObjectID id, object_info& header) {
+  object_info* new_header;
   if (object_to_header.find(id) != object_to_header.end()) {
     // Object exist. There must be something wrong.
     return false;
   }
   new_header = new object_info;
   memcpy(new_header, &header, sizeof(object_info));
-  object_to_header.insert(std::pair<ObjectID, object_info *>(id, new_header));
+  object_to_header.insert(std::pair<ObjectID, object_info*>(id, new_header));
   return true;
 }
 
@@ -316,7 +315,7 @@ int NetLinkServer::HandleSet(vineyard_request_msg* msg) {
 fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
   std::vector<ObjectID> ids;
   std::vector<std::shared_ptr<Payload>> objects;
-  object_info *obj_info;
+  object_info* obj_info;
   fopt_ret ret;
   void* pointer = NULL;
   uint64_t file_size = 0;
@@ -332,7 +331,8 @@ fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
       VineyardSpinLock(&sync_val);
       vs_ptr_->GetData(
           ids, false, false, []() { return true; },
-          [this, &param, &ret, &sync_val](const Status& status, const json& tree) {
+          [this, &param, &ret, &sync_val](const Status& status,
+                                          const json& tree) {
             uint64_t bulk_id;
             if (!tree.empty()) {
               std::vector<ObjectID> ids;
@@ -340,31 +340,37 @@ fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
               std::vector<int> tensor_shape;
               std::string tensor_shape_string;
               std::string dtype_string;
-              std::pair<char *, int> header;
+              std::pair<char*, int> header;
               object_info obj_info;
 
               auto tensor_info = tree.begin();
-              bulk_id = ObjectIDFromString((*tensor_info)["buffer_"]["id"].get<std::string>());
+              bulk_id = ObjectIDFromString(
+                  (*tensor_info)["buffer_"]["id"].get<std::string>());
               ids.push_back(bulk_id);
               get_container(*tensor_info, "shape_", tensor_shape);
               dtype_string = (*tensor_info)["value_type_"].get<std::string>();
 
               tensor_shape_string = ConstructTensorShape(tensor_shape);
-              header = ConstructHeader(dtype_string, tensor_shape_string, false);
+              header =
+                  ConstructHeader(dtype_string, tensor_shape_string, false);
 
               this->vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
-              //FIXME: maybe there exist more than one blob to store the data.
+              // FIXME: maybe there exist more than one blob to store the data.
               auto blob_info = objects.begin();
-              ret.data_offset = (uint64_t)(*blob_info)->pointer - (uint64_t) base_pointer;
+              ret.data_offset =
+                  (uint64_t)(*blob_info)->pointer - (uint64_t) base_pointer;
               ret.data_size = (*blob_info)->data_size;
 
               // construct npy header
               ObjectID object_id;
               std::shared_ptr<Payload> object;
-              this->vs_ptr_->GetBulkStore()->Create(header.second, object_id, object);
+              this->vs_ptr_->GetBulkStore()->Create(header.second, object_id,
+                                                    object);
               memcpy(object->pointer, header.first, header.second);
+              free(header.first);
 
-              ret.header_offset = (uint64_t)object->pointer - (uint64_t) base_pointer;
+              ret.header_offset =
+                  (uint64_t) object->pointer - (uint64_t) base_pointer;
               ret.header_size = object->data_size;
               ret.type = OBJECT_TYPE::TENSOR;
               ret.ret = 0;
@@ -471,8 +477,10 @@ void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
 
   if (type == OBJECT_TYPE::BLOB) {
     for (auto iter = tree.begin(); iter != tree.end(); iter++) {
-      entrys[current_file_num + i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
-      entrys[current_file_num + i].file_size = (*iter)["length"].get<uint64_t>();
+      entrys[current_file_num + i].obj_id =
+          ObjectIDFromString((*iter)["id"].get<std::string>());
+      entrys[current_file_num + i].file_size =
+          (*iter)["length"].get<uint64_t>();
       entrys[current_file_num + i].type = type;
       i++;
     }
@@ -480,8 +488,10 @@ void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
 
   if (type == OBJECT_TYPE::TENSOR) {
     for (auto iter = tree.begin(); iter != tree.end(); iter++) {
-      entrys[header->total_file + i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
-      entrys[header->total_file + i].file_size = (*iter)["nbytes"].get<uint64_t>();
+      entrys[header->total_file + i].obj_id =
+          ObjectIDFromString((*iter)["id"].get<std::string>());
+      entrys[header->total_file + i].file_size =
+          (*iter)["nbytes"].get<uint64_t>();
       entrys[header->total_file + i].type = type;
       i++;
     }
