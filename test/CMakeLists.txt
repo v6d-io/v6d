@@ -31,7 +31,11 @@ foreach(testfile ${TEST_FILES})
     set(testname ${CMAKE_MATCH_1})
 
     if(${testname} STREQUAL "gpumalloc_test" AND NOT USE_GPU)
-      continue()
+        continue()
+    endif()
+
+    if(${testname} STREQUAL "lru_test" AND NOT (TARGET TBB::tbb))
+        continue()
     endif()
 
     message(STATUS "Found unit_test - " ${testname})
