@@ -34,7 +34,7 @@ limitations under the License.
 
 #define OFF (0)
 #define ON (1)
-#define DEBUG ON
+#define DEBUG OFF
 #define PAGE_SIZE (0x1000)
 #define PAGE_DOWN(x) ((x) & (~(PAGE_SIZE - 1)))
 
@@ -56,7 +56,7 @@ static void PrintJsonElement(const json& tree) {
 #endif
 }
 
-std::pair<char *, int> ConstructHeader(enum DTYPE type, std::string &tensor_shape, bool order)
+std::pair<char *, int> ConstructHeader(std::string &dtype_string, std::string &tensor_shape, bool order)
 {
     char *ret;
     char *temp;
@@ -70,28 +70,22 @@ std::pair<char *, int> ConstructHeader(enum DTYPE type, std::string &tensor_shap
     // type
     // we now suppose that the platform is little endian
     strcpy(descr_str, descr);
-    switch(type) {
-    case DTYPE::i8:
-        strcpy(descr_str + strlen(descr), "'<i8', ");
-        break;
-    case DTYPE::u8:
-        strcpy(descr_str + strlen(descr), "'<u8', ");
-        break;
-    case DTYPE::i4:
-        strcpy(descr_str + strlen(descr), "'<i4', ");
-        break;
-    case DTYPE::u4:
-        strcpy(descr_str + strlen(descr), "'<u4', ");
-        break;
-    case DTYPE::f4:
-        strcpy(descr_str + strlen(descr), "'<f4', ");
-        break;
-    case DTYPE::f8:
-        strcpy(descr_str + strlen(descr), "'<f8', ");
-        break;
-    default:
-        strcpy(descr_str + strlen(descr), "'<i8', ");
-        break;
+
+    if (!dtype_string.compare("uint64")) {
+      strcpy(descr_str + strlen(descr), "'<i8', ");
+    } else if(!dtype_string.compare("int64")) {
+      strcpy(descr_str + strlen(descr), "'<u8', ");
+    } else if(!dtype_string.compare("uint32")) {
+      strcpy(descr_str + strlen(descr), "'<i4', ");
+    } else if(!dtype_string.compare("int32")) {
+      strcpy(descr_str + strlen(descr), "'<u4', ");
+    } else if(!dtype_string.compare("float")) {
+      strcpy(descr_str + strlen(descr), "'<f4', ");
+    } else if(!dtype_string.compare("double")) {
+      strcpy(descr_str + strlen(descr), "'<f8', ");
+    } else {
+      LOG(INFO) << "Unknow type:" << dtype_string << ". Think of it as uint64.";
+      strcpy(descr_str + strlen(descr), "'<i8', ");
     }
 
     //fortran
@@ -171,17 +165,9 @@ NetLinkServer::NetLinkServer(std::shared_ptr<VineyardServer> vs_ptr)
       obj_info_mem(nullptr),
       obj_info_lock(0),
       base_object_id(std::numeric_limits<uintptr_t>::max()) {
-  LOG(INFO) << __func__;
 }
 
-NetLinkServer::~NetLinkServer() {
-  LOG(INFO) << __func__;
-  close(socket_fd);
-  free(nlh);
-  for (auto iter = object_to_header.begin(); iter != object_to_header.end(); iter++) {
-    delete iter->second;
-  }
-}
+NetLinkServer::~NetLinkServer() {}
 
 void NetLinkServer::InitNetLink() {
   size_t size;
@@ -253,10 +239,17 @@ void NetLinkServer::Start() {
 
 void NetLinkServer::Close() { LOG(INFO) << __func__; }
 
+void NetLinkServer::Exit() {
+  close(socket_fd);
+  free(nlh);
+  for (auto iter = object_to_header.begin(); iter != object_to_header.end(); iter++) {
+    delete iter->second;
+  }
+}
+
 void NetLinkServer::SyncObjectEntryList() {
   vineyard_object_info_header* header;
   sync_ready = 0;
-  LOG(INFO) << __func__;
 
   header = reinterpret_cast<vineyard_object_info_header*>(obj_info_mem);
   if (header) {
@@ -265,14 +258,12 @@ void NetLinkServer::SyncObjectEntryList() {
     vs_ptr_->ListData("vineyard::Blob", false,
                       std::numeric_limits<size_t>::max(),
                       [this, header](const Status& status, const json& tree) {
-                        LOG(INFO) << "blob";
                         if (!tree.empty()) {
                           PrintJsonElement(tree);
                           this->FillFileEntryInfo(tree, OBJECT_TYPE::BLOB);
                         }
                         this->sync_ready |= _ready::Blob;
                         if (this->sync_ready == _ready::Ready) {
-                          LOG(INFO) << "Unlock";
                           VineyardWriteUnlock(&header->rw_lock.w_lock);
                           this->sync_ready = 0;
                         }
@@ -281,14 +272,12 @@ void NetLinkServer::SyncObjectEntryList() {
     vs_ptr_->ListData("vineyard::Tensor*", false,
                       std::numeric_limits<size_t>::max(),
                       [this, header](const Status& status, const json& tree) {
-                        LOG(INFO) << "tensor";
                         if (!tree.empty()) {
                           // PrintJsonElement(tree);
                           this->FillFileEntryInfo(tree, OBJECT_TYPE::TENSOR);
                         }
                         this->sync_ready |= _ready::Tensor;
                         if (this->sync_ready == _ready::Ready) {
-                          LOG(INFO) << "Unlock";
                           VineyardWriteUnlock(&header->rw_lock.w_lock);
                           this->sync_ready = 0;
                         }
@@ -297,7 +286,7 @@ void NetLinkServer::SyncObjectEntryList() {
   }
 }
 
-object_header *NetLinkServer::SearchHeaderInfo(ObjectID id) {
+object_info *NetLinkServer::SearchHeaderInfo(ObjectID id) {
   auto header = object_to_header.find(id);
   if (header != object_to_header.end()) {
     return header->second;
@@ -305,15 +294,15 @@ object_header *NetLinkServer::SearchHeaderInfo(ObjectID id) {
   return NULL;
 }
 
-bool NetLinkServer::InsertHeaderInfo(ObjectID id, object_header &header) {
-  object_header *new_header;
+bool NetLinkServer::InsertHeaderInfo(ObjectID id, object_info &header) {
+  object_info *new_header;
   if (object_to_header.find(id) != object_to_header.end()) {
-    LOG(INFO) << "Exist";
+    // Object exist. There must be something wrong.
     return false;
   }
-  new_header = new object_header;
-  memcpy(new_header, &header, sizeof(object_header));
-  object_to_header.insert(std::pair<ObjectID, object_header *>(id, new_header));
+  new_header = new object_info;
+  memcpy(new_header, &header, sizeof(object_info));
+  object_to_header.insert(std::pair<ObjectID, object_info *>(id, new_header));
   return true;
 }
 
@@ -327,6 +316,7 @@ int NetLinkServer::HandleSet(vineyard_request_msg* msg) {
 fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
   std::vector<ObjectID> ids;
   std::vector<std::shared_ptr<Payload>> objects;
+  object_info *obj_info;
   fopt_ret ret;
   void* pointer = NULL;
   uint64_t file_size = 0;
@@ -335,86 +325,70 @@ fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
   ret.ret = -1;
   ids.push_back(param.obj_id);
   // TODO: Use a more elegent way to sync result.
-  VineyardSpinLock(&sync_val);
   if (param.type == OBJECT_TYPE::TENSOR) {
-    vs_ptr_->GetData(
-        ids, false, false, []() { return true; },
-        [this, &param, &ret, &sync_val](const Status& status, const json& tree) {
-          uint64_t bulk_id;
-          if (!tree.empty()) {
-            std::vector<ObjectID> ids;
-            std::vector<std::shared_ptr<Payload>> objects;
-            std::vector<int> tensor_shape;
-            std::string tensor_shape_string;
-            std::string dtype_string;
-            enum DTYPE dtype = DTYPE::i8;
-            std::pair<char *, int> header;
-            object_header *obj_header;
+    obj_info = SearchHeaderInfo(param.obj_id);
+    if (!obj_info) {
+      // There not exist a record in object info map.
+      VineyardSpinLock(&sync_val);
+      vs_ptr_->GetData(
+          ids, false, false, []() { return true; },
+          [this, &param, &ret, &sync_val](const Status& status, const json& tree) {
+            uint64_t bulk_id;
+            if (!tree.empty()) {
+              std::vector<ObjectID> ids;
+              std::vector<std::shared_ptr<Payload>> objects;
+              std::vector<int> tensor_shape;
+              std::string tensor_shape_string;
+              std::string dtype_string;
+              std::pair<char *, int> header;
+              object_info obj_info;
 
-            auto iter = tree.begin();
-            bulk_id = ObjectIDFromString((*iter)["buffer_"]["id"].get<std::string>());
-            ids.push_back(bulk_id);
-            get_container(*iter, "shape_", tensor_shape);
-
-            obj_header = SearchHeaderInfo(param.obj_id);
-            if (!obj_header) {
-              dtype_string = (*iter)["value_type_"].get<std::string>();
-
-              if (!dtype_string.compare("uint64")) {
-                dtype = DTYPE::u8;
-              } else if(!dtype_string.compare("int64")) {
-                dtype = DTYPE::i8;
-              } else if(!dtype_string.compare("uint32")) {
-                dtype = DTYPE::u4;
-              } else if(!dtype_string.compare("int32")) {
-                dtype = DTYPE::i4;
-              } else if(!dtype_string.compare("float")) {
-                dtype = DTYPE::f4;
-              } else if(!dtype_string.compare("double")) {
-                dtype = DTYPE::f8;
-              }
-              LOG(INFO) << "dtype:" << dtype;
+              auto tensor_info = tree.begin();
+              bulk_id = ObjectIDFromString((*tensor_info)["buffer_"]["id"].get<std::string>());
+              ids.push_back(bulk_id);
+              get_container(*tensor_info, "shape_", tensor_shape);
+              dtype_string = (*tensor_info)["value_type_"].get<std::string>();
 
               tensor_shape_string = ConstructTensorShape(tensor_shape);
-              header = ConstructHeader(dtype, tensor_shape_string, false);
+              header = ConstructHeader(dtype_string, tensor_shape_string, false);
 
               this->vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
               //FIXME: maybe there exist more than one blob to store the data.
-              for (auto iter = objects.begin(); iter != objects.end(); iter++) {
-                ret.data_offset = (uint64_t)(*iter)->pointer - (uint64_t) base_pointer;
-                ret.data_size = (*iter)->data_size;
+              auto blob_info = objects.begin();
+              ret.data_offset = (uint64_t)(*blob_info)->pointer - (uint64_t) base_pointer;
+              ret.data_size = (*blob_info)->data_size;
 
-                // construct npy header
-                ObjectID object_id;
-                std::shared_ptr<Payload> object;
-                this->vs_ptr_->GetBulkStore()->Create(header.second, object_id, object);
-                memcpy(object->pointer, header.first, header.second);
+              // construct npy header
+              ObjectID object_id;
+              std::shared_ptr<Payload> object;
+              this->vs_ptr_->GetBulkStore()->Create(header.second, object_id, object);
+              memcpy(object->pointer, header.first, header.second);
 
-                ret.header_offset = (uint64_t)object->pointer - (uint64_t) base_pointer;
-                ret.header_size = object->data_size;
-                ret.type = OBJECT_TYPE::TENSOR;
-                ret.ret = 0;
-                // It should not be seen by client.
-                // this->vs_ptr_->GetBulkStore()->Seal(object_id);
-                obj_header = new object_header;
-                obj_header->data_offset = ret.data_offset;
-                obj_header->data_size = ret.data_size;
-                obj_header->header_offset = ret.header_offset;
-                obj_header->header_size = ret.header_size;
-                InsertHeaderInfo(param.obj_id, *obj_header);
-                delete obj_header;
-              }
-            } else {
-              ret.header_offset = obj_header->header_offset;
-              ret.header_size = obj_header->header_size;
-              ret.data_offset = obj_header->data_offset;
-              ret.data_size = obj_header->data_size;
+              ret.header_offset = (uint64_t)object->pointer - (uint64_t) base_pointer;
+              ret.header_size = object->data_size;
+              ret.type = OBJECT_TYPE::TENSOR;
               ret.ret = 0;
+              // It should not be seen by client.
+              // this->vs_ptr_->GetBulkStore()->Seal(object_id);
+              obj_info.data_offset = ret.data_offset;
+              obj_info.data_size = ret.data_size;
+              obj_info.header_offset = ret.header_offset;
+              obj_info.header_size = ret.header_size;
+              obj_info.refcnt = 1;
+              InsertHeaderInfo(param.obj_id, obj_info);
             }
-          }
-          VineyardSpinUnlock(&sync_val);
-          return Status::OK();
-        });
+            VineyardSpinUnlock(&sync_val);
+            return Status::OK();
+          });
+    } else {
+      // Find a record.
+      ret.header_offset = obj_info->header_offset;
+      ret.header_size = obj_info->header_size;
+      ret.data_offset = obj_info->data_offset;
+      ret.data_size = obj_info->data_size;
+      obj_info->refcnt++;
+      ret.ret = 0;
+    }
   } else if (param.type == OBJECT_TYPE::BLOB) {
     vs_ptr_->GetBulkStore()->GetUnsafe(ids, true, objects);
     for (auto iter = objects.begin(); iter != objects.end(); iter++) {
@@ -427,9 +401,8 @@ fopt_ret NetLinkServer::HandleOpen(fopt_param& param) {
       ret.data_size = file_size;
       ret.type = OBJECT_TYPE::BLOB;
     }
-    VineyardSpinUnlock(&sync_val);
   } else {
-    VineyardSpinUnlock(&sync_val);
+    // other type
   }
   // for sync
   VineyardSpinLock(&sync_val);
@@ -485,14 +458,12 @@ fopt_ret NetLinkServer::HandleFops(vineyard_request_msg* msg) {
 }
 
 void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
-  LOG(INFO) << __func__;
   vineyard_object_info_header* header;
   vineyard_entry* entrys;
   int i = 0;
   int current_file_num;
 
   VineyardSpinLock(&obj_info_lock);
-  current_file_num = header->total_file;
   header = reinterpret_cast<vineyard_object_info_header*>(obj_info_mem);
   entrys = reinterpret_cast<vineyard_entry*>(header + 1);
   current_file_num = header->total_file;
@@ -509,11 +480,6 @@ void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
 
   if (type == OBJECT_TYPE::TENSOR) {
     for (auto iter = tree.begin(); iter != tree.end(); iter++) {
-      LOG(INFO) << *iter;
-      LOG(INFO) << ObjectIDFromString((*iter)["id"].get<std::string>());
-      LOG(INFO) << (*iter)["nbytes"].get<uint64_t>();
-      LOG(INFO) << ObjectIDFromString((*iter)["buffer_"]["id"].get<std::string>());
-      
       entrys[header->total_file + i].obj_id = ObjectIDFromString((*iter)["id"].get<std::string>());
       entrys[header->total_file + i].file_size = (*iter)["nbytes"].get<uint64_t>();
       entrys[header->total_file + i].type = type;
@@ -521,7 +487,6 @@ void NetLinkServer::FillFileEntryInfo(const json& tree, enum OBJECT_TYPE type) {
     }
   }
   header->total_file = current_file_num + i;
-  LOG(INFO) << "total file " << header->total_file;
   VineyardSpinUnlock(&obj_info_lock);
 }
 
@@ -529,7 +494,7 @@ void NetLinkServer::thread_routine(NetLinkServer* ns_ptr, int socket_fd,
                                    struct sockaddr_nl saddr,
                                    struct sockaddr_nl daddr,
                                    struct nlmsghdr* nlh) {
-  LOG(INFO) << __func__;
+  LOG(INFO) << "Net link server handler thread start!";
   int ret;
   socklen_t len;
   kmsg kmsg;
@@ -586,6 +551,7 @@ void NetLinkServer::thread_routine(NetLinkServer* ns_ptr, int socket_fd,
   }
 
 out:
+  ns_ptr->Exit();
   return;
 }
 

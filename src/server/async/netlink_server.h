@@ -140,7 +140,7 @@ struct vineyard_entry {
   uint64_t inode_id;
 };
 
-struct object_header {
+struct object_info {
   uint64_t header_offset;
   uint64_t header_size;
   uint64_t data_offset;
@@ -177,13 +177,15 @@ class NetLinkServer : public SocketServer,
 
   void Close() override;
 
+  void Exit();
+
   std::string Socket() { return std::string(""); }
 
   void SyncObjectEntryList();
 
-  object_header *SearchHeaderInfo(ObjectID id);
+  object_info *SearchHeaderInfo(ObjectID id);
 
-  bool InsertHeaderInfo(ObjectID id, object_header &header);
+  bool InsertHeaderInfo(ObjectID id, object_info &header);
 
  private:
   void InitNetLink();
@@ -232,7 +234,7 @@ class NetLinkServer : public SocketServer,
   uint64_t base_object_id;
   void* base_pointer;
 
-  std::map<ObjectID, object_header *> object_to_header;
+  std::map<ObjectID, object_info *> object_to_header;
 
   enum _ready {
     Blob = 0b1,
