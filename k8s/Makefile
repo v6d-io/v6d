@@ -29,6 +29,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # Image URL to use all building/pushing image targets
 IMG ?= registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-controller:latest
 
+temp=$(shell mktemp -d)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -93,7 +94,7 @@ dry-run: manifests kustomize
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 sample: predeploy
 	$(KUSTOMIZE) build config/samples | kubectl apply -f -
@@ -190,3 +191,8 @@ bundle: manifests kustomize
 .PHONY: bundle-build
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+# Build all crds
+.PHONY: build-crds
+build-crds:
+	$(KUSTOMIZE) build config/crd > ../charts/vineyard-operator/crds/crds.yaml

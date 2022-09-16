@@ -1,6 +1,6 @@
 #!/bin/bash
 
-helm uninstall vineyard -n vineyard-system
+helm uninstall vineyard-operator -n vineyard-system
 
 kubectl -n vineyard-system delete localobjects --all 2>/dev/null || true
 kubectl -n vineyard-system delete globalobjects --all 2>/dev/null || true
