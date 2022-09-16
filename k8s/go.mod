@@ -131,8 +131,8 @@ require (
 )
 
 replace (
+	github.com/Masterminds/goutils => github.com/Masterminds/goutils v1.1.1
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.2
-	github.com/googleapis/goutils => github.com/Masterminds/goutils v1.1.1
 	// these are needed since k8s.io/kubernetes cites v0.0.0 for these in its go.mod
 	k8s.io/api => k8s.io/api v0.24.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.0
