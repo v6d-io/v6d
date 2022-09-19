@@ -646,6 +646,57 @@ class [[vineyard]] ArrowFragment
     return builder.Seal(client)->id();
   }
 
+  boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
+      vineyard::Client& client,
+      const std::map<
+        label_id_t,
+        std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
+        columns,
+      bool replace = false) {
+    vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+    auto schema = schema_;
+
+    if (replace) {
+      for (auto& pair : columns) {
+        auto label_id = pair.first;
+        auto& entry = schema.GetMutableEntry(label_id, "EDGE");
+        for (size_t i = 0; i < entry.props_.size(); ++i) {
+          entry.InvalidateProperty(i);
+        }
+      }
+    }
+    for (label_id_t label_id = 0; label_id < edge_label_num_; ++label_id) {
+      if (columns.find(label_id) != columns.end()) {
+        LOG(INFO) << "Find edge table at label id: " << label_id;
+        auto& table = this->edge_tables_[label_id];
+        vineyard::TableExtender extender(client, table);
+
+        auto& vec = columns.at(label_id);
+        for (auto& pair : vec) {
+          auto status = extender.AddColumn(client, pair.first, pair.second);
+          LOG(INFO) << status.message();
+          CHECK(status.ok());
+        }
+        auto new_table =
+            std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
+        builder.set_vertex_tables_(label_id, new_table);
+        auto& entry =
+            schema.GetMutableEntry(schema.GetVertexLabelName(label_id), "EDGE");
+        for (size_t index = table->num_columns();
+             index < new_table->num_columns(); ++index) {
+          entry.AddProperty(new_table->field(index)->name(),
+                            new_table->field(index)->type());
+        }
+      }
+    }
+    std::string error_message;
+    if (!schema.Validate(error_message)) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
+    }
+    builder.set_schema_json_(schema.ToJSON());
+    return builder.Seal(client)->id();
+  }
+
   boost::leaf::result<vineyard::ObjectID> Project(
       vineyard::Client & client,
       std::map<label_id_t, std::vector<label_id_t>> vertices,
