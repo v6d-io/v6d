@@ -25,7 +25,6 @@ limitations under the License.
 #include "basic/ds/arrow.h"
 #include "basic/ds/hashmap.h"
 #include "client/client.h"
-#include "common/util/functions.h"
 #include "common/util/typename.h"
 
 #include "graph/fragment/property_graph_types.h"

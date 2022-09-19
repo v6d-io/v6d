@@ -310,8 +310,14 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   int64_t offset = partial_read_offset_[index];
   int64_t nbytes =
       partial_read_offset_[index + 1] - partial_read_offset_[index];
+#if defined(ARROW_VERSION) && ARROW_VERSION <= 9000000
   std::shared_ptr<arrow::io::InputStream> input =
       arrow::io::RandomAccessFile::GetStream(ifp_, offset, nbytes);
+#else
+  std::shared_ptr<arrow::io::InputStream> input;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      input, arrow::io::RandomAccessFile::GetStream(ifp_, offset, nbytes));
+#endif
 
   arrow::MemoryPool* pool = arrow::default_memory_pool();
 
@@ -382,7 +388,6 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
                                             parse_options, convert_options));
 #endif
 
-  // RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table, reader->Read());
   auto result = reader->Read();
   if (!result.status().ok()) {
     if (result.status().message() == "Empty CSV file") {

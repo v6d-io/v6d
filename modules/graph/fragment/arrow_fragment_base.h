@@ -16,14 +16,10 @@ limitations under the License.
 #ifndef MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_BASE_H_
 #define MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_BASE_H_
 
-#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
-#include <thread>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -31,8 +27,6 @@ limitations under the License.
 #include "arrow/io/api.h"
 
 #include "client/ds/i_object.h"
-#include "common/util/functions.h"
-#include "common/util/typename.h"
 
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"

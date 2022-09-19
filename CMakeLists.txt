@@ -645,9 +645,9 @@ if(BUILD_VINEYARD_SERVER)
                                             TBB::tbb
     )
     if(ARROW_SHARED_LIB)
-        target_link_libraries(vineyardd PUBLIC ${ARROW_SHARED_LIB})
+        target_link_libraries(vineyardd PRIVATE ${ARROW_SHARED_LIB})
     else()
-        target_link_libraries(vineyardd PUBLIC ${ARROW_STATIC_LIB})
+        target_link_libraries(vineyardd PRIVATE ${ARROW_STATIC_LIB})
     endif()
 
     if(USE_GPU)
@@ -660,10 +660,13 @@ if(BUILD_VINEYARD_SERVER)
 
     target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(BUILD_VINEYARD_SERVER_REDIS)
+        target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_REDIS)
         target_include_directories(vineyardd PRIVATE ${HIREDIS_INCLUDE_DIR}
                                                      ${REDIS_PLUS_PLUS_INCLUDE_DIR}
         )
-        target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_REDIS)
+        target_link_libraries(vineyardd PRIVATE ${HIREDIS_LIBRARIES}
+                                                ${REDIS_PLUS_PLUS_LIBRARIES}
+        )
     endif()
 
     if(${LIBUNWIND_FOUND})

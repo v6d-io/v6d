@@ -16,20 +16,16 @@ limitations under the License.
 #ifndef MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 #define MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 
-#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
-#include <thread>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
-#include "boost/algorithm/string.hpp"
 
 #include "grape/fragment/fragment_base.h"
 #include "grape/graph/adj_list.h"
@@ -40,7 +36,6 @@ limitations under the License.
 
 #include "basic/ds/arrow.h"
 #include "basic/ds/arrow_utils.h"
-#include "common/util/functions.h"
 #include "common/util/typename.h"
 
 #include "graph/fragment/arrow_fragment_base.h"

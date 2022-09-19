@@ -20,6 +20,7 @@ limitations under the License.
 #include <unordered_map>
 
 #include "arrow/api.h"
+#include "arrow/compute/api.h"
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
 
@@ -526,6 +527,186 @@ const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array) {
                << " is not supported yet...";
     return NULL;
   }
+}
+
+Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
+                  std::shared_ptr<arrow::Schema>& schema) {
+  int field_num = -1;
+  std::shared_ptr<arrow::KeyValueMetadata> metadata(
+      new arrow::KeyValueMetadata());
+  for (const auto& schema : schemas) {
+    if (schema != nullptr) {
+      RETURN_ON_ASSERT(
+          field_num == -1 || field_num == schema->num_fields(),
+          "Inconsistent field number in those schemas that will be unified");
+      field_num = schema->num_fields();
+      if (schema->metadata() != nullptr) {
+        std::unordered_map<std::string, std::string> metakv;
+        schema->metadata()->ToUnorderedMap(&metakv);
+        for (auto const& kv : metakv) {
+          metadata->Append(kv.first, kv.second);
+        }
+      }
+    }
+  }
+  RETURN_ON_ASSERT(field_num > 0,
+                   "Empty table list cannot be used for normalizing schema");
+
+  // Perform type lossen.
+  // Date32 -> int32
+  // Timestamp -> int64 -> double -> utf8   binary (not supported)
+
+  // Timestamp value are stored as as number of seconds, milliseconds,
+  // microseconds or nanoseconds since UNIX epoch.
+  // CSV reader can only produce timestamp in seconds.
+  std::vector<std::vector<std::shared_ptr<arrow::Field>>> fields(field_num);
+  for (int i = 0; i < field_num; ++i) {
+    for (const auto& schema : schemas) {
+      if (schema != nullptr) {
+        fields[i].push_back(schema->field(i));
+      }
+    }
+  }
+  std::vector<std::shared_ptr<arrow::Field>> lossen_fields(field_num);
+
+  for (int i = 0; i < field_num; ++i) {
+    lossen_fields[i] = fields[i][0];
+    auto res = fields[i][0]->type();
+    if (res == arrow::null()) {
+      continue;
+    }
+    if (res->Equals(arrow::boolean())) {
+      res = arrow::int32();
+    }
+    if (res->Equals(arrow::date32())) {
+      res = arrow::int32();
+    }
+    if (res->Equals(arrow::date64())) {
+      res = arrow::int64();
+    }
+    if (res->id() == arrow::Type::TIMESTAMP) {
+      res = arrow::int64();
+    }
+    if (res->Equals(arrow::int64())) {
+      for (size_t j = 1; j < fields[i].size(); ++j) {
+        if (fields[i][j]->type()->Equals(arrow::float64())) {
+          res = arrow::float64();
+        }
+      }
+    }
+    if (res->Equals(arrow::float64())) {
+      for (size_t j = 1; j < fields[i].size(); ++j) {
+        if (fields[i][j]->type()->Equals(arrow::utf8())) {
+          res = arrow::utf8();
+        }
+      }
+    }
+    if (res->Equals(arrow::utf8())) {
+      res = arrow::large_utf8();
+    }
+    lossen_fields[i] = lossen_fields[i]->WithType(res);
+  }
+  schema = std::make_shared<arrow::Schema>(lossen_fields, metadata);
+  return Status::OK();
+}
+
+Status CastStringToBigString(const std::shared_ptr<arrow::Array>& in,
+                             const std::shared_ptr<arrow::DataType>& to_type,
+                             std::shared_ptr<arrow::Array>& out) {
+  auto array_data = in->data()->Copy();
+  auto offset = array_data->buffers[1];
+  using from_offset_type = typename arrow::StringArray::offset_type;
+  using to_string_offset_type = typename arrow::LargeStringArray::offset_type;
+  auto raw_value_offsets_ =
+      offset == NULLPTR
+          ? NULLPTR
+          : reinterpret_cast<const from_offset_type*>(offset->data());
+  std::vector<to_string_offset_type> to_offset(offset->size() /
+                                               sizeof(from_offset_type));
+  for (size_t i = 0; i < to_offset.size(); ++i) {
+    to_offset[i] = raw_value_offsets_[i];
+  }
+  std::shared_ptr<arrow::Buffer> buffer;
+  arrow::TypedBufferBuilder<to_string_offset_type> buffer_builder;
+  RETURN_ON_ARROW_ERROR(
+      buffer_builder.Append(to_offset.data(), to_offset.size()));
+  RETURN_ON_ARROW_ERROR(buffer_builder.Finish(&buffer));
+  array_data->type = to_type;
+  array_data->buffers[1] = buffer;
+  out = arrow::MakeArray(array_data);
+  RETURN_ON_ARROW_ERROR(out->ValidateFull());
+  return Status::OK();
+}
+
+Status CastNullToOthers(const std::shared_ptr<arrow::Array>& in,
+                        const std::shared_ptr<arrow::DataType>& to_type,
+                        std::shared_ptr<arrow::Array>& out) {
+  std::unique_ptr<arrow::ArrayBuilder> builder;
+  RETURN_ON_ARROW_ERROR(
+      arrow::MakeBuilder(arrow::default_memory_pool(), to_type, &builder));
+  RETURN_ON_ARROW_ERROR(builder->AppendNulls(in->length()));
+  RETURN_ON_ARROW_ERROR(builder->Finish(&out));
+  RETURN_ON_ARROW_ERROR(out->ValidateFull());
+  return Status::OK();
+}
+
+Status GeneralCast(const std::shared_ptr<arrow::Array>& in,
+                   const std::shared_ptr<arrow::DataType>& to_type,
+                   std::shared_ptr<arrow::Array>& out) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 1000000
+  arrow::compute::FunctionContext ctx;
+  ARROW_OK_OR_RAISE(arrow::compute::Cast(&ctx, *in, to_type, {}, &out));
+#else
+  CHECK_ARROW_ERROR_AND_ASSIGN(out, arrow::compute::Cast(*in, to_type));
+#endif
+  return Status::OK();
+}
+
+Status CastTableToSchema(const std::shared_ptr<arrow::Table>& table,
+                         const std::shared_ptr<arrow::Schema>& schema,
+                         std::shared_ptr<arrow::Table>& out) {
+  if (table->schema()->Equals(schema)) {
+    out = table;
+    return Status::OK();
+  }
+
+  RETURN_ON_ASSERT(
+      table->num_columns() == schema->num_fields(),
+      "The schema of original table and expected schema is not consistent");
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
+  for (int64_t i = 0; i < table->num_columns(); ++i) {
+    auto col = table->column(i);
+    if (table->field(i)->type()->Equals(schema->field(i)->type())) {
+      new_columns.push_back(col);
+      continue;
+    }
+    auto from_type = table->field(i)->type();
+    auto to_type = schema->field(i)->type();
+    std::vector<std::shared_ptr<arrow::Array>> chunks;
+    for (int64_t j = 0; j < col->num_chunks(); ++j) {
+      auto array = col->chunk(j);
+      std::shared_ptr<arrow::Array> out;
+      if (arrow::compute::CanCast(*from_type, *to_type)) {
+        RETURN_ON_ERROR(GeneralCast(array, to_type, out));
+        chunks.push_back(out);
+      } else if (from_type->Equals(arrow::utf8()) &&
+                 to_type->Equals(arrow::large_utf8())) {
+        RETURN_ON_ERROR(CastStringToBigString(array, to_type, out));
+        chunks.push_back(out);
+      } else if (from_type->Equals(arrow::null())) {
+        RETURN_ON_ERROR(CastNullToOthers(array, to_type, out));
+        chunks.push_back(out);
+      } else {
+        return Status::Invalid(
+            "Unsupported cast: To type: " + to_type->ToString() +
+            " vs. origin type: " + from_type->ToString());
+      }
+    }
+    new_columns.push_back(
+        std::make_shared<arrow::ChunkedArray>(chunks, to_type));
+  }
+  out = arrow::Table::Make(schema, new_columns);
+  return Status::OK();
 }
 
 inline bool IsDataTypeConsilidatable(std::shared_ptr<arrow::DataType> type) {
