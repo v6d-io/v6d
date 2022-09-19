@@ -83,18 +83,20 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release" AND
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif()
 
-find_program(ccache_EXECUTABLE ccache)
-if(ccache_EXECUTABLE)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${ccache_EXECUTABLE})
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ${ccache_EXECUTABLE})
-    add_custom_target(ccache-stats
-        COMMAND ${ccache_EXECUTABLE} --show-stats
-    )
-else()
-    add_custom_target(ccache-stats
-        COMMAND echo "ccache not found."
-    )
-endif(ccache_EXECUTABLE)
+if(NOT (CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache") AND NOT (CMAKE_C_COMPILER_LAUNCHER MATCHES "ccache"))
+    find_program(ccache_EXECUTABLE ccache)
+    if(ccache_EXECUTABLE)
+        set(CMAKE_C_COMPILER_LAUNCHER ${ccache_EXECUTABLE})
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${ccache_EXECUTABLE})
+        add_custom_target(ccache-stats
+            COMMAND ${ccache_EXECUTABLE} --show-stats
+        )
+    else()
+        add_custom_target(ccache-stats
+            COMMAND echo "ccache not found."
+        )
+    endif(ccache_EXECUTABLE)
+endif()
 
 # enable colored diagnostics
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -642,13 +644,6 @@ if(BUILD_VINEYARD_SERVER)
                                             nlohmann_json::nlohmann_json
                                             TBB::tbb
     )
-    if(BUILD_VINEYARD_SERVER_REDIS)
-        target_link_libraries(vineyardd PUBLIC TBB::tbb
-                                               ${HIREDIS_LIBRARIES}
-                                               ${REDIS_PLUS_PLUS_LIBRARIES}
-        )
-        target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_REDIS)
-    endif()
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyardd PUBLIC ${ARROW_SHARED_LIB})
     else()
@@ -668,7 +663,9 @@ if(BUILD_VINEYARD_SERVER)
         target_include_directories(vineyardd PRIVATE ${HIREDIS_INCLUDE_DIR}
                                                      ${REDIS_PLUS_PLUS_INCLUDE_DIR}
         )
+        target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_REDIS)
     endif()
+
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
