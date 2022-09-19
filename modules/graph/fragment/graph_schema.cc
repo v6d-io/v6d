@@ -35,11 +35,90 @@ namespace vineyard {
 namespace detail {
 
 std::string PropertyTypeToString(PropertyType type) {
-  return type_name_from_arrow_type(type);
+  if (type == nullptr) {
+    return "NULL";
+  } else if (arrow::boolean()->Equals(type)) {
+    return "BOOL";
+  } else if (arrow::int16()->Equals(type)) {
+    return "SHORT";
+  } else if (arrow::int32()->Equals(type)) {
+    return "INT";
+  } else if (arrow::int64()->Equals(type)) {
+    return "LONG";
+  } else if (arrow::float32()->Equals(type)) {
+    return "FLOAT";
+  } else if (arrow::float64()->Equals(type)) {
+    return "DOUBLE";
+  } else if (arrow::utf8()->Equals(type)) {
+    return "STRING";
+  } else if (arrow::large_utf8()->Equals(type)) {
+    return "STRING";
+  } else if (type->id() == arrow::Type::LIST) {
+    auto ty = std::dynamic_pointer_cast<arrow::ListType>(type);
+    return "LIST" + PropertyTypeToString(ty->value_type());
+  } else if (type->id() == arrow::Type::LARGE_LIST) {
+    auto ty = std::dynamic_pointer_cast<arrow::LargeListType>(type);
+    return "LARGELIST" + PropertyTypeToString(ty->value_type());
+  } else if (type->id() == arrow::Type::FIXED_SIZE_LIST) {
+    auto ty = std::dynamic_pointer_cast<arrow::FixedSizeListType>(type);
+    return "FIXEDLIST" + PropertyTypeToString(ty->value_type()) +
+           std::to_string(ty->list_size());
+  } else if (arrow::null()->Equals(type)) {
+    return "NULL";
+  }
+  LOG(ERROR) << "Unsupported arrow type " << type->ToString();
+  return "NULL";
+}
+
+std::string toupper(const std::string& s) {
+  std::string upper_s = s;
+  std::transform(s.begin(), s.end(), upper_s.begin(),
+                 [](unsigned char c) { return std::toupper(c); });
+  return upper_s;
 }
 
 PropertyType PropertyTypeFromString(const std::string& type) {
-  return type_name_to_arrow_type(type);
+  auto type_upper = toupper(type);
+  if (type_upper == "BOOL") {
+    return arrow::boolean();
+  } else if (type_upper == "SHORT") {
+    return arrow::int16();
+  } else if (type_upper == "INT") {
+    return arrow::int32();
+  } else if (type_upper == "LONG") {
+    return arrow::int64();
+  } else if (type_upper == "FLOAT") {
+    return arrow::float32();
+  } else if (type_upper == "DOUBLE") {
+    return arrow::float64();
+  } else if (type_upper == "STRING") {
+    return arrow::large_utf8();
+  } else if (type_upper == "LISTINT") {
+    return arrow::list(arrow::int32());
+  } else if (type_upper == "LISTLONG") {
+    return arrow::list(arrow::int64());
+  } else if (type_upper == "LISTFLOAT") {
+    return arrow::list(arrow::float32());
+  } else if (type_upper == "LISTDOUBLE") {
+    return arrow::list(arrow::float64());
+  } else if (type_upper == "LISTSTRING") {
+    return arrow::list(arrow::large_utf8());
+  } else if (type_upper == "LARGELISTINT") {
+    return arrow::large_list(arrow::int32());
+  } else if (type_upper == "LARGELISTLONG") {
+    return arrow::large_list(arrow::int64());
+  } else if (type_upper == "LARGELISTFLOAT") {
+    return arrow::large_list(arrow::float32());
+  } else if (type_upper == "LARGELISTDOUBLE") {
+    return arrow::large_list(arrow::float64());
+  } else if (type_upper == "LARGELISTSTRING") {
+    return arrow::large_list(arrow::large_utf8());
+  } else if (type_upper == "NULL") {
+    return arrow::null();
+  } else {
+    LOG(ERROR) << "Unsupported property type " << type;
+  }
+  return arrow::null();
 }
 
 }  // namespace detail
