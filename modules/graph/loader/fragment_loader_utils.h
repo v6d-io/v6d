@@ -24,6 +24,9 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
+#include "grape/worker/comm_spec.h"
+
+#include "basic/ds/arrow_utils.h"
 #include "graph/utils/table_shuffler_beta.h"
 
 namespace vineyard {
@@ -209,6 +212,21 @@ class FragmentLoaderUtils {
   grape::CommSpec comm_spec_;
   const partitioner_t& partitioner_;
 };
+
+// This method used when several workers is loading a file in parallel, each
+// worker will read a chunk of the origin file into a arrow::Table.
+// We may get different table schemas as some chunks may have zero rows
+// or some chunks' data doesn't have any floating numbers, but others might
+// have. We could use this method to gather their schemas, and find out most
+// inclusive fields, construct a new schema and broadcast back. Note: We perform
+// type loosen, date32 -> int32; timestamp(s) -> int64 -> double -> string (big
+// string), and any type is prior to null.
+boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
+    const std::shared_ptr<arrow::Table>& table,
+    const grape::CommSpec& comm_spec);
+
+boost::leaf::result<ObjectID> ConstructFragmentGroup(
+    Client& client, ObjectID frag_id, const grape::CommSpec& comm_spec);
 
 }  // namespace vineyard
 

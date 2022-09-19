@@ -28,7 +28,11 @@ limitations under the License.
 
 namespace vineyard {
 
+#if __cplusplus >= 201703L
+[[noreturn]] void backtrace_on_terminate();
+#else
 [[noreturn]] void backtrace_on_terminate() noexcept;
+#endif
 
 static_assert(
     std::is_same<std::terminate_handler, decltype(&backtrace_on_terminate)>{},
@@ -43,7 +47,11 @@ std::unique_ptr<std::remove_pointer_t<std::terminate_handler>,
                       std::set_terminate};
 #pragma clang diagnostic pop
 
+#if __cplusplus >= 201703L
+[[noreturn]] void backtrace_on_terminate() {
+#else
 [[noreturn]] void backtrace_on_terminate() noexcept {
+#endif
   std::set_terminate(
       terminate_handler.release());  // to avoid infinite looping if any
   if (std::exception_ptr ep = std::current_exception()) {

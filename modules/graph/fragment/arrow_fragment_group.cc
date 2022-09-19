@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "graph/fragment/arrow_fragment_group.h"
+
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -21,7 +23,6 @@ limitations under the License.
 
 #include "client/client.h"
 
-#include "graph/fragment/arrow_fragment_group.h"
 #include "graph/fragment/property_graph_types.h"
 
 namespace vineyard {
@@ -90,74 +91,6 @@ std::shared_ptr<vineyard::Object> ArrowFragmentGroupBuilder::_Seal(
   this->set_sealed(true);
 
   return std::static_pointer_cast<vineyard::Object>(fg);
-}
-
-boost::leaf::result<ObjectID> ConstructFragmentGroup(
-    Client& client, ObjectID frag_id, const grape::CommSpec& comm_spec) {
-  ObjectID group_object_id;
-  uint64_t instance_id = client.instance_id();
-
-  MPI_Barrier(comm_spec.comm());
-  VINEYARD_DISCARD(client.SyncMetaData());
-
-  if (comm_spec.worker_id() == 0) {
-    std::vector<uint64_t> gathered_instance_ids(comm_spec.worker_num());
-    std::vector<ObjectID> gathered_object_ids(comm_spec.worker_num());
-
-    MPI_Gather(&instance_id, sizeof(uint64_t), MPI_CHAR,
-               &gathered_instance_ids[0], sizeof(uint64_t), MPI_CHAR, 0,
-               comm_spec.comm());
-
-    MPI_Gather(&frag_id, sizeof(ObjectID), MPI_CHAR, &gathered_object_ids[0],
-               sizeof(ObjectID), MPI_CHAR, 0, comm_spec.comm());
-
-    ArrowFragmentGroupBuilder builder;
-    builder.set_total_frag_num(comm_spec.fnum());
-    typename ArrowFragmentBase::label_id_t vertex_label_num = 0,
-                                           edge_label_num = 0;
-
-    ObjectMeta meta;
-    if (client.GetMetaData(frag_id, meta).ok()) {
-      if (meta.Haskey("vertex_label_num_")) {
-        vertex_label_num =
-            meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
-                "vertex_label_num_");
-      }
-      if (meta.Haskey("edge_label_num_")) {
-        edge_label_num =
-            meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
-                "edge_label_num_");
-      }
-    }
-
-    builder.set_vertex_label_num(vertex_label_num);
-    builder.set_edge_label_num(edge_label_num);
-    for (fid_t i = 0; i < comm_spec.fnum(); ++i) {
-      builder.AddFragmentObject(
-          i, gathered_object_ids[comm_spec.FragToWorker(i)],
-          gathered_instance_ids[comm_spec.FragToWorker(i)]);
-    }
-
-    auto group_object =
-        std::dynamic_pointer_cast<ArrowFragmentGroup>(builder.Seal(client));
-    group_object_id = group_object->id();
-    VY_OK_OR_RAISE(client.Persist(group_object_id));
-
-    MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,
-              comm_spec.comm());
-  } else {
-    MPI_Gather(&instance_id, sizeof(uint64_t), MPI_CHAR, NULL, sizeof(uint64_t),
-               MPI_CHAR, 0, comm_spec.comm());
-    MPI_Gather(&frag_id, sizeof(ObjectID), MPI_CHAR, NULL, sizeof(ObjectID),
-               MPI_CHAR, 0, comm_spec.comm());
-
-    MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,
-              comm_spec.comm());
-  }
-
-  MPI_Barrier(comm_spec.comm());
-  VINEYARD_DISCARD(client.SyncMetaData());
-  return group_object_id;
 }
 
 }  // namespace vineyard

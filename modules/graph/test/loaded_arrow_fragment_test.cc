@@ -23,7 +23,7 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 
-#include "graph/fragment/arrow_fragment.h"
+#include "graph/fragment/arrow_fragment.vineyard.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 

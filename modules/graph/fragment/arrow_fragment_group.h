@@ -24,7 +24,6 @@ limitations under the License.
 
 #include "client/client.h"
 
-#include "graph/fragment/arrow_fragment_base.h"
 #include "graph/fragment/property_graph_types.h"
 
 namespace vineyard {
@@ -91,9 +90,6 @@ class ArrowFragmentGroupBuilder : public ObjectBuilder {
   std::unordered_map<fid_t, ObjectID> fragments_;
   std::unordered_map<fid_t, uint64_t> fragment_locations_;
 };
-
-boost::leaf::result<ObjectID> ConstructFragmentGroup(
-    Client& client, ObjectID frag_id, const grape::CommSpec& comm_spec);
 
 }  // namespace vineyard
 

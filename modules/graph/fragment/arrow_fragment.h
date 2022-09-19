@@ -27,7 +27,6 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
-#include "boost/algorithm/string.hpp"
 
 #include "grape/fragment/fragment_base.h"
 #include "grape/graph/adj_list.h"
@@ -157,7 +156,7 @@ class BasicArrowFragmentBuilder
     this->set_oid_type(type_name<oid_t>());
     this->set_vid_type(type_name<vid_t>());
 
-    return vineyard::Status::OK();
+    return Status::OK();
   }
 
   boost::leaf::result<void> Init(

@@ -241,6 +241,25 @@ std::string type_name_from_arrow_type(
 
 const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array);
 
+Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
+                  std::shared_ptr<arrow::Schema>& schema);
+
+Status CastStringToBigString(const std::shared_ptr<arrow::Array>& in,
+                             const std::shared_ptr<arrow::DataType>& to_type,
+                             std::shared_ptr<arrow::Array>& out);
+
+Status CastNullToOthers(const std::shared_ptr<arrow::Array>& in,
+                        const std::shared_ptr<arrow::DataType>& to_type,
+                        std::shared_ptr<arrow::Array>& out);
+
+Status GeneralCast(const std::shared_ptr<arrow::Array>& in,
+                   const std::shared_ptr<arrow::DataType>& to_type,
+                   std::shared_ptr<arrow::Array>& out);
+
+Status CastTableToSchema(const std::shared_ptr<arrow::Table>& table,
+                         const std::shared_ptr<arrow::Schema>& schema,
+                         std::shared_ptr<arrow::Table>& out);
+
 Status ConsolidateColumns(
     const std::vector<std::shared_ptr<arrow::Array>>& columns,
     std::shared_ptr<arrow::Array>& out);
