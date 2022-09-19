@@ -667,7 +667,6 @@ class [[vineyard]] ArrowFragment
     }
     for (label_id_t label_id = 0; label_id < edge_label_num_; ++label_id) {
       if (columns.find(label_id) != columns.end()) {
-        LOG(INFO) << "Find edge table at label id: " << label_id;
         auto& table = this->edge_tables_[label_id];
         vineyard::TableExtender extender(client, table);
 
@@ -681,7 +680,7 @@ class [[vineyard]] ArrowFragment
             std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
         builder.set_vertex_tables_(label_id, new_table);
         auto& entry =
-            schema.GetMutableEntry(schema.GetVertexLabelName(label_id), "EDGE");
+            schema.GetMutableEntry(schema.GetEdgeLabelName(label_id), "EDGE");
         for (size_t index = table->num_columns();
              index < new_table->num_columns(); ++index) {
           entry.AddProperty(new_table->field(index)->name(),
