@@ -694,7 +694,6 @@ class [[vineyard]] ArrowFragment
         auto& vec = columns.at(label_id);
         for (auto& pair : vec) {
           auto status = extender.AddColumn(client, pair.first, pair.second);
-          LOG(INFO) << status.message();
           CHECK(status.ok());
         }
         auto new_table =
