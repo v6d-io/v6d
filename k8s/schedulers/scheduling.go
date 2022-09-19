@@ -39,19 +39,12 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	clientset "github.com/v6d-io/v6d/k8s/generated/clientset/versioned"
-	clientsetv1alpha1 "github.com/v6d-io/v6d/k8s/generated/clientset/versioned/typed/k8s/v1alpha1"
-
-	_ "github.com/v6d-io/v6d/k8s/generated/informers/externalversions/k8s/v1alpha1"
-	_ "github.com/v6d-io/v6d/k8s/generated/listers/k8s/v1alpha1"
 )
 
 // SchedulerState records the status of current scheduling
 type SchedulerState struct {
 	client.Client
-	state     map[string]map[string]string // { jobname: { pod: nodename }}
-	localctl  clientsetv1alpha1.LocalObjectInterface
-	globalctl clientsetv1alpha1.GlobalObjectInterface
+	state map[string]map[string]string // { jobname: { pod: nodename }}
 }
 
 // Append records the action of appending a new pod in job to given node.
@@ -168,14 +161,14 @@ func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []s
 		requiredjobs[n] = true
 	}
 	objects := []*v1alpha1.GlobalObject{}
-	globalObjectList, err := ss.globalctl.List(ctx, metav1.ListOptions{})
-	if err != nil {
-		klog.V(5).Infof("ss.globalctl.List error : %v", err)
+	globalObjects := &v1alpha1.GlobalObjectList{}
+	if err := ss.List(ctx, globalObjects); err != nil {
+		klog.V(5).Infof("client.List failed to get global objects, error: %v", err)
 		return nil, err
 	}
-	for i, obj := range globalObjectList.Items {
+	for _, obj := range globalObjects.Items {
 		if jobname, exist := obj.Labels["job"]; exist && requiredjobs[jobname] {
-			objects = append(objects, &globalObjectList.Items[i])
+			objects = append(objects, &obj)
 		}
 	}
 
@@ -185,10 +178,11 @@ func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []s
 func (ss *SchedulerState) getLocalObjectsBySignatures(ctx context.Context, signatures []string) ([]*v1alpha1.LocalObject, error) {
 	objects := make([]*v1alpha1.LocalObject, 0)
 	for _, sig := range signatures {
-		options := metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("k8s.v6d.io/signature=%v", sig),
-		}
-		if localObjects, err := ss.localctl.List(ctx, options); err != nil {
+		localObjects := &v1alpha1.LocalObjectList{}
+		if err := ss.List(ctx, localObjects, client.MatchingLabels{
+			"k8s.v6d.io/signature": sig,
+		}); err != nil {
+			klog.V(5).Infof("client.List failed to get local objects, error: %v", err)
 			return nil, err
 		} else {
 			for _, localObject := range localObjects.Items {
@@ -251,7 +245,6 @@ type VineyardScheduling struct {
 	scheduleTimeout *time.Duration
 	state           map[string]*SchedulerState
 	podRank         map[string]map[string]int64
-	clientset       *clientset.Clientset
 }
 
 const (
@@ -279,7 +272,6 @@ func New(client client.Client, config *rest.Config, obj runtime.Object, handle f
 	klog.Info("Initializing the vineyard scheduler plugin ...")
 	timeout := Timeout * time.Second
 	state := make(map[string]*SchedulerState)
-	clientset := clientset.NewForConfigOrDie(config)
 	scheduling := &VineyardScheduling{
 		Client:          client,
 		handle:          handle,
@@ -287,7 +279,6 @@ func New(client client.Client, config *rest.Config, obj runtime.Object, handle f
 		scheduleTimeout: &timeout,
 		state:           state,
 		podRank:         map[string]map[string]int64{},
-		clientset:       clientset,
 	}
 	return scheduling, nil
 }
@@ -355,13 +346,9 @@ func (vs *VineyardScheduling) PostBind(ctx context.Context, _ *framework.CycleSt
 func (vs *VineyardScheduling) MakeSchedulerStateForNamespace(namespace string) *SchedulerState {
 	if _, ok := vs.state[namespace]; !ok {
 		state := make(map[string]map[string]string)
-		localctl := vs.clientset.K8sV1alpha1().LocalObjects(namespace)
-		globalctl := vs.clientset.K8sV1alpha1().GlobalObjects(namespace)
 		vs.state[namespace] = &SchedulerState{
-			Client:    vs.Client,
-			state:     state,
-			localctl:  localctl,
-			globalctl: globalctl,
+			Client: vs.Client,
+			state:  state,
 		}
 	}
 	return vs.state[namespace]
