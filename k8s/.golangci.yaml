@@ -17,7 +17,6 @@ run:
   deadline: 10m
   skip-dirs:
     - config
-    - generated
 linters:
   enable:
     - errcheck

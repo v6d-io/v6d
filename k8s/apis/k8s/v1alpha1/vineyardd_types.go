@@ -146,10 +146,11 @@ type VineyarddStatus struct {
 	Conditions []appsv1.DeploymentCondition `json:"conditions,omitempty"`
 }
 
-// kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Running",type=string,JSONPath=`.status.running`
 // +kubebuilder:printcolumn:name="Required",type=string,JSONPath=`.status.required`
+// +genclient
 
 // Vineyardd is the Schema for the vineyardds API
 type Vineyardd struct {
