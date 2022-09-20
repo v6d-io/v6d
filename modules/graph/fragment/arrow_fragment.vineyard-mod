@@ -647,10 +647,31 @@ class [[vineyard]] ArrowFragment
   }
 
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
+      vineyard::Client & client,
+      const std::map<
+          label_id_t,
+          std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
+          columns,
+      bool replace = false) override {
+    return AddEdgeColumnsImpl<arrow::Array>(client, columns, replace);
+  }
+
+  boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
+      vineyard::Client & client,
+      const std::map<label_id_t,
+                     std::vector<std::pair<
+                         std::string, std::shared_ptr<arrow::ChunkedArray>>>>
+          columns,
+      bool replace = false) override {
+    return AddEdgeColumnsImpl<arrow::ChunkedArray>(client, columns, replace);
+  }
+
+  template <typename ArrayType = arrow::Array>
+  boost::leaf::result<vineyard::ObjectID> AddEdgeColumnsImpl(
       vineyard::Client& client,
       const std::map<
         label_id_t,
-        std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
+        std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
         columns,
       bool replace = false) {
     vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
