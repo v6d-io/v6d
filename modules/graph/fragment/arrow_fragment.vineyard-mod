@@ -698,7 +698,7 @@ class [[vineyard]] ArrowFragment
         }
         auto new_table =
             std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
-        builder.set_vertex_tables_(label_id, new_table);
+        builder.set_edges_tables_(label_id, new_table);
         auto& entry =
             schema.GetMutableEntry(schema.GetEdgeLabelName(label_id), "EDGE");
         for (size_t index = table->num_columns();
