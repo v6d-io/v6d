@@ -32,10 +32,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	k8scontrollers "github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/operator"
 	"github.com/v6d-io/v6d/k8s/schedulers"
 	"github.com/v6d-io/v6d/k8s/templates"
 	// +kubebuilder:scaffold:imports
@@ -92,6 +94,21 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		}
 		if err = (&k8sv1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Vineyardd")
+			os.Exit(1)
+		}
+		// register the assembly webhook
+		setupLog.Info("registering the assembly webhook")
+		mgr.GetWebhookServer().Register("/mutate-v1-pod",
+			&webhook.Admission{
+				Handler: &operator.AssemblyInjector{Client: mgr.GetClient()}})
+		setupLog.Info("the assembly webhook is registered")
+
+		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			setupLog.Error(err, "unable to set up health check for webhook")
+			os.Exit(1)
+		}
+		if err := mgr.AddReadyzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			setupLog.Error(err, "unable to set up ready check for webhook")
 			os.Exit(1)
 		}
 	}

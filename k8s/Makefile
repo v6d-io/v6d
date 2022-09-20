@@ -80,16 +80,13 @@ undeploy: kustomize
 # Deploy namespace, CRDs, rbac, etc. except the controller in the configured Kubernetes cluster in ~/.kube/config
 predeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/environment | kubectl apply -f -
 
 unpredeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/environment | kubectl delete -f -
 
 # dump the deployment configuration
 dry-run: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/environment > env.yaml
 	$(KUSTOMIZE) build config/default > controller.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.

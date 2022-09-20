@@ -19,20 +19,20 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - "v*"
     paths:
-      - '.github/workflows/vineyard-operator.yaml'
-      - 'k8s/**'
-      - 'src/server/util/kubectl*'
+      - ".github/workflows/vineyard-operator.yaml"
+      - "k8s/**"
+      - "src/server/util/kubectl*"
   pull_request:
     branches:
       - main
     tags:
-      - 'v*'
+      - "v*"
     paths:
-      - '.github/workflows/vineyard-operator.yaml'
-      - 'k8s/**'
-      - 'src/server/util/kubectl*'
+      - ".github/workflows/vineyard-operator.yaml"
+      - "k8s/**"
+      - "src/server/util/kubectl*"
 
 jobs:
   build:
@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/setup-go@v2
         with:
-          go-version: '^1.18.0'
+          go-version: "^1.18.0"
 
       - name: Golang format and lint
         run: |
@@ -83,12 +83,20 @@ jobs:
           sudo make docker-build IMG=${IMG}:${{ github.sha }}
           sudo docker tag ${IMG}:${{ github.sha }} ${IMG}:nightly
           sudo docker push ${IMG}:nightly
-      
+
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+<<<<<<< HEAD
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
+||||||| constructed merge base
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+      
+=======
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+
+>>>>>>> Add assembly webhook for injecting the assmebly container
       - name: Publish docker images for releases
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
@@ -115,10 +123,10 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
       - name: Run E2E Test(vineyardd)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
         with:
           e2e-file: k8s/test/e2e/vineyardd/e2e.yaml
-  
+
   serialize-e2e-tests:
     name: e2e tests(serialize)
     runs-on: ubuntu-latest
@@ -137,7 +145,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
       - name: Run E2E Test(serialize)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
         with:
           e2e-file: k8s/test/e2e/serialize/e2e.yaml
 
@@ -159,10 +167,10 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
       - name: Run E2E Test(spill)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
         with:
           e2e-file: k8s/test/e2e/spill/e2e.yaml
-  
+
   released-operator-e2e-tests:
     name: e2e tests(released-operator)
     runs-on: ubuntu-latest
@@ -181,6 +189,28 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
       - name: Run E2E Test(released-operator)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421      # always prefer to use a revision instead of `main`.
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
         with:
           e2e-file: k8s/test/e2e/released-operator/e2e.yaml
+
+  assembly-operation-e2e-tests:
+    name: e2e tests(assembly-operation)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+        id: go
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Run E2E Test(assembly-operation)
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+        with:
+          e2e-file: k8s/test/e2e/assembly-webhook/e2e.yaml
