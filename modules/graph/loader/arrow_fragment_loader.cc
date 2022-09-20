@@ -455,5 +455,4 @@ boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> GatherVTables(
   }
   return tables;
 }
-
 }  // namespace vineyard

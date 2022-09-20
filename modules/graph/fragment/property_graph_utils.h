@@ -769,6 +769,125 @@ boost::leaf::result<void> generate_undirected_csr(
   return {};
 }
 
+template <typename VID_T, typename EID_T>
+boost::leaf::result<void> generate_gsf_csr(
+    IdParser<VID_T>& parser,
+    const std::shared_ptr<
+        typename vineyard::ConvertToArrowType<VID_T>::ArrayType>& src_list,
+    const std::shared_ptr<
+        typename vineyard::ConvertToArrowType<VID_T>::ArrayType>& dst_list,
+    std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
+    std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>& edges,
+    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets) {
+  std::vector<std::vector<int>> degree(vertex_label_num);
+  std::vector<int64_t> actual_edge_num(vertex_label_num, 0);
+  for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
+    degree[v_label].resize(tvnums[v_label], 0);
+  }
+  int64_t edge_num = src_list->length();
+  const VID_T* src_list_ptr = src_list->raw_values();
+  const VID_T* dst_list_ptr = dst_list->raw_values();
+
+  if (true) {
+    for (int64_t i = 0; i < edge_num; ++i) {
+      VID_T src_id = src_list_ptr[i];
+      ++degree[parser.GetLabelId(src_id)][parser.GetOffset(src_id)];
+    }
+  } else {
+    parallel_for(
+        static_cast<int64_t>(0), edge_num,
+        [&degree, parser, src_list_ptr](int64_t i) {
+          VID_T src_id = src_list_ptr[i];
+          auto label = parser.GetLabelId(src_id);
+          int64_t offset = parser.GetOffset(src_id);
+          grape::atomic_add(degree[label][offset], 1);
+        },
+        concurrency);
+  }
+
+  std::vector<std::vector<int64_t>> offsets(vertex_label_num);
+  for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
+    auto tvnum = tvnums[v_label];
+    auto& offset_vec = offsets[v_label];
+    auto& degree_vec = degree[v_label];
+    arrow::Int64Builder builder;
+
+    offset_vec.resize(tvnum + 1);
+    offset_vec[0] = 0;
+
+    if (tvnum > 0) {
+      // if (concurrency == 1) {
+      // FIXME: TEST
+      if (true) {
+        for (VID_T i = 0; i < tvnum; ++i) {
+          offset_vec[i + 1] = offset_vec[i] + degree_vec[i];
+        }
+        ARROW_OK_OR_RAISE(builder.AppendValues(offset_vec));
+      } else {
+        parallel_prefix_sum(degree_vec.data(), &offset_vec[1], tvnum,
+                            concurrency);
+        ARROW_OK_OR_RAISE(builder.Resize(tvnum + 1));
+        parallel_for(
+            static_cast<VID_T>(0), tvnum + 1,
+            [&offset_vec, &builder](VID_T i) { builder[i] = offset_vec[i]; },
+            concurrency);
+        ARROW_OK_OR_RAISE(builder.Advance(tvnum + 1));
+      }
+    } else {
+      ARROW_OK_OR_RAISE(builder.AppendValues(offset_vec));
+    }
+    ARROW_OK_OR_RAISE(builder.Finish(&edge_offsets[v_label]));
+    actual_edge_num[v_label] = offset_vec[tvnum];
+  }
+  using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
+  std::vector<vineyard::PodArrayBuilder<nbr_unit_t>> edge_builders(
+      vertex_label_num);
+  for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
+    // FixedSizeBinaryBuilder has different behaviour on `Resize/Advance`
+    ARROW_OK_OR_RAISE(
+        edge_builders[v_label].ResizeAndFill(actual_edge_num[v_label]));
+  }
+
+  // if (concurrency == 1) {
+  // FIXME: test
+  if (true) {
+    for (int64_t i = 0; i < edge_num; ++i) {
+      VID_T src_id = src_list_ptr[i];
+      int v_label = parser.GetLabelId(src_id);
+      int64_t v_offset = parser.GetOffset(src_id);
+      nbr_unit_t* ptr =
+          edge_builders[v_label].MutablePointer(offsets[v_label][v_offset]);
+      ptr->vid = dst_list->Value(i);
+      ptr->eid = static_cast<EID_T>(i);
+      ++offsets[v_label][v_offset];
+    }
+  } else {
+    parallel_for(
+        static_cast<int64_t>(0), edge_num,
+        [src_list_ptr, dst_list_ptr, &parser, &edge_builders,
+         &offsets](int64_t i) {
+          VID_T src_id = src_list_ptr[i];
+          int v_label = parser.GetLabelId(src_id);
+          int64_t v_offset = parser.GetOffset(src_id);
+          int64_t adj_offset =
+              __sync_fetch_and_add(&offsets[v_label][v_offset], 1);
+          nbr_unit_t* ptr = edge_builders[v_label].MutablePointer(adj_offset);
+          ptr->vid = dst_list_ptr[i];
+          ptr->eid = static_cast<EID_T>(i);
+        },
+        concurrency);
+  }
+
+  for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
+    // sort_edges_with_respect_to_vertex(edge_builders[v_label],
+    //                                   edge_offsets[v_label], tvnums[v_label],
+    //                                   concurrency);
+    ARROW_OK_OR_RAISE(edge_builders[v_label].Advance(actual_edge_num[v_label]));
+    ARROW_OK_OR_RAISE(edge_builders[v_label].Finish(&edges[v_label]));
+  }
+  return {};
+}
+
 }  // namespace vineyard
 
 namespace grape {

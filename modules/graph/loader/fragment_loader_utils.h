@@ -91,6 +91,27 @@ struct InputTable {
   std::shared_ptr<arrow::Table> table;
 };
 
+struct InputEdgeTable {
+  InputEdgeTable(const std::string& src_label_, const std::string& dst_label_,
+             const std::string& edge_label_,
+             std::shared_ptr<arrow::Table> adj_list_table_,
+             std::shared_ptr<arrow::Array> offset_array_,
+             std::shared_ptr<arrow::Table> property_table_)
+      : src_label(src_label_),
+        dst_label(dst_label_),
+        edge_label(edge_label_),
+        adj_list_table(adj_list_table_),
+        offset_array(offset_array_),
+        property_table(property_table_) {}
+
+  std::string src_label;
+  std::string dst_label;
+  std::string edge_label;
+  std::shared_ptr<arrow::Table> adj_list_table;
+  std::shared_ptr<arrow::Array> offset_array;
+  std::shared_ptr<arrow::Table> property_table;
+};
+
 template <typename OID_T, typename VID_T, typename PARTITIONER_T>
 class FragmentLoaderUtils {
   static constexpr int src_column = 0;

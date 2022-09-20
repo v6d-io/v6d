@@ -24,6 +24,7 @@ limitations under the License.
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <tuple>
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
@@ -179,6 +180,25 @@ class BasicArrowFragmentBuilder
     return {};
   }
 
+  boost::leaf::result<void> Init(
+      fid_t fid, fid_t fnum,
+      std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
+      std::vector<std::tuple<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Array>, std::shared_ptr<arrow::Table>>>&& edge_tables,
+      bool directed = true, int concurrency = 1) {
+    this->fid_ = fid;
+    this->fnum_ = fnum;
+    this->directed_ = directed;
+    this->is_multigraph_ = false;
+    this->vertex_label_num_ = vertex_tables.size();
+    this->edge_label_num_ = edge_tables.size();
+
+    vid_parser_.Init(this->fnum_, this->vertex_label_num_);
+
+    BOOST_LEAF_CHECK(initVertices(std::move(vertex_tables)));
+    BOOST_LEAF_CHECK(initEdges(std::move(edge_tables), concurrency));
+    return {};
+  }
+
   boost::leaf::result<void> SetPropertyGraphSchema(
       PropertyGraphSchema&& schema) {
     this->set_schema_json_(schema.ToJSON());
@@ -316,6 +336,116 @@ class BasicArrowFragmentBuilder
     return {};
   }
 
+  // | src_id(generated) | dst_id(generated) | prop_0 | prop_1
+  // | ... |
+  boost::leaf::result<void> initEdges(
+      std::vector<std::tuple<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Array>, std::shared_ptr<arrow::Table>>>&& edge_tables,
+      int concurrency) {
+    assert(edge_tables.size() == static_cast<size_t>(this->edge_label_num_));
+    std::vector<std::shared_ptr<vid_array_t>> edge_src, edge_dst;
+    edge_src.resize(this->edge_label_num_);
+    edge_dst.resize(this->edge_label_num_);
+
+    edge_tables_.resize(this->edge_label_num_);
+    offset_arrays_.resize(this->edge_label_num_);
+    std::vector<std::vector<vid_t>> collected_ovgids(this->vertex_label_num_);
+
+    for (size_t i = 0; i < edge_tables.size(); ++i) {
+      std::shared_ptr<arrow::Table> combined_table;
+      ARROW_OK_ASSIGN_OR_RAISE(
+          combined_table,
+          std::get<0>(edge_tables[i])->CombineChunks(arrow::default_memory_pool()));
+      std::get<0>(edge_tables[i]).swap(combined_table);
+      ARROW_OK_ASSIGN_OR_RAISE(
+          combined_table,
+          std::get<2>(edge_tables[i])->CombineChunks(arrow::default_memory_pool()));
+      std::get<2>(edge_tables[i]).swap(combined_table);
+
+      auto adj_list_table = std::get<0>(edge_tables[i]);
+      /* only csr
+      collect_outer_vertices(vid_parser_,
+                             std::dynamic_pointer_cast<vid_array_t>(
+                                 adj_list_table->column(0)->chunk(0)),
+                             this->fid_, collected_ovgids);
+      */
+      collect_outer_vertices(vid_parser_,
+                             std::dynamic_pointer_cast<vid_array_t>(
+                                 adj_list_table->column(1)->chunk(0)),
+                             this->fid_, collected_ovgids);
+    }
+    std::vector<vid_t> start_ids(this->vertex_label_num_);
+    for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
+      start_ids[i] = vid_parser_.GenerateId(0, i, ivnums_[i]);
+    }
+    generate_outer_vertices_map<vid_t>(collected_ovgids, start_ids,
+                                       this->vertex_label_num_, ovg2l_maps_,
+                                       ovgid_lists_);
+    collected_ovgids.clear();
+    for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
+      ovnums_[i] = ovgid_lists_[i]->length();
+      tvnums_[i] = ivnums_[i] + ovnums_[i];
+    }
+
+    for (size_t i = 0; i < edge_tables.size(); ++i) {
+      auto adj_list_table = std::get<0>(edge_tables[i]);
+      generate_local_id_list(vid_parser_,
+                             std::dynamic_pointer_cast<vid_array_t>(
+                                 adj_list_table->column(0)->chunk(0)),
+                             this->fid_, ovg2l_maps_, concurrency, edge_src[i]);
+      generate_local_id_list(vid_parser_,
+                             std::dynamic_pointer_cast<vid_array_t>(
+                                 adj_list_table->column(1)->chunk(0)),
+                             this->fid_, ovg2l_maps_, concurrency, edge_dst[i]);
+
+      // std::shared_ptr<arrow::Table> tmp_table0;
+      // ARROW_OK_ASSIGN_OR_RAISE(tmp_table0, edge_tables[i]->RemoveColumn(0));
+      // ARROW_OK_ASSIGN_OR_RAISE(edge_tables_[i], tmp_table0->RemoveColumn(0));
+      offset_arrays_[i] = dynamic_pointer_cast<arrow::Int64Array>(std::get<1>(edge_tables[i]));
+      edge_tables_[i] = std::get<2>(edge_tables[i]);
+    }
+
+    oe_lists_.resize(this->vertex_label_num_);
+    oe_offsets_lists_.resize(this->vertex_label_num_);
+    if (this->directed_) {
+      ie_lists_.resize(this->vertex_label_num_);
+      ie_offsets_lists_.resize(this->vertex_label_num_);
+    }
+
+    for (label_id_t v_label = 0; v_label < this->vertex_label_num_; ++v_label) {
+      oe_lists_[v_label].resize(this->edge_label_num_);
+      oe_offsets_lists_[v_label].resize(this->edge_label_num_);
+      if (this->directed_) {
+        ie_lists_[v_label].resize(this->edge_label_num_);
+        ie_offsets_lists_[v_label].resize(this->edge_label_num_);
+      }
+    }
+    for (label_id_t e_label = 0; e_label < this->edge_label_num_; ++e_label) {
+      std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>> sub_ie_lists(
+          this->vertex_label_num_);
+      std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>> sub_oe_lists(
+          this->vertex_label_num_);
+      std::vector<std::shared_ptr<arrow::Int64Array>> sub_ie_offset_lists(
+          this->vertex_label_num_);
+      std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
+          this->vertex_label_num_);
+      generate_gsf_csr<vid_t, eid_t>(
+        vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums_,
+            this->vertex_label_num_, concurrency, sub_oe_lists,
+            sub_oe_offset_lists);
+
+      for (label_id_t v_label = 0; v_label < this->vertex_label_num_;
+           ++v_label) {
+        if (this->directed_) {
+          ie_lists_[v_label][e_label] = sub_ie_lists[v_label];
+          ie_offsets_lists_[v_label][e_label] = sub_ie_offset_lists[v_label];
+        }
+        oe_lists_[v_label][e_label] = sub_oe_lists[v_label];
+        oe_offsets_lists_[v_label][e_label] = sub_oe_offset_lists[v_label];
+      }
+    }
+    return {};
+  }
+
   std::vector<vid_t> ivnums_, ovnums_, tvnums_;
 
   std::vector<std::shared_ptr<arrow::Table>> vertex_tables_;
@@ -323,6 +453,7 @@ class BasicArrowFragmentBuilder
   std::vector<typename ArrowFragment<OID_T, VID_T>::ovg2l_map_t> ovg2l_maps_;
 
   std::vector<std::shared_ptr<arrow::Table>> edge_tables_;
+  std::vector<std::shared_ptr<arrow::Int64Array>> offset_arrays_;
 
   std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
       ie_lists_, oe_lists_;

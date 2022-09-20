@@ -117,7 +117,20 @@ class SegmentedPartitioner {
     }
   }
 
+  void Init(fid_t fnum, const std::vector<std::vector<OID_T>>& oid_list) {
+    CHECK(fnum == oid_list.size());
+    fnum_ = fnum;
+    for (size_t i = 0; i < fnum; ++i) {
+      for (const auto& id : oid_list[i]) {
+        // LOG(INFO) << "Insert id to: " << id;
+        o2f_.emplace(id, i);
+      }
+    }
+  }
+
   inline fid_t GetPartitionId(const OID_T& oid) const { return o2f_.at(oid); }
+
+  void SetPartitionId(const oid_t& oid, fid_t fid) { o2f_[oid] = fid; }
 
   SegmentedPartitioner& operator=(const SegmentedPartitioner& other) {
     if (this == &other) {
