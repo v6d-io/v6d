@@ -70,6 +70,28 @@ class ArrowFragmentBase : public vineyard::Object {
     return vineyard::InvalidObjectID();
   }
 
+  virtual boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
+      vineyard::Client& client,
+      const std::map<
+          label_id_t,
+          std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
+          columns,
+      bool replace = false) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
+  virtual boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
+      vineyard::Client& client,
+      const std::map<label_id_t,
+                     std::vector<std::pair<
+                         std::string, std::shared_ptr<arrow::ChunkedArray>>>>
+          columns,
+      bool replace = false) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
   virtual vineyard::ObjectID vertex_map_id() const = 0;
 
   virtual const PropertyGraphSchema& schema() const = 0;
