@@ -668,11 +668,11 @@ class [[vineyard]] ArrowFragment
 
   template <typename ArrayType = arrow::Array>
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumnsImpl(
-      vineyard::Client& client,
+      vineyard::Client & client,
       const std::map<
-        label_id_t,
-        std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
-        columns,
+          label_id_t,
+          std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
+          columns,
       bool replace = false) {
     vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
     auto schema = schema_;
