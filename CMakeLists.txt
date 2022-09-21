@@ -191,11 +191,9 @@ if(W_NO_NOEXCEPT_TYPE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 if(BUILD_VINEYARD_COVERAGE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage")
 endif()
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g")
 
 if(APPLE)
     set(CMAKE_MACOSX_RPATH ON)
@@ -542,6 +540,10 @@ macro(target_enable_sanitizer target visibility)
     endif()
 endmacro()
 
+macro(target_add_debuginfo target)
+    target_compile_options(${target} PRIVATE -g)
+endmacro()
+
 macro(install_vineyard_target target)
     install(TARGETS ${target}
         EXPORT vineyard-targets
@@ -633,6 +635,7 @@ if(BUILD_VINEYARD_SERVER)
         list(APPEND SERVER_SRC_FILES "thirdparty/redis-plus-plus-shim/recipes/redlock.cpp")
     endif()
     add_executable(vineyardd ${SERVER_SRC_FILES})
+    target_add_debuginfo(vineyardd)
     target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
     target_link_libraries(vineyardd PRIVATE ${Boost_LIBRARIES}
                                             ${CPPREST_LIB}
@@ -748,6 +751,7 @@ if(BUILD_VINEYARD_CLIENT)
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
     add_library(vineyard_client ${CLIENT_SRC_FILES})
+    target_add_debuginfo(vineyard_client)
     if(USE_GPU)
         find_package(CUDA REQUIRED)
         target_link_libraries(vineyard_client PUBLIC ${CUDA_LIBRARIES})
@@ -803,6 +807,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
                           "python/pybind11_utils.cc"
                           "python/vineyard.cc")
     pybind11_add_module(_C MODULE ${PYTHON_BIND_FILES})
+    target_add_debuginfo(_C)
     target_link_libraries(_C PRIVATE vineyard_client)
     target_include_directories(_C PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                          thirdparty/pybind11/include)

@@ -8,6 +8,7 @@ set(HMDF_BENCHMARKS OFF CACHE BOOL "Build benchmarks of hosseinmoein/dataframe")
 add_subdirectory_static(thirdparty/DataFrame EXCLUDE_FROM_ALL)
 
 add_library(vineyard_hosseinmoein_dataframe ${DATAFRAME_SRC_FILES})
+target_add_debuginfo(vineyard_hosseinmoein_dataframe)
 set_property(TARGET vineyard_hosseinmoein_dataframe PROPERTY CXX_STANDARD 17)
 target_link_libraries(vineyard_hosseinmoein_dataframe PUBLIC vineyard_client
                                                              vineyard_basic)

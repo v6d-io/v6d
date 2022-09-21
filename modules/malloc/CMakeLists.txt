@@ -3,6 +3,7 @@
 file(GLOB_RECURSE BASIC_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "*.cc")
 
 add_library(vineyard_malloc ${BASIC_SRC_FILES})
+target_add_debuginfo(vineyard_malloc)
 target_link_libraries(vineyard_malloc PUBLIC vineyard_client)
 
 # requires mimalloc
