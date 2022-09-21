@@ -17,6 +17,7 @@ limitations under the License.
 
 enum OBJECT_TYPE {
 	BLOB = 1,
+	TENSOR = 2,
 };
 
 enum MSG_OPT {
@@ -34,8 +35,11 @@ enum MSG_OPT {
 
 struct fopt_ret {
 	uint64_t obj_id;
-	uint64_t offset;
-	uint64_t size;
+	uint64_t data_offset;
+	uint64_t header_offset;
+	uint64_t data_size;
+	uint64_t header_size;
+	enum OBJECT_TYPE type;
 	int ret;
 };
 
