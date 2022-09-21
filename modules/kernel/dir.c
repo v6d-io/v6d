@@ -70,6 +70,11 @@ static inline int vineyard_get_entry(struct file *dir_file, int *cpos,
 		}
 		*cpos = *cpos + 1;
 		translate_u64_to_char((*entry)->obj_id, name);
+
+		printk(KERN_INFO PREFIX "%s\n", name);
+		if ((*entry)->type == TENSOR)
+			memcpy(name + strlen(name), ".npy", 4);
+		printk(KERN_INFO PREFIX "%s\n", name);
 		return 0;
 	}
 	return -1;
@@ -84,7 +89,7 @@ static int vineyard_fs_dir_read(struct file *file, struct dir_context *ctx)
 	struct inode *dir_i;
 	struct super_block *sb;
 	struct vineyard_entry *entry;
-	char name[32] = { 0 };
+	char name[256] = { 0 };
 	int cpos = 0;
 	int find = 0;
 	ret = 0;
@@ -112,6 +117,7 @@ static int vineyard_fs_dir_read(struct file *file, struct dir_context *ctx)
 
 	vineyard_read_lock(&vineyard_object_info_header->rw_lock);
 get_new:
+	memset(name, 0, 256);
 	if (vineyard_get_entry(file, &cpos, &entry, name) == -1) {
 		if (!find)
 			ret = 0;
