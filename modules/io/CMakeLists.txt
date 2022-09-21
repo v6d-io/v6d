@@ -14,6 +14,7 @@ set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
 set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}" CACHE BOOL "Restore the default value" FORCE)
 
 add_library(vineyard_io ${IO_SRC_FILES})
+target_add_debuginfo(vineyard_io)
 target_include_directories(vineyard_io PRIVATE ${MPI_CXX_INCLUDE_PATH}
 )
 target_link_libraries(vineyard_io PUBLIC vineyard_client

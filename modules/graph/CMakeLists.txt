@@ -47,6 +47,7 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
 )
 
 add_library(vineyard_graph ${GRAPH_SRC_FILES})
+target_add_debuginfo(vineyard_graph)
 target_include_directories(vineyard_graph PUBLIC
                                           ${MPI_CXX_INCLUDE_PATH}
 )
