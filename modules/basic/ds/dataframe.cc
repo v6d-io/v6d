@@ -158,8 +158,12 @@ void GlobalDataFrame::Construct(const ObjectMeta& meta) {
   this->meta_ = meta;
   this->id_ = meta.GetId();
 
-  meta.GetKeyValue("partition_shape_row_", this->partition_shape_row_);
-  meta.GetKeyValue("partition_shape_column_", this->partition_shape_column_);
+  if (meta.Haskey("partition_shape_row_")) {
+    meta.GetKeyValue("partition_shape_row_", this->partition_shape_row_);
+  }
+  if (meta.Haskey("partition_shape_column_")) {
+    meta.GetKeyValue("partition_shape_column_", this->partition_shape_column_);
+  }
 
   for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("partitions_-size");
        ++__idx) {
