@@ -235,7 +235,9 @@ def lil_matrix_resolver(obj):
     raise NotImplementedError('sp.sparse.lil_matirx is not supported')
 
 
-def make_global_tensor(client, blocks, extra_meta=None):
+def make_global_tensor(
+    client, blocks, extra_meta=None, shape=None, partition_shape=None
+):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::GlobalTensor'
     meta.set_global(True)
@@ -243,6 +245,17 @@ def make_global_tensor(client, blocks, extra_meta=None):
     if extra_meta:
         for k, v in extra_meta.items():
             meta[k] = v
+
+    if 'shape_' not in meta:
+        if shape is not None:
+            meta['shape_'] = to_json(tuple(shape))
+        else:
+            meta['shape_'] = to_json(())
+    if 'partition_shape_' not in meta:
+        if partition_shape is not None:
+            meta['partition_shape_'] = to_json(tuple(partition_shape))
+        else:
+            meta['partition_shape_'] = to_json(())
 
     for idx, block in enumerate(blocks):
         if not isinstance(block, (ObjectMeta, ObjectID, Object)):

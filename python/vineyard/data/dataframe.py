@@ -162,6 +162,12 @@ def make_global_dataframe(client, blocks, extra_meta=None) -> ObjectMeta:
         for k, v in extra_meta.items():
             meta[k] = v
 
+    # assume chunks are split over the row axis
+    if 'partition_shape_row_' not in meta:
+        meta['partition_shape_row_'] = len(blocks)
+    if 'partition_shape_column_' not in meta:
+        meta['partition_shape_column_'] = 1
+
     for idx, block in enumerate(blocks):
         if not isinstance(block, (ObjectMeta, ObjectID, Object)):
             block = ObjectID(block)
