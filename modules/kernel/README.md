@@ -7,7 +7,7 @@ Vineyard kernel module is a file system module for **Linux**. It can provide a f
 |  type      | view          | open(ro) | open(rw) | read  | write  | fsync |
 |  :----     | :----         | :---:    | :---:    | :---: | :---:  | :---: |
 | Blob       | binary        | O        | -        | O     | -      | -     |
-| Tensor     | tensor        | O        | -        | O     | -      | -     |
+| Tensor     | npy           | O        | -        | O     | -      | -     |
 | Dataframe  | arrow/parquet | -        | -        | -     | -      | -     |
 
 ## **Example**
