@@ -99,7 +99,9 @@
 #endif
 
 
-namespace wy::internal
+namespace wy
+{
+namespace internal
 {
 	// 128bit multiply function
 #if WYHASH_32BIT_MUM
@@ -163,6 +165,7 @@ namespace wy::internal
 	// fast range integer random number generation on [0,k) credit to Daniel Lemire. May not work when WYHASH_32BIT_MUM=1. It can be combined with wyrand, wyhash64 or wyhash.
 	static inline uint64_t wy2u0k(uint64_t r, uint64_t k) noexcept { _wymum(&r, &k); return k; }
 #endif
+}
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
