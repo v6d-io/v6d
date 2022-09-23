@@ -39,6 +39,8 @@ std::string PropertyTypeToString(PropertyType type) {
     return "NULL";
   } else if (arrow::boolean()->Equals(type)) {
     return "BOOL";
+  } else if (arrow::int8()->Equals(type)) {
+    return "BYTE";
   } else if (arrow::int16()->Equals(type)) {
     return "SHORT";
   } else if (arrow::int32()->Equals(type)) {
@@ -47,6 +49,14 @@ std::string PropertyTypeToString(PropertyType type) {
     return "LONG";
   } else if (arrow::float32()->Equals(type)) {
     return "FLOAT";
+  } else if (arrow::uint8()->Equals(type)) {
+    return "UBYTE";
+  } else if (arrow::uint16()->Equals(type)) {
+    return "USHORT";
+  } else if (arrow::uint32()->Equals(type)) {
+    return "UINT";
+  } else if (arrow::uint64()->Equals(type)) {
+    return "ULONG";
   } else if (arrow::float64()->Equals(type)) {
     return "DOUBLE";
   } else if (arrow::utf8()->Equals(type)) {
@@ -81,12 +91,22 @@ PropertyType PropertyTypeFromString(const std::string& type) {
   auto type_upper = toupper(type);
   if (type_upper == "BOOL") {
     return arrow::boolean();
+  } else if (type_upper == "BYTE") {
+    return arrow::int8();
   } else if (type_upper == "SHORT") {
     return arrow::int16();
   } else if (type_upper == "INT") {
     return arrow::int32();
   } else if (type_upper == "LONG") {
     return arrow::int64();
+  } else if (type_upper == "UBYTE") {
+    return arrow::uint8();
+  } else if (type_upper == "USHORT") {
+    return arrow::uint16();
+  } else if (type_upper == "UINT") {
+    return arrow::uint32();
+  } else if (type_upper == "ULONG") {
+    return arrow::uint64();
   } else if (type_upper == "FLOAT") {
     return arrow::float32();
   } else if (type_upper == "DOUBLE") {
@@ -116,9 +136,8 @@ PropertyType PropertyTypeFromString(const std::string& type) {
   } else if (type_upper == "NULL") {
     return arrow::null();
   } else {
-    LOG(ERROR) << "Unsupported property type " << type;
+    return type_name_to_arrow_type(type);
   }
-  return arrow::null();
 }
 
 }  // namespace detail
