@@ -895,4 +895,4 @@ class [[vineyard]] ArrowFragment
 
 #endif  // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 
-#vim : syntax = cpp
+// vim: syntax=cpp
