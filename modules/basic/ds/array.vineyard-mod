@@ -82,3 +82,5 @@ class [[vineyard]] Array : public Registered<Array<T>> {
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_ARRAY_MOD_H_
+
+#vim : syntax = cpp

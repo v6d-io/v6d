@@ -111,3 +111,5 @@ class [[vineyard(streamable)]] DataFrame : public Registered<DataFrame> {
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_DATAFRAME_MOD_H_
+
+#vim : syntax = cpp

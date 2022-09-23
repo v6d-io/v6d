@@ -39,3 +39,5 @@ class [[vineyard]] ParallelStream : public Registered<ParallelStream>,
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_STREAM_PARALLEL_STREAM_MOD_H_
+
+#vim : syntax = cpp

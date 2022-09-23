@@ -894,3 +894,5 @@ class [[vineyard]] ArrowFragment
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
+
+#vim : syntax = cpp
