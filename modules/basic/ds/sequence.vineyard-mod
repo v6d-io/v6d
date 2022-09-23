@@ -131,3 +131,5 @@ class [[vineyard]] Sequence : public Registered<Sequence> {
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_SEQUENCE_MOD_H_
+
+#vim : syntax = cpp

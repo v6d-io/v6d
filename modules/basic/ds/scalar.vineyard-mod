@@ -82,3 +82,5 @@ class [[vineyard]] Scalar : public Registered<Scalar<T>> {
 }  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_SCALAR_MOD_H_
+
+#vim : syntax = cpp
