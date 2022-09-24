@@ -290,4 +290,4 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 
 #endif  // MODULES_BASIC_DS_HASHMAP_MOD_H_
 
-#vim : syntax = cpp
+// vim: syntax=cpp

@@ -455,4 +455,4 @@ class [[vineyard]] Table : public Registered<Table> {
 
 #endif  // MODULES_BASIC_DS_ARROW_MOD_H_
 
-#vim : syntax = cpp
+// vim: syntax=cpp

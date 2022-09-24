@@ -40,4 +40,4 @@ class [[vineyard]] ParallelStream : public Registered<ParallelStream>,
 
 #endif  // MODULES_BASIC_STREAM_PARALLEL_STREAM_MOD_H_
 
-#vim : syntax = cpp
+// vim: syntax=cpp
