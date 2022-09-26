@@ -74,19 +74,27 @@ jobs:
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://docker.pkg.github.com -u $GITHUB_ACTOR --password-stdin
 
-      - name: Docker images
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+      - name: Upload docker image as nightly
+        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         run: |
           cd k8s
           sudo make docker-build IMG=${IMG}:${{ github.sha }}
           sudo docker tag ${IMG}:${{ github.sha }} ${IMG}:nightly
-
-      - name: Publish docker images
+          sudo docker push ${IMG}:nightly
+      
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+      
+      - name: Publish docker images for releases
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
           cd k8s
           sudo make docker-push IMG=${IMG}:${{ github.sha }}
-          sudo docker push ${IMG}:nightly
+          sudo docker tag ${IMG}:${{ github.sha }} vineyardcloudnative/vineyard-operator:latest
+          sudo docker tag ${IMG}:${{ github.sha }} vineyardcloudnative/vineyard-operator:${{ steps.tag.outputs.TAG }}
+          sudo docker push vineyardcloudnative/vineyard-operator:latest
 
   vineyardd-e2e-tests:
     name: e2e tests(vineyardd)
