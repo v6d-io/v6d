@@ -37,7 +37,7 @@ setup:
     - name: install scheduler-plugin and operator
       command: |
         make -C k8s docker-build
-        kind load docker-image registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-controller:latest
+        kind load docker-image registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-operator:latest
         make -C k8s predeploy
         make -C k8s deploy
       wait:
