@@ -20,11 +20,19 @@ on:
       - main
     tags:
       - 'v*'
+    paths:
+      - '.github/workflows/vineyard-operator.yaml'
+      - 'k8s/**'
+      - 'src/server/util/kubectl*'
   pull_request:
     branches:
       - main
     tags:
       - 'v*'
+    paths:
+      - '.github/workflows/vineyard-operator.yaml'
+      - 'k8s/**'
+      - 'src/server/util/kubectl*'
 
 jobs:
   build:
