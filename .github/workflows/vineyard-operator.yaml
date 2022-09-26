@@ -20,17 +20,11 @@ on:
       - main
     tags:
       - 'v*'
-    paths:
-      - 'k8s/**'
-      - 'src/server/util/kubectl*'
   pull_request:
     branches:
       - main
     tags:
       - 'v*'
-    paths:
-      - 'k8s/**'
-      - 'src/server/util/kubectl*'
 
 jobs:
   build:
