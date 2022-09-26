@@ -27,7 +27,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-controller:latest
+IMG ?= registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-operator:latest
 
 temp=$(shell mktemp -d)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
