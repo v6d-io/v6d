@@ -501,6 +501,8 @@ ArrowFragment<OID_T, VID_T>::AddNewVertexEdgeLabels(
       ovg2l_maps[i].clear();
     }
   }
+  builder.ovgid_lists_.resize(total_vertex_label_num);
+  builder.ovg2l_maps_.resize(total_vertex_label_num);
   for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
     auto fn = [this, &builder, i, &ovgid_lists, &ovg2l_maps](Client* client) {
       if (i >= vertex_label_num_ || ovgid_lists[i]->length() != 0) {
@@ -520,7 +522,19 @@ ArrowFragment<OID_T, VID_T>::AddNewVertexEdgeLabels(
   }
 
   // Extra ie_list, oe_list, ie_offset_list, oe_offset_list
+  if (directed_) {
+    builder.ie_lists_.resize(total_vertex_label_num);
+    builder.ie_offsets_lists_.resize(total_vertex_label_num);
+  }
+  builder.oe_lists_.resize(total_vertex_label_num);
+  builder.oe_offsets_lists_.resize(total_vertex_label_num);
   for (label_id_t i = 0; i < total_vertex_label_num; ++i) {
+    if (directed_) {
+      builder.ie_lists_[i].resize(total_edge_label_num);
+      builder.ie_offsets_lists_[i].resize(total_edge_label_num);
+    }
+    builder.oe_lists_[i].resize(total_edge_label_num);
+    builder.oe_offsets_lists_[i].resize(total_edge_label_num);
     for (label_id_t j = 0; j < total_edge_label_num; ++j) {
       auto fn = [this, &builder, i, j, &ie_lists, &oe_lists, &ie_offsets_lists,
                  &oe_offsets_lists](Client* client) {
@@ -935,6 +949,8 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddNewEdgeLabels(
       ovg2l_maps[i].clear();
     }
   }
+  builder.ovgid_lists_.resize(vertex_label_num_);
+  builder.ovg2l_maps_.resize(vertex_label_num_);
   for (label_id_t i = 0; i < vertex_label_num_; ++i) {
     auto fn = [this, &builder, i, &ovgid_lists, &ovg2l_maps](Client* client) {
       if (ovgid_lists[i]->length() != 0) {
@@ -954,7 +970,20 @@ boost::leaf::result<ObjectID> ArrowFragment<OID_T, VID_T>::AddNewEdgeLabels(
   }
 
   // Extra ie_list, oe_list, ie_offset_list, oe_offset_list
+  if (directed_) {
+    builder.ie_lists_.resize(vertex_label_num_);
+    builder.ie_offsets_lists_.resize(vertex_label_num_);
+  }
+  builder.oe_lists_.resize(vertex_label_num_);
+  builder.oe_offsets_lists_.resize(vertex_label_num_);
   for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+    if (directed_) {
+      builder.ie_lists_[i].resize(edge_label_num_ + extra_edge_label_num);
+      builder.ie_offsets_lists_[i].resize(edge_label_num_ +
+                                          extra_edge_label_num);
+    }
+    builder.oe_lists_[i].resize(edge_label_num_ + extra_edge_label_num);
+    builder.oe_offsets_lists_[i].resize(edge_label_num_ + extra_edge_label_num);
     for (label_id_t j = 0; j < extra_edge_label_num; ++j) {
       auto fn = [this, &builder, i, j, &ie_lists, &oe_lists, &ie_offsets_lists,
                  &oe_offsets_lists](Client* client) {

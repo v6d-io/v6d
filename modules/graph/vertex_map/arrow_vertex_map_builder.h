@@ -446,7 +446,6 @@ BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>::Build(
   this->set_fnum_label_num(fnum_, label_num_);
 
   ThreadGroup tg;
-
   auto builder_fn = [this, &client](fid_t const fid,
                                     label_id_t const vlabel_id) -> Status {
     auto& array = oid_arrays_[vlabel_id][fid];
