@@ -42,6 +42,9 @@ template <typename OID_T, typename VID_T>
 class ArrowVertexMapBuilder;
 
 template <typename OID_T, typename VID_T>
+class BasicArrowVertexMapBuilder;
+
+template <typename OID_T, typename VID_T>
 class ArrowVertexMap
     : public vineyard::Registered<ArrowVertexMap<OID_T, VID_T>> {
   using oid_t = OID_T;
@@ -187,6 +190,7 @@ class ArrowVertexMap
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
 
   friend class ArrowVertexMapBuilder<OID_T, VID_T>;
+  friend class BasicArrowVertexMapBuilder<OID_T, VID_T>;
 
   friend class gs::ArrowProjectedVertexMap<OID_T, VID_T>;
 };
@@ -350,6 +354,7 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   std::vector<std::vector<ska::flat_hash_map<oid_t, vid_t>>> o2g_;
 
   friend class ArrowVertexMapBuilder<arrow::util::string_view, VID_T>;
+  friend class BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>;
 
   friend class gs::ArrowProjectedVertexMap<arrow::util::string_view, VID_T>;
 };

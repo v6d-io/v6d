@@ -88,6 +88,9 @@ class BasicArrowFragmentBuilder
       tg.AddTask(fn, &client);
     }
 
+    this->vertex_tables_.resize(this->vertex_label_num_);
+    this->ovgid_lists_.resize(this->vertex_label_num_);
+    this->ovg2l_maps_.resize(this->vertex_label_num_);
     for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
       auto fn = [this, i](Client* client) {
         vineyard::TableBuilder vt(*client, vertex_tables_[i]);
@@ -110,6 +113,7 @@ class BasicArrowFragmentBuilder
       tg.AddTask(fn, &client);
     }
 
+    this->edge_tables_.resize(this->edge_label_num_);
     for (label_id_t i = 0; i < this->edge_label_num_; ++i) {
       auto fn = [this, i](Client* client) {
         vineyard::TableBuilder et(*client, edge_tables_[i]);
@@ -120,7 +124,19 @@ class BasicArrowFragmentBuilder
       tg.AddTask(fn, &client);
     }
 
+    if (this->directed_) {
+      this->ie_lists_.resize(this->vertex_label_num_);
+      this->ie_offsets_lists_.resize(this->vertex_label_num_);
+    }
+    this->oe_lists_.resize(this->vertex_label_num_);
+    this->oe_offsets_lists_.resize(this->vertex_label_num_);
     for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
+      if (this->directed_) {
+        this->ie_lists_[i].resize(this->edge_label_num_);
+        this->ie_offsets_lists_[i].resize(this->edge_label_num_);
+      }
+      this->oe_lists_[i].resize(this->edge_label_num_);
+      this->oe_offsets_lists_[i].resize(this->edge_label_num_);
       for (label_id_t j = 0; j < this->edge_label_num_; ++j) {
         auto fn = [this, i, j](Client* client) {
           if (this->directed_) {
