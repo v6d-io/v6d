@@ -93,10 +93,9 @@ jobs:
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
           cd k8s
-          sudo make docker-push IMG=${IMG}:${{ github.sha }}
-          sudo docker tag ${IMG}:${{ github.sha }} vineyardcloudnative/vineyard-operator:latest
-          sudo docker tag ${IMG}:${{ github.sha }} vineyardcloudnative/vineyard-operator:${{ steps.tag.outputs.TAG }}
-          sudo docker push vineyardcloudnative/vineyard-operator:latest
+          sudo make docker-build IMG=${IMG}:${{ github.sha }}
+          sudo docker tag ${IMG}:${{ github.sha }} ${IMG}:latest
+          sudo docker push ${IMG}:latest
 
   vineyardd-e2e-tests:
     name: e2e tests(vineyardd)
