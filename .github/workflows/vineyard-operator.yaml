@@ -94,9 +94,8 @@ jobs:
         run: |
           cd k8s
           sudo make docker-build IMG=${IMG}:${{ github.sha }}
-          sudo docker tag ${IMG}:${{ github.sha }} vineyardcloudnative/vineyard-operator:latest
-          sudo docker tag ${IMG}:${{ github.sha }} vineyardcloudnative/vineyard-operator:${{ steps.tag.outputs.TAG }}
-          sudo docker push vineyardcloudnative/vineyard-operator:latest
+          sudo docker tag ${IMG}:${{ github.sha }} ${IMG}:latest
+          sudo docker push ${IMG}:latest
 
   vineyardd-e2e-tests:
     name: e2e tests(vineyardd)
