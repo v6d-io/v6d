@@ -59,34 +59,41 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   std::map<std::string, std::vector<IMetaService::op_t>> ops;
   for (auto const& event : resp.events()) {
     std::string const& key = event.kv().key();
-    for (auto const& item : sessions_) {
-      if (boost::algorithm::boyer_moore_search<std::string>(key,
-                                                            "/meta_sync_lock")
-              .first != key.end()) {
-        break;
-      }
-      if (boost::algorithm::starts_with(key, item->prefix + "/")) {
-        IMetaService::op_t op;
-        std::string op_key =
-            boost::algorithm::erase_head_copy(key, item->prefix.size());
-        switch (event.event_type()) {
-        case etcd::Event::EventType::PUT: {
-          auto op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
-                                            event.kv().modified_index());
-          ops[item->sessionID].emplace_back(op);
+    auto it = sessions_.begin();
+    while (it != sessions_.end()) {
+      if (!(*it)->meta_service_ptr->stopped()) {
+        if (boost::algorithm::boyer_moore_search<std::string>(key,
+                                                              "/meta_sync_lock")
+                .first != key.end()) {
           break;
         }
-        case etcd::Event::EventType::DELETE_: {
-          auto op =
-              IMetaService::op_t::Del(op_key, event.kv().modified_index());
-          ops[item->sessionID].emplace_back(op);
+        if (boost::algorithm::starts_with(key, (*it)->prefix + "/")) {
+          IMetaService::op_t op;
+          std::string op_key =
+              boost::algorithm::erase_head_copy(key, (*it)->prefix.size());
+          switch (event.event_type()) {
+          case etcd::Event::EventType::PUT: {
+            auto op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
+                                              event.kv().modified_index());
+            ops[(*it)->sessionID].emplace_back(op);
+            break;
+          }
+          case etcd::Event::EventType::DELETE_: {
+            auto op =
+                IMetaService::op_t::Del(op_key, event.kv().modified_index());
+            ops[(*it)->sessionID].emplace_back(op);
+            break;
+          }
+          default: {
+            // invalid event type.
+            break;
+          }
+          }
           break;
         }
-        default: {
-          // invalid event type.
-          break;
-        }
-        }
+        ++it;
+      } else {
+        it = sessions_.erase(it);
       }
     }
   }
