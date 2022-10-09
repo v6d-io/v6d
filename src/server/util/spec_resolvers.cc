@@ -86,6 +86,9 @@ DEFINE_bool(prometheus, false,
 DEFINE_bool(metrics, false,
             "Alias for --prometheus, and takes precedence over --prometheus");
 
+// core dump
+DEFINE_bool(coredump, false, "Enable core dump when been aborted");
+
 const Resolver& Resolver::get(std::string name) {
   static auto server_resolver = ServerSpecResolver();
   static auto bulkstore_resolver = BulkstoreSpecResolver();

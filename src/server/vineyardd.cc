@@ -13,6 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <sys/resource.h>
+#include <sys/time.h>
+
 #include <signal.h>
 
 #include <chrono>
@@ -34,6 +37,11 @@ limitations under the License.
 
 DECLARE_bool(help);
 DECLARE_string(helpmatch);
+
+namespace vineyard {
+// See also the definition in `spec_resolvers.cc`.
+DECLARE_bool(coredump);
+}  // namespace vineyard
 
 // for dumpping coverage data
 #ifdef __cplusplus
@@ -82,6 +90,14 @@ int main(int argc, char* argv[]) {
     FLAGS_helpmatch = "v6d";
   }
   vineyard::flags::HandleCommandLineHelpFlags();
+
+  // disable coredump
+  if (!vineyard::FLAGS_coredump) {
+    struct rlimit rlim;
+    rlim.rlim_cur = 0;
+    rlim.rlim_max = 0;
+    setrlimit(RLIMIT_CORE, &rlim);
+  }
 
   // tweak other flags, specially alias
   if (vineyard::FLAGS_metrics) {
