@@ -585,9 +585,10 @@ bool SocketConnection::doCreateGPUBuffer(json const& root) {
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->CreateGPU(size, object_id, object));
   if (!object->IsGPU() || object->pointer == nullptr) {
-    LOG(ERROR) << "invalid GPU memory pointer" << std::endl;
-    return false;
+    RESPONSE_ON_ERROR(Status::Invalid(
+        "Failed to create GPU buffer: invalid GPU memory pointer"));
   }
+
   // cudaIpcMemHandle_t cuda_handle;
   GPUUnifiedAddress gua(true, reinterpret_cast<void*>(object->pointer));
   WriteGPUCreateBufferReply(object_id, object, gua, message_out);
@@ -701,7 +702,7 @@ bool SocketConnection::doGetData(const json& root) {
         if (status.ok()) {
           WriteGetDataReply(tree, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -726,7 +727,7 @@ bool SocketConnection::doListData(const json& root) {
         if (status.ok()) {
           WriteGetDataReply(tree, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -748,7 +749,7 @@ bool SocketConnection::doCreateData(const json& root) {
         if (status.ok()) {
           WriteCreateDataReply(id, signature, instance_id, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -774,7 +775,7 @@ bool SocketConnection::doPersist(const json& root) {
     if (status.ok()) {
       WritePersistReply(message_out);
     } else {
-      LOG(ERROR) << status.ToString();
+      VLOG(100) << "Error: " << status.ToString();
       WriteErrorReply(status, message_out);
     }
     self->doWrite(message_out);
@@ -793,7 +794,7 @@ bool SocketConnection::doIfPersist(const json& root) {
         if (status.ok()) {
           WriteIfPersistReply(persist, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -812,7 +813,7 @@ bool SocketConnection::doExists(const json& root) {
         if (status.ok()) {
           WriteExistsReply(exists, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -832,7 +833,7 @@ bool SocketConnection::doShallowCopy(const json& root) {
         if (status.ok()) {
           WriteShallowCopyReply(target, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -853,7 +854,7 @@ bool SocketConnection::doDelData(const json& root) {
         if (status.ok()) {
           WriteDelDataReply(message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -875,7 +876,7 @@ bool SocketConnection::doCreateStream(const json& root) {
   if (status.ok()) {
     WriteCreateStreamReply(message_out);
   } else {
-    LOG(ERROR) << status.ToString();
+    VLOG(100) << "Error: " << status.ToString();
     WriteErrorReply(status, message_out);
   }
   this->doWrite(message_out);
@@ -892,7 +893,7 @@ bool SocketConnection::doOpenStream(const json& root) {
   if (status.ok()) {
     WriteOpenStreamReply(message_out);
   } else {
-    LOG(ERROR) << status.ToString();
+    VLOG(100) << "Error: " << status.ToString();
     WriteErrorReply(status, message_out);
   }
   this->doWrite(message_out);
@@ -926,7 +927,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
             return Status::OK();
           });
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
           self->doWrite(message_out);
         }
@@ -945,7 +946,7 @@ bool SocketConnection::doPushNextStreamChunk(const json& root) {
         if (status.ok()) {
           WritePushNextStreamChunkReply(message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -966,7 +967,7 @@ bool SocketConnection::doPullNextStreamChunk(const json& root) {
           WritePullNextStreamChunkReply(chunk, message_out);
         } else {
           if (!status.IsStreamDrained()) {
-            LOG(ERROR) << status.ToString();
+            VLOG(100) << "Error: " << status.ToString();
           }
           WriteErrorReply(status, message_out);
         }
@@ -1001,7 +1002,7 @@ bool SocketConnection::doPutName(const json& root) {
         if (status.ok()) {
           WritePutNameReply(message_out);
         } else {
-          LOG(ERROR) << "Failed to put name: " << status.ToString();
+          VLOG(100) << "Error: failed to put name: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -1022,7 +1023,7 @@ bool SocketConnection::doGetName(const json& root) {
         if (status.ok()) {
           WriteGetNameReply(object_id, message_out);
         } else {
-          LOG(ERROR) << "Failed to get name: " << status.ToString();
+          VLOG(100) << "Error: failed to get name: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -1037,11 +1038,10 @@ bool SocketConnection::doDropName(const json& root) {
   TRY_READ_REQUEST(ReadDropNameRequest, root, name);
   RESPONSE_ON_ERROR(server_ptr_->DropName(name, [self](const Status& status) {
     std::string message_out;
-    LOG(INFO) << "drop name callback: " << status;
     if (status.ok()) {
       WriteDropNameReply(message_out);
     } else {
-      LOG(ERROR) << "Failed to drop name: " << status.ToString();
+      VLOG(100) << "Error: failed to drop name: " << status.ToString();
       WriteErrorReply(status, message_out);
     }
     self->doWrite(message_out);
@@ -1062,18 +1062,18 @@ bool SocketConnection::doMigrateObject(const json& root) {
 bool SocketConnection::doClusterMeta(const json& root) {
   auto self(shared_from_this());
   TRY_READ_REQUEST(ReadClusterMetaRequest, root);
-  RESPONSE_ON_ERROR(
-      server_ptr_->ClusterInfo([self](const Status& status, const json& tree) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteClusterMetaReply(tree, message_out);
-        } else {
-          LOG(ERROR) << "Check cluster meta: " << status.ToString();
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
+  RESPONSE_ON_ERROR(server_ptr_->ClusterInfo([self](const Status& status,
+                                                    const json& tree) {
+    std::string message_out;
+    if (status.ok()) {
+      WriteClusterMetaReply(tree, message_out);
+    } else {
+      VLOG(100) << "Error: failed to check cluster meta: " << status.ToString();
+      WriteErrorReply(status, message_out);
+    }
+    self->doWrite(message_out);
+    return Status::OK();
+  }));
   return false;
 }
 
@@ -1086,7 +1086,8 @@ bool SocketConnection::doInstanceStatus(const json& root) {
         if (status.ok()) {
           WriteInstanceStatusReply(tree, message_out);
         } else {
-          LOG(ERROR) << "Check instance status: " << status.ToString();
+          VLOG(100) << "Error: failed to check instance status: "
+                    << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -1153,7 +1154,7 @@ bool SocketConnection::doClear(const json& root) {
                 if (status.ok()) {
                   WriteClearReply(message_out);
                 } else {
-                  LOG(ERROR) << status.ToString();
+                  VLOG(100) << "Error: " << status.ToString();
                   WriteErrorReply(status, message_out);
                 }
                 self->doWrite(message_out);
@@ -1161,13 +1162,13 @@ bool SocketConnection::doClear(const json& root) {
               });
           if (!s.ok()) {
             std::string message_out;
-            LOG(ERROR) << s.ToString();
+            VLOG(100) << "Error: " << s.ToString();
             WriteErrorReply(s, message_out);
             self->doWrite(message_out);
           }
         } else {
           std::string message_out;
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
           self->doWrite(message_out);
         }
@@ -1441,7 +1442,7 @@ bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
           }
           WriteDelDataWithFeedbacksReply(deleted_bids, message_out);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);

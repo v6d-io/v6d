@@ -166,7 +166,7 @@ uint8_t* BulkStoreBase<ID, P>::AllocateMemoryGPU(size_t size) {
   pointer = reinterpret_cast<uint8_t*>(
       GPUBulkAllocator::Memalign(size, gpukBlockSize));
   if (pointer == nullptr) {
-    LOG(ERROR) << "Failed to allocate GPU memory......" << std::endl;
+    DVLOG(10) << "Failed to allocate GPU memory of size '" << size << "'";
   }
   return pointer;
 }
