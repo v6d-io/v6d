@@ -76,7 +76,6 @@ inline const char* ErrorCodeToString(ErrorCode ec) {
   case ErrorCode::kUnimplementedMethod:
     return "UnimplementedMethod";
   default:
-    CHECK(false);
     return "UndefinedErrorCode";
   }
 }
