@@ -147,7 +147,8 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 #endif
         self->metaUpdate(ops, false);
       } else {
-        LOG(ERROR) << status.ToString();
+        VLOG(100) << "Error: failed to generated ops to update metadata: "
+                  << status.ToString();
       }
       VINEYARD_SUPPRESS(callback_after_finish(status, computed_instance_id));
     });
@@ -204,7 +205,8 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
                 });
             return Status::OK();
           } else {
-            LOG(ERROR) << status.ToString();
+            VLOG(100) << "Error: failed to request metadata lock: "
+                      << status.ToString();
             return callback_after_finish(status);  // propogate the error
           }
         });
@@ -301,7 +303,8 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
                   });
               return Status::OK();
             } else {
-              LOG(ERROR) << status.ToString();
+              VLOG(100) << "Error: failed to request metadata lock: "
+                        << status.ToString();
               return callback_after_finish(status, {});  // propogate the error.
             }
           });
@@ -340,11 +343,12 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
             return Status::OK();
           }
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: failed to generated ops to update metadata: "
+                    << status.ToString();
           return callback_after_finish(status);
         }
       } else {
-        LOG(ERROR) << "request values failed: " << status.ToString();
+        VLOG(100) << "Error: request values failed: " << status.ToString();
         return callback_after_finish(status);
       }
     });

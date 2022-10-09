@@ -59,7 +59,7 @@ void IPCServer::Close() {
   boost::system::error_code ec;
   acceptor_.cancel(ec);
   if (ec) {
-    LOG(ERROR) << "Failed to close session : " << ec.message();
+    LOG(ERROR) << "Failed to close the IPC server: " << ec.message();
   }
 }
 

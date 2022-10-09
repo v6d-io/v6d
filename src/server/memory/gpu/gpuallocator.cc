@@ -48,8 +48,7 @@ void* GPUBulkAllocator::Memalign(const size_t bytes, const size_t alignment) {
 #ifdef ENABLE_GPU
   cudaError_t result = cudaMalloc(&mem, bytes);
   if (result != cudaSuccess) {
-    LOG(ERROR) << "cudaMalloc Error: " << cudaGetErrorString(result)
-               << std::endl;
+    DVLOG(10) << "cudaMalloc Error: " << cudaGetErrorString(result);
     return nullptr;
   }
   gpu_allocated_ += bytes;
@@ -61,7 +60,7 @@ void GPUBulkAllocator::Free(void* mem, size_t bytes) {
 #ifdef ENABLE_GPU
   cudaError_t result = cudaFree(mem);
   if (result != cudaSuccess) {
-    LOG(ERROR) << "cudaFree Error: " << cudaGetErrorString(result) << "\n";
+    DVLOG(10) << "cudaFree Error: " << cudaGetErrorString(result);
   }
   gpu_allocated_ -= bytes;
 #endif

@@ -301,7 +301,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
             return Status::OK();
           }
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       });
@@ -360,7 +360,7 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
           }
           return callback(status, sub_tree_group);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return callback(status, json{});
         }
       });
@@ -386,7 +386,7 @@ Status VineyardServer::ListAllData(
           }
           return callback(status, objects);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return callback(status, {});
         }
       });
@@ -443,7 +443,7 @@ Status VineyardServer::CreateData(
                                                     computed_instance_id));
           return s;
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       },
@@ -476,7 +476,7 @@ Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
           }
           return s;
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       },
@@ -509,7 +509,7 @@ Status VineyardServer::IfPersist(const ObjectID id,
           CATCH_JSON_ERROR(s, meta_tree::IfPersist(meta, id, persist));
           return callback(s, persist);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       });
@@ -533,7 +533,7 @@ Status VineyardServer::Exists(const ObjectID id,
           CATCH_JSON_ERROR(s, meta_tree::Exists(meta, id, exists));
           return callback(s, exists);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       });
@@ -558,7 +558,7 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
                                            ops, transient));
           return s;
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       },
@@ -610,7 +610,7 @@ Status VineyardServer::DelData(
           }
           return s;
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       },
@@ -635,8 +635,8 @@ Status VineyardServer::DeleteAllAt(const json& meta,
   return this->DelData(objects_to_cleanup, true, true, false /* fastpath */,
                        [](Status const& status) -> Status {
                          if (!status.ok()) {
-                           LOG(ERROR) << "Error happens on cleanup: "
-                                      << status.ToString();
+                           VLOG(100) << "Error: failed during cleanup: "
+                                     << status.ToString();
                          }
                          return Status::OK();
                        });
@@ -687,7 +687,7 @@ Status VineyardServer::PutName(const ObjectID object_id,
               meta_tree::EncodeValue(name)));
           return Status::OK();
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       },
@@ -728,7 +728,7 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
         return Status::OK();
       }
     } else {
-      LOG(ERROR) << status.ToString();
+      VLOG(100) << "Error: " << status.ToString();
       return status;
     }
   });
@@ -764,7 +764,7 @@ Status VineyardServer::DropName(const std::string& name,
           }
           return Status::OK();
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       },
@@ -779,7 +779,7 @@ Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {
         if (status.ok()) {
           return callback(status, meta["instances"]);
         } else {
-          LOG(ERROR) << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           return status;
         }
       });

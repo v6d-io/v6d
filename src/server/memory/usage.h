@@ -261,7 +261,7 @@ class ColdObjectTracker
       while (it != list_.rend()) {
         st = bulk_store_ptr->SpillPayload(it->second);
         if (!st.ok()) {
-          LOG(ERROR) << st.ToString();
+          VLOG(100) << "Error: failed to spill payload: " << st.ToString();
           break;
         }
         spilled_sz += it->second->data_size;
@@ -462,7 +462,7 @@ class ColdObjectTracker
   void SetSpillPath(const std::string& spill_path) {
     spill_path_ = spill_path;
     if (spill_path.empty()) {
-      LOG(INFO) << "No spill path set, disable spill...";
+      LOG(INFO) << "No spill path set, spill has been disabled ...";
       return;
     }
     if (spill_path.back() != '/') {

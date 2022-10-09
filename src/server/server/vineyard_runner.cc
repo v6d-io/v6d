@@ -108,7 +108,7 @@ Status VineyardRunner::CreateNewSession(
       spec, session_id, shared_from_this(), context_, meta_context_,
       io_context_, callback);
   sessions_.emplace(session_id, vs_ptr);
-  LOG(INFO) << "Vineyard creates a new session with '"
+  LOG(INFO) << "Vineyard creates a new session with ID '"
             << SessionIDToString(session_id) << "'";
   return vs_ptr->Serve(bulk_store_type);
 }
@@ -121,7 +121,7 @@ Status VineyardRunner::Delete(SessionID const& sid) {
   accessor->second->Stop();
   sessions_.erase(accessor);
   if (unlikely(sid != RootSessionID())) {
-    LOG(INFO) << "Deleting session : " << SessionIDToString(sid);
+    LOG(INFO) << "Deleting session: '" << SessionIDToString(sid) << "'";
   }
   return Status::OK();
 }
