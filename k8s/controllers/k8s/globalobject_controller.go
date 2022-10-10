@@ -286,7 +286,7 @@ func (r *GlobalObjectReconciler) UpdateState(ctx context.Context, globalobject *
 	return r.updateStatus(ctx, globalobject, status)
 }
 
-// UpdateStatus updates the globalobject's creation time
+// UpdateTime updates the globalobject's creation time
 func (r *GlobalObjectReconciler) UpdateTime(ctx context.Context, globalobject *v1alpha1.GlobalObject) error {
 	nilTime := metav1.Time{}
 	if globalobject.Status.CreationTime != nilTime {
