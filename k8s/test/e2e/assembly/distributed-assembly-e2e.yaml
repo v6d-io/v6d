@@ -1,0 +1,100 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Test assembly operation in different node
+setup:
+  env: kind
+  file: ../kind.yaml
+  steps:
+    - name: prepare e2e.yaml
+      command: bash k8s/hack/prepare-e2e.sh
+    - name: pull docker image
+      command: |
+        docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
+        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job1
+        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job2
+        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job3
+        docker pull docker.pkg.github.com/v6d-io/v6d/local-assembly
+        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job1
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job2
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job3
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/local-assembly
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly
+    - name: install cert-manager
+      command: |
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+      wait:
+        - namespace: cert-manager
+          resource: pod
+          for: condition=Ready
+    - name: install scheduler-plugin and operator
+      command: |
+        make -C k8s docker-build
+        kind load docker-image registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-operator:latest
+        make -C k8s predeploy
+        make -C k8s deploy
+      wait:
+        - namespace: vineyard-system
+          resource: deployment/vineyard-controller-manager
+          for: condition=Available
+    - name: install vineyardd
+      command: |
+        sed 's/replicas: 2/replicas: 3/' k8s/test/e2e/vineyardd.yaml | kubectl apply -f -
+      wait:
+        - namespace: vineyard-system
+          resource: vineyardd/vineyardd-sample
+          for: condition=Available
+    - name: install job1 and job2
+      command: |
+        kubectl create namespace vineyard-job
+        kubectl label namespace vineyard-job assembly-injection=enabled
+        kubectl apply -f k8s/test/e2e/distributed-assembly-job1.yaml
+        kubectl wait --for=condition=Ready pod -l app=distributed-assembly-job1 -n vineyard-job
+        while [ -z $(kubectl get po -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]; \
+        do \
+          sleep 0.1; \
+        done
+        export meta=$(kubectl get po -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export metadata_id=$(echo $meta | awk -F "[\"]" '{print $2}')
+        sed 's/METADATA_ID_VALUE/'$metadata_id'/' k8s/test/e2e/distributed-assembly-job2.yaml | kubectl apply -f -
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/distributed-assembly-job2-deployment
+          for: condition=Available
+    - name: install job3
+      command: |
+        kubectl apply -f k8s/test/e2e/distributed-assembly-job3.yaml
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/distributed-assembly-job3-deployment
+          for: condition=Available
+  timeout: 40m
+
+cleanup:
+  # always never success failure
+  on: always
+
+verify:
+  # verify with retry strategy
+  retry:
+    # max retry count
+    count: 10
+    # the interval between two attempts, e.g. 10s, 1m.
+    interval: 10s
+  cases:
+    - query: 'kubectl get po -l app=distributed-assembly-job3 -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
+      expected: ../verify/distributed-assembly-values.yaml

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package operator contains the logic for the operator
 package operator
 
 import (
@@ -20,7 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/v6d-io/v6d/k8s/schedulers"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,8 +43,8 @@ type AssemblyInjector struct {
 }
 
 const (
-	// AssmeblyEnabledAnnotation is the annotation for assembly, and inject the assembly container when setting true
-	AssmeblyEnabledAnnotation = "assembly.v6d.io/enabled"
+	// AssmeblyEnabledLabel is the label for assembly, and inject the assembly container when setting true
+	AssmeblyEnabledLabel = "assembly.v6d.io/enabled"
 	// ImageAnnotation is the annotation key for the image to use for the sidecar.
 	ImageAnnotation = "assembly.v6d.io/image"
 	// CommandAnnotation is the annotation key for the command to run in the assembly container.
@@ -64,100 +67,74 @@ type AssemblyConfig struct {
 	SharedVolumePathInJob string
 }
 
+// Handle handles admission requests.
 func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	pod := &corev1.Pod{}
 	if err := r.decoder.Decode(req, pod); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if pod.Annotations == nil {
-		return admission.Allowed("there are no annatations")
+	// if the pod enables assembly, we need to label the required pods
+	if value, ok := pod.Labels[AssmeblyEnabledLabel]; ok && strings.ToLower(value) == "true" {
+		if requiredJob, ok := pod.Annotations[schedulers.VineyardJobRequired]; ok {
+			jobs := strings.Split(requiredJob, ".")
+			for _, job := range jobs {
+				// get the required job
+				podList := &corev1.PodList{}
+				opts := []client.ListOption{
+					client.MatchingLabels{
+						"app": job,
+					},
+				}
+				if err := r.Client.List(ctx, podList, opts...); err != nil {
+					return admission.Errored(http.StatusBadRequest, fmt.Errorf("Failed to list pods: %v", err))
+				}
+				for i := range podList.Items {
+					// label the required pods that need to be injected with the assembly container
+					labels := &podList.Items[i].Labels
+					(*labels)["need-injected-assembly"] = "true"
+					if err := r.Client.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
+						return admission.Errored(http.StatusBadRequest, fmt.Errorf("Failed to update pod: %v", err))
+					}
+				}
+			}
+		}
 	}
 
-	// get all configurations from the annotations of the pod
-	annotations := pod.Annotations
-	assemblyConfig := AssemblyConfig{}
-	if enabled, ok := annotations[AssmeblyEnabledAnnotation]; !ok || enabled == "false" {
-		return admission.Allowed("assembly is not enabled")
-	}
-
-	if image, ok := annotations[ImageAnnotation]; ok {
-		assemblyConfig.Image = image
-	} else {
-		assemblyInjectorLog.Info("assembly image not found")
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("assembly image not found"))
-	}
-
-	if command, ok := annotations[CommandAnnotation]; ok {
-		assemblyConfig.Command = command
-	} else {
-		assemblyInjectorLog.Info("assembly command not found")
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("assembly command not found"))
-	}
-
-	if sharedVolumeInAssemblyPath, ok := annotations[SharedVolumePathInAssemblyAnnotation]; ok {
-		assemblyConfig.SharedVolumePathInAssembly = sharedVolumeInAssemblyPath
-	} else {
-		assemblyInjectorLog.Info("assembly shared volume path not found")
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("assembly shared volume path not found"))
-	}
-
-	if sharedVolumeInJobPath, ok := annotations[SharedVolumePathInJobAnnotation]; ok {
-		assemblyConfig.SharedVolumePathInJob = sharedVolumeInJobPath
-	} else {
-		assemblyInjectorLog.Info("job shared volume path not found")
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("job shared volume path not found"))
-	}
-
-	assemblyInjectorLog.Info("Producing the assemblySidecar container and shared volume...")
-	logPath := assemblyConfig.SharedVolumePathInAssembly + "/log"
-	assemblySidecar := corev1.Container{
-		Name:            "assembly-sidecar",
-		Image:           assemblyConfig.Image,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		// TODO: Synchronize the two containers.
-		Lifecycle: &corev1.Lifecycle{
-			PostStart: &corev1.LifecycleHandler{
-				Exec: &corev1.ExecAction{
-					Command: []string{
-						"sh",
-						"-c",
-						"while [ -z $(cat " + logPath + " | grep \"stream done\")]; do sleep 0.1; done",
+	// Add podname and podnamespace to all pods' env
+	for i := range pod.Spec.Containers {
+		m := map[string]bool{}
+		for _, e := range pod.Spec.Containers[i].Env {
+			m[e.Name] = true
+		}
+		if _, ok := m["POD_NAME"]; !ok {
+			pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, corev1.EnvVar{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
 					},
 				},
-			},
-		},
-		Command: []string{
-			"sh",
-			"-c",
-			assemblyConfig.Command,
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			corev1.VolumeMount{
-				Name:      "shared-volume",
-				MountPath: assemblyConfig.SharedVolumePathInAssembly,
-			},
-		},
+			})
+		}
+		if _, ok := m["POD_NAMESPACE"]; !ok {
+			pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, corev1.EnvVar{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			})
+		}
 	}
-
-	sharedVolume := corev1.Volume{
-		Name: "shared-volume",
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{},
-		},
-	}
-
-	assemblyInjectorLog.Info("Injecting the assemblySidecar container and shared volume...")
-	// inject the assembly sidecar into the pod
-	pod.Spec.Containers = append(pod.Spec.Containers, assemblySidecar)
-	pod.Spec.Volumes = append(pod.Spec.Volumes, sharedVolume)
 
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	assemblyInjectorLog.Info("Injecting the assemblySidecar container and shared volume successfully!")
+	assemblyInjectorLog.Info("Injecting the env and assembly labels successfully!")
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 

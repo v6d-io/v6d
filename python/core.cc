@@ -219,6 +219,10 @@ void bind_core(py::module& mod) {
              }
            })
       .def("__setitem__",
+           [](ObjectMeta* self, std::string const& key) {
+             self->AddKeyValueFromEnv(key);
+           })
+      .def("__setitem__",
            [](ObjectMeta* self, std::string const& key,
               std::string const& value) { self->AddKeyValue(key, value); })
       .def("__setitem__", [](ObjectMeta* self, std::string const& key,

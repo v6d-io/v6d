@@ -1,6 +1,3 @@
-#! /usr/bin/env python3 # pylint: disable=missing-module-docstring
-# -*- coding: utf-8 -*-
-#
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-import time
-import numpy as np
-import vineyard
+FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
-client = vineyard.connect('/var/run/vineyard.sock')
+WORKDIR /
 
-object = client.put(np.arange(10))
-meta = vineyard.ObjectMeta()
-meta['typename'] = 'vineyard::Sequence'
-meta['size_'] = 1
-meta.set_global(True)
-meta.add_member('__elements_-0', object)
-meta['__elements_-size'] = 1
-tup = client.create_metadata(meta)
-client.persist(tup)
+COPY ./assembly-job2.py /
 
-# avoid CrashLoopBackOff
-time.sleep(600)
+ENTRYPOINT [ "python3" ]
+
+CMD [ "assembly-job2.py" ]

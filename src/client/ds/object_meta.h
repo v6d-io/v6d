@@ -157,6 +157,14 @@ class ObjectMeta {
   void AddKeyValue(const std::string& key, const std::string& value);
 
   /**
+   * @brief Add a string value entry to the metadata from the environment
+   * variable.
+   *
+   * @param key The name of metadata entry.
+   */
+  void AddKeyValueFromEnv(const std::string& key);
+
+  /**
    * @brief Add a generic value entry to the metadata.
    *
    * @param T The type of metadata's value.

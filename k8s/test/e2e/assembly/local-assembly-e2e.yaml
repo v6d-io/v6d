@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+# Test assembly operation in the same node
 setup:
   env: kind
   file: ../kind.yaml
@@ -22,11 +23,13 @@ setup:
     - name: pull docker image
       command: |
         docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        docker pull docker.pkg.github.com/v6d-io/v6d/job1
-        docker pull docker.pkg.github.com/v6d-io/v6d/job2
+        docker pull docker.pkg.github.com/v6d-io/v6d/assembly-job1
+        docker pull docker.pkg.github.com/v6d-io/v6d/assembly-job2
+        docker pull docker.pkg.github.com/v6d-io/v6d/local-assembly
         kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job1
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job2
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/assembly-job1
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/assembly-job2
+        kind load docker-image docker.pkg.github.com/v6d-io/v6d/local-assembly
     - name: install cert-manager
       command: |
         kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
@@ -37,7 +40,7 @@ setup:
     - name: install scheduler-plugin and operator
       command: |
         make -C k8s docker-build
-        kind load docker-image registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-controller:latest
+        kind load docker-image registry-vpc.cn-hongkong.aliyuncs.com/libvineyard/vineyard-operator:latest
         make -C k8s predeploy
         make -C k8s deploy
       wait:
@@ -60,7 +63,13 @@ setup:
         - namespace: vineyard-job
           resource: deployment/assembly-job1-deployment
           for: condition=Available
-
+    - name: install job2
+      command: |
+        kubectl apply -f k8s/test/e2e/assembly-job2.yaml
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/assembly-job2-deployment
+          for: condition=Available
   timeout: 20m
 
 cleanup:
@@ -75,7 +84,5 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
   cases:
-    # test the assmebly container injector
-    - query: |
-        kubectl get po -l app=assembly-job1 -n vineyard-job -o=jsonpath='{.items[*].spec.containers[*].name}'
-      expect: assembly-container.yaml
+    - query: 'kubectl get po -l app=assembly-job2 -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
+      expected: ../verify/local-assembly-values.yaml

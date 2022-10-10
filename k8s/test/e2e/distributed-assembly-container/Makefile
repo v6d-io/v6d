@@ -1,6 +1,3 @@
-#! /usr/bin/env python3 # pylint: disable=missing-module-docstring
-# -*- coding: utf-8 -*-
-#
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,21 +13,15 @@
 # limitations under the License.
 #
 
-import time
-import numpy as np
-import vineyard
+REGISTRY := docker.pkg.github.com/v6d-io/v6d
+TAG      := latest
 
-client = vineyard.connect('/var/run/vineyard.sock')
+all: build-distributed-assembly docker-push
+	
+build-distributed-assembly:
+	docker build . -f Dockerfile.assembly -t $(REGISTRY)/distributed-assembly:$(TAG)
+.PHONY: build-distributed-assembly
 
-object = client.put(np.arange(10))
-meta = vineyard.ObjectMeta()
-meta['typename'] = 'vineyard::Sequence'
-meta['size_'] = 1
-meta.set_global(True)
-meta.add_member('__elements_-0', object)
-meta['__elements_-size'] = 1
-tup = client.create_metadata(meta)
-client.persist(tup)
-
-# avoid CrashLoopBackOff
-time.sleep(600)
+docker-push: build-distributed-assembly
+	docker push $(REGISTRY)/distributed-assembly:$(TAG)
+.PHONY: docker-push

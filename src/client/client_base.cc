@@ -83,6 +83,9 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
   InstanceID computed_instance_id = instance_id;
   meta_data.SetInstanceId(instance_id);
   meta_data.AddKeyValue("transient", true);
+  meta_data.AddKeyValueFromEnv("JOB_NAME");
+  meta_data.AddKeyValueFromEnv("POD_NAME");
+  meta_data.AddKeyValueFromEnv("POD_NAMESPACE");
   // nbytes is optional
   if (!meta_data.Haskey("nbytes")) {
     meta_data.SetNBytes(0);

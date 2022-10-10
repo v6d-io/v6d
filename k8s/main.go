@@ -59,17 +59,19 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 	var err error
 
 	if err = (&controllers.LocalObjectReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LocalObject"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Template: templates.NewEmbedTemplate(),
+		Recorder: mgr.GetEventRecorderFor("localobject-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LocalObject")
 		os.Exit(1)
 	}
 	if err = (&controllers.GlobalObjectReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("GlobalObject"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Template: templates.NewEmbedTemplate(),
+		Recorder: mgr.GetEventRecorderFor("globalobject-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalObject")
 		os.Exit(1)

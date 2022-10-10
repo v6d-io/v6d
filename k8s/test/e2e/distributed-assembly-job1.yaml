@@ -16,31 +16,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: assembly-job1-deployment
+  name: distributed-assembly-job1-deployment
   namespace: vineyard-job
 spec:
   selector:
     matchLabels:
-      app: assembly-job1
+      app: distributed-assembly-job1
   replicas: 1
   template:
     metadata:
       annotations:
         scheduling.k8s.v6d.io/required: none
       labels:
-        app: assembly-job1
+        app: distributed-assembly-job1
         # this label represents the vineyardd's name that need to be used
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
-        scheduling.k8s.v6d.io/job: assembly-job1
+        scheduling.k8s.v6d.io/job: distributed-assembly-job1
     spec:
-      schedulerName: vineyard-scheduler
+      # to avoid scheduling to the same node with the job2, we specify a node here
+      nodeName: kind-worker
       containers:
         - name: job1
-          image: docker.pkg.github.com/v6d-io/v6d/assembly-job1
+          image: docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job1
+          imagePullPolicy: IfNotPresent
           env:
             - name: JOB_NAME
-              value: assembly-job1
-          imagePullPolicy: IfNotPresent
+              value: distributed-assembly-job1
           volumeMounts:
             - mountPath: /var/run
               name: vineyard-sock

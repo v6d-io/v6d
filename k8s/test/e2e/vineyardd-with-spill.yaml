@@ -21,7 +21,7 @@ metadata:
   namespace: vineyard-system
 spec:
   image: docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-  version: 0.8.2
+  version: 0.9.0
   replicas: 2
   imagePullPolicy: IfNotPresent
   # vineyardd's configuration

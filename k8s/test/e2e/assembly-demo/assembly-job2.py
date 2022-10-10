@@ -16,21 +16,24 @@
 # limitations under the License.
 #
 
+import os
 import time
-import numpy as np
 import vineyard
 
-client = vineyard.connect('/var/run/vineyard.sock')
+vineyard_client = vineyard.connect('/var/run/vineyard.sock')
+env_dist = os.environ
 
-object = client.put(np.arange(10))
-meta = vineyard.ObjectMeta()
-meta['typename'] = 'vineyard::Sequence'
-meta['size_'] = 1
-meta.set_global(True)
-meta.add_member('__elements_-0', object)
-meta['__elements_-size'] = 1
-tup = client.create_metadata(meta)
-client.persist(tup)
+job = env_dist['REQUIRED_JOB_NAME']
+metaid = env_dist.get(job)
+sum = 0
+top_meta = vineyard_client.get_meta(vineyard._C.ObjectID(metaid))  # pylint: disable=no-member
+for i in range(0, top_meta['__elements_-size']):
+    second_meta = vineyard_client.get_meta(vineyard._C.ObjectID(top_meta['__elements_-{}'.format(i)].id))  # pylint: disable=no-member
+    for i in range(0, second_meta['__elements_-size']):
+        meta = vineyard_client.get_meta(vineyard._C.ObjectID(second_meta['__elements_-{}'.format(i)].id))
+        value = vineyard_client.get(meta.id)
+        sum += (value['a'].sum() + value['b'].sum()) 
+print(sum, flush=True)
 
 # avoid CrashLoopBackOff
 time.sleep(600)

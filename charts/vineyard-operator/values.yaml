@@ -8,7 +8,7 @@ image:
   repository: vineyardcloudnative/vineyard-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.8.2"
+  tag: "v0.9.0"
 
 serviceAccountName: "vineyard-manager"
 
@@ -28,7 +28,8 @@ resources:
     cpu: 500m
     memory: 500Mi
 
-tolerations: {}
+tolerations:
+  {}
   # this toleration is to have the daemonset runnable on master nodes
   # remove it if your masters can't run pods.
   # - key: node-role.kubernetes.io/master

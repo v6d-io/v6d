@@ -16,31 +16,39 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: assembly-job1-deployment
+  name: distributed-assembly-job3-deployment
   namespace: vineyard-job
 spec:
   selector:
     matchLabels:
-      app: assembly-job1
+      app: distributed-assembly-job3
   replicas: 1
   template:
     metadata:
       annotations:
-        scheduling.k8s.v6d.io/required: none
+        # The label is limited to 63 characters, so we need to use the annotation here
+        scheduling.k8s.v6d.io/required: distributed-assembly-job1.distributed-assembly-job2
       labels:
-        app: assembly-job1
+        app: distributed-assembly-job3
+        assembly.v6d.io/enabled: "true"
         # this label represents the vineyardd's name that need to be used
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
-        scheduling.k8s.v6d.io/job: assembly-job1
+        scheduling.k8s.v6d.io/job: distributed-assembly-job3
     spec:
       schedulerName: vineyard-scheduler
       containers:
-        - name: job1
-          image: docker.pkg.github.com/v6d-io/v6d/assembly-job1
+        - name: job3
+          image: docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job3
+          imagePullPolicy: IfNotPresent
+          # TODO: could we make it more native?
           env:
             - name: JOB_NAME
-              value: assembly-job1
-          imagePullPolicy: IfNotPresent
+              value: distributed-assembly-job3
+            - name: REQUIRED_JOB_NAME
+              value: distributed-assembly-job2
+          envFrom:
+          - configMapRef:
+              name: distributed-assembly-job2
           volumeMounts:
             - mountPath: /var/run
               name: vineyard-sock

@@ -20,8 +20,7 @@ setup:
     - name: prepare e2e.yaml
       command: bash k8s/hack/prepare-e2e.sh
     - name: setup the serialize path
-      command:
-        worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/serialize; done
+      command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/serialize; done
     - name: pull docker image
       command: |
         docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest

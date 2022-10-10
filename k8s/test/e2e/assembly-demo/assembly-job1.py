@@ -17,20 +17,31 @@
 #
 
 import time
-import numpy as np
+import pandas as pd
 import vineyard
+from vineyard.io.recordbatch import RecordBatchStream
 
-client = vineyard.connect('/var/run/vineyard.sock')
 
-object = client.put(np.arange(10))
-meta = vineyard.ObjectMeta()
-meta['typename'] = 'vineyard::Sequence'
-meta['size_'] = 1
-meta.set_global(True)
-meta.add_member('__elements_-0', object)
-meta['__elements_-size'] = 1
-tup = client.create_metadata(meta)
-client.persist(tup)
+def generate_df(index):
+    return pd.DataFrame({'a': [int(index), int(index)], 'b': [int(index), int(index)]})
+
+
+vineyard_client = vineyard.connect('/var/run/vineyard.sock')
+
+stream = RecordBatchStream.new(vineyard_client)
+vineyard_client.persist(stream.id)
+print(stream.id)
+writer = stream.writer
+total_chunks = 10
+for idx in range(total_chunks):
+    time.sleep(idx)
+    chunk = generate_df(idx)
+    chunk_id = vineyard_client.put(chunk)
+    writer.append(chunk_id)
+
+writer.finish()
+
+print("writer finished",flush=True)
 
 # avoid CrashLoopBackOff
 time.sleep(600)

@@ -1,0 +1,52 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+{{- $config := getDistributedAssemblyConfig }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $config.Name }}
+  namespace: {{ $config.Namespace }}
+spec:
+  template:
+    spec:
+      containers:
+      - name: assembly-operation
+        image: docker.pkg.github.com/v6d-io/v6d/distributed-assembly
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: GLOBALOBJECT_ID
+          value: {{ $config.GLOBALOBJECT_ID  }}
+        - name: OldObjectToNewObject
+          value: {{ $config.OldObjectToNewObject }}
+        - name: JOB_NAME
+          value: {{ $config.JobName }}
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - mountPath: /var/run
+          name: vineyard-sock
+      volumes:
+      - name: vineyard-sock
+        hostPath:
+          # The path should be changed to the path provided by users.
+          path: {{ $config.VineyardSockPath }}
+      restartPolicy: Never

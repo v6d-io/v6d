@@ -40,22 +40,22 @@ RUN cd /work/v6d && \
     mkdir -p /work/v6d/build && \
     cd /work/v6d/build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
-         -DBUILD_SHARED_LIBS=OFF \
-         -DUSE_STATIC_BOOST_LIBS=ON \
-         -DBUILD_VINEYARD_SERVER=ON \
-         -DBUILD_VINEYARD_CLIENT=OFF \
-         -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
-         -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
-         -DBUILD_VINEYARD_BASIC=OFF \
-         -DBUILD_VINEYARD_GRAPH=OFF \
-         -DBUILD_VINEYARD_MALLOC=OFF \
-         -DBUILD_VINEYARD_IO=OFF \
-         -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
-         -DBUILD_VINEYARD_TESTS=OFF \
-         -DBUILD_VINEYARD_TESTS_ALL=OFF \
-         -DBUILD_VINEYARD_BENCHMARKS=OFF \
-         -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
-         -DBUILD_VINEYARD_PROFILING=OFF && \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DUSE_STATIC_BOOST_LIBS=ON \
+    -DBUILD_VINEYARD_SERVER=ON \
+    -DBUILD_VINEYARD_CLIENT=OFF \
+    -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
+    -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
+    -DBUILD_VINEYARD_BASIC=OFF \
+    -DBUILD_VINEYARD_GRAPH=OFF \
+    -DBUILD_VINEYARD_MALLOC=OFF \
+    -DBUILD_VINEYARD_IO=OFF \
+    -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+    -DBUILD_VINEYARD_TESTS=OFF \
+    -DBUILD_VINEYARD_TESTS_ALL=OFF \
+    -DBUILD_VINEYARD_BENCHMARKS=OFF \
+    -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
+    -DBUILD_VINEYARD_PROFILING=OFF && \
     make vineyardd -j`nproc` && \
     mv ./bin/vineyardd /usr/local/bin/vineyardd && \
     rm -rf /work/v6d
@@ -66,7 +66,7 @@ FROM vineyardcloudnative/vineyard-manylinux1:20220512 as wheel
 ENV python=cp310-cp310
 
 RUN for pylibs in /opt/_internal/tools/lib/*; do\
-        sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py || true; \
+    sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py || true; \
     done
 
 COPY thirdparty /work/v6d/thirdparty
@@ -95,24 +95,24 @@ RUN cd /work/v6d && \
     export PATH=$PATH:/opt/python/$python/bin && \
     pip3 install -U pip setuptools wheel && \
     cmake .. -DBUILD_SHARED_LIBS=OFF \
-             -DBUILD_VINEYARD_SERVER=OFF \
-             -DBUILD_VINEYARD_CLIENT=ON \
-             -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
-             -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
-             -DBUILD_VINEYARD_BASIC=OFF \
-             -DBUILD_VINEYARD_IO=OFF \
-             -DBUILD_VINEYARD_GRAPH=OFF \
-             -DBUILD_VINEYARD_MALLOC=OFF \
-             -DBUILD_VINEYARD_MIGRATION=ON \
-             -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
-             -DBUILD_VINEYARD_TESTS=OFF \
-             -DBUILD_VINEYARD_TESTS_ALL=OFF \
-             -DBUILD_VINEYARD_BENCHMARKS=OFF \
-             -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
-             -DBUILD_VINEYARD_COVERAGE=OFF \
-             -DBUILD_VINEYARD_PROFILING=OFF \
-             -DCMAKE_BUILD_TYPE=Release \
-             -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
+    -DBUILD_VINEYARD_SERVER=OFF \
+    -DBUILD_VINEYARD_CLIENT=ON \
+    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+    -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
+    -DBUILD_VINEYARD_BASIC=OFF \
+    -DBUILD_VINEYARD_IO=OFF \
+    -DBUILD_VINEYARD_GRAPH=OFF \
+    -DBUILD_VINEYARD_MALLOC=OFF \
+    -DBUILD_VINEYARD_MIGRATION=ON \
+    -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+    -DBUILD_VINEYARD_TESTS=OFF \
+    -DBUILD_VINEYARD_TESTS_ALL=OFF \
+    -DBUILD_VINEYARD_BENCHMARKS=OFF \
+    -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
+    -DBUILD_VINEYARD_COVERAGE=OFF \
+    -DBUILD_VINEYARD_PROFILING=OFF \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
     make vineyard_client_python -j$(nproc)
 
 COPY README.rst /work/v6d/README.rst
@@ -139,7 +139,7 @@ RUN cd /work/v6d/build && \
     rm -rf dist && \
     /opt/python/$python/bin/python setup.py bdist_wheel && \
     for wheel in `ls dist/*`; do \
-        auditwheel repair -w fixed_wheels $wheel; \
+    auditwheel repair -w fixed_wheels $wheel; \
     done && \
     mv /work/v6d/fixed_wheels/* /work/fixed_wheels/ && \
     cd /work/v6d && \
