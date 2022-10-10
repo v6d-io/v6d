@@ -34,7 +34,7 @@ for i in range(0, top_meta['__global_id_-size']):
         for k in range(0, third_meta['__elements_-size']):
             meta = vineyard_client.get_meta(vineyard._C.ObjectID(third_meta['__elements_-{}'.format(k)].id),True,True)
             value = vineyard_client.get(meta.id)
-            sum += (value['a'].sum() + value['b'].sum()) 
+            sum += (value['a'].sum() + value['b'].sum())
 print(sum, flush=True)
 
 # avoid CrashLoopBackOff

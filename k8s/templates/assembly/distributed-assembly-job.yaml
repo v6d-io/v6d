@@ -28,7 +28,7 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: GLOBALOBJECT_ID
-          value: {{ $config.GLOBALOBJECT_ID  }}
+          value: {{ $config.GlobalobjectID  }}
         - name: OldObjectToNewObject
           value: {{ $config.OldObjectToNewObject }}
         - name: JOB_NAME

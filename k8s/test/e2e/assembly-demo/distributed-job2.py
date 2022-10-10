@@ -17,8 +17,8 @@
 #
 
 import time
-import pandas as pd
 import os
+import pandas as pd
 import vineyard
 from vineyard.io.recordbatch import RecordBatchStream
 

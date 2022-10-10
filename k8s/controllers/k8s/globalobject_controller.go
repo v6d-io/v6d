@@ -55,7 +55,7 @@ type DistributedAssemblyConfig struct {
 	Namespace            string
 	StreamID             string
 	JobName              string
-	GLOBALOBJECT_ID      string
+	GlobalobjectID       string
 	OldObjectToNewObject string
 	VineyardSockPath     string
 }
@@ -155,6 +155,7 @@ func (r *GlobalObjectReconciler) FindDistributedAssemblyPodByGlobalObject(ctx co
 	return nil, nil
 }
 
+// NeedDistribuedAssemblyJob checks if the distributed assembly job is needed
 func (r *GlobalObjectReconciler) NeedDistribuedAssemblyJob(ctx context.Context, globalObject *v1alpha1.GlobalObject, pod *corev1.Pod) bool {
 	podLabels := pod.Labels
 	signatures := map[string]bool{}
@@ -168,11 +169,11 @@ func (r *GlobalObjectReconciler) NeedDistribuedAssemblyJob(ctx context.Context, 
 		return false
 	}
 
-	sigToId := map[string]string{}
+	sigToID := map[string]string{}
 	for i := range localobjectList.Items {
 		if _, ok := signatures[localobjectList.Items[i].Spec.Signature]; ok &&
 			strings.Contains(strings.ToLower(localobjectList.Items[i].Spec.Typename), "stream") {
-			sigToId[localobjectList.Items[i].Spec.Signature] = localobjectList.Items[i].Name
+			sigToID[localobjectList.Items[i].Spec.Signature] = localobjectList.Items[i].Name
 		}
 	}
 
@@ -186,16 +187,16 @@ func (r *GlobalObjectReconciler) NeedDistribuedAssemblyJob(ctx context.Context, 
 	for i := range globalobjectList.Items {
 		labels := globalobjectList.Items[i].Labels
 		if v, ok := labels[PodNameLabelKey]; ok {
-			for j := range sigToId {
-				if strings.Contains(v, sigToId[j]) {
-					oldObjectToNewObject[sigToId[j]] = globalobjectList.Items[i].Name
+			for j := range sigToID {
+				if strings.Contains(v, sigToID[j]) {
+					oldObjectToNewObject[sigToID[j]] = globalobjectList.Items[i].Name
 				}
 			}
 		}
 	}
 
 	// Apply the distributed assembly job
-	if len(sigToId) == len(oldObjectToNewObject) {
+	if len(sigToID) == len(oldObjectToNewObject) {
 		str := `'{`
 		for k, v := range oldObjectToNewObject {
 			str = str + `"` + k + `"` + ":" + `"` + v + `"` + ","
@@ -203,7 +204,7 @@ func (r *GlobalObjectReconciler) NeedDistribuedAssemblyJob(ctx context.Context, 
 		str = str[:len(str)-1] + `}'`
 		GlobalDistributedAssemblyConfig.Name = AssemblyPrefix + globalObject.Name
 		GlobalDistributedAssemblyConfig.Namespace = pod.Namespace
-		GlobalDistributedAssemblyConfig.GLOBALOBJECT_ID = globalObject.Name
+		GlobalDistributedAssemblyConfig.GlobalobjectID = globalObject.Name
 		GlobalDistributedAssemblyConfig.OldObjectToNewObject = str
 		GlobalDistributedAssemblyConfig.JobName = podLabels[schedulers.VineyardJobName]
 		vineyardd := podLabels[schedulers.VineyarddName]
@@ -213,6 +214,7 @@ func (r *GlobalObjectReconciler) NeedDistribuedAssemblyJob(ctx context.Context, 
 	return false
 }
 
+// UpdateState updates the globalobject's state
 func (r *GlobalObjectReconciler) UpdateState(ctx context.Context, globalobject *v1alpha1.GlobalObject, defaultValue string, namespace string) error {
 	job := &batchv1.Job{}
 	state := defaultValue
@@ -225,7 +227,7 @@ func (r *GlobalObjectReconciler) UpdateState(ctx context.Context, globalobject *
 		if job.Status.Succeeded == 1 {
 			state = SucceededState
 			// get the new produced globalobject's ID by the distributed assembly job
-			newGlobalObjectId := ""
+			newGlobalObjectID := ""
 			globalobjectList := &v1alpha1.GlobalObjectList{}
 			if err := r.Client.List(ctx, globalobjectList); err != nil {
 				ctrl.Log.Error(err, "unable to list globalobjects")
@@ -236,7 +238,7 @@ func (r *GlobalObjectReconciler) UpdateState(ctx context.Context, globalobject *
 				labels := globalobjectList.Items[i].Labels
 				if v, ok := labels[PodNameLabelKey]; ok {
 					if strings.Contains(v, job.Name) {
-						newGlobalObjectId = globalobjectList.Items[i].Name
+						newGlobalObjectID = globalobjectList.Items[i].Name
 						break
 					}
 				}
@@ -260,7 +262,7 @@ func (r *GlobalObjectReconciler) UpdateState(ctx context.Context, globalobject *
 						Name:      configmapName,
 						Namespace: configmapNamespace,
 					},
-					Data: map[string]string{configmapName: newGlobalObjectId},
+					Data: map[string]string{configmapName: newGlobalObjectID},
 				}
 				if err := r.Client.Create(ctx, &cm); err != nil {
 					ctrl.Log.Error(err, "failed to create the configmap")
@@ -268,7 +270,7 @@ func (r *GlobalObjectReconciler) UpdateState(ctx context.Context, globalobject *
 				}
 			} else {
 				data := configmap.Data
-				data[configmapName] = newGlobalObjectId
+				data[configmapName] = newGlobalObjectID
 				if err := r.Client.Update(ctx, configmap); err != nil {
 					ctrl.Log.Error(err, "failed to update the configmap")
 					return err
@@ -280,13 +282,11 @@ func (r *GlobalObjectReconciler) UpdateState(ctx context.Context, globalobject *
 	status := &v1alpha1.GlobalObjectStatus{
 		State: state,
 	}
-	if err := r.updateStatus(ctx, globalobject, status); err != nil {
-		return err
-	}
 
-	return nil
+	return r.updateStatus(ctx, globalobject, status)
 }
 
+// UpdateStatus updates the globalobject's creation time
 func (r *GlobalObjectReconciler) UpdateTime(ctx context.Context, globalobject *v1alpha1.GlobalObject) error {
 	nilTime := metav1.Time{}
 	if globalobject.Status.CreationTime != nilTime {
@@ -296,11 +296,7 @@ func (r *GlobalObjectReconciler) UpdateTime(ctx context.Context, globalobject *v
 	status := &v1alpha1.GlobalObjectStatus{
 		CreationTime: metav1.Now(),
 	}
-	if err := r.updateStatus(ctx, globalobject, status); err != nil {
-		return err
-	}
-
-	return nil
+	return r.updateStatus(ctx, globalobject, status)
 }
 
 func (r *GlobalObjectReconciler) updateStatus(ctx context.Context, globalobject *v1alpha1.GlobalObject, status *v1alpha1.GlobalObjectStatus) error {

@@ -17,15 +17,15 @@
 #
 
 import os
-import vineyard
 import json
+import vineyard
 
-from vineyard.core import default_builder_context
-from vineyard.core import default_resolver_context
-from vineyard.data import register_builtin_types
+from vineyard.core import default_builder_context  # pylint: disable=unused-import
+from vineyard.core import default_resolver_context  # pylint: disable=unused-import
+from vineyard.data import register_builtin_types  # pylint: disable=unused-import
 from vineyard.io.byte import ByteStream  # pylint: disable=unused-import
 from vineyard.io.dataframe import DataframeStream  # pylint: disable=unused-import
-from vineyard.io.recordbatch import RecordBatchStream
+from vineyard.io.recordbatch import RecordBatchStream  # pylint: disable=unused-import
 
 vineyard_client = vineyard.connect('/var/run/vineyard.sock')
 

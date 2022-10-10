@@ -33,12 +33,12 @@ stream = RecordBatchStream.new(vineyard_client)
 vineyard_client.persist(stream.id)
 meta = vineyard_client.get_meta(stream.id)
 # flush the stdout buffer
-f = open('/dev/null', 'w')
+f = open('/dev/null', 'w') # pylint: disable=unspecified-encoding,consider-using-with
 sys.stdout = f
 print(flush=True)
 
 sys.stdout = sys.__stdout__
-print(meta.id,flush=True)
+print(meta.id, flush=True)
 writer = stream.writer
 total_chunks = 10
 for idx in range(total_chunks):
@@ -49,7 +49,7 @@ for idx in range(total_chunks):
 
 writer.finish()
 
-print("writer finished",flush=True)
+print("writer finished", flush=True)
 
 # avoid CrashLoopBackOff
 time.sleep(600)

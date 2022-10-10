@@ -59,7 +59,7 @@ type AssemblyConfig struct {
 const (
 	// PodNameLabelKey is the label key for the pod name which generated the stream
 	PodNameLabelKey = "created-by-podname"
-	// PodNamespaceLabelKey is the label key for the pod namespace which generated the stream
+	// PodNameSpaceLabelKey is the label key for the pod namespace which generated the stream
 	PodNameSpaceLabelKey = "created-by-podnamespace"
 	// NeedInjectedAssemblyKey represents the pod need to be injected with the assembly job
 	NeedInjectedAssemblyKey = "need-injected-assembly"
@@ -239,6 +239,7 @@ func (r *LocalObjectReconciler) FindNeedAssemblyPodByLocalObject(ctx context.Con
 	return nil, nil
 }
 
+// NeedAssemblyJob checks if the pod needs to be injected with the assembly job
 func (r *LocalObjectReconciler) NeedAssemblyJob(ctx context.Context, localObject *v1alpha1.LocalObject, pod *corev1.Pod) bool {
 	podLabels := pod.Labels
 	// When the pod which generated the stream is annotated, the assembly job will be created in the same pod
@@ -257,6 +258,7 @@ func (r *LocalObjectReconciler) NeedAssemblyJob(ctx context.Context, localObject
 	return false
 }
 
+// UpdateStatus updates the status of the localobject
 func (r *LocalObjectReconciler) UpdateStatus(ctx context.Context, localobject *v1alpha1.LocalObject, defaultValue string, namespace string) error {
 	job := &batchv1.Job{}
 	state := defaultValue
@@ -274,11 +276,8 @@ func (r *LocalObjectReconciler) UpdateStatus(ctx context.Context, localobject *v
 	status := &v1alpha1.LocalObjectStatus{
 		State: state,
 	}
-	if err := r.updateStatus(ctx, localobject, status); err != nil {
-		return err
-	}
 
-	return nil
+	return r.updateStatus(ctx, localobject, status)
 }
 
 func (r *LocalObjectReconciler) updateStatus(ctx context.Context, localobject *v1alpha1.LocalObject, status *v1alpha1.LocalObjectStatus) error {
