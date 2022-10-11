@@ -19,20 +19,20 @@ on:
     branches:
       - main
     tags:
-      - "v*"
+      - 'v*'
     paths:
-      - ".github/workflows/vineyard-operator.yaml"
-      - "k8s/**"
-      - "src/server/util/kubectl*"
+      - '.github/workflows/vineyard-operator.yaml'
+      - 'k8s/**'
+      - 'src/server/util/kubectl*'
   pull_request:
     branches:
       - main
     tags:
-      - "v*"
+      - 'v*'
     paths:
-      - ".github/workflows/vineyard-operator.yaml"
-      - "k8s/**"
-      - "src/server/util/kubectl*"
+      - '.github/workflows/vineyard-operator.yaml'
+      - 'k8s/**'
+      - 'src/server/util/kubectl*'
 
 jobs:
   build:
@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.18.0"
+          go-version: '^1.18.0'
 
       - name: Golang format and lint
         run: |
