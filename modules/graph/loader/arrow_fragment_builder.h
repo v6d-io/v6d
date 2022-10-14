@@ -173,8 +173,9 @@ class ArrowFragmentBuilder {
             auto result = reader.GetChunk();
             chunk_tables.push_back(result.value());
             if (id_ranges.size() != chunk_index.size()) {
-              auto id_range = reader.GetRange();
-              id_ranges.push_back(id_range.value());
+              auto id_range = reader.GetRange().value();
+              id_range.second = id_ranges.first + result.value()->num_rows();
+              id_ranges.push_back(id_range);
             }
           }
           auto pg_table = arrow::ConcatenateTables(chunk_tables);
