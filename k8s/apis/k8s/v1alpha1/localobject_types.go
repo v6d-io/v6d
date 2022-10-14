@@ -21,22 +21,26 @@ import (
 
 // LocalObjectSpec defines the desired state of LocalObject
 type LocalObjectSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	ObjectID   string `json:"id"`
-	Name       string `json:"name,omitempty"`
-	Signature  string `json:"signature"`
-	Typename   string `json:"typename,omitempty"`
-	InstanceID int    `json:"instance_id"`
-	Hostname   string `json:"hostname"`
-	Metadata   string `json:"metadata"`
+	// +kubebuilder:validation:Required
+	ObjectID string `json:"id"`
+	// +kubebuilder:validation:Required
+	Name string `json:"name,omitempty"`
+	// +kubebuilder:validation:Required
+	Signature string `json:"signature"`
+	// +kubebuilder:validation:Optional
+	Typename string `json:"typename,omitempty"`
+	// +kubebuilder:validation:Optional
+	InstanceID int `json:"instance_id"`
+	// +kubebuilder:validation:Required
+	Hostname string `json:"hostname"`
+	// +kubebuilder:validation:Optional
+	Metadata string `json:"metadata"`
 }
 
 // LocalObjectStatus defines the observed state of LocalObject
 type LocalObjectStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// The state represents the current state of the local object.
+	State string `json:"state"`
 }
 
 // +kubebuilder:object:root=true

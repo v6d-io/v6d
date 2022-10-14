@@ -21,16 +21,28 @@ import (
 
 // GlobalObjectSpec defines the desired state of GlobalObject
 type GlobalObjectSpec struct {
-	ObjectID  string   `json:"id"`
-	Name      string   `json:"name,omitempty"`
-	Signature string   `json:"signature"`
-	Typename  string   `json:"typename,omitempty"`
-	Members   []string `json:"members"`
-	Metadata  string   `json:"metadata"`
+	// +kubebuilder:validation:Required
+	ObjectID string `json:"id"`
+	// +kubebuilder:validation:Required
+	Name string `json:"name,omitempty"`
+	// +kubebuilder:validation:Required
+	Signature string `json:"signature"`
+	// +kubebuilder:validation:Required
+	Typename string `json:"typename,omitempty"`
+	// +kubebuilder:validation:Optional
+	Members []string `json:"members"`
+	// +kubebuilder:validation:Optional
+	Metadata string `json:"metadata"`
 }
 
 // GlobalObjectStatus defines the observed state of GlobalObject
 type GlobalObjectStatus struct {
+	// The state represents the current state of the global object.
+	// +kubebuilder:validation:Optional
+	State string `json:"state"`
+	// The time when the global object is created.
+	// +kubebuilder:validation:Optional
+	CreationTime metav1.Time `json:"createdTime"`
 }
 
 // +kubebuilder:object:root=true

@@ -192,7 +192,7 @@ bundle: manifests kustomize
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
-# Build all crds
-.PHONY: build-crds
-build-crds:
-	$(KUSTOMIZE) build config/crd > ../charts/vineyard-operator/crds/crds.yaml
+# Build all bundle operator
+.PHONY: build-bundle
+build-bundle:
+	$(KUSTOMIZE) build config/default > ../charts/vineyard-operator/templates/vineyard-operator-bundle.yaml
