@@ -12,106 +12,131 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:20.04 as builder
+# build vineyardd
+FROM vineyardcloudnative/vineyardd-alpine-builder:builder-latest as vineyardd
 
-ADD . /work/v6d
+COPY thirdparty /work/v6d/thirdparty
 
-ENV DEBIAN_FRONTEND noninteractive
+# patch cpprestsdk to drop boost::regex dependency.
+RUN cd /work/v6d && \
+    sed -i 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake && \
+    sed -i 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
 
-# build environment
-RUN chmod -R a+wrx /tmp &&\
-    apt-get update -y && \
-    apt install -y ca-certificates \
-    ccache \
-    cmake \
-    curl \
-    doxygen \
-    fuse3 \
-    git \
-    libboost-all-dev \
-    libcurl4-openssl-dev \
-    libfuse3-dev \
-    libgflags-dev \
-    libgoogle-glog-dev \
-    libgmock-dev \
-    libgrpc-dev \
-    libgrpc++-dev \
-    libgtest-dev \
-    libkrb5-dev \
-    libmpich-dev \
-    libprotobuf-dev \
-    librdkafka-dev \
-    libgsasl7-dev \
-    librdkafka-dev \
-    libssl-dev \
-    libunwind-dev \
-    libxml2-dev \
-    libz-dev \
-    lsb-release \
-    pandoc \
-    protobuf-compiler-grpc \
-    python3-pip \
-    python3 \
-    uuid-dev \
-    wget && \
-    # install apache-arrow
-    wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb &&\
-    apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb &&\
-    apt update &&\
-    apt install -y libarrow-dev=3.0.0-1 libparquet-dev=3.0.0-1 libarrow-python-dev=3.0.0-1 &&\
-    # install pyarrow from scratch
-    pip3 install --no-binary pyarrow pyarrow==3.0.0 &&\
-    # install python packages for codegen, and io adaptors
-    pip3 install -U "Pygments>=2.4.1" &&\
-    cd /work/v6d &&\
-    pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt &&\
-    # install linters
-    pip3 install auditwheel black isort flake8 twine &&\
-    # install clang-format
-    curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format &&\
-    chmod +x /usr/bin/clang-format
+COPY thirdparty /work/v6d/thirdparty
 
-# install libgrape-lite
-RUN git clone https://github.com/alibaba/libgrape-lite.git &&\
-    cd libgrape-lite &&\
-    mkdir build &&\
-    cd build &&\
-    cmake .. &&\
-    make -j`nproc` &&\
-    make install
+COPY cmake /work/v6d/cmake
+COPY python/vineyard/core/codegen /work/v6d/python/vineyard/core/codegen
+COPY python/vineyard/version.py.in /work/v6d/python/vineyard/version.py.in
 
-# install libhdfs3
-RUN git clone https://github.com/ContinuumIO/libhdfs3-downstream.git &&\
-    cd libhdfs3-downstream/libhdfs3 &&\
-    mkdir build &&\
-    cd build &&\
-    cmake .. &&\
-    make -j`nproc` &&\
-    make install
+COPY CMakeLists.txt /work/v6d/CMakeLists.txt
+COPY setup.cfg.in /work/v6d/setup.cfg.in
+COPY vineyard-config-version.in.cmake /work/v6d/vineyard-config-version.in.cmake
+COPY vineyard-config.in.cmake /work/v6d/vineyard-config.in.cmake
 
-# build vineyard
-RUN cd /work/v6d &&\ 
-    mkdir build &&\
-    cd build &&\
+COPY src /work/v6d/src
+
+RUN cd /work/v6d && \
+    mkdir -p /work/v6d/build && \
+    cd /work/v6d/build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
-             -DBUILD_SHARED_LIBS=ON &&\
-    make -j`nproc` && \
-    make vineyard_client_python -j`nproc` && \
-    make install && \
-    cd .. &&\ 
-    python3 setup.py bdist_wheel &&\
-    python3 setup_io.py bdist_wheel &&\
-    twine check dist/*.whl
+         -DBUILD_SHARED_LIBS=OFF \
+         -DUSE_STATIC_BOOST_LIBS=ON \
+         -DBUILD_VINEYARD_SERVER=ON \
+         -DBUILD_VINEYARD_CLIENT=OFF \
+         -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
+         -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
+         -DBUILD_VINEYARD_BASIC=OFF \
+         -DBUILD_VINEYARD_GRAPH=OFF \
+         -DBUILD_VINEYARD_MALLOC=OFF \
+         -DBUILD_VINEYARD_IO=OFF \
+         -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+         -DBUILD_VINEYARD_TESTS=OFF \
+         -DBUILD_VINEYARD_TESTS_ALL=OFF \
+         -DBUILD_VINEYARD_BENCHMARKS=OFF \
+         -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
+         -DBUILD_VINEYARD_PROFILING=OFF && \
+    make vineyardd -j`nproc` && \
+    mv ./bin/vineyardd /usr/local/bin/vineyardd && \
+    rm -rf /work/v6d
 
-FROM python:3.8
+# build vineyard-python-dev
+FROM vineyardcloudnative/vineyard-manylinux1:20220512 as wheel
 
-COPY --from=builder /work/v6d/dist/* /tmp/
-COPY --from=builder /work/v6d/build/shared-lib/* /lib/
+ENV python=cp310-cp310
 
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libunwind* /lib/
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libre2* /lib/
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libarrow* /lib/
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libsnappy* /lib/
+RUN for pylibs in /opt/_internal/tools/lib/*; do\
+        sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py || true; \
+    done
+
+COPY thirdparty /work/v6d/thirdparty
+
+COPY cmake /work/v6d/cmake
+
+COPY CMakeLists.txt /work/v6d/CMakeLists.txt
+COPY setup.cfg.in /work/v6d/setup.cfg.in
+COPY vineyard-config-version.in.cmake /work/v6d/vineyard-config-version.in.cmake
+COPY vineyard-config.in.cmake /work/v6d/vineyard-config.in.cmake
+
+COPY src /work/v6d/src
+COPY python /work/v6d/python
+COPY modules/io /work/v6d/modules/io
+
+COPY README.rst /work/v6d/README.rst
+COPY setup.py /work/v6d/setup.py
+COPY setup_io.py /work/v6d/setup_io.py
+COPY requirements.txt /work/v6d/requirements.txt
+COPY requirements-dev.txt /work/v6d/requirements-dev.txt
+COPY requirements-kubernetes.txt /work/v6d/requirements-kubernetes.txt
+COPY requirements-setup.txt /work/v6d/requirements-setup.txt
+
+# copy the vineyardd binary from vineyardd image to build the python wheel
+COPY --from=vineyardd /usr/local/bin/vineyardd /work/v6d/python/vineyard/vineyardd
+
+RUN cd /work/v6d && \
+    mkdir build && \
+    cd build && \
+    export PATH=$PATH:/opt/python/$python/bin && \
+    pip3 install -U pip setuptools wheel && \
+    cmake .. -DBUILD_SHARED_LIBS=OFF \
+             -DBUILD_VINEYARD_SERVER=OFF \
+             -DBUILD_VINEYARD_CLIENT=ON \
+             -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+             -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
+             -DBUILD_VINEYARD_BASIC=OFF \
+             -DBUILD_VINEYARD_IO=OFF \
+             -DBUILD_VINEYARD_GRAPH=OFF \
+             -DBUILD_VINEYARD_MALLOC=OFF \
+             -DBUILD_VINEYARD_MIGRATION=ON \
+             -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+             -DBUILD_VINEYARD_TESTS=OFF \
+             -DBUILD_VINEYARD_TESTS_ALL=OFF \
+             -DBUILD_VINEYARD_BENCHMARKS=OFF \
+             -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
+             -DBUILD_VINEYARD_COVERAGE=OFF \
+             -DBUILD_VINEYARD_PROFILING=OFF \
+             -DCMAKE_BUILD_TYPE=Release \
+             -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
+    make vineyard_client_python -j$(nproc) && \
+    cd /work && \
+    export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
+    mkdir -p fixed_wheels/ && \
+    cd /work/v6d && \
+    rm -rf dist && \
+    /opt/python/$python/bin/python setup.py bdist_wheel && \
+    for wheel in `ls dist/*`; do \
+        auditwheel repair -w fixed_wheels $wheel; \
+    done && \
+    mv /work/v6d/fixed_wheels/* /work/fixed_wheels/ && \
+    cd /work/v6d && \
+    rm -rf dist && \
+    /opt/python/$python/bin/python setup_io.py bdist_wheel && \
+    mv /work/v6d/dist/*.whl /work/fixed_wheels/ && \
+    rm -rf /work/v6d
+
+# generate final image
+FROM python:3.10
+
+COPY --from=wheel /work/fixed_wheels/*.whl /tmp/
 
 RUN cd /tmp &&\
     pip3 install --no-cache-dir *.whl ipython
