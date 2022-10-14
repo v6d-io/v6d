@@ -67,11 +67,14 @@ spec:
             required:
             - hostname
             - id
-            - instance_id
-            - metadata
             - signature
             type: object
           status:
+            properties:
+              state:
+                type: string
+            required:
+            - state
             type: object
         type: object
     served: true

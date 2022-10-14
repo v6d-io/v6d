@@ -13,30 +13,24 @@
 # limitations under the License.
 #
 
-apiVersion: v1
-kind: Service
+apiVersion: cert-manager.io/v1
+kind: Issuer
 metadata:
-  labels:
-    control-plane: controller-manager
-  name: {{ include "vineyard-operator.fullname" . }}-metrics-service
+  name: {{ include "vineyard-operator.fullname" . }}-selfsigned-issuer
   namespace: {{ .Release.Namespace }}
 spec:
-  ports:
-  - name: https
-    port: 8443
-    targetPort: https
-  selector:
-    control-plane: controller-manager
+  selfSigned: {}
 ---
-apiVersion: v1
-kind: Service
+apiVersion: cert-manager.io/v1
+kind: Certificate
 metadata:
-  name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+  name: {{ include "vineyard-operator.fullname" . }}-serving-cert  
   namespace: {{ .Release.Namespace }}
 spec:
-  ports:
-  - port: 443
-    protocol: TCP
-    targetPort: 9443
-  selector:
-    control-plane: controller-manager
+  dnsNames:
+  - {{ include "vineyard-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc
+  - {{ include "vineyard-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "vineyard-operator.fullname" . }}-selfsigned-issuer
+  secretName: {{ include "vineyard-operator.fullname" . }}-webhook-server-cert

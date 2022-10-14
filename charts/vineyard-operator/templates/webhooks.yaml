@@ -1,0 +1,158 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "vineyard-operator.fullname" . }}-serving-cert
+  name: vineyard-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-v1-pod
+  failurePolicy: Fail
+  name: mpod.kb.io
+  namespaceSelector:
+    matchLabels:
+      assembly-injection: enabled
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-k8s-v6d-io-v1alpha1-globalobject
+  failurePolicy: Fail
+  name: mglobalobject.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - globalobjects
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-k8s-v6d-io-v1alpha1-localobject
+  failurePolicy: Fail
+  name: mlocalobject.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - localobjects
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-k8s-v6d-io-v1alpha1-vineyardd
+  failurePolicy: Fail
+  name: mvineyardd.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vineyardds
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "vineyard-operator.fullname" . }}-serving-cert
+  name: vineyard-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /validate-k8s-v6d-io-v1alpha1-globalobject
+  failurePolicy: Fail
+  name: vglobalobject.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - globalobjects
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /validate-k8s-v6d-io-v1alpha1-localobject
+  failurePolicy: Fail
+  name: vlocalobject.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - localobjects
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /validate-k8s-v6d-io-v1alpha1-vineyardd
+  failurePolicy: Fail
+  name: vvineyardd.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vineyardds
+  sideEffects: None
