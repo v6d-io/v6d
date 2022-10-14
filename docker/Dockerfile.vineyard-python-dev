@@ -33,7 +33,8 @@ COPY setup.cfg.in /work/v6d/setup.cfg.in
 COPY vineyard-config-version.in.cmake /work/v6d/vineyard-config-version.in.cmake
 COPY vineyard-config.in.cmake /work/v6d/vineyard-config.in.cmake
 
-COPY src /work/v6d/src
+COPY src/common /work/v6d/src/common
+COPY src/server /work/v6d/src/server
 
 RUN cd /work/v6d && \
     mkdir -p /work/v6d/build && \
@@ -71,26 +72,22 @@ RUN for pylibs in /opt/_internal/tools/lib/*; do\
 COPY thirdparty /work/v6d/thirdparty
 
 COPY cmake /work/v6d/cmake
+COPY python/vineyard/version.py.in /work/v6d/python/vineyard/version.py.in
 
 COPY CMakeLists.txt /work/v6d/CMakeLists.txt
 COPY setup.cfg.in /work/v6d/setup.cfg.in
 COPY vineyard-config-version.in.cmake /work/v6d/vineyard-config-version.in.cmake
 COPY vineyard-config.in.cmake /work/v6d/vineyard-config.in.cmake
 
-COPY src /work/v6d/src
-COPY python /work/v6d/python
-COPY modules/io /work/v6d/modules/io
+COPY src/common /work/v6d/src/common
+COPY src/client /work/v6d/src/client
 
-COPY README.rst /work/v6d/README.rst
-COPY setup.py /work/v6d/setup.py
-COPY setup_io.py /work/v6d/setup_io.py
-COPY requirements.txt /work/v6d/requirements.txt
-COPY requirements-dev.txt /work/v6d/requirements-dev.txt
-COPY requirements-kubernetes.txt /work/v6d/requirements-kubernetes.txt
-COPY requirements-setup.txt /work/v6d/requirements-setup.txt
-
-# copy the vineyardd binary from vineyardd image to build the python wheel
-COPY --from=vineyardd /usr/local/bin/vineyardd /work/v6d/python/vineyard/vineyardd
+COPY python/client.cc /work/v6d/python/client.cc
+COPY python/core.cc /work/v6d/python/core.cc
+COPY python/error.cc /work/v6d/python/error.cc
+COPY python/pybind11_utils.cc /work/v6d/python/pybind11_utils.cc
+COPY python/pybind11_utils.h /work/v6d/python/pybind11_utils.h
+COPY python/vineyard.cc /work/v6d/python/vineyard.cc
 
 RUN cd /work/v6d && \
     mkdir build && \
@@ -116,6 +113,24 @@ RUN cd /work/v6d && \
              -DBUILD_VINEYARD_PROFILING=OFF \
              -DCMAKE_BUILD_TYPE=Release \
              -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
+    make vineyard_client_python -j$(nproc)
+
+COPY README.rst /work/v6d/README.rst
+COPY setup.py /work/v6d/setup.py
+COPY setup_io.py /work/v6d/setup_io.py
+COPY requirements.txt /work/v6d/requirements.txt
+COPY requirements-dev.txt /work/v6d/requirements-dev.txt
+COPY requirements-kubernetes.txt /work/v6d/requirements-kubernetes.txt
+COPY requirements-setup.txt /work/v6d/requirements-setup.txt
+COPY modules/io /work/v6d/modules/io
+
+COPY python/vineyard /work/v6d/python/vineyard
+
+# copy the vineyardd binary from vineyardd image to build the python wheel
+COPY --from=vineyardd /usr/local/bin/vineyardd /work/v6d/python/vineyard/vineyardd
+
+# make sure the library been copied
+RUN cd /work/v6d/build && \
     make vineyard_client_python -j$(nproc) && \
     cd /work && \
     export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
