@@ -81,7 +81,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Error(err, "unable to create controller", "controller", "Vineyardd")
 		os.Exit(1)
 	}
-	if os.Getenv("ENABLE_WEBHOOKS") == "true" {
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
 			os.Exit(1)
