@@ -25,11 +25,13 @@ spec:
   replicas: 3
   template:
     metadata:
+      annotations:
+        # The label is limited to 63 characters, so we need to use the annotation here
+        scheduling.k8s.v6d.io/required: v6d-workflow-demo-job1
       labels:
         app: v6d-workflow-demo-job2
         # this label represents the vineyardd's name that need to be used
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
-        scheduling.k8s.v6d.io/required: v6d-workflow-demo-job1
         scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
     spec:
       schedulerName: vineyard-scheduler
