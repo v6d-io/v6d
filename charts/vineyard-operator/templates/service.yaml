@@ -13,18 +13,30 @@
 # limitations under the License.
 #
 
----
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     control-plane: controller-manager
-  name: vineyard-controller-manager-metrics-service
+  name: {{ include "vineyard-operator.fullname" . }}-metrics-service
   namespace: {{ .Release.Namespace }}
 spec:
   ports:
   - name: https
     port: 8443
     targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vineyard-operator.fullname" . }}-webhook-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
   selector:
     control-plane: controller-manager
