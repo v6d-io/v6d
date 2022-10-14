@@ -41,6 +41,25 @@ import (
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
+const (
+	// Name is the name of the plugin used in Registry and configurations.
+	Name = "Vineyard"
+	// Timeout is the default timeout for the scheduler plugin.
+	Timeout = 60
+	// VineyardJobName is the pod group name
+	VineyardJobName = "scheduling.k8s.v6d.io/job"
+	// VineyardJobRequired is the object ids that required by this job
+	VineyardJobRequired = "scheduling.k8s.v6d.io/required"
+	// VineyardJobReplica is the replication of pods in this job.
+	VineyardJobReplica = "scheduling.k8s.v6d.io/replica"
+	// ControlPlaneLabel is the label of the control plane
+	ControlPlaneLabel = "node-role.kubernetes.io/control-plane"
+	// VineyardSystemNamespace is the default system namespace
+	VineyardSystemNamespace = "vineyard-system"
+	// VineyarddName is the name of the vineyardd
+	VineyarddName = "scheduling.k8s.v6d.io/vineyardd"
+)
+
 // SchedulerState records the status of current scheduling
 type SchedulerState struct {
 	client.Client
@@ -246,25 +265,6 @@ type VineyardScheduling struct {
 	state           map[string]*SchedulerState
 	podRank         map[string]map[string]int64
 }
-
-const (
-	// Name is the name of the plugin used in Registry and configurations.
-	Name = "Vineyard"
-	// Timeout is the default timeout for the scheduler plugin.
-	Timeout = 60
-	// VineyardJobName is the pod group name
-	VineyardJobName = "scheduling.k8s.v6d.io/job"
-	// VineyardJobRequired is the object ids that required by this job
-	VineyardJobRequired = "scheduling.k8s.v6d.io/required"
-	// VineyardJobReplica is the replication of pods in this job.
-	VineyardJobReplica = "scheduling.k8s.v6d.io/replica"
-	// ControlPlaneLabel is the label of the control plane
-	ControlPlaneLabel = "node-role.kubernetes.io/control-plane"
-	// VineyardSystemNamespace is the default system namespace
-	VineyardSystemNamespace = "vineyard-system"
-	// VineyarddName is the name of the vineyardd
-	VineyarddName = "scheduling.k8s.v6d.io/vineyardd"
-)
 
 // New initializes a vineyard scheduler
 // func New(configuration *runtime.Unknown, handle framework.FrameworkHandle) (framework.Plugin, error) {
