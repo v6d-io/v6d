@@ -299,7 +299,7 @@ func (vs *VineyardScheduling) Less(pod1, pod2 *framework.PodInfo) bool {
 func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
 	klog.V(5).Infof("scoring for pod %v on node %v", GetNamespacedName(pod), nodeName)
 
-	job, replica, requires, vineyardd, err := vs.GetVineyardLabels(pod)
+	job, replica, requires, vineyardd, err := vs.GetJobInfo(pod)
 	if err != nil {
 		return 0, framework.NewStatus(framework.Unschedulable, err.Error())
 	}
@@ -434,7 +434,7 @@ func (vs *VineyardScheduling) GetAllWorkerNodes(vineyardd string) []string {
 
 // get all required jobs name that separated by '.'
 func (vs *VineyardScheduling) getRequiredJob(pod *v1.Pod) ([]string, error) {
-	objects, exists := pod.Labels[VineyardJobRequired]
+	objects, exists := pod.Annotations[VineyardJobRequired]
 	if !exists {
 		return []string{}, fmt.Errorf("Failed to get the required jobs, please set none if there is no required job")
 	}
@@ -446,8 +446,8 @@ func (vs *VineyardScheduling) getRequiredJob(pod *v1.Pod) ([]string, error) {
 	return strings.Split(objects, "."), nil
 }
 
-// GetVineyardLabels requires (job, replica, requires, vineyardd) information of a pod.
-func (vs *VineyardScheduling) GetVineyardLabels(pod *v1.Pod) (string, int64, []string, string, error) {
+// GetJobInfo requires (job, replica, requires, vineyardd) information of a pod.
+func (vs *VineyardScheduling) GetJobInfo(pod *v1.Pod) (string, int64, []string, string, error) {
 	job, err := vs.getJobName(pod)
 	if err != nil {
 		return "", 0, nil, "", err

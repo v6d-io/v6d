@@ -27,11 +27,12 @@ spec:
   replicas: 1
   template:
     metadata:
+      annotations:
+        scheduling.k8s.v6d.io/required: none
       labels:
         app: serialize-demo
         # this label represents the vineyardd's name that need to be used
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
-        scheduling.k8s.v6d.io/required: none
         scheduling.k8s.v6d.io/job: serialize-demo
     spec:
       schedulerName: vineyard-scheduler
