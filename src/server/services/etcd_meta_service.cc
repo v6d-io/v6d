@@ -16,13 +16,11 @@ limitations under the License.
 #include "server/services/etcd_meta_service.h"
 
 #include <chrono>
-#include <map>
 #include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "boost/algorithm/searching/boyer_moore.hpp"
 #include "boost/asio/steady_timer.hpp"
 #include "etcd/Client.hpp"
 #include "etcd/Watcher.hpp"
@@ -44,7 +42,8 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   VLOG(10) << "etcd watch use " << resp.duration().count()
            << " microseconds, event size = " << resp.events().size();
 
-  if (sessions_[0]->meta_service_ptr->stopped()) {
+  if (sessions_[SessionIDToString(RootSessionID())]
+          ->meta_service_ptr->stopped()) {
     return;
   }
 
@@ -54,79 +53,80 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     head_rev = resp.events().back().kv().modified_index();
   }
 
-  std::lock_guard<std::mutex> scope_lock(this->session_add_mutex_);
+  std::lock_guard<std::mutex> scope_lock(session_add_mutex_);
 
-  std::map<std::string, std::vector<IMetaService::op_t>> ops;
+  // group events according to the session
+  std::map<std::string, std::vector<etcd::Event>> event_groups;
   for (auto const& event : resp.events()) {
     std::string const& key = event.kv().key();
-    auto it = sessions_.begin();
-    while (it != sessions_.end()) {
-      if (!(*it)->meta_service_ptr->stopped()) {
-        if (boost::algorithm::boyer_moore_search<std::string>(key,
-                                                              "/meta_sync_lock")
-                .first != key.end()) {
-          break;
-        }
-        if (boost::algorithm::starts_with(key, (*it)->prefix + "/")) {
-          IMetaService::op_t op;
-          std::string op_key =
-              boost::algorithm::erase_head_copy(key, (*it)->prefix.size());
-          switch (event.event_type()) {
-          case etcd::Event::EventType::PUT: {
-            auto op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
-                                              event.kv().modified_index());
-            ops[(*it)->sessionID].emplace_back(op);
-            break;
-          }
-          case etcd::Event::EventType::DELETE_: {
-            auto op =
-                IMetaService::op_t::Del(op_key, event.kv().modified_index());
-            ops[(*it)->sessionID].emplace_back(op);
-            break;
-          }
-          default: {
-            // invalid event type.
-            break;
-          }
-          }
-          break;
-        }
-        ++it;
-      } else {
-        it = sessions_.erase(it);
-      }
+    if (boost::algorithm::contains(key, "/S")) {
+      auto pos = key.find("/S");
+      event_groups[key.substr(pos + 1, 17)].emplace_back(event);
     }
   }
-  // Notes on [Execute order in boost asio context]
-  //
-  // The execution order is guaranteed to be the same with the post order.
-  //
-  // Ref: https://www.boost.org/doc/libs/1_75_0/doc/html/boost_asio/reference/
-  //      io_context__strand.html#boost_asio.reference.io_context__strand.orde
-  //      r_of_handler_invocation
+
+  // dispatch events to sessions
+  for (auto const& group : event_groups) {
+    auto const& session_ptr = sessions_[group.first];
+    std::vector<IMetaService::op_t> ops;
+    ops.reserve(group.second.size());
+    for (auto const& event : group.second) {
+      std::string const& key = event.kv().key();
+      if (!session_ptr->filter_prefix.empty() &&
+          boost::algorithm::starts_with(key, session_ptr->filter_prefix)) {
+        // FIXME: for simplicity, we don't care the instance-lock related keys.
+        continue;
+      }
+      IMetaService::op_t op;
+      std::string op_key =
+          boost::algorithm::erase_head_copy(key, session_ptr->prefix.size());
+      switch (event.event_type()) {
+      case etcd::Event::EventType::PUT: {
+        auto op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
+                                          event.kv().modified_index());
+        ops.emplace_back(op);
+        break;
+      }
+      case etcd::Event::EventType::DELETE_: {
+        auto op = IMetaService::op_t::Del(op_key, event.kv().modified_index());
+        ops.emplace_back(op);
+        break;
+      }
+      default: {
+        // invalid event type.
+        break;
+      }
+      }
+    }
+    // Notes on [Execute order in boost asio context]
+    //
+    // The execution order is guaranteed to be the same with the post order.
+    //
+    // Ref: https://www.boost.org/doc/libs/1_75_0/doc/html/boost_asio/reference/
+    //      io_context__strand.html#boost_asio.reference.io_context__strand.orde
+    //      r_of_handler_invocation
 
 #ifndef NDEBUG
-  static unsigned processed = 0;
+    static unsigned processed = 0;
 #endif
 
-  auto status = Status::EtcdError(resp.error_code(), resp.error_message());
+    auto status = Status::EtcdError(resp.error_code(), resp.error_message());
 
-  for (auto const& item : sessions_) {
     // NB: update the `handled_rev_` after we have truely applied the update
     // ops.
-    item->ctx.post(boost::bind(
-        item->callback, status, ops[item->sessionID], head_rev,
-        [this, item, status](Status const&, unsigned rev) -> Status {
-          if (item->meta_service_ptr->stopped()) {
+    session_ptr->ctx.post(boost::bind(
+        session_ptr->callback, status, ops, head_rev,
+        [session_ptr, status](Status const&, unsigned rev) -> Status {
+          if (session_ptr->meta_service_ptr->stopped()) {
             return Status::AlreadyStopped("etcd metadata service");
           }
           std::lock_guard<std::mutex> scope_lock(
-              item->meta_service_ptr->getMutex());
-          item->meta_service_ptr->getHandledRev().store(rev);
+              session_ptr->meta_service_ptr->getMutex());
+          session_ptr->meta_service_ptr->getHandledRev().store(rev);
 
           // handle registered callbacks
-          while (!item->meta_service_ptr->getQueue().empty()) {
-            auto iter = item->meta_service_ptr->getQueue().top();
+          while (!session_ptr->meta_service_ptr->getQueue().empty()) {
+            auto iter = session_ptr->meta_service_ptr->getQueue().top();
 #ifndef NDEBUG
             VINEYARD_ASSERT(iter.first >= processed);
             processed = iter.first;
@@ -134,9 +134,9 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
             if (iter.first > rev) {
               break;
             }
-            item->ctx.post(boost::bind(iter.second, status,
-                                       std::vector<IMetaService::op_t>{}, rev));
-            item->meta_service_ptr->getQueue().pop();
+            session_ptr->ctx.post(boost::bind(
+                iter.second, status, std::vector<IMetaService::op_t>{}, rev));
+            session_ptr->meta_service_ptr->getQueue().pop();
           }
           return Status::OK();
         }));
@@ -335,27 +335,37 @@ void EtcdMetaService::startDaemonWatch(
   LOG(INFO) << "start background etcd watch, since " << rev_;
   try {
     this->handled_rev_.store(since_rev);
-    this->watcher_ =
-        EtcdWatchHandler::getInstance(handled_rev_, registered_callbacks_mutex_)
-            .getWatcher(SessionIDToString(server_ptr_->session_id()),
-                        shared_from_base(), server_ptr_->GetMetaContext(),
-                        callback, prefix_, since_rev, etcd_);
+    EtcdWatchHandler::getInstance(&handler_, handled_rev_,
+                                  registered_callbacks_mutex_)
+        .addSession(SessionIDToString(server_ptr_->session_id()),
+                    shared_from_base(), server_ptr_->GetMetaContext(), callback,
+                    prefix_, prefix_ + meta_sync_lock_);
 
-    if (this->watcher_ && this->watcher_->Cancelled()) {
+    if (watcher_ && watcher_->Cancelled()) {
       return;
     }
+    if (!watcher_) {
+      // Use "" as the prefix to watch, and filter out unused garbage values
+      // in the watch handlers.
+      //
+      // As we use `head()` to get latest revision, without prefix, use "" as
+      // the prefix would help us to get the true latest updates ASAP.
+      static etcd::Watcher watcherInstance(*etcd_, "", since_rev + 1,
+                                           std::ref(*handler_), true);
+      watcher_ = &watcherInstance;
 
-    this->watcher_->Wait([this, prefix, callback](bool cancelled) {
-      LOG(INFO) << "Watcher stopped, as cancelled: "
-                << (cancelled ? "true" : "false");
-      if (cancelled) {
-        return;
-      }
-      this->retryDaeminWatch(prefix, callback);
-    });
+      watcher_->Wait([this, prefix, callback](bool cancelled) {
+        LOG(INFO) << "Watcher stopped, as cancelled: "
+                  << (cancelled ? "true" : "false");
+        if (cancelled) {
+          return;
+        }
+        this->retryDaeminWatch(prefix, callback);
+      });
+    }
   } catch (std::runtime_error& e) {
     LOG(ERROR) << "Failed to create daemon etcd watcher: " << e.what();
-    this->watcher_.reset();
+    watcher_ = nullptr;
     this->retryDaeminWatch(prefix, callback);
   }
 }
@@ -397,30 +407,20 @@ Status EtcdMetaService::preStart() {
   return etcd_launcher_->LaunchEtcdServer(etcd_, meta_sync_lock_);
 }
 
-std::shared_ptr<etcd::Watcher> EtcdWatchHandler::getWatcher(
-    std::string sessionID, const std::shared_ptr<EtcdMetaService>& pems,
+void EtcdWatchHandler::addSession(
+    const std::string& sessionID, const std::shared_ptr<EtcdMetaService>& pems,
     asio::io_context& ctx,
     callback_t<const std::vector<IMetaService::op_t>&, unsigned,
                callback_t<unsigned>>
         callback,
-    std::string const& prefix, unsigned since_rev,
-    std::unique_ptr<etcd::Client>& etcd_) {
+    const std::string& prefix, const std::string& filter_prefix) {
   std::lock_guard<std::mutex> scope_lock(session_add_mutex_);
-  sessions_.emplace_back(
-      std::make_shared<SessionInfo>(sessionID, pems, ctx, callback, prefix));
-
-  if (!watcher_) {
-    // Use "" as the prefix to watch, and filter out unused garbage values
-    // in the watch handlers.
-    //
-    // As we use `head()` to get latest revision, without prefix, use "" as
-    // the prefix would help us to get the true latest updates ASAP.
-    watcher_.reset(new etcd::Watcher(*etcd_, "", since_rev + 1,
-                                     std::ref(*handler_), true));
-  }
-  return watcher_;
+  sessions_.insert(
+      make_pair(sessionID, std::make_shared<SessionInfo>(
+                               pems, ctx, callback, prefix, filter_prefix)));
 }
 
-EtcdWatchHandler* EtcdWatchHandler::handler_ = 0;
+EtcdWatchHandler* EtcdWatchHandler::handler_ = nullptr;
+etcd::Watcher* EtcdMetaService::watcher_ = nullptr;
 
 }  // namespace vineyard
