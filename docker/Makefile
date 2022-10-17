@@ -10,7 +10,7 @@ PYTHON_DEV_REGISTRY	:= docker.pkg.github.com/v6d-io
 PYTHON_DEV_IMAGE	:= v6d/vineyard-python-dev
 PYTHON_DEV_TAG		:= latest
 
-all: builder docker-build build-python-dev docker-push
+all: builder docker-build docker-push
 
 builder: 
 	docker build ./vineyardd -f ./vineyardd/Dockerfile.alpine-builder -t $(BUILDER_REGISTRY)/$(BUILDER_IMAGE):$(BUILDER_TAG)
