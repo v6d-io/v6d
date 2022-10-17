@@ -1,4 +1,5 @@
 .git
+**/.git
 
 # contents from .gitignore
 build/
@@ -17,14 +18,18 @@ install-docker-gsa/
 .DS_store
 cmake-build-debug
 
+# vineyardd
+python/vineyard/vineyardd
+
 # for python packaging
 dist/
-*.egg-info/
-*.so
-*.dylib
-*.a
-*.pyc
-*.bin
+**/*.egg-info/
+**/*.so
+**/*.dylib
+**/*.a
+**/*.pyc
+**/*.bin
+**/*.egg
 
 # generated files
 *.vineyard.h
