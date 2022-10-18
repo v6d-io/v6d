@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <future>
 #include <iostream>
+#include <ostream>
 #include <set>
 #include <utility>
 
@@ -80,12 +81,17 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
 
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
                                   InstanceID const& instance_id, ObjectID& id) {
+  const char* labels[3] = {"JOB_NAME", "POD_NAME", "POD_NAMESPACE"};
   InstanceID computed_instance_id = instance_id;
   meta_data.SetInstanceId(instance_id);
   meta_data.AddKeyValue("transient", true);
-  meta_data.AddKeyValueFromEnv("JOB_NAME");
-  meta_data.AddKeyValueFromEnv("POD_NAME");
-  meta_data.AddKeyValueFromEnv("POD_NAMESPACE");
+  // add the key from env to the metadata for k8s environment.
+  for (auto l : labels) {
+    char* value = std::getenv(l);
+    if (value != NULL) {
+      meta_data.AddKeyValue(std::string(l), std::string(value));
+    }
+  }
   // nbytes is optional
   if (!meta_data.Haskey("nbytes")) {
     meta_data.SetNBytes(0);

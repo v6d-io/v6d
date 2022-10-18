@@ -61,14 +61,14 @@ setup:
         sed 's/$job/job1/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/job1
+          resource: deployment/assembly-job1
           for: condition=Available
     - name: install job2
       command: |
         sed 's/$job/job2/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/job2
+          resource: deployment/assembly-job2
           for: condition=Available
   timeout: 20m
 
