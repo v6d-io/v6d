@@ -75,12 +75,14 @@ template <typename OID_T = gsf::IdType,
 class ArrowFragmentWriter {
   using oid_t = OID_T;
   using vid_t = VID_T;
+  using eid_t = property_graph_types::EID_TYPE;
   using label_id_t = vineyard::property_graph_types::LABEL_ID_TYPE;
   using internal_oid_t = typename vineyard::InternalType<oid_t>::type;
   using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
   using vertex_map_t = vineyard::ArrowVertexMap<internal_oid_t, vid_t>;
   using oid_array_builder_t = typename vineyard::ConvertToArrowType<oid_t>::BuilderType;
   using range_t = std::pair<oid_t, oid_t>;
+  using nbr_t = property_graph_utils::Nbr<vid_t, eid_t>;
   static constexpr const char* LABEL_TAG = "label";
   static constexpr const char* SRC_LABEL_TAG = "src_label";
   static constexpr const char* DST_LABEL_TAG = "dst_label";
@@ -203,12 +205,24 @@ class ArrowFragmentWriter {
           gsf::EdgeChunkWriter writer(edge_info, graph_info_->GetPrefix(), config_.adj_list_type);
           int v_count = 0, e_count = 0;
           int v_chunk_index = start_chunk_index, e_chunk_index = 0;
-          std::vector<std::shared_ptr<arrow::Array>> src_dst_columns(3);
+          label_id_t e_label_id = schema.GetEdgeLabelId(edge_label);
+          label_id_t prop_num = frag_->edge_property_num(e_label_id);
+          std::vector<std::shared_ptr<arrow::Array>> src_dst_columns(prop_num + 2);
           std::vector<std::shared_ptr<arrow::Array>> offset_columns(1);
-          arrow::Int64Builder src_builder, dst_builder, offset_builder;
-          arrow::Int64Builder prop_builder;
+          std::vector<std::shared_ptr<arrow::ArrayBuilder>> builders(prop_num + 2);
+          arrow::Int64Builder offset_builder;
+          construct_arrow_array_builders(builders, prop_num, e_label_id);
+          auto src_builder = std::dynamic_pointer_cast<arrow::Int64Builder>(builders[0]);
+          auto dst_builder = std::dynamic_pointer_cast<arrow::Int64Builder>(builders[1]);
           int64_t offset = 0;
           offset_builder.Append(offset);
+          std::vector<std::shared_ptr<arrow::Field>> fields = {arrow::field("src", arrow::int64()), arrow::field("dst", arrow::int64())};
+          for (int64_t i = 0; i < prop_num; ++i) {
+            auto prop_name = schema.GetEdgePropertyName(e_label_id, i);
+            auto prop_type = schema.GetEdgePropertyType(e_label_id, i);
+            fields.push_back(arrow::field(prop_name, prop_type));
+          }
+          std::shared_ptr<arrow::Schema> table_schema = arrow::schema(fields);
           for (auto& u : inner_vertices) {
             auto u_global_id = start_chunk_index * config_.vertex_chunk_size + vid_parser.GetOffset(u.GetValue());
             auto oe = frag_->GetOutgoingAdjList(u, schema.GetEdgeLabelId(edge_label));
@@ -223,21 +237,17 @@ class ArrowFragmentWriter {
                 auto v_offset = vid_parser.GetOffset(gid);
                 v_global_id = start_chunk_indices[v_fid] * config_.vertex_chunk_size + v_offset;
               }
-              src_builder.Append(u_global_id);
-              dst_builder.Append(v_global_id);
-              prop_builder.Append(e.get_int(0));
+              src_builder->Append(u_global_id);
+              dst_builder->Append(v_global_id);
+              append_property_to_arrow_array_builders(builders, e, prop_num, e_label_id);
               e_count++;
               if (e_count == config_.edge_chunk_size) {
-                src_builder.Finish(&src_dst_columns[0]);
-                dst_builder.Finish(&src_dst_columns[1]);
-                prop_builder.Finish(&src_dst_columns[2]);
+                finish_arrow_array_builders(builders, src_dst_columns);
                 // auto edge_table = arrow::Table::Make(arrow::schema({arrow::field("src", arrow::int64()), arrow::field("dst", arrow::int64())}), src_dst_columns);
-                auto edge_table = arrow::Table::Make(arrow::schema({arrow::field("src", arrow::int64()), arrow::field("dst", arrow::int64()), arrow::field("weight", arrow::int64())}), src_dst_columns);
+                auto edge_table = arrow::Table::Make(table_schema, src_dst_columns);
                 auto st = writer.WriteChunk(edge_table, v_chunk_index, e_chunk_index);
                 CHECK(st.ok());
-                src_builder.Reset();
-                dst_builder.Reset();
-                prop_builder.Reset();
+                reset_arrow_array_builders(builders);
                 e_count = 0;
                 e_chunk_index++;
               }
@@ -248,20 +258,16 @@ class ArrowFragmentWriter {
             // one chunk size.
             if (v_count == config_.vertex_chunk_size) {
               if (e_count != 0) {
-                src_builder.Finish(&src_dst_columns[0]);
-                dst_builder.Finish(&src_dst_columns[1]);
-                prop_builder.Finish(&src_dst_columns[2]);
+                finish_arrow_array_builders(builders, src_dst_columns);
                 // auto edge_table = arrow::Table::Make(arrow::schema({arrow::field("src", arrow::int64()), arrow::field("dst", arrow::int64())}), src_dst_columns);
                 // auto st = writer.WriteAdjListChunk(edge_table, v_chunk_index, e_chunk_index);
-                auto edge_table = arrow::Table::Make(arrow::schema({arrow::field("src", arrow::int64()), arrow::field("dst", arrow::int64()), arrow::field("weight", arrow::int64())}), src_dst_columns);
+                auto edge_table = arrow::Table::Make(table_schema, src_dst_columns);
                 auto st = writer.WriteChunk(edge_table, v_chunk_index, e_chunk_index);
                 if (!st.ok()) {
                   LOG(ERROR) << "write chunk error: " << st.message();
                 }
                 CHECK(st.ok());
-                src_builder.Reset();
-                dst_builder.Reset();
-                prop_builder.Reset();
+                reset_arrow_array_builders(builders);
                 e_count = 0;
                 e_chunk_index = 0;
               }
@@ -278,17 +284,13 @@ class ArrowFragmentWriter {
           // maybe the last chunk not align to vertex chunk size
           if (v_count != 0) {
               if (e_count != 0) {
-                src_builder.Finish(&src_dst_columns[0]);
-                dst_builder.Finish(&src_dst_columns[1]);
-                prop_builder.Finish(&src_dst_columns[2]);
+                finish_arrow_array_builders(builders, src_dst_columns);
                 // auto edge_table = arrow::Table::Make(arrow::schema({arrow::field("src", arrow::int64()), arrow::field("dst", arrow::int64())}), src_dst_columns);
                 // auto st = writer.WriteAdjListChunk(edge_table, v_chunk_index, e_chunk_index);
-                auto edge_table = arrow::Table::Make(arrow::schema({arrow::field("src", arrow::int64()), arrow::field("dst", arrow::int64()), arrow::field("weight", arrow::int64())}), src_dst_columns);
+                auto edge_table = arrow::Table::Make(table_schema, src_dst_columns);
                 auto st = writer.WriteChunk(edge_table, v_chunk_index, e_chunk_index);
                 CHECK(st.ok());
-                src_builder.Reset();
-                dst_builder.Reset();
-                prop_builder.Reset();
+                reset_arrow_array_builders(builders);
                 e_count = 0;
                 e_chunk_index = 0;
               }
@@ -300,6 +302,78 @@ class ArrowFragmentWriter {
           }
         }
       }
+    }
+  }
+
+ private:
+  void construct_arrow_array_builders(std::vector<std::shared_ptr<arrow::ArrayBuilder>>& builders, int64_t prop_num, label_id_t edge_label) {
+    builders.resize(prop_num + 2);
+    builders[0] = std::make_shared<arrow::Int64Builder>();
+    builders[1] = std::make_shared<arrow::Int64Builder>();
+    auto& schema = frag_->schema();
+    for (int64_t i = 0; i < prop_num; i++) {
+      auto prop_type = schema.GetEdgePropertyType(edge_label, i);
+      if (arrow::boolean()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::BooleanBuilder>();
+      } else if (arrow::int16()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::Int16Builder>();
+      } else if (arrow::int32()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::Int32Builder>();
+      } else if (arrow::int64()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::Int64Builder>();
+      } else if (arrow::float32()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::FloatBuilder>();
+      } else if (arrow::float64()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::DoubleBuilder>();
+      } else if (arrow::utf8()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::StringBuilder>();
+      } else if (arrow::large_utf8()->Equals(prop_type)) {
+        builders[i+2] = std::make_shared<arrow::LargeStringBuilder>();
+      }
+    }
+  }
+
+  void append_property_to_arrow_array_builders(std::vector<std::shared_ptr<arrow::ArrayBuilder>>& builders, const nbr_t& edge, int64_t prop_num, label_id_t edge_label) {
+    auto& schema = frag_->schema();
+    for (int64_t i = 0; i < prop_num; i++) {
+      auto prop_type = schema.GetEdgePropertyType(edge_label, i);
+      if (arrow::boolean()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::BooleanBuilder>(builders[i+2]);
+        builder->Append(edge.template get_data<bool>(i));
+      } else if (arrow::int16()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::Int16Builder>(builders[i+2]);
+        builder->Append(edge.template get_data<int16_t>(i));
+      } else if (arrow::int32()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::Int32Builder>(builders[i+2]);
+        builder->Append(edge.template get_data<int32_t>(i));
+      } else if (arrow::int64()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::Int64Builder>(builders[i+2]);
+        builder->Append(edge.template get_data<int64_t>(i));
+      } else if (arrow::float32()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::FloatBuilder>(builders[i+2]);
+        builder->Append(edge.template get_data<float>(i));
+      } else if (arrow::float64()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::DoubleBuilder>(builders[i+2]);
+        builder->Append(edge.template get_data<double>(i));
+      } else if (arrow::utf8()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::StringBuilder>(builders[i+2]);
+        builder->Append(edge.template get_data<std::string>(i));
+      } else if (arrow::large_utf8()->Equals(prop_type)) {
+        auto builder = std::dynamic_pointer_cast<arrow::LargeStringBuilder>(builders[i+2]);
+        builder->Append(edge.template get_data<std::string>(i));
+      }
+    }
+  }
+
+  void reset_arrow_array_builders(std::vector<std::shared_ptr<arrow::ArrayBuilder>>& builders) {
+    for (auto& builder : builders) {
+      builder->Reset();
+    }
+  }
+
+  void finish_arrow_array_builders(std::vector<std::shared_ptr<arrow::ArrayBuilder>>& builders, std::vector<std::shared_ptr<arrow::Array>>& columns) {
+    for (int64_t i = 0; i < builders.size(); i++) {
+      builders[i]->Finish(&columns[i]);
     }
   }
 
