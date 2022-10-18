@@ -62,7 +62,7 @@ setup:
       command: |
         kubectl create namespace vineyard-job
         kubectl label namespace vineyard-job assembly-injection=enabled
-        kubectl apply -f k8s/test/e2e/distributed-assembly-job1.yaml
+        sed 's/$job/distributedJob1/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
         kubectl wait --for=condition=Ready pod -l app=distributed-assembly-job1 -n vineyard-job
         while [ -z $(kubectl get po -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]; \
         do \
@@ -70,17 +70,17 @@ setup:
         done
         export meta=$(kubectl get po -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
         export metadata_id=$(echo $meta | awk -F "[\"]" '{print $2}')
-        sed 's/METADATA_ID_VALUE/'$metadata_id'/' k8s/test/e2e/distributed-assembly-job2.yaml | kubectl apply -f -
+        sed 's/METADATA_ID_VALUE/'$metadata_id'/;s/$job/distributedJob2/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/distributed-assembly-job2-deployment
+          resource: deployment/distributed-assembly-job2
           for: condition=Available
     - name: install job3
       command: |
-        kubectl apply -f k8s/test/e2e/distributed-assembly-job3.yaml
+        sed 's/$job/distributedJob3/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/distributed-assembly-job3-deployment
+          resource: deployment/distributed-assembly-job3
           for: condition=Available
   timeout: 40m
 

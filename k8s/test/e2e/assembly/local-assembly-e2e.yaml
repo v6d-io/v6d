@@ -58,17 +58,17 @@ setup:
       command: |
         kubectl create namespace vineyard-job
         kubectl label namespace vineyard-job assembly-injection=enabled
-        kubectl apply -f k8s/test/e2e/assembly-job1.yaml
+        sed 's/$job/job1/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/assembly-job1-deployment
+          resource: deployment/job1
           for: condition=Available
     - name: install job2
       command: |
-        kubectl apply -f k8s/test/e2e/assembly-job2.yaml
+        sed 's/$job/job2/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/assembly-job2-deployment
+          resource: deployment/job2
           for: condition=Available
   timeout: 20m
 
