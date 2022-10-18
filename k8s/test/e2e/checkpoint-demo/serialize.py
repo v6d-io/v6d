@@ -58,7 +58,6 @@ def global_object(vineyard_ipc_socket):
     client1.persist(tup)
     return tup.id
 
-
 def test_seriarialize_round_trip(destination, vineyard_ipc_socket, vineyard_endpoint, global_object):
     shutil.rmtree(destination, ignore_errors=True)
     vineyard.io.serialize(
