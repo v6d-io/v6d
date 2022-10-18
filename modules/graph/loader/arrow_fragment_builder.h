@@ -243,7 +243,7 @@ class ArrowFragmentBuilder {
           CHECK(offset_reader.seek(index * edge_info.GetSrcChunkSize()).ok());
           auto offset_result = offset_reader.GetChunk();
           CHECK(offset_result.status().ok());
-          auto offset_chunk_array = dynamic_pointer_cast<arrow::Int64Array>(offset_result.value());
+          auto offset_chunk_array = std::dynamic_pointer_cast<arrow::Int64Array>(offset_result.value());
           for (int64_t i = 0; i < offset_chunk_array->length() - 1; ++i) {
             offset_array_builder.Append(offset_chunk_array->Value(i) + last_chunk_end);
           }
