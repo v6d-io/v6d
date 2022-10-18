@@ -16,7 +16,7 @@
 REGISTRY := docker.pkg.github.com/v6d-io/v6d
 TAG      := latest
 
-all: build-distributed-assembly docker-push
+all: build-distributed-assembly
 	
 build-distributed-assembly:
 	docker build . -f Dockerfile.assembly -t $(REGISTRY)/distributed-assembly:$(TAG)

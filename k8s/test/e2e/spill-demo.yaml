@@ -38,7 +38,7 @@ spec:
       schedulerName: vineyard-scheduler
       containers:
       - name: spill-demo
-        image: docker.pkg.github.com/v6d-io/v6d/spill
+        image: ghcr.io/v6d-io/v6d/spill
         command: ["spill_test", "/var/run/vineyard.sock"]
         imagePullPolicy: IfNotPresent
         volumeMounts:

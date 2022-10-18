@@ -16,7 +16,7 @@
 REGISTRY := docker.pkg.github.com/v6d-io/v6d
 TAG      := latest
 
-all: build-job1 build-job2 docker-push
+all: build-job1 build-job2
 	
 build-job1:
 	docker build . -f Dockerfile.job1 -t $(REGISTRY)/job1:$(TAG)

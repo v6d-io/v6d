@@ -20,20 +20,6 @@ setup:
   steps:
     - name: prepare e2e.yaml
       command: bash k8s/hack/prepare-e2e.sh
-    - name: pull docker image
-      command: |
-        docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job1
-        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job2
-        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job3
-        docker pull docker.pkg.github.com/v6d-io/v6d/local-assembly
-        docker pull docker.pkg.github.com/v6d-io/v6d/distributed-assembly
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job1
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job2
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly-job3
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/local-assembly
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-assembly
     - name: install cert-manager
       command: |
         kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml

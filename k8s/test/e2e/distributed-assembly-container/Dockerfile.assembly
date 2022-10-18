@@ -14,8 +14,6 @@
 
 FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
-RUN pip3 install bash
-
 WORKDIR /
 
 COPY ./assembly.py /

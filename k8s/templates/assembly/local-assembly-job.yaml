@@ -25,7 +25,7 @@ spec:
       nodeName: {{ $config.NodeName }}
       containers:
       - name: assembly-operation
-        image: docker.pkg.github.com/v6d-io/v6d/local-assembly
+        image: ghcr.io/v6d-io/v6d/local-assembly
         imagePullPolicy: IfNotPresent
         env:
         - name: STREAM_ID

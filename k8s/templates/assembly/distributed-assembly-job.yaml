@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: assembly-operation
-        image: docker.pkg.github.com/v6d-io/v6d/distributed-assembly
+        image: ghcr.io/v6d-io/v6d/distributed-assembly
         imagePullPolicy: IfNotPresent
         env:
         - name: GLOBALOBJECT_ID

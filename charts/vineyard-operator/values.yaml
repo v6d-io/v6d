@@ -8,7 +8,7 @@ image:
   repository: vineyardcloudnative/vineyard-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.9.0"
+  tag: "latest"
 
 serviceAccountName: "vineyard-manager"
 

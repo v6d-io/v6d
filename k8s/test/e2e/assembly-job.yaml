@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+# replace the $job with your job name
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,7 +45,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ (datasource "config").$job.jobName }}
-          image: docker.pkg.github.com/v6d-io/v6d/{{ (datasource "config").$job.jobName }}
+          image: ghcr.io/v6d-io/v6d/{{ (datasource "config").$job.jobName }}
           env:
             - name: JOB_NAME
               value: {{ (datasource "config").$job.jobName }}

@@ -37,7 +37,7 @@ spec:
       schedulerName: vineyard-scheduler
       containers:
       - name: job2
-        image: docker.pkg.github.com/v6d-io/v6d/job2
+        image: ghcr.io/v6d-io/v6d/job2
         imagePullPolicy: IfNotPresent
         env:
         # pass node name to the environment

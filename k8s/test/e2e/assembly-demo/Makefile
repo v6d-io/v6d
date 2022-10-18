@@ -16,7 +16,7 @@
 REGISTRY := docker.pkg.github.com/v6d-io/v6d
 TAG      := latest
 
-all: build-assembly-job1 build-assembly-job2 build-distributed-assembly-job1 build-distributed-assembly-job2 build-distributed-assembly-job3 docker-push
+all: build-assembly-job1 build-assembly-job2 build-distributed-assembly-job1 build-distributed-assembly-job2 build-distributed-assembly-job3
 	
 build-assembly-job1:
 	docker build . -f Dockerfile.assembly-job1 -t $(REGISTRY)/assembly-job1:$(TAG)
@@ -27,7 +27,7 @@ build-assembly-job2:
 .PHONY: build-assembly-job2
 
 build-distributed-assembly-job1:
-	docker build . -f Dockerfile.distributed-assembly-job1 -t $(REGISTRY)/distributed-assembly-job1:$(TAG)
+	docker-linux-amd64 build . -f Dockerfile.distributed-assembly-job1 -t $(REGISTRY)/distributed-assembly-job1:$(TAG)
 .PHONY: build-distributed-assembly-job1
 
 build-distributed-assembly-job2:
@@ -41,7 +41,7 @@ build-distributed-assembly-job3:
 docker-push: build-assembly-job1 build-assembly-job2 build-distributed-assembly-job1 build-distributed-assembly-job2 build-distributed-assembly-job3
 	docker push $(REGISTRY)/assembly-job1:$(TAG)
 	docker push $(REGISTRY)/assembly-job2:$(TAG)
-	docker push $(REGISTRY)/distributed-assembly-job1:$(TAG)
+	docker-linux-amd64 push $(REGISTRY)/distributed-assembly-job1:$(TAG)
 	docker push $(REGISTRY)/distributed-assembly-job2:$(TAG)
 	docker push $(REGISTRY)/distributed-assembly-job3:$(TAG)
 .PHONY: docker-push

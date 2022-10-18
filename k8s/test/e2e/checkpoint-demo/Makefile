@@ -16,7 +16,7 @@
 REGISTRY := docker.pkg.github.com/v6d-io/v6d
 TAG      := latest
 
-all: build-spill build-serialize docker-push
+all: build-spill build-serialize
 	
 build-spill:
 	cd ../../../../ && docker build -f k8s/test/e2e/checkpoint-demo/Dockerfile.spill -t docker.pkg.github.com/v6d-io/v6d/spill:latest .
