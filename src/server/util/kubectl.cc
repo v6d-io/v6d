@@ -76,7 +76,7 @@ static std::string generate_local_object(
                     "\n    k8s.v6d.io/signature: " + signature +
                     "\n    k8s.v6d.io/job: " + job_name +
                     "\n    k8s.v6d.io/created-by/name: " + client_pod_name +
-                    "\n    k8s.v6d.io/created-by/namespace: " 
+                    "\n    k8s.v6d.io/created-by/namespace: "
                     + client_pod_namespace +
                     "\n  ownerReferences:"
                     "\n    - apiVersion: k8s.v6d.io/v1alpha1"
@@ -133,7 +133,7 @@ static std::string generate_global_object(
                     "\n  labels:"
                     "\n    k8s.v6d.io/job: " + job_name +
                     "\n    k8s.v6d.io/created-by/name: " + client_pod_name +
-                    "\n    k8s.v6d.io/created-by/namespace: " 
+                    "\n    k8s.v6d.io/created-by/namespace: "
                     + client_pod_namespace +
                     "\n  ownerReferences:"
                     "\n    - apiVersion: k8s.v6d.io/v1alpha1"
