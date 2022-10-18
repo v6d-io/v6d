@@ -400,7 +400,7 @@ class BasicArrowFragmentBuilder
       // std::shared_ptr<arrow::Table> tmp_table0;
       // ARROW_OK_ASSIGN_OR_RAISE(tmp_table0, edge_tables[i]->RemoveColumn(0));
       // ARROW_OK_ASSIGN_OR_RAISE(edge_tables_[i], tmp_table0->RemoveColumn(0));
-      offset_arrays_[i] = dynamic_pointer_cast<arrow::Int64Array>(std::get<1>(edge_tables[i]));
+      offset_arrays_[i] = std::dynamic_pointer_cast<arrow::Int64Array>(std::get<1>(edge_tables[i]));
       edge_tables_[i] = std::get<2>(edge_tables[i]);
     }
 
