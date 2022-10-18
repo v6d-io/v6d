@@ -118,7 +118,6 @@ class ArrowFragmentWriter {
       gsf::PropertyGroup group = {"properties", config_.vertex_chunk_file_type, properties};
       CHECK(vertex_info.AddPropertyGroup(group).ok());
       graph_info->AddVertex(vertex_info);
-      LOG(INFO) <<"vertex info: " << vertex_info.Dump().value();
     }
     for (auto& entry : schema.edge_entries()) {
       auto& edge_label = entry.label;
@@ -198,7 +197,6 @@ class ArrowFragmentWriter {
       for (auto& pair : graph_info_->GetAllEdgeInfo()) {
         auto& edge_info = pair.second;
         auto edge_label = edge_info.GetEdgeLabel();
-        LOG(INFO) <<"edge_info: " << edge_info.Dump().value();
         auto src_label = edge_info.GetSrcLabel();
         auto dst_label = edge_info.GetDstLabel();
         if (config_.adj_list_type == gsf::AdjListType::ordered_by_source && src_label == schema.GetVertexLabelName(label)) {
