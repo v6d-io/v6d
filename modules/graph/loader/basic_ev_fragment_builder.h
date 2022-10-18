@@ -78,7 +78,8 @@ class BasicEVFragmentBuilder {
   boost::leaf::result<void> AddVertexTable(
       const std::string& label, std::shared_ptr<arrow::Table> table) {
     vertex_labels_.push_back(label);
-    input_vertex_tables_[label] = table;
+    ordered_vertex_tables_.push_back(table);
+    // input_vertex_tables_[label] = table;
     return {};
   }
 
@@ -91,14 +92,14 @@ class BasicEVFragmentBuilder {
     }
     vertex_label_num_ = vertex_labels_.size();
 
-    ordered_vertex_tables_.clear();
-    ordered_vertex_tables_.resize(vertex_label_num_);
+    // ordered_vertex_tables_.clear();
+    // ordered_vertex_tables_.resize(vertex_label_num_);
 
-    for (auto& pair : input_vertex_tables_) {
-      ordered_vertex_tables_[vertex_label_to_index_[pair.first]] = pair.second;
-    }
+    // for (auto& pair : input_vertex_tables_) {
+    //   ordered_vertex_tables_[vertex_label_to_index_[pair.first]] = pair.second;
+    // }
 
-    input_vertex_tables_.clear();
+    // input_vertex_tables_.clear();
 
     output_vertex_tables_.resize(vertex_label_num_);
 
@@ -244,21 +245,6 @@ class BasicEVFragmentBuilder {
     edge_relations_.resize(edge_label_num_);
     for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
       edge_relations_[e_label].insert(ordered_edge_tables_[e_label].first);
-      /*
-      std::vector<std::pair<label_id_t, label_id_t>> relations;
-      auto& vec = ordered_edge_tables_[e_label];
-      for (auto& pair : vec) {
-        relations.push_back(pair.first);
-      }
-      std::vector<std::vector<std::pair<label_id_t, label_id_t>>>
-          gathered_relations;
-      GlobalAllGatherv(relations, gathered_relations, comm_spec_);
-      for (auto& pair_vec : gathered_relations) {
-        for (auto& pair : pair_vec) {
-          edge_relations_[e_label].insert(pair);
-        }
-      }
-      */
     }
 
     vineyard::IdParser<vid_t> id_parser;
@@ -266,21 +252,12 @@ class BasicEVFragmentBuilder {
 
     output_edge_tables_.resize(edge_label_num_);
     for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
-      auto shuffle_procedure =
-          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-        auto& item = ordered_edge_tables_[e_label];
-        std::shared_ptr<arrow::Table> table;
-        label_id_t src_label = item.first.first;
-        label_id_t dst_label = item.first.second;
-        auto adj_list_table = std::get<0>(item.second);
-        BOOST_LEAF_AUTO(tmp_table,
-                        edgesId2Gid(adj_list_table, src_label, dst_label));
-        return tmp_table;
-      };
-
-      LOG(INFO) << "process edge label " << e_label;
-      BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
-      LOG(INFO) << "process edge label done " << e_label;
+      auto& item = ordered_edge_tables_[e_label];
+      label_id_t src_label = item.first.first;
+      label_id_t dst_label = item.first.second;
+      auto adj_list_table = std::get<0>(item.second);
+      BOOST_LEAF_AUTO(table,
+                      edgesId2Gid(adj_list_table, src_label, dst_label));
 
       auto metadata = std::make_shared<arrow::KeyValueMetadata>();
       metadata->Append("label", edge_labels_[e_label]);

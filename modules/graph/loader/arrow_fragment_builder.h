@@ -155,17 +155,20 @@ class ArrowFragmentBuilder {
         const auto& vertex_info = item.second;
         table_vec_t pg_tables;
         std::vector<range_t> id_ranges;
+        int total_chunk_num = 0;
+        std::vector<int> chunk_index;
         for (const auto& pg : vertex_info.GetPropertyGroups()) {
           auto maybe_reader = gsf::ConstructVertexPropertyArrowChunkReader(*(graph_info_.get()), vertex_info.GetLabel(), pg);
           CHECK(!maybe_reader.has_error());
           auto& reader = maybe_reader.value();
-          int total_chunk_num = reader.GetChunkNum();
-          std::vector<int> chunk_index;
           table_vec_t chunk_tables;
-          // distribute chunks
-          for (int i = 0; i < total_chunk_num; ++i) {
-            if (i % comm_spec_.worker_num() == comm_spec_.worker_id()) {
-              chunk_index.push_back(i);
+          if (total_chunk_num == 0) {
+            total_chunk_num = reader.GetChunkNum();
+            // distribute vertex chunks
+            for (int i = 0; i < total_chunk_num; ++i) {
+              if (i % comm_spec_.worker_num() == comm_spec_.worker_id()) {
+                chunk_index.push_back(i);
+              }
             }
           }
           for (auto index : chunk_index) {
@@ -174,15 +177,13 @@ class ArrowFragmentBuilder {
             chunk_tables.push_back(result.value());
             if (id_ranges.size() != chunk_index.size()) {
               auto id_range = reader.GetRange().value();
-              id_range.second = id_ranges.first + result.value()->num_rows();
               id_ranges.push_back(id_range);
             }
           }
           auto pg_table = arrow::ConcatenateTables(chunk_tables);
           if (!pg_table.status().ok()) {
-            LOG(INFO) << "Error: " << pg_table.status().message();
+            LOG(ERROR) << "Error: " << pg_table.status().message();
           }
-          CHECK(pg_table.status().ok());
           pg_tables.push_back(pg_table.ValueOrDie());
         }
         auto v_table = ConcatenateTablesColumnWise(pg_tables);
@@ -228,16 +229,16 @@ class ArrowFragmentBuilder {
         oid_array_builder_t offset_array_builder;
         oid_t last_chunk_end = 0;
         for (auto index : chunk_index) {
-          table_vec_t adj_list_chunk_tables;
-          CHECK(reader.seek_src(index * edge_info.GetSrcChunkSize()).ok());
+          // table_vec_t adj_list_chunk_tables;
+          reader.ResetChunk(index);
           do {
             auto result = reader.GetChunk();
             CHECK(result.status().ok());
-            adj_list_chunk_tables.push_back(result.value());
+            chunk_tables.push_back(result.value());
           } while (reader.next_chunk().ok());
-          auto chunk_table = arrow::ConcatenateTables(adj_list_chunk_tables);
-          CHECK(chunk_table.status().ok());
-          chunk_tables.push_back(chunk_table.ValueOrDie());
+          // auto chunk_table = arrow::ConcatenateTables(adj_list_chunk_tables);
+          // CHECK(chunk_table.status().ok());
+          // chunk_tables.push_back(chunk_table.ValueOrDie());
 
           CHECK(offset_reader.seek(index * edge_info.GetSrcChunkSize()).ok());
           auto offset_result = offset_reader.GetChunk();
@@ -250,7 +251,11 @@ class ArrowFragmentBuilder {
             last_chunk_end += offset_chunk_array->Value(offset_chunk_array->length() - 1);
           }
         }
-        auto adj_list_table = arrow::ConcatenateTables(chunk_tables).ValueOrDie();
+        auto maybe_adj_list_table = arrow::ConcatenateTables(chunk_tables);
+        if (!maybe_adj_list_table.status().ok()) {
+          LOG(ERROR) << "Error: " << maybe_adj_list_table.status().message();
+        }
+        auto adj_list_table = maybe_adj_list_table.ValueOrDie();
         auto offset_array = offset_array_builder.Finish().ValueOrDie();
 
         // process property chunks
@@ -259,21 +264,24 @@ class ArrowFragmentBuilder {
             edge_info.GetDstLabel(), pg, gsf::AdjListType::ordered_by_source);
           CHECK(!maybe_reader.has_error());
           auto& reader = maybe_reader.value();
-          table_vec_t chunk_tables;
+          table_vec_t pg_chunk_tables;
           for (auto index : chunk_index) {
             table_vec_t adj_list_chunk_tables;
-            CHECK(reader.seek_src(index * edge_info.GetSrcChunkSize()).ok());
+            reader.ResetChunk(index);
             do {
               auto result = reader.GetChunk();
               CHECK(result.status().ok());
-              adj_list_chunk_tables.push_back(result.value());
+              // adj_list_chunk_tables.push_back(result.value());
+              pg_chunk_tables.push_back(result.value());
             } while (reader.next_chunk().ok());
-            auto chunk_table = arrow::ConcatenateTables(adj_list_chunk_tables);
-            CHECK(chunk_table.status().ok());
-            chunk_tables.push_back(chunk_table.ValueOrDie());
+            // auto chunk_table = arrow::ConcatenateTables(adj_list_chunk_tables);
+            // CHECK(chunk_table.status().ok());
+            // chunk_tables.push_back(chunk_table.ValueOrDie());
           }
           auto pg_table = arrow::ConcatenateTables(chunk_tables);
-          CHECK(pg_table.status().ok());
+          if(!pg_table.status().ok()) {
+            LOG(ERROR) << "Error: " << pg_table.status().message();
+          }
           pg_tables.push_back(pg_table.ValueOrDie());
         }
         auto property_table = ConcatenateTablesColumnWise(pg_tables);
@@ -338,7 +346,6 @@ class ArrowFragmentBuilder {
           "Segmented partitioner is not supported when the v-file is "
           "not provided");
     }
-    if (graph_info_) {
       label_id_t vlabel = 0;
       for (auto& pair : vertex_tables) {
         oid_lists[vlabel].resize(comm_spec_.fnum());
@@ -348,11 +355,11 @@ class ArrowFragmentBuilder {
             oid_lists[vlabel][comm_spec_.WorkerToFrag(comm_spec_.worker_id())].push_back(id);
           }
         }
+        // TODO: gather the range, not oid lists
         grape::sync_comm::AllGather(oid_lists[vlabel], comm_spec_.comm());
         partitioners[vlabel].Init(comm_spec_.fnum(), oid_lists[vlabel]);
         ++vlabel;
       }
-    }
     return {};
   }
 
