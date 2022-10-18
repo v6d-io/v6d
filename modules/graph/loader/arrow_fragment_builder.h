@@ -281,7 +281,7 @@ class ArrowFragmentBuilder {
           }
           auto pg_table = arrow::ConcatenateTables(chunk_tables);
           if(!pg_table.status().ok()) {
-            LOG(ERROR) << "frag-" << frag_->fid() << " Error: " << pg_table.status().message();
+            LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << pg_table.status().message();
           }
           pg_tables.push_back(pg_table.ValueOrDie());
         }
