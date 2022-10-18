@@ -164,7 +164,6 @@ class ArrowFragmentBuilder {
           table_vec_t chunk_tables;
           if (total_chunk_num == 0) {
             total_chunk_num = reader.GetChunkNum();
-            LOG(INFO) << "total_chunk_num: " << total_chunk_num;
             // distribute vertex chunks
             for (int i = 0; i < total_chunk_num; ++i) {
               if (i % comm_spec_.worker_num() == comm_spec_.worker_id()) {
@@ -172,6 +171,7 @@ class ArrowFragmentBuilder {
               }
             }
           }
+          LOG(INFO) << "worker-" << comm_spec_.worker_id() << " total_chunk_num: " << total_chunk_num;
           for (auto index : chunk_index) {
             CHECK(reader.seek(index * vertex_info.GetChunkSize()).ok());
             auto result = reader.GetChunk();
@@ -183,7 +183,7 @@ class ArrowFragmentBuilder {
           }
           auto pg_table = arrow::ConcatenateTables(chunk_tables);
           if (!pg_table.status().ok()) {
-            LOG(ERROR) << "frag-" << frag_->fid() << " Error: " << pg_table.status().message();
+            LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << pg_table.status().message();
           }
           pg_tables.push_back(pg_table.ValueOrDie());
         }
@@ -254,7 +254,7 @@ class ArrowFragmentBuilder {
         }
         auto maybe_adj_list_table = arrow::ConcatenateTables(chunk_tables);
         if (!maybe_adj_list_table.status().ok()) {
-          LOG(ERROR) << "frag-" << frag_->fid() << " Error: " << maybe_adj_list_table.status().message();
+          LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << maybe_adj_list_table.status().message();
         }
         auto adj_list_table = maybe_adj_list_table.ValueOrDie();
         auto offset_array = offset_array_builder.Finish().ValueOrDie();
