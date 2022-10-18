@@ -60,7 +60,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
   for (auto const& event : resp.events()) {
     std::string const& key = event.kv().key();
     if (boost::algorithm::contains(key, "/S")) {
-      auto pos = key.find("/S");
+      auto pos = key.find('/');
       event_groups[key.substr(pos + 1, 17)].emplace_back(event);
     }
   }
