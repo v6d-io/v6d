@@ -107,14 +107,23 @@ class BasicEVFragmentBuilder {
         vertex_label_num_);
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
       auto vertex_table = ordered_vertex_tables_[v_label];
-      // std::vector<arrow::Int64Builder> oid_array_builders(comm_spec_.fnum());
       oid_arrays[v_label].resize(comm_spec_.fnum());
+      std::vector<std::thread> thrds(comm_spec_.fnum());
       for (fid_t fid = 0; fid < comm_spec_.fnum(); ++fid) {
-        arrow::Int64Builder oid_array_builder;
-        oid_array_builder.Reserve(oid_lists_[v_label][fid].size());
-        oid_array_builder.AppendValues(oid_lists_[v_label][fid]);
-        oid_arrays[v_label][fid] = std::dynamic_pointer_cast<oid_array_t>(
+        thrds[fid] = std::thread(
+          [&](fid_t tid) {
+            arrow::Int64Builder oid_array_builder;
+            oid_array_builder.Reset();
+            oid_array_builder.Reserve(oid_lists_[v_label][fid].size());
+            oid_array_builder.AppendValues(oid_lists_[v_label][fid]);
+            oid_arrays[v_label][fid] = std::dynamic_pointer_cast<oid_array_t>(
             oid_array_builder.Finish().ValueOrDie());
+          },
+          fid);
+      }
+
+      for (auto& thrd : thrds) {
+        thrd.join();
       }
 
       auto metadata = std::make_shared<arrow::KeyValueMetadata>();
@@ -189,28 +198,12 @@ class BasicEVFragmentBuilder {
     auto src_column_type = adj_list_table->column(src_column)->type();
     auto dst_column_type = adj_list_table->column(dst_column)->type();
 
-    /*
-    if (!src_column_type->Equals(
-            vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                      "OID_T is not consistent with src id of edge table");
-    }
-    if (!dst_column_type->Equals(
-            vineyard::ConvertToArrowType<oid_t>::TypeValue())) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                      "OID_T is not consistent with dst id of edge table");
-    }
-    */
-
-    LOG(INFO) << "parse src column";
     BOOST_LEAF_AUTO(
         src_gid_array,
         parseOidChunkedArray(src_label, adj_list_table->column(src_column)));
-    LOG(INFO) << "parse dst column";
     BOOST_LEAF_AUTO(
         dst_gid_array,
         parseOidChunkedArray(dst_label, adj_list_table->column(dst_column)));
-    LOG(INFO) << "parse dst done";
 
     // replace oid columns with gid
     ARROW_OK_ASSIGN_OR_RAISE(
@@ -314,7 +307,7 @@ class BasicEVFragmentBuilder {
 
     ArrowVertexMap<internal_oid_t, vid_t>* vm = vm_ptr_.get();
 
-#if 1
+#if 0
     LOG(INFO) <<  "Start to parse chunks";
     for (size_t chunk_i = 0; chunk_i != chunk_num; ++chunk_i) {
       std::shared_ptr<oid_array_t> oid_array =
@@ -368,7 +361,7 @@ class BasicEVFragmentBuilder {
 
               for (size_t k = 0; k != size; ++k) {
                 internal_oid_t oid = oid_array->GetView(k);
-                fid_t fid = partitioner_.GetPartitionId(oid_t(oid));
+                fid_t fid = partitioners_[label_id].GetPartitionId(oid_t(oid));
                 if (!vm->GetGid(fid, label_id, oid, builder[k])) {
                   LOG(ERROR) << "Mapping vertex " << oid << " failed.";
                 }
