@@ -369,7 +369,7 @@ class BasicArrowFragmentBuilder
                                  adj_list_table->column(1)->chunk(0)),
                              this->fid_, collected_ovgids);
     }
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
       << " Collect outer vertices: " << vineyard::GetCurrentTime() - t;
     t = vineyard::GetCurrentTime();
     std::vector<vid_t> start_ids(this->vertex_label_num_);
@@ -384,7 +384,7 @@ class BasicArrowFragmentBuilder
       ovnums_[i] = ovgid_lists_[i]->length();
       tvnums_[i] = ivnums_[i] + ovnums_[i];
     }
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
       << " Generate outer vertices map: " << vineyard::GetCurrentTime() - t;
 
     t = vineyard::GetCurrentTime();
@@ -405,7 +405,7 @@ class BasicArrowFragmentBuilder
       offset_arrays_[i] = std::dynamic_pointer_cast<arrow::Int64Array>(std::get<1>(edge_tables[i]));
       edge_tables_[i] = std::get<2>(edge_tables[i]);
     }
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
       << " To local id: " << vineyard::GetCurrentTime() - t;
 
     t = vineyard::GetCurrentTime();
@@ -448,7 +448,7 @@ class BasicArrowFragmentBuilder
         oe_offsets_lists_[v_label][e_label] = sub_oe_offset_lists[v_label];
       }
     }
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
       << " Generate CSR: " << vineyard::GetCurrentTime() - t;
     return {};
   }
