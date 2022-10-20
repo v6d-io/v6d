@@ -48,16 +48,16 @@ namespace bl = boost::leaf;
 std::shared_ptr<arrow::Table> ConcatenateTablesColumnWise(const std::vector<std::shared_ptr<arrow::Table>> table_vec) {
   CHECK(!table_vec.empty());
   auto table = table_vec[0];
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = table->columns();
+  std::vector<std::shared_ptr<arrow::Field>> fields = table->fields();
   for (int i = 1; i < table_vec.size(); ++i) {
-    std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = table->columns();
     const std::vector<std::shared_ptr<arrow::ChunkedArray>>& right_columns = table_vec[i]->columns();
     columns.insert(columns.end(), right_columns.begin(), right_columns.end());
 
-    std::vector<std::shared_ptr<arrow::Field>> fields = table->fields();
     const std::vector<std::shared_ptr<arrow::Field>>& right_fields = table_vec[i]->fields();
     fields.insert(fields.end(), right_fields.begin(), right_fields.end());
-    table = arrow::Table::Make(arrow::schema(std::move(fields)), std::move(columns));
   }
+  table = arrow::Table::Make(arrow::schema(std::move(fields)), std::move(columns));
   return table;
 }
 
@@ -131,7 +131,6 @@ class ArrowFragmentBuilder {
       auto maybe_reader = gsf::ConstructVertexPropertyChunkInfoReader(*(graph_info_.get()), label, vertex_info.GetPropertyGroups()[0]);
       CHECK(!maybe_reader.has_error());
       auto& reader = maybe_reader.value();
-      label2vertex_chunk_num_[label] = reader.GetChunkNum();
       vertex_chunk_begin_of_frag_[label].resize(comm_spec_.fnum() + 1);
       for (fid_t fid = 0; fid < comm_spec_.fnum(); ++fid) {
         vertex_chunk_begin_of_frag_[label][fid] = fid * (reader.GetChunkNum() / comm_spec_.fnum());
@@ -152,7 +151,7 @@ class ArrowFragmentBuilder {
 
         table_vec_t pg_tables;
         for (const auto& pg : vertex_info.GetPropertyGroups()) {
-          std::vector<table_vec_t> chunk_tables_2d(worker_vertex_chunk_num);
+          table_vec_t vertex_chunk_tables(worker_vertex_chunk_num);
           std::vector<std::thread> threads(worker_vertex_chunk_num);
           for (int i = 0; i < worker_vertex_chunk_num; ++i) {
             threads[i] = std::thread([&](int tid) {
@@ -162,17 +161,13 @@ class ArrowFragmentBuilder {
               CHECK(reader.seek((tid + vertex_chunk_begin) * vertex_info.GetChunkSize()).ok());
               auto chunk_table = reader.GetChunk();
               CHECK(!chunk_table.has_error());
-              chunk_tables_2d[tid].push_back(chunk_table.value());
+              vertex_chunk_tables[tid] = chunk_table.value();
             }, i);
           }
           for (auto& t : threads) {
             t.join();
           }
-          table_vec_t chunk_tables(chunk_tables_2d.size());
-          for (int i = 0; i < chunk_tables_2d.size(); ++i) {
-            chunk_tables[i] = arrow::ConcatenateTables(chunk_tables_2d[i]).ValueOrDie();
-          }
-          auto pg_table = arrow::ConcatenateTables(chunk_tables);
+          auto pg_table = arrow::ConcatenateTables(vertex_chunk_tables);
           if (!pg_table.status().ok()) {
             LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << pg_table.status().message();
           }
@@ -207,82 +202,96 @@ class ArrowFragmentBuilder {
       auto src_label = edge_info.GetSrcLabel();
       auto dst_label = edge_info.GetDstLabel();
       auto edge_label = edge_info.GetEdgeLabel();
-      if (edge_info.ContainAdjList(gsf::AdjListType::ordered_by_source)) {
-        auto maybe_offset_reader = gsf::ConstructAdjListOffsetArrowChunkReader(*(graph_info_.get()),
-            src_label, edge_label, dst_label, gsf::AdjListType::ordered_by_source);
-        CHECK(maybe_offset_reader.status().ok());
-        auto& offset_reader = maybe_offset_reader.value();
-        arrow::Int64Builder offset_array_builder;
+      const auto& property_groups = edge_info.GetPropertyGroups(gsf::AdjListType::ordered_by_source);
 
+      if (edge_info.ContainAdjList(gsf::AdjListType::ordered_by_source)) {
         int vertex_chunk_begin = vertex_chunk_begin_of_frag_[src_label][comm_spec_.fid()];
         int worker_vertex_chunk_num =
             vertex_chunk_begin_of_frag_[src_label][comm_spec_.fid() + 1] - vertex_chunk_begin_of_frag_[src_label][comm_spec_.fid()];
+        table_vec_t edge_chunk_tables(worker_vertex_chunk_num), edge_property_chunk_tables(worker_vertex_chunk_num);
+        std::vector<std::shared_ptr<arrow::Array>> offset_arrays(worker_vertex_chunk_num);
+        auto maybe_reader = gsf::ConstructAdjListArrowChunkReader(*(graph_info_.get()), src_label, edge_label, dst_label, gsf::AdjListType::ordered_by_source);
+        CHECK(!maybe_reader.has_error());
+        auto helper_reader = maybe_reader.value();
 
-        std::vector<table_vec_t> edge_chunk_tables_2d(worker_vertex_chunk_num);
-        std::vector<std::thread> threads(worker_vertex_chunk_num);
+        std::vector<std::thread> threads;
         for (int i = 0; i < worker_vertex_chunk_num; ++i) {
-            threads[i] = std::thread([&](int tid) {
-              auto expect = gsf::ConstructAdjListArrowChunkReader(*(graph_info_.get()),
-                src_label, edge_label, dst_label, gsf::AdjListType::ordered_by_source);
-              CHECK(!expect.has_error());
-              auto& reader = expect.value();
-              reader.ResetChunk(tid + vertex_chunk_begin);
-              do {
+          int edge_chunk_num = helper_reader.GetEdgeChunkNumOfVertexChunk(i + vertex_chunk_begin);
+          LOG(INFO) << "worker-" << comm_spec_.worker_id() << " vertex_chunk_index: " << i + vertex_chunk_begin <<" num=" << edge_chunk_num;
+          table_vec_t edge_chunk_tables_of_vertex(edge_chunk_num), edge_property_chunk_tables_of_vertex(edge_chunk_num);
+          threads.clear();
+          threads.resize(edge_chunk_num * 2);
+          for (int tid = 0; tid < edge_chunk_num * 2; ++tid) {
+            threads[tid] = std::thread([&, tid]() {
+              // get edge chunk table
+              if (tid < edge_chunk_num) {
+                auto expect = gsf::ConstructAdjListArrowChunkReader(*(graph_info_.get()),
+                  src_label, edge_label, dst_label, gsf::AdjListType::ordered_by_source);
+                CHECK(!expect.has_error());
+                auto& reader = expect.value();
+                reader.ResetChunk(i + vertex_chunk_begin, tid);
                 auto result = reader.GetChunk();
-                CHECK(result.status().ok());
-                edge_chunk_tables_2d[tid].push_back(result.value());
-              } while (reader.next_chunk().ok());
-            },i);
+                if (!result.status().ok()) {
+                  LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << result.status().message();
+                }
+                edge_chunk_tables_of_vertex[tid] = result.value();
+              } else {
+                table_vec_t property_chunk_tables;
+                // get edge property chunk
+                for (const auto& pg : property_groups) {
+                  auto maybe_reader = gsf::ConstructAdjListPropertyArrowChunkReader(*(graph_info_.get()), src_label, edge_label,
+                      dst_label, pg, gsf::AdjListType::ordered_by_source);
+                  CHECK(!maybe_reader.has_error());
+                  auto& reader = maybe_reader.value();
+                  reader.ResetChunk(i + vertex_chunk_begin, tid - edge_chunk_num);
+                  auto result = reader.GetChunk();
+                  if (!result.status().ok()) {
+                    LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << result.status().message() <<" " << edge_chunk_num;
+                  }
+                  property_chunk_tables.push_back(result.value());
+                }
+                edge_property_chunk_tables_of_vertex[tid - edge_chunk_num] = ConcatenateTablesColumnWise(property_chunk_tables);
+              }
+            });
+          }
+          for (auto& t : threads) {
+            t.join();
+          }
+          edge_chunk_tables[i] = arrow::ConcatenateTables(edge_chunk_tables_of_vertex).ValueOrDie();
+          edge_property_chunk_tables[i] = arrow::ConcatenateTables(edge_property_chunk_tables_of_vertex).ValueOrDie();
+        }
+
+        threads.clear();
+        threads.resize(worker_vertex_chunk_num);
+        for (int tid = 0; tid < worker_vertex_chunk_num; ++tid) {
+          threads[tid] = std::thread([&, tid]() {
+              // get offset array of vertex chunk tid + vertex_chunk_begin
+              auto maybe_offset_reader = gsf::ConstructAdjListOffsetArrowChunkReader(*(graph_info_.get()),
+                  src_label, edge_label, dst_label, gsf::AdjListType::ordered_by_source);
+              CHECK(maybe_offset_reader.status().ok());
+              auto& offset_reader = maybe_offset_reader.value();
+              auto st = offset_reader.seek((tid + vertex_chunk_begin) * edge_info.GetSrcChunkSize());
+              if (!st.ok()) {
+                LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << st.message();
+              }
+              auto offset_result = offset_reader.GetChunk();
+              if (!offset_result.status().ok()) {
+                LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << offset_result.status().message();
+              }
+              offset_arrays[tid] = offset_result.value();
+            });
         }
         for (auto& t : threads) {
           t.join();
-        }
-        table_vec_t edge_chunk_tables(edge_chunk_tables_2d.size());
-        for (int i = 0; i < edge_chunk_tables_2d.size(); ++i) {
-          edge_chunk_tables[i] = arrow::ConcatenateTables(edge_chunk_tables_2d[i]).ValueOrDie();
         }
         auto maybe_adj_list_table = arrow::ConcatenateTables(edge_chunk_tables);
         if (!maybe_adj_list_table.status().ok()) {
           LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << maybe_adj_list_table.status().message();
         }
         auto adj_list_table = maybe_adj_list_table.ValueOrDie();
-        auto offset_array = offset_array_builder.Finish().ValueOrDie();
-
-        // process property chunks
-        table_vec_t pg_tables;
-        for (const auto& pg : edge_info.GetPropertyGroups(gsf::AdjListType::ordered_by_source)) {
-          edge_chunk_tables_2d.clear();
-          edge_chunk_tables_2d.resize(worker_vertex_chunk_num);
-          threads.clear();
-          threads.resize(worker_vertex_chunk_num);
-          for (int i = 0; i < worker_vertex_chunk_num; ++i) {
-            threads[i] = std::thread([&](int tid) {
-              auto maybe_reader = gsf::ConstructAdjListPropertyArrowChunkReader(*(graph_info_.get()), edge_info.GetSrcLabel(), edge_info.GetEdgeLabel(),
-                  edge_info.GetDstLabel(), pg, gsf::AdjListType::ordered_by_source);
-              CHECK(!maybe_reader.has_error());
-              auto& reader = maybe_reader.value();
-              reader.ResetChunk(tid + vertex_chunk_begin);
-              do {
-                auto result = reader.GetChunk();
-                CHECK(result.status().ok());
-                edge_chunk_tables_2d[tid].push_back(result.value());
-              } while (reader.next_chunk().ok());
-            },i);
-          }
-          for (auto& t : threads) {
-            t.join();
-          }
-
-          for (int i = 0; i < edge_chunk_tables_2d.size(); ++i) {
-            edge_chunk_tables[i] = arrow::ConcatenateTables(edge_chunk_tables_2d[i]).ValueOrDie();
-          }
-          auto pg_table = arrow::ConcatenateTables(edge_chunk_tables);
-          if(!pg_table.status().ok()) {
-            LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << pg_table.status().message();
-          }
-          pg_tables.push_back(pg_table.ValueOrDie());
-        }
-        auto property_table = ConcatenateTablesColumnWise(pg_tables);
+        auto offset_chunked_array = arrow::ChunkedArray::Make(offset_arrays).ValueOrDie();
+        auto offset_array = offset_chunked_array->chunk(0);
+        auto property_table = arrow::ConcatenateTables(edge_property_chunk_tables).ValueOrDie();
 
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append("label", edge_label);
@@ -312,6 +321,7 @@ class ArrowFragmentBuilder {
       edge_label_to_index_[edge_labels_[i]] = i;
     }
     edge_label_num_ = edge_labels_.size();
+
     LOG_IF(INFO, comm_spec_.worker_id() == 0)
         << "PROGRESS--GRAPH-LOADING-READ-EDGE-100";
     return {};
@@ -563,7 +573,6 @@ class ArrowFragmentBuilder {
   std::shared_ptr<gsf::GraphInfo> graph_info_;
 
   bool directed_;
-  std::map<std::string, int> label2vertex_chunk_num_;
   std::vector<int64_t> vertex_chunk_sizes_;
   std::map<std::string, std::vector<int>> vertex_chunk_begin_of_frag_;
 
