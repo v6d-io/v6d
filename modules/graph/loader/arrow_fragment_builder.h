@@ -105,17 +105,21 @@ class ArrowFragmentBuilder {
     BOOST_LEAF_CHECK(loadVertexTables());
     BOOST_LEAF_CHECK(loadEdgeTables());
 
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
-        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-VERTEX-MAP-0";
+    // LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
+        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-VERTEX-MAP-0 " << comm_spec_.worker_id();
     BOOST_LEAF_CHECK(constructVertexMap());
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
-        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-VERTEX-MAP-100";
+    // LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
+        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-VERTEX-MAP-100 " << comm_spec_.worker_id();
 
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
-        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-EDGE-0";
+    // LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
+        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-EDGE-0 " << comm_spec_.worker_id();
     BOOST_LEAF_CHECK(constructEdges());
-    LOG_IF(INFO, comm_spec_.worker_id() == 0)
-        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-EDGE-100";
+    // LOG_IF(INFO, comm_spec_.worker_id() == 0)
+    LOG(INFO)
+        << "PROGRESS--GRAPH-LOADING-CONSTRUCT-EDGE-100 " << comm_spec_.worker_id();
 
     LOG_IF(INFO, comm_spec_.worker_id() == 0)
         << "PROGRESS--GRAPH-LOADING-SEAL-0";
@@ -233,6 +237,11 @@ class ArrowFragmentBuilder {
                 auto result = reader.GetChunk();
                 if (!result.status().ok()) {
                   LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << result.status().message();
+                }
+                auto table = result.value();
+                auto src_array = std::dynamic_pointer_cast<arrow::Int64Array>(table->column(0)->chunk(0));
+                if (src_array->GetView(0) < (i + vertex_chunk_begin) * edge_info.GetSrcChunkSize()) {
+                  LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << src_array->GetView(0) << " " << (i + vertex_chunk_begin) * edge_info.GetSrcChunkSize() <<" vertex_chunk_index: " << i + vertex_chunk_begin <<" edge_chunk_index=" << tid;
                 }
                 edge_chunk_tables_of_vertex[tid] = result.value();
               } else {
