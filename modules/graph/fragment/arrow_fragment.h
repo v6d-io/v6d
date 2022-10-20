@@ -350,6 +350,7 @@ class BasicArrowFragmentBuilder
     offset_arrays_.resize(this->edge_label_num_);
     std::vector<std::vector<vid_t>> collected_ovgids(this->vertex_label_num_);
 
+    double t = grape::GetCurrentTime();
     for (size_t i = 0; i < edge_tables.size(); ++i) {
       std::shared_ptr<arrow::Table> combined_table;
       ARROW_OK_ASSIGN_OR_RAISE(
@@ -362,17 +363,15 @@ class BasicArrowFragmentBuilder
       std::get<2>(edge_tables[i]).swap(combined_table);
 
       auto adj_list_table = std::get<0>(edge_tables[i]);
-      /* only csr
-      collect_outer_vertices(vid_parser_,
-                             std::dynamic_pointer_cast<vid_array_t>(
-                                 adj_list_table->column(0)->chunk(0)),
-                             this->fid_, collected_ovgids);
-      */
+      // the outer vertices on exist in dst column
       collect_outer_vertices(vid_parser_,
                              std::dynamic_pointer_cast<vid_array_t>(
                                  adj_list_table->column(1)->chunk(0)),
                              this->fid_, collected_ovgids);
     }
+    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+      << " Collect outer vertices: " << grape::GetCurrentTime() - t;
+    t = grape::GetCurrentTime();
     std::vector<vid_t> start_ids(this->vertex_label_num_);
     for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
       start_ids[i] = vid_parser_.GenerateId(0, i, ivnums_[i]);
@@ -385,7 +384,10 @@ class BasicArrowFragmentBuilder
       ovnums_[i] = ovgid_lists_[i]->length();
       tvnums_[i] = ivnums_[i] + ovnums_[i];
     }
+    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+      << " Generate outer vertices map: " << grape::GetCurrentTime() - t;
 
+    t = grape::GetCurrentTime();
     for (size_t i = 0; i < edge_tables.size(); ++i) {
       auto adj_list_table = std::get<0>(edge_tables[i]);
       generate_local_id_list(vid_parser_,
@@ -403,7 +405,10 @@ class BasicArrowFragmentBuilder
       offset_arrays_[i] = std::dynamic_pointer_cast<arrow::Int64Array>(std::get<1>(edge_tables[i]));
       edge_tables_[i] = std::get<2>(edge_tables[i]);
     }
+    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+      << " To local id: " << grape::GetCurrentTime() - t;
 
+    t = grape::GetCurrentTime();
     oe_lists_.resize(this->vertex_label_num_);
     oe_offsets_lists_.resize(this->vertex_label_num_);
     if (this->directed_) {
@@ -443,6 +448,8 @@ class BasicArrowFragmentBuilder
         oe_offsets_lists_[v_label][e_label] = sub_oe_offset_lists[v_label];
       }
     }
+    LOG_IF(INFO, comm_spec_.worker_id() == 0)
+      << " Generate CSR: " << grape::GetCurrentTime() - t;
     return {};
   }
 
