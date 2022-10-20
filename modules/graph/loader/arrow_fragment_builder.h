@@ -45,23 +45,18 @@
 
 namespace bl = boost::leaf;
 
-std::shared_ptr<arrow::Table> CombineTables(const std::shared_ptr<arrow::Table> left, const std::shared_ptr<arrow::Table> right) {
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = left->columns();
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& right_columns = right->columns();
-  columns.insert(columns.end(), right_columns.begin(), right_columns.end());
-
-  std::vector<std::shared_ptr<arrow::Field>> fields = left->fields();
-  const std::vector<std::shared_ptr<arrow::Field>>& right_fields = right->fields();
-  fields.insert(fields.end(), right_fields.begin(), right_fields.end());
-
-  return arrow::Table::Make(arrow::schema(std::move(fields)), std::move(columns));
-}
-
 std::shared_ptr<arrow::Table> ConcatenateTablesColumnWise(const std::vector<std::shared_ptr<arrow::Table>> table_vec) {
   CHECK(!table_vec.empty());
   auto table = table_vec[0];
   for (int i = 1; i < table_vec.size(); ++i) {
-    table = CombineTables(table, table_vec[i]);
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = table->columns();
+    const std::vector<std::shared_ptr<arrow::ChunkedArray>>& right_columns = table_vec[i]->columns();
+    columns.insert(columns.end(), right_columns.begin(), right_columns.end());
+
+    std::vector<std::shared_ptr<arrow::Field>> fields = table->fields();
+    const std::vector<std::shared_ptr<arrow::Field>>& right_fields = table_vec[i]->fields();
+    fields.insert(fields.end(), right_fields.begin(), right_fields.end());
+    table = arrow::Table::Make(arrow::schema(std::move(fields)), std::move(columns));
   }
   return table;
 }
@@ -322,7 +317,7 @@ class ArrowFragmentBuilder {
     return {};
   }
 
-  boost::leaf::result<void> constructVertexMap() {
+  bl::result<void> constructVertexMap() {
     std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays(
         vertex_label_num_);
     for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -363,7 +358,7 @@ class ArrowFragmentBuilder {
     return {};
   }
 
-  boost::leaf::result<void> constructEdges() {
+  bl::result<void> constructEdges() {
     for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
       auto& item = edge_tables_[e_label];
       label_id_t src_label = edge_relations_[e_label].first;
@@ -377,7 +372,7 @@ class ArrowFragmentBuilder {
     return {};
   }
 
-  boost::leaf::result<std::shared_ptr<arrow::Table>> edgesId2Gid(
+  bl::result<std::shared_ptr<arrow::Table>> edgesId2Gid(
       std::shared_ptr<arrow::Table> adj_list_table, label_id_t src_label,
       label_id_t dst_label) {
     std::shared_ptr<arrow::Field> src_gid_field =
@@ -407,7 +402,7 @@ class ArrowFragmentBuilder {
   }
 
   // parse oid to global id
-  boost::leaf::result<std::shared_ptr<arrow::ChunkedArray>>
+  bl::result<std::shared_ptr<arrow::ChunkedArray>>
   parseOidChunkedArray(label_id_t label_id,
                        std::shared_ptr<arrow::ChunkedArray> oid_arrays_in,
                        bool is_src = true) {
@@ -484,7 +479,7 @@ class ArrowFragmentBuilder {
     return std::make_shared<arrow::ChunkedArray>(chunks_out);
   }
 
-  boost::leaf::result<ObjectID> constructFragment() {
+  bl::result<ObjectID> constructFragment() {
     BasicArrowFragmentBuilder<oid_t, vid_t> frag_builder(client_, vm_ptr_);
 
     PropertyGraphSchema schema;
@@ -506,7 +501,7 @@ class ArrowFragmentBuilder {
     return frag->id();
   }
 
-  boost::leaf::result<void> initSchema(PropertyGraphSchema& schema) {
+  bl::result<void> initSchema(PropertyGraphSchema& schema) {
     schema.set_fnum(comm_spec_.fnum());
     for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
       std::string vertex_label = vertex_labels_[v_label];
