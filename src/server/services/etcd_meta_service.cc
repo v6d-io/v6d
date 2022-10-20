@@ -53,8 +53,6 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
     head_rev = resp.events().back().kv().modified_index();
   }
 
-  std::lock_guard<std::mutex> scope_lock(session_add_mutex_);
-
   // group events according to the session
   std::map<std::string, std::vector<etcd::Event>> event_groups;
   for (auto const& event : resp.events()) {
@@ -64,7 +62,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
       event_groups[key.substr(pos + 1, 17)].emplace_back(event);
     }
   }
-
+  std::lock_guard<std::mutex> scope_lock(session_add_mutex_);
   // dispatch events to sessions
   for (auto const& group : event_groups) {
     auto const& session_ptr = sessions_[group.first];
@@ -82,13 +80,13 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
           boost::algorithm::erase_head_copy(key, session_ptr->prefix.size());
       switch (event.event_type()) {
       case etcd::Event::EventType::PUT: {
-        auto op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
-                                          event.kv().modified_index());
+        op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
+                                     event.kv().modified_index());
         ops.emplace_back(op);
         break;
       }
       case etcd::Event::EventType::DELETE_: {
-        auto op = IMetaService::op_t::Del(op_key, event.kv().modified_index());
+        op = IMetaService::op_t::Del(op_key, event.kv().modified_index());
         ops.emplace_back(op);
         break;
       }
@@ -121,12 +119,12 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
             return Status::AlreadyStopped("etcd metadata service");
           }
           std::lock_guard<std::mutex> scope_lock(
-              session_ptr->meta_service_ptr->getMutex());
-          session_ptr->meta_service_ptr->getHandledRev().store(rev);
+              EtcdWatchHandler::registered_callbacks_mutex_);
+          EtcdWatchHandler::handled_rev_.store(rev);
 
           // handle registered callbacks
-          while (!session_ptr->meta_service_ptr->getQueue().empty()) {
-            auto iter = session_ptr->meta_service_ptr->getQueue().top();
+          while (!EtcdWatchHandler::registered_callbacks_.empty()) {
+            auto iter = EtcdWatchHandler::registered_callbacks_.top();
 #ifndef NDEBUG
             VINEYARD_ASSERT(iter.first >= processed);
             processed = iter.first;
@@ -136,7 +134,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
             }
             session_ptr->ctx.post(boost::bind(
                 iter.second, status, std::vector<IMetaService::op_t>{}, rev));
-            session_ptr->meta_service_ptr->getQueue().pop();
+            EtcdWatchHandler::registered_callbacks_.pop();
           }
           return Status::OK();
         }));
@@ -303,29 +301,30 @@ void EtcdMetaService::requestUpdates(
     const std::string& prefix, unsigned,
     callback_t<const std::vector<op_t>&, unsigned> callback) {
   auto self(shared_from_base());
-  etcd_->head().then([self, prefix,
-                      callback](pplx::task<etcd::Response> resp_task) {
-    if (self->stopped_.load()) {
-      return;
-    }
-    auto resp = resp_task.get();
-    LOG_SUMMARY("etcd_request_duration_microseconds", "head",
-                resp.duration().count());
-    auto head_rev = static_cast<unsigned>(resp.index());
-    {
-      std::lock_guard<std::mutex> scope_lock(self->registered_callbacks_mutex_);
-      auto handled_rev = self->handled_rev_.load();
-      if (head_rev <= handled_rev) {
-        self->server_ptr_->GetMetaContext().post(
-            boost::bind(callback, Status::OK(), std::vector<op_t>{},
-                        self->handled_rev_.load()));
-        return;
-      }
-      // We still choose to wait event there's no watchers, as if the watcher
-      // fails, a explict watch action will fail as well.
-      self->registered_callbacks_.emplace(std::make_pair(head_rev, callback));
-    }
-  });
+  etcd_->head().then(
+      [self, prefix, callback](pplx::task<etcd::Response> resp_task) {
+        if (self->stopped_.load()) {
+          return;
+        }
+        auto resp = resp_task.get();
+        LOG_SUMMARY("etcd_request_duration_microseconds", "head",
+                    resp.duration().count());
+        auto head_rev = static_cast<unsigned>(resp.index());
+        {
+          std::lock_guard<std::mutex> scope_lock(
+              EtcdWatchHandler::registered_callbacks_mutex_);
+          auto handled_rev = EtcdWatchHandler::handled_rev_.load();
+          if (head_rev <= handled_rev) {
+            self->server_ptr_->GetMetaContext().post(boost::bind(
+                callback, Status::OK(), std::vector<op_t>{}, handled_rev));
+            return;
+          }
+          // We still choose to wait event there's no watchers, as if the
+          // watcher fails, a explict watch action will fail as well.
+          EtcdWatchHandler::registered_callbacks_.emplace(
+              std::make_pair(head_rev, callback));
+        }
+      });
 }
 
 void EtcdMetaService::startDaemonWatch(
@@ -334,12 +333,10 @@ void EtcdMetaService::startDaemonWatch(
         callback) {
   LOG(INFO) << "start background etcd watch, since " << rev_;
   try {
-    this->handled_rev_.store(since_rev);
-    EtcdWatchHandler::getInstance(&handler_, handled_rev_,
-                                  registered_callbacks_mutex_)
-        .addSession(SessionIDToString(server_ptr_->session_id()),
-                    shared_from_base(), server_ptr_->GetMetaContext(), callback,
-                    prefix_, prefix_ + meta_sync_lock_);
+    EtcdWatchHandler::getInstance(&handler_).addSession(
+        SessionIDToString(server_ptr_->session_id()), shared_from_base(),
+        server_ptr_->GetMetaContext(), callback, prefix_,
+        prefix_ + meta_sync_lock_);
 
     if (watcher_ && watcher_->Cancelled()) {
       return;
@@ -388,7 +385,8 @@ void EtcdMetaService::retryDaeminWatch(
     if (!error || error != boost::asio::error::operation_aborted) {
       // retry
       LOG(INFO) << "retrying to connect etcd ...";
-      self->startDaemonWatch(prefix, self->handled_rev_.load(), callback);
+      self->startDaemonWatch(prefix, EtcdWatchHandler::handled_rev_.load(),
+                             callback);
     }
   });
 }
@@ -422,5 +420,8 @@ void EtcdWatchHandler::addSession(
 
 EtcdWatchHandler* EtcdWatchHandler::handler_ = nullptr;
 etcd::Watcher* EtcdMetaService::watcher_ = nullptr;
+std::atomic<unsigned> EtcdWatchHandler::handled_rev_;
+std::mutex EtcdWatchHandler::registered_callbacks_mutex_;
+callback_task_queue_t EtcdWatchHandler::registered_callbacks_;
 
 }  // namespace vineyard

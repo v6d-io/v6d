@@ -81,11 +81,9 @@ class EtcdWatchHandler {
     const std::string prefix, filter_prefix;
   };
 
-  static EtcdWatchHandler& getInstance(EtcdWatchHandler** handler,
-                                       std::atomic<unsigned>& handled_rev,
-                                       std::mutex& registered_callbacks_mutex) {
+  static EtcdWatchHandler& getInstance(EtcdWatchHandler** handler) {
     if (!handler_) {
-      static EtcdWatchHandler instance(handled_rev, registered_callbacks_mutex);
+      static EtcdWatchHandler instance;
       handler_ = &instance;
       *handler = handler_;
     }
@@ -104,18 +102,19 @@ class EtcdWatchHandler {
   void operator()(etcd::Response const& task);
 
  private:
-  EtcdWatchHandler(std::atomic<unsigned>& handled_rev,
-                   std::mutex& registered_callbacks_mutex)
-      : handled_rev_(handled_rev),
-        session_add_mutex_(registered_callbacks_mutex) {}
+  EtcdWatchHandler() { handled_rev_.store(0); }
   EtcdWatchHandler(const EtcdWatchHandler&) = delete;
   EtcdWatchHandler& operator=(const EtcdWatchHandler&) = delete;
 
   static EtcdWatchHandler* handler_;
   std::map<std::string, std::shared_ptr<SessionInfo>> sessions_;
+  std::mutex session_add_mutex_;
 
-  std::atomic<unsigned>& handled_rev_;
-  std::mutex& session_add_mutex_;
+  static std::atomic<unsigned> handled_rev_;
+  static std::mutex registered_callbacks_mutex_;
+  static callback_task_queue_t registered_callbacks_;
+
+  friend class EtcdMetaService;
 };
 
 /**
@@ -147,12 +146,6 @@ class EtcdMetaService : public IMetaService {
  public:
   inline void Stop() override;
 
-  inline std::atomic<unsigned>& getHandledRev() { return handled_rev_; }
-
-  inline std::mutex& getMutex() { return registered_callbacks_mutex_; }
-
-  inline callback_task_queue_t& getQueue() { return registered_callbacks_; }
-
   ~EtcdMetaService() override {}
 
  protected:
@@ -160,9 +153,7 @@ class EtcdMetaService : public IMetaService {
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
         prefix_(etcd_spec_["etcd_prefix"].get<std::string>() + "/" +
-                SessionIDToString(server_ptr->session_id())) {
-    this->handled_rev_.store(0);
-  }
+                SessionIDToString(server_ptr->session_id())) {}
 
   void requestLock(
       std::string lock_name,
@@ -206,10 +197,6 @@ class EtcdMetaService : public IMetaService {
   EtcdWatchHandler* handler_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
   std::unique_ptr<EtcdLauncher> etcd_launcher_;
-
-  callback_task_queue_t registered_callbacks_;
-  std::atomic<unsigned> handled_rev_;
-  std::mutex registered_callbacks_mutex_;
 
   friend class IMetaService;
 };
