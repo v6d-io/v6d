@@ -221,7 +221,6 @@ class ArrowFragmentBuilder {
         std::vector<std::thread> threads;
         for (int i = 0; i < worker_vertex_chunk_num; ++i) {
           int edge_chunk_num = helper_reader.GetEdgeChunkNumOfVertexChunk(i + vertex_chunk_begin);
-          LOG(INFO) << "worker-" << comm_spec_.worker_id() << " vertex_chunk_index: " << i + vertex_chunk_begin <<" num=" << edge_chunk_num;
           table_vec_t edge_chunk_tables_of_vertex(edge_chunk_num), edge_property_chunk_tables_of_vertex(edge_chunk_num);
           threads.clear();
           threads.resize(edge_chunk_num * 2);
@@ -237,11 +236,6 @@ class ArrowFragmentBuilder {
                 auto result = reader.GetChunk();
                 if (!result.status().ok()) {
                   LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << result.status().message();
-                }
-                auto table = result.value();
-                auto src_array = std::dynamic_pointer_cast<arrow::Int64Array>(table->column(0)->chunk(0));
-                if (src_array->GetView(0) < (i + vertex_chunk_begin) * edge_info.GetSrcChunkSize()) {
-                  LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << src_array->GetView(0) << " " << (i + vertex_chunk_begin) * edge_info.GetSrcChunkSize() <<" vertex_chunk_index: " << i + vertex_chunk_begin <<" edge_chunk_index=" << tid;
                 }
                 edge_chunk_tables_of_vertex[tid] = result.value();
               } else {
