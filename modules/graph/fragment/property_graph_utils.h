@@ -788,7 +788,7 @@ boost::leaf::result<void> generate_gsf_csr(
   const VID_T* src_list_ptr = src_list->raw_values();
   const VID_T* dst_list_ptr = dst_list->raw_values();
 
-  if (true) {
+  if (concurrency == 1) {
     for (int64_t i = 0; i < edge_num; ++i) {
       VID_T src_id = src_list_ptr[i];
       ++degree[parser.GetLabelId(src_id)][parser.GetOffset(src_id)];
@@ -816,9 +816,7 @@ boost::leaf::result<void> generate_gsf_csr(
     offset_vec[0] = 0;
 
     if (tvnum > 0) {
-      // if (concurrency == 1) {
-      // FIXME: TEST
-      if (true) {
+       if (concurrency == 1) {
         for (VID_T i = 0; i < tvnum; ++i) {
           offset_vec[i + 1] = offset_vec[i] + degree_vec[i];
         }
@@ -848,9 +846,7 @@ boost::leaf::result<void> generate_gsf_csr(
         edge_builders[v_label].ResizeAndFill(actual_edge_num[v_label]));
   }
 
-  // if (concurrency == 1) {
-  // FIXME: test
-  if (true) {
+  if (concurrency == 1) {
     for (int64_t i = 0; i < edge_num; ++i) {
       VID_T src_id = src_list_ptr[i];
       int v_label = parser.GetLabelId(src_id);
