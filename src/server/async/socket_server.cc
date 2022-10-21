@@ -227,6 +227,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::ListDataRequest: {
     return doListData(root);
   }
+  case CommandType::ListNameRequest: {
+    return doListName(root);
+  }
   case CommandType::CreateDataRequest: {
     return doCreateData(root);
   }
@@ -726,6 +729,29 @@ bool SocketConnection::doListData(const json& root) {
         std::string message_out;
         if (status.ok()) {
           WriteGetDataReply(tree, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doListName(const json& root) {
+  auto self(shared_from_this());
+  std::string pattern;
+  bool regex;
+  size_t limit;
+  TRY_READ_REQUEST(ReadListNameRequest, root, pattern, regex, limit);
+  RESPONSE_ON_ERROR(server_ptr_->ListName(
+      pattern, regex, limit,
+      [self](const Status& status,
+             const std::map<std::string, ObjectID>& names) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteListNameReply(names, message_out);
         } else {
           VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);

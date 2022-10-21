@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <iostream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -388,6 +389,27 @@ Status VineyardServer::ListAllData(
         } else {
           VLOG(100) << "Error: " << status.ToString();
           return callback(status, {});
+        }
+      });
+  return Status::OK();
+}
+
+Status VineyardServer::ListName(
+    std::string const& pattern, bool const regex, size_t const limit,
+    callback_t<const std::map<std::string, ObjectID>&> callback) {
+  ENSURE_VINEYARDD_READY();
+  meta_service_ptr_->RequestToGetData(
+      true, [this, pattern, regex, limit, callback](const Status& status,
+                                                    const json& meta) {
+        if (status.ok()) {
+          std::map<std::string, ObjectID> names;
+          Status s;
+          CATCH_JSON_ERROR(
+              s, meta_tree::ListName(meta, pattern, regex, limit, names));
+          return callback(s, names);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          return status;
         }
       });
   return Status::OK();

@@ -61,7 +61,16 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(client.GetName("test_name", id2));
   CHECK_EQ(id, id2);
 
-  LOG(INFO) << "check existing name success";
+  LOG(INFO) << "check existing name succeed";
+
+  {
+    std::map<std::string, ObjectID> names;
+    VINEYARD_CHECK_OK(client.ListNames("test*", false, 100, names));
+    CHECK(names.find("test_name") != names.end());
+    CHECK(names.at("test_name") == id);
+  }
+
+  LOG(INFO) << "check list names succeed";
 
   // meta should contains name
   ObjectMeta meta;
@@ -73,17 +82,26 @@ int main(int argc, char** argv) {
   auto status = client.GetName("test_name2", id3);
   CHECK(status.IsObjectNotExists());
 
-  LOG(INFO) << "check non-existing name success";
+  LOG(INFO) << "check non-existing name succeed";
 
   VINEYARD_CHECK_OK(client.DropName("test_name"));
   ObjectID id4 = 0;
   CHECK(client.GetName("test_name", id4).IsObjectNotExists());
 
-  LOG(INFO) << "check drop name success";
+  LOG(INFO) << "check drop name succeed";
 
   // meta shouldn't contains name anymore
   VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
   CHECK(!meta.Haskey("__name"));
+
+  {
+    std::map<std::string, ObjectID> names;
+    VINEYARD_CHECK_OK(client.ListNames("test*", false, 100, names));
+    // name being deleted
+    CHECK(names.find("test_name") == names.end());
+  }
+
+  LOG(INFO) << "check list names succeed";
 
   LOG(INFO) << "Passed name test...";
 

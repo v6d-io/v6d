@@ -677,6 +677,29 @@ Return:
 )
 
 add_doc(
+    ClientBase.list_names,
+    r'''
+.. method:: list_names(pattern: str, regex: bool = False, limit: int = 5)
+                       -> Dict[str, ObjectID]
+    :noindex:
+
+List all names in current vineyard server.
+
+Parameters:
+    pattern: str
+        The pattern string that will be matched against the name.
+    regex: bool
+        Whether the pattern is a regex expression, otherwise the pattern will be used
+        as wildcard pattern. Default value is False.
+    limit: int
+        The limit to list. Default value is 5.
+
+Returns:
+    Dict[str, ObjectID]
+''',
+)
+
+add_doc(
     ClientBase.drop_name,
     r'''
 .. method:: drop_name(name: str or ObjectName) -> None

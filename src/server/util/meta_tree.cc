@@ -18,6 +18,7 @@ limitations under the License.
 #include <fnmatch.h>
 
 #include <iostream>
+#include <map>
 #include <regex>
 #include <set>
 #include <string>
@@ -381,11 +382,11 @@ Status ListData(const json& tree, const std::string& instance_name,
 
     // match type on pattern
     if (MatchTypeName(regex, pattern, type)) {
-      found += 1;
       json object_meta_tree;
       // skip invalid metadata entries when listing, rather than returning an
       // error
       if (GetData(tree, instance_name, item.key(), object_meta_tree).ok()) {
+        found += 1;
         tree_group[item.key()] = object_meta_tree;
       }
     }
@@ -404,6 +405,28 @@ Status ListAllData(const json& tree, std::vector<ObjectID>& objects) {
       return Status::MetaTreeInvalid();
     }
     objects.emplace_back(ObjectIDFromString(item.key()));
+  }
+  return Status::OK();
+}
+
+Status ListName(const json& tree, std::string const& pattern, bool const regex,
+                size_t const limit, std::map<std::string, ObjectID>& names) {
+  if (!tree.contains("names")) {
+    return Status::OK();
+  }
+
+  size_t found = 0;
+
+  for (auto const& item : tree["names"].items()) {
+    if (found >= limit) {
+      break;
+    }
+
+    // match type on pattern
+    if (MatchTypeName(regex, pattern, item.key())) {
+      found += 1;
+      names[item.key()] = item.value().get<ObjectID>();
+    }
   }
   return Status::OK();
 }

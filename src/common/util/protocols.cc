@@ -61,6 +61,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::ClusterMetaRequest;
   } else if (str_type == "list_data_request") {
     return CommandType::ListDataRequest;
+  } else if (str_type == "list_name_request") {
+    return CommandType::ListNameRequest;
   } else if (str_type == "create_buffer_request") {
     return CommandType::CreateBufferRequest;
   } else if (str_type == "create_disk_buffer_request") {
@@ -308,6 +310,43 @@ Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
   pattern = root["pattern"].get_ref<std::string const&>();
   regex = root.value("regex", false);
   limit = root["limit"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteListNameRequest(std::string const& pattern, bool const regex,
+                          size_t const limit, std::string& msg) {
+  json root;
+  root["type"] = "list_name_request";
+  root["pattern"] = pattern;
+  root["regex"] = regex;
+  root["limit"] = limit;
+
+  encode_msg(root, msg);
+}
+
+Status ReadListNameRequest(const json& root, std::string& pattern, bool& regex,
+                           size_t& limit) {
+  RETURN_ON_ASSERT(root["type"] == "list_name_request");
+  pattern = root["pattern"].get_ref<std::string const&>();
+  regex = root.value("regex", false);
+  limit = root["limit"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteListNameReply(std::map<std::string, ObjectID> const& names,
+                        std::string& msg) {
+  json root;
+  root["type"] = "list_name_reply";
+  root["size"] = names.size();
+  root["names"] = names;
+
+  encode_msg(root, msg);
+}
+
+Status ReadListNameReply(const json& root,
+                         std::map<std::string, ObjectID>& names) {
+  CHECK_IPC_ERROR(root, "list_name_reply");
+  names = root.value("names", std::map<std::string, ObjectID>{});
   return Status::OK();
 }
 

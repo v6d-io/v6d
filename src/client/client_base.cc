@@ -145,6 +145,19 @@ Status ClientBase::ListData(std::string const& pattern, bool const regex,
   return Status::OK();
 }
 
+Status ClientBase::ListNames(std::string const& pattern, bool const regex,
+                             size_t const limit,
+                             std::map<std::string, ObjectID>& names) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteListNameRequest(pattern, regex, limit, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadListNameReply(message_in, names));
+  return Status::OK();
+}
+
 Status ClientBase::CreateStream(const ObjectID& id) {
   ENSURE_CONNECTED(this);
   std::string message_out;

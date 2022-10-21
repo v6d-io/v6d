@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_SERVER_UTIL_META_TREE_H_
 #define SRC_SERVER_UTIL_META_TREE_H_
 
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -93,6 +94,8 @@ Status ListData(const json& tree, const std::string& instance_name,
                 const std::string& pattern, bool const regex,
                 size_t const limit, json& tree_group);
 Status ListAllData(const json& tree, std::vector<ObjectID>& objects);
+Status ListName(const json& tree, std::string const& pattern, bool const regex,
+                size_t const limit, std::map<std::string, ObjectID>& names);
 Status IfPersist(const json& tree, const ObjectID id, bool& persist);
 Status Exists(const json& tree, const ObjectID id, bool& exists);
 
