@@ -261,6 +261,19 @@ void bind_client(py::module& mod) {
           },
           "object_id"_a, "extra_metadata"_a)
       .def(
+          "list_names",
+          [](ClientBase* self, std::string const& pattern, const bool regex,
+             const size_t limit) -> std::map<std::string, ObjectIDWrapper> {
+            std::map<std::string, ObjectID> names;
+            std::map<std::string, ObjectIDWrapper> transformed_names;
+            throw_on_error(self->ListNames(pattern, regex, limit, names));
+            for (auto const& name : names) {
+              transformed_names[name.first] = ObjectIDWrapper(name.second);
+            }
+            return transformed_names;
+          },
+          py::arg("pattern"), py::arg("regex") = false, py::arg("limit") = 5)
+      .def(
           "put_name",
           [](ClientBase* self, const ObjectIDWrapper object_id,
              std::string const& name) {

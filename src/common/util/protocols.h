@@ -89,6 +89,7 @@ enum class CommandType {
   CreateGPUBufferRequest = 56,
   GetGPUBuffersRequest = 57,
   CreateDiskBufferRequest = 58,
+  ListNameRequest = 59,
 };
 
 enum class StoreType {
@@ -140,6 +141,18 @@ void WriteListDataRequest(std::string const& pattern, bool const regex,
 
 Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
                            size_t& limit);
+
+void WriteListNameRequest(std::string const& pattern, bool const regex,
+                          size_t const limit, std::string& msg);
+
+Status ReadListNameRequest(const json& root, std::string& pattern, bool& regex,
+                           size_t& limit);
+
+void WriteListNameReply(std::map<std::string, ObjectID> const& names,
+                        std::string& msg);
+
+Status ReadListNameReply(const json& root,
+                         std::map<std::string, ObjectID>& names);
 
 void WriteCreateDataRequest(const json& content, std::string& msg);
 

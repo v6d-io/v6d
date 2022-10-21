@@ -201,6 +201,24 @@ class ClientBase {
                   std::unordered_map<ObjectID, json>& meta_trees);
 
   /**
+   * @brief List names in vineyard, using the given name patterns.
+   *
+   * @param pattern The pattern string that will be used to matched against
+   * objects' `name`.
+   * @param regex Whether the pattern is a regular expression pattern. Default
+   * is false. When `regex` is false, the pattern will be treated as a glob
+   * pattern.
+   * @param limit The number limit for how many objects will be returned at
+   * most.
+   * @param names An map that contains the returned names and corresponding
+   * object ids.
+   *
+   * @return Status that indicates whether the list action has succeeded.
+   */
+  Status ListNames(std::string const& pattern, bool const regex,
+                   size_t const limit, std::map<std::string, ObjectID>& names);
+
+  /**
    * @brief Allocate a stream on vineyard. The metadata of parameter `id` must
    * has already been created on vineyard.
    *

@@ -92,6 +92,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doListData(json const& root);
 
+  bool doListName(json const& root);
+
   bool doCreateData(json const& root);
 
   bool doPersist(json const& root);

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <atomic>
 #include <list>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -115,6 +116,10 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                   size_t const limit, callback_t<const json&> callback);
 
   Status ListAllData(callback_t<std::vector<ObjectID> const&> callback);
+
+  Status ListName(std::string const& pattern, bool const regex,
+                  size_t const limit,
+                  callback_t<const std::map<std::string, ObjectID>&> callback);
 
   Status CreateData(
       const json& tree,
