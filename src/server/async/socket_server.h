@@ -41,6 +41,8 @@ namespace asio = boost::asio;
 using boost::asio::generic::stream_protocol;
 
 class SocketServer;
+class IPCServer;
+class RPCServer;
 class BulkStore;
 class PlasmaBulkStore;
 class VineyardServer;
@@ -218,6 +220,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
       boost::system::error_code const ec,
       callback_t<std::shared_ptr<Payload> const&> callback_after_finish);
 
+  void switchSession(std::shared_ptr<VineyardServer>& session) {
+    this->server_ptr_ = session;
+  }
+
   stream_protocol::socket socket_;
   std::shared_ptr<VineyardServer> server_ptr_;
   std::shared_ptr<SocketServer> socket_server_ptr_;
@@ -237,6 +243,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   size_t read_msg_header_;
   std::string read_msg_body_;
+
+  friend class IPCServer;
+  friend class RPCServer;
 };
 
 /**
@@ -286,6 +295,13 @@ class SocketServer {
    * Inspect the size of current alive connections.
    */
   size_t AliveConnections() const;
+
+  /**
+   * Register the new connection. RPC server will set the expected server ptr
+   * to the connection object.
+   */
+  virtual Status Register(std::shared_ptr<SocketConnection> conn,
+                          const SessionID session_id) = 0;
 
  protected:
   std::atomic_bool stopped_;  // if the socket server being stopped.

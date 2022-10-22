@@ -94,8 +94,9 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   // initializing the metadata service.
   ipc_server_ptr_ = std::make_shared<IPCServer>(shared_from_this());
   if (session_id_ == RootSessionID() && spec_["rpc_spec"]["rpc"].get<bool>()) {
-    // TODO: the rpc won't be enabled for child sessions as we are unsure
-    // about how to select the port.
+    // N.B: the rpc won't be enabled for child sessions. In the handler
+    // of "Register" request in RPC server the session will be set as the
+    // request session as expected.
     rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
   }
 
@@ -109,7 +110,7 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
     RETURN_ON_ERROR(plasma_bulk_store_->PreAllocate(memory_limit, allocator));
 
-    // TODO(mengke.mk): Currently we do not allow streamming in plasma
+    // TODO(mengke.mk): Currently we do not allow streaming in plasma
     // bulkstore, anyway, we can templatize stream store to solve this.
     stream_store_ = nullptr;
   } else if (bulk_store_type_ == StoreType::kDefault) {
@@ -399,8 +400,8 @@ Status VineyardServer::ListName(
     callback_t<const std::map<std::string, ObjectID>&> callback) {
   ENSURE_VINEYARDD_READY();
   meta_service_ptr_->RequestToGetData(
-      true, [this, pattern, regex, limit, callback](const Status& status,
-                                                    const json& meta) {
+      true, [pattern, regex, limit, callback](const Status& status,
+                                              const json& meta) {
         if (status.ok()) {
           std::map<std::string, ObjectID> names;
           Status s;

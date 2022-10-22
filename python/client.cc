@@ -63,17 +63,19 @@ class ClientManager {
     return manager;
   }
 
-  std::shared_ptr<ClientType> Connect(std::string const& endpoint = "") {
+  std::shared_ptr<ClientType> Connect(
+      std::string const& endpoint = "",
+      const SessionID session_id = RootSessionID()) {
     std::lock_guard<std::mutex> guard{mtx_};
-    auto iter = client_set_.find(endpoint);
+    std::string endpoint_key = endpoint + ":" + SessionIDToString(session_id);
+    auto iter = client_set_.find(endpoint_key);
     if (iter != client_set_.end()) {
       if (iter->second->Connected()) {
         return iter->second;
       }
     }
     std::shared_ptr<ClientType> client = std::make_shared<ClientType>();
-    auto connect_status =
-        endpoint.empty() ? client->Connect() : client->Connect(endpoint);
+    auto connect_status = this->ConnectImpl(client, endpoint, session_id);
     if (PyErr_CheckSignals() != 0) {
       // The method `Connect` will keep retrying, we need to propogate
       // the Ctrl-C when during the C++ code run retries.
@@ -82,22 +84,45 @@ class ClientManager {
     // propogate the KeyboardInterrupt exception correctly before the
     // RuntimeError
     throw_on_error(connect_status);
-    client_set_.emplace(endpoint, client);
+    client_set_.emplace(endpoint_key, client);
     return client;
   }
 
-  void Disconnect(std::string const& ipc_socket) {
+  void Disconnect(std::string const& endpoint,
+                  const SessionID session_id = RootSessionID()) {
     std::lock_guard<std::mutex> guard{mtx_};
-    auto iter = client_set_.find(ipc_socket);
+    std::string endpoint_key = endpoint + ":" + SessionIDToString(session_id);
+    auto iter = client_set_.find(endpoint_key);
     if (iter != client_set_.end() && iter->second.use_count() == 2) {
       // the python variable is the last reference, another reference
       // lies in the `client_set_`.
       iter->second->Disconnect();
-      client_set_.erase(ipc_socket);
+      client_set_.erase(endpoint_key);
     }
   }
 
  private:
+  // See also "Notes" in https://en.cppreference.com/w/cpp/types/enable_if
+
+  template <
+      typename ClientPtrType,
+      typename std::enable_if<std::is_same<
+          ClientPtrType, std::shared_ptr<Client>>::value>::type* = nullptr>
+  Status ConnectImpl(ClientPtrType& client, std::string const& endpoint,
+                     const SessionID session_id) {
+    return endpoint.empty() ? client->Connect() : client->Connect(endpoint);
+  }
+
+  template <
+      typename ClientPtrType,
+      typename std::enable_if<std::is_same<
+          ClientPtrType, std::shared_ptr<RPCClient>>::value>::type* = nullptr>
+  Status ConnectImpl(ClientPtrType& client, std::string const& endpoint,
+                     const SessionID session_id) {
+    return endpoint.empty() ? client->Connect()
+                            : client->Connect(endpoint, session_id);
+  }
+
   std::mutex mtx_;
   std::unordered_map<std::string, std::shared_ptr<ClientType>> client_set_;
 };
@@ -718,7 +743,7 @@ void bind_client(py::module& mod) {
       .def("close",
            [](RPCClient* self) {
              return ClientManager<RPCClient>::GetManager()->Disconnect(
-                 self->RPCEndpoint());
+                 self->RPCEndpoint(), self->session_id());
            })
       .def("fork",
            [](RPCClient* self) {
@@ -758,37 +783,41 @@ void bind_client(py::module& mod) {
           "endpoint"_a)
       .def(
           "connect",
-          [](std::string const& host, const uint32_t port) {
+          [](std::string const& host, const uint32_t port,
+             const SessionID session_id) {
             std::string rpc_endpoint = host + ":" + std::to_string(port);
-            return py::cast(
-                ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint));
+            return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint, session_id));
           },
-          "host"_a, "port"_a)
+          "host"_a, "port"_a, py::arg("session") = RootSessionID())
       .def(
           "connect",
-          [](std::string const& host, std::string const& port) {
+          [](std::string const& host, std::string const& port,
+             const SessionID session_id) {
             std::string rpc_endpoint = host + ":" + port;
-            return ClientManager<RPCClient>::GetManager()->Connect(
-                rpc_endpoint);
+            return ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint,
+                                                                   session_id);
           },
-          "host"_a, "port"_a)
+          "host"_a, "port"_a, py::arg("session") = RootSessionID())
       .def(
           "connect",
-          [](std::pair<std::string, uint32_t> const& endpoint) {
+          [](std::pair<std::string, uint32_t> const& endpoint,
+             const SessionID session_id) {
             std::string rpc_endpoint =
                 endpoint.first + ":" + std::to_string(endpoint.second);
-            return ClientManager<RPCClient>::GetManager()->Connect(
-                rpc_endpoint);
+            return ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint,
+                                                                   session_id);
           },
-          "(host, port)"_a)
+          "(host, port)"_a, py::arg("session") = RootSessionID())
       .def(
           "connect",
-          [](std::pair<std::string, std::string> const& endpoint) {
+          [](std::pair<std::string, std::string> const& endpoint,
+             const SessionID session_id) {
             std::string rpc_endpoint = endpoint.first + ":" + endpoint.second;
-            return ClientManager<RPCClient>::GetManager()->Connect(
-                rpc_endpoint);
+            return ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint,
+                                                                   session_id);
           },
-          "(host, port)"_a);
+          "(host, port)"_a, py::arg("session") = RootSessionID());
 }  // NOLINT(readability/fn_size)
 
 }  // namespace vineyard

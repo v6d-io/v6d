@@ -45,6 +45,11 @@ Status RPCClient::Connect() {
 }
 
 Status RPCClient::Connect(const std::string& rpc_endpoint) {
+  return this->Connect(rpc_endpoint, RootSessionID());
+}
+
+Status RPCClient::Connect(const std::string& rpc_endpoint,
+                          const SessionID session_id) {
   size_t pos = rpc_endpoint.find(":");
   std::string host, port;
   if (pos == std::string::npos) {
@@ -54,10 +59,16 @@ Status RPCClient::Connect(const std::string& rpc_endpoint) {
     host = rpc_endpoint.substr(0, pos);
     port = rpc_endpoint.substr(pos + 1);
   }
-  return this->Connect(host, static_cast<uint32_t>(std::stoul(port)));
+  return this->Connect(host, static_cast<uint32_t>(std::stoul(port)),
+                       session_id);
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port) {
+  return this->Connect(host, port, RootSessionID());
+}
+
+Status RPCClient::Connect(const std::string& host, uint32_t port,
+                          const SessionID session_id) {
   std::lock_guard<std::recursive_mutex> guard(client_mutex_);
   std::string rpc_endpoint = host + ":" + std::to_string(port);
   RETURN_ON_ASSERT(!connected_ || rpc_endpoint == rpc_endpoint_);
@@ -67,7 +78,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
   rpc_endpoint_ = rpc_endpoint;
   RETURN_ON_ERROR(connect_rpc_socket_retry(host, port, vineyard_conn_));
   std::string message_out;
-  WriteRegisterRequest(message_out, StoreType::kDefault);
+  WriteRegisterRequest(message_out, StoreType::kDefault, session_id);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -96,7 +107,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
 Status RPCClient::Fork(RPCClient& client) {
   RETURN_ON_ASSERT(!client.Connected(),
                    "The client has already been connected to vineyard server");
-  return client.Connect(rpc_endpoint_);
+  return client.Connect(rpc_endpoint_, session_id_);
 }
 
 Status RPCClient::GetMetaData(const ObjectID id, ObjectMeta& meta,

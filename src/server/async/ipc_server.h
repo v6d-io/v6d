@@ -47,6 +47,9 @@ class IPCServer : public SocketServer,
     return ipc_spec_["socket"].get_ref<std::string const&>();
   }
 
+  Status Register(std::shared_ptr<SocketConnection> conn,
+                  const SessionID session_id) override;
+
  private:
   asio::local::stream_protocol::endpoint getEndpoint(asio::io_context&);
 

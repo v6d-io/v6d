@@ -159,21 +159,29 @@ void WriteErrorReply(Status const& status, std::string& msg) {
 }
 
 void WriteRegisterRequest(std::string& msg, StoreType const& store_type) {
+  WriteRegisterRequest(msg, store_type, RootSessionID());
+}
+
+void WriteRegisterRequest(std::string& msg, StoreType const& store_type,
+                          const ObjectID& session_id) {
   json root;
   root["type"] = "register_request";
   root["version"] = vineyard_version();
   root["store_type"] = store_type;
+  root["session_id"] = session_id;
 
   encode_msg(root, msg);
 }
 
 Status ReadRegisterRequest(const json& root, std::string& version,
-                           StoreType& store_type) {
+                           StoreType& store_type, SessionID& session_id) {
   RETURN_ON_ASSERT(root["type"] == "register_request");
 
   // When the "version" field is missing from the client, we treat it
   // as default unknown version number: 0.0.0.
-  version = root.value<std::string>("version", std::string("0.0.0"));
+  version =
+      root.value<std::string>("version", /* default */ std::string("0.0.0"));
+  session_id = root.value("session_id", /* default */ RootSessionID());
 
   // Keep backwards compatibility.
   if (root.contains("store_type")) {
