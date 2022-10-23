@@ -81,11 +81,10 @@ class EtcdWatchHandler {
     const std::string prefix, filter_prefix;
   };
 
-  static EtcdWatchHandler& getInstance(EtcdWatchHandler** handler) {
+  static EtcdWatchHandler& getInstance() {
     if (!handler_) {
       static EtcdWatchHandler instance;
       handler_ = &instance;
-      *handler = handler_;
     }
     return *handler_;
   }

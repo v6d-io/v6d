@@ -75,18 +75,17 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
         // FIXME: for simplicity, we don't care the instance-lock related keys.
         continue;
       }
-      IMetaService::op_t op;
       std::string op_key =
           boost::algorithm::erase_head_copy(key, session_ptr->prefix.size());
       switch (event.event_type()) {
       case etcd::Event::EventType::PUT: {
-        op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
-                                     event.kv().modified_index());
+        auto op = IMetaService::op_t::Put(op_key, event.kv().as_string(),
+                                          event.kv().modified_index());
         ops.emplace_back(op);
         break;
       }
       case etcd::Event::EventType::DELETE_: {
-        op = IMetaService::op_t::Del(op_key, event.kv().modified_index());
+        auto op = IMetaService::op_t::Del(op_key, event.kv().modified_index());
         ops.emplace_back(op);
         break;
       }
@@ -333,7 +332,7 @@ void EtcdMetaService::startDaemonWatch(
         callback) {
   LOG(INFO) << "start background etcd watch, since " << rev_;
   try {
-    EtcdWatchHandler::getInstance(&handler_).addSession(
+    EtcdWatchHandler::getInstance().addSession(
         SessionIDToString(server_ptr_->session_id()), shared_from_base(),
         server_ptr_->GetMetaContext(), callback, prefix_,
         prefix_ + meta_sync_lock_);
@@ -347,8 +346,9 @@ void EtcdMetaService::startDaemonWatch(
       //
       // As we use `head()` to get latest revision, without prefix, use "" as
       // the prefix would help us to get the true latest updates ASAP.
-      static etcd::Watcher watcherInstance(*etcd_, "", since_rev + 1,
-                                           std::ref(*handler_), true);
+      static etcd::Watcher watcherInstance(
+          *etcd_, "", since_rev + 1, std::ref(*EtcdWatchHandler::handler_),
+          true);
       watcher_ = &watcherInstance;
 
       watcher_->Wait([this, prefix, callback](bool cancelled) {

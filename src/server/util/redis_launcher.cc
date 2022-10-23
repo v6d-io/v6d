@@ -49,9 +49,8 @@ RedisLauncher::~RedisLauncher() {
 Status RedisLauncher::LaunchRedisServer(
     std::unique_ptr<redis::AsyncRedis>& redis_client,
     std::unique_ptr<redis::Redis>& syncredis_client,
-    std::unique_ptr<redis::Redis>& watch_client,
-    std::shared_ptr<redis::RedMutex>& mtx,
-    std::shared_ptr<redis::RedLock<redis::RedMutex>>& redlock) {
+    redis::Redis** watch_client, redis::RedMutex** mtx,
+    std::unique_ptr<redis::RedLock<redis::RedMutex>>& redlock) {
   RETURN_ON_ERROR(parseEndpoint());
   redis::ConnectionOptions opts;
   opts.host = endpoint_host_;
@@ -64,12 +63,15 @@ Status RedisLauncher::LaunchRedisServer(
   // sync redis client
   syncredis_client.reset(new redis::Redis(opts, pool_opts));
   // watch sync redis client
-  watch_client.reset(new redis::Redis(opts, pool_opts));
+  if (!*watch_client) {
+    static redis::Redis instance(opts, pool_opts);
+    *watch_client = &instance;
+    static redis::RedMutex rMinstance(*syncredis_client, "resource");
+    *mtx = &rMinstance;
+  }
+  redlock.reset(new redis::RedLock<redis::RedMutex>(**mtx, std::defer_lock));
 
-  mtx.reset(new redis::RedMutex(*syncredis_client, "resource"));
-  redlock.reset(new redis::RedLock<redis::RedMutex>(*mtx, std::defer_lock));
-
-  if (probeRedisServer(redis_client, syncredis_client, watch_client)) {
+  if (probeRedisServer(redis_client, syncredis_client, *watch_client)) {
     return Status::OK();
   }
 
@@ -95,7 +97,7 @@ Status RedisLauncher::LaunchRedisServer(
     LOG(INFO) << "Will not launch a redis instance.";
     int retries = 0;
     while (retries < max_probe_retries) {
-      if (probeRedisServer(redis_client, syncredis_client, watch_client)) {
+      if (probeRedisServer(redis_client, syncredis_client, *watch_client)) {
         break;
       }
       retries += 1;
@@ -132,7 +134,7 @@ Status RedisLauncher::LaunchRedisServer(
     std::error_code err;
     while (redis_proc_ && redis_proc_->running(err) && !err &&
            retries < max_probe_retries) {
-      if (probeRedisServer(redis_client, syncredis_client, watch_client)) {
+      if (probeRedisServer(redis_client, syncredis_client, *watch_client)) {
         break;
       }
       retries += 1;
@@ -216,7 +218,7 @@ Status RedisLauncher::parseEndpoint() {
 bool RedisLauncher::probeRedisServer(
     std::unique_ptr<redis::AsyncRedis>& redis_client,
     std::unique_ptr<redis::Redis>& syncredis_client,
-    std::unique_ptr<redis::Redis>& watch_client) {
+    redis::Redis* watch_client) {
   LOG(INFO) << "Waiting for the redis server response ...";
   try {
     auto watch_response = watch_client->ping();

@@ -99,54 +99,62 @@ class RedisMetaService;
  */
 class RedisWatchHandler {
  public:
-  RedisWatchHandler(const std::shared_ptr<RedisMetaService>& meta_service_ptr,
-#if BOOST_VERSION >= 106600
-                    asio::io_context& ctx,
-#else
-                    asio::io_service& ctx,
-#endif
-                    callback_t<const std::vector<IMetaService::op_t>&, unsigned,
-                               callback_t<unsigned>>
-                        callback,
-                    std::string const& prefix,
-                    callback_task_queue_t& registered_callbacks,
-                    std::atomic<unsigned>& handled_rev,
-                    std::mutex& registered_callbacks_mutex)
-      : meta_service_ptr_(meta_service_ptr),
-        ctx_(ctx),
-        callback_(callback),
-        prefix_(prefix),
-        registered_callbacks_(registered_callbacks),
-        handled_rev_(handled_rev),
-        registered_callbacks_mutex_(registered_callbacks_mutex) {
+  struct SessionInfo {
+    SessionInfo(const std::string& ID,
+                const std::shared_ptr<RedisMetaService>& p, asio::io_context& c,
+                callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                           callback_t<unsigned>>
+                    f)
+        : sessionID(ID), meta_service_ptr(p), ctx(c), callback(f) {}
+    const std::string sessionID;
+    const std::shared_ptr<RedisMetaService> meta_service_ptr;
+    asio::io_context& ctx;
+    const callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                     callback_t<unsigned>>
+        callback;
+  };
+
+  static RedisWatchHandler& getInstance(const std::string& prefix) {
+    if (!handler_) {
+      static RedisWatchHandler instance(prefix);
+      handler_ = &instance;
+    }
+    return *handler_;
   }
 
-  void operator()(std::unique_ptr<redis::Redis>&, std::string);
+  void addSession(const std::string& sessionID,
+                  const std::shared_ptr<RedisMetaService>& pems,
+                  asio::io_context& ctx,
+                  callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                             callback_t<unsigned>>
+                      callback);
+
+  void operator()(redis::Redis* redis, const std::string& rev);
 
  private:
-  const std::shared_ptr<RedisMetaService> meta_service_ptr_;
-#if BOOST_VERSION >= 106600
-  asio::io_context& ctx_;
-#else
-  asio::io_service& ctx_;
-#endif
-  const callback_t<const std::vector<IMetaService::op_t>&, unsigned,
-                   callback_t<unsigned>>
-      callback_;
-  std::string const prefix_;
+  explicit RedisWatchHandler(const std::string& prefix) : prefix_(prefix) {}
+  RedisWatchHandler(const RedisWatchHandler&) = delete;
+  RedisWatchHandler& operator=(const RedisWatchHandler&) = delete;
 
-  callback_task_queue_t& registered_callbacks_;
-  std::atomic<unsigned>& handled_rev_;
-  std::mutex& registered_callbacks_mutex_;
+  static RedisWatchHandler* handler_;
+  std::vector<std::shared_ptr<SessionInfo>> sessions_;
+  std::mutex session_add_mutex_;
+
+  static std::atomic<unsigned> handled_rev_;
+  static std::mutex registered_callbacks_mutex_;
+  static callback_task_queue_t registered_callbacks_;
 
   const std::string kPut = "0";
   const std::string kDel = "1";
+  const std::string prefix_;
 
   // TODO: more error codes
   enum { OK = 0, UNNAMED_ERROR = 1 };
   std::string errMsg;
   int stateCode = OK;
   std::string errType;
+
+  friend class RedisMetaService;
 };
 /**
  * @brief RedisLock is designed as the lock for accessing redis
@@ -175,6 +183,7 @@ class RedisLock : public ILock {
 class RedisMetaService : public IMetaService {
  public:
   inline void Stop() override;
+
   ~RedisMetaService() override {}
 
  protected:
@@ -182,9 +191,7 @@ class RedisMetaService : public IMetaService {
       : IMetaService(server_ptr),
         redis_spec_(server_ptr_->GetSpec()["metastore_spec"]),
         prefix_(redis_spec_["redis_prefix"].get<std::string>() + "/" +
-                SessionIDToString(server_ptr->session_id())) {
-    this->handled_rev_.store(0);
-  }
+                SessionIDToString(server_ptr->session_id())) {}
 
   void requestLock(
       std::string lock_name,
@@ -225,17 +232,13 @@ class RedisMetaService : public IMetaService {
 
   std::unique_ptr<redis::AsyncRedis> redis_;
   std::unique_ptr<redis::Redis> syncredis_;
-  std::unique_ptr<redis::Redis> watch_client_;
-  std::shared_ptr<redis::RedMutex> mtx_;
-  std::shared_ptr<redis::RedLock<redis::RedMutex>> redlock_;
-  std::shared_ptr<redis::AsyncSubscriber> watcher_;
-  std::shared_ptr<RedisWatchHandler> handler_;
+  std::unique_ptr<redis::AsyncSubscriber> watcher_;
+  static redis::Redis* watch_client_;
+  static redis::RedMutex* mtx_;
+  std::unique_ptr<redis::RedLock<redis::RedMutex>> redlock_;
+
   std::unique_ptr<asio::steady_timer> backoff_timer_;
   std::unique_ptr<RedisLauncher> redis_launcher_;
-
-  callback_task_queue_t registered_callbacks_;
-  std::atomic<unsigned> handled_rev_;
-  std::mutex registered_callbacks_mutex_;
 
   // TODO: more error codes
   enum { OK = 0, UNNAMED_ERROR = 1 };
@@ -257,7 +260,7 @@ class RedisMetaService : public IMetaService {
   inline void operationUpdates(
       callback_t<unsigned> callback_after_updated,
       const std::unordered_map<std::string, unsigned> ops,
-      std::string op_prefix, unsigned irev) {
+      const std::string& op_prefix, unsigned irev) {
     auto self(shared_from_base());
     redis_->hset(
         op_prefix, ops.begin(), ops.end(),

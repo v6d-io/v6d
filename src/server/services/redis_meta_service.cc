@@ -18,6 +18,7 @@ limitations under the License.
 #if defined(BUILD_VINEYARDD_REDIS)
 
 #include <chrono>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -31,11 +32,13 @@ limitations under the License.
 
 namespace vineyard {
 
-void RedisWatchHandler::operator()(std::unique_ptr<redis::Redis>& redis,
-                                   std::string rev) {
+void RedisWatchHandler::operator()(redis::Redis* redis,
+                                   const std::string& rev) {
   // need to ensure handled_rev_ updates before next publish is handled
-  std::lock_guard<std::mutex> scope_lock(registered_callbacks_mutex_);
-  if (this->meta_service_ptr_->stopped()) {
+  std::lock_guard<std::mutex> scope_lock(
+      RedisWatchHandler::registered_callbacks_mutex_);
+
+  if (sessions_[0]->meta_service_ptr->stopped()) {
     return;
   }
 
@@ -48,13 +51,13 @@ void RedisWatchHandler::operator()(std::unique_ptr<redis::Redis>& redis,
     errType += " resolve redis_revision error";
   }
 
-  if (irev < handled_rev_.load()) {
+  if (irev < RedisWatchHandler::handled_rev_.load()) {
     return;
   }
 
   std::vector<std::string> operations;
   try {
-    redis->lrange("opslist", handled_rev_.load(), irev,
+    redis->lrange("opslist", RedisWatchHandler::handled_rev_.load(), irev,
                   std::back_inserter(operations));
   } catch (...) {
     stateCode = UNNAMED_ERROR;
@@ -62,7 +65,7 @@ void RedisWatchHandler::operator()(std::unique_ptr<redis::Redis>& redis,
     errType += " lrange error";
   }
 
-  std::vector<IMetaService::op_t> ops;
+  std::map<std::string, std::vector<IMetaService::op_t>> ops;
   try {
     for (auto const& item : operations) {
       std::vector<std::string> puts;
@@ -75,7 +78,11 @@ void RedisWatchHandler::operator()(std::unique_ptr<redis::Redis>& redis,
           puts.emplace_back(kv.first);
         } else if (kv.second == kDel) {
           // keys need to Del
-          ops.emplace_back(IMetaService::op_t::Del(kv.first, irev + 1));
+          auto pos = kv.first.find('/');
+          ops[kv.first.substr(pos + 1, 17)].emplace_back(
+              IMetaService::op_t::Del(
+                  boost::algorithm::erase_head_copy(kv.first, prefix_.size()),
+                  irev + 1));
         }
       }
 
@@ -85,9 +92,11 @@ void RedisWatchHandler::operator()(std::unique_ptr<redis::Redis>& redis,
           redis->mget(puts.begin(), puts.end(), std::back_inserter(vals));
           for (size_t i = 0; i < vals.size(); ++i) {
             if (vals[i]) {
-              ops.emplace_back(IMetaService::op_t::Put(
-                  boost::algorithm::erase_head_copy(puts[i], prefix_.size()),
-                  *vals[i], irev + 1));
+              auto pos = puts[i].find('/');
+              ops[puts[i].substr(pos + 1, 17)].emplace_back(
+                  IMetaService::op_t::Put(boost::algorithm::erase_head_copy(
+                                              puts[i], prefix_.size()),
+                                          *vals[i], irev + 1));
             }
           }
         } catch (...) {
@@ -108,33 +117,44 @@ void RedisWatchHandler::operator()(std::unique_ptr<redis::Redis>& redis,
 #endif
 
   auto status = Status::RedisError(stateCode, errMsg, errType);
-  ctx_.post(boost::bind(
-      callback_, status, ops, irev + 1,
-      [this, status](Status const&, unsigned rev) -> Status {
-        if (this->meta_service_ptr_->stopped()) {
-          return Status::AlreadyStopped("redis metadata service");
-        }
-        std::lock_guard<std::mutex> scope_lock(
-            this->registered_callbacks_mutex_);
-        if (status.ok()) {
-          this->handled_rev_.store(rev);
-        }
-        // handle registered callbacks
-        while (!this->registered_callbacks_.empty()) {
-          auto iter = this->registered_callbacks_.top();
+
+  std::lock_guard<std::mutex> scope_lock2(session_add_mutex_);
+  auto it = sessions_.begin();
+  while (it != sessions_.end()) {
+    auto session_ptr = (*it);
+    if (!session_ptr->meta_service_ptr->stopped()) {
+      session_ptr->ctx.post(boost::bind(
+          session_ptr->callback, status, ops[session_ptr->sessionID], irev + 1,
+          [session_ptr, status](Status const&, unsigned rev) -> Status {
+            if (session_ptr->meta_service_ptr->stopped()) {
+              return Status::AlreadyStopped("redis metadata service");
+            }
+            std::lock_guard<std::mutex> scope_lock(
+                RedisWatchHandler::registered_callbacks_mutex_);
+            if (status.ok()) {
+              RedisWatchHandler::handled_rev_.store(rev);
+            }
+            // handle registered callbacks
+            while (!RedisWatchHandler::registered_callbacks_.empty()) {
+              auto iter = RedisWatchHandler::registered_callbacks_.top();
 #ifndef NDEBUG
-          VINEYARD_ASSERT(iter.first >= processed);
-          processed = iter.first;
+              VINEYARD_ASSERT(iter.first >= processed);
+              processed = iter.first;
 #endif
-          if (iter.first > rev) {
-            break;
-          }
-          this->ctx_.post(boost::bind(iter.second, status,
-                                      std::vector<IMetaService::op_t>{}, rev));
-          this->registered_callbacks_.pop();
-        }
-        return Status::OK();
-      }));
+              if (iter.first > rev) {
+                break;
+              }
+              session_ptr->ctx.post(boost::bind(
+                  iter.second, status, std::vector<IMetaService::op_t>{}, rev));
+              RedisWatchHandler::registered_callbacks_.pop();
+            }
+            return Status::OK();
+          }));
+      ++it;
+    } else {
+      it = sessions_.erase(it);
+    }
+  }
 }
 
 void RedisMetaService::Stop() {
@@ -294,15 +314,15 @@ void RedisMetaService::requestUpdates(
         auto head_rev = static_cast<unsigned>(std::stol(*resp.get()));
         {
           std::lock_guard<std::mutex> scope_lock(
-              self->registered_callbacks_mutex_);
-          auto handled_rev = self->handled_rev_.load();
+              RedisWatchHandler::registered_callbacks_mutex_);
+          auto handled_rev = RedisWatchHandler::handled_rev_.load();
           if (head_rev <= handled_rev + 1) {
             self->server_ptr_->GetMetaContext().post(boost::bind(
                 callback, Status::OK(), std::vector<op_t>{}, handled_rev));
             return;
           }
           // all updates through publish
-          self->registered_callbacks_.emplace(
+          RedisWatchHandler::registered_callbacks_.emplace(
               std::make_pair(head_rev, callback));
         }
       });
@@ -342,7 +362,7 @@ void RedisMetaService::commitUpdates(
       ops.insert({prefix_ + op.kv.key, op_t::kPut});
     } else if (op.op == op_t::kDel) {
       keys.emplace_back(prefix_ + op.kv.key);
-      ops.insert({op.kv.key, op_t::kDel});
+      ops.insert({prefix_ + op.kv.key, op_t::kDel});
     }
   }
 
@@ -388,19 +408,22 @@ void RedisMetaService::startDaemonWatch(
         callback) {
   LOG(INFO) << "start background redis watch, since " << rev_;
   try {
-    this->handled_rev_.store(since_rev);
-    if (!handler_) {
-      handler_.reset(new RedisWatchHandler(
-          shared_from_base(), server_ptr_->GetMetaContext(), callback, prefix_,
-          this->registered_callbacks_, this->handled_rev_,
-          this->registered_callbacks_mutex_));
+    {
+      std::lock_guard<std::mutex> scope_lock(
+          RedisWatchHandler::registered_callbacks_mutex_);
+      RedisWatchHandler::handled_rev_.store(since_rev);
     }
     auto self(shared_from_base());
+    RedisWatchHandler::getInstance(prefix_).addSession(
+        SessionIDToString(server_ptr_->session_id()), self,
+        server_ptr_->GetMetaContext(), callback);
     this->watcher_.reset(new redis::AsyncSubscriber(redis_->subscriber()));
-    this->watcher_->on_message([self](std::string channel, std::string msg) {
-      self->server_ptr_->GetMetaContext().post(boost::bind<void>(
-          std::ref(*(self->handler_)), std::ref(self->watch_client_), msg));
-    });
+    this->watcher_->on_message(
+        [self](const std::string& channel, const std::string& msg) {
+          self->server_ptr_->GetMetaContext().post(boost::bind<void>(
+              std::ref(*RedisWatchHandler::handler_),
+              std::ref(RedisMetaService::watch_client_), msg));
+        });
     this->watcher_->subscribe("operations");
   } catch (std::runtime_error& e) {
     LOG(ERROR) << "Failed to create daemon redis watcher: " << e.what();
@@ -427,7 +450,8 @@ void RedisMetaService::retryDaeminWatch(
     if (!error || error != boost::asio::error::operation_aborted) {
       // retry
       LOG(INFO) << "retrying to connect redis ...";
-      self->startDaemonWatch(prefix, self->handled_rev_.load(), callback);
+      self->startDaemonWatch(prefix, RedisWatchHandler::handled_rev_.load(),
+                             callback);
     }
   });
 }
@@ -444,9 +468,27 @@ Status RedisMetaService::probe() {
 Status RedisMetaService::preStart() {
   redis_launcher_ =
       std::unique_ptr<RedisLauncher>(new RedisLauncher(redis_spec_));
-  return redis_launcher_->LaunchRedisServer(redis_, syncredis_, watch_client_,
-                                            mtx_, redlock_);
+  return redis_launcher_->LaunchRedisServer(redis_, syncredis_, &watch_client_,
+                                            &mtx_, redlock_);
 }
+
+void RedisWatchHandler::addSession(
+    const std::string& sessionID, const std::shared_ptr<RedisMetaService>& pems,
+    asio::io_context& ctx,
+    callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+               callback_t<unsigned>>
+        callback) {
+  std::lock_guard<std::mutex> scope_lock(session_add_mutex_);
+  sessions_.emplace_back(
+      std::make_shared<SessionInfo>(sessionID, pems, ctx, callback));
+}
+
+redis::Redis* RedisMetaService::watch_client_ = nullptr;
+redis::RedMutex* RedisMetaService::mtx_ = nullptr;
+RedisWatchHandler* RedisWatchHandler::handler_ = nullptr;
+std::atomic<unsigned> RedisWatchHandler::handled_rev_;
+std::mutex RedisWatchHandler::registered_callbacks_mutex_;
+callback_task_queue_t RedisWatchHandler::registered_callbacks_;
 
 }  // namespace vineyard
 
