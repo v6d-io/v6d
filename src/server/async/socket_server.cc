@@ -358,13 +358,20 @@ bool SocketConnection::doRegister(const json& root) {
   auto self(shared_from_this());
   std::string client_version, message_out;
   StoreType bulk_store_type;
-  TRY_READ_REQUEST(ReadRegisterRequest, root, client_version, bulk_store_type);
-  bool store_match = (bulk_store_type == server_ptr_->GetBulkStoreType());
-  WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
-                     server_ptr_->instance_id(), server_ptr_->session_id(),
-                     store_match, message_out);
+  SessionID session_id;
+  TRY_READ_REQUEST(ReadRegisterRequest, root, client_version, bulk_store_type,
+                   session_id);
+  Status s = socket_server_ptr_->Register(self, session_id);
+  if (s.ok()) {
+    bool store_match = (bulk_store_type == server_ptr_->GetBulkStoreType());
+    WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
+                       server_ptr_->instance_id(), server_ptr_->session_id(),
+                       store_match, message_out);
+  } else {
+    WriteErrorReply(s, message_out);
+  }
   doWrite(message_out);
-  return false;
+  return !s.ok();
 }
 
 void SocketConnection::sendRemoteBufferHelper(
@@ -462,7 +469,7 @@ bool SocketConnection::doGetBuffers(const json& root) {
    *       a very short message.
    *
    *       We will examine other methods later, such as using
-   *       explicit file descritors.
+   *       explicit file descriptors.
    */
   this->doWrite(message_out, [self, objects, fd_to_send](const Status& status) {
     for (int store_fd : fd_to_send) {
@@ -562,7 +569,7 @@ bool SocketConnection::doGetGPUBuffers(json const& root) {
    *       a very short message.
    *
    *       We will examine other methods later, such as using
-   *       explicit file descritors.
+   *       explicit file descriptors.
    */
   this->doWrite(message_out,
                 [self, objects, handle_to_send](const Status& status) {

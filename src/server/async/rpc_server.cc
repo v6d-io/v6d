@@ -60,6 +60,20 @@ asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_context&) {
   return asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port);
 }
 
+Status RPCServer::Register(std::shared_ptr<SocketConnection> conn,
+                           const SessionID session_id) {
+  if (session_id == RootSessionID()) {
+    return Status::OK();
+  }
+  std::shared_ptr<VineyardServer> session;
+  auto status = this->vs_ptr_->GetRunner()->Get(session_id, session);
+  if (status.ok()) {
+    conn->switchSession(session);
+    return status;
+  }
+  return status;
+}
+
 void RPCServer::doAccept() {
   if (!acceptor_.is_open()) {
     return;

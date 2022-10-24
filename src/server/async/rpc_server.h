@@ -44,6 +44,9 @@ class RPCServer : public SocketServer,
     return get_hostname() + ":" + json_to_string(rpc_spec_["port"]);
   }
 
+  Status Register(std::shared_ptr<SocketConnection> conn,
+                  const SessionID session_id) override;
+
  private:
   asio::ip::tcp::endpoint getEndpoint(asio::io_context&);
 

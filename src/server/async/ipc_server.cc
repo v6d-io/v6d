@@ -118,6 +118,11 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
   return endpoint;
 }
 
+Status IPCServer::Register(std::shared_ptr<SocketConnection> conn,
+                           const SessionID session_id) {
+  return Status::OK();
+}
+
 void IPCServer::doAccept() {
   if (!acceptor_.is_open()) {
     return;

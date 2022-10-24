@@ -57,6 +57,17 @@ class RPCClient final : public ClientBase {
   Status Connect(const std::string& rpc_endpoint);
 
   /**
+   * @brief Connect to vineyardd using the given TCP endpoint `rpc_endpoint`.
+   *
+   * @param rpc_endpoint The TPC endpoint of vineyard server, in the format of
+   * `host:port`.
+   * @param session_id Connect to specified session.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& rpc_endpoint, const SessionID session_id);
+
+  /**
    * @brief Connect to vineyardd using the given TCP `host` and `port`.
    *
    * @param host The host of vineyard server.
@@ -65,6 +76,18 @@ class RPCClient final : public ClientBase {
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& host, uint32_t port);
+
+  /**
+   * @brief Connect to vineyardd using the given TCP `host` and `port`.
+   *
+   * @param host The host of vineyard server.
+   * @param port The TCP port of vineyard server's RPC service.
+   * @param session_id Connect to specified session.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& host, uint32_t port,
+                 const SessionID session_id);
 
   /**
    * @brief Create a new client using self endpoint.

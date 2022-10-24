@@ -103,8 +103,11 @@ void WriteErrorReply(Status const& status, std::string& msg);
 
 void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type);
 
+void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type,
+                          const ObjectID& session_id);
+
 Status ReadRegisterRequest(const json& msg, std::string& version,
-                           StoreType& bulk_store_type);
+                           StoreType& bulk_store_type, SessionID& session_id);
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
