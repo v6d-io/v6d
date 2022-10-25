@@ -28,7 +28,7 @@ jobs:
         os: [ubuntu-20.04]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -64,7 +64,7 @@ jobs:
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Tag and upload docker for releases
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
@@ -99,7 +99,7 @@ jobs:
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
       - name: Upload CI artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           path: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
@@ -113,7 +113,7 @@ jobs:
         python: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -123,7 +123,7 @@ jobs:
           cat git-modules.txt
 
       - name: Cache for cccahe
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.ccache
           key: ${{ matrix.os }}-${{ matrix.python }}-ccache-${{ hashFiles('**/git-modules.txt') }}
@@ -131,7 +131,7 @@ jobs:
             ${{ matrix.os }}-${{ matrix.python }}-ccache-
 
       - name: Download vineyardd artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
 
@@ -155,7 +155,7 @@ jobs:
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Upload wheels to tagged release
         uses: svenstaro/upload-release-action@v2
@@ -169,7 +169,7 @@ jobs:
           overwrite: true
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
         with:
           name: vineyard-linux-wheels-${{ matrix.python }}

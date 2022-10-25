@@ -28,7 +28,7 @@ jobs:
         os: [ubuntu-20.04]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -38,7 +38,7 @@ jobs:
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Upload wheels to tagged release
         uses: svenstaro/upload-release-action@v2
@@ -52,7 +52,7 @@ jobs:
           overwrite: true
           body: "vineyard repository tarball ${{ steps.tag.outputs.TAG }}"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ github.event_name == 'workflow_dispatch'}}
         with:
           name: vineyard-tarball-${{ github.sha }}
