@@ -347,6 +347,124 @@ void collect_outer_vertices(
 }
 
 template <typename VID_T>
+boost::leaf::result<void> collect_outer_vertices_parallel(
+    const IdParser<VID_T>& parser,
+    std::shared_ptr<arrow::ChunkedArray> gid_arrays,
+    const grape::CommSpec& comm_spec,
+    fid_t fid, std::vector<std::vector<VID_T>>& ov_gids) {
+    size_t chunk_num = gid_arrays->num_chunks();
+    int thread_num =
+        (std::thread::hardware_concurrency() + comm_spec.local_num() - 1) /
+        comm_spec.local_num();
+    std::vector<std::thread> collect_threads(thread_num);
+
+    std::atomic<size_t> cur(0);
+    for (int i = 0; i < thread_num; ++i) {
+      collect_threads[i] = std::thread(
+          [&](int tid) {
+            while (true) {
+              auto got = cur.fetch_add(1);
+              if (got >= chunk_num) {
+                break;
+              }
+              std::shared_ptr<typename vineyard::ConvertToArrowType<VID_T>::ArrayType> gid_array =
+                  std::dynamic_pointer_cast<typename vineyard::ConvertToArrowType<VID_T>::ArrayType>(
+                      gid_arrays->chunk(got));
+              const VID_T* arr = gid_array->raw_values();
+              for (int64_t i = 0; i < gid_array->length(); ++i) {
+                if (parser.GetFid(arr[i] != fid)) {
+                  ov_gids[got].push_back(arr[i]);
+                }
+              }
+            }
+          },
+          i);
+    }
+    for (auto& thrd : collect_threads) {
+      thrd.join();
+    }
+    return {};
+}
+
+  // parse oid to global id
+  /*
+  boost::leaf::result<std::shared_ptr<arrow::ChunkedArray>>
+  parseVerticesIdToLocalId(int64_t label_id,
+                       std::shared_ptr<arrow::ChunkedArray> oid_arrays_in,
+                       bool is_inner_col = true) {
+    size_t chunk_num = oid_arrays_in->num_chunks();
+    std::vector<std::shared_ptr<arrow::Array>> chunks_out(chunk_num);
+
+    int thread_num =
+        (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
+        comm_spec_.local_num();
+    std::vector<std::thread> parse_threads(thread_num);
+
+    std::atomic<size_t> cur(0);
+    std::vector<arrow::Status> statuses(thread_num, arrow::Status::OK());
+    for (int i = 0; i < thread_num; ++i) {
+      parse_threads[i] = std::thread(
+          [&](int tid) {
+            while (true) {
+              auto got = cur.fetch_add(1);
+              if (got >= chunk_num) {
+                break;
+              }
+              std::shared_ptr<oid_array_t> oid_array =
+                  std::dynamic_pointer_cast<oid_array_t>(
+                      oid_arrays_in->chunk(got));
+              typename ConvertToArrowType<vid_t>::BuilderType builder;
+              size_t size = oid_array->length();
+
+              arrow::Status status = builder.Resize(size);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
+
+              if (is_src) {
+                for (size_t k = 0; k != size; ++k) {
+                  internal_oid_t oid = oid_array->GetView(k);
+                  if (!vm->GetGid(comm_spec_.fid(), label_id, oid, builder[k])) {
+                    LOG(ERROR) << "Mapping vertex " << oid << " failed.";
+                  }
+                }
+              } else {
+                for (size_t k = 0; k != size; ++k) {
+                  internal_oid_t oid = oid_array->GetView(k);
+                  if (!vm->GetGid(getFid(oid, label_id), label_id, oid, builder[k])) {
+                    LOG(ERROR) << "Mapping vertex " << oid << " failed.";
+                  }
+                }
+              }
+
+              status = builder.Advance(size);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
+              status = builder.Finish(&chunks_out[got]);
+              if (!status.ok()) {
+                statuses[tid] = status;
+                return;
+              }
+            }
+          },
+          i);
+    }
+    for (auto& thrd : parse_threads) {
+      thrd.join();
+    }
+    for (auto& status : statuses) {
+      if (!status.ok()) {
+        RETURN_GS_ERROR(ErrorCode::kArrowError, status.ToString());
+      }
+    }
+    return std::make_shared<arrow::ChunkedArray>(chunks_out);
+  }
+  */
+
+template <typename VID_T>
 boost::leaf::result<void> generate_outer_vertices_map(
     std::vector<std::vector<VID_T>>& collected_ovgids,
     const std::vector<VID_T>& start_ids, int vertex_label_num,
@@ -419,6 +537,63 @@ boost::leaf::result<void> generate_local_id_list(
                                            parser.GetOffset(gid));
           } else {
             builder[i] = ovg2l_maps[parser.GetLabelId(gid)].at(gid);
+          }
+        },
+        concurrency);
+    ARROW_OK_OR_RAISE(builder.Advance(length));
+  }
+  ARROW_OK_OR_RAISE(builder.Finish(&lid_list));
+  return {};
+}
+
+template <typename VID_T>
+boost::leaf::result<void> generate_local_id_list_gsf(
+    IdParser<VID_T>& parser,
+    const std::shared_ptr<
+        typename vineyard::ConvertToArrowType<VID_T>::ArrayType>& gid_list,
+    fid_t fid,
+    std::vector<ska::flat_hash_map<VID_T, VID_T,
+                                   typename Hashmap<VID_T, VID_T>::KeyHash>>
+        ovg2l_maps,
+    int concurrency,
+    std::shared_ptr<typename vineyard::ConvertToArrowType<VID_T>::ArrayType>&
+        lid_list, uint64_t label_id, bool is_inner_col = true, int64_t start_id = 0) {
+  typename ConvertToArrowType<VID_T>::BuilderType builder;
+  const VID_T* vec = gid_list->raw_values();
+  int64_t length = gid_list->length();
+
+  if (concurrency == 1) {
+    for (int64_t i = 0; i < length; ++i) {
+      VID_T gid = vec[i];
+      if (is_inner_col) {
+        ARROW_OK_OR_RAISE(builder.Append(parser.GenerateId(
+            0, label_id, parser.GetOffset(gid - start_id))));
+      } else {
+        if (parser.GetFid(gid) == fid) {
+          ARROW_OK_OR_RAISE(builder.Append(parser.GenerateId(
+              0, parser.GetLabelId(gid), parser.GetOffset(gid))));
+        } else {
+          ARROW_OK_OR_RAISE(
+              builder.Append(ovg2l_maps[parser.GetLabelId(gid)].at(gid)));
+        }
+      }
+    }
+  } else {
+    ARROW_OK_OR_RAISE(builder.Resize(length));
+    parallel_for(
+        static_cast<int64_t>(0), length,
+        [&vec, &parser, fid, &ovg2l_maps, &builder, &label_id, &start_id, &is_inner_col](int64_t i) {
+          VID_T gid = vec[i];
+          if (is_inner_col) {
+            ARROW_OK_OR_RAISE(builder.Append(parser.GenerateId(
+                0, label_id, parser.GetOffset(gid - start_id))));
+          } else {
+            if (parser.GetFid(gid) == fid) {
+              builder[i] = parser.GenerateId(0, parser.GetLabelId(gid),
+                                            parser.GetOffset(gid));
+            } else {
+              builder[i] = ovg2l_maps[parser.GetLabelId(gid)].at(gid);
+            }
           }
         },
         concurrency);

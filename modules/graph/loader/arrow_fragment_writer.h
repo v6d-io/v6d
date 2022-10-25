@@ -32,7 +32,6 @@
 #include "vineyard/basic/ds/arrow_utils.h"
 #include "vineyard/client/client.h"
 #include "vineyard/common/util/functions.h"
-#include "vineyard/graph/loader/basic_ev_fragment_builder.h"
 #include "vineyard/graph/loader/fragment_loader_utils.h"
 #include "vineyard/io/io/i_io_adaptor.h"
 #include "vineyard/io/io/io_factory.h"
