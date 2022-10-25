@@ -30,7 +30,7 @@ jobs:
     env:
       RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -40,7 +40,7 @@ jobs:
           cat git-modules.txt
 
       - name: Cache for ccache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.ccache
           key: ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
@@ -399,14 +399,14 @@ jobs:
 
       - name: Upload Coverage
         if: runner.os == 'Linux'
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           verbose: true
 
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Upload vineyard contrib wheels to tagged release
         uses: svenstaro/upload-release-action@v2
