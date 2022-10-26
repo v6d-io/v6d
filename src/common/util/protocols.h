@@ -161,10 +161,10 @@ void WriteCreateDataRequest(const json& content, std::string& msg);
 
 Status ReadCreateDataRequest(const json& root, json& content);
 
-void WriteCreateDataReply(const ObjectID& id, const Signature& sigature,
+void WriteCreateDataReply(const ObjectID& id, const Signature& signature,
                           const InstanceID& instance_id, std::string& msg);
 
-Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& sigature,
+Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& signature,
                            InstanceID& instance_id);
 
 void WritePersistRequest(const ObjectID id, std::string& msg);
@@ -272,7 +272,11 @@ Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
 
 void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
 
-Status ReadCreateRemoteBufferRequest(const json& root, size_t& size);
+void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
+                                    std::string& msg);
+
+Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
+                                     bool& compress);
 
 void WriteGetBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
                             std::string& msg);
@@ -284,10 +288,14 @@ Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
                              bool& unsafe);
 
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
-                          const std::vector<int>& fd_to_send, std::string& msg);
+                          const std::vector<int>& fd_to_send,
+                          const bool compress, std::string& msg);
 
 Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
                            std::vector<int>& fd_sent);
+
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
+                           std::vector<int>& fd_sent, bool& compress);
 
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
                                   const bool unsafe, std::string& msg);
@@ -295,8 +303,16 @@ void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   const bool unsafe, std::string& msg);
 
+void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  std::string& msg);
+
+void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  std::string& msg);
+
 Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                                   bool& unsafe);
+                                   bool& unsafe, bool& compress);
 
 void WriteDropBufferRequest(const ObjectID id, std::string& msg);
 

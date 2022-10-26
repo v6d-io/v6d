@@ -42,4 +42,8 @@
 	path = thirdparty/hiredis
 	url = https://github.com/redis/hiredis.git
   shallow = true
+[submodule "thirdparty/zstd"]
+	path = thirdparty/zstd
+	url = https://github.com/facebook/zstd.git
+	shallow = true
 

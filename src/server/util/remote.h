@@ -70,13 +70,27 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   bool connected_;
 };
 
+/**
+ * Notes on [Transferring remote blobs]
+ *
+ * The protocol work as:
+ *
+ *  - if compression is disabled, each blob is sent one by one and blobs
+ *    that are empty are skipped.
+ *
+ *  - if compression is enabled, each blob will be compressed as several
+ *    chunks, and each chunk will be sent as [chunk_size, chunk], where
+ *    the chunk_size is a `size_t`.
+ */
+
 void SendRemoteBuffers(asio::generic::stream_protocol::socket& socket,
                        std::vector<std::shared_ptr<Payload>> const& objects,
-                       size_t index, callback_t<> callback_after_finish);
+                       size_t index, const bool compress,
+                       callback_t<> callback_after_finish);
 
 void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
                           std::vector<std::shared_ptr<Payload>> const& objects,
-                          size_t index, size_t offset,
+                          size_t index, size_t offset, const bool decompress,
                           callback_t<> callback_after_finish);
 
 }  // namespace vineyard

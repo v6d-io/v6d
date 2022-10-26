@@ -212,14 +212,14 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
                   } else {
                     unsigned rev_after_unlock = 0;
                     VINEYARD_DISCARD(lock->Release(rev_after_unlock));
-                    return callback_after_finish(s);  // propogate the error
+                    return callback_after_finish(s);  // propagate the error
                   }
                 });
             return Status::OK();
           } else {
             VLOG(100) << "Error: failed to request metadata lock: "
                       << status.ToString();
-            return callback_after_finish(status);  // propogate the error
+            return callback_after_finish(status);  // propagate the error
           }
         });
   }
@@ -317,7 +317,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
             } else {
               VLOG(100) << "Error: failed to request metadata lock: "
                         << status.ToString();
-              return callback_after_finish(status, {});  // propogate the error.
+              return callback_after_finish(status, {});  // propagate the error.
             }
           });
     });
@@ -788,7 +788,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 #ifndef NDEBUG
       if (VLOG_IS_ON(10)) {
         for (auto const& item : processed_delete_set) {
-          VLOG(10) << "deleting object (in metaupdate): "
+          VLOG(10) << "deleting object (in meta update): "
                    << ObjectIDToString(item);
         }
       }
@@ -855,7 +855,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     // Guarantee: all kvs inside a txn reaches the client at the same time,
     // which is guaranteed by the implementation of etcd.
     //
-    // That means, every time this handler is called, we just need to reponse
+    // That means, every time this handler is called, we just need to response
     // for one type of change.
     if (!status.ok()) {
       LOG(ERROR) << "Error in daemon watching: " << status.ToString();

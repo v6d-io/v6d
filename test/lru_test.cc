@@ -22,22 +22,21 @@ limitations under the License.
 #include "server/memory/usage.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
-using namespace std;       // NOLINT(build/namespaces)
 
 using LRU =
     detail::ColdObjectTracker<uint64_t, std::string, decltype(nullptr)>::LRU;
 
 void BasicTest() {
   LRU lru_;
-  vector<uint64_t> ids;
-  vector<shared_ptr<string>> payloads;
+  std::vector<uint64_t> ids;
+  std::vector<std::shared_ptr<std::string>> payloads;
   ids.reserve(1000);
   payloads.reserve(1000);
   {
     // insert
     for (int i = 0; i < 1000; i++) {
       ids.push_back(i);
-      payloads.push_back(make_shared<string>(to_string(i)));
+      payloads.push_back(std::make_shared<std::string>(std::to_string(i)));
       lru_.Ref(ids.back(), payloads.back());
     }
   }

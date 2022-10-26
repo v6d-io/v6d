@@ -29,7 +29,7 @@ limitations under the License.
 #include "server/util/metrics.h"
 
 namespace boost {
-// Makes the behaviour of lexical_cast compatibile with boost::property_tree.
+// Makes the behaviour of lexical_cast compatible with boost::property_tree.
 template <>
 bool lexical_cast<bool, std::string>(const std::string& arg) {
   std::istringstream ss(arg);

@@ -70,7 +70,7 @@ bool SocketConnection::Stop() {
     std::unordered_set<ObjectID> ids;
     auto status = bulk_store_->ReleaseConnection(this->getConnId());
     if (!status.ok() && !status.IsKeyError()) {
-      LOG(WARNING) << "Failed to release the connction '" << this->getConnId()
+      LOG(WARNING) << "Failed to release the connection '" << this->getConnId()
                    << "' from object dependency: " << status.ToString();
     }
   }
@@ -395,7 +395,7 @@ bool SocketConnection::doGetBuffers(const json& root) {
       fd_to_send.emplace_back(object->store_fd);
     }
   }
-  WriteGetBuffersReply(objects, fd_to_send, message_out);
+  WriteGetBuffersReply(objects, fd_to_send, false, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
    *       We are using sendmsg to send the file descriptor
@@ -421,23 +421,25 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool unsafe = false;
+  bool compress = false;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe);
+  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
-  WriteGetBuffersReply(objects, {}, message_out);
+  WriteGetBuffersReply(objects, {}, compress, message_out);
 
-  this->doWrite(message_out, [self, objects](const Status& status) {
-    SendRemoteBuffers(self->socket_, objects, 0, [self](const Status& status) {
-      if (!status.ok()) {
-        LOG(ERROR) << "Failed to send buffers to remote client: "
-                   << status.ToString();
-      }
-      return Status::OK();
-    });
+  this->doWrite(message_out, [self, objects, compress](const Status& status) {
+    SendRemoteBuffers(
+        self->socket_, objects, 0, compress, [self](const Status& status) {
+          if (!status.ok()) {
+            LOG(ERROR) << "Failed to send buffers to remote client: "
+                       << status.ToString();
+          }
+          return Status::OK();
+        });
     return Status::OK();
   });
   return false;
@@ -550,15 +552,17 @@ bool SocketConnection::doCreateGPUBuffer(json const& root) {
 bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   auto self(shared_from_this());
   size_t size;
+  bool compress = false;
   std::shared_ptr<Payload> object;
 
-  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size);
+  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size, compress);
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
 
   ReceiveRemoteBuffers(
-      socket_, {object}, 0, 0, [self, object](const Status& status) -> Status {
+      socket_, {object}, 0, 0, compress,
+      [self, object](const Status& status) -> Status {
         std::string message_out;
         if (status.ok()) {
           WriteCreateBufferReply(object->object_id, object, -1, message_out);
@@ -1250,7 +1254,7 @@ bool SocketConnection::doGetBuffersByPlasma(json const& root) {
    *       a very short message.
    *
    *       We will examine other methods later, such as using
-   *       explicit file descritors.
+   *       explicit file descriptors.
    */
   this->doWrite(message_out, [self, plasma_objects](const Status& status) {
     for (auto object : plasma_objects) {
@@ -1361,12 +1365,12 @@ Status SocketConnection::MoveBuffers(
     ids.insert(item.first);
   }
 
-  std::map<FROM, typename ID_traits<FROM>::P> successed_ids;
+  std::map<FROM, typename ID_traits<FROM>::P> succeeded_ids;
   RETURN_ON_ERROR(source_session->GetBulkStore<FROM>()->RemoveOwnership(
-      ids, successed_ids));
+      ids, succeeded_ids));
 
   std::map<TO, typename ID_traits<TO>::P> to_process_ids;
-  for (auto& item : successed_ids) {
+  for (auto& item : succeeded_ids) {
     typename ID_traits<TO>::P payload(item.second);
     payload.Reset();
     to_process_ids.emplace(mapping.at(item.first), payload);
