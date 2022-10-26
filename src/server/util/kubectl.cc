@@ -53,14 +53,10 @@ static std::string generate_local_object(
   std::string signature =
       SignatureToString(object["signature"].get<Signature>());
   std::string type_name = object["typename"].get_ref<std::string const&>();
-  std::vector<std::string> members;
 
   std::string job_name = object.value("JOB_NAME", "\"\"");
   std::string client_pod_name = object.value("POD_NAME", "\"\"");
   std::string client_pod_namespace = object.value("POD_NAMESPACE", "\"\"");
-
-  std::cout << "client_pod_namespace: " << client_pod_namespace << std::endl
-            << std::flush;
 
   InstanceID instance_id = object["instance_id"].get<InstanceID>();
   std::string vineyardd_name = getenv("VINEYARDD_NAME");

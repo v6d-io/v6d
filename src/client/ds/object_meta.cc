@@ -122,13 +122,6 @@ void ObjectMeta::AddKeyValue(const std::string& key, const std::string& value) {
   meta_[key] = value;
 }
 
-void ObjectMeta::AddKeyValueFromEnv(const std::string& key) {
-  char* value = std::getenv(key.c_str());
-  if (value != NULL) {
-    meta_[key] = std::string(value);
-  }
-}
-
 void ObjectMeta::AddKeyValue(const std::string& key, const json& value) {
   meta_[key] = json_to_string(value);
 }
