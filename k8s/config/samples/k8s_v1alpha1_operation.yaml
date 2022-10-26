@@ -1,0 +1,10 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Operation
+metadata:
+  name: operation-sample
+spec:
+  name: assembly
+  type: local
+  require: job1
+  target: job2
+  timeoutSeconds: 300

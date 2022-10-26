@@ -51,6 +51,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-k8s-v6d-io-v1alpha1-operation
+  failurePolicy: Fail
+  name: moperation.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - operations
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-k8s-v6d-io-v1alpha1-vineyardd
   failurePolicy: Fail
   name: mvineyardd.kb.io
@@ -131,6 +151,26 @@ webhooks:
     - UPDATE
     resources:
     - localobjects
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-k8s-v6d-io-v1alpha1-operation
+  failurePolicy: Fail
+  name: voperation.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - operations
   sideEffects: None
 - admissionReviewVersions:
   - v1

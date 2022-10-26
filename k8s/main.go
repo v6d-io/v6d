@@ -59,19 +59,15 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 	var err error
 
 	if err = (&controllers.LocalObjectReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("localobject-controller"),
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LocalObject")
 		os.Exit(1)
 	}
 	if err = (&controllers.GlobalObjectReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("globalobject-controller"),
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalObject")
 		os.Exit(1)
@@ -85,6 +81,15 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Error(err, "unable to create controller", "controller", "Vineyardd")
 		os.Exit(1)
 	}
+	if err = (&k8scontrollers.OperationReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Template: templates.NewEmbedTemplate(),
+		Recorder: mgr.GetEventRecorderFor("operation-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Operation")
+		os.Exit(1)
+	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
@@ -96,6 +101,10 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		}
 		if err = (&k8sv1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Vineyardd")
+			os.Exit(1)
+		}
+		if err = (&k8sv1alpha1.Operation{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Operation")
 			os.Exit(1)
 		}
 		// register the assembly webhook

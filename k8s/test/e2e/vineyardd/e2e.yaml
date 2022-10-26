@@ -57,10 +57,6 @@ setup:
         do \
           sleep 0.1; \
         done
-    - name: label the objects produced by job1
-      command: |
-        kubectl label localobjects --overwrite --selector=job=none job=v6d-workflow-demo-job1 -n vineyard-system
-        kubectl label globalobjects --overwrite --selector=job=none job=v6d-workflow-demo-job1 -n vineyard-system
     - name: install job2
       command: |
         kubectl apply -f k8s/test/e2e/workflow-job2.yaml
@@ -68,10 +64,6 @@ setup:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job2-deployment
           for: condition=Available
-    - name: label the objects produced by job2
-      command: |
-        kubectl label localobjects --overwrite --selector=job=none job=v6d-workflow-demo-job2 -n vineyard-system
-        kubectl label globalobjects --overwrite --selector=job=none job=v6d-workflow-demo-job2 -n vineyard-system
   timeout: 20m
 
 cleanup:

@@ -40,7 +40,11 @@ type LocalObjectSpec struct {
 // LocalObjectStatus defines the observed state of LocalObject
 type LocalObjectStatus struct {
 	// The state represents the current state of the local object.
+	// +kubebuilder:validation:Optional
 	State string `json:"state"`
+	// The time when the global object is created.
+	// +kubebuilder:validation:Optional
+	CreationTime metav1.Time `json:"createdTime"`
 }
 
 // +kubebuilder:object:root=true

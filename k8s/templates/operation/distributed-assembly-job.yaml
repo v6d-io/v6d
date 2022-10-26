@@ -20,6 +20,7 @@ metadata:
   name: {{ $config.Name }}
   namespace: {{ $config.Namespace }}
 spec:
+  activeDeadlineSeconds: {{ $config.TimeoutSeconds }}
   template:
     spec:
       containers:

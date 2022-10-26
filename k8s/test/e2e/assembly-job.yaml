@@ -33,6 +33,9 @@ spec:
         {{- if (datasource "config").$job.assembly.enabled }}
         assembly.v6d.io/enabled: "{{ (datasource "config").$job.assembly.enabled }}"
         {{- end}}
+        {{- if (datasource "config").$job.assembly.type }}
+        assembly.v6d.io/type: "{{ (datasource "config").$job.assembly.type }}"
+        {{- end}}
         # this label represents the vineyardd's name that need to be used
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
         scheduling.k8s.v6d.io/job: {{ (datasource "config").$job.jobName }}

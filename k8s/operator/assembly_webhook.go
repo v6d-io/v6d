@@ -45,35 +45,9 @@ type AssemblyInjector struct {
 const (
 	// AssmeblyEnabledLabel is the label for assembly, and inject the assembly container when setting true
 	AssmeblyEnabledLabel = "assembly.v6d.io/enabled"
-	// ImageAnnotation is the annotation key for the image to use for the sidecar.
-	ImageAnnotation = "assembly.v6d.io/image"
-	// CommandAnnotation is the annotation key for the command to run in the assembly container.
-	CommandAnnotation = "assembly.v6d.io/command"
-	// SharedVolumePathInAssemblyAnnotation is the annotation key for the shared volume path in the assembly container.
-	SharedVolumePathInAssemblyAnnotation = "assembly.v6d.io/assembly.shared-volume-path"
-	// SharedVolumePathInJobAnnotation is the annotation key for the shared volume path in the job pod.
-	SharedVolumePathInJobAnnotation = "assembly.v6d.io/job.shared-volume-path"
 )
 
-// AssemblyConfig holds the configuration for the assembly sidecar
-type AssemblyConfig struct {
-	// Image is the container image name
-	Image string
-	// Command is the command to run in the assembly container
-	Command string
-	// SharedVolumePathInAssembly is the path to the shared volume in the assembly container
-	SharedVolumePathInAssembly string
-	// SharedVolumePathInJob is the path to the shared volume in the job container
-	SharedVolumePathInJob string
-}
-
-// Handle handles admission requests.
-func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
-	pod := &corev1.Pod{}
-	if err := r.decoder.Decode(req, pod); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-
+func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Pod, label string) error {
 	// if the pod enables assembly, we need to label the required pods
 	if value, ok := pod.Labels[AssmeblyEnabledLabel]; ok && strings.ToLower(value) == "true" {
 		if requiredJob, ok := pod.Annotations[schedulers.VineyardJobRequired]; ok {
@@ -87,18 +61,31 @@ func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) ad
 					},
 				}
 				if err := r.Client.List(ctx, podList, opts...); err != nil {
-					return admission.Errored(http.StatusBadRequest, fmt.Errorf("Failed to list pods: %v", err))
+					return fmt.Errorf("Failed to list pods: %v", err)
 				}
 				for i := range podList.Items {
 					// label the required pods that need to be injected with the assembly container
 					labels := &podList.Items[i].Labels
 					(*labels)["need-injected-assembly"] = "true"
 					if err := r.Client.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
-						return admission.Errored(http.StatusBadRequest, fmt.Errorf("Failed to update pod: %v", err))
+						return fmt.Errorf("Failed to update pod: %v", err)
 					}
 				}
 			}
 		}
+	}
+	return nil
+}
+
+// Handle handles admission requests.
+func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
+	pod := &corev1.Pod{}
+	if err := r.decoder.Decode(req, pod); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	if err := r.LabelRequiredPods(ctx, pod, AssmeblyEnabledLabel); err != nil {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("assembly label error: %v", err))
 	}
 
 	// Add podname and podnamespace to all pods' env

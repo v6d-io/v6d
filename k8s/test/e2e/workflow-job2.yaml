@@ -40,6 +40,8 @@ spec:
         image: ghcr.io/v6d-io/v6d/job2
         imagePullPolicy: IfNotPresent
         env:
+        - name: JOB_NAME
+          value: v6d-workflow-demo-job2
         # pass node name to the environment
         - name: NODENAME
           valueFrom:

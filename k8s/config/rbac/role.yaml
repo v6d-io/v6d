@@ -11,6 +11,7 @@ rules:
   - configmaps
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -154,6 +155,32 @@ rules:
   - k8s.v6d.io
   resources:
   - localobjects/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - operations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - operations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - operations/status
   verbs:
   - get
   - patch
