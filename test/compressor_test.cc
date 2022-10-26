@@ -30,7 +30,7 @@ std::string generate_random(const size_t len) {
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       "abcdefghijklmnopqrstuvwxyz";
   std::stringstream ss;
-  for (int i = 0; i < len; ++i) {
+  for (size_t i = 0; i < len; ++i) {
     ss << alphanum[rand() % (sizeof(alphanum) - 1)];
   }
 
@@ -86,8 +86,9 @@ void CompressSingleBlobTest() {
         if (decompressed_offset >= decompressed.length()) {
           break;
         }
-        uint8_t* pointer = reinterpret_cast<uint8_t*>(decompressed.data()) +
-                           decompressed_offset;
+        uint8_t* pointer =
+            reinterpret_cast<uint8_t*>(const_cast<char*>(decompressed.data())) +
+            decompressed_offset;
         size_t size = 0;
         auto s = decompressor->Pull(
             pointer, decompressed.length() - decompressed_offset, size);

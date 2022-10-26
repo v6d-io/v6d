@@ -303,7 +303,9 @@ Status RemoteClient::doRead(std::string& message_in) {
                            std::to_string(length));
   }
   message_in.resize(length);
-  asio::read(socket_, asio::buffer(message_in.data(), length), ec);
+  asio::read(socket_,
+             asio::mutable_buffer(const_cast<char*>(message_in.data()), length),
+             ec);
   RETURN_ON_ASIO_ERROR(ec);
   return Status::OK();
 }
@@ -447,7 +449,7 @@ static size_t decompress_chunk(
   }
   size_t decompressed_size = 0, decompressed_offset = offset;
   while (true) {
-    if (decompressed_offset >= objects[index]->data_size) {
+    if (decompressed_offset >= static_cast<size_t>(objects[index]->data_size)) {
       break;
     }
     uint8_t* data = objects[index]->pointer + decompressed_offset;
