@@ -30,7 +30,7 @@ type PluggableOperaton interface {
 	IsDone() bool
 }
 
-// NewOperation returns a new operation according to the operation type
+// NewPluggableOperation returns a new pluggable operation according to the operation type
 func NewPluggableOperation(opname string, c client.Client, app *kubernetes.Application) PluggableOperaton {
 	switch opname {
 	case "assembly":
