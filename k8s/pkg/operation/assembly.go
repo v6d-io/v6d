@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package operation contains the operation logic
 package operation
 
 import (
@@ -47,6 +48,7 @@ const (
 	FailedState = "failed"
 )
 
+// AssemblyOperation is the operation for the assembly
 type AssemblyOperation struct {
 	client.Client
 	app  *kubernetes.Application
@@ -76,16 +78,18 @@ type DistributedAssemblyConfig struct {
 	VineyardSockPath     string
 }
 
-// TmpAssemblyConfig is the template config for the assembly job
+// TmpLocalAssemblyConfig is the template config for the assembly job
 var TmpLocalAssemblyConfig LocalAssemblyConfig
 
+// GetAssemblyConfig gets the local assembly config
 func GetAssemblyConfig() LocalAssemblyConfig {
 	return TmpLocalAssemblyConfig
 }
 
-// TmpAssemblyConfig is the template config for the distributed assembly job
+// TmpDistributedAssemblyConfig is the template config for the distributed assembly job
 var TmpDistributedAssemblyConfig DistributedAssemblyConfig
 
+// GetDistributedAssemblyConfig gets the distributed assembly config
 func GetDistributedAssemblyConfig() DistributedAssemblyConfig {
 	return TmpDistributedAssemblyConfig
 }
@@ -369,6 +373,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 	return true, nil
 }
 
+// UpdateConfigmap will update the configmap when the assembly operation is done
 func (ao *AssemblyOperation) UpdateConfigmap(ctx context.Context, target map[string]bool, o *v1alpha1.Operation) error {
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 
@@ -435,6 +440,7 @@ func (ao *AssemblyOperation) UpdateConfigmap(ctx context.Context, target map[str
 	return nil
 }
 
+// IsDone will check if the assembly operation is done
 func (ao *AssemblyOperation) IsDone() bool {
 	return ao.done
 }

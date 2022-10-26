@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package k8s contains controllers for k8s API group k8s.v6d.io
 package k8s
 
 import (

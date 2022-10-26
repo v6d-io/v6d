@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package operation contains the operation logic
 package operation
 
 import (
@@ -29,6 +30,7 @@ type PluggableOperaton interface {
 	IsDone() bool
 }
 
+// NewOperation returns a new operation according to the operation type
 func NewPluggableOperation(opname string, c client.Client, app *kubernetes.Application) PluggableOperaton {
 	switch opname {
 	case "assembly":

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 package v1alpha1
 
 import (
@@ -25,6 +26,7 @@ import (
 // log is for logging in this package.
 var operationlog = logf.Log.WithName("operation-resource")
 
+// SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Operation) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).

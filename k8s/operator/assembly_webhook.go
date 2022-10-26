@@ -47,6 +47,7 @@ const (
 	AssmeblyEnabledLabel = "assembly.v6d.io/enabled"
 )
 
+// LabelRequiredPods labels the pods with the given label
 func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Pod, label string) error {
 	// if the pod enables assembly, we need to label the required pods
 	if value, ok := pod.Labels[AssmeblyEnabledLabel]; ok && strings.ToLower(value) == "true" {
