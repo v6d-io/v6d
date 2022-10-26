@@ -34,6 +34,7 @@ limitations under the License.
 #include "server/util/meta_tree.h"
 #include "server/util/metrics.h"
 #include "server/util/proc.h"
+#include "server/util/remote.h"
 
 namespace vineyard {
 
@@ -416,27 +417,13 @@ Status VineyardServer::ListName(
   return Status::OK();
 }
 
-Status VineyardServer::CreateData(
-    const json& tree,
-    callback_t<const ObjectID, const Signature, const InstanceID> callback) {
-  ENSURE_VINEYARDD_READY();
-  ObjectID id = GenerateObjectID();
-#if !defined(NDEBUG)
-  if (VLOG_IS_ON(100)) {
-    DVLOG(100) << "Got request from client to create data:";
-    // NB: glog has limit on maximum lines.
-    std::cerr << id << " " << ObjectIDToString(id) << " " << tree.dump(4)
-              << std::endl;
-    DVLOG(100) << "=========================================";
-  }
-#endif
+namespace detail {
+
+Status validate_metadata(const json& tree, json& result, Signature& signature) {
   // validate typename
   auto type_name_node = tree.value("typename", json(nullptr));
   if (type_name_node.is_null() || !type_name_node.is_string()) {
-    VINEYARD_DISCARD(callback(Status::MetaTreeInvalid("No typename field"),
-                              InvalidObjectID(), InvalidSignature(),
-                              UnspecifiedInstanceID()));
-    return Status::OK();
+    return Status::MetaTreeInvalid("No 'typename' field in incoming metadata");
   }
   std::string const& type = type_name_node.get_ref<std::string const&>();
 
@@ -446,21 +433,79 @@ Status VineyardServer::CreateData(
   RETURN_ON_ASSERT(tree.contains("instance_id"),
                    "The instance_id filed must be presented");
 
-  auto decorated_tree = tree;
-  Signature signature = GenerateSignature();
-  if (decorated_tree.find("signature") != decorated_tree.end()) {
-    signature = decorated_tree["signature"].get<Signature>();
+  result = tree;
+  signature = GenerateSignature();
+  if (result.find("signature") != result.end()) {
+    signature = result["signature"].get<Signature>();
   } else {
-    decorated_tree["signature"] = signature;
+    result["signature"] = signature;
   }
+  return Status::OK();
+}
+
+Status put_members_recursively(
+    std::shared_ptr<IMetaService> metadata_service_ptr, const json& meta,
+    json& tree, std::string const& instance_name) {
+  for (auto& item : tree.items()) {
+    if (item.value().is_object()) {
+      auto& sub_tree = item.value();
+      if (!sub_tree.contains("id")) {
+        Signature signature;
+        RETURN_ON_ERROR(validate_metadata(sub_tree, sub_tree, signature));
+
+        // recursively create members
+        RETURN_ON_ERROR(put_members_recursively(metadata_service_ptr, meta,
+                                                sub_tree, instance_name));
+
+        Status s;
+        ObjectID id = GenerateObjectID();
+        InstanceID computed_instance_id = 0;
+        std::vector<meta_tree::op_t> ops;
+        CATCH_JSON_ERROR(
+            s, meta_tree::PutDataOps(meta, instance_name, id, sub_tree, ops,
+                                     computed_instance_id));
+        metadata_service_ptr->RequestToDirectUpdate(ops);
+
+        // annotate id into the subtree
+        sub_tree["id"] = ObjectIDToString(id);
+      }
+    }
+  }
+  return Status::OK();
+}
+
+}  // namespace detail
+
+Status VineyardServer::CreateData(
+    const json& tree,
+    callback_t<const ObjectID, const Signature, const InstanceID> callback) {
+  return CreateData(tree, false, callback);
+}
+
+Status VineyardServer::CreateData(
+    const json& tree, bool recursive,
+    callback_t<const ObjectID, const Signature, const InstanceID> callback) {
+  ENSURE_VINEYARDD_READY();
 
   // update meta into json
   meta_service_ptr_->RequestToBulkUpdate(
-      [this, id, decorated_tree](const Status& status, const json& meta,
-                                 std::vector<meta_tree::op_t>& ops,
-                                 InstanceID& computed_instance_id) {
+      [this, tree, recursive](const Status& status, const json& meta,
+                              std::vector<meta_tree::op_t>& ops, ObjectID& id,
+                              Signature& signature,
+                              InstanceID& computed_instance_id) {
         if (status.ok()) {
+          auto decorated_tree = json::object();
+          RETURN_ON_ERROR(
+              detail::validate_metadata(tree, decorated_tree, signature));
+
+          // expand trees: for putting many metadatas in a single call
+          if (recursive) {
+            RETURN_ON_ERROR(detail::put_members_recursively(
+                meta_service_ptr_, meta, decorated_tree, instance_name_));
+          }
+
           Status s;
+          id = GenerateObjectID();
           CATCH_JSON_ERROR(s, meta_tree::PutDataOps(meta, this->instance_name(),
                                                     id, decorated_tree, ops,
                                                     computed_instance_id));
@@ -470,7 +515,7 @@ Status VineyardServer::CreateData(
           return status;
         }
       },
-      boost::bind(callback, _1, id, signature, _2));
+      boost::bind(callback, _1, _2, _3, _4));
   return Status::OK();
 }
 
@@ -792,6 +837,80 @@ Status VineyardServer::DropName(const std::string& name,
         }
       },
       callback);
+  return Status::OK();
+}
+
+Status VineyardServer::MigrateObject(const ObjectID object_id,
+                                     callback_t<const ObjectID&> callback) {
+  ENSURE_VINEYARDD_READY();
+  if (IsBlob(object_id)) {
+    return callback(Status::Invalid("blobs cannot be directly migrated"),
+                    InvalidObjectID());
+  }
+  auto self(shared_from_this());
+  meta_service_ptr_->RequestToGetData(
+      true /* sync remote */,
+      [self, callback, object_id](const Status& status, const json& meta) {
+        if (status.ok()) {
+          Status s;
+          json metadata;
+          CATCH_JSON_ERROR(
+              s, meta_tree::GetData(meta, self->instance_name(), object_id,
+                                    metadata, self->instance_id_));
+          if (!s.ok()) {
+            return callback(s, InvalidObjectID());
+          }
+          if (metadata.value("global", false)) {
+            return callback(
+                Status::Invalid("global objects cannot be directly migrated"),
+                InvalidObjectID());
+          }
+          InstanceID remote_instance_id =
+              metadata.value("instance_id", UnspecifiedInstanceID());
+          if (remote_instance_id == self->instance_id_) {
+            // no need for migration
+            return callback(Status::OK(), object_id);
+          }
+          if (remote_instance_id == UnspecifiedInstanceID()) {
+            return callback(
+                Status::Invalid("the location of object " +
+                                ObjectIDToString(object_id) +
+                                " cannot be resolved from metadata"),
+                InvalidObjectID());
+          }
+
+          // find the remote instance endpoint
+          json const& instances = meta["instances"];
+          std::string key = "i" + std::to_string(remote_instance_id);
+          json::const_iterator instance = instances.find(key);
+          if (instance == instances.end()) {
+            return callback(
+                Status::Invalid("the remote instances doesn't exist"),
+                InvalidObjectID());
+          }
+
+          std::string remote_endpoint =
+              (*instance)["rpc_endpoint"].get_ref<std::string const&>();
+          // push to the async queues
+          boost::asio::post(
+              self->GetIOContext(),
+              [self, callback, remote_endpoint, object_id, metadata]() {
+                auto remote = std::make_shared<RemoteClient>(self);
+                RETURN_ON_ERROR(
+                    remote->Connect(remote_endpoint, self->session_id()));
+                return remote->MigrateObject(
+                    object_id, metadata,
+                    [self, remote, callback](const Status& status,
+                                             const ObjectID result) {
+                      return callback(status, result);
+                    });
+              });
+          return Status::OK();
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          return status;
+        }
+      });
   return Status::OK();
 }
 

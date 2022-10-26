@@ -754,7 +754,7 @@ static Status diff_data_meta_tree(const json& meta,
              !is_link_node(
                  mb_old_sub_sub_tree->get_ref<std::string const&>()))) {
           return Status::MetaTreeInvalid(
-              "Here it was a link node, but not it isn't.");
+              "Here it was a link node, but now it isn't.");
         }
       }
 

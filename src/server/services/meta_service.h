@@ -124,22 +124,27 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
  public:
   inline void RequestToBulkUpdate(
-      callback_t<const json&, std::vector<op_t>&, InstanceID&>
+      callback_t<const json&, std::vector<op_t>&, ObjectID&, Signature&,
+                 InstanceID&>
           callback_after_ready,
-      callback_t<const InstanceID> callback_after_finish) {
+      callback_t<const ObjectID, const Signature, const InstanceID>
+          callback_after_finish) {
     auto self(shared_from_this());
     server_ptr_->GetMetaContext().post([self, callback_after_ready,
                                         callback_after_finish]() {
       if (self->stopped_.load()) {
         VINEYARD_SUPPRESS(callback_after_finish(
             Status::AlreadyStopped("etcd metadata service"),
-            UnspecifiedInstanceID()));
+            UnspecifiedInstanceID(), InvalidObjectID(), InvalidSignature()));
         return;
       }
       std::vector<op_t> ops;
+      ObjectID object_id;
+      Signature signature;
       InstanceID computed_instance_id;
-      auto status = callback_after_ready(Status::OK(), self->meta_, ops,
-                                         computed_instance_id);
+      auto status =
+          callback_after_ready(Status::OK(), self->meta_, ops, object_id,
+                               signature, computed_instance_id);
       if (status.ok()) {
 #ifndef NDEBUG
         // debugging
@@ -150,8 +155,15 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
         VLOG(100) << "Error: failed to generated ops to update metadata: "
                   << status.ToString();
       }
-      VINEYARD_SUPPRESS(callback_after_finish(status, computed_instance_id));
+      VINEYARD_SUPPRESS(callback_after_finish(status, object_id, signature,
+                                              computed_instance_id));
     });
+  }
+
+  // When requesting direct update, we already worked inside the meta context.
+  inline void RequestToDirectUpdate(std::vector<op_t> const& ops,
+                                    const bool from_remote = false) {
+    this->metaUpdate(ops, from_remote);
   }
 
   inline void RequestToPersist(

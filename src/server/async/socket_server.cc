@@ -30,6 +30,7 @@ limitations under the License.
 #include "common/util/protocols.h"
 #include "server/server/vineyard_server.h"
 #include "server/util/metrics.h"
+#include "server/util/remote.h"
 
 namespace vineyard {
 
@@ -374,70 +375,6 @@ bool SocketConnection::doRegister(const json& root) {
   return !s.ok();
 }
 
-void SocketConnection::sendRemoteBufferHelper(
-    std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
-    boost::system::error_code const ec, callback_t<> callback_after_finish) {
-  auto self(shared_from_this());
-  if (!ec && index < objects.size()) {
-    while (objects[index]->data_size == 0) {
-      index += 1;
-    }
-    boost::asio::async_write(
-        socket_,
-        boost::asio::buffer(objects[index]->pointer, objects[index]->data_size),
-        [self, callback_after_finish, objects, index](
-            boost::system::error_code ec, std::size_t) {
-          self->sendRemoteBufferHelper(objects, index + 1, ec,
-                                       callback_after_finish);
-        });
-  } else {
-    if (ec) {
-      VINEYARD_DISCARD(callback_after_finish(Status::IOError(
-          "Failed to write buffer to client: " + ec.message())));
-    } else {
-      VINEYARD_DISCARD(callback_after_finish(Status::OK()));
-    }
-  }
-}
-
-void SocketConnection::recvRemoteBufferHelper(
-    std::shared_ptr<Payload> const& object, size_t offset,
-    boost::system::error_code const ec,
-    callback_t<std::shared_ptr<Payload> const&> callback_after_finish) {
-  auto self(shared_from_this());
-  boost::asio::async_read(
-      socket_,
-      boost::asio::buffer(object->pointer + offset, object->data_size - offset),
-      [self, callback_after_finish, object, offset](
-          boost::system::error_code ec, std::size_t read_size) {
-        if (ec) {
-          if (ec == asio::error::eof) {
-            if (read_size + offset < static_cast<size_t>(object->data_size)) {
-              VINEYARD_DISCARD(callback_after_finish(
-                  Status::IOError("Failed to read buffer from client, no "
-                                  "enough content from client: " +
-                                  ec.message()),
-                  object));
-            } else {
-              VINEYARD_DISCARD(callback_after_finish(Status::OK(), object));
-            }
-          } else {
-            VINEYARD_DISCARD(callback_after_finish(
-                Status::IOError("Failed to read buffer from client: " +
-                                ec.message()),
-                object));
-          }
-        } else {
-          if (read_size + offset < static_cast<size_t>(object->data_size)) {
-            self->recvRemoteBufferHelper(object, read_size + offset, ec,
-                                         callback_after_finish);
-          } else {
-            VINEYARD_DISCARD(callback_after_finish(Status::OK(), object));
-          }
-        }
-      });
-}
-
 bool SocketConnection::doGetBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
@@ -493,9 +430,8 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, message_out);
 
-  this->doWrite(message_out, [this, self, objects](const Status& status) {
-    boost::system::error_code ec;
-    sendRemoteBufferHelper(objects, 0, ec, [self](const Status& status) {
+  this->doWrite(message_out, [self, objects](const Status& status) {
+    SendRemoteBuffers(self->socket_, objects, 0, [self](const Status& status) {
       if (!status.ok()) {
         LOG(ERROR) << "Failed to send buffers to remote client: "
                    << status.ToString();
@@ -621,11 +557,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
 
-  boost::system::error_code ec;
-  this->recvRemoteBufferHelper(
-      object, 0, ec,
-      [self](const Status& status,
-             std::shared_ptr<Payload> const& object) -> Status {
+  ReceiveRemoteBuffers(
+      socket_, {object}, 0, 0, [self, object](const Status& status) -> Status {
         std::string message_out;
         if (status.ok()) {
           WriteCreateBufferReply(object->object_id, object, -1, message_out);
@@ -1085,10 +1018,21 @@ bool SocketConnection::doDropName(const json& root) {
 
 bool SocketConnection::doMigrateObject(const json& root) {
   auto self(shared_from_this());
-  std::string message_out;
-  WriteErrorReply(Status::Invalid("Migrate request has been deprecated"),
-                  message_out);
-  self->doWrite(message_out);
+  ObjectID object_id;
+  TRY_READ_REQUEST(ReadMigrateObjectRequest, root, object_id);
+
+  RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
+      object_id, [self](const Status& status, const ObjectID& target) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteMigrateObjectReply(target, message_out);
+        } else {
+          VLOG(100) << "Error: failed to migrate object: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
   return false;
 }
 

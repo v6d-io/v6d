@@ -333,6 +333,10 @@ void WriteDropNameReply(std::string& msg);
 
 Status ReadDropNameReply(const json& root);
 
+void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg);
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id);
+
 void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
                                const bool is_stream, std::string const& peer,
                                std::string const& peer_rpc_endpoint,

@@ -323,112 +323,15 @@ Status ClientBase::DropName(const std::string& name) {
   return Status::OK();
 }
 
-Status ClientBase::collectRemoteBlobs(const json& tree,
-                                      std::set<ObjectID>& blobs) {
-  if (tree.empty()) {
-    return Status::OK();
-  }
-  ObjectID member_id =
-      ObjectIDFromString(tree["id"].get_ref<std::string const&>());
-  if (IsBlob(member_id)) {
-#ifndef NDEBUG
-    std::clog << "[migration] instance id for blob " << member_id << " is "
-              << tree["instance_id"].get<InstanceID>() << std::endl;
-#endif
-    blobs.emplace(member_id);
-  } else {
-    for (auto& item : tree) {
-      if (item.is_object()) {
-        RETURN_ON_ERROR(collectRemoteBlobs(item, blobs));
-      }
-    }
-  }
-  return Status::OK();
-}
-
-Status ClientBase::recreateMetadata(ClientBase& client,
-                                    ObjectMeta const& metadata,
-                                    ObjectMeta& target,
-                                    std::map<ObjectID, ObjectID> result_blobs) {
-  for (auto const& kv : metadata) {
-    if (kv.value().is_object()) {
-      ObjectMeta member = metadata.GetMemberMeta(kv.key());
-      if (member.GetTypeName() == type_name<Blob>()) {
-        ObjectMeta blob_meta;
-        blob_meta.SetId(result_blobs.at(member.GetId()));
-        blob_meta.SetTypeName(type_name<Blob>());
-        blob_meta.SetInstanceId(client.remote_instance_id());
-        target.AddMember(kv.key(), blob_meta);
-      } else {
-        ObjectMeta subtarget;
-        RETURN_ON_ERROR(
-            recreateMetadata(client, member, subtarget, result_blobs));
-        target.AddMember(kv.key(), subtarget);
-      }
-    } else {
-      if (kv.value().is_string()) {
-        target.AddKeyValue(kv.key(), kv.value().get_ref<std::string const&>());
-      } else if (kv.value().is_boolean()) {
-        target.AddKeyValue(kv.key(), kv.value().get<bool>());
-      } else if (kv.value().is_number_integer()) {
-        target.AddKeyValue(kv.key(), kv.value().get<int64_t>());
-      } else if (kv.value().is_number_float()) {
-        target.AddKeyValue(kv.key(), kv.value().get<double>());
-      } else {
-        target.AddKeyValue(kv.key(), kv.value());
-      }
-    }
-  }
-  ObjectID target_id = InvalidObjectID();
-  RETURN_ON_ERROR(client.CreateMetaData(target, target_id));
-  target.SetId(target_id);
-  return Status::OK();
-}
-
 Status ClientBase::MigrateObject(const ObjectID object_id,
                                  ObjectID& result_id) {
   ENSURE_CONNECTED(this);
-
-  // query the object location info
-  ObjectMeta meta;
-  RETURN_ON_ERROR(this->GetMetaData(object_id, meta, true));
-  if (meta.IsGlobal() || meta.GetInstanceId() == this->instance_id()) {
-    result_id = object_id;
-    return Status::OK();
-  }
-
-#ifndef NDEBUG
-  std::clog << "[migration] local: " << this->instance_id()
-            << ", remote: " << meta.GetInstanceId() << std::endl;
-#endif
-
-  // find the remote server
-  std::map<InstanceID, json> cluster;
-  RETURN_ON_ERROR(this->ClusterInfo(cluster));
-  auto selfhost =
-      cluster.at(this->instance_id())["hostname"].get_ref<std::string const&>();
-  auto otherHost = cluster.at(meta.GetInstanceId())["hostname"]
-                       .get_ref<std::string const&>();
-  auto otherEndpoint = cluster.at(meta.GetInstanceId())["rpc_endpoint"]
-                           .get_ref<std::string const&>();
-  RPCClient rpc_client;
-  RETURN_ON_ERROR(rpc_client.Connect(otherEndpoint));
-
-  // inspect the metadata to collect buffers
-  std::set<ObjectID> blobs;
-  RETURN_ON_ERROR(this->collectRemoteBlobs(meta.MetaData(), blobs));
-
-  // migrate all the blobs from remote server
-  std::map<ObjectID, ObjectID> result_blobs;
-  RETURN_ON_ERROR(this->migrateBuffers(rpc_client, blobs, result_blobs));
-
-  // rebuild the metadata on the local server
-  ObjectMeta result;
-  RETURN_ON_ERROR(this->recreateMetadata(*this, meta, result, result_blobs));
-  RETURN_ON_ERROR(this->Persist(result.GetId()));
-
-  // finishes
-  result_id = result.GetId();
+  std::string message_out;
+  WriteMigrateObjectRequest(object_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMigrateObjectReply(message_in, result_id));
   return Status::OK();
 }
 
@@ -485,16 +388,17 @@ Status ClientBase::doWrite(const std::string& message_out) {
 }
 
 Status ClientBase::doRead(std::string& message_in) {
-  return recv_message(vineyard_conn_, message_in);
+  auto status = recv_message(vineyard_conn_, message_in);
+  if (!status.ok()) {
+    connected_ = false;
+  }
+  return status;
 }
 
 Status ClientBase::doRead(json& root) {
   std::string message_in;
-  auto status = recv_message(vineyard_conn_, message_in);
-  if (!status.ok()) {
-    connected_ = false;
-    return status;
-  }
+  RETURN_ON_ERROR(doRead(message_in));
+  Status status;
   CATCH_JSON_ERROR(root, status, json::parse(message_in));
   if (!status.ok()) {
     connected_ = false;

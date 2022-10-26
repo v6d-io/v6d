@@ -412,7 +412,7 @@ class Client final : public BasicIPCClient,
 
   /**
    * @brief Allocate a chunk of given size in vineyard for a stream. When the
-   * request cannot be statisfied immediately, e.g., vineyard doesn't have
+   * request cannot be satisfied immediately, e.g., vineyard doesn't have
    * enough memory or the specified has accumulated too many chunks, the request
    * will be blocked until the request been processed.
    *
@@ -847,9 +847,6 @@ class Client final : public BasicIPCClient,
   Status GetBufferSizes(const std::set<ObjectID>& ids, const bool unsafe,
                         std::map<ObjectID, size_t>& sizes);
 
-  Status migrateBuffers(RPCClient& remote, const std::set<ObjectID> blobs,
-                        std::map<ObjectID, ObjectID>& results) override;
-
   friend class Blob;
   friend class BlobWriter;
   friend class ObjectBuilder;
@@ -959,9 +956,6 @@ class PlasmaClient final
   Status GetBuffers(
       std::set<PlasmaID> const& plasma_ids, const bool unsafe,
       std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
-
-  Status migrateBuffers(RPCClient& remote, const std::set<ObjectID> blobs,
-                        std::map<ObjectID, ObjectID>& results) override;
 
   friend class detail::UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient>;
 };

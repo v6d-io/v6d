@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "boost/asio.hpp"
 
+#include "common/util/status.h"
+
 #if BOOST_VERSION < 106600
 
 namespace boost {
@@ -33,6 +35,17 @@ using io_context = io_service;
 namespace vineyard {
 
 namespace asio = boost::asio;
+
+// return the status if the boost::system:error_code is not OK.
+#ifndef RETURN_ON_ASIO_ERROR
+#define RETURN_ON_ASIO_ERROR(ec)                                        \
+  do {                                                                  \
+    auto _ret = (ec);                                                   \
+    if (_ret) {                                                         \
+      return Status::IOError("Error in boost asio: " + _ret.message()); \
+    }                                                                   \
+  } while (0)
+#endif  // RETURN_ON_ASIO_ERROR
 
 }  // namespace vineyard
 

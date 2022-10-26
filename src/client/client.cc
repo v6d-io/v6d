@@ -32,7 +32,6 @@ limitations under the License.
 
 #include "client/ds/blob.h"
 #include "client/io.h"
-#include "client/rpc_client.h"
 #include "client/utils.h"
 #include "common/memory/fling.h"
 #include "common/util/protocols.h"
@@ -469,7 +468,7 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
     cnt += 1;
   }
 
-  // retrive blobs
+  // retrieve blobs
   std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
   VINEYARD_CHECK_OK(GetBuffers(blob_ids, buffers));
 
@@ -492,38 +491,6 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
     objects.emplace_back(std::shared_ptr<Object>(object.release()));
   }
   return objects;
-}
-
-Status Client::migrateBuffers(RPCClient& remote, const std::set<ObjectID> blobs,
-                              std::map<ObjectID, ObjectID>& results) {
-  ENSURE_CONNECTED(this);
-
-  std::vector<Payload> payloads;
-  std::vector<int> fd_sent;
-
-  std::string message_out;
-  WriteGetRemoteBuffersRequest(blobs, false, message_out);
-  RETURN_ON_ERROR(remote.doWrite(message_out));
-  json message_in;
-  RETURN_ON_ERROR(remote.doRead(message_in));
-  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
-  RETURN_ON_ASSERT(payloads.size() == blobs.size(),
-                   "The result size doesn't match with the requested sizes: " +
-                       std::to_string(payloads.size()) + " vs. " +
-                       std::to_string(blobs.size()));
-
-  for (auto const& payload : payloads) {
-    if (payload.data_size == 0) {
-      results[payload.object_id] = EmptyBlobID();
-      continue;
-    }
-    std::unique_ptr<BlobWriter> blob_writer;
-    RETURN_ON_ERROR(this->CreateBlob(payload.data_size, blob_writer));
-    RETURN_ON_ERROR(recv_bytes(remote.vineyard_conn_, blob_writer->data(),
-                               payload.data_size));
-    results[payload.object_id] = blob_writer->Seal(*this)->id();
-  }
-  return Status::OK();
 }
 
 bool Client::IsSharedMemory(const void* target) const {
@@ -1281,12 +1248,6 @@ Status PlasmaClient::OnDelete(PlasmaID const& plasma_id) {
 Status PlasmaClient::Release(const PlasmaID& id) { return RemoveUsage(id); }
 
 Status PlasmaClient::Delete(const PlasmaID& id) { return PreDelete(id); }
-
-Status PlasmaClient::migrateBuffers(RPCClient& remote,
-                                    const std::set<ObjectID> blobs,
-                                    std::map<ObjectID, ObjectID>& results) {
-  return Status::Invalid("Migrate is not supported on plasma client");
-}
 
 namespace detail {
 

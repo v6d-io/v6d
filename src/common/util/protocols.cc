@@ -995,6 +995,21 @@ Status ReadDropNameReply(const json& root) {
   return Status::OK();
 }
 
+void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg) {
+  json root;
+  root["type"] = "migrate_object_request";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
+                   "migrate_object_request");
+  object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
 void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
                                const bool is_stream, const std::string& peer,
                                std::string const& peer_rpc_endpoint,
