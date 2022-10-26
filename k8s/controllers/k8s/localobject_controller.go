@@ -18,10 +18,7 @@ package k8s
 import (
 	"context"
 
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -31,9 +28,7 @@ import (
 // LocalObjectReconciler reconciles a LocalObject object
 type LocalObjectReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Template kubernetes.Repo
-	Recorder record.EventRecorder
+	Scheme *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=localobjects,verbs=get;list;watch;create;update;patch;delete
