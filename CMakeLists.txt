@@ -303,7 +303,7 @@ endmacro()
 
 macro(find_etcd_cpp_apiv3)
     if(USE_EXTERNAL_ETCD_LIBS)
-        find_package(etcd-cpp-api 0.2.6 QUIET)
+        find_package(etcd-cpp-api 0.2.9 QUIET)
         if(NOT etcd-cpp-api_FOUND)
             message(WARNING "etcd-cpp-apiv3 not found, will use the bundled one from git submodules.")
             include("cmake/BuildEtcdCpp.cmake")
