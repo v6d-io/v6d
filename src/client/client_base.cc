@@ -26,8 +26,8 @@ limitations under the License.
 #include "client/io.h"
 #include "client/rpc_client.h"
 #include "client/utils.h"
-#include "common/util/protocols.h"
 #include "common/util/env.h"
+#include "common/util/protocols.h"
 
 namespace vineyard {
 
