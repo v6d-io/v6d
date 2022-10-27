@@ -18,7 +18,7 @@ setup:
   file: ../kind.yaml
   steps:
     - name: prepare e2e.yaml
-      command: bash k8s/hack/prepare-e2e.sh
+      command: bash k8s/test/hack/prepare-e2e.sh
     - name: install cert-manager
       command: |
         kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
