@@ -18,15 +18,7 @@ setup:
   file: ../kind.yaml
   steps:
     - name: prepare e2e.yaml
-      command: bash k8s/hack/prepare-e2e.sh
-    - name: pull docker image
-      command: |
-        docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        docker pull docker.pkg.github.com/v6d-io/v6d/job1
-        docker pull docker.pkg.github.com/v6d-io/v6d/job2
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job1
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job2
+      command: bash k8s/test/hack/prepare-e2e.sh
     - name: install cert-manager
       command: |
         kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
@@ -65,10 +57,6 @@ setup:
         do \
           sleep 0.1; \
         done
-    - name: label the objects produced by job1
-      command: |
-        kubectl label localobjects --overwrite --selector=job=none job=v6d-workflow-demo-job1 -n vineyard-system
-        kubectl label globalobjects --overwrite --selector=job=none job=v6d-workflow-demo-job1 -n vineyard-system
     - name: install job2
       command: |
         kubectl apply -f k8s/test/e2e/workflow-job2.yaml
@@ -76,10 +64,6 @@ setup:
         - namespace: vineyard-job
           resource: deployment/v6d-workflow-demo-job2-deployment
           for: condition=Available
-    - name: label the objects produced by job2
-      command: |
-        kubectl label localobjects --overwrite --selector=job=none job=v6d-workflow-demo-job2 -n vineyard-system
-        kubectl label globalobjects --overwrite --selector=job=none job=v6d-workflow-demo-job2 -n vineyard-system
   timeout: 20m
 
 cleanup:

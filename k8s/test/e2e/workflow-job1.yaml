@@ -36,7 +36,10 @@ spec:
       schedulerName: vineyard-scheduler
       containers:
       - name: job1
-        image: docker.pkg.github.com/v6d-io/v6d/job1
+        image: ghcr.io/v6d-io/v6d/job1
+        env:
+        - name: JOB_NAME
+          value: v6d-workflow-demo-job1
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - mountPath: /var/run

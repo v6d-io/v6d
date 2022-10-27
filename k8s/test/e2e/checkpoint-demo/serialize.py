@@ -1,5 +1,5 @@
 # pylint: disable=django-not-configured
-#! /usr/bin/env python3 # pylint: disable=missing-module-docstring
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2020-2022 Alibaba Group Holding Limited.
@@ -58,7 +58,6 @@ def global_object(vineyard_ipc_socket):
     tup = client1.create_metadata(meta)
     client1.persist(tup)
     return tup.id
-
 
 def test_seriarialize_round_trip(destination, vineyard_ipc_socket, vineyard_endpoint, global_object):
     shutil.rmtree(destination, ignore_errors=True)

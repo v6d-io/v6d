@@ -32,10 +32,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	k8scontrollers "github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/operator"
 	"github.com/v6d-io/v6d/k8s/schedulers"
 	"github.com/v6d-io/v6d/k8s/templates"
 	// +kubebuilder:scaffold:imports
@@ -58,7 +60,6 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 
 	if err = (&controllers.LocalObjectReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LocalObject"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LocalObject")
@@ -66,7 +67,6 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 	}
 	if err = (&controllers.GlobalObjectReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("GlobalObject"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalObject")
@@ -81,6 +81,15 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Error(err, "unable to create controller", "controller", "Vineyardd")
 		os.Exit(1)
 	}
+	if err = (&k8scontrollers.OperationReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Template: templates.NewEmbedTemplate(),
+		Recorder: mgr.GetEventRecorderFor("operation-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Operation")
+		os.Exit(1)
+	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
@@ -92,6 +101,25 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		}
 		if err = (&k8sv1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Vineyardd")
+			os.Exit(1)
+		}
+		if err = (&k8sv1alpha1.Operation{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Operation")
+			os.Exit(1)
+		}
+		// register the assembly webhook
+		setupLog.Info("registering the assembly webhook")
+		mgr.GetWebhookServer().Register("/mutate-v1-pod",
+			&webhook.Admission{
+				Handler: &operator.AssemblyInjector{Client: mgr.GetClient()}})
+		setupLog.Info("the assembly webhook is registered")
+
+		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			setupLog.Error(err, "unable to set up health check for webhook")
+			os.Exit(1)
+		}
+		if err := mgr.AddReadyzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			setupLog.Error(err, "unable to set up ready check for webhook")
 			os.Exit(1)
 		}
 	}

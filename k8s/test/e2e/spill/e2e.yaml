@@ -18,16 +18,9 @@ setup:
   file: ../kind.yaml
   steps:
     - name: prepare e2e.yaml
-      command: bash k8s/hack/prepare-e2e.sh
+      command: bash k8s/test/hack/prepare-e2e.sh
     - name: setup the serialize path
-      command:
-        worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
-    - name: pull docker image
-      command: |
-        docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        docker pull docker.pkg.github.com/v6d-io/v6d/spill
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/spill
+      command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
     - name: install cert-manager
       command: |
         kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml

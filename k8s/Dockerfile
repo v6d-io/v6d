@@ -14,7 +14,9 @@ COPY main.go main.go
 COPY apis/ apis/
 COPY config/scheduler/config.yaml scheduler-config.yaml
 COPY controllers/ controllers/
+COPY pkg/ pkg/
 COPY hack/ hack/
+COPY operator/ operator/
 COPY schedulers/ schedulers/
 COPY templates/ templates/
 

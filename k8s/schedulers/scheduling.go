@@ -90,6 +90,7 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	num := len(workernodes)
 	if len(requires) == 0 {
 		if workernodes[int(rank)%num] == nodeName {
+			klog.V(5).Infof("nodeName: %v, workernodes: %v, rank: %v", nodeName, workernodes, rank)
 			return 100, nil
 		} else {
 			return 1, nil
@@ -114,12 +115,50 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	if err != nil {
 		return 0, err
 	}
-	if len(localObjects) == 0 {
+	if len(localObjects) == 0 && len(globalObjects) != 0 {
 		return 0, fmt.Errorf("No local chunks found")
 	}
 
-	if err := ss.createConfigmapForID(ctx, requires, pod.GetNamespace(), localObjects, pod); err != nil {
+	if err := ss.createConfigmapForID(ctx, requires, pod.GetNamespace(), localObjects, globalObjects, pod); err != nil {
 		klog.V(5).Infof("can't create configmap for object ID %v", err)
+	}
+
+	// if the pod needs to be injected with the assembly operation
+	// we must wait for the assembly operation to be ready
+	if value, ok := pod.Labels["assembly.v6d.io/enabled"]; ok && strings.ToLower(value) == "true" {
+		op := &v1alpha1.Operation{}
+		err := ss.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, op)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return 0, err
+		}
+		if apierrors.IsNotFound(err) {
+			requiredJob := pod.Annotations[VineyardJobRequired]
+			targetJob := pod.Labels[VineyardJobName]
+			operation := &v1alpha1.Operation{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      pod.Name,
+					Namespace: pod.Namespace,
+				},
+				Spec: v1alpha1.OperationSpec{
+					Name:           "assembly",
+					Type:           pod.Labels["assembly.v6d.io/type"],
+					Require:        requiredJob,
+					Target:         targetJob,
+					TimeoutSeconds: 300,
+				},
+			}
+			if err := ss.Create(ctx, operation); err != nil {
+				return 0, err
+			}
+		}
+		/*
+			if op.Status.State != "succeeded" {
+				return 100, nil
+			}
+			return 0, nil*/
+		if op.Status.State != "succeeded" {
+			return 0, nil
+		}
 	}
 
 	klog.V(5).Infof("job %v requires local chunks %v", job, localObjects)
@@ -186,7 +225,7 @@ func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []s
 		return nil, err
 	}
 	for _, obj := range globalObjects.Items {
-		if jobname, exist := obj.Labels["job"]; exist && requiredjobs[jobname] {
+		if jobname, exist := obj.Labels["k8s.v6d.io/job"]; exist && requiredjobs[jobname] {
 			objects = append(objects, &obj)
 		}
 	}
@@ -214,7 +253,8 @@ func (ss *SchedulerState) getLocalObjectsBySignatures(ctx context.Context, signa
 }
 
 // Create a configmap for the object id and the nodes
-func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []string, namespace string, objects []*v1alpha1.LocalObject, pod *v1.Pod) error {
+func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []string, namespace string,
+	localobjects []*v1alpha1.LocalObject, globalobjects []*v1alpha1.GlobalObject, pod *v1.Pod) error {
 	for i := range jobname {
 		configmap := &v1.ConfigMap{}
 		err := ss.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: jobname[i]}, configmap)
@@ -226,9 +266,19 @@ func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []st
 		if apierrors.IsNotFound(err) {
 			data := make(map[string]string)
 			// get all local objects produced by the required job
-			for _, o := range objects {
-				if (*o).Labels["job"] == jobname[i] {
+			// hostname -> localobject id
+			// TODO: if there are lots of localobjects in the same node
+			for _, o := range localobjects {
+				if (*o).Labels["k8s.v6d.io/job"] == jobname[i] {
 					data[(*o).Spec.Hostname] = (*o).Spec.ObjectID
+				}
+			}
+			// get all global objects produced by the required job
+			// jobname -> globalobject id
+			// TODO: if there are lots of globalobjects produced by the same job
+			for _, o := range globalobjects {
+				if (*o).Labels["k8s.v6d.io/job"] == jobname[i] {
+					data[jobname[i]] = (*o).Spec.ObjectID
 				}
 			}
 			cm := v1.ConfigMap{
@@ -247,7 +297,6 @@ func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []st
 				klog.V(5).Infof("create configmap error: %v", err)
 				return err
 			}
-			continue
 		}
 		klog.V(5).Infof("the configmap [%v/%v] exist!", namespace, jobname[i])
 
@@ -313,6 +362,9 @@ func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleS
 	score, err := schedulerState.Compute(ctx, job, replica, podRank, nodes, requires, nodeName, pod)
 	if err != nil {
 		return 0, framework.NewStatus(framework.Unschedulable, err.Error())
+	}
+	if score == 0 {
+		return score, framework.NewStatus(framework.Unschedulable, "")
 	}
 	klog.Infof("score for pod of job %v on node %v is: %v", job, nodeName, score)
 	return score, framework.NewStatus(framework.Success, "")
@@ -428,7 +480,7 @@ func (vs *VineyardScheduling) GetAllWorkerNodes(vineyardd string) []string {
 	for _, pod := range podList.Items {
 		nodes = append(nodes, pod.Spec.NodeName)
 	}
-
+	sort.Strings(nodes)
 	return nodes
 }
 

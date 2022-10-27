@@ -18,7 +18,6 @@ package k8s
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +28,6 @@ import (
 // GlobalObjectReconciler reconciles a GlobalObject object
 type GlobalObjectReconciler struct {
 	client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -37,7 +35,9 @@ type GlobalObjectReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=globalobjects/status,verbs=get;update;patch
 
 func (r *GlobalObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("globalobject", req.NamespacedName)
+	_ = context.Background()
+
+	ctrl.Log.V(1).Info("Reconciling GlobalObject...")
 
 	return ctrl.Result{}, nil
 }

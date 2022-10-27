@@ -18,15 +18,7 @@ setup:
   file: ../kind.yaml
   steps:
     - name: prepare e2e.yaml
-      command: bash k8s/hack/prepare-e2e.sh
-    - name: pull docker image
-      command: |
-        docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        docker pull docker.pkg.github.com/v6d-io/v6d/job1
-        docker pull docker.pkg.github.com/v6d-io/v6d/job2
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job1
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job2
+      command: bash k8s/test/hack/prepare-e2e.sh
     - name: install cert-manager
       command: |
         helm repo add jetstack https://charts.jetstack.io

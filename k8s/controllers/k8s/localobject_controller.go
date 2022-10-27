@@ -18,7 +18,6 @@ package k8s
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +28,6 @@ import (
 // LocalObjectReconciler reconciles a LocalObject object
 type LocalObjectReconciler struct {
 	client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -38,7 +36,7 @@ type LocalObjectReconciler struct {
 
 func (r *LocalObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("localobject", req.NamespacedName)
+	ctrl.Log.V(1).Info("Reconciling LocalObject...")
 
 	return ctrl.Result{}, nil
 }

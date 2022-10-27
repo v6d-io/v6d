@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM  vineyardcloudnative/vineyard-python:latest
+FROM  docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
 WORKDIR /
 

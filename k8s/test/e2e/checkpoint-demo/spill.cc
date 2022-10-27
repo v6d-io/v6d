@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <unistd.h>
 #include <memory>
 #include <stdexcept>
 #include <vector>
-#include <unistd.h>
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"

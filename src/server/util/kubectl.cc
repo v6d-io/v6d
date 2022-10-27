@@ -53,6 +53,11 @@ static std::string generate_local_object(
   std::string signature =
       SignatureToString(object["signature"].get<Signature>());
   std::string type_name = object["typename"].get_ref<std::string const&>();
+
+  std::string job_name = object.value("JOB_NAME", "\"\"");
+  std::string client_pod_name = object.value("POD_NAME", "\"\"");
+  std::string client_pod_namespace = object.value("POD_NAMESPACE", "\"\"");
+
   InstanceID instance_id = object["instance_id"].get<InstanceID>();
   std::string vineyardd_name = getenv("VINEYARDD_NAME");
   std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
@@ -69,7 +74,10 @@ static std::string generate_local_object(
                     "\n  namespace: " + namespace_ +
                     "\n  labels:"
                     "\n    k8s.v6d.io/signature: " + signature +
-                    "\n    job: none"
+                    "\n    k8s.v6d.io/job: " + job_name +
+                    "\n    k8s.v6d.io/created-podname: " + client_pod_name +
+                    "\n    k8s.v6d.io/created-podnamespace: "
+                    + client_pod_namespace +
                     "\n  ownerReferences:"
                     "\n    - apiVersion: k8s.v6d.io/v1alpha1"
                     "\n      kind: Vineyardd"
@@ -95,6 +103,10 @@ static std::string generate_global_object(
   std::string type_name = object["typename"].get_ref<std::string const&>();
   std::vector<std::string> members;
 
+  std::string job_name = object.value("JOB_NAME", "\"\"");
+  std::string client_pod_name = object.value("POD_NAME", "\"\"");
+  std::string client_pod_namespace = object.value("POD_NAMESPACE", "\"\"");
+
   std::string vineyardd_name = getenv("VINEYARDD_NAME");
   std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
   std::string uid = getenv("VINEYARDD_UID");
@@ -118,7 +130,10 @@ static std::string generate_global_object(
                     "\n  name: " + object_id +
                     "\n  namespace: " + namespace_ +
                     "\n  labels:"
-                    "\n    job: none"
+                    "\n    k8s.v6d.io/job: " + job_name +
+                    "\n    k8s.v6d.io/created-podname: " + client_pod_name +
+                    "\n    k8s.v6d.io/created-podnamespace: "
+                    + client_pod_namespace +
                     "\n  ownerReferences:"
                     "\n    - apiVersion: k8s.v6d.io/v1alpha1"
                     "\n      kind: Vineyardd"
