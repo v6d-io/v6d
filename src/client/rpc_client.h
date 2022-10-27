@@ -294,9 +294,6 @@ class RPCClient final : public ClientBase {
  private:
   InstanceID remote_instance_id_;
 
-  Status migrateBuffers(RPCClient& remote, const std::set<ObjectID> blobs,
-                        std::map<ObjectID, ObjectID>& results) override;
-
   friend class Client;
 };
 

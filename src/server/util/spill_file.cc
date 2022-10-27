@@ -40,7 +40,7 @@ void PutFixed64(std::string* dst, uint64_t value) {
 Status SpillWriteFile::Init(uint64_t object_id) {
   if (io_adaptor_) {
     return Status::Invalid(
-        "Warning: may not flushed before io_adaptor_ is overwriten");
+        "Warning: may not flushed before io_adaptor_ is overwritten");
   }
   io_adaptor_ =
       std::make_unique<FileIOAdaptor>(spill_path_ + std::to_string(object_id));
@@ -70,7 +70,7 @@ Status SpillWriteFile::Sync() {
 Status SpillReadFile::Init(uint64_t object_id) {
   if (io_adaptor_) {
     return Status::Invalid(
-        "Warning: may not flushed before io_adaptor_ is overwriten");
+        "Warning: may not flushed before io_adaptor_ is overwritten");
   }
   io_adaptor_ =
       std::make_unique<FileIOAdaptor>(spill_path_ + std::to_string(object_id));

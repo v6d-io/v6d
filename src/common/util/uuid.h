@@ -40,7 +40,7 @@ using ObjectID = uint64_t;
 
 /**
  * @brief Signature is an opaque type for vineyard's object. The signature of
- * an object keep unchange during migration. The underlying type of Signature
+ * an object keep unchanged during migration. The underlying type of Signature
  * is a 64-bit unsigned integer.
  */
 using Signature = uint64_t;

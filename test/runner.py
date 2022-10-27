@@ -495,7 +495,7 @@ def run_scale_in_out_tests(meta, endpoints, instance_size=4):
         time.sleep(5)
 
 
-def run_fuse_test(meta, endpoints):
+def run_fuse_test(meta, endpoints, tests):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
 
@@ -503,15 +503,22 @@ def run_fuse_test(meta, endpoints):
         metadata_settings, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
     ) as (_, rpc_socket_port), start_fuse() as _:
         start_time = time.time()
+        test_args = []
+        if tests:
+            for test in tests:
+                test_args.append('-k')
+                test_args.append(test)
         subprocess.check_call(
             [
                 'pytest',
                 '-s',
                 '-vvv',
+                '--exitfirst',
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
                 'modules/fuse/test',
+                *test_args,
                 '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                 '--vineyard-fuse-mount-dir=%s' % VINEYARD_FUSE_MOUNT_DIR,
@@ -541,6 +548,7 @@ def run_python_tests(meta, endpoints, tests):
                 'pytest',
                 '-s',
                 '-vvv',
+                '--exitfirst',
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
@@ -572,6 +580,7 @@ def run_python_contrib_ml_tests(meta, endpoints):
                 'pytest',
                 '-s',
                 '-vvv',
+                '--exitfirst',
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
@@ -608,6 +617,7 @@ def run_python_contrib_dask_tests(meta, endpoints):
                 'pytest',
                 '-s',
                 '-vvv',
+                '--exitfirst',
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
@@ -623,11 +633,11 @@ def run_python_contrib_dask_tests(meta, endpoints):
         )
 
 
-def run_python_deploy_tests(meta, endpoints, with_migration):
+def run_python_deploy_tests(meta, endpoints, tests, with_migration):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
 
-    instance_size = 4
+    instance_size = 2
     extra_args = []
     if with_migration:
         extra_args.append('--with-migration')
@@ -641,15 +651,22 @@ def run_python_deploy_tests(meta, endpoints, with_migration):
             ['%s.%d' % (VINEYARD_CI_IPC_SOCKET, i) for i in range(instance_size)]
         )
         start_time = time.time()
+        test_args = []
+        if tests:
+            for test in tests:
+                test_args.append('-k')
+                test_args.append(test)
         subprocess.check_call(
             [
                 'pytest',
                 '-s',
                 '-vvv',
+                '--exitfirst',
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
                 'python/vineyard/deploy/tests',
+                *test_args,
                 '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets,
             ]
             + extra_args,
@@ -662,7 +679,7 @@ def run_python_deploy_tests(meta, endpoints, with_migration):
         )
 
 
-def run_io_adaptor_tests(meta, endpoints):
+def run_io_adaptor_tests(meta, endpoints, tests):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
 
@@ -670,15 +687,22 @@ def run_io_adaptor_tests(meta, endpoints):
         metadata_settings, default_ipc_socket=VINEYARD_CI_IPC_SOCKET
     ) as (_, rpc_socket_port):
         start_time = time.time()
+        test_args = []
+        if tests:
+            for test in tests:
+                test_args.append('-k')
+                test_args.append(test)
         subprocess.check_call(
             [
                 'pytest',
                 '-s',
                 '-vvv',
+                '--exitfirst',
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
                 'modules/io/python/drivers/io/tests',
+                *test_args,
                 '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                 '--test-dataset=%s' % get_data_path(None),
@@ -691,7 +715,7 @@ def run_io_adaptor_tests(meta, endpoints):
         )
 
 
-def run_io_adaptor_distributed_tests(meta, endpoints, with_migration):
+def run_io_adaptor_distributed_tests(meta, endpoints, tests, with_migration):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
 
@@ -710,15 +734,22 @@ def run_io_adaptor_distributed_tests(meta, endpoints, with_migration):
         )
         rpc_socket_port = instances[0][1]
         start_time = time.time()
+        test_args = []
+        if tests:
+            for test in tests:
+                test_args.append('-k')
+                test_args.append(test)
         subprocess.check_call(
             [
                 'pytest',
                 '-s',
                 '-vvv',
+                '--exitfirst',
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
                 'modules/io/python/drivers/io/tests/test_migrate_stream.py',
+                *test_args,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                 '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets,
             ]
@@ -834,17 +865,21 @@ def execute_tests(args):
 
         if args.with_deployment:
             with start_metadata_engine(args.meta) as (_, endpoints):
-                run_python_deploy_tests(args.meta, endpoints, args.with_migration)
+                run_python_deploy_tests(
+                    args.meta, endpoints, args.tests, args.with_migration
+                )
 
     if args.with_io:
         with start_metadata_engine(args.meta) as (_, endpoints):
-            run_io_adaptor_tests(args.meta, endpoints)
+            run_io_adaptor_tests(args.meta, endpoints, args.tests)
         with start_metadata_engine(args.meta) as (_, endpoints):
-            run_io_adaptor_distributed_tests(args.meta, endpoints, args.with_migration)
+            run_io_adaptor_distributed_tests(
+                args.meta, endpoints, args.tests, args.with_migration
+            )
 
     if args.with_fuse:
         with start_metadata_engine(args.meta) as (_, endpoints):
-            run_fuse_test(args.meta, endpoints)
+            run_fuse_test(args.meta, endpoints, args.tests)
 
 
 def main():

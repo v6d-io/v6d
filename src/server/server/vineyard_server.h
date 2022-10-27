@@ -125,6 +125,10 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
       const json& tree,
       callback_t<const ObjectID, const Signature, const InstanceID> callback);
 
+  Status CreateData(
+      const json& tree, bool recursive,
+      callback_t<const ObjectID, const Signature, const InstanceID> callback);
+
   Status Persist(const ObjectID id, callback_t<> callback);
 
   Status IfPersist(const ObjectID id, callback_t<const bool> callback);
@@ -153,6 +157,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                  callback_t<const ObjectID&> callback);
 
   Status DropName(const std::string& name, callback_t<> callback);
+
+  Status MigrateObject(const ObjectID object_id,
+                       callback_t<const ObjectID&> callback);
 
   Status ClusterInfo(callback_t<const json&> callback);
 

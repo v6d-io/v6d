@@ -73,9 +73,9 @@ Status VineyardRunner::Serve() {
         boost::bind(&boost::asio::io_context::run, &context_));
   }
 
-  for (unsigned int idx = 0; idx < concurrency_; ++idx) {
+  for (unsigned int idx = 0; idx < concurrency_ / 2 + 1; ++idx) {
     io_workers_.emplace_back(
-        boost::bind(&boost::asio::io_context::run, &context_));
+        boost::bind(&boost::asio::io_context::run, &io_context_));
   }
 
   meta_context_.run();
@@ -158,9 +158,9 @@ void VineyardRunner::Stop() {
     VINEYARD_DISCARD(Delete(item));  // trigger item->stop()
   }
 
-  guard_.reset();
-  meta_guard_.reset();
   io_guard_.reset();
+  meta_guard_.reset();
+  guard_.reset();
 
   // stop the asio context at last
   io_context_.stop();

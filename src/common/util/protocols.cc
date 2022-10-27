@@ -544,16 +544,24 @@ Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
 }
 
 void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg) {
+  WriteCreateRemoteBufferRequest(size, false, msg);
+}
+
+void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
+                                    std::string& msg) {
   json root;
   root["type"] = "create_remote_buffer_request";
   root["size"] = size;
+  root["compress"] = compress;
 
   encode_msg(root, msg);
 }
 
-Status ReadCreateRemoteBufferRequest(const json& root, size_t& size) {
+Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
+                                     bool& compress) {
   RETURN_ON_ASSERT(root["type"] == "create_remote_buffer_request");
   size = root["size"].get<size_t>();
+  compress = root.value("compress", false);
   return Status::OK();
 }
 
@@ -598,7 +606,7 @@ Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
 
 void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
                           const std::vector<int>& fd_to_send,
-                          std::string& msg) {
+                          const bool compress, std::string& msg) {
   json root;
   root["type"] = "get_buffers_reply";
   for (size_t i = 0; i < objects.size(); ++i) {
@@ -608,6 +616,7 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
   }
   root["fds"] = fd_to_send;
   root["num"] = objects.size();
+  root["compress"] = compress;
 
   encode_msg(root, msg);
 }
@@ -628,8 +637,21 @@ Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
   return Status::OK();
 }
 
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
+                           std::vector<int>& fd_sent, bool& compress) {
+  RETURN_ON_ERROR(ReadGetBuffersReply(root, objects, fd_sent));
+  compress = root.value("compress", false);
+  return Status::OK();
+}
+
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
                                   const bool unsafe, std::string& msg) {
+  WriteGetRemoteBuffersRequest(ids, unsafe, false, msg);
+}
+
+void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  std::string& msg) {
   json root;
   root["type"] = "get_remote_buffers_request";
   int idx = 0;
@@ -638,12 +660,19 @@ void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
   }
   root["num"] = ids.size();
   root["unsafe"] = unsafe;
+  root["compress"] = compress;
 
   encode_msg(root, msg);
 }
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   const bool unsafe, std::string& msg) {
+  WriteGetRemoteBuffersRequest(ids, unsafe, false, msg);
+}
+
+void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  std::string& msg) {
   json root;
   root["type"] = "get_remote_buffers_request";
   int idx = 0;
@@ -652,18 +681,20 @@ void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
   }
   root["num"] = ids.size();
   root["unsafe"] = unsafe;
+  root["compress"] = compress;
 
   encode_msg(root, msg);
 }
 
 Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                                   bool& unsafe) {
+                                   bool& unsafe, bool& compress) {
   RETURN_ON_ASSERT(root["type"] == "get_remote_buffers_request");
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
     ids.push_back(root[std::to_string(i)].get<ObjectID>());
   }
   unsafe = root.value("unsafe", false);
+  compress = root.value("compress", false);
   return Status::OK();
 }
 
@@ -992,6 +1023,21 @@ void WriteDropNameReply(std::string& msg) {
 
 Status ReadDropNameReply(const json& root) {
   CHECK_IPC_ERROR(root, "drop_name_reply");
+  return Status::OK();
+}
+
+void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg) {
+  json root;
+  root["type"] = "migrate_object_request";
+  root["object_id"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id) {
+  RETURN_ON_ASSERT(root["type"].get_ref<std::string const&>() ==
+                   "migrate_object_request");
+  object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
 

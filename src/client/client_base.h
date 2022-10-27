@@ -541,25 +541,6 @@ class ClientBase {
 
   Status doRead(json& root);
 
-  /**
-   * @brief Migrate remote buffers to connected instance.
-   *
-   * @param remote The RPC client that will be used to fetch remote buffers.
-   * @param blobs The existing blobs that will be migrated to current instance.
-   * @param results Record the result blob id mapping.
-   *
-   * @return Status that indicates if the migration success.
-   */
-  virtual Status migrateBuffers(RPCClient& remote,
-                                const std::set<ObjectID> blobs,
-                                std::map<ObjectID, ObjectID>& results) = 0;
-
-  Status collectRemoteBlobs(const json& tree, std::set<ObjectID>& blobs);
-
-  Status recreateMetadata(ClientBase& client, ObjectMeta const& metadata,
-                          ObjectMeta& target,
-                          std::map<ObjectID, ObjectID> result_blobs);
-
   mutable bool connected_;
   std::string ipc_socket_;
   std::string rpc_endpoint_;

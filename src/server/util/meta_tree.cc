@@ -29,7 +29,7 @@ limitations under the License.
 #include "server/util/metrics.h"
 
 namespace boost {
-// Makes the behaviour of lexical_cast compatibile with boost::property_tree.
+// Makes the behaviour of lexical_cast compatible with boost::property_tree.
 template <>
 bool lexical_cast<bool, std::string>(const std::string& arg) {
   std::istringstream ss(arg);
@@ -754,7 +754,7 @@ static Status diff_data_meta_tree(const json& meta,
              !is_link_node(
                  mb_old_sub_sub_tree->get_ref<std::string const&>()))) {
           return Status::MetaTreeInvalid(
-              "Here it was a link node, but not it isn't.");
+              "Here it was a link node, but now it isn't.");
         }
       }
 

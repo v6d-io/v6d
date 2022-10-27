@@ -80,6 +80,9 @@ DEFINE_int32(rpc_socket_port, 9600, "port to listen in rpc server");
 // Kubernetes
 DEFINE_bool(sync_crds, false, "Synchronize CRDs when persisting objects");
 
+// IO: spill and migration
+DEFINE_bool(compression, true, "Compress before migration or spilling");
+
 // metrics and prometheus
 DEFINE_bool(prometheus, false,
             "Whether to print metrics for prometheus or not");
@@ -201,6 +204,7 @@ json RpcSpecResolver::resolve() const {
 json ServerSpecResolver::resolve() const {
   json spec;
   spec["deployment"] = FLAGS_deployment;
+  spec["compression"] = FLAGS_compression;
   spec["sync_crds"] =
       FLAGS_sync_crds || (read_env("VINEYARD_SYNC_CRDS") == "1");
   spec["metastore_spec"] = Resolver::get("metastore").resolve();

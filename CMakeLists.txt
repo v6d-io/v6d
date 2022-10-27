@@ -482,6 +482,20 @@ macro(find_cuda)
   find_package(CUDA REQUIRED)
 endmacro(find_cuda)
 
+macro(find_zstd)
+    # include zstd
+    set(ZSTD_LEGACY_SUPPORT OFF CACHE INTERNAL "")
+    set(ZSTD_MULTITHREAD_SUPPORT OFF CACHE INTERNAL "")
+    set(ZSTD_BUILD_PROGRAMS OFF CACHE INTERNAL "")
+    set(ZSTD_BUILD_CONTRIB OFF CACHE INTERNAL "")
+    set(ZSTD_BUILD_TESTS OFF CACHE INTERNAL "")
+    set(ZSTD_BUILD_SHARED OFF CACHE INTERNAL "")
+    set(ZSTD_BUILD_STATIC ON CACHE INTERNAL "")
+    if (NOT TARGET libzstd_static)
+        add_subdirectory_static(thirdparty/zstd/build/cmake EXCLUDE_FROM_ALL)
+    endif()
+endmacro()
+
 macro(find_common_libraries)
     find_apache_arrow()
     find_boost()
@@ -621,6 +635,7 @@ if(BUILD_VINEYARD_SERVER)
     find_etcd_cpp_apiv3()
     find_intel_tbb()
     find_mimalloc()
+    find_zstd()
     if(BUILD_VINEYARD_SERVER_REDIS)
         find_hiredis()
         find_redis_plus_plus()
@@ -643,6 +658,7 @@ if(BUILD_VINEYARD_SERVER)
                                             ${GFLAGS_LIBRARIES}
                                             ${GLOG_LIBRARIES}
                                             ${OPENSSL_LIBRARIES}
+                                            libzstd_static
                                             mimalloc-static
                                             nlohmann_json::nlohmann_json
                                             TBB::tbb
@@ -675,6 +691,7 @@ if(BUILD_VINEYARD_SERVER)
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
+
     install_vineyard_target(vineyardd)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/server")
     target_enable_sanitizer(vineyardd PRIVATE)
@@ -752,14 +769,15 @@ if(BUILD_VINEYARD_CLIENT)
     # is a singleton.
     add_library(vineyard_client ${CLIENT_SRC_FILES})
     target_add_debuginfo(vineyard_client)
-    if(USE_GPU)
-        find_package(CUDA REQUIRED)
-        target_link_libraries(vineyard_client PUBLIC ${CUDA_LIBRARIES})
-    endif()
     target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
                                                  Threads::Threads
                                                  nlohmann_json::nlohmann_json
     )
+    if(USE_GPU)
+        find_package(CUDA REQUIRED)
+        target_link_libraries(vineyard_client PUBLIC ${CUDA_LIBRARIES})
+    endif()
+
     # make sure `vineyard_internal_registry` been built.
     add_dependencies(vineyard_client vineyard_internal_registry)
     if(ARROW_SHARED_LIB)

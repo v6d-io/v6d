@@ -212,14 +212,6 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   void doAsyncWrite(std::string&& buf, callback_t<> callback);
 
-  void sendRemoteBufferHelper(
-      std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
-      boost::system::error_code const ec, callback_t<> callback_after_finish);
-  void recvRemoteBufferHelper(
-      std::shared_ptr<Payload> const& object, size_t offset,
-      boost::system::error_code const ec,
-      callback_t<std::shared_ptr<Payload> const&> callback_after_finish);
-
   void switchSession(std::shared_ptr<VineyardServer>& session) {
     this->server_ptr_ = session;
   }

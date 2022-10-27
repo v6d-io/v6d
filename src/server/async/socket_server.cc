@@ -30,6 +30,7 @@ limitations under the License.
 #include "common/util/protocols.h"
 #include "server/server/vineyard_server.h"
 #include "server/util/metrics.h"
+#include "server/util/remote.h"
 
 namespace vineyard {
 
@@ -69,7 +70,7 @@ bool SocketConnection::Stop() {
     std::unordered_set<ObjectID> ids;
     auto status = bulk_store_->ReleaseConnection(this->getConnId());
     if (!status.ok() && !status.IsKeyError()) {
-      LOG(WARNING) << "Failed to release the connction '" << this->getConnId()
+      LOG(WARNING) << "Failed to release the connection '" << this->getConnId()
                    << "' from object dependency: " << status.ToString();
     }
   }
@@ -374,70 +375,6 @@ bool SocketConnection::doRegister(const json& root) {
   return !s.ok();
 }
 
-void SocketConnection::sendRemoteBufferHelper(
-    std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
-    boost::system::error_code const ec, callback_t<> callback_after_finish) {
-  auto self(shared_from_this());
-  if (!ec && index < objects.size()) {
-    while (objects[index]->data_size == 0) {
-      index += 1;
-    }
-    boost::asio::async_write(
-        socket_,
-        boost::asio::buffer(objects[index]->pointer, objects[index]->data_size),
-        [self, callback_after_finish, objects, index](
-            boost::system::error_code ec, std::size_t) {
-          self->sendRemoteBufferHelper(objects, index + 1, ec,
-                                       callback_after_finish);
-        });
-  } else {
-    if (ec) {
-      VINEYARD_DISCARD(callback_after_finish(Status::IOError(
-          "Failed to write buffer to client: " + ec.message())));
-    } else {
-      VINEYARD_DISCARD(callback_after_finish(Status::OK()));
-    }
-  }
-}
-
-void SocketConnection::recvRemoteBufferHelper(
-    std::shared_ptr<Payload> const& object, size_t offset,
-    boost::system::error_code const ec,
-    callback_t<std::shared_ptr<Payload> const&> callback_after_finish) {
-  auto self(shared_from_this());
-  boost::asio::async_read(
-      socket_,
-      boost::asio::buffer(object->pointer + offset, object->data_size - offset),
-      [self, callback_after_finish, object, offset](
-          boost::system::error_code ec, std::size_t read_size) {
-        if (ec) {
-          if (ec == asio::error::eof) {
-            if (read_size + offset < static_cast<size_t>(object->data_size)) {
-              VINEYARD_DISCARD(callback_after_finish(
-                  Status::IOError("Failed to read buffer from client, no "
-                                  "enough content from client: " +
-                                  ec.message()),
-                  object));
-            } else {
-              VINEYARD_DISCARD(callback_after_finish(Status::OK(), object));
-            }
-          } else {
-            VINEYARD_DISCARD(callback_after_finish(
-                Status::IOError("Failed to read buffer from client: " +
-                                ec.message()),
-                object));
-          }
-        } else {
-          if (read_size + offset < static_cast<size_t>(object->data_size)) {
-            self->recvRemoteBufferHelper(object, read_size + offset, ec,
-                                         callback_after_finish);
-          } else {
-            VINEYARD_DISCARD(callback_after_finish(Status::OK(), object));
-          }
-        }
-      });
-}
-
 bool SocketConnection::doGetBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
@@ -458,7 +395,7 @@ bool SocketConnection::doGetBuffers(const json& root) {
       fd_to_send.emplace_back(object->store_fd);
     }
   }
-  WriteGetBuffersReply(objects, fd_to_send, message_out);
+  WriteGetBuffersReply(objects, fd_to_send, false, message_out);
 
   /* NOTE: Here we send the file descriptor after the objects.
    *       We are using sendmsg to send the file descriptor
@@ -484,24 +421,25 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool unsafe = false;
+  bool compress = false;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe);
+  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
-  WriteGetBuffersReply(objects, {}, message_out);
+  WriteGetBuffersReply(objects, {}, compress, message_out);
 
-  this->doWrite(message_out, [this, self, objects](const Status& status) {
-    boost::system::error_code ec;
-    sendRemoteBufferHelper(objects, 0, ec, [self](const Status& status) {
-      if (!status.ok()) {
-        LOG(ERROR) << "Failed to send buffers to remote client: "
-                   << status.ToString();
-      }
-      return Status::OK();
-    });
+  this->doWrite(message_out, [self, objects, compress](const Status& status) {
+    SendRemoteBuffers(
+        self->socket_, objects, 0, compress, [self](const Status& status) {
+          if (!status.ok()) {
+            LOG(ERROR) << "Failed to send buffers to remote client: "
+                       << status.ToString();
+          }
+          return Status::OK();
+        });
     return Status::OK();
   });
   return false;
@@ -614,18 +552,17 @@ bool SocketConnection::doCreateGPUBuffer(json const& root) {
 bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   auto self(shared_from_this());
   size_t size;
+  bool compress = false;
   std::shared_ptr<Payload> object;
 
-  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size);
+  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size, compress);
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
 
-  boost::system::error_code ec;
-  this->recvRemoteBufferHelper(
-      object, 0, ec,
-      [self](const Status& status,
-             std::shared_ptr<Payload> const& object) -> Status {
+  ReceiveRemoteBuffers(
+      socket_, {object}, 0, 0, compress,
+      [self, object](const Status& status) -> Status {
         std::string message_out;
         if (status.ok()) {
           WriteCreateBufferReply(object->object_id, object, -1, message_out);
@@ -1085,10 +1022,21 @@ bool SocketConnection::doDropName(const json& root) {
 
 bool SocketConnection::doMigrateObject(const json& root) {
   auto self(shared_from_this());
-  std::string message_out;
-  WriteErrorReply(Status::Invalid("Migrate request has been deprecated"),
-                  message_out);
-  self->doWrite(message_out);
+  ObjectID object_id;
+  TRY_READ_REQUEST(ReadMigrateObjectRequest, root, object_id);
+
+  RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
+      object_id, [self](const Status& status, const ObjectID& target) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteMigrateObjectReply(target, message_out);
+        } else {
+          VLOG(100) << "Error: failed to migrate object: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
   return false;
 }
 
@@ -1306,7 +1254,7 @@ bool SocketConnection::doGetBuffersByPlasma(json const& root) {
    *       a very short message.
    *
    *       We will examine other methods later, such as using
-   *       explicit file descritors.
+   *       explicit file descriptors.
    */
   this->doWrite(message_out, [self, plasma_objects](const Status& status) {
     for (auto object : plasma_objects) {
@@ -1417,12 +1365,12 @@ Status SocketConnection::MoveBuffers(
     ids.insert(item.first);
   }
 
-  std::map<FROM, typename ID_traits<FROM>::P> successed_ids;
+  std::map<FROM, typename ID_traits<FROM>::P> succeeded_ids;
   RETURN_ON_ERROR(source_session->GetBulkStore<FROM>()->RemoveOwnership(
-      ids, successed_ids));
+      ids, succeeded_ids));
 
   std::map<TO, typename ID_traits<TO>::P> to_process_ids;
-  for (auto& item : successed_ids) {
+  for (auto& item : succeeded_ids) {
     typename ID_traits<TO>::P payload(item.second);
     payload.Reset();
     to_process_ids.emplace(mapping.at(item.first), payload);
