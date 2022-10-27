@@ -196,10 +196,9 @@ class ArrowVertexMap
 };
 
 template <typename VID_T>
-class ArrowVertexMap<arrow::util::string_view, VID_T>
-    : public vineyard::Registered<
-          ArrowVertexMap<arrow::util::string_view, VID_T>> {
-  using oid_t = arrow::util::string_view;
+class ArrowVertexMap<arrow_string_view, VID_T>
+    : public vineyard::Registered<ArrowVertexMap<arrow_string_view, VID_T>> {
+  using oid_t = arrow_string_view;
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
   using oid_array_t = arrow::LargeStringArray;
@@ -353,10 +352,10 @@ class ArrowVertexMap<arrow::util::string_view, VID_T>
   std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays_;
   std::vector<std::vector<ska::flat_hash_map<oid_t, vid_t>>> o2g_;
 
-  friend class ArrowVertexMapBuilder<arrow::util::string_view, VID_T>;
-  friend class BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>;
+  friend class ArrowVertexMapBuilder<arrow_string_view, VID_T>;
+  friend class BasicArrowVertexMapBuilder<arrow_string_view, VID_T>;
 
-  friend class gs::ArrowProjectedVertexMap<arrow::util::string_view, VID_T>;
+  friend class gs::ArrowProjectedVertexMap<arrow_string_view, VID_T>;
 };
 
 template <typename OID_T, typename VID_T>
@@ -402,9 +401,9 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
 };
 
 template <typename VID_T>
-class ArrowVertexMapBuilder<arrow::util::string_view, VID_T>
+class ArrowVertexMapBuilder<arrow_string_view, VID_T>
     : public vineyard::ObjectBuilder {
-  using oid_t = arrow::util::string_view;
+  using oid_t = arrow_string_view;
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
 
@@ -467,9 +466,9 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
 };
 
 template <typename VID_T>
-class BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>
-    : public ArrowVertexMapBuilder<arrow::util::string_view, VID_T> {
-  using oid_t = arrow::util::string_view;
+class BasicArrowVertexMapBuilder<arrow_string_view, VID_T>
+    : public ArrowVertexMapBuilder<arrow_string_view, VID_T> {
+  using oid_t = arrow_string_view;
   using vid_t = VID_T;
   using oid_array_t = arrow::LargeStringArray;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
@@ -478,7 +477,7 @@ class BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>
   BasicArrowVertexMapBuilder(
       vineyard::Client& client, fid_t fnum, label_id_t label_num,
       const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays)
-      : ArrowVertexMapBuilder<arrow::util::string_view, vid_t>(client),
+      : ArrowVertexMapBuilder<arrow_string_view, vid_t>(client),
         fnum_(fnum),
         label_num_(label_num),
         oid_arrays_(oid_arrays) {

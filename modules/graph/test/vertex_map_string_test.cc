@@ -116,16 +116,16 @@ int main(int argc, char** argv) {
       }
     }
 
-    BasicArrowVertexMapBuilder<arrow::util::string_view, uint64_t> vm_builder(
+    BasicArrowVertexMapBuilder<arrow_string_view, uint64_t> vm_builder(
         client, fnum, vertex_label_num, oid_lists);
 
     auto vm = vm_builder.Seal(client);
     vm_id = vm->id();
   }
 
-  auto vm_ptr = std::dynamic_pointer_cast<
-      ArrowVertexMap<arrow::util::string_view, uint64_t>>(
-      client.GetObject(vm_id));
+  auto vm_ptr =
+      std::dynamic_pointer_cast<ArrowVertexMap<arrow_string_view, uint64_t>>(
+          client.GetObject(vm_id));
 
   vineyard::IdParser<uint64_t> id_parser;
   id_parser.Init(fnum, vertex_label_num);
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
       uint64_t vnum = vm_ptr->GetInnerVertexSize(i, j);
       for (uint64_t k = 0; k < vnum; ++k) {
         uint64_t gid = id_parser.GenerateId(i, j, k);
-        arrow::util::string_view oid;
+        arrow_string_view oid;
         CHECK(vm_ptr->GetOid(gid, oid));
 
         fout << oid << std::endl;

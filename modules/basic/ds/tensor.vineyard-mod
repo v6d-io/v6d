@@ -59,13 +59,19 @@ class ITensor : public Object {
 
 namespace detail {
 
+#if ARROW_VERSION_MAJOR >= 10
+using arrow_string_view = std::string_view;
+#else
+using arrow_string_view = arrow::util::string_view;
+#endif
+
 template <typename T>
 struct ArrowTensorType {
   using type = arrow::NumericTensor<typename arrow::CTypeTraits<T>::ArrowType>;
 };
 
 template <>
-struct ArrowTensorType<arrow::util::string_view> {
+struct ArrowTensorType<arrow_string_view> {
   using type = void;
 };
 

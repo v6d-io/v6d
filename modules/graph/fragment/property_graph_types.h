@@ -30,6 +30,12 @@ namespace vineyard {
 
 using fid_t = grape::fid_t;
 
+#if ARROW_VERSION_MAJOR >= 10
+using arrow_string_view = std::string_view;
+#else
+using arrow_string_view = arrow::util::string_view;
+#endif
+
 template <typename T>
 struct InternalType {
   using type = T;
@@ -39,14 +45,14 @@ struct InternalType {
 
 template <>
 struct InternalType<std::string> {
-  using type = arrow::util::string_view;
+  using type = arrow_string_view;
   using vineyard_array_type = vineyard::LargeStringArray;
   using vineyard_builder_type = vineyard::LargeStringArrayBuilder;
 };
 
 template <>
-struct InternalType<arrow::util::string_view> {
-  using type = arrow::util::string_view;
+struct InternalType<arrow_string_view> {
+  using type = arrow_string_view;
   using vineyard_array_type = vineyard::LargeStringArray;
   using vineyard_builder_type = vineyard::LargeStringArrayBuilder;
 };

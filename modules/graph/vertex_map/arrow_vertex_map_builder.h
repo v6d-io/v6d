@@ -157,7 +157,7 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::AddNewVertexLabels(
 }
 
 template <typename VID_T>
-ObjectID ArrowVertexMap<arrow::util::string_view, VID_T>::AddVertices(
+ObjectID ArrowVertexMap<arrow_string_view, VID_T>::AddVertices(
     Client& client,
     const std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>&
         oid_arrays_map) {
@@ -172,7 +172,7 @@ ObjectID ArrowVertexMap<arrow::util::string_view, VID_T>::AddVertices(
 }
 
 template <typename VID_T>
-ObjectID ArrowVertexMap<arrow::util::string_view, VID_T>::AddNewVertexLabels(
+ObjectID ArrowVertexMap<arrow_string_view, VID_T>::AddNewVertexLabels(
     Client& client,
     const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays) {
   size_t extra_label_num = oid_arrays.size();
@@ -292,7 +292,7 @@ std::shared_ptr<vineyard::Object> ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
 
 template <typename VID_T>
 std::shared_ptr<vineyard::Object>
-ArrowVertexMapBuilder<arrow::util::string_view, VID_T>::_Seal(
+ArrowVertexMapBuilder<arrow_string_view, VID_T>::_Seal(
     vineyard::Client& client) {
   // ensure the builder hasn't been sealed yet.
   ENSURE_NOT_SEALED(this);
@@ -300,7 +300,7 @@ ArrowVertexMapBuilder<arrow::util::string_view, VID_T>::_Seal(
   VINEYARD_CHECK_OK(this->Build(client));
 
   auto vertex_map =
-      std::make_shared<ArrowVertexMap<arrow::util::string_view, vid_t>>();
+      std::make_shared<ArrowVertexMap<arrow_string_view, vid_t>>();
   vertex_map->fnum_ = fnum_;
   vertex_map->label_num_ = label_num_;
   vertex_map->id_parser_.Init(fnum_, label_num_);
@@ -440,8 +440,7 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
 }
 
 template <typename VID_T>
-vineyard::Status
-BasicArrowVertexMapBuilder<arrow::util::string_view, VID_T>::Build(
+vineyard::Status BasicArrowVertexMapBuilder<arrow_string_view, VID_T>::Build(
     vineyard::Client& client) {
   this->set_fnum_label_num(fnum_, label_num_);
 
