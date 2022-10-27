@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef SRC_SERVER_SERVICES_ETCD_META_SERVICE_H_
 #define SRC_SERVER_SERVICES_ETCD_META_SERVICE_H_
 
-#include <map>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -62,58 +61,38 @@ class EtcdMetaService;
  */
 class EtcdWatchHandler {
  public:
-  struct SessionInfo {
-    SessionInfo(const std::shared_ptr<EtcdMetaService>& p, asio::io_context& c,
-                callback_t<const std::vector<IMetaService::op_t>&, unsigned,
-                           callback_t<unsigned>>
-                    f,
-                const std::string& pf, const std::string& fp)
-        : meta_service_ptr(p),
-          ctx(c),
-          callback(f),
-          prefix(pf),
-          filter_prefix(fp) {}
-    const std::shared_ptr<EtcdMetaService> meta_service_ptr;
-    asio::io_context& ctx;
-    const callback_t<const std::vector<IMetaService::op_t>&, unsigned,
-                     callback_t<unsigned>>
-        callback;
-    const std::string prefix, filter_prefix;
-  };
-
-  static EtcdWatchHandler& getInstance() {
-    if (!handler_) {
-      static EtcdWatchHandler instance;
-      handler_ = &instance;
-    }
-    return *handler_;
-  }
-
-  void addSession(const std::string& sessionID,
-                  const std::shared_ptr<EtcdMetaService>& pems,
-                  asio::io_context& ctx,
-                  callback_t<const std::vector<IMetaService::op_t>&, unsigned,
-                             callback_t<unsigned>>
-                      callback,
-                  const std::string& prefix, const std::string& filter_prefix);
+  EtcdWatchHandler(const std::shared_ptr<EtcdMetaService>& meta_service_ptr,
+                   asio::io_context& ctx,
+                   callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                              callback_t<unsigned>>
+                       callback,
+                   std::string const& prefix, std::string const& filter_prefix,
+                   callback_task_queue_t& registered_callbacks,
+                   std::atomic<unsigned>& handled_rev,
+                   std::mutex& registered_callbacks_mutex)
+      : meta_service_ptr_(meta_service_ptr),
+        ctx_(ctx),
+        callback_(callback),
+        prefix_(prefix),
+        filter_prefix_(filter_prefix),
+        registered_callbacks_(registered_callbacks),
+        handled_rev_(handled_rev),
+        registered_callbacks_mutex_(registered_callbacks_mutex) {}
 
   void operator()(pplx::task<etcd::Response> const& resp_task);
   void operator()(etcd::Response const& task);
 
  private:
-  EtcdWatchHandler() { handled_rev_.store(0); }
-  EtcdWatchHandler(const EtcdWatchHandler&) = delete;
-  EtcdWatchHandler& operator=(const EtcdWatchHandler&) = delete;
+  const std::shared_ptr<EtcdMetaService> meta_service_ptr_;
+  asio::io_context& ctx_;
+  const callback_t<const std::vector<IMetaService::op_t>&, unsigned,
+                   callback_t<unsigned>>
+      callback_;
+  std::string const prefix_, filter_prefix_;
 
-  static EtcdWatchHandler* handler_;
-  std::map<std::string, std::shared_ptr<SessionInfo>> sessions_;
-  std::mutex session_add_mutex_;
-
-  static std::atomic<unsigned> handled_rev_;
-  static std::mutex registered_callbacks_mutex_;
-  static callback_task_queue_t registered_callbacks_;
-
-  friend class EtcdMetaService;
+  callback_task_queue_t& registered_callbacks_;
+  std::atomic<unsigned>& handled_rev_;
+  std::mutex& registered_callbacks_mutex_;
 };
 
 /**
@@ -152,7 +131,9 @@ class EtcdMetaService : public IMetaService {
       : IMetaService(server_ptr),
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
         prefix_(etcd_spec_["etcd_prefix"].get<std::string>() + "/" +
-                SessionIDToString(server_ptr->session_id())) {}
+                SessionIDToString(server_ptr->session_id())) {
+    this->handled_rev_.store(0);
+  }
 
   void requestLock(
       std::string lock_name,
@@ -192,10 +173,14 @@ class EtcdMetaService : public IMetaService {
   Status preStart() override;
 
   std::unique_ptr<etcd::Client> etcd_;
-  static etcd::Watcher* watcher_;
-  EtcdWatchHandler* handler_;
+  std::shared_ptr<etcd::Watcher> watcher_;
+  std::shared_ptr<EtcdWatchHandler> handler_;
   std::unique_ptr<asio::steady_timer> backoff_timer_;
   std::unique_ptr<EtcdLauncher> etcd_launcher_;
+
+  callback_task_queue_t registered_callbacks_;
+  std::atomic<unsigned> handled_rev_;
+  std::mutex registered_callbacks_mutex_;
 
   friend class IMetaService;
 };

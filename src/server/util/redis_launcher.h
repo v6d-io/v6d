@@ -44,12 +44,13 @@ class RedisLauncher {
   Status LaunchRedisServer(
       std::unique_ptr<redis::AsyncRedis>& redis_client,
       std::unique_ptr<redis::Redis>& syncredis_client,
-      redis::Redis** watch_client, redis::RedMutex** mtx,
-      std::unique_ptr<redis::RedLock<redis::RedMutex>>& lock);
+      std::unique_ptr<redis::Redis>& watch_client,
+      std::shared_ptr<redis::RedMutex>& mtx,
+      std::shared_ptr<redis::RedLock<redis::RedMutex>>& lock);
 
   static bool probeRedisServer(std::unique_ptr<redis::AsyncRedis>& redis_client,
                                std::unique_ptr<redis::Redis>& syncredis_client,
-                               redis::Redis* watch_client);
+                               std::unique_ptr<redis::Redis>& watch_client);
 
  private:
   Status parseEndpoint();
