@@ -38,11 +38,13 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version || shell ${GOBIN}/golangci-lint --version)
+GOMPLATE := $(shell command -v ${GOBIN}/gomplate --version || shell ${GOBIN}/gomplate --version)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4@v4.5.5
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
 GOLANGCI_LINT_VERSION ?= v1.49.0
+GOMPLATE_VERSION ?= v3.11.3
 
 all: manager
 
@@ -112,6 +114,16 @@ golint:
     endif
 	${GOBIN}/golangci-lint run ./...
 .PHONY: golint
+
+# Install gomplate
+install-gomplate:
+    ifeq (${GOMPLATE},)
+		@echo "gomplate not exist, installing it..."
+		go install github.com/hairyhenderson/gomplate/v3/cmd/gomplate@$(GOMPLATE_VERSION)
+    else
+		@echo "gomplate already installed"
+    endif
+.PHONY: install-gomplate
 
 # Run go fmt against code
 fmt:

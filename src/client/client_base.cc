@@ -19,7 +19,6 @@ limitations under the License.
 
 #include <future>
 #include <iostream>
-#include <ostream>
 #include <set>
 #include <utility>
 
@@ -28,6 +27,7 @@ limitations under the License.
 #include "client/rpc_client.h"
 #include "client/utils.h"
 #include "common/util/protocols.h"
+#include "common/util/env.h"
 
 namespace vineyard {
 
@@ -87,8 +87,8 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
   meta_data.AddKeyValue("transient", true);
   // add the key from env to the metadata for k8s environment.
   for (auto l : labels) {
-    char* value = std::getenv(l);
-    if (value != NULL) {
+    auto value = read_env(l);
+    if (!value.empty()) {
       meta_data.AddKeyValue(std::string(l), std::string(value));
     }
   }
