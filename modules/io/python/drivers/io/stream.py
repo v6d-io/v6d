@@ -130,15 +130,20 @@ class ParallelStreamLauncher(ScriptLauncher):
                 else:
                     cmd = proc.command
                 messages.append(
-                    "Failed to launch job [%s], exited with %r: %s"
-                    % (cmd, proc.exit_code, ''.join(proc.error_message))
+                    "Failed to launch job [%s], exited with %r: \n%s\n"
+                    "extra diagnostics are as follows: %s"
+                    % (
+                        cmd,
+                        proc.exit_code,
+                        ''.join(proc.error_message),
+                        '\n\n'.join(proc.diagnostics),
+                    )
                 )
         if messages:
             raise RuntimeError(
                 ReprableString(
                     "Subprocesses failed with the following error: \n%s\n"
-                    "extra diagnostics are as follows: %s"
-                    % ('\n\n'.join(messages), '\n\n'.join(proc.diagnostics))
+                    % ('\n\n'.join(messages))
                 )
             )
 

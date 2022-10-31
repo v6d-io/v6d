@@ -136,8 +136,14 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
         else:
             cmd = self._cmd
         raise RuntimeError(
-            'Failed to launch job [%s], exited with %r: %s'
-            % (cmd, self._proc.poll(), ''.join(self._err_message))
+            "Failed to launch job [%s], exited with %r: \n%s\n"
+            "extra diagnostics are as follows: %s"
+            % (
+                cmd,
+                self._proc.poll(),
+                ''.join(self._err_message),
+                '\n\n'.join(self.diagnostics),
+            )
         )
 
     def read_output(self, stdout):
