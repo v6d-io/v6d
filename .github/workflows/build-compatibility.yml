@@ -25,10 +25,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-11]
+        os: [ubuntu-20.04, macos-11]
         arrow: [none, 1.0.1-1, 6.0.1-1, 9.0.0-1]
         exclude:
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             arrow: none
           - os: macos-11
             arrow: 1.0.1-1
