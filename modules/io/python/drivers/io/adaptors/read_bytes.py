@@ -130,6 +130,8 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
                     if header_row:
                         header_line = read_block(f, 0, 1, read_block_delimiter)
                         params["header_line"] = header_line.decode("unicode_escape")
+                        if header_line[0:3] == b'\xef\xbb\xbf':
+                            header_line = header_line[3:]
                         offset = len(header_line)
                     stream = ByteStream.new(client, params)
                     client.persist(stream.id)
@@ -158,7 +160,7 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
                     size = len(buffer)
                     if size <= 0:
                         break
-                    begin += size - 1
+                    begin += size
                     if size > 0:
                         chunk = writer.next(size)
                         vineyard.memory_copy(chunk, 0, buffer)
