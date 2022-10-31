@@ -22,8 +22,6 @@ RUN cd /work/v6d && \
     sed -i 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake && \
     sed -i 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
 
-COPY thirdparty /work/v6d/thirdparty
-
 COPY cmake /work/v6d/cmake
 COPY python/vineyard/core/codegen /work/v6d/python/vineyard/core/codegen
 COPY python/vineyard/version.py.in /work/v6d/python/vineyard/version.py.in
