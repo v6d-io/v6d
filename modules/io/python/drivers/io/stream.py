@@ -125,8 +125,8 @@ class ParallelStreamLauncher(ScriptLauncher):
             if proc.status == LauncherStatus.FAILED and (
                 proc.exit_code is not None and proc.exit_code != 0
             ):
-                if isinstance(proc.command, list):
-                    cmd = ' '.join(proc.command)
+                if isinstance(proc.command, (list, tuple)):
+                    cmd = ' '.join(proc.command[0:5]) + ' ...'
                 else:
                     cmd = proc.command
                 messages.append(

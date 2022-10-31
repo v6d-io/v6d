@@ -131,8 +131,8 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
         r = super().wait(timeout=period)
         if r is not None:
             return r
-        if isinstance(self._cmd, list):
-            cmd = ' '.join(self._cmd)
+        if isinstance(self._cmd, (tuple, list)):
+            cmd = ' '.join(self._cmd[0:5]) + ' ...'
         else:
             cmd = self._cmd
         raise RuntimeError(
