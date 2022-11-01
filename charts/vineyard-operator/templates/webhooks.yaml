@@ -31,7 +31,7 @@ webhooks:
   name: mpod.kb.io
   namespaceSelector:
     matchLabels:
-      assembly-injection: enabled
+      operation-injection: enabled
   rules:
   - apiGroups:
     - ""

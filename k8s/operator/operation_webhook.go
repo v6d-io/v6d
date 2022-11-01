@@ -45,12 +45,13 @@ type AssemblyInjector struct {
 const (
 	// AssmeblyEnabledLabel is the label for assembly, and inject the assembly container when setting true
 	AssmeblyEnabledLabel = "assembly.v6d.io/enabled"
+	// RepartitionEnabledLabel is the label for repartition, and inject the repartition container when setting true
+	RepartitionEnabledLabel = "repartition.v6d.io/enabled"
 )
 
 // LabelRequiredPods labels the pods with the given label
 func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Pod, label string) error {
-	// if the pod enables assembly, we need to label the required pods
-	if value, ok := pod.Labels[AssmeblyEnabledLabel]; ok && strings.ToLower(value) == "true" {
+	if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
 		if requiredJob, ok := pod.Annotations[schedulers.VineyardJobRequired]; ok {
 			jobs := strings.Split(requiredJob, ".")
 			for _, job := range jobs {
@@ -67,7 +68,7 @@ func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Po
 				for i := range podList.Items {
 					// label the required pods that need to be injected with the assembly container
 					labels := &podList.Items[i].Labels
-					(*labels)["need-injected-assembly"] = "true"
+					(*labels)["need-injected-"+label[:strings.Index(label, ".")]] = "true"
 					if err := r.Client.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
 						return fmt.Errorf("Failed to update pod: %v", err)
 					}
@@ -85,8 +86,12 @@ func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if err := r.LabelRequiredPods(ctx, pod, AssmeblyEnabledLabel); err != nil {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("assembly label error: %v", err))
+	operationLabels := []string{AssmeblyEnabledLabel, RepartitionEnabledLabel}
+	// check all operation labels
+	for _, l := range operationLabels {
+		if err := r.LabelRequiredPods(ctx, pod, l); err != nil {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("assembly label error: %v", err))
+		}
 	}
 
 	// Add podname and podnamespace to all pods' env

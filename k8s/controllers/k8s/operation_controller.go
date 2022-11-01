@@ -53,6 +53,7 @@ type OperationReconciler struct {
 // +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles the operation
@@ -70,7 +71,7 @@ func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		CR:       &op,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Operation"),
 		TmplFunc: map[string]interface{}{"getDistributedAssemblyConfig": operation.GetDistributedAssemblyConfig,
-			"getAssemblyConfig": operation.GetAssemblyConfig},
+			"getAssemblyConfig": operation.GetAssemblyConfig, "getDaskRepartitionConfig": operation.GetDaskRepartitionConfig},
 		Recorder: r.Recorder,
 	}
 

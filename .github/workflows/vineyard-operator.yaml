@@ -228,3 +228,25 @@ jobs:
         uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
         with:
           e2e-file: k8s/test/e2e/assembly/distributed-assembly-e2e.yaml
+
+  dask-repartition-e2e-tests:
+    name: e2e tests(dask-repartition)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+        id: go
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+      - name: Run E2E Test(distributed-assembly)
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+        with:
+          e2e-file: k8s/test/e2e/repartition/dask-repartition-e2e.yaml

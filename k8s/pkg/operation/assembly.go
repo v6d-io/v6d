@@ -222,7 +222,7 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 		}
 	}
 
-	if err := ao.UpdateConfigmap(ctx, targetLocalObjects, o); err != nil {
+	if err := UpdateConfigmap(ao.Client, ctx, targetLocalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 
@@ -366,7 +366,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 		}
 	}
 
-	if err := ao.UpdateConfigmap(ctx, targetGlobalObjects, o); err != nil {
+	if err := UpdateConfigmap(ao.Client, ctx, targetGlobalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 
@@ -374,11 +374,12 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 }
 
 // UpdateConfigmap will update the configmap when the assembly operation is done
-func (ao *AssemblyOperation) UpdateConfigmap(ctx context.Context, target map[string]bool, o *v1alpha1.Operation) error {
+func UpdateConfigmap(k8sclient client.Client, ctx context.Context, target map[string]bool,
+	o *v1alpha1.Operation, prefix string, data *map[string]string) error {
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 
 	// get all globalobjects which may need to be injected with the assembly job
-	if err := ao.Client.List(ctx, globalObjectList); err != nil {
+	if err := k8sclient.List(ctx, globalObjectList); err != nil {
 		return fmt.Errorf("failed to list the global objects: %v", err)
 	}
 	// build new global object
@@ -386,7 +387,7 @@ func (ao *AssemblyOperation) UpdateConfigmap(ctx context.Context, target map[str
 	for j := range globalObjectList.Items {
 		labels := globalObjectList.Items[j].Labels
 		if v, ok := labels[PodNameLabelKey]; ok {
-			v = v[len(AssemblyPrefix):strings.LastIndex(v, "-")]
+			v = v[len(prefix):strings.LastIndex(v, "-")]
 			if target[v] {
 				newObjList = append(newObjList, &globalObjectList.Items[j])
 			}
@@ -404,11 +405,12 @@ func (ao *AssemblyOperation) UpdateConfigmap(ctx context.Context, target map[str
 		namespace := o.Namespace
 		// update the configmap
 		configmap := &corev1.ConfigMap{}
-		err := ao.Client.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, configmap)
+		err := k8sclient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, configmap)
 		if err != nil && !apierrors.IsNotFound(err) {
 			ctrl.Log.Info("failed to get the configmap")
 			return err
 		}
+		(*data)[name] = newObjStr
 		if apierrors.IsNotFound(err) {
 			cm := corev1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
@@ -419,9 +421,9 @@ func (ao *AssemblyOperation) UpdateConfigmap(ctx context.Context, target map[str
 					Name:      name,
 					Namespace: namespace,
 				},
-				Data: map[string]string{name: newObjStr},
+				Data: *data,
 			}
-			if err := ao.Client.Create(ctx, &cm); err != nil {
+			if err := k8sclient.Create(ctx, &cm); err != nil {
 				ctrl.Log.Error(err, "failed to create the configmap")
 				return err
 			}
@@ -431,7 +433,10 @@ func (ao *AssemblyOperation) UpdateConfigmap(ctx context.Context, target map[str
 				configmap.Data = map[string]string{}
 			}
 			configmap.Data[name] = newObjStr
-			if err := ao.Client.Update(ctx, configmap); err != nil {
+			for k, v := range *data {
+				configmap.Data[k] = v
+			}
+			if err := k8sclient.Update(ctx, configmap); err != nil {
 				ctrl.Log.Error(err, "failed to update the configmap")
 				return err
 			}

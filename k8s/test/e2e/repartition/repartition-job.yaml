@@ -1,0 +1,78 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# replace the $job with your job name
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ (datasource "config").$job.jobName }}
+  namespace: vineyard-job
+spec:
+  selector:
+    matchLabels:
+      app: {{ (datasource "config").$job.jobName }}
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        scheduling.k8s.v6d.io/required: "{{ (datasource "config").$job.required.jobName }}"
+        {{- if (datasource "config").$job.repartition.dask.daskScheduler }}
+        scheduling.k8s.v6d.io/dask-scheduler: "{{ (datasource "config").$job.repartition.dask.daskScheduler }}"
+        {{- end }}
+        {{- if (datasource "config").$job.repartition.dask.daskWorkerSelector }}
+        # use ',' to separate the different labels here
+        scheduling.k8s.v6d.io/dask-worker-selector: "{{ (datasource "config").$job.repartition.dask.daskWorkerSelector }}"
+        {{- end }}
+      labels:
+        app: {{ (datasource "config").$job.jobName }}
+        {{- if (datasource "config").$job.repartition.enabled }}
+        repartition.v6d.io/enabled: "{{ (datasource "config").$job.repartition.enabled }}"
+        {{- end }}
+        {{- if (datasource "config").$job.repartition.type }}
+        repartition.v6d.io/type: "{{ (datasource "config").$job.repartition.type }}"
+        {{- end }}
+        scheduling.k8s.v6d.io/replicas: "{{ (datasource "config").$job.replicas }}"
+        # this label represents the vineyardd's name that need to be used
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+        scheduling.k8s.v6d.io/job: {{ (datasource "config").$job.jobName }}
+    spec:
+      schedulerName: vineyard-scheduler
+      containers:
+      - name: {{ (datasource "config").$job.jobName }}
+        image: ghcr.io/v6d-io/v6d/{{ (datasource "config").$job.jobName }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: JOB_NAME
+          value: {{ (datasource "config").$job.jobName }}
+        {{- if (datasource "config").$job.repartition.dask.daskScheduler }}
+        - name: DASK_SCHEDULER
+          value: {{ (datasource "config").$job.repartition.dask.daskScheduler }}
+        {{- end }}
+        {{- if (datasource "config").$job.required.dataName }}
+        - name: REQUIRED_JOB_NAME
+          value: {{ (datasource "config").$job.required.dataName }}
+        {{- end }}
+        {{- if (datasource "config").$job.required.dataName }}
+        envFrom:
+        - configMapRef:
+            name: {{ (datasource "config").$job.required.dataName }}
+        {{- end }}
+        volumeMounts:
+        - mountPath: /var/run
+          name: vineyard-sock
+      volumes:
+      - name: vineyard-sock
+        hostPath:
+          path: /var/run/vineyard-vineyard-system-vineyardd-sample
