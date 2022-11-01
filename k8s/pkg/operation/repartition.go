@@ -274,7 +274,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 
 	data := map[string]string{}
 	data["InstanceToWorker"] = strings.Trim(TmpDaskRepartitionConfig.InstanceToWorker, "'")
-	if err := UpdateConfigmap(ro.Client, ctx, targetGlobalObjects, o, RepartitionPrefix, &data); err != nil {
+	if err := UpdateConfigmap(ctx, ro.Client, targetGlobalObjects, o, RepartitionPrefix, &data); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 	return true, nil

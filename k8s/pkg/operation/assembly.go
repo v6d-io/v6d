@@ -222,7 +222,7 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 		}
 	}
 
-	if err := UpdateConfigmap(ao.Client, ctx, targetLocalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
+	if err := UpdateConfigmap(ctx, ao.Client, targetLocalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 
@@ -366,7 +366,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 		}
 	}
 
-	if err := UpdateConfigmap(ao.Client, ctx, targetGlobalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
+	if err := UpdateConfigmap(ctx, ao.Client, targetGlobalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 
@@ -374,7 +374,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 }
 
 // UpdateConfigmap will update the configmap when the assembly operation is done
-func UpdateConfigmap(k8sclient client.Client, ctx context.Context, target map[string]bool,
+func UpdateConfigmap(ctx context.Context, k8sclient client.Client, target map[string]bool,
 	o *v1alpha1.Operation, prefix string, data *map[string]string) error {
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 
