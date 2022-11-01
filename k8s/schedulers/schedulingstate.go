@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//
 package schedulers
 
 import (
@@ -65,9 +66,8 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 		if workernodes[int(rank)%num] == nodeName {
 			klog.V(5).Infof("nodeName: %v, workernodes: %v, rank: %v", nodeName, workernodes, rank)
 			return 100, nil
-		} else {
-			return 1, nil
 		}
+		return 1, nil
 	}
 	// if no replica, raise
 	if replica == 0 {
@@ -155,7 +155,7 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	}
 	sort.Strings(nodes)
 
-	var cnt int64 = 0
+	var cnt int64
 	target := ""
 	for _, node := range nodes {
 		localfrags := int64(len(locations[node]))

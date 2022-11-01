@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package schedulers implements the vineyard scheduler plugin.
 package schedulers
 
 import (
