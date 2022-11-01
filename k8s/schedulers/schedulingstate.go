@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//
+// Package schedulers implements the vineyard scheduler plugin.
 package schedulers
 
 import (
@@ -212,10 +212,9 @@ func (ss *SchedulerState) getLocalObjectsBySignatures(ctx context.Context, signa
 		}); err != nil {
 			klog.V(5).Infof("client.List failed to get local objects, error: %v", err)
 			return nil, err
-		} else {
-			for _, localObject := range localObjects.Items {
-				objects = append(objects, &localObject)
-			}
+		}
+		for _, localObject := range localObjects.Items {
+			objects = append(objects, &localObject)
 		}
 	}
 
