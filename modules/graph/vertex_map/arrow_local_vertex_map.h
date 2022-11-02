@@ -70,12 +70,15 @@ class ArrowLocalVertexMap
 
     id_parser_.Init(fnum_, label_num_);
 
+    double nbytes = 0, local_oid_total = 0, o2i_total = 0, i2o_total = 0;
+    double o2i_size = 0, o2i_bucket_count = 0;
     local_oid_arrays_.resize(label_num_);
     for (label_id_t i = 0; i < label_num_; ++i) {
       typename InternalType<oid_t>::vineyard_array_type array;
       array.Construct(
           meta.GetMemberMeta("local_oid_arrays_" + std::to_string(i)));
       local_oid_arrays_[i] = array.GetArray();
+      local_oid_total += array.nbytes();
     }
 
     o2i_.resize(fnum_);
@@ -91,11 +94,25 @@ class ArrowLocalVertexMap
         if (i != fid_) {
           i2o_[i][j].Construct(meta.GetMemberMeta("i2o_" + std::to_string(i) +
                                                   "_" + std::to_string(j)));
+          i2o_total += i2o_[i][j].nbytes();
         }
         vertices_num_[i][j] = meta.GetKeyValue<vid_t>(
             "vertices_num_" + std::to_string(i) + "_" + std::to_string(j));
+
+        o2i_total += o2i_[i][j].nbytes();
+        o2i_size += o2i_[i][j].size();
+        o2i_bucket_count += o2i_[i][j].bucket_count();
       }
     }
+    nbytes = local_oid_total + o2i_total + i2o_total;
+    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
+              << "Total: " << nbytes / 1000000 << " MB\n"
+              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
+              << "o2i total: " << o2i_total / 1000000 << " MB\n"
+              << "i2o total: " << i2o_total / 1000000 << " MB\n"
+              << "o2i size: " << o2i_size << "\n"
+              << "o2i bucket_count: " << o2i_bucket_count << "\n"
+              << "o2i load factor: " << o2i_size / o2i_bucket_count;
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -223,10 +240,10 @@ class ArrowLocalVertexMap
 };
 
 template <typename VID_T>
-class ArrowLocalVertexMap<arrow::util::string_view, VID_T>
+class ArrowLocalVertexMap<arrow_string_view, VID_T>
     : public vineyard::Registered<
-          ArrowLocalVertexMap<arrow::util::string_view, VID_T>> {
-  using oid_t = arrow::util::string_view;
+          ArrowLocalVertexMap<arrow_string_view, VID_T>> {
+  using oid_t = arrow_string_view;
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
   using oid_array_t = arrow::LargeStringArray;
@@ -255,22 +272,27 @@ class ArrowLocalVertexMap<arrow::util::string_view, VID_T>
     oid_arrays_.resize(fnum_);
     index_arrays_.resize(fnum_);
     vertices_num_.resize(fnum_);
+    double nbytes = 0, local_oid_total = 0, index_total = 0, o2i_total = 0,
+           i2o_total = 0;
     for (fid_t i = 0; i < fnum_; ++i) {
       oid_arrays_[i].resize(label_num_);
       if (i != fid_) {
         index_arrays_[i].resize(label_num_);
       }
       vertices_num_[i].resize(label_num_);
+
       for (label_id_t j = 0; j < label_num_; ++j) {
         typename InternalType<oid_t>::vineyard_array_type array;
         array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
                                            "_" + std::to_string(j)));
         oid_arrays_[i][j] = array.GetArray();
+        local_oid_total += array.nbytes();
         if (i != fid_) {
           typename InternalType<vid_t>::vineyard_array_type index_array;
           index_array.Construct(meta.GetMemberMeta(
               "index_arrays_" + std::to_string(i) + "_" + std::to_string(j)));
           index_arrays_[i][j] = index_array.GetArray();
+          index_total += index_array.nbytes();
         }
         vertices_num_[i][j] = meta.GetKeyValue<vid_t>(
             "vertices_num_" + std::to_string(i) + "_" + std::to_string(j));
@@ -278,6 +300,22 @@ class ArrowLocalVertexMap<arrow::util::string_view, VID_T>
     }
 
     initHashmaps();
+
+    for (fid_t i = 0; i < fnum_; ++i) {
+      for (label_id_t j = 0; j < label_num_; ++j) {
+        if (i != fid_) {
+          i2o_total += i2o_[i][j].bucket_count();
+        }
+        o2i_total += o2i_[i][j].bucket_count();
+      }
+    }
+
+    nbytes = local_oid_total + o2i_total + i2o_total;
+    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
+              << "Total size: " << nbytes / 1000000 << " MB\n"
+              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
+              << "o2i size: " << o2i_total * 16 / 1000000 << " MB\n"
+              << "i2o size: " << i2o_total * 16 / 1000000 << " MB";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -409,20 +447,19 @@ class ArrowLocalVertexMap<arrow::util::string_view, VID_T>
           fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
           label_id_t cur_label =
               static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
-          if (cur_fid == fid_) {
-            int64_t vnum = oid_arrays_[cur_fid][cur_label]->length();
-            for (int64_t i = 0; i < vnum; ++i) {
-              o2i_[cur_fid][cur_label].emplace(
-                  oid_arrays_[cur_fid][cur_label]->GetView(i), i);
-            }
-            continue;
-          }
           int64_t vnum = oid_arrays_[cur_fid][cur_label]->length();
-          for (int64_t i = 0; i < vnum; ++i) {
-            auto oid = oid_arrays_[cur_fid][cur_label]->GetView(i);
-            auto index = index_arrays_[cur_fid][cur_label]->GetView(i);
-            o2i_[cur_fid][cur_label].emplace(oid, index);
-            i2o_[cur_fid][cur_label].emplace(index, oid);
+          if (cur_fid == fid_) {
+            for (int64_t i = 0; i < vnum; ++i) {
+              auto oid = oid_arrays_[cur_fid][cur_label]->GetView(i);
+              o2i_[cur_fid][cur_label].emplace(oid, i);
+            }
+          } else {
+            for (int64_t i = 0; i < vnum; ++i) {
+              auto oid = oid_arrays_[cur_fid][cur_label]->GetView(i);
+              auto index = index_arrays_[cur_fid][cur_label]->GetView(i);
+              o2i_[cur_fid][cur_label].emplace(oid, index);
+              i2o_[cur_fid][cur_label].emplace(index, oid);
+            }
           }
         }
       });
@@ -445,7 +482,7 @@ class ArrowLocalVertexMap<arrow::util::string_view, VID_T>
 
   std::vector<std::vector<vid_t>> vertices_num_;
 
-  friend class ArrowLocalVertexMapBuilder<arrow::util::string_view, VID_T>;
+  friend class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>;
 };
 
 template <typename OID_T, typename VID_T>
@@ -484,9 +521,8 @@ class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
     vertex_map->id_parser_.Init(fnum_, label_num_);
 
     vertex_map->local_oid_arrays_.resize(label_num_);
-    auto& array = vertex_map->local_oid_arrays_;
     for (label_id_t i = 0; i < label_num_; ++i) {
-      array[i] = local_oid_arrays_[i].GetArray();
+      vertex_map->local_oid_arrays_[i] = local_oid_arrays_[i].GetArray();
     }
 
     vertex_map->o2i_ = o2i_;
@@ -505,6 +541,7 @@ class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
                                   local_oid_arrays_[i].meta());
       nbytes += local_oid_arrays_[i].nbytes();
     }
+
     for (fid_t i = 0; i < fnum_; ++i) {
       for (label_id_t j = 0; j < label_num_; ++j) {
         vertex_map->meta_.AddKeyValue(
@@ -675,9 +712,9 @@ class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
 };
 
 template <typename VID_T>
-class ArrowLocalVertexMapBuilder<arrow::util::string_view, VID_T>
+class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>
     : public vineyard::ObjectBuilder {
-  using oid_t = arrow::util::string_view;
+  using oid_t = arrow_string_view;
   using vid_t = VID_T;
   using oid_array_t = arrow::LargeStringArray;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
@@ -704,8 +741,8 @@ class ArrowLocalVertexMapBuilder<arrow::util::string_view, VID_T>
     // ensure the builder hasn't been sealed yet.
     ENSURE_NOT_SEALED(this);
 
-    auto vertex_map = std::make_shared<
-        ArrowLocalVertexMap<arrow::util::string_view, vid_t>>();
+    auto vertex_map =
+        std::make_shared<ArrowLocalVertexMap<arrow_string_view, vid_t>>();
     vertex_map->fnum_ = fnum_;
     vertex_map->fid_ = fid_;
     vertex_map->label_num_ = label_num_;

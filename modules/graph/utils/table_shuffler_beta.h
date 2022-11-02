@@ -356,8 +356,7 @@ void ShuffleTableByOffsetLists(
 template <typename VID_TYPE>
 boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
     const grape::CommSpec& comm_spec, IdParser<VID_TYPE>& id_parser,
-    int src_col_id, int dst_col_id, std::shared_ptr<arrow::Table>& table_in,
-    bool shuffle_with_oid = false) {
+    int src_col_id, int dst_col_id, std::shared_ptr<arrow::Table>& table_in) {
   BOOST_LEAF_CHECK(SchemaConsistent(*table_in->schema(), comm_spec));
 
   std::vector<std::shared_ptr<arrow::RecordBatch>> record_batches;

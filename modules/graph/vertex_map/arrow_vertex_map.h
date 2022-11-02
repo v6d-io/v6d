@@ -63,7 +63,7 @@ class ArrowVertexMap
     this->label_num_ = meta.GetKeyValue<label_id_t>("label_num");
 
     id_parser_.Init(fnum_, label_num_);
-
+    double nbytes = 0, local_oid_total = 0, o2g_total = 0;
     o2g_.resize(fnum_);
     oid_arrays_.resize(fnum_);
     for (fid_t i = 0; i < fnum_; ++i) {
@@ -77,8 +77,16 @@ class ArrowVertexMap
         array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
                                            "_" + std::to_string(j)));
         oid_arrays_[i][j] = array.GetArray();
+
+        local_oid_total += array.nbytes();
+        o2g_total += o2g_[i][j].nbytes();
       }
     }
+    nbytes = local_oid_total + o2g_total;
+    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
+              << "Total size: " << nbytes / 1000000 << " MB\n"
+              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
+              << "o2g size: " << o2g_total / 1000000 << " MB\n";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -184,8 +192,6 @@ class ArrowVertexMap
 
   friend class ArrowVertexMapBuilder<OID_T, VID_T>;
   friend class BasicArrowVertexMapBuilder<OID_T, VID_T>;
-
-  friend class gs::ArrowProjectedVertexMap<OID_T, VID_T>;
 };
 
 template <typename VID_T>
@@ -215,6 +221,7 @@ class ArrowVertexMap<arrow_string_view, VID_T>
 
     id_parser_.Init(fnum_, label_num_);
 
+    double nbytes = 0, local_oid_total = 0, o2g_total = 0;
     oid_arrays_.resize(fnum_);
     for (fid_t i = 0; i < fnum_; ++i) {
       oid_arrays_[i].resize(label_num_);
@@ -227,6 +234,17 @@ class ArrowVertexMap<arrow_string_view, VID_T>
     }
 
     initHashmaps();
+
+    for (fid_t i = 0; i < fnum_; ++i) {
+      for (int j = 0; j < label_num_; ++j) {
+        o2g_total += o2g_[i][j].bucket_count();
+      }
+    }
+    nbytes = local_oid_total + o2g_total;
+    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
+              << "Total size: " << nbytes / 1000000 << " MB\n"
+              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
+              << "o2g size: " << o2g_total * 16 / 1000000 << " MB\n";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -364,8 +382,6 @@ class ArrowVertexMap<arrow_string_view, VID_T>
 
   friend class ArrowVertexMapBuilder<arrow_string_view, VID_T>;
   friend class BasicArrowVertexMapBuilder<arrow_string_view, VID_T>;
-
-  friend class gs::ArrowProjectedVertexMap<arrow_string_view, VID_T>;
 };
 
 template <typename OID_T, typename VID_T>

@@ -425,7 +425,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     }
   }
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
   builder.set_edge_label_num_(total_edge_label_num);
 
@@ -604,7 +604,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
     tvnums[vertex_label_num_ + i] = ivnums[vertex_label_num_ + i];
   }
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
 
   auto schema = schema_;
@@ -905,7 +905,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     }
   }
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   builder.set_edge_label_num_(total_edge_label_num);
 
   auto schema = schema_;
@@ -1047,7 +1047,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
     vineyard::Client& client,
     std::map<label_id_t, std::vector<label_id_t>> vertices,
     std::map<label_id_t, std::vector<label_id_t>> edges) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
 
   auto schema = schema_;
 
@@ -1134,7 +1134,7 @@ template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
 ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
     vineyard::Client& client, int concurrency) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   builder.set_directed_(!directed_);
 
   std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
@@ -1169,9 +1169,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
   return builder.Seal(client)->id();
 }
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T>::ConsolidateVertexColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateVertexColumns(
     vineyard::Client& client, const label_id_t vlabel,
     std::vector<std::string> const& prop_names,
     std::string const& consolidate_name) {
@@ -1187,12 +1187,12 @@ ArrowFragment<OID_T, VID_T>::ConsolidateVertexColumns(
   return ConsolidateVertexColumns(client, vlabel, props, consolidate_name);
 }
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T>::ConsolidateVertexColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateVertexColumns(
     vineyard::Client& client, const label_id_t vlabel,
     std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   auto schema = schema_;
 
   auto& table = this->vertex_tables_[vlabel];
@@ -1222,9 +1222,9 @@ ArrowFragment<OID_T, VID_T>::ConsolidateVertexColumns(
   return builder.Seal(client)->id();
 }
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T>::ConsolidateEdgeColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateEdgeColumns(
     vineyard::Client& client, const label_id_t elabel,
     std::vector<std::string> const& prop_names,
     std::string const& consolidate_name) {
@@ -1240,12 +1240,12 @@ ArrowFragment<OID_T, VID_T>::ConsolidateEdgeColumns(
   return ConsolidateEdgeColumns(client, elabel, props, consolidate_name);
 }
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T>::ConsolidateEdgeColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateEdgeColumns(
     vineyard::Client& client, const label_id_t elabel,
     std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   auto schema = schema_;
 
   auto& table = this->edge_tables_[elabel];
@@ -1275,8 +1275,8 @@ ArrowFragment<OID_T, VID_T>::ConsolidateEdgeColumns(
   return builder.Seal(client)->id();
 }
 
-template <typename OID_T, typename VID_T>
-void ArrowFragment<OID_T, VID_T>::initDestFidList(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initDestFidList(
     bool in_edge, bool out_edge,
     std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
     std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset) {
