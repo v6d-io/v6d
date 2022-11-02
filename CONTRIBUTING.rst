@@ -143,7 +143,29 @@ Submitting pull requests
 ------------------------
 
 We also welcome any help on vineyard from the community, including but not
-limited to fixing bugs and adding new features. Our project vineyard has enabled
+limited to fixing bugs and adding new features. Contributors can follow this
+section for how to submit pull requests to vineyard:
+
+Install pre-commit
+^^^^^^^^^^^^^^^^^^
+
+Vineyard use `pre-commit`_ to ensure no secrets are accidentally committed
+into the Git repository, you could first install  `pre-commit`_ by
+
+.. code:: bash
+
+    pip3 install pre-commit
+
+The configure the necessary pre-commit hooks with
+
+.. code:: bash
+
+    pre-commit install
+
+Sign-off your commits
+^^^^^^^^^^^^^^^^^^^^^
+
+Our project vineyard has enabled
 `DCO`_ thus you will be asked to `sign-off`_ your commits that are included in
 your pull requests. Git has a :code:`-s` command line option that can `sign-off`_
 your commit automatically:
