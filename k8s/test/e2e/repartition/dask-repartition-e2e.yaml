@@ -13,13 +13,30 @@
 # limitations under the License.
 #
 
-# Test assembly operation in the same node
 setup:
   env: kind
   file: ../kind.yaml
   steps:
     - name: prepare e2e.yaml
       command: bash k8s/test/hack/prepare-e2e.sh
+    - name: load docker image
+      command: |
+        docker pull ghcr.io/v6d-io/v6d/dask-worker-with-vineyard
+        docker pull ghcr.io/dask/dask:2022.8.1
+        kind load docker-image ghcr.io/v6d-io/v6d/dask-worker-with-vineyard
+        kind load docker-image ghcr.io/dask/dask:2022.8.1
+    - name: install dask-scheduler and dask-worker
+      command: |
+        helm repo add dask https://helm.dask.org/
+        helm repo update
+        helm install my-release dask/dask -f k8s/test/e2e/repartition/repartition-dask-helm-values.yaml
+      wait:
+        - namespace: default
+          resource: deployment/my-release-dask-scheduler
+          for: condition=Available
+        - namespace: default
+          resource: deployment/my-release-dask-worker
+          for: condition=Available
     - name: install cert-manager
       command: |
         kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
@@ -39,7 +56,7 @@ setup:
           for: condition=Available
     - name: install vineyardd
       command: |
-        kubectl apply -f k8s/test/e2e/vineyardd.yaml
+        sed 's/replicas: 2/replicas: 3/' k8s/test/e2e/vineyardd.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-system
           resource: vineyardd/vineyardd-sample
@@ -48,17 +65,17 @@ setup:
       command: |
         kubectl create namespace vineyard-job
         kubectl label namespace vineyard-job operation-injection=enabled
-        sed 's/$job/job1/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
+        sed 's/$job/daskRepartitionJob1/' k8s/test/e2e/repartition/repartition-job.yaml | gomplate -d config=k8s/test/e2e/repartition/repartition-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/assembly-job1
+          resource: deployment/dask-repartition-job1
           for: condition=Available
     - name: install job2
       command: |
-        sed 's/$job/job2/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
+        sed 's/$job/daskRepartitionJob2/' k8s/test/e2e/repartition/repartition-job.yaml | gomplate -d config=k8s/test/e2e/repartition/repartition-job-config.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/assembly-job2
+          resource: deployment/dask-repartition-job2
           for: condition=Available
   timeout: 50m
 
@@ -74,5 +91,7 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
   cases:
-    - query: 'kubectl get po -l app=assembly-job2 -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
-      expected: ../verify/local-assembly-values.yaml
+    - query: |
+        kubectl get po -l app=dask-repartition-job2 -n vineyard-job -o name | awk -F '/' '{print $2}' |  \
+        xargs kubectl logs -n vineyard-job | head -n 1 | yq e '{"partition": .}' - | yq e 'to_entries' -
+      expected: ../verify/partition.yaml

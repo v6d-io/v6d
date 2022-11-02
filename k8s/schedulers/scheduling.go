@@ -58,6 +58,12 @@ const (
 	VineyardSystemNamespace = "vineyard-system"
 	// VineyarddName is the name of the vineyardd
 	VineyarddName = "scheduling.k8s.v6d.io/vineyardd"
+	// DaskScheduler is the name of the dask scheduler
+	DaskScheduler = "scheduling.k8s.v6d.io/dask-scheduler"
+	// DaskWorkerSelector is the selector of the dask worker
+	DaskWorkerSelector = "scheduling.k8s.v6d.io/dask-worker-selector"
+	// WorkloadReplicas is the replicas of workload
+	WorkloadReplicas = "scheduling.k8s.v6d.io/replicas"
 )
 
 // VineyardScheduling is a plugin that schedules pods that requires vineyard objects as inputs.

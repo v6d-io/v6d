@@ -47,7 +47,7 @@ setup:
     - name: install job1 and job2
       command: |
         kubectl create namespace vineyard-job
-        kubectl label namespace vineyard-job assembly-injection=enabled
+        kubectl label namespace vineyard-job operation-injection=enabled
         sed 's/$job/distributedJob1/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
         kubectl wait --for=condition=Ready pod -l app=distributed-assembly-job1 -n vineyard-job --timeout=5m
         while [ -z $(kubectl get po -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]; \

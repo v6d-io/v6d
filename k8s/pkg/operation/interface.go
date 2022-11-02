@@ -35,6 +35,8 @@ func NewPluggableOperation(opname string, c client.Client, app *kubernetes.Appli
 	switch opname {
 	case "assembly":
 		return &AssemblyOperation{c, app, false}
+	case "repartition":
+		return &RepartitionOperation{c, app, false}
 	}
 	return nil
 }
