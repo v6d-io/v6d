@@ -96,37 +96,12 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 		klog.V(5).Infof("can't create configmap for object ID %v", err)
 	}
 
-	// if the pod needs to be injected with the assembly operation
-	// we must wait for the assembly operation to be ready
-	if value, ok := pod.Labels["assembly.v6d.io/enabled"]; ok && strings.ToLower(value) == "true" {
-		op := &v1alpha1.Operation{}
-		err := ss.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, op)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return 0, err
-		}
-		if apierrors.IsNotFound(err) {
-			requiredJob := pod.Annotations[VineyardJobRequired]
-			targetJob := pod.Labels[VineyardJobName]
-			operation := &v1alpha1.Operation{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pod.Name,
-					Namespace: pod.Namespace,
-				},
-				Spec: v1alpha1.OperationSpec{
-					Name:           "assembly",
-					Type:           pod.Labels["assembly.v6d.io/type"],
-					Require:        requiredJob,
-					Target:         targetJob,
-					TimeoutSeconds: 300,
-				},
-			}
-			if err := ss.Create(ctx, operation); err != nil {
-				return 0, err
-			}
-		}
-		if op.Status.State != "succeeded" {
-			return 0, nil
-		}
+	s, err := ss.checkOperationLabels(ctx, pod)
+	if err != nil {
+		return 0, err
+	}
+	if s == 0 {
+		return 0, nil
 	}
 
 	klog.V(5).Infof("job %v requires local chunks %v", job, localObjects)
@@ -179,6 +154,44 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	} else {
 		return 1, nil
 	}
+}
+
+func (ss *SchedulerState) checkOperationLabels(ctx context.Context, pod *v1.Pod) (int64, error) {
+	operationLabels := []string{"assembly.v6d.io/enabled", "repartition.v6d.io/enabled"}
+	for _, label := range operationLabels {
+		if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
+			opName := label[:strings.Index(label, ".")]
+			op := &v1alpha1.Operation{}
+			err := ss.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, op)
+			if err != nil && !apierrors.IsNotFound(err) {
+				return 0, err
+			}
+			if apierrors.IsNotFound(err) {
+				requiredJob := pod.Annotations[VineyardJobRequired]
+				targetJob := pod.Labels[VineyardJobName]
+				operation := &v1alpha1.Operation{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pod.Name,
+						Namespace: pod.Namespace,
+					},
+					Spec: v1alpha1.OperationSpec{
+						Name:           opName,
+						Type:           pod.Labels[opName+".v6d.io/type"],
+						Require:        requiredJob,
+						Target:         targetJob,
+						TimeoutSeconds: 300,
+					},
+				}
+				if err := ss.Create(ctx, operation); err != nil {
+					return 0, err
+				}
+			}
+			if op.Status.State != "succeeded" {
+				return 0, nil
+			}
+		}
+	}
+	return 1, nil
 }
 
 // getGlobalObjectsByID returns the global objects by the given jobname.

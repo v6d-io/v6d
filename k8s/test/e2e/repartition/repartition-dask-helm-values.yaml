@@ -13,7 +13,12 @@
 # limitations under the License.
 #
 
-scheduler.image.tag: "2022.8.1"
+scheduler:
+  image:
+    tag: "2022.8.1"
+
+jupyter:
+  enabled: false
 
 worker:
   # worker numbers
