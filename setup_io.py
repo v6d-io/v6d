@@ -108,7 +108,7 @@ setup(
         'wheel',
     ],
     install_requires=[
-        'fsspec',
+        'fsspec>=2022.10.0',
         'hdfs3',
         'oss2',
         'pyarrow',

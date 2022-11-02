@@ -25,7 +25,6 @@ from urllib.parse import urlparse
 import pyarrow as pa
 
 import fsspec
-import fsspec.implementations.hdfs
 import pyorc
 
 import vineyard

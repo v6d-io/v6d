@@ -17,12 +17,14 @@
 #
 
 import base64
+import io
 import json
 import sys
 import traceback
 from typing import Dict
 
 import fsspec
+import fsspec.implementations.arrow
 from fsspec.core import split_protocol
 from fsspec.utils import read_block
 
@@ -34,13 +36,53 @@ from vineyard.io.utils import report_error
 from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
 
+# register OSS
 try:
     from vineyard.drivers.io import ossfs
 except ImportError:
     ossfs = None
 
 if ossfs:
-    fsspec.register_implementation("oss", ossfs.OSSFileSystem)
+    fsspec.register_implementation("oss", ossfs.OSSFileSystem, clobber=True)
+
+# register customized HDFS implementation to make it seekable
+import pyarrow
+import pyarrow.fs
+
+
+class ArrowFile(fsspec.implementations.arrow.ArrowFile):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def size(self):
+        return self.stream.size()
+
+
+class HDFSFileSystem(fsspec.implementations.arrow.HadoopFileSystem):
+    @fsspec.implementations.arrow.wrap_exceptions
+    def _open(self, path, mode="rb", block_size=None, **kwargs):
+        if mode == "rb":
+            method = self.fs.open_input_file
+        elif mode == "wb":
+            method = self.fs.open_output_stream
+        elif mode == "ab":
+            method = self.fs.open_append_stream
+        else:
+            raise ValueError(f"unsupported mode for Arrow filesystem: {mode!r}")
+
+        _kwargs = {}
+        if fsspec.implementations.arrow.PYARROW_VERSION[0] >= 4:
+            # disable compression auto-detection
+            _kwargs["compression"] = None
+        if mode == 'rb':
+            stream = method(path)
+        else:
+            stream = method(path, **_kwargs)
+
+        return ArrowFile(self, stream, path, mode, block_size, **kwargs)
+
+
+fsspec.register_implementation("hdfs", HDFSFileSystem, clobber=True)
 
 
 def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
