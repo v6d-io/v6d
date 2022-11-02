@@ -47,9 +47,6 @@ spec:
     - jsonPath: .spec.id
       name: Id
       type: string
-    - jsonPath: .spec.name
-      name: Name
-      type: string
     - jsonPath: .spec.signature
       name: Signature
       type: string
@@ -75,8 +72,6 @@ spec:
                   type: string
                 type: array
               metadata:
-                type: string
-              name:
                 type: string
               signature:
                 type: string
@@ -134,9 +129,6 @@ spec:
     - jsonPath: .spec.id
       name: Id
       type: string
-    - jsonPath: .spec.name
-      name: Name
-      type: string
     - jsonPath: .spec.signature
       name: Signature
       type: string
@@ -169,8 +161,6 @@ spec:
                 type: integer
               metadata:
                 type: string
-              name:
-                type: string
               signature:
                 type: string
               typename:
@@ -182,10 +172,11 @@ spec:
             type: object
           status:
             properties:
+              createdTime:
+                format: date-time
+                type: string
               state:
                 type: string
-            required:
-            - state
             type: object
         type: object
     served: true

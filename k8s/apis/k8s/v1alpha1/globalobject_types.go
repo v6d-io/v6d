@@ -24,8 +24,6 @@ type GlobalObjectSpec struct {
 	// +kubebuilder:validation:Required
 	ObjectID string `json:"id"`
 	// +kubebuilder:validation:Required
-	Name string `json:"name,omitempty"`
-	// +kubebuilder:validation:Required
 	Signature string `json:"signature"`
 	// +kubebuilder:validation:Required
 	Typename string `json:"typename,omitempty"`
@@ -49,7 +47,6 @@ type GlobalObjectStatus struct {
 // +kubebuilder:resource:categories=all,shortName=gobject
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Id",type=string,JSONPath=`.spec.id`
-// +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
 // +kubebuilder:printcolumn:name="Signature",type=string,JSONPath=`.spec.signature`
 // +kubebuilder:printcolumn:name="Typename",type=string,JSONPath=`.spec.typename`
 // +genclient

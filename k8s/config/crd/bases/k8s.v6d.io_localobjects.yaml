@@ -23,9 +23,6 @@ spec:
     - jsonPath: .spec.id
       name: Id
       type: string
-    - jsonPath: .spec.name
-      name: Name
-      type: string
     - jsonPath: .spec.signature
       name: Signature
       type: string
@@ -57,8 +54,6 @@ spec:
               instance_id:
                 type: integer
               metadata:
-                type: string
-              name:
                 type: string
               signature:
                 type: string

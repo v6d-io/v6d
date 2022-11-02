@@ -24,8 +24,6 @@ type LocalObjectSpec struct {
 	// +kubebuilder:validation:Required
 	ObjectID string `json:"id"`
 	// +kubebuilder:validation:Required
-	Name string `json:"name,omitempty"`
-	// +kubebuilder:validation:Required
 	Signature string `json:"signature"`
 	// +kubebuilder:validation:Optional
 	Typename string `json:"typename,omitempty"`
@@ -51,7 +49,6 @@ type LocalObjectStatus struct {
 // +kubebuilder:resource:categories=all,shortName=lobject
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Id",type=string,JSONPath=`.spec.id`
-// +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
 // +kubebuilder:printcolumn:name="Signature",type=string,JSONPath=`.spec.signature`
 // +kubebuilder:printcolumn:name="Typename",type=string,JSONPath=`.spec.typename`
 // +kubebuilder:printcolumn:name="Instance",type=integer,JSONPath=`.spec.instance_id`
