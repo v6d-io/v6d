@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 public class FFI {
     private static Logger logger = LoggerFactory.getLogger(FFI.class);
 
-    public static final String JNI_LIBRARY_NAME = "vineyard-core";
+    public static final String JNI_LIBRARY_NAME = "vineyard-core_jni";
     public static final String JNI_LIBRARY_DEFAULT_VERSION = "0.1-SNAPSHOT";
 
     private static volatile Boolean loaded = null;

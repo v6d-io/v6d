@@ -23,7 +23,7 @@
     <dependency.jackson.version>2.14.0-rc1</dependency.jackson.version>
     <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
     <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
-    <dependency.junit.version>4.13.1</dependency.junit.version>
+    <dependency.junit.version>4.13.2</dependency.junit.version>
     <dependency.lombok.version>1.18.20</dependency.lombok.version>
     <dependency.logback.version>1.2.9</dependency.logback.version>
     <dependency.native-lib-loader.version>2.3.5</dependency.native-lib-loader.version>
@@ -158,20 +158,6 @@
         <native.library.ext>so</native.library.ext>
         <native.library.path>linux_64</native.library.path>
       </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>native-maven-plugin</artifactId>
-            <configuration>
-              <linkerMiddleOptions>
-                <linkerMiddleOption>-L /usr/lib64/</linkerMiddleOption>
-                <linkerMiddleOption>-L /usr/local/lib64/</linkerMiddleOption>
-              </linkerMiddleOptions>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
     <profile>
       <id>macosx</id>
@@ -184,20 +170,6 @@
         <native.library.ext>dylib</native.library.ext>
         <native.library.path>osx_64</native.library.path>
       </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>native-maven-plugin</artifactId>
-            <configuration>
-              <linkerMiddleOptions>
-                <linkerMiddleOption>-Wl,-rpath,/usr/lib</linkerMiddleOption>
-                <linkerMiddleOption>-Wl,-rpath,/usr/local/lib</linkerMiddleOption>
-              </linkerMiddleOptions>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
   </profiles>
 
@@ -258,10 +230,9 @@
           <version>3.0.0</version>
         </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>native-maven-plugin</artifactId>
-          <version>1.0-alpha-11</version>
-          <extensions>true</extensions>
+          <groupId>com.googlecode.cmake-maven-project</groupId>
+          <artifactId>cmake-maven-plugin</artifactId>
+          <version>3.23.2-b1</version>
         </plugin>
         <plugin>
           <groupId>com.diffplug.spotless</groupId>
@@ -287,7 +258,11 @@
             </formats>
             <!-- define a language-specific format -->
             <java>
-              <!-- no need to specify files, inferred automatically, but you can if you want -->
+              <importOrder>  <!-- or a custom ordering -->
+                <wildcardsLast>false</wildcardsLast>
+                <order>java,javax,org.apache,org,com,lombok,io.v6d,</order>
+                <!-- you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports. -->
+              </importOrder>
 
               <!-- apply a specific flavor of google-java-format -->
               <googleJavaFormat>

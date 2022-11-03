@@ -19,7 +19,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>foreign-resolver</module>
     <module>basic</module>
     <module>graph</module>
   </modules>
