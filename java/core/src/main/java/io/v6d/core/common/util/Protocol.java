@@ -33,10 +33,9 @@ public class Protocol {
     public abstract static class Reply {
         protected static void check(JsonNode tree, String type) throws VineyardException {
             if (tree.has("code")) {
-                VineyardException.check(
-                        tree.get("code").intValue(), tree.get("message").asText(""));
+                VineyardException.check(JSON.getInt(tree, "code"), tree.get("message").asText(""));
             }
-            VineyardException.AssertionFailed.AssertEqual(type, tree.get("type").textValue());
+            VineyardException.AssertionFailed.AssertEqual(type, JSON.getText(tree, "type"));
         }
 
         public abstract void get(JsonNode root) throws VineyardException;
@@ -60,9 +59,9 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "register_reply");
-            this.ipc_socket = root.get("ipc_socket").textValue();
-            this.rpc_endpoint = root.get("rpc_endpoint").textValue();
-            this.instance_id = new InstanceID(root.get("instance_id").longValue());
+            this.ipc_socket = JSON.getText(root, "ipc_socket");
+            this.rpc_endpoint = JSON.getText(root, "rpc_endpoint");
+            this.instance_id = new InstanceID(JSON.getLong(root, "instance_id"));
             this.version = root.get("version").asText("0.0.0");
         }
     }
@@ -84,9 +83,9 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "create_data_reply");
-            this.id = new ObjectID(root.get("id").longValue());
-            this.signature = new Signature(root.get("signature").longValue());
-            this.instance_id = new InstanceID(root.get("instance_id").longValue());
+            this.id = new ObjectID(JSON.getLong(root, "id"));
+            this.signature = new Signature(JSON.getLong(root, "signature"));
+            this.instance_id = new InstanceID(JSON.getLong(root, "instance_id"));
         }
     }
 
@@ -136,7 +135,7 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "create_buffer_reply");
-            this.id = new ObjectID(root.get("id").longValue());
+            this.id = new ObjectID(JSON.getLong(root, "id"));
             this.payload = Payload.fromJson(root.get("created"));
         }
     }
@@ -170,7 +169,7 @@ public class Protocol {
         public void get(JsonNode root) throws VineyardException {
             check(root, "get_buffers_reply");
             this.payloads = new ArrayList<>();
-            for (int index = 0; index < root.get("num").intValue(); ++index) {
+            for (int index = 0; index < JSON.getInt(root, "num"); ++index) {
                 val payload = Payload.fromJson(root.get(String.valueOf(index)));
                 this.payloads.add(payload);
             }
@@ -260,7 +259,7 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "get_name_reply");
-            this.id = new ObjectID(root.get("object_id").longValue());
+            this.id = new ObjectID(JSON.getLong(root, "object_id"));
         }
     }
 
@@ -277,24 +276,6 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "drop_name_reply");
-        }
-    }
-
-    public static class InstanceStatusRequest extends Request {
-        public static void put(ObjectNode root) {
-            root.put("type", "instance_status_request");
-        }
-    }
-
-    @Data
-    @EqualsAndHashCode(callSuper = false)
-    public static class InstanceStatusReply extends Reply {
-        private ObjectNode status;
-
-        @Override
-        public void get(JsonNode root) throws VineyardException {
-            check(root, "instance_status_reply");
-            this.status = (ObjectNode) root.get("meta");
         }
     }
 
@@ -363,7 +344,7 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "pull_next_stream_chunk_reply");
-            this.chunk = new ObjectID(root.get("chunk").longValue());
+            this.chunk = new ObjectID(JSON.getLong(root, "chunk"));
         }
     }
 
@@ -372,6 +353,42 @@ public class Protocol {
             root.put("type", "stop_stream_request");
             root.put("id", id.value());
             root.put("failed", failed);
+        }
+    }
+
+    public static class InstanceStatusRequest extends Request {
+        public static void put(ObjectNode root) {
+            root.put("type", "instance_status_request");
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class InstanceStatusReply extends Reply {
+        private ObjectNode status;
+
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "instance_status_reply");
+            this.status = (ObjectNode) root.get("meta");
+        }
+    }
+
+    public static class ClusterStatusRequest extends Request {
+        public static void put(ObjectNode root) {
+            root.put("type", "cluster_meta");
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class ClusterStatusReply extends Reply {
+        private ObjectNode status;
+
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "cluster_meta");
+            this.status = (ObjectNode) root.get("meta");
         }
     }
 

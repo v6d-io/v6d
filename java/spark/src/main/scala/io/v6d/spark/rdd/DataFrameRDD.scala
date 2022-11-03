@@ -12,26 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.common.util;
+package io.v6d.spark.rdd
 
-public class Env {
-    public static final String VINEYARD_IPC_SOCKET = "VINEYARD_IPC_SOCKET";
-
-    public static final String VINEYARD_RPC_ENDPOINT = "VINEYARD_RPC_ENDPOINT";
-
-    public static String getEnv(String key) {
-        return System.getenv(key);
-    }
-
-    public static String getEnvOrNull(String key) {
-        return getEnvOr(key, null);
-    }
-
-    public static String getEnvOrEmpty(String key) {
-        return getEnvOr(key, "");
-    }
-
-    public static String getEnvOr(String key, String value) {
-        return System.getenv().getOrDefault(key, value);
-    }
-}
+class DataFrameRDD {}

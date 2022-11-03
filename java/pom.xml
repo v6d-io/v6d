@@ -18,7 +18,7 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <dependency.commons-lang.version>3.12.0</dependency.commons-lang.version>
+    <dependency.arrow.version>5.0.0</dependency.arrow.version>
     <dependency.guava.version>31.0.1-jre</dependency.guava.version>
     <dependency.jackson.version>2.14.0-rc1</dependency.jackson.version>
     <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
@@ -33,16 +33,11 @@
   <modules>
     <module>core</module>
     <module>modules</module>
+    <module>spark</module>
   </modules>
 
   <dependencyManagement>
     <dependencies>
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-lang3</artifactId>
-        <version>${dependency.commons-lang.version}</version>
-      </dependency>
-
       <dependency>
         <groupId>com.github.jnr</groupId>
         <artifactId>jnr-posix</artifactId>
@@ -59,6 +54,37 @@
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${dependency.guava.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-memory</artifactId>
+        <version>${dependency.arrow.version}</version>
+        <type>pom</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-memory-core</artifactId>
+        <version>${dependency.arrow.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-memory-netty</artifactId>
+        <version>${dependency.arrow.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-memory-unsafe</artifactId>
+        <version>${dependency.arrow.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-vector</artifactId>
+        <version>${dependency.arrow.version}</version>
       </dependency>
 
       <dependency>
@@ -225,7 +251,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.4.2</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
@@ -240,7 +266,7 @@
         <plugin>
           <groupId>com.diffplug.spotless</groupId>
           <artifactId>spotless-maven-plugin</artifactId>
-          <version>2.12.2</version>
+          <version>2.27.2</version>
           <configuration>
             <formats>
               <!-- you can define as many formats as you want, each is independent -->
@@ -277,6 +303,25 @@
                 <file>${maven.multiModuleProjectDirectory}/apache-2.0.txt</file>
               </licenseHeader>
             </java>
+            <scala>
+              <!-- These are the defaults, you can override if you want -->
+              <includes>
+                <include>src/main/scala/**/*.scala</include>
+                <include>src/test/scala/**/*.scala</include>
+                <include>src/main/scala/**/*.sc</include>
+                <include>src/test/scala/**/*.sc</include>
+              </includes>
+
+              <scalafmt>
+                <version>3.5.9</version>
+              </scalafmt>
+
+              <licenseHeader>
+                <!-- <content>/* (C)$YEAR */</content>  or <file>${project.basedir}/license-header</file> -->
+                <file>${maven.multiModuleProjectDirectory}/apache-2.0.txt</file>
+                <delimiter>package </delimiter>
+              </licenseHeader>
+            </scala>
           </configuration>
         </plugin>
       </plugins>

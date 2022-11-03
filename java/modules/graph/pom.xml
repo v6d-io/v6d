@@ -12,7 +12,7 @@
 
   <artifactId>vineyard-graph</artifactId>
 
-  <name>vineyard-graph</name>
+  <name>${project.artifactId}</name>
   <url>https://v6d.io</url>
 
   <properties>

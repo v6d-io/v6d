@@ -14,12 +14,13 @@
  */
 package io.v6d.core.common.util;
 
+import java.io.Serializable;
 import lombok.*;
 import lombok.EqualsAndHashCode;
 
 /** Vineyard ObjectID definition. */
 @EqualsAndHashCode(callSuper = false)
-public class ObjectID implements Comparable {
+public class ObjectID implements Comparable<ObjectID>, Serializable {
     private long id = -1L;
 
     public static ObjectID InvalidObjectID = new ObjectID(-1L);
@@ -48,8 +49,7 @@ public class ObjectID implements Comparable {
     }
 
     @Override
-    public int compareTo(Object o) {
-        val other = (ObjectID) o;
+    public int compareTo(@NonNull ObjectID other) {
         return (int) (this.id - other.id);
     }
 }
