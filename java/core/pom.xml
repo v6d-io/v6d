@@ -20,6 +20,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <cmake.download>false</cmake.download>
   </properties>
 
   <dependencies>
@@ -151,63 +152,40 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>native-maven-plugin</artifactId>
-        <version>1.0-alpha-11</version>
-        <extensions>true</extensions>
+        <groupId>com.googlecode.cmake-maven-project</groupId>
+        <artifactId>cmake-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>build-jni-configure</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <sourcePath>${project.basedir}</sourcePath>
+              <targetPath>${project.build.directory}/native</targetPath>
+              <generator>
+              </generator>
+              <environmentVariables>
+              </environmentVariables>
+              <options>
+                <option>-DPLATFORM_NATIVE_LIBRARY_PATH:string=${project.build.directory}/classes/${native.library.path}</option>
+                <option>-DPLATFORM_NATIVE_LIBRARY_VERSION:string=${project.version}</option>
+              </options>
+            </configuration>
+          </execution>
+          <execution>
+            <id>build-jni</id>
             <phase>compile</phase>
             <goals>
               <goal>compile</goal>
-              <goal>link</goal>
             </goals>
+            <configuration>
+              <target>all</target>
+              <projectDirectory>${project.build.directory}/native</projectDirectory>
+            </configuration>
           </execution>
         </executions>
-        <configuration>
-          <compilerProvider>generic-classic</compilerProvider>
-          <compilerExecutable>${env.CC}</compilerExecutable>
-          <linkerExecutable>${env.CC}</linkerExecutable>
-          <sources>
-            <source>
-              <directory>${project.basedir}/src/main/cpp/ffi</directory>
-              <fileNames>
-                <fileName>fling.cc</fileName>
-                <fileName>ffi.cc</fileName>
-              </fileNames>
-            </source>
-            <source>
-              <directory>${project.build.directory}/jni/javah-include</directory>
-            </source>
-          </sources>
-          <compilerStartOptions>
-            <compilerStartOption>-I ${JAVA_HOME}/include</compilerStartOption>
-            <compilerStartOption>-I ${JAVA_HOME}/include/linux</compilerStartOption>
-            <compilerStartOption>-I ${JAVA_HOME}/include/darwin</compilerStartOption>
-            <compilerStartOption>-I ${project.basedir}/src/main/cpp/ffi</compilerStartOption>
-            <compilerStartOption>-I ${project.build.directory}/jni/javah-include</compilerStartOption>
-          </compilerStartOptions>
-          <compilerEndOptions>
-            <compilerEndOption>-fPIC</compilerEndOption>
-            <compilerEndOption>-std=c++17</compilerEndOption>
-            <compilerEndOption>-O2</compilerEndOption>
-            <compilerEndOption>-g</compilerEndOption>
-            <compilerEndOption>-ggdb</compilerEndOption>
-            <compilerEndOption>-Wno-deprecated-declarations</compilerEndOption>
-          </compilerEndOptions>
-          <linkerStartOptions>
-            <linkerStartOption>-L ${JAVA_HOME}/lib/</linkerStartOption>
-            <linkerStartOption>-L /usr/lib/</linkerStartOption>
-            <linkerStartOption>-L /usr/local/lib/</linkerStartOption>
-          </linkerStartOptions>
-          <linkerEndOptions>
-            <linkerEndOption>-shared</linkerEndOption>
-            <linkerEndOption>-fPIC</linkerEndOption>
-          </linkerEndOptions>
-          <linkerOutputDirectory>${project.build.directory}/classes/${native.library.path}</linkerOutputDirectory>
-          <linkerFinalName>lib${project.build.finalName}</linkerFinalName>
-          <linkerFinalNameExt>${native.library.ext}</linkerFinalNameExt>
-        </configuration>
       </plugin>
     </plugins>
   </build>

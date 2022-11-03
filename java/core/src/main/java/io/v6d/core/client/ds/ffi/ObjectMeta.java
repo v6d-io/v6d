@@ -12,8 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.contrib.ds.ffi;
+package io.v6d.core.client.ds.ffi;
 
+import io.v6d.core.FFI;
 import lombok.val;
 
 public class ObjectMeta {

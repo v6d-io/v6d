@@ -12,17 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.contrib.graph;
+package io.v6d.core.client.ds.ffi;
 
-import static org.junit.Assert.assertTrue;
+import io.v6d.core.client.ds.Object;
+import io.v6d.core.client.ds.ObjectFactory;
+import io.v6d.core.client.ds.ObjectMeta;
 
-import org.junit.Test;
-
-/** Unit test for simple App. */
-public class GraphTest {
-    /** Rigorous Test :-) */
-    @Test
-    public void shouldAnswerWithTrue() {
-        assertTrue(true);
+public abstract class FFIResolver extends ObjectFactory.Resolver {
+    public Object resolve(final ObjectMeta metadata) {
+        long address = new io.v6d.core.client.ds.ffi.ObjectMeta(metadata).resolve();
+        if (address == 0) {
+            return null;
+        }
+        return resolve(metadata, address);
     }
+
+    public abstract Object resolve(final ObjectMeta metadata, long address);
 }

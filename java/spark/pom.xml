@@ -22,7 +22,6 @@
     <scala.version>2.12.15</scala.version>
     <scala.compat.version>2.12</scala.compat.version>
     <spark.version>3.2.2</spark.version>
-    <spec2.version>4.2.0</spec2.version>
   </properties>
 
   <dependencies>
@@ -95,7 +94,6 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
