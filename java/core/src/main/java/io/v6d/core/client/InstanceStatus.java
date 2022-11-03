@@ -17,13 +17,15 @@ package io.v6d.core.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.v6d.core.common.util.InstanceID;
+import io.v6d.core.common.util.JSON;
+import java.io.Serializable;
 import lombok.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class InstanceStatus {
+public class InstanceStatus implements Serializable {
     @JsonProperty private InstanceID instanceID;
     @JsonProperty private String deployment;
     @JsonProperty private long memory_usage;
@@ -32,15 +34,23 @@ public class InstanceStatus {
     @JsonProperty private long ipc_connections;
     @JsonProperty private long rpc_connections;
 
+    @JsonProperty private InstanceID hostid;
+    @JsonProperty private String hostname;
+    @JsonProperty private String nodename;
+
     public static InstanceStatus fromJson(JsonNode root) {
         val status = new InstanceStatus();
-        status.instanceID = new InstanceID(root.get("instance_id").longValue());
-        status.deployment = root.get("deployment").textValue();
-        status.memory_usage = root.get("memory_usage").longValue();
-        status.memory_limit = root.get("memory_limit").longValue();
-        status.deferred_requests = root.get("deferred_requests").longValue();
-        status.ipc_connections = root.get("ipc_connections").longValue();
-        status.rpc_connections = root.get("rpc_connections").longValue();
+        status.instanceID = new InstanceID(JSON.getLongMaybe(root, "instance_id", -1));
+        status.deployment = JSON.getTextMaybe(root, "deployment", "unknown");
+        status.memory_usage = JSON.getLongMaybe(root, "memory_usage", -1);
+        status.memory_limit = JSON.getLongMaybe(root, "memory_limit", -1);
+        status.deferred_requests = JSON.getLongMaybe(root, "deferred_requests", -1);
+        status.ipc_connections = JSON.getLongMaybe(root, "ipc_connections", -1);
+        status.rpc_connections = JSON.getLongMaybe(root, "rpc_connections", -1);
+
+        status.hostid = new InstanceID(JSON.getLongMaybe(root, "hostid", -1));
+        status.hostname = JSON.getTextMaybe(root, "hostname", "localhost");
+        status.nodename = JSON.getTextMaybe(root, "nodename", "localhost");
         return status;
     }
 }

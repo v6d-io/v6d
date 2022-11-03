@@ -14,12 +14,13 @@
  */
 package io.v6d.core.common.util;
 
+import java.io.Serializable;
 import lombok.*;
 import lombok.EqualsAndHashCode;
 
 /** Vineyard InstanceID definition. */
 @EqualsAndHashCode(callSuper = false)
-public class InstanceID implements Comparable {
+public class InstanceID implements Comparable<InstanceID>, Serializable {
     private long id = -1L;
 
     public static InstanceID UnspecifiedInstanceID = new InstanceID(-1L);
@@ -42,8 +43,7 @@ public class InstanceID implements Comparable {
     }
 
     @Override
-    public int compareTo(Object o) {
-        val other = (InstanceID) o;
+    public int compareTo(InstanceID other) {
         return (int) (this.id - other.id);
     }
 }

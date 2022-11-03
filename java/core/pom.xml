@@ -13,7 +13,7 @@
   <groupId>io.v6d.core</groupId>
   <artifactId>vineyard-core</artifactId>
 
-  <name>vineyard-core</name>
+  <name>${project.artifactId}</name>
   <url>https://v6d.io</url>
 
   <properties>
@@ -189,7 +189,7 @@
           </compilerStartOptions>
           <compilerEndOptions>
             <compilerEndOption>-fPIC</compilerEndOption>
-            <compilerEndOption>-std=c++14</compilerEndOption>
+            <compilerEndOption>-std=c++17</compilerEndOption>
             <compilerEndOption>-O2</compilerEndOption>
             <compilerEndOption>-g</compilerEndOption>
             <compilerEndOption>-ggdb</compilerEndOption>

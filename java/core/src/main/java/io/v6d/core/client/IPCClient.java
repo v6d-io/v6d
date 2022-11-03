@@ -48,30 +48,30 @@ public class IPCClient extends Client {
     private final int NUM_CONNECT_ATTEMPTS = 10;
     private final long CONNECT_TIMEOUT_MS = 1000;
 
-    private UnixSocketChannel channel_;
-    private LittleEndianDataOutputStream writer_;
-    private LittleEndianDataInputStream reader_;
-    private ObjectMapper mapper_;
+    private UnixSocketChannel channel;
+    private LittleEndianDataOutputStream writer;
+    private LittleEndianDataInputStream reader;
+    private ObjectMapper mapper;
 
-    private Map<Integer, Long> mmap_table;
+    private Map<Integer, Long> mmapTable;
 
     public IPCClient() throws VineyardException {
-        mapper_ = new ObjectMapper();
-        mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
-        mmap_table = new HashMap<>();
+        mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
+        mmapTable = new HashMap<>();
         this.connect(System.getenv("VINEYARD_IPC_SOCKET"));
     }
 
     public IPCClient(String ipc_socket) throws VineyardException {
-        mapper_ = new ObjectMapper();
-        mapper_.configure(SerializationFeature.INDENT_OUTPUT, false);
-        mmap_table = new HashMap<>();
+        mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
+        mmapTable = new HashMap<>();
         this.connect(ipc_socket);
     }
 
     private synchronized void connect(String ipc_socket) throws VineyardException {
         connectIPCSocketWithRetry(ipc_socket);
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         RegisterRequest.put(root);
         this.doWrite(root);
         val reply = new RegisterReply();
@@ -88,7 +88,7 @@ public class IPCClient extends Client {
         if (!meta.hasMeta("nbytes")) {
             meta.setNBytes(0);
         }
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         CreateDataRequest.put(root, meta.metadata());
         this.doWrite(root);
         val reply = new CreateDataReply();
@@ -106,7 +106,7 @@ public class IPCClient extends Client {
     @Override
     public ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
             throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         GetDataRequest.put(root, id, sync_remote, wait);
         this.doWrite(root);
         val reply = new GetDataReply();
@@ -141,7 +141,7 @@ public class IPCClient extends Client {
     @Override
     public Collection<ObjectMeta> listMetaData(String pattern, boolean regex, int limit)
             throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         ListDataRequest.put(root, pattern, regex, limit);
         this.doWrite(root);
         val reply = new GetDataReply();
@@ -169,7 +169,7 @@ public class IPCClient extends Client {
 
     @Override
     public void persist(ObjectID id) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         PersistRequest.put(root, id);
         this.doWrite(root);
         val reply = new PersistReply();
@@ -179,7 +179,7 @@ public class IPCClient extends Client {
     @Override
     public void delete(Collection<ObjectID> ids, boolean force, boolean deep)
             throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         DeleteDataRequest.put(root, ids, force, deep, false);
         this.doWrite(root);
         val reply = new DeleteDataReply();
@@ -188,7 +188,7 @@ public class IPCClient extends Client {
 
     @Override
     public void putName(ObjectID id, String name) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         PutNameRequest.put(root, id, name);
         this.doWrite(root);
         val reply = new PutNameReply();
@@ -197,7 +197,7 @@ public class IPCClient extends Client {
 
     @Override
     public ObjectID getName(String name, boolean wait) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         GetNameRequest.put(root, name, wait);
         this.doWrite(root);
         val reply = new GetNameReply();
@@ -207,7 +207,7 @@ public class IPCClient extends Client {
 
     @Override
     public void dropName(String name) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         DropNameRequest.put(root, name);
         this.doWrite(root);
         val reply = new DropNameReply();
@@ -215,18 +215,8 @@ public class IPCClient extends Client {
     }
 
     @Override
-    public InstanceStatus instanceStatus() throws VineyardException {
-        val root = mapper_.createObjectNode();
-        InstanceStatusRequest.put(root);
-        this.doWrite(root);
-        val reply = new InstanceStatusReply();
-        reply.get(this.doReadJson());
-        return InstanceStatus.fromJson(reply.getStatus());
-    }
-
-    @Override
     public void createStream(final ObjectID id) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         CreateStreamRequest.put(root, id);
         this.doWrite(root);
         val reply = new CreateStreamReply();
@@ -235,7 +225,7 @@ public class IPCClient extends Client {
 
     @Override
     public void openStream(final ObjectID id, final char mode) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         VineyardException.asserts(
                 mode == 'r' || mode == 'w', "invalid mode to open stream: '" + mode + "'");
         OpenStreamRequest.put(root, id, mode == 'r' ? 1 : 2);
@@ -246,7 +236,7 @@ public class IPCClient extends Client {
 
     @Override
     public void pushStreamChunk(final ObjectID id, final ObjectID chunk) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         PushNextStreamChunkRequest.put(root, id, chunk);
         this.doWrite(root);
         val reply = new PushNextStreamChunkReply();
@@ -255,7 +245,7 @@ public class IPCClient extends Client {
 
     @Override
     public ObjectID pullStreamChunkID(final ObjectID id) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         PullNextStreamChunkRequest.put(root, id);
         this.doWrite(root);
         val reply = new PullNextStreamChunkReply();
@@ -271,18 +261,38 @@ public class IPCClient extends Client {
 
     @Override
     public void stopStream(final ObjectID id, boolean failed) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         StopStreamRequest.put(root, id, failed);
         this.doWrite(root);
         val reply = new StopStreamReply();
         reply.get(this.doReadJson());
     }
 
+    @Override
+    public InstanceStatus getInstanceStatus() throws VineyardException {
+        val root = mapper.createObjectNode();
+        InstanceStatusRequest.put(root);
+        this.doWrite(root);
+        val reply = new InstanceStatusReply();
+        reply.get(this.doReadJson());
+        return InstanceStatus.fromJson(reply.getStatus());
+    }
+
+    @Override
+    public ClusterStatus getClusterStatus() throws VineyardException {
+        val root = mapper.createObjectNode();
+        ClusterStatusRequest.put(root);
+        this.doWrite(root);
+        val reply = new ClusterStatusReply();
+        reply.get(this.doReadJson());
+        return ClusterStatus.fromJson(reply.getStatus());
+    }
+
     public Buffer createBuffer(long size) throws VineyardException {
         if (size == 0) {
             return Buffer.empty();
         }
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         CreateBufferRequest.put(root, size);
         this.doWrite(root);
         val reply = new CreateBufferReply();
@@ -299,12 +309,12 @@ public class IPCClient extends Client {
 
     private void connectIPCSocket(UnixSocketAddress address) throws VineyardException.IOError {
         try {
-            channel_ = UnixSocketChannel.open(address);
+            channel = UnixSocketChannel.open(address);
         } catch (IOException e) {
             throw new VineyardException.IOError(e.getMessage());
         }
-        writer_ = new LittleEndianDataOutputStream(Channels.newOutputStream(channel_));
-        reader_ = new LittleEndianDataInputStream(Channels.newInputStream(channel_));
+        writer = new LittleEndianDataOutputStream(Channels.newOutputStream(channel));
+        reader = new LittleEndianDataInputStream(Channels.newInputStream(channel));
     }
 
     @SneakyThrows(InterruptedException.class)
@@ -321,13 +331,13 @@ public class IPCClient extends Client {
             }
             num_retries -= 1;
         }
-        if (reader_ == null || writer_ == null) {
+        if (reader == null || writer == null) {
             throw new VineyardException.ConnectionFailed();
         }
     }
 
     private Map<ObjectID, Buffer> getBuffers(Set<ObjectID> ids) throws VineyardException {
-        val root = mapper_.createObjectNode();
+        val root = mapper.createObjectNode();
         GetBuffersRequest.put(root, ids);
         this.doWrite(root);
         val reply = new GetBuffersReply();
@@ -348,15 +358,15 @@ public class IPCClient extends Client {
 
     private long mmap(int fd, long mapSize, boolean readonly, boolean realign)
             throws VineyardException {
-        if (mmap_table.containsKey(fd)) {
-            return mmap_table.get(fd);
+        if (mmapTable.containsKey(fd)) {
+            return mmapTable.get(fd);
         }
-        int client_fd = Fling.recvFD(this.channel_.getFD());
+        int client_fd = Fling.recvFD(this.channel.getFD());
         long pointer = Fling.mapSharedMem(client_fd, mapSize, readonly, realign);
         if (pointer == -1) {
             throw new VineyardException.UnknownError("mmap failed for fd " + fd);
         }
-        mmap_table.put(fd, pointer);
+        mmapTable.put(fd, pointer);
         return pointer;
     }
 
@@ -367,23 +377,23 @@ public class IPCClient extends Client {
 
     @SneakyThrows(IOException.class)
     private void doWrite(String content) {
-        writer_.writeLong(content.length());
-        writer_.writeBytes(content);
-        writer_.flush();
+        writer.writeLong(content.length());
+        writer.writeBytes(content);
+        writer.flush();
     }
 
     @SneakyThrows(JsonProcessingException.class)
     private void doWrite(JsonNode node) {
-        this.doWrite(mapper_.writeValueAsString(node));
+        this.doWrite(mapper.writeValueAsString(node));
     }
 
     @SneakyThrows(IOException.class)
     private byte[] doRead() {
-        int length = (int) reader_.readLong(); // n.b.: the server writes a size_t (long)
+        int length = (int) reader.readLong(); // n.b.: the server writes a size_t (long)
         val content = new byte[length];
         int done = 0, remaining = length;
         while (done < length) {
-            int batch = reader_.read(content, done, remaining);
+            int batch = reader.read(content, done, remaining);
             done += batch;
             remaining -= batch;
         }
@@ -392,6 +402,6 @@ public class IPCClient extends Client {
 
     @SneakyThrows(IOException.class)
     private JsonNode doReadJson() {
-        return mapper_.readTree(doRead());
+        return mapper.readTree(doRead());
     }
 }

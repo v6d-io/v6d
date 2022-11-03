@@ -12,26 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.core.common.util;
+package io.v6d.spark
 
-public class Env {
-    public static final String VINEYARD_IPC_SOCKET = "VINEYARD_IPC_SOCKET";
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
 
-    public static final String VINEYARD_RPC_ENDPOINT = "VINEYARD_RPC_ENDPOINT";
+object SparkApp {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf()
+    conf
+      .setAppName("Spark on Vineyard")
+      .setMaster("local[*]")
+      // ensure all executor ready
+      .set("spark.scheduler.minRegisteredResourcesRatio", "1.0")
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    val sc: SparkContext = spark.sparkContext
 
-    public static String getEnv(String key) {
-        return System.getenv(key);
-    }
-
-    public static String getEnvOrNull(String key) {
-        return getEnvOr(key, null);
-    }
-
-    public static String getEnvOrEmpty(String key) {
-        return getEnvOr(key, "");
-    }
-
-    public static String getEnvOr(String key, String value) {
-        return System.getenv().getOrDefault(key, value);
-    }
+    sc.stop()
+  }
 }

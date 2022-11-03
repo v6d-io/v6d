@@ -13,7 +13,7 @@
   <groupId>io.v6d.modules</groupId>
   <artifactId>vineyard-modules</artifactId>
 
-  <name>vineyard-modules</name>
+  <name>${project.artifactId}</name>
   <url>https://v6d.io</url>
 
   <packaging>pom</packaging>

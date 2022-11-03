@@ -14,7 +14,9 @@
  */
 package io.v6d.core.common.util;
 
-public abstract class VineyardException extends Exception {
+import java.io.Serializable;
+
+public abstract class VineyardException extends Exception implements Serializable {
     public VineyardException(String message) {
         super(message);
     }

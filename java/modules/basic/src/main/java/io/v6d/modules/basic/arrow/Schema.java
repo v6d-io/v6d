@@ -22,16 +22,18 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.util.SchemaSerializer;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.util.Collections2;
 import org.apache.arrow.vector.types.pojo.Field;
 
 /** Hello world! */
-public class Schema extends Object {
-    private final org.apache.arrow.vector.types.pojo.Schema schema;
+public class Schema extends Object implements Serializable {
+    private org.apache.arrow.vector.types.pojo.Schema schema;
 
     public static void instantiate() {
         Buffer.instantiate();
@@ -85,6 +87,19 @@ public class Schema extends Object {
                 .add("object", super.toString())
                 .add("schema", schema)
                 .toString();
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        out.writeObject(SchemaSerializer.serialize(schema));
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        byte[] bytes = (byte[]) in.readObject();
+        val allocator = new RootAllocator(Long.MAX_VALUE);
+        val buffer = allocator.buffer(bytes.length);
+        buffer.writeBytes(bytes);
+        this.schema = SchemaSerializer.deserialize(buffer, allocator);
     }
 }
 

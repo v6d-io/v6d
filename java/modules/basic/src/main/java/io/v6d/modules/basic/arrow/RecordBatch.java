@@ -24,9 +24,13 @@ import java.util.stream.IntStream;
 import lombok.val;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Hello world! */
 public class RecordBatch extends Object {
+    private static final Logger logger = LoggerFactory.getLogger(RecordBatch.class);
+
     private final VectorSchemaRoot batch;
 
     public static void instantiate() {

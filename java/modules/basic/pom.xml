@@ -12,54 +12,43 @@
 
   <artifactId>vineyard-basic</artifactId>
 
-  <name>vineyard-basic</name>
+  <name>${project.artifactId}</name>
   <url>https://v6d.io</url>
 
   <properties>
-    <dependency.arrow.version>5.0.0</dependency.arrow.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-memory</artifactId>
-      <version>${dependency.arrow.version}</version>
       <type>pom</type>
     </dependency>
 
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-memory-core</artifactId>
-      <version>${dependency.arrow.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-memory-netty</artifactId>
-      <version>${dependency.arrow.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-memory-unsafe</artifactId>
-      <version>${dependency.arrow.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-vector</artifactId>
-      <version>${dependency.arrow.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
     </dependency>
 
     <dependency>

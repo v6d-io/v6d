@@ -28,25 +28,31 @@ import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.Signature;
 import io.v6d.core.common.util.VineyardException;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ObjectMeta {
+public class ObjectMeta implements Serializable, Iterable<Map.Entry<String, JsonNode>> {
     private static final Logger logger = LoggerFactory.getLogger(ObjectMeta.class);
 
-    private ObjectMapper mapper;
+    private transient ObjectMapper mapper = new ObjectMapper();
     private ObjectNode meta;
     private InstanceID instanceId;
-    private BufferSet buffers;
+
+    private transient BufferSet buffers;
     private boolean incomplete;
 
     private ObjectMeta() {
-        mapper = new ObjectMapper();
         meta = mapper.createObjectNode();
         instanceId = InstanceID.UnspecifiedInstanceID;
         buffers = new BufferSet();
@@ -370,6 +376,9 @@ public class ObjectMeta {
     }
 
     private void findAllBuffers(ObjectNode meta) throws VineyardException {
+        if (this.buffers == null) {
+            this.buffers = new BufferSet();
+        }
         if (meta == null || meta.isEmpty()) {
             return;
         }
@@ -387,5 +396,105 @@ public class ObjectMeta {
                 }
             }
         }
+    }
+
+    private void writeObject(ObjectOutputStream oos) throws IOException {
+        oos.defaultWriteObject();
+        oos.writeObject(meta);
+        oos.writeObject(instanceId);
+        oos.writeObject(incomplete);
+    }
+
+    @SneakyThrows(VineyardException.class)
+    private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
+        ois.defaultReadObject();
+        this.mapper = new ObjectMapper();
+        this.meta = (ObjectNode) ois.readObject();
+        this.instanceId = (InstanceID) ois.readObject();
+        this.incomplete = (boolean) ois.readObject();
+        this.findAllBuffers(meta);
+    }
+
+    @Override
+    public Iterator<Map.Entry<String, JsonNode>> iterator() {
+        return new Iterator<Map.Entry<String, JsonNode>>() {
+            final Iterator<Map.Entry<String, JsonNode>> fields = meta.fields();
+
+            @Override
+            public boolean hasNext() {
+                return fields.hasNext();
+            }
+
+            @Override
+            public Map.Entry<String, JsonNode> next() {
+                return fields.next();
+            }
+        };
+    }
+
+    public static class Member implements Map.Entry<String, ObjectMeta> {
+        private final String key;
+        private final ObjectMeta value;
+
+        @SneakyThrows(VineyardException.class)
+        public Member(String key, ObjectNode value, InstanceID instanceId) {
+            this.key = key;
+            this.value = ObjectMeta.fromMeta(value, instanceId);
+        }
+
+        @Override
+        public String getKey() {
+            return key;
+        }
+
+        @Override
+        public ObjectMeta getValue() {
+            return value;
+        }
+
+        @Override
+        public ObjectMeta setValue(ObjectMeta value) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public Iterator<Member> iteratorMembers() {
+        return iteratorMembers("");
+    }
+
+    public Iterator<Member> iteratorMembers(final String pattern) {
+        return new Iterator<Member>() {
+            final Iterator<Map.Entry<String, JsonNode>> fields = meta.fields();
+            Map.Entry<String, JsonNode> member = null;
+
+            @Override
+            public boolean hasNext() {
+                if (this.member != null) {
+                    return true;
+                }
+                while (fields.hasNext()) {
+                    this.member = fields.next();
+                    if (this.member.getValue().isObject()
+                            && this.member.getKey().startsWith(pattern)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            @Override
+            public Member next() {
+                if (this.member == null || !hasNext()) {
+                    throw new NoSuchElementException("No more members in the metadata");
+                }
+                val item =
+                        new Member(
+                                this.member.getKey(),
+                                (ObjectNode) this.member.getValue(),
+                                instanceId);
+                this.member = null;
+                return item;
+            }
+        };
     }
 }

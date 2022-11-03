@@ -14,11 +14,12 @@
  */
 package io.v6d.core.common.util;
 
+import java.io.Serializable;
 import lombok.EqualsAndHashCode;
 
 /** Vineyard Signature definition. */
 @EqualsAndHashCode(callSuper = false)
-public class Signature {
+public class Signature implements Serializable {
     private long id = -1L;
 
     public static Signature InvalidSignature = new Signature(-1L);
