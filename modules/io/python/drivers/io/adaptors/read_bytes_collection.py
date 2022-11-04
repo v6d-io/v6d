@@ -41,15 +41,13 @@ from vineyard.io.utils import expand_full_path
 from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
 
-try:
-    from vineyard.drivers.io import ossfs
-except ImportError:
-    ossfs = None
-
-if ossfs:
-    fsspec.register_implementation("oss", ossfs.OSSFileSystem)
-
 logger = logging.getLogger('vineyard')
+
+try:
+    from vineyard.drivers.io import fsspec_adaptors
+except Exception as e:  # pylint: disable=broad-except
+    logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc %s", e)
+
 
 CHUNK_SIZE = 1024 * 1024 * 128
 

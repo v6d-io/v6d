@@ -36,6 +36,9 @@ sharing for distributed data in big data tasks, such as graph analytics
 
 # pylint: disable=import-outside-toplevel,wrong-import-position
 
+logger = logging.getLogger('vineyard')
+logger.setLevel(logging.INFO)
+
 
 @contextlib.contextmanager
 def envvars(key, value=None, append=False):
@@ -193,8 +196,6 @@ from .deploy.local import get_current_client
 from .deploy.local import get_current_socket
 from .deploy.local import init
 from .deploy.local import shutdown
-
-logger = logging.getLogger('vineyard')
 
 
 def _init_vineyard_modules():  # noqa: C901

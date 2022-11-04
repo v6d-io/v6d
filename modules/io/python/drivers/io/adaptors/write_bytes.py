@@ -18,6 +18,7 @@
 
 import base64
 import json
+import logging
 import sys
 
 import fsspec
@@ -28,13 +29,12 @@ from vineyard.io.utils import expand_full_path
 from vineyard.io.utils import report_error
 from vineyard.io.utils import report_exception
 
-try:
-    from vineyard.drivers.io import ossfs
-except ImportError:
-    ossfs = None
+logger = logging.getLogger('vineyard')
 
-if ossfs:
-    fsspec.register_implementation("oss", ossfs.OSSFileSystem)
+try:
+    from vineyard.drivers.io import fsspec_adaptors
+except Exception as e:  # pylint: disable=broad-except
+    logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc %s", e)
 
 
 def write_bytes(

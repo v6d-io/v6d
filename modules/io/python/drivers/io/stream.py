@@ -287,6 +287,25 @@ def read_orc(
     return launcher.wait()
 
 
+def read_parquet(
+    path, vineyard_socket, storage_options, read_options, *args, handlers=None, **kwargs
+):
+    deployment = kwargs.pop("deployment", "ssh")
+    launcher = ParallelStreamLauncher(deployment)
+    launcher.run(
+        get_executable("read_parquet"),
+        vineyard_socket,
+        path,
+        storage_options,
+        read_options,
+        *args,
+        **kwargs,
+    )
+    if handlers is not None:
+        handlers.append(launcher)
+    return launcher.wait()
+
+
 def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
@@ -299,6 +318,16 @@ def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
     )
     if ".orc" in path:
         return read_orc(
+            path,
+            vineyard_socket,
+            storage_options,
+            read_options,
+            *args,
+            handlers=handlers,
+            **kwargs.copy(),
+        )
+    elif ".parquet" in path or ".pq" in path:
+        return read_parquet(
             path,
             vineyard_socket,
             storage_options,
@@ -388,6 +417,30 @@ def write_orc(
     launcher.join()
 
 
+def write_parquet(
+    path,
+    dataframe_stream,
+    vineyard_socket,
+    storage_options,
+    write_options,
+    *args,
+    **kwargs,
+):
+    deployment = kwargs.pop("deployment", "ssh")
+    launcher = ParallelStreamLauncher(deployment)
+    launcher.run(
+        get_executable("write_parquet"),
+        vineyard_socket,
+        path,
+        dataframe_stream,
+        storage_options,
+        write_options,
+        *args,
+        **kwargs,
+    )
+    launcher.join()
+
+
 def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
@@ -408,9 +461,19 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
             *args,
             **kwargs.copy(),
         )
+    elif ".parquet" in path or ".pq" in path:
+        write_parquet(
+            path,
+            dataframe_stream,
+            vineyard_socket,
+            storage_options,
+            write_options,
+            *args,
+            **kwargs.copy(),
+        )
     else:
         stream = parse_dataframe_to_bytes(
-            vineyard_socket, dataframe_stream, *args, **kwargs.copy()
+            vineyard_socket, dataframe_stream, write_options, *args, **kwargs.copy()
         )
         write_bytes(
             path,

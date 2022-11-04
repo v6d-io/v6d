@@ -92,6 +92,7 @@ setup(
             'vineyard_read_bytes_collection='
             'vineyard.drivers.io.adaptors.read_bytes_collection:main',
             'vineyard_read_orc=vineyard.drivers.io.adaptors.read_orc:main',
+            'vineyard_read_parquet=vineyard.drivers.io.adaptors.read_parquet:main',
             'vineyard_read_vineyard_dataframe='
             'vineyard.drivers.io.adaptors.read_vineyard_dataframe:main',
             'vineyard_serializer=vineyard.drivers.io.adaptors.serializer:main',
@@ -99,6 +100,7 @@ setup(
             'vineyard_write_bytes_collection='
             'vineyard.drivers.io.adaptors.write_bytes_collection:main',
             'vineyard_write_orc=vineyard.drivers.io.adaptors.write_orc:main',
+            'vineyard_write_parquet=vineyard.drivers.io.adaptors.write_parquet:main',
             'vineyard_write_vineyard_dataframe='
             'vineyard.drivers.io.adaptors.write_vineyard_dataframe:main',
         ],
