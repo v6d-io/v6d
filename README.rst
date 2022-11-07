@@ -33,7 +33,7 @@ Table of Contents
   * `I/O Drivers <#drivers>`_
 
 * `Getting started with vineyard <#try-vineyard>`_
-* `Integrate with kubernetes <#integrate-with-kubernetes>`_
+* `Deploying on Kubernetes <#deploying-on-kubernetes>`_
 * `Frequently asked questions <#faq>`_
 * `Getting involved in our community <#getting-involved>`_
 * `Third-party dependencies <#acknowledgements>`_
@@ -197,8 +197,8 @@ Once installed, you can start a vineyard instance with:
 For more details about connecting to a locally deployed vineyard instance, please refer to
 `Getting Started`_.
 
-Integrate with Kubernetes
--------------------------
+Deploying on Kubernetes
+-----------------------
 
 Vineyard helps share immutable data between different workloads, is a natural fit
 to cloud-native computing. Vineyard could provide efficient distributed data sharing
