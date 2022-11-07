@@ -91,6 +91,31 @@ def parse_readable_size(size):
     return int(ns) * ratios.get(cs, 1)
 
 
+class capture_exception:
+    """Capture the possible exception and throw later when `.check()` is called."""
+
+    def __init__(self):
+        self.exception = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, traceback):
+        if exc_type is not None:
+            self.exception = exc_type(exc_val).with_traceback(traceback)
+        return True
+
+    def check(self):
+        if self.exception is not None:
+            raise self.exception
+
+    def print(self):
+        if self.exception is not None:
+            traceback.print_exception(
+                type(self.exception), self.exception, self.exception.__traceback__
+            )
+
+
 class BaseStreamExecutor:
     def execute(self):
         """Execute the action on stream chunks."""

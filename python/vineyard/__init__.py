@@ -37,7 +37,6 @@ sharing for distributed data in big data tasks, such as graph analytics
 # pylint: disable=import-outside-toplevel,wrong-import-position
 
 logger = logging.getLogger('vineyard')
-logger.setLevel(logging.INFO)
 
 
 @contextlib.contextmanager

@@ -16,6 +16,10 @@ name: Vineyard CI
 
 on: [push, pull_request]
 
+env:
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -91,10 +95,12 @@ jobs:
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=3.0.0-1 libparquet-dev=3.0.0-1 libarrow-python-dev=3.0.0-1
+          sudo apt install -y libarrow-dev=10.0.0-1 libparquet-dev=10.0.0-1 libarrow-python-dev=10.0.0-1
 
           # install pyarrow from scratch
-          sudo pip3 install --no-binary pyarrow pyarrow==3.0.0
+          export PYARROW_WITH_PARQUET=1
+          export PYARROW_WITH_ORC=1
+          sudo -E pip3 install --no-binary pyarrow pyarrow==10.0.0
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install -U "Pygments>=2.4.1"
