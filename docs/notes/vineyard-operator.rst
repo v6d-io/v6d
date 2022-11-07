@@ -105,7 +105,7 @@ Install from source code
 
 .. code:: bash
 
-    $  kubectl get all -n vineyard-system
+    $ kubectl get all -n vineyard-system
     NAME                                               READY   STATUS    RESTARTS   AGE
     pod/vineyard-controller-manager-5c6f4bc454-8xm8q   2/2     Running   0          62m
 
@@ -517,7 +517,7 @@ and you could get them as follows.
 
 .. code:: bash
 
-    $  kubectl get operation -A
+    $ kubectl get operation -A
     NAMESPACE      NAME                                    OPERATION     TYPE   STATE
     vineyard-job   dask-repartition-job2-bbf596bf4-985vc   repartition   dask   
 
