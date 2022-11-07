@@ -33,7 +33,7 @@ Table of Contents
   * `I/O Drivers <#drivers>`_
 
 * `Getting started with vineyard <#try-vineyard>`_
-* `Vineyard Operator <#integrate-with-kubernetes>`_
+* `Integrate with kubernetes <#integrate-with-kubernetes>`_
 * `Frequently asked questions <#faq>`_
 * `Getting involved in our community <#getting-involved>`_
 * `Third-party dependencies <#acknowledgements>`_
