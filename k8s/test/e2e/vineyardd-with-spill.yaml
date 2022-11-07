@@ -52,7 +52,7 @@ spec:
           requests:
             storage: 512Mi
   etcd:
-    instances: 3
+    replicas: 3
   service:
     type: ClusterIP
     port: 9600

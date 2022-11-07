@@ -17,7 +17,7 @@ Install vineyardd as follows.
 
 .. code:: shell
 
-   curl <https://raw.githubusercontent.com/v6d-io/v6d/main/k8s/test/e2e/vineyardd.yaml> | kubectl apply -f -
+   curl https://raw.githubusercontent.com/v6d-io/v6d/main/k8s/test/e2e/vineyardd.yaml | kubectl apply -f -
 
 ## Uninstall
 

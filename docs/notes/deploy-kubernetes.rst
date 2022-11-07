@@ -6,7 +6,7 @@ Deploying on Kubernetes
 Deploying with Vineyard Operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Please refer to `Vineyard Operator Doc <https://github.com/v6d-io/v6d/blob/main/notes/vineyard-operator.rst>`_.
+Please refer to `Vineyard Operator <https://github.com/v6d-io/v6d/blob/main/notes/vineyard-operator.rst>`_.
 
 Deploying using Python API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

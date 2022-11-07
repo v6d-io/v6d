@@ -732,7 +732,7 @@ spec:
                 type: array
               etcd:
                 properties:
-                  instances:
+                  replicas:
                     type: integer
                 type: object
               image:

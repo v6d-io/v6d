@@ -206,7 +206,7 @@ in cloud-native environment by embracing cloud-native big data processing and Ku
 helps vineyard leverage the scale-in/out and scheduling ability of Kubernetes.
 
 In order to better manage all the components of the vineyard in the kubernetes cluster, 
-we designed the vineyard operator, please check the `Vineyard Operator Doc`_. for 
+we designed the vineyard operator, please check the `Vineyard Operator`_. for 
 more information.
 
 FAQ
@@ -274,7 +274,7 @@ third-party libraries may not have the same license as vineyard.
 .. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/install.rst
 .. _Contributing: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _Getting Started: https://v6d.io/notes/getting-started.html
-.. _Vineyard Operator Doc: https://github.com/v6d-io/v6d/blob/main/notes/vineyard-operator.rst
+.. _Vineyard Operator: https://github.com/v6d-io/v6d/blob/main/notes/vineyard-operator.rst
 .. _Apache License 2.0: https://github.com/v6d-io/v6d/blob/main/LICENSE
 .. _contribution guide: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
