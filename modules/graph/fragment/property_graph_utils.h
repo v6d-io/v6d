@@ -585,8 +585,8 @@ boost::leaf::result<void> generate_local_id_list_gsf(
         [&vec, &parser, fid, &ovg2l_maps, &builder, &label_id, &start_id, &is_inner_col](int64_t i) {
           VID_T gid = vec[i];
           if (is_inner_col) {
-            ARROW_OK_OR_RAISE(builder.Append(parser.GenerateId(
-                0, label_id, parser.GetOffset(gid - start_id))));
+            builder.Append(parser.GenerateId(
+                0, label_id, parser.GetOffset(gid - start_id)));
           } else {
             if (parser.GetFid(gid) == fid) {
               builder[i] = parser.GenerateId(0, parser.GetLabelId(gid),
