@@ -157,8 +157,8 @@ the vineyard daemon server:
    * - image
      - string
      - The image name of vineyardd image.
-     - "vineyardcloudnative/
-       vineyardd:alpine-latest"
+     - | "vineyardcloudnative/
+       | vineyardd:alpine-latest"
 
    * - imagePullPolicy
      - string
@@ -180,112 +180,136 @@ the vineyard daemon server:
      - The environment of vineyardd.
      - nil
 
-   * - metric.image
+   * - | metric.
+       | image
      - string
      - The image name of metric.
      - nil
 
-   * - metric.imagePullPolicy
+   * - | metric.
+       | imagePullPolicy
      - string
      - The image pull policy of metric.
      - nil
 
-   * - config.etcdCmd
+   * - | config.
+       | etcdCmd
      - string
      - The path of etcd command.
      - nil
 
-   * - config.etcdEndpoint
+   * - | config.
+       | etcdEndpoint
      - string
      - The endpoint of etcd.
      - nil
 
-   * - config.etcdPrefix
+   * - | config.
+       | etcdPrefix
      - string
      - The path prefix of etcd.
      - nil
 
-   * - config.enableMetrics
+   * - | config.
+       | enableMetrics
      - bool
      - Enable the metrics in vineyardd.
      - false
 
-   * - config.enablePrometheus
+   * - | config.
+       | enablePrometheus
      - bool
      - Enable the Prometheus.
      - false
 
-   * - config.socket
+   * - | config.
+       | socket
      - string
      - The ipc socket file of vineyardd.
      - nil
 
-   * - config.streamThreshold
+   * - | config.
+       | streamThreshold
      - int64
      - The memory threshold of streams 
        (percentage of total memory) 
      - nil
 
-   * - config.sharedMemorySize
+   * - | config.
+       | sharedMemorySize
      - string
      - The shared memory size for vineyardd.
      - nil
 
-   * - config.syncCRDs
+   * - | config.
+       | syncCRDs
      - bool
      - Synchronize CRDs when persisting objects
      - true
 
-   * - config.spillConfig
-       .Name
+   * - | config.
+       | spillConfig.
+       | Name
      - string
      - The name of the spill config, 
        if set we'll enable the spill module.
      - nil
 
-   * - config.spillConfig
-       .path
+   * - | config.
+       | spillConfig.
+       | path
      - string
      - The path of spilling.
      - nil
 
-   * - config.spillConfig
-       .spillLowerRate
+   * - | config.
+       | spillConfig.
+       | spillLowerRate
      - string
      - The low watermark of spilling memory.
      - nil
 
-   * - config.spillConfig
-       .spillUpperRate
+   * - | config.
+       | spillConfig.
+       | spillUpperRate
      - string
      - The high watermark of triggering spilling.
      - nil
 
-   * - config.spillConfig
-       .persistentVolumeSpec
-     - corev1
-       .PersistentVolumeSpec
+   * - | config.
+       | spillConfig.
+       | persistent
+       | VolumeSpec
+     - | corev1.
+       | Persistent
+       | VolumeSpec
      - The PV of the spilling for persistent storage.
      - nil
 
-   * - config.spillConfig
-       .persistentVolumeClaimSpec
-     - corev1.
-       PersistentVolumeClaimSpec
+   * - | config.
+       | spillConfig.
+       | persistent
+       | VolumeClaimSpec
+     - | corev1.
+       | Persistent
+       | VolumeClaimSpec
      - The PVC of the spilling for the persistent storage.
      - nil
 
-   * - service.type
+   * - | service.
+       | type
      - string
      - The service type of vineyardd service.
      - nil
 
-   * - service.port
+   * - | service.
+       | port
      - int
      - The service port of vineyardd service 
      - nil
 
-   * - etcd.replicas
+   * - | etcd.
+       | replicas
      - int
      - The etcd replicas of vineyard
      - nil
