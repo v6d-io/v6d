@@ -18,7 +18,7 @@ The docker images can be used in the following way
     docker run --rm -it vineyardcloudnative/vineyardd:latest
 
 Just like what you can do with a locally installed vineyard package.
-See also `Deploying on Linux/MacOS <https://v6d.io/v6d/notes/deploy-docker.html>`_.
+See also `Deploying on Linux/MacOS <https://v6d.io/notes/deploy-locally.html>`_.
 
 Docker images history
 ---------------------
