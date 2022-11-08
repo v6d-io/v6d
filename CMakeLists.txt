@@ -96,6 +96,10 @@ if(NOT (CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache") AND NOT (CMAKE_C_COMPILER_
             COMMAND echo "ccache not found."
         )
     endif(ccache_EXECUTABLE)
+else()
+    add_custom_target(ccache-stats
+        COMMAND ${ccache_EXECUTABLE} --show-stats
+    )
 endif()
 
 # enable colored diagnostics

@@ -95,11 +95,17 @@ jobs:
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=10.0.0-1 libparquet-dev=10.0.0-1 libarrow-python-dev=10.0.0-1
+          sudo apt install -y libarrow-dev=10.0.0-1 \
+                              libarrow-dataset-dev=10.0.0-1 \
+                              libarrow-flight-dev=10.0.0-1 \
+                              libgandiva-dev=10.0.0-1 \
+                              libparquet-dev=10.0.0-1 \
+                              libplasma-dev=10.0.0-1
 
           # install pyarrow from scratch
           export PYARROW_WITH_PARQUET=1
           export PYARROW_WITH_ORC=1
+          export PYARROW_WITH_DATASET=1
           sudo -E pip3 install --no-binary pyarrow pyarrow==10.0.0
 
           # install python packages for codegen, and io adaptors
