@@ -366,7 +366,7 @@ jobs:
           python3 test/runner.py $RUNNER_ARGS --with-python --with-migration --with-deployment --with-contrib
 
       - name: Setup tmate session
-        if: true
+        if: false
         uses: mxschmitt/action-tmate@v2
 
       - name: Run IO Tests
