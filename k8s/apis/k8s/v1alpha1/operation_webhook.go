@@ -41,6 +41,10 @@ var _ webhook.Defaulter = &Operation{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Operation) Default() {
 	operationlog.Info("default", "name", r.Name)
+	// set the default timeoutSeconds
+	if r.Spec.TimeoutSeconds == 0 {
+		r.Spec.TimeoutSeconds = 300
+	}
 	r.check()
 }
 

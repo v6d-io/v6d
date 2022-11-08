@@ -100,9 +100,9 @@ type ServiceConfig struct {
 
 // Etcd holds all configuration about Etcd
 type Etcd struct {
-	// Etcd instances
+	// Etcd replicas
 	// +kubebuilder:validation:Optional
-	Instances int `json:"instances,omitempty"`
+	Replicas int `json:"replicas,omitempty"`
 }
 
 // VineyarddSpec holds all configuration about vineyardd
@@ -131,7 +131,7 @@ type VineyarddSpec struct {
 	// vineyardd's service
 	// +kubebuilder:validation:Optional
 	Service ServiceConfig `json:"service,omitempty"`
-	// Etcd describe the etcd instances
+	// Etcd describe the etcd replicas
 	// +kubebuilder:validation:Optional
 	Etcd Etcd `json:"etcd,omitempty"`
 }

@@ -25,7 +25,7 @@ type OperationSpec struct {
 	// the name of vineyard pluggable drivers, including assembly and repartition.
 	// +kubebuilder:validation:Required
 	Name string `json:"name,omitempty"`
-	// the type of object, including local and distribued.
+	// the type of object, including local and distributed.
 	// +kubebuilder:validation:Required
 	Type string `json:"type,omitempty"`
 	// the required job's name of the operation

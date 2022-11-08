@@ -80,6 +80,7 @@ func (r *Vineyardd) check() {
 	defaultImage := "vineyardcloudnative/vineyardd:alpine-latest"
 	defaultVersion := "latest"
 	defaultReplicas := 3
+	syncCRD := true
 	if r.Spec.Image == "" {
 		vineyarddlog.Info("the image is absent, use the default image", "name", defaultImage)
 		r.Spec.Image = defaultImage
@@ -91,5 +92,9 @@ func (r *Vineyardd) check() {
 	if r.Spec.Replicas == 0 {
 		vineyarddlog.Info("the replicas is absent, use the default replicas", "name", 1)
 		r.Spec.Replicas = defaultReplicas
+	}
+	if !r.Spec.Config.SyncCRDs {
+		vineyarddlog.Info("the syncCRD is false, use the default syncCRD", "name", syncCRD)
+		r.Spec.Config.SyncCRDs = syncCRD
 	}
 }

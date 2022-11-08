@@ -105,13 +105,13 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// set up the etcd
 	Etcd.Namespace = vineyardd.Namespace
 	Etcd.Endpoints = ""
-	instances := vineyardd.Spec.Etcd.Instances
-	for i := 0; i < instances; i++ {
+	replicas := vineyardd.Spec.Etcd.Replicas
+	for i := 0; i < replicas; i++ {
 		Etcd.Endpoints = Etcd.Endpoints + "etcd" + strconv.Itoa(i) + "=http://etcd" + strconv.Itoa(i) + ":2380,"
 	}
 	Etcd.Endpoints = Etcd.Endpoints[:len(Etcd.Endpoints)-1]
 
-	for i := 0; i < instances; i++ {
+	for i := 0; i < replicas; i++ {
 		Etcd.Rank = i
 		if _, err := etcdApp.Apply(ctx, "etcd/etcd.yaml", ctrl.Log, true); err != nil {
 			ctrl.Log.Error(err, "failed to apply etcd pod")

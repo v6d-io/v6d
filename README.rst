@@ -33,11 +33,7 @@ Table of Contents
   * `I/O Drivers <#drivers>`_
 
 * `Getting started with vineyard <#try-vineyard>`_
-* `Vineyard on Kubernetes <#integrate-with-kubernetes>`_
-
-  * `Deploying on Kubernetes <#deployment-on-kubernetes>`_
-  * `Deploying using Helm <#deployment-with-helm>`_
-
+* `Deploying on Kubernetes <#deploying-on-kubernetes>`_
 * `Frequently asked questions <#faq>`_
 * `Getting involved in our community <#getting-involved>`_
 * `Third-party dependencies <#acknowledgements>`_
@@ -201,56 +197,16 @@ Once installed, you can start a vineyard instance with:
 For more details about connecting to a locally deployed vineyard instance, please refer to
 `Getting Started`_.
 
-Integrate with Kubernetes
--------------------------
+Deploying on Kubernetes
+-----------------------
 
 Vineyard helps share immutable data between different workloads, is a natural fit
 to cloud-native computing. Vineyard could provide efficient distributed data sharing
 in cloud-native environment by embracing cloud-native big data processing and Kubernetes
 helps vineyard leverage the scale-in/out and scheduling ability of Kubernetes.
 
-Deployment on Kubernetes
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-For better leveraging the scale-in/out capability of Kubernetes for worker pods of
-a data analytical job, vineyard could be deployed on Kubernetes to as a DaemonSet
-in Kubernetes cluster. Vineyard pods shares memory with worker pods using a UNIX
-domain socket with fine-grained access control.
-
-The UNIX domain socket can be either mounted on ``hostPath`` or via a ``PersistentVolumeClaim``.
-When users bundle vineyard and the workload to the same pod, the UNIX domain socket
-could also be shared using an ``emptyDir``.
-
-**Note** that when deploying vineyard on Kubernetes, it usually can only be connected
-from containers in the same pod, or pods on the same hosts.
-
-Deployment with Helm
-^^^^^^^^^^^^^^^^^^^^
-
-Before installing the vineyard operator, you should install cert-manager at first.
-
-.. code:: shell
-
-   helm repo add jetstack https://charts.jetstack.io
-   helm install \
-      cert-manager jetstack/cert-manager \
-      --namespace cert-manager \
-      --create-namespace \
-      --version v1.9.1 \
-      --set installCRDs=true
-
-Vineyard operator has been integrated with `Helm <https://helm.sh/>`_. Deploy it as follows.
-
-.. code:: shell
-
-   helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
-   helm install vineyard-operator vineyard/vineyard-operator
-
-Install vineyardd as follows.
-
-.. code:: shell
-
-   curl https://raw.githubusercontent.com/v6d-io/v6d/main/k8s/test/e2e/vineyardd.yaml | kubectl apply -f -
+In order to better manage all the components of the vineyard in the kubernetes cluster, 
+we designed the vineyard operator, please check the `Vineyard Operator`_ for more information.
 
 FAQ
 ---
@@ -317,6 +273,7 @@ third-party libraries may not have the same license as vineyard.
 .. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/install.rst
 .. _Contributing: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _Getting Started: https://v6d.io/notes/getting-started.html
+.. _Vineyard Operator: https://github.com/v6d-io/v6d/blob/main/docs/notes/vineyard-operator.rst
 .. _Apache License 2.0: https://github.com/v6d-io/v6d/blob/main/LICENSE
 .. _contribution guide: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _time series prediction with LSTM: https://github.com/L1aoXingyu/code-of-learn-deep-learning-with-pytorch/blob/master/chapter5_RNN/time-series/lstm-time-series.ipynb
