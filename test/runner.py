@@ -834,6 +834,7 @@ def parse_sys_args():
         help="whether to run fuse test",
     )
     arg_parser.add_argument(
+        '-k',
         '--tests',
         action='extend',
         nargs="*",

@@ -112,7 +112,12 @@ def write(path, stream, *args, handlers=None, **kwargs):
                     **proc_kwargs
                 )
             except Exception:  # pylint: disable=broad-except
-                errors.append('%s: %s' % (writer.__name__, traceback.format_exc()))
+                exc = traceback.format_exc()
+                errors.append('%s: %s' % (writer.__name__, exc))
+                if 'StreamFailedException: Stream failed' in exc:
+                    # if the source stream has already failed, we should
+                    # fail immediately and don't try other drivers.
+                    break
                 continue
             else:
                 return

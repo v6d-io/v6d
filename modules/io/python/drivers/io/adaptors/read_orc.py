@@ -18,141 +18,139 @@
 
 import base64
 import json
+import logging
 import sys
+import traceback
 from typing import Dict
-from urllib.parse import urlparse
-
-import pyarrow as pa
 
 import fsspec
-import pyorc
+from fsspec.core import split_protocol
 
 import vineyard
 from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import expand_full_path
+from vineyard.io.utils import report_error
+from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
 
+logger = logging.getLogger('vineyard')
+
+
 try:
-    from vineyard.drivers.io import ossfs
-except ImportError:
-    ossfs = None
-
-if ossfs:
-    fsspec.register_implementation("oss", ossfs.OSSFileSystem)
-fsspec.register_implementation("hive", fsspec.implementations.hdfs.PyArrowHDFS)
+    from vineyard.drivers.io import fsspec_adaptors
+except Exception as e:  # pylint: disable=broad-except
+    logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc %s", e)
 
 
-def arrow_type(field):
-    if field.name == "decimal":
-        return pa.decimal128(field.precision)
-    elif field.name == "uniontype":
-        return pa.union(field.cont_types)
-    elif field.name == "array":
-        return pa.list_(field.type)
-    elif field.name == "map":
-        return pa.map_(field.key, field.value)
-    elif field.name == "struct":
-        return pa.struct(field.fields)
-    else:
-        types = {
-            "boolean": pa.bool_(),
-            "tinyint": pa.int8(),
-            "smallint": pa.int16(),
-            "int": pa.int32(),
-            "bigint": pa.int64(),
-            "float": pa.float32(),
-            "double": pa.float64(),
-            "string": pa.string(),
-            "char": pa.string(),
-            "varchar": pa.string(),
-            "binary": pa.binary(),
-            "timestamp": pa.timestamp("ms"),
-            "date": pa.date32(),
-        }
-        if field.name not in types:
-            raise ValueError("Cannot convert to arrow type: " + field.name)
-        return types[field.name]
+def make_empty_batch(schema):
+    import pyarrow
+
+    colmuns = [pyarrow.array([], t) for t in schema.types]
+    return pyarrow.RecordBatch.from_arrays(colmuns, schema.names)
 
 
-def read_single_orc(path, fs, writer):
-    chunk_rows = 1024 * 256
+def read_orc_blocks(fs, path, read_options, proc_num, proc_index, writer):
+    import pyarrow.orc
 
-    with fs.open(path, "rb") as f:
-        reader = pyorc.Reader(f)
-        fields = reader.schema.fields  # pylint: disable=no-member
-        schema = []
-        for c in fields:
-            schema.append((c, arrow_type(fields[c])))
-        pa_struct = pa.struct(schema)
-        while True:
-            rows = reader.read(num=chunk_rows)
-            if not rows:
-                break
-            batch = pa.RecordBatch.from_struct_array(pa.array(rows, type=pa_struct))
-            writer.write(batch)
+    columns = read_options.get('columns', None)
+    kwargs = {}
+    if columns:
+        kwargs['columns'] = columns.split(',')
+
+    with fs.open(path, 'rb') as f:
+        reader = pyarrow.orc.ORCFile(f)
+        stripes_per_proc = reader.nstripes // proc_num
+        if reader.nstripes % proc_num != 0:
+            stripes_per_proc += 1
+        stripe_begin = stripes_per_proc * proc_index
+        stripe_end = min(stripes_per_proc * (proc_index + 1), reader.nstripes)
+
+        if stripe_begin < stripe_end:
+            kwargs = {}
+            for stripe in range(stripe_begin, stripe_end):
+                batch = reader.read_stripe(stripe, **kwargs)
+                writer.write(batch)
+        else:
+            writer.write(make_empty_batch(reader.schema))
 
 
-def read_orc(
-    vineyard_socket,
-    path,
+def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
+    vineyard_socket: str,
+    path: str,
     storage_options: Dict,
     read_options: Dict,
-    _proc_num,
-    proc_index,
+    proc_num: int,
+    proc_index: int,
 ):
-    # This method is to read the data files of a specific hive table
-    # that is stored as orc format in HDFS.
-    #
-    # In general, the data files of a hive table are stored at the hive
-    # space in the HDFS with the table name as the directory,
-    # e.g.,
-    #
-    # .. code:: python
-    #
-    #    '/user/hive/warehouse/sometable'
-    #
-    # To read the entire table, simply use 'hive://user/hive/warehouse/sometable'
-    # as the path.
-    #
-    # In case the table is partitioned, use the sub-directory of a specific partition
-    # to read only the data from that partition. For example, sometable is partitioned
-    # by column date, we can read the data in a given date by giving path as
-    #
-    # .. code:: python
-    #
-    #    'hive://user/hive/warehouse/sometable/date=20201112'
-    #
-    if proc_index:
-        raise ValueError("Parallel reading ORC hasn't been supported yet")
-    if read_options:
-        raise ValueError("Reading ORC doesn't support read options.")
+    """Read bytes from external storage and produce a ByteStream,
+    which will later be assembled into a ParallelStream.
+
+    Args:
+        vineyard_socket (str): Ipc socket
+        path (str): External storage path to write to
+        storage_options (dict): Configurations of external storage
+        read_options (dict): Additional options that could control the
+                             behavior of read
+        proc_num (int): Total amount of process
+        proc_index (int): The sequence of this process
+
+    Raises:
+        ValueError: If the stream is invalid.
+    """
     client = vineyard.connect(vineyard_socket)
-    stream = DataframeStream.new(client)
-    client.persist(stream.id)
-    report_success(stream.id)
+    params = dict()
 
-    writer = stream.open_writer(client)
-    parsed = urlparse(path)
+    # Used when reading tables from external storage.
+    # Usually for load a property graph
+    #
+    # possbile values:
+    #
+    #   - columns, seperated by ','
+    for k, v in read_options.items():
+        params[k] = v
 
-    fs = fsspec.filesystem(parsed.scheme, **storage_options)
-    if fs.isfile(parsed.path):
-        files = [parsed.path]
+    try:
+        protocol = split_protocol(path)[0]
+        fs = fsspec.filesystem(protocol, **storage_options)
+    except Exception:  # pylint: disable=broad-except
+        report_error(
+            f"Cannot initialize such filesystem for '{path}', "
+            f"exception is:\n{traceback.format_exc()}"
+        )
+        sys.exit(-1)
+
+    if fs.isfile(path):
+        files = [path]
     else:
-        files = [f for f in fs.ls(parsed.path, detail=False) if fs.isfile(f)]
-    for file_path in files:
-        read_single_orc(file_path, fs, writer)
-    # hdfs = HDFileSystem(
-    #     host=host, port=int(port), pars={"dfs.client.read.shortcircuit": "false"}
-    # )
+        try:
+            files = fs.glob(path + '*')
+            assert files, f"Cannot find such files: {path}"
+        except Exception:  # pylint: disable=broad-except
+            report_error(f"Cannot find such files for '{path}'")
+            sys.exit(-1)
 
-    writer.finish()
+    stream, writer = None, None
+    try:
+        for index, file_path in enumerate(files):
+            if index == 0:
+                stream = DataframeStream.new(client, {})
+                client.persist(stream.id)
+                report_success(stream.id)
+                writer = stream.open_writer(client)
+            read_orc_blocks(fs, file_path, read_options, proc_num, proc_index, writer)
+        writer.finish()
+    except Exception:  # pylint: disable=broad-except
+        report_exception()
+        if writer is not None:
+            writer.fail()
+        sys.exit(-1)
 
 
 def main():
     if len(sys.argv) < 7:
         print(
-            "usage: ./read_orc <ipc_socket> <path/directory> <storage_options> "
-            "<read_options> <proc_num> <proc_index>"
+            "usage: ./read_orc <ipc_socket> <path> <storage_options> <read_options> "
+            "<proc_num> <proc_index>"
         )
         sys.exit(1)
     ipc_socket = sys.argv[1]
@@ -165,7 +163,7 @@ def main():
     )
     proc_num = int(sys.argv[5])
     proc_index = int(sys.argv[6])
-    read_orc(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
+    read_bytes(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
 
 
 if __name__ == "__main__":

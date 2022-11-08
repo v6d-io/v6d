@@ -225,7 +225,7 @@ def parse_bytes_to_dataframe(
     return launcher.wait()
 
 
-def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
+def read_vineyard_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     storage_options = kwargs.pop("storage_options", {})
@@ -246,6 +246,8 @@ def read_vineyard_dataframe(path, vineyard_socket, *args, **kwargs):
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.wait()
 
 
@@ -287,6 +289,25 @@ def read_orc(
     return launcher.wait()
 
 
+def read_parquet(
+    path, vineyard_socket, storage_options, read_options, *args, handlers=None, **kwargs
+):
+    deployment = kwargs.pop("deployment", "ssh")
+    launcher = ParallelStreamLauncher(deployment)
+    launcher.run(
+        get_executable("read_parquet"),
+        vineyard_socket,
+        path,
+        storage_options,
+        read_options,
+        *args,
+        **kwargs,
+    )
+    if handlers is not None:
+        handlers.append(launcher)
+    return launcher.wait()
+
+
 def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
@@ -299,6 +320,16 @@ def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
     )
     if ".orc" in path:
         return read_orc(
+            path,
+            vineyard_socket,
+            storage_options,
+            read_options,
+            *args,
+            handlers=handlers,
+            **kwargs.copy(),
+        )
+    elif ".parquet" in path or ".pq" in path:
+        return read_parquet(
             path,
             vineyard_socket,
             storage_options,
@@ -335,7 +366,9 @@ vineyard.io.read.register("oss", read_dataframe)
 vineyard.io.read.register("vineyard", read_vineyard_dataframe)
 
 
-def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs):
+def parse_dataframe_to_bytes(
+    vineyard_socket, dataframe_stream, *args, handlers=None, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -343,11 +376,20 @@ def parse_dataframe_to_bytes(vineyard_socket, dataframe_stream, *args, **kwargs)
         *((vineyard_socket, dataframe_stream) + args),
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.wait()
 
 
 def write_bytes(
-    path, byte_stream, vineyard_socket, storage_options, write_options, *args, **kwargs
+    path,
+    byte_stream,
+    vineyard_socket,
+    storage_options,
+    write_options,
+    *args,
+    handlers=None,
+    **kwargs,
 ):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -361,6 +403,8 @@ def write_bytes(
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     launcher.join()
 
 
@@ -371,6 +415,7 @@ def write_orc(
     storage_options,
     write_options,
     *args,
+    handlers=None,
     **kwargs,
 ):
     deployment = kwargs.pop("deployment", "ssh")
@@ -385,10 +430,41 @@ def write_orc(
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     launcher.join()
 
 
-def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
+def write_parquet(
+    path,
+    dataframe_stream,
+    vineyard_socket,
+    storage_options,
+    write_options,
+    *args,
+    handlers=None,
+    **kwargs,
+):
+    deployment = kwargs.pop("deployment", "ssh")
+    launcher = ParallelStreamLauncher(deployment)
+    launcher.run(
+        get_executable("write_parquet"),
+        vineyard_socket,
+        path,
+        dataframe_stream,
+        storage_options,
+        write_options,
+        *args,
+        **kwargs,
+    )
+    if handlers is not None:
+        handlers.append(launcher)
+    launcher.join()
+
+
+def write_dataframe(
+    path, dataframe_stream, vineyard_socket, *args, handlers=None, **kwargs
+):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
     write_options = kwargs.pop("write_options", {})
@@ -406,11 +482,23 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
             storage_options,
             write_options,
             *args,
+            handlers=handlers,
+            **kwargs.copy(),
+        )
+    elif ".parquet" in path or ".pq" in path:
+        write_parquet(
+            path,
+            dataframe_stream,
+            vineyard_socket,
+            storage_options,
+            write_options,
+            *args,
+            handlers=handlers,
             **kwargs.copy(),
         )
     else:
         stream = parse_dataframe_to_bytes(
-            vineyard_socket, dataframe_stream, *args, **kwargs.copy()
+            vineyard_socket, dataframe_stream, write_options, *args, **kwargs.copy()
         )
         write_bytes(
             path,
@@ -419,6 +507,7 @@ def write_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
             storage_options,
             write_options,
             *args,
+            handlers=handlers,
             **kwargs.copy(),
         )
 
@@ -450,7 +539,9 @@ def create_global_dataframe(
     return gdf.id
 
 
-def write_vineyard_dataframe(path, dataframe_stream, vineyard_socket, *args, **kwargs):
+def write_vineyard_dataframe(
+    path, dataframe_stream, vineyard_socket, *args, handlers=None, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -460,6 +551,8 @@ def write_vineyard_dataframe(path, dataframe_stream, vineyard_socket, *args, **k
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.join_with_aggregator(
         aggregator=create_global_dataframe, name=path[len("vineyard://") :]
     )
@@ -530,7 +623,7 @@ def merge_global_object(vineyard_endpoint, results: List[List[ObjectID]]) -> Obj
 
 
 def write_bytes_collection(
-    path, byte_stream, vineyard_socket, storage_options, *args, **kwargs
+    path, byte_stream, vineyard_socket, storage_options, *args, handlers=None, **kwargs
 ):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -543,10 +636,14 @@ def write_bytes_collection(
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     launcher.join()
 
 
-def read_bytes_collection(path, vineyard_socket, storage_options, *args, **kwargs):
+def read_bytes_collection(
+    path, vineyard_socket, storage_options, *args, handlers=None, **kwargs
+):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -557,10 +654,12 @@ def read_bytes_collection(path, vineyard_socket, storage_options, *args, **kwarg
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.wait()
 
 
-def serialize_to_stream(object_id, vineyard_socket, *args, **kwargs):
+def serialize_to_stream(object_id, vineyard_socket, *args, handlers=None, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     serialization_options = kwargs.pop("serialization_options", {})
     serialization_options = base64.b64encode(
@@ -575,23 +674,33 @@ def serialize_to_stream(object_id, vineyard_socket, *args, **kwargs):
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.wait()
 
 
-def serialize(path, object_id, vineyard_socket, *args, **kwargs):
+def serialize(path, object_id, vineyard_socket, *args, handlers=None, **kwargs):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
     storage_options = base64.b64encode(
         json.dumps(storage_options).encode("utf-8")
     ).decode("utf-8")
 
-    stream = serialize_to_stream(object_id, vineyard_socket, *args, **kwargs.copy())
+    stream = serialize_to_stream(
+        object_id, vineyard_socket, *args, handlers=handlers, **kwargs.copy()
+    )
     write_bytes_collection(
-        path, stream, vineyard_socket, storage_options, *args, **kwargs.copy()
+        path,
+        stream,
+        vineyard_socket,
+        storage_options,
+        *args,
+        handlers=handlers,
+        **kwargs.copy(),
     )
 
 
-def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
+def deserialize_from_stream(stream, vineyard_socket, *args, handlers=None, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -601,18 +710,22 @@ def deserialize_from_stream(stream, vineyard_socket, *args, **kwargs):
         *args,
         **kwargs,
     )
+    if handlers is not None:
+        handlers.append(launcher)
     return launcher.join_with_aggregator(aggregator=merge_global_object)
 
 
-def deserialize(path, vineyard_socket, *args, **kwargs):
+def deserialize(path, vineyard_socket, *args, handlers=None, **kwargs):
     storage_options = kwargs.pop("storage_options", {})
     storage_options = base64.b64encode(
         json.dumps(storage_options).encode("utf-8")
     ).decode("utf-8")
     stream = read_bytes_collection(
-        path, vineyard_socket, storage_options, *args, **kwargs
+        path, vineyard_socket, storage_options, *args, handlers=handlers, **kwargs
     )
-    return deserialize_from_stream(stream, vineyard_socket, *args, **kwargs.copy())
+    return deserialize_from_stream(
+        stream, vineyard_socket, *args, handlers=handlers, **kwargs.copy()
+    )
 
 
 vineyard.io.serialize.register("default", serialize)

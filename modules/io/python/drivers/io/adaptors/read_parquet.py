@@ -24,13 +24,12 @@ import traceback
 from typing import Dict
 
 import fsspec
+import fsspec.implementations.arrow
 from fsspec.core import split_protocol
-from fsspec.utils import read_block
 
 import vineyard
-from vineyard.io.byte import ByteStream
+from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import expand_full_path
-from vineyard.io.utils import parse_readable_size
 from vineyard.io.utils import report_error
 from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
@@ -44,55 +43,41 @@ except Exception as e:  # pylint: disable=broad-except
     logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc %s", e)
 
 
-# Note [Semantic of read_block with delimiter]:
-#
-# read_block(fp, begin, size, delimiter) will:
-#
-#    - find the first `delimiter` from `begin`, then starts read
-#    - after `size`, go through util the next `delimiter` or EOF,
-#      then finishes read.
-#
-# Note that the returned size may exceed `size`.
-#
+def make_empty_batch(schema):
+    import pyarrow
+
+    colmuns = [pyarrow.array([], t) for t in schema.types]
+    return pyarrow.RecordBatch.from_arrays(colmuns, schema.names)
 
 
-def read_byte_blocks(
-    fp,
-    proc_num,
-    proc_index,
-    index,
-    header_row,
-    offset,
-    chunk_size,
-    read_block_delimiter,
-    writer,
-):
-    try:
-        total_size = fp.size()
-    except TypeError:
-        total_size = fp.size
-    part_size = (total_size - offset) // proc_num
-    begin = part_size * proc_index + offset
-    end = min(begin + part_size, total_size)
+def read_parquet_blocks(fs, path, read_options, proc_num, proc_index, writer):
+    import pyarrow.parquet
 
-    # See Note [Semantic of read_block with delimiter].
-    if index == 0 and proc_index == 0:
-        begin -= int(header_row)
+    columns = read_options.get('columns', None)
+    kwargs = {}
+    if columns:
+        kwargs['columns'] = columns.split(',')
 
-    while begin < end:
-        buffer = read_block(
-            fp,
-            begin,
-            min(chunk_size, end - begin),
-            delimiter=read_block_delimiter,
+    with fs.open(path, 'rb') as f:
+        reader = pyarrow.parquet.ParquetFile(f)
+        row_groups_per_proc = reader.num_row_groups // proc_num
+        if reader.num_row_groups % proc_num != 0:
+            row_groups_per_proc += 1
+        row_group_begin = row_groups_per_proc * proc_index
+        row_group_end = min(
+            row_groups_per_proc * (proc_index + 1), reader.num_row_groups
         )
-        size = len(buffer)
-        if size <= 0:
-            break
-        begin += size
-        if size > 0:
-            chunk = writer.next(size)
-            vineyard.memory_copy(chunk, 0, buffer)
+
+        if row_group_begin < row_group_end:
+            kwargs = {}
+            for batch in reader.iter_batches(
+                row_groups=range(row_group_begin, row_group_end),
+                use_threads=False,
+                **kwargs,
+            ):
+                writer.write(batch)
+        else:
+            writer.write(make_empty_batch(reader.schema_arrow))
 
 
 def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
@@ -121,20 +106,14 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     client = vineyard.connect(vineyard_socket)
     params = dict()
 
-    read_block_delimiter = read_options.pop('read_block_delimiter', '\n')
-    if read_block_delimiter is not None:
-        read_block_delimiter = read_block_delimiter.encode('utf-8')
-
     # Used when reading tables from external storage.
     # Usually for load a property graph
-    header_row = read_options.get("header_row", False)
+    #
+    # possbile values:
+    #
+    #   - columns, seperated by ','
     for k, v in read_options.items():
-        if k in ("header_row", "include_all_columns"):
-            params[k] = "1" if v else "0"
-        elif k == "delimiter":
-            params[k] = bytes(v, "utf-8").decode("unicode_escape")
-        else:
-            params[k] = v
+        params[k] = v
 
     try:
         protocol = split_protocol(path)[0]
@@ -157,41 +136,16 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
             sys.exit(-1)
 
     stream, writer = None, None
-    if 'chunk_size' in storage_options:
-        chunk_size = parse_readable_size(storage_options['chunk_size'])
-    else:
-        chunk_size = 1024 * 1024 * 64  # default: 64MB
-
     try:
         for index, file_path in enumerate(files):
-            with fs.open(file_path, mode="rb") as fp:
-                offset = 0
-                # Only process header line when processing first file
-                # And open the writer when processing first file
-                if index == 0:
-                    if header_row:
-                        header_line = read_block(fp, 0, 1, read_block_delimiter)
-                        params["header_line"] = header_line.decode("unicode_escape")
-                        if header_line[0:3] == b'\xef\xbb\xbf':
-                            header_line = header_line[3:]
-                        offset = len(header_line)
-                    stream = ByteStream.new(client, params)
-                    client.persist(stream.id)
-                    report_success(stream.id)
-                    writer = stream.open_writer(client)
-
-                read_byte_blocks(
-                    fp,
-                    proc_num,
-                    proc_index,
-                    index,
-                    header_row,
-                    offset,
-                    chunk_size,
-                    read_block_delimiter,
-                    writer,
-                )
-
+            if index == 0:
+                stream = DataframeStream.new(client, {})
+                client.persist(stream.id)
+                report_success(stream.id)
+                writer = stream.open_writer(client)
+            read_parquet_blocks(
+                fs, file_path, read_options, proc_num, proc_index, writer
+            )
         writer.finish()
     except Exception:  # pylint: disable=broad-except
         report_exception()
@@ -203,8 +157,8 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
 def main():
     if len(sys.argv) < 7:
         print(
-            "usage: ./read_bytes <ipc_socket> <path> <storage_options> <read_options> "
-            "<proc_num> <proc_index>"
+            "usage: ./read_parquet <ipc_socket> <path> <storage_options> "
+            "<read_options> <proc_num> <proc_index>"
         )
         sys.exit(1)
     ipc_socket = sys.argv[1]

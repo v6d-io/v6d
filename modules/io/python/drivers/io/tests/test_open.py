@@ -50,69 +50,192 @@ import pytest
 
 import vineyard
 import vineyard.io
+from vineyard.io.utils import capture_exception
 
 
-def test_local_with_header(
+def test_local_csv_with_header(
     vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
 ):
+    handlers = []
     stream = vineyard.io.open(
         "file://%s/p2p-31.e" % test_dataset,
         vineyard_ipc_socket=vineyard_ipc_socket,
         vineyard_endpoint=vineyard_endpoint,
         read_options={"header_row": True, "delimiter": " "},
+        handlers=handlers,
     )
-    vineyard.io.open(
-        "file://%s/p2p-31.out" % test_dataset_tmp,
-        stream,
-        mode="w",
-        vineyard_ipc_socket=vineyard_ipc_socket,
-        vineyard_endpoint=vineyard_endpoint,
-    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
     assert filecmp.cmp(
         "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
     )
 
 
-def test_local_without_header(
+def test_local_csv_without_header(
     vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
 ):
+    handlers = []
     stream = vineyard.io.open(
         "file://%s/p2p-31.e" % test_dataset,
         vineyard_ipc_socket=vineyard_ipc_socket,
         vineyard_endpoint=vineyard_endpoint,
         read_options={"header_row": False, "delimiter": " "},
+        handlers=handlers,
     )
-    vineyard.io.open(
-        "file://%s/p2p-31.out" % test_dataset_tmp,
-        stream,
-        mode="w",
-        vineyard_ipc_socket=vineyard_ipc_socket,
-        vineyard_endpoint=vineyard_endpoint,
-    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
     assert filecmp.cmp(
         "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
     )
 
 
-@pytest.mark.skip()
-def test_local_orc(
+def test_local_parquet_to_csv(
     vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
 ):
+    handlers = []
+    stream = vineyard.io.open(
+        "file://%s/p2p-31.e.parquet" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    print('finish joined: ', flush=True)
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
+def test_local_orc_to_csv(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
     stream = vineyard.io.open(
         "file://%s/p2p-31.e.orc" % test_dataset,
         vineyard_ipc_socket=vineyard_ipc_socket,
         vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
     )
-    vineyard.io.open(
-        "file://%s/testout.orc" % test_dataset_tmp,
-        stream,
-        mode="w",
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
+def test_local_parquet_to_parquet(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
+    stream = vineyard.io.open(
+        "file://%s/p2p-31.e.parquet" % test_dataset,
         vineyard_ipc_socket=vineyard_ipc_socket,
         vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
     )
-    assert filecmp.cmp(
-        "%s/p2p-31.e.orc" % test_dataset, "%s/testout.orc_0" % test_dataset_tmp
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/testout.parquet" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    # Have manually verified that they have the same content, but the
+    # bytes seems different.
+    #
+    # assert filecmp.cmp(
+    #     "%s/p2p-31.e.parquet" % test_dataset,
+    #     "%s/testout.parquet_0" % test_dataset_tmp
+    # )
+
+
+def test_local_orc_to_orc(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
+    stream = vineyard.io.open(
+        "file://%s/p2p-31.e.orc" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
     )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/testout.orc" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    # Have manually verified that they have the same content
+    #
+    # assert filecmp.cmp(
+    #     "%s/p2p-31.e.orc" % test_dataset, "%s/testout.orc_0" % test_dataset_tmp
+    # )
 
 
 @pytest.mark.skip_without_hdfs()
@@ -178,7 +301,7 @@ def test_hive(vineyard_ipc_socket, vineyard_endpoint, test_dataset, hive_endpoin
 
 
 @pytest.mark.skip_without_hdfs()
-def test_hdfs_tag(
+def test_hdfs_ldbc_tag_table(
     vineyard_ipc_socket,
     vineyard_endpoint,
     test_dataset,
