@@ -45,3 +45,12 @@ and can be easily deployed to a Kubernetes cluster.
    ^^^^^^^^^^^^
    Vineyard can be deployed on Kubernetes in various configurations.
 
+   ---
+
+   .. link-button:: notes/vineyard-operator
+      :type: ref
+      :text: Vineyard Operator
+      :classes: btn-block stretched-link text-left
+   ^^^^^^^^^^^^
+   Applications and objects on Vineyard on Kubernetes is managed and orchestrated by
+   vineyard-operator.
