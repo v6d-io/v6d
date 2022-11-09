@@ -1,3 +1,5 @@
+.. _vineyard-objects:
+
 Internals of Objects
 ====================
 
