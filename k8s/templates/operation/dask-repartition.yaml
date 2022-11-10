@@ -29,7 +29,7 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: GLOBALOBJECT_ID
-          value: {{ $config.GlobalobjectID  }}
+          value: {{ $config.GlobalObjectID  }}
         - name: Replicas
           value: {{ $config.Replicas  }}
         - name: InstanceToWorker

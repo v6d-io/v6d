@@ -495,9 +495,9 @@ for its required inputs and all required configurations are listed as follows:
 
    * - "scheduling.k8s.v6d.io/vineyardd"
      - labels
-     - The name of vineyardd. Notice, the vineyardd's
-       namespace is generally recommended to be set
-       to `vineyard-system`.
+     - The name or namespaced name of vineyardd. e.g.,
+       `vineyard-sample` or
+       `vineyard-system/vineyard-sample`.
 
    * - "scheduling.k8s.v6d.io/job ""
      - labels
@@ -537,6 +537,7 @@ then deploy `workflow-job1`_ as follows.
         labels:
           app: v6d-workflow-demo-job1
           # vineyardd's name
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           # job name
           scheduling.k8s.v6d.io/job: v6d-workflow-demo-job1
@@ -557,8 +558,7 @@ then deploy `workflow-job1`_ as follows.
         volumes:
         - name: vineyard-sock
           hostPath:
-            # the path name is combined by `vineyard-{vineyardd's namespace}-{vineyardd's name}`
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
 
 We can see the created job and the objects produced by it:
@@ -619,6 +619,7 @@ Then deploy the `workflow-job2`_ as follows,
         labels:
           app: v6d-workflow-demo-job2
           # vineyardd's name
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           # job name
           scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
@@ -648,7 +649,7 @@ Then deploy the `workflow-job2`_ as follows,
           volumes:
           - name: vineyard-sock
             hostPath:
-              path: /var/run/vineyard-vineyard-system-vineyardd-sample
+              path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
 
 Now you can see that both jobs has been scheduled and became running:
@@ -882,6 +883,7 @@ running the following yaml file.
           labels:
             app: assembly-job1
             # this label represents the vineyardd's name that need to be used
+            scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
             scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
             scheduling.k8s.v6d.io/job: assembly-job1
         spec:
@@ -899,7 +901,7 @@ running the following yaml file.
           volumes:
             - name: vineyard-sock
               hostPath:
-                path: /var/run/vineyard-vineyard-system-vineyardd-sample
+                path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
     # we can get the localobjects produced by the first workload, it's a stream type.
     $ kubectl get localobjects -n vineyard-system
@@ -938,6 +940,7 @@ The following is the yaml file of the `assembly workload2`_:
           assembly.v6d.io/enabled: "true"
           assembly.v6d.io/type: "local"
           # this label represents the vineyardd's name that need to be used
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           scheduling.k8s.v6d.io/job: assembly-job2
       spec:
@@ -960,7 +963,7 @@ The following is the yaml file of the `assembly workload2`_:
         volumes:
           - name: vineyard-sock
             hostPath:
-              path: /var/run/vineyard-vineyard-system-vineyardd-sample
+              path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
   EOF
 
 
@@ -1132,7 +1135,7 @@ running the following yaml file.
       volumes:
         - name: vineyard-sock
           hostPath:
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
       volumeMounts:
         - mountPath: /var/run
           name: vineyard-sock
@@ -1169,6 +1172,7 @@ Deploy the `repartition workload1`_ as follows:
           repartition.v6d.io/type: "dask"
           scheduling.k8s.v6d.io/replicas: "1"
           # this label represents the vineyardd's name that need to be used
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           scheduling.k8s.v6d.io/job: dask-repartition-job1
       spec:
@@ -1188,7 +1192,7 @@ Deploy the `repartition workload1`_ as follows:
         volumes:
         - name: vineyard-sock
           hostPath:
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
   EOF
 
 The first workload will create 4 partitions (each partition as a localobject):
@@ -1237,6 +1241,7 @@ Deploy the `repartition workload2`_ as follows:
           repartition.v6d.io/type: "dask"
           scheduling.k8s.v6d.io/replicas: "1"
           # this label represents the vineyardd's name that need to be used
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           scheduling.k8s.v6d.io/job: dask-repartition-job2
       spec:
@@ -1261,7 +1266,7 @@ Deploy the `repartition workload2`_ as follows:
         volumes:
         - name: vineyard-sock
           hostPath:
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
   EOF
 
 The second workload waits for the repartition operation to finish:

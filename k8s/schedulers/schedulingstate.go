@@ -186,8 +186,8 @@ func (ss *SchedulerState) checkOperationLabels(ctx context.Context, pod *v1.Pod)
 					return 0, err
 				}
 			}
-			if op.Status.State != "succeeded" {
-				return 0, nil
+			if op.Status.State != v1alpha1.OperationSucceeded {
+				return 0, fmt.Errorf("operation %v is not succeeded, state is: %v", opName, op.Status.State)
 			}
 		}
 	}
@@ -281,7 +281,6 @@ func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []st
 			}
 		}
 		klog.V(5).Infof("the configmap [%v/%v] exist!", namespace, jobname[i])
-
 	}
 
 	return nil

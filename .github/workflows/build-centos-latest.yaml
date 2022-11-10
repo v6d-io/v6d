@@ -23,6 +23,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     container:
       image: centos:latest
     strategy:

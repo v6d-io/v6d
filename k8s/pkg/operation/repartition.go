@@ -30,6 +30,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/schedulers"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -64,12 +65,12 @@ type DaskRepartitionConfig struct {
 	VineyardSockPath string
 }
 
-// TmpDaskRepartitionConfig is the template config for the dask repartition job
-var TmpDaskRepartitionConfig DaskRepartitionConfig
+// DaskRepartitionConfigTemplate is the template config for the dask repartition job
+var DaskRepartitionConfigTemplate DaskRepartitionConfig
 
 // GetDaskRepartitionConfig gets the dask repartition config
 func GetDaskRepartitionConfig() DaskRepartitionConfig {
-	return TmpDaskRepartitionConfig
+	return DaskRepartitionConfigTemplate
 }
 
 // CreateJob creates the job for the repartition
@@ -171,20 +172,24 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 		return fmt.Errorf("failed to get replicas from target jobs")
 	}
 
-	TmpDaskRepartitionConfig.Replicas = "'" + replicas + "'"
-	TmpDaskRepartitionConfig.Name = RepartitionPrefix + globalObject.Name
-	TmpDaskRepartitionConfig.Namespace = pod.Namespace
-	TmpDaskRepartitionConfig.GlobalObjectID = globalObject.Name
-	TmpDaskRepartitionConfig.DaskScheduler = "'" + anno[schedulers.DaskScheduler] + "'"
-	TmpDaskRepartitionConfig.JobName = pod.Labels[schedulers.VineyardJobName]
-	TmpDaskRepartitionConfig.InstanceToWorker = instanceToWorker
-	TmpDaskRepartitionConfig.TimeoutSeconds = o.Spec.TimeoutSeconds
-
-	vineyardd, ok := pod.Labels[schedulers.VineyarddName]
-	if !ok {
-		return fmt.Errorf("failed to get vineyardd name from pod labels")
+	DaskRepartitionConfigTemplate.Replicas = "'" + replicas + "'"
+	DaskRepartitionConfigTemplate.Name = RepartitionPrefix + globalObject.Name
+	DaskRepartitionConfigTemplate.Namespace = pod.Namespace
+	DaskRepartitionConfigTemplate.GlobalObjectID = globalObject.Name
+	DaskRepartitionConfigTemplate.DaskScheduler = "'" + anno[schedulers.DaskScheduler] + "'"
+	DaskRepartitionConfigTemplate.JobName = pod.Labels[schedulers.VineyardJobName]
+	DaskRepartitionConfigTemplate.InstanceToWorker = instanceToWorker
+	DaskRepartitionConfigTemplate.TimeoutSeconds = o.Spec.TimeoutSeconds
+	if socket, err := ro.ResolveRequiredVineyarddSocket(
+		ctx,
+		pod.Labels[schedulers.VineyarddName],
+		pod.Labels[schedulers.VineyarddNamespace],
+		globalObject.Namespace,
+	); err != nil {
+		return nil
+	} else {
+		DaskRepartitionConfigTemplate.VineyardSockPath = socket
 	}
-	TmpDaskRepartitionConfig.VineyardSockPath = "/var/run/vineyard-" + globalObject.Namespace + "-" + vineyardd
 	return nil
 }
 
@@ -216,6 +221,9 @@ func (ro *RepartitionOperation) applyDaskRepartitionJob(ctx context.Context, o *
 	for i := range globalObjectList.Items {
 		pod, err := ro.findNeedDaskRepartitionPodByGlobalObject(ctx, &globalObjectList.Items[i].Labels)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
 			return fmt.Errorf("failed to find the pod which needs to be injected with the repartition job: %v", err)
 		}
 		if pod != nil {
@@ -274,7 +282,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 	}
 
 	data := map[string]string{}
-	data["InstanceToWorker"] = strings.Trim(TmpDaskRepartitionConfig.InstanceToWorker, "'")
+	data["InstanceToWorker"] = strings.Trim(DaskRepartitionConfigTemplate.InstanceToWorker, "'")
 	if err := ro.UpdateConfigmap(ctx, targetGlobalObjects, o, RepartitionPrefix, &data); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}

@@ -155,7 +155,7 @@ spec:
                 default: 256Mi
                 type: string
               socket:
-                default: /var/run/vineyard.sock
+                default: /var/run/vineyard-kubernetes/{{ .Namespace }}/{{ .Name }}
                 type: string
               spillConfig:
                 properties:

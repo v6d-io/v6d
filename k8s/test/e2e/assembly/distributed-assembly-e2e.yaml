@@ -18,8 +18,6 @@ setup:
   env: kind
   file: ../kind.yaml
   steps:
-    - name: prepare e2e.yaml
-      command: bash k8s/test/hack/prepare-e2e.sh
     - name: install cert-manager
       command: |
         kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
@@ -29,9 +27,7 @@ setup:
           for: condition=Ready
     - name: install scheduler-plugin and operator
       command: |
-        make -C k8s docker-build
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
-        make -C k8s predeploy
         make -C k8s deploy
       wait:
         - namespace: vineyard-system
@@ -50,11 +46,11 @@ setup:
         kubectl label namespace vineyard-job operation-injection=enabled
         sed 's/$job/distributedJob1/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
         kubectl wait --for=condition=Ready pod -l app=distributed-assembly-job1 -n vineyard-job --timeout=5m
-        while [ -z $(kubectl get po -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]; \
+        while [ -z $(kubectl get pod -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]; \
         do \
           sleep 0.1; \
         done
-        export meta=$(kubectl get po -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export meta=$(kubectl get pod -l app=distributed-assembly-job1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
         export metadata_id=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
         sed 's/METADATA_ID_VALUE/'$metadata_id'/;s/$job/distributedJob2/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
       wait:
@@ -82,5 +78,5 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
   cases:
-    - query: 'kubectl get po -l app=distributed-assembly-job3 -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
+    - query: 'kubectl get pod -l app=distributed-assembly-job3 -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
       expected: ../verify/distributed-assembly-values.yaml

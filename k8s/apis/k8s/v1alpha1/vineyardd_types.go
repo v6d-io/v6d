@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"bytes"
+	"text/template"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,9 +104,10 @@ type VineyarddSpec struct {
 	// +kubebuilder:default:=true
 	SyncCRDs bool `json:"syncCRDs"`
 
-	// ipc socket file location
+	// The directory on host for the IPC socket file. The UNIX-domain
+	// socket will be placed as `${Socket}/vineyard.sock`.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/var/run/vineyard.sock"
+	// +kubebuilder:default:="/var/run/vineyard-kubernetes/{{ .Namespace }}/{{ .Name }}"
 	Socket string `json:"socket"`
 	// vineyardd's service
 	// +kubebuilder:validation:Optional
@@ -185,6 +189,18 @@ type VineyarddList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Vineyardd `json:"items"`
+}
+
+func PreprocessVineyarddSocket(vineyardd *Vineyardd) {
+	if vineyardd.Spec.Socket == "" {
+		return
+	}
+	if tpl, err := template.New("vineyardd").Parse(vineyardd.Spec.Socket); err == nil {
+		var buf bytes.Buffer
+		if err := tpl.Execute(&buf, vineyardd); err == nil {
+			vineyardd.Spec.Socket = buf.String()
+		}
+	}
 }
 
 func init() {

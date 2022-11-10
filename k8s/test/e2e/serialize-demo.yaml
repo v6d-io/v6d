@@ -32,6 +32,7 @@ spec:
       labels:
         app: serialize-demo
         # this label represents the vineyardd's name that need to be used
+        scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
         scheduling.k8s.v6d.io/job: serialize-demo
     spec:
@@ -48,7 +49,7 @@ spec:
       volumes:
       - name: vineyard-sock
         hostPath:
-          path: /var/run/vineyard-vineyard-system-vineyardd-sample
+          path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
       - name: serialize-pvc
         persistentVolumeClaim:
           claimName: serialize-path

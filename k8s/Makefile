@@ -122,9 +122,12 @@ lint: golint
 .PHONY: lint
 
 # Run go fmt against code
-fmt:
+gofmt:
 	go fmt main.go
 	go fmt $(modules)
+.PHONY: gofmt
+
+fmt: gofmt
 .PHONY: fmt
 
 # Run go vet against code

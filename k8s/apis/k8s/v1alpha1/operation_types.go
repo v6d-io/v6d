@@ -50,7 +50,7 @@ type OperationStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Operation",type=string,JSONPath=`.spec.name`
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.type`
-// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.name`
+// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 
 // Operation is the Schema for the operations API
 type Operation struct {
@@ -69,6 +69,15 @@ type OperationList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Operation `json:"items"`
 }
+
+const (
+	// OperationRunning is the running state of the job
+	OperationRunning = "running"
+	// OperationSucceeded is the succeeded state of the job
+	OperationSucceeded = "succeeded"
+	// OperationFailed is the failed state of the job
+	OperationFailed = "failed"
+)
 
 func init() {
 	SchemeBuilder.Register(&Operation{}, &OperationList{})

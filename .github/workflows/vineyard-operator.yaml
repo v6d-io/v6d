@@ -27,25 +27,35 @@ on:
   pull_request:
     branches:
       - main
-    tags:
-      - 'v*'
     paths:
       - '.github/workflows/vineyard-operator.yaml'
       - 'k8s/**'
       - 'src/server/util/kubectl*'
 
+env:
+  IMG: vineyardcloudnative/vineyard-operator:latest
+  NIGHTLY_IMG: docker.pkg.github.com/v6d-io/v6d/vineyard-operator:nightly
+  LATEST_IMG: docker.pkg.github.com/v6d-io/v6d/vineyard-operator:latest
+
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    env:
-      IMG: docker.pkg.github.com/v6d-io/v6d/vineyard-operator
+  ci:
+    runs-on: ubuntu-20.04
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        job:
+          - release
+          - e2e-tests-vineyardd
+          - e2e-tests-serialize
+          - e2e-tests-spill
+          - e2e-tests-released-operator
+          - e2e-tests-local-assembly
+          - e2e-tests-distributed-assembly
+          - e2e-tests-dask-repartition
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: false  # we don't need submodules for building the k8s operator
 
       - uses: actions/setup-go@v2
         with:
@@ -53,200 +63,113 @@ jobs:
 
       - name: Golang format and lint
         run: |
-          cd k8s
-          make golint
-          if [ $? -ne ]; then
+          function prepend() { while read line; do echo "${1}${line}"; done; }
+
+          make -C k8s fmt
+          GIT_DIFF=$(git diff --ignore-submodules)
+          if [[ -n $GIT_DIFF ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-              echo "| golangci-lint (golang format) failures found!"
+              echo "| gofmt failures found!"
               echo "|"
-              echo "|    ${GOPATH}/bin/golangci-lint run ./... --fix"
+              echo "$GIT_DIFF" | prepend "| "
+              echo "|"
+              echo "| Run: "
+              echo "|"
+              echo "|    make -C k8s fmt"
               echo "|"
               echo "| to fix this error."
-              echo "|"
-              echo "| The tool golangci-lint can be installed by"
-              echo "|"
-              echo "|    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
-              echo "|"
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               exit -1
           fi
 
-      - name: Login docker registry
-        if: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))) && github.repository == 'v6d-io/v6d' }}
-        run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://docker.pkg.github.com -u $GITHUB_ACTOR --password-stdin
+          function ec() { [[ "$1" == "-h" ]] && { shift && eval $* > /dev/null 2>&1; ec=$?; echo $ec; } || eval $*; ec=$?; }
 
-      - name: Upload docker image as nightly
-        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
+          ec make -C k8s golint
+          if [[ "$ec" != "0" ]]; then
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              echo "| golangci-lint (golang format) failures found!"
+              echo "|"
+              echo "| Run: "
+              echo "|"
+              echo "|    ${GOPATH}/bin/golangci-lint run ./... --fix"
+              echo "|"
+              echo "| to fix this error."
+              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              exit -1
+          fi
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build docker image
         run: |
           cd k8s
-          sudo make docker-build IMG=${IMG}:${{ github.sha }}
-          sudo docker tag ${IMG}:${{ github.sha }} ${IMG}:nightly
-          sudo docker push ${IMG}:nightly
+          sudo make docker-build
+
+      - name: Upload nightly docker image
+        if: ${{ matrix.job == 'release' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
+        run: |
+          sudo docker tag ${IMG} ${NIGHTLY_IMG}
+          sudo docker push ${NIGHTLY_IMG}
 
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
-      - name: Publish docker images for releases
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
-        run: |
-          cd k8s
-          sudo make docker-build IMG=${IMG}:${{ github.sha }}
-          sudo docker tag ${IMG}:${{ github.sha }} ${IMG}:latest
-          sudo docker push ${IMG}:latest
 
-  vineyardd-e2e-tests:
-    name: e2e tests(vineyardd)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-        id: go
-      - name: Log in to GitHub Docker Registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: docker.pkg.github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Run E2E Test(vineyardd)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+      - name: Upload latest docker image
+        if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: |
+          sudo docker tag ${IMG} ${LATEST_IMG}
+          sudo docker push ${LATEST_IMG}
+
+      - name: Install e2e test dependencies
+        if: ${{ matrix.job != 'release' }}
+        run: |
+          sudo bash k8s/test/hack/prepare-e2e.sh
+
+      - name: e2e-tests-vineyardd
+        if: ${{ matrix.job == 'e2e-tests-vineyardd' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/vineyardd/e2e.yaml
 
-  serialize-e2e-tests:
-    name: e2e tests(serialize)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-        id: go
-      - name: Log in to GitHub Docker Registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: docker.pkg.github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Run E2E Test(serialize)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+      - name: e2e-tests-serialize
+        if: ${{ matrix.job == 'e2e-tests-serialize' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/serialize/e2e.yaml
 
-  spill-e2e-tests:
-    name: e2e tests(spill)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-        id: go
-      - name: Log in to GitHub Docker Registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: docker.pkg.github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Run E2E Test(spill)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+      - name: e2e-tests-spill
+        if: ${{ matrix.job == 'e2e-tests-spill' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/spill/e2e.yaml
 
-  released-operator-e2e-tests:
-    name: e2e tests(released-operator)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-        id: go
-      - name: Log in to GitHub Docker Registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: docker.pkg.github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Run E2E Test(released-operator)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+      - name: e2e-tests-released-operator
+        if: ${{ matrix.job == 'e2e-tests-released-operator' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/released-operator/e2e.yaml
 
-  local-assembly-e2e-tests:
-    name: e2e tests(local-assembly)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-        id: go
-      - name: Log in to GitHub Docker Registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: docker.pkg.github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Run E2E Test(local-assembly)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+      - name: e2e-tests-local-assembly
+        if: ${{ matrix.job == 'e2e-tests-local-assembly' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/assembly/local-assembly-e2e.yaml
 
-  distributed-assembly-e2e-tests:
-    name: e2e tests(distributed-assembly)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-        id: go
-      - name: Log in to GitHub Docker Registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: docker.pkg.github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Run E2E Test(distributed-assembly)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+      - name: e2e-tests-distributed-assembly
+        if: ${{ matrix.job == 'e2e-tests-distributed-assembly' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/assembly/distributed-assembly-e2e.yaml
 
-  dask-repartition-e2e-tests:
-    name: e2e tests(dask-repartition)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
-        id: go
-      - name: Log in to GitHub Docker Registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: docker.pkg.github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Run E2E Test(distributed-assembly)
-        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421 # always prefer to use a revision instead of `main`.
+      - name: e2e-tests-dask-repartition
+        if: ${{ matrix.job == 'e2e-tests-dask-repartition' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/repartition/dask-repartition-e2e.yaml

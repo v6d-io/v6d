@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -34,12 +35,12 @@ type ClientUtils struct {
 }
 
 // UpdateConfigmap will update the configmap when the assembly operation is done
-func (cu *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]bool,
+func (c *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]bool,
 	o *v1alpha1.Operation, prefix string, data *map[string]string) error {
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 
 	// get all globalobjects which may need to be injected with the assembly job
-	if err := cu.List(ctx, globalObjectList); err != nil {
+	if err := c.List(ctx, globalObjectList); err != nil {
 		return fmt.Errorf("failed to list the global objects: %v", err)
 	}
 	// build new global object
@@ -65,7 +66,7 @@ func (cu *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]bo
 		namespace := o.Namespace
 		// update the configmap
 		configmap := &corev1.ConfigMap{}
-		err := cu.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, configmap)
+		err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, configmap)
 		if err != nil && !apierrors.IsNotFound(err) {
 			ctrl.Log.Info("failed to get the configmap")
 			return err
@@ -83,7 +84,7 @@ func (cu *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]bo
 				},
 				Data: *data,
 			}
-			if err := cu.Create(ctx, &cm); err != nil {
+			if err := c.Create(ctx, &cm); err != nil {
 				ctrl.Log.Error(err, "failed to create the configmap")
 				return err
 			}
@@ -96,11 +97,29 @@ func (cu *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]bo
 			for k, v := range *data {
 				configmap.Data[k] = v
 			}
-			if err := cu.Update(ctx, configmap); err != nil {
+			if err := c.Update(ctx, configmap); err != nil {
 				ctrl.Log.Error(err, "failed to update the configmap")
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (c *ClientUtils) ResolveRequiredVineyarddSocket(
+	ctx context.Context,
+	name string, namespace string, objectNamespace string) (string, error) {
+	vineyardd := &v1alpha1.Vineyardd{}
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+	if namespacedName.Namespace == "" {
+		namespacedName.Namespace = objectNamespace
+	}
+	if err := c.Get(ctx, namespacedName, vineyardd); err != nil {
+		return "", err
+	}
+	v1alpha1.PreprocessVineyarddSocket(vineyardd)
+	return vineyardd.Spec.Socket, nil
 }

@@ -88,6 +88,10 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	// preprocessing the docket directory
+	k8sv1alpha1.PreprocessVineyarddSocket(&vineyardd)
+	logger.Info("Rendered Vineyardd", "vineyardd", vineyardd)
+
 	// deploy the vineyardd
 	vineyarddApp := kubernetes.Application{
 		Client:   r.Client,
@@ -142,8 +146,9 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // UpdateStatus updates the status of the Vineyardd.
 func (r *VineyarddReconciler) UpdateStatus(ctx context.Context, vineyardd *k8sv1alpha1.Vineyardd) error {
+	name := client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}
 	deployment := appsv1.Deployment{}
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}, &deployment); err != nil {
+	if err := r.Client.Get(ctx, name, &deployment); err != nil {
 		ctrl.Log.V(1).Error(err, "failed to get deployment")
 	}
 
@@ -158,9 +163,11 @@ func (r *VineyarddReconciler) UpdateStatus(ctx context.Context, vineyardd *k8sv1
 	return nil
 }
 
-func (r *VineyarddReconciler) applyStatusUpdate(ctx context.Context, vineyardd *k8sv1alpha1.Vineyardd, status *k8sv1alpha1.VineyarddStatus) error {
+func (r *VineyarddReconciler) applyStatusUpdate(ctx context.Context,
+	vineyardd *k8sv1alpha1.Vineyardd, status *k8sv1alpha1.VineyarddStatus) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := r.Client.Get(ctx, client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}, vineyardd); err != nil {
+		name := client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}
+		if err := r.Client.Get(ctx, name, vineyardd); err != nil {
 			return fmt.Errorf("failed to get vineyardd: %w", err)
 		}
 		vineyardd.Status = *status

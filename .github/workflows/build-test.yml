@@ -21,8 +21,9 @@ env:
   CMAKE_CXX_COMPILER_LAUNCHER: ccache
 
 jobs:
-  build:
+  ci:
     runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -132,20 +133,6 @@ jobs:
 
           git clone https://github.com/alibaba/libgrape-lite.git
           cd libgrape-lite
-          mkdir build
-          cd build
-          cmake ..
-          make -j`nproc`
-          sudo make install
-
-      - name: Install libhdfs3
-        if: false
-        run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
-
-          git clone https://github.com/ContinuumIO/libhdfs3-downstream.git
-          cd libhdfs3-downstream/libhdfs3
           mkdir build
           cd build
           cmake ..

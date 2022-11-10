@@ -51,7 +51,7 @@ spec:
             sleep 1;
             /usr/local/bin/vineyardd
             --sync_crds {{ .Spec.SyncCRDs }}
-            --socket {{ .Spec.Socket }}
+            --socket /var/run/vineyard.sock
             --size {{ .Spec.SharedMemorySize }}
             --stream_threshold {{ .Spec.StreamThreshold }}
             --etcd_cmd {{ .Spec.EtcdCmd }}

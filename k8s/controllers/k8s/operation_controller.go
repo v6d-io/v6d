@@ -93,9 +93,9 @@ func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // UpdateStatus updates the status of the localobject
 func (r *OperationReconciler) UpdateStatus(ctx context.Context, op *v1alpha1.Operation, opDone bool) error {
-	state := "running"
+	state := v1alpha1.OperationRunning
 	if opDone {
-		state = operation.SucceededState
+		state = v1alpha1.OperationSucceeded
 	}
 
 	status := &v1alpha1.OperationStatus{

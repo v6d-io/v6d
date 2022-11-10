@@ -22,7 +22,7 @@ spec:
     - jsonPath: .spec.type
       name: Type
       type: string
-    - jsonPath: .status.name
+    - jsonPath: .status.state
       name: State
       type: string
     name: v1alpha1
