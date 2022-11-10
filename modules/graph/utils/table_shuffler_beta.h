@@ -512,6 +512,92 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
   return table_out;
 }
 
+template <typename PARTITIONER_T>
+boost::leaf::result<std::shared_ptr<arrow::Table>>
+ShufflePropertyEdgeTableByPartition(const grape::CommSpec& comm_spec,
+                                    const PARTITIONER_T& partitioner,
+                                    int src_col_id, int dst_col_id,
+                                    std::shared_ptr<arrow::Table>& table_in) {
+  using oid_t = typename PARTITIONER_T::oid_t;
+  using internal_oid_t = typename InternalType<oid_t>::type;
+  using oid_array_type = typename ConvertToArrowType<oid_t>::ArrayType;
+
+  BOOST_LEAF_CHECK(SchemaConsistent(*table_in->schema(), comm_spec));
+
+  std::vector<std::shared_ptr<arrow::RecordBatch>> record_batches;
+  VY_OK_OR_RAISE(TableToRecordBatches(table_in, &record_batches));
+
+  size_t record_batch_num = record_batches.size();
+  // record_batch_num, fragment_num, row_ids
+  std::vector<std::vector<std::vector<int64_t>>> offset_lists(record_batch_num);
+
+  int thread_num =
+      (std::thread::hardware_concurrency() + comm_spec.local_num() - 1) /
+      comm_spec.local_num();
+  std::vector<std::thread> scan_threads(thread_num);
+  std::atomic<size_t> cur(0);
+
+  for (int i = 0; i < thread_num; ++i) {
+    scan_threads[i] = std::thread([&]() {
+      while (true) {
+        size_t got = cur.fetch_add(1);
+        if (got >= record_batch_num) {
+          break;
+        }
+
+        auto& offset_list = offset_lists[got];
+        offset_list.resize(comm_spec.fnum());
+        auto cur_batch = record_batches[got];
+        int64_t row_num = cur_batch->num_rows();
+
+        auto src_col = std::dynamic_pointer_cast<oid_array_type>(
+            cur_batch->column(src_col_id));
+        auto dst_col = std::dynamic_pointer_cast<oid_array_type>(
+            cur_batch->column(dst_col_id));
+
+        for (int64_t row_id = 0; row_id < row_num; ++row_id) {
+          internal_oid_t src_oid = src_col->GetView(row_id);
+          internal_oid_t dst_oid = dst_col->GetView(row_id);
+
+          grape::fid_t src_fid = partitioner.GetPartitionId(oid_t(src_oid));
+          grape::fid_t dst_fid = partitioner.GetPartitionId(oid_t(dst_oid));
+
+          offset_list[src_fid].push_back(row_id);
+          if (src_fid != dst_fid) {
+            offset_list[dst_fid].push_back(row_id);
+          }
+        }
+      }
+    });
+  }
+  for (auto& thrd : scan_threads) {
+    thrd.join();
+  }
+
+  std::vector<std::shared_ptr<arrow::RecordBatch>> batches_in;
+
+  ShuffleTableByOffsetLists(table_in->schema(), record_batches, offset_lists,
+                            batches_in, comm_spec);
+
+  batches_in.erase(std::remove_if(batches_in.begin(), batches_in.end(),
+                                  [](std::shared_ptr<arrow::RecordBatch>& e) {
+                                    return e->num_rows() == 0;
+                                  }),
+                   batches_in.end());
+
+  // N.B.: we need an empty table for non-existing labels.
+  std::shared_ptr<arrow::Table> table_out;
+  if (batches_in.empty()) {
+    VY_OK_OR_RAISE(EmptyTableBuilder::Build(table_in->schema(), table_out));
+  } else {
+    std::shared_ptr<arrow::Table> tmp_table;
+    VY_OK_OR_RAISE(RecordBatchesToTable(batches_in, &tmp_table));
+    ARROW_OK_ASSIGN_OR_RAISE(
+        table_out, tmp_table->CombineChunks(arrow::default_memory_pool()));
+  }
+  return table_out;
+}
+
 }  // namespace beta
 
 }  // namespace vineyard

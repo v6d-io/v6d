@@ -29,13 +29,6 @@ limitations under the License.
 
 #include "graph/fragment/property_graph_types.h"
 
-namespace gs {
-
-template <typename OID_T, typename VID_T>
-class ArrowProjectedVertexMap;
-
-}  // namespace gs
-
 namespace vineyard {
 
 template <typename OID_T, typename VID_T>
@@ -70,7 +63,7 @@ class ArrowVertexMap
     this->label_num_ = meta.GetKeyValue<label_id_t>("label_num");
 
     id_parser_.Init(fnum_, label_num_);
-
+    double nbytes = 0, local_oid_total = 0, o2g_total = 0;
     o2g_.resize(fnum_);
     oid_arrays_.resize(fnum_);
     for (fid_t i = 0; i < fnum_; ++i) {
@@ -84,8 +77,16 @@ class ArrowVertexMap
         array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
                                            "_" + std::to_string(j)));
         oid_arrays_[i][j] = array.GetArray();
+
+        local_oid_total += array.nbytes();
+        o2g_total += o2g_[i][j].nbytes();
       }
     }
+    nbytes = local_oid_total + o2g_total;
+    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
+              << "Total size: " << nbytes / 1000000 << " MB\n"
+              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
+              << "o2g size: " << o2g_total / 1000000 << " MB\n";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -191,8 +192,6 @@ class ArrowVertexMap
 
   friend class ArrowVertexMapBuilder<OID_T, VID_T>;
   friend class BasicArrowVertexMapBuilder<OID_T, VID_T>;
-
-  friend class gs::ArrowProjectedVertexMap<OID_T, VID_T>;
 };
 
 template <typename VID_T>
@@ -222,6 +221,7 @@ class ArrowVertexMap<arrow_string_view, VID_T>
 
     id_parser_.Init(fnum_, label_num_);
 
+    double nbytes = 0, local_oid_total = 0, o2g_total = 0;
     oid_arrays_.resize(fnum_);
     for (fid_t i = 0; i < fnum_; ++i) {
       oid_arrays_[i].resize(label_num_);
@@ -234,6 +234,17 @@ class ArrowVertexMap<arrow_string_view, VID_T>
     }
 
     initHashmaps();
+
+    for (fid_t i = 0; i < fnum_; ++i) {
+      for (int j = 0; j < label_num_; ++j) {
+        o2g_total += o2g_[i][j].bucket_count();
+      }
+    }
+    nbytes = local_oid_total + o2g_total;
+    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
+              << "Total size: " << nbytes / 1000000 << " MB\n"
+              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
+              << "o2g size: " << o2g_total * 16 / 1000000 << " MB\n";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -325,21 +336,38 @@ class ArrowVertexMap<arrow_string_view, VID_T>
 
  private:
   void initHashmaps() {
+    int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
+    int thread_num = std::min(
+        static_cast<int>(std::thread::hardware_concurrency()), task_num);
+    std::atomic<int> task_id(0);
+    std::vector<std::thread> threads(thread_num);
     o2g_.resize(fnum_);
     for (fid_t i = 0; i < fnum_; ++i) {
       o2g_[i].resize(label_num_);
-      for (label_id_t j = 0; j < label_num_; ++j) {
-        auto array = oid_arrays_[i][j];
-        auto& map = o2g_[i][j];
-        {
-          vid_t cur_gid = id_parser_.GenerateId(i, j, 0);
+    }
+    for (int i = 0; i < thread_num; ++i) {
+      threads[i] = std::thread([&]() {
+        while (true) {
+          int got_task_id = task_id.fetch_add(1);
+          if (got_task_id >= task_num) {
+            break;
+          }
+          fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
+          label_id_t cur_label =
+              static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
+          auto array = oid_arrays_[cur_fid][cur_label];
+          auto& map = o2g_[cur_fid][cur_label];
+          vid_t cur_gid = id_parser_.GenerateId(cur_fid, cur_label, 0);
           int64_t vnum = array->length();
           for (int64_t k = 0; k < vnum; ++k) {
             map.emplace(array->GetView(k), cur_gid);
             ++cur_gid;
           }
         }
-      }
+      });
+    }
+    for (auto& thrd : threads) {
+      thrd.join();
     }
   }
 
@@ -354,8 +382,6 @@ class ArrowVertexMap<arrow_string_view, VID_T>
 
   friend class ArrowVertexMapBuilder<arrow_string_view, VID_T>;
   friend class BasicArrowVertexMapBuilder<arrow_string_view, VID_T>;
-
-  friend class gs::ArrowProjectedVertexMap<arrow_string_view, VID_T>;
 };
 
 template <typename OID_T, typename VID_T>

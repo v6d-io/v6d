@@ -49,25 +49,28 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 class ArrowFragmentBaseBuilder;
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T,
+          typename VERTEX_MAP_T =
+              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
 class BasicArrowFragmentBuilder
-    : public ArrowFragmentBaseBuilder<OID_T, VID_T> {
+    : public ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> {
   using oid_t = OID_T;
   using vid_t = VID_T;
   using internal_oid_t = typename InternalType<oid_t>::type;
   using eid_t = property_graph_types::EID_TYPE;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
-  using vertex_map_t = ArrowVertexMap<internal_oid_t, vid_t>;
+  using vertex_map_t = VERTEX_MAP_T;
   using nbr_unit_t = property_graph_utils::NbrUnit<vid_t, eid_t>;
   using vid_array_t = typename vineyard::ConvertToArrowType<vid_t>::ArrayType;
 
  public:
   explicit BasicArrowFragmentBuilder(vineyard::Client& client,
                                      std::shared_ptr<vertex_map_t> vm_ptr)
-      : ArrowFragmentBaseBuilder<oid_t, vid_t>(client), vm_ptr_(vm_ptr) {}
+      : ArrowFragmentBaseBuilder<oid_t, vid_t, vertex_map_t>(client),
+        vm_ptr_(vm_ptr) {}
 
   vineyard::Status Build(vineyard::Client& client) override {
     ThreadGroup tg;

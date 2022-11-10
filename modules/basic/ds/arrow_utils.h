@@ -41,6 +41,12 @@ using EIDT = uint64_t;
 
 struct RefString;
 
+#if ARROW_VERSION_MAJOR >= 10
+using arrow_string_view = std::string_view;
+#else
+using arrow_string_view = arrow::util::string_view;
+#endif
+
 template <typename T>
 struct ConvertToArrowType {};
 
@@ -85,6 +91,8 @@ CONVERT_TO_ARROW_TYPE(double, arrow::DoubleArray, arrow::DoubleBuilder,
 CONVERT_TO_ARROW_TYPE(RefString, arrow::LargeStringArray,
                       arrow::LargeStringBuilder, arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(std::string, arrow::LargeStringArray,
+                      arrow::LargeStringBuilder, arrow::large_utf8())
+CONVERT_TO_ARROW_TYPE(arrow_string_view, arrow::LargeStringArray,
                       arrow::LargeStringBuilder, arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(arrow::TimestampType, arrow::TimestampArray,
                       arrow::TimestampBuilder,
