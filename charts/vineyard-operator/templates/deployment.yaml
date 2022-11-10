@@ -32,6 +32,9 @@ spec:
       labels:
         control-plane: controller-manager
         {{- include "vineyard-operator.selectorLabels" . | nindent 8 }}
+      annotations:
+        kubectl.kubernetes.io/default-container: "manager"
+        kubectl.kubernetes.io/default-logs-container: "manager"
     spec:
       containers:
       - args:
@@ -57,7 +60,8 @@ spec:
           capabilities:
             drop:
             - ALL
-      - command: 
+      - name: manager
+        command:
         - /manager
         args:
         - --health-probe-bind-address=:8081
@@ -67,7 +71,6 @@ spec:
         {{- if .Values.image.pullPolicy }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         {{- end }}
-        name: manager
         livenessProbe:
           httpGet:
             path: /healthz

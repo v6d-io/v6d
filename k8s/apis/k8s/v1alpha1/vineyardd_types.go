@@ -26,59 +26,32 @@ import (
 type MetricConfig struct {
 	// represent the metric's image
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="vineyardcloudnative/vineyard-grok-exporter:latest"
 	Image string `json:"image,omitempty"`
 	// the policy about pulling image
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="IfNotPresent"
 	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
 }
 
 // VineyarddConfig holds all command configuration about vineyardd
-type VineyarddConfig struct {
-	// path of etcd executable
-	// +kubebuilder:validation:Optional
-	EtcdCmd string `json:"etcdCmd,omitempty"`
-	// endpoint of etcd
-	// +kubebuilder:validation:Optional
-	EtcdEndpoint string `json:"etcdEndpoint,omitempty"`
-	// path prefix in etcd
-	// +kubebuilder:validation:Optional
-	EtcdPrefix string `json:"etcdPrefix,omitempty"`
-	// enable the metrics in vineyardd
-	// +kubebuilder:validation:Optional
-	EnableMetrics bool `json:"enableMetrics,omitempty"`
-	// whether to print metrics for prometheus
-	// +kubebuilder:validation:Optional
-	EnablePrometheus bool `json:"enablePrometheus,omitempty"`
-	// ipc socket file location
-	// +kubebuilder:validation:Optional
-	Socket string `json:"socket,omitempty"`
-	// the configuration of spilling
-	// +kubebuilder:validation:Optional
-	SpillConfig SpillConfig `json:"spillConfig,omitempty"`
-	// memory threshold of streams (percentage of total memory)
-	// +kubebuilder:validation:Optional
-	StreamThreshold int64 `json:"streamThreshold,omitempty"`
-	// shared memory size for vineyardd
-	// +kubebuilder:validation:Optional
-	SharedMemorySize string `json:"sharedMemorySize,omitempty"`
-	// synchronize CRDs when persisting objects
-	// +kubebuilder:validation:Optional
-	SyncCRDs bool `json:"syncCRDs,omitempty"`
-}
-
 // SpillConfig holds all configuration about spilling
 type SpillConfig struct {
 	// the name of the spill config
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
 	Name string `json:"name,omitempty"`
 	// the path of spilling
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
 	Path string `json:"path,omitempty"`
 	// low watermark of spilling memory
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="0.3"
 	SpillLowerRate string `json:"spillLowerRate,omitempty"`
-	// high watermark of triggering spiling
+	// high watermark of triggering spilling
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="0.8"
 	SpillUpperRate string `json:"spillUpperRate,omitempty"`
 	// the PersistentVolumeSpec of the spilling PV
 	// +kubebuilder:validation:Optional
@@ -91,68 +64,112 @@ type SpillConfig struct {
 // ServiceConfig holds all service configuration about vineyardd
 type ServiceConfig struct {
 	// service type
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=ClusterIP
 	Type string `json:"type,omitempty"`
 	// service port
-	// +kubebuilder:validation:Required
-	Port int `json:"port,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=9600
+	Port int `json:"port"`
 }
 
 // Etcd holds all configuration about Etcd
-type Etcd struct {
+type EtcdConfig struct {
 	// Etcd replicas
 	// +kubebuilder:validation:Optional
-	Replicas int `json:"replicas,omitempty"`
+	// +kubebuilder:default:=3
+	Replicas int `json:"replicas"`
 }
 
 // VineyarddSpec holds all configuration about vineyardd
 type VineyarddSpec struct {
 	// represent the vineyardd's image
-	// +kubebuilder:validation:Required
-	Image string `json:"image"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="vineyardcloudnative/vineyardd:latest"
+	Image string `json:"image,omitempty"`
 	// the policy about pulling image
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="IfNotPresent"
 	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
-	// the version of vineyardd
-	// +kubebuilder:validation:Required
-	Version string `json:"version"`
 	// the replicas of vineyardd
 	// +kubebuilder:validation:Required
+	// +kubebuilder:default:=3
 	Replicas int `json:"replicas"`
-	// metric configuration
+
+	// synchronize CRDs when persisting objects
 	// +kubebuilder:validation:Optional
-	Metric MetricConfig `json:"metric,omitempty"`
-	// vinyardd configuration
+	// +kubebuilder:default:=true
+	SyncCRDs bool `json:"syncCRDs"`
+
+	// ipc socket file location
 	// +kubebuilder:validation:Optional
-	Config VineyarddConfig `json:"config,omitempty"`
-	// environment configuration
-	// +kubebuilder:validation:Optional
-	Env []corev1.EnvVar `json:"env,omitempty"`
+	// +kubebuilder:default:="/var/run/vineyard.sock"
+	Socket string `json:"socket"`
 	// vineyardd's service
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={type: "ClusterIP", port: 9600}
 	Service ServiceConfig `json:"service,omitempty"`
+	// shared memory size for vineyardd
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="256Mi"
+	SharedMemorySize string `json:"sharedMemorySize"`
+	// memory threshold of streams (percentage of total memory)
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=80
+	StreamThreshold int64 `json:"streamThreshold"`
+
+	// path of etcd executable
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="etcd"
+	EtcdCmd string `json:"etcdCmd"`
+	// endpoint of etcd
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="http://etcd-for-vineyard:2379"
+	EtcdEndpoint string `json:"etcdEndpoint"`
+	// path prefix in etcd
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="/vineyard"
+	EtcdPrefix string `json:"etcdPrefix"`
 	// Etcd describe the etcd replicas
 	// +kubebuilder:validation:Optional
-	Etcd Etcd `json:"etcd,omitempty"`
+	// +kubebuilder:default:={replicas: 3}
+	Etcd EtcdConfig `json:"etcd,omitempty"`
+
+	// the configuration of spilling
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	SpillConfig SpillConfig `json:"spillConfig,omitempty"`
+
+	// enable the metrics in vineyardd
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	EnableMetrics bool `json:"enableMetrics"`
+	// metric configuration
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={image: "vineyardcloudnative/vineyard-grok-exporter:latest", imagePullPolicy: "IfNotPresent"}
+	Metric MetricConfig `json:"metric,omitempty"`
+
+	// environment configuration
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
 // VineyarddStatus defines the observed state of Vineyardd
 type VineyarddStatus struct {
-	// Total replicas of running vineyardd.
-	Running int32 `json:"running,omitempty"`
-	// Total replicas of required vineyardd.
-	Required int32 `json:"required,omitempty"`
+	// Total replicas of current running vineyardd.
+	ReadyReplicas int32 `json:"current,omitempty"`
 	// Represents the vineyardd deployment's current state.
 	Conditions []appsv1.DeploymentCondition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Running",type=string,JSONPath=`.status.running`
-// +kubebuilder:printcolumn:name="Required",type=string,JSONPath=`.status.required`
+// +kubebuilder:printcolumn:name="Current",type=string,JSONPath=`.status.current`
+// +kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.replicas`
 // +genclient
 
-// Vineyardd is the Schema for the vineyardds API
+// Vineyardd is the Schema for the vineyardd API
 type Vineyardd struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

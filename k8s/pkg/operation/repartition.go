@@ -46,6 +46,7 @@ const (
 // RepartitionOperation is the operation for the repartition
 type RepartitionOperation struct {
 	client.Client
+	ClientUtils
 	app  *swckkube.Application
 	done bool
 }
@@ -54,7 +55,7 @@ type RepartitionOperation struct {
 type DaskRepartitionConfig struct {
 	Name             string
 	Namespace        string
-	GlobalobjectID   string
+	GlobalObjectID   string
 	Replicas         string
 	InstanceToWorker string
 	DaskScheduler    string
@@ -117,9 +118,9 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	// convert the selector to map
 	anno := pod.GetAnnotations()
 	daskWorkerSelector := anno[schedulers.DaskWorkerSelector]
-	allselectors := strings.Split(daskWorkerSelector, ",")
+	allSelectors := strings.Split(daskWorkerSelector, ",")
 	selector := map[string]string{}
-	for _, s := range allselectors {
+	for _, s := range allSelectors {
 		str := strings.Split(s, ":")
 		selector[str[0]] = str[1]
 	}
@@ -173,7 +174,7 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	TmpDaskRepartitionConfig.Replicas = "'" + replicas + "'"
 	TmpDaskRepartitionConfig.Name = RepartitionPrefix + globalObject.Name
 	TmpDaskRepartitionConfig.Namespace = pod.Namespace
-	TmpDaskRepartitionConfig.GlobalobjectID = globalObject.Name
+	TmpDaskRepartitionConfig.GlobalObjectID = globalObject.Name
 	TmpDaskRepartitionConfig.DaskScheduler = "'" + anno[schedulers.DaskScheduler] + "'"
 	TmpDaskRepartitionConfig.JobName = pod.Labels[schedulers.VineyardJobName]
 	TmpDaskRepartitionConfig.InstanceToWorker = instanceToWorker
@@ -274,7 +275,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 
 	data := map[string]string{}
 	data["InstanceToWorker"] = strings.Trim(TmpDaskRepartitionConfig.InstanceToWorker, "'")
-	if err := UpdateConfigmap(ctx, ro.Client, targetGlobalObjects, o, RepartitionPrefix, &data); err != nil {
+	if err := ro.UpdateConfigmap(ctx, targetGlobalObjects, o, RepartitionPrefix, &data); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 	return true, nil

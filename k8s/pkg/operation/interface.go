@@ -24,19 +24,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// PluggableOperaton is the interface for the operation
-type PluggableOperaton interface {
+// PluggableOperation is the interface for the operation
+type PluggableOperation interface {
 	CreateJob(ctx context.Context, o *v1alpha1.Operation) error
 	IsDone() bool
 }
 
 // NewPluggableOperation returns a new pluggable operation according to the operation type
-func NewPluggableOperation(opname string, c client.Client, app *kubernetes.Application) PluggableOperaton {
-	switch opname {
+func NewPluggableOperation(opName string, c client.Client, app *kubernetes.Application) PluggableOperation {
+	switch opName {
 	case "assembly":
-		return &AssemblyOperation{c, app, false}
+		return &AssemblyOperation{c, ClientUtils{c}, app, false}
 	case "repartition":
-		return &RepartitionOperation{c, app, false}
+		return &RepartitionOperation{c, ClientUtils{c}, app, false}
 	}
 	return nil
 }

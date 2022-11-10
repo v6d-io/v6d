@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/component-helpers/scheduling/corev1"
 
@@ -107,14 +108,16 @@ func (vs *VineyardScheduling) Less(pod1, pod2 *framework.PodInfo) bool {
 
 // Score compute the score for a pod based on the status of required vineyard objects.
 func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
-	klog.V(5).Infof("scoring for pod %v on node %v", GetNamespacedName(pod), nodeName)
+	logger := log.FromContext(ctx).WithName("scheduler")
+
+	logger.Info(fmt.Sprintf("scoring for pod %v on node %v", GetNamespacedName(pod), nodeName))
 
 	job, replica, requires, vineyardd, err := vs.GetJobInfo(pod)
 	if err != nil {
 		return 0, framework.NewStatus(framework.Unschedulable, err.Error())
 	}
 
-	klog.V(5).Infof("scoring for pod of job %v, with %v replicas (rank %v), and requires %v", job, replica, requires)
+	logger.Info(fmt.Sprintf("scoring for pod of job %v, with %v replicas, and requires %v", job, replica, requires))
 
 	schedulerState := vs.MakeSchedulerStateForNamespace(VineyardSystemNamespace)
 	podRank := vs.GetPodRank(pod, replica)
@@ -127,32 +130,30 @@ func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleS
 	if score == 0 {
 		return score, framework.NewStatus(framework.Unschedulable, "")
 	}
-	klog.Infof("score for pod of job %v on node %v is: %v", job, nodeName, score)
+	logger.Info(fmt.Sprintf("score for pod of job %v on node %v is: %v", job, nodeName, score))
 	return score, framework.NewStatus(framework.Success, "")
 }
 
 // ScoreExtensions of the Score plugin.
 func (vs *VineyardScheduling) ScoreExtensions() framework.ScoreExtensions {
-	klog.V(5).Infof("ScoreExtensions...")
 	return vs
 }
 
 // NormalizeScore normalizes the score of all nodes for a pod.
 func (vs *VineyardScheduling) NormalizeScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
-	klog.V(5).Infof("NormalizeScore...")
 	// Find highest and lowest scores.
 	return framework.NewStatus(framework.Success, "")
 }
 
 // Permit only permit runs on the node that has vineyard installed.
 func (vs *VineyardScheduling) Permit(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (*framework.Status, time.Duration) {
-	klog.V(5).Infof("Permit...")
 	return framework.NewStatus(framework.Success, ""), 0
 }
 
 // PostBind prints the bind info
 func (vs *VineyardScheduling) PostBind(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, nodeName string) {
-	klog.V(5).Infof("Bind pod %v on node %v", GetNamespacedName(pod), nodeName)
+	logger := log.FromContext(ctx).WithName("scheduler")
+	logger.Info(fmt.Sprintf("Bind pod %v on node %v", GetNamespacedName(pod), nodeName))
 }
 
 // MakeSchedulerStateForNamespace initializes a state for the given namespace, if not exists.

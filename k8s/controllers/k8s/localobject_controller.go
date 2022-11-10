@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
@@ -36,7 +37,9 @@ type LocalObjectReconciler struct {
 
 func (r *LocalObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	ctrl.Log.V(1).Info("Reconciling LocalObject...")
+	logger := log.FromContext(ctx).WithName("controllers").WithName("LocalObject")
+
+	logger.V(1).Info("Reconciling LocalObject...")
 
 	return ctrl.Result{}, nil
 }

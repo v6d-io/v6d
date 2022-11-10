@@ -119,6 +119,11 @@ jobs:
           sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
           sudo chmod +x /usr/bin/clang-format
 
+          # install latest ccache
+          wget https://github.com/ccache/ccache/releases/download/v4.7.3/ccache-4.7.3-linux-x86_64.tar.xz
+          tar -xf ccache-4.7.3-linux-x86_64.tar.xz
+          sudo mv ccache-4.7.3-linux-x86_64/ccache /usr/bin/ccache
+
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |

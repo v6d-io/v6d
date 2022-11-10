@@ -21,36 +21,34 @@ metadata:
   namespace: vineyard-system
 spec:
   image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-  version: 0.9.0
   replicas: 2
   imagePullPolicy: IfNotPresent
   # vineyardd's configuration
-  config:
-    sharedMemorySize: "2048"
-    syncCRDs: true
-    enableMetrics: false
-    # spill configuration
-    spillConfig:
-      name: spill-path
-      # please make sure the path exists
-      path: /var/vineyard/spill
-      spillLowerRate: "0.3"
-      spillUpperRate: "0.8"
-      persistentVolumeSpec:
-        storageClassName: manual
-        capacity:
-          storage: 1Gi
-        accessModes:
-          - ReadWriteOnce
-        hostPath:
-          path: /var/vineyard/spill
-      persistentVolumeClaimSpec:
-        storageClassName: manual
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 512Mi
+  sharedMemorySize: "2048"
+  syncCRDs: true
+  enableMetrics: false
+  # spill configuration
+  spillConfig:
+    name: spill-path
+    # please make sure the path exists
+    path: /var/vineyard/spill
+    spillLowerRate: "0.3"
+    spillUpperRate: "0.8"
+    persistentVolumeSpec:
+      storageClassName: manual
+      capacity:
+        storage: 1Gi
+      accessModes:
+        - ReadWriteOnce
+      hostPath:
+        path: /var/vineyard/spill
+    persistentVolumeClaimSpec:
+      storageClassName: manual
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 512Mi
   etcd:
     replicas: 3
   service:

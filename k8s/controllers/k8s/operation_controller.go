@@ -58,12 +58,13 @@ type OperationReconciler struct {
 
 // Reconcile reconciles the operation
 func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithName("controllers").WithName("Operation")
+
 	op := k8sv1alpha1.Operation{}
 	if err := r.Client.Get(ctx, req.NamespacedName, &op); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	ctrl.Log.V(1).Info("Reconciling Operation", "vineyardd", op)
+	logger.Info("Reconciling Operation", "vineyardd", op)
 
 	app := kubernetes.Application{
 		Client:   r.Client,
@@ -77,12 +78,12 @@ func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	preOp := operation.NewPluggableOperation(op.Spec.Name, r.Client, &app)
 	if err := preOp.CreateJob(ctx, &op); err != nil {
-		ctrl.Log.Error(err, "Failed to create the job", "Operation", op)
+		logger.Error(err, "Failed to create the job", "Operation", op)
 		return ctrl.Result{}, err
 	}
 
 	if err := r.UpdateStatus(ctx, &op, preOp.IsDone()); err != nil {
-		ctrl.Log.Error(err, "Failed to update the status", "Operation", op)
+		logger.Error(err, "Failed to update the status", "Operation", op)
 	}
 
 	// reconcile every minute
@@ -100,13 +101,13 @@ func (r *OperationReconciler) UpdateStatus(ctx context.Context, op *v1alpha1.Ope
 	status := &v1alpha1.OperationStatus{
 		State: state,
 	}
-	if err := r.updateStatus(ctx, op, status); err != nil {
+	if err := r.applyStatusUpdate(ctx, op, status); err != nil {
 		return fmt.Errorf("failed to update status: %w", err)
 	}
 	return nil
 }
 
-func (r *OperationReconciler) updateStatus(ctx context.Context, op *v1alpha1.Operation, status *v1alpha1.OperationStatus) error {
+func (r *OperationReconciler) applyStatusUpdate(ctx context.Context, op *v1alpha1.Operation, status *v1alpha1.OperationStatus) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: op.Name, Namespace: op.Namespace}, op); err != nil {
 			return fmt.Errorf("failed to get operation: %w", err)

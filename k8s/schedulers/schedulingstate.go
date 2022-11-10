@@ -196,9 +196,9 @@ func (ss *SchedulerState) checkOperationLabels(ctx context.Context, pod *v1.Pod)
 
 // getGlobalObjectsByID returns the global objects by the given jobname.
 func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []string) ([]*v1alpha1.GlobalObject, error) {
-	requiredjobs := make(map[string]bool)
+	requiredJobs := make(map[string]bool)
 	for _, n := range jobNames {
-		requiredjobs[n] = true
+		requiredJobs[n] = true
 	}
 	objects := []*v1alpha1.GlobalObject{}
 	globalObjects := &v1alpha1.GlobalObjectList{}
@@ -207,7 +207,7 @@ func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []s
 		return nil, err
 	}
 	for _, obj := range globalObjects.Items {
-		if jobname, exist := obj.Labels["k8s.v6d.io/job"]; exist && requiredjobs[jobname] {
+		if jobname, exist := obj.Labels["k8s.v6d.io/job"]; exist && requiredJobs[jobname] {
 			objects = append(objects, &obj)
 		}
 	}

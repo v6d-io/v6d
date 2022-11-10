@@ -43,7 +43,7 @@ func (e *EmbedTemplate) GetFilesRecursive(dir string) ([]string, error) {
 	path := filepath.Join(filepath.Dir(dir), dir)
 	fd, err := fs.ReadDir(path)
 	if err != nil {
-		return []string{}, fmt.Errorf("ReadDir Error: %v", err)
+		return []string{}, fmt.Errorf("ReadDir error: %v", err)
 	}
 	files := []string{}
 	for _, f := range fd {

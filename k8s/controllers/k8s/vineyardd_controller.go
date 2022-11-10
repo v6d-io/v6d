@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
@@ -74,15 +75,16 @@ func getStorage(q resource.Quantity) string {
 
 // Reconcile reconciles the Vineyardd.
 func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithName("controllers").WithName("Vineyardd")
+
 	vineyardd := k8sv1alpha1.Vineyardd{}
 	if err := r.Get(ctx, req.NamespacedName, &vineyardd); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	ctrl.Log.V(1).Info("Reconciling Vineyardd", "vineyardd", vineyardd)
+	logger.V(1).Info("Reconciling Vineyardd", "vineyardd", vineyardd)
 	vineyarddFile, err := r.Template.GetFilesRecursive("vineyardd")
 	if err != nil {
-		ctrl.Log.Error(err, "failed to load vineyardd templates")
+		logger.Error(err, "failed to load vineyardd templates")
 		return ctrl.Result{}, err
 	}
 
@@ -104,32 +106,32 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	// set up the etcd
 	Etcd.Namespace = vineyardd.Namespace
-	Etcd.Endpoints = ""
+	etcdEndpoints := make([]string, 0, vineyardd.Spec.Etcd.Replicas)
 	replicas := vineyardd.Spec.Etcd.Replicas
 	for i := 0; i < replicas; i++ {
-		Etcd.Endpoints = Etcd.Endpoints + "etcd" + strconv.Itoa(i) + "=http://etcd" + strconv.Itoa(i) + ":2380,"
+		etcdEndpoints = append(etcdEndpoints, fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)))
 	}
-	Etcd.Endpoints = Etcd.Endpoints[:len(Etcd.Endpoints)-1]
+	Etcd.Endpoints = strings.Join(etcdEndpoints, ",")
 
 	for i := 0; i < replicas; i++ {
 		Etcd.Rank = i
-		if _, err := etcdApp.Apply(ctx, "etcd/etcd.yaml", ctrl.Log, true); err != nil {
-			ctrl.Log.Error(err, "failed to apply etcd pod")
+		if _, err := etcdApp.Apply(ctx, "etcd/etcd.yaml", logger, true); err != nil {
+			logger.Error(err, "failed to apply etcd pod")
 			return ctrl.Result{}, err
 		}
-		if _, err := etcdApp.Apply(ctx, "etcd/service.yaml", ctrl.Log, true); err != nil {
-			ctrl.Log.Error(err, "failed to apply etcd service")
+		if _, err := etcdApp.Apply(ctx, "etcd/service.yaml", logger, true); err != nil {
+			logger.Error(err, "failed to apply etcd service")
 			return ctrl.Result{}, err
 		}
 	}
 
-	if err := vineyarddApp.ApplyAll(ctx, vineyarddFile, ctrl.Log); err != nil {
-		ctrl.Log.Error(err, "failed to apply vineyardd resources")
+	if err := vineyarddApp.ApplyAll(ctx, vineyarddFile, logger); err != nil {
+		logger.Error(err, "failed to apply vineyardd resources")
 		return ctrl.Result{}, err
 	}
 
 	if err := r.UpdateStatus(ctx, &vineyardd); err != nil {
-		ctrl.Log.Error(err, "failed to update status")
+		logger.Error(err, "failed to update status")
 		return ctrl.Result{}, err
 	}
 
@@ -147,17 +149,16 @@ func (r *VineyarddReconciler) UpdateStatus(ctx context.Context, vineyardd *k8sv1
 
 	// get the running vineyardd
 	status := &k8sv1alpha1.VineyarddStatus{
-		Running:    deployment.Status.ReadyReplicas,
-		Required:   int32(vineyardd.Spec.Replicas),
-		Conditions: deployment.Status.Conditions,
+		ReadyReplicas: deployment.Status.ReadyReplicas,
+		Conditions:    deployment.Status.Conditions,
 	}
-	if err := r.updateStatus(ctx, vineyardd, status); err != nil {
+	if err := r.applyStatusUpdate(ctx, vineyardd, status); err != nil {
 		return fmt.Errorf("failed to update status: %w", err)
 	}
 	return nil
 }
 
-func (r *VineyarddReconciler) updateStatus(ctx context.Context, vineyardd *k8sv1alpha1.Vineyardd, status *k8sv1alpha1.VineyarddStatus) error {
+func (r *VineyarddReconciler) applyStatusUpdate(ctx context.Context, vineyardd *k8sv1alpha1.Vineyardd, status *k8sv1alpha1.VineyarddStatus) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}, vineyardd); err != nil {
 			return fmt.Errorf("failed to get vineyardd: %w", err)

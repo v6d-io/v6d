@@ -18,12 +18,13 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	log "github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // log is for logging in this package.
-var vineyarddlog = logf.Log.WithName("vineyardd-resource")
+var vlog = log.Logger.WithName("vineyardd")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Vineyardd) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -39,9 +40,7 @@ var _ webhook.Defaulter = &Vineyardd{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Vineyardd) Default() {
-	vineyarddlog.Info("default", "name", r.Name)
-	// check the image、version and replicas
-	r.check()
+	vlog.Info("default", "name", r.Name)
 }
 
 //nolint: lll
@@ -51,50 +50,21 @@ var _ webhook.Validator = &Vineyardd{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *Vineyardd) ValidateCreate() error {
-	vineyarddlog.Info("validate create", "name", r.Name)
-	// check the image、version and replicas
-	r.check()
+	vlog.Info("validate create", "name", r.Name)
 
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Vineyardd) ValidateUpdate(old runtime.Object) error {
-	vineyarddlog.Info("validate update", "name", r.Name)
-	// check the image、version and replicas
-	r.check()
+	vlog.Info("validate update", "name", r.Name)
 
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *Vineyardd) ValidateDelete() error {
-	vineyarddlog.Info("validate delete", "name", r.Name)
+	vlog.Info("validate delete", "name", r.Name)
 
 	return nil
-}
-
-// Make sure the vineyardd is valid
-func (r *Vineyardd) check() {
-	vineyarddlog.Info("validate image", "name", r.Name)
-	defaultImage := "vineyardcloudnative/vineyardd:alpine-latest"
-	defaultVersion := "latest"
-	defaultReplicas := 3
-	syncCRD := true
-	if r.Spec.Image == "" {
-		vineyarddlog.Info("the image is absent, use the default image", "name", defaultImage)
-		r.Spec.Image = defaultImage
-	}
-	if r.Spec.Version == "" {
-		vineyarddlog.Info("the version is absent, use the default version", "name", defaultVersion)
-		r.Spec.Version = defaultVersion
-	}
-	if r.Spec.Replicas == 0 {
-		vineyarddlog.Info("the replicas is absent, use the default replicas", "name", 1)
-		r.Spec.Replicas = defaultReplicas
-	}
-	if !r.Spec.Config.SyncCRDs {
-		vineyarddlog.Info("the syncCRD is false, use the default syncCRD", "name", syncCRD)
-		r.Spec.Config.SyncCRDs = syncCRD
-	}
 }

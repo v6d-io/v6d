@@ -18,12 +18,13 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	log "github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // log is for logging in this package.
-var globalobjectlog = logf.Log.WithName("globalobject-resource")
+var glog = log.Logger.WithName("globalobject")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *GlobalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -39,7 +40,7 @@ var _ webhook.Defaulter = &GlobalObject{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *GlobalObject) Default() {
-	globalobjectlog.Info("default", "name", r.Name)
+	glog.Info("default", "name", r.Name)
 
 	// TODO(user): fill in your defaulting logic.
 }
@@ -51,21 +52,21 @@ var _ webhook.Validator = &GlobalObject{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *GlobalObject) ValidateCreate() error {
-	globalobjectlog.Info("validate create", "name", r.Name)
+	glog.Info("validate create", "name", r.Name)
 
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *GlobalObject) ValidateUpdate(old runtime.Object) error {
-	globalobjectlog.Info("validate update", "name", r.Name)
+	glog.Info("validate update", "name", r.Name)
 
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *GlobalObject) ValidateDelete() error {
-	globalobjectlog.Info("validate delete", "name", r.Name)
+	glog.Info("validate delete", "name", r.Name)
 
 	return nil
 }
