@@ -778,8 +778,15 @@ class BasicEVFragmentLoader {
   boost::leaf::result<void> constructVerticesImpl(ObjectID vm_id,
                                                   std::true_type) {
     if (vm_id != InvalidObjectID()) {
-      std::string msg = "Not support add vertex label with local vertex map";
-      RETURN_GS_ERROR(ErrorCode::kUnsupportedOperationError, msg);
+      auto old_vm_ptr =
+          std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm_id));
+      label_id_t pre_label_num = old_vm_ptr->label_num();
+      if (pre_label_num != 0) {
+        std::string msg =
+            "Not support adding vertex label to existing labels with local "
+            "vertex map";
+        RETURN_GS_ERROR(ErrorCode::kUnsupportedOperationError, msg);
+      }
     }
     local_vm_builder_ =
         std::make_shared<ArrowLocalVertexMapBuilder<internal_oid_t, vid_t>>(
