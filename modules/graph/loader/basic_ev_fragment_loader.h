@@ -249,167 +249,178 @@ class BasicEVFragmentLoader {
 
     output_edge_tables_.resize(edge_label_num_);
     LOG(INFO) << "Shuffling property edge tables";
-    static_if<is_local_vertex_map<vertex_map_t>::value>([&]() {
-      // Shuffle property tables
-      for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
-        std::vector<std::pair<std::pair<label_id_t, label_id_t>,
-                              std::shared_ptr<arrow::Table>>>
-            shuffled_tables;
-        for (auto& item : ordered_edge_tables_[e_label]) {
-          auto shuffle_procedure =
-              [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-            BOOST_LEAF_AUTO(
-                table_out,
-                beta::ShufflePropertyEdgeTableByPartition<partitioner_t>(
-                    comm_spec_, partitioner_, src_column, dst_column,
-                    item.second));
-            return table_out;
-          };
-          BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
-          shuffled_tables.emplace_back(item.first, table);
-        }
-        ordered_edge_tables_[e_label] = shuffled_tables;
-      }
+    static_if<is_local_vertex_map<vertex_map_t>::value>(
+        [&]() -> boost::leaf::result<void> {
+          // Shuffle property tables
+          for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+            std::vector<std::pair<std::pair<label_id_t, label_id_t>,
+                                  std::shared_ptr<arrow::Table>>>
+                shuffled_tables;
+            for (auto& item : ordered_edge_tables_[e_label]) {
+              auto shuffle_procedure =
+                  [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+                BOOST_LEAF_AUTO(
+                    table_out,
+                    beta::ShufflePropertyEdgeTableByPartition<partitioner_t>(
+                        comm_spec_, partitioner_, src_column, dst_column,
+                        item.second));
+                return table_out;
+              };
+              BOOST_LEAF_AUTO(table,
+                              sync_gs_error(comm_spec_, shuffle_procedure));
+              shuffled_tables.emplace_back(item.first, table);
+            }
+            ordered_edge_tables_[e_label] = shuffled_tables;
+          }
 
-      // Finish the local vertex map with outer vertices
-      LOG(INFO) << "Finalizing local vertex map";
-      fid_t fnum = comm_spec_.fnum();
-      std::vector<std::vector<std::unordered_set<oid_t>>> outer_vertex_oids(
-          fnum);
-      for (fid_t i = 0; i < fnum; i++) {
-        outer_vertex_oids[i].resize(vertex_label_num_);
-      }
-      for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
-        for (auto& item : ordered_edge_tables_[e_label]) {
-          auto src_label = item.first.first;
-          auto dst_label = item.first.second;
-          auto table = item.second;
-          std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-          TableToRecordBatches(table, &batches);
-          for (size_t i = 0; i < batches.size(); ++i) {
-            auto cur_batch = batches[i];
-            int64_t row_num = cur_batch->num_rows();
+          // Finish the local vertex map with outer vertices
+          LOG(INFO) << "Finalizing local vertex map";
+          fid_t fnum = comm_spec_.fnum();
+          std::vector<std::vector<std::unordered_set<oid_t>>> outer_vertex_oids(
+              fnum);
+          for (fid_t i = 0; i < fnum; i++) {
+            outer_vertex_oids[i].resize(vertex_label_num_);
+          }
+          for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+            for (auto& item : ordered_edge_tables_[e_label]) {
+              auto src_label = item.first.first;
+              auto dst_label = item.first.second;
+              auto table = item.second;
+              std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+              TableToRecordBatches(table, &batches);
+              for (size_t i = 0; i < batches.size(); ++i) {
+                auto cur_batch = batches[i];
+                int64_t row_num = cur_batch->num_rows();
 
-            auto src_col = std::dynamic_pointer_cast<oid_array_t>(
-                cur_batch->column(src_column));
-            auto dst_col = std::dynamic_pointer_cast<oid_array_t>(
-                cur_batch->column(dst_column));
-            for (int64_t row_id = 0; row_id < row_num; ++row_id) {
-              internal_oid_t internal_src_oid = src_col->GetView(row_id);
-              internal_oid_t internal_dst_oid = dst_col->GetView(row_id);
-              oid_t src_oid = oid_t(internal_src_oid);
-              oid_t dst_oid = oid_t(internal_dst_oid);
-              grape::fid_t src_fid = partitioner_.GetPartitionId(src_oid);
-              grape::fid_t dst_fid = partitioner_.GetPartitionId(dst_oid);
-              if (src_fid != comm_spec_.fid()) {
-                outer_vertex_oids[src_fid][src_label].insert(src_oid);
-              }
-              if (dst_fid != comm_spec_.fid()) {
-                outer_vertex_oids[dst_fid][dst_label].insert(dst_oid);
+                auto src_col = std::dynamic_pointer_cast<oid_array_t>(
+                    cur_batch->column(src_column));
+                auto dst_col = std::dynamic_pointer_cast<oid_array_t>(
+                    cur_batch->column(dst_column));
+                for (int64_t row_id = 0; row_id < row_num; ++row_id) {
+                  internal_oid_t internal_src_oid = src_col->GetView(row_id);
+                  internal_oid_t internal_dst_oid = dst_col->GetView(row_id);
+                  oid_t src_oid = oid_t(internal_src_oid);
+                  oid_t dst_oid = oid_t(internal_dst_oid);
+                  grape::fid_t src_fid = partitioner_.GetPartitionId(src_oid);
+                  grape::fid_t dst_fid = partitioner_.GetPartitionId(dst_oid);
+                  if (src_fid != comm_spec_.fid()) {
+                    outer_vertex_oids[src_fid][src_label].insert(src_oid);
+                  }
+                  if (dst_fid != comm_spec_.fid()) {
+                    outer_vertex_oids[dst_fid][dst_label].insert(dst_oid);
+                  }
+                }
               }
             }
           }
-        }
-      }
-      // copy set to vector
-      std::vector<std::vector<std::vector<oid_t>>> outer_oid_vec(fnum);
-      {
-        for (fid_t i = 0; i < fnum; i++) {
-          outer_oid_vec[i].resize(vertex_label_num_);
-          for (label_id_t j = 0; j < vertex_label_num_; j++) {
-            auto& set = outer_vertex_oids[i][j];
-            outer_oid_vec[i][j] = std::vector<oid_t>(set.begin(), set.end());
-            set.clear();
+          // copy set to vector
+          std::vector<std::vector<std::vector<oid_t>>> outer_oid_vec(fnum);
+          {
+            for (fid_t i = 0; i < fnum; i++) {
+              outer_oid_vec[i].resize(vertex_label_num_);
+              for (label_id_t j = 0; j < vertex_label_num_; j++) {
+                auto& set = outer_vertex_oids[i][j];
+                outer_oid_vec[i][j] =
+                    std::vector<oid_t>(set.begin(), set.end());
+                set.clear();
+              }
+            }
+            outer_vertex_oids.clear();
           }
-        }
-        outer_vertex_oids.clear();
-      }
 
-      // Request and response the outer vertex oid index
-      int worker_id = comm_spec_.worker_id();
-      int worker_num = comm_spec_.worker_num();
-      std::vector<std::vector<std::vector<vid_t>>> index_lists(
-          comm_spec_.fnum());
-      std::thread request_thread([&]() {
-        for (int i = 1; i < worker_num; ++i) {
-          int dst_worker_id = (worker_id + i) % worker_num;
-          auto& oids = outer_oid_vec[comm_spec_.WorkerToFrag(dst_worker_id)];
-          grape::sync_comm::Send(oids, dst_worker_id, 0, comm_spec_.comm());
-          grape::sync_comm::Recv(
-              index_lists[comm_spec_.WorkerToFrag(dst_worker_id)],
-              dst_worker_id, 1, comm_spec_.comm());
-        }
-      });
-      std::thread response_thread([&]() {
-        for (int i = 1; i < worker_num; ++i) {
-          int src_worker_id = (worker_id + worker_num - i) % worker_num;
-          std::vector<std::vector<oid_t>> oids;
-          grape::sync_comm::Recv(oids, src_worker_id, 0, comm_spec_.comm());
-          std::vector<std::vector<vid_t>> index_list;
-          local_vm_builder_->GetIndexOfOids(oids, index_list);
-          grape::sync_comm::Send(index_list, src_worker_id, 1,
-                                 comm_spec_.comm());
-        }
-      });
+          // Request and response the outer vertex oid index
+          int worker_id = comm_spec_.worker_id();
+          int worker_num = comm_spec_.worker_num();
+          std::vector<std::vector<std::vector<vid_t>>> index_lists(
+              comm_spec_.fnum());
+          std::thread request_thread([&]() {
+            for (int i = 1; i < worker_num; ++i) {
+              int dst_worker_id = (worker_id + i) % worker_num;
+              auto& oids =
+                  outer_oid_vec[comm_spec_.WorkerToFrag(dst_worker_id)];
+              grape::sync_comm::Send(oids, dst_worker_id, 0, comm_spec_.comm());
+              grape::sync_comm::Recv(
+                  index_lists[comm_spec_.WorkerToFrag(dst_worker_id)],
+                  dst_worker_id, 1, comm_spec_.comm());
+            }
+          });
+          std::thread response_thread([&]() {
+            for (int i = 1; i < worker_num; ++i) {
+              int src_worker_id = (worker_id + worker_num - i) % worker_num;
+              std::vector<std::vector<oid_t>> oids;
+              grape::sync_comm::Recv(oids, src_worker_id, 0, comm_spec_.comm());
+              std::vector<std::vector<vid_t>> index_list;
+              local_vm_builder_->GetIndexOfOids(oids, index_list);
+              grape::sync_comm::Send(index_list, src_worker_id, 1,
+                                     comm_spec_.comm());
+            }
+          });
 
-      request_thread.join();
-      response_thread.join();
-      MPI_Barrier(comm_spec_.comm());
-      // Construct the outer vertex map with response o2i
-      local_vm_builder_->AddOuterVerticesMapping(outer_oid_vec, index_lists);
-      auto vm = local_vm_builder_->_Seal(client_);
-      vm_ptr_ =
-          std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm->id()));
+          request_thread.join();
+          response_thread.join();
+          MPI_Barrier(comm_spec_.comm());
+          // Construct the outer vertex map with response o2i
+          local_vm_builder_->AddOuterVerticesMapping(outer_oid_vec,
+                                                     index_lists);
+          auto vm = local_vm_builder_->_Seal(client_);
+          vm_ptr_ = std::dynamic_pointer_cast<vertex_map_t>(
+              client_.GetObject(vm->id()));
 
-      // Concatenate and add metadata to final edge tables
-      LOG(INFO) << "Transforming ids of edge tables and concatenate them";
-      for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
-        std::vector<std::shared_ptr<arrow::Table>> processed_table_list;
-        for (auto& item : ordered_edge_tables_[e_label]) {
-          BOOST_LEAF_AUTO(table, edgesId2Gid(item.second, item.first.first,
-                                             item.first.second));
-          processed_table_list.emplace_back(table);
-        }
-        auto table = vineyard::ConcatenateTables(processed_table_list);
-        auto metadata = std::make_shared<arrow::KeyValueMetadata>();
-        metadata->Append("label", edge_labels_[e_label]);
-        metadata->Append("label_id", std::to_string(e_label));
-        metadata->Append("type", "EDGE");
-        output_edge_tables_[e_label] = table->ReplaceSchemaMetadata(metadata);
-        ordered_edge_tables_[e_label].clear();
-      }
-    })();
-    static_if<!is_local_vertex_map<vertex_map_t>::value>([&]() {
-      for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
-        auto& edge_table_list = ordered_edge_tables_[e_label];
-        LOG(INFO) << "Transforming ids of edge tables and concatenate them";
-        auto shuffle_procedure =
-            [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-          std::vector<std::shared_ptr<arrow::Table>> processed_table_list;
-          for (auto& item : edge_table_list) {
-            label_id_t src_label = item.first.first;
-            label_id_t dst_label = item.first.second;
-            BOOST_LEAF_AUTO(tmp_table,
-                            edgesId2Gid(item.second, src_label, dst_label));
-            processed_table_list.emplace_back(tmp_table);
+          // Concatenate and add metadata to final edge tables
+          LOG(INFO) << "Transforming ids of edge tables and concatenate them";
+          for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+            std::vector<std::shared_ptr<arrow::Table>> processed_table_list;
+            for (auto& item : ordered_edge_tables_[e_label]) {
+              BOOST_LEAF_AUTO(table, edgesId2Gid(item.second, item.first.first,
+                                                 item.first.second));
+              processed_table_list.emplace_back(table);
+            }
+            auto table = vineyard::ConcatenateTables(processed_table_list);
+            auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+            metadata->Append("label", edge_labels_[e_label]);
+            metadata->Append("label_id", std::to_string(e_label));
+            metadata->Append("type", "EDGE");
+            output_edge_tables_[e_label] =
+                table->ReplaceSchemaMetadata(metadata);
+            ordered_edge_tables_[e_label].clear();
           }
-          auto table = vineyard::ConcatenateTables(processed_table_list);
-          // Shuffle the edge table with gid
-          BOOST_LEAF_AUTO(table_out, beta::ShufflePropertyEdgeTable<vid_t>(
-                                         comm_spec_, id_parser, src_column,
-                                         dst_column, table));
-          return table_out;
-        };
-        BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
+          return {};
+        })();
+    static_if<!is_local_vertex_map<vertex_map_t>::value>(
+        [&]() -> boost::leaf::result<void> {
+          for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+            auto& edge_table_list = ordered_edge_tables_[e_label];
+            LOG(INFO) << "Transforming ids of edge tables and concatenate them";
+            auto shuffle_procedure =
+                [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+              std::vector<std::shared_ptr<arrow::Table>> processed_table_list;
+              for (auto& item : edge_table_list) {
+                label_id_t src_label = item.first.first;
+                label_id_t dst_label = item.first.second;
+                BOOST_LEAF_AUTO(tmp_table,
+                                edgesId2Gid(item.second, src_label, dst_label));
+                processed_table_list.emplace_back(tmp_table);
+              }
+              auto table = vineyard::ConcatenateTables(processed_table_list);
+              // Shuffle the edge table with gid
+              BOOST_LEAF_AUTO(table_out, beta::ShufflePropertyEdgeTable<vid_t>(
+                                             comm_spec_, id_parser, src_column,
+                                             dst_column, table));
+              return table_out;
+            };
+            BOOST_LEAF_AUTO(table,
+                            sync_gs_error(comm_spec_, shuffle_procedure));
 
-        auto metadata = std::make_shared<arrow::KeyValueMetadata>();
-        metadata->Append("label", edge_labels_[e_label]);
-        metadata->Append("label_id", std::to_string(e_label));
-        metadata->Append("type", "EDGE");
-        output_edge_tables_[e_label] = table->ReplaceSchemaMetadata(metadata);
-        ordered_edge_tables_[e_label].clear();
-      }
-    })();
+            auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+            metadata->Append("label", edge_labels_[e_label]);
+            metadata->Append("label_id", std::to_string(e_label));
+            metadata->Append("type", "EDGE");
+            output_edge_tables_[e_label] =
+                table->ReplaceSchemaMetadata(metadata);
+            ordered_edge_tables_[e_label].clear();
+          }
+          return {};
+        })();
 
     ordered_edge_tables_.clear();
     return {};
