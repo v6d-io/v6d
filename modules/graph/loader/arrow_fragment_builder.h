@@ -112,6 +112,13 @@ class ArrowFragmentBuilder {
 
   ~ArrowFragmentBuilder() = default;
 
+  bl::result<void> TestReadChunks() {
+    BOOST_LEAF_CHECK(distributeVertexChunks());
+    BOOST_LEAF_CHECK(loadVertexTables());
+    BOOST_LEAF_CHECK(loadEdgeTables());
+    return {};
+  }
+
   bl::result<vineyard::ObjectID> LoadFragment() {
     BOOST_LEAF_CHECK(distributeVertexChunks());
 
@@ -161,11 +168,31 @@ class ArrowFragmentBuilder {
     return {};
   }
 
+  bl::result<void> distributeVertexChunksWithEdgeInfo() {
+    for (const auto& edge : graph_info_->GetAllEdgeInfo()) {
+      const auto& edge_info = edge.second;
+      auto label = edge_info.GetSrcLabel();
+      std::string base_dir;
+      auto fs = gsf::FileSystemFromUriOrPath(graph_info_->GetPrefix(), &base_dir).value();
+      base_dir += "/" + edge_info.GetAdjListDirPath(gsf::AdjListType::ordered_by_dest);
+      gsf::IdType vertex_chunk_num = fs->GetFileNumInDir(base_dir).value();
+      LOG(INFO) << "vertex_chunk_num = " << vertex_chunk_num;
+      vertex_chunk_begin_of_frag_[label].resize(comm_spec_.fnum() + 1);
+      for (fid_t fid = 0; fid < comm_spec_.fnum(); ++fid) {
+        vertex_chunk_begin_of_frag_[label][fid] = static_cast<gsf::IdType>(fid) * (vertex_chunk_num / static_cast<gsf::IdType>(comm_spec_.fnum()));
+      }
+      vertex_chunk_begin_of_frag_[label][comm_spec_.fnum()] = vertex_chunk_num;
+      LOG(INFO) << "frag-" << comm_spec_.fid() << " get vertex " << label << " chunk from " << vertex_chunk_begin_of_frag_[label][comm_spec_.fid()] << " to " << vertex_chunk_begin_of_frag_[label][comm_spec_.fid() + 1];
+    }
+    return {};
+  }
+
   bl::result<void> loadVertexTables() {
     LOG_IF(INFO, comm_spec_.worker_id() == 0)
         << "PROGRESS--GRAPH-LOADING-READ-VERTEX-0";
     for (const auto& vertex : graph_info_->GetAllVertexInfo()) {
-      LOG(INFO) << "Loading vertex: " << vertex.first;
+      LOG_IF(INFO, comm_spec_.worker_id() == 0)
+          << "Loading vertex: " << vertex.first;
       const auto& label = vertex.first;
       const auto& vertex_info = vertex.second;
       auto vertex_chunk_begin = vertex_chunk_begin_of_frag_[label][comm_spec_.fid()];
@@ -175,18 +202,26 @@ class ArrowFragmentBuilder {
 
       table_vec_t pg_tables;
       for (const auto& pg : vertex_info.GetPropertyGroups()) {
+        int64_t thread_num =
+            (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
+             comm_spec_.local_num();
         table_vec_t vertex_chunk_tables(worker_vertex_chunk_num);
-        std::vector<std::thread> threads(worker_vertex_chunk_num);
-        for (int64_t i = 0; i < worker_vertex_chunk_num; ++i) {
+        std::vector<std::thread> threads(thread_num);
+        std::atomic<size_t> cur_chunk_index(0);
+        for (int64_t i = 0; i < thread_num; ++i) {
           threads[i] = std::thread([&](int64_t tid) {
             auto maybe_reader = gsf::ConstructVertexPropertyArrowChunkReader(*(graph_info_.get()), label, pg);
             CHECK(!maybe_reader.has_error());
             auto& reader = maybe_reader.value();
-            auto st = reader.seek((vertex_chunk_begin + tid) * chunk_size);
-            CHECK(st.ok());
-            auto chunk_table = reader.GetChunk();
-            CHECK(!chunk_table.has_error());
-            vertex_chunk_tables[tid] = chunk_table.value();
+            while (true) {
+              auto got = cur_chunk_index.fetch_add(1);
+              if (got >= worker_vertex_chunk_num) {
+                break;
+              }
+              reader.seek((vertex_chunk_begin + got) * chunk_size);
+              auto chunk_table = reader.GetChunk();
+              vertex_chunk_tables[got] = chunk_table.value();
+            }
           }, i);
         }
         for (auto& t : threads) {
@@ -223,16 +258,15 @@ class ArrowFragmentBuilder {
         << "PROGRESS--GRAPH-LOADING-READ-EDGE-0";
     // read the adj list chunk tables
     for (const auto& edge : graph_info_->GetAllEdgeInfo()) {
-      LOG(INFO) << "Loading edge: " << edge.first;
+      LOG_IF(INFO, comm_spec_.worker_id() == 0)
+         << "Loading edge: " << edge.first;
       const auto& edge_info = edge.second;
       if (edge_info.ContainAdjList(gsf::AdjListType::ordered_by_source)) {
         readEdgeTableOfLabel(edge_info, gsf::AdjListType::ordered_by_source);
       }
-      LOG(INFO) <<"Load CSR Done";
       if (edge_info.ContainAdjList(gsf::AdjListType::ordered_by_dest)) {
         readEdgeTableOfLabel(edge_info, gsf::AdjListType::ordered_by_dest);
       }
-      LOG(INFO) <<"Load CSC Done";
 
       // add edge relation
       auto src_label = edge_info.GetSrcLabel();
@@ -315,30 +349,127 @@ class ArrowFragmentBuilder {
     auto dst_label = edge_info.GetDstLabel();
     auto edge_label = edge_info.GetEdgeLabel();
     const auto& property_groups = edge_info.GetPropertyGroups(adj_list_type);
-    std::string base_dir = graph_info_->GetPrefix() + "/" + edge_info.GetPrefix();
+    std::string base_dir;
+    auto fs = gsf::FileSystemFromUriOrPath(graph_info_->GetPrefix(), &base_dir).value();
+    base_dir += "/" + edge_info.GetAdjListDirPath(adj_list_type);
 
     int64_t vertex_chunk_begin = 0;
     int64_t worker_vertex_chunk_num = 0;
+    int64_t vertex_chunk_size;
     if (adj_list_type == gsf::AdjListType::ordered_by_source) {
       vertex_chunk_begin = vertex_chunk_begin_of_frag_[src_label][comm_spec_.fid()];
       worker_vertex_chunk_num =
         vertex_chunk_begin_of_frag_[src_label][comm_spec_.fid() + 1] - vertex_chunk_begin_of_frag_[src_label][comm_spec_.fid()];
+      vertex_chunk_size = edge_info.GetSrcChunkSize();
     } else {
       vertex_chunk_begin = vertex_chunk_begin_of_frag_[dst_label][comm_spec_.fid()];
       worker_vertex_chunk_num =
         vertex_chunk_begin_of_frag_[dst_label][comm_spec_.fid() + 1] - vertex_chunk_begin_of_frag_[dst_label][comm_spec_.fid()];
+      vertex_chunk_size = edge_info.GetDstChunkSize();
     }
-    table_vec_t edge_chunk_tables, edge_property_chunk_tables;
     std::vector<std::shared_ptr<arrow::Array>> offset_arrays(worker_vertex_chunk_num);
 
-    std::vector<std::thread> threads;
+    int64_t thread_num =
+      (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
+      comm_spec_.local_num();
+    std::vector<std::thread> threads(thread_num);
+    std::vector<gsf::IdType> edge_chunk_num_vec(worker_vertex_chunk_num + 1, 0);
+    std::atomic<size_t> cur_chunk(0);
+    for (int64_t i = 0; i < thread_num; ++i) {
+      threads[i] = std::thread([&](int64_t tid) {
+        auto maybe_offset_reader = gsf::ConstructAdjListOffsetArrowChunkReader(*(graph_info_.get()),
+              src_label, edge_label, dst_label, adj_list_type);
+        CHECK(maybe_offset_reader.status().ok());
+        auto& offset_reader = maybe_offset_reader.value();
+        while (true) {
+          auto got = cur_chunk.fetch_add(1);
+          if (got >= worker_vertex_chunk_num) {
+            break;
+          }
+          int64_t vertex_chunk_id = got + vertex_chunk_begin;
+          std::string chunk_dir = base_dir + "/part" + std::to_string(vertex_chunk_id);
+          auto num = fs->GetFileNumInDir(chunk_dir);
+          // if (!num.status().ok()) {
+          //   LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << num.status().message();
+          // }
+          edge_chunk_num_vec[got] = num.value();
+
+          auto st = offset_reader.seek(vertex_chunk_id * vertex_chunk_size);
+          // if (!st.ok()) {
+          //   LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << st.message();
+          // }
+          auto offset_result = offset_reader.GetChunk();
+          // if (!offset_result.status().ok()) {
+          //   LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << offset_result.status().message();
+          // }
+          offset_arrays[got] = offset_result.value();
+        }
+      }, i);
+    }
+    for (auto& t : threads) {
+      t.join();
+    }
+    for (int i = 1; i < edge_chunk_num_vec.size() - 1; ++i) {
+      edge_chunk_num_vec[i] += edge_chunk_num_vec[i - 1];
+    }
+    for (size_t i = edge_chunk_num_vec.size() - 1; i > 0; --i) {
+      edge_chunk_num_vec[i] = edge_chunk_num_vec[i - 1];
+    }
+    edge_chunk_num_vec[0] = 0;
+    auto total_edge_chunk_num = edge_chunk_num_vec.back();
+    // LOG(INFO) <<"frag-" << comm_spec_.fid() << " total_edge_chunk_num: " << total_edge_chunk_num;
+    table_vec_t edge_chunk_tables(total_edge_chunk_num), edge_property_chunk_tables(total_edge_chunk_num);
+
+    double t = 0;
+    std::atomic<size_t> cur_edge_chunk(0);
+    for (int64_t i = 0; i < thread_num; ++i) {
+      threads[i] = std::thread([&](int64_t tid) {
+        auto expect = gsf::ConstructAdjListArrowChunkReader(*(graph_info_.get()),
+             src_label, edge_label, dst_label, adj_list_type);
+        CHECK(!expect.has_error());
+        auto& reader = expect.value();
+        std::vector<gsf::AdjListPropertyArrowChunkReader> property_readers;
+        for (const auto& pg : property_groups) {
+          property_readers.emplace_back(
+              edge_info, pg, adj_list_type, graph_info_->GetPrefix());
+        }
+        while (true) {
+          auto got = cur_edge_chunk.fetch_add(1);
+          if (got >= total_edge_chunk_num) {
+            break;
+          }
+          auto chunk_pair = getChunkPair(edge_chunk_num_vec, got);
+          auto vertex_chunk_id = chunk_pair.first + vertex_chunk_begin;
+          auto edge_chunk_index = chunk_pair.second;
+          reader.seek_chunk_index(vertex_chunk_id, edge_chunk_index);
+          auto result = reader.GetChunk();
+          // if (!result.status().ok()) {
+          //   LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << result.status().message();
+          // }
+          edge_chunk_tables[got] = result.value();
+          // property group chunks
+          for (int i = 0; i < property_groups.size(); ++i) {
+            auto& preader = property_readers[i];
+            preader.seek_chunk_index(vertex_chunk_id, edge_chunk_index);
+            auto presult = preader.GetChunk();
+            // if (!result.status().ok()) {
+            //   LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << result.status().message() <<" " << edge_chunk_num;
+            // }
+            edge_property_chunk_tables[got] = presult.value();
+          }
+        }
+      }, i);
+    }
+    for (auto& t : threads) {
+      t.join();
+    }
+    /*
     for (int64_t i = 0; i < worker_vertex_chunk_num; ++i) {
       int64_t edge_chunk_num = gsf::utils::GetEdgeChunkNumOfVertexChunk(edge_info, adj_list_type, i + vertex_chunk_begin, base_dir).value();
       if (edge_chunk_num == 0) {
         continue;
       }
       table_vec_t edge_chunk_tables_of_vertex(edge_chunk_num), edge_property_chunk_tables_of_vertex(edge_chunk_num);
-      threads.clear();
       threads.resize(edge_chunk_num * 2);
       for (int64_t tid = 0; tid < edge_chunk_num * 2; ++tid) {
         threads[tid] = std::thread([&, tid]() {
@@ -365,7 +496,7 @@ class ArrowFragmentBuilder {
               reader.seek_chunk_index(i + vertex_chunk_begin, tid - edge_chunk_num);
               auto result = reader.GetChunk();
               if (!result.status().ok()) {
-                LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << result.status().message() <<" " << edge_chunk_num;
+                LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << result.status().message() <<" " << edge_chunk_num;
               }
               property_chunk_tables.push_back(result.value());
             }
@@ -395,11 +526,11 @@ class ArrowFragmentBuilder {
           auto& offset_reader = maybe_offset_reader.value();
           auto st = offset_reader.seek((tid + vertex_chunk_begin) * edge_info.GetSrcChunkSize());
           if (!st.ok()) {
-            LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << st.message();
+            LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << st.message();
           }
           auto offset_result = offset_reader.GetChunk();
           if (!offset_result.status().ok()) {
-            LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << offset_result.status().message();
+            LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << offset_result.status().message();
           }
           offset_arrays[tid] = offset_result.value();
         });
@@ -407,14 +538,20 @@ class ArrowFragmentBuilder {
     for (auto& t : threads) {
       t.join();
     }
+    */
     auto maybe_adj_list_table = arrow::ConcatenateTables(edge_chunk_tables);
     if (!maybe_adj_list_table.status().ok()) {
-      LOG(ERROR) << "worker-" << comm_spec_.worker_id() << " Error: " << maybe_adj_list_table.status().message();
+      LOG(ERROR) << "frag-" << comm_spec_.fid() << " Error: " << maybe_adj_list_table.status().message();
     }
     auto adj_list_table = maybe_adj_list_table.ValueOrDie();
     auto offset_chunked_array = arrow::ChunkedArray::Make(offset_arrays).ValueOrDie();
     auto offset_array = offset_chunked_array->chunk(0);
-    auto property_table = arrow::ConcatenateTables(edge_property_chunk_tables).ValueOrDie();
+    std::shared_ptr<arrow::Table> property_table;
+    if (property_groups.empty()) {
+      property_table = CreateEmptyTable();;
+    } else {
+      property_table = arrow::ConcatenateTables(edge_property_chunk_tables).ValueOrDie();
+    }
 
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     metadata->Append("label", edge_label);
@@ -451,13 +588,13 @@ class ArrowFragmentBuilder {
         auto adj_list_table = std::get<0>(csr_item);
         std::shared_ptr<arrow::Table> table;
         BOOST_LEAF_ASSIGN(table,
-                      CSREdgesId2Gid(adj_list_table, src_label, dst_label, false));
+                      CSREdgesId2Gid(adj_list_table, src_label, dst_label));
         std::get<0>(csr_item) = table;
 
         auto& csc_item = csc_edge_tables_[e_label][i];
         adj_list_table = std::get<0>(csc_item);
         BOOST_LEAF_ASSIGN(table,
-                      CSCEdgesId2Gid(adj_list_table, src_label, dst_label, true));
+                      CSCEdgesId2Gid(adj_list_table, src_label, dst_label));
         std::get<0>(csc_item) = table;
       }
       if (edge_relations_[e_label].size() > 1) {
@@ -489,8 +626,7 @@ class ArrowFragmentBuilder {
 
   bl::result<std::shared_ptr<arrow::Table>> CSREdgesId2Gid(
       std::shared_ptr<arrow::Table> adj_list_table, label_id_t src_label,
-      label_id_t dst_label, bool is_src = true) {
-    // if (is_src) {
+      label_id_t dst_label) {
       std::shared_ptr<arrow::Field> src_gid_field =
         std::make_shared<arrow::Field>(
             "_graphArSrcIndex", vineyard::ConvertToArrowType<vid_t>::TypeValue());
@@ -500,7 +636,6 @@ class ArrowFragmentBuilder {
       ARROW_OK_ASSIGN_OR_RAISE(
         adj_list_table,
         adj_list_table->SetColumn(src_column, src_gid_field, src_gid_array));
-    // } else {
       std::shared_ptr<arrow::Field> dst_gid_field =
         std::make_shared<arrow::Field>(
             "_graphArDstIndex", vineyard::ConvertToArrowType<vid_t>::TypeValue());
@@ -512,14 +647,12 @@ class ArrowFragmentBuilder {
       ARROW_OK_ASSIGN_OR_RAISE(
         adj_list_table,
         adj_list_table->SetColumn(dst_column, dst_gid_field, dst_gid_array));
-    // }
     return adj_list_table;
   }
 
   bl::result<std::shared_ptr<arrow::Table>> CSCEdgesId2Gid(
       std::shared_ptr<arrow::Table> adj_list_table, label_id_t src_label,
-      label_id_t dst_label, bool is_src = true) {
-    // if (is_src) {
+      label_id_t dst_label) {
       std::shared_ptr<arrow::Field> src_gid_field =
         std::make_shared<arrow::Field>(
             "_graphArSrcIndex", vineyard::ConvertToArrowType<vid_t>::TypeValue());
@@ -529,7 +662,6 @@ class ArrowFragmentBuilder {
       ARROW_OK_ASSIGN_OR_RAISE(
         adj_list_table,
         adj_list_table->SetColumn(src_column, src_gid_field, src_gid_array));
-    // } else {
       std::shared_ptr<arrow::Field> dst_gid_field =
         std::make_shared<arrow::Field>(
             "_graphArDstIndex", vineyard::ConvertToArrowType<vid_t>::TypeValue());
@@ -541,7 +673,6 @@ class ArrowFragmentBuilder {
       ARROW_OK_ASSIGN_OR_RAISE(
         adj_list_table,
         adj_list_table->SetColumn(dst_column, dst_gid_field, dst_gid_array));
-    // }
     return adj_list_table;
   }
 
@@ -549,7 +680,7 @@ class ArrowFragmentBuilder {
   bl::result<std::shared_ptr<arrow::ChunkedArray>>
   parseOidChunkedArray(label_id_t label_id,
                        std::shared_ptr<arrow::ChunkedArray> oid_arrays_in,
-                       bool is_src = true) {
+                       bool is_local = true) {
     size_t chunk_num = oid_arrays_in->num_chunks();
     std::vector<std::shared_ptr<arrow::Array>> chunks_out(chunk_num);
 
@@ -582,7 +713,7 @@ class ArrowFragmentBuilder {
                 return;
               }
 
-              if (is_src) {
+              if (is_local) {
                 for (size_t k = 0; k != size; ++k) {
                   internal_oid_t oid = oid_array->GetView(k);
                   if (!vm->GetGid(comm_spec_.fid(), label_id, oid, builder[k])) {
@@ -706,6 +837,22 @@ class ArrowFragmentBuilder {
       }
     }
     return low;
+  }
+
+  static std::pair<int64_t, int64_t> getChunkPair(const std::vector<gsf::IdType>& num_vec, int64_t got) {
+    // binary search;
+    int64_t low = 0, high = num_vec.size() - 1;
+    while (low <= high) {
+      int64_t mid = (low + high) / 2;
+      if (num_vec[mid] <= got && num_vec[mid + 1] > got) {
+        return std::make_pair(mid, got - num_vec[mid]);
+      } else if (num_vec[mid] > got) {
+        high = mid - 1;
+      } else {
+        low = mid + 1;
+      }
+    }
+    return std::make_pair(low, got - num_vec[low]);
   }
 
  private:
@@ -897,6 +1044,7 @@ class GSFArrowFragmentBuilder
       std::vector<std::tuple<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Array>, std::shared_ptr<arrow::Table>>>&& csr_edge_tables,
       std::vector<std::tuple<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Array>, std::shared_ptr<arrow::Table>>>&& csc_edge_tables,
       int concurrency) {
+    LOG(INFO) << "edge label num: " << this->edge_label_num_ << " concurrency: " << concurrency;
     CHECK(csr_edge_tables.size() == static_cast<size_t>(this->edge_label_num_));
     CHECK(csc_edge_tables.size() == static_cast<size_t>(this->edge_label_num_));
     std::vector<std::shared_ptr<vid_array_t>> csr_edge_src, csr_edge_dst, csc_edge_src, csc_edge_dst;
@@ -924,11 +1072,13 @@ class GSFArrowFragmentBuilder
       std::get<0>(csc_edge_tables[i]) = combined_table;
       auto csr_adj_list_table = std::get<0>(csr_edge_tables[i]);
       auto csc_adj_list_table = std::get<0>(csc_edge_tables[i]);
+      LOG_IF(INFO, comm_spec_.worker_id() == 0) <<
+        "label-" << i << " csr table: " << csr_adj_list_table->num_rows() << " csc table: " << csc_adj_list_table->num_rows();
       // the outer vertices on exist in dst column
       // ov_gids.resize(csr_adj_list_table->column(1)->num_chunks());
       collect_outer_vertices<vid_t>(vid_parser_,
                              std::dynamic_pointer_cast<vid_array_t>(
-                                 csr_adj_list_table->column(0)->chunk(0)),
+                                 csr_adj_list_table->column(1)->chunk(0)),
                              this->fid_, collected_ovgids);
       // for (auto& ov_gid_vec : ov_gids) {
       //   collected_ovgids[i].insert(collected_ovgids[i].end(), ov_gid_vec.begin(),
@@ -974,6 +1124,8 @@ class GSFArrowFragmentBuilder
           adj_list_table,
           std::get<0>(csr_edge_tables[i])->CombineChunks(arrow::default_memory_pool()));
       */
+      LOG_IF(INFO, this->fid_ == 0) <<
+        "label-" << i << " csr table: " << adj_list_table->num_rows();
       BOOST_LEAF_CHECK(generate_local_id_list<vid_t>(vid_parser_,
                              std::dynamic_pointer_cast<vid_array_t>(
                                  adj_list_table->column(0)->chunk(0)),
@@ -993,6 +1145,8 @@ class GSFArrowFragmentBuilder
           adj_list_table,
           std::get<0>(csc_edge_tables[i])->CombineChunks(arrow::default_memory_pool()));
       */
+      LOG_IF(INFO, comm_spec_.worker_id() == 0) <<
+        "label-" << i << " csc table: " << adj_list_table->num_rows();
       BOOST_LEAF_CHECK(generate_local_id_list<vid_t>(vid_parser_,
                              std::dynamic_pointer_cast<vid_array_t>(
                                  adj_list_table->column(0)->chunk(0)),
