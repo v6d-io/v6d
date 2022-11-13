@@ -1,7 +1,7 @@
 Vineyard Operator
 =================
 
-To manage all vineyard relevant components in kubernetes cluster, we proposal the vineyard
+To manage all vineyard relevant components in Kubernetes cluster, we proposal the vineyard
 operator. With it, users can easily deploy vineyard components, and manage their lifecycle of them.
 The doc will show you all details about vineyard operator and how to use it to manage vineyard
 components.
@@ -17,7 +17,7 @@ Install vineyard-operator
 There are two ways to install vineyard operator, one is to install it from helm chart(recommended
 way), and the other is to install it from source code.
 
-**Note** Before you install vineyard operator, you should have a kubernetes cluster and kubectl
+**Note** Before you install vineyard operator, you should have a Kubernetes cluster and kubectl
 installed. Here we use `kind`_ to create a cluster.
 
 Install from helm chart
@@ -63,43 +63,53 @@ Install from source code
 
 1. Clone the vineyard repo:
 
-.. code:: bash
+  .. code:: bash
 
-    $ git clone https://github.com/v6d-io/v6d.git
+      $ git clone https://github.com/v6d-io/v6d.git
 
 2. Install cert-manager:
 
-.. code:: bash
+  .. code:: bash
 
-    $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+      $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
 
-3. Build the vineyard operator image and deploy it to your kubernetes cluster:
+3. Build the vineyard operator image and deploy it to your Kubernetes cluster:
 
-.. code:: bash
+  .. code:: bash
 
-    $ cd k8s
-    $ make -C k8s docker-build
-    $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
-    $ make -C k8s deploy
-    $ make -C k8s deploy
+      $ cd k8s
+      $ make -C k8s docker-build
+
+  If you are working with kind, you need to first import the image into the kind cluster, and this step should
+  be skipped if you are working with other Kubernetes distribution:
+
+  .. code:: bash
+
+      $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
+
+  Then, deploy the vineyard operator:
+
+  .. code:: bash
+
+      $ make -C k8s deploy
 
 4. Check the vineyard operator as below:
 
-.. code:: bash
+  .. code:: bash
 
-    $ kubectl get all -n vineyard-system
-    NAME                                               READY   STATUS    RESTARTS   AGE
-    pod/vineyard-controller-manager-5c6f4bc454-8xm8q   2/2     Running   0          62m
+      $ kubectl get all -n vineyard-system
+      NAME                                               READY   STATUS    RESTARTS   AGE
+      pod/vineyard-controller-manager-5c6f4bc454-8xm8q   2/2     Running   0          62m
 
-    NAME                                                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-    service/vineyard-controller-manager-metrics-service   ClusterIP   10.96.240.173   <none>        8443/TCP   62m
-    service/vineyard-webhook-service                      ClusterIP   10.96.41.132    <none>        443/TCP    62m
+      NAME                                                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+      service/vineyard-controller-manager-metrics-service   ClusterIP   10.96.240.173   <none>        8443/TCP   62m
+      service/vineyard-webhook-service                      ClusterIP   10.96.41.132    <none>        443/TCP    62m
 
-    NAME                                          READY   UP-TO-DATE   AVAILABLE   AGE
-    deployment.apps/vineyard-controller-manager   1/1     1            1           62m
+      NAME                                          READY   UP-TO-DATE   AVAILABLE   AGE
+      deployment.apps/vineyard-controller-manager   1/1     1            1           62m
 
-    NAME                                                     DESIRED   CURRENT   READY   AGE
-    replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       62m
+      NAME                                                     DESIRED   CURRENT   READY   AGE
+      replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       62m
 
 
 Creating a vineyard Cluster
@@ -119,11 +129,8 @@ replicas:
       namespace: vineyard-system
     spec:
       image: vineyardcloudnative/vineyardd:latest
-      replicas: 3
       imagePullPolicy: IfNotPresent
-      service:
-        type: ClusterIP
-        port: 9600
+      replicas: 3
     EOF
 
 The vineyard-operator will created deployment for required metadata service backend (:code:`etcd`),
@@ -203,92 +210,73 @@ The detailed configuration entries for creating a vineyard cluster are listed as
      - The image pull policy of metric.
      - nil
 
-   * - | config.
-       | etcdCmd
+   * - | etcdCmd
      - string
      - The path of etcd command.
      - nil
 
-   * - | config.
-       | etcdEndpoint
+   * - | etcdEndpoint
      - string
      - The endpoint of etcd.
      - nil
 
-   * - | config.
-       | etcdPrefix
+   * - | etcdPrefix
      - string
      - The path prefix of etcd.
      - nil
 
-   * - | config.
-       | enableMetrics
+   * - | enableMetrics
      - bool
      - Enable the metrics in vineyardd.
      - false
 
-   * - | config.
-       | enablePrometheus
-     - bool
-     - Enable the Prometheus.
-     - false
-
-   * - | config.
-       | socket
+   * - | socket
      - string
      - The ipc socket file of vineyardd.
      - nil
 
-   * - | config.
-       | streamThreshold
+   * - | streamThreshold
      - int64
      - The memory threshold of streams
        (percentage of total memory)
      - nil
 
-   * - | config.
-       | sharedMemorySize
+   * - | sharedMemorySize
      - string
      - The shared memory size for vineyardd.
      - nil
 
-   * - | config.
-       | syncCRDs
+   * - | syncCRDs
      - bool
      - Synchronize CRDs when persisting objects
      - true
 
-   * - | config.
-       | spillConfig.
+   * - | spillConfig.
        | Name
      - string
      - The name of the spill config,
        if set we'll enable the spill module.
      - nil
 
-   * - | config.
-       | spillConfig.
+   * - | spillConfig.
        | path
      - string
      - The path of spilling.
      - nil
 
-   * - | config.
-       | spillConfig.
+   * - | spillConfig.
        | spillLowerRate
      - string
      - The low watermark of spilling memory.
      - nil
 
-   * - | config.
-       | spillConfig.
+   * - | spillConfig.
        | spillUpperRate
      - string
      - The high watermark of triggering spilling.
      - nil
 
-   * - | config.
-       | spillConfig.
+   * - | spillConfig.
        | persistent
        | VolumeSpec
      - | corev1.
@@ -297,8 +285,7 @@ The detailed configuration entries for creating a vineyard cluster are listed as
      - The PV of the spilling for persistent storage.
      - nil
 
-   * - | config.
-       | spillConfig.
+   * - | spillConfig.
        | persistent
        | VolumeClaimSpec
      - | corev1.
@@ -393,7 +380,7 @@ LocalObject
 ^^^^^^^^^^^
 
 The **LocalObject** custom resource definition (CRD) declaratively defines the local object
-in a kubernetes cluster, it contains the following fields:
+in a Kubernetes cluster, it contains the following fields:
 
 .. list-table:: LocalObject Properties
    :widths: 15 10 60 15
@@ -508,9 +495,9 @@ for its required inputs and all required configurations are listed as follows:
 
    * - "scheduling.k8s.v6d.io/vineyardd"
      - labels
-     - The name of vineyardd. Notice, the vineyardd's
-       namespace is generally recommended to be set
-       to `vineyard-system`.
+     - The name or namespaced name of vineyardd. e.g.,
+       `vineyard-sample` or
+       `vineyard-system/vineyard-sample`.
 
    * - "scheduling.k8s.v6d.io/job ""
      - labels
@@ -550,6 +537,7 @@ then deploy `workflow-job1`_ as follows.
         labels:
           app: v6d-workflow-demo-job1
           # vineyardd's name
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           # job name
           scheduling.k8s.v6d.io/job: v6d-workflow-demo-job1
@@ -570,8 +558,7 @@ then deploy `workflow-job1`_ as follows.
         volumes:
         - name: vineyard-sock
           hostPath:
-            # the path name is combined by `vineyard-{vineyardd's namespace}-{vineyardd's name}`
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
 
 We can see the created job and the objects produced by it:
@@ -632,6 +619,7 @@ Then deploy the `workflow-job2`_ as follows,
         labels:
           app: v6d-workflow-demo-job2
           # vineyardd's name
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           # job name
           scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
@@ -661,7 +649,7 @@ Then deploy the `workflow-job2`_ as follows,
           volumes:
           - name: vineyard-sock
             hostPath:
-              path: /var/run/vineyard-vineyard-system-vineyardd-sample
+              path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
 
 Now you can see that both jobs has been scheduled and became running:
@@ -692,7 +680,7 @@ Operations and drivers
 ----------------------
 
 The **Operation** custom resource definition (CRD) declaratively defines the configurable
-pluggable drivers ( mainly `assembly` and `repartition` ) in a kubernetes cluster,
+pluggable drivers ( mainly `assembly` and `repartition` ) in a Kubernetes cluster,
 it contains the following fields:
 
 .. list-table:: Operation Configurations
@@ -782,42 +770,40 @@ daemon server with spill mechanism:
       namespace: vineyard-system
     spec:
       image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-      version: latest
       replicas: 3
       imagePullPolicy: IfNotPresent
       # vineyardd's configuration
-      config:
-        sharedMemorySize: "2048"
-        syncCRDs: true
-        enableMetrics: false
-        # spill configuration
-        spillConfig:
-          # if set, then enable the spill mechanism
-          name: spill-path
-          # please make sure the path exists
-          path: /var/vineyard/spill
-          spillLowerRate: "0.3"
-          spillUpperRate: "0.8"
-          persistentVolumeSpec:
-            storageClassName: manual
-            capacity:
-              storage: 1Gi
-            accessModes:
-              - ReadWriteOnce
-            hostPath:
-              path: /var/vineyard/spill
-        persistentVolumeClaimSpec:
-            storageClassName: manual
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 512Mi
-        etcd:
-          replicas: 3
-        service:
-          type: ClusterIP
-          port: 9600
+      sharedMemorySize: "2048M"
+      syncCRDs: true
+      enableMetrics: false
+      # spill configuration
+      spillConfig:
+        # if set, then enable the spill mechanism
+        name: spill-path
+        # please make sure the path exists
+        path: /var/vineyard/spill
+        spillLowerRate: "0.3"
+        spillUpperRate: "0.8"
+        persistentVolumeSpec:
+          storageClassName: manual
+          capacity:
+            storage: 1Gi
+          accessModes:
+            - ReadWriteOnce
+          hostPath:
+            path: /var/vineyard/spill
+      persistentVolumeClaimSpec:
+          storageClassName: manual
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 512Mi
+      etcd:
+        replicas: 3
+      service:
+        type: ClusterIP
+        port: 9600
     EOF
 
 For more information about the checkpoint mechanism in vineyard operator, there
@@ -897,6 +883,7 @@ running the following yaml file.
           labels:
             app: assembly-job1
             # this label represents the vineyardd's name that need to be used
+            scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
             scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
             scheduling.k8s.v6d.io/job: assembly-job1
         spec:
@@ -914,7 +901,7 @@ running the following yaml file.
           volumes:
             - name: vineyard-sock
               hostPath:
-                path: /var/run/vineyard-vineyard-system-vineyardd-sample
+                path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
     # we can get the localobjects produced by the first workload, it's a stream type.
     $ kubectl get localobjects -n vineyard-system
@@ -953,6 +940,7 @@ The following is the yaml file of the `assembly workload2`_:
           assembly.v6d.io/enabled: "true"
           assembly.v6d.io/type: "local"
           # this label represents the vineyardd's name that need to be used
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           scheduling.k8s.v6d.io/job: assembly-job2
       spec:
@@ -975,7 +963,7 @@ The following is the yaml file of the `assembly workload2`_:
         volumes:
           - name: vineyard-sock
             hostPath:
-              path: /var/run/vineyard-vineyard-system-vineyardd-sample
+              path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
   EOF
 
 
@@ -1147,7 +1135,7 @@ running the following yaml file.
       volumes:
         - name: vineyard-sock
           hostPath:
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
       volumeMounts:
         - mountPath: /var/run
           name: vineyard-sock
@@ -1184,6 +1172,7 @@ Deploy the `repartition workload1`_ as follows:
           repartition.v6d.io/type: "dask"
           scheduling.k8s.v6d.io/replicas: "1"
           # this label represents the vineyardd's name that need to be used
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           scheduling.k8s.v6d.io/job: dask-repartition-job1
       spec:
@@ -1203,7 +1192,7 @@ Deploy the `repartition workload1`_ as follows:
         volumes:
         - name: vineyard-sock
           hostPath:
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
   EOF
 
 The first workload will create 4 partitions (each partition as a localobject):
@@ -1252,6 +1241,7 @@ Deploy the `repartition workload2`_ as follows:
           repartition.v6d.io/type: "dask"
           scheduling.k8s.v6d.io/replicas: "1"
           # this label represents the vineyardd's name that need to be used
+          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
           scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
           scheduling.k8s.v6d.io/job: dask-repartition-job2
       spec:
@@ -1276,7 +1266,7 @@ Deploy the `repartition workload2`_ as follows:
         volumes:
         - name: vineyard-sock
           hostPath:
-            path: /var/run/vineyard-vineyard-system-vineyardd-sample
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
   EOF
 
 The second workload waits for the repartition operation to finish:

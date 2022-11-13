@@ -21,15 +21,18 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
+      annotations:
+        kubectl.kubernetes.io/default-container: "manager"
+        kubectl.kubernetes.io/default-logs-container: "manager"
     spec:
       containers:
-      - command:
+      - name: manager
+        command:
         - /manager
         args:
         - --leader-elect
         image: controller:latest
         imagePullPolicy: IfNotPresent
-        name: manager
         livenessProbe:
           httpGet:
             path: /healthz

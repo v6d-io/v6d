@@ -28,7 +28,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,15 +41,12 @@ const (
 	NeedInjectedAssemblyKey = "need-injected-assembly"
 	// AssemblyPrefix is the prefix of the assembly job
 	AssemblyPrefix = "assemble-"
-	// SucceededState is the succeeded state of the job
-	SucceededState = "succeeded"
-	// FailedState is the failed state of the job
-	FailedState = "failed"
 )
 
 // AssemblyOperation is the operation for the assembly
 type AssemblyOperation struct {
 	client.Client
+	ClientUtils
 	app  *kubernetes.Application
 	done bool
 }
@@ -72,26 +68,26 @@ type DistributedAssemblyConfig struct {
 	Namespace            string
 	StreamID             string
 	JobName              string
-	GlobalobjectID       string
+	GlobalObjectID       string
 	OldObjectToNewObject string
 	TimeoutSeconds       int64
 	VineyardSockPath     string
 }
 
-// TmpLocalAssemblyConfig is the template config for the assembly job
-var TmpLocalAssemblyConfig LocalAssemblyConfig
+// LocalAssemblyConfigTemplate is the template config for the assembly job
+var LocalAssemblyConfigTemplate LocalAssemblyConfig
 
 // GetAssemblyConfig gets the local assembly config
 func GetAssemblyConfig() LocalAssemblyConfig {
-	return TmpLocalAssemblyConfig
+	return LocalAssemblyConfigTemplate
 }
 
-// TmpDistributedAssemblyConfig is the template config for the distributed assembly job
-var TmpDistributedAssemblyConfig DistributedAssemblyConfig
+// DistributedAssemblyConfigTemplate is the template config for the distributed assembly job
+var DistributedAssemblyConfigTemplate DistributedAssemblyConfig
 
 // GetDistributedAssemblyConfig gets the distributed assembly config
 func GetDistributedAssemblyConfig() DistributedAssemblyConfig {
-	return TmpDistributedAssemblyConfig
+	return DistributedAssemblyConfigTemplate
 }
 
 // CreateJob creates the job for the operation
@@ -135,7 +131,10 @@ func (ao *AssemblyOperation) findNeedAssemblyPodByLocalObject(ctx context.Contex
 	podNamespace := (*labels)[PodNameSpaceLabelKey]
 	if podName != "" && podNamespace != "" {
 		pod := &corev1.Pod{}
-		if err := ao.Client.Get(ctx, client.ObjectKey{Name: podName, Namespace: podNamespace}, pod); err != nil {
+		if err := ao.Client.Get(ctx, client.ObjectKey{
+			Name:      podName,
+			Namespace: podNamespace,
+		}, pod); err != nil {
 			return nil, fmt.Errorf("failed to get the pod: %v", err)
 		}
 		if v, ok := pod.Labels[NeedInjectedAssemblyKey]; ok && strings.ToLower(v) == "true" {
@@ -146,21 +145,30 @@ func (ao *AssemblyOperation) findNeedAssemblyPodByLocalObject(ctx context.Contex
 }
 
 // buildLocalAssemblyJob build all configuration for the local assembly job
-func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObject *v1alpha1.LocalObject, pod *corev1.Pod, timeout int64) {
+func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObject *v1alpha1.LocalObject, pod *corev1.Pod, timeout int64) error {
 	podLabels := pod.Labels
 	// When the pod which generated the stream is annotated, the assembly job will be created in the same pod
 	if _, ok := podLabels[NeedInjectedAssemblyKey]; ok {
 		if strings.Contains(strings.ToLower(localObject.Spec.Typename), "stream") {
-			TmpLocalAssemblyConfig.Name = AssemblyPrefix + localObject.Spec.ObjectID
-			TmpLocalAssemblyConfig.Namespace = pod.Namespace
-			TmpLocalAssemblyConfig.StreamID = localObject.Spec.ObjectID
-			TmpLocalAssemblyConfig.NodeName = localObject.Spec.Hostname
-			TmpLocalAssemblyConfig.JobName = podLabels[schedulers.VineyardJobName]
-			TmpLocalAssemblyConfig.TimeoutSeconds = timeout
-			vineyardd := podLabels[schedulers.VineyarddName]
-			TmpLocalAssemblyConfig.VineyardSockPath = "/var/run/vineyard-" + localObject.Namespace + "-" + vineyardd
+			LocalAssemblyConfigTemplate.Name = AssemblyPrefix + localObject.Spec.ObjectID
+			LocalAssemblyConfigTemplate.Namespace = pod.Namespace
+			LocalAssemblyConfigTemplate.StreamID = localObject.Spec.ObjectID
+			LocalAssemblyConfigTemplate.NodeName = localObject.Spec.Hostname
+			LocalAssemblyConfigTemplate.JobName = podLabels[schedulers.VineyardJobName]
+			LocalAssemblyConfigTemplate.TimeoutSeconds = timeout
+			if socket, err := ao.ResolveRequiredVineyarddSocket(
+				ctx,
+				podLabels[schedulers.VineyarddName],
+				podLabels[schedulers.VineyarddNamespace],
+				localObject.Namespace,
+			); err != nil {
+				return err
+			} else {
+				LocalAssemblyConfigTemplate.VineyardSockPath = socket
+			}
 		}
 	}
+	return nil
 }
 
 // applyLocalAssemblyJob will apply the local assembly job
@@ -174,10 +182,15 @@ func (ao *AssemblyOperation) applyLocalAssemblyJob(ctx context.Context, o *v1alp
 	for i := range localObjectList.Items {
 		pod, err := ao.findNeedAssemblyPodByLocalObject(ctx, &localObjectList.Items[i].Labels)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
 			return fmt.Errorf("failed to find the pod which needs to be injected with the assembly job: %v", err)
 		}
 		if pod != nil {
-			ao.buildLocalAssemblyJob(ctx, &localObjectList.Items[i], pod, o.Spec.TimeoutSeconds)
+			if err := ao.buildLocalAssemblyJob(ctx, &localObjectList.Items[i], pod, o.Spec.TimeoutSeconds); err != nil {
+				return fmt.Errorf("failed to build the local assembly job: %v", err)
+			}
 			if _, err := ao.app.Apply(ctx, "operation/local-assembly-job.yaml", ctrl.Log, false); err != nil {
 				return fmt.Errorf("failed to apply the local assembly job: %v", err)
 			}
@@ -192,7 +205,7 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 	podList := &corev1.PodList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
-			operator.AssmeblyEnabledLabel: "true",
+			operator.AssemblyEnabledLabel: "true",
 		},
 	}
 
@@ -211,7 +224,10 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 	for i := range localObjectList.Items {
 		job := &batchv1.Job{}
 		if strings.Contains(strings.ToLower(localObjectList.Items[i].Spec.Typename), "stream") {
-			if err := ao.Client.Get(ctx, client.ObjectKey{Name: AssemblyPrefix + localObjectList.Items[i].Spec.ObjectID, Namespace: o.Namespace}, job); err != nil {
+			if err := ao.Client.Get(ctx, client.ObjectKey{
+				Name:      AssemblyPrefix + localObjectList.Items[i].Spec.ObjectID,
+				Namespace: o.Namespace,
+			}, job); err != nil {
 				return false, fmt.Errorf("failed to get the job: %v", err)
 			}
 			targetLocalObjects[localObjectList.Items[i].Spec.ObjectID] = true
@@ -222,7 +238,7 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 		}
 	}
 
-	if err := UpdateConfigmap(ctx, ao.Client, targetLocalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
+	if err := ao.UpdateConfigmap(ctx, targetLocalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 
@@ -230,39 +246,42 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 }
 
 // buildDistributedAssemblyJob build all configuration for the distributed assembly job
-func (ao *AssemblyOperation) buildDistributedAssemblyJob(ctx context.Context, globalObject *v1alpha1.GlobalObject,
-	pod *corev1.Pod, timeout int64) (bool, error) {
+func (ao *AssemblyOperation) buildDistributedAssemblyJob(
+	ctx context.Context,
+	globalObject *v1alpha1.GlobalObject,
+	pod *corev1.Pod,
+	timeout int64) (bool, error) {
 	podLabels := pod.Labels
 	signatures := map[string]bool{}
 	for i := range globalObject.Spec.Members {
 		signatures[globalObject.Spec.Members[i]] = true
 	}
 
-	localobjectList := &v1alpha1.LocalObjectList{}
-	if err := ao.Client.List(ctx, localobjectList); err != nil {
+	localObjectList := &v1alpha1.LocalObjectList{}
+	if err := ao.Client.List(ctx, localObjectList); err != nil {
 		return false, fmt.Errorf("failed to list the local objects: %v", err)
 	}
 
 	sigToID := map[string]string{}
-	for i := range localobjectList.Items {
-		if _, ok := signatures[localobjectList.Items[i].Spec.Signature]; ok &&
-			strings.Contains(strings.ToLower(localobjectList.Items[i].Spec.Typename), "stream") {
-			sigToID[localobjectList.Items[i].Spec.Signature] = localobjectList.Items[i].Name
+	for i := range localObjectList.Items {
+		if _, ok := signatures[localObjectList.Items[i].Spec.Signature]; ok &&
+			strings.Contains(strings.ToLower(localObjectList.Items[i].Spec.Typename), "stream") {
+			sigToID[localObjectList.Items[i].Spec.Signature] = localObjectList.Items[i].Name
 		}
 	}
 
-	globalobjectList := &v1alpha1.GlobalObjectList{}
-	if err := ao.Client.List(ctx, globalobjectList); err != nil {
+	globalObjectList := &v1alpha1.GlobalObjectList{}
+	if err := ao.Client.List(ctx, globalObjectList); err != nil {
 		return false, fmt.Errorf("failed to list the global objects: %v", err)
 	}
 
 	oldObjectToNewObject := map[string]string{}
-	for i := range globalobjectList.Items {
-		labels := globalobjectList.Items[i].Labels
+	for i := range globalObjectList.Items {
+		labels := globalObjectList.Items[i].Labels
 		if v, ok := labels[PodNameLabelKey]; ok {
 			for j := range sigToID {
 				if strings.Contains(v, sigToID[j]) {
-					oldObjectToNewObject[sigToID[j]] = globalobjectList.Items[i].Name
+					oldObjectToNewObject[sigToID[j]] = globalObjectList.Items[i].Name
 				}
 			}
 		}
@@ -275,14 +294,22 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(ctx context.Context, gl
 			str = str + `"` + k + `"` + ":" + `"` + v + `"` + ","
 		}
 		str = str[:len(str)-1] + `}'`
-		TmpDistributedAssemblyConfig.Name = AssemblyPrefix + globalObject.Name
-		TmpDistributedAssemblyConfig.Namespace = pod.Namespace
-		TmpDistributedAssemblyConfig.GlobalobjectID = globalObject.Name
-		TmpDistributedAssemblyConfig.OldObjectToNewObject = str
-		TmpDistributedAssemblyConfig.JobName = podLabels[schedulers.VineyardJobName]
-		TmpDistributedAssemblyConfig.TimeoutSeconds = timeout
-		vineyardd := podLabels[schedulers.VineyarddName]
-		TmpDistributedAssemblyConfig.VineyardSockPath = "/var/run/vineyard-" + globalObject.Namespace + "-" + vineyardd
+		DistributedAssemblyConfigTemplate.Name = AssemblyPrefix + globalObject.Name
+		DistributedAssemblyConfigTemplate.Namespace = pod.Namespace
+		DistributedAssemblyConfigTemplate.GlobalObjectID = globalObject.Name
+		DistributedAssemblyConfigTemplate.OldObjectToNewObject = str
+		DistributedAssemblyConfigTemplate.JobName = podLabels[schedulers.VineyardJobName]
+		DistributedAssemblyConfigTemplate.TimeoutSeconds = timeout
+		if socket, err := ao.ResolveRequiredVineyarddSocket(
+			ctx,
+			podLabels[schedulers.VineyarddName],
+			podLabels[schedulers.VineyarddNamespace],
+			globalObject.Namespace,
+		); err != nil {
+			return false, nil
+		} else {
+			DistributedAssemblyConfigTemplate.VineyardSockPath = socket
+		}
 		return true, nil
 	}
 	return false, nil
@@ -320,7 +347,7 @@ func (ao *AssemblyOperation) applyDistributedAssemblyJob(ctx context.Context, ti
 func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o *v1alpha1.Operation) (bool, error) {
 	required := o.Spec.Require
 	jobNames := strings.Split(required, ".")
-	jobnameTopodname := map[[2]string]bool{}
+	jobNameToPodName := map[[2]string]bool{}
 	for i := range jobNames {
 		podList := &corev1.PodList{}
 		opts := []client.ListOption{
@@ -334,7 +361,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 		}
 
 		for _, p := range podList.Items {
-			jobnameTopodname[[2]string{p.Name, p.Namespace}] = true
+			jobNameToPodName[[2]string{p.Name, p.Namespace}] = true
 		}
 	}
 
@@ -352,7 +379,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 	for i := range globalObjectList.Items {
 		labels := globalObjectList.Items[i].Labels
 		job := &batchv1.Job{}
-		if jobnameTopodname[[2]string{labels[PodNameLabelKey], labels[PodNameSpaceLabelKey]}] &&
+		if jobNameToPodName[[2]string{labels[PodNameLabelKey], labels[PodNameSpaceLabelKey]}] &&
 			strings.Contains(strings.ToLower(globalObjectList.Items[i].Spec.Typename), "stream") {
 			if err := ao.Client.Get(ctx, client.ObjectKey{Name: AssemblyPrefix + globalObjectList.Items[i].Spec.ObjectID, Namespace: o.Namespace}, job); err != nil {
 				return false, fmt.Errorf("failed to get the job: %v", err)
@@ -366,83 +393,11 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 		}
 	}
 
-	if err := UpdateConfigmap(ctx, ao.Client, targetGlobalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
+	if err := ao.UpdateConfigmap(ctx, targetGlobalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
 		return false, fmt.Errorf("failed to update the configmap: %v", err)
 	}
 
 	return true, nil
-}
-
-// UpdateConfigmap will update the configmap when the assembly operation is done
-func UpdateConfigmap(ctx context.Context, k8sclient client.Client, target map[string]bool,
-	o *v1alpha1.Operation, prefix string, data *map[string]string) error {
-	globalObjectList := &v1alpha1.GlobalObjectList{}
-
-	// get all globalobjects which may need to be injected with the assembly job
-	if err := k8sclient.List(ctx, globalObjectList); err != nil {
-		return fmt.Errorf("failed to list the global objects: %v", err)
-	}
-	// build new global object
-	newObjList := []*v1alpha1.GlobalObject{}
-	for j := range globalObjectList.Items {
-		labels := globalObjectList.Items[j].Labels
-		if v, ok := labels[PodNameLabelKey]; ok {
-			v = v[len(prefix):strings.LastIndex(v, "-")]
-			if target[v] {
-				newObjList = append(newObjList, &globalObjectList.Items[j])
-			}
-		}
-	}
-
-	if len(newObjList) != 0 {
-		newObjStr := ""
-		for i := range newObjList {
-			newObjStr = newObjStr + newObjList[i].Name + "."
-		}
-		newObjStr = newObjStr[:len(newObjStr)-1]
-
-		name := newObjList[0].Labels["k8s.v6d.io/job"]
-		namespace := o.Namespace
-		// update the configmap
-		configmap := &corev1.ConfigMap{}
-		err := k8sclient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, configmap)
-		if err != nil && !apierrors.IsNotFound(err) {
-			ctrl.Log.Info("failed to get the configmap")
-			return err
-		}
-		(*data)[name] = newObjStr
-		if apierrors.IsNotFound(err) {
-			cm := corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ConfigMap",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-				Data: *data,
-			}
-			if err := k8sclient.Create(ctx, &cm); err != nil {
-				ctrl.Log.Error(err, "failed to create the configmap")
-				return err
-			}
-		} else {
-			// if the configmap exist
-			if configmap.Data == nil {
-				configmap.Data = map[string]string{}
-			}
-			configmap.Data[name] = newObjStr
-			for k, v := range *data {
-				configmap.Data[k] = v
-			}
-			if err := k8sclient.Update(ctx, configmap); err != nil {
-				ctrl.Log.Error(err, "failed to update the configmap")
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // IsDone will check if the assembly operation is done

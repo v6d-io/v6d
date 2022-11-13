@@ -26,12 +26,9 @@ import (
 	"github.com/v6d-io/v6d/k8s/schedulers"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// log is for logging in this package.
-var assemblyInjectorLog = logf.Log.WithName("assembly_injector")
 
 // nolint: lll
 // +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
@@ -43,8 +40,8 @@ type AssemblyInjector struct {
 }
 
 const (
-	// AssmeblyEnabledLabel is the label for assembly, and inject the assembly container when setting true
-	AssmeblyEnabledLabel = "assembly.v6d.io/enabled"
+	// AssemblyEnabledLabel is the label for assembly, and inject the assembly container when setting true
+	AssemblyEnabledLabel = "assembly.v6d.io/enabled"
 	// RepartitionEnabledLabel is the label for repartition, and inject the repartition container when setting true
 	RepartitionEnabledLabel = "repartition.v6d.io/enabled"
 )
@@ -81,12 +78,14 @@ func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Po
 
 // Handle handles admission requests.
 func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
+	logger := log.FromContext(ctx).WithName("injector").WithName("Assembly")
+
 	pod := &corev1.Pod{}
 	if err := r.decoder.Decode(req, pod); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	operationLabels := []string{AssmeblyEnabledLabel, RepartitionEnabledLabel}
+	operationLabels := []string{AssemblyEnabledLabel, RepartitionEnabledLabel}
 	// check all operation labels
 	for _, l := range operationLabels {
 		if err := r.LabelRequiredPods(ctx, pod, l); err != nil {
@@ -127,7 +126,7 @@ func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	assemblyInjectorLog.Info("Injecting the env and assembly labels successfully!")
+	logger.Info("Injecting the env and assembly labels successfully!")
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 

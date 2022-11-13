@@ -12,7 +12,6 @@ RUN go mod download
 # Copy the go source
 COPY main.go main.go
 COPY apis/ apis/
-COPY config/scheduler/config.yaml scheduler-config.yaml
 COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY hack/ hack/
@@ -28,8 +27,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
+
+COPY config/scheduler/config.yaml /etc/kubernetes/scheduler.yaml
+
 COPY --from=builder /workspace/manager .
-COPY --from=builder /workspace/scheduler-config.yaml /etc/kubernetes/scheduler.yaml
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]

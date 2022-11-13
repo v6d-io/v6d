@@ -23,6 +23,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
         os: [ubuntu-20.04, macos-11]

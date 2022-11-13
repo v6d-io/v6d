@@ -17,8 +17,6 @@ setup:
   env: kind
   file: ../kind.yaml
   steps:
-    - name: prepare e2e.yaml
-      command: bash k8s/test/hack/prepare-e2e.sh
     - name: setup the serialize path
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
     - name: install cert-manager
@@ -30,9 +28,7 @@ setup:
           for: condition=Ready
     - name: install scheduler-plugin and operator
       command: |
-        make -C k8s docker-build
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
-        make -C k8s predeploy
         make -C k8s deploy
       wait:
         - namespace: vineyard-system
@@ -67,12 +63,12 @@ verify:
     interval: 10s
   cases:
     - query: |
-        kubectl get po -l app=spill-demo -n vineyard-system -oname | awk -F '/' '{print $2}' | \
+        kubectl get pod -l app=spill-demo -n vineyard-system -oname | awk -F '/' '{print $2}' | \
         xargs kubectl logs -n vineyard-system | grep Passed | awk -F ' ' '{print $5}' | yq e '{"result": .}' - | yq e 'to_entries' -
       expected: ../verify/spill.yaml
     # test whether the spilled file exists
     - query: |
-        kubectl get po -l app=spill-demo -n vineyard-system -oname | awk -F '/' '{print $2}' |  \
+        kubectl get pod -l app=spill-demo -n vineyard-system -oname | awk -F '/' '{print $2}' |  \
         head -n 1 | xargs -I{} kubectl exec {} -n vineyard-system -- ls /var/vineyard/spill |  \
         sort | tr '\n' ' ' | yq e '{"data": .}' - | yq e 'to_entries' -
       expected: ../verify/spilledfile.yaml

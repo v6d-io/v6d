@@ -21,13 +21,11 @@ metadata:
   namespace: vineyard-system
 spec:
   image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-  version: 0.9.0
   replicas: 2
   imagePullPolicy: IfNotPresent
   # vineyardd's configuration
-  config:
-    syncCRDs: true
-    enableMetrics: false
+  syncCRDs: true
+  enableMetrics: false
   etcd:
     replicas: 3
   service:

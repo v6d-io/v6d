@@ -17,9 +17,14 @@ setup:
   env: kind
   file: ../kind.yaml
   steps:
-    - name: prepare e2e.yaml
-      command: bash k8s/test/hack/prepare-e2e.sh
-    - name: load docker image
+    - name: install cert-manager
+      command: |
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+      wait:
+        - namespace: cert-manager
+          resource: pod
+          for: condition=Ready
+    - name: load docker image for dask
       command: |
         docker pull ghcr.io/v6d-io/v6d/dask-worker-with-vineyard
         docker pull ghcr.io/dask/dask:2022.8.1
@@ -37,18 +42,9 @@ setup:
         - namespace: default
           resource: deployment/my-release-dask-worker
           for: condition=Available
-    - name: install cert-manager
-      command: |
-        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-      wait:
-        - namespace: cert-manager
-          resource: pod
-          for: condition=Ready
     - name: install scheduler-plugin and operator
       command: |
-        make -C k8s docker-build
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
-        make -C k8s predeploy
         make -C k8s deploy
       wait:
         - namespace: vineyard-system
@@ -92,6 +88,6 @@ verify:
     interval: 10s
   cases:
     - query: |
-        kubectl get po -l app=dask-repartition-job2 -n vineyard-job -o name | awk -F '/' '{print $2}' |  \
+        kubectl get pod -l app=dask-repartition-job2 -n vineyard-job -o name | awk -F '/' '{print $2}' |  \
         xargs kubectl logs -n vineyard-job | head -n 1 | yq e '{"partition": .}' - | yq e 'to_entries' -
       expected: ../verify/partition.yaml

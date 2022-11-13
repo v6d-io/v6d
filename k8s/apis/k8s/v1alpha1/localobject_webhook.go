@@ -18,12 +18,13 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	log "github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // log is for logging in this package.
-var localobjectlog = logf.Log.WithName("localobject-resource")
+var llog = log.Logger.WithName("localobject")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *LocalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -39,7 +40,7 @@ var _ webhook.Defaulter = &LocalObject{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *LocalObject) Default() {
-	localobjectlog.Info("default", "name", r.Name)
+	llog.Info("default", "name", r.Name)
 }
 
 //nolint: lll
@@ -49,21 +50,21 @@ var _ webhook.Validator = &LocalObject{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LocalObject) ValidateCreate() error {
-	localobjectlog.Info("validate create", "name", r.Name)
+	llog.Info("validate create", "name", r.Name)
 
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *LocalObject) ValidateUpdate(old runtime.Object) error {
-	localobjectlog.Info("validate update", "name", r.Name)
+	llog.Info("validate update", "name", r.Name)
 
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *LocalObject) ValidateDelete() error {
-	localobjectlog.Info("validate delete", "name", r.Name)
+	llog.Info("validate delete", "name", r.Name)
 
 	return nil
 }

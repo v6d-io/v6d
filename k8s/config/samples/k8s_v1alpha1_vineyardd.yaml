@@ -5,33 +5,31 @@ metadata:
   # don't use default namespace
   namespace: vineyard-system
 spec:
-  image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-  version: 0.9.0
+  image: vineyardcloudnative/vineyardd:latest
   replicas: 2
   imagePullPolicy: IfNotPresent
   # vineyardd's configuration
-  config:
-    sharedMemorySize: 256Mi
-    syncCRDs: true
-    enableMetrics: false
-    spillConfig:
-      name: spill-path
-      path: /var/checkpoint/spill
-      persistentVolumeSpec:
-        storageClassName: manual
-        capacity:
-          storage: 1Gi
-        accessModes:
-          - ReadWriteOnce
-        hostPath:
-          path: /var/vineyard/spill
-      persistentVolumeClaimSpec:
-        storageClassName: manual
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 256Mi
+  sharedMemorySize: 256Mi
+  syncCRDs: true
+  enableMetrics: false
+  spillConfig:
+    name: spill-path
+    path: /var/checkpoint/spill
+    persistentVolumeSpec:
+      storageClassName: manual
+      capacity:
+        storage: 1Gi
+      accessModes:
+        - ReadWriteOnce
+      hostPath:
+        path: /var/vineyard/spill
+    persistentVolumeClaimSpec:
+      storageClassName: manual
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 256Mi
   etcd:
     replicas: 3
   service:

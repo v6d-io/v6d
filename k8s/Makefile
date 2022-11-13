@@ -77,6 +77,11 @@ deploy: manifests kustomize
 undeploy: kustomize
 	kubectl -n vineyard-system delete deployment vineyard-controller-manager
 
+# Undeploy controller and all created resources in the configured Kubernetes cluster in ~/.kube/config
+undeploy-all: kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl delete -f -
+
 # Deploy namespace, CRDs, rbac, etc. except the controller in the configured Kubernetes cluster in ~/.kube/config
 predeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
@@ -113,10 +118,16 @@ golint:
 	${GOBIN}/golangci-lint run ./...
 .PHONY: golint
 
+lint: golint
+.PHONY: lint
+
 # Run go fmt against code
-fmt:
+gofmt:
 	go fmt main.go
 	go fmt $(modules)
+.PHONY: gofmt
+
+fmt: gofmt
 .PHONY: fmt
 
 # Run go vet against code

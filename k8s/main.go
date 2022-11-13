@@ -141,7 +141,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 	}
 }
 
-func startScheduler(channel chan struct{}, mgr manager.Manager) {
+func startScheduler(channel chan struct{}, mgr manager.Manager, schedulerConfigFile string) {
 	command := app.NewSchedulerCommand(
 		app.WithPlugin(schedulers.Name,
 			func(obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
@@ -150,11 +150,13 @@ func startScheduler(channel chan struct{}, mgr manager.Manager) {
 		),
 	)
 
-	args := make([]string, 4)
-	args[0] = "-v"
-	args[1] = "5"
-	args[2] = "--config"
-	args[3] = "/etc/kubernetes/scheduler.yaml"
+	args := make([]string, 0, 10)
+	// apply logs
+	args = append(args, "-v")
+	args = append(args, "5")
+	// apply scheduler plugin config
+	args = append(args, "--config")
+	args = append(args, schedulerConfigFile)
 	command.SetArgs(args)
 	if err := command.Execute(); err != nil {
 		setupLog.Error(err, "problem running scheduler")
@@ -165,10 +167,13 @@ func startScheduler(channel chan struct{}, mgr manager.Manager) {
 
 func main() {
 	var metricsAddr string
-	var enableLeaderElection bool
 	var probeAddr string
+	var schedulerConfigFile string
+	var enableLeaderElection bool
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&schedulerConfigFile, "scheduler-config-file", "/etc/kubernetes/scheduler.yaml", "The location of scheduler plugin's configuration file.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -196,7 +201,7 @@ func main() {
 	}
 
 	scheduler := make(chan struct{})
-	go startScheduler(scheduler, mgr)
+	go startScheduler(scheduler, mgr, schedulerConfigFile)
 
 	manager := make(chan struct{})
 	go startManager(manager, mgr, metricsAddr, probeAddr, enableLeaderElection)

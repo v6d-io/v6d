@@ -35,7 +35,7 @@ worker:
     volumes:
       - name: vineyard-sock
         hostPath:
-          path: /var/run/vineyard-vineyard-system-vineyardd-sample
+          path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     volumeMounts:
       - mountPath: /var/run
         name: vineyard-sock

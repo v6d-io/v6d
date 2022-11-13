@@ -23,6 +23,7 @@ on:
 jobs:
   build-vineyardd:
     runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
         os: [macos-11]
@@ -193,6 +194,7 @@ jobs:
   build-wheels:
     needs: [build-vineyardd]
     runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
         os: [macos-11]

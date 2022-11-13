@@ -20,7 +20,6 @@ metadata:
   namespace: {{ .Namespace }}
   labels:
     app.kubernetes.io/name: {{ .Name }}
-    app.kubernetes.io/version: {{ .Spec.Version }}
     app.kubernetes.io/instance: vineyardd
     app.kubernetes.io/component: service
 spec:

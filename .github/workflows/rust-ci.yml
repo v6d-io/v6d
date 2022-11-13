@@ -30,6 +30,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     steps:
       - uses: actions/checkout@v3
 

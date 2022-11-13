@@ -19,12 +19,13 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	log "github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // log is for logging in this package.
-var operationlog = logf.Log.WithName("operation-resource")
+var olog = log.Logger.WithName("operation")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Operation) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -40,7 +41,7 @@ var _ webhook.Defaulter = &Operation{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Operation) Default() {
-	operationlog.Info("default", "name", r.Name)
+	olog.Info("default", "name", r.Name)
 	// set the default timeoutSeconds
 	if r.Spec.TimeoutSeconds == 0 {
 		r.Spec.TimeoutSeconds = 300
@@ -55,7 +56,7 @@ var _ webhook.Validator = &Operation{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *Operation) ValidateCreate() error {
-	operationlog.Info("validate create", "name", r.Name)
+	olog.Info("validate create", "name", r.Name)
 	r.check()
 
 	return nil
@@ -63,7 +64,7 @@ func (r *Operation) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Operation) ValidateUpdate(old runtime.Object) error {
-	operationlog.Info("validate update", "name", r.Name)
+	olog.Info("validate update", "name", r.Name)
 	r.check()
 
 	return nil
@@ -71,24 +72,24 @@ func (r *Operation) ValidateUpdate(old runtime.Object) error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *Operation) ValidateDelete() error {
-	operationlog.Info("validate delete", "name", r.Name)
+	olog.Info("validate delete", "name", r.Name)
 
 	return nil
 }
 
 func (r *Operation) check() {
 	if r.Spec.Name == "" {
-		operationlog.Error(nil, "operation's name is absent")
+		olog.Error(nil, "operation's name is absent")
 	} else if r.Spec.Name != "assembly" && r.Spec.Name != "repartition" {
-		operationlog.Error(nil, "operation's name is invalid")
+		olog.Error(nil, "operation's name is invalid")
 	}
 	if r.Spec.Type == "" {
-		operationlog.Error(nil, "operation's type is absent")
+		olog.Error(nil, "operation's type is absent")
 	}
 	if r.Spec.Require == "" {
-		operationlog.Error(nil, "operation's require is absent")
+		olog.Error(nil, "operation's require is absent")
 	}
 	if r.Spec.Target == "" {
-		operationlog.Error(nil, "operation's target is absent")
+		olog.Error(nil, "operation's target is absent")
 	}
 }

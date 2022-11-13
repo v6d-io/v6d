@@ -186,8 +186,8 @@ func (ss *SchedulerState) checkOperationLabels(ctx context.Context, pod *v1.Pod)
 					return 0, err
 				}
 			}
-			if op.Status.State != "succeeded" {
-				return 0, nil
+			if op.Status.State != v1alpha1.OperationSucceeded {
+				return 0, fmt.Errorf("operation %v is not succeeded, state is: %v", opName, op.Status.State)
 			}
 		}
 	}
@@ -196,9 +196,9 @@ func (ss *SchedulerState) checkOperationLabels(ctx context.Context, pod *v1.Pod)
 
 // getGlobalObjectsByID returns the global objects by the given jobname.
 func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []string) ([]*v1alpha1.GlobalObject, error) {
-	requiredjobs := make(map[string]bool)
+	requiredJobs := make(map[string]bool)
 	for _, n := range jobNames {
-		requiredjobs[n] = true
+		requiredJobs[n] = true
 	}
 	objects := []*v1alpha1.GlobalObject{}
 	globalObjects := &v1alpha1.GlobalObjectList{}
@@ -207,7 +207,7 @@ func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []s
 		return nil, err
 	}
 	for _, obj := range globalObjects.Items {
-		if jobname, exist := obj.Labels["k8s.v6d.io/job"]; exist && requiredjobs[jobname] {
+		if jobname, exist := obj.Labels["k8s.v6d.io/job"]; exist && requiredJobs[jobname] {
 			objects = append(objects, &obj)
 		}
 	}
@@ -281,7 +281,6 @@ func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []st
 			}
 		}
 		klog.V(5).Infof("the configmap [%v/%v] exist!", namespace, jobname[i])
-
 	}
 
 	return nil
