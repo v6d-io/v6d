@@ -8,7 +8,7 @@ A helm chart for [vineyard operator][3], which manages all relavant components a
 
 Vineyard operator has been integrated with [Helm](https://helm.sh/). Add the vineyard repository to your Helm client:
 
-```bash
+```shell
 
 $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
 $ helm repo update
@@ -19,7 +19,7 @@ Refer to the [helm repo](https://helm.sh/docs/helm/helm_repo/) for more repo inf
 
 The webhook is enabled by default, please make sure you have the [Cert-Manager](https://cert-manager.io/docs/installation/) installed, then deploy it in the `default` namespace as follows:
 
-```bash
+```shell
 
 $ helm install vineyard-operator vineyard/vineyard-operator
 
@@ -27,7 +27,7 @@ $ helm install vineyard-operator vineyard/vineyard-operator
 
 If you want to deploy it in a specific namespace, you can use the `--namespace` option:
 
-```bash
+```shell
 
 $ helm install vineyard-operator vineyard/vineyard-operator \
       --namespace vineyard-system
@@ -36,7 +36,7 @@ $ helm install vineyard-operator vineyard/vineyard-operator \
 
 If you want to set the value of the chart, you can use the `--set` option:
 
-```bash
+```shell
 
 $ helm install vineyard-operator vineyard/vineyard-operator \
       --set image.tag=v0.10.1
@@ -47,7 +47,7 @@ Refer to the [helm install](https://helm.sh/docs/helm/helm_install/) for more co
 
 Install `vineyardd` as follows.
 
-```bash
+```shell
 
 $ cat <<EOF | kubectl apply -f -
 apiVersion: k8s.v6d.io/v1alpha1
@@ -79,6 +79,7 @@ The installed charts can be removed with
 
 $ helm uninstall vineyard-operator
 
+```
 More information about the helm chart could be found at [artifacthub][1] and [parameters][2].
 
 ## Values
