@@ -105,14 +105,8 @@ class ArrowLocalVertexMap
       }
     }
     nbytes = local_oid_total + o2i_total + i2o_total;
-    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
-              << "Total: " << nbytes / 1000000 << " MB\n"
-              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
-              << "o2i total: " << o2i_total / 1000000 << " MB\n"
-              << "i2o total: " << i2o_total / 1000000 << " MB\n"
-              << "o2i size: " << o2i_size << "\n"
-              << "o2i bucket_count: " << o2i_bucket_count << "\n"
-              << "o2i load factor: " << o2i_size / o2i_bucket_count;
+    LOG(INFO) << "ArrowLocalVertexMap<int64_t, int64_t> size: \n"
+              << nbytes / 1000000 << " MB\n";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -311,11 +305,8 @@ class ArrowLocalVertexMap<arrow_string_view, VID_T>
     }
 
     nbytes = local_oid_total + o2i_total + i2o_total;
-    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
-              << "Total size: " << nbytes / 1000000 << " MB\n"
-              << "local oid array: " << local_oid_total / 1000000 << " MB\n"
-              << "o2i size: " << o2i_total * 16 / 1000000 << " MB\n"
-              << "i2o size: " << i2o_total * 16 / 1000000 << " MB";
+    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> size: \n"
+              << nbytes / 1000000 << " MB\n";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
