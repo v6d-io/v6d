@@ -9,38 +9,31 @@ A helm chart for [vineyard operator][3], which manages all relavant components a
 Vineyard operator has been integrated with [Helm](https://helm.sh/). Add the vineyard repository to your Helm client:
 
 ```shell
-
 $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
 $ helm repo update
-
 ```
 
 Refer to the [helm repo](https://helm.sh/docs/helm/helm_repo/) for more repo information.
 
-The webhook is enabled by default, please make sure you have the [Cert-Manager](https://cert-manager.io/docs/installation/) installed, then deploy it in the `default` namespace as follows:
+The webhook is enabled by default, please make sure you have the [Cert-Manager](https://cert-manager.io/docs/installation/) 
+installed, then deploy it in the `default` namespace as follows:
 
 ```shell
-
 $ helm install vineyard-operator vineyard/vineyard-operator
-
 ```
 
 If you want to deploy it in a specific namespace, you can use the `--namespace` option:
 
 ```shell
-
 $ helm install vineyard-operator vineyard/vineyard-operator \
       --namespace vineyard-system
-   
 ```
 
 If you want to set the value of the chart, you can use the `--set` option:
 
 ```shell
-
 $ helm install vineyard-operator vineyard/vineyard-operator \
       --set image.tag=v0.10.1
-
 ```
 
 Refer to the [helm install](https://helm.sh/docs/helm/helm_install/) for more command information.
@@ -54,21 +47,13 @@ apiVersion: k8s.v6d.io/v1alpha1
 kind: Vineyardd
 metadata:
   name: vineyardd-sample
-  # don't use default namespace
-  namespace: vineyard-system
 spec:
-  image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-  replicas: 2
+  image: vineyardcloudnative/vineyardd:latest
+  replicas: 3
   imagePullPolicy: IfNotPresent
-  syncCRDs: true
-  enableMetrics: false
   etcd:
     replicas: 3
-  service:
-    type: ClusterIP
-    port: 9600
 EOF
-   
 ```
 
 ## Uninstall
@@ -84,7 +69,8 @@ More information about the helm chart could be found at [artifacthub][1] and [pa
 
 ## Values
 
-The following table lists the configurable parameters of the Vineyard Operator chart and their default values. Besides, you can refer the [doc](https://v6d.io/notes/vineyard-operator.html) to get more detail about the vineyard operator.
+The following table lists the configurable parameters of the Vineyard Operator chart and their default values. 
+Besides, you can refer the [doc](https://v6d.io/notes/vineyard-operator.html) to get more detail about the vineyard operator.
 
 | Key                | Type   | Default                                                                   | Description                                                                                                                |
 | ------------------ | ------ | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -92,8 +78,8 @@ The following table lists the configurable parameters of the Vineyard Operator c
 | image.repository   | string | "vineyardcloudnative/vineyard-operator"                                   | The repository of vineyard operator image.                                                                                 |
 | image.pullPolicy   | string | "IfNotPresent"                                                            | The pull policy of vineyard operator image.                                                                                |
 | image.tag          | string | "latest"                                                                  | The image tag of vineyard operator image.                                                                                  |
-| webhook.enabled | bool | true                                             | Enable the webhook. If you only want to deploy the vineyard, set false here.                                                                              |
-| webhook.port | int | 9443                                             | The port of the webhook in vineyard operator.                                                 |
+| webhook.enabled    | bool   | true                                                                      | Enable the webhook. If you only want to deploy the vineyard, set false here.                                               |
+| webhook.port       | int    | 9443                                                                      | The port of the webhook in vineyard operator.                                                                              |
 | serviceAccountName | string | "Vineyard-manager"                                                        | The service account name of vineyard operator.                                                                             |
 | service.type       | string | "ClusterIP"                                                               | The type of the service.                                                                                                   |
 | service.port       | int    | 9600                                                                      | The internal port of vineyard operator service                                                                             |
