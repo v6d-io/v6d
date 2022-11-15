@@ -427,7 +427,12 @@ class BasicEVFragmentLoader {
   }
 
   boost::leaf::result<ObjectID> AddVerticesToFragment(
-      std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
+      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t>> frag) {
+    if (vineyard::is_local_vertex_map<vertex_map_t>::value) {
+      RETURN_GS_ERROR(
+          vineyard::ErrorCode::kUnsupportedOperationError,
+          "Cannot only add vertices to fragment with local vertex map");
+    }
     int pre_vlabel_num = frag->schema().all_vertex_label_num();
     std::map<label_id_t, std::shared_ptr<arrow::Table>> vertex_tables_map;
     for (size_t i = 0; i < output_vertex_tables_.size(); ++i) {
@@ -438,7 +443,7 @@ class BasicEVFragmentLoader {
   }
 
   boost::leaf::result<ObjectID> AddEdgesToFragment(
-      std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
+      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t>> frag) {
     std::vector<std::set<std::pair<std::string, std::string>>> edge_relations(
         edge_label_num_);
     int pre_vlabel_num = frag->schema().all_vertex_label_num();
@@ -467,7 +472,7 @@ class BasicEVFragmentLoader {
   }
 
   boost::leaf::result<ObjectID> AddVerticesAndEdgesToFragment(
-      std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag) {
+      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t>> frag) {
     if (output_vertex_tables_.empty()) {
       return AddEdgesToFragment(frag);
     }
