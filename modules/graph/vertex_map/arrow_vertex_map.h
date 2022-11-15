@@ -83,7 +83,7 @@ class ArrowVertexMap
       }
     }
     nbytes = local_oid_total + o2g_total;
-    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> size: \n"
+    LOG(INFO) << "ArrowVertexMap<int64_t, int64_t> size: \n"
               << nbytes / 1000000 << " MB\n";
   }
 
@@ -239,7 +239,7 @@ class ArrowVertexMap<arrow_string_view, VID_T>
       }
     }
     nbytes = local_oid_total + o2g_total;
-    LOG(INFO) << "Arrow VertexMap<int64_t, int64_t> summary: \n"
+    LOG(INFO) << "ArrowVertexMap<string, int64_t> summary: \n"
               << nbytes / 1000000 << " MB\n";
   }
 
