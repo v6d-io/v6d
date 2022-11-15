@@ -83,8 +83,8 @@ class ArrowVertexMap
       }
     }
     nbytes = local_oid_total + o2g_total;
-    LOG(INFO) << "ArrowVertexMap<int64_t, int64_t> size: \n"
-              << nbytes / 1000000 << " MB\n";
+    LOG(INFO) << "ArrowVertexMap<int64_t, int64_t>"
+              << "\tsize: " << nbytes / 1000000 << " MB";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
@@ -238,9 +238,9 @@ class ArrowVertexMap<arrow_string_view, VID_T>
         o2g_total += o2g_[i][j].bucket_count();
       }
     }
-    nbytes = local_oid_total + o2g_total;
-    LOG(INFO) << "ArrowVertexMap<string, int64_t> summary: \n"
-              << nbytes / 1000000 << " MB\n";
+    nbytes = local_oid_total + o2g_total * 24;
+    LOG(INFO) << "ArrowVertexMap<string, int64_t>: \n"
+              << "\tsize: " << nbytes / 1000000 << " MB";
   }
 
   bool GetOid(vid_t gid, oid_t& oid) const {
