@@ -891,7 +891,7 @@ class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>
     std::vector<vineyard::Status> status(thread_num);
     for (int i = 0; i < thread_num; ++i) {
       threads[i] = std::thread(
-          [&](Status& status) {
+          [&](Status& status) -> void {
             while (true) {
               int got_task_id = task_id.fetch_add(1);
               if (got_task_id >= task_num) {
@@ -913,12 +913,24 @@ class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>
               typename ConvertToArrowType<vid_t>::BuilderType index_builder;
               status += vineyard::Status::ArrowError(
                   array_builder.AppendValues(oids[cur_fid][cur_label]));
+              if (!status.ok()) {
+                return;
+              }
               status += vineyard::Status::ArrowError(
                   index_builder.AppendValues(index_list[cur_fid][cur_label]));
+              if (!status.ok()) {
+                return;
+              }
               status += vineyard::Status::ArrowError(
                   array_builder.Finish(&oid_array));
+              if (!status.ok()) {
+                return;
+              }
               status += vineyard::Status::ArrowError(
                   index_builder.Finish(&index_array));
+              if (!status.ok()) {
+                return;
+              }
               typename InternalType<oid_t>::vineyard_builder_type
                   outer_oid_builder(client, oid_array);
               typename InternalType<vid_t>::vineyard_builder_type
