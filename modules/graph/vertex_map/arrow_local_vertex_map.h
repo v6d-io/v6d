@@ -297,8 +297,7 @@ class ArrowLocalVertexMap<arrow_string_view, VID_T>
 
     initHashmaps();
 
-    double o2i_size = 0;
-    o2i_bucket_count = 0, i2o_bucket_count = 0;
+    double o2i_size = 0, o2i_bucket_count = 0, i2o_bucket_count = 0;
     for (fid_t i = 0; i < fnum_; ++i) {
       for (label_id_t j = 0; j < label_num_; ++j) {
         if (i != fid_) {
