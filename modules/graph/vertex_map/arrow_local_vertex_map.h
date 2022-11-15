@@ -888,47 +888,59 @@ class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>
         index_arrays_[i].resize(label_num_);
       }
     }
+    std::vector<vineyard::Status> status(thread_num);
     for (int i = 0; i < thread_num; ++i) {
-      threads[i] = std::thread([&]() {
-        while (true) {
-          int got_task_id = task_id.fetch_add(1);
-          if (got_task_id >= task_num) {
-            break;
-          }
-          fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
-          if (cur_fid == fid_) {
-            continue;
-          }
-          label_id_t cur_label =
-              static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
-          std::shared_ptr<typename ConvertToArrowType<std::string>::ArrayType>
-              oid_array;
-          std::shared_ptr<typename ConvertToArrowType<vid_t>::ArrayType>
-              index_array;
-          typename ConvertToArrowType<std::string>::BuilderType array_builder;
-          typename ConvertToArrowType<vid_t>::BuilderType index_builder;
-          array_builder.AppendValues(oids[cur_fid][cur_label]);
-          index_builder.AppendValues(index_list[cur_fid][cur_label]);
-          array_builder.Finish(&oid_array);
-          index_builder.Finish(&index_array);
-          typename InternalType<oid_t>::vineyard_builder_type outer_oid_builder(
-              client, oid_array);
-          typename InternalType<vid_t>::vineyard_builder_type
-              outer_index_builder(client, index_array);
-          oid_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
-              typename InternalType<oid_t>::vineyard_array_type>(
-              outer_oid_builder.Seal(client));
-          index_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
-              typename InternalType<vid_t>::vineyard_array_type>(
-              outer_index_builder.Seal(client));
-        }
-      });
+      threads[i] = std::thread(
+          [&](Status& status) {
+            while (true) {
+              int got_task_id = task_id.fetch_add(1);
+              if (got_task_id >= task_num) {
+                break;
+              }
+              fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
+              if (cur_fid == fid_) {
+                continue;
+              }
+              label_id_t cur_label = static_cast<label_id_t>(
+                  static_cast<fid_t>(got_task_id) / fnum_);
+              std::shared_ptr<
+                  typename ConvertToArrowType<std::string>::ArrayType>
+                  oid_array;
+              std::shared_ptr<typename ConvertToArrowType<vid_t>::ArrayType>
+                  index_array;
+              typename ConvertToArrowType<std::string>::BuilderType
+                  array_builder;
+              typename ConvertToArrowType<vid_t>::BuilderType index_builder;
+              status += vineyard::Status::ArrowError(
+                  array_builder.AppendValues(oids[cur_fid][cur_label]));
+              status += vineyard::Status::ArrowError(
+                  index_builder.AppendValues(index_list[cur_fid][cur_label]));
+              status += vineyard::Status::ArrowError(
+                  array_builder.Finish(&oid_array));
+              status += vineyard::Status::ArrowError(
+                  index_builder.Finish(&index_array));
+              typename InternalType<oid_t>::vineyard_builder_type
+                  outer_oid_builder(client, oid_array);
+              typename InternalType<vid_t>::vineyard_builder_type
+                  outer_index_builder(client, index_array);
+              oid_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
+                  typename InternalType<oid_t>::vineyard_array_type>(
+                  outer_oid_builder.Seal(client));
+              index_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
+                  typename InternalType<vid_t>::vineyard_array_type>(
+                  outer_index_builder.Seal(client));
+            }
+          },
+          std::ref(status[i]));
     }
     for (auto& thrd : threads) {
       thrd.join();
     }
-
-    return vineyard::Status::OK();
+    auto ret = vineyard::Status::OK();
+    for (auto& st : status) {
+      ret += st;
+    }
+    return ret;
   }
 
  private:
