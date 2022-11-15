@@ -87,10 +87,12 @@ spec:
           {{- toYaml .Values.resources | nindent 12 }}
         securityContext:
           allowPrivilegeEscalation: false
+        {{- if .Values.webhook.enabled }}
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+        {{- end }}
         env:
         - name: GOTRACEBACK
           value: system
@@ -104,8 +106,10 @@ spec:
       {{- end }}
       serviceAccountName: {{ .Values.serviceAccountName }}
       terminationGracePeriodSeconds: 10
+      {{- if .Values.webhook.enabled }}
       volumes:
       - name: cert
         secret:
           defaultMode: 420
           secretName: {{ include "vineyard-operator.fullname" . }}-webhook-server-cert
+      {{- end }}

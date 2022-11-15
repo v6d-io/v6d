@@ -6,32 +6,71 @@ A helm chart for [vineyard operator][3], which manages all relavant components a
 
 ## Install
 
-Vineyard operator has been integrated with [Helm](https://helm.sh/). Deploy it as follows:
+Vineyard operator has been integrated with [Helm](https://helm.sh/). Add the vineyard repository to your Helm client:
 
-```console
-helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
-helm install vineyard-operator vineyard/vineyard-operator
+```shell
+$ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
+$ helm repo update
 ```
 
-Install vineyardd as follows.
+Refer to the [helm repo](https://helm.sh/docs/helm/helm_repo/) for more repo information.
 
-.. code:: shell
+The webhook is enabled by default, please make sure you have the [Cert-Manager](https://cert-manager.io/docs/installation/) 
+installed, then deploy it in the `default` namespace as follows:
 
-   curl https://raw.githubusercontent.com/v6d-io/v6d/main/k8s/test/e2e/vineyardd.yaml | kubectl apply -f -
+```shell
+$ helm install vineyard-operator vineyard/vineyard-operator
+```
+
+If you want to deploy it in a specific namespace, you can use the `--namespace` option:
+
+```shell
+$ helm install vineyard-operator vineyard/vineyard-operator \
+      --namespace vineyard-system
+```
+
+If you want to set the value of the chart, you can use the `--set` option:
+
+```shell
+$ helm install vineyard-operator vineyard/vineyard-operator \
+      --set image.tag=v0.10.1
+```
+
+Refer to the [helm install](https://helm.sh/docs/helm/helm_install/) for more command information.
+
+Install `vineyardd` as follows.
+
+```shell
+
+$ cat <<EOF | kubectl apply -f -
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Vineyardd
+metadata:
+  name: vineyardd-sample
+spec:
+  image: vineyardcloudnative/vineyardd:latest
+  replicas: 3
+  imagePullPolicy: IfNotPresent
+  etcd:
+    replicas: 3
+EOF
+```
 
 ## Uninstall
 
 The installed charts can be removed with
 
-```console
-helm uninstall vineyard-operator
-```
+```shell
 
+$ helm uninstall vineyard-operator
+
+```
 More information about the helm chart could be found at [artifacthub][1] and [parameters][2].
 
 ## Values
 
-The following table lists the configurable parameters of the Vineyard Operator chart and their default values.
+The following table lists the configurable parameters of the Vineyard Operator chart and their default values. 
+Besides, you can refer the [doc](https://v6d.io/notes/vineyard-operator.html) to get more detail about the vineyard operator.
 
 | Key                | Type   | Default                                                                   | Description                                                                                                                |
 | ------------------ | ------ | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -39,6 +78,8 @@ The following table lists the configurable parameters of the Vineyard Operator c
 | image.repository   | string | "vineyardcloudnative/vineyard-operator"                                   | The repository of vineyard operator image.                                                                                 |
 | image.pullPolicy   | string | "IfNotPresent"                                                            | The pull policy of vineyard operator image.                                                                                |
 | image.tag          | string | "latest"                                                                  | The image tag of vineyard operator image.                                                                                  |
+| webhook.enabled    | bool   | true                                                                      | Enable the webhook. If you only want to deploy the vineyard, set false here.                                               |
+| webhook.port       | int    | 9443                                                                      | The port of the webhook in vineyard operator.                                                                              |
 | serviceAccountName | string | "Vineyard-manager"                                                        | The service account name of vineyard operator.                                                                             |
 | service.type       | string | "ClusterIP"                                                               | The type of the service.                                                                                                   |
 | service.port       | int    | 9600                                                                      | The internal port of vineyard operator service                                                                             |

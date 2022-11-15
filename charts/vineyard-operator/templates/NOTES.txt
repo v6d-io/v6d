@@ -5,4 +5,8 @@ To learn more about the release, try:
   $ helm status {{ .Release.Name }} -n {{ .Release.Namespace }}   # get status of running vineyard operator
   $ helm get all {{ .Release.Name }} -n {{ .Release.Namespace }}  # get all deployment yaml of vineyard operator
 
-Just have fun with vineyard operator!
+To uninstall the release, try:
+
+  $ helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+You could get all details about vineyard operator in the doc [https://v6d.io/notes/vineyard-operator.html], just have fun with vineyard operator!
