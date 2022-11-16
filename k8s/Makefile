@@ -38,11 +38,13 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version || shell ${GOBIN}/golangci-lint --version)
+HELMIFY := $(shell command -v ${GOBIN}/helmify --version || shell ${GOBIN}/helmify --version)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4@v4.5.5
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
 GOLANGCI_LINT_VERSION ?= v1.49.0
+HELMIFY_VERSION ?= v0.3.18
 
 all: manager
 
@@ -117,6 +119,15 @@ golint:
     endif
 	${GOBIN}/golangci-lint run ./...
 .PHONY: golint
+
+# Install helmify if not exist
+helmify:
+    ifeq (${HELMIFY},)
+		@echo "helmify not exist, installing it..."
+		go install github.com/arttor/helmify/cmd/helmify@$(HELMIFY_VERSION)
+    endif
+	@echo "helmify installed"
+.PHONY: helmify
 
 lint: golint
 .PHONY: lint
@@ -201,6 +212,8 @@ bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 # Build all bundle operator
-.PHONY: build-bundle
-build-bundle:
-	$(KUSTOMIZE) build config/default > ../charts/vineyard-operator/templates/vineyard-operator-bundle.yaml
+.PHONY: generate-helm-chart
+generate-helm-chart: helmify
+	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | ${GOBIN}/helmify vineyard-operator && \
+	sed -i 's/\/var\/run\/vineyard-kubernetes\/{{ .Namespace }}\/{{ .Name }}/\/var\/run\/vineyard-kubernetes\/{{ \"{{ .Namespace }}\/{{ .Name }}\" }}/g' \
+	vineyard-operator/templates/vineyardd-crd.yaml

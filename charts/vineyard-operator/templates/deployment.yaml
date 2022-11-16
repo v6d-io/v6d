@@ -1,115 +1,94 @@
-# Copyright 2020-2022 Alibaba Group Holding Limited.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "vineyard-operator.fullname" . }}-manager
+  labels:
+  {{- include "vineyard-operator.labels" . | nindent 4 }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "vineyard-operator.fullname" . }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "vineyard-operator.fullname" . }}-controller-manager
   labels:
     control-plane: controller-manager
-    {{- include "vineyard-operator.labels" . | nindent 4 }}
+  {{- include "vineyard-operator.labels" . | nindent 4 }}
 spec:
+  replicas: {{ .Values.controllerManager.replicas }}
   selector:
     matchLabels:
       control-plane: controller-manager
-      {{- include "vineyard-operator.selectorLabels" . | nindent 6 }}
-  replicas: {{ .Values.replicaCount }}
+    {{- include "vineyard-operator.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
         control-plane: controller-manager
-        {{- include "vineyard-operator.selectorLabels" . | nindent 8 }}
+      {{- include "vineyard-operator.selectorLabels" . | nindent 8 }}
       annotations:
-        kubectl.kubernetes.io/default-container: "manager"
-        kubectl.kubernetes.io/default-logs-container: "manager"
+        kubectl.kubernetes.io/default-container: manager
+        kubectl.kubernetes.io/default-logs-container: manager
     spec:
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=0
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 5m
-            memory: 64Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-      - name: manager
-        command:
-        - /manager
-        args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-        {{- if .Values.image.pullPolicy }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        {{- end }}
+        command:
+        - /manager
+        env:
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ .Values.kubernetesClusterDomain }}
+        image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
+          | default .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
             port: 8081
           initialDelaySeconds: 15
           periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        resources:
-          {{- toYaml .Values.resources | nindent 12 }}
-        securityContext:
-          allowPrivilegeEscalation: false
-        {{- if .Values.webhook.enabled }}
+        resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10
+          }}
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
-        {{- end }}
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
         env:
-        - name: GOTRACEBACK
-          value: system
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ .Values.serviceAccountName }}
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ .Values.kubernetesClusterDomain }}
+        image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag
+          | default .Chart.AppVersion }}
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent
+          10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      serviceAccountName: {{ include "vineyard-operator.fullname" . }}-manager
       terminationGracePeriodSeconds: 10
-      {{- if .Values.webhook.enabled }}
       volumes:
       - name: cert
         secret:
           defaultMode: 420
-          secretName: {{ include "vineyard-operator.fullname" . }}-webhook-server-cert
-      {{- end }}
+          secretName: webhook-server-cert
