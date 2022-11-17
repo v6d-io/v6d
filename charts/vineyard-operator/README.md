@@ -26,14 +26,15 @@ If you want to deploy it in a specific namespace, you can use the `--namespace` 
 
 ```shell
 $ helm install vineyard-operator vineyard/vineyard-operator \
-      --namespace vineyard-system
+      --namespace vineyard-system \
+      --create-namespace
 ```
 
 If you want to set the value of the chart, you can use the `--set` option:
 
 ```shell
 $ helm install vineyard-operator vineyard/vineyard-operator \
-      --set image.tag=v0.10.1
+      --set controllerManager.manager.image.tag=v0.10.1
 ```
 
 Refer to the [helm install](https://helm.sh/docs/helm/helm_install/) for more command information.
@@ -72,20 +73,24 @@ More information about the helm chart could be found at [artifacthub][1] and [pa
 The following table lists the configurable parameters of the Vineyard Operator chart and their default values. 
 Besides, you can refer the [doc](https://v6d.io/notes/vineyard-operator.html) to get more detail about the vineyard operator.
 
-| Key                | Type   | Default                                                                   | Description                                                                                                                |
-| ------------------ | ------ | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| replicaCount       | int    | 1                                                                         | The replica of vineyard operator.                                                                                          |
-| image.repository   | string | "vineyardcloudnative/vineyard-operator"                                   | The repository of vineyard operator image.                                                                                 |
-| image.pullPolicy   | string | "IfNotPresent"                                                            | The pull policy of vineyard operator image.                                                                                |
-| image.tag          | string | "latest"                                                                  | The image tag of vineyard operator image.                                                                                  |
-| webhook.enabled    | bool   | true                                                                      | Enable the webhook. If you only want to deploy the vineyard, set false here.                                               |
-| webhook.port       | int    | 9443                                                                      | The port of the webhook in vineyard operator.                                                                              |
-| serviceAccountName | string | "Vineyard-manager"                                                        | The service account name of vineyard operator.                                                                             |
-| service.type       | string | "ClusterIP"                                                               | The type of the service.                                                                                                   |
-| service.port       | int    | 9600                                                                      | The internal port of vineyard operator service                                                                             |
-| resources          | object | {limits: {cpu: 500m, memory:500Mi}},{requests: {cpu: 500m, memory:500Mi}} | The limits and requests of vineyard operator.                                                                              |
-| tolerations        | object | {}                                                                        | Tolerations allow the scheduler to schedule pods with matching taints                                                      |
-| affinity           | object | {}                                                                        | Affinity enables the scheduler to place a pod either on a group of nodes or a pod relative to the placement of other pods. |
+| Key                                              | Type   | Default                                                                   | Description                                  |
+|--------------------------------------------------|--------|---------------------------------------------------------------------------|----------------------------------------------|
+| controllerManager.kubeRbacProxy.image.repository | string | "gcr.io/kubebuilder/kube-rbac-proxy"                                      | The repository of kubeRbacProxy image.       |
+| controllerManager.kubeRbacProxy.image.tag        | string | "v0.13.0"                                                                 | The tag of kubeRbacProxy image.              |
+| controllerManager.kubeRbacProxy.resources        | object | {limits: {cpu: 300m, memory:300Mi}},{requests: {cpu: 300m, memory:300Mi}} | The limits and requests of kubeRbacProxy.    |
+| controllerManager.manager.image.repository       | string | "gcr.io/kubebuilder/kube-rbac-proxy"                                      | The repository of operator-manager image.    |
+| controllerManager.manager.image.tag              | string | "latest"                                                                  | The tag of operator-manager image.           |
+| controllerManager.manager.resources              | object | {limits: {cpu: 500m, memory:500Mi}},{requests: {cpu: 500m, memory:500Mi}} | The limits and requests of operator-manager. |
+| controllerManager.replicas                       | int    | 1                                                                         | The replica of vineyard operator.            |
+| kubernetesClusterDomain                          | string | "cluster.local"                                                           | The domain name of you kubernetes cluster.   |
+| metricsService.ports.name                        | string | "https"                                                                   | The name of metrics service.                 |
+| metricsService.ports.port                        | int    | "8443"                                                                    | The port of metrics service.                 |
+| metricsService.ports.targetPort                  | string | "https"                                                                   | The target port of metrics service.          |
+| metricsService.type                              | string | "ClusterIP"                                                               | The type of metrics service.                 |
+| webhookService.ports.port                        | int    | "443"                                                                     | The port of webhook service.                 |
+| webhookService.ports.protocol                    | string | "TCP"                                                                     | The protocol of webhook service.             |
+| webhookService.ports.targetPort                  | string | "9443"                                                                    | The target port of webhook service.          |
+| webhookService.type                              | string | "ClusterIP"                                                               | The type of webhook service.                 |
 
 ## License
 

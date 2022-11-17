@@ -1,0 +1,95 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: globalobjects.k8s.v6d.io
+  annotations:
+    cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "vineyard-operator.fullname"
+      . }}-serving-cert'
+    controller-gen.kubebuilder.io/version: v0.9.2
+  labels:
+  {{- include "vineyard-operator.labels" . | nindent 4 }}
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: webhook-service
+          namespace: '{{ .Release.Namespace }}'
+          path: /convert
+      conversionReviewVersions:
+      - v1
+  group: k8s.v6d.io
+  names:
+    categories:
+    - all
+    kind: GlobalObject
+    listKind: GlobalObjectList
+    plural: globalobjects
+    shortNames:
+    - gobject
+    singular: globalobject
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.id
+      name: Id
+      type: string
+    - jsonPath: .spec.name
+      name: Name
+      type: string
+    - jsonPath: .spec.signature
+      name: Signature
+      type: string
+    - jsonPath: .spec.typename
+      name: Typename
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              id:
+                type: string
+              members:
+                items:
+                  type: string
+                type: array
+              metadata:
+                type: string
+              name:
+                type: string
+              signature:
+                type: string
+              typename:
+                type: string
+            required:
+            - id
+            - signature
+            type: object
+          status:
+            properties:
+              createdTime:
+                format: date-time
+                type: string
+              state:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
