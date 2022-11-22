@@ -33,7 +33,7 @@ namespace vineyard {
         return st;                                                       \
       }                                                                  \
     }                                                                    \
-    RETURN_ON_ASSERT(root["type"] == (type));                            \
+    RETURN_ON_ASSERT(root.value("type", "UNKNOWN") == (type));           \
   } while (0)
 
 CommandType ParseCommandType(const std::string& str_type) {
@@ -470,6 +470,7 @@ void WriteGPUCreateBufferReply(const ObjectID id,
 Status ReadGPUCreateBufferReply(
     const json& root, ObjectID& id, Payload& Object,
     std::shared_ptr<vineyard::GPUUnifiedAddress> uva) {
+  CHECK_IPC_ERROR(root, "create_gpu_buffer_reply");
   json tree = root["created"];
   id = root["id"].get<ObjectID>();
   Object.FromJSON(tree);
@@ -522,7 +523,7 @@ void WriteGetGPUBuffersReply(
 
 Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
                               std::vector<GPUUnifiedAddress>& gua_sent) {
-  RETURN_ON_ASSERT(root["type"] == "get_gpu_buffers_reply");
+  CHECK_IPC_ERROR(root, "get_gpu_buffers_reply");
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
     Payload object;
@@ -1596,7 +1597,7 @@ void WriteSealReply(std::string& msg) {
 }
 
 Status ReadSealReply(json const& root) {
-  RETURN_ON_ASSERT(root["type"] == "seal_reply");
+  CHECK_IPC_ERROR(root, "seal_reply");
   return Status::OK();
 }
 
@@ -1773,7 +1774,7 @@ void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
 
 Status ReadDelDataWithFeedbacksReply(json const& root,
                                      std::vector<ObjectID>& deleted_bids) {
-  RETURN_ON_ASSERT(root["type"] == "del_data_with_feedbacks_reply");
+  CHECK_IPC_ERROR(root, "del_data_with_feedbacks_reply");
   deleted_bids = root["deleted_bids"].get_to(deleted_bids);
   return Status::OK();
 }
@@ -1800,7 +1801,7 @@ void WriteIsInUseReply(const bool is_in_use, std::string& msg) {
 }
 
 Status ReadIsInUseReply(json const& root, bool& is_in_use) {
-  RETURN_ON_ASSERT(root["type"] == "is_in_use_reply");
+  CHECK_IPC_ERROR(root, "is_in_use_reply");
   is_in_use = root["is_in_use"].get<bool>();
   return Status::OK();
 }
@@ -1827,7 +1828,7 @@ void WriteIsSpilledReply(const bool is_spilled, std::string& msg) {
 }
 
 Status ReadIsSpilledReply(json const& root, bool& is_spilled) {
-  RETURN_ON_ASSERT(root["type"] == "is_spilled_reply");
+  CHECK_IPC_ERROR(root, "is_spilled_reply");
   is_spilled = root["is_spilled"].get<bool>();
   return Status::OK();
 }
@@ -1854,7 +1855,7 @@ void WriteIncreaseReferenceCountReply(std::string& msg) {
 }
 
 Status ReadIncreaseReferenceCountReply(json const& root) {
-  RETURN_ON_ASSERT(root["type"] == "increase_reference_count_reply");
+  CHECK_IPC_ERROR(root, "increase_reference_count_reply");
   return Status::OK();
 }
 
