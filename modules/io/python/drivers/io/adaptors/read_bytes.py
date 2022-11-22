@@ -79,6 +79,7 @@ def read_byte_blocks(
     if index == 0 and proc_index == 0:
         begin -= int(header_row)
 
+    first_chunk = True
     while begin < end:
         buffer = read_block(
             fp,
@@ -86,6 +87,11 @@ def read_byte_blocks(
             min(chunk_size, end - begin),
             delimiter=read_block_delimiter,
         )
+        if first_chunk:
+            # strip the UTF-8 BOM
+            if buffer[0:3] == b'\xef\xbb\xbf':
+                buffer = buffer[3:]
+        first_chunk = False
         size = len(buffer)
         if size <= 0:
             break
@@ -127,9 +133,14 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
 
     # Used when reading tables from external storage.
     # Usually for load a property graph
+
+    # header_row: each file has a header_row when reading from directories
     header_row = read_options.get("header_row", False)
+    # first_header_row: only the first file (alphabetical ordered) has a header_row
+    # when reading from directories
+    first_header_row = read_options.get("first_header_row", False)
     for k, v in read_options.items():
-        if k in ("header_row", "include_all_columns"):
+        if k in ("header_row", "first_header_row", "include_all_columns"):
             params[k] = "1" if v else "0"
         elif k == "delimiter":
             params[k] = bytes(v, "utf-8").decode("unicode_escape")
@@ -155,12 +166,13 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
         except Exception:  # pylint: disable=broad-except
             report_error(f"Cannot find such files for '{path}'")
             sys.exit(-1)
+    files = sorted(files)
 
     stream, writer = None, None
     if 'chunk_size' in storage_options:
         chunk_size = parse_readable_size(storage_options['chunk_size'])
     else:
-        chunk_size = 1024 * 1024 * 64  # default: 64MB
+        chunk_size = 1024 * 1024 * 128  # default: 64MB
 
     try:
         for index, file_path in enumerate(files):
@@ -168,13 +180,14 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
                 offset = 0
                 # Only process header line when processing first file
                 # And open the writer when processing first file
+                if header_row or (first_header_row and index == 0):
+                    header_line = read_block(fp, 0, 1, read_block_delimiter)
+                    params["header_line"] = header_line.decode("unicode_escape")
+                    offset = len(header_line)
+                    # strip the UTF-8 BOM
+                    if header_line[0:3] == b'\xef\xbb\xbf':
+                        header_line = header_line[3:]
                 if index == 0:
-                    if header_row:
-                        header_line = read_block(fp, 0, 1, read_block_delimiter)
-                        params["header_line"] = header_line.decode("unicode_escape")
-                        if header_line[0:3] == b'\xef\xbb\xbf':
-                            header_line = header_line[3:]
-                        offset = len(header_line)
                     stream = ByteStream.new(client, params)
                     client.persist(stream.id)
                     report_success(stream.id)

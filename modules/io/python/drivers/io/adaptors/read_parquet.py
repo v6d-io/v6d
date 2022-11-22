@@ -134,6 +134,7 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
         except Exception:  # pylint: disable=broad-except
             report_error(f"Cannot find such files for '{path}'")
             sys.exit(-1)
+    files = sorted(files)
 
     stream, writer = None, None
     try:
