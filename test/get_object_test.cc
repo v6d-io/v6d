@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     // mismatch type
     std::shared_ptr<Array<float>> array2;
     auto status = client.GetObject(id, array2);
-    CHECK(status.IsObjectNotExists());
+    CHECK(status.IsObjectTypeError());
     CHECK(array2 == nullptr);
   }
 

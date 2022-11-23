@@ -22,6 +22,8 @@ import inspect
 import threading
 
 from .._C import IPCClient
+from .._C import Object
+from .._C import ObjectMeta
 from .._C import RPCClient
 
 
@@ -63,9 +65,14 @@ class BuilderContext:
         """
 
         # if the python value comes from a vineyard object, we choose to just reuse it.
-        base = getattr(value, '__vineyard_ref', None)
-        if base:
-            return base.meta
+
+        # N.B.: don't do that.
+        #
+        # we still construct meta, and optimize the duplicate copy in blob builder
+        #
+        # base = getattr(value, '__vineyard_ref', None)
+        # if base:
+        #     return base.meta
 
         for ty in type(value).__mro__:
             if ty in self.__factory:
@@ -161,10 +168,10 @@ def put(client, value, builder=None, **kw):
 
     # the builders is expected to return an :class:`ObjectMeta`, or an
     # :class:`Object` (in the `bytes_builder` and `memoryview` builder).
-    if meta:
+    if isinstance(meta, (ObjectMeta, Object)):
         return meta.id
     else:
-        return meta  # None
+        return meta  # None or ObjectID
 
 
 setattr(IPCClient, 'put', put)

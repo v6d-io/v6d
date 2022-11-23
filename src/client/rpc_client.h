@@ -197,10 +197,12 @@ class RPCClient final : public ClientBase {
    */
   template <typename T>
   Status GetObject(const ObjectID id, std::shared_ptr<T>& object) {
-    object = std::dynamic_pointer_cast<T>(GetObject(id));
+    std::shared_ptr<Object> _object;
+    RETURN_ON_ERROR(GetObject(id, _object));
+    object = std::dynamic_pointer_cast<T>(_object);
     if (object == nullptr) {
-      return Status::ObjectNotExists("object not exists: " +
-                                     ObjectIDToString(id));
+      return Status::ObjectTypeError(type_name<T>(),
+                                     _object->meta().GetTypeName());
     } else {
       return Status::OK();
     }

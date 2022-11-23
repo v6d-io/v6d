@@ -79,9 +79,10 @@ struct ArrowTensorType<arrow_string_view> {
 
 template <typename T>
 class [[vineyard]] Tensor : public ITensor, public BareRegistered<Tensor<T>> {
+ public:
+  using value_t = T;
   using ArrowTensorT = typename detail::ArrowTensorType<T>::type;
 
- public:
   /**
    * @brief Get the strides of the tensor.
    *

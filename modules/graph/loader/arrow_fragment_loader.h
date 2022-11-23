@@ -249,7 +249,7 @@ class ArrowFragmentLoader {
       };
       BOOST_LEAF_AUTO(tmp_e, sync_gs_error(comm_spec_, load_e_procedure));
       partial_e_tables = tmp_e;
-    } else if (!partial_e_tables_.empty() && !partial_e_tables_.empty()) {
+    } else if (!partial_v_tables_.empty() && !partial_e_tables_.empty()) {
       for (size_t vlabel = 0; vlabel < partial_v_tables_.size(); ++vlabel) {
         std::shared_ptr<arrow::Table> result_table;
         partial_v_tables.emplace_back(partial_v_tables_[vlabel]);

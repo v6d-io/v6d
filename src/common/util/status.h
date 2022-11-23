@@ -233,6 +233,7 @@ enum class StatusCode : unsigned char {
   kObjectSealed = 13,
   kObjectNotSealed = 14,
   kObjectIsBlob = 15,
+  kObjectTypeError = 16,
 
   kMetaTreeInvalid = 21,
   kMetaTreeTypeInvalid = 22,
@@ -396,6 +397,14 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// on blob objects.
   static Status ObjectIsBlob(std::string const& message = "") {
     return Status(StatusCode::kObjectIsBlob, message);
+  }
+
+  /// Return an error when user are trying to perform cast object to mismatched
+  /// types.
+  static Status ObjectTypeError(std::string const& expect,
+                                std::string const& actual) {
+    return Status(StatusCode::kObjectTypeError,
+                  "expect " + expect + ", but got " + actual);
   }
 
   /// Return an error when metatree related error occurs.
@@ -612,6 +621,10 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
   /// Return true iff the status indicates unsupported operations on blobs.
   bool IsObjectIsBlob() const { return code() == StatusCode::kObjectIsBlob; }
+  /// Return true iff the status indicates object type mismatch.
+  bool IsObjectTypeError() const {
+    return code() == StatusCode::kObjectTypeError;
+  }
   /// Return true iff the status indicates subtree not found in metatree.
   bool IsMetaTreeSubtreeNotExists() const {
     return code() == StatusCode::kMetaTreeSubtreeNotExists;

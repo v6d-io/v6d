@@ -545,8 +545,8 @@ class Client final : public BasicIPCClient,
     RETURN_ON_ERROR(GetObject(id, _object));
     object = std::dynamic_pointer_cast<T>(_object);
     if (object == nullptr) {
-      return Status::ObjectNotExists("object not exists: " +
-                                     ObjectIDToString(id));
+      return Status::ObjectTypeError(type_name<T>(),
+                                     _object->meta().GetTypeName());
     } else {
       return Status::OK();
     }
