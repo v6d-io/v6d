@@ -1,0 +1,5 @@
+go 1.18
+
+use ./go/vineyard
+
+use ./k8s
