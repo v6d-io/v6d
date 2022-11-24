@@ -128,9 +128,11 @@ def test_dataframe_reusing(vineyard_client):
     df2_id = vineyard_client.put(df2)
     df2 = vineyard_client.get(df2_id)
 
-    ob = getattr(df._mgr.blocks[0].values, '__vineyard_ref', None)
-    ob2 = getattr(df2._mgr.blocks[0].values, '__vineyard_ref', None)
+    meta1 = vineyard_client.get_meta(df_id)
+    meta2 = vineyard_client.get_meta(df2_id)
 
-    assert ob is not None
-    assert ob2 is not None
-    assert ob.id == ob2.id
+    # share the same blob
+    assert (
+        meta1['__values_-value-0']['buffer_'].id
+        == meta2['__values_-value-0']['buffer_'].id
+    )
