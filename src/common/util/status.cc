@@ -123,6 +123,9 @@ std::string Status::CodeAsString() const {
   case StatusCode::kObjectIsBlob:
     type = "Object not blob";
     break;
+  case StatusCode::kObjectTypeError:
+    type = "Object type mismatch";
+    break;
   case StatusCode::kMetaTreeInvalid:
     type = "Metatree invalid";
     break;

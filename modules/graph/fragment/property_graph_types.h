@@ -143,6 +143,9 @@ namespace property_graph_utils {
 
 template <typename VID_T, typename EID_T>
 struct NbrUnit {
+  using vid_t = VID_T;
+  using eid_t = EID_T;
+
   VID_T vid;
   EID_T eid;
   NbrUnit() = default;
@@ -175,6 +178,10 @@ class EdgeDataColumn {
 
   const DATA_T& operator[](const NBR_T& nbr) const { return data_[nbr.eid]; }
 
+  const DATA_T& operator[](const typename NBR_T::eid_t& eid) const {
+    return data_[eid];
+  }
+
  private:
   const DATA_T* data_;
 };
@@ -194,6 +201,10 @@ class EdgeDataColumn<std::string, NBR_T> {
 
   std::string operator[](const NBR_T& nbr) const {
     return array_->GetView(nbr.eid);
+  }
+
+  std::string operator[](const typename NBR_T::eid_t& eid) const {
+    return array_->GetView(eid);
   }
 
  private:
@@ -281,6 +292,8 @@ struct ValueGetter<std::string> {
 template <typename VID_T, typename EID_T>
 struct Nbr {
  private:
+  using vid_t = VID_T;
+  using eid_t = EID_T;
   using prop_id_t = property_graph_types::PROP_ID_TYPE;
 
  public:

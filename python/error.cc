@@ -54,10 +54,13 @@ DEFINE_PYBIND_EXCEPTION(IOError);
 DEFINE_PYBIND_EXCEPTION(EndOfFile);
 DEFINE_PYBIND_EXCEPTION(NotImplemented);
 DEFINE_PYBIND_EXCEPTION(AssertionFailed);
+DEFINE_PYBIND_EXCEPTION(UserInputError);
 DEFINE_PYBIND_EXCEPTION(ObjectExists);
 DEFINE_PYBIND_EXCEPTION(ObjectNotExists);
 DEFINE_PYBIND_EXCEPTION(ObjectSealed);
 DEFINE_PYBIND_EXCEPTION(ObjectNotSealed);
+DEFINE_PYBIND_EXCEPTION(ObjectIsBlob);
+DEFINE_PYBIND_EXCEPTION(ObjectTypeError);
 DEFINE_PYBIND_EXCEPTION(MetaTreeInvalid);
 DEFINE_PYBIND_EXCEPTION(MetaTreeTypeInvalid);
 DEFINE_PYBIND_EXCEPTION(MetaTreeTypeNotExists);
@@ -70,11 +73,14 @@ DEFINE_PYBIND_EXCEPTION(ArrowError);
 DEFINE_PYBIND_EXCEPTION(ConnectionFailed);
 DEFINE_PYBIND_EXCEPTION(ConnectionError);
 DEFINE_PYBIND_EXCEPTION(EtcdError);
+DEFINE_PYBIND_EXCEPTION(AlreadyStopped);
+DEFINE_PYBIND_EXCEPTION(RedisError);
 DEFINE_PYBIND_EXCEPTION(NotEnoughMemory);
 DEFINE_PYBIND_EXCEPTION(StreamDrained);
 DEFINE_PYBIND_EXCEPTION(StreamFailed);
 DEFINE_PYBIND_EXCEPTION(InvalidStreamState);
-DEFINE_PYBIND_EXCEPTION(UserInputError);
+DEFINE_PYBIND_EXCEPTION(StreamOpened);
+DEFINE_PYBIND_EXCEPTION(GlobalObjectInvalid);
 DEFINE_PYBIND_EXCEPTION(UnknownError);
 
 void bind_error(py::module& mod) {
@@ -87,10 +93,13 @@ void bind_error(py::module& mod) {
   REGISTER_PYBIND_EXCEPTION(mod, EndOfFile);
   REGISTER_PYBIND_EXCEPTION(mod, NotImplemented);
   REGISTER_PYBIND_EXCEPTION(mod, AssertionFailed);
+  REGISTER_PYBIND_EXCEPTION(mod, UserInputError);
   REGISTER_PYBIND_EXCEPTION(mod, ObjectExists);
   REGISTER_PYBIND_EXCEPTION(mod, ObjectNotExists);
   REGISTER_PYBIND_EXCEPTION(mod, ObjectSealed);
   REGISTER_PYBIND_EXCEPTION(mod, ObjectNotSealed);
+  REGISTER_PYBIND_EXCEPTION(mod, ObjectIsBlob);
+  REGISTER_PYBIND_EXCEPTION(mod, ObjectTypeError);
   REGISTER_PYBIND_EXCEPTION(mod, MetaTreeInvalid);
   REGISTER_PYBIND_EXCEPTION(mod, MetaTreeTypeInvalid);
   REGISTER_PYBIND_EXCEPTION(mod, MetaTreeTypeNotExists);
@@ -103,11 +112,14 @@ void bind_error(py::module& mod) {
   REGISTER_PYBIND_EXCEPTION(mod, ConnectionFailed);
   REGISTER_PYBIND_EXCEPTION(mod, ConnectionError);
   REGISTER_PYBIND_EXCEPTION(mod, EtcdError);
+  REGISTER_PYBIND_EXCEPTION(mod, AlreadyStopped);
+  REGISTER_PYBIND_EXCEPTION(mod, RedisError);
   REGISTER_PYBIND_EXCEPTION(mod, NotEnoughMemory);
   REGISTER_PYBIND_EXCEPTION(mod, StreamDrained);
   REGISTER_PYBIND_EXCEPTION(mod, StreamFailed);
   REGISTER_PYBIND_EXCEPTION(mod, InvalidStreamState);
-  REGISTER_PYBIND_EXCEPTION(mod, UserInputError);
+  REGISTER_PYBIND_EXCEPTION(mod, StreamOpened);
+  REGISTER_PYBIND_EXCEPTION(mod, GlobalObjectInvalid);
   REGISTER_PYBIND_EXCEPTION(mod, UnknownError);
 }
 
@@ -122,10 +134,13 @@ void throw_on_error(Status const& status) {
     THROW_ON_ERROR_OF(EndOfFile);
     THROW_ON_ERROR_OF(NotImplemented);
     THROW_ON_ERROR_OF(AssertionFailed);
+    THROW_ON_ERROR_OF(UserInputError);
     THROW_ON_ERROR_OF(ObjectExists);
     THROW_ON_ERROR_OF(ObjectNotExists);
     THROW_ON_ERROR_OF(ObjectSealed);
     THROW_ON_ERROR_OF(ObjectNotSealed);
+    THROW_ON_ERROR_OF(ObjectIsBlob);
+    THROW_ON_ERROR_OF(ObjectTypeError);
     THROW_ON_ERROR_OF(MetaTreeInvalid);
     THROW_ON_ERROR_OF(MetaTreeTypeInvalid);
     THROW_ON_ERROR_OF(MetaTreeTypeNotExists);
@@ -138,11 +153,14 @@ void throw_on_error(Status const& status) {
     THROW_ON_ERROR_OF(ConnectionFailed);
     THROW_ON_ERROR_OF(ConnectionError);
     THROW_ON_ERROR_OF(EtcdError);
+    THROW_ON_ERROR_OF(AlreadyStopped);
+    THROW_ON_ERROR_OF(RedisError);
     THROW_ON_ERROR_OF(NotEnoughMemory);
     THROW_ON_ERROR_OF(StreamDrained);
     THROW_ON_ERROR_OF(StreamFailed);
     THROW_ON_ERROR_OF(InvalidStreamState);
-    THROW_ON_ERROR_OF(UserInputError);
+    THROW_ON_ERROR_OF(StreamOpened);
+    THROW_ON_ERROR_OF(GlobalObjectInvalid);
     THROW_ON_ERROR_OF(UnknownError);
   default:
     throw std::runtime_error("Unknow status: " + status.ToString());
