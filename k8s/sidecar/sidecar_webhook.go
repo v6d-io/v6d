@@ -37,7 +37,7 @@ import (
 // nolint: lll
 // +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/mutate-v1-pod-sidecar,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.sidecar.kb.io
 
-// SidecarInjector injects vineyard sidecar container into Pods
+// The Injector injects vineyard sidecar container into Pods
 type SidecarInjector struct {
 	Client  client.Client
 	decoder *admission.Decoder
@@ -95,7 +95,7 @@ func (r *SidecarInjector) Handle(ctx context.Context, req admission.Request) adm
 			}
 		} else {
 			// the default sidecar cr exists, update it
-			sidecar.Spec.Replicas += 1
+			sidecar.Spec.Replicas++
 			if err := r.Client.Update(ctx, &sidecar); err != nil {
 				logger.Error(err, "failed to update default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
@@ -113,6 +113,7 @@ func (r *SidecarInjector) Handle(ctx context.Context, req admission.Request) adm
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
+// BuildVineyardCommand builds the command for vineyardd image
 func (r *SidecarInjector) BuildVineyardCommand(sidecar *v1alpha1.Sidecar) string {
 	socket := "/var/run/vineyard.sock"
 	if sidecar.Spec.Volume.PvcName != "" {
@@ -142,6 +143,8 @@ func (r *SidecarInjector) BuildVineyardCommand(sidecar *v1alpha1.Sidecar) string
 
 	return command
 }
+
+// ApplyCRToSidecar applies the sidecar cr to the pod
 func (r *SidecarInjector) ApplyCRToSidecar(sidecar *v1alpha1.Sidecar, pod *corev1.Pod) {
 	// add sleep to wait for the sidecar container to be ready
 	for i := range pod.Spec.Containers {

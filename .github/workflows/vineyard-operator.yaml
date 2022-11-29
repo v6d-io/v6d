@@ -52,6 +52,7 @@ jobs:
           - e2e-tests-local-assembly
           - e2e-tests-distributed-assembly
           - e2e-tests-dask-repartition
+          - e2e-tests-sidecar
     steps:
       - uses: actions/checkout@v3
         with:

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package k8s contains k8s API versions.
 package k8s
 
 import (
@@ -42,6 +43,7 @@ func getSidecarEtcdConfig() EtcdConfig {
 	return SidecarEtcd
 }
 
+// SidecarSvcLabelSelector contains the label selector of sidecar service
 var SidecarSvcLabelSelector ServiceLabelSelector
 
 func getSidecarSvcLabelSelector() ServiceLabelSelector {
@@ -61,8 +63,8 @@ type SidecarReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=sidecars/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
-// Reconcile the sidecar.
 
+// Reconcile the sidecar.
 func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Sidecar")
