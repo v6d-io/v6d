@@ -173,3 +173,9 @@ jobs:
         uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/repartition/dask-repartition-e2e.yaml
+
+      - name: e2e-tests-sidecar
+        if: ${{ matrix.job == 'e2e-tests-sidecar' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
+        with:
+          e2e-file: k8s/test/e2e/sidecar/e2e.yaml

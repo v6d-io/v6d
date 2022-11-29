@@ -6,4 +6,5 @@ configurations:
 - kustomizeconfig.yaml
 
 patchesStrategicMerge:
-- namespace_selector_patch.yaml
+- operation_namespace_selector_patch.yaml
+- sidecar_selector_patch.yaml

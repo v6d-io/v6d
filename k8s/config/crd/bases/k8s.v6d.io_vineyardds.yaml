@@ -142,11 +142,15 @@ spec:
               service:
                 default:
                   port: 9600
+                  selector: rpc.vineyardd.v6d.io/rpc=vineyard-rpc
                   type: ClusterIP
                 properties:
                   port:
                     default: 9600
                     type: integer
+                  selector:
+                    default: rpc.vineyardd.v6d.io/rpc=vineyard-rpc
+                    type: string
                   type:
                     default: ClusterIP
                     type: string

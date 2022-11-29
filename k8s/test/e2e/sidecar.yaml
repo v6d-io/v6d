@@ -13,19 +13,29 @@
 # limitations under the License.
 #
 
-{{- $svcKV := getServiceLabelSelector }}
-apiVersion: v1
-kind: Service
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: {{ .Name }}-rpc
-  namespace: {{ .Namespace }}
-  labels:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
+  name: sidecar-job-deployment
+  namespace: vineyard-job
 spec:
-  type: {{ .Spec.Service.Type }}
-  ports:
-    - port: {{ .Spec.Service.Port }}
-      protocol: TCP
-      name: vineyard-rpc
   selector:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
+    matchLabels:
+      app: sidecar-job-deployment
+  replicas: 2
+  template:
+    metadata:
+      annotations:
+        sidecar.v6d.io/name: "default"
+      labels:
+        app: sidecar-job-deployment
+        sidecar.v6d.io/enabled: "true"
+    spec:
+      containers:
+      - name: job
+        image: ghcr.io/v6d-io/v6d/sidecar-job
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "python3 /job.py"]
+        env:
+        - name: JOB_NAME
+          value: v6d-workflow-demo-job

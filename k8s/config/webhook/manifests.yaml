@@ -71,6 +71,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-k8s-v6d-io-v1alpha1-sidecar
+  failurePolicy: Fail
+  name: msidecar.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - sidecars
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-k8s-v6d-io-v1alpha1-vineyardd
   failurePolicy: Fail
   name: mvineyardd.kb.io
@@ -94,6 +114,26 @@ webhooks:
       path: /mutate-v1-pod
   failurePolicy: Fail
   name: mpod.kb.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-v1-pod-sidecar
+  failurePolicy: Fail
+  name: mpod.sidecar.kb.io
   rules:
   - apiGroups:
     - ""
@@ -171,6 +211,26 @@ webhooks:
     - UPDATE
     resources:
     - operations
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-k8s-v6d-io-v1alpha1-sidecar
+  failurePolicy: Fail
+  name: vsidecar.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - sidecars
   sideEffects: None
 - admissionReviewVersions:
   - v1

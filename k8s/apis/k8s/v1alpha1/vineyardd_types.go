@@ -37,7 +37,6 @@ type MetricConfig struct {
 	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
 }
 
-// VineyarddConfig holds all command configuration about vineyardd
 // SpillConfig holds all configuration about spilling
 type SpillConfig struct {
 	// the name of the spill config
@@ -68,12 +67,16 @@ type SpillConfig struct {
 type ServiceConfig struct {
 	// service type
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=ClusterIP
+	// +kubebuilder:default:="ClusterIP"
 	Type string `json:"type,omitempty"`
 	// service port
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=9600
-	Port int `json:"port"`
+	Port int `json:"port,omitempty"`
+	// service label selector
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="rpc.vineyardd.v6d.io/rpc=vineyard-rpc"
+	Selector string `json:"selector,omitempty"`
 }
 
 // Etcd holds all configuration about Etcd
@@ -111,7 +114,7 @@ type VineyarddSpec struct {
 	Socket string `json:"socket"`
 	// vineyardd's service
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={type: "ClusterIP", port: 9600}
+	// +kubebuilder:default:={type: "ClusterIP", port: 9600, selector: "rpc.vineyardd.v6d.io/rpc=vineyard-rpc"}
 	Service ServiceConfig `json:"service,omitempty"`
 	// shared memory size for vineyardd
 	// +kubebuilder:validation:Optional

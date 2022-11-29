@@ -24,7 +24,6 @@ import (
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/operator"
-	"github.com/v6d-io/v6d/k8s/schedulers"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -154,12 +153,12 @@ func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObj
 			LocalAssemblyConfigTemplate.Namespace = pod.Namespace
 			LocalAssemblyConfigTemplate.StreamID = localObject.Spec.ObjectID
 			LocalAssemblyConfigTemplate.NodeName = localObject.Spec.Hostname
-			LocalAssemblyConfigTemplate.JobName = podLabels[schedulers.VineyardJobName]
+			LocalAssemblyConfigTemplate.JobName = podLabels["scheduling.k8s.v6d.io/job"]
 			LocalAssemblyConfigTemplate.TimeoutSeconds = timeout
 			if socket, err := ao.ResolveRequiredVineyarddSocket(
 				ctx,
-				podLabels[schedulers.VineyarddName],
-				podLabels[schedulers.VineyarddNamespace],
+				podLabels["scheduling.k8s.v6d.io/vineyardd"],
+				podLabels["scheduling.k8s.v6d.io/vineyardd-namespace"],
 				localObject.Namespace,
 			); err != nil {
 				return err
@@ -298,12 +297,12 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 		DistributedAssemblyConfigTemplate.Namespace = pod.Namespace
 		DistributedAssemblyConfigTemplate.GlobalObjectID = globalObject.Name
 		DistributedAssemblyConfigTemplate.OldObjectToNewObject = str
-		DistributedAssemblyConfigTemplate.JobName = podLabels[schedulers.VineyardJobName]
+		DistributedAssemblyConfigTemplate.JobName = podLabels["scheduling.k8s.v6d.io/job"]
 		DistributedAssemblyConfigTemplate.TimeoutSeconds = timeout
 		if socket, err := ao.ResolveRequiredVineyarddSocket(
 			ctx,
-			podLabels[schedulers.VineyarddName],
-			podLabels[schedulers.VineyarddNamespace],
+			podLabels["scheduling.k8s.v6d.io/vineyardd"],
+			podLabels["scheduling.k8s.v6d.io/vineyardd-namespace"],
 			globalObject.Namespace,
 		); err != nil {
 			return false, nil

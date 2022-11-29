@@ -1,0 +1,7 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Sidecar
+metadata:
+  name: sidecar-sample
+spec:
+  #replicas: 1
+  image: test

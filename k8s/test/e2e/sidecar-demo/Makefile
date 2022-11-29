@@ -13,19 +13,15 @@
 # limitations under the License.
 #
 
-{{- $svcKV := getServiceLabelSelector }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Name }}-rpc
-  namespace: {{ .Namespace }}
-  labels:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
-spec:
-  type: {{ .Spec.Service.Type }}
-  ports:
-    - port: {{ .Spec.Service.Port }}
-      protocol: TCP
-      name: vineyard-rpc
-  selector:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
+REGISTRY := docker.pkg.github.com/v6d-io/v6d
+TAG      := latest
+
+all: build-job
+	
+build-job:
+	docker build . -f Dockerfile.job -t $(REGISTRY)/sidecar-job:$(TAG)
+.PHONY: build-job
+
+docker-push: build-job
+	docker push $(REGISTRY)/sidecar-job:$(TAG)
+.PHONY: docker-push
