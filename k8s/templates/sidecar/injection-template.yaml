@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: injection-containers
+# we only get the following containers
+spec:
+  containers:
+    - name: vineyard-sidecar
+      image: {{ .Spec.VineyardConfig.Image }}
+      imagePullPolicy: {{ .Spec.VineyardConfig.ImagePullPolicy }}
+      env:
+      - name: VINEYARDD_UID
+        value: {{ .UID }}
+      - name: VINEYARDD_NAME
+        value: {{ .Name }}
+      - name: VINEYARDD_NAMESPACE
+        value: {{ .Namespace }}
+      command:
+      - /bin/bash
+      - -c
+      - >
+        /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379;
+        sleep 1;
+        /usr/local/bin/vineyardd
+        --sync_crds {{ .Spec.VineyardConfig.SyncCRDs }}
+        --socket /var/run/vineyard.sock
+        --size {{ .Spec.VineyardConfig.Size }}
+        --stream_threshold {{ .Spec.VineyardConfig.StreamThreshold }}
+        --etcd_cmd etcd
+        --etcd_prefix {{ .Spec.VineyardConfig.EtcdPrefix }}
+        --etcd_endpoint {{ .Spec.VineyardConfig.EtcdEndpoint }}
+        {{- if .Spec.VineyardConfig.SpillConfig.Path }}
+        --spill_path {{ .Spec.VineyardConfig.SpillConfig.Path }}
+        --spill_lower_rate {{ .Spec.VineyardConfig.SpillConfig.SpillLowerRate }}
+        --spill_upper_rate {{ .Spec.VineyardConfig.SpillConfig.SpillUpperRate }}
+        {{- end }}
+        {{- if .Spec.MetricConfig.Enable }}
+        --metrics
+        -log_dir /var/log/vineyard/
+        {{- end }}
+      ports:
+      - containerPort: 9600
+        name: vineyard-rpc
+        type: TCP
+      volumeMounts:
+      - name: vineyard-socket
+      {{- if .Spec.Volume.MountPath }}
+        mountPath: {{ .Spec.Volume.MountPath }}
+      {{- else }}
+        mountPath: /var/run
+      {{- end }}
+    {{- if .Spec.MetricConfig.Enable }}
+    - name: metrics
+      image : {{ .Spec.MetricConfig.Image }}
+      imagePullPolicy: {{ .Spec.MetricConfig.ImagePullPolicy }}
+      command: ["./grok_exporter"]
+      args: ["-config", "grok_exporter.yml", "-disable-exporter-metrics", "&"]
+      ports:
+        - name: exporter
+          containerPort: 9144
+          protocol: TCP
+      volumeMounts:
+      - name: log
+        mountPath: /var/log/vineyard
+    {{- end }}
+  volumes:
+  - name: vineyard-socket
+  {{- if .Spec.Volume.PvcName }}
+    persistentVolumeClaim:
+      claimName: {{ .Spec.Volume.PvcName }}
+  {{- else }}
+    emptyDir: {}
+  {{- end }}
+  {{- if .Spec.MetricConfig.Enable }}
+  - name: log
+    emptyDir: {}
+  {{- end }}

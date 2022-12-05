@@ -68,12 +68,11 @@ type SidecarReconciler struct {
 func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Sidecar")
-
 	sidecar := &k8sv1alpha1.Sidecar{}
 	if err := r.Get(ctx, req.NamespacedName, sidecar); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	logger.V(1).Info("Reconciling Sidecar", "sidecar", sidecar)
+	logger.V(1).Info("Reconciling Sidecar", "sidecar", *sidecar)
 	// deploy the sidecar service
 	sidecarApp := kubernetes.Application{
 		Client:   r.Client,
@@ -84,13 +83,6 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		TmplFunc: map[string]interface{}{"getEtcdConfig": getSidecarEtcdConfig,
 			"getServiceLabelSelector": getSidecarSvcLabelSelector},
 	}
-	/*etcdApp := kubernetes.Application{
-		Client:   r.Client,
-		FileRepo: r.Template,
-		CR:       sidecar,
-		GVK:      k8sv1alpha1.GroupVersion.WithKind("Sidecar"),
-		TmplFunc: map[string]interface{}{"getEtcdConfig": getSidecarEtcdConfig},
-	}*/
 
 	// set up the etcd
 	SidecarEtcd.Namespace = sidecar.Namespace
@@ -121,6 +113,11 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	if _, err := sidecarApp.Apply(ctx, "vineyardd/service.yaml", logger, true); err != nil {
 		logger.Error(err, "failed to apply vineyard rpc service")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.UpdateStatus(ctx, sidecar); err != nil {
+		logger.Error(err, "failed to update sidecar status")
 		return ctrl.Result{}, err
 	}
 

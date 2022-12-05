@@ -20,14 +20,13 @@ metadata:
   # don't use default namespace
   namespace: vineyard-system
 spec:
-  image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
   replicas: 2
-  imagePullPolicy: IfNotPresent
-  # vineyardd's configuration
-  syncCRDs: true
-  enableMetrics: false
   etcd:
     replicas: 3
   service:
     type: ClusterIP
     port: 9600
+  vineyardConfig:
+    image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+    imagePullPolicy: IfNotPresent
+

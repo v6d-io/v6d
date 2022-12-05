@@ -20,67 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Spill holds all configuration about spilling
-type Spill struct {
-	// the path of spilling
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	Path string `json:"path,omitempty"`
-
-	// low watermark of spilling memory
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="0.3"
-	SpillLowerRate string `json:"spillLowerRate,omitempty"`
-
-	// high watermark of triggering spilling
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="0.8"
-	SpillUpperRate string `json:"spillUpperRate,omitempty"`
-}
-
-// Metric holds all metrics configuration
-type Metric struct {
-	// Enable metrics
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	Enable bool `json:"enable,omitempty"`
-
-	// represent the metric's image
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="vineyardcloudnative/vineyard-grok-exporter:latest"
-	Image string `json:"image,omitempty"`
-
-	// the policy about pulling image
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="IfNotPresent"
-	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
-}
-
-// VolumeConfig holds all configuration about persistent volume
-type VolumeConfig struct {
-	// the name of pvc
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	PvcName string `json:"pvcName,omitempty"`
-
-	// the mount path of pv
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	MountPath string `json:"mountPath,omitempty"`
-}
-
 // SidecarSpec defines the desired state of Sidecar
 type SidecarSpec struct {
-	// the image of vineyard sidecar image
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="vineyardcloudnative/vineyardd:latest"
-	Image string `json:"image,omitempty"`
-
-	// the policy about pulling vineyard sidecar image
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="IfNotPresent"
-	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
-
 	// the selector of pod
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=""
@@ -91,46 +32,16 @@ type SidecarSpec struct {
 	// +kubebuilder:default:=0
 	Replicas int `json:"replicas,omitempty"`
 
-	// shared memory size for vineyardd
+	// vineyard container configuration
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="256Mi"
-	Size string `json:"size,omitempty"`
+	//nolint: lll
+	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{ .Namespace }}/{{ .Name }}", size: "256Mi", streamThreshold: 80, etcdEndpoint: "http://etcd-for-vineyard:2379", etcdPrefix: "/vineyard"}
+	VineyardConfig VineyardContainerConfig `json:"vineyardConfig,omitempty"`
 
-	// The directory on host for the IPC socket file. The UNIX-domain
-	// socket will be placed as `${Socket}/vineyard.sock`.
+	// metric container configuration
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/var/run"
-	Socket string `json:"socket,omitempty"`
-
-	// memory threshold of streams (percentage of total memory)
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=80
-	StreamThreshold int64 `json:"streamThreshold,omitempty"`
-
-	// path of etcd executable
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="etcd"
-	EtcdCmd string `json:"etcdCmd,omitempty"`
-
-	// endpoint of etcd
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="http://etcd-for-vineyard:2379"
-	EtcdEndpoint string `json:"etcdEndpoint,omitempty"`
-
-	// path prefix in etcd
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/vineyard"
-	EtcdPrefix string `json:"etcdPrefix,omitempty"`
-
-	// the configuration of spilling
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={}
-	Spill Spill `json:"spill,omitempty"`
-
-	// metric configuration
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={}
-	Metric Metric `json:"metric,omitempty"`
+	// +kubebuilder:default:={enable: false, image: "vineyardcloudnative/vineyard-grok-exporter:latest", imagePullPolicy: "IfNotPresent"}
+	MetricConfig MetricContainerConfig `json:"metricConfig,omitempty"`
 
 	// metric configuration
 	// +kubebuilder:validation:Optional

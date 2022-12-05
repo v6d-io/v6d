@@ -13,19 +13,19 @@
 # limitations under the License.
 #
 
-{{- if .Spec.SpillConfig.Name }}
+{{- if .Spec.VineyardConfig.SpillConfig.Name }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Spec.SpillConfig.Name }}
+  name: {{ .Spec.VineyardConfig.SpillConfig.Name }}
   namespace: {{ .Namespace }}
   labels:
     app.kubernetes.io/name: {{ .Name }}
     app.kubernetes.io/instance: vineyardd
     app.kubernetes.io/component: PersistentVolumeClaim
 spec:
-  {{- if .Spec.SpillConfig.PersistentVolumeClaimSpec }}
-  {{ $spec := .Spec.SpillConfig.PersistentVolumeClaimSpec }}
+  {{- if .Spec.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec }}
+  {{ $spec := .Spec.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec }}
   {{- if $spec.AccessModes }}
   accessModes:
     {{- range $spec.AccessModes }}
@@ -53,6 +53,6 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ .Spec.SpillConfig.Name }}
+      app.kubernetes.io/name: {{ .Spec.VineyardConfig.SpillConfig.Name }}
       app.kubernetes.io/instance: vineyardd
 {{- end }}

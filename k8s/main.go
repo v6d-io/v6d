@@ -134,7 +134,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Info("registering the sidecar webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod-sidecar",
 			&webhook.Admission{
-				Handler: &sidecar.SidecarInjector{Client: mgr.GetClient()}})
+				Handler: &sidecar.Injector{Client: mgr.GetClient(), Template: templates.NewEmbedTemplate()}})
 		setupLog.Info("the sidecar webhook is registered")
 
 		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {

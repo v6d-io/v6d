@@ -16,19 +16,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sidecar-job-deployment
+  name: job-deployment-with-default-sidecar
   namespace: vineyard-job
 spec:
   selector:
     matchLabels:
-      app: sidecar-job-deployment
+      app: job-deployment-with-default-sidecar
   replicas: 2
   template:
     metadata:
       annotations:
         sidecar.v6d.io/name: "default"
       labels:
-        app: sidecar-job-deployment
+        app: job-deployment-with-default-sidecar
         sidecar.v6d.io/enabled: "true"
     spec:
       containers:

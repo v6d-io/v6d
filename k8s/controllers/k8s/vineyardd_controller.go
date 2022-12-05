@@ -62,12 +62,13 @@ func getStorage(q resource.Quantity) string {
 	return q.String()
 }
 
-// ServiceLabelSelector returns the label selector for the service.
+// ServiceLabelSelector represents the label selector of the service
 type ServiceLabelSelector struct {
 	Key   string
 	Value string
 }
 
+// SvcLabelSelector is the label selector of the service
 var SvcLabelSelector ServiceLabelSelector
 
 func getServiceLabelSelector() ServiceLabelSelector {
@@ -84,11 +85,11 @@ func getServiceLabelSelector() ServiceLabelSelector {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=*
 // +kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-// Reconcile reconciles the Vineyardd.
 
+// Reconcile reconciles the Vineyardd.
 func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Vineyardd")
-
+	logger.Info("Reconciling test")
 	vineyardd := k8sv1alpha1.Vineyardd{}
 	if err := r.Get(ctx, req.NamespacedName, &vineyardd); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)

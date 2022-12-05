@@ -1,7 +1,10 @@
 apiVersion: k8s.v6d.io/v1alpha1
 kind: Sidecar
 metadata:
-  name: sidecar-sample
+  name: sidecar-sample1
+  namespace: vineyard-job
 spec:
-  #replicas: 1
-  image: test
+  replicas: 2
+  selector: app=sidecar-job-deployment
+  vineyardConfig:
+    socket: /var/run/vineyard.sock

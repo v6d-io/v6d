@@ -17,18 +17,22 @@ limitations under the License.
 package sidecar
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
+
+	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -37,10 +41,11 @@ import (
 // nolint: lll
 // +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/mutate-v1-pod-sidecar,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.sidecar.kb.io
 
-// The Injector injects vineyard sidecar container into Pods
-type SidecarInjector struct {
-	Client  client.Client
-	decoder *admission.Decoder
+// Injector injects vineyard sidecar container into Pods
+type Injector struct {
+	Client   client.Client
+	decoder  *admission.Decoder
+	Template kubernetes.Repo
 }
 
 const (
@@ -51,9 +56,10 @@ const (
 )
 
 // Handle handles admission requests.
-func (r *SidecarInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
-	logger := log.FromContext(ctx).WithName("SidecarInjector")
+func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.Response {
+	logger := log.FromContext(ctx).WithName("Injector")
 
+	templatePod := &corev1.Pod{}
 	pod := &corev1.Pod{}
 	if err := r.decoder.Decode(req, pod); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -62,7 +68,7 @@ func (r *SidecarInjector) Handle(ctx context.Context, req admission.Request) adm
 	anno := pod.Annotations
 	if v, ok := anno[SidecarNameAnno]; ok && v == "default" {
 		// create the default sidecar cr
-		sidecar := v1alpha1.Sidecar{}
+		sidecar := &v1alpha1.Sidecar{}
 		// get the pod's label as cr's name
 		labels := pod.Labels
 		keys := []string{}
@@ -80,7 +86,7 @@ func (r *SidecarInjector) Handle(ctx context.Context, req admission.Request) adm
 		sidecar.Name = selectorname + "-default-sidecar"
 		sidecar.Namespace = pod.Namespace
 
-		err := r.Client.Get(ctx, types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace}, &sidecar)
+		err := r.Client.Get(ctx, types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace}, sidecar)
 		if err != nil && !apierrors.IsNotFound(err) {
 			logger.Info("Get sidecar cr failed", "error", err)
 			return admission.Errored(http.StatusInternalServerError, err)
@@ -88,24 +94,53 @@ func (r *SidecarInjector) Handle(ctx context.Context, req admission.Request) adm
 		// if the default sidecar cr doesn't exist, create it
 		if apierrors.IsNotFound(err) {
 			sidecar.Spec.Replicas = 1
+			// use default configurations
 			sidecar.Spec.Selector = keys[0] + "=" + labels[keys[0]]
-			if err := r.Client.Create(ctx, &sidecar); err != nil {
+			sidecar.Spec.VineyardConfig.EtcdEndpoint = "http://etcd-for-vineyard:2379"
+			sidecar.Spec.VineyardConfig.EtcdPrefix = "/vineyard"
+			sidecar.Spec.VineyardConfig.Image = "vineyardcloudnative/vineyardd:latest"
+			sidecar.Spec.VineyardConfig.ImagePullPolicy = "IfNotPresent"
+			sidecar.Spec.VineyardConfig.Socket = "/var/run/vineyard.sock"
+			sidecar.Spec.VineyardConfig.Size = "256Mi"
+			sidecar.Spec.VineyardConfig.StreamThreshold = 80
+			sidecar.Spec.VineyardConfig.SyncCRDs = true
+
+			if err := r.Client.Create(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to create default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		} else {
 			// the default sidecar cr exists, update it
 			sidecar.Spec.Replicas++
-			if err := r.Client.Update(ctx, &sidecar); err != nil {
+			if err := r.Client.Update(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to update default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
-		r.ApplyCRToSidecar(&sidecar, pod)
+		//r.ApplyCRToSidecar(&sidecar, pod)
+		buf, err := r.Template.ReadFile("sidecar/injection-template.yaml")
+		if err != nil {
+			logger.Error(err, "failed to read injection template")
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if tpl, err := template.New("sidecar").Parse(string(buf)); err == nil {
+			var buf bytes.Buffer
+			if err := tpl.Execute(&buf, sidecar); err == nil {
+				decode := scheme.Codecs.UniversalDeserializer().Decode
+				obj, _, _ := decode(buf.Bytes(), nil, nil)
+				templatePod = obj.(*corev1.Pod)
+			} else {
+				logger.Error(err, "failed to execute template")
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+		}
+		r.ApplyToSidecar(sidecar, templatePod, pod)
 	}
 
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {
+		logger.Error(err, "failed to marshal pod")
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -113,171 +148,45 @@ func (r *SidecarInjector) Handle(ctx context.Context, req admission.Request) adm
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-// BuildVineyardCommand builds the command for vineyardd image
-func (r *SidecarInjector) BuildVineyardCommand(sidecar *v1alpha1.Sidecar) string {
-	socket := "/var/run/vineyard.sock"
-	if sidecar.Spec.Volume.PvcName != "" {
-		socket = sidecar.Spec.Volume.MountPath + "/vineyard.sock"
-	}
-	command := "/usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard." + sidecar.Namespace + ".svc.cluster.local:2379;" + "\n" +
-		"sleep 1;" + "\n" +
-		"/usr/local/bin/vineyardd" + "\n" +
-		"--sync_crds true" + "\n" +
-		"--socket " + socket + "\n" +
-		"--size " + sidecar.Spec.Size + "\n" +
-		"--stream_threshold " + strconv.Itoa(int(sidecar.Spec.StreamThreshold)) + "\n" +
-		"--etcd_cmd " + sidecar.Spec.EtcdCmd + "\n" +
-		"--etcd_prefix " + sidecar.Spec.EtcdPrefix + "\n" +
-		"--etcd_endpoint " + sidecar.Spec.EtcdEndpoint + "\n"
-
-	if sidecar.Spec.Spill.Path != "" {
-		command = command + "--spill_path " + sidecar.Spec.Spill.Path + "\n" +
-			"--spill_lower_rate " + sidecar.Spec.Spill.SpillLowerRate + "\n" +
-			"--spill_upper_rate " + sidecar.Spec.Spill.SpillUpperRate + "\n"
-	}
-
-	if sidecar.Spec.Metric.Enable {
-		command = command + "--metrics" + "\n" +
-			"-log_dir /var/log/vineyard/" + "\n"
-	}
-
-	return command
-}
-
-// ApplyCRToSidecar applies the sidecar cr to the pod
-func (r *SidecarInjector) ApplyCRToSidecar(sidecar *v1alpha1.Sidecar, pod *corev1.Pod) {
+// ApplyToSidecar applies the sidecar cr and pod to the sidecar
+func (r *Injector) ApplyToSidecar(sidecar *v1alpha1.Sidecar, pod *corev1.Pod, podWithSidecar *corev1.Pod) {
 	// add sleep to wait for the sidecar container to be ready
-	for i := range pod.Spec.Containers {
-		pod.Spec.Containers[i].Lifecycle = &corev1.Lifecycle{
-			PostStart: &corev1.LifecycleHandler{
-				Exec: &corev1.ExecAction{
-					Command: []string{
-						"/bin/sh",
-						"-c",
-						"sleep 120",
-					},
-				},
-			},
-		}
-	}
-	// add the sidecar container
-	sidecarContainer := corev1.Container{
-		Name:            "vineyard-sidecar",
-		Image:           sidecar.Spec.Image,
-		ImagePullPolicy: corev1.PullPolicy(sidecar.Spec.ImagePullPolicy),
-		Command:         []string{"/bin/bash", "-c", r.BuildVineyardCommand(sidecar)},
-		Env: []corev1.EnvVar{
-			{
-				Name: "VINEYARDD_UID",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.uid",
-					},
-				},
-			},
-			{
-				Name: "VINEYARDD_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
-					},
-				},
-			},
-			{
-				Name: "VINEYARDD_NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
-					},
-				},
-			},
-		},
-		Ports: []corev1.ContainerPort{
-			{
-				Name:          "vineyard-rpc",
-				ContainerPort: 9600,
-				Protocol:      corev1.ProtocolTCP,
-			},
-		},
+	for i := range podWithSidecar.Spec.Containers {
+		command := podWithSidecar.Spec.Containers[i].Command
+		command[len(command)-1] = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + command[len(command)-1]
 	}
 
-	// add the sidecar container
-	pod.Spec.Containers = append(pod.Spec.Containers, sidecarContainer)
-
-	// add the metric of sidecar
-	if sidecar.Spec.Metric.Enable {
-		metricContainer := corev1.Container{
-			Name:            "vineyard-metric",
-			Image:           sidecar.Spec.Metric.Image,
-			ImagePullPolicy: corev1.PullPolicy(sidecar.Spec.Metric.ImagePullPolicy),
-			Command:         []string{"/bin/bash", "-c", "./grok_exporter"},
-			Args:            []string{"-config", "grok_exporter.yml", "-disable-exporter-metrics", "&"},
-			Ports: []corev1.ContainerPort{
-				{
-					Name:          "exporter",
-					ContainerPort: 9144,
-					Protocol:      corev1.ProtocolTCP,
-				},
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "log",
-					MountPath: "/var/log/vineyard",
-				},
-			},
-		}
-		pod.Spec.Containers = append(pod.Spec.Containers, metricContainer)
-		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
-			Name: "log",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-	}
-	// add rpc labels to the pod
-	labels := pod.Labels
+	// add rpc labels to the podWithSidecar
+	labels := podWithSidecar.Labels
 	s := strings.Split(sidecar.Spec.Service.Selector, "=")
-	// add the rpc label selector to the pod's labels
+	// add the rpc label selector to the podWithSidecar's labels
 	labels[s[0]] = s[1]
 
+	// add volumeMounts to the app container
 	if sidecar.Spec.Volume.PvcName == "" {
-		// add emptyDir volume for sidecar
-		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
-			Name: "vineyard-socket",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-
-		// add emptyDir volumeMount for every container
-		for i := range pod.Spec.Containers {
-			pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+		// add emptyDir volumeMount for every app container
+		for i := range podWithSidecar.Spec.Containers {
+			podWithSidecar.Spec.Containers[i].VolumeMounts = append(podWithSidecar.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      "vineyard-socket",
 				MountPath: "/var/run",
 			})
 		}
 	} else {
-		// add pvc volume for sidecar
-		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
-			Name: "vineyard-socket",
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: sidecar.Spec.Volume.PvcName,
-				},
-			},
-		})
-		for i := range pod.Spec.Containers {
-			pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+		// add pvc volumeMount for every app container
+		for i := range podWithSidecar.Spec.Containers {
+			podWithSidecar.Spec.Containers[i].VolumeMounts = append(podWithSidecar.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      "vineyard-socket",
 				MountPath: sidecar.Spec.Volume.MountPath,
 			})
 		}
 	}
-
+	// add the sidecar container
+	podWithSidecar.Spec.Containers = append(podWithSidecar.Spec.Containers, pod.Spec.Containers...)
+	podWithSidecar.Spec.Volumes = append(podWithSidecar.Spec.Volumes, pod.Spec.Volumes...)
 }
 
 // InjectDecoder injects the decoder.
-func (r *SidecarInjector) InjectDecoder(d *admission.Decoder) error {
+func (r *Injector) InjectDecoder(d *admission.Decoder) error {
 	r.decoder = d
 	return nil
 }

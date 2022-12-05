@@ -28,19 +28,27 @@ setup:
     - name: install scheduler-plugin and operator
       command: |
         make -C k8s docker-build
+        kind load docker-image vineyardcloudnative/vineyard-operator:latest
         make -C k8s deploy
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-controller-manager
           for: condition=Available
-    - name: install job
+    - name: install app with default sidecar
       command: |
         kubectl create namespace vineyard-job
         kubectl label namespace vineyard-job sidecar-injection=enabled
-        kubectl apply -f k8s/test/e2e/sidecar.yaml
+        kubectl apply -f k8s/test/e2e/sidecar-with-default-sidecar.yaml
       wait:
         - namespace: vineyard-job
-          resource: deployment/sidecar-job-deployment
+          resource: deployment/job-deployment-with-default-sidecar
+          for: condition=Available
+    - name: install app with custom sidecar
+      command: |
+        kubectl apply -f k8s/test/e2e/sidecar-with-custom-sidecar.yaml
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/job-deployment-with-custom-sidecar
           for: condition=Available
   timeout: 20m
 
@@ -56,5 +64,7 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
   cases:
-    - query: 'kubectl get pod -l app=sidecar-job-deployment -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -c job -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
+    - query: 'kubectl get pod -l app=job-deployment-with-custom-sidecar -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -c job -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
+      expected: ../verify/values.yaml
+    - query: 'kubectl get pod -l app=job-deployment-with-custom-sidecar -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -c job -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
       expected: ../verify/values.yaml

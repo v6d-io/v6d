@@ -2,7 +2,7 @@ Vineyard Operator
 =================
 
 To manage all vineyard relevant components in Kubernetes cluster, we proposal the vineyard
-operator. With it, users can easily deploy vineyard components, and manage their lifecycle of them.
+operator. With it, users can easily deploy vineyard components, and manage their lifecycle.
 The doc will show you all details about vineyard operator and how to use it to manage vineyard
 components.
 
@@ -177,106 +177,92 @@ The detailed configuration entries for creating a vineyard cluster are listed as
      - Description
      - Default Value
 
-   * - image
-     - string
-     - The image name of vineyardd image.
-     - | "vineyardcloudnative/
-       | vineyardd:latest"
-
-   * - imagePullPolicy
-     - string
-     - The image pull policy of vineyardd image.
-     - nil
-
    * - replicas
      - int
      - The replicas of vineyardd.
      - 3
 
-   * - env
-     - []corev1.EnvVar
-     - The environment of vineyardd.
-     - nil
-
-   * - | metric.
+   * - | vineyardConfig.
        | image
      - string
-     - The image name of metric.
-     - nil
+     - The image name of vineyardd container.
+     - | "vineyardcloudnative/
+       | vineyardd:latest"
 
-   * - | metric.
+   * - | vineyardConfig.
        | imagePullPolicy
      - string
-     - The image pull policy of metric.
+     - The image pull policy of vineyardd image.
      - nil
 
-   * - | etcdCmd
-     - string
-     - The path of etcd command.
-     - nil
-
-   * - | etcdEndpoint
-     - string
-     - The endpoint of etcd.
-     - nil
-
-   * - | etcdPrefix
-     - string
-     - The path prefix of etcd.
-     - nil
-
-   * - | enableMetrics
+   * - | vineyardConfig.
+       | syncCRDs
      - bool
-     - Enable the metrics in vineyardd.
-     - false
+     - Synchronize CRDs when persisting objects
+     - true
 
-   * - | socket
+   * - | vineyardConfig.
+       | socket
      - string
      - The ipc socket file of vineyardd.
      - nil
 
-   * - | streamThreshold
+   * - | vineyardConfig.
+       | size
+     - string
+     - The shared memory size for vineyardd.
+     - nil
+
+   * - | vineyardConfig.
+       | streamThreshold
      - int64
      - The memory threshold of streams
        (percentage of total memory)
      - nil
 
-   * - | sharedMemorySize
+   * - | vineyardConfig.
+       | etcdEndpoint
      - string
-     - The shared memory size for vineyardd.
+     - The endpoint of etcd.
      - nil
 
-   * - | syncCRDs
-     - bool
-     - Synchronize CRDs when persisting objects
-     - true
+   * - | vineyardConfig.
+       | etcdPrefix
+     - string
+     - The path prefix of etcd.
+     - nil
 
-   * - | spillConfig.
+   * - | vineyardConfig.
+       | spillConfig.
        | Name
      - string
      - The name of the spill config,
        if set we'll enable the spill module.
      - nil
 
-   * - | spillConfig.
+   * - | vineyardConfig.
+       | spillConfig.
        | path
      - string
      - The path of spilling.
      - nil
 
-   * - | spillConfig.
+   * - | vineyardConfig.
+       | spillConfig.
        | spillLowerRate
      - string
      - The low watermark of spilling memory.
      - nil
 
-   * - | spillConfig.
+   * - | vineyardConfig.
+       | spillConfig.
        | spillUpperRate
      - string
      - The high watermark of triggering spilling.
      - nil
 
-   * - | spillConfig.
+   * - | vineyardConfig.
+       | spillConfig.
        | persistent
        | VolumeSpec
      - | corev1.
@@ -285,13 +271,38 @@ The detailed configuration entries for creating a vineyard cluster are listed as
      - The PV of the spilling for persistent storage.
      - nil
 
-   * - | spillConfig.
+   * - | vineyardConfig.
+       | spillConfig.
        | persistent
        | VolumeClaimSpec
      - | corev1.
        | Persistent
        | VolumeClaimSpec
      - The PVC of the spilling for the persistent storage.
+     - nil
+
+   * - | vineyardConfig.
+       | env
+     - []corev1.EnvVar
+     - The environment of vineyardd.
+     - nil
+
+   * - | metricConfig.
+       | enable
+     - bool
+     - Enable the metrics in vineyardd.
+     - false
+
+   * - | metricConfig.
+       | image
+     - string
+     - The image name of metric.
+     - nil
+
+   * - | metricConfig.
+       | imagePullPolicy
+     - string
+     - The image pull policy of metric.
      - nil
 
    * - | service.
@@ -305,12 +316,436 @@ The detailed configuration entries for creating a vineyard cluster are listed as
      - int
      - The service port of vineyardd service
      - nil
+  
+   * - | service.
+       | selector
+     - string
+     - The label selector of vineyardd service.
+     - nil
 
    * - | etcd.
        | replicas
      - int
      - The etcd replicas of vineyard
      - nil
+   
+   * - | volume.
+       | pvcName
+     - string
+     - The pvc name of vineyard socket.
+     - nil
+  
+   * - | volume.
+       | mountPath
+     - string
+     - The mount path of pvc.
+     - nil
+
+Installing vineyard as sidecar
+------------------------------
+
+Vineyard can be installed as a sidecar container in the pod. We provide CRD `Sidecar` for configuring
+and obervering the sidecar container. It is mostly the same as the `Vineyardd` CRD and the following 
+list shows all configurations.
+
+.. list-table:: Sidecar Configurations
+   :widths: 15 10 60 15
+   :header-rows: 1
+
+   * - Option Name
+     - Type
+     - Description
+     - Default Value
+
+   * - selector
+     - string
+     - The label selector of your app workload. Use '=' to separate key and value.
+     - ""
+
+   * - replicas
+     - int
+     - The replicas of your workload that needs to injected with vineyard sidecar.
+     - 0
+
+   * - | vineyardConfig.
+       | image
+     - string
+     - The image name of vineyard sidecar container.
+     - | "vineyardcloudnative/
+       | vineyardd:latest"
+
+   * - | vineyardConfig.
+       | imagePullPolicy
+     - string
+     - The image pull policy of vineyard sidecar image.
+     - nil
+
+   * - | vineyardConfig.
+       | syncCRDs
+     - bool
+     - Synchronize CRDs when persisting objects
+     - true
+
+   * - | vineyardConfig.
+       | socket
+     - string
+     - The ipc socket file of vineyard sidecar.
+     - nil
+
+   * - | vineyardConfig.
+       | size
+     - string
+     - The shared memory size for vineyard sidecar.
+     - nil
+
+   * - | vineyardConfig.
+       | streamThreshold
+     - int64
+     - The memory threshold of streams
+       (percentage of total memory)
+     - nil
+
+   * - | vineyardConfig.
+       | etcdEndpoint
+     - string
+     - The endpoint of etcd.
+     - nil
+
+   * - | vineyardConfig.
+       | etcdPrefix
+     - string
+     - The path prefix of etcd.
+     - nil
+
+   * - | vineyardConfig.
+       | spillConfig.
+       | Name
+     - string
+     - The name of the spill config,
+       if set we'll enable the spill module.
+     - nil
+
+   * - | vineyardConfig.
+       | spillConfig.
+       | path
+     - string
+     - The path of spilling.
+     - nil
+
+   * - | vineyardConfig.
+       | spillConfig.
+       | spillLowerRate
+     - string
+     - The low watermark of spilling memory.
+     - nil
+
+   * - | vineyardConfig.
+       | spillConfig.
+       | spillUpperRate
+     - string
+     - The high watermark of triggering spilling.
+     - nil
+
+   * - | vineyardConfig.
+       | spillConfig.
+       | persistent
+       | VolumeSpec
+     - | corev1.
+       | Persistent
+       | VolumeSpec
+     - The PV of the spilling for persistent storage.
+     - nil
+
+   * - | vineyardConfig.
+       | spillConfig.
+       | persistent
+       | VolumeClaimSpec
+     - | corev1.
+       | Persistent
+       | VolumeClaimSpec
+     - The PVC of the spilling for the persistent storage.
+     - nil
+
+   * - | vineyardConfig.
+       | env
+     - []corev1.EnvVar
+     - The environment of vineyard sidecar.
+     - nil
+
+   * - | metricConfig.
+       | enable
+     - bool
+     - Enable the metrics in vineyard sidecar.
+     - false
+
+   * - | metricConfig.
+       | image
+     - string
+     - The image name of metric.
+     - nil
+
+   * - | metricConfig.
+       | imagePullPolicy
+     - string
+     - The image pull policy of metric.
+     - nil
+
+   * - | service.
+       | type
+     - string
+     - The service type of vineyard sidecar service.
+     - nil
+
+   * - | service.
+       | port
+     - int
+     - The service port of vineyard sidecar service
+     - nil
+  
+   * - | service.
+       | selector
+     - string
+     - The label selector of vineyard sidecar service.
+     - nil
+   
+   * - | volume.
+       | pvcName
+     - string
+     - The pvc name of vineyard socket.
+     - nil
+  
+   * - | volume.
+       | mountPath
+     - string
+     - The mount path of pvc.
+     - nil
+
+Besides, We provide some labels and annotations to help users to use the sidecar in vineyard operator.
+The following is all labels that we provide:
+
+.. list-table:: Sidecar Configurations
+   :widths: 25 15 60
+   :header-rows: 1
+
+   * - Name
+     - Yaml Fields
+     - Description
+
+   * - "sidecar.v6d.io/enabled"
+     - labels
+     - Enable the sidecar.
+
+   * - "sidecar.v6d.io/name"
+     - annotations
+     - The name of sidecar cr. If the name is `default`, the default sidecar cr will be created.
+
+There two ways to install vineyard as sidecar:
+
+- Use the **default sidecar configuration**. Users add two annotations `sidecar.v6d.io/enabled: true` 
+and `sidecar.v6d.io/name: default` to app's YAML. Then the default sidecar cr will be created for 
+obervering.
+- Use the **custom sidecar configuration**. Users create a custom sidecar cr `sidecar-demo` first 
+and then add two annotations `sidecar.v6d.io/enabled: true` and `sidecar.v6d.io/name: sidecar-demo` 
+to app's YAML.
+
+The following is an example of installing vineyard as a sidecar container in the pod.
+First, we should install the vineyard operator following the previous steps, and then 
+create a namepsace with specific label `sidecar-injection: enabled` to enable the sidecar.
+
+.. code:: bash
+
+    $ kubectl create namespace vineyard-job
+    $ kubectl label namespace vineyard-job sidecar-injection=enabled
+
+Then, we use the following YAML to inject default sidecar into the pod.
+
+.. note::
+
+    Please set up the command field of your app container and it should be 
+    like `["/bin/sh" or "/bin/bash", "-c", (your app command)]`. After injecting
+    the vineyard sidecar, the command field will be changed to `["/bin/sh" or "/bin/bash",
+     "-c", "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]`
+     to make sure the vineyard sidecar is ready before the app container starts.
+
+.. code:: yaml
+
+    $ cat <<EOF | kubectl apply -f -
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: job-deployment-with-default-sidecar
+      namespace: vineyard-job
+    spec:
+      selector:
+        matchLabels:
+          app: job-deployment-with-default-sidecar
+      replicas: 2
+      template:
+        metadata:
+          annotations:
+            sidecar.v6d.io/name: "default"
+          labels:
+            app: job-deployment-with-default-sidecar
+            sidecar.v6d.io/enabled: "true"
+        spec:
+          containers:
+          - name: job
+            image: ghcr.io/v6d-io/v6d/sidecar-job
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c", "python3 /job.py"]
+            env:
+            - name: JOB_NAME
+              value: v6d-workflow-demo-job
+    EOF
+
+Next you could see the sidecar container is injected into the pod.
+
+.. code:: yaml
+    
+    # get the default sidecar cr
+    $ kubectl get sidecar app-job-deployment-with-default-sidecar-default-sidecar -n vineyard-job -o yaml
+    apiVersion: k8s.v6d.io/v1alpha1
+    kind: Sidecar
+    metadata:
+      # the default sidecar's name is your label selector + "-default-sidecar"
+      name: app-job-deployment-with-default-sidecar-default-sidecar
+      namespace: vineyard-job
+    spec:
+      metricConfig:
+        enable: false
+        image: vineyardcloudnative/vineyard-grok-exporter:latest
+        imagePullPolicy: IfNotPresent
+      replicas: 2
+      selector: app=job-deployment-with-default-sidecar
+      service:
+        port: 9600
+        selector: rpc.vineyardd.v6d.io/rpc=vineyard-rpc
+        type: ClusterIP
+      vineyardConfig:
+        etcdEndpoint: http://etcd-for-vineyard:2379
+        etcdPrefix: /vineyard
+        image: vineyardcloudnative/vineyardd:latest
+        imagePullPolicy: IfNotPresent
+        size: 256Mi
+        socket: /var/run/vineyard.sock
+        spillConfig:
+          name: ""
+          path: ""
+          persistentVolumeClaimSpec:
+            resources: {}
+          persistentVolumeSpec: {}
+          spillLowerRate: "0.3"
+          spillUpperRate: "0.8"
+        streamThreshold: 80
+        syncCRDs: true
+    # get the injected Pod, here we only show the important part of the Pod
+    $ kubectl get pod -l app=job-deployment-with-default-sidecar -n vineyard-job -o yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: job-deployment-with-default-sidecar-55664458f8-h4jzk
+      namespace: vineyard-job
+    spec:
+      containers:
+      - command:
+        - /bin/sh
+        - -c
+        - while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;python3 /job.py
+        env:
+        - name: JOB_NAME
+          value: v6d-workflow-demo-job
+        image: ghcr.io/v6d-io/v6d/sidecar-job
+        imagePullPolicy: IfNotPresent
+        name: job
+        volumeMounts:
+        - mountPath: /var/run
+          name: vineyard-socket
+      - command:
+        - /bin/bash
+        - -c
+        - |
+          /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.vineyard-job.svc.cluster.local:2379;
+          sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock 
+          --size 256Mi --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard 
+          --etcd_endpoint http://etcd-for-vineyard:2379
+        env:
+        - name: VINEYARDD_UID
+          value: 7b0c2ec8-49f3-4f8f-9e5f-8576a4dc4321
+        - name: VINEYARDD_NAME
+          value: app-job-deployment-with-default-sidecar-default-sidecar
+        - name: VINEYARDD_NAMESPACE
+          value: vineyard-job
+        image: vineyardcloudnative/vineyardd:latest
+        imagePullPolicy: IfNotPresent
+        name: vineyard-sidecar
+        ports:
+        - containerPort: 9600
+          name: vineyard-rpc
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /var/run
+          name: vineyard-socket
+      volumes:
+      - emptyDir: {}
+        name: vineyard-socket
+    # get the number of injected sidecar
+    $ kubectl get sidecar -A       
+    NAMESPACE      NAME                                                      CURRENT   DESIRED
+    vineyard-job   app-job-deployment-with-default-sidecar-default-sidecar   2         2
+
+If you don't want to use the default sidecar configuration, you could create a custom 
+sidecar cr as follows:
+
+.. note::
+
+    Please make sure your custom sidecar cr is created before deploying your app workload
+    and keep the same namespace with your app workload.
+
+.. code:: yaml
+
+    $ cat <<EOF | kubectl apply -f -
+    apiVersion: k8s.v6d.io/v1alpha1
+    kind: Sidecar
+    metadata:
+      name: sidecar-sample
+      namespace: vineyard-job
+    spec:
+      replicas: 2
+      selector: app=job-deployment-with-custom-sidecar
+      vineyardConfig:
+        socket: /var/run/vineyard.sock
+        size: 1024Mi
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: job-deployment-with-custom-sidecar
+      namespace: vineyard-job
+    spec:
+      selector:
+        matchLabels:
+          app: job-deployment-with-custom-sidecar
+      replicas: 2
+      template:
+        metadata:
+          annotations:
+            sidecar.v6d.io/name: "sidecar-sample"
+          labels:
+            app: job-deployment-with-custom-sidecar
+            sidecar.v6d.io/enabled: "true"
+        spec:
+          containers:
+          - name: job
+            image: ghcr.io/v6d-io/v6d/sidecar-job
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c", "python3 /job.py"]
+            env:
+            - name: JOB_NAME
+              value: v6d-workflow-demo-job
+    EOF
+
+For more details about how to use the sidecar, please refer to the `sidecar e2e test`_ for 
+more inspiration.
 
 Objects in vineyard cluster
 ---------------------------
@@ -1322,6 +1757,7 @@ please refer the `repartition directory`_ to get more details.
 .. _workflow-job2: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow-demo/job2.py
 .. _vineyardd e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/vineyardd/e2e.yaml
 .. _workflow demo: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/workflow-demo
+.. _sidecar e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/sidecar/e2e.yaml
 .. _HostPath: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 .. _PersistentVolume: https://kubernetes.io/docs/concepts/storage/persistent-volumes
 .. _checkpoint examples: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/checkpoint-demo
