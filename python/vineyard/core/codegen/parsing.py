@@ -449,15 +449,24 @@ def traverse(node, to_reflect, to_include, namespaces=None):
 
 
 def find_fields(definition):
-    fields, using_alias, first_mmeber_offset, has_post_construct = [], [], -1, False
+    fields = []
+    using_alias = []
+    type_parameters = []
+    first_mmeber_offset = -1
+    has_post_construct = False
     for child in definition.get_children():
         if first_mmeber_offset == -1:
             if child.kind not in [
                 CursorKind.TEMPLATE_TYPE_PARAMETER,
                 CursorKind.CXX_BASE_SPECIFIER,
                 CursorKind.ANNOTATE_ATTR,
+                CursorKind.NAMESPACE_REF,
+                CursorKind.TYPE_REF,
             ]:
                 first_mmeber_offset = child.extent.start.offset
+
+        if child.kind == CursorKind.TYPE_REF:
+            type_parameters.append(child.spelling)
 
         if child.kind == CursorKind.FIELD_DECL:
             attribute = check_serialize_attribute(child)
@@ -484,7 +493,7 @@ def find_fields(definition):
             using_alias.append((child.spelling, child.extent))
             continue
 
-    return fields, using_alias, first_mmeber_offset, has_post_construct
+    return fields, using_alias, type_parameters, first_mmeber_offset, has_post_construct
 
 
 def find_distributed_field(definitions: List["CursorKind"]) -> "CursorKind":
@@ -524,9 +533,12 @@ def check_class(node):
     return node.spelling, template_parameters
 
 
-def generate_template_header(ts):
+def generate_template_header(ts, type_parameters):
     if not ts:
-        return ''
+        if not type_parameters:
+            return ''
+        else:
+            return 'template <>'
     ps = []
     for t in ts:
         if t.startswith('typename'):
@@ -536,7 +548,9 @@ def generate_template_header(ts):
     return 'template<{ps}>'.format(ps=', '.join(ps))
 
 
-def generate_template_type(name, ts):
+def generate_template_type(name, ts, type_parameters):
+    if type_parameters:
+        return '{name}<{ps}>'.format(name=name, ps=', '.join(type_parameters))
     if not ts:
         return name
     return '{name}<{ps}>'.format(name=name, ps=', '.join(ts))

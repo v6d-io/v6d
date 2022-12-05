@@ -52,6 +52,11 @@ class ITensorBuilder {
 template <typename T>
 class TensorBuilder : public ITensorBuilder, public TensorBaseBuilder<T> {
  public:
+  using value_t = T;
+  using value_pointer_t = T*;
+  using value_const_pointer_t = const T*;
+
+ public:
   /**
    * @brief Initialize the TensorBuilder with the tensor shape.
    *
@@ -136,7 +141,7 @@ class TensorBuilder : public ITensorBuilder, public TensorBaseBuilder<T> {
    * @brief Get the data pointer of the tensor.
    *
    */
-  inline T* data() const { return this->data_; }
+  inline value_pointer_t data() const { return this->data_; }
 
   /**
    * @brief Build the tensor.
@@ -151,6 +156,147 @@ class TensorBuilder : public ITensorBuilder, public TensorBaseBuilder<T> {
  private:
   std::unique_ptr<BlobWriter> buffer_writer_;
   T* data_;
+};
+
+/**
+ * @brief TensorBuilder is used for building tensors that supported by vineyard
+ *
+ * @tparam T
+ */
+template <>
+class TensorBuilder<std::string> : public ITensorBuilder,
+                                   public TensorBaseBuilder<std::string> {
+ public:
+  using value_t = detail::arrow_string_view;
+  using value_pointer_t = uint8_t*;
+  using value_const_pointer_t = const uint8_t*;
+
+ public:
+  /**
+   * @brief Initialize the TensorBuilder with the tensor shape.
+   *
+   * @param client The client connected to the vineyard server.
+   * @param shape The shape of the tensor.
+   */
+  TensorBuilder(Client& client, std::vector<int64_t> const& shape)
+      : TensorBaseBuilder<std::string>(client) {
+    this->set_value_type_(AnyType(AnyTypeEnum<std::string>::value));
+    this->set_shape_(shape);
+    this->buffer_writer_ = std::make_shared<arrow::LargeStringBuilder>();
+  }
+
+  /**
+   * @brief Initialize the TensorBuilder for a partition of a GlobalTensor.
+   *
+   * @param client The client connected to the vineyard server.
+   * @param shape The shape of the partition.
+   * @param partition_index The partition index in the global tensor.
+   */
+  TensorBuilder(Client& client, std::vector<int64_t> const& shape,
+                std::vector<int64_t> const& partition_index)
+      : TensorBuilder(client, shape) {
+    this->set_partition_index_(partition_index);
+  }
+
+  /**
+   * @brief Get the shape of the tensor.
+   *
+   * @return The shape vector where the ith element represents
+   * the size of the ith axis.
+   */
+  std::vector<int64_t> const& shape() const { return this->shape_; }
+
+  /**
+   * @brief Get the index of this partition in the global tensor.
+   *
+   * @return The index vector where the ith element represents the index
+   * in the ith axis.
+   */
+  std::vector<int64_t> const& partition_index() const {
+    return this->partition_index_;
+  }
+
+  /**
+   * @brief Set the shape of the tensor.
+   *
+   * @param shape The vector for the shape, where the ith element
+   * represents the size of the shape in the ith axis.
+   */
+  void set_shape(std::vector<int64_t> const& shape) { this->set_shape_(shape); }
+
+  /**
+   * @brief Set the index in the global tensor.
+   *
+   * @param partition_index The vector of indices, where the ith element
+   * represents the index in the ith axis.
+   */
+  void set_partition_index(std::vector<int64_t> const& partition_index) {
+    this->set_partition_index_(partition_index);
+  }
+
+  /**
+   * @brief Get the strides of the tensor.
+   *
+   * @return The strides of the tensor. The definition of the tensor's strides
+   * can be found in https://pytorch.org/docs/stable/tensor_attributes.html
+   */
+  std::vector<int64_t> strides() const {
+    std::vector<int64_t> vec(this->shape_.size());
+    vec[this->shape_.size() - 1] = 1 /* special case for std::string */;
+    for (size_t i = this->shape_.size() - 1; i > 0; --i) {
+      vec[i - 1] = vec[i] * this->shape_[i];
+    }
+    return vec;
+  }
+
+  /**
+   * @brief Get the data pointer of the tensor.
+   *
+   */
+  inline value_pointer_t data() const {
+    return const_cast<value_pointer_t>(this->buffer_writer_->value_data());
+  }
+
+  /**
+   * @brief Append value to the builder.
+   */
+  inline Status Append(value_t const& value) {
+    RETURN_ON_ARROW_ERROR(
+        this->buffer_writer_->Append(value.data(), value.size()));
+    return Status::OK();
+  }
+
+  /**
+   * @brief Append value to the builder.
+   */
+  inline Status Append(value_const_pointer_t value, const size_t length) {
+    RETURN_ON_ARROW_ERROR(this->buffer_writer_->Append(value, length));
+    return Status::OK();
+  }
+
+  /**
+   * @brief Append value to the builder.
+   */
+  inline Status Append(std::string const& value) {
+    RETURN_ON_ARROW_ERROR(this->buffer_writer_->Append(value));
+    return Status::OK();
+  }
+
+  /**
+   * @brief Build the tensor.
+   *
+   * @param client The client connceted to the vineyard server.
+   */
+  Status Build(Client& client) override {
+    std::shared_ptr<arrow::Array> array;
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(array, buffer_writer_->Finish());
+    this->set_buffer_(std::make_shared<LargeStringArrayBuilder>(
+        client, std::dynamic_pointer_cast<arrow::LargeStringArray>(array)));
+    return Status::OK();
+  }
+
+ private:
+  std::shared_ptr<arrow::LargeStringBuilder> buffer_writer_;
 };
 
 class GlobalTensorBaseBuilder;

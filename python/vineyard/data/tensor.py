@@ -74,6 +74,14 @@ def numpy_ndarray_resolver(obj):
         return pickle.loads(view, fix_imports=True)
 
     value_type = normalize_dtype(value_type_name, meta.get('value_type_meta_', None))
+    # process string ndarray from c++
+    if value_type_name in ['str', 'string', 'std::string', 'std::__1::string']:
+        from .arrow import string_array_resolver
+
+        return string_array_resolver(obj.member('buffer_')).to_numpy(
+            zero_copy_only=False
+        )
+
     shape = from_json(meta['shape_'])
     if 'order_' in meta:
         order = from_json(meta['order_'])

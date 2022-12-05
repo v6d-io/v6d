@@ -249,7 +249,7 @@ def codegen_construct(
 
 base_builder_tpl = '''
 {class_header}
-class {class_name}BaseBuilder: public ObjectBuilder {{
+class {class_name}BaseBuilder{type_params}: public ObjectBuilder {{
   public:
     {using_alias}
 
@@ -675,6 +675,7 @@ post_construct_in_seal_tpl = '''
 
 def codegen_base_builder(
     class_header,
+    type_parameters,
     class_name,
     class_name_elaborated,
     fields,
@@ -714,8 +715,14 @@ def codegen_base_builder(
     else:
         post_ctor = ''
 
+    if type_parameters:
+        type_params = '<' + ', '.join(type_parameters) + '>'
+    else:
+        type_params = ''
+
     code = base_builder_tpl.format(
         class_header=class_header,
+        type_params=type_params,
         class_name=class_name,
         class_name_elaborated=class_name_elaborated,
         post_construct=post_ctor,
@@ -827,6 +834,7 @@ def generate_base_builder(
     fields,
     using_alias_values,
     header,
+    type_parameters,
     name,
     name_elaborated,
     has_post_ctor,
@@ -836,6 +844,7 @@ def generate_base_builder(
         print('base_builder: ', name, [(n.type.spelling, n.spelling) for n in fields])
     return codegen_base_builder(
         header,
+        type_parameters,
         name,
         name_elaborated,
         fields,
@@ -883,7 +892,13 @@ def codegen(  # pylint: disable=too-many-statements
         code_blocks = []
 
         for kind, namespaces, node in to_reflect:
-            fields, using_alias, first_member_offset, has_post_ctor = find_fields(node)
+            (
+                fields,
+                using_alias,
+                type_parameters,
+                first_member_offset,
+                has_post_ctor,
+            ) = find_fields(node)
 
             name, ts = check_class(node)
             members, _methods = split_members_and_methods(fields)
@@ -899,10 +914,12 @@ def codegen(  # pylint: disable=too-many-statements
                 content[t.start.offset : t.end.offset] for (_, t) in ts
             ]  # with `typename`
 
-            name_elaborated = generate_template_type(name, ts_names)
+            name_elaborated = generate_template_type(name, ts_names, type_parameters)
 
-            header = generate_template_header(ts_names)
-            header_elaborated = generate_template_header(ts_name_values)
+            header = generate_template_header(ts_names, type_parameters)
+            header_elaborated = generate_template_header(
+                ts_name_values, type_parameters
+            )
 
             meth_create = generate_create_meth(header, name, name_elaborated)
             meth_construct = generate_construct_meth(
@@ -927,6 +944,7 @@ def codegen(  # pylint: disable=too-many-statements
                 members,
                 using_alias_values,
                 header_elaborated,
+                type_parameters,
                 name,
                 name_elaborated,
                 has_post_ctor,
