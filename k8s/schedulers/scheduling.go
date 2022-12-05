@@ -29,7 +29,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	apilabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +37,8 @@ import (
 
 	"k8s.io/component-helpers/scheduling/corev1"
 
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
@@ -47,25 +49,8 @@ const (
 	Name = "Vineyard"
 	// Timeout is the default timeout for the scheduler plugin.
 	Timeout = 60
-	// VineyardJobName is the pod group name
-	VineyardJobName = "scheduling.k8s.v6d.io/job"
-	// VineyardJobRequired is the object ids that required by this job
-	VineyardJobRequired = "scheduling.k8s.v6d.io/required"
-	// VineyardJobReplica is the replication of pods in this job.
-	VineyardJobReplica = "scheduling.k8s.v6d.io/replica"
-	// ControlPlaneLabel is the label of the control plane
-	ControlPlaneLabel = "node-role.kubernetes.io/control-plane"
 	// VineyardSystemNamespace is the default system namespace
 	VineyardSystemNamespace = "vineyard-system"
-	// `VineyarddNamespace`` and `VineyarddName` compose the namespaced of the vineyardd
-	VineyarddNamespace = "scheduling.k8s.v6d.io/vineyardd-namespace"
-	VineyarddName      = "scheduling.k8s.v6d.io/vineyardd"
-	// DaskScheduler is the name of the dask scheduler
-	DaskScheduler = "scheduling.k8s.v6d.io/dask-scheduler"
-	// DaskWorkerSelector is the selector of the dask worker
-	DaskWorkerSelector = "scheduling.k8s.v6d.io/dask-worker-selector"
-	// WorkloadReplicas is the replicas of workload
-	WorkloadReplicas = "scheduling.k8s.v6d.io/replicas"
 )
 
 // VineyardScheduling is a plugin that schedules pods that requires vineyard objects as inputs.
@@ -170,7 +155,7 @@ func (vs *VineyardScheduling) MakeSchedulerStateForNamespace(namespace string) *
 }
 
 func (vs *VineyardScheduling) getJobName(pod *v1.Pod) (string, error) {
-	jobName, exists := pod.Labels[VineyardJobName]
+	jobName, exists := pod.Labels[labels.VineyardJobName]
 	klog.V(5).Infof("labels: %v", pod.Labels)
 	if !exists || jobName == "" {
 		return "", fmt.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
@@ -232,7 +217,7 @@ func (vs *VineyardScheduling) GetAllWorkerNodes(vineyardd string) []string {
 	podList := v1.PodList{}
 	name := ParseNamespacedName(vineyardd)
 	option := &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(labels.Set{
+		LabelSelector: apilabels.SelectorFromSet(apilabels.Set{
 			"app.kubernetes.io/name":     name.Name,
 			"app.kubernetes.io/instance": "vineyardd",
 		}),
@@ -253,7 +238,7 @@ func (vs *VineyardScheduling) GetAllWorkerNodes(vineyardd string) []string {
 
 // get all required jobs name that separated by '.'
 func (vs *VineyardScheduling) getRequiredJob(pod *v1.Pod) ([]string, error) {
-	objects, exists := pod.Annotations[VineyardJobRequired]
+	objects, exists := pod.Annotations[annotations.VineyardJobRequired]
 	if !exists {
 		return []string{}, fmt.Errorf("Failed to get the required jobs, please set none if there is no required job")
 	}
@@ -279,11 +264,11 @@ func (vs *VineyardScheduling) GetJobInfo(pod *v1.Pod) (string, int64, []string, 
 	if err != nil {
 		return "", 0, nil, "", err
 	}
-	vineyardd, exist := pod.Labels[VineyarddName]
+	vineyardd, exist := pod.Labels[labels.VineyarddName]
 	if !exist {
 		klog.V(5).Infof("VineyarddName does't exist!")
 	}
-	vineyarddNS := pod.Labels[VineyarddNamespace]
+	vineyarddNS := pod.Labels[labels.VineyarddNamespace]
 	var name string
 	if vineyarddNS == "" {
 		name = vineyardd

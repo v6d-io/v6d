@@ -113,7 +113,7 @@ type VolumeConfig struct {
 	MountPath string `json:"mountPath,omitempty"`
 }
 
-// VineyardContainerConig holds all configuration about vineyard container
+// VineyardContainerConfig holds all configuration about vineyard container
 type VineyardContainerConfig struct {
 	// represent the vineyardd's image
 	// +kubebuilder:validation:Optional

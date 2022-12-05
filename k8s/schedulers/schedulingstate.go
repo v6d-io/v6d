@@ -23,6 +23,8 @@ import (
 	"strings"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,8 +169,8 @@ func (ss *SchedulerState) checkOperationLabels(ctx context.Context, pod *v1.Pod)
 				return 0, err
 			}
 			if apierrors.IsNotFound(err) {
-				requiredJob := pod.Annotations[VineyardJobRequired]
-				targetJob := pod.Labels[VineyardJobName]
+				requiredJob := pod.Annotations[annotations.VineyardJobRequired]
+				targetJob := pod.Labels[labels.VineyardJobName]
 				operation := &v1alpha1.Operation{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      pod.Name,
