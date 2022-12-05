@@ -494,19 +494,27 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
 }
 
 bool Client::IsSharedMemory(const void* target) const {
-  return shm_->Exists(target);
+  ObjectID object_id = InvalidObjectID();
+  return IsSharedMemory(target, object_id);
 }
 
 bool Client::IsSharedMemory(const uintptr_t target) const {
-  return shm_->Exists(target);
+  ObjectID object_id = InvalidObjectID();
+  return IsSharedMemory(target, object_id);
 }
 
 bool Client::IsSharedMemory(const void* target, ObjectID& object_id) const {
-  return shm_->Exists(target, object_id);
+  return IsSharedMemory(reinterpret_cast<uintptr_t>(target), object_id);
 }
 
 bool Client::IsSharedMemory(const uintptr_t target, ObjectID& object_id) const {
-  return shm_->Exists(target, object_id);
+  if (shm_->Exists(target, object_id)) {
+    // verify that the blob is not deleted on the server side
+    json tree;
+    Client* mutable_this = const_cast<Client*>(this);
+    return mutable_this->GetData(object_id, tree, false, false).ok();
+  }
+  return false;
 }
 
 Status Client::AllocatedSize(const ObjectID id, size_t& size) {
@@ -1346,8 +1354,9 @@ Status SharedMemoryManager::Mmap(int fd, ObjectID id, int64_t map_size,
                                  uint8_t* pointer, bool readonly, bool realign,
                                  uint8_t** ptr) {
   RETURN_ON_ERROR(this->Mmap(fd, map_size, pointer, readonly, realign, ptr));
-  segments_.emplace(reinterpret_cast<uintptr_t>(*ptr) + data_offset,
-                    std::make_pair(data_size, id));
+  // override deleted blobs
+  segments_[reinterpret_cast<uintptr_t>(*ptr) + data_offset] =
+      std::make_pair(data_size, id);
   return Status::OK();
 }
 
@@ -1366,12 +1375,12 @@ void SharedMemoryManager::PreMmap(int fd, std::vector<int>& fds,
 }
 
 bool SharedMemoryManager::Exists(const uintptr_t target) {
-  ObjectID id;
+  ObjectID id = InvalidObjectID();
   return Exists(target, id);
 }
 
 bool SharedMemoryManager::Exists(const void* target) {
-  ObjectID id;
+  ObjectID id = InvalidObjectID();
   return Exists(target, id);
 }
 
@@ -1386,7 +1395,8 @@ bool SharedMemoryManager::Exists(const uintptr_t target, ObjectID& object_id) {
   std::clog << "[trace] pointer that been queried: "
             << reinterpret_cast<void*>(target) << std::endl;
   for (auto const& item : segments_) {
-    std::clog << "[trace] [" << reinterpret_cast<void*>(item.first) << ", "
+    std::clog << "[trace] " << ObjectIDToString(item.second.second) << ": ["
+              << reinterpret_cast<void*>(item.first) << ", "
               << reinterpret_cast<void*>(item.first + item.second.first) << ")"
               << std::endl;
   }
@@ -1420,7 +1430,11 @@ ObjectID SharedMemoryManager::resolveObjectID(const uintptr_t target,
                                               const uintptr_t key,
                                               const uintptr_t data_size,
                                               const ObjectID object_id) {
-  if (key <= target && target < key + data_size) {
+  // With a more strict constraint: the target pointer must be starts froms the
+  // given blob (key), as blob slicing is not supported yet.
+  //
+  // if (key <= target && target < key + data_size) {
+  if (key == target) {
 #if defined(WITH_VERBOSE)
     std::clog << "[trace] resuing blob " << ObjectIDToString(object_id)
               << " for pointer " << reinterpret_cast<void*>(target)

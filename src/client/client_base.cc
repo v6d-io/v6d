@@ -41,8 +41,9 @@ Status ClientBase::GetData(const ObjectID id, json& tree,
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadGetDataReply(message_in, tree));
-  return Status::OK();
+  auto status = ReadGetDataReply(message_in, tree);
+  return Status::Wrap(
+      status, "failed to get metadata for '" + ObjectIDToString(id) + "'");
 }
 
 Status ClientBase::GetData(const std::vector<ObjectID>& ids,

@@ -107,9 +107,11 @@ class SharedMemoryManager {
   // compute the set of fds that needs to `recv` from the server
   void PreMmap(int fd, std::vector<int>& fds, std::set<int>& dedup);
 
-  bool Exists(const uintptr_t target);
+  bool Exists(const uintptr_t target)
+      __attribute__((deprecated("Use Exists(target, object_id) instead.")));
 
-  bool Exists(const void* target);
+  bool Exists(const void* target)
+      __attribute__((deprecated("Use Exists(target, object_id) instead.")));
 
   bool Exists(const uintptr_t target, ObjectID& object_id);
 
@@ -638,7 +640,8 @@ class Client final : public BasicIPCClient,
    * Return true if the address (client-side address) comes from the vineyard
    * server.
    */
-  bool IsSharedMemory(const void* target) const;
+  bool IsSharedMemory(const void* target) const __attribute__((
+      deprecated("Use IsSharedMemory(target, object_id) instead.")));
 
   /**
    * Check if the given address belongs to the shared memory region.
@@ -648,7 +651,8 @@ class Client final : public BasicIPCClient,
    * Return true if the address (client-side address) comes from the vineyard
    * server.
    */
-  bool IsSharedMemory(const uintptr_t target) const;
+  bool IsSharedMemory(const uintptr_t target) const __attribute__((
+      deprecated("Use IsSharedMemory(target, object_id) instead.")));
 
   /**
    * Check if the given address belongs to the shared memory region.
