@@ -625,7 +625,8 @@ void bind_client(py::module& mod) {
           "target"_a)
       .def("is_shared_memory",
            [](Client* self, const uintptr_t target) -> bool {
-             return self->IsSharedMemory(target);
+             ObjectID object_id = InvalidObjectID();
+             return self->IsSharedMemory(target, object_id);
            })
       .def("find_shared_memory",
            [](Client* self, const uintptr_t target) -> py::object {

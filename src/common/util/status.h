@@ -321,6 +321,14 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return a success status
   inline static Status OK() { return Status(); }
 
+  /// Wrap a status with customized extra message
+  inline static Status Wrap(const Status& s, const std::string& message) {
+    if (s.ok()) {
+      return s;
+    }
+    return Status(s.code(), message + ": " + s.message());
+  }
+
   /// Return an error status for invalid data (for example a string that
   /// fails parsing).
   static Status Invalid() { return Status(StatusCode::kInvalid, ""); }

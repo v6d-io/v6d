@@ -68,12 +68,12 @@ def numpy_ndarray_builder(client, value, **kw):
 
 def numpy_ndarray_resolver(obj):
     meta = obj.meta
-    value_name = meta['value_type_']
-    if value_name == 'object':
+    value_type_name = meta['value_type_']
+    if value_type_name == 'object':
         view = memoryview(obj.member('buffer_'))
         return pickle.loads(view, fix_imports=True)
 
-    value_type = normalize_dtype(value_name, meta.get('value_type_meta_', None))
+    value_type = normalize_dtype(value_type_name, meta.get('value_type_meta_', None))
     shape = from_json(meta['shape_'])
     if 'order_' in meta:
         order = from_json(meta['order_'])
@@ -81,9 +81,10 @@ def numpy_ndarray_resolver(obj):
         order = 'C'
     if np.prod(shape) == 0:
         return np.zeros(shape, dtype=value_type)
-    c_array = np.frombuffer(
-        memoryview(obj.member('buffer_')), dtype=value_type
-    ).reshape(shape)
+    mem = memoryview(obj.member('buffer_'))[
+        0 : int(np.prod(shape)) * np.dtype(value_type).itemsize
+    ]
+    c_array = np.frombuffer(mem, dtype=value_type).reshape(shape)
     # TODO: revise the memory copy of asfortranarray
     array = c_array if order == 'C' else np.asfortranarray(c_array)
     return array.view(ndarray)

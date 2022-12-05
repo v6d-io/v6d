@@ -55,11 +55,11 @@ class ResolverContext:
                         value = resolver(obj, resolver=self)
                     else:
                         value = resolver(obj)
-                except Exception:
+                except Exception as e:
                     raise RuntimeError(  # pylint: disable=raise-missing-from
                         'Unable to construct the object using resolver: '
                         'typename is %s, resolver is %s' % (obj.meta.typename, resolver)
-                    )
+                    ) from e
             if value is None:
                 # if the obj has been resolved by pybind types, and there's no proper
                 # resolver, it shouldn't be an error
