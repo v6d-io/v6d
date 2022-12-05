@@ -22,9 +22,10 @@ const (
 	// VineyardJobReplica is the replication of pods in this job.
 	VineyardJobReplica = "scheduling.k8s.v6d.io/replica"
 
-	// `VineyarddNamespace`` and `VineyarddName` compose the namespaced of the vineyardd
+	// VineyarddNamespace is the namespace of vineyardd
 	VineyarddNamespace = "scheduling.k8s.v6d.io/vineyardd-namespace"
-	VineyarddName      = "scheduling.k8s.v6d.io/vineyardd"
+	// VineyarddName is the name of the vineyardd
+	VineyarddName = "scheduling.k8s.v6d.io/vineyardd"
 	// WorkloadReplicas is the replicas of workload, for dask repartition here
 	WorkloadReplicas = "scheduling.k8s.v6d.io/replicas"
 )
