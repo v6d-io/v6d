@@ -47,6 +47,8 @@ std::shared_ptr<arrow::Table> ConcatenateTables(
 
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   switch (type) {
+  case AnyType::Undefined:
+    return arrow::null();
   case AnyType::Int32:
     return arrow::int32();
   case AnyType::UInt32:
@@ -59,6 +61,12 @@ std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
     return arrow::float32();
   case AnyType::Double:
     return arrow::float64();
+  case AnyType::String:
+    return arrow::large_utf8();
+  case AnyType::Date32:
+    return arrow::int32();
+  case AnyType::Date64:
+    return arrow::int64();
   default:
     return arrow::null();
   }

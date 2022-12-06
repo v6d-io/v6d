@@ -78,19 +78,42 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::AsBatch(bool copy) const {
     } else if (auto tensor =
                    std::dynamic_pointer_cast<Tensor<double>>(df_col)) {
       num_rows = tensor->shape()[0];
+    } else if (auto tensor =
+                   std::dynamic_pointer_cast<Tensor<std::string>>(df_col)) {
+      num_rows = tensor->shape()[0];
     }
 
-    std::shared_ptr<arrow::Buffer> copied_buffer;
-    if (copy) {
-      CHECK_ARROW_ERROR_AND_ASSIGN(
-          copied_buffer,
-          df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
-    } else {
-      copied_buffer = df_col->buffer();
+    std::vector<std::shared_ptr<arrow::Buffer>> buffer{
+        nullptr /* null bitmap */};
+
+    // process the second buffer for std::string type
+    if (auto tensor = std::dynamic_pointer_cast<Tensor<std::string>>(df_col)) {
+      std::shared_ptr<arrow::Buffer> copied_buffer;
+      if (copy) {
+        CHECK_ARROW_ERROR_AND_ASSIGN(
+            copied_buffer,
+            df_col->buffer()->CopySlice(0, df_col->auxiliary_buffer()->size()));
+      } else {
+        copied_buffer = df_col->buffer();
+      }
+      buffer.push_back(copied_buffer);
+    }
+
+    // process buffer
+    {
+      std::shared_ptr<arrow::Buffer> copied_buffer;
+      if (copy) {
+        CHECK_ARROW_ERROR_AND_ASSIGN(
+            copied_buffer,
+            df_col->buffer()->CopySlice(0, df_col->buffer()->size()));
+      } else {
+        copied_buffer = df_col->buffer();
+      }
+      buffer.push_back(copied_buffer);
     }
 
     columns[i] = arrow::MakeArray(arrow::ArrayData::Make(
-        FromAnyType(df_col->value_type()), num_rows, {nullptr, copied_buffer}));
+        FromAnyType(df_col->value_type()), num_rows, buffer));
 
     std::shared_ptr<arrow::Scalar> sca;
     CHECK_ARROW_ERROR_AND_ASSIGN(sca, columns[i]->GetScalar(0));
