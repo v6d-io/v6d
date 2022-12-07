@@ -101,6 +101,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Error(err, "unable to create controller", "controller", "Sidecar")
 		os.Exit(1)
 	}
+	// +kubebuilder:scaffold:builder
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
@@ -145,17 +146,15 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 			setupLog.Error(err, "unable to set up ready check for webhook")
 			os.Exit(1)
 		}
-	}
-
-	// +kubebuilder:scaffold:builder
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+	} else {
+		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up health check")
+			os.Exit(1)
+		}
+		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up ready check")
+			os.Exit(1)
+		}
 	}
 
 	setupLog.Info("starting manager")
