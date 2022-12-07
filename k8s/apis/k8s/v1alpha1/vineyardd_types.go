@@ -118,43 +118,43 @@ type VineyardContainerConfig struct {
 	// represent the vineyardd's image
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="vineyardcloudnative/vineyardd:latest"
-	Image string `json:"image"`
+	Image string `json:"image,omitempty"`
 
 	// the policy about pulling image
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="IfNotPresent"
-	ImagePullPolicy string `json:"imagePullPolicy"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
 
 	// synchronize CRDs when persisting objects
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=true
-	SyncCRDs bool `json:"syncCRDs"`
+	SyncCRDs bool `json:"syncCRDs,omitempty"`
 
 	// The directory on host for the IPC socket file. The UNIX-domain
 	// socket will be placed as `${Socket}/vineyard.sock`.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}"
-	Socket string `json:"socket"`
+	Socket string `json:"socket,omitempty"`
 
 	// shared memory size for vineyardd
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="256Mi"
-	Size string `json:"size"`
+	Size string `json:"size,omitempty"`
 
 	// memory threshold of streams (percentage of total memory)
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=80
-	StreamThreshold int64 `json:"streamThreshold"`
+	StreamThreshold int64 `json:"streamThreshold,omitempty"`
 
 	// endpoint of etcd
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="http://etcd-for-vineyard:2379"
-	EtcdEndpoint string `json:"etcdEndpoint"`
+	EtcdEndpoint string `json:"etcdEndpoint,omitempty"`
 
 	// path prefix in etcd
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="/vineyard"
-	EtcdPrefix string `json:"etcdPrefix"`
+	EtcdPrefix string `json:"etcdPrefix,omitempty"`
 
 	// the configuration of spilling
 	// +kubebuilder:validation:Optional

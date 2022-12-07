@@ -96,14 +96,6 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 			sidecar.Spec.Replicas = 1
 			// use default configurations
 			sidecar.Spec.Selector = keys[0] + "=" + labels[keys[0]]
-			sidecar.Spec.VineyardConfig.EtcdEndpoint = "http://etcd-for-vineyard:2379"
-			sidecar.Spec.VineyardConfig.EtcdPrefix = "/vineyard"
-			sidecar.Spec.VineyardConfig.Image = "vineyardcloudnative/vineyardd:latest"
-			sidecar.Spec.VineyardConfig.ImagePullPolicy = "IfNotPresent"
-			sidecar.Spec.VineyardConfig.Socket = "/var/run/vineyard.sock"
-			sidecar.Spec.VineyardConfig.Size = "256Mi"
-			sidecar.Spec.VineyardConfig.StreamThreshold = 80
-			sidecar.Spec.VineyardConfig.SyncCRDs = true
 
 			if err := r.Client.Create(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to create default sidecar cr")
