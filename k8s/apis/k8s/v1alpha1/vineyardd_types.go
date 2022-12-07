@@ -79,7 +79,7 @@ type EtcdConfig struct {
 	// Etcd replicas
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=3
-	Replicas int `json:"replicas"`
+	Replicas int `json:"replicas,omitempty"`
 }
 
 // MetricContainerConfig holds the configuration about metric container
@@ -172,7 +172,7 @@ type VineyarddSpec struct {
 	// the replicas of vineyardd
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default:=3
-	Replicas int `json:"replicas"`
+	Replicas int `json:"replicas,omitempty"`
 
 	// vineyardd's service
 	// +kubebuilder:validation:Optional

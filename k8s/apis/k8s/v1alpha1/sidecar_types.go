@@ -33,7 +33,7 @@ type SidecarSpec struct {
 	Replicas int `json:"replicas,omitempty"`
 
 	// vineyard container configuration
-	// +kubudebuilder:validation:Optional
+	// +kububuilder:validation:Optional
 	//nolint: lll
 	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80, etcdEndpoint: "http://etcd-for-vineyard:2379", etcdPrefix: "/vineyard"}
 	VineyardConfig VineyardContainerConfig `json:"vineyardConfig,omitempty"`
