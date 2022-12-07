@@ -20,11 +20,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	log "github.com/v6d-io/v6d/k8s/pkg/log"
+	log "github.com/v6d-io/v6d/k8s/internal/log"
 )
 
 // log is for logging in this package.
-var glog = log.Logger.WithName("globalobject")
+var glog = log.Logger.WithName("webhook").WithName("globalobject")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *GlobalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {

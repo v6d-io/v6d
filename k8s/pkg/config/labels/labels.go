@@ -17,6 +17,7 @@ limitations under the License.
 package labels
 
 const (
+	/* following labels are used for scheduling */
 	// VineyardJobName is the pod group name
 	VineyardJobName = "scheduling.k8s.v6d.io/job"
 	// VineyardJobReplica is the replication of pods in this job.
@@ -28,4 +29,14 @@ const (
 	VineyarddName = "scheduling.k8s.v6d.io/vineyardd"
 	// WorkloadReplicas is the replicas of workload, for dask repartition here
 	WorkloadReplicas = "scheduling.k8s.v6d.io/replicas"
+
+	/* following labels are used for operation injection */
+	// AssemblyEnabledLabel is the label for assembly, and inject the assembly container when setting true
+	AssemblyEnabledLabel = "assembly.v6d.io/enabled"
+	// RepartitionEnabledLabel is the label for repartition, and inject the repartition container when setting true
+	RepartitionEnabledLabel = "repartition.v6d.io/enabled"
+
+	/* following labels are used for sidecar injection */
+	// SidecarEnableLabel is the label key for enabling sidecar injection
+	SidecarEnableLabel = "sidecar-injection"
 )

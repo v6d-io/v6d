@@ -17,11 +17,17 @@ limitations under the License.
 package annotations
 
 const (
+	/* following annotations are used for scheduling */
 	// VineyardJobRequired is the object ids that required by this job
 	VineyardJobRequired = "scheduling.k8s.v6d.io/required"
 
+	/* following annotations are used for operation injection */
 	// DaskScheduler is the name of the dask scheduler
 	DaskScheduler = "scheduling.k8s.v6d.io/dask-scheduler"
 	// DaskWorkerSelector is the selector of the dask worker
 	DaskWorkerSelector = "scheduling.k8s.v6d.io/dask-worker-selector"
+
+	/* following annotations are used for sidecar injection */
+	// SidecarNameAnno is the annotation key for the sidecar name
+	SidecarNameAnno = "sidecar.v6d.io/name"
 )

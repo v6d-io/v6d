@@ -27,8 +27,9 @@ import (
 	"strings"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -48,13 +49,6 @@ type Injector struct {
 	Template kubernetes.Repo
 }
 
-const (
-	// SidecarEnableLabel is the label key for enabling sidecar injection
-	SidecarEnableLabel = "sidecar-injection"
-	// SidecarNameAnno is the annotation key for the sidecar name
-	SidecarNameAnno = "sidecar.v6d.io/name"
-)
-
 // Handle handles admission requests.
 func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := log.FromContext(ctx).WithName("Injector")
@@ -66,14 +60,14 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 	}
 
 	anno := pod.Annotations
-	if v, ok := anno[SidecarNameAnno]; ok && v == "default" {
+	if v, ok := anno[annotations.SidecarNameAnno]; ok && v == "default" {
 		// create the default sidecar cr
 		sidecar := &v1alpha1.Sidecar{}
 		// get the pod's label as cr's name
-		labels := pod.Labels
+		l := pod.Labels
 		keys := []string{}
-		for k := range labels {
-			if !strings.Contains(k, SidecarEnableLabel) {
+		for k := range l {
+			if !strings.Contains(k, labels.SidecarEnableLabel) {
 				keys = append(keys, k)
 			}
 		}
@@ -82,7 +76,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		}
 
 		sort.Strings(keys)
-		selectorname := strings.Join([]string{keys[0], labels[keys[0]]}, "-")
+		selectorname := strings.Join([]string{keys[0], l[keys[0]]}, "-")
 		sidecar.Name = selectorname + "-default-sidecar"
 		sidecar.Namespace = pod.Namespace
 
@@ -95,7 +89,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		if apierrors.IsNotFound(err) {
 			sidecar.Spec.Replicas = 1
 			// use default configurations
-			sidecar.Spec.Selector = keys[0] + "=" + labels[keys[0]]
+			sidecar.Spec.Selector = keys[0] + "=" + l[keys[0]]
 
 			if err := r.Client.Create(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to create default sidecar cr")

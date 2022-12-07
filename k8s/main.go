@@ -37,10 +37,10 @@ import (
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	k8scontrollers "github.com/v6d-io/v6d/k8s/controllers/k8s"
-	"github.com/v6d-io/v6d/k8s/operator"
-	"github.com/v6d-io/v6d/k8s/schedulers"
-	"github.com/v6d-io/v6d/k8s/sidecar"
-	"github.com/v6d-io/v6d/k8s/templates"
+	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
+	"github.com/v6d-io/v6d/k8s/pkg/webhook/operation"
+	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -127,7 +127,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Info("registering the assembly webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod",
 			&webhook.Admission{
-				Handler: &operator.AssemblyInjector{Client: mgr.GetClient()}})
+				Handler: &operation.AssemblyInjector{Client: mgr.GetClient()}})
 		setupLog.Info("the assembly webhook is registered")
 
 		// register the sidecar webhook

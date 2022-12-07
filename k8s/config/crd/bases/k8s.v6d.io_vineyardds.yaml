@@ -804,8 +804,6 @@ spec:
                     default: ""
                     type: string
                 type: object
-            required:
-            - replicas
             type: object
           status:
             properties:

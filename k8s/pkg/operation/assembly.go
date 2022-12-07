@@ -23,7 +23,6 @@ import (
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/operator"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -205,7 +204,7 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 	podList := &corev1.PodList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
-			operator.AssemblyEnabledLabel: "true",
+			labels.AssemblyEnabledLabel: "true",
 		},
 	}
 

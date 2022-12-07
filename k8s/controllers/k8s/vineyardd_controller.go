@@ -89,12 +89,13 @@ func getServiceLabelSelector() ServiceLabelSelector {
 // Reconcile reconciles the Vineyardd.
 func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Vineyardd")
-	logger.Info("Reconciling test")
+
 	vineyardd := k8sv1alpha1.Vineyardd{}
 	if err := r.Get(ctx, req.NamespacedName, &vineyardd); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	logger.V(1).Info("Reconciling Vineyardd", "vineyardd", vineyardd)
+
 	vineyarddFile, err := r.Template.GetFilesRecursive("vineyardd")
 	if err != nil {
 		logger.Error(err, "failed to load vineyardd templates")

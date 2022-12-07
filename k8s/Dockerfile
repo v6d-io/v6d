@@ -15,10 +15,7 @@ COPY apis/ apis/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY hack/ hack/
-COPY operator/ operator/
-COPY sidecar/ sidecar/
-COPY schedulers/ schedulers/
-COPY templates/ templates/
+COPY internal/ internal/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
