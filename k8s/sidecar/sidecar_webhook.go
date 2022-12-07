@@ -109,7 +109,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
-		//r.ApplyCRToSidecar(&sidecar, pod)
+
 		buf, err := r.Template.ReadFile("sidecar/injection-template.yaml")
 		if err != nil {
 			logger.Error(err, "failed to read injection template")
