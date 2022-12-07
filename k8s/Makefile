@@ -168,7 +168,7 @@ unsample:
 # Go modules
 modules	= ./apis/... \
 		  ./controllers/... \
-		  ./schedulers/...
+		  ./pkg/...
 
 # Run golangci-lint
 golint: 
