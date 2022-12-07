@@ -56,3 +56,42 @@ jobs:
           draft: false
           prerelease: false
           title: "vineyard ${{ steps.tag.outputs.TAG }}"
+
+  build-repo-tarball:
+    needs: [release]
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Make the repository tarball
+        run: |
+          ./misc/git-archive-submodules.sh
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Upload wheels to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: v6d-*.*
+          file_glob: true
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard repository tarball ${{ steps.tag.outputs.TAG }}"
+
+      - uses: actions/upload-artifact@v3
+        if: ${{ github.event_name == 'workflow_dispatch'}}
+        with:
+          name: vineyard-tarball-${{ github.sha }}
+          path: v6d-*.*
