@@ -27,7 +27,8 @@ import (
 
 	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/schedulers"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -96,7 +97,7 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	podList := &corev1.PodList{}
 	podOpts := []client.ListOption{
 		client.MatchingLabels{
-			schedulers.VineyardJobName: require,
+			labels.VineyardJobName: require,
 		},
 	}
 
@@ -118,7 +119,7 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	daskHostnameToName := make(map[string]string)
 	// convert the selector to map
 	anno := pod.GetAnnotations()
-	daskWorkerSelector := anno[schedulers.DaskWorkerSelector]
+	daskWorkerSelector := anno[annotations.DaskWorkerSelector]
 	allSelectors := strings.Split(daskWorkerSelector, ",")
 	selector := map[string]string{}
 	for _, s := range allSelectors {
@@ -160,14 +161,14 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	targetPodList := &corev1.PodList{}
 	targetPodOpts := []client.ListOption{
 		client.MatchingLabels{
-			schedulers.VineyardJobName: target,
+			labels.VineyardJobName: target,
 		},
 	}
 
 	if err := ro.Client.List(ctx, targetPodList, targetPodOpts...); err != nil {
 		return fmt.Errorf("failed to list target pods: %w", err)
 	}
-	replicas, ok := targetPodList.Items[0].Labels[schedulers.WorkloadReplicas]
+	replicas, ok := targetPodList.Items[0].Labels[labels.WorkloadReplicas]
 	if !ok {
 		return fmt.Errorf("failed to get replicas from target jobs")
 	}
@@ -176,14 +177,14 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	DaskRepartitionConfigTemplate.Name = RepartitionPrefix + globalObject.Name
 	DaskRepartitionConfigTemplate.Namespace = pod.Namespace
 	DaskRepartitionConfigTemplate.GlobalObjectID = globalObject.Name
-	DaskRepartitionConfigTemplate.DaskScheduler = "'" + anno[schedulers.DaskScheduler] + "'"
-	DaskRepartitionConfigTemplate.JobName = pod.Labels[schedulers.VineyardJobName]
+	DaskRepartitionConfigTemplate.DaskScheduler = "'" + anno[annotations.DaskScheduler] + "'"
+	DaskRepartitionConfigTemplate.JobName = pod.Labels[labels.VineyardJobName]
 	DaskRepartitionConfigTemplate.InstanceToWorker = instanceToWorker
 	DaskRepartitionConfigTemplate.TimeoutSeconds = o.Spec.TimeoutSeconds
 	if socket, err := ro.ResolveRequiredVineyarddSocket(
 		ctx,
-		pod.Labels[schedulers.VineyarddName],
-		pod.Labels[schedulers.VineyarddNamespace],
+		pod.Labels[labels.VineyarddName],
+		pod.Labels[labels.VineyarddNamespace],
 		globalObject.Namespace,
 	); err != nil {
 		return nil
@@ -247,7 +248,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 	podList := &corev1.PodList{}
 	podOpts := []client.ListOption{
 		client.MatchingLabels{
-			schedulers.VineyardJobName: require,
+			labels.VineyardJobName: require,
 		},
 	}
 

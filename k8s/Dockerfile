@@ -16,6 +16,7 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY hack/ hack/
 COPY operator/ operator/
+COPY sidecar/ sidecar/
 COPY schedulers/ schedulers/
 COPY templates/ templates/
 

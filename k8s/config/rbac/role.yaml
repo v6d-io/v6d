@@ -54,6 +54,7 @@ rules:
   - pods
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -80,6 +81,18 @@ rules:
   - ""
   resources:
   - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - services
   verbs:
   - create
@@ -187,6 +200,32 @@ rules:
   - k8s.v6d.io
   resources:
   - operations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - sidecars
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - sidecars/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - sidecars/status
   verbs:
   - get
   - patch

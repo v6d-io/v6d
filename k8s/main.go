@@ -39,6 +39,7 @@ import (
 	k8scontrollers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/operator"
 	"github.com/v6d-io/v6d/k8s/schedulers"
+	"github.com/v6d-io/v6d/k8s/sidecar"
 	"github.com/v6d-io/v6d/k8s/templates"
 	// +kubebuilder:scaffold:imports
 )
@@ -90,6 +91,16 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Error(err, "unable to create controller", "controller", "Operation")
 		os.Exit(1)
 	}
+
+	if err = (&k8scontrollers.SidecarReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Template: templates.NewEmbedTemplate(),
+		Recorder: mgr.GetEventRecorderFor("sidecar-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Sidecar")
+		os.Exit(1)
+	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
@@ -107,12 +118,24 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 			setupLog.Error(err, "unable to create webhook", "webhook", "Operation")
 			os.Exit(1)
 		}
+		if err = (&k8sv1alpha1.Sidecar{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Sidecar")
+			os.Exit(1)
+		}
+
 		// register the assembly webhook
 		setupLog.Info("registering the assembly webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod",
 			&webhook.Admission{
 				Handler: &operator.AssemblyInjector{Client: mgr.GetClient()}})
 		setupLog.Info("the assembly webhook is registered")
+
+		// register the sidecar webhook
+		setupLog.Info("registering the sidecar webhook")
+		mgr.GetWebhookServer().Register("/mutate-v1-pod-sidecar",
+			&webhook.Admission{
+				Handler: &sidecar.Injector{Client: mgr.GetClient(), Template: templates.NewEmbedTemplate()}})
+		setupLog.Info("the sidecar webhook is registered")
 
 		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {
 			setupLog.Error(err, "unable to set up health check for webhook")
@@ -123,6 +146,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 			os.Exit(1)
 		}
 	}
+
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

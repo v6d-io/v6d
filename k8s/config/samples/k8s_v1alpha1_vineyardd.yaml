@@ -9,9 +9,8 @@ spec:
   replicas: 2
   imagePullPolicy: IfNotPresent
   # vineyardd's configuration
-  sharedMemorySize: 256Mi
+  size: 256Mi
   syncCRDs: true
-  enableMetrics: false
   spillConfig:
     name: spill-path
     path: /var/checkpoint/spill

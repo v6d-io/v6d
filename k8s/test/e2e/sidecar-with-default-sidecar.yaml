@@ -13,20 +13,29 @@
 # limitations under the License.
 #
 
-apiVersion: k8s.v6d.io/v1alpha1
-kind: Vineyardd
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: vineyardd-sample
-  # don't use default namespace
-  namespace: vineyard-system
+  name: job-deployment-with-default-sidecar
+  namespace: vineyard-job
 spec:
+  selector:
+    matchLabels:
+      app: job-deployment-with-default-sidecar
   replicas: 2
-  etcd:
-    replicas: 3
-  service:
-    type: ClusterIP
-    port: 9600
-  vineyardConfig:
-    image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-    imagePullPolicy: IfNotPresent
-
+  template:
+    metadata:
+      annotations:
+        sidecar.v6d.io/name: "default"
+      labels:
+        app: job-deployment-with-default-sidecar
+        sidecar.v6d.io/enabled: "true"
+    spec:
+      containers:
+      - name: job
+        image: ghcr.io/v6d-io/v6d/sidecar-job
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "python3 /job.py"]
+        env:
+        - name: JOB_NAME
+          value: v6d-workflow-demo-job

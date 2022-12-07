@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+{{- $svcKV := getServiceLabelSelector }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,12 +28,14 @@ spec:
     matchLabels:
       app.kubernetes.io/name: {{ .Name }}
       app.kubernetes.io/instance: vineyardd
+      {{$svcKV.Key}}: {{$svcKV.Value}}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ .Name }}
         app.kubernetes.io/instance: vineyardd
         app.kubernetes.io/component: deployment
+        {{$svcKV.Key}}: {{$svcKV.Value}}
       annotations:
         kubectl.kubernetes.io/default-container: "vineyardd"
         kubectl.kubernetes.io/default-logs-container: "vineyardd"
@@ -41,8 +43,8 @@ spec:
       serviceAccountName: {{ .Name }}
       containers:
         - name: vineyardd
-          image: {{ .Spec.Image }}
-          imagePullPolicy: {{ .Spec.ImagePullPolicy }}
+          image: {{ .Spec.VineyardConfig.Image }}
+          imagePullPolicy: {{ .Spec.VineyardConfig.ImagePullPolicy }}
           command:
           - /bin/bash
           - -c
@@ -50,19 +52,19 @@ spec:
             /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379;
             sleep 1;
             /usr/local/bin/vineyardd
-            --sync_crds {{ .Spec.SyncCRDs }}
+            --sync_crds {{ .Spec.VineyardConfig.SyncCRDs }}
             --socket /var/run/vineyard.sock
-            --size {{ .Spec.SharedMemorySize }}
-            --stream_threshold {{ .Spec.StreamThreshold }}
-            --etcd_cmd {{ .Spec.EtcdCmd }}
-            --etcd_prefix {{ .Spec.EtcdPrefix }}
-            --etcd_endpoint {{ .Spec.EtcdEndpoint }}
-            {{- if .Spec.SpillConfig.Path }}
-            --spill_path {{ .Spec.SpillConfig.Path }}
-            --spill_lower_rate {{ .Spec.SpillConfig.SpillLowerRate }}
-            --spill_upper_rate {{ .Spec.SpillConfig.SpillUpperRate }}
+            --size {{ .Spec.VineyardConfig.Size }}
+            --stream_threshold {{ .Spec.VineyardConfig.StreamThreshold }}
+            --etcd_cmd etcd
+            --etcd_prefix {{ .Spec.VineyardConfig.EtcdPrefix }}
+            --etcd_endpoint {{ .Spec.VineyardConfig.EtcdEndpoint }}
+            {{- if .Spec.VineyardConfig.SpillConfig.Path }}
+            --spill_path {{ .Spec.VineyardConfig.SpillConfig.Path }}
+            --spill_lower_rate {{ .Spec.VineyardConfig.SpillConfig.SpillLowerRate }}
+            --spill_upper_rate {{ .Spec.VineyardConfig.SpillConfig.SpillUpperRate }}
             {{- end }}
-            {{- if .Spec.EnableMetrics }}
+            {{- if .Spec.MetricConfig.Enable }}
             --metrics
             -log_dir /var/log/vineyard/
             {{- end }}
@@ -101,7 +103,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            {{range .Spec.Env}}
+            {{range .Spec.VineyardConfig.Env}}
             - name: {{ .Name }}
               value: {{ .Value }}
             {{end}}
@@ -119,20 +121,25 @@ spec:
               - ls
               - /var/run/vineyard.sock
           volumeMounts:
-            - name: run
+            {{- if .Spec.Volume.MountPath }}
+            - name: vineyard-socket
+              mountPath: {{ .Spec.Volume.MountPath }}
+            {{- else }}
+            - name: vineyard-socket
               mountPath: /var/run
-            {{- if .Spec.SpillConfig.Name }}
-            - name: {{ .Spec.SpillConfig.Name }}
-              mountPath: {{ .Spec.SpillConfig.Path }}
+            {{- end }}
+            {{- if .Spec.VineyardConfig.SpillConfig.Name }}
+            - name: {{ .Spec.VineyardConfig.SpillConfig.Name }}
+              mountPath: {{ .Spec.VineyardConfig.SpillConfig.Path }}
             {{- end }}
             - name: shm
               mountPath: /dev/shm
             - name: log
               mountPath: /var/log/vineyard
-        {{- if .Spec.EnableMetrics }}
+        {{- if .Spec.MetricConfig.Enable }}
         - name: metrics
-          image : {{ .Spec.Metric.Image }}
-          imagePullPolicy: {{ .Spec.Metric.ImagePullPolicy }}
+          image : {{ .Spec.MetricConfig.Image }}
+          imagePullPolicy: {{ .Spec.MetricConfig.ImagePullPolicy }}
           command: ["./grok_exporter"]
           args: ["-config", "grok_exporter.yml", "-disable-exporter-metrics", "&"]
           ports:
@@ -144,13 +151,19 @@ spec:
             mountPath: /var/log/vineyard
         {{- end }}
       volumes:
-      - name: run
-        hostPath:
-          path: {{ .Spec.Socket }}
-      {{- if .Spec.SpillConfig.Name }}
-      - name: {{ .Spec.SpillConfig.Name }}
+      {{- if .Spec.Volume.PvcName }}
+      - name: vineyard-socket
         persistentVolumeClaim:
-          claimName: {{ .Spec.SpillConfig.Name }}
+          claimName: {{ .Spec.Volume.PvcName }}
+      {{- else }}
+      - name: vineyard-socket
+        hostPath:
+          path: {{ .Spec.VineyardConfig.Socket }}
+      {{- end }}
+      {{- if .Spec.VineyardConfig.SpillConfig.Name }}
+      - name: {{ .Spec.VineyardConfig.SpillConfig.Name }}
+        persistentVolumeClaim:
+          claimName: {{ .Spec.VineyardConfig.SpillConfig.Name }}
       {{- end }}
       - name: shm
         emptyDir:

@@ -1,3 +1,7 @@
+# pylint: disable=django-not-configured
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,19 +17,16 @@
 # limitations under the License.
 #
 
-{{- $svcKV := getServiceLabelSelector }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Name }}-rpc
-  namespace: {{ .Namespace }}
-  labels:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
-spec:
-  type: {{ .Spec.Service.Type }}
-  ports:
-    - port: {{ .Spec.Service.Port }}
-      protocol: TCP
-      name: vineyard-rpc
-  selector:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
+import time
+import numpy as np
+import vineyard
+
+client = vineyard.connect('/var/run/vineyard.sock')
+
+object = client.put(np.arange(10))
+value = client.get(object)
+sum = np.sum(value)
+print(sum,flush=True)
+
+# avoid CrashLoopBackOff
+time.sleep(600)

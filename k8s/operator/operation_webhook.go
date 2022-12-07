@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/v6d-io/v6d/k8s/schedulers"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -49,7 +49,7 @@ const (
 // LabelRequiredPods labels the pods with the given label
 func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Pod, label string) error {
 	if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
-		if requiredJob, ok := pod.Annotations[schedulers.VineyardJobRequired]; ok {
+		if requiredJob, ok := pod.Annotations[annotations.VineyardJobRequired]; ok {
 			jobs := strings.Split(requiredJob, ".")
 			for _, job := range jobs {
 				// get the required job

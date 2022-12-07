@@ -104,6 +104,9 @@ var _ = BeforeSuite(func() {
 	err = (&Operation{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&Sidecar{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:webhook
 
 	go func() {

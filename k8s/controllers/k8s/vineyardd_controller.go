@@ -53,13 +53,26 @@ type EtcdConfig struct {
 // Etcd contains the configuration about etcd
 var Etcd EtcdConfig
 
-// Get etcd configuratiin from Etcd
+// GetEtcdConfig get etcd configuratiin from Etcd
 func getEtcdConfig() EtcdConfig {
 	return Etcd
 }
 
 func getStorage(q resource.Quantity) string {
 	return q.String()
+}
+
+// ServiceLabelSelector represents the label selector of the service
+type ServiceLabelSelector struct {
+	Key   string
+	Value string
+}
+
+// SvcLabelSelector is the label selector of the service
+var SvcLabelSelector ServiceLabelSelector
+
+func getServiceLabelSelector() ServiceLabelSelector {
+	return SvcLabelSelector
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
@@ -76,7 +89,7 @@ func getStorage(q resource.Quantity) string {
 // Reconcile reconciles the Vineyardd.
 func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Vineyardd")
-
+	logger.Info("Reconciling test")
 	vineyardd := k8sv1alpha1.Vineyardd{}
 	if err := r.Get(ctx, req.NamespacedName, &vineyardd); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -88,7 +101,7 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	// preprocessing the docket directory
+	// preprocessing the socket directory
 	k8sv1alpha1.PreprocessVineyarddSocket(&vineyardd)
 	logger.Info("Rendered Vineyardd", "vineyardd", vineyardd)
 
@@ -99,7 +112,7 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		CR:       &vineyardd,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		Recorder: r.Recorder,
-		TmplFunc: map[string]interface{}{"getStorage": getStorage},
+		TmplFunc: map[string]interface{}{"getStorage": getStorage, "getServiceLabelSelector": getServiceLabelSelector},
 	}
 	etcdApp := kubernetes.Application{
 		Client:   r.Client,
@@ -129,6 +142,8 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
+	SvcLabelSelector.Key = "app.v6d.io/service"
+	SvcLabelSelector.Value = "vineyardd-rpc"
 	if err := vineyarddApp.ApplyAll(ctx, vineyarddFile, logger); err != nil {
 		logger.Error(err, "failed to apply vineyardd resources")
 		return ctrl.Result{}, err

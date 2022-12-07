@@ -121,5 +121,5 @@ func (c *ClientUtils) ResolveRequiredVineyarddSocket(
 		return "", err
 	}
 	v1alpha1.PreprocessVineyarddSocket(vineyardd)
-	return vineyardd.Spec.Socket, nil
+	return vineyardd.Spec.VineyardConfig.Socket, nil
 }

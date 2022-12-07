@@ -13,6 +13,32 @@ webhooks:
     service:
       name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
       namespace: '{{ .Release.Namespace }}'
+      path: /mutate-v1-pod-sidecar
+  failurePolicy: Fail
+  name: mpod.sidecar.kb.io
+  namespaceSelector:
+    matchLabels:
+      sidecar-injection: enabled
+  objectSelector:
+    matchLabels:
+      sidecar.v6d.io/enabled: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
+      namespace: '{{ .Release.Namespace }}'
       path: /mutate-v1-pod
   failurePolicy: Fail
   name: mpod.kb.io
@@ -89,6 +115,26 @@ webhooks:
     - UPDATE
     resources:
     - operations
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
+      namespace: '{{ .Release.Namespace }}'
+      path: /mutate-k8s-v6d-io-v1alpha1-sidecar
+  failurePolicy: Fail
+  name: msidecar.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - sidecars
   sideEffects: None
 - admissionReviewVersions:
   - v1

@@ -1,0 +1,52 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Sidecar
+metadata:
+  name: sidecar-sample
+  namespace: vineyard-job
+spec:
+  replicas: 2
+  selector: app=job-deployment-with-custom-sidecar
+  vineyardConfig:
+    socket: /var/run/vineyard.sock
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: job-deployment-with-custom-sidecar
+  namespace: vineyard-job
+spec:
+  selector:
+    matchLabels:
+      app: job-deployment-with-custom-sidecar
+  replicas: 2
+  template:
+    metadata:
+      annotations:
+        sidecar.v6d.io/name: "sidecar-sample"
+      labels:
+        app: job-deployment-with-custom-sidecar
+        sidecar.v6d.io/enabled: "true"
+    spec:
+      containers:
+      - name: job
+        image: ghcr.io/v6d-io/v6d/sidecar-job
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "python3 /job.py"]
+        env:
+        - name: JOB_NAME
+          value: v6d-workflow-demo-job
