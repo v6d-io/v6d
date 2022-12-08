@@ -13,13 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MODIFIER_H_
-#define MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MODIFIER_H_
+#include "graph/loader/arrow_fragment_loader_impl.h"
 
 namespace vineyard {
 
-// keep for backwards compatibility.
+template class ArrowFragmentLoader<int32_t, uint64_t, ArrowVertexMap>;
+
+template class ArrowFragmentLoader<int32_t, uint64_t, ArrowLocalVertexMap>;
 
 }  // namespace vineyard
-
-#endif  // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MODIFIER_H_

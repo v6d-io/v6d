@@ -506,7 +506,6 @@ class [[vineyard]] ArrowFragment
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
     const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-    const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
     return std::make_pair(offset_array[v_offset], offset_array[v_offset + 1]);
   }
 
@@ -595,9 +594,7 @@ class [[vineyard]] ArrowFragment
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
           columns,
-      bool replace = false) override {
-    return AddVertexColumnsImpl<arrow::Array>(client, columns, replace);
-  }
+      bool replace = false) override;
 
   boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
       vineyard::Client & client,
@@ -605,9 +602,7 @@ class [[vineyard]] ArrowFragment
                      std::vector<std::pair<
                          std::string, std::shared_ptr<arrow::ChunkedArray>>>>
           columns,
-      bool replace = false) override {
-    return AddVertexColumnsImpl<arrow::ChunkedArray>(client, columns, replace);
-  }
+      bool replace = false) override;
 
   template <typename ArrayType = arrow::Array>
   boost::leaf::result<vineyard::ObjectID> AddVertexColumnsImpl(
@@ -616,53 +611,7 @@ class [[vineyard]] ArrowFragment
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
           columns,
-      bool replace = false) {
-    ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
-    auto schema = schema_;
-
-    /// If replace == true, invalidate all previous properties that have new
-    /// columns.
-    if (replace) {
-      for (auto& pair : columns) {
-        auto label_id = pair.first;
-        auto& entry = schema.GetMutableEntry(label_id, "VERTEX");
-        for (size_t i = 0; i < entry.props_.size(); ++i) {
-          entry.InvalidateProperty(i);
-        }
-      }
-    }
-
-    for (label_id_t label_id = 0; label_id < vertex_label_num_; ++label_id) {
-      std::string table_name =
-          generate_name_with_suffix("vertex_tables", label_id);
-      if (columns.find(label_id) != columns.end()) {
-        auto& table = this->vertex_tables_[label_id];
-        vineyard::TableExtender extender(client, table);
-
-        auto& vec = columns.at(label_id);
-        for (auto& pair : vec) {
-          auto status = extender.AddColumn(client, pair.first, pair.second);
-          CHECK(status.ok());
-        }
-        auto new_table =
-            std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
-        builder.set_vertex_tables_(label_id, new_table);
-        auto& entry = schema.GetMutableEntry(
-            schema.GetVertexLabelName(label_id), "VERTEX");
-        for (size_t index = table->num_columns();
-             index < new_table->num_columns(); ++index) {
-          entry.AddProperty(new_table->field(index)->name(),
-                            new_table->field(index)->type());
-        }
-      }
-    }
-    std::string error_message;
-    if (!schema.Validate(error_message)) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
-    }
-    builder.set_schema_json_(schema.ToJSON());
-    return builder.Seal(client)->id();
-  }
+      bool replace = false);
 
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
       vineyard::Client & client,
@@ -670,9 +619,7 @@ class [[vineyard]] ArrowFragment
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
           columns,
-      bool replace = false) override {
-    return AddEdgeColumnsImpl<arrow::Array>(client, columns, replace);
-  }
+      bool replace = false) override;
 
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
       vineyard::Client & client,
@@ -680,9 +627,7 @@ class [[vineyard]] ArrowFragment
                      std::vector<std::pair<
                          std::string, std::shared_ptr<arrow::ChunkedArray>>>>
           columns,
-      bool replace = false) override {
-    return AddEdgeColumnsImpl<arrow::ChunkedArray>(client, columns, replace);
-  }
+      bool replace = false) override;
 
   template <typename ArrayType = arrow::Array>
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumnsImpl(
@@ -691,49 +636,7 @@ class [[vineyard]] ArrowFragment
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
           columns,
-      bool replace = false) {
-    vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(
-        *this);
-    auto schema = schema_;
-
-    if (replace) {
-      for (auto& pair : columns) {
-        auto label_id = pair.first;
-        auto& entry = schema.GetMutableEntry(label_id, "EDGE");
-        for (size_t i = 0; i < entry.props_.size(); ++i) {
-          entry.InvalidateProperty(i);
-        }
-      }
-    }
-    for (label_id_t label_id = 0; label_id < edge_label_num_; ++label_id) {
-      if (columns.find(label_id) != columns.end()) {
-        auto& table = this->edge_tables_[label_id];
-        vineyard::TableExtender extender(client, table);
-
-        auto& vec = columns.at(label_id);
-        for (auto& pair : vec) {
-          auto status = extender.AddColumn(client, pair.first, pair.second);
-          CHECK(status.ok());
-        }
-        auto new_table =
-            std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
-        builder.set_edge_tables_(label_id, new_table);
-        auto& entry =
-            schema.GetMutableEntry(schema.GetEdgeLabelName(label_id), "EDGE");
-        for (size_t index = table->num_columns();
-             index < new_table->num_columns(); ++index) {
-          entry.AddProperty(new_table->field(index)->name(),
-                            new_table->field(index)->type());
-        }
-      }
-    }
-    std::string error_message;
-    if (!schema.Validate(error_message)) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
-    }
-    builder.set_schema_json_(schema.ToJSON());
-    return builder.Seal(client)->id();
-  }
+      bool replace = false);
 
   boost::leaf::result<vineyard::ObjectID> Project(
       vineyard::Client & client,
@@ -762,91 +665,7 @@ class [[vineyard]] ArrowFragment
       std::vector<prop_id_t> const& props, std::string const& consolidate_name);
 
  private:
-  void initPointers() {
-    edge_tables_columns_.resize(edge_label_num_);
-    flatten_edge_tables_columns_.resize(edge_label_num_);
-    for (label_id_t i = 0; i < edge_label_num_; ++i) {
-      prop_id_t prop_num =
-          static_cast<prop_id_t>(edge_tables_[i]->num_columns());
-      edge_tables_columns_[i].resize(prop_num);
-      if (edge_tables_[i]->num_rows() == 0) {
-        continue;
-      }
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        edge_tables_columns_[i][j] =
-            get_arrow_array_data(edge_tables_[i]->column(j)->chunk(0));
-      }
-      flatten_edge_tables_columns_[i] = &edge_tables_columns_[i][0];
-    }
-
-    vertex_tables_columns_.resize(vertex_label_num_);
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      auto vertex_table = vertex_tables_[i]->GetTable();
-      prop_id_t prop_num = static_cast<prop_id_t>(vertex_table->num_columns());
-      vertex_tables_columns_[i].resize(prop_num);
-      if (vertex_table->num_rows() == 0) {
-        continue;
-      }
-      for (prop_id_t j = 0; j < prop_num; ++j) {
-        vertex_tables_columns_[i][j] =
-            get_arrow_array_data(vertex_table->column(j)->chunk(0));
-      }
-    }
-
-    oe_ptr_lists_.resize(vertex_label_num_);
-    oe_offsets_ptr_lists_.resize(vertex_label_num_);
-
-    idst_.resize(vertex_label_num_);
-    odst_.resize(vertex_label_num_);
-    iodst_.resize(vertex_label_num_);
-
-    idoffset_.resize(vertex_label_num_);
-    odoffset_.resize(vertex_label_num_);
-    iodoffset_.resize(vertex_label_num_);
-
-    ovgid_lists_ptr_.resize(vertex_label_num_);
-    ovg2l_maps_ptr_.resize(vertex_label_num_);
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      ovgid_lists_ptr_[i] = ovgid_lists_[i]->GetArray()->raw_values();
-      ovg2l_maps_ptr_[i] = ovg2l_maps_[i].get();
-
-      oe_ptr_lists_[i].resize(edge_label_num_);
-      oe_offsets_ptr_lists_[i].resize(edge_label_num_);
-
-      idst_[i].resize(edge_label_num_);
-      odst_[i].resize(edge_label_num_);
-      iodst_[i].resize(edge_label_num_);
-
-      idoffset_[i].resize(edge_label_num_);
-      odoffset_[i].resize(edge_label_num_);
-      iodoffset_[i].resize(edge_label_num_);
-
-      for (label_id_t j = 0; j < edge_label_num_; ++j) {
-        oe_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
-            oe_lists_[i][j]->GetArray()->raw_values());
-        oe_offsets_ptr_lists_[i][j] =
-            oe_offsets_lists_[i][j]->GetArray()->raw_values();
-      }
-    }
-
-    if (directed_) {
-      ie_ptr_lists_.resize(vertex_label_num_);
-      ie_offsets_ptr_lists_.resize(vertex_label_num_);
-      for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-        ie_ptr_lists_[i].resize(edge_label_num_);
-        ie_offsets_ptr_lists_[i].resize(edge_label_num_);
-        for (label_id_t j = 0; j < edge_label_num_; ++j) {
-          ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
-              ie_lists_[i][j]->GetArray()->raw_values());
-          ie_offsets_ptr_lists_[i][j] =
-              ie_offsets_lists_[i][j]->GetArray()->raw_values();
-        }
-      }
-    } else {
-      ie_ptr_lists_ = oe_ptr_lists_;
-      ie_offsets_ptr_lists_ = oe_offsets_ptr_lists_;
-    }
-  }
+  void initPointers();
 
   void initDestFidList(
       bool in_edge, bool out_edge,

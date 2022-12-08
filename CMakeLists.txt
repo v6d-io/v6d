@@ -8,12 +8,18 @@ set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEY
 message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
 
 if(POLICY CMP0025)
-  cmake_policy(SET CMP0025 NEW)
+    cmake_policy(SET CMP0025 NEW)
+    set(CMAKE_POLICY_DEFAULT_CMP0025 NEW)
 endif()
-
 if(POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
+    set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 endif()
+if(POLICY CMP0069)
+    cmake_policy(SET CMP0069 NEW)
+    set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+endif()
+    
 project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
@@ -23,7 +29,8 @@ option(USE_EXTERNAL_REDIS_LIBS "Build with external redis-plus-plus library rath
 option(USE_EXTERNAL_HIREDIS_LIBS "Build with external hiredis library rather than the submodule one" ON)
 option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" OFF)
 option(USE_EXTERNAL_NLOHMANN_JSON_LIBS "Build with external nlohmann-json library rather than the submodule one" ON)
-option(USE_ASAN "Using address sanitizer to check memory accessing" OFF)
+option(VINEYARD_USE_ASAN "Using address sanitizer to check memory accessing" OFF)
+option(VINEYARD_USE_LTO "Using IPO/LTO support for link-time optimization" OFF)
 option(USE_LIBUNWIND "Using libunwind to retrieve the stack backtrace when exception occurs" ON)
 option(USE_INCLUDE_WHAT_YOU_USE "Simply the intra-module dependencies with iwyu" OFF)
 option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of metadata" OFF)
@@ -76,11 +83,22 @@ else()
     message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}'.")
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release" AND
-        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
-            "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND
+        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
     # avoid the llvm-strip: error: unsupported load command (cmd=0x80000034) error
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+endif()
+
+if(VINEYARD_USE_LTO AND CMAKE_VERSION VERSION_GREATER "3.9" AND
+        (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT lpo_supported OUTPUT lpo_supported_error)
+    if(lpo_supported)
+        message(STATUS "IPO / LTO enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(STATUS "IPO / LTO not supported: '${lpo_supported_error}'")
+    endif()
 endif()
 
 if(NOT (CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache") AND NOT (CMAKE_C_COMPILER_LAUNCHER MATCHES "ccache"))
@@ -551,7 +569,7 @@ macro(target_add_link_options target scope)
 endmacro()
 
 macro(target_enable_sanitizer target visibility)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND USE_ASAN)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND VINEYARD_USE_ASAN)
         message(STATUS "Vineyardd will be bulit with -fsanitize=address")
         target_compile_options(${target} ${visibility} -fsanitize=address)
         target_add_link_options(${target} ${visibility} OPTIONS -fsanitize=address)

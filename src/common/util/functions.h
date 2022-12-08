@@ -47,6 +47,9 @@ inline std::string ExpandEnvironmentVariables(const std::string& text) {
   }
 }
 
+/**
+ * @brief Get the current timestamp in seconds.
+ */
 inline double GetCurrentTime() {
   timeval t;
   gettimeofday(&t, 0);
@@ -54,10 +57,22 @@ inline double GetCurrentTime() {
          static_cast<double>(t.tv_usec) / 1000000;
 }
 
+/**
+ * @brief Generate a 64bit unique timestamp, no actual meanings.
+ */
 inline int64_t GetTimestamp() {
   timeval t;
   gettimeofday(&t, 0);
   return ((int64_t) t.tv_sec << sizeof(int32_t) * 8) + (int64_t) t.tv_usec;
+}
+
+/**
+ * @brief Get the current timestamp in microseconds.
+ */
+inline int64_t GetMicroTimestamp() {
+  return std::chrono::duration_cast<std::chrono::microseconds>(
+             std::chrono::high_resolution_clock::now().time_since_epoch())
+      .count();
 }
 
 namespace detail {
