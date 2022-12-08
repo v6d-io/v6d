@@ -282,6 +282,6 @@ bundle-build:
 # Build all bundle operator
 .PHONY: generate-helm-chart
 generate-helm-chart: helmify
-	cd charts && $(KUSTOMIZE) build ../config/default | ${GOBIN}/helmify vineyard-operator && \
+	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | ${GOBIN}/helmify vineyard-operator && \
 	sed -i 's/\/var\/run\/vineyard-kubernetes\/{{.Namespace}}\/{{.Name}}/\/var\/run\/vineyard-kubernetes\/{{ \"{{.Namespace}}\/{{.Name}}\" }}/g' \
 	vineyard-operator/templates/vineyardd-crd.yaml

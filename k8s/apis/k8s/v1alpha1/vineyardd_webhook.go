@@ -20,7 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	log "github.com/v6d-io/v6d/k8s/internal/log"
+	log "github.com/v6d-io/v6d/k8s/pkg/internal/log"
 )
 
 // log is for logging in this package.

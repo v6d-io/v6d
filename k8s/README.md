@@ -9,11 +9,11 @@ For more details, please refer to [vineyard operator doc](https://v6d.io/notes/v
 
 Vineyard operator defines the following CRDs to manage vineyard components and operations.
 
-- `GlobalObject` for global objects.
-- `LocalObject` for local objects.
-- `Vineyardd` for deployment of vineyard.
-- `Operation` for inserting operation to a workflow.
-- `Sidecar` for vineyard as a sidecar container.
+*   `GlobalObject` for global objects.
+*   `LocalObject` for local objects.
+*   `Vineyardd` for deployment of vineyard.
+*   `Operation` for inserting operation to a workflow.
+*   `Sidecar` for vineyard as a sidecar container.
 
 ### Deploy
 
