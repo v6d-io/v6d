@@ -42,7 +42,6 @@ var _ webhook.Defaulter = &GlobalObject{}
 func (r *GlobalObject) Default() {
 	glog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
 }
 
 //nolint: lll

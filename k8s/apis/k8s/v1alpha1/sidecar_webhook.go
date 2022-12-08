@@ -24,7 +24,7 @@ import (
 )
 
 // log is for logging in this package.
-var sidecarlog = log.Logger.WithName("webhook").WithName("sidecar")
+var sidecarlog = log.Logger.WithName("sidecar-resource")
 
 // SetupWebhookWithManager sets up the webhook with the manager
 func (r *Sidecar) SetupWebhookWithManager(mgr ctrl.Manager) error {
