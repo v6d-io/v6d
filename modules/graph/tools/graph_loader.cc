@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <chrono>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
+
+#include "grape/worker/comm_spec.h"
 
 #include "client/client.h"
 #include "common/util/env.h"
@@ -24,22 +28,37 @@
 #include "common/util/json.h"
 #include "common/util/logging.h"
 
-#include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
-#include "graph/loader/arrow_fragment_loader.h"
+#include "graph/tools/graph_loader.h"
 
 namespace vineyard {
 
 namespace detail {
 
-struct loader_options {
-  std::string vineyard_ipc_socket;
-  std::vector<std::string> efiles;
-  std::vector<std::string> vfiles;
-  bool directed = true;
-  bool generate_eid = false;
-  bool string_oid = false;
-};
+void print_graph_memory_usage(Client& client, grape::CommSpec& comm_spec,
+                              const ObjectID fragment_group_id) {
+  if (comm_spec.local_id() != 0) {
+    return;
+  }
+
+  std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
+      std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
+          client.GetObject(fragment_group_id));
+
+  auto const& fragments = fg->Fragments();
+  for (const auto& item : fg->FragmentLocations()) {
+    if (item.second == client.instance_id()) {
+      ObjectMeta meta;
+      VINEYARD_CHECK_OK(client.GetMetaData(fragments.at(item.first), meta));
+      ObjectMeta vertexmap = meta.GetMemberMeta("vm_ptr_");
+      LOG(INFO) << "[frag-" << item.first << "]: " << item.second
+                << "\n\tuses memory: "
+                << prettyprint_memory_size(meta.MemoryUsage())
+                << "\n\tvertex map: "
+                << prettyprint_memory_size(vertexmap.MemoryUsage());
+    }
+  }
+}
 
 static inline bool parse_boolean_value(std::string const& value) {
   return value == "y" || value == "yes" || value == "t" || value == "true" ||
@@ -85,6 +104,15 @@ static inline bool parse_options_from_args(struct loader_options& options,
   if (argc > current_index) {
     options.string_oid = parse_boolean_value(argv[current_index++]);
   }
+  if (argc > current_index) {
+    options.int32_oid = parse_boolean_value(argv[current_index++]);
+  }
+  if (argc > current_index) {
+    options.local_vertex_map = parse_boolean_value(argv[current_index++]);
+  }
+  if (argc > current_index) {
+    options.catch_leaf_errors = parse_boolean_value(argv[current_index++]);
+  }
   return true;
 }
 
@@ -93,7 +121,14 @@ static inline bool parse_options_from_config_json(
   std::ifstream config_file(config_json);
   std::string config_json_content((std::istreambuf_iterator<char>(config_file)),
                                   std::istreambuf_iterator<char>());
-  vineyard::json config = vineyard::json::parse(config_json_content);
+#if NLOHMANN_JSON_VERSION_MAJOR > 3 || \
+    (NLOHMANN_JSON_VERSION_MAJOR == 3 && NLOHMANN_JSON_VERSION_MINOR >= 9)
+  vineyard::json config =
+      vineyard::json::parse(config_json_content, nullptr, true, true);
+#else
+  vineyard::json config =
+      vineyard::json::parse(config_json_content, nullptr, true);
+#endif
   if (config.contains("vertices")) {
     for (auto const& item : config["vertices"]) {
       auto vfile = vineyard::ExpandEnvironmentVariables(
@@ -124,8 +159,18 @@ static inline bool parse_options_from_config_json(
   if (config.contains("generate_eid")) {
     options.generate_eid = parse_boolean_value(config["generate_eid"]);
   }
+  if (config.contains("int32_oid")) {
+    options.int32_oid = parse_boolean_value(config["int32_oid"]);
+  }
   if (config.contains("string_oid")) {
     options.string_oid = parse_boolean_value(config["string_oid"]);
+  }
+  if (config.contains("local_vertex_map")) {
+    options.local_vertex_map = parse_boolean_value(config["local_vertex_map"]);
+  }
+  if (config.contains("catch_leaf_errors")) {
+    options.catch_leaf_errors =
+        parse_boolean_value(config["catch_leaf_errors"]);
   }
   return true;
 }
@@ -141,35 +186,34 @@ static void loading_vineyard_graph(
   VINEYARD_CHECK_OK(client.Connect(options.vineyard_ipc_socket));
 
   MPI_Barrier(comm_spec.comm());
-  vineyard::ObjectID fragment_group_id;
-  if (options.string_oid) {
-    auto loader = std::make_unique<vineyard::ArrowFragmentLoader<
-        std::string, vineyard::property_graph_types::VID_TYPE>>(
-        client, comm_spec, options.efiles, options.vfiles,
-        options.directed != 0, options.generate_eid != 0);
-
-    fragment_group_id = loader->LoadFragmentAsFragmentGroup().value();
+  vineyard::ObjectID fragment_group_id = InvalidObjectID();
+  if (options.local_vertex_map) {
+    if (options.string_oid) {
+      fragment_group_id = detail::loading_vineyard_graph_string_localvm(
+          client, comm_spec, options);
+    } else if (options.int32_oid) {
+      fragment_group_id = detail::loading_vineyard_graph_int32_localvm(
+          client, comm_spec, options);
+    } else {
+      fragment_group_id = detail::loading_vineyard_graph_int64_localvm(
+          client, comm_spec, options);
+    }
   } else {
-    auto loader = std::make_unique<vineyard::ArrowFragmentLoader<
-        vineyard::property_graph_types::OID_TYPE,
-        vineyard::property_graph_types::VID_TYPE>>(
-        client, comm_spec, options.efiles, options.vfiles,
-        options.directed != 0, options.generate_eid != 0);
-
-    fragment_group_id = loader->LoadFragmentAsFragmentGroup().value();
+    if (options.string_oid) {
+      fragment_group_id =
+          detail::loading_vineyard_graph_string(client, comm_spec, options);
+    } else if (options.int32_oid) {
+      fragment_group_id =
+          detail::loading_vineyard_graph_int32(client, comm_spec, options);
+    } else {
+      fragment_group_id =
+          detail::loading_vineyard_graph_int64(client, comm_spec, options);
+    }
   }
 
+  MPI_Barrier(comm_spec.comm());
   LOG(INFO) << "[fragment group id]: " << fragment_group_id;
-  MPI_Barrier(comm_spec.comm());
-
-  std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
-      std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
-          client.GetObject(fragment_group_id));
-
-  for (const auto& pair : fg->Fragments()) {
-    LOG(INFO) << "[frag-" << pair.first << "]: " << pair.second;
-  }
-  MPI_Barrier(comm_spec.comm());
+  detail::print_graph_memory_usage(client, comm_spec, fragment_group_id);
 }
 
 }  // namespace vineyard
@@ -207,7 +251,8 @@ int main(int argc, char** argv) {
               ],
               "directed": 1, # 0 or 1
               "generate_eid": 1, # 0 or 1
-              "string_oid": 0 # 0 or 1
+              "string_oid": 0, # 0 or 1
+              "local_vertex_map": 0 # 0 or 1
           })r");
     return 1;
   }
@@ -242,8 +287,15 @@ int main(int argc, char** argv) {
   }
 
   grape::InitMPIComm();
+  auto start_time = vineyard::GetMicroTimestamp();
   { vineyard::loading_vineyard_graph(options); }
+  auto finish_time = vineyard::GetMicroTimestamp();
   grape::FinalizeMPIComm();
+
+  LOG(INFO) << "time usage: " << ((finish_time - start_time) / 1000000.0)
+            << " seconds";
+  LOG(INFO) << "peek memory usage: "
+            << vineyard::prettyprint_memory_size(vineyard::get_peek_rss());
 
   return 0;
 }

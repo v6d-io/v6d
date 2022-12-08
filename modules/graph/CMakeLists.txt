@@ -103,7 +103,8 @@ install_vineyard_target(vineyard_graph)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
 # add the vineyard-graph-loader target
-add_executable(vineyard-graph-loader "${CMAKE_CURRENT_SOURCE_DIR}/tools/graph_loader.cc")
+file(GLOB_RECURSE GRAPH_LOADER_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "tools/*.cc")
+add_executable(vineyard-graph-loader ${GRAPH_LOADER_SRC_FILES})
 target_link_libraries(vineyard-graph-loader PRIVATE vineyard_graph)
 install_vineyard_target(vineyard-graph-loader)
 

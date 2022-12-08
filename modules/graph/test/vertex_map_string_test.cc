@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
+#include "boost/algorithm/string.hpp"
 
 #include "client/client.h"
 #include "common/util/logging.h"

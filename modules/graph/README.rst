@@ -86,5 +86,6 @@ The graph can be loaded from the following two approaches:
          ],
          "directed": 1,
          "generate_eid": 1,
-         "string_oid": 0
+         "string_oid": 0,
+         "local_vertex_map": 0
      }

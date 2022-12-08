@@ -100,6 +100,11 @@ size_t get_peek_rss();
  */
 int64_t get_maximum_shared_memory();
 
+/**
+ * @brief Return the memory size in human readable way.
+ */
+std::string prettyprint_memory_size(size_t nbytes);
+
 }  // namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_ENV_H_

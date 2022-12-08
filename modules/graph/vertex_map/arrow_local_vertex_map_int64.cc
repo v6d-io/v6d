@@ -13,13 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MODIFIER_H_
-#define MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MODIFIER_H_
+#include "graph/vertex_map/arrow_local_vertex_map_impl.h"
 
 namespace vineyard {
 
-// keep for backwards compatibility.
+template class ArrowLocalVertexMap<int64_t, uint64_t>;
+
+template class ArrowLocalVertexMapBuilder<int64_t, uint64_t>;
 
 }  // namespace vineyard
-
-#endif  // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MODIFIER_H_

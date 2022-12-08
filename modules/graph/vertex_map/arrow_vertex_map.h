@@ -55,119 +55,29 @@ class ArrowVertexMap
             new ArrowVertexMap<OID_T, VID_T>()});
   }
 
-  void Construct(const vineyard::ObjectMeta& meta) {
-    this->meta_ = meta;
-    this->id_ = meta.GetId();
+  void Construct(const vineyard::ObjectMeta& meta);
 
-    this->fnum_ = meta.GetKeyValue<fid_t>("fnum");
-    this->label_num_ = meta.GetKeyValue<label_id_t>("label_num");
+  bool GetOid(vid_t gid, oid_t& oid) const;
 
-    id_parser_.Init(fnum_, label_num_);
-    double nbytes = 0, local_oid_total = 0, o2g_total = 0;
-    o2g_.resize(fnum_);
-    oid_arrays_.resize(fnum_);
-    for (fid_t i = 0; i < fnum_; ++i) {
-      o2g_[i].resize(label_num_);
-      oid_arrays_[i].resize(label_num_);
-      for (label_id_t j = 0; j < label_num_; ++j) {
-        o2g_[i][j].Construct(meta.GetMemberMeta("o2g_" + std::to_string(i) +
-                                                "_" + std::to_string(j)));
+  bool GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const;
 
-        typename InternalType<oid_t>::vineyard_array_type array;
-        array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
-                                           "_" + std::to_string(j)));
-        oid_arrays_[i][j] = array.GetArray();
+  bool GetGid(label_id_t label_id, oid_t oid, vid_t& gid) const;
 
-        local_oid_total += array.nbytes();
-        o2g_total += o2g_[i][j].nbytes();
-      }
-    }
-    nbytes = local_oid_total + o2g_total;
-    LOG(INFO) << "ArrowVertexMap<int64_t, int64_t>"
-              << "\tsize: " << nbytes / 1000000 << " MB";
-  }
+  std::vector<OID_T> GetOids(fid_t fid, label_id_t label_id) const;
 
-  bool GetOid(vid_t gid, oid_t& oid) const {
-    fid_t fid = id_parser_.GetFid(gid);
-    label_id_t label = id_parser_.GetLabelId(gid);
-    int64_t offset = id_parser_.GetOffset(gid);
-    if (fid < fnum_ && label < label_num_ && label >= 0) {
-      auto array = oid_arrays_[fid][label];
-      if (offset < array->length()) {
-        oid = array->GetView(offset);
-        return true;
-      }
-    }
-    return false;
-  }
+  std::shared_ptr<oid_array_t> GetOidArray(fid_t fid, label_id_t label_id);
 
-  bool GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
-    auto iter = o2g_[fid][label_id].find(oid);
-    if (iter != o2g_[fid][label_id].end()) {
-      gid = iter->second;
-      return true;
-    }
-    return false;
-  }
+  fid_t fnum() const { return fnum_; }
 
-  bool GetGid(label_id_t label_id, oid_t oid, vid_t& gid) const {
-    for (fid_t i = 0; i < fnum_; ++i) {
-      if (GetGid(i, label_id, oid, gid)) {
-        return true;
-      }
-    }
-    return false;
-  }
+  size_t GetTotalNodesNum() const;
 
-  std::vector<oid_t> GetOids(fid_t fid, label_id_t label_id) {
-    auto array = oid_arrays_[fid][label_id];
-    std::vector<oid_t> oids;
-
-    oids.resize(array->length());
-    for (auto i = 0; i < array->length(); i++) {
-      oids[i] = array->GetView(i);
-    }
-
-    return oids;
-  }
-
-  std::shared_ptr<oid_array_t> GetOidArray(fid_t fid, label_id_t label_id) {
-    return oid_arrays_[fid][label_id];
-  }
-
-  fid_t fnum() { return fnum_; }
-
-  size_t GetTotalNodesNum() const {
-    size_t num = 0;
-    for (auto& vec : oid_arrays_) {
-      for (auto& v : vec) {
-        num += v->length();
-      }
-    }
-    return num;
-  }
-
-  size_t GetTotalNodesNum(label_id_t label) const {
-    size_t num = 0;
-    for (auto& vec : oid_arrays_) {
-      num += vec[label]->length();
-    }
-    return num;
-  }
+  size_t GetTotalNodesNum(label_id_t label) const;
 
   label_id_t label_num() const { return label_num_; }
 
-  vid_t GetInnerVertexSize(fid_t fid) const {
-    size_t num = 0;
-    for (auto& v : oid_arrays_[fid]) {
-      num += v->length();
-    }
-    return static_cast<vid_t>(num);
-  }
+  VID_T GetInnerVertexSize(fid_t fid) const;
 
-  vid_t GetInnerVertexSize(fid_t fid, label_id_t label_id) const {
-    return static_cast<vid_t>(oid_arrays_[fid][label_id]->length());
-  }
+  VID_T GetInnerVertexSize(fid_t fid, label_id_t label_id) const;
 
   ObjectID AddVertices(
       Client& client,
@@ -210,116 +120,27 @@ class ArrowVertexMap<arrow_string_view, VID_T>
             new ArrowVertexMap<oid_t, vid_t>()});
   }
 
-  void Construct(const vineyard::ObjectMeta& meta) {
-    this->meta_ = meta;
-    this->id_ = meta.GetId();
+  void Construct(const vineyard::ObjectMeta& meta);
 
-    this->fnum_ = meta.GetKeyValue<fid_t>("fnum");
-    this->label_num_ = meta.GetKeyValue<label_id_t>("label_num");
+  bool GetOid(vid_t gid, oid_t& oid) const;
 
-    id_parser_.Init(fnum_, label_num_);
+  bool GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const;
 
-    double nbytes = 0, local_oid_total = 0, o2g_total = 0;
-    oid_arrays_.resize(fnum_);
-    for (fid_t i = 0; i < fnum_; ++i) {
-      oid_arrays_[i].resize(label_num_);
-      for (label_id_t j = 0; j < label_num_; ++j) {
-        typename InternalType<oid_t>::vineyard_array_type array;
-        array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
-                                           "_" + std::to_string(j)));
-        oid_arrays_[i][j] = array.GetArray();
-      }
-    }
+  bool GetGid(label_id_t label_id, oid_t oid, vid_t& gid) const;
 
-    initHashmaps();
-
-    for (fid_t i = 0; i < fnum_; ++i) {
-      for (int j = 0; j < label_num_; ++j) {
-        o2g_total += o2g_[i][j].bucket_count();
-      }
-    }
-    nbytes = local_oid_total + o2g_total * 24;
-    LOG(INFO) << "ArrowVertexMap<string, int64_t>: \n"
-              << "\tsize: " << nbytes / 1000000 << " MB";
-  }
-
-  bool GetOid(vid_t gid, oid_t& oid) const {
-    fid_t fid = id_parser_.GetFid(gid);
-    label_id_t label = id_parser_.GetLabelId(gid);
-    int64_t offset = id_parser_.GetOffset(gid);
-    if (fid < fnum_ && label < label_num_ && label >= 0) {
-      auto array = oid_arrays_[fid][label];
-      if (offset < array->length()) {
-        oid = array->GetView(offset);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
-    auto iter = o2g_[fid][label_id].find(oid);
-    if (iter != o2g_[fid][label_id].end()) {
-      gid = iter->second;
-      return true;
-    }
-    return false;
-  }
-
-  bool GetGid(label_id_t label_id, oid_t oid, vid_t& gid) const {
-    for (fid_t i = 0; i < fnum_; ++i) {
-      if (GetGid(i, label_id, oid, gid)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  std::vector<oid_t> GetOids(fid_t fid, label_id_t label_id) {
-    auto array = oid_arrays_[fid][label_id];
-    std::vector<oid_t> oids;
-
-    oids.resize(array->length());
-    for (auto i = 0; i < array->length(); i++) {
-      oids[i] = array->GetView(i);
-    }
-
-    return oids;
-  }
+  std::vector<oid_t> GetOids(fid_t fid, label_id_t label_id) const;
 
   fid_t fnum() { return fnum_; }
 
-  size_t GetTotalNodesNum() const {
-    size_t num = 0;
-    for (auto& vec : oid_arrays_) {
-      for (auto& v : vec) {
-        num += v->length();
-      }
-    }
-    return num;
-  }
+  size_t GetTotalNodesNum() const;
 
-  size_t GetTotalNodesNum(label_id_t label) const {
-    size_t num = 0;
-    for (auto& vec : oid_arrays_) {
-      num += vec[label]->length();
-    }
-    return num;
-  }
+  size_t GetTotalNodesNum(label_id_t label) const;
 
   label_id_t label_num() const { return label_num_; }
 
-  vid_t GetInnerVertexSize(fid_t fid) const {
-    size_t num = 0;
-    for (auto& v : oid_arrays_[fid]) {
-      num += v->length();
-    }
-    return static_cast<vid_t>(num);
-  }
+  VID_T GetInnerVertexSize(fid_t fid) const;
 
-  vid_t GetInnerVertexSize(fid_t fid, label_id_t label_id) const {
-    return static_cast<vid_t>(oid_arrays_[fid][label_id]->length());
-  }
+  VID_T GetInnerVertexSize(fid_t fid, label_id_t label_id) const;
 
   ObjectID AddVertices(
       Client& client,
@@ -331,41 +152,7 @@ class ArrowVertexMap<arrow_string_view, VID_T>
       const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays);
 
  private:
-  void initHashmaps() {
-    int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
-    int thread_num = std::min(
-        static_cast<int>(std::thread::hardware_concurrency()), task_num);
-    std::atomic<int> task_id(0);
-    std::vector<std::thread> threads(thread_num);
-    o2g_.resize(fnum_);
-    for (fid_t i = 0; i < fnum_; ++i) {
-      o2g_[i].resize(label_num_);
-    }
-    for (int i = 0; i < thread_num; ++i) {
-      threads[i] = std::thread([&]() {
-        while (true) {
-          int got_task_id = task_id.fetch_add(1);
-          if (got_task_id >= task_num) {
-            break;
-          }
-          fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
-          label_id_t cur_label =
-              static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
-          auto array = oid_arrays_[cur_fid][cur_label];
-          auto& map = o2g_[cur_fid][cur_label];
-          vid_t cur_gid = id_parser_.GenerateId(cur_fid, cur_label, 0);
-          int64_t vnum = array->length();
-          for (int64_t k = 0; k < vnum; ++k) {
-            map.emplace(array->GetView(k), cur_gid);
-            ++cur_gid;
-          }
-        }
-      });
-    }
-    for (auto& thrd : threads) {
-      thrd.join();
-    }
-  }
+  void initHashmaps();
 
   fid_t fnum_;
   label_id_t label_num_;
@@ -389,27 +176,14 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
  public:
   explicit ArrowVertexMapBuilder(vineyard::Client& client) {}
 
-  void set_fnum_label_num(fid_t fnum, label_id_t label_num) {
-    fnum_ = fnum;
-    label_num_ = label_num;
-    oid_arrays_.resize(fnum_);
-    o2g_.resize(fnum_);
-    for (fid_t i = 0; i < fnum_; ++i) {
-      oid_arrays_[i].resize(label_num_);
-      o2g_[i].resize(label_num_);
-    }
-  }
+  void set_fnum_label_num(fid_t fnum, label_id_t label_num);
 
   void set_oid_array(
       fid_t fid, label_id_t label,
-      const typename InternalType<oid_t>::vineyard_array_type& array) {
-    oid_arrays_[fid][label] = array;
-  }
+      const typename InternalType<oid_t>::vineyard_array_type& array);
 
   void set_o2g(fid_t fid, label_id_t label,
-               const vineyard::Hashmap<oid_t, vid_t>& rm) {
-    o2g_[fid][label] = rm;
-  }
+               const vineyard::Hashmap<oid_t, vid_t>& rm);
 
   std::shared_ptr<vineyard::Object> _Seal(vineyard::Client& client);
 
@@ -432,20 +206,11 @@ class ArrowVertexMapBuilder<arrow_string_view, VID_T>
  public:
   explicit ArrowVertexMapBuilder(vineyard::Client& client) {}
 
-  void set_fnum_label_num(fid_t fnum, label_id_t label_num) {
-    fnum_ = fnum;
-    label_num_ = label_num;
-    oid_arrays_.resize(fnum_);
-    for (fid_t i = 0; i < fnum_; ++i) {
-      oid_arrays_[i].resize(label_num_);
-    }
-  }
+  void set_fnum_label_num(fid_t fnum, label_id_t label_num);
 
   void set_oid_array(
       fid_t fid, label_id_t label,
-      const typename InternalType<oid_t>::vineyard_array_type& array) {
-    oid_arrays_[fid][label] = array;
-  }
+      const typename InternalType<oid_t>::vineyard_array_type& array);
 
   std::shared_ptr<vineyard::Object> _Seal(vineyard::Client& client);
 
@@ -467,14 +232,7 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
  public:
   BasicArrowVertexMapBuilder(
       vineyard::Client& client, fid_t fnum, label_id_t label_num,
-      const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays)
-      : ArrowVertexMapBuilder<oid_t, vid_t>(client),
-        fnum_(fnum),
-        label_num_(label_num),
-        oid_arrays_(oid_arrays) {
-    CHECK_EQ(oid_arrays.size(), label_num);
-    id_parser_.Init(fnum_, label_num_);
-  }
+      const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays);
 
   vineyard::Status Build(vineyard::Client& client) override;
 
@@ -498,14 +256,7 @@ class BasicArrowVertexMapBuilder<arrow_string_view, VID_T>
  public:
   BasicArrowVertexMapBuilder(
       vineyard::Client& client, fid_t fnum, label_id_t label_num,
-      const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays)
-      : ArrowVertexMapBuilder<arrow_string_view, vid_t>(client),
-        fnum_(fnum),
-        label_num_(label_num),
-        oid_arrays_(oid_arrays) {
-    CHECK_EQ(oid_arrays.size(), label_num);
-    id_parser_.Init(fnum_, label_num_);
-  }
+      const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays);
 
   vineyard::Status Build(vineyard::Client& client) override;
 

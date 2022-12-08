@@ -154,4 +154,21 @@ int64_t get_maximum_shared_memory() {
   return shmmax;
 }
 
+/**
+ * @brief Return the memory size in human readable way.
+ */
+std::string prettyprint_memory_size(size_t nbytes) {
+  if (nbytes > (1L << 40)) {
+    return std::to_string(nbytes * 1.0 / (1L << 40)) + " TB";
+  } else if (nbytes > (1L << 30)) {
+    return std::to_string(nbytes * 1.0 / (1L << 30)) + " GB";
+  } else if (nbytes > (1L << 20)) {
+    return std::to_string(nbytes * 1.0 / (1L << 20)) + " MB";
+  } else if (nbytes > (1L << 10)) {
+    return std::to_string(nbytes * 1.0 / (1L << 10)) + " KB";
+  } else {
+    return std::to_string(nbytes) + " B";
+  }
+}
+
 }  // namespace vineyard
