@@ -15,7 +15,6 @@ COPY apis/ apis/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY hack/ hack/
-COPY internal/ internal/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
