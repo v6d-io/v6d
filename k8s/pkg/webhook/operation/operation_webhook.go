@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package operator contains the logic for the operator
-package operator
+// Package operation contains the logic for the operation
+package operation
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,13 +39,6 @@ type AssemblyInjector struct {
 	Client  client.Client
 	decoder *admission.Decoder
 }
-
-const (
-	// AssemblyEnabledLabel is the label for assembly, and inject the assembly container when setting true
-	AssemblyEnabledLabel = "assembly.v6d.io/enabled"
-	// RepartitionEnabledLabel is the label for repartition, and inject the repartition container when setting true
-	RepartitionEnabledLabel = "repartition.v6d.io/enabled"
-)
 
 // LabelRequiredPods labels the pods with the given label
 func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Pod, label string) error {
@@ -85,7 +79,7 @@ func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) ad
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	operationLabels := []string{AssemblyEnabledLabel, RepartitionEnabledLabel}
+	operationLabels := []string{labels.AssemblyEnabledLabel, labels.RepartitionEnabledLabel}
 	// check all operation labels
 	for _, l := range operationLabels {
 		if err := r.LabelRequiredPods(ctx, pod, l); err != nil {

@@ -13,7 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pkg
+// Package log contains the global logger for the vineyard operator.
+package log
 
 import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"

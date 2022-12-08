@@ -1,32 +1,19 @@
 Vineyard Operator
 -----------------
 
-Vineyard operator is a kubernetes controller to operator the vineyard cluster. Within the
-vineyard operator, there's a scheduler-plugin called `vineyard-scheduler` which performs
-data aware job scheduling based on the locality information of objects in vineyard.
+To manage all vineyard relevant components in kubernetes cluster, we proposal the vineyard 
+operator. With it, users can easily deploy vineyard components, and manage their lifecycle. 
+For more details, please refer to [vineyard operator doc](https://v6d.io/notes/vineyard-operator.html).
 
 ### CRDs
 
-Vineyard operator defines two CRDs to represents objects in vineyard:
+Vineyard operator defines the following CRDs to manage vineyard components and operations.
 
-- `GlobalObject` for global objects
-- `LocalObject` for local objects
-
-### Scheduler Plugin
-
-The scheduler plugin works based the CRDs in the cluster. When vineyardd persists objects
-to etcd, it will create a CRD entry in kubernetes as well. The metadata of CRD has location
-information and scheduler plugin scores pod based on the data locality of required objects
-by jobs. For jobs, some label annotation are used to describe which objects are required
-in the pod spec.
-
-```yaml
-labels:
-    app: pytorch
-    scheduling.k8s.v6d.io/job: pytorch
-    scheduling.k8s.v6d.io/required: "o0000022285553e22"
-    scheduling.k8s.v6d.io/replica: "4"
-```
+*   `GlobalObject` for global objects.
+*   `LocalObject` for local objects.
+*   `Vineyardd` for deployment of vineyard.
+*   `Operation` for inserting operation to a workflow.
+*   `Sidecar` for vineyard as a sidecar container.
 
 ### Deploy
 
@@ -42,7 +29,7 @@ To install CRDs and required k8s cluster roles, run
 make predeploy
 ```
 
-To deploy the custom scheduler, run
+To deploy the vineyard operator, run
 
 ```bash
 make deploy

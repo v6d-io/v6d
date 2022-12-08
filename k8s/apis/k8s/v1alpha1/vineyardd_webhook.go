@@ -20,11 +20,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	log "github.com/v6d-io/v6d/k8s/pkg/log"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // log is for logging in this package.
-var vlog = log.Logger.WithName("vineyardd")
+var vlog = log.Logger.WithName("webhook").WithName("vineyardd")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Vineyardd) SetupWebhookWithManager(mgr ctrl.Manager) error {

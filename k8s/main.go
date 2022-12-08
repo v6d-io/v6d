@@ -37,10 +37,10 @@ import (
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	k8scontrollers "github.com/v6d-io/v6d/k8s/controllers/k8s"
-	"github.com/v6d-io/v6d/k8s/operator"
-	"github.com/v6d-io/v6d/k8s/schedulers"
-	"github.com/v6d-io/v6d/k8s/sidecar"
-	"github.com/v6d-io/v6d/k8s/templates"
+	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
+	"github.com/v6d-io/v6d/k8s/pkg/webhook/operation"
+	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -101,6 +101,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Error(err, "unable to create controller", "controller", "Sidecar")
 		os.Exit(1)
 	}
+	// +kubebuilder:scaffold:builder
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&k8sv1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LocalObject")
@@ -127,7 +128,7 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 		setupLog.Info("registering the assembly webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod",
 			&webhook.Admission{
-				Handler: &operator.AssemblyInjector{Client: mgr.GetClient()}})
+				Handler: &operation.AssemblyInjector{Client: mgr.GetClient()}})
 		setupLog.Info("the assembly webhook is registered")
 
 		// register the sidecar webhook
@@ -145,17 +146,15 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 			setupLog.Error(err, "unable to set up ready check for webhook")
 			os.Exit(1)
 		}
-	}
-
-	// +kubebuilder:scaffold:builder
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+	} else {
+		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up health check")
+			os.Exit(1)
+		}
+		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up ready check")
+			os.Exit(1)
+		}
 	}
 
 	setupLog.Info("starting manager")

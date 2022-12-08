@@ -66,13 +66,14 @@ type SidecarReconciler struct {
 
 // Reconcile the sidecar.
 func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Sidecar")
+
 	sidecar := &k8sv1alpha1.Sidecar{}
 	if err := r.Get(ctx, req.NamespacedName, sidecar); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	logger.V(1).Info("Reconciling Sidecar", "sidecar", *sidecar)
+
 	// deploy the sidecar service
 	sidecarApp := kubernetes.Application{
 		Client:   r.Client,

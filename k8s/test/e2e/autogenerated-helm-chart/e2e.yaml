@@ -33,7 +33,7 @@ setup:
     - name: use helm chart to install the operator
       command: |
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
-        
+
         helm install vineyard-operator charts/vineyard-operator \
             --namespace vineyard-system \
             --create-namespace
