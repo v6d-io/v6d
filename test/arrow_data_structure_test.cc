@@ -477,6 +477,69 @@ int main(int argc, char** argv) {
 
     LOG(INFO) << "Passed Table wrapper tests...";
   }
+
+  {
+    LOG(INFO) << "######### Large Table with Multiple Chunks Test ######";
+
+    size_t nchunks = 10;
+    std::vector<std::shared_ptr<arrow::Array>> column1(nchunks);
+    std::vector<std::shared_ptr<arrow::Array>> column2(nchunks);
+    arrow::MemoryPool* pool = arrow::default_memory_pool();
+    // new arrow::LoggingMemoryPool(arrow::default_memory_pool());
+
+    auto generator = [&column1, &column2, &pool](size_t chunk_index) {
+      {
+        size_t size = (1L << 20) * 1L;
+        {
+          std::vector<int64_t> vec(size / sizeof(int64_t), 0xff);
+          std::shared_ptr<arrow::Int64Array> a1;
+          arrow::Int64Builder b1(pool);
+          CHECK_ARROW_ERROR(b1.AppendValues(vec));
+          CHECK_ARROW_ERROR(b1.Finish(&a1));
+          column1[chunk_index] = a1;
+        }
+        {
+          std::string s;
+          s.resize(size);
+          for (size_t i = 0; i < size; ++i) {
+            s[i] = 'a' + (i % 26);
+          }
+          std::shared_ptr<arrow::LargeStringArray> a1;
+          arrow::LargeStringBuilder b1(pool);
+          CHECK_ARROW_ERROR(b1.AppendValues({"a", "bb", "ccc", "dddd"}));
+          CHECK_ARROW_ERROR(b1.AppendNull());
+          CHECK_ARROW_ERROR(b1.AppendValues({"eeeee"}));
+          CHECK_ARROW_ERROR(b1.AppendValues({s}));
+          CHECK_ARROW_ERROR(b1.Finish(&a1));
+          column2[chunk_index] = a1;
+        }
+      }
+    };
+
+    for (size_t chunk_index = 0; chunk_index < nchunks; ++chunk_index) {
+      generator(chunk_index);
+    }
+
+    auto table = arrow::Table::Make(
+        arrow::schema({arrow::field("a", arrow::int64()),
+                       arrow::field("b", arrow::large_utf8())}),
+        std::vector<std::shared_ptr<arrow::ChunkedArray>>{
+            std::make_shared<arrow::ChunkedArray>(std::move(column1)),
+            std::make_shared<arrow::ChunkedArray>(std::move(column2))});
+
+    // test concatentate array
+    LOG(INFO) << "before putting to vineyard: " << get_rss_pretty()
+              << ", peak = " << get_peak_rss_pretty();
+
+    TableBuilder builder(client, std::move(table), true);
+    auto object = builder.Seal(client);
+
+    LOG(INFO) << "finish putting to vineyard: " << get_rss_pretty()
+              << ", peak = " << get_peak_rss_pretty();
+
+    LOG(INFO) << "Passed large table with multiple chunks tests...";
+  }
+
   client.Disconnect();
 
   return 0;

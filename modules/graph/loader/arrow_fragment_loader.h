@@ -41,8 +41,6 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/loader/basic_ev_fragment_loader.h"
-#include "graph/loader/fragment_loader_utils.h"
-#include "graph/utils/error.h"
 #include "graph/utils/partitioner.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
@@ -92,6 +90,13 @@ Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
                              std::shared_ptr<arrow::Table>& table, int part_id,
                              int part_num);
 
+Status ReadTableFromPandas(const std::string& data,
+                           std::shared_ptr<arrow::Table>& table);
+
+Status ReadTableFromLocation(const std::string& location,
+                             std::shared_ptr<arrow::Table>& table, int index,
+                             int total_parts);
+
 /** Note [GatherETables and GatherVTables]
  *
  * GatherETables and GatherVTables gathers all edges and vertices as table from
@@ -120,24 +125,39 @@ template <typename OID_T = property_graph_types::OID_TYPE,
                     typename VID_T_ = VID_T>
           class VERTEX_MAP_T = ArrowVertexMap>
 class ArrowFragmentLoader {
+ public:
   using oid_t = OID_T;
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
   using internal_oid_t = typename InternalType<oid_t>::type;
-  using oid_array_t = typename ConvertToArrowType<oid_t>::ArrayType;
+  using oid_array_t = ArrowArrayType<oid_t>;
+  using vid_array_t = ArrowArrayType<vid_t>;
   using vertex_map_t = VERTEX_MAP_T<internal_oid_t, vid_t>;
-  // These consts represent the key in the path of vfile/efile
-  static constexpr const char* LABEL_TAG = "label";
-  static constexpr const char* CONSOLIDATE_TAG = "consolidate";
-  static constexpr const char* SRC_LABEL_TAG = "src_label";
-  static constexpr const char* DST_LABEL_TAG = "dst_label";
+  using fragment_t = ArrowFragment<OID_T, VID_T, vertex_map_t>;
 
-  static constexpr int id_column = 0;
+  using table_vec_t = std::vector<std::shared_ptr<arrow::Table>>;
+  using oid_array_vec_t = std::vector<std::shared_ptr<oid_array_t>>;
+  using vid_array_vec_t = std::vector<std::shared_ptr<vid_array_t>>;
+
 #ifdef HASH_PARTITION
   using partitioner_t = HashPartitioner<oid_t>;
 #else
   using partitioner_t = SegmentedPartitioner<oid_t>;
 #endif
+
+  using basic_fragment_loader_t =
+      BasicEVFragmentLoader<OID_T, VID_T, partitioner_t, VERTEX_MAP_T>;
+
+ protected:
+  // These consts represent the key in the path of vfile/efile
+  static constexpr const char* LABEL_TAG = "label";
+  static constexpr const char* SRC_LABEL_TAG = "src_label";
+  static constexpr const char* DST_LABEL_TAG = "dst_label";
+  static constexpr const char* CONSOLIDATE_TAG = "consolidate";
+  static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
+
+  static constexpr int id_column = 0;
+
   using vertex_table_info_t =
       std::map<std::string, std::shared_ptr<arrow::Table>>;
   using edge_table_info_t = std::vector<InputTable>;
@@ -173,17 +193,6 @@ class ArrowFragmentLoader {
         directed_(directed),
         generate_eid_(generate_eid) {}
 
-  ArrowFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
-                      const std::vector<ObjectID>& vstreams,
-                      const std::vector<std::vector<ObjectID>>& estreams,
-                      bool directed = true, bool generate_eid = false)
-      : client_(client),
-        comm_spec_(comm_spec),
-        v_streams_(vstreams),
-        e_streams_(estreams),
-        directed_(directed),
-        generate_eid_(generate_eid) {}
-
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
       std::vector<std::shared_ptr<arrow::Table>> const& partial_v_tables,
@@ -213,10 +222,37 @@ class ArrowFragmentLoader {
 
   boost::leaf::result<ObjectID> LoadFragment();
 
+  boost::leaf::result<ObjectID> LoadFragment(
+      const std::vector<std::string>& efiles,
+      const std::vector<std::string>& vfiles);
+
+  boost::leaf::result<ObjectID> LoadFragment(
+      std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables);
+
   boost::leaf::result<ObjectID> LoadFragmentAsFragmentGroup();
+
+  boost::leaf::result<ObjectID> LoadFragmentAsFragmentGroup(
+      const std::vector<std::string>& efiles,
+      const std::vector<std::string>& vfiles);
+
+  boost::leaf::result<vineyard::ObjectID> AddLabelsToFragment(
+      vineyard::ObjectID frag_id);
+
+  boost::leaf::result<vineyard::ObjectID> AddLabelsToFragmentAsFragmentGroup(
+      vineyard::ObjectID frag_id);
+
+  boost::leaf::result<std::pair<table_vec_t, std::vector<table_vec_t>>>
+  LoadVertexEdgeTables();
+
+  boost::leaf::result<table_vec_t> LoadVertexTables();
+
+  boost::leaf::result<std::vector<table_vec_t>> LoadEdgeTables();
 
  protected:  // for subclasses
   boost::leaf::result<void> initPartitioner();
+
+  boost::leaf::result<vineyard::ObjectID> resolveVineyardObject(
+      std::string const& source);
 
   boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>>
   loadVertexTables(const std::vector<std::string>& files, int index,
@@ -232,6 +268,13 @@ class ArrowFragmentLoader {
       const std::vector<std::vector<std::shared_ptr<arrow::Table>>>& e_tables,
       const std::set<std::string>& previous_vertex_labels =
           std::set<std::string>());
+
+  /// Do some necessary sanity checks.
+  boost::leaf::result<void> sanityChecks(std::shared_ptr<arrow::Table> table);
+
+  boost::leaf::result<vineyard::ObjectID> addVerticesAndEdges(
+      vineyard::ObjectID frag_id,
+      std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables);
 
   Client& client_;
   grape::CommSpec comm_spec_;
@@ -252,6 +295,30 @@ class ArrowFragmentLoader {
     delete adaptor;
   };
 };
+
+namespace detail {
+
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+struct rebind_arrow_fragment_loader;
+
+template <typename OID_T, typename VID_T>
+struct rebind_arrow_fragment_loader<OID_T, VID_T,
+                                    vineyard::ArrowVertexMap<OID_T, VID_T>> {
+  using type = ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowVertexMap>;
+};
+
+template <typename OID_T, typename VID_T>
+struct rebind_arrow_fragment_loader<
+    OID_T, VID_T, vineyard::ArrowLocalVertexMap<OID_T, VID_T>> {
+  using type = ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowLocalVertexMap>;
+};
+
+}  // namespace detail
+
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+using arrow_fragment_loader_t =
+    typename detail::rebind_arrow_fragment_loader<OID_T, VID_T,
+                                                  VERTEX_MAP_T>::type;
 
 }  // namespace vineyard
 

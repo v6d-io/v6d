@@ -21,4 +21,8 @@ template class ArrowFragmentLoader<int64_t, uint64_t, ArrowVertexMap>;
 
 template class ArrowFragmentLoader<int64_t, uint64_t, ArrowLocalVertexMap>;
 
+template class ArrowFragmentLoader<int64_t, uint32_t, ArrowVertexMap>;
+
+template class ArrowFragmentLoader<int64_t, uint32_t, ArrowLocalVertexMap>;
+
 }  // namespace vineyard

@@ -36,41 +36,37 @@ namespace vineyard {
 
 namespace detail {
 
+enum progressive_t {
+  NONE,
+  WHOLE,
+  STEP_BY_STEP,
+};
+
 struct loader_options {
   std::string vineyard_ipc_socket;
   std::vector<std::string> efiles;
   std::vector<std::string> vfiles;
   bool directed = true;
   bool generate_eid = false;
-  bool string_oid = false;
-  bool int32_oid = false;
+  std::string oid_type = "int64";
+  bool large_vid = true;
+  bool large_eid = true;
   bool local_vertex_map = false;
+  progressive_t progressive = NONE;
   bool catch_leaf_errors = true;
+  std::string dump;
 };
 
-ObjectID loading_vineyard_graph_int32(
-    Client& client, grape::CommSpec& comm_spec,
-    struct detail::loader_options const& options);
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
+                    struct detail::loader_options const& options);
 
-ObjectID loading_vineyard_graph_int64(
-    Client& client, grape::CommSpec& comm_spec,
-    struct detail::loader_options const& options);
-
-ObjectID loading_vineyard_graph_string(
-    Client& client, grape::CommSpec& comm_spec,
-    struct detail::loader_options const& options);
-
-ObjectID loading_vineyard_graph_int32_localvm(
-    Client& client, grape::CommSpec& comm_spec,
-    struct detail::loader_options const& options);
-
-ObjectID loading_vineyard_graph_int64_localvm(
-    Client& client, grape::CommSpec& comm_spec,
-    struct detail::loader_options const& options);
-
-ObjectID loading_vineyard_graph_string_localvm(
-    Client& client, grape::CommSpec& comm_spec,
-    struct detail::loader_options const& options);
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+void dump_graph(Client& client, grape::CommSpec& comm_spec,
+                const ObjectID fragment_group_id,
+                const std::string& target_directory);
 
 }  // namespace detail
 

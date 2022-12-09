@@ -27,22 +27,109 @@ limitations under the License.
 #include "common/util/status.h"
 #include "graph/utils/error.h"
 
+namespace grape {
+class CommSpec;
+}
+
 namespace vineyard {
+
 class ThreadGroup {
   using tid_t = uint32_t;
   using return_t = Status;
 
  public:
-  explicit ThreadGroup(tid_t parallelism = std::thread::hardware_concurrency())
-      : parallelism_(parallelism), tid_(0), stopped_(false) {}
+  explicit ThreadGroup(
+      uint32_t parallelism = std::thread::hardware_concurrency());
 
-  template <class F_T, class... ARGS_T>
-  tid_t AddTask(F_T&& f, ARGS_T&&... args) {
-    if (stopped_) {
+  explicit ThreadGroup(const grape::CommSpec& comm_spec);
+
+  ThreadGroup(const ThreadGroup&) = delete;
+  ThreadGroup(ThreadGroup&&) = delete;
+
+  template <class F, class... Args>
+  tid_t AddTask(F&& f, Args&&... args) {
+    static_assert(
+        std::is_same<return_t,
+                     typename std::result_of<F(Args...)>::type>::value,
+        "The return type of the task must be `Status`");
+    if (stopped_.load()) {
       throw std::runtime_error("ThreadGroup is stopped");
     }
+
+    auto task_wrapper = [this](F&& _f, auto&&... _args) -> return_t {
+      try {
+        return std::move(_f(std::forward<Args>(_args)...));
+      } catch (std::exception& e) {
+        return Status(StatusCode::kUnknownError, e.what());
+      }
+    };
+
+    auto task = std::make_shared<std::packaged_task<return_t()>>(
+        std::bind(std::move(task_wrapper), std::forward<F>(f),
+                  std::forward<Args>(args)...));
+
+    tid_t current_task_id = tid_.fetch_add(1);
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (stopped_.load()) {
+        throw std::runtime_error("ThreadGroup is stopped");
+      }
+      pending_tasks_.emplace([task]() { (*task)(); });
+      tasks_[current_task_id] = task->get_future();
+    }
+    condition_.notify_one();
+    return current_task_id;
+  }
+
+  ~ThreadGroup();
+
+  return_t TaskResult(tid_t tid);
+
+  std::vector<return_t> TakeResults();
+
+ private:
+  size_t getRunningThreadNum();
+
+  tid_t parallelism_;
+  std::atomic<tid_t> tid_;
+  std::atomic_bool stopped_;
+  std::atomic<size_t> running_task_num_;
+  std::unordered_map<tid_t, std::future<return_t>> tasks_;
+  std::vector<std::thread> workers_;
+  std::mutex mutex_;
+  std::condition_variable condition_;
+  std::queue<std::function<void()>> pending_tasks_;
+};
+
+/**
+ * @brief A thread group that dynamically allocate a new thread for each tasks.
+ *
+ * @AddTask@ will be blocked until there are spare thread resources.
+ */
+class DynamicThreadGroup {
+  using tid_t = uint32_t;
+  using return_t = Status;
+
+ public:
+  explicit DynamicThreadGroup(
+      tid_t parallelism = std::thread::hardware_concurrency());
+
+  explicit DynamicThreadGroup(const grape::CommSpec& comm_spec);
+
+  DynamicThreadGroup(const DynamicThreadGroup&) = delete;
+  DynamicThreadGroup(DynamicThreadGroup&&) = delete;
+
+  template <class F, class... Args>
+  tid_t AddTask(F&& f, Args&&... args) {
+    static_assert(
+        std::is_same<return_t,
+                     typename std::result_of<F(Args...)>::type>::value,
+        "The return type of the task must be `Status`");
+    if (stopped_) {
+      throw std::runtime_error("DynamicThreadGroup is stopped");
+    }
     while (getRunningThreadNum() >= parallelism_) {
-      std::lock_guard<std::mutex> lg(mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
 
       while (!finished_threads_.empty()) {
         finished_threads_.front().join();
@@ -51,79 +138,58 @@ class ThreadGroup {
       std::this_thread::yield();
     }
 
-    auto task_wrapper = [this](tid_t tid, F_T&& _f,
-                               auto&&... _args) -> return_t {
+    auto task_wrapper = [this](tid_t tid, F&& _f, auto&&... _args) -> return_t {
       return_t v;
 
       try {
-        v = std::move(_f(std::forward<ARGS_T>(_args)...));
-      } catch (std::runtime_error& e) {
+        v = std::move(_f(std::forward<Args>(_args)...));
+      } catch (std::exception& e) {
         v = Status(StatusCode::kUnknownError, e.what());
       }
 
-      std::lock_guard<std::mutex> lg(mutex_);
-
-      finished_threads_.push(std::move(threads_.at(tid)));
-      threads_.erase(tid);
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        finished_threads_.push(std::move(threads_.at(tid)));
+        threads_.erase(tid);
+      }
       return v;
     };
 
+    tid_t current_task_id = tid_.fetch_add(1);
     auto task = std::make_shared<std::packaged_task<return_t()>>(
-        std::bind(std::move(task_wrapper), tid_, std::forward<F_T>(f),
-                  std::forward<ARGS_T>(args)...));
+        std::bind(std::move(task_wrapper), current_task_id, std::forward<F>(f),
+                  std::forward<Args>(args)...));
 
-    std::lock_guard<std::mutex> lg(mutex_);
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (stopped_.load()) {
+        throw std::runtime_error("ThreadGroup is stopped");
+      }
 
-    threads_.emplace(tid_, std::thread([task]() { (*task)(); }));
-    tasks_[tid_] = task->get_future();
-    return tid_++;
-  }
-
-  ~ThreadGroup() {
-    stopped_ = true;
-    while (getRunningThreadNum() > 0) {
-      std::this_thread::yield();
+      threads_.emplace(current_task_id, std::thread([task]() { (*task)(); }));
+      tasks_[current_task_id] = task->get_future();
     }
-
-    std::lock_guard<std::mutex> lg(mutex_);
-
-    while (!finished_threads_.empty()) {
-      finished_threads_.front().join();
-      finished_threads_.pop();
-    }
+    return current_task_id;
   }
 
-  return_t TaskResult(tid_t tid) {
-    auto fu_it = tasks_.find(tid);
-    return fu_it->second.get();
-  }
+  ~DynamicThreadGroup();
 
-  std::vector<return_t> TakeResults() {
-    std::vector<return_t> results;
-    auto it = tasks_.begin();
+  return_t TaskResult(tid_t tid);
 
-    while (it != tasks_.end()) {
-      auto& fu = it->second;
-
-      results.push_back(fu.get());
-      it = tasks_.erase(it);
-    }
-    return results;
-  }
+  std::vector<return_t> TakeResults();
 
  private:
-  size_t getRunningThreadNum() {
-    std::unique_lock<std::mutex> lk(mutex_);
-    return threads_.size();
-  }
+  size_t getRunningThreadNum();
 
   tid_t parallelism_;
-  tid_t tid_;
-  bool stopped_;
+  std::atomic<tid_t> tid_;
+  std::atomic_bool stopped_;
   std::unordered_map<tid_t, std::thread> threads_;
   std::unordered_map<tid_t, std::future<return_t>> tasks_;
   std::queue<std::thread> finished_threads_;
   std::mutex mutex_;
 };
+
 }  // namespace vineyard
+
 #endif  // MODULES_GRAPH_UTILS_THREAD_GROUP_H_

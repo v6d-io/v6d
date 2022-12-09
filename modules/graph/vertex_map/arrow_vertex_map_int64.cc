@@ -17,6 +17,12 @@ limitations under the License.
 
 namespace vineyard {
 
+template class ArrowVertexMap<int64_t, uint32_t>;
+
+template class ArrowVertexMapBuilder<int64_t, uint32_t>;
+
+template class BasicArrowVertexMapBuilder<int64_t, uint32_t>;
+
 template class ArrowVertexMap<int64_t, uint64_t>;
 
 template class ArrowVertexMapBuilder<int64_t, uint64_t>;

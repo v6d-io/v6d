@@ -33,4 +33,20 @@ template class BasicArrowFragmentBuilder<
     int64_t, uint64_t,
     ArrowLocalVertexMap<typename InternalType<int64_t>::type, uint64_t>>;
 
+template class ArrowFragment<
+    int64_t, uint32_t,
+    ArrowVertexMap<typename InternalType<int64_t>::type, uint32_t>>;
+
+template class ArrowFragment<
+    int64_t, uint32_t,
+    ArrowLocalVertexMap<typename InternalType<int64_t>::type, uint32_t>>;
+
+template class BasicArrowFragmentBuilder<
+    int64_t, uint32_t,
+    ArrowVertexMap<typename InternalType<int64_t>::type, uint32_t>>;
+
+template class BasicArrowFragmentBuilder<
+    int64_t, uint32_t,
+    ArrowLocalVertexMap<typename InternalType<int64_t>::type, uint32_t>>;
+
 }  // namespace vineyard

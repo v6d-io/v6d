@@ -98,14 +98,14 @@ class [[vineyard]] ArrowFragment
   using ovg2l_map_t =
       ska::flat_hash_map<vid_t, vid_t, typename Hashmap<vid_t, vid_t>::KeyHash>;
 
-  using vid_array_t = typename vineyard::ConvertToArrowType<vid_t>::ArrayType;
-  using vid_vineyard_array_t =
-      typename vineyard::ConvertToArrowType<vid_t>::VineyardArrayType;
-  using eid_array_t = typename vineyard::ConvertToArrowType<eid_t>::ArrayType;
-  using eid_vineyard_array_t =
-      typename vineyard::ConvertToArrowType<vid_t>::VineyardArrayType;
+  using vid_array_t = ArrowArrayType<vid_t>;
+  using vid_vineyard_array_t = ArrowVineyardArrayType<vid_t>;
+  using vid_vineyard_builder_t = ArrowVineyardBuilderType<vid_t>;
+  using eid_array_t = ArrowArrayType<eid_t>;
+  using eid_vineyard_array_t = ArrowVineyardArrayType<eid_t>;
+  using eid_vineyard_builder_t = ArrowVineyardBuilderType<eid_t>;
 
-  using vid_builder_t = typename ConvertToArrowType<vid_t>::BuilderType;
+  using vid_builder_t = ArrowBuilderType<vid_t>;
 
   template <typename DATA_T>
   using vertex_array_t = grape::VertexArray<vertices_t, DATA_T>;
@@ -202,6 +202,7 @@ class [[vineyard]] ArrowFragment
     if (edge_tables_[label]->num_rows() == 0) {
       return property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t>();
     } else {
+      // the finalized etables are guaranteed to have been concatenated
       return property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t>(
           edge_tables_[label]->column(prop)->chunk(0));
     }
@@ -214,6 +215,7 @@ class [[vineyard]] ArrowFragment
       return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
           InnerVertices(label));
     } else {
+      // the finalized vtables are guaranteed to have been concatenated
       return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
           InnerVertices(label), vertex_tables_[label]->column(prop)->chunk(0));
     }
@@ -673,7 +675,8 @@ class [[vineyard]] ArrowFragment
       std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset);
 
   void directedCSR2Undirected(
-      std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>> &
+      vineyard::Client & client,
+      std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>> &
           oe_lists,
       std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> &
           oe_offsets_lists,

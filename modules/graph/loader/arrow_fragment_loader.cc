@@ -50,17 +50,17 @@ static Status ReadRecordBatchesFromVineyardStreamImpl(
   size_t end_to_read =
       std::min(local_streams.size(), (part_id + 1) * split_size);
 
-  DLOG(INFO) << "reading recordbatches from vineyard: total chunks = "
-             << local_streams.size() << ", part id = " << part_id
-             << ", part num = " << part_num
-             << ", start to read = " << start_to_read
-             << ", end to read = " << end_to_read
-             << ", split size = " << split_size;
+  VLOG(10) << "reading recordbatches from vineyard: total chunks = "
+           << local_streams.size() << ", part id = " << part_id
+           << ", part num = " << part_num
+           << ", start to read = " << start_to_read
+           << ", end to read = " << end_to_read
+           << ", split size = " << split_size;
 
   std::mutex mutex_for_results;
 
   auto reader = [&client, &local_streams, &mutex_for_results,
-                 &batches](size_t idx) {
+                 &batches](size_t idx) -> Status {
     // use a local client, since reading from stream may block the client.
     Client local_client;
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
@@ -86,13 +86,11 @@ static Status ReadRecordBatchesFromVineyardStreamImpl(
   for (auto const& status : readers_status) {
     RETURN_ON_ERROR(status);
   }
-#if !defined(NDEBUG)
   size_t total_rows = 0;
   for (auto const& batch : batches) {
     total_rows += batch->num_rows();
   }
-  LOG(INFO) << "read record batch from vineyard: total rows = " << total_rows;
-#endif
+  VLOG(10) << "read record batch from vineyard: total rows = " << total_rows;
   return Status::OK();
 }
 
@@ -134,13 +132,11 @@ Status ReadRecordBatchesFromVineyardDataFrame(
   for (int idx = start_to_read; idx != end_to_read; ++idx) {
     batches.emplace_back(local_chunks[idx]->AsBatch(true));
   }
-#if !defined(NDEBUG)
   size_t total_rows = 0;
   for (auto const& batch : batches) {
     total_rows += batch->num_rows();
   }
-  LOG(INFO) << "read record batch from vineyard: total rows = " << total_rows;
-#endif
+  VLOG(10) << "read record batch from vineyard: total rows = " << total_rows;
   return Status::OK();
 }
 
@@ -148,8 +144,8 @@ Status ReadRecordBatchesFromVineyard(
     Client& client, const ObjectID object_id,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
     int part_num) {
-  DLOG(INFO) << "loading table from vineyard: " << ObjectIDToString(object_id)
-             << ", part id = " << part_id << ", part num = " << part_num;
+  VLOG(10) << "loading table from vineyard: " << ObjectIDToString(object_id)
+           << ", part id = " << part_id << ", part num = " << part_num;
   auto source = client.GetObject(object_id);
   RETURN_ON_ASSERT(source != nullptr,
                    "Object not exists: " + ObjectIDToString(object_id));
@@ -176,17 +172,17 @@ static Status ReadTableFromVineyardStreamImpl(
   int start_to_read = part_id * split_size;
   int end_to_read = std::min(local_streams.size(), (part_id + 1) * split_size);
 
-  DLOG(INFO) << "reading table from vineyard: total chunks = "
-             << local_streams.size() << ", part id = " << part_id
-             << ", part num = " << part_num
-             << ", start to read = " << start_to_read
-             << ", end to read = " << end_to_read
-             << ", split size = " << split_size;
+  VLOG(10) << "reading table from vineyard: total chunks = "
+           << local_streams.size() << ", part id = " << part_id
+           << ", part num = " << part_num
+           << ", start to read = " << start_to_read
+           << ", end to read = " << end_to_read
+           << ", split size = " << split_size;
 
   std::mutex mutex_for_results;
   std::vector<std::shared_ptr<arrow::Table>> tables;
   auto reader = [&client, &local_streams, &mutex_for_results,
-                 &tables](size_t idx) {
+                 &tables](size_t idx) -> Status {
     // use a local client, since reading from stream may block the client.
     Client local_client;
     RETURN_ON_ERROR(local_client.Connect(client.IPCSocket()));
@@ -217,15 +213,13 @@ static Status ReadTableFromVineyardStreamImpl(
   if (tables.empty()) {
     table = nullptr;
   } else {
-    table = ConcatenateTables(tables);
+    RETURN_ON_ERROR(ConcatenateTables(tables, table));
   }
-#if !defined(NDEBUG)
   if (table != nullptr) {
-    LOG(INFO) << "read table from vineyard: total rows = " << table->num_rows();
+    VLOG(10) << "read table from vineyard: total rows = " << table->num_rows();
   } else {
-    LOG(INFO) << "read table from vineyard: total rows = " << 0;
+    VLOG(10) << "read table from vineyard: total rows = " << 0;
   }
-#endif
   return Status::OK();
 }
 
@@ -277,20 +271,16 @@ Status ReadTableFromVineyardDataFrame(Client& client,
   }
   if (batches.empty()) {
     table = nullptr;
-#if !defined(NDEBUG)
-    LOG(INFO) << "read table from vineyard: total rows = " << 0;
-#endif
+    VLOG(10) << "read table from vineyard: total rows = " << 0;
     return Status::OK();
   } else {
     auto status = RecordBatchesToTable(batches, &table);
-#if !defined(NDEBUG)
     if (status.ok()) {
-      LOG(INFO) << "read table from vineyard: total rows = "
-                << table->num_rows();
+      VLOG(10) << "read table from vineyard: total rows = "
+               << table->num_rows();
     } else {
-      LOG(INFO) << "read table from vineyard: total rows = " << 0;
+      VLOG(10) << "read table from vineyard: total rows = " << 0;
     }
-#endif
     return status;
   }
 }
@@ -301,8 +291,8 @@ Status ReadTableFromVineyardDataFrame(Client& client,
 Status ReadTableFromVineyard(Client& client, const ObjectID object_id,
                              std::shared_ptr<arrow::Table>& table, int part_id,
                              int part_num) {
-  DLOG(INFO) << "loading table from vineyard: " << ObjectIDToString(object_id)
-             << ", part id = " << part_id << ", part num = " << part_num;
+  VLOG(10) << "loading table from vineyard: " << ObjectIDToString(object_id)
+           << ", part id = " << part_id << ", part num = " << part_num;
   auto source = client.GetObject(object_id);
   RETURN_ON_ASSERT(source != nullptr,
                    "Object not exists: " + ObjectIDToString(object_id));
@@ -343,7 +333,8 @@ GatherETables(Client& client,
   batch_group_t grouped_batches;
   std::mutex mutex_for_results;
   auto reader = [&client, &mutex_for_results, &grouped_batches, part_id,
-                 part_num](size_t const index, ObjectID const estream) {
+                 part_num](size_t const index,
+                           ObjectID const estream) -> Status {
     std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
     auto status = ReadRecordBatchesFromVineyard(client, estream, batches,
                                                 part_id, part_num);
@@ -409,7 +400,8 @@ boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> GatherVTables(
   batch_group_t grouped_batches;
   std::mutex mutex_for_results;
   auto reader = [&client, &mutex_for_results, &grouped_batches, part_id,
-                 part_num](size_t const index, ObjectID const vstream) {
+                 part_num](size_t const index,
+                           ObjectID const vstream) -> Status {
     std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
     auto status = ReadRecordBatchesFromVineyard(client, vstream, batches,
                                                 part_id, part_num);
@@ -454,6 +446,45 @@ boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> GatherVTables(
     tables.emplace_back(table);
   }
   return tables;
+}
+
+Status ReadTableFromPandas(const std::string& data,
+                           std::shared_ptr<arrow::Table>& table) {
+  if (!data.empty()) {
+    std::shared_ptr<arrow::Buffer> buffer = arrow::Buffer::FromString(data);
+    RETURN_ON_ERROR(vineyard::DeserializeTable(buffer, &table));
+  }
+  return Status::OK();
+}
+
+Status ReadTableFromLocation(const std::string& location,
+                             std::shared_ptr<arrow::Table>& table, int index,
+                             int total_parts) {
+  std::string expanded = vineyard::ExpandEnvironmentVariables(location);
+  auto io_adaptor = vineyard::IOFactory::CreateIOAdaptor(expanded);
+  VINEYARD_ASSERT(io_adaptor != nullptr,
+                  "Cannot find a supported adaptor for " + location);
+  RETURN_ON_ERROR(io_adaptor->SetPartialRead(index, total_parts));
+  RETURN_ON_ERROR(io_adaptor->Open());
+  RETURN_ON_ERROR(io_adaptor->ReadTable(&table));
+
+  if (table != nullptr) {  // the file may be too small
+    auto adaptor_meta = io_adaptor->GetMeta();
+    auto meta = std::make_shared<arrow::KeyValueMetadata>();
+    for (auto const& item : io_adaptor->GetMeta()) {
+      VINEYARD_DISCARD(meta->Set(item.first, item.second));
+    }
+    auto table_meta = table->schema()->metadata();
+    if (table_meta != nullptr) {
+      for (auto const& item : table_meta->sorted_pairs()) {
+        VINEYARD_DISCARD(meta->Set(item.first, item.second));
+      }
+    }
+    table = table->ReplaceSchemaMetadata(meta);
+  }
+
+  RETURN_ON_ERROR(io_adaptor->Close());
+  return Status::OK();
 }
 
 }  // namespace vineyard

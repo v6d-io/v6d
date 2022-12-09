@@ -25,16 +25,11 @@ limitations under the License.
 #include "grape/utils/vertex_array.h"
 
 #include "basic/ds/arrow.h"
+#include "common/util/arrow.h"
 
 namespace vineyard {
 
 using fid_t = grape::fid_t;
-
-#if ARROW_VERSION_MAJOR >= 10
-using arrow_string_view = std::string_view;
-#else
-using arrow_string_view = arrow::util::string_view;
-#endif
 
 template <typename T>
 struct InternalType {
@@ -167,10 +162,8 @@ class EdgeDataColumn {
   explicit EdgeDataColumn(std::shared_ptr<arrow::Array> array) {
     if (array->type()->Equals(
             vineyard::ConvertToArrowType<DATA_T>::TypeValue())) {
-      data_ =
-          std::dynamic_pointer_cast<
-              typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array)
-              ->raw_values();
+      data_ = std::dynamic_pointer_cast<ArrowArrayType<DATA_T>>(array)
+                  ->raw_values();
     } else {
       data_ = NULL;
     }
@@ -222,11 +215,9 @@ class VertexDataColumn {
       : range_(range) {
     if (array->type()->Equals(
             vineyard::ConvertToArrowType<DATA_T>::TypeValue())) {
-      data_ =
-          std::dynamic_pointer_cast<
-              typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array)
-              ->raw_values() -
-          static_cast<ptrdiff_t>(range.begin().GetValue());
+      data_ = std::dynamic_pointer_cast<ArrowArrayType<DATA_T>>(array)
+                  ->raw_values() -
+              static_cast<ptrdiff_t>(range.begin().GetValue());
     } else {
       data_ = NULL;
     }
@@ -439,8 +430,8 @@ struct OffsetNbr {
 
   template <typename T>
   T get_data(prop_id_t prop_id) const {
-    return std::dynamic_pointer_cast<
-               typename vineyard::ConvertToArrowType<T>::ArrayType>(
+    // the finalized vtables are guaranteed to have been concatenate
+    return std::dynamic_pointer_cast<ArrowArrayType<T>>(
                edata_table_->column(prop_id)->chunk(0))
         ->Value(nbr_->eid);
   }
@@ -636,19 +627,16 @@ class EmptyArray {
 
 template <typename DATA_T>
 typename std::enable_if<std::is_same<DATA_T, grape::EmptyType>::value,
-                        std::shared_ptr<typename vineyard::ConvertToArrowType<
-                            DATA_T>::ArrayType>>::type
+                        std::shared_ptr<ArrowArrayType<DATA_T>>>::type
 assign_array(std::shared_ptr<arrow::Array>, int64_t length) {
   return std::make_shared<EmptyArray>(length);
 }
 
 template <typename DATA_T>
 typename std::enable_if<!std::is_same<DATA_T, grape::EmptyType>::value,
-                        std::shared_ptr<typename vineyard::ConvertToArrowType<
-                            DATA_T>::ArrayType>>::type
+                        std::shared_ptr<ArrowArrayType<DATA_T>>>::type
 assign_array(std::shared_ptr<arrow::Array> array, int64_t) {
-  return std::dynamic_pointer_cast<
-      typename vineyard::ConvertToArrowType<DATA_T>::ArrayType>(array);
+  return std::dynamic_pointer_cast<ArrowArrayType<DATA_T>>(array);
 }
 
 template <>

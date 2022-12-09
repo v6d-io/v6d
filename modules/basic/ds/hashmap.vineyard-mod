@@ -22,6 +22,7 @@ limitations under the License.
 #include <string>
 #include <utility>
 
+#include "cityhash/cityhash.hpp"
 #include "flat_hash_map/flat_hash_map.hpp"
 #include "wyhash/wyhash.hpp"
 
@@ -74,6 +75,16 @@ struct prime_number_hash_wy : wy::hash<T> {
 template <typename U>
 struct typename_t<prime_number_hash_wy<U>> {
   inline static const std::string name() { return type_name<wy::hash<U>>(); }
+};
+
+template <typename T>
+struct prime_number_hash_city : city::hash<T> {
+  typedef ska::prime_number_hash_policy hash_policy;
+};
+
+template <typename U>
+struct typename_t<prime_number_hash_city<U>> {
+  inline static const std::string name() { return type_name<city::hash<U>>(); }
 };
 
 template <typename K, typename V, typename H, typename E>

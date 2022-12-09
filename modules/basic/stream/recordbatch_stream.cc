@@ -98,7 +98,7 @@ Status RecordBatchStream::ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
                            type_name<RecordBatch>() + "'");
   }
   if (batch != nullptr && copy) {
-    batch = CopyRecordBatch(batch);
+    RETURN_ON_ERROR(detail::Copy(batch, batch, false));
   }
   return Status::OK();
 }

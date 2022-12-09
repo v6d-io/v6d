@@ -285,7 +285,17 @@ void bind_core(py::module& mod) {
            [](ObjectMeta* self, std::string const& key,
               ObjectIDWrapper const member) { self->AddMember(key, member); })
       .def("reset", [](ObjectMeta& meta) { meta.Reset(); })
-      .def_property_readonly("memory_usage", &ObjectMeta::MemoryUsage)
+      .def_property_readonly(
+          "memory_usage",
+          [](ObjectMeta& meta) -> size_t { return meta.MemoryUsage(); })
+      .def(
+          "memory_usage_details",
+          [](ObjectMeta& meta, const bool pretty) -> py::object {
+            json usages;
+            meta.MemoryUsage(usages, pretty);
+            return detail::from_json(usages);
+          },
+          py::arg("pretty") = true)
       .def("reset_key",
            [](ObjectMeta& meta, std::string const& key) { meta.ResetKey(key); })
       .def("reset_signature", [](ObjectMeta& meta) { meta.ResetSignature(); })

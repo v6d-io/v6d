@@ -324,7 +324,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
   ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   builder.set_directed_(!directed_);
 
-  std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
+  std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
       oe_lists(vertex_label_num_);
   std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> oe_offsets_lists(
       vertex_label_num_);
@@ -336,15 +336,12 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
 
   if (directed_) {
     bool is_multigraph = is_multigraph_;
-    directedCSR2Undirected(oe_lists, oe_offsets_lists, concurrency,
+    directedCSR2Undirected(client, oe_lists, oe_offsets_lists, concurrency,
                            is_multigraph);
 
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       for (label_id_t j = 0; j < edge_label_num_; ++j) {
-        vineyard::FixedSizeBinaryArrayBuilder oe_builder(client,
-                                                         oe_lists[i][j]);
-        builder.set_oe_lists_(i, j, oe_builder.Seal(client));
-
+        builder.set_oe_lists_(i, j, oe_lists[i][j]);
         vineyard::NumericArrayBuilder<int64_t> oeo_builder(
             client, oe_offsets_lists[i][j]);
         builder.set_oe_offsets_lists_(i, j, oeo_builder.Seal(client));
@@ -473,6 +470,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
       continue;
     }
     for (prop_id_t j = 0; j < prop_num; ++j) {
+      // the finalized etables are guaranteed to have been concatenate
       edge_tables_columns_[i][j] =
           get_arrow_array_data(edge_tables_[i]->column(j)->chunk(0));
     }
@@ -488,6 +486,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
       continue;
     }
     for (prop_id_t j = 0; j < prop_num; ++j) {
+      // the finalized vtables are guaranteed to have been concatenate
       vertex_tables_columns_[i][j] =
           get_arrow_array_data(vertex_table->column(j)->chunk(0));
     }
@@ -606,7 +605,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initDestFidList(
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::directedCSR2Undirected(
-    std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>&
+    vineyard::Client& client,
+    std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>&
         oe_lists,
     std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>&
         oe_offsets_lists,
@@ -619,34 +619,37 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::directedCSR2Undirected(
       const int64_t* oe_offset = oe_offsets_ptr_lists_.at(v_label).at(e_label);
 
       // Merge edges from two array into one
-      vineyard::PodArrayBuilder<nbr_unit_t> edge_builder;
+      auto edge_builder =
+          std::make_shared<vineyard::PodArrayBuilder<nbr_unit_t>>(
+              client,
+              ie_offset[tvnums_[v_label]] + oe_offset[tvnums_[v_label]]);
+      nbr_unit_t* data = edge_builder->MutablePointer(0);
       arrow::Int64Builder offset_builder;
       CHECK_ARROW_ERROR(offset_builder.Append(0));
+      size_t edge_offset = 0;
       for (size_t offset = 0; offset < static_cast<size_t>(tvnums_[v_label]);
            ++offset) {
         for (size_t k = ie_offset[offset];
              k < static_cast<size_t>(ie_offset[offset + 1]); ++k) {
-          CHECK_ARROW_ERROR(
-              edge_builder.Append(reinterpret_cast<const uint8_t*>(ie + k)));
+          data[edge_offset++] = ie[k];
         }
         for (int k = oe_offset[offset]; k < oe_offset[offset + 1]; ++k) {
-          CHECK_ARROW_ERROR(
-              edge_builder.Append(reinterpret_cast<const uint8_t*>(oe + k)));
+          data[edge_offset++] = oe[k];
         }
-        CHECK_ARROW_ERROR(offset_builder.Append(edge_builder.length()));
+        CHECK_ARROW_ERROR(offset_builder.Append(edge_offset));
       }
       CHECK_ARROW_ERROR(
           offset_builder.Finish(&oe_offsets_lists[v_label][e_label]));
 
-      sort_edges_with_respect_to_vertex(edge_builder,
+      sort_edges_with_respect_to_vertex(*edge_builder,
                                         oe_offsets_lists[v_label][e_label],
                                         tvnums_[v_label], concurrency);
       if (!is_multigraph) {
-        check_is_multigraph(edge_builder, oe_offsets_lists[v_label][e_label],
+        check_is_multigraph(*edge_builder, oe_offsets_lists[v_label][e_label],
                             tvnums_[v_label], concurrency, is_multigraph);
       }
 
-      CHECK_ARROW_ERROR(edge_builder.Finish(&oe_lists[v_label][e_label]));
+      oe_lists[v_label][e_label] = edge_builder;
     }
   }
 }

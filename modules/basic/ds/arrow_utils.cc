@@ -30,21 +30,6 @@ limitations under the License.
 
 namespace vineyard {
 
-std::shared_ptr<arrow::Table> ConcatenateTables(
-    std::vector<std::shared_ptr<arrow::Table>>& tables) {
-  if (tables.size() == 1) {
-    return tables[0];
-  }
-  auto col_names = tables[0]->ColumnNames();
-  for (size_t i = 1; i < tables.size(); ++i) {
-    CHECK_ARROW_ERROR_AND_ASSIGN(tables[i],
-                                 tables[i]->RenameColumns(col_names));
-  }
-  std::shared_ptr<arrow::Table> table;
-  CHECK_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(tables));
-  return table;
-}
-
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   switch (type) {
   case AnyType::Undefined:
@@ -72,152 +57,109 @@ std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   }
 }
 
-Status GetRecordBatchStreamSize(const arrow::RecordBatch& batch, size_t* size) {
-  // emulates the behavior of Write without actually writing
-  arrow::io::MockOutputStream dst;
+namespace detail {
 
-  std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
-#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-      writer, arrow::ipc::NewStreamWriter(&dst, batch.schema()));
-#else
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-      writer, arrow::ipc::MakeStreamWriter(&dst, batch.schema()));
-#endif
-  RETURN_ON_ARROW_ERROR(writer->WriteRecordBatch(batch));
-  RETURN_ON_ARROW_ERROR(writer->Close());
-  *size = dst.GetExtentBytesWritten();
-  return Status::OK();
-}
-
-Status SerializeRecordBatch(std::shared_ptr<arrow::RecordBatch>& batch,
-                            std::shared_ptr<arrow::Buffer>* buffer) {
-  std::shared_ptr<arrow::io::BufferOutputStream> out_stream;
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_stream,
-                                   arrow::io::BufferOutputStream::Create(1024));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
-  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
-      {batch}, arrow::ipc::IpcOptions::Defaults(), out_stream.get()));
-#else
-  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
-      {batch}, arrow::ipc::IpcWriteOptions::Defaults(), out_stream.get()));
-#endif
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*buffer, out_stream->Finish());
-  return Status::OK();
-}
-
-Status DeserializeRecordBatch(std::shared_ptr<arrow::Buffer>& buffer,
-                              std::shared_ptr<arrow::RecordBatch>* batch) {
-  if (buffer == nullptr || buffer->size() == 0) {
-    return Status::Invalid(
-        "Unable to deserialize to recordbatch: buffer is empty");
+Status Copy(std::shared_ptr<arrow::ArrayData> const& array,
+            std::shared_ptr<arrow::ArrayData>& out, bool shallow,
+            arrow::MemoryPool* pool) {
+  if (array == nullptr) {
+    out = array;
+    return Status::OK();
   }
-  arrow::io::BufferReader reader(buffer);
-  std::shared_ptr<arrow::RecordBatchReader> batch_reader;
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-      batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
-  RETURN_ON_ARROW_ERROR(batch_reader->ReadNext(batch));
+  std::vector<std::shared_ptr<arrow::Buffer>> buffers;
+  for (auto const& buffer : array->buffers) {
+    if (buffer == nullptr || buffer->size() == 0) {
+      buffers.push_back(buffer);
+    } else {
+      if (shallow) {
+        buffers.push_back(buffer);
+      } else {
+        std::shared_ptr<arrow::Buffer> buf;
+        RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+            buf, buffer->CopySlice(0, buffer->size(), pool));
+        buffers.push_back(buf);
+      }
+    }
+  }
+  std::vector<std::shared_ptr<arrow::ArrayData>> child_data;
+  for (auto const& child : array->child_data) {
+    std::shared_ptr<arrow::ArrayData> data;
+    RETURN_ON_ERROR(Copy(child, data, shallow, pool));
+    child_data.push_back(data);
+  }
+  std::shared_ptr<arrow::ArrayData> directory;
+  RETURN_ON_ERROR(Copy(array->dictionary, directory, shallow, pool));
+  out = arrow::ArrayData::Make(array->type, array->length, buffers, child_data,
+                               directory, array->null_count, array->offset);
   return Status::OK();
 }
 
-Status SerializeRecordBatchesToAllocatedBuffer(
-    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
-    std::shared_ptr<arrow::Buffer>* buffer) {
-  arrow::io::FixedSizeBufferWriter stream(*buffer);
-#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
-  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
-      batches, arrow::ipc::IpcOptions::Defaults(), &stream));
-#else
-  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
-      batches, arrow::ipc::IpcWriteOptions::Defaults(), &stream));
-#endif
+Status Copy(std::shared_ptr<arrow::Array> const& array,
+            std::shared_ptr<arrow::Array>& out, bool shallow,
+            arrow::MemoryPool* pool) {
+  if (array == nullptr) {
+    out = array;
+    return Status::OK();
+  }
+  std::shared_ptr<arrow::ArrayData> data;
+  RETURN_ON_ERROR(Copy(array->data(), data, shallow, pool));
+  out = arrow::MakeArray(data);
   return Status::OK();
 }
 
-Status SerializeRecordBatches(
-    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
-    std::shared_ptr<arrow::Buffer>* buffer) {
-  std::shared_ptr<arrow::io::BufferOutputStream> out_stream;
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_stream,
-                                   arrow::io::BufferOutputStream::Create(1024));
-#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
-  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
-      batches, arrow::ipc::IpcOptions::Defaults(), out_stream.get()));
-#else
-  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
-      batches, arrow::ipc::IpcWriteOptions::Defaults(), out_stream.get()));
-#endif
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*buffer, out_stream->Finish());
+Status Copy(std::shared_ptr<arrow::ChunkedArray> const& array,
+            std::shared_ptr<arrow::ChunkedArray>& out, bool shallow,
+            arrow::MemoryPool* pool) {
+  if (array == nullptr) {
+    out = array;
+    return Status::OK();
+  }
+  std::vector<std::shared_ptr<arrow::Array>> chunks;
+  for (auto const& chunk : array->chunks()) {
+    std::shared_ptr<arrow::Array> data;
+    RETURN_ON_ERROR(Copy(chunk, data, shallow, pool));
+    chunks.push_back(data);
+  }
+  out = std::make_shared<arrow::ChunkedArray>(chunks, array->type());
   return Status::OK();
 }
 
-Status DeserializeRecordBatches(
-    const std::shared_ptr<arrow::Buffer>& buffer,
-    std::vector<std::shared_ptr<arrow::RecordBatch>>* batches) {
-  arrow::io::BufferReader reader(buffer);
-  std::shared_ptr<arrow::RecordBatchReader> batch_reader;
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-      batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
-  RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(batches));
+Status Copy(std::shared_ptr<arrow::RecordBatch> const& batch,
+            std::shared_ptr<arrow::RecordBatch>& out, bool shallow,
+            arrow::MemoryPool* pool) {
+  if (batch == nullptr) {
+    out = batch;
+    return Status::OK();
+  }
+  arrow::ArrayDataVector columns_data;
+  for (auto const& column : batch->column_data()) {
+    std::shared_ptr<arrow::ArrayData> data;
+    RETURN_ON_ERROR(Copy(column, data, shallow, pool));
+    columns_data.push_back(data);
+  }
+  out = arrow::RecordBatch::Make(batch->schema(), batch->num_rows(),
+                                 columns_data);
   return Status::OK();
 }
 
-Status RecordBatchesToTable(
-    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
-    std::shared_ptr<arrow::Table>* table) {
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table,
-                                   arrow::Table::FromRecordBatches(batches));
+Status Copy(std::shared_ptr<arrow::Table> const& table,
+            std::shared_ptr<arrow::Table>& out, bool shallow,
+            arrow::MemoryPool* pool) {
+  if (table == nullptr) {
+    out = table;
+    return Status::OK();
+  }
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
+  for (auto const& column : table->columns()) {
+    std::shared_ptr<arrow::ChunkedArray> data;
+    RETURN_ON_ERROR(Copy(column, data, shallow, pool));
+    columns.push_back(data);
+  }
+  out = arrow::Table::Make(table->schema(), columns);
   return Status::OK();
 }
 
-Status CombineRecordBatches(
-    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
-    std::shared_ptr<arrow::RecordBatch>* batch) {
-  std::shared_ptr<arrow::Table> table, combined_table;
-  RETURN_ON_ERROR(RecordBatchesToTable(batches, &table));
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-      combined_table, table->CombineChunks(arrow::default_memory_pool()));
-  arrow::TableBatchReader tbreader(*combined_table);
-  RETURN_ON_ARROW_ERROR(tbreader.ReadNext(batch));
-  std::shared_ptr<arrow::RecordBatch> test_batch;
-  RETURN_ON_ARROW_ERROR(tbreader.ReadNext(&test_batch));
-  RETURN_ON_ASSERT(test_batch == nullptr);
-  return Status::OK();
-}
-
-Status TableToRecordBatches(
-    std::shared_ptr<arrow::Table> table,
-    std::vector<std::shared_ptr<arrow::RecordBatch>>* batches) {
-  arrow::TableBatchReader tbr(*table);
-  RETURN_ON_ARROW_ERROR(tbr.ReadAll(batches));
-  return Status::OK();
-}
-
-Status SerializeTableToAllocatedBuffer(std::shared_ptr<arrow::Table> table,
-                                       std::shared_ptr<arrow::Buffer>* buffer) {
-  std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-  RETURN_ON_ERROR(TableToRecordBatches(table, &batches));
-  RETURN_ON_ERROR(SerializeRecordBatchesToAllocatedBuffer(batches, buffer));
-  return Status::OK();
-}
-
-Status SerializeTable(std::shared_ptr<arrow::Table> table,
-                      std::shared_ptr<arrow::Buffer>* buffer) {
-  std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-  RETURN_ON_ERROR(TableToRecordBatches(table, &batches));
-  RETURN_ON_ERROR(SerializeRecordBatches(batches, buffer));
-  return Status::OK();
-}
-
-Status DeserializeTable(std::shared_ptr<arrow::Buffer> buffer,
-                        std::shared_ptr<arrow::Table>* table) {
-  arrow::io::BufferReader reader(buffer);
-  std::shared_ptr<arrow::RecordBatchReader> batch_reader;
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-      batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
-  RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(table));
-  return Status::OK();
-}
+}  // namespace detail
 
 Status EmptyTableBuilder::Build(const std::shared_ptr<arrow::Schema>& schema,
                                 std::shared_ptr<arrow::Table>& table) {
@@ -299,40 +241,269 @@ std::shared_ptr<arrow::Schema> EmptyTableBuilder::EmptySchema() {
 #endif
 }
 
-std::shared_ptr<arrow::ArrayData> CopyArrayData(
-    std::shared_ptr<arrow::ArrayData> const& array) {
-  if (array == nullptr) {
-    return array;
-  }
-  std::vector<std::shared_ptr<arrow::Buffer>> buffers;
-  for (auto const& buffer : array->buffers) {
-    if (buffer == nullptr || buffer->size() == 0) {
-      buffers.push_back(buffer);
-    } else {
-      std::shared_ptr<arrow::Buffer> buf;
-      CHECK_ARROW_ERROR_AND_ASSIGN(buf, buffer->CopySlice(0, buffer->size()));
-      buffers.push_back(buf);
-    }
-  }
-  std::vector<std::shared_ptr<arrow::ArrayData>> child_data;
-  for (auto const& child : array->child_data) {
-    child_data.push_back(CopyArrayData(child));
-  }
-  return arrow::ArrayData::Make(array->type, array->length, buffers, child_data,
-                                array->null_count, array->offset);
+Status GetRecordBatchStreamSize(const arrow::RecordBatch& batch, size_t* size) {
+  // emulates the behavior of Write without actually writing
+  arrow::io::MockOutputStream dst;
+
+  std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      writer, arrow::ipc::NewStreamWriter(&dst, batch.schema()));
+#else
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      writer, arrow::ipc::MakeStreamWriter(&dst, batch.schema()));
+#endif
+  RETURN_ON_ARROW_ERROR(writer->WriteRecordBatch(batch));
+  RETURN_ON_ARROW_ERROR(writer->Close());
+  *size = dst.GetExtentBytesWritten();
+  return Status::OK();
 }
 
-std::shared_ptr<arrow::RecordBatch> CopyRecordBatch(
-    std::shared_ptr<arrow::RecordBatch> const& batch) {
-  if (batch == nullptr) {
+Status SerializeDataType(const std::shared_ptr<arrow::DataType>& type,
+                         std::shared_ptr<arrow::Buffer>* buffer) {
+  auto schema = std::make_shared<arrow::Schema>(
+      std::vector<std::shared_ptr<arrow::Field>>{
+          std::make_shared<arrow::Field>("_", type)});
+  return SerializeSchema(*schema, buffer);
+}
+
+Status DeserializeDataType(const std::shared_ptr<arrow::Buffer>& buffer,
+                           std::shared_ptr<arrow::DataType>* type) {
+  std::shared_ptr<arrow::Schema> schema;
+  RETURN_ON_ERROR(DeserializeSchema(buffer, &schema));
+  *type = schema->field(0)->type();
+  return Status::OK();
+}
+
+Status SerializeSchema(const arrow::Schema& schema,
+                       std::shared_ptr<arrow::Buffer>* buffer) {
+#if defined(ARROW_VERSION) && ARROW_VERSION < 2000000
+  arrow::ipc::DictionaryMemo out_memo;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      *buffer, arrow::ipc::SerializeSchema(schema, out_memo,
+                                           arrow::default_memory_pool()));
+#else
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      *buffer,
+      arrow::ipc::SerializeSchema(schema, arrow::default_memory_pool()));
+#endif
+  return Status::OK();
+}
+
+Status DeserializeSchema(const std::shared_ptr<arrow::Buffer>& buffer,
+                         std::shared_ptr<arrow::Schema>* schema) {
+  arrow::ipc::DictionaryMemo memo;
+  arrow::io::BufferReader reader(buffer);
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*schema,
+                                   arrow::ipc::ReadSchema(&reader, &memo));
+  return Status::OK();
+}
+
+Status SerializeRecordBatch(const std::shared_ptr<arrow::RecordBatch>& batch,
+                            std::shared_ptr<arrow::Buffer>* buffer) {
+  std::shared_ptr<arrow::io::BufferOutputStream> out_stream;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_stream,
+                                   arrow::io::BufferOutputStream::Create(1024));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      {batch}, arrow::ipc::IpcOptions::Defaults(), out_stream.get()));
+#else
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      {batch}, arrow::ipc::IpcWriteOptions::Defaults(), out_stream.get()));
+#endif
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*buffer, out_stream->Finish());
+  return Status::OK();
+}
+
+Status DeserializeRecordBatch(const std::shared_ptr<arrow::Buffer>& buffer,
+                              std::shared_ptr<arrow::RecordBatch>* batch) {
+  if (buffer == nullptr || buffer->size() == 0) {
+    return Status::Invalid(
+        "Unable to deserialize to recordbatch: buffer is empty");
+  }
+  arrow::io::BufferReader reader(buffer);
+  std::shared_ptr<arrow::RecordBatchReader> batch_reader;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
+  RETURN_ON_ARROW_ERROR(batch_reader->ReadNext(batch));
+  return Status::OK();
+}
+
+Status SerializeRecordBatchesToAllocatedBuffer(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Buffer>* buffer) {
+  arrow::io::FixedSizeBufferWriter stream(*buffer);
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      batches, arrow::ipc::IpcOptions::Defaults(), &stream));
+#else
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      batches, arrow::ipc::IpcWriteOptions::Defaults(), &stream));
+#endif
+  return Status::OK();
+}
+
+Status SerializeRecordBatches(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Buffer>* buffer) {
+  std::shared_ptr<arrow::io::BufferOutputStream> out_stream;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_stream,
+                                   arrow::io::BufferOutputStream::Create(1024));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      batches, arrow::ipc::IpcOptions::Defaults(), out_stream.get()));
+#else
+  RETURN_ON_ARROW_ERROR(arrow::ipc::WriteRecordBatchStream(
+      batches, arrow::ipc::IpcWriteOptions::Defaults(), out_stream.get()));
+#endif
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*buffer, out_stream->Finish());
+  return Status::OK();
+}
+
+Status DeserializeRecordBatches(
+    const std::shared_ptr<arrow::Buffer>& buffer,
+    std::vector<std::shared_ptr<arrow::RecordBatch>>* batches) {
+  arrow::io::BufferReader reader(buffer);
+  std::shared_ptr<arrow::RecordBatchReader> batch_reader;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
+  RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(batches));
+  return Status::OK();
+}
+
+Status RecordBatchesToTable(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table) {
+  return RecordBatchesToTable(nullptr, batches, table);
+}
+
+Status RecordBatchesToTable(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table) {
+  if (batches.size() > 0) {
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table,
+                                     arrow::Table::FromRecordBatches(batches));
+    return Status::OK();
+  } else {
+    return EmptyTableBuilder::Build(schema, *table);
+  }
+}
+
+Status CombineRecordBatches(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::RecordBatch>* batch) {
+  std::shared_ptr<arrow::Table> table, combined_table;
+  RETURN_ON_ERROR(RecordBatchesToTable(batches, &table));
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      combined_table, table->CombineChunks(arrow::default_memory_pool()));
+  arrow::TableBatchReader tbreader(*combined_table);
+  RETURN_ON_ARROW_ERROR(tbreader.ReadNext(batch));
+  std::shared_ptr<arrow::RecordBatch> test_batch;
+  RETURN_ON_ARROW_ERROR(tbreader.ReadNext(&test_batch));
+  RETURN_ON_ASSERT(test_batch == nullptr);
+  return Status::OK();
+}
+
+Status TableToRecordBatches(
+    const std::shared_ptr<arrow::Table> table,
+    std::vector<std::shared_ptr<arrow::RecordBatch>>* batches) {
+  std::shared_ptr<arrow::Table> fixed_table = table;
+  if (fixed_table->num_rows() == 0) {
+    // ensure there are chunks, even empty chunks
+    RETURN_ON_ERROR(
+        EmptyTableBuilder::Build(fixed_table->schema(), fixed_table));
+  }
+
+  std::vector<std::vector<std::shared_ptr<arrow::Array>>> chunks;
+  for (int64_t cindex = 0; cindex < fixed_table->num_columns(); ++cindex) {
+    for (int64_t rindex = 0; rindex < fixed_table->column(cindex)->num_chunks();
+         ++rindex) {
+      chunks.resize(fixed_table->column(cindex)->num_chunks());
+      chunks[rindex].push_back(fixed_table->column(cindex)->chunk(rindex));
+    }
+  }
+  batches->clear();
+  for (size_t chunk_index = 0; chunk_index < chunks.size(); ++chunk_index) {
+    std::shared_ptr<arrow::RecordBatch> batch = arrow::RecordBatch::Make(
+        fixed_table->schema(), chunks[chunk_index][0]->length(),
+        chunks[chunk_index]);
+    batches->push_back(batch);
+  }
+  return Status::OK();
+}
+
+std::shared_ptr<arrow::ChunkedArray> ConcatenateChunkedArrays(
+    const std::vector<std::shared_ptr<arrow::ChunkedArray>>& arrays) {
+  std::shared_ptr<arrow::DataType> dtype;
+  std::vector<std::shared_ptr<arrow::Array>> chunks;
+  for (auto const& array : arrays) {
+    if (array) {
+      dtype = array->type();
+      for (int64_t i = 0; i < array->num_chunks(); ++i) {
+        chunks.push_back(array->chunk(i));
+      }
+    }
+  }
+  if (chunks.empty()) {
     return nullptr;
+  } else {
+    return std::make_shared<arrow::ChunkedArray>(chunks, dtype);
   }
-  arrow::ArrayDataVector columns_data;
-  for (auto const& column : batch->column_data()) {
-    columns_data.push_back(CopyArrayData(column));
+}
+
+std::shared_ptr<arrow::ChunkedArray> ConcatenateChunkedArrays(
+    const std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+        arrays) {
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> chunked_arrays;
+  for (auto const& array : arrays) {
+    chunked_arrays.insert(chunked_arrays.begin(), array.begin(), array.end());
   }
-  return arrow::RecordBatch::Make(batch->schema(), batch->num_rows(),
-                                  columns_data);
+  return ConcatenateChunkedArrays(chunked_arrays);
+}
+
+Status SerializeTableToAllocatedBuffer(
+    const std::shared_ptr<arrow::Table> table,
+    std::shared_ptr<arrow::Buffer>* buffer) {
+  std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+  RETURN_ON_ERROR(TableToRecordBatches(table, &batches));
+  RETURN_ON_ERROR(SerializeRecordBatchesToAllocatedBuffer(batches, buffer));
+  return Status::OK();
+}
+
+Status SerializeTable(const std::shared_ptr<arrow::Table> table,
+                      std::shared_ptr<arrow::Buffer>* buffer) {
+  std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+  RETURN_ON_ERROR(TableToRecordBatches(table, &batches));
+  RETURN_ON_ERROR(SerializeRecordBatches(batches, buffer));
+  return Status::OK();
+}
+
+Status DeserializeTable(const std::shared_ptr<arrow::Buffer> buffer,
+                        std::shared_ptr<arrow::Table>* table) {
+  arrow::io::BufferReader reader(buffer);
+  std::shared_ptr<arrow::RecordBatchReader> batch_reader;
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
+  RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(table));
+  return Status::OK();
+}
+
+Status ConcatenateTables(
+    const std::vector<std::shared_ptr<arrow::Table>>& tables,
+    std::shared_ptr<arrow::Table>& table) {
+  if (tables.size() == 1) {
+    table = tables[0];
+    return Status::OK();
+  }
+  std::vector<std::shared_ptr<arrow::Table>> out_tables(tables.size());
+  auto col_names = tables[0]->ColumnNames();
+  for (size_t i = 1; i < tables.size(); ++i) {
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_tables[i],
+                                     tables[i]->RenameColumns(col_names));
+  }
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(table, arrow::ConcatenateTables(out_tables));
+  return Status::OK();
 }
 
 std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
@@ -531,8 +702,8 @@ const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::NullArray>(array).get());
   } else {
-    LOG(FATAL) << "Array type - " << array->type()->ToString()
-               << " is not supported yet...";
+    LOG(ERROR) << "Unsupported arrow array type '" << array->type()->ToString()
+               << "', type id: " << array->type()->id();
     return NULL;
   }
 }

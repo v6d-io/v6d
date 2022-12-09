@@ -228,6 +228,49 @@ size_t ObjectMeta::MemoryUsage() const {
   return total_size;
 }
 
+size_t ObjectMeta::MemoryUsage(json& usages, const bool pretty) const {
+  std::function<size_t(const json&, json&)> traverse =
+      [this, pretty, &traverse](const json& tree, json& usages) -> size_t {
+    if (!tree.is_object() || tree.empty()) {
+      return 0;
+    }
+    ObjectID member_id =
+        ObjectIDFromString(tree["id"].get_ref<std::string const&>());
+    if (IsBlob(member_id)) {
+      std::shared_ptr<arrow::Buffer> buffer;
+      if (buffer_set_->Get(member_id, buffer)) {
+        if (pretty) {
+          usages = json::string_t(prettyprint_memory_size(buffer->size()));
+          return buffer->size();
+        } else {
+          usages = json::number_integer_t(buffer->size());
+          return buffer->size();
+        }
+      } else {
+        return 0;
+      }
+    } else {
+      size_t total = 0;
+      for (auto& item : tree.items()) {
+        if (item.value().is_object()) {
+          json usage;
+          total += traverse(item.value(), usage);
+          if (!usage.is_null()) {
+            usages[item.key()] = usage;
+          }
+        }
+      }
+      if (pretty) {
+        usages["summary"] = json::string_t(prettyprint_memory_size(total));
+      } else {
+        usages["summary"] = json::number_integer_t(total);
+      }
+      return total;
+    }
+  };
+  return traverse(this->meta_, usages);
+}
+
 std::string ObjectMeta::ToString() const { return meta_.dump(4); }
 
 void ObjectMeta::PrintMeta() const { std::clog << meta_.dump(4) << std::endl; }
@@ -241,7 +284,28 @@ json& ObjectMeta::MutMetaData() { return meta_; }
 void ObjectMeta::SetMetaData(ClientBase* client, const json& meta) {
   this->client_ = client;
   this->meta_ = meta;
-  findAllBlobs(meta_);
+
+  std::function<void(const json&)> traverse = [this,
+                                               &traverse](const json& tree) {
+    if (!tree.is_object() || tree.empty()) {
+      return;
+    }
+    ObjectID member_id =
+        ObjectIDFromString(tree["id"].get_ref<std::string const&>());
+    if (IsBlob(member_id)) {
+      if (client_ == nullptr /* traverse to account blobs */ ||
+          tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
+        VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
+      }
+    } else {
+      for (auto& item : tree) {
+        if (item.is_object()) {
+          traverse(item);
+        }
+      }
+    }
+  };
+  traverse(this->meta_);
 }
 
 std::unique_ptr<ObjectMeta> ObjectMeta::Unsafe(std::string meta,
@@ -271,26 +335,6 @@ std::unique_ptr<ObjectMeta> ObjectMeta::Unsafe(json meta, size_t nobjects,
 
 const std::shared_ptr<BufferSet>& ObjectMeta::GetBufferSet() const {
   return buffer_set_;
-}
-
-void ObjectMeta::findAllBlobs(const json& tree) {
-  if (tree.empty()) {
-    return;
-  }
-  ObjectID member_id =
-      ObjectIDFromString(tree["id"].get_ref<std::string const&>());
-  if (IsBlob(member_id)) {
-    if (client_ == nullptr /* traverse to account blobs */ ||
-        tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
-      VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
-    }
-  } else {
-    for (auto& item : tree) {
-      if (item.is_object()) {
-        this->findAllBlobs(item);
-      }
-    }
-  }
 }
 
 void ObjectMeta::SetInstanceId(const InstanceID instance_id) {

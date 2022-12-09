@@ -94,18 +94,18 @@ int main(int argc, char** argv) {
   std::string ipc_socket = std::string(argv[index++]);
 
   int edge_label_num = atoi(argv[index++]);
-  std::vector<std::vector<ObjectID>> estreams;
+  std::vector<std::string> estreams;
   for (int i = 0; i < edge_label_num; ++i) {
     LOG(INFO) << "edges: " << ObjectIDToString(ObjectIDFromString(argv[index]));
-    estreams.push_back({ObjectIDFromString(argv[index++])});
+    estreams.push_back("vineyard://" + std::string(argv[index++]));
   }
 
   int vertex_label_num = atoi(argv[index++]);
-  std::vector<ObjectID> vstreams;
+  std::vector<std::string> vstreams;
   for (int i = 0; i < vertex_label_num; ++i) {
     LOG(INFO) << "vertex: "
               << ObjectIDToString(ObjectIDFromString(argv[index]));
-    vstreams.push_back(ObjectIDFromString(argv[index++]));
+    vstreams.push_back("vineyard://" + std::string(argv[index++]));
   }
 
   int directed = 1;

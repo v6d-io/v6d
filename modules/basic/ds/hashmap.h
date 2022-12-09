@@ -180,6 +180,9 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
   Status Build(Client& client) override {
     using entry_t = typename Hashmap<K, V, H, E>::Entry;
 
+    // shrink the size of hashmap
+    hashmap_.shrink_to_fit();
+
     size_t entry_size =
         hashmap_.get_num_slots_minus_one() + hashmap_.get_max_lookups() + 1;
     auto entries_builder = std::make_shared<ArrayBuilder<entry_t>>(

@@ -62,7 +62,7 @@ template <typename T>
 class [[vineyard]] NumericArray : public PrimitiveArray,
                                   public Registered<NumericArray<T>> {
  public:
-  using ArrayType = typename ConvertToArrowType<T>::ArrayType;
+  using ArrayType = ArrowArrayType<T>;
 
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<ArrayType>(
@@ -96,7 +96,7 @@ class BooleanArrayBaseBuilder;
 class [[vineyard]] BooleanArray : public PrimitiveArray,
                                   public Registered<BooleanArray> {
  public:
-  using ArrayType = typename ConvertToArrowType<bool>::ArrayType;
+  using ArrayType = ArrowArrayType<bool>;
 
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<ArrayType>(
