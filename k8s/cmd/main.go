@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-/* Pakcage main is used for simplify the operator usage. */
+/* Package main is used for simplify the operator usage. */
 package main
 
 import (
