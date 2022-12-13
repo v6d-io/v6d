@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -39,6 +38,14 @@ import (
 var (
 	scheme          = runtime.NewScheme()
 	ownerReferences []metav1.OwnerReference
+)
+
+const (
+	// AvailableConditionType is the condition type for Available.
+	AvailableConditionType = "available"
+
+	// CompleteConditionType is the condition type for Complete.
+	CompleteConditionType = "complete"
 )
 
 // add k8s apis scheme and apiextensions scheme
@@ -64,7 +71,7 @@ func main() {
 
 	client, _ := client.New(cfg, client.Options{Scheme: scheme})
 	//read file from path
-	contents, err := ioutil.ReadFile(workflow)
+	contents, err := os.ReadFile(workflow)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 	}
@@ -105,17 +112,17 @@ func parseManifests(c client.Client, manifests []byte, kubeconfig string) {
 func getWaitCondition(kind string) (string, string) {
 	switch kind {
 	case "Deployment":
-		return "available", "deployment.apps"
+		return AvailableConditionType, "deployment.apps"
 	case "StatefulSet":
-		return "available", "statefulset.apps"
+		return AvailableConditionType, "statefulset.apps"
 	case "DaemonSet":
-		return "available", "daemonset.apps"
+		return AvailableConditionType, "daemonset.apps"
 	case "ReplicaSet":
-		return "available", "replicaset.apps"
+		return AvailableConditionType, "replicaset.apps"
 	case "Job":
-		return "complete", "job.batch"
+		return CompleteConditionType, "job.batch"
 	case "CronJob":
-		return "complete", "cronjob.batch"
+		return CompleteConditionType, "cronjob.batch"
 	default:
 		return "", ""
 	}

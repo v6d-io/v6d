@@ -35,7 +35,6 @@ import (
 
 	"k8s.io/component-helpers/scheduling/corev1"
 
-	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
@@ -210,20 +209,6 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int64, error) {
 func (vs *VineyardScheduling) GetAllWorkerNodes(vineyardd string) []string {
 	name := ParseNamespacedName(vineyardd)
 	return GetVineyarddNodes(vs.Client, slog, name.Name, name.Namespace)
-}
-
-// get all required jobs name that separated by '.'
-func (vs *VineyardScheduling) getRequiredJob(pod *v1.Pod) ([]string, error) {
-	objects, exists := pod.Annotations[annotations.VineyardJobRequired]
-	if !exists {
-		return []string{}, fmt.Errorf("Failed to get the required jobs, please set none if there is no required job")
-	}
-
-	slog.Info(fmt.Sprintf("Get the required jobs: %v", objects))
-	if objects == "none" {
-		return []string{}, nil
-	}
-	return strings.Split(objects, "."), nil
 }
 
 // GetJobInfo requires (job, replica, requires, vineyardd) information of a pod.
