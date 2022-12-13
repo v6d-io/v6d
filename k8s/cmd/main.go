@@ -23,13 +23,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	clientgoScheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,107 +82,168 @@ func parseManifests(c client.Client, manifests []byte, kubeconfig string) {
 			resources[i] = resources[i][1:]
 		}
 		decode := clientgoScheme.Codecs.UniversalDeserializer().Decode
-		obj, gvk, err := decode(resources[i], nil, nil)
+		obj, _, err := decode(resources[i], nil, nil)
 		if err != nil {
 			fmt.Println("failed to decode resource", err)
 			os.Exit(1)
 		}
-		if success := SchedulingWorkload(c, gvk, obj, kubeconfig); !success {
-			fmt.Println("failed to wait resource", err)
+
+		proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			fmt.Println("failed to convert resource", err)
+			os.Exit(1)
+		}
+
+		unstructuredObj := &unstructured.Unstructured{Object: proto}
+		if success := SchedulingWorkload(c, unstructuredObj, kubeconfig); !success {
+			fmt.Println("failed to schedule resource", err)
 			os.Exit(1)
 		}
 	}
 }
 
-func scheduling(c client.Client, manifestsQueue []interface{}) {
-	// scheduling
-	vineyarddList := v1alpha1.VineyarddList{}
-	//podList := v1.PodList{}
-	if err := c.List(context.TODO(), &vineyarddList); err != nil {
-		fmt.Println("failed to list vineyardd", err)
-		os.Exit(1)
-	}
-
-	deploymentList := appsv1.DeploymentList{}
-	if err := c.List(context.TODO(), &deploymentList); err != nil {
-		fmt.Println("failed to list deployment", err)
-		os.Exit(1)
-	}
-	fmt.Println("vineyarddList: ", vineyarddList)
-	for _, q := range manifestsQueue {
-		deployment := q.(*appsv1.Deployment)
-		anno := deployment.Spec.Template.Annotations
-		if anno["scheduling.k8s.v6d.io/required"] == "none" {
-			if err := c.Create(context.TODO(), deployment); err != nil {
-				fmt.Println("failed to create deployment", err)
-				os.Exit(1)
-			}
-		}
-
-		fmt.Println("deployment: ", deployment)
-
-	}
-}
-
-// SchedulingWorkload is used to schedule the workload
-func SchedulingWorkload(c client.Client, gvk *schema.GroupVersionKind, obj interface{}, kubeconfig string) bool {
-	command := ""
-	switch gvk.Kind {
+func getWaitCondition(kind string) (string, string) {
+	switch kind {
 	case "Deployment":
-		deployment := obj.(*appsv1.Deployment)
-		annotations := deployment.Spec.Template.Annotations
-		labels := deployment.Spec.Template.Labels
-		str := Scheduling(c, annotations, labels, int(*deployment.Spec.Replicas), deployment.Namespace)
-		annotations["scheduledOrder"] = str
-		labels["scheduling.v6d.io/enabled"] = "true"
-		if err := c.Create(context.TODO(), deployment); err != nil {
-			fmt.Println("failed to create deployment", err)
-			os.Exit(1)
-		}
-		command = "kubectl wait --for=condition=available --timeout=60s deployment.apps/" + deployment.Name +
-			" -n " + deployment.Namespace + " --kubeconfig=" + kubeconfig
+		return "available", "deployment.apps"
 	case "StatefulSet":
-		statefulset := obj.(*appsv1.StatefulSet)
-		command = "kubectl wait --for=condition=available --timeout=60s statefulset.apps/" + statefulset.Name +
-			" -n " + statefulset.Namespace + " --kubeconfig=" + kubeconfig
-	case "Job":
-		job := obj.(*batchv1.Job)
-		annotations := job.Spec.Template.Annotations
-		labels := job.Spec.Template.Labels
-		str := Scheduling(c, annotations, labels, int(*job.Spec.Parallelism), job.Namespace)
-		annotations["scheduledOrder"] = str
-		labels["scheduling.v6d.io/enabled"] = "true"
-		if err := c.Create(context.TODO(), job); err != nil {
-			fmt.Println("failed to create job", err)
-			os.Exit(1)
-		}
-		command = "kubectl wait --for=condition=complete --timeout=60s job.batch/" + job.Name +
-			" -n " + job.Namespace + " --kubeconfig=" + kubeconfig
+		return "available", "statefulset.apps"
 	case "DaemonSet":
-		daemonset := obj.(*appsv1.DaemonSet)
-		command = "kubectl wait --for=condition=available --timeout=60s daemonset.apps/" + daemonset.Name +
-			" -n " + daemonset.Namespace + " --kubeconfig=" + kubeconfig
+		return "available", "daemonset.apps"
 	case "ReplicaSet":
-		replicaset := obj.(*appsv1.ReplicaSet)
-		command = "kubectl wait --for=condition=available --timeout=60s replicaset.apps/" + replicaset.Name +
-			" -n " + replicaset.Namespace + " --kubeconfig=" + kubeconfig
+		return "available", "replicaset.apps"
+	case "Job":
+		return "complete", "job.batch"
 	case "CronJob":
-		cronjob := obj.(*batchv1.CronJob)
-		command = "kubectl wait --for=condition=complete --timeout=60s cronjob.batch/" + cronjob.Name +
-			" -n " + cronjob.Namespace + " --kubeconfig=" + kubeconfig
+		return "complete", "cronjob.batch"
 	default:
-		fmt.Println("unsupported workload kind: ", gvk.Kind)
-		os.Exit(1)
-		return false
+		return "", ""
 	}
+}
 
+// wait for the workload to be ready
+func waitWorkload(c client.Client, kind, kubeconfig, condition, apiVersion, name, namespace string) error {
+	command := "kubectl wait --for=condition=" + condition + " --timeout=60s " + apiVersion +
+		"/" + name + " -n " + namespace + " --kubeconfig=" + kubeconfig
 	// run kubectl wait command
 	cmd := exec.Command("bash", "-c", command)
 
 	err := cmd.Run()
 	if err != nil {
 		fmt.Println("failed to run kubectl wait, please check", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
+}
+
+// SchedulingWorkload is used to schedule the workload
+func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubeconfig string) bool {
+	// get template labels
+	l, _, err := unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "labels")
+	if err != nil {
+		fmt.Println("failed to get labels", err)
+		return false
+	}
+
+	// get template annotations
+	a, _, err := unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "annotations")
+	if err != nil {
+		fmt.Println("failed to get annotations", err)
+		return false
+	}
+
+	// get name and namespace
+	name, _, err := unstructured.NestedString(obj.Object, "metadata", "name")
+	if err != nil {
+		fmt.Println("failed to get the name of resource", err)
+		return false
+	}
+	namespace, _, err := unstructured.NestedString(obj.Object, "metadata", "namespace")
+	if err != nil {
+		fmt.Println("failed to get the namespace of resource", err)
+		return false
+	}
+
+	// get obj kind
+	kind, _, err := unstructured.NestedString(obj.Object, "kind")
+	if err != nil {
+		fmt.Println("failed to get the kind of resource", err)
+		return false
+	}
+
+	condition, apiVersion := getWaitCondition(kind)
+
+	// for non-workload resources
+	if condition == "" {
+		if err := c.Create(context.TODO(), obj); err != nil {
+			fmt.Println("failed to create non-workload resources", err)
+			return false
+		}
+		return true
+	}
+
+	// for workload resources
+	r := l[labels.WorkloadReplicas]
+	replicas, err := strconv.Atoi(r)
+	if err != nil {
+		fmt.Println("failed to get replicas", err)
+		return false
+	}
+
+	str, required, localObjects, globalObjects := Scheduling(c, a, l, replicas, namespace)
+
+	// setup annotations and labels
+	l["scheduling.v6d.io/enabled"] = "true"
+	if err := unstructured.SetNestedStringMap(obj.Object, l, "spec", "template", "metadata", "labels"); err != nil {
+		fmt.Println("failed to set labels", err)
+		return false
+	}
+
+	a["scheduledOrder"] = str
+	if err := unstructured.SetNestedStringMap(obj.Object, a, "spec", "template", "metadata", "annotations"); err != nil {
+		fmt.Println("failed to set annotations", err)
+		return false
+	}
+
+	if err := c.Create(context.TODO(), obj); err != nil {
+		fmt.Println("failed to create workload", err)
+		return false
+	}
+
+	// wait for the workload to be ready
+	if err := waitWorkload(c, kind, kubeconfig, condition, apiVersion, name, namespace); err != nil {
+		fmt.Println("failed to wait workload", err)
+		return false
+	}
+
+	// get the workload
+	if err := c.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj); err != nil {
+		fmt.Println("failed to get workload", err)
+		return false
+	}
+	version, _, err := unstructured.NestedString(obj.Object, "apiVersion")
+	if err != nil {
+		fmt.Println("failed to get apiVersion", err)
+		return false
+	}
+
+	uid, _, err := unstructured.NestedString(obj.Object, "metadata", "uid")
+	if err != nil {
+		fmt.Println("failed to get uid", err)
+		return false
+	}
+	ownerReferences := []metav1.OwnerReference{
+		{
+			APIVersion: version,
+			Kind:       kind,
+			Name:       name,
+			UID:        types.UID(uid),
+		},
+	}
+
+	if err := schedulers.CreateConfigmapForID(c, slog, required, namespace, localObjects, globalObjects, ownerReferences); err != nil {
+		slog.Info(fmt.Sprintf("can't create configmap for object ID %v", err))
+	}
+
 	return true
 }

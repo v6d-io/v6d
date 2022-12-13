@@ -19,7 +19,6 @@ package schedulers
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
@@ -29,7 +28,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -41,7 +39,7 @@ type SchedulerState struct {
 
 // Append records the action of appending a new pod in job to given node.
 func (ss *SchedulerState) Append(job string, pod string, nodeName string) error {
-	klog.V(5).Infof("assign job %v pod %v to node %v", job, pod, nodeName)
+	slog.Info(fmt.Sprintf("assign job %v pod %v to node %v", job, pod, nodeName))
 	if s, ok := ss.state[job]; ok {
 		if _, ok := s[pod]; ok {
 			return fmt.Errorf("The pod has already been scheduled")
@@ -66,7 +64,7 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	num := len(workernodes)
 	if len(requires) == 0 {
 		if workernodes[int(rank)%num] == nodeName {
-			klog.V(5).Infof("nodeName: %v, workernodes: %v, rank: %v", nodeName, workernodes, rank)
+			slog.Info(fmt.Sprintf("nodeName: %v, workernodes: %v, rank: %v", nodeName, workernodes, rank))
 			return 100, nil
 		}
 		return 1, nil
@@ -77,16 +75,16 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	}
 
 	// accumulates all local required objects
-	globalObjects, err := ss.getGlobalObjectsByID(ctx, requires)
+	globalObjects, err := GetGlobalObjectsByID(ss.Client, slog, requires)
 	if err != nil {
 		return 0, err
 	}
-	klog.V(5).Infof("job %v requires objects %v", job, globalObjects)
+	slog.Info(fmt.Sprintf("job %v requires objects %v", job, globalObjects))
 	localsigs := make([]string, 0)
 	for _, globalObject := range globalObjects {
 		localsigs = append(localsigs, globalObject.Spec.Members...)
 	}
-	localObjects, err := ss.getLocalObjectsBySignatures(ctx, localsigs)
+	localObjects, err := GetLocalObjectsBySignatures(ss.Client, slog, localsigs)
 	if err != nil {
 		return 0, err
 	}
@@ -94,11 +92,12 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 		return 0, fmt.Errorf("No local chunks found")
 	}
 
-	if err := ss.createConfigmapForID(ctx, requires, pod.GetNamespace(), localObjects, globalObjects, pod); err != nil {
-		klog.V(5).Infof("can't create configmap for object ID %v", err)
+	ownerReferences := pod.GetOwnerReferences()
+	if err := CreateConfigmapForID(ss.Client, slog, requires, pod.GetNamespace(), localObjects, globalObjects, ownerReferences); err != nil {
+		slog.Info(fmt.Sprintf("can't create configmap for object ID %v", err))
 	}
 
-	s, err := ss.checkOperationLabels(ctx, pod)
+	s, err := CheckOperationLabels(ss.Client, slog, pod)
 	if err != nil {
 		return 0, err
 	}
@@ -106,31 +105,9 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 		return 0, nil
 	}
 
-	klog.V(5).Infof("job %v requires local chunks %v", job, localObjects)
+	slog.Info(fmt.Sprintf("job %v requires local chunks %v", job, localObjects))
 
-	locations := make(map[string][]string)
-	for _, localObject := range localObjects {
-		host := localObject.Spec.Hostname
-		if _, ok := locations[host]; !ok {
-			locations[host] = make([]string, 0)
-		}
-		locations[host] = append(locations[host], localObject.Spec.ObjectID)
-	}
-
-	// total frags
-	totalfrags := int64(len(localObjects))
-	// frags for per pod
-	nchunks := totalfrags / replica
-	if totalfrags%replica != 0 {
-		nchunks++
-	}
-
-	// find the node
-	nodes := make([]string, 0)
-	for k := range locations {
-		nodes = append(nodes, k)
-	}
-	sort.Strings(nodes)
+	locations, nchunks, nodes := GetObjectInfo(localObjects, replica)
 
 	var cnt int64
 	target := ""
@@ -146,12 +123,12 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 	// make sure every pod will be deployed in a node
 	if target == "" {
 		if nodeName == nodes[0] {
-			klog.V(5).Infof("Bint the pod to the node with the most locations, %v", nodes[0])
+			slog.Info(fmt.Sprintf("Bint the pod to the node with the most locations, %v", nodes[0]))
 			return 100, nil
 		}
 		return 1, nil
 	} else if target == nodeName {
-		klog.V(5).Infof("target == nodeName")
+		slog.Info("target == nodeName")
 		return 100, nil
 	} else {
 		return 1, nil
@@ -205,7 +182,7 @@ func (ss *SchedulerState) getGlobalObjectsByID(ctx context.Context, jobNames []s
 	objects := []*v1alpha1.GlobalObject{}
 	globalObjects := &v1alpha1.GlobalObjectList{}
 	if err := ss.List(ctx, globalObjects); err != nil {
-		klog.V(5).Infof("client.List failed to get global objects, error: %v", err)
+		slog.Info(fmt.Sprintf("client.List failed to get global objects, error: %v", err))
 		return nil, err
 	}
 	for _, obj := range globalObjects.Items {
@@ -225,7 +202,7 @@ func (ss *SchedulerState) getLocalObjectsBySignatures(ctx context.Context, signa
 		if err := ss.List(ctx, localObjects, client.MatchingLabels{
 			"k8s.v6d.io/signature": sig,
 		}); err != nil {
-			klog.V(5).Infof("client.List failed to get local objects, error: %v", err)
+			slog.Info(fmt.Sprintf("client.List failed to get local objects, error: %v", err))
 			return nil, err
 		}
 		for _, localObject := range localObjects.Items {
@@ -243,7 +220,7 @@ func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []st
 		configmap := &v1.ConfigMap{}
 		err := ss.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: jobname[i]}, configmap)
 		if err != nil && !apierrors.IsNotFound(err) {
-			klog.V(5).Infof("get configmap error: %v", err)
+			slog.Info(fmt.Sprintf("get configmap error:: %v", err))
 			return err
 		}
 		// the configmap doesn't exist
@@ -278,11 +255,11 @@ func (ss *SchedulerState) createConfigmapForID(ctx context.Context, jobname []st
 			}
 			cm.OwnerReferences = pod.GetOwnerReferences()
 			if err := ss.Client.Create(ctx, &cm); err != nil {
-				klog.V(5).Infof("create configmap error: %v", err)
+				slog.Info(fmt.Sprintf("create configmap error: %v", err))
 				return err
 			}
 		}
-		klog.V(5).Infof("the configmap [%v/%v] exist!", namespace, jobname[i])
+		slog.Info(fmt.Sprintf("the configmap [%v/%v] exist!", namespace, jobname[i]))
 	}
 
 	return nil
