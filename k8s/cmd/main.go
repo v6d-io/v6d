@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-/* Pakcage cmd is used for simplify the operator usage. */
+/* Pakcage main is used for simplify the operator usage. */
 package main
 
 import (
@@ -27,7 +27,6 @@ import (
 
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
-	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +37,8 @@ import (
 )
 
 var (
-	scheme = runtime.NewScheme()
+	scheme          = runtime.NewScheme()
+	ownerReferences []metav1.OwnerReference
 )
 
 // add k8s apis scheme and apiextensions scheme
@@ -190,7 +190,7 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 		return false
 	}
 
-	str, required, localObjects, globalObjects := Scheduling(c, a, l, replicas, namespace)
+	str := Scheduling(c, a, l, replicas, namespace, ownerReferences)
 
 	// setup annotations and labels
 	l["scheduling.v6d.io/enabled"] = "true"
@@ -216,7 +216,7 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 		return false
 	}
 
-	// get the workload
+	// use the previous workload as ownerreference
 	if err := c.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj); err != nil {
 		fmt.Println("failed to get workload", err)
 		return false
@@ -232,17 +232,13 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 		fmt.Println("failed to get uid", err)
 		return false
 	}
-	ownerReferences := []metav1.OwnerReference{
+	ownerReferences = []metav1.OwnerReference{
 		{
 			APIVersion: version,
 			Kind:       kind,
 			Name:       name,
 			UID:        types.UID(uid),
 		},
-	}
-
-	if err := schedulers.CreateConfigmapForID(c, slog, required, namespace, localObjects, globalObjects, ownerReferences); err != nil {
-		slog.Info(fmt.Sprintf("can't create configmap for object ID %v", err))
 	}
 
 	return true

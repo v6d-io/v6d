@@ -21,7 +21,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: job1
-        image: docker.pkg.github.com/v6d-io/v6d/job1-with-scheduler
+        image: ghcr.io/v6d-io/v6d/job1-with-scheduler
         env:
         - name: JOB_NAME
           value: v6d-workflow-demo-job1
@@ -58,7 +58,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: job2
-        image: docker.pkg.github.com/v6d-io/v6d/job2-with-scheduler
+        image: ghcr.io/v6d-io/v6d/job2-with-scheduler
         imagePullPolicy: IfNotPresent
         env:
         - name: JOB_NAME

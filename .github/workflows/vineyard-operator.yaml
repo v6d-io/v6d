@@ -53,6 +53,7 @@ jobs:
           - e2e-tests-distributed-assembly
           - e2e-tests-dask-repartition
           - e2e-tests-sidecar
+          - e2e-tests-scheduler-outside-cluster
     steps:
       - uses: actions/checkout@v3
         with:
@@ -180,3 +181,9 @@ jobs:
         uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
         with:
           e2e-file: k8s/test/e2e/sidecar/e2e.yaml
+      
+      - name: e2e-tests-scheduler-outside-cluster
+        if: ${{ matrix.job == 'e2e-tests-sidecar' }}
+        uses: apache/skywalking-infra-e2e@afdf1cca0519d65bc480d8680b7a27f9b41fc421
+        with:
+          e2e-file: k8s/test/e2e/scheduling-outside-cluster/e2e.yaml

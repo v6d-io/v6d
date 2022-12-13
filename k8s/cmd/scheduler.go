@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/* Pakcage main is used for simplify the operator usage. */
 package main
 
 import (
@@ -20,17 +21,18 @@ import (
 	"strconv"
 	"strings"
 
-	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var slog = log.Logger.WithName("vineyard-scheduler-outside-cluster")
 
-func Scheduling(c client.Client, a, l map[string]string, replica int, namespace string) (string, []string,
-	[]*vineyardV1alpha1.LocalObject, []*vineyardV1alpha1.GlobalObject) {
+// Scheduling is used to schedule jobs to nodes
+func Scheduling(c client.Client, a, l map[string]string, replica int, namespace string,
+	ownerReferences []metav1.OwnerReference) string {
 	scheduledOrder := ""
 	jobToNode := make(map[string]int)
 	// get all nodes that have vineyardd
@@ -50,20 +52,20 @@ func Scheduling(c client.Client, a, l map[string]string, replica int, namespace 
 			s = append(s, n+"="+strconv.Itoa(v))
 		}
 		scheduledOrder = strings.Join(s, ",")
-		return scheduledOrder, nil, nil, nil
+		return scheduledOrder
 	}
 
 	// get required jobs
 	required, err := schedulers.GetRequiredJob(slog, a)
 	if err != nil {
 		slog.Info(fmt.Sprintf("get required jobs failed: %v", err))
-		return "", nil, nil, nil
+		return ""
 	}
 	// get all global objects
 	globalObjects, err := schedulers.GetGlobalObjectsByID(c, slog, required)
 	if err != nil {
 		slog.Info(fmt.Sprintf("get global objects failed: %v", err))
-		return "", nil, nil, nil
+		return ""
 	}
 
 	localsigs := make([]string, 0)
@@ -73,7 +75,7 @@ func Scheduling(c client.Client, a, l map[string]string, replica int, namespace 
 	localObjects, err := schedulers.GetLocalObjectsBySignatures(c, slog, localsigs)
 	if err != nil {
 		slog.Info(fmt.Sprintf("get local objects failed: %v", err))
-		return "", nil, nil, nil
+		return ""
 	}
 
 	locations, nchunks, nodes := schedulers.GetObjectInfo(localObjects, int64(replica))
@@ -103,5 +105,9 @@ func Scheduling(c client.Client, a, l map[string]string, replica int, namespace 
 	}
 	scheduledOrder = strings.Join(s, ",")
 
-	return scheduledOrder, required, localObjects, globalObjects
+	if err := schedulers.CreateConfigmapForID(c, slog, required, namespace, localObjects, globalObjects, ownerReferences); err != nil {
+		slog.Info(fmt.Sprintf("can't create configmap for object ID %v", err))
+	}
+
+	return scheduledOrder
 }

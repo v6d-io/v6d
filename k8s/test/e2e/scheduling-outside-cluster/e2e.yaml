@@ -26,8 +26,6 @@ setup:
           for: condition=Ready
     - name: install vineyard operator
       command: |
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job1-with-scheduler
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/job2-with-scheduler
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
         make -C k8s deploy
       wait:

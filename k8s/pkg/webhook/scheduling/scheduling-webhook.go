@@ -33,8 +33,8 @@ import (
 // nolint: lll
 // +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/mutate-v1-pod-scheduling,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.scheduling.kb.io
 
-// SchedulingInjector injects assembly operation container into Pods
-type SchedulingInjector struct {
+// Injector injects scheduling info into pods.
+type Injector struct {
 	Client  client.Client
 	decoder *admission.Decoder
 }
@@ -45,7 +45,7 @@ const (
 )
 
 // Handle handles admission requests.
-func (r *SchedulingInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := log.FromContext(ctx).WithName("injector").WithName("Assembly")
 
 	pod := &corev1.Pod{}
@@ -96,7 +96,7 @@ func (r *SchedulingInjector) Handle(ctx context.Context, req admission.Request) 
 }
 
 // InjectDecoder injects the decoder.
-func (r *SchedulingInjector) InjectDecoder(d *admission.Decoder) error {
+func (r *Injector) InjectDecoder(d *admission.Decoder) error {
 	r.decoder = d
 	return nil
 }

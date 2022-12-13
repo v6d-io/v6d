@@ -73,6 +73,7 @@ func GetRequiredJob(log logr.Logger, anno map[string]string) ([]string, error) {
 	return strings.Split(objects, "."), nil
 }
 
+// GetLocalObjectsBySignatures returns the local objects by the given signatures.
 func GetLocalObjectsBySignatures(c client.Client, log logr.Logger, signatures []string) ([]*v1alpha1.LocalObject, error) {
 	objects := make([]*v1alpha1.LocalObject, 0)
 	for _, sig := range signatures {
@@ -112,6 +113,7 @@ func GetGlobalObjectsByID(c client.Client, log logr.Logger, jobNames []string) (
 	return objects, nil
 }
 
+// CheckOperationLabels checks if the pod has operation labels and returns the operation name.
 func CheckOperationLabels(c client.Client, log logr.Logger, pod *v1.Pod) (int64, error) {
 	operationLabels := []string{"assembly.v6d.io/enabled", "repartition.v6d.io/enabled"}
 	for _, label := range operationLabels {
@@ -202,7 +204,7 @@ func CreateConfigmapForID(c client.Client, log logr.Logger, jobname []string, na
 	return nil
 }
 
-// Get3ObjectInfo returns the local object info including the locations and average number of chunks per node.
+// GetObjectInfo returns the local object info including the locations and average number of chunks per node.
 func GetObjectInfo(localObjects []*v1alpha1.LocalObject, replica int64) (map[string][]string, int64, []string) {
 	locations := make(map[string][]string)
 	for _, localObject := range localObjects {
