@@ -62,8 +62,32 @@ template boost::leaf::result<void> generate_directed_csr<uint64_t, uint64_t>(
     std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
     bool& is_multigraph);
 
+template boost::leaf::result<void> generate_directed_csc<uint64_t, uint64_t>(
+    Client& client, IdParser<uint64_t>& parser, fid_t fid,
+    std::vector<uint64_t> tvnums, int vertex_label_num, int concurrency,
+    std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<uint64_t, uint64_t>>>>&
+        oedges,
+    std::vector<std::shared_ptr<arrow::Int64Array>>& oedge_offsets,
+    std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<uint64_t, uint64_t>>>>&
+        iedges,
+    std::vector<std::shared_ptr<arrow::Int64Array>>& iedge_offsets,
+    bool& is_multigraph);
+
 template boost::leaf::result<void> generate_undirected_csr<uint64_t, uint64_t>(
     Client& client, IdParser<uint64_t>& parser,
+    std::vector<std::shared_ptr<ArrowArrayType<uint64_t>>> src_chunks,
+    std::vector<std::shared_ptr<ArrowArrayType<uint64_t>>> dst_chunks,
+    std::vector<uint64_t> tvnums, int vertex_label_num, int concurrency,
+    std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<uint64_t, uint64_t>>>>&
+        edges,
+    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    bool& is_multigraph);
+
+template boost::leaf::result<void> generate_undirected_csr<uint64_t, uint64_t>(
+    Client& client, IdParser<uint64_t>& parser, fid_t fid,
     std::vector<std::shared_ptr<ArrowArrayType<uint64_t>>> src_chunks,
     std::vector<std::shared_ptr<ArrowArrayType<uint64_t>>> dst_chunks,
     std::vector<uint64_t> tvnums, int vertex_label_num, int concurrency,
