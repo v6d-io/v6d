@@ -361,17 +361,18 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
       if (directed_) {
         // Process 0...total_v_num  X  e_num...total_e_num  part.
         generate_directed_csr<vid_t, eid_t>(
-            client, vid_parser_, edge_src[cur_label_index],
-            edge_dst[cur_label_index], tvnums, total_vertex_label_num,
-            concurrency, sub_oe_lists, sub_oe_offset_lists, is_multigraph_);
-        generate_directed_csr<vid_t, eid_t>(
-            client, vid_parser_, std::move(edge_dst[cur_label_index]),
-            std::move(edge_src[cur_label_index]), tvnums,
-            total_vertex_label_num, concurrency, sub_ie_lists,
+            client, vid_parser_, std::move(edge_src[cur_label_index]),
+            std::move(edge_dst[cur_label_index]), tvnums,
+            total_vertex_label_num, concurrency, sub_oe_lists,
+            sub_oe_offset_lists, is_multigraph_);
+        generate_directed_csc<vid_t, eid_t>(
+            client, vid_parser_, this->fid_, tvnums, total_vertex_label_num,
+            concurrency, sub_oe_lists, sub_oe_offset_lists, sub_ie_lists,
             sub_ie_offset_lists, is_multigraph_);
       } else {
         generate_undirected_csr<vid_t, eid_t>(
-            client, vid_parser_, std::move(edge_src[cur_label_index]),
+            client, vid_parser_, this->fid_,
+            std::move(edge_src[cur_label_index]),
             std::move(edge_dst[cur_label_index]), tvnums,
             total_vertex_label_num, concurrency, sub_oe_lists,
             sub_oe_offset_lists, is_multigraph_);
@@ -849,16 +850,16 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
         vertex_label_num_);
     if (directed_) {
       generate_directed_csr<vid_t, eid_t>(
-          client, vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums,
-          vertex_label_num_, concurrency, sub_oe_lists, sub_oe_offset_lists,
-          is_multigraph_);
-      generate_directed_csr<vid_t, eid_t>(
-          client, vid_parser_, std::move(edge_dst[e_label]),
-          std::move(edge_src[e_label]), tvnums, vertex_label_num_, concurrency,
-          sub_ie_lists, sub_ie_offset_lists, is_multigraph_);
+          client, vid_parser_, std::move(edge_src[e_label]),
+          std::move(edge_dst[e_label]), tvnums, vertex_label_num_, concurrency,
+          sub_oe_lists, sub_oe_offset_lists, is_multigraph_);
+      generate_directed_csc<vid_t, eid_t>(
+          client, vid_parser_, this->fid_, tvnums, vertex_label_num_,
+          concurrency, sub_oe_lists, sub_oe_offset_lists, sub_ie_lists,
+          sub_ie_offset_lists, is_multigraph_);
     } else {
       generate_undirected_csr<vid_t, eid_t>(
-          client, vid_parser_, std::move(edge_src[e_label]),
+          client, vid_parser_, this->fid_, std::move(edge_src[e_label]),
           std::move(edge_dst[e_label]), tvnums, vertex_label_num_, concurrency,
           sub_oe_lists, sub_oe_offset_lists, is_multigraph_);
     }
@@ -1246,16 +1247,16 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
         this->vertex_label_num_);
     if (this->directed_) {
       generate_directed_csr<vid_t, eid_t>(
-          client_, vid_parser_, edge_src[e_label], edge_dst[e_label], tvnums_,
-          this->vertex_label_num_, concurrency, sub_oe_lists,
-          sub_oe_offset_lists, this->is_multigraph_);
-      generate_directed_csr<vid_t, eid_t>(
-          client_, vid_parser_, std::move(edge_dst[e_label]),
-          std::move(edge_src[e_label]), tvnums_, this->vertex_label_num_,
-          concurrency, sub_ie_lists, sub_ie_offset_lists, this->is_multigraph_);
+          client_, vid_parser_, std::move(edge_src[e_label]),
+          std::move(edge_dst[e_label]), tvnums_, this->vertex_label_num_,
+          concurrency, sub_oe_lists, sub_oe_offset_lists, this->is_multigraph_);
+      generate_directed_csc<vid_t, eid_t>(
+          client_, vid_parser_, this->fid_, tvnums_, this->vertex_label_num_,
+          concurrency, sub_oe_lists, sub_oe_offset_lists, sub_ie_lists,
+          sub_ie_offset_lists, this->is_multigraph_);
     } else {
       generate_undirected_csr<vid_t, eid_t>(
-          client_, vid_parser_, std::move(edge_src[e_label]),
+          client_, vid_parser_, this->fid_, std::move(edge_src[e_label]),
           std::move(edge_dst[e_label]), tvnums_, this->vertex_label_num_,
           concurrency, sub_oe_lists, sub_oe_offset_lists, this->is_multigraph_);
     }

@@ -107,6 +107,9 @@ void check_is_multigraph(
     std::shared_ptr<arrow::Int64Array> offsets, VID_T tvnum, int concurrency,
     bool& is_multigraph);
 
+/**
+ * @brief Generate CSR from given COO.
+ */
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_directed_csr(
     Client& client, IdParser<VID_T>& parser,
@@ -118,9 +121,43 @@ boost::leaf::result<void> generate_directed_csr(
     std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
     bool& is_multigraph);
 
+/**
+ * @brief Generate CSC from given CSR.
+ */
+template <typename VID_T, typename EID_T>
+boost::leaf::result<void> generate_directed_csc(
+    Client& client, IdParser<VID_T>& parser, fid_t fid,
+    std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
+    std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& oedges,
+    std::vector<std::shared_ptr<arrow::Int64Array>>& oedge_offsets,
+    std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& iedges,
+    std::vector<std::shared_ptr<arrow::Int64Array>>& iedge_offsets,
+    bool& is_multigraph);
+
+/**
+ * @brief Generate CSR and CSC from given COO, scan once, and generate both
+ * direction at the same time.
+ */
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_undirected_csr(
     Client& client, IdParser<VID_T>& parser,
+    std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> src_chunks,
+    std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> dst_chunks,
+    std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
+    std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& edges,
+    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    bool& is_multigraph);
+
+/**
+ * @brief Generate CSR and CSC from given COO, scan twice, generate CSR from
+ * COO, and then generate CSC from CSR.
+ */
+template <typename VID_T, typename EID_T>
+boost::leaf::result<void> generate_undirected_csr(
+    Client& client, IdParser<VID_T>& parser, fid_t fid,
     std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> src_chunks,
     std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> dst_chunks,
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
