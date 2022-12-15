@@ -308,17 +308,24 @@ def read_parquet(
     return launcher.wait()
 
 
-def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
+def read_dataframe(
+    path, vineyard_socket, *args, handlers=None, filetype=None, **kwargs
+):
     path = json.dumps(path)
-    storage_options = kwargs.pop("storage_options", {})
-    read_options = kwargs.pop("read_options", {})
+    storage_options_dict = kwargs.pop("storage_options", {})
+    read_options_dict = kwargs.pop("read_options", {})
     storage_options = base64.b64encode(
-        json.dumps(storage_options).encode("utf-8")
+        json.dumps(storage_options_dict).encode("utf-8")
     ).decode("utf-8")
-    read_options = base64.b64encode(json.dumps(read_options).encode("utf-8")).decode(
+    read_options = base64.b64encode(json.dumps(read_options_dict).encode("utf-8")).decode(
         "utf-8"
     )
-    if ".orc" in path:
+    if filetype is None:
+        filetype = storage_options_dict.get('filetype', None)
+    if filetype is None:
+        filetype = read_options_dict.get('filetype', None)
+    filetype = str(filetype).upper()
+    if filetype == "ORC" or ".orc" in path:
         return read_orc(
             path,
             vineyard_socket,
@@ -328,7 +335,7 @@ def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
             handlers=handlers,
             **kwargs.copy(),
         )
-    elif ".parquet" in path or ".pq" in path:
+    elif filetype == "PARQUET" or ".parquet" in path or ".pq" in path:
         return read_parquet(
             path,
             vineyard_socket,
@@ -338,7 +345,7 @@ def read_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
             handlers=handlers,
             **kwargs.copy(),
         )
-    else:
+    else:  # fall back to CSV
         stream = read_bytes(
             path,
             vineyard_socket,
