@@ -317,9 +317,9 @@ def read_dataframe(
     storage_options = base64.b64encode(
         json.dumps(storage_options_dict).encode("utf-8")
     ).decode("utf-8")
-    read_options = base64.b64encode(json.dumps(read_options_dict).encode("utf-8")).decode(
-        "utf-8"
-    )
+    read_options = base64.b64encode(
+        json.dumps(read_options_dict).encode("utf-8")
+    ).decode("utf-8")
     if filetype is None:
         filetype = storage_options_dict.get('filetype', None)
     if filetype is None:
