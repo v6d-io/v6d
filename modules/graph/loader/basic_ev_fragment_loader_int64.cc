@@ -18,12 +18,16 @@ limitations under the License.
 
 namespace vineyard {
 
-template class BasicEVFragmentLoader<
-    int64_t, uint64_t, HashPartitioner<int64_t>,
-    ArrowVertexMap<typename InternalType<int64_t>::type, uint64_t>>;
+template class BasicEVFragmentLoader<int64_t, uint32_t,
+                                     HashPartitioner<int64_t>, ArrowVertexMap>;
+
+template class BasicEVFragmentLoader<int64_t, uint64_t,
+                                     HashPartitioner<int64_t>, ArrowVertexMap>;
 
 template class BasicEVFragmentLoader<
-    int64_t, uint64_t, HashPartitioner<int64_t>,
-    ArrowLocalVertexMap<typename InternalType<int64_t>::type, uint64_t>>;
+    int64_t, uint32_t, HashPartitioner<int64_t>, ArrowLocalVertexMap>;
+
+template class BasicEVFragmentLoader<
+    int64_t, uint64_t, HashPartitioner<int64_t>, ArrowLocalVertexMap>;
 
 }  // namespace vineyard

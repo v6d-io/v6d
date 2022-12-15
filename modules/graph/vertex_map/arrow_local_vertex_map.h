@@ -50,7 +50,7 @@ class ArrowLocalVertexMap
   using oid_t = OID_T;
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
-  using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
+  using oid_array_t = ArrowArrayType<oid_t>;
 
  public:
   ArrowLocalVertexMap() {}
@@ -92,9 +92,20 @@ class ArrowLocalVertexMap
       const std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>&
           oid_arrays_map);
 
+  ObjectID AddVertices(
+      Client& client,
+      const std::map<label_id_t,
+                     std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+          oid_arrays_map);
+
   ObjectID AddNewVertexLabels(
       Client& client,
       const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays);
+
+  ObjectID AddNewVertexLabels(
+      Client& client,
+      const std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+          oid_arrays);
 
  private:
   fid_t fnum_, fid_;
@@ -120,7 +131,7 @@ class ArrowLocalVertexMap<arrow_string_view, VID_T>
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
   using oid_array_t = arrow::LargeStringArray;
-  using vid_array_t = typename vineyard::ConvertToArrowType<vid_t>::ArrayType;
+  using vid_array_t = ArrowArrayType<vid_t>;
 
  public:
   ArrowLocalVertexMap() {}
@@ -159,9 +170,20 @@ class ArrowLocalVertexMap<arrow_string_view, VID_T>
       const std::map<label_id_t, std::vector<std::shared_ptr<oid_array_t>>>&
           oid_arrays_map);
 
+  ObjectID AddVertices(
+      Client& client,
+      const std::map<label_id_t,
+                     std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+          oid_arrays_map);
+
   ObjectID AddNewVertexLabels(
       Client& client,
       const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays);
+
+  ObjectID AddNewVertexLabels(
+      Client& client,
+      const std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+          oid_arrays);
 
  private:
   void initHashmaps();
@@ -186,7 +208,7 @@ template <typename OID_T, typename VID_T>
 class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
   using oid_t = OID_T;
   using vid_t = VID_T;
-  using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
+  using oid_array_t = ArrowArrayType<oid_t>;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
 
  public:
@@ -204,6 +226,10 @@ class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
       grape::CommSpec& comm_spec,
       std::vector<std::shared_ptr<oid_array_t>> oid_arrays);
 
+  vineyard::Status AddLocalVertices(
+      grape::CommSpec& comm_spec,
+      std::vector<std::shared_ptr<arrow::ChunkedArray>> oid_arrays);
+
   vineyard::Status GetIndexOfOids(const std::vector<std::vector<oid_t>>& oids,
                                   std::vector<std::vector<vid_t>>& index_list);
 
@@ -212,6 +238,10 @@ class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
       std::vector<std::vector<std::vector<vid_t>>>& index_list);
 
  private:
+  vineyard::Status addLocalVertices(
+      grape::CommSpec& comm_spec,
+      std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays);
+
   vineyard::Client& client;
   fid_t fnum_, fid_;
   label_id_t label_num_;
@@ -248,6 +278,10 @@ class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>
       grape::CommSpec& comm_spec,
       std::vector<std::shared_ptr<oid_array_t>> oid_arrays);
 
+  vineyard::Status AddLocalVertices(
+      grape::CommSpec& comm_spec,
+      std::vector<std::shared_ptr<arrow::ChunkedArray>> oid_arrays);
+
   vineyard::Status GetIndexOfOids(
       const std::vector<std::vector<std::string>>& oids,
       std::vector<std::vector<vid_t>>& index_list);
@@ -257,6 +291,10 @@ class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>
       std::vector<std::vector<std::vector<vid_t>>>& index_list);
 
  private:
+  vineyard::Status addLocalVertices(
+      grape::CommSpec& comm_spec,
+      std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays);
+
   vineyard::Client& client;
   fid_t fnum_, fid_;
   label_id_t label_num_;

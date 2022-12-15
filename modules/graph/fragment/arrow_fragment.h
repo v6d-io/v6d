@@ -57,6 +57,8 @@ template <typename OID_T, typename VID_T,
               ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
 class BasicArrowFragmentBuilder
     : public ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> {
+  using Base = ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T>;
+
   using oid_t = OID_T;
   using vid_t = VID_T;
   using internal_oid_t = typename InternalType<oid_t>::type;
@@ -64,12 +66,13 @@ class BasicArrowFragmentBuilder
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
   using vertex_map_t = VERTEX_MAP_T;
   using nbr_unit_t = property_graph_utils::NbrUnit<vid_t, eid_t>;
-  using vid_array_t = typename vineyard::ConvertToArrowType<vid_t>::ArrayType;
+  using vid_array_t = vineyard::ArrowArrayType<vid_t>;
 
  public:
   explicit BasicArrowFragmentBuilder(vineyard::Client& client,
                                      std::shared_ptr<vertex_map_t> vm_ptr)
       : ArrowFragmentBaseBuilder<oid_t, vid_t, vertex_map_t>(client),
+        client_(client),
         vm_ptr_(vm_ptr) {}
 
   vineyard::Status Build(vineyard::Client& client) override;
@@ -97,6 +100,8 @@ class BasicArrowFragmentBuilder
       std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
       int concurrency);
 
+  vineyard::Client& client_;
+
   std::vector<vid_t> ivnums_, ovnums_, tvnums_;
 
   std::vector<std::shared_ptr<arrow::Table>> vertex_tables_;
@@ -105,7 +110,7 @@ class BasicArrowFragmentBuilder
 
   std::vector<std::shared_ptr<arrow::Table>> edge_tables_;
 
-  std::vector<std::vector<std::shared_ptr<arrow::FixedSizeBinaryArray>>>
+  std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
       ie_lists_, oe_lists_;
   std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
       ie_offsets_lists_, oe_offsets_lists_;

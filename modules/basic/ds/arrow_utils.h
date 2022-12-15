@@ -41,12 +41,6 @@ using EIDT = uint64_t;
 
 struct RefString;
 
-#if ARROW_VERSION_MAJOR >= 10
-using arrow_string_view = std::string_view;
-#else
-using arrow_string_view = arrow::util::string_view;
-#endif
-
 template <typename T>
 struct ConvertToArrowType {};
 
@@ -56,9 +50,11 @@ class NumericArray;
 template <typename T>
 class NumericArrayBuilder;
 
-#define CONVERT_TO_ARROW_TYPE(type, array_type, builder_type, type_value)      \
+#define CONVERT_TO_ARROW_TYPE(type, data_type, array_type, builder_type,       \
+                              type_value)                                      \
   template <>                                                                  \
   struct ConvertToArrowType<type> {                                            \
+    using DataType = data_type;                                                \
     using ArrayType = array_type;                                              \
     using VineyardArrayType = NumericArray<type>;                              \
     using BuilderType = builder_type;                                          \
@@ -66,86 +62,105 @@ class NumericArrayBuilder;
     static std::shared_ptr<arrow::DataType> TypeValue() { return type_value; } \
   };
 
-CONVERT_TO_ARROW_TYPE(bool, arrow::BooleanArray, arrow::BooleanBuilder,
-                      arrow::boolean())
-CONVERT_TO_ARROW_TYPE(int8_t, arrow::Int8Array, arrow::Int8Builder,
-                      arrow::int8())
-CONVERT_TO_ARROW_TYPE(uint8_t, arrow::UInt8Array, arrow::UInt8Builder,
-                      arrow::uint8())
-CONVERT_TO_ARROW_TYPE(int16_t, arrow::Int16Array, arrow::Int16Builder,
-                      arrow::int16())
-CONVERT_TO_ARROW_TYPE(uint16_t, arrow::UInt16Array, arrow::UInt16Builder,
-                      arrow::uint16())
-CONVERT_TO_ARROW_TYPE(int32_t, arrow::Int32Array, arrow::Int32Builder,
-                      arrow::int32())
-CONVERT_TO_ARROW_TYPE(uint32_t, arrow::UInt32Array, arrow::UInt32Builder,
-                      arrow::uint32())
-CONVERT_TO_ARROW_TYPE(int64_t, arrow::Int64Array, arrow::Int64Builder,
-                      arrow::int64())
-CONVERT_TO_ARROW_TYPE(uint64_t, arrow::UInt64Array, arrow::UInt64Builder,
-                      arrow::uint64())
-CONVERT_TO_ARROW_TYPE(float, arrow::FloatArray, arrow::FloatBuilder,
-                      arrow::float32())
-CONVERT_TO_ARROW_TYPE(double, arrow::DoubleArray, arrow::DoubleBuilder,
-                      arrow::float64())
-CONVERT_TO_ARROW_TYPE(RefString, arrow::LargeStringArray,
-                      arrow::LargeStringBuilder, arrow::large_utf8())
-CONVERT_TO_ARROW_TYPE(std::string, arrow::LargeStringArray,
-                      arrow::LargeStringBuilder, arrow::large_utf8())
-CONVERT_TO_ARROW_TYPE(arrow_string_view, arrow::LargeStringArray,
-                      arrow::LargeStringBuilder, arrow::large_utf8())
-CONVERT_TO_ARROW_TYPE(arrow::TimestampType, arrow::TimestampArray,
-                      arrow::TimestampBuilder,
+template <typename T>
+using ArrowDataType = typename ConvertToArrowType<T>::DataType;
+
+template <typename T>
+using ArrowArrayType = typename ConvertToArrowType<T>::ArrayType;
+
+template <typename T>
+using ArrowVineyardArrayType =
+    typename ConvertToArrowType<T>::VineyardArrayType;
+
+template <typename T>
+using ArrowBuilderType = typename ConvertToArrowType<T>::BuilderType;
+
+template <typename T>
+using ArrowVineyardBuilderType =
+    typename ConvertToArrowType<T>::VineyardBuilderType;
+
+CONVERT_TO_ARROW_TYPE(void, arrow::NullType, arrow::NullArray,
+                      arrow::NullBuilder, arrow::null())
+CONVERT_TO_ARROW_TYPE(bool, arrow::BooleanType, arrow::BooleanArray,
+                      arrow::BooleanBuilder, arrow::boolean())
+CONVERT_TO_ARROW_TYPE(int8_t, arrow::Int8Type, arrow::Int8Array,
+                      arrow::Int8Builder, arrow::int8())
+CONVERT_TO_ARROW_TYPE(uint8_t, arrow::UInt8Type, arrow::UInt8Array,
+                      arrow::UInt8Builder, arrow::uint8())
+CONVERT_TO_ARROW_TYPE(int16_t, arrow::Int16Type, arrow::Int16Array,
+                      arrow::Int16Builder, arrow::int16())
+CONVERT_TO_ARROW_TYPE(uint16_t, arrow::UInt16Type, arrow::UInt16Array,
+                      arrow::UInt16Builder, arrow::uint16())
+CONVERT_TO_ARROW_TYPE(int32_t, arrow::Int32Type, arrow::Int32Array,
+                      arrow::Int32Builder, arrow::int32())
+CONVERT_TO_ARROW_TYPE(uint32_t, arrow::UInt32Type, arrow::UInt32Array,
+                      arrow::UInt32Builder, arrow::uint32())
+CONVERT_TO_ARROW_TYPE(int64_t, arrow::Int64Type, arrow::Int64Array,
+                      arrow::Int64Builder, arrow::int64())
+CONVERT_TO_ARROW_TYPE(uint64_t, arrow::UInt64Type, arrow::UInt64Array,
+                      arrow::UInt64Builder, arrow::uint64())
+CONVERT_TO_ARROW_TYPE(float, arrow::FloatType, arrow::FloatArray,
+                      arrow::FloatBuilder, arrow::float32())
+CONVERT_TO_ARROW_TYPE(double, arrow::DoubleType, arrow::DoubleArray,
+                      arrow::DoubleBuilder, arrow::float64())
+CONVERT_TO_ARROW_TYPE(RefString, arrow::LargeStringType,
+                      arrow::LargeStringArray, arrow::LargeStringBuilder,
+                      arrow::large_utf8())
+CONVERT_TO_ARROW_TYPE(std::string, arrow::LargeStringType,
+                      arrow::LargeStringArray, arrow::LargeStringBuilder,
+                      arrow::large_utf8())
+CONVERT_TO_ARROW_TYPE(arrow_string_view, arrow::LargeStringType,
+                      arrow::LargeStringArray, arrow::LargeStringBuilder,
+                      arrow::large_utf8())
+CONVERT_TO_ARROW_TYPE(arrow::TimestampType, arrow::TimestampType,
+                      arrow::TimestampArray, arrow::TimestampBuilder,
                       arrow::timestamp(arrow::TimeUnit::MILLI))
-CONVERT_TO_ARROW_TYPE(arrow::Date32Type, arrow::Date32Array,
+CONVERT_TO_ARROW_TYPE(arrow::Date32Type, arrow::Date32Type, arrow::Date32Array,
                       arrow::Date32Builder, arrow::date32())
-CONVERT_TO_ARROW_TYPE(arrow::Date64Type, arrow::Date64Array,
+CONVERT_TO_ARROW_TYPE(arrow::Date64Type, arrow::Date64Type, arrow::Date64Array,
                       arrow::Date64Builder, arrow::date64())
 
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type);
 
+namespace detail {
 /**
- * @brief PodArrayBuilder is designed for constructing Arrow arrays of POD data
- * type
+ * @brief Make a copy for a arrow ArrayData.
  *
- * @tparam T
+ * arrow::ArrayData::Copy() is a shallow thus is not suitable in many
+ * cases.
  */
-template <typename T>
-class PodArrayBuilder : public arrow::FixedSizeBinaryBuilder {
- public:
-  explicit PodArrayBuilder(
-      arrow::MemoryPool* pool = arrow::default_memory_pool())
-      : arrow::FixedSizeBinaryBuilder(arrow::fixed_size_binary(sizeof(T)),
-                                      pool) {}
+Status Copy(std::shared_ptr<arrow::ArrayData> const& array,
+            std::shared_ptr<arrow::ArrayData>& out,
 
-  T* MutablePointer(int64_t i) {
-    return reinterpret_cast<T*>(
-        arrow::FixedSizeBinaryBuilder::GetMutableValue(i));
-  }
+            bool shallow = true,
+            arrow::MemoryPool* pool = arrow::default_memory_pool());
 
-  // the bahavior of `arrow::FixedSizeBinaryBuilder` has been changed in
-  // https://github.com/apache/arrow/commit/e990d177, and hopeful to be
-  // fixed in arrow 0.6.0.
+Status Copy(std::shared_ptr<arrow::Array> const& array,
+            std::shared_ptr<arrow::Array>& out, bool shallow = true,
+            arrow::MemoryPool* pool = arrow::default_memory_pool());
 
-  arrow::Status ResizeAndFill(int64_t capacity) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 5000000
-    return arrow::FixedSizeBinaryBuilder::Resize(capacity);
-#else
-    auto status = arrow::FixedSizeBinaryBuilder::Resize(capacity);
-    if (!status.ok()) {
-      return status;
-    }
-    return arrow::FixedSizeBinaryBuilder::AppendEmptyValues(capacity);
-#endif
-  }
+Status Copy(std::shared_ptr<arrow::ChunkedArray> const& array,
+            std::shared_ptr<arrow::ChunkedArray>& out, bool shallow = true,
+            arrow::MemoryPool* pool = arrow::default_memory_pool());
 
-  arrow::Status Advance(int64_t elements) {
-#if defined(ARROW_VERSION) && ARROW_VERSION < 5000000
-    return arrow::FixedSizeBinaryBuilder::Advance(elements);
-#else
-    return arrow::Status::OK();
-#endif
-  }
+/**
+ * @brief Make a copy for a arrow recordbatch.
+ */
+Status Copy(std::shared_ptr<arrow::RecordBatch> const& batch,
+            std::shared_ptr<arrow::RecordBatch>& out, bool shallow = true,
+            arrow::MemoryPool* pool = arrow::default_memory_pool());
+
+Status Copy(std::shared_ptr<arrow::Table> const& batch,
+            std::shared_ptr<arrow::Table>& out, bool shallow = true,
+            arrow::MemoryPool* pool = arrow::default_memory_pool());
+
+}  // namespace detail
+
+struct EmptyTableBuilder {
+  static Status Build(const std::shared_ptr<arrow::Schema>& schema,
+                      std::shared_ptr<arrow::Table>& table);
+
+  static std::shared_ptr<arrow::Schema> EmptySchema();
 };
 
 /**
@@ -155,10 +170,22 @@ class PodArrayBuilder : public arrow::FixedSizeBinaryBuilder {
  */
 Status GetRecordBatchStreamSize(const arrow::RecordBatch& batch, size_t* size);
 
-Status SerializeRecordBatch(std::shared_ptr<arrow::RecordBatch>& batch,
+Status SerializeDataType(const std::shared_ptr<arrow::DataType>& type,
+                         std::shared_ptr<arrow::Buffer>* buffer);
+
+Status DeserializeDataType(const std::shared_ptr<arrow::Buffer>& buffer,
+                           std::shared_ptr<arrow::DataType>* type);
+
+Status SerializeSchema(const arrow::Schema& schema,
+                       std::shared_ptr<arrow::Buffer>* buffer);
+
+Status DeserializeSchema(const std::shared_ptr<arrow::Buffer>& buffer,
+                         std::shared_ptr<arrow::Schema>* schema);
+
+Status SerializeRecordBatch(const std::shared_ptr<arrow::RecordBatch>& batch,
                             std::shared_ptr<arrow::Buffer>* buffer);
 
-Status DeserializeRecordBatch(std::shared_ptr<arrow::Buffer>& buffer,
+Status DeserializeRecordBatch(const std::shared_ptr<arrow::Buffer>& buffer,
                               std::shared_ptr<arrow::RecordBatch>* batch);
 
 Status SerializeRecordBatchesToAllocatedBuffer(
@@ -177,50 +204,44 @@ Status RecordBatchesToTable(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::Table>* table);
 
+Status RecordBatchesToTable(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table);
+
 Status CombineRecordBatches(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::RecordBatch>* batch);
 
 Status TableToRecordBatches(
-    std::shared_ptr<arrow::Table> table,
+    const std::shared_ptr<arrow::Table> table,
     std::vector<std::shared_ptr<arrow::RecordBatch>>* batches);
 
-Status SerializeTableToAllocatedBuffer(std::shared_ptr<arrow::Table> table,
-                                       std::shared_ptr<arrow::Buffer>* buffer);
+std::shared_ptr<arrow::ChunkedArray> ConcatenateChunkedArrays(
+    const std::vector<std::shared_ptr<arrow::ChunkedArray>>& arrays);
 
-Status SerializeTable(std::shared_ptr<arrow::Table> table,
+std::shared_ptr<arrow::ChunkedArray> ConcatenateChunkedArrays(
+    const std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+        arrays);
+
+Status SerializeTableToAllocatedBuffer(
+    const std::shared_ptr<arrow::Table> table,
+    std::shared_ptr<arrow::Buffer>* buffer);
+
+Status SerializeTable(const std::shared_ptr<arrow::Table> table,
                       std::shared_ptr<arrow::Buffer>* buffer);
 
-Status DeserializeTable(std::shared_ptr<arrow::Buffer> buffer,
+Status DeserializeTable(const std::shared_ptr<arrow::Buffer> buffer,
                         std::shared_ptr<arrow::Table>* table);
-
-struct EmptyTableBuilder {
-  static Status Build(const std::shared_ptr<arrow::Schema>& schema,
-                      std::shared_ptr<arrow::Table>& table);
-
-  static std::shared_ptr<arrow::Schema> EmptySchema();
-};
 
 /**
  * @brief Concatenate multiple arrow tables into one.
- */
-std::shared_ptr<arrow::Table> ConcatenateTables(
-    std::vector<std::shared_ptr<arrow::Table>>& tables);
-
-/**
- * @brief Make a copy for a arrow ArrayData.
  *
- * arrow::ArrayData::Copy() is a shallow thus is not suitable in many
- * cases.
+ * Like `arrow::ConcatenateTables`, but unify the column names as well.
  */
-std::shared_ptr<arrow::ArrayData> CopyArrayData(
-    std::shared_ptr<arrow::ArrayData> const& array);
-
-/**
- * @brief Make a copy for a arrow recordbatch.
- */
-std::shared_ptr<arrow::RecordBatch> CopyRecordBatch(
-    std::shared_ptr<arrow::RecordBatch> const& batch);
+Status ConcatenateTables(
+    const std::vector<std::shared_ptr<arrow::Table>>& tables,
+    std::shared_ptr<arrow::Table>& table);
 
 /**
  * @brief Add extra metadata mapping to existing recordbatch.

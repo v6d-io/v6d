@@ -23,4 +23,10 @@ template class ArrowVertexMapBuilder<int32_t, uint64_t>;
 
 template class BasicArrowVertexMapBuilder<int32_t, uint64_t>;
 
+template class ArrowVertexMap<int32_t, uint32_t>;
+
+template class ArrowVertexMapBuilder<int32_t, uint32_t>;
+
+template class BasicArrowVertexMapBuilder<int32_t, uint32_t>;
+
 }  // namespace vineyard

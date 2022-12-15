@@ -24,6 +24,7 @@ limitations under the License.
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "basic/ds/array.h"
@@ -52,8 +53,8 @@ void ArrowLocalVertexMap<OID_T, VID_T>::Construct(
 
   id_parser_.Init(fnum_, label_num_);
 
-  double nbytes = 0, local_oid_total = 0;
-  double o2i_total_bytes = 0, i2o_total_bytes = 0, o2i_size = 0,
+  size_t nbytes = 0, local_oid_total = 0;
+  size_t o2i_total_bytes = 0, i2o_total_bytes = 0, o2i_size = 0,
          o2i_bucket_count = 0, i2o_size = 0, i2o_bucket_count = 0;
   local_oid_arrays_.resize(label_num_);
   for (label_id_t i = 0; i < label_num_; ++i) {
@@ -91,17 +92,19 @@ void ArrowLocalVertexMap<OID_T, VID_T>::Construct(
   }
   nbytes = local_oid_total + o2i_total_bytes + i2o_total_bytes;
   double o2i_load_factor =
-      o2i_bucket_count == 0 ? 0 : o2i_size / o2i_bucket_count;
+      o2i_bucket_count == 0 ? 0
+                            : static_cast<size_t>(o2i_size) / o2i_bucket_count;
   double i2o_load_factor =
-      i2o_bucket_count == 0 ? 0 : i2o_size / i2o_bucket_count;
+      i2o_bucket_count == 0 ? 0
+                            : static_cast<size_t>(i2o_size) / i2o_bucket_count;
   VLOG(2) << "ArrowLocalVertexMap<int64_t, uint64_t> "
           << "\n\tmemory: " << prettyprint_memory_size(nbytes)
-          << "\n\to2i size: " << prettyprint_memory_size(o2i_size)
-          << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
+          << "\n\to2i size: " << o2i_size
           << ", load factor: " << o2i_load_factor
-          << "\n\ti2o size: " << prettyprint_memory_size(i2o_size)
-          << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes)
-          << ", load factor: " << i2o_load_factor;
+          << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
+          << "\n\ti2o size: " << i2o_size
+          << ", load factor: " << i2o_load_factor
+          << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes);
 }
 
 template <typename OID_T, typename VID_T>
@@ -164,7 +167,7 @@ std::vector<OID_T> ArrowLocalVertexMap<OID_T, VID_T>::GetOids(
 }
 
 template <typename OID_T, typename VID_T>
-std::shared_ptr<typename vineyard::ConvertToArrowType<OID_T>::ArrayType>
+std::shared_ptr<ArrowArrayType<OID_T>>
 ArrowLocalVertexMap<OID_T, VID_T>::GetOidArray(fid_t fid,
                                                label_id_t label_id) const {
   CHECK(fid == fid_);
@@ -217,9 +220,29 @@ ObjectID ArrowLocalVertexMap<OID_T, VID_T>::AddVertices(
 }
 
 template <typename OID_T, typename VID_T>
+ObjectID ArrowLocalVertexMap<OID_T, VID_T>::AddVertices(
+    Client& client,
+    const std::map<label_id_t,
+                   std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+        oid_arrays_map) {
+  LOG(ERROR) << "ArrowLocalVertexMap not support AddVertices operation yet";
+  return InvalidObjectID();
+}
+
+template <typename OID_T, typename VID_T>
 ObjectID ArrowLocalVertexMap<OID_T, VID_T>::AddNewVertexLabels(
     Client& client,
     const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays) {
+  LOG(ERROR)
+      << "ArrowLocalVertexMap not support AddNewVertexLabels operation yet";
+  return InvalidObjectID();
+}
+
+template <typename OID_T, typename VID_T>
+ObjectID ArrowLocalVertexMap<OID_T, VID_T>::AddNewVertexLabels(
+    Client& client,
+    const std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+        oid_arrays) {
   LOG(ERROR)
       << "ArrowLocalVertexMap not support AddNewVertexLabels operation yet";
   return InvalidObjectID();
@@ -240,8 +263,8 @@ void ArrowLocalVertexMap<arrow_string_view, VID_T>::Construct(
   oid_arrays_.resize(fnum_);
   index_arrays_.resize(fnum_);
   vertices_num_.resize(fnum_);
-  double nbytes = 0, local_oid_total = 0, index_array_total = 0;
-  double o2i_total_bytes = 0, i2o_total_bytes = 0, o2i_size = 0,
+  size_t nbytes = 0, local_oid_total = 0, index_array_total = 0;
+  size_t o2i_total_bytes = 0, i2o_total_bytes = 0, o2i_size = 0,
          o2i_bucket_count = 0, i2o_size = 0, i2o_bucket_count = 0;
   for (fid_t i = 0; i < fnum_; ++i) {
     oid_arrays_[i].resize(label_num_);
@@ -288,18 +311,20 @@ void ArrowLocalVertexMap<arrow_string_view, VID_T>::Construct(
   nbytes =
       local_oid_total + index_array_total + i2o_total_bytes + o2i_total_bytes;
   double o2i_load_factor =
-      o2i_bucket_count == 0 ? 0 : o2i_size / o2i_bucket_count;
+      o2i_bucket_count == 0 ? 0
+                            : static_cast<double>(o2i_size) / o2i_bucket_count;
   double i2o_load_factor =
-      i2o_bucket_count == 0 ? 0 : i2o_size / i2o_bucket_count;
+      i2o_bucket_count == 0 ? 0
+                            : static_cast<double>(i2o_size) / i2o_bucket_count;
   VLOG(2) << "ArrowLocalVertexMap<string_view, uint64_t> "
           << "\n\tmemory: " << prettyprint_memory_size(nbytes)
           << "\n\tindex array: " << prettyprint_memory_size(index_array_total)
-          << "\n\to2i size: " << prettyprint_memory_size(o2i_size)
-          << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
+          << "\n\to2i size: " << o2i_size
           << ", load factor: " << o2i_load_factor
-          << "\n\ti2o size: " << prettyprint_memory_size(i2o_size)
-          << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes)
-          << ", load factor: " << i2o_load_factor;
+          << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
+          << "\n\ti2o size: " << i2o_size
+          << ", load factor: " << i2o_load_factor
+          << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes);
 }
 
 template <typename VID_T>
@@ -413,9 +438,29 @@ ObjectID ArrowLocalVertexMap<arrow_string_view, VID_T>::AddVertices(
 }
 
 template <typename VID_T>
+ObjectID ArrowLocalVertexMap<arrow_string_view, VID_T>::AddVertices(
+    Client& client,
+    const std::map<label_id_t,
+                   std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+        oid_arrays_map) {
+  LOG(ERROR) << "ArrowLocalVertexMap not support AddVertices operation yet";
+  return InvalidObjectID();
+}
+
+template <typename VID_T>
 ObjectID ArrowLocalVertexMap<arrow_string_view, VID_T>::AddNewVertexLabels(
     Client& client,
     const std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oid_arrays) {
+  LOG(ERROR)
+      << "ArrowLocalVertexMap not support AddNewVertexLabels operation yet";
+  return InvalidObjectID();
+}
+
+template <typename VID_T>
+ObjectID ArrowLocalVertexMap<arrow_string_view, VID_T>::AddNewVertexLabels(
+    Client& client,
+    const std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>&
+        oid_arrays) {
   LOG(ERROR)
       << "ArrowLocalVertexMap not support AddNewVertexLabels operation yet";
   return InvalidObjectID();
@@ -432,41 +477,41 @@ void ArrowLocalVertexMap<arrow_string_view, VID_T>::initHashmaps() {
     }
   }
 
-  int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
-  int thread_num =
-      std::min(static_cast<int>(std::thread::hardware_concurrency()), task_num);
-  std::atomic<int> task_id(0);
-  std::vector<std::thread> threads(thread_num);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      while (true) {
-        int got_task_id = task_id.fetch_add(1);
-        if (got_task_id >= task_num) {
-          break;
-        }
-        fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
-        label_id_t cur_label =
-            static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
-        int64_t vnum = oid_arrays_[cur_fid][cur_label]->length();
-        if (cur_fid == fid_) {
-          for (int64_t i = 0; i < vnum; ++i) {
-            auto oid = oid_arrays_[cur_fid][cur_label]->GetView(i);
-            o2i_[cur_fid][cur_label].emplace(oid, i);
-          }
-        } else {
-          for (int64_t i = 0; i < vnum; ++i) {
-            auto oid = oid_arrays_[cur_fid][cur_label]->GetView(i);
-            auto index = index_arrays_[cur_fid][cur_label]->GetView(i);
-            o2i_[cur_fid][cur_label].emplace(oid, index);
-            i2o_[cur_fid][cur_label].emplace(index, oid);
-          }
-        }
+  auto fn = [&](fid_t cur_fid, label_id_t cur_label) -> Status {
+    int64_t vnum = oid_arrays_[cur_fid][cur_label]->length();
+    if (cur_fid == fid_) {
+      o2i_[cur_fid][cur_label].reserve(static_cast<size_t>(vnum));
+      for (int64_t i = 0; i < vnum; ++i) {
+        auto oid = oid_arrays_[cur_fid][cur_label]->GetView(i);
+        o2i_[cur_fid][cur_label].emplace(oid, i);
       }
-    });
+    } else {
+      o2i_[cur_fid][cur_label].reserve(static_cast<size_t>(vnum));
+      i2o_[cur_fid][cur_label].reserve(static_cast<size_t>(vnum));
+      for (int64_t i = 0; i < vnum; ++i) {
+        auto oid = oid_arrays_[cur_fid][cur_label]->GetView(i);
+        auto index = index_arrays_[cur_fid][cur_label]->GetView(i);
+        o2i_[cur_fid][cur_label].emplace(oid, index);
+        i2o_[cur_fid][cur_label].emplace(index, oid);
+      }
+    }
+    // shrink the size of hashmap
+    o2i_[cur_fid][cur_label].shrink_to_fit();
+    i2o_[cur_fid][cur_label].shrink_to_fit();
+    return Status::OK();
+  };
+
+  ThreadGroup tg;
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    for (label_id_t label = 0; label < label_num_; ++label) {
+      tg.AddTask(fn, fid, label);
+    }
   }
-  for (auto& thrd : threads) {
-    thrd.join();
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
   }
+  VINEYARD_CHECK_OK(status);
 }
 
 template <typename OID_T, typename VID_T>
@@ -483,7 +528,7 @@ ArrowLocalVertexMapBuilder<OID_T, VID_T>::ArrowLocalVertexMapBuilder(
 template <typename OID_T, typename VID_T>
 vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::Build(
     vineyard::Client& client) {
-  LOG(ERROR) << "Not implement Build method.";
+  LOG(WARNING) << "Empty 'Build' method.";
   return vineyard::Status::OK();
 }
 
@@ -550,41 +595,70 @@ template <typename OID_T, typename VID_T>
 vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::AddLocalVertices(
     grape::CommSpec& comm_spec,
     std::vector<std::shared_ptr<oid_array_t>> oid_arrays) {
-  int thread_num = std::min(
-      static_cast<int>(std::thread::hardware_concurrency()), label_num_);
-  std::atomic<int> task_id(0);
-  std::vector<std::thread> threads(thread_num);
-  vertices_num_.resize(label_num_);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      while (true) {
-        int got_label_id = task_id.fetch_add(1);
-        if (got_label_id >= label_num_) {
-          break;
-        }
-        auto& array = oid_arrays[got_label_id];
-        typename InternalType<oid_t>::vineyard_builder_type array_builder(
-            client, array);
-        local_oid_arrays_[got_label_id] = *std::dynamic_pointer_cast<
-            typename InternalType<oid_t>::vineyard_array_type>(
-            array_builder.Seal(client));
-        vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
-        int64_t vnum = oid_arrays[got_label_id]->length();
-        for (int64_t i = 0; i < vnum; ++i) {
-          builder.emplace(oid_arrays[got_label_id]->GetView(i), i);
-        }
-        o2i_[fid_][got_label_id] =
-            *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
-                builder.Seal(client));
+  std::vector<std::vector<std::shared_ptr<oid_array_t>>> arrays(
+      oid_arrays.size());
+  for (size_t i = 0; i < oid_arrays.size(); ++i) {
+    arrays[i] = {oid_arrays[i]};
+  }
+  return addLocalVertices(comm_spec, std::move(arrays));
+}
 
-        vertices_num_[got_label_id].resize(fnum_);
-        vertices_num_[got_label_id][fid_] = vnum;
-      }
-    });
+template <typename OID_T, typename VID_T>
+vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::AddLocalVertices(
+    grape::CommSpec& comm_spec,
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> oid_arrays) {
+  std::vector<std::vector<std::shared_ptr<oid_array_t>>> arrays(
+      oid_arrays.size());
+  for (size_t i = 0; i < oid_arrays.size(); ++i) {
+    for (auto const& chunk : oid_arrays[i]->chunks()) {
+      arrays[i].emplace_back(std::dynamic_pointer_cast<oid_array_t>(chunk));
+    }
   }
-  for (auto& thrd : threads) {
-    thrd.join();
+  return addLocalVertices(comm_spec, std::move(arrays));
+}
+
+template <typename OID_T, typename VID_T>
+vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::addLocalVertices(
+    grape::CommSpec& comm_spec,
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays) {
+  vertices_num_.resize(label_num_);
+
+  auto fn = [&](label_id_t label) -> Status {
+    auto& arrays = oid_arrays[label];
+    typename InternalType<oid_t>::vineyard_builder_type array_builder(client,
+                                                                      arrays);
+    local_oid_arrays_[label] = *std::dynamic_pointer_cast<
+        typename InternalType<oid_t>::vineyard_array_type>(
+        array_builder.Seal(client));
+    arrays.clear();  // release the reference
+
+    // now use the array in vineyard memory
+    auto array = local_oid_arrays_[label].GetArray();
+    vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
+    int64_t vnum = array->length();
+    builder.reserve(static_cast<size_t>(vnum));
+    for (int64_t i = 0; i < vnum; ++i) {
+      builder.emplace(array->GetView(i), i);
+    }
+    o2i_[fid_][label] =
+        *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
+            builder.Seal(client));
+
+    vertices_num_[label].resize(fnum_);
+    vertices_num_[label][fid_] = vnum;
+    return Status::OK();
+  };
+
+  ThreadGroup tg(comm_spec);
+  for (label_id_t label = 0; label < label_num_; ++label) {
+    tg.AddTask(fn, label);
   }
+
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
+  }
+  RETURN_ON_ERROR(status);
 
   // sync the vertices_num
   for (label_id_t label = 0; label < label_num_; ++label) {
@@ -630,52 +704,44 @@ vineyard::Status
 ArrowLocalVertexMapBuilder<OID_T, VID_T>::AddOuterVerticesMapping(
     std::vector<std::vector<std::vector<oid_t>>>& oids,
     std::vector<std::vector<std::vector<vid_t>>>& index_list) {
-  int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
-  int thread_num =
-      std::min(static_cast<int>(std::thread::hardware_concurrency()), task_num);
-  std::atomic<int> task_id(0);
-  std::vector<std::thread> threads(thread_num);
   for (fid_t i = 0; i < fnum_; ++i) {
     if (i != fid_) {
       o2i_[i].resize(label_num_);
       i2o_[i].resize(label_num_);
     }
   }
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      while (true) {
-        int got_task_id = task_id.fetch_add(1);
-        if (got_task_id >= task_num) {
-          break;
-        }
-        fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
-        if (cur_fid == fid_) {
-          continue;
-        }
-        label_id_t cur_label =
-            static_cast<label_id_t>(static_cast<fid_t>(got_task_id) / fnum_);
-        vineyard::HashmapBuilder<oid_t, vid_t> o2i_builder(client);
-        vineyard::HashmapBuilder<vid_t, oid_t> i2o_builder(client);
-        for (size_t i = 0; i < oids[cur_fid][cur_label].size(); i++) {
-          auto& oid = oids[cur_fid][cur_label][i];
-          auto& index = index_list[cur_fid][cur_label][i];
-          o2i_builder.emplace(oid, index);
-          i2o_builder.emplace(index, oid);
-        }
-        o2i_[cur_fid][cur_label] =
-            *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
-                o2i_builder.Seal(client));
-        i2o_[cur_fid][cur_label] =
-            *std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, oid_t>>(
-                i2o_builder.Seal(client));
-      }
-    });
-  }
-  for (auto& thrd : threads) {
-    thrd.join();
-  }
 
-  return vineyard::Status::OK();
+  auto fn = [&](fid_t cur_fid, label_id_t cur_label) -> Status {
+    vineyard::HashmapBuilder<oid_t, vid_t> o2i_builder(client);
+    vineyard::HashmapBuilder<vid_t, oid_t> i2o_builder(client);
+    o2i_builder.reserve(static_cast<size_t>(oids[cur_fid][cur_label].size()));
+    i2o_builder.reserve(static_cast<size_t>(oids[cur_fid][cur_label].size()));
+    for (size_t i = 0; i < oids[cur_fid][cur_label].size(); i++) {
+      auto& oid = oids[cur_fid][cur_label][i];
+      auto& index = index_list[cur_fid][cur_label][i];
+      o2i_builder.emplace(oid, index);
+      i2o_builder.emplace(index, oid);
+    }
+    o2i_[cur_fid][cur_label] =
+        *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
+            o2i_builder.Seal(client));
+    i2o_[cur_fid][cur_label] =
+        *std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, oid_t>>(
+            i2o_builder.Seal(client));
+    return Status::OK();
+  };
+
+  ThreadGroup tg;
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    for (label_id_t label = 0; label < label_num_; ++label) {
+      tg.AddTask(fn, fid, label);
+    }
+  }
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
+  }
+  return status;
 }
 
 template <typename VID_T>
@@ -692,7 +758,7 @@ ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::
 template <typename VID_T>
 vineyard::Status ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::Build(
     vineyard::Client& client) {
-  LOG(ERROR) << "Not implement Build method.";
+  LOG(WARNING) << "Empty 'Build' method.";
   return vineyard::Status::OK();
 }
 
@@ -765,37 +831,68 @@ vineyard::Status
 ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::AddLocalVertices(
     grape::CommSpec& comm_spec,
     std::vector<std::shared_ptr<oid_array_t>> oid_arrays) {
-  int thread_num = std::min(
-      static_cast<int>(std::thread::hardware_concurrency()), label_num_);
-  std::atomic<int> task_id(0);
+  std::vector<std::vector<std::shared_ptr<oid_array_t>>> arrays(
+      oid_arrays.size());
+  for (size_t i = 0; i < oid_arrays.size(); ++i) {
+    arrays[i] = {oid_arrays[i]};
+  }
+  return addLocalVertices(comm_spec, std::move(arrays));
+}
+
+template <typename VID_T>
+vineyard::Status
+ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::AddLocalVertices(
+    grape::CommSpec& comm_spec,
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> oid_arrays) {
+  std::vector<std::vector<std::shared_ptr<oid_array_t>>> arrays(
+      oid_arrays.size());
+  for (size_t i = 0; i < oid_arrays.size(); ++i) {
+    for (auto const& chunk : oid_arrays[i]->chunks()) {
+      arrays[i].emplace_back(std::dynamic_pointer_cast<oid_array_t>(chunk));
+    }
+  }
+  return addLocalVertices(comm_spec, std::move(arrays));
+}
+
+template <typename VID_T>
+vineyard::Status
+ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::addLocalVertices(
+    grape::CommSpec& comm_spec,
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays) {
   vertices_num_.resize(label_num_);
-  std::vector<std::thread> threads(thread_num);
   oid_arrays_[fid_].resize(label_num_);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      while (true) {
-        int got_label_id = task_id.fetch_add(1);
-        if (got_label_id >= label_num_) {
-          break;
-        }
-        auto& array = oid_arrays[got_label_id];
-        typename InternalType<oid_t>::vineyard_builder_type array_builder(
-            client, array);
-        oid_arrays_[fid_][got_label_id] = *std::dynamic_pointer_cast<
-            typename InternalType<oid_t>::vineyard_array_type>(
-            array_builder.Seal(client));
-        int64_t vnum = array->length();
-        for (int64_t i = 0; i < vnum; ++i) {
-          o2i_[got_label_id].emplace(array->GetView(i), i);
-        }
-        vertices_num_[got_label_id].resize(fnum_);
-        vertices_num_[got_label_id][fid_] = vnum;
-      }
-    });
+
+  auto fn = [&](label_id_t label) -> Status {
+    auto& arrays = oid_arrays[label];
+    typename InternalType<oid_t>::vineyard_builder_type array_builder(client,
+                                                                      arrays);
+    oid_arrays_[fid_][label] = *std::dynamic_pointer_cast<
+        typename InternalType<oid_t>::vineyard_array_type>(
+        array_builder.Seal(client));
+    arrays.clear();  // release the reference
+
+    // now use the array in vineyard memory
+    auto array = oid_arrays_[fid_][label].GetArray();
+    int64_t vnum = array->length();
+    o2i_[label].reserve(static_cast<size_t>(vnum));
+    for (int64_t i = 0; i < vnum; ++i) {
+      o2i_[label].emplace(array->GetView(i), i);
+    }
+    vertices_num_[label].resize(fnum_);
+    vertices_num_[label][fid_] = vnum;
+    return Status::OK();
+  };
+
+  ThreadGroup tg(comm_spec);
+  for (label_id_t label = 0; label < label_num_; ++label) {
+    tg.AddTask(fn, label);
   }
-  for (auto& thrd : threads) {
-    thrd.join();
+
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
   }
+  RETURN_ON_ERROR(status);
 
   // sync the vertices_num
   for (label_id_t label = 0; label < label_num_; ++label) {
@@ -810,31 +907,26 @@ vineyard::Status
 ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::GetIndexOfOids(
     const std::vector<std::vector<std::string>>& oids,
     std::vector<std::vector<vid_t>>& index_list) {
-  int thread_num = std::min(
-      static_cast<int>(std::thread::hardware_concurrency()), label_num_);
   index_list.resize(label_num_);
-  std::atomic<int> task_id(0);
-  std::vector<std::thread> threads(thread_num);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      while (true) {
-        int got_label_id = task_id.fetch_add(1);
-        if (got_label_id >= label_num_) {
-          break;
-        }
-        auto& o2i_map = o2i_[got_label_id];
-        index_list[got_label_id].reserve(oids[got_label_id].size());
-        for (const auto& oid : oids[got_label_id]) {
-          index_list[got_label_id].push_back(o2i_map[oid]);
-        }
-      }
-    });
-  }
-  for (auto& thrd : threads) {
-    thrd.join();
-  }
 
-  return vineyard::Status::OK();
+  auto fn = [&](label_id_t label) -> Status {
+    auto& o2i_map = o2i_[label];
+    index_list[label].reserve(oids[label].size());
+    for (const auto& oid : oids[label]) {
+      index_list[label].push_back(o2i_map[oid]);
+    }
+    return Status::OK();
+  };
+
+  ThreadGroup tg;
+  for (label_id_t label = 0; label < label_num_; ++label) {
+    tg.AddTask(fn, label);
+  }
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
+  }
+  return status;
 }
 
 template <typename VID_T>
@@ -842,80 +934,46 @@ vineyard::Status
 ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::AddOuterVerticesMapping(
     std::vector<std::vector<std::vector<std::string>>>& oids,
     std::vector<std::vector<std::vector<vid_t>>>& index_list) {
-  int task_num = static_cast<int>(fnum_) * static_cast<int>(label_num_);
-  int thread_num =
-      std::min(static_cast<int>(std::thread::hardware_concurrency()), task_num);
-  std::atomic<int> task_id(0);
-  std::vector<std::thread> threads(thread_num);
   for (fid_t i = 0; i < fnum_; ++i) {
     if (i != fid_) {
       oid_arrays_[i].resize(label_num_);
       index_arrays_[i].resize(label_num_);
     }
   }
-  std::vector<vineyard::Status> status(thread_num);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread(
-        [&](Status& status) -> void {
-          while (true) {
-            int got_task_id = task_id.fetch_add(1);
-            if (got_task_id >= task_num) {
-              break;
-            }
-            fid_t cur_fid = static_cast<fid_t>(got_task_id) % fnum_;
-            if (cur_fid == fid_) {
-              continue;
-            }
-            label_id_t cur_label = static_cast<label_id_t>(
-                static_cast<fid_t>(got_task_id) / fnum_);
-            std::shared_ptr<typename ConvertToArrowType<std::string>::ArrayType>
-                oid_array;
-            std::shared_ptr<typename ConvertToArrowType<vid_t>::ArrayType>
-                index_array;
-            typename ConvertToArrowType<std::string>::BuilderType array_builder;
-            typename ConvertToArrowType<vid_t>::BuilderType index_builder;
-            status += vineyard::Status::ArrowError(
-                array_builder.AppendValues(oids[cur_fid][cur_label]));
-            if (!status.ok()) {
-              return;
-            }
-            status += vineyard::Status::ArrowError(
-                index_builder.AppendValues(index_list[cur_fid][cur_label]));
-            if (!status.ok()) {
-              return;
-            }
-            status +=
-                vineyard::Status::ArrowError(array_builder.Finish(&oid_array));
-            if (!status.ok()) {
-              return;
-            }
-            status += vineyard::Status::ArrowError(
-                index_builder.Finish(&index_array));
-            if (!status.ok()) {
-              return;
-            }
-            typename InternalType<oid_t>::vineyard_builder_type
-                outer_oid_builder(client, oid_array);
-            typename InternalType<vid_t>::vineyard_builder_type
-                outer_index_builder(client, index_array);
-            oid_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
-                typename InternalType<oid_t>::vineyard_array_type>(
-                outer_oid_builder.Seal(client));
-            index_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
-                typename InternalType<vid_t>::vineyard_array_type>(
-                outer_index_builder.Seal(client));
-          }
-        },
-        std::ref(status[i]));
+  auto fn = [&](fid_t cur_fid, label_id_t cur_label) -> Status {
+    std::shared_ptr<ArrowArrayType<std::string>> oid_array;
+    std::shared_ptr<ArrowArrayType<vid_t>> index_array;
+    ArrowBuilderType<std::string> array_builder;
+    ArrowBuilderType<vid_t> index_builder;
+    RETURN_ON_ARROW_ERROR(array_builder.AppendValues(oids[cur_fid][cur_label]));
+    RETURN_ON_ARROW_ERROR(
+        index_builder.AppendValues(index_list[cur_fid][cur_label]));
+    RETURN_ON_ARROW_ERROR(array_builder.Finish(&oid_array));
+    RETURN_ON_ARROW_ERROR(index_builder.Finish(&index_array));
+    typename InternalType<oid_t>::vineyard_builder_type outer_oid_builder(
+        client, oid_array);
+    typename InternalType<vid_t>::vineyard_builder_type outer_index_builder(
+        client, index_array);
+    oid_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
+        typename InternalType<oid_t>::vineyard_array_type>(
+        outer_oid_builder.Seal(client));
+    index_arrays_[cur_fid][cur_label] = *std::dynamic_pointer_cast<
+        typename InternalType<vid_t>::vineyard_array_type>(
+        outer_index_builder.Seal(client));
+    return Status::OK();
+  };
+
+  ThreadGroup tg;
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    for (label_id_t label = 0; label < label_num_; ++label) {
+      tg.AddTask(fn, fid, label);
+    }
   }
-  for (auto& thrd : threads) {
-    thrd.join();
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
   }
-  auto ret = vineyard::Status::OK();
-  for (auto& st : status) {
-    ret += st;
-  }
-  return ret;
+  return status;
 }
 
 }  // namespace vineyard

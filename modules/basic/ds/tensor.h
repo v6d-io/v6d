@@ -35,6 +35,7 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "common/util/arrow.h"
 #include "common/util/json.h"
 
 namespace vineyard {
@@ -167,7 +168,7 @@ template <>
 class TensorBuilder<std::string> : public ITensorBuilder,
                                    public TensorBaseBuilder<std::string> {
  public:
-  using value_t = detail::arrow_string_view;
+  using value_t = arrow_string_view;
   using value_pointer_t = uint8_t*;
   using value_const_pointer_t = const uint8_t*;
 

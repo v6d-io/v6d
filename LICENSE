@@ -213,8 +213,8 @@ following license:
 
 The files cmake/FindArrow.cmake, src/server/memory/{allocator.h,allocator.cc,
 dlmalloc.cc,malloc.cc,malloc.h}, src/common/util/{status.h,status.cc,memory.h,
-memory.cc} are referred from the apache-arrow project, which has the following
-license:
+memory.cc}, modules/basic/ds/arrow_shim{concatenate.h,concatenate.cc} are
+referred from the apache-arrow project, which has the following license:
 
                                  Apache License
                            Version 2.0, January 2004

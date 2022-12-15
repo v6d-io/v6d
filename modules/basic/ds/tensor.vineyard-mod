@@ -47,12 +47,6 @@ namespace vineyard {
 
 namespace detail {
 
-#if ARROW_VERSION_MAJOR >= 10
-using arrow_string_view = std::string_view;
-#else
-using arrow_string_view = arrow::util::string_view;
-#endif
-
 template <typename T>
 struct ArrowTensorType {
   using type = arrow::NumericTensor<typename arrow::CTypeTraits<T>::ArrowType>;
@@ -188,11 +182,11 @@ template <>
 class [[vineyard]] Tensor<std::string>
     : public ITensor, public BareRegistered<Tensor<std::string>> {
  public:
-  using value_t = detail::arrow_string_view;
+  using value_t = arrow_string_view;
   using value_pointer_t = uint8_t*;
   using value_const_pointer_t = const uint8_t*;
   using ArrowTensorT =
-      typename detail::ArrowTensorType<detail::arrow_string_view>::type;
+      typename detail::ArrowTensorType<arrow_string_view>::type;
 
   /**
    * @brief Get the strides of the tensor.

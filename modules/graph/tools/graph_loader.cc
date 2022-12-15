@@ -33,6 +33,18 @@
 
 namespace vineyard {
 
+template <typename OID_T, typename VID_T>
+class ArrowVertexMap;
+
+template <typename OID_T, typename VID_T>
+class ArrowLocalVertexMap;
+
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+class ArrowFragment;
+
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+class ArrowFragmentLoader;
+
 namespace detail {
 
 void print_graph_memory_usage(Client& client, grape::CommSpec& comm_spec,
@@ -51,11 +63,13 @@ void print_graph_memory_usage(Client& client, grape::CommSpec& comm_spec,
       ObjectMeta meta;
       VINEYARD_CHECK_OK(client.GetMetaData(fragments.at(item.first), meta));
       ObjectMeta vertexmap = meta.GetMemberMeta("vm_ptr_");
+      json usages;
+      size_t memory_usage = meta.MemoryUsage(usages, true);
       LOG(INFO) << "[frag-" << item.first << "]: " << item.second
-                << "\n\tuses memory: "
-                << prettyprint_memory_size(meta.MemoryUsage())
+                << "\n\tuses memory: " << prettyprint_memory_size(memory_usage)
                 << "\n\tvertex map: "
                 << prettyprint_memory_size(vertexmap.MemoryUsage());
+      std::clog << usages.dump(2);
     }
   }
 }
@@ -63,6 +77,18 @@ void print_graph_memory_usage(Client& client, grape::CommSpec& comm_spec,
 static inline bool parse_boolean_value(std::string const& value) {
   return value == "y" || value == "yes" || value == "t" || value == "true" ||
          value == "on" || value == "1";
+}
+
+static inline std::string normalize_data_type(std::string const& datatype) {
+  if (datatype == "s" || datatype == "str" || datatype == "string" ||
+      datatype == "std::string") {
+    return "string";
+  }
+  if (datatype == "i" || datatype == "i32" || datatype == "int" ||
+      datatype == "int32" || datatype == "int32_t") {
+    return "int32";
+  }
+  return "int64";  // default
 }
 
 static inline bool parse_boolean_value(const char* value) {
@@ -80,6 +106,22 @@ static inline bool parse_boolean_value(json const& value) {
   } else {
     return false;
   }
+}
+
+static inline progressive_t parse_progressive_enum(const std::string& value) {
+  if (value == "whole") {
+    return progressive_t::WHOLE;
+  }
+  if (value == "step_by_step") {
+    return progressive_t::STEP_BY_STEP;
+  }
+  if (true /* value == "none" */) {
+    return progressive_t::NONE;
+  }
+}
+
+static inline progressive_t parse_progressive_enum(const char* value) {
+  return parse_progressive_enum(std::string(value));
 }
 
 static inline bool parse_options_from_args(struct loader_options& options,
@@ -102,13 +144,19 @@ static inline bool parse_options_from_args(struct loader_options& options,
     options.generate_eid = parse_boolean_value(argv[current_index++]);
   }
   if (argc > current_index) {
-    options.string_oid = parse_boolean_value(argv[current_index++]);
+    options.oid_type = normalize_data_type(argv[current_index++]);
   }
   if (argc > current_index) {
-    options.int32_oid = parse_boolean_value(argv[current_index++]);
+    options.large_vid = parse_boolean_value(argv[current_index++]);
+  }
+  if (argc > current_index) {
+    options.large_eid = parse_boolean_value(argv[current_index++]);
   }
   if (argc > current_index) {
     options.local_vertex_map = parse_boolean_value(argv[current_index++]);
+  }
+  if (argc > current_index) {
+    options.progressive = parse_progressive_enum(argv[current_index++]);
   }
   if (argc > current_index) {
     options.catch_leaf_errors = parse_boolean_value(argv[current_index++]);
@@ -159,18 +207,29 @@ static inline bool parse_options_from_config_json(
   if (config.contains("generate_eid")) {
     options.generate_eid = parse_boolean_value(config["generate_eid"]);
   }
-  if (config.contains("int32_oid")) {
-    options.int32_oid = parse_boolean_value(config["int32_oid"]);
+  if (config.contains("oid_type")) {
+    options.oid_type =
+        normalize_data_type(config["oid_type"].get<std::string>());
   }
-  if (config.contains("string_oid")) {
-    options.string_oid = parse_boolean_value(config["string_oid"]);
+  if (config.contains("large_vid")) {
+    options.large_vid = parse_boolean_value(config["large_vid"]);
+  }
+  if (config.contains("large_eid")) {
+    options.large_eid = parse_boolean_value(config["large_eid"]);
   }
   if (config.contains("local_vertex_map")) {
     options.local_vertex_map = parse_boolean_value(config["local_vertex_map"]);
   }
+  if (config.contains("progressive")) {
+    options.progressive =
+        parse_progressive_enum(config["progressive"].get<std::string>());
+  }
   if (config.contains("catch_leaf_errors")) {
     options.catch_leaf_errors =
         parse_boolean_value(config["catch_leaf_errors"]);
+  }
+  if (config.contains("dump")) {
+    options.dump = config["dump"].get<std::string>();
   }
   return true;
 }
@@ -188,32 +247,122 @@ static void loading_vineyard_graph(
   MPI_Barrier(comm_spec.comm());
   vineyard::ObjectID fragment_group_id = InvalidObjectID();
   if (options.local_vertex_map) {
-    if (options.string_oid) {
-      fragment_group_id = detail::loading_vineyard_graph_string_localvm(
-          client, comm_spec, options);
-    } else if (options.int32_oid) {
-      fragment_group_id = detail::loading_vineyard_graph_int32_localvm(
-          client, comm_spec, options);
+    if (options.large_vid) {
+      if (options.oid_type == "string") {
+        fragment_group_id =
+            detail::load_graph<std::string, uint64_t, ArrowLocalVertexMap>(
+                client, comm_spec, options);
+      } else if (options.oid_type == "int32") {
+        fragment_group_id =
+            detail::load_graph<int32_t, uint64_t, ArrowLocalVertexMap>(
+                client, comm_spec, options);
+      } else {
+        fragment_group_id =
+            detail::load_graph<int64_t, uint64_t, ArrowLocalVertexMap>(
+                client, comm_spec, options);
+      }
     } else {
-      fragment_group_id = detail::loading_vineyard_graph_int64_localvm(
-          client, comm_spec, options);
+      if (options.oid_type == "string") {
+        fragment_group_id =
+            detail::load_graph<std::string, uint32_t, ArrowLocalVertexMap>(
+                client, comm_spec, options);
+      } else if (options.oid_type == "int32") {
+        fragment_group_id =
+            detail::load_graph<int32_t, uint32_t, ArrowLocalVertexMap>(
+                client, comm_spec, options);
+      } else {
+        fragment_group_id =
+            detail::load_graph<int64_t, uint32_t, ArrowLocalVertexMap>(
+                client, comm_spec, options);
+      }
     }
   } else {
-    if (options.string_oid) {
-      fragment_group_id =
-          detail::loading_vineyard_graph_string(client, comm_spec, options);
-    } else if (options.int32_oid) {
-      fragment_group_id =
-          detail::loading_vineyard_graph_int32(client, comm_spec, options);
+    if (options.large_vid) {
+      if (options.oid_type == "string") {
+        fragment_group_id =
+            detail::load_graph<std::string, uint64_t, ArrowVertexMap>(
+                client, comm_spec, options);
+      } else if (options.oid_type == "int32") {
+        fragment_group_id =
+            detail::load_graph<int32_t, uint64_t, ArrowVertexMap>(
+                client, comm_spec, options);
+      } else {
+        fragment_group_id =
+            detail::load_graph<int64_t, uint64_t, ArrowVertexMap>(
+                client, comm_spec, options);
+      }
     } else {
-      fragment_group_id =
-          detail::loading_vineyard_graph_int64(client, comm_spec, options);
+      if (options.oid_type == "string") {
+        fragment_group_id =
+            detail::load_graph<std::string, uint32_t, ArrowVertexMap>(
+                client, comm_spec, options);
+      } else if (options.oid_type == "int32") {
+        fragment_group_id =
+            detail::load_graph<int32_t, uint32_t, ArrowVertexMap>(
+                client, comm_spec, options);
+      } else {
+        fragment_group_id =
+            detail::load_graph<int64_t, uint32_t, ArrowVertexMap>(
+                client, comm_spec, options);
+      }
     }
   }
 
   MPI_Barrier(comm_spec.comm());
   LOG(INFO) << "[fragment group id]: " << fragment_group_id;
   detail::print_graph_memory_usage(client, comm_spec, fragment_group_id);
+  if (!options.dump.empty()) {
+    if (options.local_vertex_map) {
+      if (options.large_vid) {
+        if (options.oid_type == "string") {
+          detail::dump_graph<std::string, uint64_t, ArrowLocalVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else if (options.oid_type == "int32") {
+          detail::dump_graph<int32_t, uint64_t, ArrowLocalVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else {
+          detail::dump_graph<int64_t, uint64_t, ArrowLocalVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        }
+      } else {
+        if (options.oid_type == "string") {
+          detail::dump_graph<std::string, uint32_t, ArrowLocalVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else if (options.oid_type == "int32") {
+          detail::dump_graph<int32_t, uint32_t, ArrowLocalVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else {
+          detail::dump_graph<int64_t, uint32_t, ArrowLocalVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        }
+      }
+
+    } else {
+      if (options.large_vid) {
+        if (options.oid_type == "string") {
+          detail::dump_graph<std::string, uint64_t, ArrowVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else if (options.oid_type == "int32") {
+          detail::dump_graph<int32_t, uint64_t, ArrowVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else {
+          detail::dump_graph<int64_t, uint64_t, ArrowVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        }
+      } else {
+        if (options.oid_type == "string") {
+          detail::dump_graph<std::string, uint32_t, ArrowVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else if (options.oid_type == "int32") {
+          detail::dump_graph<int32_t, uint32_t, ArrowVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        } else {
+          detail::dump_graph<int64_t, uint32_t, ArrowVertexMap>(
+              client, comm_spec, fragment_group_id, options.dump);
+        }
+      }
+    }
+  }
 }
 
 }  // namespace vineyard
@@ -292,10 +441,9 @@ int main(int argc, char** argv) {
   auto finish_time = vineyard::GetMicroTimestamp();
   grape::FinalizeMPIComm();
 
-  LOG(INFO) << "time usage: " << ((finish_time - start_time) / 1000000.0)
+  LOG(INFO) << "Time usage: " << ((finish_time - start_time) / 1000000.0)
             << " seconds";
-  LOG(INFO) << "peek memory usage: "
-            << vineyard::prettyprint_memory_size(vineyard::get_peek_rss());
+  LOG(INFO) << "Final peak rss = " << vineyard::get_peak_rss_pretty();
 
   return 0;
 }

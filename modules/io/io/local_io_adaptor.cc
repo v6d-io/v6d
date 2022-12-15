@@ -84,6 +84,8 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
             (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
         meta_.emplace("include_all_columns",
                       std::to_string(include_all_columns_));
+      } else if (kv_pair[0] == "block_size") {
+        meta_.emplace("block_size", kv_pair[1]);
       } else if (kv_pair[0] == "consolidate") {
         meta_.emplace("consolidate", kv_pair[1]);
       } else if (kv_pair.size() > 1) {
@@ -136,7 +138,7 @@ LocalIOAdaptor::~LocalIOAdaptor() {
 std::unique_ptr<IIOAdaptor> LocalIOAdaptor::Make(const std::string& location,
                                                  Client* client) {
   // use `registered` to avoid it being optimized out.
-  VLOG(999) << "Local IO adaptor has been registered: " << registered_;
+  VLOG(100) << "Local IO adaptor has been registered: " << registered_;
   return std::unique_ptr<IIOAdaptor>(new LocalIOAdaptor(location));
 }
 
@@ -184,12 +186,12 @@ Status LocalIOAdaptor::SetPartialRead(const int index, const int total_parts) {
   // make sure that the bytes of each line of the file is smaller than macro
   // FINELINE
   if (index < 0 || total_parts <= 0 || index >= total_parts) {
-    LOG(ERROR) << "error during set_partial_read with [" << index << ", "
+    LOG(ERROR) << "Error during set_partial_read with [" << index << ", "
                << total_parts << "]";
     return Status::IOError();
   }
   if (ifp_ != nullptr) {
-    LOG(WARNING) << "WARNING!! Set partial read after open have no effect, "
+    LOG(WARNING) << "WARNING: set partial read after open have no effect, "
                     "You probably want to set partial before open!";
     return Status::IOError();
   }
@@ -208,7 +210,7 @@ Status LocalIOAdaptor::GetPartialReadDetail(int64_t& offset, int64_t& nbytes) {
   offset = partial_read_offset_[index_];
   nbytes = partial_read_offset_[index_ + 1] - partial_read_offset_[index_];
 
-  VLOG(2) << "partial read offset = " << offset << ", nbytes = " << nbytes;
+  VLOG(2) << "Partial read offset = " << offset << ", nbytes = " << nbytes;
   return Status::OK();
 }
 
@@ -325,6 +327,16 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   auto parse_options = arrow::csv::ParseOptions::Defaults();
   auto convert_options = arrow::csv::ConvertOptions::Defaults();
 
+  // default: 128MB
+  read_options.block_size = 128 * 1024 * 1024;
+  if (meta_.find("block_size") != meta_.end()) {
+    auto range = meta_.equal_range("block_size");
+    for (auto iter = range.first; iter != range.second; ++iter) {
+      int32_t block_size =
+          static_cast<int32_t>(parse_memory_size(iter->second));
+      read_options.block_size = std::max(read_options.block_size, block_size);
+    }
+  }
   read_options.column_names = original_columns_;
 
   auto is_number = [](const std::string& s) -> bool {
@@ -633,7 +645,7 @@ std::string LocalIOAdaptor::trimBOM(const std::string& line) {
   auto line_copy = line;
   ::boost::algorithm::trim(line_copy);
   if (line_copy.substr(0, 3) == "\xef\xbb\xbf") {
-    VLOG(2) << "Found the BOM, trimming it...";
+    VLOG(2) << "Found the UTF-8 BOM, trimming it ...";
     line_copy = line_copy.substr(3);
   }
   return line_copy;

@@ -32,7 +32,6 @@ limitations under the License.
 namespace vineyard {
 
 KafkaIOAdaptor::KafkaIOAdaptor(const std::string& location) {
-  LOG(INFO) << "Parse location here";
   parseLocation(location);
 }
 
@@ -41,7 +40,7 @@ KafkaIOAdaptor::~KafkaIOAdaptor() {}
 std::unique_ptr<IIOAdaptor> KafkaIOAdaptor::Make(const std::string& location,
                                                  Client* client) {
   // use `registered` to avoid it being optimized out.
-  VLOG(999) << "Kafka IO adaptor has been registered: " << registered_;
+  VLOG(100) << "Kafka IO adaptor has been registered: " << registered_;
   return std::unique_ptr<IIOAdaptor>(new KafkaIOAdaptor(location));
 }
 

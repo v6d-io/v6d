@@ -28,7 +28,6 @@ namespace vineyard {
 
 template <typename T>
 void ReportStatus(const std::string& kind, T const& value) {
-  LOG(INFO) << "kind: " << kind;
   json result;
   result["type"] = kind;
   result["content"] = value;

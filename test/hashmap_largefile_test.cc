@@ -73,7 +73,8 @@ int main(int argc, char** argv) {
   LOG(INFO) << "sealed hashmap size: " << sealed_hashmap->size()
             << ", bucket count: " << sealed_hashmap->bucket_count()
             << ", load factor: " << sealed_hashmap->load_factor()
-            << ", memory usage: " << sealed_hashmap->meta().MemoryUsage();
+            << ", memory usage: "
+            << prettyprint_memory_size(sealed_hashmap->meta().MemoryUsage());
 
   for (auto const& kv : *sealed_hashmap) {
     CHECK_EQ(kv.first, kv.second);

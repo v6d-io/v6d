@@ -18,6 +18,10 @@ limitations under the License.
 #include <cinttypes>
 #endif
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
 #include "common/util/env.h"
 
 #if defined(__unix__) || defined(__unix) || defined(unix) || \
@@ -28,6 +32,7 @@ limitations under the License.
 #elif defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
 #include <fcntl.h>
+#include <malloc.h>
 #include <sys/statvfs.h>
 #endif
 #endif
@@ -38,12 +43,64 @@ limitations under the License.
 #endif
 #else
 #include <sys/sysctl.h>
-#include <sys/types.h>
 #endif
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <iostream>
 
 namespace vineyard {
+
+namespace detail {
+
+#if 0
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+static void parse_proc_smaps(int64_t& private_rss, int64_t& shared_rss) {
+  FILE* fp = nullptr;
+  if ((fp = fopen("/proc/self/smaps", "r")) == nullptr) {
+    return;
+  }
+  char line[1024];
+  while (!feof(fp)) {
+    if (fgets(line, 1024, fp) == nullptr) {
+      break;
+    }
+    if (strncmp(line, "Pss:", 4) == 0) {
+      private_rss += atoll(line + 4) * 1024;
+    } else if (strncmp(line, "Rss:", 4) == 0) {
+      shared_rss += atoll(line + 4) * 1024;
+    }
+  }
+}
+#endif
+#endif
+
+}  // namespace detail
+
+void create_dirs(const char* path) {
+  if (path == nullptr) {
+    return;
+  }
+  size_t length = strlen(path);
+  if (length == 0) {
+    return;
+  }
+  char* temp = static_cast<char*>(malloc(length + 1));
+  memset(temp, 0x00, length + 1);
+  for (size_t i = 0; i < length; i++) {
+    temp[i] = path[i];
+    if (temp[i] == '/') {
+      if (access(temp, 0) != 0) {
+        mkdir(temp, 0755);
+      }
+    }
+  }
+  if (access(temp, 0) != 0) {
+    mkdir(temp, 0755);
+  }
+  free(temp);
+}
 
 /**
  * @brief Returns the current resident set size (physical memory use) measured
@@ -51,7 +108,8 @@ namespace vineyard {
  *
  * c.f.: https://stackoverflow.com/a/14927379/5080177
  */
-size_t get_rss() {
+size_t get_rss(bool include_shared_memory) {
+  trim_rss();
 #if defined(__APPLE__) && defined(__MACH__)
   /* OSX ------------------------------------------------------ */
   struct mach_task_basic_info info;
@@ -62,20 +120,41 @@ size_t get_rss() {
   return (size_t) info.resident_size;
 #elif defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
-  /* Linux ---------------------------------------------------- */
-  int64_t rss = 0L;
+  // /* Linux ---------------------------------------------------- */
+  int64_t rss = 0L, shared_rss = 0L;
   FILE* fp = NULL;
   if ((fp = fopen("/proc/self/statm", "r")) == NULL)
     return (size_t) 0L; /* Can't open? */
+  //
   if (fscanf(fp, "%*s%ld", &rss) != 1) {
     fclose(fp);
     return (size_t) 0L; /* Can't read? */
   }
+  // read the second number
+  if (fscanf(fp, "%ld", &shared_rss) != 1) {
+    fclose(fp);
+    return (size_t) 0L; /* Can't read? */
+  }
   fclose(fp);
-  return (size_t) rss * (size_t) sysconf(_SC_PAGESIZE);
+  if (include_shared_memory) {
+    return (size_t) rss * (size_t) sysconf(_SC_PAGESIZE);
+  } else {
+    return (size_t)(rss - shared_rss) * (size_t) sysconf(_SC_PAGESIZE);
+  }
 #else
   /* Unknown OS ----------------------------------------------- */
   return 0;
+#endif
+}
+
+std::string get_rss_pretty(const bool include_shared_memory) {
+  return prettyprint_memory_size(get_rss(include_shared_memory));
+}
+
+void trim_rss() {
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+  malloc_trim(1024 * 1024 /* 1MB */);
 #endif
 }
 
@@ -105,13 +184,17 @@ size_t get_shared_rss() {
 #endif
 }
 
+std::string get_shared_rss_pretty() {
+  return prettyprint_memory_size(get_shared_rss());
+}
+
 /**
  * @brief Returns the peak (maximum so far) resident set size (physical
  * memory use) measured in bytes.
  *
  * c.f.: https://stackoverflow.com/a/14927379/5080177
  */
-size_t get_peek_rss() {
+size_t get_peak_rss() {
 #if defined(__unix__) || defined(__unix) || defined(unix) || \
     (defined(__APPLE__) && defined(__MACH__))
   /* BSD, Linux, and OSX -------------------------------------- */
@@ -127,6 +210,10 @@ size_t get_peek_rss() {
   /* Unknown OS ----------------------------------------------- */
   return 0;
 #endif
+}
+
+std::string get_peak_rss_pretty() {
+  return prettyprint_memory_size(get_peak_rss());
 }
 
 /**
@@ -168,6 +255,41 @@ std::string prettyprint_memory_size(size_t nbytes) {
     return std::to_string(nbytes * 1.0 / (1L << 10)) + " KB";
   } else {
     return std::to_string(nbytes) + " B";
+  }
+}
+
+/**
+ * @brief Parse human-readable size. Note that any extra character that follows
+ * a valid sequence will be ignored.
+ */
+size_t parse_memory_size(std::string const& nbytes) {
+  const char *start = nbytes.c_str(), *end = nbytes.c_str() + nbytes.size();
+  char* parsed_end = nullptr;
+  double parse_size = std::strtod(start, &parsed_end);
+  if (end == parsed_end || *parsed_end == '\0') {
+    return static_cast<size_t>(parse_size);
+  }
+  switch (*parsed_end) {
+  case 'k':
+  case 'K':
+    return static_cast<size_t>(parse_size * (1LL << 10));
+  case 'm':
+  case 'M':
+    return static_cast<size_t>(parse_size * (1LL << 20));
+  case 'g':
+  case 'G':
+    return static_cast<size_t>(parse_size * (1LL << 30));
+  case 't':
+  case 'T':
+    return static_cast<size_t>(parse_size * (1LL << 40));
+  case 'P':
+  case 'p':
+    return static_cast<size_t>(parse_size * (1LL << 50));
+  case 'e':
+  case 'E':
+    return static_cast<size_t>(parse_size * (1LL << 60));
+  default:
+    return static_cast<size_t>(parse_size);
   }
 }
 

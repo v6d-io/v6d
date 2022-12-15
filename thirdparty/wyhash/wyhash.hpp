@@ -17,6 +17,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 #include <random>
 #include <string>
@@ -437,7 +438,12 @@ namespace wy {
 			using hash_imp::hash_imp;// Inherit constructors
 			inline uint64_t operator()(const STRING_TYPE& elem) const noexcept
 			{
-				return hash_imp::wyhash(reinterpret_cast<const uint8_t*>(elem.data()), sizeof(STRING_TYPE::value_type) * elem.size());
+				return hash_imp::wyhash(reinterpret_cast<const uint8_t*>(elem.data()), sizeof(typename STRING_TYPE::value_type) * elem.size());
+			}
+
+			inline uint64_t operator()(const typename STRING_TYPE::value_type* data, const size_t size) const noexcept
+			{
+				return hash_imp::wyhash(reinterpret_cast<const uint8_t*>(data), sizeof(typename STRING_TYPE::value_type) * size);
 			}
 		};
 	};

@@ -252,6 +252,7 @@ We thank the following excellent open-source projects:
 - `etcd-cpp-apiv3 <https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3>`_, a C++ API for etcd's v3 client API.
 - `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation.
 - `wyhash <https://github.com/alainesp/wy>`_, C++ wrapper around wyhash and wyrand.
+- `cityhash <https://github.com/google/cityhash>`_, CityHash, a family of hash functions for strings.
 - `mimalloc <https://github.com/microsoft/mimalloc>`_, a general purpose allocator with excellent performance characteristics.
 - `nlohmann/json <https://github.com/nlohmann/json>`_, a json library for modern c++.
 - `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python.

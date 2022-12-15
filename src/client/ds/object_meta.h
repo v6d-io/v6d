@@ -664,6 +664,11 @@ class ObjectMeta {
    */
   size_t MemoryUsage() const;
 
+  /**
+   * @brief Compute the memory usage of this object, in a json tree format.
+   */
+  size_t MemoryUsage(json& usages, const bool pretty = true) const;
+
   std::string ToString() const;
 
   void PrintMeta() const;
@@ -699,8 +704,6 @@ class ObjectMeta {
   const std::shared_ptr<BufferSet>& GetBufferSet() const;
 
  private:
-  void findAllBlobs(const json& tree);
-
   void SetInstanceId(const InstanceID instance_id);
 
   void SetSignature(const Signature signature);
@@ -709,8 +712,9 @@ class ObjectMeta {
   // depends on that the "client_" should be valid.
   ClientBase* client_ = nullptr;
   json meta_;
+
   // associated blobs
-  std::shared_ptr<BufferSet> buffer_set_ = nullptr;
+  mutable std::shared_ptr<BufferSet> buffer_set_ = nullptr;
 
   // incomplete: whether the metadata has incomplete member, introduced by
   // `AddMember(name, member_id)`.

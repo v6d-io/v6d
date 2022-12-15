@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-The implementation of `get_rss`, `get_shared_rss` and `get_peek_rss`
+The implementation of `get_rss`, `get_shared_rss` and `get_peak_rss`
 are referred from https://stackoverflow.com/a/14927379/5080177, which
 has the following license header originally:
 
@@ -77,11 +77,26 @@ inline int get_pid() { return static_cast<int>(getpid()); }
 
 inline std::thread::id get_tid() { return std::this_thread::get_id(); }
 
+void create_dirs(const char* path);
+
 /**
  * @brief Returns the current resident set size (physical memory use) measured
  * in bytes.
  */
-size_t get_rss();
+size_t get_rss(const bool include_shared_memory = true);
+
+/**
+ * @brief Returns the current resident set size (physical memory use) measured
+ * in bytes.
+ */
+std::string get_rss_pretty(const bool include_shared_memory = true);
+
+/**
+ * @brief Return back freed memory to the OS, for observing whether a free
+ * or the destructor is called properly.
+ *
+ */
+void trim_rss();
 
 /**
  * @brief Returns the peak (maximum so far) resident set size (physical
@@ -93,7 +108,19 @@ size_t get_shared_rss();
  * @brief Returns the peak (maximum so far) resident set size (physical
  * memory use) measured in bytes.
  */
-size_t get_peek_rss();
+std::string get_shared_rss_pretty();
+
+/**
+ * @brief Returns the peak (maximum so far) resident set size (physical
+ * memory use) measured in bytes.
+ */
+size_t get_peak_rss();
+
+/**
+ * @brief Returns the peak (maximum so far) resident set size (physical
+ * memory use) measured in bytes.
+ */
+std::string get_peak_rss_pretty();
 
 /**
  * @brief Return the size limitation of available shared memory.
@@ -104,6 +131,20 @@ int64_t get_maximum_shared_memory();
  * @brief Return the memory size in human readable way.
  */
 std::string prettyprint_memory_size(size_t nbytes);
+
+/**
+ * @brief Parse human-readable size. Note that any extra character that follows
+ * a valid sequence will be ignored.
+ *
+ * You can express memory as a plain integer or as a fixed-point number using
+ * one of these suffixes: E, P, T, G, M, K. You can also use the power-of-two
+ * equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
+ *
+ * For example, the following represent roughly the same value:
+ *
+ * 128974848, 129k, 129M, 123Mi, 1G, 10Gi, ...
+ */
+size_t parse_memory_size(std::string const& nbytes);
 
 }  // namespace vineyard
 

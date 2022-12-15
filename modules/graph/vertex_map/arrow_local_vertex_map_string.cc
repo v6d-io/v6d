@@ -21,4 +21,8 @@ template class ArrowLocalVertexMap<arrow_string_view, uint64_t>;
 
 template class ArrowLocalVertexMapBuilder<arrow_string_view, uint64_t>;
 
+template class ArrowLocalVertexMap<arrow_string_view, uint32_t>;
+
+template class ArrowLocalVertexMapBuilder<arrow_string_view, uint32_t>;
+
 }  // namespace vineyard

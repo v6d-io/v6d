@@ -29,14 +29,31 @@ limitations under the License.
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
 #include "graph/fragment/property_graph_types.h"
+#include "graph/utils/table_pipeline.h"
 #include "graph/vertex_map/arrow_local_vertex_map.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 namespace vineyard {
 
+struct InputTable {
+  InputTable(const std::string& src_label_, const std::string& dst_label_,
+             const std::string& edge_label_,
+             std::shared_ptr<arrow::Table> table_)
+      : src_label(src_label_),
+        dst_label(dst_label_),
+        edge_label(edge_label_),
+        table(table_) {}
+
+  std::string src_label;
+  std::string dst_label;
+  std::string edge_label;
+  std::shared_ptr<arrow::Table> table;
+};
+
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
+          template <typename OID_T_ = typename InternalType<OID_T>::type,
+                    typename VID_T_ = VID_T>
+          class VERTEX_MAP_T = ArrowVertexMap>
 class BasicEVFragmentLoader {
   static constexpr int id_column = 0;
   static constexpr int src_column = 0;
@@ -47,8 +64,8 @@ class BasicEVFragmentLoader {
   using oid_t = OID_T;
   using vid_t = VID_T;
   using partitioner_t = PARTITIONER_T;
-  using vertex_map_t = VERTEX_MAP_T;
-  using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
+  using vertex_map_t = VERTEX_MAP_T<typename InternalType<OID_T>::type, VID_T>;
+  using oid_array_t = ArrowArrayType<oid_t>;
   using internal_oid_t = typename InternalType<oid_t>::type;
 
  public:
@@ -86,10 +103,6 @@ class BasicEVFragmentLoader {
       const std::string& src_label, const std::string& dst_label,
       const std::string& edge_label, std::shared_ptr<arrow::Table> edge_table);
 
-  boost::leaf::result<std::shared_ptr<arrow::Table>> edgesId2Gid(
-      std::shared_ptr<arrow::Table> edge_table, label_id_t src_label,
-      label_id_t dst_label);
-
   boost::leaf::result<void> ConstructEdges(int label_offset = 0,
                                            int vertex_label_num = 0);
 
@@ -115,17 +128,27 @@ class BasicEVFragmentLoader {
   void set_vm_ptr(std::shared_ptr<vertex_map_t> in) { vm_ptr_ = in; }
 
  private:
-  boost::leaf::result<std::shared_ptr<arrow::ChunkedArray>>
-  parseOidChunkedArray(label_id_t label_id,
-                       std::shared_ptr<arrow::ChunkedArray> oid_arrays_in);
+  boost::leaf::result<std::shared_ptr<ITablePipeline>> edgesId2Gid(
+      const std::shared_ptr<ITablePipeline> edge_table, label_id_t src_label,
+      label_id_t dst_label);
+
+  Status parseOidChunkedArray(
+      label_id_t label_id,
+      const std::shared_ptr<arrow::ChunkedArray> oid_arrays_in,
+      std::shared_ptr<arrow::ChunkedArray>& out);
+
+  Status parseOidChunkedArrayChunk(
+      label_id_t label_id, const std::shared_ptr<arrow::Array> oid_arrays_in,
+      std::shared_ptr<arrow::Array>& out);
 
   boost::leaf::result<void> initSchema(PropertyGraphSchema& schema);
 
   boost::leaf::result<void> generateEdgeId(
+      const grape::CommSpec& comm_spec,
       std::vector<std::vector<std::pair<std::pair<label_id_t, label_id_t>,
-                                        std::shared_ptr<arrow::Table>>>>&
+                                        std::shared_ptr<ITablePipeline>>>>&
           edge_tables,
-      grape::CommSpec& comm_spec, int label_offset);
+      int label_offset);
 
   // constructVertices implementation for ArrowVertexMap
   boost::leaf::result<void> constructVerticesImpl(ObjectID vm_id,
@@ -134,6 +157,16 @@ class BasicEVFragmentLoader {
   // constructVertices implementation for ArrowLocalVertexMap
   boost::leaf::result<void> constructVerticesImpl(ObjectID vm_id,
                                                   std::true_type);
+
+  // constructEdges implementation for ArrowVertexMap
+  boost::leaf::result<void> constructEdgesImpl(int label_offset,
+                                               int vertex_label_num,
+                                               std::false_type);
+
+  // constructEdges implementation for ArrowLocalVertexMap
+  boost::leaf::result<void> constructEdgesImpl(int label_offset,
+                                               int vertex_label_num,
+                                               std::true_type);
 
   Client& client_;
 
@@ -157,9 +190,9 @@ class BasicEVFragmentLoader {
                                               std::shared_ptr<arrow::Table>>>>
       input_edge_tables_;
 
-  std::vector<std::shared_ptr<arrow::Table>> ordered_vertex_tables_;
+  std::vector<std::shared_ptr<ITablePipeline>> ordered_vertex_tables_;
   std::vector<std::vector<std::pair<std::pair<label_id_t, label_id_t>,
-                                    std::shared_ptr<arrow::Table>>>>
+                                    std::shared_ptr<ITablePipeline>>>>
       ordered_edge_tables_;
 
   std::vector<std::shared_ptr<arrow::Table>> output_vertex_tables_;

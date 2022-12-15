@@ -27,6 +27,7 @@ limitations under the License.
 #include "grape/worker/comm_spec.h"
 
 #include "basic/ds/arrow_utils.h"
+#include "graph/loader/basic_ev_fragment_loader.h"
 #include "graph/utils/table_shuffler_beta.h"
 
 namespace vineyard {
@@ -35,7 +36,7 @@ template <typename T>
 class OidSet {
   using oid_t = T;
   using internal_oid_t = typename InternalType<oid_t>::type;
-  using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
+  using oid_array_t = ArrowArrayType<oid_t>;
 
  public:
   boost::leaf::result<void> BatchInsert(
@@ -62,7 +63,7 @@ class OidSet {
   }
 
   boost::leaf::result<std::shared_ptr<oid_array_t>> ToArrowArray() {
-    typename vineyard::ConvertToArrowType<oid_t>::BuilderType builder;
+    ArrowBuilderType<oid_t> builder;
     ARROW_OK_OR_RAISE(builder.Reserve(oids.size()));
     for (auto& oid : oids) {
       ARROW_OK_OR_RAISE(builder.Append(oid));
@@ -79,21 +80,6 @@ class OidSet {
   std::unordered_set<internal_oid_t> oids;
 };
 
-struct InputTable {
-  InputTable(const std::string& src_label_, const std::string& dst_label_,
-             const std::string& edge_label_,
-             std::shared_ptr<arrow::Table> table_)
-      : src_label(src_label_),
-        dst_label(dst_label_),
-        edge_label(edge_label_),
-        table(table_) {}
-
-  std::string src_label;
-  std::string dst_label;
-  std::string edge_label;
-  std::shared_ptr<arrow::Table> table;
-};
-
 template <typename OID_T, typename VID_T, typename PARTITIONER_T>
 class FragmentLoaderUtils {
   static constexpr int src_column = 0;
@@ -103,7 +89,7 @@ class FragmentLoaderUtils {
   using oid_t = OID_T;
   using vid_t = VID_T;
   using partitioner_t = PARTITIONER_T;
-  using oid_array_t = typename vineyard::ConvertToArrowType<oid_t>::ArrayType;
+  using oid_array_t = ArrowArrayType<oid_t>;
   using internal_oid_t = typename InternalType<oid_t>::type;
 
  public:
@@ -192,7 +178,7 @@ class FragmentLoaderUtils {
         BOOST_LEAF_ASSIGN(oid_array, oid_set.ToArrowArray());
         std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
         auto v_table = arrow::Table::Make(schema, arrays);
-        BOOST_LEAF_AUTO(tmp_table, beta::ShufflePropertyVertexTable(
+        BOOST_LEAF_AUTO(tmp_table, ShufflePropertyVertexTable(
                                        comm_spec_, partitioner_, v_table));
         oid_set.Clear();
         BOOST_LEAF_CHECK(oid_set.BatchInsert(tmp_table->column(0)));

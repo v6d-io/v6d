@@ -16,12 +16,56 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_ARROW_H_
 #define SRC_COMMON_UTIL_ARROW_H_
 
+#include <memory>
 #include <utility>
+#include <vector>
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 
+#include "cityhash/cityhash.hpp"
+#include "wyhash/wyhash.hpp"
+
 #include "common/util/status.h"
+
+namespace vineyard {
+
+#if ARROW_VERSION_MAJOR >= 10
+using arrow_string_view = std::string_view;
+#else
+using arrow_string_view = arrow::util::string_view;
+#endif
+
+using table_vec_t = std::vector<std::shared_ptr<arrow::Table>>;
+using array_vec_t = std::vector<std::shared_ptr<arrow::Array>>;
+
+}  // namespace vineyard
+
+namespace wy {
+#if !__cpp_lib_string_view
+template <>
+class hash<arrow_string_view> : private internal::hash_imp {
+  using hash_imp::hash_imp;  // Inherit constructors
+  inline uint64_t operator()(const arrow_string_view& elem) const noexcept {
+    return hash_imp::wyhash(reinterpret_cast<const uint8_t*>(elem.data()),
+                            elem.size());
+  }
+};
+#endif
+}  // namespace wy
+
+namespace city {
+#if !__cpp_lib_string_view
+template <>
+class hash<arrow_string_view> : private internal::hash_imp {
+  using hash_imp::hash_imp;  // Inherit constructors
+  inline uint64_t operator()(const arrow_string_view& data) const noexcept {
+    return detail::CityHash64(reinterpret_cast<const char*>(data.data()),
+                              data.size());
+  }
+};
+#endif
+}  // namespace city
 
 namespace vineyard {
 
