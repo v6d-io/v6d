@@ -44,13 +44,9 @@ using array_vec_t = std::vector<std::shared_ptr<arrow::Array>>;
 namespace wy {
 #if (!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10
 template <>
-class hash<vineyard::arrow_string_view> : private internal::hash_imp {
-  using hash_imp::hash_imp;  // Inherit constructors
-  inline uint64_t operator()(const vineyard::arrow_string_view& elem) const
-      noexcept {
-    return hash_imp::wyhash(reinterpret_cast<const uint8_t*>(elem.data()),
-                            elem.size());
-  }
+struct hash<vineyard::arrow_string_view>
+    : public internal::hash_string_base<vineyard::arrow_string_view> {
+  using hash_string_base::hash_string_base;  // Inherit constructors
 };
 #endif
 }  // namespace wy
@@ -58,8 +54,7 @@ class hash<vineyard::arrow_string_view> : private internal::hash_imp {
 namespace city {
 #if (!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10
 template <>
-class hash<vineyard::arrow_string_view> : private internal::hash_imp {
-  using hash_imp::hash_imp;  // Inherit constructors
+class hash<vineyard::arrow_string_view> {
   inline uint64_t operator()(const vineyard::arrow_string_view& data) const
       noexcept {
     return detail::CityHash64(reinterpret_cast<const char*>(data.data()),
