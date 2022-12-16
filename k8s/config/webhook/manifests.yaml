@@ -111,6 +111,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-v1-pod-scheduling
+  failurePolicy: Fail
+  name: mpod.scheduling.kb.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-v1-pod
   failurePolicy: Fail
   name: mpod.kb.io

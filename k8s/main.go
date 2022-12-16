@@ -40,6 +40,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/operation"
+	"github.com/v6d-io/v6d/k8s/pkg/webhook/scheduling"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
 	// +kubebuilder:scaffold:imports
 )
@@ -137,6 +138,13 @@ func startManager(channel chan struct{}, mgr manager.Manager, metricsAddr string
 			&webhook.Admission{
 				Handler: &sidecar.Injector{Client: mgr.GetClient(), Template: templates.NewEmbedTemplate()}})
 		setupLog.Info("the sidecar webhook is registered")
+
+		// register the scheduling webhook
+		setupLog.Info("registering the scheduling webhook")
+		mgr.GetWebhookServer().Register("/mutate-v1-pod-scheduling",
+			&webhook.Admission{
+				Handler: &scheduling.Injector{Client: mgr.GetClient()}})
+		setupLog.Info("the scheduling webhook is registered")
 
 		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {
 			setupLog.Error(err, "unable to set up health check for webhook")

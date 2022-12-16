@@ -8,3 +8,4 @@ configurations:
 patchesStrategicMerge:
 - operation_namespace_selector_patch.yaml
 - sidecar_selector_patch.yaml
+- scheduling_selector_patch.yaml
