@@ -117,6 +117,17 @@ class IdParser {
 
   ID_TYPE GetLid(ID_TYPE v) const { return v & lid_mask_; }
 
+  /**
+   * @brief Generate the LID
+   */
+  ID_TYPE GenerateId(LabelIDT label, int64_t offset) const {
+    return (((ID_TYPE) offset) & offset_mask_) |
+           ((((ID_TYPE) label) << label_id_offset_) & label_id_mask_);
+  }
+
+  /**
+   * @brief Generate the GID
+   */
   ID_TYPE GenerateId(fid_t fid, LabelIDT label, int64_t offset) const {
     return (((ID_TYPE) offset) & offset_mask_) |
            ((((ID_TYPE) label) << label_id_offset_) & label_id_mask_) |

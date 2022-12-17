@@ -414,7 +414,15 @@ Status TableToRecordBatches(
     RETURN_ON_ERROR(
         EmptyTableBuilder::Build(fixed_table->schema(), fixed_table));
   }
+  if (fixed_table->num_columns() == 0) {
+    auto batch =
+        arrow::RecordBatch::Make(fixed_table->schema(), fixed_table->num_rows(),
+                                 std::vector<std::shared_ptr<arrow::Array>>{});
+    batches->push_back(batch);
+    return Status::OK();
+  }
 
+  // chunks[rindex][cindex]
   std::vector<std::vector<std::shared_ptr<arrow::Array>>> chunks;
   for (int64_t cindex = 0; cindex < fixed_table->num_columns(); ++cindex) {
     for (int64_t rindex = 0; rindex < fixed_table->column(cindex)->num_chunks();
@@ -425,9 +433,9 @@ Status TableToRecordBatches(
   }
   batches->clear();
   for (size_t chunk_index = 0; chunk_index < chunks.size(); ++chunk_index) {
-    std::shared_ptr<arrow::RecordBatch> batch = arrow::RecordBatch::Make(
-        fixed_table->schema(), chunks[chunk_index][0]->length(),
-        chunks[chunk_index]);
+    auto batch = arrow::RecordBatch::Make(fixed_table->schema(),
+                                          chunks[chunk_index][0]->length(),
+                                          chunks[chunk_index]);
     batches->push_back(batch);
   }
   return Status::OK();

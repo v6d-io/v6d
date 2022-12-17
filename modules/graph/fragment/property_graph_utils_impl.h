@@ -126,7 +126,7 @@ boost::leaf::result<void> generate_outer_vertices_map(
 
     // update the hashmap entries
     for (int64_t k = 0; k < ovgid_lists[label]->length(); ++k) {
-      ovg2l_maps[label][current_list[k]] = k;
+      ovg2l_maps[label][current_list[k]] = start_ids[label] + k;
     }
   }
   return {};
@@ -353,8 +353,8 @@ boost::leaf::result<void> generate_directed_csr(
 
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_directed_csc(
-    Client& client, IdParser<VID_T>& parser, fid_t fid,
-    std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
+    Client& client, IdParser<VID_T>& parser, std::vector<VID_T> tvnums,
+    int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& oedges,
     std::vector<std::shared_ptr<arrow::Int64Array>>& oedge_offsets,
@@ -423,9 +423,9 @@ boost::leaf::result<void> generate_directed_csc(
     const int64_t* oe_offsets = oedge_offsets[v_label]->raw_values();
     parallel_for(
         static_cast<VID_T>(0), tvnums[v_label],
-        [&degree, &parser, &fid, &v_label, &offsets, &iedges, &oe,
+        [&degree, &parser, &v_label, &offsets, &iedges, &oe,
          &oe_offsets](VID_T src_offset) {
-          VID_T src_id = parser.GenerateId(fid, v_label, src_offset);
+          VID_T src_id = parser.GenerateId(v_label, src_offset);
           for (int64_t i = oe_offsets[src_offset];
                i < oe_offsets[src_offset + 1]; ++i) {
             VID_T dst_id = oe[i].vid;
@@ -578,8 +578,8 @@ boost::leaf::result<void> generate_undirected_csr(
 }
 
 template <typename VID_T, typename EID_T>
-boost::leaf::result<void> generate_undirected_csr(
-    Client& client, IdParser<VID_T>& parser, fid_t fid,
+boost::leaf::result<void> generate_undirected_csr_memopt(
+    Client& client, IdParser<VID_T>& parser,
     std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> src_chunks,
     std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> dst_chunks,
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
@@ -689,9 +689,9 @@ boost::leaf::result<void> generate_undirected_csr(
     const int64_t* oe_offsets = edge_offsets[v_label]->raw_values();
     parallel_for(
         static_cast<VID_T>(0), tvnums[v_label],
-        [&degree, &parser, &fid, &v_label, &csr_offsets, &offsets, &oe_offsets,
+        [&degree, &parser, &v_label, &csr_offsets, &offsets, &oe_offsets,
          &edges, &oe](VID_T src_offset) {
-          VID_T src_id = parser.GenerateId(fid, v_label, src_offset);
+          VID_T src_id = parser.GenerateId(v_label, src_offset);
           for (int64_t i = oe_offsets[src_offset];
                i < csr_offsets[v_label][src_offset]; ++i) {
             VID_T dst_id = oe[i].vid;

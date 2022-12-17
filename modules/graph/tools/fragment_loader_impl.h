@@ -116,7 +116,7 @@ void traverse_graph(std::shared_ptr<fragment_t> graph,
   label_id_t v_label_num = graph->vertex_label_num();
 
   for (label_id_t v_label = 0; v_label != v_label_num; ++v_label) {
-    std::ofstream fout(path_prefix + "_v_" + std::to_string(v_label),
+    std::ofstream fout(path_prefix + "_v" + std::to_string(v_label),
                        std::ios::binary);
     auto iv = graph->InnerVertices(v_label);
     for (auto v : iv) {
@@ -127,7 +127,7 @@ void traverse_graph(std::shared_ptr<fragment_t> graph,
     fout.close();
   }
   for (label_id_t e_label = 0; e_label != e_label_num; ++e_label) {
-    std::ofstream fout(path_prefix + "_e_" + std::to_string(e_label),
+    std::ofstream fout(path_prefix + "_e" + std::to_string(e_label),
                        std::ios::binary);
     for (label_id_t v_label = 0; v_label != v_label_num; ++v_label) {
       auto iv = graph->InnerVertices(v_label);
@@ -167,7 +167,7 @@ void dump_graph(Client& client, grape::CommSpec& comm_spec,
     if (item.second == client.instance_id()) {
       std::shared_ptr<fragment_t> fragment;
       VINEYARD_CHECK_OK(client.GetObject(fragments.at(item.first), fragment));
-      traverse_graph(fragment, target_directory + "/output_graph_" +
+      traverse_graph(fragment, target_directory + "/output_graph_f" +
                                    std::to_string(fragment->fid()));
     }
   }

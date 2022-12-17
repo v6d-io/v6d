@@ -119,7 +119,7 @@ ShufflePropertyEdgeTableByPartition(
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
-                                      return e->num_rows() == 0;
+                                      return e == nullptr || e->num_rows() == 0;
                                     }),
                      batches_recv.end());
 
@@ -181,7 +181,7 @@ ShufflePropertyEdgeTableByPartition(
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
-                                      return e->num_rows() == 0;
+                                      return e == nullptr || e->num_rows() == 0;
                                     }),
                      batches_recv.end());
 
@@ -251,7 +251,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
-                                      return e->num_rows() == 0;
+                                      return e == nullptr || e->num_rows() == 0;
                                     }),
                      batches_recv.end());
 
@@ -300,7 +300,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
-                                      return e->num_rows() == 0;
+                                      return e == nullptr || e->num_rows() == 0;
                                     }),
                      batches_recv.end());
 
@@ -378,7 +378,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
-                                      return e->num_rows() == 0;
+                                      return e == nullptr || e->num_rows() == 0;
                                     }),
                      batches_recv.end());
 
@@ -438,7 +438,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
-                                      return e->num_rows() == 0;
+                                      return e == nullptr || e->num_rows() == 0;
                                     }),
                      batches_recv.end());
 
