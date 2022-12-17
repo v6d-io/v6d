@@ -126,8 +126,8 @@ boost::leaf::result<void> generate_directed_csr(
  */
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_directed_csc(
-    Client& client, IdParser<VID_T>& parser, fid_t fid,
-    std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
+    Client& client, IdParser<VID_T>& parser, std::vector<VID_T> tvnums,
+    int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& oedges,
     std::vector<std::shared_ptr<arrow::Int64Array>>& oedge_offsets,
@@ -156,8 +156,8 @@ boost::leaf::result<void> generate_undirected_csr(
  * COO, and then generate CSC from CSR.
  */
 template <typename VID_T, typename EID_T>
-boost::leaf::result<void> generate_undirected_csr(
-    Client& client, IdParser<VID_T>& parser, fid_t fid,
+boost::leaf::result<void> generate_undirected_csr_memopt(
+    Client& client, IdParser<VID_T>& parser,
     std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> src_chunks,
     std::vector<std::shared_ptr<ArrowArrayType<VID_T>>> dst_chunks,
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,

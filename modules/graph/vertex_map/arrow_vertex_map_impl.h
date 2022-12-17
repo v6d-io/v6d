@@ -334,8 +334,8 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::addNewVertexLabels(
   new_meta.SetNBytes(nbytes);
   ObjectID ret;
   VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
-  VLOG(2) << "vertex map memory usage: "
-          << prettyprint_memory_size(new_meta.MemoryUsage());
+  VLOG(100) << "vertex map memory usage: "
+            << prettyprint_memory_size(new_meta.MemoryUsage());
   return ret;
 }
 
@@ -379,11 +379,11 @@ void ArrowVertexMap<arrow_string_view, VID_T>::Construct(
   double o2g_load_factor =
       o2g_bucket_count == 0 ? 0
                             : static_cast<double>(o2g_size) / o2g_bucket_count;
-  VLOG(2) << "ArrowVertexMap<string_view, uint64_t> "
-          << "\n\tmemory: " << prettyprint_memory_size(nbytes)
-          << "\n\to2g size: " << o2g_size
-          << ", load factor: " << o2g_load_factor
-          << "\n\to2g memory: " << prettyprint_memory_size(o2g_total_bytes);
+  VLOG(100) << "ArrowVertexMap<string_view, uint64_t> "
+            << "\n\tmemory: " << prettyprint_memory_size(nbytes)
+            << "\n\to2g size: " << o2g_size
+            << ", load factor: " << o2g_load_factor
+            << "\n\to2g memory: " << prettyprint_memory_size(o2g_total_bytes);
 }
 
 template <typename VID_T>
@@ -618,8 +618,8 @@ ObjectID ArrowVertexMap<arrow_string_view, VID_T>::addNewVertexLabels(
   new_meta.SetNBytes(nbytes);
   ObjectID ret;
   VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
-  VLOG(2) << "vertex map memory usage: "
-          << prettyprint_memory_size(new_meta.MemoryUsage());
+  VLOG(100) << "vertex map memory usage: "
+            << prettyprint_memory_size(new_meta.MemoryUsage());
   return ret;
 }
 
@@ -750,8 +750,8 @@ std::shared_ptr<vineyard::Object> ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
   vertex_map->meta_.SetNBytes(nbytes);
 
   VINEYARD_CHECK_OK(client.CreateMetaData(vertex_map->meta_, vertex_map->id_));
-  VLOG(2) << "vertex map memory usage: "
-          << prettyprint_memory_size(vertex_map->meta_.MemoryUsage());
+  VLOG(100) << "vertex map memory usage: "
+            << prettyprint_memory_size(vertex_map->meta_.MemoryUsage());
 
   // mark the builder as sealed
   this->set_sealed(true);
@@ -826,8 +826,8 @@ ArrowVertexMapBuilder<arrow_string_view, VID_T>::_Seal(
 
   vertex_map->meta_.SetNBytes(nbytes);
   VINEYARD_CHECK_OK(client.CreateMetaData(vertex_map->meta_, vertex_map->id_));
-  VLOG(2) << "vertex map memory usage: "
-          << prettyprint_memory_size(vertex_map->meta_.MemoryUsage());
+  VLOG(100) << "vertex map memory usage: "
+            << prettyprint_memory_size(vertex_map->meta_.MemoryUsage());
 
   // mark the builder as sealed
   this->set_sealed(true);

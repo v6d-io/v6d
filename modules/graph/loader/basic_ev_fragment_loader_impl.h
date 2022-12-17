@@ -224,7 +224,6 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     }
   }
 
-  output_edge_tables_.resize(edge_label_num_);
   VLOG(100) << "Starting constructing property edge tables: "
             << get_rss_pretty() << ", peak = " << get_peak_rss_pretty();
   auto r = constructEdgesImpl(
@@ -557,7 +556,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::
             from->num_rows(), std::shared_ptr<arrow::Buffer>(std::move(buffer)),
             nullptr, 0, 0);
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(
-        to, from->AddColumn(from->num_columns(), eid_field, eid_array));
+        to, from->AddColumn(edge_id_column, eid_field, eid_array));
     return Status::OK();
   };
 
@@ -570,8 +569,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::
       auto& edge_table = edge_table_list[edge_table_index].second;
       std::shared_ptr<arrow::Schema> schema;
       ARROW_OK_ASSIGN_OR_RAISE(
-          schema, edge_table->schema()->AddField(
-                      edge_table->schema()->num_fields(), eid_field));
+          schema, edge_table->schema()->AddField(edge_id_column, eid_field));
 
       edge_table = std::make_shared<MapTablePipeline<int64_t>>(
           edge_table, genfn, cur_id, schema);
@@ -779,7 +777,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
 
   std::vector<std::vector<std::pair<std::pair<label_id_t, label_id_t>,
                                     std::shared_ptr<arrow::Table>>>>
-      shuffled_tables;
+      shuffled_tables(edge_label_num_);
 
   // Shuffle property tables
   for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {

@@ -858,9 +858,7 @@ void ShuffleTableByOffsetLists(
       std::vector<std::vector<int64_t>> offset_lists(comm_spec.fnum());
       while (true) {
         std::shared_ptr<arrow::RecordBatch> batch;
-        // LOG(INFO) << "start pull chunks ...";
         auto status = record_batches_send->Next(batch);
-        // LOG(INFO) << "recev from pull chunks: " << status.ToString();
         if (status.IsStreamDrained()) {
           break;
         }

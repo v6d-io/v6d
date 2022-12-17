@@ -71,13 +71,10 @@ class TablePipeline : public ITablePipeline {
     batches_.SetProducerNum(0);
     schema_ = table->schema();
     length_ = table->num_rows();
-    if (table->num_columns() == 0) {
-      num_batches_ = 0;
-    } else {
-      num_batches_ = table->column(0)->num_chunks();
-    }
     std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
     VINEYARD_CHECK_OK(TableToRecordBatches(table, &batches));
+    num_batches_ = batches.size();
+
     for (auto& batch : batches) {
       batches_.Put(batch);
     }

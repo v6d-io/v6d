@@ -97,14 +97,14 @@ void ArrowLocalVertexMap<OID_T, VID_T>::Construct(
   double i2o_load_factor =
       i2o_bucket_count == 0 ? 0
                             : static_cast<size_t>(i2o_size) / i2o_bucket_count;
-  VLOG(2) << "ArrowLocalVertexMap<int64_t, uint64_t> "
-          << "\n\tmemory: " << prettyprint_memory_size(nbytes)
-          << "\n\to2i size: " << o2i_size
-          << ", load factor: " << o2i_load_factor
-          << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
-          << "\n\ti2o size: " << i2o_size
-          << ", load factor: " << i2o_load_factor
-          << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes);
+  VLOG(100) << "ArrowLocalVertexMap<int64_t, uint64_t> "
+            << "\n\tmemory: " << prettyprint_memory_size(nbytes)
+            << "\n\to2i size: " << o2i_size
+            << ", load factor: " << o2i_load_factor
+            << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
+            << "\n\ti2o size: " << i2o_size
+            << ", load factor: " << i2o_load_factor
+            << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes);
 }
 
 template <typename OID_T, typename VID_T>
@@ -316,15 +316,15 @@ void ArrowLocalVertexMap<arrow_string_view, VID_T>::Construct(
   double i2o_load_factor =
       i2o_bucket_count == 0 ? 0
                             : static_cast<double>(i2o_size) / i2o_bucket_count;
-  VLOG(2) << "ArrowLocalVertexMap<string_view, uint64_t> "
-          << "\n\tmemory: " << prettyprint_memory_size(nbytes)
-          << "\n\tindex array: " << prettyprint_memory_size(index_array_total)
-          << "\n\to2i size: " << o2i_size
-          << ", load factor: " << o2i_load_factor
-          << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
-          << "\n\ti2o size: " << i2o_size
-          << ", load factor: " << i2o_load_factor
-          << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes);
+  VLOG(100) << "ArrowLocalVertexMap<string_view, uint64_t> "
+            << "\n\tmemory: " << prettyprint_memory_size(nbytes)
+            << "\n\tindex array: " << prettyprint_memory_size(index_array_total)
+            << "\n\to2i size: " << o2i_size
+            << ", load factor: " << o2i_load_factor
+            << "\n\to2i memory: " << prettyprint_memory_size(o2i_total_bytes)
+            << "\n\ti2o size: " << i2o_size
+            << ", load factor: " << i2o_load_factor
+            << "\n\ti2o memory: " << prettyprint_memory_size(i2o_total_bytes);
 }
 
 template <typename VID_T>
@@ -704,10 +704,10 @@ vineyard::Status
 ArrowLocalVertexMapBuilder<OID_T, VID_T>::AddOuterVerticesMapping(
     std::vector<std::vector<std::vector<oid_t>>>& oids,
     std::vector<std::vector<std::vector<vid_t>>>& index_list) {
-  for (fid_t i = 0; i < fnum_; ++i) {
-    if (i != fid_) {
-      o2i_[i].resize(label_num_);
-      i2o_[i].resize(label_num_);
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    if (fid != fid_) {
+      o2i_[fid].resize(label_num_);
+      i2o_[fid].resize(label_num_);
     }
   }
 
@@ -733,6 +733,9 @@ ArrowLocalVertexMapBuilder<OID_T, VID_T>::AddOuterVerticesMapping(
 
   ThreadGroup tg;
   for (fid_t fid = 0; fid < fnum_; ++fid) {
+    if (fid == fid_) {
+      continue;
+    }
     for (label_id_t label = 0; label < label_num_; ++label) {
       tg.AddTask(fn, fid, label);
     }
@@ -934,10 +937,10 @@ vineyard::Status
 ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::AddOuterVerticesMapping(
     std::vector<std::vector<std::vector<std::string>>>& oids,
     std::vector<std::vector<std::vector<vid_t>>>& index_list) {
-  for (fid_t i = 0; i < fnum_; ++i) {
-    if (i != fid_) {
-      oid_arrays_[i].resize(label_num_);
-      index_arrays_[i].resize(label_num_);
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    if (fid != fid_) {
+      oid_arrays_[fid].resize(label_num_);
+      index_arrays_[fid].resize(label_num_);
     }
   }
   auto fn = [&](fid_t cur_fid, label_id_t cur_label) -> Status {
@@ -965,6 +968,9 @@ ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::AddOuterVerticesMapping(
 
   ThreadGroup tg;
   for (fid_t fid = 0; fid < fnum_; ++fid) {
+    if (fid == fid_) {
+      continue;
+    }
     for (label_id_t label = 0; label < label_num_; ++label) {
       tg.AddTask(fn, fid, label);
     }

@@ -187,7 +187,7 @@ template <typename T>
 class PodArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
  public:
   explicit PodArrayBuilder(Client& client, size_t size)
-      : FixedSizeBinaryArrayBaseBuilder(client) {
+      : FixedSizeBinaryArrayBaseBuilder(client), size_(size) {
     if (size != 0) {
       VINEYARD_CHECK_OK(client.CreateBlob(size * sizeof(T), buffer_));
       data_ = reinterpret_cast<T*>(buffer_->Buffer()->mutable_data());
@@ -200,6 +200,8 @@ class PodArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
     }
     return nullptr;
   }
+
+  size_t size() const { return size_; }
 
   Status Build(Client& client) override {
     this->set_byte_width_(sizeof(T));
@@ -217,6 +219,7 @@ class PodArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
   }
 
  private:
+  size_t size_;
   std::unique_ptr<BlobWriter> buffer_;
   T* data_ = nullptr;
 };  // namespace vineyard
