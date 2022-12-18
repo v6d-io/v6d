@@ -24,31 +24,45 @@ namespace vineyard {
 template void SendArrowArray<arrow::Array>(
     const std::shared_ptr<arrow::Array>& array, int dst_worker_id,
     MPI_Comm comm, int tag);
-
 template void SendArrowArray<arrow::Int32Array>(
     const std::shared_ptr<arrow::Int32Array>& array, int dst_worker_id,
     MPI_Comm comm, int tag);
-
+template void SendArrowArray<arrow::UInt32Array>(
+    const std::shared_ptr<arrow::UInt32Array>& array, int dst_worker_id,
+    MPI_Comm comm, int tag);
 template void SendArrowArray<arrow::Int64Array>(
     const std::shared_ptr<arrow::Int64Array>& array, int dst_worker_id,
     MPI_Comm comm, int tag);
-
+template void SendArrowArray<arrow::UInt64Array>(
+    const std::shared_ptr<arrow::UInt64Array>& array, int dst_worker_id,
+    MPI_Comm comm, int tag);
 template void SendArrowArray<arrow::StringArray>(
     const std::shared_ptr<arrow::StringArray>& array, int dst_worker_id,
+    MPI_Comm comm, int tag);
+template void SendArrowArray<arrow::LargeStringArray>(
+    const std::shared_ptr<arrow::LargeStringArray>& array, int dst_worker_id,
     MPI_Comm comm, int tag);
 
 template void RecvArrowArray<arrow::Array>(std::shared_ptr<arrow::Array>& array,
                                            int src_worker_id, MPI_Comm comm,
                                            int tag);
-
 template void RecvArrowArray<arrow::Int32Array>(
     std::shared_ptr<arrow::Int32Array>& array, int src_worker_id, MPI_Comm comm,
     int tag);
+template void RecvArrowArray<arrow::UInt32Array>(
+    std::shared_ptr<arrow::UInt32Array>& array, int src_worker_id,
+    MPI_Comm comm, int tag);
 template void RecvArrowArray<arrow::Int64Array>(
     std::shared_ptr<arrow::Int64Array>& array, int src_worker_id, MPI_Comm comm,
     int tag);
+template void RecvArrowArray<arrow::UInt64Array>(
+    std::shared_ptr<arrow::UInt64Array>& array, int src_worker_id,
+    MPI_Comm comm, int tag);
 template void RecvArrowArray<arrow::StringArray>(
     std::shared_ptr<arrow::StringArray>& array, int src_worker_id,
+    MPI_Comm comm, int tag);
+template void RecvArrowArray<arrow::LargeStringArray>(
+    std::shared_ptr<arrow::LargeStringArray>& array, int src_worker_id,
     MPI_Comm comm, int tag);
 
 template <>
