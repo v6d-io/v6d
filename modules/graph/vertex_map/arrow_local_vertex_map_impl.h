@@ -266,28 +266,29 @@ void ArrowLocalVertexMap<arrow_string_view, VID_T>::Construct(
   size_t nbytes = 0, local_oid_total = 0, index_array_total = 0;
   size_t o2i_total_bytes = 0, i2o_total_bytes = 0, o2i_size = 0,
          o2i_bucket_count = 0, i2o_size = 0, i2o_bucket_count = 0;
-  for (fid_t i = 0; i < fnum_; ++i) {
-    oid_arrays_[i].resize(label_num_);
-    if (i != fid_) {
-      index_arrays_[i].resize(label_num_);
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    oid_arrays_[fid].resize(label_num_);
+    if (fid != fid_) {
+      index_arrays_[fid].resize(label_num_);
     }
-    vertices_num_[i].resize(label_num_);
+    vertices_num_[fid].resize(label_num_);
 
-    for (label_id_t j = 0; j < label_num_; ++j) {
+    for (label_id_t label = 0; label < label_num_; ++label) {
       typename InternalType<oid_t>::vineyard_array_type array;
-      array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
-                                         "_" + std::to_string(j)));
-      oid_arrays_[i][j] = array.GetArray();
+      array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(fid) +
+                                         "_" + std::to_string(label)));
+      oid_arrays_[fid][label] = array.GetArray();
       local_oid_total += array.nbytes();
-      if (i != fid_) {
+      if (fid != fid_) {
         typename InternalType<vid_t>::vineyard_array_type index_array;
-        index_array.Construct(meta.GetMemberMeta(
-            "index_arrays_" + std::to_string(i) + "_" + std::to_string(j)));
-        index_arrays_[i][j] = index_array.GetArray();
+        index_array.Construct(meta.GetMemberMeta("index_arrays_" +
+                                                 std::to_string(fid) + "_" +
+                                                 std::to_string(label)));
+        index_arrays_[fid][label] = index_array.GetArray();
         index_array_total += index_array.nbytes();
       }
-      vertices_num_[i][j] = meta.GetKeyValue<vid_t>(
-          "vertices_num_" + std::to_string(i) + "_" + std::to_string(j));
+      vertices_num_[fid][label] = meta.GetKeyValue<vid_t>(
+          "vertices_num_" + std::to_string(fid) + "_" + std::to_string(label));
     }
   }
 
@@ -497,7 +498,9 @@ void ArrowLocalVertexMap<arrow_string_view, VID_T>::initHashmaps() {
     }
     // shrink the size of hashmap
     o2i_[cur_fid][cur_label].shrink_to_fit();
-    i2o_[cur_fid][cur_label].shrink_to_fit();
+    if (cur_fid != fid_) {
+      i2o_[cur_fid][cur_label].shrink_to_fit();
+    }
     return Status::OK();
   };
 

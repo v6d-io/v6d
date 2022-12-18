@@ -452,15 +452,30 @@ template Status FragmentAllGatherArray<arrow::Int32Array>(
     std::shared_ptr<arrow::Int32Array> data_in,
     std::vector<std::shared_ptr<arrow::Int32Array>>& data_out);
 
+template Status FragmentAllGatherArray<arrow::UInt32Array>(
+    const grape::CommSpec& comm_spec,
+    std::shared_ptr<arrow::UInt32Array> data_in,
+    std::vector<std::shared_ptr<arrow::UInt32Array>>& data_out);
+
 template Status FragmentAllGatherArray<arrow::Int64Array>(
     const grape::CommSpec& comm_spec,
     std::shared_ptr<arrow::Int64Array> data_in,
     std::vector<std::shared_ptr<arrow::Int64Array>>& data_out);
 
+template Status FragmentAllGatherArray<arrow::UInt64Array>(
+    const grape::CommSpec& comm_spec,
+    std::shared_ptr<arrow::UInt64Array> data_in,
+    std::vector<std::shared_ptr<arrow::UInt64Array>>& data_out);
+
 template Status FragmentAllGatherArray<arrow::StringArray>(
     const grape::CommSpec& comm_spec,
     std::shared_ptr<arrow::StringArray> data_in,
     std::vector<std::shared_ptr<arrow::StringArray>>& data_out);
+
+template Status FragmentAllGatherArray<arrow::LargeStringArray>(
+    const grape::CommSpec& comm_spec,
+    std::shared_ptr<arrow::LargeStringArray> data_in,
+    std::vector<std::shared_ptr<arrow::LargeStringArray>>& data_out);
 
 Status CheckSchemaConsistency(const arrow::Schema& schema,
                               const grape::CommSpec& comm_spec) {

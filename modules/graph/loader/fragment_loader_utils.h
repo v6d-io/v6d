@@ -43,7 +43,8 @@ class OidSet {
       const std::shared_ptr<arrow::Array>& arr) {
     if (vineyard::ConvertToArrowType<oid_t>::TypeValue() != arr->type()) {
       RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                      "OID_T is not same with arrow::Column(" +
+                      "OID_T '" + type_name<oid_t>() +
+                          "' is not same with arrow::Column(" +
                           arr->type()->ToString() + ")");
     }
     auto oid_arr = std::dynamic_pointer_cast<oid_array_t>(arr);
