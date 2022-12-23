@@ -49,8 +49,13 @@
 #include "arrow/util/bit_util.h"
 #include "arrow/util/bitmap_ops.h"
 #include "arrow/util/checked_cast.h"
+#include "arrow/util/config.h"
 #include "arrow/util/int_util.h"
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
+#include "arrow/util/int_util_internal.h"
+#else
 #include "arrow/util/int_util_overflow.h"
+#endif
 #include "arrow/util/logging.h"
 #include "arrow/visit_type_inline.h"
 

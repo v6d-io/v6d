@@ -625,7 +625,7 @@ def generate_parsing_flags(
     base_flags = [
         '-x',
         'c++',
-        '-std=c++14',
+        '-std=c++17',
         '-nostdinc',
         '-nostdinc++',
         '-D__VPP=1',

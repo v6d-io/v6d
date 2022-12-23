@@ -28,6 +28,8 @@ from .utils import normalize_dtype
 def buffer_builder(client, buffer, builder):
     if buffer is None:
         return client.create_empty_blob()
+    if len(buffer) == 0:
+        return client.create_empty_blob()
     existing = client.find_shared_memory(buffer.address)
     if existing is not None:
         return client.get_meta(existing)
