@@ -51,9 +51,7 @@
 #include "arrow/util/checked_cast.h"
 #include "arrow/util/config.h"
 #include "arrow/util/int_util.h"
-#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
-#include "arrow/util/int_util_internal.h"
-#else
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 9000000
 #include "arrow/util/int_util_overflow.h"
 #endif
 #include "arrow/util/logging.h"
@@ -64,7 +62,25 @@ namespace vineyard {
 namespace arrow_shim {
 
 using namespace arrow;  // NOLINT(build/namespaces)
+
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 9000000
+using arrow::internal::AddWithOverflow;
 using arrow::internal::SafeSignedAdd;
+#else
+template <typename SignedInt>
+static inline SignedInt SafeSignedAdd(SignedInt u, SignedInt v) {
+  using UnsignedInt = typename std::make_unsigned<SignedInt>::type;
+  return static_cast<SignedInt>(static_cast<UnsignedInt>(u) +
+                                static_cast<UnsignedInt>(v));
+}
+
+// As a approximate for lower-version arrow, as it only exists
+// in the error handling path.
+template <typename T>
+static inline bool AddWithOverflow(T u, T v, T* out) {
+  return __builtin_add_overflow(u, v, out);
+}
+#endif
 
 namespace {
 /// offset, length pair for representing a Range of a buffer or array
@@ -94,8 +110,7 @@ Status ConcatenateBitmaps(std::vector<Bitmap>&& bitmaps, MemoryPool* pool,
                           std::shared_ptr<Buffer>* out) {
   int64_t out_length = 0;
   for (const auto& bitmap : bitmaps) {
-    if (internal::AddWithOverflow(out_length, bitmap.range.length,
-                                  &out_length)) {
+    if (AddWithOverflow(out_length, bitmap.range.length, &out_length)) {
       return Status::Invalid("Length overflow when concatenating arrays");
     }
   }
@@ -453,8 +468,8 @@ class ConcatenateImpl {
         // offset to the concatenated offsets buffer.
         for (auto j = 0; j < in_[i]->length; j++) {
           int32_t offset;
-          if (internal::AddWithOverflow(offset_map[u.child_ids()[type_ids[j]]],
-                                        offset_values[j], &offset)) {
+          if (AddWithOverflow(offset_map[u.child_ids()[type_ids[j]]],
+                              offset_values[j], &offset)) {
             return Status::Invalid(
                 "Offset value overflow when concatenating arrays");
           }
@@ -464,9 +479,8 @@ class ConcatenateImpl {
         // Increment the offsets in the offset map for the next iteration.
         for (int j = 0; j < u.num_fields(); j++) {
           int64_t length;
-          if (internal::AddWithOverflow(static_cast<int64_t>(offset_map[j]),
-                                        in_[i]->child_data[j]->length,
-                                        &length)) {
+          if (AddWithOverflow(static_cast<int64_t>(offset_map[j]),
+                              in_[i]->child_data[j]->length, &length)) {
             return Status::Invalid(
                 "Offset value overflow when concatenating arrays");
           }

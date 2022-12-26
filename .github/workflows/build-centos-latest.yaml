@@ -23,7 +23,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     container:
       image: centos:latest
     strategy:

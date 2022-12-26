@@ -49,7 +49,7 @@ jobs:
       - name: Install dependencies for MacOS
         run: |
           brew update
-          brew install ccache boost coreutils grpc protobuf openssl
+          brew install ccache boost coreutils grpc protobuf openssl || true
 
           export CC=clang
           export CXX=clang++
@@ -246,7 +246,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install ccache boost coreutils grpc protobuf openssl
+          brew install ccache boost coreutils grpc protobuf openssl || true
 
           export CC=clang
           export CXX=clang++
