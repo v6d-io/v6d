@@ -23,7 +23,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [ubuntu-20.04, macos-11]
@@ -121,7 +121,7 @@ jobs:
 
           brew update
           for dep in apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers open-mpi openssl protobuf; do
-              install_or_upgrade $dep;
+              install_or_upgrade $dep || true;
           done
 
           # install python packages for codegen
