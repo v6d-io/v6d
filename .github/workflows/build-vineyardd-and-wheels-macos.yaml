@@ -230,7 +230,7 @@ jobs:
 
       - name: Install python for MacOS
         if: runner.os == 'macOS'
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
