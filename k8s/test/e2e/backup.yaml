@@ -1,0 +1,25 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Backup
+metadata:
+  name: backup-sample
+  namespace: backup
+spec:
+  vineyarddName: vineyardd-sample
+  vineyarddNamespace: vineyard-system
+  limit: 1000
+  backupPath: /var/vineyard/dump
+  persistentVolumeSpec:
+    storageClassName: manual
+    capacity:
+      storage: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    hostPath:
+      path: /var/vineyard/dump
+  persistentVolumeClaimSpec:
+    storageClassName: manual
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi

@@ -1,0 +1,51 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Name }}
+spec:
+  {{ $spec := .Spec.PersistentVolumeClaimSpec }}
+  {{- if $spec.AccessModes }}
+  accessModes:
+    {{- range $spec.AccessModes }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  {{- if $spec.Resources }}
+  resources:
+    {{- if $spec.Resources.Requests }}
+    requests:
+      {{- if $spec.Resources.Requests.Storage }}
+      storage: {{ $spec.Resources.Requests.Storage }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if $spec.VolumeName }}
+  volumeName: {{ $spec.VolumeName }}
+  {{- end }}
+  {{- if $spec.StorageClassName }}
+  storageClassName: {{ $spec.StorageClassName }}
+  {{- end }}
+  {{- if $spec.VolumeMode }}
+  volumeMode: {{ $spec.VolumeMode }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Name }}

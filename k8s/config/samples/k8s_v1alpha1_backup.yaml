@@ -1,0 +1,6 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Backup
+metadata:
+  name: backup-sample
+spec:
+  # TODO(user): Add fields here

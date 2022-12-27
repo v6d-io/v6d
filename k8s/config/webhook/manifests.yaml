@@ -11,6 +11,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-k8s-v6d-io-v1alpha1-backup
+  failurePolicy: Fail
+  name: mbackup.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - backups
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-k8s-v6d-io-v1alpha1-globalobject
   failurePolicy: Fail
   name: mglobalobject.kb.io
@@ -71,6 +91,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-k8s-v6d-io-v1alpha1-recover
+  failurePolicy: Fail
+  name: mrecover.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - recovers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-k8s-v6d-io-v1alpha1-sidecar
   failurePolicy: Fail
   name: msidecar.kb.io
@@ -111,9 +151,9 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-v1-pod-scheduling
+      path: /mutate-v1-pod
   failurePolicy: Fail
-  name: mpod.scheduling.kb.io
+  name: mpod.kb.io
   rules:
   - apiGroups:
     - ""
@@ -131,9 +171,9 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-v1-pod
+      path: /mutate-v1-pod-scheduling
   failurePolicy: Fail
-  name: mpod.kb.io
+  name: mpod.scheduling.kb.io
   rules:
   - apiGroups:
     - ""
@@ -172,6 +212,26 @@ metadata:
   creationTimestamp: null
   name: validating-webhook-configuration
 webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-k8s-v6d-io-v1alpha1-backup
+  failurePolicy: Fail
+  name: vbackup.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - backups
+  sideEffects: None
 - admissionReviewVersions:
   - v1
   clientConfig:
@@ -231,6 +291,26 @@ webhooks:
     - UPDATE
     resources:
     - operations
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-k8s-v6d-io-v1alpha1-recover
+  failurePolicy: Fail
+  name: vrecover.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - recovers
   sideEffects: None
 - admissionReviewVersions:
   - v1

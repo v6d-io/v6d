@@ -1,0 +1,24 @@
+# permissions for end users to edit recovers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: recover-editor-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - recovers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - recovers/status
+  verbs:
+  - get
