@@ -456,8 +456,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
   ThreadGroup tg;
   {
     // ivnums, ovnums, tvnums
-    auto fn = [this, &builder, &ivnums, &ovnums,
-               &tvnums](Client* client) -> Status {
+    auto fn = [&builder, &ivnums, &ovnums, &tvnums](Client* client) -> Status {
       vineyard::ArrayBuilder<vid_t> ivnums_builder(*client, ivnums);
       vineyard::ArrayBuilder<vid_t> ovnums_builder(*client, ovnums);
       vineyard::ArrayBuilder<vid_t> tvnums_builder(*client, tvnums);
@@ -909,7 +908,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
 
   ThreadGroup tg;
   {
-    auto fn = [this, &builder, &ovnums, &tvnums](Client* client) -> Status {
+    auto fn = [&builder, &ovnums, &tvnums](Client* client) -> Status {
       vineyard::ArrayBuilder<vid_t> ovnums_builder(*client, ovnums);
       vineyard::ArrayBuilder<vid_t> tvnums_builder(*client, tvnums);
       builder.set_ovnums_(ovnums_builder.Seal(*client));
@@ -929,7 +928,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
   builder.ovgid_lists_.resize(vertex_label_num_);
   builder.ovg2l_maps_.resize(vertex_label_num_);
   for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-    auto fn = [this, &builder, i, &ovgid_lists,
+    auto fn = [&builder, i, &ovgid_lists,
                &ovg2l_maps](Client* client) -> Status {
       if (ovgid_lists[i] != nullptr) {
         builder.set_ovgid_lists_(i, ovgid_lists[i]);

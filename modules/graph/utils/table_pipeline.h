@@ -43,6 +43,7 @@ namespace vineyard {
 class ITablePipeline {
  protected:
   ITablePipeline() = default;
+  virtual ~ITablePipeline() = default;
 
  public:
   virtual Status Next(std::shared_ptr<arrow::RecordBatch>& batch) = 0;

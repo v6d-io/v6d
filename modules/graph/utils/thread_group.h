@@ -56,7 +56,7 @@ class ThreadGroup {
       throw std::runtime_error("ThreadGroup is stopped");
     }
 
-    auto task_wrapper = [this](F&& _f, auto&&... _args) -> return_t {
+    auto task_wrapper = [](F&& _f, auto&&... _args) -> return_t {
       try {
         return std::move(_f(std::forward<Args>(_args)...));
       } catch (std::exception& e) {
