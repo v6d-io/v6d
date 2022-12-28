@@ -13,14 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // RecoverSpec defines the desired state of Recover
 type RecoverSpec struct {
@@ -35,12 +33,19 @@ type RecoverSpec struct {
 
 // RecoverStatus defines the observed state of Recover
 type RecoverStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// the mapping table of old object to new object
+	// +kubebuilder:validation:Required
+	ObjectMapping map[string]string `json:"objectMapping,omitempty"`
+
+	// state of the recover
+	// +kubebuilder:validation:Optional
+	State string `json:"state,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Mapping",type=string,JSONPath=`.status.objectMapping`
+// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 
 // Recover is the Schema for the recovers API
 type Recover struct {

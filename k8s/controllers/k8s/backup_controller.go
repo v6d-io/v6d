@@ -119,7 +119,6 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	Backup.VineyardSockPath = socket
 	Backup.Endpoint = backup.Spec.VineyarddName + "-rpc." + backup.Spec.VineyarddNamespace
 
-	fmt.Println("Backup:", Backup)
 	if backup.Status.State == "" || backup.Status.State == "Running" {
 		if _, err := app.Apply(ctx, "backup/job.yaml", logger, false); err != nil {
 			logger.Error(err, "failed to apply backup job")
@@ -133,11 +132,10 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			logger.Error(err, "failed to apply backup pvc")
 			return ctrl.Result{}, err
 		}
-	}
-
-	if err := r.UpdateStatus(ctx, &backup); err != nil {
-		logger.Error(err, "failed to update status")
-		return ctrl.Result{}, err
+		if err := r.UpdateStatus(ctx, &backup); err != nil {
+			logger.Error(err, "failed to update status")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// reconcile every minute
@@ -154,7 +152,7 @@ func (r *BackupReconciler) UpdateStatus(ctx context.Context, backup *k8sv1alpha1
 	}
 
 	state := "Running"
-	if job.Status.Succeeded == 1 {
+	if job.Status.Succeeded == *job.Spec.Parallelism {
 		state = "Succeed"
 	}
 	// get the running backup

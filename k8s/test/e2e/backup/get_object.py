@@ -17,30 +17,20 @@
 #
 
 import os
+import time
+import numpy as np
 import vineyard
 
+
+client = vineyard.connect('/var/run/vineyard.sock')
 env_dist = os.environ
 
-path = env_dist['RECOVER_PATH']
-socket = '/var/run/vineyard.sock'
-endpoint = env_dist['ENDPOINT']
-service = (endpoint, 9600)
-client = vineyard.connect(socket)
+objid = env_dist['OBJECT_ID']
 
-objslist = [] 
-if (os.path.exists(path)):
-    files = os.listdir(path)
-    for file in files:
-        m = os.path.join(path, file)
-        if (os.path.isdir(m)):
-            objslist.append(m)
+value = client.get(vineyard._C.ObjectID(objid))
 
-for objs in objslist:  
-    obj = vineyard.io.deserialize(
-        objs,
-        vineyard_ipc_socket=socket,
-        vineyard_endpoint=service,
-    )
-    oldobj = os.path.split(objs)
-    newobj = str(obj).split("\"")[1]
-    print(f'{oldobj[1]}->{newobj}',flush=True)
+sum = np.sum(value)
+print(sum,flush=True)
+
+# avoid CrashLoopBackOff
+time.sleep(600)

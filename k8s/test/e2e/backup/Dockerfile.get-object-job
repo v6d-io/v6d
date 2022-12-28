@@ -1,6 +1,3 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,24 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-import time
-import sys
-import numpy as np
-import vineyard
+FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
-client = vineyard.connect('/var/run/vineyard.sock')
+WORKDIR /
 
-obj = client.put(np.arange(1,6))
-client.persist(obj)
-# flush the stdout buffer
-f = open('/dev/null', 'w') # pylint: disable=unspecified-encoding,consider-using-with
-sys.stdout = f
-print(flush=True)
+COPY ./get_object.py /
 
-sys.stdout = sys.__stdout__
-print(obj.id, flush=True)
+ENTRYPOINT [ "python3" ]
 
-# avoid CrashLoopBackOff
-time.sleep(600)
+CMD [ "get_object.py" ]

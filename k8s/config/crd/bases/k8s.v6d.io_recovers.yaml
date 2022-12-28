@@ -15,7 +15,14 @@ spec:
     singular: recover
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.objectMapping
+      name: Mapping
+      type: string
+    - jsonPath: .status.state
+      name: State
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:
@@ -33,6 +40,13 @@ spec:
                 type: string
             type: object
           status:
+            properties:
+              objectMapping:
+                additionalProperties:
+                  type: string
+                type: object
+              state:
+                type: string
             type: object
         type: object
     served: true

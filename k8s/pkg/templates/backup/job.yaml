@@ -21,7 +21,7 @@ metadata:
   namespace: {{ $config.Namespace }}
 spec:
   parallelism: {{ $config.Replicas }}
-  ttlSecondsAfterFinished: 20
+  ttlSecondsAfterFinished: 80
   template:
     metadata:
       annotations:
@@ -35,7 +35,7 @@ spec:
       schedulerName: vineyard-scheduler
       containers:
       - name: backup
-        image: docker.pkg.github.com/v6d-io/v6d/backup-job
+        image: ghcr.io/v6d-io/v6d/backup-job
         imagePullPolicy: IfNotPresent
         env:
         - name: LIMIT

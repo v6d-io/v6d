@@ -15,7 +15,11 @@ spec:
     singular: backup
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:
@@ -637,8 +641,7 @@ spec:
             type: object
           status:
             properties:
-              creationTime:
-                format: date-time
+              state:
                 type: string
             type: object
         type: object

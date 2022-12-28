@@ -25,6 +25,7 @@ import (
 // log is for logging in this package.
 var backuplog = log.Logger.WithName("webhook").WithName("backup")
 
+// SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Backup) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
