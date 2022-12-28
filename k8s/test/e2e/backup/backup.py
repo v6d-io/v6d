@@ -1,3 +1,4 @@
+# pylint: disable=django-not-configured
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -31,14 +32,13 @@ client = vineyard.connect(socket)
 # get instance id
 instance = client.instance_id
 
-# the limit 
 objs = client.list_objects(pattern='*',limit=limits)
 
 # serialize all persistent objects
-for i in range(0, len(objs)):
+for i in enumerate(objs):
     try:
         meta = client.get_meta(objs[i].id, sync_remote=True)
-        if meta['transient']==False and meta['instance_id']==int(instance):
+        if not meta['transient'] and meta['instance_id']==int(instance):
             objname = str(objs[i].id).split("\"")[1]
             objpath = path + '/' + objname
             print(objpath)

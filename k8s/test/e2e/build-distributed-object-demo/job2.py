@@ -1,3 +1,4 @@
+# pylint: disable=django-not-configured
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -17,6 +18,7 @@
 #
 
 import os
+import sys
 import time
 import numpy as np
 import vineyard
@@ -41,7 +43,7 @@ sys.stdout = f
 print(flush=True)
 
 sys.stdout = sys.__stdout__
-print(obj.id, flush=True)
+print(o.id, flush=True)
 
 # avoid CrashLoopBackOff
 time.sleep(600)

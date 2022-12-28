@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package k8s contains k8s API versions.
 package k8s
 
 import (
@@ -86,6 +87,7 @@ func getRecoverConfig() RecoverConfig {
 // +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 
+// Reconcile reconciles the Recover.
 func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Recover")
 

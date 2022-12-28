@@ -27,15 +27,15 @@ endpoint = env_dist['ENDPOINT']
 service = (endpoint, 9600)
 client = vineyard.connect(socket)
 
-objslist = [] 
-if (os.path.exists(path)):
+objslist = []
+if os.path.exists(path):
     files = os.listdir(path)
     for file in files:
         m = os.path.join(path, file)
-        if (os.path.isdir(m)):
+        if os.path.isdir(m):
             objslist.append(m)
 
-for objs in objslist:  
+for objs in objslist:
     obj = vineyard.io.deserialize(
         objs,
         vineyard_ipc_socket=socket,
