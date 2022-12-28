@@ -32,8 +32,7 @@ func (r *Backup) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
+//nolint: lll
 //+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-backup,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=backups,verbs=create;update,versions=v1alpha1,name=mbackup.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &Backup{}
@@ -45,7 +44,7 @@ func (r *Backup) Default() {
 	// TODO(user): fill in your defaulting logic.
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+//nolint: lll
 //+kubebuilder:webhook:path=/validate-k8s-v6d-io-v1alpha1-backup,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=backups,verbs=create;update,versions=v1alpha1,name=vbackup.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &Backup{}

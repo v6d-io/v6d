@@ -119,7 +119,7 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	Backup.VineyardSockPath = socket
 	Backup.Endpoint = backup.Spec.VineyarddName + "-rpc." + backup.Spec.VineyarddNamespace
 
-	if backup.Status.State == "" || backup.Status.State == "Running" {
+	if backup.Status.State == "" || backup.Status.State == RunningState {
 		if _, err := app.Apply(ctx, "backup/job.yaml", logger, false); err != nil {
 			logger.Error(err, "failed to apply backup job")
 			return ctrl.Result{}, err
@@ -143,7 +143,7 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{RequeueAfter: duration}, nil
 }
 
-// UpdateStatus updates the status of the Backup.
+// UpdateStatus updates the status of the Backup.Running
 func (r *BackupReconciler) UpdateStatus(ctx context.Context, backup *k8sv1alpha1.Backup) error {
 	name := client.ObjectKey{Name: "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace, Namespace: backup.Namespace}
 	job := batchv1.Job{}
@@ -151,9 +151,9 @@ func (r *BackupReconciler) UpdateStatus(ctx context.Context, backup *k8sv1alpha1
 		ctrl.Log.V(1).Error(err, "failed to get job")
 	}
 
-	state := "Running"
+	state := RunningState
 	if job.Status.Succeeded == *job.Spec.Parallelism {
-		state = "Succeed"
+		state = SucceedState
 	}
 	// get the running backup
 	status := &k8sv1alpha1.BackupStatus{

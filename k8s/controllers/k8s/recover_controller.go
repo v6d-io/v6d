@@ -39,6 +39,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const (
+	// SucceedState is the succeed state
+	SucceedState = "Succeed"
+	// RunningState is the running state
+	RunningState = "Running"
+)
+
 // RecoverReconciler reconciles a Recover object
 type RecoverReconciler struct {
 	client.Client
@@ -126,7 +133,7 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	Recover.Endpoint = backup.Spec.VineyarddName + "-rpc." + backup.Spec.VineyarddNamespace
 	Recover.BackupPVCName = backup.Name
 
-	if recover.Status.State == "" || recover.Status.State == "Running" {
+	if recover.Status.State == "" || recover.Status.State == RunningState {
 		if _, err := app.Apply(ctx, "recover/job.yaml", logger, false); err != nil {
 			logger.Error(err, "failed to apply recover job")
 			return ctrl.Result{}, err
@@ -137,7 +144,7 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	if recover.Status.State == "Succeed" {
+	if recover.Status.State == SucceedState {
 		if err := r.UpdateMappingStatus(ctx, &backup, &recover); err != nil {
 			logger.Error(err, "failed to update recover objectmapping status")
 			return ctrl.Result{}, err
@@ -158,9 +165,9 @@ func (r *RecoverReconciler) UpdateStateStatus(ctx context.Context, backup *k8sv1
 	}
 
 	// get job state
-	state := "Running"
+	state := RunningState
 	if job.Status.Succeeded == *job.Spec.Parallelism {
-		state = "Succeed"
+		state = SucceedState
 	}
 
 	status := &k8sv1alpha1.RecoverStatus{

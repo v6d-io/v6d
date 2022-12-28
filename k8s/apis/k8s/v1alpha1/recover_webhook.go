@@ -32,8 +32,7 @@ func (r *Recover) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
+//nolint: lll
 //+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-recover,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=recovers,verbs=create;update,versions=v1alpha1,name=mrecover.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &Recover{}
@@ -42,10 +41,9 @@ var _ webhook.Defaulter = &Recover{}
 func (r *Recover) Default() {
 	recoverlog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+//nolint: lll
 //+kubebuilder:webhook:path=/validate-k8s-v6d-io-v1alpha1-recover,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=recovers,verbs=create;update,versions=v1alpha1,name=vrecover.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &Recover{}
@@ -54,7 +52,6 @@ var _ webhook.Validator = &Recover{}
 func (r *Recover) ValidateCreate() error {
 	recoverlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
@@ -62,7 +59,6 @@ func (r *Recover) ValidateCreate() error {
 func (r *Recover) ValidateUpdate(old runtime.Object) error {
 	recoverlog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
 	return nil
 }
 
@@ -70,6 +66,5 @@ func (r *Recover) ValidateUpdate(old runtime.Object) error {
 func (r *Recover) ValidateDelete() error {
 	recoverlog.Info("validate delete", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
