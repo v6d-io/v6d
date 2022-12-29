@@ -42,7 +42,8 @@ using array_vec_t = std::vector<std::shared_ptr<arrow::Array>>;
 }  // namespace vineyard
 
 namespace wy {
-#if (!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10
+#if !nssv_USES_STD_STRING_VIEW && \
+    ((!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10)
 template <>
 struct hash<vineyard::arrow_string_view>
     : public internal::hash_string_base<vineyard::arrow_string_view> {
@@ -52,7 +53,8 @@ struct hash<vineyard::arrow_string_view>
 }  // namespace wy
 
 namespace city {
-#if (!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10
+#if !nssv_USES_STD_STRING_VIEW && \
+    ((!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10)
 template <>
 class hash<vineyard::arrow_string_view> {
   inline uint64_t operator()(const vineyard::arrow_string_view& data) const
