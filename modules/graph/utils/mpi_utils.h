@@ -146,6 +146,23 @@ inline OutArchive& operator>>(OutArchive& out_archive,
   }
   return out_archive;
 }
+
+#if ARROW_VERSION_MAJOR >= 10
+inline InArchive& operator<<(InArchive& archive, const std::string_view& str) {
+  archive << str.length();
+  archive.AddBytes(str.data(), str.length());
+  return archive;
+}
+
+inline OutArchive& operator>>(OutArchive& archive, std::string_view& str) {
+  size_t length;
+  archive >> length;
+  str = std::string_view(reinterpret_cast<char*>(archive.GetBytes(length)),
+                         length);
+  return archive;
+}
+#endif
+
 }  // namespace grape
 
 #endif  // MODULES_GRAPH_UTILS_MPI_UTILS_H_
