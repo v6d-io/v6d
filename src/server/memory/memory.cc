@@ -136,7 +136,8 @@ template <typename ID, typename P>
 BulkStoreBase<ID, P>::~BulkStoreBase() {
   std::vector<ID> object_ids;
   object_ids.reserve(objects_.size());
-  for (auto iter = objects_.begin(); iter != objects_.end(); iter++) {
+  auto locked = objects_.lock_table();
+  for (auto iter = locked.begin(); iter != locked.end(); iter++) {
     object_ids.emplace_back(iter->first);
   }
   for (auto const& item : object_ids) {
@@ -176,14 +177,12 @@ Status BulkStoreBase<ID, P>::Seal(ID const& id) {
   if (id == EmptyBlobID<ID>()) {
     return Status::OK();
   } else {
-    typename object_map_t::const_accessor accessor;
-    if (objects_.find(accessor, id)) {
-      auto object = accessor->second;
-      object->MarkAsSealed();
-      return Status::OK();
-    } else {
-      return Status::ObjectNotExists("get: id = " + IDToString<ID>(id));
+    bool accessed = objects_.update_fn(
+        id, [](std::shared_ptr<P>& object) -> void { object->MarkAsSealed(); });
+    if (!accessed) {
+      return Status::ObjectNotExists("seal: id = " + IDToString<ID>(id));
     }
+    return Status::OK();
   }
 }
 
@@ -194,24 +193,28 @@ Status BulkStoreBase<ID, P>::Get(ID const& id, std::shared_ptr<P>& object) {
 
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::GetUnsafe(ID const& id, const bool unsafe,
-                                       std::shared_ptr<P>& object) {
+                                       std::shared_ptr<P>& target) {
   if (id == EmptyBlobID<ID>()) {
-    object = P::MakeEmpty();
+    target = P::MakeEmpty();
     return Status::OK();
   } else {
-    typename object_map_t::const_accessor accessor;
-    if (objects_.find(accessor, id)) {
-      if (unsafe || accessor->second->IsSealed()) {
-        object = accessor->second;
-        return Status::OK();
-      } else {
-        return Status::ObjectNotSealed("Failed to get blob with id " +
-                                       IDToString<ID>(id));
-      }
-    } else {
+    Status status;
+    bool accessed = objects_.find_fn(
+        id,
+        [id, unsafe, &target,
+         &status](const std::shared_ptr<P>& object) -> void {
+          if (unsafe || object->IsSealed()) {
+            target = object;
+          } else {
+            status = Status::ObjectNotSealed("Failed to get blob with id " +
+                                             IDToString<ID>(id));
+          }
+        });
+    if (!accessed) {
       return Status::ObjectNotExists("Failed to get blob with id " +
                                      IDToString<ID>(id));
     }
+    return status;
   }
 }
 
@@ -229,15 +232,20 @@ Status BulkStoreBase<ID, P>::GetUnsafe(
     if (object_id == EmptyBlobID<ID>()) {
       objects.push_back(P::MakeEmpty());
     } else {
-      typename object_map_t::const_accessor accessor;
-      if (objects_.find(accessor, object_id)) {
-        auto object = accessor->second;
-        if (unsafe || object->IsSealed()) {
-          objects.push_back(accessor->second);
-        } else {
-          objects.clear();
-          return Status::ObjectNotSealed();
-        }
+      Status status;
+      bool accessed =
+          objects_.find_fn(object_id,
+                           [unsafe, &objects,
+                            &status](const std::shared_ptr<P>& object) -> void {
+                             if (unsafe || object->IsSealed()) {
+                               objects.push_back(object);
+                             } else {
+                               objects.clear();
+                               status = Status::ObjectNotSealed();
+                             }
+                           });
+      if (accessed && !status.ok()) {
+        return status;
       }
     }
   }
@@ -250,29 +258,36 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
       object_id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
     return Status::OK();
   }
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, object_id)) {
+  std::shared_ptr<Payload> target;
+  bool accessed = objects_.erase_fn(
+      object_id, [&target](std::shared_ptr<P>& object) -> bool {
+        if (!object->IsOwner()) {
+          return false;
+        }
+        if (object->IsSpilled()) {
+          return true;
+        }
+        if (object->IsGPU()) {
+          // DeleteGPU() will deal with GPU object
+          return false;
+        }
+        target = object;
+        return true;
+      });
+  if (!accessed) {
     return Status::ObjectNotExists("delete: id = " + IDToString(object_id));
   }
-  auto& object = accessor->second;
 
-  if (!object->IsOwner()) {
+  if (target == nullptr) {  // nothing happen
     return Status::OK();
   }
 
-  if (object->IsSpilled()) {
-    objects_.erase(accessor);
-    return Status::OK();
-  }
-  // DeleteGPU will deal with GPU object
-  if (object->IsGPU()) {
-    return Status::OK();
-  }
-  if (object->arena_fd == -1) {
-    auto buff_size = object->data_size;
-    switch (object->kind) {
+  if (target->arena_fd == -1) {
+    // release the memory
+    auto buff_size = target->data_size;
+    switch (target->kind) {
     case Payload::Kind::kMalloc: {
-      BulkAllocator::Free(object->pointer, buff_size);
+      BulkAllocator::Free(target->pointer, buff_size);
       DVLOG(10) << "after free: " << IDToString(object_id) << ": "
                 << Footprint() << "(" << FootprintLimit() << ")";
     }
@@ -280,8 +295,9 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
     }
     }
   } else {
+    // release the span on allocator's arena to release the physical memory
     static size_t page_size = memory::system_page_size();
-    uintptr_t pointer = reinterpret_cast<uintptr_t>(object->pointer);
+    uintptr_t pointer = reinterpret_cast<uintptr_t>(target->pointer);
     uintptr_t lower = memory::align_down(pointer, page_size),
               upper = memory::align_up(pointer, page_size);
     uintptr_t lower_bound = lower, upper_bound = upper;
@@ -289,26 +305,28 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
       auto iter = Arena::spans.find(object_id);
       if (iter != Arena::spans.begin()) {
         auto iter_prev = std::prev(iter);
-        typename object_map_t::const_accessor accessor;
-        if (!objects_.find(accessor, *iter_prev)) {
+        bool accessed_prev = objects_.find_fn(
+            *iter_prev, [&lower_bound](const std::shared_ptr<Payload>& object) {
+              lower_bound = memory::align_up(
+                  reinterpret_cast<uintptr_t>(object->pointer) +
+                      object->data_size,
+                  page_size);
+            });
+        if (!accessed_prev) {
           return Status::Invalid(
               "Internal state error: previous blob not found");
         }
-        auto& object_prev = accessor->second;
-        lower_bound =
-            memory::align_up(reinterpret_cast<uintptr_t>(object_prev->pointer) +
-                                 object_prev->data_size,
-                             page_size);
       }
       auto iter_next = std::next(iter);
       if (iter_next != Arena::spans.end()) {
-        typename object_map_t::const_accessor accessor;
-        if (!objects_.find(accessor, *iter_next)) {
+        bool accessed_next = objects_.find_fn(
+            *iter_next, [&upper_bound](std::shared_ptr<P>& object) {
+              upper_bound = memory::align_down(
+                  reinterpret_cast<uintptr_t>(object->pointer), page_size);
+            });
+        if (!accessed_next) {
           return Status::Invalid("Internal state error: next blob not found");
         }
-        auto& object_next = accessor->second;
-        upper_bound = memory::align_down(
-            reinterpret_cast<uintptr_t>(object_next->pointer), page_size);
       }
     }
     if (std::max(lower, lower_bound) < std::min(upper, upper_bound)) {
@@ -319,7 +337,6 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
                                       std::min(upper, upper_bound));
     }
   }
-  objects_.erase(accessor);
   return Status::OK();
 }
 
@@ -332,32 +349,29 @@ Status BulkStoreBase<ID, P>::DeleteGPU(ID const& object_id) {
       object_id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
     return Status::OK();
   }
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, object_id)) {
+  bool accessed = objects_.erase_fn(
+      object_id, [this, object_id](std::shared_ptr<P>& object) -> bool {
+        if (!object->IsOwner() || !object->IsGPU()) {
+          return false;
+        }
+        if (object->arena_fd == -1) {
+          auto buff_size = object->data_size;
+          GPUBulkAllocator::Free(object->pointer, buff_size);
+          DVLOG(10) << "after free: " << IDToString(object_id) << ": "
+                    << this->FootprintGPU() << "(" << this->FootprintLimitGPU()
+                    << ")";
+        }
+        return true;  // delete the key
+      });
+  if (!accessed) {
     return Status::ObjectNotExists("delete: id = " + IDToString(object_id));
   }
-
-  auto& object = accessor->second;
-  if (!object->IsOwner()) {
-    return Status::OK();
-  }
-  if (!object->IsGPU()) {
-    return Status::OK();
-  }
-  if (object->arena_fd == -1) {
-    auto buff_size = object->data_size;
-    GPUBulkAllocator::Free(object->pointer, buff_size);
-    DVLOG(10) << "after free: " << IDToString(object_id) << ": "
-              << FootprintGPU() << "(" << FootprintLimitGPU() << ")";
-  }
-  objects_.erase(accessor);
   return Status::OK();
 }
 
 template <typename ID, typename P>
 bool BulkStoreBase<ID, P>::Exists(const ID& object_id) {
-  typename object_map_t::const_accessor accessor;
-  return objects_.find(accessor, object_id);
+  return objects_.contains(object_id);
 }
 
 template <typename ID, typename P>
@@ -415,7 +429,7 @@ Status BulkStoreBase<ID, P>::PreAllocate(const size_t size,
   auto payload = std::make_shared<P>(
       object_id, size, static_cast<uint8_t*>(pointer), fd, map_size, offset);
   payload->is_sealed = true;
-  objects_.emplace(object_id, payload);
+  objects_.insert(object_id, payload);
   return Status::OK();
 }
 
@@ -441,10 +455,10 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
     // make them available for blob pool
     uintptr_t pointer = mmap_base + offsets[idx];
     ID object_id = GenerateBlobID<ID>(pointer);
-    objects_.emplace(
-        object_id, std::make_shared<P>(object_id, sizes[idx],
-                                       reinterpret_cast<uint8_t*>(pointer), fd,
-                                       mmap_size, offsets[idx]));
+    objects_.insert(object_id,
+                    std::make_shared<P>(object_id, sizes[idx],
+                                        reinterpret_cast<uint8_t*>(pointer), fd,
+                                        mmap_size, offsets[idx]));
     // record the span, will be used to release memory back to OS when deleting
     // blobs
     Arena::spans.emplace(object_id);
@@ -467,14 +481,13 @@ Status BulkStoreBase<ID, P>::MoveOwnership(
     std::map<ID, P> const& to_process_ids) {
   for (auto& item : to_process_ids) {
     auto id = item.first;
-    typename object_map_t::const_accessor accessor;
     // already exists
-    if (objects_.find(accessor, id)) {
+    if (objects_.contains(id)) {
       continue;
     }
     auto object = std::make_shared<P>(item.second);
     object->MarkAsSealed();
-    objects_.emplace(id, object);
+    objects_.insert(id, object);
   }
   return Status::OK();
 }
@@ -487,14 +500,11 @@ Status BulkStoreBase<ID, P>::RemoveOwnership(
         id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
       continue;
     }
-    typename object_map_t::const_accessor accessor;
-    if (!objects_.find(accessor, id)) {
-      // already deleted by other session
-      continue;
-    } else {
-      successed_id_to_size.emplace(id, *(accessor->second));
-      accessor->second->RemoveOwner();
-    }
+    objects_.update_fn(
+        id, [id, &successed_id_to_size](std::shared_ptr<P>& object) -> void {
+          object->RemoveOwner();
+          successed_id_to_size.emplace(id, *object);
+        });
   }
   return Status::OK();
 }
@@ -526,18 +536,19 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   object_id = GenerateBlobID<ObjectID>(pointer);
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      map_size, offset);
-  objects_.emplace(object_id, object);
+  objects_.insert(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
   return Status::OK();
 }
 
 Status BulkStore::OnRelease(ObjectID const& id) {
-  typename object_map_t::const_accessor accessor;
-  if (objects_.find(accessor, id)) {
-    RETURN_ON_ERROR(this->MarkAsCold(id, accessor->second));
-  }
-  return Status::OK();
+  Status status;
+  objects_.find_fn(id,
+                   [this, id, &status](const std::shared_ptr<Payload>& object) {
+                     status = this->MarkAsCold(id, object);
+                   });
+  return status;
 }
 
 Status BulkStore::Release(ObjectID const& id, int conn) {
@@ -546,14 +557,11 @@ Status BulkStore::Release(ObjectID const& id, int conn) {
 
 Status BulkStore::FetchAndModify(const ObjectID& id, int64_t& ref_cnt,
                                  int64_t changes) {
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, id)) {
-    // NB: Keep consistent with the the Get opeartion.
-    return Status::OK();
-  } else {
-    accessor->second->ref_cnt += changes;
-    ref_cnt = accessor->second->ref_cnt;
-  }
+  objects_.update_fn(
+      id, [&ref_cnt, changes](std::shared_ptr<Payload>& object) -> void {
+        object->ref_cnt += changes;
+        ref_cnt = object->ref_cnt;
+      });
   return Status::OK();
 }
 
@@ -589,7 +597,7 @@ Status BulkStore::CreateGPU(const size_t data_size, ObjectID& object_id,
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      map_size, offset);
   object->is_gpu = 1;  // set the GPU object flag
-  objects_.emplace(object_id, object);
+  objects_.insert(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << FootprintGPU() << "(" << FootprintLimitGPU() << ")";
   return Status::OK();
@@ -621,7 +629,7 @@ Status BulkStore::CreateDisk(const size_t data_size, const std::string& path,
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      data_size, 0);
   object->kind = Payload::Kind::kDiskMMap;
-  objects_.emplace(object_id, object);
+  objects_.insert(object_id, object);
   return Status::OK();
 }
 
@@ -651,19 +659,19 @@ Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
   object =
       std::make_shared<PlasmaPayload>(plasma_id, object_id, plasma_size,
                                       data_size, pointer, fd, map_size, offset);
-  objects_.emplace(plasma_id, object);
+  objects_.insert(plasma_id, object);
   DVLOG(10) << "after allocate: " << IDToString<PlasmaID>(plasma_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
   return Status::OK();
 }
 
 Status PlasmaBulkStore::OnRelease(PlasmaID const& id) {
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, id)) {
+  if (objects_.contains(id)) {
+    RETURN_ON_ERROR(OnDelete(id));
+    return Status::OK();
+  } else {
     return Status::ObjectNotExists("object " + PlasmaIDToString(id) +
                                    " cannot be found");
-  } else {
-    RETURN_ON_ERROR(OnDelete(id));
   }
   return Status::OK();
 }
@@ -674,14 +682,11 @@ Status PlasmaBulkStore::Release(PlasmaID const& id, int conn) {
 
 Status PlasmaBulkStore::FetchAndModify(const PlasmaID& id, int64_t& ref_cnt,
                                        int64_t changes) {
-  typename object_map_t::const_accessor accessor;
-  if (!objects_.find(accessor, id)) {
-    // N.B.: Keep consistent with the the Get opeartion.
-    return Status::OK();
-  } else {
-    accessor->second->ref_cnt += changes;
-    ref_cnt = accessor->second->ref_cnt;
-  }
+  objects_.update_fn(
+      id, [&ref_cnt, changes](std::shared_ptr<PlasmaPayload>& object) -> void {
+        object->ref_cnt += changes;
+        ref_cnt = object->ref_cnt;
+      });
   return Status::OK();
 }
 

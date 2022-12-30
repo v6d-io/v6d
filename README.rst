@@ -258,7 +258,6 @@ We thank the following excellent open-source projects:
 - `nlohmann/json <https://github.com/nlohmann/json>`_, a json library for modern c++.
 - `pybind11 <https://github.com/pybind/pybind11>`_, a library for seamless operability between C++11 and Python.
 - `s3fs <https://github.com/dask/s3fs>`_, a library provide a convenient Python filesystem interface for S3.
-- `tbb <https://github.com/oneapi-src/oneTBB>`_ a C++ library for threading building blocks.
 - `skywalking-infra-e2e <https://github.com/apache/skywalking-infra-e2e>`_ A generation End-to-End Testing framework.
 - `skywalking-swck <https://github.com/apache/skywalking-swck>`_ A kubernetes operator for the Apache Skywalking.
 

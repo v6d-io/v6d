@@ -95,17 +95,6 @@ if(APPLE)
     target_compile_options(vineyard_graph PUBLIC -Wno-unused-result)
 endif()
 
-# install libcuckoo
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libcuckoo/libcuckoo"
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
-        PATTERN "*.hh"
-)
-
-target_include_directories(vineyard_graph PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libcuckoo>
-    $<INSTALL_INTERFACE:include/vineyard/contrib>
-)
-
 add_dependencies(vineyard_graph vineyard_graph_gen)
 
 add_dependencies(vineyard_codegen vineyard_graph_gen)

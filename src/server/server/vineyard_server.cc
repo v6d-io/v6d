@@ -332,8 +332,9 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
           if (current < limit &&
               meta_tree::MatchTypeName(false, pattern, "vineyard::Blob")) {
             // consider returns blob when not reach the limit
-            auto const& blobs = bulk_store_->List();
-            for (auto const& item : blobs) {
+            auto& blobs = bulk_store_->List();
+            auto locked = blobs.lock_table();
+            for (auto const& item : locked) {
               if (current >= limit) {
                 break;
               }
@@ -383,8 +384,9 @@ Status VineyardServer::ListAllData(
           if (!s.ok()) {
             return callback(s, objects);
           }
-          auto const& blobs = bulk_store_->List();
-          for (auto const& item : blobs) {
+          auto& blobs = bulk_store_->List();
+          auto locked = blobs.lock_table();
+          for (auto const& item : locked) {
             objects.emplace_back(item.first);
           }
           return callback(status, objects);

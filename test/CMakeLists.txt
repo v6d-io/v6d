@@ -34,10 +34,6 @@ foreach(testfile ${TEST_FILES})
         continue()
     endif()
 
-    if(${testname} STREQUAL "lru_test" AND NOT (TARGET TBB::tbb))
-        continue()
-    endif()
-
     message(STATUS "Found unit_test - " ${testname})
     add_test_case(${testname} ${testfile})
 
@@ -45,9 +41,6 @@ foreach(testfile ${TEST_FILES})
         target_compile_options(${testname} PRIVATE "-fno-access-control")
     endif()
 
-    if(${testname} STREQUAL "lru_test")
-        target_link_libraries(${testname} PRIVATE TBB::tbb)
-    endif()
     if(${testname} STREQUAL "compressor_test")
         target_sources(${testname} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src/server/util/compressor.cc)
         target_link_libraries(${testname} PRIVATE libzstd_static)

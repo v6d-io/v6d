@@ -39,7 +39,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "oneapi/tbb/concurrent_hash_map.h"
+#include "libcuckoo/cuckoohash_map.hh"
 
 #include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
@@ -54,7 +54,7 @@ namespace vineyard {
 template <typename ID, typename P>
 class BulkStoreBase {
  public:
-  using object_map_t = tbb::concurrent_hash_map<ID, std::shared_ptr<P>>;
+  using object_map_t = libcuckoo::cuckoohash_map<ID, std::shared_ptr<P>>;
 
   virtual ~BulkStoreBase();
 
@@ -63,7 +63,7 @@ class BulkStoreBase {
   /**
    * Like `Get()`, but optionally bypass the "sealed" check.
    */
-  Status GetUnsafe(ID const& id, const bool unsafe, std::shared_ptr<P>& object);
+  Status GetUnsafe(ID const& id, const bool unsafe, std::shared_ptr<P>& target);
 
   /**
    * This methods only return available objects, and doesn't fail when object
@@ -83,7 +83,7 @@ class BulkStoreBase {
 
   Status DeleteGPU(ID const& object_id);
 
-  object_map_t const& List() const { return objects_; }
+  object_map_t& List() { return objects_; }
 
   size_t Footprint() const;
   size_t FootprintLimit() const;

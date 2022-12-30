@@ -14,10 +14,6 @@
 	path = thirdparty/nlohmann-json
 	url = https://github.com/nlohmann/json.git
 	shallow = true
-[submodule "thirdparty/intel-tbb"]
-	path = thirdparty/intel-tbb
-	url = https://github.com/oneapi-src/oneTBB.git
-	shallow = true
 [submodule "thirdparty/ctti"]
 	path = thirdparty/ctti
 	url = https://github.com/Manu343726/ctti.git
@@ -46,7 +42,7 @@
 	path = thirdparty/zstd
 	url = https://github.com/facebook/zstd.git
 	shallow = true
-[submodule "modules/graph/thirdparty/libcuckoo"]
-	path = modules/graph/thirdparty/libcuckoo
+[submodule "thirdparty/libcuckoo"]
+	path = thirdparty/libcuckoo
 	url = https://github.com/efficient/libcuckoo.git
 	shallow = true
