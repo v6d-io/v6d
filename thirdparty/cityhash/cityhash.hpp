@@ -49,26 +49,28 @@ static inline uint64 Uint128Low64(const uint128& x) { return x.first; }
 static inline uint64 Uint128High64(const uint128& x) { return x.second; }
 
 // Hash function for a byte array.
-static uint64 CityHash64(const char* buf, size_t len);
+static inline uint64 CityHash64(const char* buf, size_t len);
 
 // Hash function for a byte array.  For convenience, a 64-bit seed is also
 // hashed into the result.
-static uint64 CityHash64WithSeed(const char* buf, size_t len, uint64 seed);
+static inline uint64 CityHash64WithSeed(const char* buf, size_t len,
+                                        uint64 seed);
 
 // Hash function for a byte array.  For convenience, two seeds are also
 // hashed into the result.
-static uint64 CityHash64WithSeeds(const char* buf, size_t len, uint64 seed0,
-                                  uint64 seed1);
+static inline uint64 CityHash64WithSeeds(const char* buf, size_t len,
+                                         uint64 seed0, uint64 seed1);
 
 // Hash function for a byte array.
-static uint128 CityHash128(const char* s, size_t len);
+static inline uint128 CityHash128(const char* s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 128-bit seed is also
 // hashed into the result.
-static uint128 CityHash128WithSeed(const char* s, size_t len, uint128 seed);
+static inline uint128 CityHash128WithSeed(const char* s, size_t len,
+                                          uint128 seed);
 
 // Hash function for a byte array.  Most useful in 32-bit binaries.
-static uint32 CityHash32(const char* buf, size_t len);
+static inline uint32 CityHash32(const char* buf, size_t len);
 
 // Hash 128 input bits down to 64 bits of output.
 // This is intended to be a reasonably good hash function.
@@ -237,7 +239,7 @@ static uint32 Hash32Len5to12(const char* s, size_t len) {
   return fmix(Mur(c, Mur(b, Mur(a, d))));
 }
 
-static uint32 CityHash32(const char* s, size_t len) {
+static inline uint32 CityHash32(const char* s, size_t len) {
   if (len <= 24) {
     return len <= 12
                ? (len <= 4 ? Hash32Len0to4(s, len) : Hash32Len5to12(s, len))
@@ -409,7 +411,7 @@ static uint64 HashLen33to64(const char* s, size_t len) {
   return b + x;
 }
 
-static uint64 CityHash64(const char* s, size_t len) {
+static inline uint64 CityHash64(const char* s, size_t len) {
   if (len <= 32) {
     if (len <= 16) {
       return HashLen0to16(s, len);
@@ -447,18 +449,19 @@ static uint64 CityHash64(const char* s, size_t len) {
                    HashLen16(v.second, w.second) + x);
 }
 
-static uint64 CityHash64WithSeed(const char* s, size_t len, uint64 seed) {
+static inline uint64 CityHash64WithSeed(const char* s, size_t len,
+                                        uint64 seed) {
   return CityHash64WithSeeds(s, len, k2, seed);
 }
 
-static uint64 CityHash64WithSeeds(const char* s, size_t len, uint64 seed0,
-                                  uint64 seed1) {
+static inline uint64 CityHash64WithSeeds(const char* s, size_t len,
+                                         uint64 seed0, uint64 seed1) {
   return HashLen16(CityHash64(s, len) - seed0, seed1);
 }
 
 // A subroutine for CityHash128().  Returns a decent 128-bit hash for strings
 // of any length representable in signed long.  Based on City and Murmur.
-static uint128 CityMurmur(const char* s, size_t len, uint128 seed) {
+static inline uint128 CityMurmur(const char* s, size_t len, uint128 seed) {
   uint64 a = Uint128Low64(seed);
   uint64 b = Uint128High64(seed);
   uint64 c = 0;
@@ -488,7 +491,8 @@ static uint128 CityMurmur(const char* s, size_t len, uint128 seed) {
   return uint128(a ^ b, HashLen16(b, a));
 }
 
-static uint128 CityHash128WithSeed(const char* s, size_t len, uint128 seed) {
+static inline uint128 CityHash128WithSeed(const char* s, size_t len,
+                                          uint128 seed) {
   if (len < 128) {
     return CityMurmur(s, len, seed);
   }
@@ -551,7 +555,7 @@ static uint128 CityHash128WithSeed(const char* s, size_t len, uint128 seed) {
                  HashLen16(x + w.second, y + v.second));
 }
 
-static uint128 CityHash128(const char* s, size_t len) {
+static inline uint128 CityHash128(const char* s, size_t len) {
   return len >= 16
              ? CityHash128WithSeed(s + 16, len - 16,
                                    uint128(Fetch64(s), Fetch64(s + 8) + k0))

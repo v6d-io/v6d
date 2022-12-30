@@ -66,6 +66,7 @@ class BasicEVFragmentLoader {
   using partitioner_t = PARTITIONER_T;
   using vertex_map_t = VERTEX_MAP_T<typename InternalType<OID_T>::type, VID_T>;
   using oid_array_t = ArrowArrayType<oid_t>;
+  using oid_array_builder_t = ArrowBuilderType<oid_t>;
   using internal_oid_t = typename InternalType<oid_t>::type;
 
  public:

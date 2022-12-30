@@ -327,6 +327,9 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
   auto parse_options = arrow::csv::ParseOptions::Defaults();
   auto convert_options = arrow::csv::ConvertOptions::Defaults();
 
+  // enable parallelism
+  read_options.use_threads = true;
+
   // default: 128MB
   read_options.block_size = 128 * 1024 * 1024;
   if (meta_.find("block_size") != meta_.end()) {

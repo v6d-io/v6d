@@ -22,8 +22,9 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "cityhash/cityhash.hpp"
 #include "flat_hash_map/flat_hash_map.hpp"
+
+#include "cityhash/cityhash.hpp"
 #include "wyhash/wyhash.hpp"
 
 #include "basic/ds/array.vineyard.h"

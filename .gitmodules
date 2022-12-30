@@ -46,4 +46,7 @@
 	path = thirdparty/zstd
 	url = https://github.com/facebook/zstd.git
 	shallow = true
-
+[submodule "modules/graph/thirdparty/libcuckoo"]
+	path = modules/graph/thirdparty/libcuckoo
+	url = https://github.com/efficient/libcuckoo.git
+	shallow = true

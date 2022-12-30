@@ -1,4 +1,7 @@
+include(GNUInstallDirs)
+
 # build vineyard-graph
+
 file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                     "*.vineyard-mod")
 
@@ -63,11 +66,9 @@ else()
                             "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/boost-leaf"
     )
     # install boost leaf
-    include(GNUInstallDirs)
-    install(DIRECTORY
-        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include/"
-        DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include/"
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+            PATTERN "*.hpp"
     )
 
     target_include_directories(vineyard_graph PUBLIC
@@ -93,6 +94,17 @@ endif()
 if(APPLE)
     target_compile_options(vineyard_graph PUBLIC -Wno-unused-result)
 endif()
+
+# install libcuckoo
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libcuckoo/libcuckoo"
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+        PATTERN "*.hh"
+)
+
+target_include_directories(vineyard_graph PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libcuckoo>
+    $<INSTALL_INTERFACE:include/vineyard/contrib>
+)
 
 add_dependencies(vineyard_graph vineyard_graph_gen)
 
