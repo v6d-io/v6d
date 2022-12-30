@@ -31,6 +31,7 @@ limitations under the License.
 #include "graph/fragment/arrow_fragment_group.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/loader/basic_ev_fragment_loader.h"
+#include "graph/loader/fragment_loader_utils.h"
 #include "graph/utils/error.h"
 #include "graph/utils/table_shuffler.h"
 #include "graph/utils/table_shuffler_beta.h"
@@ -803,78 +804,112 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   // Finish the local vertex map with outer vertices
   VLOG(100) << "Finalizing local vertex map: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
-  fid_t fnum = comm_spec_.fnum();
-  std::vector<std::vector<std::unordered_set<oid_t>>> outer_vertex_oids(fnum);
-  for (fid_t i = 0; i < fnum; i++) {
-    outer_vertex_oids[i].resize(vertex_label_num_);
+
+  // outer_vertex_oid_sets[fid][vlabel_id]
+  std::vector<std::vector<std::shared_ptr<ConcurrentOidSet<oid_t>>>>
+      outer_vertex_oid_sets(comm_spec_.fnum());
+  // collected unique oid arrays: outer_vertex_oids[fid][vlabel_id]
+  std::vector<std::vector<std::shared_ptr<oid_array_t>>> outer_vertex_oids(
+      comm_spec_.fnum());
+
+  for (fid_t fid = 0; fid < comm_spec_.fnum(); fid++) {
+    outer_vertex_oid_sets[fid].resize(vertex_label_num_);
+    for (label_id_t label_id = 0; label_id < vertex_label_num_; ++label_id) {
+      outer_vertex_oid_sets[fid][label_id] =
+          std::make_shared<ConcurrentOidSet<oid_t>>();
+    }
+    outer_vertex_oids[fid].resize(vertex_label_num_);
   }
+
+  ThreadGroup tg(comm_spec_);
+  auto fn = [&](const label_id_t label_id,
+                std::shared_ptr<arrow::Array> chunk) -> Status {
+    auto array = std::dynamic_pointer_cast<oid_array_t>(chunk);
+    for (int64_t index = 0; index < array->length(); ++index) {
+      internal_oid_t internal_oid = array->GetView(index);
+      fid_t fid = partitioner_.GetPartitionId(internal_oid);
+      if (fid != comm_spec_.fid()) {
+        outer_vertex_oid_sets[fid][label_id]->Insert(internal_oid);
+      }
+    }
+    return Status::OK();
+  };
+
   for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
     for (auto& item : shuffled_tables[e_label]) {
       auto src_label = item.first.first;
       auto dst_label = item.first.second;
       auto table = item.second;
-      std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
-      VY_OK_OR_RAISE(TableToRecordBatches(table, &batches));
-      for (size_t i = 0; i < batches.size(); ++i) {
-        auto cur_batch = batches[i];
-        int64_t row_num = cur_batch->num_rows();
 
-        auto src_col = std::dynamic_pointer_cast<oid_array_t>(
-            cur_batch->column(src_column));
-        auto dst_col = std::dynamic_pointer_cast<oid_array_t>(
-            cur_batch->column(dst_column));
-        for (int64_t row_id = 0; row_id < row_num; ++row_id) {
-          internal_oid_t internal_src_oid = src_col->GetView(row_id);
-          internal_oid_t internal_dst_oid = dst_col->GetView(row_id);
-          grape::fid_t src_fid = partitioner_.GetPartitionId(internal_src_oid);
-          grape::fid_t dst_fid = partitioner_.GetPartitionId(internal_dst_oid);
-          if (src_fid != comm_spec_.fid()) {
-            oid_t src_oid = oid_t(internal_src_oid);
-            // FIXME: can it be internal_oid_t ?
-            outer_vertex_oids[src_fid][src_label].insert(src_oid);
-          }
-          if (dst_fid != comm_spec_.fid()) {
-            oid_t dst_oid = oid_t(internal_dst_oid);
-            // FIXME: can it be internal_oid_t ?
-            outer_vertex_oids[dst_fid][dst_label].insert(dst_oid);
-          }
-        }
+      auto srcs = table->column(src_column);
+      auto dsts = table->column(dst_column);
+
+      for (int64_t chunk = 0; chunk < srcs->num_chunks(); ++chunk) {
+        tg.AddTask(fn, src_label, srcs->chunk(chunk));
+      }
+      for (int64_t chunk = 0; chunk < srcs->num_chunks(); ++chunk) {
+        tg.AddTask(fn, dst_label, dsts->chunk(chunk));
       }
     }
   }
-  // copy set to vector
-  std::vector<std::vector<std::vector<oid_t>>> outer_oid_vec(fnum);
   {
-    for (fid_t i = 0; i < fnum; i++) {
-      outer_oid_vec[i].resize(vertex_label_num_);
-      for (label_id_t j = 0; j < vertex_label_num_; j++) {
-        auto& set = outer_vertex_oids[i][j];
-        outer_oid_vec[i][j] = std::vector<oid_t>(set.begin(), set.end());
-        set.clear();
-      }
+    Status status;
+    for (auto const& s : tg.TakeResults()) {
+      status += s;
     }
-    outer_vertex_oids.clear();
+    VY_OK_OR_RAISE(status);
   }
 
-  // Request and response the outer vertex oid index
+  // copy set to oid array
+  ThreadGroup tgcopy(comm_spec_);
+  auto copyfn = [&](const fid_t fid, const label_id_t label_id) -> Status {
+    RETURN_ON_ERROR(outer_vertex_oid_sets[fid][label_id]->ToArray(
+        outer_vertex_oids[fid][label_id]));
+    outer_vertex_oid_sets[fid][label_id].reset();  // release the memory
+    return Status::OK();
+  };
+
+  for (fid_t fid = 0; fid < comm_spec_.fnum(); ++fid) {
+    for (label_id_t label_id = 0; label_id < vertex_label_num_; label_id++) {
+      tgcopy.AddTask(copyfn, fid, label_id);
+    }
+  }
+  {
+    Status status;
+    for (auto const& s : tgcopy.TakeResults()) {
+      status += s;
+    }
+    VY_OK_OR_RAISE(status);
+  }
+
+  VLOG(100) << "Finish collect outer vertices: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
+
+  // Exchange the outer vertex oid index between workers
   int worker_id = comm_spec_.worker_id();
   int worker_num = comm_spec_.worker_num();
   std::vector<std::vector<std::vector<vid_t>>> index_lists(comm_spec_.fnum());
+
   std::thread request_thread([&]() {
     for (int i = 1; i < worker_num; ++i) {
       int dst_worker_id = (worker_id + i) % worker_num;
-      auto& oids = outer_oid_vec[comm_spec_.WorkerToFrag(dst_worker_id)];
-      grape::sync_comm::Send(oids, dst_worker_id, 0, comm_spec_.comm());
-      grape::sync_comm::Recv(
-          index_lists[comm_spec_.WorkerToFrag(dst_worker_id)], dst_worker_id, 1,
-          comm_spec_.comm());
+      fid_t fid = comm_spec_.WorkerToFrag(dst_worker_id);
+      for (label_id_t label_id = 0; label_id < vertex_label_num_; ++label_id) {
+        SendArrowArray<oid_array_t>(outer_vertex_oids[fid][label_id],
+                                    dst_worker_id, comm_spec_.comm(), 0);
+      }
+      grape::sync_comm::Recv(index_lists[fid], dst_worker_id, 1,
+                             comm_spec_.comm());
     }
   });
   std::thread response_thread([&]() {
     for (int i = 1; i < worker_num; ++i) {
       int src_worker_id = (worker_id + worker_num - i) % worker_num;
-      std::vector<std::vector<oid_t>> oids;
-      grape::sync_comm::Recv(oids, src_worker_id, 0, comm_spec_.comm());
+      std::vector<std::shared_ptr<oid_array_t>> oids(vertex_label_num_);
+      for (label_id_t label_id = 0; label_id < vertex_label_num_; ++label_id) {
+        RecvArrowArray<oid_array_t>(oids[label_id], src_worker_id,
+                                    comm_spec_.comm(), 0);
+      }
       std::vector<std::vector<vid_t>> index_list;
       local_vm_builder_->GetIndexOfOids(oids, index_list);
       grape::sync_comm::Send(index_list, src_worker_id, 1, comm_spec_.comm());
@@ -885,7 +920,11 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   response_thread.join();
   MPI_Barrier(comm_spec_.comm());
   // Construct the outer vertex map with response o2i
-  local_vm_builder_->AddOuterVerticesMapping(outer_oid_vec, index_lists);
+  local_vm_builder_->AddOuterVerticesMapping(outer_vertex_oids, index_lists);
+
+  VLOG(100) << "Finish adding outer vertices mapping: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
+
   auto vm = local_vm_builder_->_Seal(client_);
   vm_ptr_ =
       std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm->id()));
@@ -893,7 +932,6 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   // Concatenate and add metadata to final edge tables
   VLOG(100) << "Transforming ids of edge tables and concatenate them: "
             << get_rss_pretty() << ", peak = " << get_peak_rss_pretty();
-
   size_t concurrency =
       (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
       comm_spec_.local_num();

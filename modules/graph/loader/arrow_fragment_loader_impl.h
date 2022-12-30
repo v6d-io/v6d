@@ -91,44 +91,36 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadFragment(
   auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
       client_, comm_spec_, partitioner_, directed_, true, generate_eid_);
 
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
   for (auto const& pair : vertex_tables_with_label) {
     BOOST_LEAF_CHECK(
         basic_fragment_loader->AddVertexTable(pair.first, pair.second));
   }
 
-  trim_rss();
-  VLOG(100) << "[worker-" << comm_spec_.worker_id()
-            << "] RSS after adding vertex tables: " << get_rss_pretty()
-            << ", peak = " << get_peak_rss_pretty();
   vertex_tables_with_label.clear();
-  trim_rss();
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
             << "] RSS after freeing vertex tables: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
 
-  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-50";
   BOOST_LEAF_CHECK(basic_fragment_loader->ConstructVertices());
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-100";
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
             << "] RSS after constructing vertices: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
 
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-0";
   for (auto& table : edge_tables_with_label) {
     BOOST_LEAF_CHECK(basic_fragment_loader->AddEdgeTable(
         table.src_label, table.dst_label, table.edge_label, table.table));
   }
 
-  trim_rss();
-  VLOG(100) << "[worker-" << comm_spec_.worker_id()
-            << "] RSS after adding edge tables: " << get_rss_pretty()
-            << ", peak = " << get_peak_rss_pretty();
   edge_tables_with_label.clear();
-  trim_rss();
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
             << "] RSS after freeing edge tables: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
 
-  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-0";
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-50";
   BOOST_LEAF_CHECK(basic_fragment_loader->ConstructEdges());
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-100";
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
@@ -473,8 +465,8 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::preprocessInputs(
   }
 
   if (!deduced_labels.empty()) {
-    FragmentLoaderUtils<OID_T, VID_T, partitioner_t> loader_utils(comm_spec_,
-                                                                  partitioner_);
+    FragmentLoaderUtils<OID_T, partitioner_t> loader_utils(comm_spec_,
+                                                           partitioner_);
     BOOST_LEAF_AUTO(vertex_labels,
                     loader_utils.GatherVertexLabels(edge_tables_with_label));
     BOOST_LEAF_AUTO(vertex_label_to_index,
@@ -529,7 +521,6 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::addVerticesAndEdges(
   auto& partial_v_tables = raw_v_e_tables.first;
   auto& partial_e_tables = raw_v_e_tables.second;
 
-  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
   auto frag = std::dynamic_pointer_cast<fragment_t>(client_.GetObject(frag_id));
   const PropertyGraphSchema& schema = frag->schema();
 
@@ -541,9 +532,13 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::addVerticesAndEdges(
     previous_labels.insert(entry.label);
   }
 
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-0";
   BOOST_LEAF_AUTO(
       v_e_tables,
       preprocessInputs(partial_v_tables, partial_e_tables, previous_labels));
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after normalize tables: " << get_rss_pretty();
 
   // clear after grouped by labels
   partial_v_tables.clear();
@@ -555,17 +550,23 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::addVerticesAndEdges(
   auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
       client_, comm_spec_, partitioner_, directed_, true, generate_eid_);
 
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
   for (auto& pair : vertex_tables_with_label) {
     BOOST_LEAF_CHECK(
         basic_fragment_loader->AddVertexTable(pair.first, pair.second));
   }
   vertex_tables_with_label.clear();
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after freeing vertex tables: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
 
   auto old_vm_ptr = frag->GetVertexMap();
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-50";
   BOOST_LEAF_CHECK(basic_fragment_loader->ConstructVertices(old_vm_ptr->id()));
-
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-100";
-  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-0";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after constructing vertices: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
 
   label_id_t pre_label_num = old_vm_ptr->label_num();
 
@@ -575,15 +576,24 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::addVerticesAndEdges(
   }
   basic_fragment_loader->set_vertex_label_to_index(
       std::move(vertex_label_to_index));
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-0";
   for (auto& table : edge_tables_with_label) {
     BOOST_LEAF_CHECK(basic_fragment_loader->AddEdgeTable(
         table.src_label, table.dst_label, table.edge_label, table.table));
   }
   edge_tables_with_label.clear();
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after freeing edge tables: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
 
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-50";
   BOOST_LEAF_CHECK(basic_fragment_loader->ConstructEdges(
       schema.all_edge_label_num(), schema.all_vertex_label_num()));
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after constructing edges: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
+
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "SEAL-0";
   return basic_fragment_loader->AddVerticesAndEdgesToFragment(frag);
 }

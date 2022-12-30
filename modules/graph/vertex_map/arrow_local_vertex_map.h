@@ -230,11 +230,12 @@ class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
       grape::CommSpec& comm_spec,
       std::vector<std::shared_ptr<arrow::ChunkedArray>> oid_arrays);
 
-  vineyard::Status GetIndexOfOids(const std::vector<std::vector<oid_t>>& oids,
-                                  std::vector<std::vector<vid_t>>& index_list);
+  vineyard::Status GetIndexOfOids(
+      const std::vector<std::shared_ptr<oid_array_t>>& oids,
+      std::vector<std::vector<vid_t>>& index_list);
 
   vineyard::Status AddOuterVerticesMapping(
-      std::vector<std::vector<std::vector<oid_t>>>& oids,
+      std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oids,
       std::vector<std::vector<std::vector<vid_t>>>& index_list);
 
  private:
@@ -286,8 +287,12 @@ class ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>
       const std::vector<std::vector<std::string>>& oids,
       std::vector<std::vector<vid_t>>& index_list);
 
+  vineyard::Status GetIndexOfOids(
+      const std::vector<std::shared_ptr<oid_array_t>>& oids,
+      std::vector<std::vector<vid_t>>& index_list);
+
   vineyard::Status AddOuterVerticesMapping(
-      std::vector<std::vector<std::vector<std::string>>>& oids,
+      std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oids,
       std::vector<std::vector<std::vector<vid_t>>>& index_list);
 
  private:

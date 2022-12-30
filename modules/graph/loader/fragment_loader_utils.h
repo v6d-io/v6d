@@ -25,6 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "grape/worker/comm_spec.h"
+#include "libcuckoo/cuckoohash_map.hh"
 
 #include "basic/ds/arrow_utils.h"
 #include "graph/loader/basic_ev_fragment_loader.h"
@@ -33,62 +34,67 @@ limitations under the License.
 namespace vineyard {
 
 template <typename T>
-class OidSet {
+class ConcurrentOidSet {
   using oid_t = T;
   using internal_oid_t = typename InternalType<oid_t>::type;
   using oid_array_t = ArrowArrayType<oid_t>;
+  using oid_array_builder_t = ArrowBuilderType<oid_t>;
+
+  // no cuckoohash_set, so we use a map instead
+  using concurrent_map_t =
+      libcuckoo::cuckoohash_map<internal_oid_t, bool,
+                                prime_number_hash_wy<internal_oid_t>>;
 
  public:
-  boost::leaf::result<void> BatchInsert(
-      const std::shared_ptr<arrow::Array>& arr) {
-    if (vineyard::ConvertToArrowType<oid_t>::TypeValue() != arr->type()) {
-      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
-                      "OID_T '" + type_name<oid_t>() +
-                          "' is not same with arrow::Column(" +
-                          arr->type()->ToString() + ")");
+  Status Insert(const std::shared_ptr<arrow::Array>& array,
+                std::shared_ptr<arrow::Array>& out) {
+    RETURN_ON_ASSERT(
+        vineyard::ConvertToArrowType<oid_t>::TypeValue()->Equals(array->type()),
+        "OID_T '" + type_name<oid_t>() + "' is not same with arrow::Column(" +
+            array->type()->ToString() + ")");
+    auto oid_array = std::dynamic_pointer_cast<oid_array_t>(array);
+    oid_array_builder_t builder;
+    for (int64_t i = 0; i < oid_array->length(); i++) {
+      if (oids.insert(oid_array->GetView(i), true /* dummy */)) {
+        RETURN_ON_ARROW_ERROR(builder.Append(oid_array->GetView(i)));
+      }
     }
-    auto oid_arr = std::dynamic_pointer_cast<oid_array_t>(arr);
-    for (int64_t i = 0; i < oid_arr->length(); i++) {
-      oids.insert(oid_arr->GetView(i));
-    }
-    return {};
+    RETURN_ON_ARROW_ERROR(builder.Finish(&out));
+    return Status::OK();
   }
 
-  boost::leaf::result<void> BatchInsert(
-      const std::shared_ptr<arrow::ChunkedArray>& chunked_arr) {
-    for (auto chunk_idx = 0; chunk_idx < chunked_arr->num_chunks();
-         chunk_idx++) {
-      BOOST_LEAF_CHECK(BatchInsert(chunked_arr->chunk(chunk_idx)));
+  void Insert(internal_oid_t const& oid, ArrowBuilderType<oid_t>& builder) {
+    if (oids.insert(oid, true /* dummy */)) {
+      DISCARD_ARROW_ERROR(builder.Append(oid));
     }
-    return {};
   }
 
-  boost::leaf::result<std::shared_ptr<oid_array_t>> ToArrowArray() {
-    ArrowBuilderType<oid_t> builder;
-    ARROW_OK_OR_RAISE(builder.Reserve(oids.size()));
-    for (auto& oid : oids) {
-      ARROW_OK_OR_RAISE(builder.Append(oid));
-    }
+  void Insert(internal_oid_t const& oid) { oids.insert(oid, true /* dummy */); }
 
-    std::shared_ptr<oid_array_t> oid_arr;
-    ARROW_OK_OR_RAISE(builder.Finish(&oid_arr));
-    return oid_arr;
+  Status ToArray(std::shared_ptr<oid_array_t>& out) {
+    oid_array_builder_t builder;
+    RETURN_ON_ARROW_ERROR(builder.Reserve(oids.size()));
+    auto locked = oids.lock_table();
+    for (auto const& item : locked) {
+      RETURN_ON_ARROW_ERROR(builder.Append(item.first));
+    }
+    RETURN_ON_ARROW_ERROR(builder.Finish(&out));
+    return Status::OK();
   }
 
   void Clear() { oids.clear(); }
 
  private:
-  std::unordered_set<internal_oid_t> oids;
+  concurrent_map_t oids;
 };
 
-template <typename OID_T, typename VID_T, typename PARTITIONER_T>
+template <typename OID_T, typename PARTITIONER_T>
 class FragmentLoaderUtils {
   static constexpr int src_column = 0;
   static constexpr int dst_column = 1;
 
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
   using oid_t = OID_T;
-  using vid_t = VID_T;
   using partitioner_t = PARTITIONER_T;
   using oid_array_t = ArrowArrayType<oid_t>;
   using internal_oid_t = typename InternalType<oid_t>::type;
@@ -147,53 +153,7 @@ class FragmentLoaderUtils {
   BuildVertexTableFromEdges(
       const std::vector<InputTable>& edge_tables,
       const std::map<std::string, label_id_t>& vertex_label_to_index,
-      const std::set<std::string>& deduced_labels) {
-    std::map<std::string, std::shared_ptr<arrow::Table>> ret;
-
-    size_t vertex_label_num = vertex_label_to_index.size();
-    std::vector<OidSet<oid_t>> oids(vertex_label_num);
-    // Collect vertex ids in current fragment
-    for (auto& table : edge_tables) {
-      if (deduced_labels.find(table.src_label) != deduced_labels.end()) {
-        label_id_t src_label_id = vertex_label_to_index.at(table.src_label);
-        BOOST_LEAF_CHECK(
-            oids[src_label_id].BatchInsert(table.table->column(src_column)));
-      }
-
-      if (deduced_labels.find(table.dst_label) != deduced_labels.end()) {
-        label_id_t dst_label_id = vertex_label_to_index.at(table.dst_label);
-        BOOST_LEAF_CHECK(
-            oids[dst_label_id].BatchInsert(table.table->column(dst_column)));
-      }
-    }
-
-    // Gather vertex ids from all fragments
-    std::vector<std::shared_ptr<arrow::Field>> schema_vector{
-        arrow::field("id", vineyard::ConvertToArrowType<oid_t>::TypeValue())};
-    auto schema = std::make_shared<arrow::Schema>(schema_vector);
-    for (const auto& label : deduced_labels) {
-      std::shared_ptr<oid_array_t> oid_array;
-      {
-        label_id_t label_id = vertex_label_to_index.at(label);
-        auto& oid_set = oids[label_id];
-        BOOST_LEAF_ASSIGN(oid_array, oid_set.ToArrowArray());
-        std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
-        auto v_table = arrow::Table::Make(schema, arrays);
-        BOOST_LEAF_AUTO(tmp_table, ShufflePropertyVertexTable(
-                                       comm_spec_, partitioner_, v_table));
-        oid_set.Clear();
-        BOOST_LEAF_CHECK(oid_set.BatchInsert(tmp_table->column(0)));
-        BOOST_LEAF_ASSIGN(oid_array, oid_set.ToArrowArray());
-      }
-      // Build the deduced vertex table
-      {
-        std::vector<std::shared_ptr<arrow::Array>> arrays{oid_array};
-        auto v_table = arrow::Table::Make(schema, arrays);
-        ret[label] = v_table;
-      }
-    }
-    return ret;
-  }
+      const std::set<std::string>& deduced_labels);
 
  private:
   grape::CommSpec comm_spec_;

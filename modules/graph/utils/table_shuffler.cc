@@ -33,6 +33,7 @@ limitations under the License.
 #include "grape/worker/comm_spec.h"
 
 #include "basic/ds/arrow_utils.h"
+#include "common/util/functions.h"
 #include "common/util/status.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/utils/error.h"
@@ -816,7 +817,7 @@ void ShuffleTableByOffsetLists(
   // after pipelining, the serialize thread would be responsible for trigger
   // the execution of whole pipeline, including things like generate eid,
   // resolve oid -> gid mapping, etc., and become more computation intensive.
-  int deserialize_thread_num = std::max(1, (thread_num - 2) / 4);
+  int deserialize_thread_num = std::max(1, (thread_num - 2) / 6);
   int serialize_thread_num =
       std::max(1, thread_num - 2 - deserialize_thread_num);
   std::vector<std::thread> serialize_threads(serialize_thread_num);

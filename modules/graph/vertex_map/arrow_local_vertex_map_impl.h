@@ -672,40 +672,30 @@ vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::addLocalVertices(
 
 template <typename OID_T, typename VID_T>
 vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::GetIndexOfOids(
-    const std::vector<std::vector<oid_t>>& oids,
+    const std::vector<std::shared_ptr<oid_array_t>>& oids,
     std::vector<std::vector<vid_t>>& index_list) {
-  int thread_num = std::min(
-      static_cast<int>(std::thread::hardware_concurrency()), label_num_);
   index_list.resize(label_num_);
-  std::atomic<int> task_id(0);
-  std::vector<std::thread> threads(thread_num);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      while (true) {
-        int got_label_id = task_id.fetch_add(1);
-        if (got_label_id >= label_num_) {
-          break;
-        }
-        auto& o2i_map = o2i_[fid_][got_label_id];
-        index_list[got_label_id].reserve(oids[got_label_id].size());
-        for (const auto& oid : oids[got_label_id]) {
-          auto iter = o2i_map.find(oid);
-          index_list[got_label_id].push_back(iter->second);
-        }
-      }
-    });
-  }
-  for (auto& thrd : threads) {
-    thrd.join();
-  }
 
+  for (label_id_t label_id = 0; label_id < label_num_; ++label_id) {
+    auto& o2i_map = o2i_[fid_][label_id];
+    auto& current_oids = oids[label_id];
+    auto& current_index_list = index_list[label_id];
+    current_index_list.resize(current_oids->length());
+
+    parallel_for(
+        static_cast<int64_t>(0), current_oids->length(),
+        [&](const size_t& i) {
+          current_index_list[i] = o2i_map.find(current_oids->Value(i))->second;
+        },
+        std::thread::hardware_concurrency());
+  }
   return vineyard::Status::OK();
 }
 
 template <typename OID_T, typename VID_T>
 vineyard::Status
 ArrowLocalVertexMapBuilder<OID_T, VID_T>::AddOuterVerticesMapping(
-    std::vector<std::vector<std::vector<oid_t>>>& oids,
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oids,
     std::vector<std::vector<std::vector<vid_t>>>& index_list) {
   for (fid_t fid = 0; fid < fnum_; ++fid) {
     if (fid != fid_) {
@@ -717,10 +707,12 @@ ArrowLocalVertexMapBuilder<OID_T, VID_T>::AddOuterVerticesMapping(
   auto fn = [&](fid_t cur_fid, label_id_t cur_label) -> Status {
     vineyard::HashmapBuilder<oid_t, vid_t> o2i_builder(client);
     vineyard::HashmapBuilder<vid_t, oid_t> i2o_builder(client);
-    o2i_builder.reserve(static_cast<size_t>(oids[cur_fid][cur_label].size()));
-    i2o_builder.reserve(static_cast<size_t>(oids[cur_fid][cur_label].size()));
-    for (size_t i = 0; i < oids[cur_fid][cur_label].size(); i++) {
-      auto& oid = oids[cur_fid][cur_label][i];
+    o2i_builder.reserve(
+        static_cast<size_t>(oids[cur_fid][cur_label]->length()));
+    i2o_builder.reserve(
+        static_cast<size_t>(oids[cur_fid][cur_label]->length()));
+    for (int64_t i = 0; i < oids[cur_fid][cur_label]->length(); i++) {
+      auto oid = oids[cur_fid][cur_label]->Value(i);
       auto& index = index_list[cur_fid][cur_label][i];
       o2i_builder.emplace(oid, index);
       i2o_builder.emplace(index, oid);
@@ -911,34 +903,30 @@ ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::addLocalVertices(
 template <typename VID_T>
 vineyard::Status
 ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::GetIndexOfOids(
-    const std::vector<std::vector<std::string>>& oids,
+    const std::vector<std::shared_ptr<oid_array_t>>& oids,
     std::vector<std::vector<vid_t>>& index_list) {
   index_list.resize(label_num_);
 
-  auto fn = [&](label_id_t label) -> Status {
-    auto& o2i_map = o2i_[label];
-    index_list[label].reserve(oids[label].size());
-    for (const auto& oid : oids[label]) {
-      index_list[label].push_back(o2i_map[oid]);
-    }
-    return Status::OK();
-  };
+  for (label_id_t label_id = 0; label_id < label_num_; ++label_id) {
+    auto& o2i_map = o2i_[label_id];
+    auto& current_oids = oids[label_id];
+    auto& current_index_list = index_list[label_id];
+    current_index_list.resize(current_oids->length());
 
-  ThreadGroup tg;
-  for (label_id_t label = 0; label < label_num_; ++label) {
-    tg.AddTask(fn, label);
+    parallel_for(
+        static_cast<int64_t>(0), current_oids->length(),
+        [&](const size_t& i) {
+          current_index_list[i] = o2i_map.find(current_oids->Value(i))->second;
+        },
+        std::thread::hardware_concurrency());
   }
-  Status status;
-  for (auto const& s : tg.TakeResults()) {
-    status += s;
-  }
-  return status;
+  return vineyard::Status::OK();
 }
 
 template <typename VID_T>
 vineyard::Status
 ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::AddOuterVerticesMapping(
-    std::vector<std::vector<std::vector<std::string>>>& oids,
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>>& oids,
     std::vector<std::vector<std::vector<vid_t>>>& index_list) {
   for (fid_t fid = 0; fid < fnum_; ++fid) {
     if (fid != fid_) {
@@ -951,7 +939,10 @@ ArrowLocalVertexMapBuilder<arrow_string_view, VID_T>::AddOuterVerticesMapping(
     std::shared_ptr<ArrowArrayType<vid_t>> index_array;
     ArrowBuilderType<std::string> array_builder;
     ArrowBuilderType<vid_t> index_builder;
-    RETURN_ON_ARROW_ERROR(array_builder.AppendValues(oids[cur_fid][cur_label]));
+    for (int64_t i = 0; i < oids[cur_fid][cur_label]->length(); ++i) {
+      RETURN_ON_ARROW_ERROR(
+          array_builder.Append(oids[cur_fid][cur_label]->GetView(i)));
+    }
     RETURN_ON_ARROW_ERROR(
         index_builder.AppendValues(index_list[cur_fid][cur_label]));
     RETURN_ON_ARROW_ERROR(array_builder.Finish(&oid_array));
