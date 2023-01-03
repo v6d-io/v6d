@@ -19,11 +19,11 @@ TAG      := latest
 all: build-backup-job build-recover-job
 	
 build-backup-job:
-	docker build . -f Dockerfile.backup-job -t $(REGISTRY)/backup-job:$(TAG)
+	sed 's/app/backup/' Dockerfile.build | docker build -t $(REGISTRY)/backup-job:$(TAG) . -f-
 .PHONY: build-backup-job
 
 build-recover-job:
-	docker build . -f Dockerfile.recover-job -t $(REGISTRY)/recover-job:$(TAG)
+	sed 's/app/recover/' Dockerfile.build | docker build -t $(REGISTRY)/recover-job:$(TAG) . -f-
 .PHONY: build-recover-job
 
 docker-push: build-backup-job build-recover-job build-get-object-job

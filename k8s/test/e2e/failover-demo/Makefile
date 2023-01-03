@@ -19,23 +19,23 @@ TAG      := latest
 all: build-local-object build-distributed-object-step1 build-distributed-object-step2 build-get-local-object build-get-distributed-object
 	
 build-local-object:
-	docker build . -f Dockerfile.build-local-object -t $(REGISTRY)/local-object:$(TAG)
+	sed 's/app/build-local-object/' Dockerfile.build | docker build -t $(REGISTRY)/build-local-object:$(TAG) . -f-
 .PHONY: build-local-object
 
 build-distributed-object-step1:
-	docker build . -f Dockerfile.build-distributed-object-step1 -t $(REGISTRY)/distributed-object-step1:$(TAG)
+	sed 's/app/build-distributed-object-step1/' Dockerfile.build | docker build -t $(REGISTRY)/build-distributed-object-step1:$(TAG) . -f-
 .PHONY: build-distributed-object-step1
 
 build-distributed-object-step2:
-	docker build . -f Dockerfile.build-distributed-object-step2 -t $(REGISTRY)/distributed-object-step2:$(TAG)
+	sed 's/app/build-distributed-object-step2/' Dockerfile.build | docker build -t $(REGISTRY)/distributed-object-step2:$(TAG) . -f-
 .PHONY: build-distributed-object-step2
 
 build-get-local-object:
-	docker build . -f Dockerfile.get-local-object-job -t $(REGISTRY)/get-local-object:$(TAG)
+	sed 's/app/get-local-object/' Dockerfile.build | docker build -t $(REGISTRY)/get-local-object:$(TAG) . -f-
 .PHONY: build-get-local-object
 
 build-get-distributed-object:
-	docker build . -f Dockerfile.get-distributed-object-job -t $(REGISTRY)/get-distributed-object:$(TAG)
+	sed 's/app/get-distributed-object/' Dockerfile.build | docker build -t $(REGISTRY)/get-distributed-object:$(TAG) . -f-
 .PHONY: build-get-distributed-object
 
 docker-push: build-local-object build-distributed-object-step1 build-distributed-object-step2 build-get-local-object build-get-distributed-object
@@ -43,4 +43,5 @@ docker-push: build-local-object build-distributed-object-step1 build-distributed
 	docker push $(REGISTRY)/distributed-object-step1:$(TAG)
 	docker push $(REGISTRY)/distributed-object-step2:$(TAG)
 	docker push $(REGISTRY)/get-local-object:$(TAG)
+	docker push $(REGISTRY)/get-distributed-object:$(TAG)
 .PHONY: docker-push

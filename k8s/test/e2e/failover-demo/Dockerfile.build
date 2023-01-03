@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM  docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
+FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
 WORKDIR /
 
-COPY ./build-distributed-object-step1.py /
+COPY ./app.py /
 
 ENTRYPOINT [ "python3" ]
 
-CMD [ "build-distributed-object-step1.py" ]
+CMD [ "app.py" ]
