@@ -13,6 +13,29 @@ webhooks:
     service:
       name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
       namespace: '{{ .Release.Namespace }}'
+      path: /mutate-v1-pod-scheduling
+  failurePolicy: Fail
+  name: mpod.scheduling.kb.io
+  objectSelector:
+    matchLabels:
+      scheduling.v6d.io/enabled: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
+      namespace: '{{ .Release.Namespace }}'
       path: /mutate-v1-pod-sidecar
   failurePolicy: Fail
   name: mpod.sidecar.kb.io
@@ -55,6 +78,26 @@ webhooks:
     - UPDATE
     resources:
     - pods
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
+      namespace: '{{ .Release.Namespace }}'
+      path: /mutate-k8s-v6d-io-v1alpha1-backup
+  failurePolicy: Fail
+  name: mbackup.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - backups
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -115,6 +158,26 @@ webhooks:
     - UPDATE
     resources:
     - operations
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
+      namespace: '{{ .Release.Namespace }}'
+      path: /mutate-k8s-v6d-io-v1alpha1-recover
+  failurePolicy: Fail
+  name: mrecover.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - recovers
   sideEffects: None
 - admissionReviewVersions:
   - v1
