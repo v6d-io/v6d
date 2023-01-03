@@ -24,6 +24,7 @@ on:
       - '.github/workflows/vineyard-operator.yaml'
       - 'k8s/**'
       - 'src/server/util/kubectl*'
+      - 'charts/vineyard-operator/**'
   pull_request:
     branches:
       - main
@@ -31,6 +32,7 @@ on:
       - '.github/workflows/vineyard-operator.yaml'
       - 'k8s/**'
       - 'src/server/util/kubectl*'
+      - 'charts/vineyard-operator/**'
 
 env:
   IMG: vineyardcloudnative/vineyard-operator:latest
