@@ -11,6 +11,16 @@ components.
     :local:
     :class: this-will-duplicate-information-and-it-is-still-useful-here
 
+Architecture of vineyard operator
+---------------------------------
+
+.. figure:: ../images/vineyard_operator_arch.jpg
+   :alt: Architecture of vineyard operator
+
+   Architecture of vineyard operator
+
+The figure above demonstrates the architecture of vineyard operator.
+
 Install vineyard-operator
 -------------------------
 
