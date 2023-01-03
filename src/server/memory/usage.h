@@ -82,16 +82,17 @@ class DependencyTracker
 
   Status AddDependency(ID const& id, int conn) {
     Status status;
-    dependency_.upsert(
-        conn,
-        [this, id, &status](ska::flat_hash_set<ID>& objects) -> bool {
-          if (objects.find(id) == objects.end()) {
-            objects.emplace(id);
-            status = this->IncreaseReferenceCount(id);
-          }
-          return false;
-        },
-        ska::flat_hash_set<ID>{});
+    auto fn = [this, id, &status](ska::flat_hash_set<ID>& objects) -> bool {
+      if (objects.find(id) == objects.end()) {
+        objects.emplace(id);
+        status = this->IncreaseReferenceCount(id);
+      }
+      return false;
+    };
+    if (dependency_.upsert(conn, fn, ska::flat_hash_set<ID>{})) {
+      // newly inserted, needs updating it again
+      dependency_.update_fn(conn, fn);
+    }
     return status;
   }
 
@@ -114,7 +115,10 @@ class DependencyTracker
     bool accessed = dependency_.erase_fn(
         conn, [this, id, &status](ska::flat_hash_set<ID>& objects) -> bool {
           if (objects.find(id) == objects.end()) {
-            status = Status::ObjectNotExists();
+            status = Status::ObjectNotExists(
+                "DependencyTracker: failed to find object during remove "
+                "dependency: " +
+                ObjectIDToString(id));
             return false;
           } else {
             objects.erase(id);
@@ -122,7 +126,7 @@ class DependencyTracker
           }
         });
     if (!accessed) {
-      return Status::KeyError("connection not exist.");
+      return Status::KeyError("DependencyTracker: connection not exist.");
     }
     RETURN_ON_ERROR(status);
     return this->DecreaseReferenceCount(id);

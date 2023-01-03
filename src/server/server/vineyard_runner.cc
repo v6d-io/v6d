@@ -145,9 +145,11 @@ void VineyardRunner::Stop() {
 
   std::vector<SessionID> session_ids;
   session_ids.reserve(sessions_.size());
-  auto locked = sessions_.lock_table();
-  for (auto iter = locked.begin(); iter != locked.end(); iter++) {
-    session_ids.emplace_back(iter->first);
+  {
+    auto locked = sessions_.lock_table();
+    for (auto iter = locked.begin(); iter != locked.end(); iter++) {
+      session_ids.emplace_back(iter->first);
+    }
   }
   for (auto const& item : session_ids) {
     VINEYARD_DISCARD(Delete(item));  // trigger item->stop()

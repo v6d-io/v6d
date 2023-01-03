@@ -136,9 +136,11 @@ template <typename ID, typename P>
 BulkStoreBase<ID, P>::~BulkStoreBase() {
   std::vector<ID> object_ids;
   object_ids.reserve(objects_.size());
-  auto locked = objects_.lock_table();
-  for (auto iter = locked.begin(); iter != locked.end(); iter++) {
-    object_ids.emplace_back(iter->first);
+  {
+    auto locked = objects_.lock_table();
+    for (auto iter = locked.begin(); iter != locked.end(); iter++) {
+      object_ids.emplace_back(iter->first);
+    }
   }
   for (auto const& item : object_ids) {
     VINEYARD_DISCARD(Delete(item));
@@ -667,13 +669,11 @@ Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
 
 Status PlasmaBulkStore::OnRelease(PlasmaID const& id) {
   if (objects_.contains(id)) {
-    RETURN_ON_ERROR(OnDelete(id));
-    return Status::OK();
+    return OnDelete(id);
   } else {
     return Status::ObjectNotExists("object " + PlasmaIDToString(id) +
                                    " cannot be found");
   }
-  return Status::OK();
 }
 
 Status PlasmaBulkStore::Release(PlasmaID const& id, int conn) {

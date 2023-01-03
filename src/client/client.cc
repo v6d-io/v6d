@@ -1457,7 +1457,9 @@ Status UsageTracker<ID, P, Der>::FetchOnLocal(ID const& id, P& payload) {
       return Status::ObjectNotSealed();
     }
   }
-  return Status::ObjectNotExists();
+  return Status::ObjectNotExists(
+      "UsageTracker: failed to find object during fetching: " +
+      ObjectIDToString(id));
 }
 
 template <typename ID, typename P, typename Der>
@@ -1467,7 +1469,9 @@ Status UsageTracker<ID, P, Der>::SealUsage(ID const& id) {
     elem->second->is_sealed = true;
     return Status::OK();
   }
-  return Status::ObjectNotExists();
+  return Status::ObjectNotExists(
+      "UsageTracker: failed to find object during sealing: " +
+      ObjectIDToString(id));
 }
 
 template <typename ID, typename P, typename Der>
@@ -1511,7 +1515,9 @@ Status UsageTracker<ID, P, Der>::FetchAndModify(ID const& id, int64_t& ref_cnt,
     ref_cnt = elem->second->ref_cnt;
     return Status::OK();
   }
-  return Status::ObjectNotExists();
+  return Status::ObjectNotExists(
+      "UsageTracker: failed to find object during fetch-and-modifying: " +
+      ObjectIDToString(id));
 }
 
 template <typename ID, typename P, typename Der>

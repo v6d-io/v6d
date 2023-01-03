@@ -333,33 +333,35 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
               meta_tree::MatchTypeName(false, pattern, "vineyard::Blob")) {
             // consider returns blob when not reach the limit
             auto& blobs = bulk_store_->List();
-            auto locked = blobs.lock_table();
-            for (auto const& item : locked) {
-              if (current >= limit) {
-                break;
+            {
+              auto locked = blobs.lock_table();
+              for (auto const& item : locked) {
+                if (current >= limit) {
+                  break;
+                }
+                if (!item.second->IsSealed()) {
+                  // skip unsealed blobs, otherwise `GetBuffers()` will fail on
+                  // client after `ListData()`.
+                  continue;
+                }
+                if (item.first ==
+                    GenerateBlobID(std::numeric_limits<uintptr_t>::max())) {
+                  // skip the dummy blob with the initialized blob id
+                  continue;
+                }
+                std::string sub_tree_key = ObjectIDToString(item.first);
+                json sub_tree;
+                {
+                  sub_tree["id"] = sub_tree_key;
+                  sub_tree["typename"] = "vineyard::Blob";
+                  sub_tree["length"] = item.second->data_size;
+                  sub_tree["nbytes"] = item.second->data_size;
+                  sub_tree["transient"] = true;
+                  sub_tree["instance_id"] = this->instance_id();
+                }
+                sub_tree_group[sub_tree_key] = sub_tree;
+                current += 1;
               }
-              if (!item.second->IsSealed()) {
-                // skip unsealed blobs, otherwise `GetBuffers()` will fail on
-                // client after `ListData()`.
-                continue;
-              }
-              if (item.first ==
-                  GenerateBlobID(std::numeric_limits<uintptr_t>::max())) {
-                // skip the dummy blob with the initialized blob id
-                continue;
-              }
-              std::string sub_tree_key = ObjectIDToString(item.first);
-              json sub_tree;
-              {
-                sub_tree["id"] = sub_tree_key;
-                sub_tree["typename"] = "vineyard::Blob";
-                sub_tree["length"] = item.second->data_size;
-                sub_tree["nbytes"] = item.second->data_size;
-                sub_tree["transient"] = true;
-                sub_tree["instance_id"] = this->instance_id();
-              }
-              sub_tree_group[sub_tree_key] = sub_tree;
-              current += 1;
             }
           }
           return callback(status, sub_tree_group);
@@ -385,9 +387,11 @@ Status VineyardServer::ListAllData(
             return callback(s, objects);
           }
           auto& blobs = bulk_store_->List();
-          auto locked = blobs.lock_table();
-          for (auto const& item : locked) {
-            objects.emplace_back(item.first);
+          {
+            auto locked = blobs.lock_table();
+            for (auto const& item : locked) {
+              objects.emplace_back(item.first);
+            }
           }
           return callback(status, objects);
         } else {
