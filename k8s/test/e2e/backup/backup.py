@@ -18,7 +18,11 @@
 #
 
 import os
+import sys
 import vineyard
+import time
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 env_dist = os.environ
 
@@ -27,28 +31,85 @@ path = env_dist['BACKUP_PATH']
 socket = '/var/run/vineyard.sock'
 endpoint = env_dist['ENDPOINT']
 service = (endpoint, 9600)
-client = vineyard.connect(socket)
+vineyard_client = vineyard.connect(socket)
+
+allinstances = int(env_dist['ALLINSTANCES'])
+# get pod name
+selector = env_dist['SELECTOR']
+podname = env_dist['POD_NAME']
+namespace = env_dist['POD_NAMESPACE']
+config.load_incluster_config()
+
+k8s_api_obj = client.CoreV1Api()
+podlists = []
+while True:
+    api_response = k8s_api_obj.list_namespaced_pod(namespace, label_selector="app.kubernetes.io/name=" + selector)
+    # wait all pods to be deployed on nodes
+    alldeployedpods = 0
+    for i in api_response.items:
+        if i.spec.node_name is not None:
+            alldeployedpods += 1
+    if alldeployedpods == allinstances:
+        api_response.items.sort(key=lambda a: a.spec.node_name)
+        for i in api_response.items:
+            podlists.append(i.metadata.name)
+        break
+    time.sleep(5)
 
 # get instance id
-instance = client.instance_id
+instance = vineyard_client.instance_id
 
-objs = client.list_objects(pattern='*',limit=limits)
-
+objs = vineyard_client.list_objects(pattern='*',limit=limits)
 # serialize all persistent objects
-for i in enumerate(objs):
+for i,o in enumerate(objs):
     try:
-        meta = client.get_meta(objs[i].id, sync_remote=True)
-        if not meta['transient'] and meta['instance_id']==int(instance):
-            objname = str(objs[i].id).split("\"")[1]
+        meta = vineyard_client.get_meta(o.id, sync_remote=True)
+        if not meta['transient'] and meta['typename'] not in ['vineyard::ParallelStream','vineyard::StreamCollection']:
+            objname = str(o.id).split("\"")[1]
             objpath = path + '/' + objname
-            print(objpath)
-            if not os.path.exists(objpath):
-                os.makedirs(objpath)
-            vineyard.io.serialize(
-                objpath,
-                objs[i].id,
-                vineyard_ipc_socket=socket,
-                vineyard_endpoint=service,
-            )
+            # for local objects
+            if not meta['global'] and meta['instance_id']==instance:
+                objpath += '-local-' + str(instance)
+                if not os.path.exists(objpath):
+                    os.makedirs(objpath)
+                vineyard.io.serialize(
+                    objpath,
+                    o.id,
+                    vineyard_ipc_socket=socket,
+                    vineyard_endpoint=service,
+                )
+            # for global objects
+            if meta['global'] and meta['instance_id']%allinstances==instance:
+                objpath += '-global-' + str(instance)
+                if not os.path.exists(objpath):
+                    os.makedirs(objpath)
+                vineyard.io.serialize(
+                    objpath,
+                    o.id,
+                    type="global",
+                    vineyard_ipc_socket=socket,
+                    vineyard_endpoint=service,
+                    deployment='kubernetes',
+                    hosts=podlists,
+                )
     except vineyard.ObjectNotExistsException:
-        print(objs[i].id,' trigger ObjectNotExistsException')
+        print(o.id,' trigger ObjectNotExistsException')
+
+# wait other backup process ready
+print('Succeed',flush=True)
+
+succeed = True
+while succeed:
+    succeedInstance = 0
+    for p in podlists:
+        if p != podname:
+            try:
+                api_response = k8s_api_obj.read_namespaced_pod_log(name=p,namespace=namespace)
+                if "Succeed" in api_response:
+                    succeedInstance += 1
+            except ApiException as e:
+                print('Found exception in reading the logs')
+    if succeedInstance == allinstances-1:
+        succeed = False
+        break
+    time.sleep(10)

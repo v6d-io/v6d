@@ -16,13 +16,8 @@ FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
 WORKDIR /
 
-RUN curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl && \
-    chmod +x kubectl && \
-    mv kubectl /usr/bin &&\
-    pip3 install --no-cache-dir kubernetes
-
-COPY ./recover.py /
+COPY ./get-distributed-object.py /
 
 ENTRYPOINT [ "python3" ]
 
-CMD [ "recover.py" ]
+CMD [ "get-distributed-object.py" ]

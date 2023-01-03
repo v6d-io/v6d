@@ -11,13 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
-
-WORKDIR /
-
-COPY ./job1.py /
-
-ENTRYPOINT [ "python3" ]
-
-CMD [ "job1.py" ]
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Name }}
+  labels:
+    app.kubernetes.io/name: backup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Name }}
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{ .Namespace }}

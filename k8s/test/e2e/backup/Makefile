@@ -13,10 +13,10 @@
 # limitations under the License.
 #
 
-REGISTRY := docker.pkg.github.com/v6d-io/v6d
+REGISTRY := ghcr.io/v6d-io/v6d
 TAG      := latest
 
-all: build-backup-job build-recover-job build-get-object-job
+all: build-backup-job build-recover-job
 	
 build-backup-job:
 	docker build . -f Dockerfile.backup-job -t $(REGISTRY)/backup-job:$(TAG)
@@ -26,12 +26,7 @@ build-recover-job:
 	docker build . -f Dockerfile.recover-job -t $(REGISTRY)/recover-job:$(TAG)
 .PHONY: build-recover-job
 
-build-get-object-job:
-	docker build . -f Dockerfile.get-object-job -t $(REGISTRY)/get-object-job:$(TAG)
-.PHONY: build-get-object-job
-
 docker-push: build-backup-job build-recover-job build-get-object-job
 	docker push $(REGISTRY)/backup-job:$(TAG)
 	docker push $(REGISTRY)/recover-job:$(TAG)
-	docker push $(REGISTRY)/get-object-job:$(TAG)
 .PHONY: docker-push

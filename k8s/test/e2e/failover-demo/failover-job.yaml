@@ -1,0 +1,50 @@
+# Copyright 2020-2022 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# replace the $job with your job name
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ (datasource "config").$job.jobName }}
+  namespace: vineyard-job
+spec:
+  selector:
+    matchLabels:
+      app: {{ (datasource "config").$job.jobName }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ (datasource "config").$job.jobName }}
+    spec:
+      {{- if (datasource "config").$job.nodeName }}
+      nodeName: {{ (datasource "config").$job.nodeName }}
+      {{- end }}
+      containers:
+        - name: {{ (datasource "config").$job.jobName }}
+          image: ghcr.io/v6d-io/v6d/{{ (datasource "config").$job.jobName }}
+          env:
+            - name: JOB_NAME
+              value: {{ (datasource "config").$job.jobName }}
+            - name: OBJECT_ID
+              value: objectid
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /var/run
+              name: vineyard-sock
+      volumes:
+        - name: vineyard-sock
+          hostPath:
+            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample

@@ -11,13 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
+localObject:
+  jobName: local-object
+  nodeName: "kind-worker2"
 
-WORKDIR /
+distributedObject1:
+  jobName: distributed-object-step1
+  nodeName: "kind-worker"
 
-COPY ./get_object.py /
+distributedObject2:
+  jobName: distributed-object-step2
+  nodeName: "kind-worker3"
 
-ENTRYPOINT [ "python3" ]
+getLocalObject:
+  jobName: get-local-object
+  nodeName: "kind-worker2"
 
-CMD [ "get_object.py" ]
+getDistributedObject:
+  jobName: get-distributed-object
+  nodeName: "kind-worker2"

@@ -47,6 +47,7 @@ type BackupConfig struct {
 	VineyarddName      string
 	Endpoint           string
 	VineyardSockPath   string
+	Allinstances       string
 }
 
 // Backup contains the configuration about backup
@@ -77,6 +78,7 @@ type BackupReconciler struct {
 // +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=*
 
 // Reconcile reconciles the Backup.
 func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -120,6 +122,7 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 	Backup.VineyardSockPath = socket
 	Backup.Endpoint = backup.Spec.VineyarddName + "-rpc." + backup.Spec.VineyarddNamespace
+	Backup.Allinstances = strconv.Itoa(vineyardd.Spec.Replicas)
 
 	if backup.Status.State == "" || backup.Status.State == RunningState {
 		if _, err := app.Apply(ctx, "backup/job.yaml", logger, false); err != nil {
@@ -131,7 +134,15 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, err
 		}
 		if _, err := app.Apply(ctx, "backup/backup-pvc.yaml", logger, false); err != nil {
-			logger.Error(err, "failed to apply backup pvc")
+			logger.Error(err, "failed to apply backup pv")
+			return ctrl.Result{}, err
+		}
+		if _, err := app.Apply(ctx, "backup/cluster-role.yaml", logger, true); err != nil {
+			logger.Error(err, "failed to apply backup cluster role")
+			return ctrl.Result{}, err
+		}
+		if _, err := app.Apply(ctx, "backup/cluster-role-binding.yaml", logger, true); err != nil {
+			logger.Error(err, "failed to apply backup cluster role binding")
 			return ctrl.Result{}, err
 		}
 		if err := r.UpdateStatus(ctx, &backup); err != nil {

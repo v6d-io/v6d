@@ -34,7 +34,7 @@ spec:
     spec:
       schedulerName: vineyard-scheduler
       containers:
-      - name: recover
+      - name: engine
         image: ghcr.io/v6d-io/v6d/recover-job
         imagePullPolicy: IfNotPresent
         env:
@@ -42,6 +42,10 @@ spec:
           value: {{  $config.RecoverPath }}
         - name: ENDPOINT
           value: {{ $config.Endpoint  }}
+        - name: SELECTOR
+          value: {{ .Name }}
+        - name: ALLINSTANCES
+          value: "{{ $config.Allinstances }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:

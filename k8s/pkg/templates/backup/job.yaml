@@ -34,7 +34,7 @@ spec:
     spec:
       schedulerName: vineyard-scheduler
       containers:
-      - name: backup
+      - name: engine
         image: ghcr.io/v6d-io/v6d/backup-job
         imagePullPolicy: IfNotPresent
         env:
@@ -44,6 +44,10 @@ spec:
           value: {{ $config.BackupPath }}
         - name: ENDPOINT
           value: {{ $config.Endpoint }}
+        - name: SELECTOR
+          value: {{ .Name }}
+        - name: ALLINSTANCES
+          value: "{{ $config.Allinstances }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:

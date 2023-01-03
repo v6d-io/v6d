@@ -1,3 +1,6 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
 # Copyright 2020-2022 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,18 +14,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
+import time
+import sys
+import pandas as pd
+import vineyard
 
-WORKDIR /
+client = vineyard.connect('/var/run/vineyard.sock')
 
-RUN curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl && \
-    chmod +x kubectl && \
-    mv kubectl /usr/bin &&\
-    pip3 install --no-cache-dir kubernetes
+df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8]})
+obj = client.put(df)
+client.persist(obj)
+# flush the stdout buffer
+f = open('/dev/null', 'w') # pylint: disable=unspecified-encoding,consider-using-with
+sys.stdout = f
+print(flush=True)
 
-COPY ./recover.py /
+sys.stdout = sys.__stdout__
+print(obj, flush=True)
 
-ENTRYPOINT [ "python3" ]
-
-CMD [ "recover.py" ]
+# avoid CrashLoopBackOff
+time.sleep(1200)

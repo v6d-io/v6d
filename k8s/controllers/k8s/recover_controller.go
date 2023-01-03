@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -65,6 +66,7 @@ type RecoverConfig struct {
 	Endpoint           string
 	VineyardSockPath   string
 	BackupPVCName      string
+	Allinstances       string
 }
 
 // Recover contains the configuration about recover
@@ -134,10 +136,19 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	Recover.VineyardSockPath = socket
 	Recover.Endpoint = backup.Spec.VineyarddName + "-rpc." + backup.Spec.VineyarddNamespace
 	Recover.BackupPVCName = backup.Name
+	Recover.Allinstances = strconv.Itoa(vineyardd.Spec.Replicas)
 
 	if recover.Status.State == "" || recover.Status.State == RunningState {
 		if _, err := app.Apply(ctx, "recover/job.yaml", logger, false); err != nil {
 			logger.Error(err, "failed to apply recover job")
+			return ctrl.Result{}, err
+		}
+		if _, err := app.Apply(ctx, "recover/cluster-role.yaml", logger, true); err != nil {
+			logger.Error(err, "failed to apply recover cluster role")
+			return ctrl.Result{}, err
+		}
+		if _, err := app.Apply(ctx, "recover/cluster-role-binding.yaml", logger, true); err != nil {
+			logger.Error(err, "failed to apply recover cluster role binding")
 			return ctrl.Result{}, err
 		}
 		if err := r.UpdateStateStatus(ctx, &backup, &recover); err != nil {

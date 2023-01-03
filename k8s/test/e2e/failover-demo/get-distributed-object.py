@@ -1,4 +1,3 @@
-# pylint: disable=django-not-configured
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -18,32 +17,22 @@
 #
 
 import os
-import sys
-import time
-import numpy as np
 import vineyard
 
-client = vineyard.connect('/var/run/vineyard.sock')
-
+vineyard_client = vineyard.connect('/var/run/vineyard.sock')
 env_dist = os.environ
-metaid = env_dist['METADATA_ID']
 
-# build obj2
-data = np.arange(6,10)
-obj2 = client.put(data)
-client.persist(obj2)
+objid = env_dist['OBJECT_ID']
 
-# build distributed object
-obj1 = client.get_object(vineyard._C.ObjectID(metaid),fetch=True)
-o = client.put((obj1, obj2), global_=True)
-
-# flush the stdout buffer
-f = open('/dev/null', 'w') # pylint: disable=unspecified-encoding,consider-using-with
-sys.stdout = f
-print(flush=True)
-
-sys.stdout = sys.__stdout__
-print(o.id, flush=True)
-
-# avoid CrashLoopBackOff
-time.sleep(600)
+meta = vineyard_client.get_meta(vineyard._C.ObjectID(objid))  # pylint: disable=no-member
+verified = True
+for i in range(0, meta['__elements_-size']):
+    second_meta = vineyard_client.get_meta(meta['__elements_-{}'.format(i)].id)  # pylint: disable=no-member
+    if second_meta['typename'] != "vineyard::DataFrame":
+        verified = False
+        break
+    for j in range(0,2):
+        if second_meta['__values_-value-{}'.format(j)].nbytes != 32:
+            verified = False
+if verified:
+    print('Passed', flush=True)
