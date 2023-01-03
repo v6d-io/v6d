@@ -1,0 +1,8 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: Recover
+metadata:
+  name: recover-sample
+  namespace: backup
+spec:
+  backupName: backup-sample
+  backupNamespace: backup

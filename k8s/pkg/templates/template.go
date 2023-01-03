@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 )
 
-//go:embed vineyardd etcd operation sidecar
+//go:embed vineyardd etcd operation sidecar backup recover
 var fs embed.FS
 
 // EmbedTemplate is only used for implementing the interface

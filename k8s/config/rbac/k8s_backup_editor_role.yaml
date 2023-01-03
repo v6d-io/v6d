@@ -1,0 +1,24 @@
+# permissions for end users to edit backups.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backup-editor-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - backups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - backups/status
+  verbs:
+  - get
