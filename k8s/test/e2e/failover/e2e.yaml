@@ -116,11 +116,12 @@ setup:
       command: |
         export newdistributed_id=$(kubectl get recover -A | grep $distributedobjectid | sed 's/,/\n/g'| grep \"$distributedobjectid\" | sed 's/:/\n/g' | tail -n 1 | sed 's/}/\n/g' | head -n 1 | sed 's/"//g')
         sed 's/objectid/'$newdistributed_id'/;s/$job/getDistributedObject/' k8s/test/e2e/failover-demo/failover-job.yaml | gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | kubectl apply -f -
+        sleep infinity      
       wait:
         - namespace: vineyard-job
           resource: deployment/get-distributed-object
           for: condition=Available
-  timeout: 60m
+  timeout: 120m
 
 cleanup:
   # always never success failure

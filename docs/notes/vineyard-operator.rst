@@ -17,8 +17,10 @@ Install vineyard-operator
 There are two ways to install vineyard operator, one is to install it from helm chart(recommended
 way), and the other is to install it from source code.
 
-**Note** Before you install vineyard operator, you should have a Kubernetes cluster and kubectl
-installed. Here we use `kind`_ to create a cluster.
+.. note::
+
+    Before you install vineyard operator, you should have a Kubernetes cluster and kubectl
+    installed. Here we use `kind`_ to create a cluster.
 
 Install from helm chart
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -29,8 +31,10 @@ Install from helm chart
 
     $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
 
-**Note** Please wait the cert-manager for a while until it is ready. Then, install the
-vineyard operator.
+.. note::
+  
+    Please wait the cert-manager for a while until it is ready. Then, install the
+    vineyard operator.
 
 2. Install vineyard operator:
 
@@ -541,16 +545,17 @@ The following is all labels that we provide:
 
 There two ways to install vineyard as sidecar:
 
-- Use the **default sidecar configuration**. Users add two annotations `sidecar.v6d.io/enabled: true` 
-and `sidecar.v6d.io/name: default` to app's YAML. Then the default sidecar cr will be created for 
+- Use the **default sidecar configuration**. Users add two annotations ``sidecar.v6d.io/enabled: true`` 
+and ``sidecar.v6d.io/name: default`` to app's YAML. Then the default sidecar cr will be created for 
 obervering.
-- Use the **custom sidecar configuration**. Users create a custom sidecar cr `sidecar-demo` first 
-and then add two annotations `sidecar.v6d.io/enabled: true` and `sidecar.v6d.io/name: sidecar-demo` 
+
+- Use the **custom sidecar configuration**. Users create a custom sidecar cr ``sidecar-demo`` first 
+and then add two annotations ``sidecar.v6d.io/enabled: true`` and ``sidecar.v6d.io/name: sidecar-demo`` 
 to app's YAML.
 
 The following is an example of installing vineyard as a sidecar container in the pod.
 First, we should install the vineyard operator following the previous steps, and then 
-create a namepsace with specific label `sidecar-injection: enabled` to enable the sidecar.
+create a namepsace with specific label ``sidecar-injection: enabled`` to enable the sidecar.
 
 .. code:: bash
 
@@ -562,10 +567,10 @@ Then, we use the following YAML to inject default sidecar into the pod.
 .. note::
 
     Please set up the command field of your app container and it should be 
-    like `["/bin/sh" or "/bin/bash", "-c", (your app command)]`. After injecting
-    the vineyard sidecar, the command field will be changed to `["/bin/sh" or "/bin/bash",
-     "-c", "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]`
-     to make sure the vineyard sidecar is ready before the app container starts.
+    like ``["/bin/sh" or "/bin/bash", "-c", (your app command)]``. After injecting
+    the vineyard sidecar, the command field will be changed to ``["/bin/sh" or "/bin/bash",
+    "-c", "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]``
+    to make sure the vineyard sidecar is ready before the app container starts.
 
 .. code:: yaml
 
@@ -1291,8 +1296,10 @@ we have a workflow that contains two workloads, the first workload is a stream w
 the second workload is a chunk workload. The following is the yaml file of the
 `assembly workload1`_:
 
-**Note** Please make sure you have installed the vineyard operator and vineyardd before
-running the following yaml file.
+.. note::
+
+    Please make sure you have installed the vineyard operator and vineyardd before
+    running the following yaml file.
 
 .. code:: bash
 
@@ -1535,8 +1542,10 @@ we provide:
 The following is a demo of repartition based on dask. At first, we create a dask cluster
 with 3 workers.
 
-**Note** Please make sure you have installed the vineyard operator and vineyardd before
-running the following yaml file.
+.. note:: 
+  
+    Please make sure you have installed the vineyard operator and vineyardd before
+    running the following yaml file.
 
 .. code:: bash
 
@@ -1750,6 +1759,140 @@ After the repartition job finishes, the second workload will be scheduled:
 The whole workflow can be found in `dask repartition e2e test`_. What's more,
 please refer the `repartition directory`_ to get more details.
 
+Failover mechanism of vineyard cluster
+--------------------------------------
+
+If you want to back up data for the current vineyard cluster, you can create a Backup CR to 
+perform a backup operation. The main fields are described as follows.
+
+.. list-table:: Backup Configurations
+   :widths: 15 10 60 15
+   :header-rows: 1
+
+   * - Option Name
+     - Type
+     - Description
+     - Default Value
+
+   * - vineyarddName
+     - string
+     - The name of vineyardd cluster.
+     - nil
+
+   * - vineyarddNamespace
+     - string
+     - The namespace of vineyardd cluster.
+     - nil
+
+   * - limit
+     - int
+     - The number of objects to be backed up
+     - nil
+
+   * - backupPath
+     - string
+     - The path of backup data
+     - nil
+
+   * - persistentVolumeSpec
+     - corev1.PersistentVolumeSpec
+     - The PersistentVolumeSpec of the backup data
+     - nil
+
+   * - persistentVolumeClaimSpec
+     - corev1.PersistentVolumeClaimSpec
+     - The PersistentVolumeClaimSpec of the backup data
+     - nil
+
+After data backup, you can create a Recover CR to restore a certain vineyard backup data.
+Its fields are as follows.
+
+.. list-table:: Recover Configurations
+   :widths: 15 10 60 15
+   :header-rows: 1
+
+   * - Option Name
+     - Type
+     - Description
+     - Default Value
+
+   * - backupName
+     - string
+     - The name of a backup.
+     - nil
+
+   * - backupNamespace
+     - string
+     - The namespace of a backup.
+     - nil
+
+Next, we will show how to use the failover mechanism in vineyard operator. Assuming that
+we have a vineyard cluster that contains some objects, then we create a backup cr to back
+up the data. The following is the yaml file of the backup:
+
+.. note::
+
+    Please make sure you have installed the vineyard operator and vineyardd before
+    running the following yaml file.
+
+.. code:: yaml
+
+  $ cat <<EOF | kubectl apply -f -
+  apiVersion: k8s.v6d.io/v1alpha1
+  kind: Backup
+  metadata:
+    name: backup-sample
+    namespace: backup
+  spec:
+    vineyarddName: vineyardd-sample
+    vineyarddNamespace: vineyard-system
+    limit: 1000
+    backupPath: /var/vineyard/dump
+    persistentVolumeSpec:
+      storageClassName: manual
+      capacity:
+        storage: 1Gi
+      accessModes:
+        - ReadWriteOnce
+      hostPath:
+        path: /var/vineyard/dump
+    persistentVolumeClaimSpec:
+      storageClassName: manual
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+  EOF
+
+Assuming that the vineyard cluster crashes at some point, we create Recover CR to 
+restore the data in the vineyard cluster, and the recover yaml file is as follows:
+
+.. code:: yaml
+
+  $ cat <<EOF | kubectl apply -f -
+  apiVersion: k8s.v6d.io/v1alpha1
+  kind: Recover
+  metadata:
+    name: recover-sample
+    namespace: backup
+  spec:
+    backupName: backup-sample
+    backupNamespace: backup
+  EOF
+
+Then you could get the Recover's status to get the mapping relationship between the 
+object ID during backup and the object ID during recovery as follows:
+
+.. code:: bash
+
+  $ kubectl get recover -A                                                                              
+  NAMESPACE   NAME             MAPPING                                                                                                                     STATE
+  backup      recover-sample   {"o000ef92379fd8850":"o000ef9ea5189718d","o000ef9237a3a5432":"o000ef9eb5d26ad5e","o000ef97a8289973f":"o000ef9ed586ef1d3"}   Succeed
+
+If you want to get more details about failover of vineyard cluster, please refer 
+the `failover e2e test`_.
+
 .. _kind: https://kind.sigs.k8s.io
 .. _CustomResouceDefinitions(CRDs): https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions
 .. _Kubernetes Scheduling Framework: https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
@@ -1776,3 +1919,5 @@ please refer the `repartition directory`_ to get more details.
 .. _repartition workload2: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/repartition-demo/job2.py
 .. _dask repartition e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/dask-repartition-e2e.yaml
 .. _repartition directory: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/repartition
+.. _failover e2e test: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/failover/e2e.yaml
+
