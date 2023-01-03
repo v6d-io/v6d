@@ -17,9 +17,10 @@
 #
 
 import os
-import vineyard
 import time
+import vineyard
 from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 env_dist = os.environ
 

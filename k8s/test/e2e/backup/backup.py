@@ -18,9 +18,8 @@
 #
 
 import os
-import sys
-import vineyard
 import time
+import vineyard
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 

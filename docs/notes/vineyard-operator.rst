@@ -1750,6 +1750,9 @@ After the repartition job finishes, the second workload will be scheduled:
 The whole workflow can be found in `dask repartition e2e test`_. What's more,
 please refer the `repartition directory`_ to get more details.
 
+Installing vineyard as sidecar
+------------------------------
+
 .. _kind: https://kind.sigs.k8s.io
 .. _CustomResouceDefinitions(CRDs): https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions
 .. _Kubernetes Scheduling Framework: https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
