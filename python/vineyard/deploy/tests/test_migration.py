@@ -63,6 +63,31 @@ def test_migration(vineyard_ipc_sockets):
 
 
 @pytest.mark.skip_without_migration()
+def test_fetch_and_get(vineyard_ipc_sockets):
+    vineyard_ipc_sockets = list(
+        itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2)
+    )
+
+    client1 = vineyard.connect(vineyard_ipc_sockets[0])
+    client2 = vineyard.connect(vineyard_ipc_sockets[1])
+
+    # test if metadata of remote object available
+    data = np.ones((1, 2, 3, 4, 5))
+    o = client1.put(data)
+    client1.persist(o)
+    meta = client2.get_meta(o, sync_remote=True)
+    assert data.shape == tuple(json.loads(meta['shape_']))
+
+    # migrate local to local: do nothing.
+    np.testing.assert_allclose(client1.get(o), client1.get(o, fetch=True))
+    logger.info('------- finish migrate local --------')
+
+    # migrate remote to local: do nothing.
+    np.testing.assert_allclose(client1.get(o), client2.get(o, fetch=True))
+    logger.info('------- finish migrate remote --------')
+
+
+@pytest.mark.skip_without_migration()
 def test_migration_and_deletion(
     vineyard_ipc_sockets,
 ):  # pylint: disable=too-many-statements
