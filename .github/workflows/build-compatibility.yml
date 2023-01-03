@@ -27,16 +27,16 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, macos-11]
-        arrow: [none, 1.0.1-1, 6.0.1-1, 9.0.0-1]
+        arrow: [none, 6.0.1-1, 9.0.0-1, 10.0.1-1]
         exclude:
           - os: ubuntu-20.04
             arrow: none
           - os: macos-11
-            arrow: 1.0.1-1
-          - os: macos-11
             arrow: 6.0.1-1
           - os: macos-11
             arrow: 9.0.0-1
+          - os: macos-11
+            arrow: 10.0.1-1
 
     steps:
       - uses: actions/checkout@v3
