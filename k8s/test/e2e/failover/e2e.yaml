@@ -28,13 +28,6 @@ setup:
           for: condition=Ready
     - name: install scheduler-plugin and operator
       command: |
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/backup-job:latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/recover-job:latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/local-object:latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-object-step1:latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/distributed-object-step2:latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/get-local-object:latest
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/get-distributed-object
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
         make -C k8s deploy
       wait:
@@ -59,7 +52,6 @@ setup:
         done
         export meta=$(kubectl get pod -l app=local-object -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
         export localobjectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
-        echo $localobjectid
       wait:
         - namespace: vineyard-job
           resource: deployment/local-object
@@ -82,7 +74,6 @@ setup:
         done
         export meta=$(kubectl get pod -l app=distributed-object-step2 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
         export distributedobjectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
-        echo $distributedobjectid
       wait:
         - namespace: vineyard-job
           resource: deployment/distributed-object-step2
