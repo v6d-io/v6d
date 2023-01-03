@@ -24,7 +24,7 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
-#include "oneapi/tbb/concurrent_hash_map.h"
+#include "libcuckoo/cuckoohash_map.hh"
 
 #include "common/util/asio.h"
 #include "common/util/callback.h"
@@ -40,11 +40,11 @@ namespace asio = boost::asio;
 
 class VineyardServer;
 
-using session_dict_t =
-    tbb::concurrent_hash_map<SessionID, std::shared_ptr<VineyardServer>>;
-
 class VineyardRunner : public std::enable_shared_from_this<VineyardRunner> {
  public:
+  using session_dict_t =
+      libcuckoo::cuckoohash_map<SessionID, std::shared_ptr<VineyardServer>>;
+
   static std::shared_ptr<VineyardRunner> Get(const json& spec);
   Status Serve();
   Status Finalize();

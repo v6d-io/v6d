@@ -27,7 +27,6 @@ option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
 option(USE_EXTERNAL_REDIS_LIBS "Build with external redis-plus-plus library rather than the submodule one" ON)
 option(USE_EXTERNAL_HIREDIS_LIBS "Build with external hiredis library rather than the submodule one" ON)
-option(USE_EXTERNAL_TBB_LIBS "Build with external tbb library rather than the submodule one" OFF)
 option(USE_EXTERNAL_NLOHMANN_JSON_LIBS "Build with external nlohmann-json library rather than the submodule one" ON)
 option(VINEYARD_USE_ASAN "Using address sanitizer to check memory accessing" OFF)
 option(VINEYARD_USE_LTO "Using IPO/LTO support for link-time optimization" OFF)
@@ -379,36 +378,6 @@ macro(find_fuse)
     endif()
 endmacro()
 
-macro(find_intel_tbb)
-    set(TBB_FIND_PACKAGE OFF CACHE BOOL "Build TBB from bundled source")
-    set(TBB_TEST OFF CACHE BOOL "Disable tbb testing")
-    set(TBB_EXAMPLES OFF CACHE BOOL "Disable tbb examples")
-    set(TBB_STRICT OFF CACHE BOOL "Don't treat warnings as errors for tbb library")
-    set(TBB4PY_BUILD OFF CACHE BOOL "Disable tbb4py build")
-    set(TBBMALLOC_BUILD OFF CACHE BOOL "Disable tbb4py build")
-    set(TBBMALLOC_PROXY_BUILD OFF CACHE BOOL "Disable tbb4py build")
-    set(TBB_ENABLE_IPO OFF CACHE BOOL "Enable interprocedural optimization")
-    set(TBB_CPF ON CACHE BOOL "Enable preview features of the library")
-
-    if(USE_EXTERNAL_TBB_LIBS)
-        find_package(TBB QUIET)
-        if(NOT TBB_FOUND)
-            message(WARNING "intel-tbb not found, will use the bundled one from git submodules.")
-            # clear previous cmake configure result
-            set(TBB_DIR)
-            set(MESSAGE_QUIET ON)
-            add_subdirectory_static(thirdparty/intel-tbb EXCLUDE_FROM_ALL)
-            unset(MESSAGE_QUIET)
-        endif()
-    else()
-        # clear previous cmake configure result
-        set(TBB_DIR)
-        set(MESSAGE_QUIET ON)
-        add_subdirectory_static(thirdparty/intel-tbb EXCLUDE_FROM_ALL)
-        unset(MESSAGE_QUIET)
-    endif()
-endmacro(find_intel_tbb)
-
 macro(find_mimalloc)
     set(MI_OVERRIDE OFF CACHE INTERNAL "")
     set(MI_OSX_INTERPOSE OFF CACHE INTERNAL "")
@@ -434,6 +403,18 @@ endmacro()
 
 macro(find_gflags)
     include("cmake/FindGFlags.cmake")
+endmacro()
+
+macro(find_libcuckoo)
+    # install libcuckoo
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libcuckoo/libcuckoo"
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+            PATTERN "*.hh"
+    )
+
+    include_directories($<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libcuckoo>
+                        $<INSTALL_INTERFACE:include/vineyard/contrib>
+    )
 endmacro()
 
 macro(find_libunwind)
@@ -524,6 +505,7 @@ macro(find_common_libraries)
     find_ctti()
     find_gflags()
     find_glog()
+    find_libcuckoo()
     find_libunwind()
     find_pthread()
     find_nlohmann_json()
@@ -653,15 +635,16 @@ include("cmake/GenerateVineyardJava.cmake")
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
-    find_openssl_libraries(REQUIRED)
     find_etcd_cpp_apiv3()
-    find_intel_tbb()
     find_mimalloc()
+    find_openssl_libraries(REQUIRED)
     find_zstd()
+
     if(BUILD_VINEYARD_SERVER_REDIS)
         find_hiredis()
         find_redis_plus_plus()
     endif()
+
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
@@ -683,7 +666,6 @@ if(BUILD_VINEYARD_SERVER)
                                             libzstd_static
                                             mimalloc-static
                                             nlohmann_json::nlohmann_json
-                                            TBB::tbb
     )
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyardd PRIVATE ${ARROW_SHARED_LIB})

@@ -63,7 +63,7 @@ Status VineyardRunner::Serve() {
       spec_template_, RootSessionID(), shared_from_this(), context_,
       meta_context_, io_context_,
       [](Status const& s, std::string const&) { return s; });
-  sessions_.emplace(RootSessionID(), root_vs);
+  sessions_.insert(RootSessionID(), root_vs);
 
   // start a root session
   VINEYARD_CHECK_OK(root_vs->Serve(StoreType::kDefault));
@@ -85,12 +85,11 @@ Status VineyardRunner::Serve() {
 Status VineyardRunner::Finalize() { return Status::OK(); }
 
 Status VineyardRunner::GetRootSession(std::shared_ptr<VineyardServer>& vs_ptr) {
-  session_dict_t::const_accessor accessor;
-  if (!sessions_.find(accessor, RootSessionID())) {
+  if (sessions_.find(RootSessionID(), vs_ptr)) {
+    return Status::OK();
+  } else {
     return Status::Invalid("Cannot find the root session.");
   }
-  vs_ptr = accessor->second;
-  return Status::OK();
 }
 
 Status VineyardRunner::CreateNewSession(
@@ -107,19 +106,17 @@ Status VineyardRunner::CreateNewSession(
   auto vs_ptr = std::make_shared<VineyardServer>(
       spec, session_id, shared_from_this(), context_, meta_context_,
       io_context_, callback);
-  sessions_.emplace(session_id, vs_ptr);
+  sessions_.insert(session_id, vs_ptr);
   LOG(INFO) << "Vineyard creates a new session with ID '"
             << SessionIDToString(session_id) << "'";
   return vs_ptr->Serve(bulk_store_type);
 }
 
 Status VineyardRunner::Delete(SessionID const& sid) {
-  session_dict_t::const_accessor accessor;
-  if (!sessions_.find(accessor, sid)) {
-    return Status::OK();
-  }
-  accessor->second->Stop();
-  sessions_.erase(accessor);
+  sessions_.erase_fn(sid, [](std::shared_ptr<VineyardServer>& vs_ptr) -> bool {
+    vs_ptr->Stop();
+    return true;
+  });
   if (unlikely(sid != RootSessionID())) {
     LOG(INFO) << "Deleting session: '" << SessionIDToString(sid) << "'";
   }
@@ -128,9 +125,7 @@ Status VineyardRunner::Delete(SessionID const& sid) {
 
 Status VineyardRunner::Get(SessionID const& sid,
                            std::shared_ptr<VineyardServer>& session) {
-  session_dict_t::const_accessor accessor;
-  if (sessions_.find(accessor, sid)) {
-    session = accessor->second;
+  if (sessions_.find(sid, session)) {
     return Status::OK();
   } else {
     return Status::Invalid("Session (sid = " + SessionIDToString(sid) +
@@ -139,8 +134,7 @@ Status VineyardRunner::Get(SessionID const& sid,
 }
 
 bool VineyardRunner::Exists(SessionID const& sid) {
-  session_dict_t::const_accessor accessor;
-  return sessions_.find(accessor, sid);
+  return sessions_.contains(sid);
 }
 
 void VineyardRunner::Stop() {
@@ -151,8 +145,11 @@ void VineyardRunner::Stop() {
 
   std::vector<SessionID> session_ids;
   session_ids.reserve(sessions_.size());
-  for (auto iter = sessions_.begin(); iter != sessions_.end(); iter++) {
-    session_ids.emplace_back(iter->first);
+  {
+    auto locked = sessions_.lock_table();
+    for (auto iter = locked.begin(); iter != locked.end(); iter++) {
+      session_ids.emplace_back(iter->first);
+    }
   }
   for (auto const& item : session_ids) {
     VINEYARD_DISCARD(Delete(item));  // trigger item->stop()

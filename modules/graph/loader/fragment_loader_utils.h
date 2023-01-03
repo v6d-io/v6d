@@ -74,9 +74,11 @@ class ConcurrentOidSet {
   Status ToArray(std::shared_ptr<oid_array_t>& out) {
     oid_array_builder_t builder;
     RETURN_ON_ARROW_ERROR(builder.Reserve(oids.size()));
-    auto locked = oids.lock_table();
-    for (auto const& item : locked) {
-      RETURN_ON_ARROW_ERROR(builder.Append(item.first));
+    {
+      auto locked = oids.lock_table();
+      for (auto const& item : locked) {
+        RETURN_ON_ARROW_ERROR(builder.Append(item.first));
+      }
     }
     RETURN_ON_ARROW_ERROR(builder.Finish(&out));
     return Status::OK();

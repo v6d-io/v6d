@@ -29,7 +29,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "oneapi/tbb/concurrent_hash_map.h"
+#include "flat_hash_map/flat_hash_map.hpp"
+#include "libcuckoo/cuckoohash_map.hh"
 
 #include "common/memory/payload.h"
 #include "common/util/arrow.h"
@@ -60,8 +61,8 @@ class DependencyTracker
     : public LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>> {
  public:
   using base_t = LifeCycleTracker<ID, P, DependencyTracker<ID, P, Der>>;
-  using dependency_map_t = tbb::concurrent_hash_map</*socket_connection*/ int,
-                                                    std::unordered_set<ID>>;
+  using dependency_map_t = libcuckoo::cuckoohash_map</*socket_connection*/ int,
+                                                     ska::flat_hash_set<ID>>;
   DependencyTracker() {}
 
   /**
@@ -80,19 +81,19 @@ class DependencyTracker
   }
 
   Status AddDependency(ID const& id, int conn) {
-    typename dependency_map_t::accessor accessor;
-    if (!dependency_.find(accessor, conn)) {
-      dependency_.emplace(conn, std::unordered_set<ID>());
-    }
-
-    if (dependency_.find(accessor, conn)) {
-      auto& objects = accessor->second;
+    Status status;
+    auto fn = [this, id, &status](ska::flat_hash_set<ID>& objects) -> bool {
       if (objects.find(id) == objects.end()) {
         objects.emplace(id);
-        RETURN_ON_ERROR(this->IncreaseReferenceCount(id));
+        status = this->IncreaseReferenceCount(id);
       }
+      return false;
+    };
+    if (dependency_.upsert(conn, fn, ska::flat_hash_set<ID>{})) {
+      // newly inserted, needs updating it again
+      dependency_.update_fn(conn, fn);
     }
-    return Status::OK();
+    return status;
   }
 
   /**
@@ -110,24 +111,25 @@ class DependencyTracker
   }
 
   Status RemoveDependency(ID const& id, int conn) {
-    typename dependency_map_t::accessor accessor;
-    if (!dependency_.find(accessor, conn)) {
-      return Status::KeyError("connection not exist.");
-    } else {
-      auto& objects = accessor->second;
-      if (objects.find(id) == objects.end()) {
-        return Status::ObjectNotExists();
-      } else {
-        objects.erase(id);
-        if (objects.empty()) {
-          dependency_.erase(accessor);
-        }
-      }
+    Status status;
+    bool accessed = dependency_.erase_fn(
+        conn, [this, id, &status](ska::flat_hash_set<ID>& objects) -> bool {
+          if (objects.find(id) == objects.end()) {
+            status = Status::ObjectNotExists(
+                "DependencyTracker: failed to find object during remove "
+                "dependency: " +
+                ObjectIDToString(id));
+            return false;
+          } else {
+            objects.erase(id);
+            return objects.empty();
+          }
+        });
+    if (!accessed) {
+      return Status::KeyError("DependencyTracker: connection not exist.");
     }
-
-    RETURN_ON_ERROR(this->DecreaseReferenceCount(id));
-
-    return Status::OK();
+    RETURN_ON_ERROR(status);
+    return this->DecreaseReferenceCount(id);
   }
 
   /**
@@ -140,18 +142,22 @@ class DependencyTracker
    * @brief Remove all the dependency of all objects in given socket connection.
    */
   Status ReleaseConnection(int conn) {
-    typename dependency_map_t::const_accessor accessor;
-    if (!dependency_.find(accessor, conn)) {
+    Status status;
+    bool accessed = dependency_.erase_fn(
+        conn, [this, &status](ska::flat_hash_set<ID>& objects) -> bool {
+          for (auto& elem : objects) {
+            // try our best to remove dependency.
+            status = this->DecreaseReferenceCount(elem);
+            if (!status.ok()) {
+              return false;  // early return, don't delete
+            }
+          }
+          return true;
+        });
+    if (!accessed) {
       return Status::KeyError("connection doesn't exist.");
-    } else {
-      auto& objects = accessor->second;
-      for (auto& elem : objects) {
-        // try our best to remove dependency.
-        RETURN_ON_ERROR(this->DecreaseReferenceCount(elem));
-      }
-      dependency_.erase(accessor);
-      return Status::OK();
     }
+    return status;
   }
 
  public:
@@ -296,7 +302,6 @@ class ColdObjectTracker
   };
 
  public:
-  using cold_object_map_t = tbb::concurrent_hash_map<ID, std::shared_ptr<P>>;
   using base_t = DependencyTracker<ID, P, ColdObjectTracker<ID, P, Der>>;
   using lru_t = LRU;
 
