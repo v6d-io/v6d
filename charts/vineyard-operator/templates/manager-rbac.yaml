@@ -141,6 +141,26 @@ rules:
 - apiGroups:
   - k8s.v6d.io
   resources:
+  - backups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - backups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - k8s.v6d.io
+  resources:
   - globalobjects
   verbs:
   - create
@@ -200,6 +220,26 @@ rules:
   - k8s.v6d.io
   resources:
   - operations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - recovers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - recovers/status
   verbs:
   - get
   - patch
