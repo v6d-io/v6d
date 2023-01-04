@@ -45,3 +45,6 @@ default.etcd/
 
 # Java JVM crash logs
 hs_err_pid*.log
+
+# ignore go.work.sum
+go.work.sum
