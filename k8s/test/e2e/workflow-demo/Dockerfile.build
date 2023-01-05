@@ -14,10 +14,14 @@
 
 FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
+ARG APP
+
+ENV APP ${APP}
+
 WORKDIR /
 
-COPY ./job1.py /
+COPY ./${APP} /
 
 ENTRYPOINT [ "python3" ]
 
-CMD [ "job1.py" ]
+CMD [ "${APP}" ]

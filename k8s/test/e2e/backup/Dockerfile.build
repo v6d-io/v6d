@@ -14,6 +14,10 @@
 
 FROM docker.pkg.github.com/v6d-io/v6d/vineyard-python-dev:latest
 
+ARG APP
+
+ENV APP ${APP}
+
 WORKDIR /
 
 RUN curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl && \
@@ -21,8 +25,8 @@ RUN curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl && \
     mv kubectl /usr/bin &&\
     pip3 install --no-cache-dir kubernetes
 
-COPY ./app.py /
+COPY ./${APP} /
 
 ENTRYPOINT [ "python3" ]
 
-CMD [ "app.py" ]
+CMD [ "${APP}" ]

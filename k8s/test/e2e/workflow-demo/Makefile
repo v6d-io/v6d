@@ -19,11 +19,11 @@ TAG      := latest
 all: build-job1 build-job2
 	
 build-job1:
-	docker build . -f Dockerfile.job1 -t $(REGISTRY)/job1:$(TAG)
+	docker build --build-arg APP=job1.py -f Dockerfile.build -t $(REGISTRY)/job1:$(TAG) .
 .PHONY: build-job1
 
 build-job2:
-	docker build . -f Dockerfile.job2 -t $(REGISTRY)/job2:$(TAG)
+	docker build --build-arg APP=job2.py -f Dockerfile.build -t $(REGISTRY)/job2:$(TAG) .
 .PHONY: build-job2
 
 docker-push: build-job1 build-job2

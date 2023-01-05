@@ -19,23 +19,23 @@ TAG      := latest
 all: build-local-object build-distributed-object-step1 build-distributed-object-step2 build-get-local-object build-get-distributed-object
 	
 build-local-object:
-	sed 's/app/build-local-object/' Dockerfile.build | docker build -t $(REGISTRY)/build-local-object:$(TAG) . -f-
+	docker build --build-arg APP=build-local-object.py -f Dockerfile.build -t $(REGISTRY)/build-local-object:$(TAG) .
 .PHONY: build-local-object
 
 build-distributed-object-step1:
-	sed 's/app/build-distributed-object-step1/' Dockerfile.build | docker build -t $(REGISTRY)/build-distributed-object-step1:$(TAG) . -f-
+	docker build --build-arg APP=build-distributed-object-step1.py -f Dockerfile.build -t $(REGISTRY)/build-distributed-object-step1:$(TAG) .
 .PHONY: build-distributed-object-step1
 
 build-distributed-object-step2:
-	sed 's/app/build-distributed-object-step2/' Dockerfile.build | docker build -t $(REGISTRY)/distributed-object-step2:$(TAG) . -f-
+	docker build --build-arg APP=build-distributed-object-step2.py -f Dockerfile.build -t $(REGISTRY)/build-distributed-object-step2:$(TAG) .
 .PHONY: build-distributed-object-step2
 
 build-get-local-object:
-	sed 's/app/get-local-object/' Dockerfile.build | docker build -t $(REGISTRY)/get-local-object:$(TAG) . -f-
+	docker build --build-arg APP=get-local-object.py -f Dockerfile.build -t $(REGISTRY)/get-local-object:$(TAG) .
 .PHONY: build-get-local-object
 
 build-get-distributed-object:
-	sed 's/app/get-distributed-object/' Dockerfile.build | docker build -t $(REGISTRY)/get-distributed-object:$(TAG) . -f-
+	docker build --build-arg APP=get-distributed-object.py -f Dockerfile.build -t $(REGISTRY)/get-distributed-object:$(TAG) .
 .PHONY: build-get-distributed-object
 
 docker-push: build-local-object build-distributed-object-step1 build-distributed-object-step2 build-get-local-object build-get-distributed-object
