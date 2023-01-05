@@ -19,23 +19,23 @@ TAG      := latest
 all: build-assembly-job1 build-assembly-job2 build-distributed-assembly-job1 build-distributed-assembly-job2 build-distributed-assembly-job3
 	
 build-assembly-job1:
-	sed 's/app/assembly-job1/' Dockerfile.build | docker build -t $(REGISTRY)/assembly-job1:$(TAG) . -f-
+	docker build --build-arg APP=assembly-job1.py -f Dockerfile.build -t $(REGISTRY)/assembly-job1:$(TAG) .
 .PHONY: build-assembly-job1
 
 build-assembly-job2:
-	sed 's/app/assembly-job2/' Dockerfile.build | docker build -t $(REGISTRY)/assembly-job2:$(TAG) . -f-
+	docker build --build-arg APP=assembly-job2.py -f Dockerfile.build -t $(REGISTRY)/assembly-job2:$(TAG) .
 .PHONY: build-assembly-job2
 
 build-distributed-assembly-job1:
-	sed 's/app/distributed-job1/' Dockerfile.build | docker build -t $(REGISTRY)/distributed-assembly-job1:$(TAG) . -f-
+	docker build --build-arg APP=distributed-job1.py -f Dockerfile.build -t $(REGISTRY)/distributed-assembly-job1:$(TAG) .
 .PHONY: build-distributed-assembly-job1
 
 build-distributed-assembly-job2:
-	sed 's/app/distributed-job2/' Dockerfile.build | docker build -t $(REGISTRY)/distributed-assembly-job2:$(TAG) . -f-
+	docker build --build-arg APP=distributed-job2.py -f Dockerfile.build -t $(REGISTRY)/distributed-assembly-job2:$(TAG) .
 .PHONY: build-distributed-assembly-job2
 
 build-distributed-assembly-job3:
-	sed 's/app/distributed-job3/' Dockerfile.build | docker build -t $(REGISTRY)/distributed-assembly-job3:$(TAG) . -f-
+	docker build --build-arg APP=distributed-job3.py -f Dockerfile.build -t $(REGISTRY)/distributed-assembly-job3:$(TAG) .
 .PHONY: build-distributed-assembly-job3
 
 docker-push: build-assembly-job1 build-assembly-job2 build-distributed-assembly-job1 build-distributed-assembly-job2 build-distributed-assembly-job3
