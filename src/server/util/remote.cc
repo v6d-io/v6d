@@ -196,6 +196,9 @@ Status RemoteClient::recreateMetadata(
     json const& metadata, json& target,
     std::map<ObjectID, ObjectID> const& result_blobs) {
   for (auto const& kv : metadata.items()) {
+    if (kv.key() == "id") {
+      continue;
+    }
     if (kv.value().is_object()) {
       json member = kv.value();
       if (member.value("typename", "") == "vineyard::Blob") {
@@ -214,9 +217,9 @@ Status RemoteClient::recreateMetadata(
     } else {
       target[kv.key()] = kv.value();
     }
-    target["instance_id"] = this->server_ptr_->instance_id();
-    target["transient"] = true;
   }
+  target["instance_id"] = this->server_ptr_->instance_id();
+  target["transient"] = true;
   return Status::OK();
 }
 

@@ -45,8 +45,8 @@ const char* RemoteBlob::data() const {
   }
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
-        "The object might be a (partially) remote object and the payload data "
-        "is not locally available: " +
+        "RemoteBlob::data(): the object might be a (partially) remote object "
+        "and the payload data is not locally available: " +
         ObjectIDToString(id_));
   }
   return reinterpret_cast<const char*>(buffer_->data());
@@ -55,8 +55,8 @@ const char* RemoteBlob::data() const {
 const std::shared_ptr<arrow::Buffer>& RemoteBlob::Buffer() const {
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
-        "The object might be a (partially) remote object and the payload data "
-        "is not locally available: " +
+        "RemoteBlob::Buffer(): the object might be a (partially) remote object "
+        "and the payload data is not locally available: " +
         ObjectIDToString(id_));
   }
   return buffer_;
@@ -95,8 +95,8 @@ char* RemoteBlob::mutable_data() const {
   }
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
-        "The object might be a (partially) remote object and the payload data "
-        "is not locally available: " +
+        "RemoteBlob::mutable_data(): The object might be a (partially) remote "
+        "object and the payload data is not locally available: " +
         ObjectIDToString(id_));
   }
   return reinterpret_cast<char*>(buffer_->mutable_data());

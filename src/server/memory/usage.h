@@ -113,7 +113,7 @@ class DependencyTracker
   Status RemoveDependency(ID const& id, int conn) {
     Status status;
     bool accessed = dependency_.erase_fn(
-        conn, [this, id, &status](ska::flat_hash_set<ID>& objects) -> bool {
+        conn, [id, &status](ska::flat_hash_set<ID>& objects) -> bool {
           if (objects.find(id) == objects.end()) {
             status = Status::ObjectNotExists(
                 "DependencyTracker: failed to find object during remove "

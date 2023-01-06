@@ -39,8 +39,8 @@ const char* Blob::data() const {
   }
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
-        "The object might be a (partially) remote object and the payload data "
-        "is not locally available: " +
+        "Blob::data(): the object might be a (partially) remote object and the "
+        "payload data is not locally available: " +
         ObjectIDToString(id_));
   }
   return reinterpret_cast<const char*>(buffer_->data());
@@ -49,8 +49,8 @@ const char* Blob::data() const {
 const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
-        "The object might be a (partially) remote object and the payload data "
-        "is not locally available: " +
+        "Blob::Buffer(): the object might be a (partially) remote object and "
+        "the payload data is not locally available: " +
         ObjectIDToString(id_));
   }
   return buffer_;
@@ -76,14 +76,15 @@ void Blob::Construct(ObjectMeta const& meta) {
   if (meta.GetBuffer(meta.GetId(), this->buffer_).ok()) {
     if (this->buffer_ == nullptr) {
       throw std::runtime_error(
-          "Invalid internal state: local blob found bit it is nullptr: " +
+          "Blob::Construct(): Invalid internal state: local blob found bit it "
+          "is nullptr: " +
           ObjectIDToString(meta.GetId()));
     }
     this->size_ = this->buffer_->size();
   } else {
     throw std::runtime_error(
-        "Invalid internal state: failed to construct local blob since payload "
-        "is missing: " +
+        "Blob::Construct(): Invalid internal state: failed to construct local "
+        "blob since payload is missing: " +
         ObjectIDToString(meta.GetId()));
   }
 }
