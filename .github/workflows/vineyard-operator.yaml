@@ -34,6 +34,10 @@ on:
       - 'src/server/util/kubectl*'
       - 'charts/vineyard-operator/**'
 
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
 env:
   IMG: vineyardcloudnative/vineyard-operator:latest
   NIGHTLY_IMG: docker.pkg.github.com/v6d-io/v6d/vineyard-operator:nightly

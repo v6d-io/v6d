@@ -20,6 +20,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   build-vineyardd:
     runs-on: ${{ matrix.os }}

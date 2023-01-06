@@ -12,48 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Vineyard Rust CI
+name: Codeball
 
 on:
-  # Trigger the workflow on push or pull request, but only for the main branch
-  push:
-    branches:
-      - main
-    paths:
-      - 'rust/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'rust/**'
+  pull_request: {}
+  pull_request_review_comment:
+    types: [created, edited]
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
-  check:
+  codeball_job:
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    name: Codeball
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions-rs/toolchain@v1
+      - name: Codeball
+        uses: sturdy-dev/codeball-action@main
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-
-      - name: Test
-        run: |
-          cd rust
-          cargo fmt --all -- --check
-          # cargo clippy -- -D warnings
-          cargo check
-          cargo test --lib
-
-
-
-
-
+          # For all configuration options see https://github.com/sturdy-dev/codeball-action/blob/v2/action.yml
+          approvePullRequests: "false"  # it doesn't work: https://github.com/v6d-io/v6d/actions/runs/3852300286/jobs/6564310075
+          approveThreshold: "0.875"
+          codeSuggestionsFromComments: "true"
+          failJobsWhenReviewNeeded: "false"
+          labelPullRequestsWhenApproved: "true"
+          labelPullRequestsWhenReviewNeeded: "true"
+          labelPullRequestsWhenCarefulReviewNeeded: "true"
