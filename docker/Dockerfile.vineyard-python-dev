@@ -12,52 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# build vineyardd
-FROM vineyardcloudnative/vineyardd-alpine-builder:builder-latest as vineyardd
-
-COPY thirdparty /work/v6d/thirdparty
-
-# patch cpprestsdk to drop boost::regex dependency.
-RUN cd /work/v6d && \
-    sed -i 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake && \
-    sed -i 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
-
-COPY cmake /work/v6d/cmake
-COPY python/vineyard/core/codegen /work/v6d/python/vineyard/core/codegen
-COPY python/vineyard/version.py.in /work/v6d/python/vineyard/version.py.in
-
-COPY CMakeLists.txt /work/v6d/CMakeLists.txt
-COPY setup.cfg.in /work/v6d/setup.cfg.in
-COPY vineyard-config-version.in.cmake /work/v6d/vineyard-config-version.in.cmake
-COPY vineyard-config.in.cmake /work/v6d/vineyard-config.in.cmake
-
-COPY src/common /work/v6d/src/common
-COPY src/server /work/v6d/src/server
-
-RUN cd /work/v6d && \
-    mkdir -p /work/v6d/build && \
-    cd /work/v6d/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release \
-         -DBUILD_SHARED_LIBS=OFF \
-         -DUSE_STATIC_BOOST_LIBS=ON \
-         -DBUILD_VINEYARD_SERVER=ON \
-         -DBUILD_VINEYARD_CLIENT=OFF \
-         -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
-         -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
-         -DBUILD_VINEYARD_BASIC=OFF \
-         -DBUILD_VINEYARD_GRAPH=OFF \
-         -DBUILD_VINEYARD_MALLOC=OFF \
-         -DBUILD_VINEYARD_IO=OFF \
-         -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
-         -DBUILD_VINEYARD_TESTS=OFF \
-         -DBUILD_VINEYARD_TESTS_ALL=OFF \
-         -DBUILD_VINEYARD_BENCHMARKS=OFF \
-         -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
-         -DBUILD_VINEYARD_PROFILING=OFF && \
-    make vineyardd -j`nproc` && \
-    mv ./bin/vineyardd /usr/local/bin/vineyardd && \
-    rm -rf /work/v6d
-
 # build vineyard-python-dev
 FROM vineyardcloudnative/vineyard-manylinux1:20220512 as wheel
 
@@ -124,9 +78,6 @@ COPY modules/io /work/v6d/modules/io
 
 COPY python/vineyard /work/v6d/python/vineyard
 
-# copy the vineyardd binary from vineyardd image to build the python wheel
-COPY --from=vineyardd /usr/local/bin/vineyardd /work/v6d/python/vineyard/vineyardd
-
 # make sure the library been copied
 RUN cd /work/v6d/build && \
     make vineyard_client_python -j$(nproc) && \
@@ -147,8 +98,9 @@ RUN cd /work/v6d/build && \
     rm -rf /work/v6d
 
 # generate final image
-FROM python:3.10
+FROM python:3.10-slim-buster
 
+SHELL ["/bin/bash", "-l", "-c"]
 COPY --from=wheel /work/fixed_wheels/*.whl /tmp/
 
 RUN cd /tmp &&\

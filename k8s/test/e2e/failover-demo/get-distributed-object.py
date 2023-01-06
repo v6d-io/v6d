@@ -1,4 +1,3 @@
-# pylint: disable=django-not-configured
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -28,12 +27,7 @@ objid = env_dist['OBJECT_ID']
 meta = vineyard_client.get_meta(vineyard._C.ObjectID(objid))  # pylint: disable=no-member
 verified = True
 for i in range(0, meta['__elements_-size']):
-    second_meta = vineyard_client.get_meta(meta['__elements_-{}'.format(i)].id)  # pylint: disable=no-member
-    if second_meta['typename'] != "vineyard::DataFrame":
-        verified = False
-        break
-    for j in range(0,2):
-        if second_meta['__values_-value-{}'.format(j)].nbytes != 32:
-            verified = False
-if verified:
-    print('Passed', flush=True)
+    oid = meta['__elements_-{}'.format(i)].id
+    value = vineyard_client.get(vineyard_client.migrate(oid))
+    sum += (value['a'].sum() + value['b'].sum())
+print(sum, flush=True)

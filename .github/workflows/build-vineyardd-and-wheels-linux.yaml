@@ -39,12 +39,12 @@ jobs:
 
       - name: Login docker registry
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://docker.pkg.github.com -u $GITHUB_ACTOR --password-stdin
+          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://ghcr.io -u $GITHUB_ACTOR --password-stdin
 
       - name: Build vineyardd on Linux
         run: |
-          sudo docker build . -f docker/Dockerfile.vineyardd -t docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/local/bin/vineyardd /target/"
+          sudo docker build . -f docker/Dockerfile.vineyardd -t ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
+          sudo docker run --rm -v `pwd`:/target ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/local/bin/vineyardd /target/"
           ldd ./vineyardd
 
       - name: Package vineyardd artifact on Linux
@@ -57,14 +57,14 @@ jobs:
       - name: Upload docker image as nightly
         if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         run: |
-          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-nightly
-          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/v6d-io/v6d/vineyardd:nightly
+          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          ghcr.io/v6d-io/v6d/vineyardd:alpine-nightly
+          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          ghcr.io/v6d-io/v6d/vineyardd:nightly
 
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-nightly
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:nightly
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-nightly
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:nightly
 
       - name: Extract tag name
         id: tag
@@ -74,22 +74,22 @@ jobs:
       - name: Tag and upload docker for releases
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
-          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
-          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
+          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
+          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          ghcr.io/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
 
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
 
-          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-          sudo docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
+          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
+                          ghcr.io/v6d-io/v6d/vineyardd:latest
 
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:alpine-latest
-          sudo docker push docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:latest
 
       - name: Upload vineyardd to tagged release
         uses: svenstaro/upload-release-action@v2
@@ -148,14 +148,14 @@ jobs:
 
       - name: Login docker registry
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://docker.pkg.github.com -u $GITHUB_ACTOR --password-stdin
+          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://ghcr.io -u $GITHUB_ACTOR --password-stdin
 
       - name: Build wheel package on Linux
         run: |
           sudo docker build . -f docker/pypa/Dockerfile.manylinux1-wheel \
-                              -t docker.pkg.github.com/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
+                              -t ghcr.io/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
                               --build-arg python=${{ matrix.python }}
-          sudo docker run --rm -v `pwd`:/target docker.pkg.github.com/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
+          sudo docker run --rm -v `pwd`:/target ghcr.io/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
           ls -la ./fixed_wheels/
 
       - name: Extract tag name

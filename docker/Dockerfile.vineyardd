@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyardd-alpine-builder:builder-latest as builder
+FROM ghcr.io/v6d-io/v6d/vineyardd-alpine-builder:builder-latest as builder
 
 ADD . /work/v6d
 

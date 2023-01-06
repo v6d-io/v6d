@@ -30,6 +30,8 @@ setup:
       command: |
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
         make -C k8s deploy
+
+        make -C k8s/test/e2e kind-load-serialize-images
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-controller-manager
@@ -43,9 +45,9 @@ setup:
           for: condition=Available
     - name: install serialize-demo
       command: |
-        kubectl apply -f k8s/test/e2e/serialize-pv.yaml
-        kubectl apply -f k8s/test/e2e/serialize-pvc.yaml
-        kubectl apply -f k8s/test/e2e/serialize-demo.yaml
+        kubectl apply -f k8s/test/e2e/serialize-demo/serialize-pv.yaml
+        kubectl apply -f k8s/test/e2e/serialize-demo/serialize-pvc.yaml
+        kubectl apply -f k8s/test/e2e/serialize-demo/serialize-demo.yaml
       wait:
         - namespace: vineyard-system
           resource: deployment/serialize-demo-deployment
@@ -65,8 +67,12 @@ verify:
     interval: 10s
   cases:
     - query: |
-        kubectl get pod -l app=serialize-demo -n vineyard-system -oname | awk -F '/' '{print $2}' |  \
-        head -n 1 | xargs kubectl logs -n vineyard-system | yq e '{"result": .}' - | yq e 'to_entries' -
+        kubectl get pod -l app=serialize-demo -n vineyard-system -oname | \
+          awk -F '/' '{print $2}' | \
+          head -n 1 | \
+          xargs kubectl logs -n vineyard-system | \
+          yq e '{"result": .}' - | \
+          yq e 'to_entries' -
       expected: ../verify/serialize.yaml
     # test whether the serialized file exists
     - query: |
