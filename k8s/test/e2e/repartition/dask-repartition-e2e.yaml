@@ -28,26 +28,12 @@ setup:
       command: |
         docker pull ghcr.io/dask/dask:2022.8.1
         kind load docker-image ghcr.io/dask/dask:2022.8.1
-
-        make -C k8s/test/e2e kind-load-repartition-images
-    - name: install dask-scheduler and dask-worker
-      command: |
-        helm repo add dask https://helm.dask.org/
-        helm repo update
-        helm install my-release dask/dask -f k8s/test/e2e/repartition/repartition-dask-helm-values.yaml
-      wait:
-        - namespace: default
-          resource: deployment/my-release-dask-scheduler
-          for: condition=Available
-        - namespace: default
-          resource: deployment/my-release-dask-worker
-          for: condition=Available
     - name: install scheduler-plugin and operator
       command: |
-        make -C k8s/test/e2e kind-load-repartition-images
         kind load docker-image vineyardcloudnative/vineyard-operator:latest
-
         make -C k8s deploy
+
+        make -C k8s/test/e2e kind-load-repartition-images
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-controller-manager
@@ -58,6 +44,18 @@ setup:
       wait:
         - namespace: vineyard-system
           resource: vineyardd/vineyardd-sample
+          for: condition=Available
+    - name: install dask-scheduler and dask-worker
+      command: |
+        helm repo add dask https://helm.dask.org/
+        helm repo update
+        helm install my-release dask/dask -f k8s/test/e2e/repartition-demo/repartition-dask-helm-values.yaml
+      wait:
+        - namespace: default
+          resource: deployment/my-release-dask-scheduler
+          for: condition=Available
+        - namespace: default
+          resource: deployment/my-release-dask-worker
           for: condition=Available
     - name: install job1
       command: |
@@ -97,7 +95,7 @@ verify:
         kubectl get pod -l app=dask-repartition-job2 -n vineyard-job -o name | \
           awk -F '/' '{print $2}' | \
           xargs kubectl logs -n vineyard-job | \
-          head -n 1 | \
+          tail -n 1 | \
           yq e '{"partition": .}' - | \
           yq e 'to_entries' -
       expected: ../verify/partition.yaml

@@ -51,7 +51,7 @@ setup:
           for: condition=Available
     - name: wait globalobjects ready
       command: |
-        while [[ -z $(kubectl get globalobjects -n vineyard-system -oname)]]; \
+        while [[ -z $(kubectl get globalobjects -n vineyard-system -oname) ]]; \
         do \
           sleep 0.1; \
         done

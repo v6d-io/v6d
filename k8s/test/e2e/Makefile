@@ -138,21 +138,21 @@ kind-load-repartition-images: load-dask-repartition load-dask-repartition-job1 l
 dask-repartition:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=dask-repartition.py \
-		--build-arg PYPI_DEPENDENCIES="dask distributed" \
+		--build-arg PYPI_DEPENDENCIES="dask distributed vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition:$(TAG)
 .PHONY: dask-repartition
 
 dask-repartition-job1:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=job1.py \
-		--build-arg PYPI_DEPENDENCIES="dask distributed lz4" \
+		--build-arg PYPI_DEPENDENCIES="dask distributed lz4 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition-job1:$(TAG)
 .PHONY: dask-repartition-job1
 
 dask-repartition-job2:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=job2.py \
-		--build-arg PYPI_DEPENDENCIES="dask distributed lz4" \
+		--build-arg PYPI_DEPENDENCIES="dask distributed lz4 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition-job2:$(TAG)
 .PHONY: dask-repartition-job2
 
@@ -169,7 +169,7 @@ kind-load-sidecar-images: load-sidecar-job
 
 sidecar-job:
 	docker build sidecar-demo/ -f Dockerfile \
-		--build-arg APP=job.py \ 
+		--build-arg APP=job.py \
 		-t $(REGISTRY)/sidecar-job:$(TAG)
 .PHONY: sidecar-job
 

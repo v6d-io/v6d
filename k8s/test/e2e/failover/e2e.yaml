@@ -49,42 +49,42 @@ setup:
         sed 's/$job/localObject/' k8s/test/e2e/failover-demo/failover-job.yaml | \
           gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
           kubectl apply -f -
-        kubectl wait --for=condition=Ready pod -l app=local-object -n vineyard-job --timeout=5m
-        while [[ -z $(kubectl get pod -l app=local-object -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
+        kubectl wait --for=condition=Ready pod -l app=build-local-object -n vineyard-job --timeout=5m
+        while [[ -z $(kubectl get pod -l app=build-local-object -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
         do \
           sleep 0.1; \
         done
-        export meta=$(kubectl get pod -l app=local-object -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export meta=$(kubectl get pod -l app=build-local-object -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
         export localobjectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
       wait:
         - namespace: vineyard-job
-          resource: deployment/local-object
+          resource: deployment/build-local-object
           for: condition=Available
     - name: install distributed-object
       command: |
         sed 's/$job/distributedObject1/' k8s/test/e2e/failover-demo/failover-job.yaml | \
           gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
           kubectl apply -f -
-        kubectl wait --for=condition=Ready pod -l app=distributed-object-step1 -n vineyard-job --timeout=5m
-        while [[ -z $(kubectl get pod -l app=distributed-object-step1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
+        kubectl wait --for=condition=Ready pod -l app=build-distributed-object-step1 -n vineyard-job --timeout=5m
+        while [[ -z $(kubectl get pod -l app=build-distributed-object-step1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
         do \
           sleep 0.1; \
         done
-        export meta=$(kubectl get pod -l app=distributed-object-step1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export meta=$(kubectl get pod -l app=build-distributed-object-step1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
         export step1objectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
         sed 's/objectid/'$step1objectid'/;s/$job/distributedObject2/' k8s/test/e2e/failover-demo/failover-job.yaml | \
           gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
           kubectl apply -f -
-        kubectl wait --for=condition=Ready pod -l app=distributed-object-step2 -n vineyard-job --timeout=5m
-        while [[ -z $(kubectl get pod -l app=distributed-object-step2 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
+        kubectl wait --for=condition=Ready pod -l app=build-distributed-object-step2 -n vineyard-job --timeout=5m
+        while [[ -z $(kubectl get pod -l app=build-distributed-object-step2 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
         do \
           sleep 0.1; \
         done
-        export meta=$(kubectl get pod -l app=distributed-object-step2 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export meta=$(kubectl get pod -l app=build-distributed-object-step2 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
         export distributedobjectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
       wait:
         - namespace: vineyard-job
-          resource: deployment/distributed-object-step2
+          resource: deployment/build-distributed-object-step2
           for: condition=Available
     - name: install backup
       command: |
