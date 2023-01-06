@@ -140,11 +140,18 @@ replicas:
     kind: Vineyardd
     metadata:
       name: vineyardd-sample
+      # don't use default namespace
       namespace: vineyard-system
     spec:
-      image: vineyardcloudnative/vineyardd:latest
-      imagePullPolicy: IfNotPresent
-      replicas: 3
+      replicas: 2
+      etcd:
+        replicas: 3
+      service:
+        type: ClusterIP
+        port: 9600
+      vineyardConfig:
+        image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+        imagePullPolicy: IfNotPresent
     EOF
 
 The vineyard-operator will created deployment for required metadata service backend (:code:`etcd`),
@@ -1217,43 +1224,41 @@ daemon server with spill mechanism:
     kind: Vineyardd
     metadata:
       name: vineyardd-sample
+      # don't use default namespace
       namespace: vineyard-system
     spec:
-      image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-      replicas: 3
-      imagePullPolicy: IfNotPresent
-      # vineyardd's configuration
-      sharedMemorySize: "2048M"
-      syncCRDs: true
-      enableMetrics: false
-      # spill configuration
-      spillConfig:
-        # if set, then enable the spill mechanism
-        name: spill-path
-        # please make sure the path exists
-        path: /var/vineyard/spill
-        spillLowerRate: "0.3"
-        spillUpperRate: "0.8"
-        persistentVolumeSpec:
-          storageClassName: manual
-          capacity:
-            storage: 1Gi
-          accessModes:
-            - ReadWriteOnce
-          hostPath:
-            path: /var/vineyard/spill
-      persistentVolumeClaimSpec:
-          storageClassName: manual
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 512Mi
+      replicas: 2
       etcd:
         replicas: 3
       service:
         type: ClusterIP
         port: 9600
+      vineyardConfig:
+        image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+        imagePullPolicy: IfNotPresent
+        size: "2048"
+        # spill configuration
+        spillConfig:
+          name: spill-path
+          # please make sure the path exists
+          path: /var/vineyard/spill
+          spillLowerRate: "0.3"
+          spillUpperRate: "0.8"
+          persistentVolumeSpec:
+            storageClassName: manual
+            capacity:
+              storage: 1Gi
+            accessModes:
+              - ReadWriteOnce
+            hostPath:
+              path: /var/vineyard/spill
+          persistentVolumeClaimSpec:
+            storageClassName: manual
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 512Mi
     EOF
 
 For more information about the checkpoint mechanism in vineyard operator, there
