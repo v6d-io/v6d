@@ -19,6 +19,10 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ${{ matrix.os }}
