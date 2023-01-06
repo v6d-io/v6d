@@ -66,7 +66,7 @@ setup:
     - name: install job3
       command: |
         sed 's/$job/distributedJob3/' k8s/test/e2e/assembly-demo/assembly-job.yaml | \
-          gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | \
+          gomplate -d config=k8s/test/e2e/assembly-demo/assembly-job-config.yaml | \
           kubectl apply -f -
       wait:
         - namespace: vineyard-job
