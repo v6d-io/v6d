@@ -59,7 +59,7 @@ Compressor::~Compressor() {
 
 Status Compressor::Compress(const void* data, const size_t size) {
   if (!finished_) {
-    return Status::Invalid("The zstd stream is not finished yet");
+    return Status::Invalid("Compressor: the zstd stream is not finished yet");
   }
   input_ = ZSTD_inBuffer{data, size, 0};
   finished_ = false;
@@ -138,7 +138,9 @@ Decompressor::~Decompressor() {
 
 Status Decompressor::Buffer(void*& data, size_t& size) {
   if (!finished_) {
-    return Status::Invalid("The zstd stream is not finished yet");
+    return Status::Invalid(
+        "Decompressor: the zstd stream is not finished yet, the next input "
+        "cannot be feeded");
   }
   data = const_cast<void*>(input_.src);
   size = input_.size;
@@ -147,7 +149,17 @@ Status Decompressor::Buffer(void*& data, size_t& size) {
 
 Status Decompressor::Decompress(const size_t size) {
   if (!finished_) {
-    return Status::Invalid("The zstd stream is not finished yet");
+    // pull again, if the returned size is zero, mark is as finished
+    char buffer[1024];
+    size_t size = 0;
+    auto s = this->Pull(buffer, 1024, size);
+    if (!(s.IsStreamDrained() || size == 0)) {
+      // indicates an error, as there's error, the consumed 1 byte doesn't
+      // matter
+      return Status::Invalid(
+          "Decompressor: the zstd stream is not finished yet, new decompress "
+          "process cannot be started");
+    }
   }
   input_.size = size;
   input_.pos = 0;
@@ -159,6 +171,10 @@ Status Decompressor::Pull(void* data, const size_t capacity, size_t& size) {
   if (capacity == 0) {
     size = 0;
     return Status::OK();
+  }
+  if (finished_) {
+    size = 0;
+    return Status::StreamDrained();
   }
 
   // reset output pointer

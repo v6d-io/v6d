@@ -21,6 +21,7 @@ import json
 import logging
 
 import numpy as np
+import pandas as pd
 
 import pytest
 
@@ -43,6 +44,27 @@ def test_migration(vineyard_ipc_sockets):
     client1 = vineyard.connect(vineyard_ipc_sockets[0])
     client2 = vineyard.connect(vineyard_ipc_sockets[1])
 
+    # test on scalars
+
+    # test if metadata of remote object available
+    data = "abcdefgh"
+    o = client1.put(data)
+    client1.persist(o)
+    meta = client2.get_meta(o, sync_remote=True)
+
+    # migrate local to local: do nothing.
+    o1 = client1.migrate(o)
+    assert o == o1
+    logger.info('------- finish migrate local --------')
+
+    # migrate remote to local: do nothing.
+    o2 = client2.migrate(o)
+    assert o != o2
+    assert client1.get(o1) == client2.get(o2)
+    logger.info('------- finish migrate remote --------')
+
+    # test on numpy ndarray
+
     # test if metadata of remote object available
     data = np.ones((1, 2, 3, 4, 5))
     o = client1.put(data)
@@ -61,6 +83,25 @@ def test_migration(vineyard_ipc_sockets):
     np.testing.assert_allclose(client1.get(o1), client2.get(o2))
     logger.info('------- finish migrate remote --------')
 
+    # test on pandas dataframe
+
+    # test if metadata of remote object available
+    data = pd.DataFrame(np.ones((1, 2)))
+    o = client1.put(data)
+    client1.persist(o)
+    meta = client2.get_meta(o, sync_remote=True)
+
+    # migrate local to local: do nothing.
+    o1 = client1.migrate(o)
+    assert o == o1
+    logger.info('------- finish migrate local --------')
+
+    # migrate remote to local: do nothing.
+    o2 = client2.migrate(o)
+    assert o != o2
+    pd.testing.assert_frame_equal(client1.get(o1), client2.get(o2))
+    logger.info('------- finish migrate remote --------')
+
 
 @pytest.mark.skip_without_migration()
 def test_fetch_and_get(vineyard_ipc_sockets):
@@ -70,6 +111,24 @@ def test_fetch_and_get(vineyard_ipc_sockets):
 
     client1 = vineyard.connect(vineyard_ipc_sockets[0])
     client2 = vineyard.connect(vineyard_ipc_sockets[1])
+
+    # test on scalars
+
+    # test if metadata of remote object available
+    data = "abcdefgh"
+    o = client1.put(data)
+    client1.persist(o)
+    meta = client2.get_meta(o, sync_remote=True)
+
+    # migrate local to local: do nothing.
+    assert client1.get(o) == client1.get(o, fetch=True)
+    logger.info('------- finish migrate local --------')
+
+    # migrate remote to local: do nothing.
+    assert client1.get(o) == client2.get(o, fetch=True)
+    logger.info('------- finish migrate remote --------')
+
+    # test on numpy ndarray
 
     # test if metadata of remote object available
     data = np.ones((1, 2, 3, 4, 5))
@@ -84,6 +143,22 @@ def test_fetch_and_get(vineyard_ipc_sockets):
 
     # migrate remote to local: do nothing.
     np.testing.assert_allclose(client1.get(o), client2.get(o, fetch=True))
+    logger.info('------- finish migrate remote --------')
+
+    # test on pandas dataframe
+
+    # test if metadata of remote object available
+    data = pd.DataFrame(np.ones((33, 44)))
+    o = client1.put(data)
+    client1.persist(o)
+    meta = client2.get_meta(o, sync_remote=True)
+
+    # migrate local to local: do nothing.
+    pd.testing.assert_frame_equal(client1.get(o), client1.get(o, fetch=True))
+    logger.info('------- finish migrate local --------')
+
+    # migrate remote to local: do nothing.
+    pd.testing.assert_frame_equal(client1.get(o), client2.get(o, fetch=True))
     logger.info('------- finish migrate remote --------')
 
 
