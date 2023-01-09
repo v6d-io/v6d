@@ -12,12 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM  vineyardcloudnative/vineyard-python:latest
+FROM ghcr.io/v6d-io/v6d/vineyard-python-dev:latest
 
 WORKDIR /
 
-COPY ./serialize.py /
+# install kubectl and kubernetes package
+RUN python -c "import urllib.request; open('/usr/bin/kubectl', 'wb').write(urllib.request.urlopen('https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl').read())" && \
+    chmod +x /usr/bin/kubectl && \
+    pip3 install --no-cache-dir kubernetes
 
-ENTRYPOINT [ "python3" ]
+ARG PYPI_DEPENDENCIES=""
+ENV PYPI_DEPENDENCIES ${PYPI_DEPENDENCIES}
 
-CMD [ "serialize.py" ]
+RUN if [[ ! "${PYPI_DEPENDENCIES}" == "" ]]; then pip3 install --no-cache-dir ${PYPI_DEPENDENCIES}; fi
+
+ARG APP
+ENV APP ${APP}
+
+COPY ${APP} /job.py
+
+ENTRYPOINT [ "python" ]
+CMD [ "/job.py" ]

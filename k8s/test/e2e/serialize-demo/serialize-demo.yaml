@@ -16,46 +16,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: v6d-workflow-demo-job2-deployment
-  namespace: vineyard-job
+  name: serialize-demo-deployment
+  # please make the namespace the same as the vineyardd's namespace
+  # as the pod should use the vineyardd's pvc and pvc is namespace scoped
+  namespace: vineyard-system
 spec:
   selector:
     matchLabels:
-      app: v6d-workflow-demo-job2
-  replicas: 3
+      app: serialize-demo
+  replicas: 1
   template:
     metadata:
       annotations:
-        # The label is limited to 63 characters, so we need to use the annotation here
-        scheduling.k8s.v6d.io/required: v6d-workflow-demo-job1
+        scheduling.k8s.v6d.io/required: none
       labels:
-        app: v6d-workflow-demo-job2
+        app: serialize-demo
         # this label represents the vineyardd's name that need to be used
         scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
-        scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
+        scheduling.k8s.v6d.io/job: serialize-demo
     spec:
       schedulerName: vineyard-scheduler
       containers:
-      - name: job2
-        image: ghcr.io/v6d-io/v6d/job2
+      - name: serialize-demo
+        image: ghcr.io/v6d-io/v6d/serialize-job
         imagePullPolicy: IfNotPresent
-        env:
-        - name: JOB_NAME
-          value: v6d-workflow-demo-job2
-        # pass node name to the environment
-        - name: NODENAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        # TODO: could we make it more native?
-        envFrom:
-          - configMapRef:
-              name: v6d-workflow-demo-job1
         volumeMounts:
         - mountPath: /var/run
           name: vineyard-sock
+        - mountPath: /var/vineyard/serialize
+          name: serialize-pvc
       volumes:
       - name: vineyard-sock
         hostPath:
           path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+      - name: serialize-pvc
+        persistentVolumeClaim:
+          claimName: serialize-path

@@ -37,6 +37,8 @@ setup:
         helm install vineyard-operator charts/vineyard-operator \
             --namespace vineyard-system \
             --create-namespace
+
+        make -C k8s/test/e2e kind-load-local-assembly-images
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-operator-controller-manager
@@ -52,14 +54,18 @@ setup:
       command: |
         kubectl create namespace vineyard-job
         kubectl label namespace vineyard-job operation-injection=enabled
-        sed 's/$job/job1/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
+        sed 's/$job/job1/' k8s/test/e2e/assembly-demo/assembly-job.yaml | \
+          gomplate -d config=k8s/test/e2e/assembly-demo/assembly-job-config.yaml \
+          | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/assembly-job1
           for: condition=Available
     - name: install job2
       command: |
-        sed 's/$job/job2/' k8s/test/e2e/assembly-job.yaml | gomplate -d config=k8s/test/e2e/assembly-job-config.yaml | kubectl apply -f -
+        sed 's/$job/job2/' k8s/test/e2e/assembly-demo/assembly-job.yaml | \
+          gomplate -d config=k8s/test/e2e/assembly-demo/assembly-job-config.yaml | \
+          kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/assembly-job2
@@ -78,5 +84,11 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
   cases:
-    - query: 'kubectl get pod -l app=assembly-job2 -n vineyard-job -oname | awk -F ''/'' ''{print $2}'' | head -n 1 | xargs kubectl logs -n vineyard-job | yq e ''{"sum": .}'' - | yq e ''to_entries'' -'
+    - query: |
+        kubectl get pod -l app=assembly-job2 -n vineyard-job -oname | \
+          awk -F '/' '{print $2}' | \
+          head -n 1 | \
+          xargs kubectl logs -n vineyard-job | \
+          yq e '{"sum": .}' - | \
+          yq e 'to_entries' -
       expected: ../verify/local-assembly-values.yaml

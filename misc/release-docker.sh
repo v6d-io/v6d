@@ -11,13 +11,13 @@ if [ "$version" = "" ]; then
     exit 1
 fi
 
-docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:$version
-docker pull docker.pkg.github.com/v6d-io/v6d/vineyardd:latest
-docker pull docker.pkg.github.com/v6d-io/v6d/vineyard-operator:nightly
+docker pull ghcr.io/v6d-io/v6d/vineyardd:$version
+docker pull ghcr.io/v6d-io/v6d/vineyardd:latest
+docker pull ghcr.io/v6d-io/v6d/vineyard-operator:nightly
 
-docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:$version vineyardcloudnative/vineyardd:$version
-docker tag docker.pkg.github.com/v6d-io/v6d/vineyardd:latest vineyardcloudnative/vineyardd:latest
-docker tag docker.pkg.github.com/v6d-io/v6d/vineyard-operator:nightly vineyardcloudnative/vineyard-operator:nightly
+docker tag ghcr.io/v6d-io/v6d/vineyardd:$version vineyardcloudnative/vineyardd:$version
+docker tag ghcr.io/v6d-io/v6d/vineyardd:latest vineyardcloudnative/vineyardd:latest
+docker tag ghcr.io/v6d-io/v6d/vineyard-operator:nightly vineyardcloudnative/vineyard-operator:nightly
 
 docker push vineyardcloudnative/vineyardd:$version
 docker push vineyardcloudnative/vineyardd:latest

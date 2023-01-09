@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.pkg.github.com/v6d-io/v6d/vineyard-manylinux1:20220512
+FROM ghcr.io/v6d-io/v6d/vineyard-manylinux1:20220512
 
-# target: docker.pkg.github.com/v6d-io/v6d/vineyard-wheel
+# target: ghcr.io/v6d-io/v6d/vineyard-wheel
 
 # specify python version:
 #   - cp36-cp36m

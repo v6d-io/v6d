@@ -14,15 +14,15 @@
 #
 
 localObject:
-  jobName: local-object
+  jobName: build-local-object
   nodeName: "kind-worker2"
 
 distributedObject1:
-  jobName: distributed-object-step1
+  jobName: build-distributed-object-step1
   nodeName: "kind-worker"
 
 distributedObject2:
-  jobName: distributed-object-step2
+  jobName: build-distributed-object-step2
   nodeName: "kind-worker3"
 
 getLocalObject:

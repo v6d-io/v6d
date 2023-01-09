@@ -1,13 +1,13 @@
-BUILDER_REGISTRY	:= docker.pkg.github.com/v6d-io
-BUILDER_IMAGE		:= v6d/vineyardd-alpine-builder
+BUILDER_REGISTRY	:= ghcr.io/v6d-io/v6d
+BUILDER_IMAGE		:= vineyardd-alpine-builder
 BUILDER_TAG 		:= builder-latest
 
-ALPINE_REGISTRY		:= docker.pkg.github.com/v6d-io
-ALPINE_IMAGE		:= v6d/vineyardd
+ALPINE_REGISTRY		:= ghcr.io/v6d-io/v6d
+ALPINE_IMAGE		:= vineyardd
 ALPINE_TAG			:= alpine-latest
 
-PYTHON_DEV_REGISTRY	:= docker.pkg.github.com/v6d-io
-PYTHON_DEV_IMAGE	:= v6d/vineyard-python-dev
+PYTHON_DEV_REGISTRY	:= ghcr.io/v6d-io/v6d
+PYTHON_DEV_IMAGE	:= vineyard-python-dev
 PYTHON_DEV_TAG		:= latest
 
 all: builder docker-build docker-push

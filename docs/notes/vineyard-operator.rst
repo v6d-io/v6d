@@ -986,7 +986,7 @@ then deploy `workflow-job1`_ as follows.
         schedulerName: vineyard-scheduler
         containers:
         - name: job1
-          image: ghcr.io/v6d-io/v6d/job1
+          image: ghcr.io/v6d-io/v6d/workflow-job1
           # please set the JOB_NAME env, it will be used by vineyard scheduler
           env:
           - name: JOB_NAME
@@ -1068,7 +1068,7 @@ Then deploy the `workflow-job2`_ as follows,
           schedulerName: vineyard-scheduler
           containers:
           - name: job2
-            image: ghcr.io/v6d-io/v6d/job2
+            image: ghcr.io/v6d-io/v6d/workflow-job2
             imagePullPolicy: IfNotPresent
             env:
             - name: JOB_NAME

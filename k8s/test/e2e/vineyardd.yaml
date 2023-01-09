@@ -20,7 +20,7 @@ metadata:
   # don't use default namespace
   namespace: vineyard-system
 spec:
-  replicas: 2
+  replicas: 3
   etcd:
     replicas: 3
   service:
@@ -29,4 +29,3 @@ spec:
   vineyardConfig:
     image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
     imagePullPolicy: IfNotPresent
-
