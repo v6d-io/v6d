@@ -157,7 +157,7 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
                 stream_writer.write_table(table)
             else:
                 for batch in table.to_batches():
-                    chunks.append(client.put(batch))
+                    chunks.append(client.put(batch, persist=True))
     except Exception:  # pylint: disable=broad-except
         report_exception()
         stream_writer.fail()

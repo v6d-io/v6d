@@ -132,7 +132,7 @@ def builder_context(builders=None, base=None):
         _builder_context_local.default_builder = current_builder
 
 
-def put(client, value, builder=None, **kw):
+def put(client, value, builder=None, persist=False, **kwargs):
     """Put python value to vineyard.
 
     .. code:: python
@@ -150,11 +150,13 @@ def put(client, value, builder=None, **kw):
             types are decided by modules that registered to vineyard. By default,
             python value can be put to vineyard after serialized as a bytes buffer
             using pickle.
-        builder:
+        builder: optional
             When putting python value to vineyard, an optional *builder* can be
             specified to tell vineyard how to construct the corresponding vineyard
             :class:`Object`. If not specified, the default builder context will be
             used to select a proper builder.
+        persist: bool, optional
+            If true, persist the object after creation.
         kw:
             User-specific argument that will be passed to the builder.
 
@@ -162,15 +164,19 @@ def put(client, value, builder=None, **kw):
         ObjectID: The result object id will be returned.
     """
     if builder is not None:
-        return builder(client, value, **kw)
+        return builder(client, value, **kwargs)
 
-    meta = get_current_builders().run(client, value, **kw)
+    meta = get_current_builders().run(client, value, **kwargs)
 
     # the builders is expected to return an :class:`ObjectMeta`, or an
     # :class:`Object` (in the `bytes_builder` and `memoryview` builder).
     if isinstance(meta, (ObjectMeta, Object)):
+        if persist:
+            client.persist(meta.id)
         return meta.id
     else:
+        if persist:
+            client.persist(meta)
         return meta  # None or ObjectID
 
 
