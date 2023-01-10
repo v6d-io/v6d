@@ -27,7 +27,7 @@ env_dist = os.environ
 
 objid = env_dist['OBJECT_ID']
 
-value = client.get(vineyard._C.ObjectID(objid))
+value = client.get(vineyard.ObjectID(objid))
 
 sum = np.sum(value)
 print(sum,flush=True)

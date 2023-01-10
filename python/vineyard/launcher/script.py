@@ -57,7 +57,7 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
     def exit_code(self):
         return self._exit_code
 
-    def run(self, *args, **kw):
+    def run(self, *args, **kwargs):
         # FIXME run self._script on a set of host machines, the host is decided
         # by the arguments of the launcher in `__init__`, and those inputs object
         cmd = [self._script]
@@ -67,7 +67,7 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
             else:
                 cmd.append(repr(arg))
         env = os.environ.copy()
-        for key, value in kw.items():
+        for key, value in kwargs.items():
             # if key is all in lower cases, treat it as arguments, otherwise as the
             # environment variables.
             if key.islower():

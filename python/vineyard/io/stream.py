@@ -33,7 +33,7 @@ logger = logging.getLogger('vineyard')
 
 
 @registerize
-def read(path, *args, handlers=None, **kwargs):
+def read(path, *args, handlers=None, accumulate=False, **kwargs):
     """Open a path and read it as a single stream.
 
     Parameters
@@ -41,6 +41,13 @@ def read(path, *args, handlers=None, **kwargs):
     path: str
         Path to read, the last reader registered for the scheme of
         the path will be used.
+    handlers: list, optional
+        If handlers is not None, launched worker processes will be
+        emplaced into the list for further customized job lifecycle
+        management. Default is None.
+    accumulate: bool, optional
+        If :code:`accumulate` is True, it will return a data frame,
+        rather than dataframe stream. Default is False.
     vineyard_ipc_socket: str
         The local or remote vineyard's IPC socket location that the
         remote readers will use to establish connections with the
@@ -63,6 +70,7 @@ def read(path, *args, handlers=None, **kwargs):
                     proc_kwargs.pop('vineyard_ipc_socket'),
                     *args,
                     handlers=handlers,
+                    accumulate=accumulate,
                     **proc_kwargs
                 )
                 if r is not None:
@@ -88,6 +96,10 @@ def write(path, stream, *args, handlers=None, **kwargs):
         will be used.
     stream: vineyard stream
         Stream that produces the data to write.
+    handlers: list, optional
+        If handlers is not None, launched worker processes will be
+        emplaced into the list for further customized job lifecycle
+        management. Default is None.
     vineyard_ipc_socket: str
         The local or remote vineyard's IPC socket location that the remote
         readers will use to establish connections with the vineyard server.
@@ -140,14 +152,14 @@ def open(path, *args, mode='r', handlers=None, **kwargs):
         Path to open.
     mode: char
         Mode about how to open the path, :code:`r` is for read and :code:`w` for write.
-    vineyard_ipc_socket: str
-        Vineyard's IPC socket location.
-    vineyard_endpoint: str
-        Vineyard's RPC socket address.
     handlers:
         A dict that will be filled with a :code:`handler` that contains the process
         handler of the underlying read/write process that can be joined using
         :code:`join` to capture the possible errors during the I/O proceeding.
+    vineyard_ipc_socket: str
+        Vineyard's IPC socket location.
+    vineyard_endpoint: str
+        Vineyard's RPC socket address.
 
     See Also
     --------

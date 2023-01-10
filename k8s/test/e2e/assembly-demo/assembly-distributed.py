@@ -33,13 +33,13 @@ new_meta_size = 0
 new_id_size = 0
 new_meta['typename'] = 'vineyard::GlobalSequence'
 new_meta.set_global(True)
-old_meta = vineyard_client.get_meta(vineyard._C.ObjectID(
+old_meta = vineyard_client.get_meta(vineyard.ObjectID(
     globalobject_id))  # pylint: disable=no-member
 for i in range(0, old_meta['__elements_-size']):
-    member_meta = vineyard_client.get_meta(vineyard._C.ObjectID(
+    member_meta = vineyard_client.get_meta(vineyard.ObjectID(
         old_meta['__elements_-{}'.format(i)].id))  # pylint: disable=no-member
     if member_meta['id'] in dist:
-        id = vineyard._C.ObjectID(dist[member_meta['id']])
+        id = vineyard.ObjectID(dist[member_meta['id']])
         local_meta = vineyard_client.get_meta(id)  # pylint: disable=no-member
         for j in range(0, local_meta['__elements_-size']):
             md = local_meta['__elements_-{}'.format(j)]

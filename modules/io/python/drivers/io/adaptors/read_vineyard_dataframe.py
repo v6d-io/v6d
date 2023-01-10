@@ -52,12 +52,15 @@ def read_vineyard_dataframe(
     except Exception:  # pylint: disable=broad-except
         df_id = vineyard.ObjectID(name)
     dataframes = client.get(df_id)
+    if not isinstance(dataframes, (tuple, list)):
+        dataframes = [dataframes]
 
     writer: DataframeStream.Writer = stream.open_writer(client)
 
     try:
-        for df in dataframes:
-            batch = pa.RecordBatch.from_pandas(df)
+        for batch in dataframes:
+            if not isinstance(batch, pa.RecordBatch):
+                batch = pa.RecordBatch.from_pandas(batch)
             writer.write(batch)
         writer.finish()
     except Exception:  # pylint: disable=broad-except

@@ -51,7 +51,7 @@ for key, value in dist.items():
 
 dask_scheduler = env_dist['DASK_SCHEDULER']
 with vineyard_for_dask():
-    ddf = client.get(vineyard._C.ObjectID(gid),
+    ddf = client.get(vineyard.ObjectID(gid),
                      dask_scheduler=dask_scheduler, dask_workers=dask_workers)
     partitions = ddf.npartitions
     print(partitions, flush=True)

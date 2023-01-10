@@ -27,7 +27,7 @@ env_dist = os.environ
 
 hostname = env_dist['NODENAME']
 metaid = env_dist.get(hostname)
-meta = client.get_meta(vineyard._C.ObjectID(metaid)) # pylint: disable=no-member
+meta = client.get_meta(vineyard.ObjectID(metaid)) # pylint: disable=no-member
 value = client.get(meta['buffer_'].id)
 
 sum = np.sum(value)

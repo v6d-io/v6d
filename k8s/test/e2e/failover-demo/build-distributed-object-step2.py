@@ -33,7 +33,7 @@ obj = client.put(df)
 client.persist(obj)
 
 meta1 = client.get_meta(obj)
-meta2 = client.get_meta(vineyard._C.ObjectID(objid))
+meta2 = client.get_meta(vineyard.ObjectID(objid))
 
 meta = vineyard.ObjectMeta()
 meta['__elements_-size'] = 2

@@ -35,7 +35,7 @@ vineyard_client = vineyard.connect('/var/run/vineyard.sock')
 stream = RecordBatchStream.new(vineyard_client)
 vineyard_client.persist(stream.id)
 meta1 = vineyard_client.get_meta(stream.id)
-meta2 = vineyard_client.get_meta(vineyard._C.ObjectID(metaid))
+meta2 = vineyard_client.get_meta(vineyard.ObjectID(metaid))
 
 meta = vineyard.ObjectMeta()
 meta['__elements_-size'] = 2

@@ -747,7 +747,7 @@ def get_tree(meta, tree, memory=False, memory_dict=None, parent=None):
     tree.create_node(node, node, parent=parent)
     parent = node
     for key in meta:
-        if isinstance(meta[key], vineyard._C.ObjectMeta):
+        if isinstance(meta[key], vineyard.ObjectMeta):
             get_tree(meta[key], tree, memory, memory_dict, parent)
 
 
@@ -755,7 +755,7 @@ def get_memory_used(meta):
     """Utility to get the memory used by the vineyard object."""
     total_bytes = 0
     for key in meta:
-        if isinstance(meta[key], vineyard._C.ObjectMeta):
+        if isinstance(meta[key], vineyard.ObjectMeta):
             if str(meta[key]['typename']) == 'vineyard::Blob':
                 size = meta[key]['length']
                 total_bytes += size

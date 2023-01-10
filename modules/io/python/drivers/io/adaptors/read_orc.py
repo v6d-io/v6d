@@ -27,6 +27,7 @@ import fsspec
 from fsspec.core import split_protocol
 
 import vineyard
+from vineyard.data.utils import str_to_bool
 from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import expand_full_path
 from vineyard.io.utils import report_error
@@ -49,7 +50,9 @@ def make_empty_batch(schema):
     return pyarrow.RecordBatch.from_arrays(colmuns, schema.names)
 
 
-def read_orc_blocks(fs, path, read_options, proc_num, proc_index, writer):
+def read_orc_blocks(
+    client, fs, path, read_options, proc_num, proc_index, writer, chunks
+):
     import pyarrow.orc
 
     columns = read_options.get('columns', None)
@@ -69,9 +72,16 @@ def read_orc_blocks(fs, path, read_options, proc_num, proc_index, writer):
             kwargs = {}
             for stripe in range(stripe_begin, stripe_end):
                 batch = reader.read_stripe(stripe, **kwargs)
-                writer.write(batch)
+                if writer is not None:
+                    writer.write(batch)
+                else:
+                    chunks.append(client.put(batch))
         else:
-            writer.write(make_empty_batch(reader.schema))
+            batch = make_empty_batch(reader.schema)
+            if writer is not None:
+                writer.write(batch)
+            else:
+                chunks.append(client.put(batch))
 
 
 def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
@@ -81,6 +91,7 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     read_options: Dict,
     proc_num: int,
     proc_index: int,
+    accumulate: bool = False,
 ):
     """Read bytes from external storage and produce a ByteStream,
     which will later be assembled into a ParallelStream.
@@ -130,16 +141,28 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
             sys.exit(-1)
     files = sorted(files)
 
-    stream, writer = None, None
+    stream, writer, chunks = None, None, []
     try:
         for index, file_path in enumerate(files):
-            if index == 0:
+            if index == 0 and not accumulate:
                 stream = DataframeStream.new(client, {})
                 client.persist(stream.id)
                 report_success(stream.id)
                 writer = stream.open_writer(client)
-            read_orc_blocks(fs, file_path, read_options, proc_num, proc_index, writer)
-        writer.finish()
+            read_orc_blocks(
+                client,
+                fs,
+                file_path,
+                read_options,
+                proc_num,
+                proc_index,
+                writer,
+                chunks,
+            )
+        if writer is not None:
+            writer.finish()
+        else:
+            report_success(json.dumps([repr(vineyard.ObjectID(k)) for k in chunks]))
     except Exception:  # pylint: disable=broad-except
         report_exception()
         if writer is not None:
@@ -151,7 +174,7 @@ def main():
     if len(sys.argv) < 7:
         print(
             "usage: ./read_orc <ipc_socket> <path> <storage_options> <read_options> "
-            "<proc_num> <proc_index>"
+            "<accumulate> <proc_num> <proc_index>"
         )
         sys.exit(1)
     ipc_socket = sys.argv[1]
@@ -162,9 +185,18 @@ def main():
     read_options = json.loads(
         base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
     )
-    proc_num = int(sys.argv[5])
-    proc_index = int(sys.argv[6])
-    read_bytes(ipc_socket, path, storage_options, read_options, proc_num, proc_index)
+    accumulate = str_to_bool(sys.argv[5])
+    proc_num = int(sys.argv[6])
+    proc_index = int(sys.argv[7])
+    read_bytes(
+        ipc_socket,
+        path,
+        storage_options,
+        read_options,
+        proc_num,
+        proc_index,
+        accumulate=accumulate,
+    )
 
 
 if __name__ == "__main__":

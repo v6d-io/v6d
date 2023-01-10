@@ -26,13 +26,13 @@ env_dist = os.environ
 job = env_dist['REQUIRED_JOB_NAME']
 metaid = env_dist.get(job)
 sum = 0
-top_meta = vineyard_client.get_meta(vineyard._C.ObjectID(metaid))  # pylint: disable=no-member
+top_meta = vineyard_client.get_meta(vineyard.ObjectID(metaid))  # pylint: disable=no-member
 for i in range(0, top_meta['__global_id_-size']):
-    second_meta = vineyard_client.get_meta(vineyard._C.ObjectID(top_meta['__global_id_-{}'.format(i)]))  # pylint: disable=no-member
+    second_meta = vineyard_client.get_meta(vineyard.ObjectID(top_meta['__global_id_-{}'.format(i)]))  # pylint: disable=no-member
     for j in range(0, second_meta['__elements_-size']):
-        third_meta = vineyard_client.get_meta(vineyard._C.ObjectID(second_meta['__elements_-{}'.format(j)].id))  # pylint: disable=no-member
+        third_meta = vineyard_client.get_meta(vineyard.ObjectID(second_meta['__elements_-{}'.format(j)].id))  # pylint: disable=no-member
         for k in range(0, third_meta['__elements_-size']):
-            meta = vineyard_client.get_meta(vineyard._C.ObjectID(third_meta['__elements_-{}'.format(k)].id),True,True)
+            meta = vineyard_client.get_meta(vineyard.ObjectID(third_meta['__elements_-{}'.format(k)].id),True,True)
             value = vineyard_client.get(meta.id)
             sum += (value['a'].sum() + value['b'].sum())
 print(sum, flush=True)

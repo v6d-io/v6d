@@ -62,7 +62,16 @@ class StreamLauncher(ScriptLauncher):
         super().__init__(_resolve_ssh_script(deployment=deployment))
 
     def wait(self, timeout=None):
-        return vineyard.ObjectID(super().wait(timeout=timeout))
+        results = super().wait(timeout=timeout)
+        try:
+            results = json.loads(results)
+        except:  # noqa: E722, pylint: disable=bare-except
+            pass
+
+        if isinstance(results, (list, tuple)):
+            return [vineyard.ObjectID(r) for r in results]
+        else:
+            return vineyard.ObjectID(results)
 
 
 class ParallelStreamLauncher(ScriptLauncher):
@@ -169,9 +178,12 @@ class ParallelStreamLauncher(ScriptLauncher):
             r = proc.wait(timeout=timeout)
             partial_ids.append(r)
         logger.debug("[wait] partial ids = %s", partial_ids)
-        if aggregator is None:
-            return self.create_parallel_stream(partial_ids, **kwargs)
-        return aggregator(self.vineyard_endpoint, partial_ids, **kwargs)
+        if aggregator is not None:
+            return aggregator(self.vineyard_endpoint, partial_ids, **kwargs)
+        else:
+            return self.create_parallel_stream(
+                self.vineyard_endpoint, partial_ids, **kwargs
+            )
 
     def join_with_aggregator(
         self,
@@ -191,14 +203,14 @@ class ParallelStreamLauncher(ScriptLauncher):
         logger.debug("[join_with_aggregator] partial ids = %s", results)
         return aggregator(self.vineyard_endpoint, results, **kwargs)
 
-    def create_parallel_stream(self, partial_ids) -> ObjectID:
+    def create_parallel_stream(self, vineyard_endpoint, partial_ids) -> ObjectID:
         meta = vineyard.ObjectMeta()
         meta['typename'] = 'vineyard::ParallelStream'
         meta.set_global(True)
         meta['__streams_-size'] = len(partial_ids)
         for idx, partition_id in enumerate(partial_ids):
             meta.add_member("__streams_-%d" % idx, partition_id)
-        vineyard_rpc_client = vineyard.connect(self.vineyard_endpoint)
+        vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
         ret_meta = vineyard_rpc_client.create_metadata(meta)
         vineyard_rpc_client.persist(ret_meta.id)
         return ret_meta.id
@@ -209,7 +221,13 @@ def get_executable(name):
 
 
 def parse_bytes_to_dataframe(
-    vineyard_socket, byte_stream, *args, handlers=None, **kwargs
+    vineyard_socket,
+    byte_stream,
+    *args,
+    handlers=None,
+    aggregator=None,
+    accumulate=False,
+    **kwargs,
 ):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -218,11 +236,12 @@ def parse_bytes_to_dataframe(
         vineyard_socket,
         byte_stream,
         *args,
+        accumulate,
         **kwargs,
     )
     if handlers is not None:
         handlers.append(launcher)
-    return launcher.wait()
+    return launcher.wait(aggregator=aggregator)
 
 
 def read_vineyard_dataframe(path, vineyard_socket, *args, handlers=None, **kwargs):
@@ -271,7 +290,15 @@ def read_bytes(
 
 
 def read_orc(
-    path, vineyard_socket, storage_options, read_options, *args, handlers=None, **kwargs
+    path,
+    vineyard_socket,
+    storage_options,
+    read_options,
+    *args,
+    handlers=None,
+    aggregator=None,
+    accumulate=False,
+    **kwargs,
 ):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -282,15 +309,24 @@ def read_orc(
         storage_options,
         read_options,
         *args,
+        accumulate,
         **kwargs,
     )
     if handlers is not None:
         handlers.append(launcher)
-    return launcher.wait()
+    return launcher.wait(aggregator=aggregator)
 
 
 def read_parquet(
-    path, vineyard_socket, storage_options, read_options, *args, handlers=None, **kwargs
+    path,
+    vineyard_socket,
+    storage_options,
+    read_options,
+    *args,
+    handlers=None,
+    aggregator=None,
+    accumulate=False,
+    **kwargs,
 ):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -301,15 +337,22 @@ def read_parquet(
         storage_options,
         read_options,
         *args,
+        accumulate,
         **kwargs,
     )
     if handlers is not None:
         handlers.append(launcher)
-    return launcher.wait()
+    return launcher.wait(aggregator=aggregator)
 
 
 def read_dataframe(
-    path, vineyard_socket, *args, handlers=None, filetype=None, **kwargs
+    path,
+    vineyard_socket,
+    *args,
+    handlers=None,
+    filetype=None,
+    accumulate=False,
+    **kwargs,
 ):
     path = json.dumps(path)
     storage_options_dict = kwargs.pop("storage_options", {})
@@ -320,11 +363,28 @@ def read_dataframe(
     read_options = base64.b64encode(
         json.dumps(read_options_dict).encode("utf-8")
     ).decode("utf-8")
+
     if filetype is None:
         filetype = storage_options_dict.get('filetype', None)
     if filetype is None:
         filetype = read_options_dict.get('filetype', None)
     filetype = str(filetype).upper()
+
+    if accumulate:
+
+        def aggregator(vineyard_endpoint, partial_ids, extra_meta=None, **kwargs):
+            vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
+            chunks = []
+            for item in partial_ids:
+                if isinstance(item, (list, tuple)):
+                    chunks.extend(item)
+                else:
+                    chunks.append(item)
+            return make_global_dataframe(vineyard_rpc_client, chunks, extra_meta)
+
+    else:
+        aggregator = None
+
     if filetype == "ORC" or ".orc" in path:
         return read_orc(
             path,
@@ -333,6 +393,8 @@ def read_dataframe(
             read_options,
             *args,
             handlers=handlers,
+            aggregator=aggregator,
+            accumulate=accumulate,
             **kwargs.copy(),
         )
     elif filetype == "PARQUET" or ".parquet" in path or ".pq" in path:
@@ -343,6 +405,8 @@ def read_dataframe(
             read_options,
             *args,
             handlers=handlers,
+            aggregator=aggregator,
+            accumulate=accumulate,
             **kwargs.copy(),
         )
     else:  # fall back to CSV
@@ -360,6 +424,8 @@ def read_dataframe(
             stream,
             *args,
             handlers=handlers,
+            aggregator=aggregator,
+            accumulate=accumulate,
             **kwargs.copy(),
         )
 
