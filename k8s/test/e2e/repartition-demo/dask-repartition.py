@@ -52,7 +52,7 @@ dask_scheduler = env_dist['DASK_SCHEDULER']
 client = vineyard.connect('/var/run/vineyard.sock')
 with vineyard_for_dask():
     print('start to get ddf', flush=True)
-    data = client.get(vineyard._C.ObjectID(gid),
+    data = client.get(vineyard.ObjectID(gid),
                       dask_scheduler=dask_scheduler, dask_workers=dask_workers)
     print('get data done', flush=True)
     new_df = data.repartition(npartitions=int(replicas))

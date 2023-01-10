@@ -24,7 +24,7 @@ env_dist = os.environ
 
 objid = env_dist['OBJECT_ID']
 
-meta = vineyard_client.get_meta(vineyard._C.ObjectID(objid))  # pylint: disable=no-member
+meta = vineyard_client.get_meta(vineyard.ObjectID(objid))  # pylint: disable=no-member
 verified = True
 for i in range(0, meta['__elements_-size']):
     oid = meta['__elements_-{}'.format(i)].id

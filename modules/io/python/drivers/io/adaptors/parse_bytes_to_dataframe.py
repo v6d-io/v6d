@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import json
 import logging
 import sys
 
@@ -24,6 +25,7 @@ import pyarrow.csv  # pylint: disable=unused-import
 
 import vineyard
 from vineyard.data.utils import normalize_arrow_dtype
+from vineyard.data.utils import str_to_bool
 from vineyard.io.byte import ByteStream
 from vineyard.io.dataframe import DataframeStream
 from vineyard.io.utils import report_error
@@ -39,7 +41,11 @@ def parse_dataframe_blocks(content, read_options, parse_options, convert_options
 
 
 def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
-    vineyard_socket, stream_id, proc_num, proc_index
+    vineyard_socket,
+    stream_id,
+    proc_num,
+    proc_index,
+    accumulate=False,
 ):
     client = vineyard.connect(vineyard_socket)
 
@@ -120,18 +126,26 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
             arrow_column_types[columns[i]] = normalize_arrow_dtype(column_type)
     convert_options.column_types = arrow_column_types
 
-    stream = DataframeStream.new(client, params=instream.params)
-    client.persist(stream.id)
-    report_success(stream.id)
-
-    stream_writer = stream.open_writer(client)
+    chunks = []
+    if accumulate:
+        stream_writer = None
+    else:
+        stream = DataframeStream.new(client, params=instream.params)
+        client.persist(stream.id)
+        report_success(stream.id)
+        stream_writer = stream.open_writer(client)
 
     try:
         while True:
             try:
                 content = stream_reader.next()
             except (StopIteration, vineyard.StreamDrainedException):
-                stream_writer.finish()
+                if stream_writer is not None:
+                    stream_writer.finish()
+                else:
+                    report_success(
+                        json.dumps([repr(vineyard.ObjectID(k)) for k in chunks])
+                    )
                 break
 
             # parse csv
@@ -139,7 +153,11 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
                 content, read_options, parse_options, convert_options
             )
             # write recordbatches
-            stream_writer.write_table(table)
+            if stream_writer is not None:
+                stream_writer.write_table(table)
+            else:
+                for batch in table.to_batches():
+                    chunks.append(client.put(batch))
     except Exception:  # pylint: disable=broad-except
         report_exception()
         stream_writer.fail()
@@ -150,14 +168,15 @@ def main():
     if len(sys.argv) < 5:
         print(
             "usage: ./parse_bytes_to_dataframe.py <ipc_socket> <stream_id> "
-            "<proc_num> <proc_index>"
+            "<accumulate> <proc_num> <proc_index>"
         )
         sys.exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
-    proc_num = int(sys.argv[3])
-    proc_index = int(sys.argv[4])
-    parse_bytes(ipc_socket, stream_id, proc_num, proc_index)
+    accumulate = str_to_bool(sys.argv[3])
+    proc_num = int(sys.argv[4])
+    proc_index = int(sys.argv[5])
+    parse_bytes(ipc_socket, stream_id, proc_num, proc_index, accumulate=accumulate)
 
 
 if __name__ == "__main__":

@@ -189,7 +189,8 @@ def global_dataframe_resolver(obj, resolver):
         df = meta.get_member('partitions_-%d' % i)
         if df.meta.islocal:
             dataframes.append(resolver.run(df))
-            orders.append(df.meta["row_batch_index_"])
+            if 'row_batch_index_' in df.meta:
+                orders.append(df.meta["row_batch_index_"])
     if orders != sorted(orders):
         raise ValueError("Bad dataframe orders:", orders)
     return dataframes

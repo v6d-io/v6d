@@ -71,6 +71,47 @@ def test_local_csv_with_header(
             mode="w",
             vineyard_ipc_socket=vineyard_ipc_socket,
             vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": True, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
+def test_local_csv_with_header_accumulate(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
+    dataframe = vineyard.io.open(
+        "file://%s/p2p-31.e" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        read_options={"header_row": True, "delimiter": " "},
+        handlers=handlers,
+        accumulate=True,
+    )
+    if isinstance(dataframe, vineyard.ObjectMeta):
+        dataframe = dataframe.id
+    stream = vineyard.io.open(
+        "vineyard://%s" % repr(dataframe),
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": True, "delimiter": " "},
             handlers=handlers,
         )
 
@@ -101,6 +142,47 @@ def test_local_csv_without_header(
             mode="w",
             vineyard_ipc_socket=vineyard_ipc_socket,
             vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
+def test_local_csv_without_header_accumulate(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
+    dataframe = vineyard.io.open(
+        "file://%s/p2p-31.e" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        read_options={"header_row": False, "delimiter": " "},
+        handlers=handlers,
+        accumulate=True,
+    )
+    if isinstance(dataframe, vineyard.ObjectMeta):
+        dataframe = dataframe.id
+    stream = vineyard.io.open(
+        "vineyard://%s" % repr(dataframe),
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
             handlers=handlers,
         )
 
@@ -144,12 +226,91 @@ def test_local_parquet_to_csv(
     )
 
 
+def test_local_parquet_to_csv_accumulate(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
+    dataframe = vineyard.io.open(
+        "file://%s/p2p-31.e.parquet" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
+        accumulate=True,
+    )
+    if isinstance(dataframe, vineyard.ObjectMeta):
+        dataframe = dataframe.id
+    stream = vineyard.io.open(
+        "vineyard://%s" % repr(dataframe),
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    print('finish joined: ', flush=True)
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
 def test_local_orc_to_csv(
     vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
 ):
     handlers = []
     stream = vineyard.io.open(
         "file://%s/p2p-31.e.orc" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
+def test_local_orc_to_csv_accumulate(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
+    dataframe = vineyard.io.open(
+        "file://%s/p2p-31.e.orc" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        handlers=handlers,
+        accumulate=True,
+    )
+    if isinstance(dataframe, vineyard.ObjectMeta):
+        dataframe = dataframe.id
+    stream = vineyard.io.open(
+        "vineyard://%s" % repr(dataframe),
         vineyard_ipc_socket=vineyard_ipc_socket,
         vineyard_endpoint=vineyard_endpoint,
         handlers=handlers,
