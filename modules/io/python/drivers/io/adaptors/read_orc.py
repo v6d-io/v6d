@@ -75,13 +75,13 @@ def read_orc_blocks(
                 if writer is not None:
                     writer.write(batch)
                 else:
-                    chunks.append(client.put(batch))
+                    chunks.append(client.put(batch, persist=True))
         else:
             batch = make_empty_batch(reader.schema)
             if writer is not None:
                 writer.write(batch)
             else:
-                chunks.append(client.put(batch))
+                chunks.append(client.put(batch, persist=True))
 
 
 def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
