@@ -19,7 +19,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  pull_request_target:
     branches:
       - main
 
@@ -34,6 +34,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -133,6 +136,33 @@ jobs:
         run: |
           cd build
           make vineyard_doc
+
+      - uses: actions/setup-node@v3
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          node-version: 16
+
+      - name: Preview Using Netlify
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          npm install netlify-cli -g
+          netlify deploy \
+            --site=$NETLIFY_SITE_ID \
+            --auth=$NETLIFY_AUTH_TOKEN \
+            --dir=docs/_build/html \
+            --alias deploy-preview-pr-${{ github.event.number }}
+
+      - name: maintain-comment
+        uses: actions-cool/maintain-one-comment@v3
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            :white_check_mark: Deploy preview ready: https://deploy-preview-pr-${{ github.event.number }}--v6d.netlify.app
+          body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
 
       - name: Commit Doc
         if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
