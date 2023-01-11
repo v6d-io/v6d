@@ -24,9 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  codeball_job:
+  codeball:
     runs-on: ubuntu-latest
-    name: Codeball
     steps:
       - name: Codeball
         uses: sturdy-dev/codeball-action@main

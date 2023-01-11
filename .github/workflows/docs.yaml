@@ -19,7 +19,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  pull_request_target:
     branches:
       - main
 
@@ -34,9 +34,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
         with:
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          ref: ${{github.event.pull_request.head.ref}}
           submodules: true
 
       - name: Install Dependencies for Linux
@@ -133,6 +138,24 @@ jobs:
         run: |
           cd build
           make vineyard_doc
+
+      - name: Preview using netlify
+        uses: netlify/actions/cli@master
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          args: deploy deploy --dir=docs/_build/html --alias deploy-preview-pr-${{ github.event.number }}
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+      - name: Leave the comment on pull request
+        uses: actions-cool/maintain-one-comment@v3
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            :white_check_mark: Deploy preview ready: https://deploy-preview-pr-${{ github.event.number }}--v6d.netlify.app
+          body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
 
       - name: Commit Doc
         if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
