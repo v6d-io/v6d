@@ -81,13 +81,13 @@ def read_parquet_blocks(
                 if writer is not None:
                     writer.write(batch)
                 else:
-                    chunks.append(client.put(batch, persist=True))
+                    chunks.append(client.put(batch.to_pandas(), persist=True))
         else:
             batch = make_empty_batch(reader.schema_arrow)
             if writer is not None:
                 writer.write(batch)
             else:
-                chunks.append(client.put(batch, persist=True))
+                chunks.append(client.put(batch.to_pandas(), persist=True))
 
 
 def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
