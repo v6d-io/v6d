@@ -1,17 +1,17 @@
-User Guide
-==========
+Key Concepts
+============
 
 .. toctree::
    :maxdepth: 1
    :caption: TOC
    :hidden:
 
-   notes/install.rst
-   notes/architecture.rst
-   notes/objects.rst
-   notes/data-accessing.rst
-   notes/streams.rst
-   notes/io-drivers.rst
+   key-concepts/architecture.rst
+   key-concepts/objects.rst
+   key-concepts/code-generator.rst
+   key-concepts/data-accessing.rst
+   key-concepts/streams.rst
+   key-concepts/io-drivers.rst
 
 The *User Guide* sections provides a comprehensive perspective of the design and
 implementation of vineyard. Including a detailed environment setup guidance, the
@@ -25,20 +25,6 @@ architecture, as well as the core features inside the vineyard engine.
    `Getting Started <https://v6d.io/notes/getting-started.html>`_ page first would
    be better.
 
-Installation
-------------
-
-.. panels::
-   :header: text-center
-   :column: col-lg-12 p-2
-
-   .. link-button:: notes/install
-      :type: ref
-      :text: Installation
-      :classes: btn-block stretched-link
-   ^^^^^^^^^^^^
-   How vineyard can be installed on various platforms.
-
 Concepts
 --------
 
@@ -46,7 +32,7 @@ Concepts
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: notes/architecture
+   .. link-button:: key-concepts/architecture
       :type: ref
       :text: Architecture
       :classes: btn-block stretched-link
@@ -55,16 +41,23 @@ Concepts
 
    ---
 
-   .. link-button:: notes/objects
+   .. link-button:: key-concepts/objects
       :type: ref
       :text: Vineyard Objects
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
    The design space of vineyard objects.
 
+   .. link-button:: key-concepts/code-generator
+      :type: ref
+      :text: Code Generator
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   The design space of vineyard objects.
+
    ---
 
-   .. link-button:: notes/data-accessing
+   .. link-button:: key-concepts/data-accessing
       :type: ref
       :text: Accessing Objects in Vineyard
       :classes: btn-block stretched-link
@@ -74,7 +67,7 @@ Concepts
 
    ---
 
-   .. link-button:: notes/streams
+   .. link-button:: key-concepts/streams
       :type: ref
       :text: Stream in Vineyard
       :classes: btn-block stretched-link
@@ -83,7 +76,7 @@ Concepts
 
    ---
 
-   .. link-button:: notes/io-drivers
+   .. link-button:: key-concepts/io-drivers
       :type: ref
       :text: I/O Drivers
       :classes: btn-block stretched-link

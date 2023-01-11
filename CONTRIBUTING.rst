@@ -68,8 +68,8 @@ built from the following command:
     cd build
     make vineyard_tests -j$(nproc)
 
-Before running test cases, you need to ensure etcd is correctly installed, by `brew install etcd` on Mac or
-:code:`pip3 install etcd_distro` on Linux distributions.
+Before running test cases, you need to ensure etcd is correctly installed, by ``brew install etcd`` on Mac or
+``pip3 install etcd_distro`` on Linux distributions.
 
 There's a script to setup required environments and run test cases:
 

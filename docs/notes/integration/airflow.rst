@@ -47,7 +47,7 @@ It forms the following DAG, including three individual tasks as the nodes, and
 edges between nodes that describe the data dependency relations. Airflow scheduler
 runs the tasks one after another based the the data dependency.
 
-.. image:: ../images/airflow_etl.jpg
+.. image:: ../../images/airflow_etl.jpg
    :alt: Airflow ETL Workflow
 
 Airflow on Vineyard
@@ -62,7 +62,7 @@ the database backend, e.g., SQLite, MySQL and PostgreSQL to store the intermedia
 data between tasks. Large-scale data in real world scenarios cannot be fit into
 the database, e.g., large tensors, dataframes, and even distributed graphs, and
 external storage like HDFS, S3 will be used to store the intermediate data, and
-there's only an identifer in the database.
+there's only an identifier in the database.
 
 Using external storage system to share the intermediate data among tasks in big
 data analytical pipelines suffers the performance cost of data copy, serialization/

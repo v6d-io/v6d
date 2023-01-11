@@ -6,8 +6,8 @@ Tutorials
    :caption: TOC
    :hidden:
 
-   tutorials/distributed-learning.rst
-   tutorials/adding-custom-datatypes-cpp.rst
+   ../tutorials/distributed-learning.rst
+   ../tutorials/adding-custom-datatypes-cpp.rst
 
 We showcase step-by-step case studies of how to combine the functionalities of vineyard
 with existing data-intensive jobs. We show that vineyard can bring huge gains in both
@@ -18,7 +18,7 @@ computing engines.
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: tutorials/distributed-learning
+   .. link-button:: ../tutorials/distributed-learning
       :type: ref
       :text: Distributed Learning
       :classes: btn-block stretched-link
@@ -36,7 +36,7 @@ gain the benefits brought by vineyard.
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: tutorials/adding-custom-datatypes-cpp
+   .. link-button:: ../tutorials/adding-custom-datatypes-cpp
       :type: ref
       :text: Adding Custom Types
       :classes: btn-block stretched-link

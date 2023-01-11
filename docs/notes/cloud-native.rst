@@ -1,4 +1,4 @@
-Deployment
+Kubernetes
 ==========
 
 .. toctree::
@@ -6,9 +6,9 @@ Deployment
    :caption: TOC
    :hidden:
 
-   notes/deploy-locally.rst
-   notes/deploy-docker.rst
-   notes/deploy-kubernetes.rst
+   cloud-native/deploy-kubernetes.rst
+   cloud-native/vineyard-operator.rst
+   cloud-native/how-to-use-vineyard-operator.rst
 
 Vineyard supports Linux and MacOS and can be deployed both locally and inside a Docker
 container.
@@ -20,25 +20,7 @@ and can be easily deployed to a Kubernetes cluster.
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: notes/deploy-locally
-      :type: ref
-      :text: Vineyard on Linux/MacOS
-      :classes: btn-block stretched-link text-left
-   ^^^^^^^^^^^^
-   Vineyard can be deployed on common Linux distributions and MacOS.
-
-   ---
-
-   .. link-button:: notes/deploy-docker
-      :type: ref
-      :text: Vineyard in Docker
-      :classes: btn-block stretched-link text-left
-   ^^^^^^^^^^^^
-   Vineyard can be deployed using Docker with prebuilt images.
-
-   ---
-
-   .. link-button:: notes/deploy-kubernetes
+   .. link-button:: cloud-native/deploy-kubernetes
       :type: ref
       :text: Deploying on Kubernetes
       :classes: btn-block stretched-link text-left
@@ -47,7 +29,17 @@ and can be easily deployed to a Kubernetes cluster.
 
    ---
 
-   .. link-button:: notes/vineyard-operator
+   .. link-button:: cloud-native/vineyard-operator
+      :type: ref
+      :text: Vineyard Operator
+      :classes: btn-block stretched-link text-left
+   ^^^^^^^^^^^^
+   Applications and objects on Vineyard on Kubernetes is managed and orchestrated by
+   vineyard-operator.
+
+   ---
+
+   .. link-button:: cloud-native/how-to-use-vineyard-operator
       :type: ref
       :text: Vineyard Operator
       :classes: btn-block stretched-link text-left

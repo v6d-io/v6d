@@ -25,7 +25,7 @@ del vineyard
 # -- Project information -----------------------------------------------------
 
 project = 'vineyard'
-copyright = '2019-2022, The Vineyard Authors'
+copyright = '2020-2023, The Vineyard Authors'
 author = 'The Vineyard Authors'
 
 language = 'en'

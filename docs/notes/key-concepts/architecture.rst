@@ -36,7 +36,7 @@ To address this issue, vineyard provides:
    and the meta data of the distributed data will be shared across the vineyard cluster
    via the backend key-value store, e.g., etcd or zookeeper.
 
-   .. figure:: ../images/vineyard_deployment.jpg
+   .. figure:: ../../images/vineyard_deployment.jpg
       :alt: Distributed data sharing in vineyard
 
       Distributed data sharing in vineyard
@@ -73,7 +73,7 @@ To address this issue, vineyard provides:
 Architecture of vineyard
 ------------------------
 
-.. figure:: ../images/vineyard_arch.jpg
+.. figure:: ../../images/vineyard_arch.jpg
    :alt: Architecture of vineyard
 
    Architecture of vineyard
