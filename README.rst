@@ -21,6 +21,14 @@ computing (e.g., `Mars`_), and machine learning.
 
 Vineyard is a `CNCF sandbox project`_ and indeed made successful by its community.
 
+.. note::
+
+   1. Why bother
+   2. What is vineyard
+   3. 框架图
+   4. Features
+   5. Links to quick start, concepts (object, blob, metadata, etc), tutorials, etc.
+
 Table of Contents
 -----------------
 

@@ -5,7 +5,7 @@ Vineyard supports distributed object sharing by-design, and provides both the IP
 and RPCClient for data accessing. You would learn how accessing objects inside vineyard in
 various ways. For vineyard objects basics, please refer to :ref:`metadata-and-payloads`.
 
-.. figure:: ../images/vineyard_deployment.jpg
+.. figure:: ../../images/vineyard_deployment.jpg
    :alt: Data Partitioning in Vineyard
    :width: 60%
 

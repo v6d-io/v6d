@@ -6,9 +6,9 @@ API Reference
    :caption: TOC
    :hidden:
 
-   notes/python-api.rst
-   notes/cpp-api.rst
-   notes/ctl.rst
+   references/python-api.rst
+   references/cpp-api.rst
+   references/ctl.rst
 
 Vineyard currently is distributed with a Python SDK and a C++ SDK. You could find a
 detail API reference from in the following pages:
@@ -17,7 +17,7 @@ detail API reference from in the following pages:
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: notes/python-api
+   .. link-button:: references/python-api
       :type: ref
       :text: Python
       :classes: btn-block stretched-link
@@ -26,7 +26,7 @@ detail API reference from in the following pages:
 
    ---
 
-   .. link-button:: notes/cpp-api
+   .. link-button:: references/cpp-api
       :type: ref
       :text: C++
       :classes: btn-block stretched-link
@@ -40,7 +40,7 @@ with local :code:`vineyardd` instance for inspecting and debugging propose.
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: notes/ctl
+   .. link-button:: references/ctl
       :type: ref
       :text: Vineyard CTL
       :classes: btn-block stretched-link

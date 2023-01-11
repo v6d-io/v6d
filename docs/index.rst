@@ -14,37 +14,46 @@
 
 .. toctree::
    :maxdepth: 1
-   :caption: User Guide
+   :caption: User Guides
    :hidden:
 
    notes/getting-started.rst
-   user-guide.rst
-   tutorials.rst
+   notes/key-concepts.rst
+   notes/user-guides.rst
 
 .. toctree::
    :maxdepth: 1
-   :caption: Integrations
+   :caption: Cloud-Native
    :hidden:
 
-   integrations.rst
+   notes/cloud-native.rst
 
 .. toctree::
    :maxdepth: 1
-   :caption: Deployment
+   :caption: Tutorials
    :hidden:
 
-   deployment.rst
+   notes/tutorials.rst
 
 .. toctree::
    :maxdepth: 1
+   :caption: Integration
+   :hidden:
+
+   notes/integration-bigdata.rst
+   notes/integration-orchestration.rst
+
+.. toctree::
+   :maxdepth: 2
    :caption: API Reference
    :hidden:
 
-   api-reference.rst
+   notes/references.rst
 
 .. toctree::
    :maxdepth: 1
-   :caption: Community
+   :caption: Developer Guides
    :hidden:
 
-   community.rst
+   notes/developers.rst
+   notes/developers/faq.rst

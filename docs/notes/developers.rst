@@ -1,15 +1,15 @@
-Join the Community
-------------------
+Getting Involved
+----------------
 
 .. toctree::
    :maxdepth: 1
    :caption: TOC
    :hidden:
 
-   notes/contributing.rst
-   notes/faq.rst
-   notes/troubleshooting.rst
-   notes/roadmap.rst
+   developers/build-from-source.rst
+   developers/contributing.rst
+   developers/troubleshooting.rst
+   developers/roadmap.rst
 
 Vineyard is an open-source project and has been accepted by CNCF sandbox in April, 2021,
 and indeed made successfully by the open-source community. We are striving to engage
@@ -37,17 +37,17 @@ welcoming and responsible by join our Github discussion or Slack channel:
 
     :fa:`slack`
 
-We have collected frequently asked questions from our users and you can find a detail
-list at
+To edit the vineyard source code, you will need to prepare the environments and building
+from source, following the instructions below:
 
 .. panels::
     :container: container-lg pb-4
     :column: col-lg-6 col-md-6 col-sm-6 col-xs-12 p-2
     :body: text-center card-body-less-padding
 
-    .. link-button:: notes/faq
+    .. link-button:: developers/build-from-source
        :type: ref
-       :text: Frequently Asked Questions
+       :text: Building from source
        :classes: btn-block stretched-link
 
 When encounter troubles during your journal of vineyard, you may find answers from:
@@ -57,7 +57,7 @@ When encounter troubles during your journal of vineyard, you may find answers fr
     :column: col-lg-4 col-md-4 col-sm-4 col-xs-12 p-2
     :body: text-center card-body-less-padding
 
-    .. link-button:: notes/troubleshooting
+    .. link-button:: developers/troubleshooting
        :type: ref
        :text: Troubleshooting
        :classes: btn-block stretched-link
@@ -77,7 +77,7 @@ reflects our where ongoing efforts are happening:
     :column: col-lg-4 col-md-4 col-sm-4 col-xs-12 p-2
     :body: text-center card-body-less-padding
 
-    .. link-button:: notes/roadmap
+    .. link-button:: developers/roadmap
        :type: ref
        :text: Our Roadmap
        :classes: btn-block stretched-link
