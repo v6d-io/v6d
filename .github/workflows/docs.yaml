@@ -155,7 +155,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
-            :white_check_mark: Deploy preview ready: https://deploy-preview-pr-${{ github.event.number }}--v6d.netlify.app
+            :white_check_mark: Doc deploy preview ready: https://deploy-preview-pr-${{ github.event.number }}--v6d.netlify.app
           body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
 
       - name: Commit Doc
