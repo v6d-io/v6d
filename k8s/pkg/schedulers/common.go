@@ -104,9 +104,9 @@ func GetGlobalObjectsByID(c client.Client, log logr.Logger, jobNames []string) (
 		log.Info(fmt.Sprintf("client.List failed to get global objects, error: %v", err))
 		return nil, err
 	}
-	for _, obj := range globalObjects.Items {
+	for i, obj := range globalObjects.Items {
 		if jobname, exist := obj.Labels["k8s.v6d.io/job"]; exist && requiredJobs[jobname] {
-			objects = append(objects, &obj)
+			objects = append(objects, &globalObjects.Items[i])
 		}
 	}
 
