@@ -1,5 +1,5 @@
-Installation
-============
+Building from source
+====================
 
 Install vineyard
 ----------------
@@ -120,7 +120,6 @@ works,
     cd libgrape-lite
     mkdir build
     cd build
-    cmake ..
     make -j$(nproc)
     sudo make install
 

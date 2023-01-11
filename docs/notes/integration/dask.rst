@@ -9,7 +9,7 @@ which was previously shown in the blog_.
 The Deployment
 --------------
 
-.. image:: ../images/dask-tf.jpg
+.. image:: ../../images/dask-tf.jpg
    :alt: Dask Tensorflow Workflow
 
 As shown in the figure above, we only use two machines for the distributed tasks
