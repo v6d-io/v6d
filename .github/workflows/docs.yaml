@@ -159,7 +159,7 @@ jobs:
           body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
 
       - name: Commit Doc
-        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         run: |
           git config user.email github-actions@github.com
           git config user.name github-actions
