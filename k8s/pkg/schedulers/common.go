@@ -165,22 +165,26 @@ func CreateConfigmapForID(c client.Client, log logr.Logger, jobname []string, na
 		// the configmap doesn't exist
 		if apierrors.IsNotFound(err) {
 			data := make(map[string]string)
+			localObjList := make(map[string][]string)
 			// get all local objects produced by the required job
 			// hostname -> localobject id
-			// TODO: if there are lots of localobjects in the same node
 			for _, o := range localobjects {
 				if (*o).Labels["k8s.v6d.io/job"] == jobname[i] {
-					data[(*o).Spec.Hostname] = (*o).Spec.ObjectID
+					localObjList[(*o).Spec.Hostname] = append(localObjList[(*o).Spec.Hostname], (*o).Spec.ObjectID)
 				}
+			}
+			for nodeName, nodeObjs := range localObjList {
+				data[nodeName] = strings.Join(nodeObjs, ",")
 			}
 			// get all global objects produced by the required job
 			// jobname -> globalobject id
-			// TODO: if there are lots of globalobjects produced by the same job
+			globalObjs := []string{}
 			for _, o := range globalobjects {
 				if (*o).Labels["k8s.v6d.io/job"] == jobname[i] {
-					data[jobname[i]] = (*o).Spec.ObjectID
+					globalObjs = append(globalObjs, (*o).Spec.ObjectID)
 				}
 			}
+			data[jobname[i]] = strings.Join(globalObjs, ",")
 			cm := v1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ConfigMap",
