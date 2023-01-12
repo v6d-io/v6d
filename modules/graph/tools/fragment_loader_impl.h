@@ -47,7 +47,7 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
   using loader_t = ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>;
   auto loader = loader_t(client, comm_spec, std::vector<std::string>{},
                          std::vector<std::string>{}, options.directed,
-                         options.generate_eid);
+                         options.generate_eid, options.retain_oid);
 
   MPI_Barrier(comm_spec.comm());
   auto fn = [&]() -> boost::leaf::result<ObjectID> {
@@ -58,7 +58,7 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
     ObjectID frag = InvalidObjectID();
     BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
     loader_t adder(client, comm_spec, options.efiles, options.vfiles,
-                   options.directed, options.generate_eid);
+                   options.directed, options.generate_eid, options.retain_oid);
     return adder.AddLabelsToFragmentAsFragmentGroup(frag);
   };
 
@@ -68,13 +68,13 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
     for (auto vfile : options.vfiles) {
       loader_t adder(client, comm_spec, std::vector<std::string>{},
                      std::vector<std::string>{vfile}, options.directed,
-                     options.generate_eid);
+                     options.generate_eid, options.retain_oid);
       BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
     }
     for (auto efile : options.efiles) {
       loader_t adder(client, comm_spec, std::vector<std::string>{efile},
                      std::vector<std::string>{}, options.directed,
-                     options.generate_eid);
+                     options.generate_eid, options.retain_oid);
       BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
     }
     return vineyard::ConstructFragmentGroup(client, frag, comm_spec);

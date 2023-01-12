@@ -67,9 +67,11 @@ class [[vineyard]] NumericArray : public PrimitiveArray,
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<ArrayType>(
         ConvertToArrowType<T>::TypeValue(), this->length_,
-        this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
+        this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
         this->null_count_, this->offset_);
   }
+
+  std::shared_ptr<Blob> GetBuffer() const { return buffer_; }
 
   std::shared_ptr<ArrayType> GetArray() const { return array_; }
 
@@ -101,9 +103,11 @@ class [[vineyard]] BooleanArray : public PrimitiveArray,
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<ArrayType>(
         ConvertToArrowType<bool>::TypeValue(), this->length_,
-        this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
+        this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
         this->null_count_, this->offset_);
   }
+
+  std::shared_ptr<Blob> GetBuffer() const { return buffer_; }
 
   std::shared_ptr<ArrayType> GetArray() const { return array_; }
 
@@ -144,10 +148,14 @@ class [[vineyard]] BaseBinaryArray
  public:
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<ArrayType>(
-        this->length_, this->buffer_offsets_->Buffer(),
-        this->buffer_data_->Buffer(), this->null_bitmap_->Buffer(),
+        this->length_, this->buffer_offsets_->BufferOrEmpty(),
+        this->buffer_data_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
         this->null_count_, this->offset_);
   }
+
+  std::shared_ptr<Blob> GetBuffer() const { return buffer_data_; }
+
+  std::shared_ptr<Blob> GetOffsetsBuffer() const { return buffer_offsets_; }
 
   std::shared_ptr<ArrayType> GetArray() const { return array_; }
 
@@ -180,9 +188,11 @@ class [[vineyard]] FixedSizeBinaryArray
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
         arrow::fixed_size_binary(this->byte_width_), this->length_,
-        this->buffer_->Buffer(), this->null_bitmap_->Buffer(),
+        this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
         this->null_count_, this->offset_);
   }
+
+  std::shared_ptr<Blob> GetBuffer() const { return buffer_; }
 
   std::shared_ptr<arrow::FixedSizeBinaryArray> GetArray() const {
     return array_;
@@ -211,6 +221,8 @@ class [[vineyard]] NullArray : public FlatArray, public Registered<NullArray> {
   void PostConstruct(const ObjectMeta& meta) override {
     this->array_ = std::make_shared<arrow::NullArray>(this->length_);
   }
+
+  std::shared_ptr<Blob> GetBuffer() const { return nullptr; }
 
   std::shared_ptr<ArrayType> GetArray() const { return array_; }
 
@@ -270,7 +282,7 @@ class [[vineyard]] BaseListArray : public ArrowArray,
     auto list_type =
         std::make_shared<typename ArrayType::TypeClass>(arr->type());
     this->array_ = std::make_shared<ArrayType>(
-        list_type, this->length_, this->buffer_offsets_->Buffer(), arr,
+        list_type, this->length_, this->buffer_offsets_->BufferOrEmpty(), arr,
         this->null_bitmap_->Buffer(), this->null_count_, this->offset_);
   }
 

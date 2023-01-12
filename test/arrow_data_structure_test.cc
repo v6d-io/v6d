@@ -41,6 +41,25 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   {
+    LOG(INFO) << "#########  Empty Array Test #############";
+    arrow::Int64Builder b1;
+    std::shared_ptr<arrow::Int64Array> a1;
+    CHECK_ARROW_ERROR(b1.Finish(&a1));
+    NumericArrayBuilder<int64_t> array_builder(client, a1);
+    auto r1 = std::dynamic_pointer_cast<NumericArray<int64_t>>(
+        array_builder.Seal(client));
+    VINEYARD_CHECK_OK(client.Persist(r1->id()));
+    ObjectID id = r1->id();
+
+    auto r2 =
+        std::dynamic_pointer_cast<NumericArray<int64_t>>(client.GetObject(id));
+    auto internal_array = r2->GetArray();
+    CHECK_EQ(internal_array->length(), a1->length());
+
+    LOG(INFO) << "Passed empty array wrapper tests...";
+  }
+
+  {
     LOG(INFO) << "#########  Int64 Test #############";
     arrow::Int64Builder b1;
     CHECK_ARROW_ERROR(b1.AppendValues({1, 2, 3, 4}));

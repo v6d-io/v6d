@@ -30,6 +30,7 @@ limitations under the License.
 #include "basic/ds/array.vineyard.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "common/util/arrow.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -122,6 +123,15 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
    */
   void PostConstruct(const ObjectMeta& meta) override {
     hash_policy_.set_prime(num_slots_minus_one_ + 1);
+
+    if (data_buffer_mmaped_ != nullptr) {
+      // value in orignal string_view: k1 = data_buffer + offset
+      // value in mmap-ed string_view: k2 = data_buffer_mmaped_ + offset
+      //
+      // -> k2 = k1 + diff
+      diff_ = reinterpret_cast<uintptr_t>(data_buffer_mmaped_->data()) -
+              data_buffer_;
+    }
   }
 
   using value_type = T;
@@ -282,6 +292,11 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 
   prime_hash_policy hash_policy_;
 
+  // used for std::hashmap<string_view, V> only.
+  [[shared]] uintptr_t data_buffer_ = 0;
+  [[shared]] std::shared_ptr<Blob> data_buffer_mmaped_;
+  ptrdiff_t diff_ = 0;
+
   friend class Client;
   friend class HashmapBaseBuilder<K, V, H, E>;
 
@@ -289,8 +304,18 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
     return static_cast<const H&>(*this)(key);
   }
 
-  bool compares_equal(const K& lhs, const K& rhs) const {
+  template <typename KT,
+            typename std::enable_if<!std::is_same<KT, arrow_string_view>::value,
+                                    bool>::type* = nullptr>
+  bool compares_equal(const KT& lhs, const KT& rhs) const {
     return static_cast<const E&>(*this)(lhs, rhs);
+  }
+
+  template <typename KT, typename std::enable_if<std::is_same<
+                             KT, arrow_string_view>::value>::type* = nullptr>
+  bool compares_equal(const KT& lhs, const KT& rhs) const {
+    return static_cast<const E&>(*this)(
+        lhs, arrow_string_view{rhs.data() + diff_, rhs.size()});
   }
 };
 

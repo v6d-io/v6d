@@ -306,7 +306,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
 
   VLOG(100) << "[worker-" << comm_spec.worker_id()
             << "] Vertices: after shuffle by offset lists: " << get_rss_pretty()
-            << ", peek = " << get_peak_rss_pretty();
+            << ", peak = " << get_peak_rss_pretty();
 
   // N.B.: we need an empty table for labels that doesn't have effective data.
   std::shared_ptr<arrow::Table> table_out;
@@ -444,7 +444,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
 
   VLOG(100) << "[worker-" << comm_spec.worker_id()
             << "] Edges: after shuffle by offset lists: " << get_rss_pretty()
-            << ", peek = " << get_peak_rss_pretty();
+            << ", peak = " << get_peak_rss_pretty();
 
   // N.B.: we need an empty table for labels that doesn't have effective data.
   std::shared_ptr<arrow::Table> table_out;
@@ -454,7 +454,7 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
   // table_out->CombineChunks(arrow::default_memory_pool()));
   VLOG(100) << "[worker-" << comm_spec.worker_id()
             << "] Edges: after combine chunks: " << get_rss_pretty()
-            << ", peek = " << get_peak_rss_pretty();
+            << ", peak = " << get_peak_rss_pretty();
   return table_out;
 }
 

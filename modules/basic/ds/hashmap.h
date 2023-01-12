@@ -29,6 +29,7 @@ limitations under the License.
 #include "basic/ds/hashmap.vineyard.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "common/util/arrow.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -174,6 +175,13 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
   }
 
   /**
+   * @brief Associated with a given data buffer
+   */
+  void AssociateDataBuffer(std::shared_ptr<Blob> data_buffer) {
+    this->data_buffer_ = data_buffer;
+  }
+
+  /**
    * @brief Build the hashmap object.
    *
    */
@@ -192,11 +200,21 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
     this->set_max_lookups_(hashmap_.get_max_lookups());
     this->set_num_elements_(hashmap_.size());
     this->set_entries_(std::static_pointer_cast<ObjectBase>(entries_builder));
+
+    if (this->data_buffer_ != nullptr) {
+      this->set_data_buffer_(
+          reinterpret_cast<uintptr_t>(this->data_buffer_->data()));
+      this->set_data_buffer_mmaped_(this->data_buffer_);
+    } else {
+      this->set_data_buffer_(reinterpret_cast<uintptr_t>(nullptr));
+      this->set_data_buffer_mmaped_(Blob::MakeEmpty(client));
+    }
     return Status::OK();
   }
 
  private:
   ska::flat_hash_map<K, V, H, E> hashmap_;
+  std::shared_ptr<Blob> data_buffer_;
 };
 
 }  // namespace vineyard

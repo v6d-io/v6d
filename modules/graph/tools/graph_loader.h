@@ -48,6 +48,7 @@ struct loader_options {
   std::vector<std::string> vfiles;
   bool directed = true;
   bool generate_eid = false;
+  bool retain_oid = false;
   std::string oid_type = "int64";
   bool large_vid = true;
   bool large_eid = true;

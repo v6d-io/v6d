@@ -24,6 +24,11 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 7000000
+#include "arrow/visit_type_inline.h"
+#else
+#include "arrow/visitor_inline.h"
+#endif
 
 #include "basic/ds/arrow_shim/concatenate.h"
 #include "basic/ds/arrow_shim/memory_pool.h"
