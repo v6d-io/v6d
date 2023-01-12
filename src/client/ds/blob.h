@@ -85,6 +85,15 @@ class Blob : public Registered<Blob> {
    */
   const std::shared_ptr<arrow::Buffer>& Buffer() const;
 
+  /**
+   * @brief Get the arrow buffer of the blob, ensure a valid shared_ptr been
+   * returned even the blob is empty (size == 0).
+   *
+   * @return The arrow buffer which holds the data payload
+   * of the blob.
+   */
+  const std::shared_ptr<arrow::Buffer> BufferOrEmpty() const;
+
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(std::unique_ptr<Blob>{new Blob()});
   }

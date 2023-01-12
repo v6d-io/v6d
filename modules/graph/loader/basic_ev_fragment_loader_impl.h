@@ -45,13 +45,13 @@ template <typename OID_T, typename VID_T, typename PARTITIONER_T,
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::
     BasicEVFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                           const PARTITIONER_T& partitioner, bool directed,
-                          bool retain_oid, bool generate_eid)
+                          bool generate_eid, bool retain_oid)
     : client_(client),
       comm_spec_(comm_spec),
       partitioner_(partitioner),
       directed_(directed),
-      retain_oid_(retain_oid),
-      generate_eid_(generate_eid) {}
+      generate_eid_(generate_eid),
+      retain_oid_(retain_oid) {}
 
 /**
  * @brief Add a loaded vertex table.
@@ -626,11 +626,14 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     metadata->Append("retain_oid", std::to_string(retain_oid_));
     output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
   }
+  VLOG(100) << "Constructing vertices: after shuffle: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
 
   ObjectID new_vm_id = InvalidObjectID();
   if (vm_id == InvalidObjectID()) {
     BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
-        client_, comm_spec_.fnum(), vertex_label_num_, oid_lists);
+        client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists));
+    // oid_lists.clear();
 
     auto vm = vm_builder.Seal(client_);
     new_vm_id = vm->id();
@@ -647,14 +650,14 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     if (oid_lists_map.empty()) {
       new_vm_id = vm_id;
     } else {
-      new_vm_id = old_vm_ptr->AddVertices(client_, oid_lists_map);
+      new_vm_id = old_vm_ptr->AddVertices(client_, std::move(oid_lists_map));
     }
   }
   vm_ptr_ =
       std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(new_vm_id));
 
   VLOG(100) << "Constructing vertices: after constructing vertex map: "
-            << get_rss_pretty();
+            << get_rss_pretty() << ", peak = " << get_peak_rss_pretty();
   return {};
 }
 
@@ -712,7 +715,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     metadata->Append("retain_oid", std::to_string(retain_oid_));
     output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
   }
-  local_vm_builder_->AddLocalVertices(comm_spec_, local_oid_array);
+  local_vm_builder_->AddLocalVertices(comm_spec_, std::move(local_oid_array));
   local_oid_array.clear();
   ordered_vertex_tables_.clear();
   return {};
@@ -920,7 +923,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   response_thread.join();
   MPI_Barrier(comm_spec_.comm());
   // Construct the outer vertex map with response o2i
-  local_vm_builder_->AddOuterVerticesMapping(outer_vertex_oids, index_lists);
+  local_vm_builder_->template AddOuterVerticesMapping<internal_oid_t>(
+      std::move(outer_vertex_oids), std::move(index_lists));
 
   VLOG(100) << "Finish adding outer vertices mapping: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();

@@ -62,6 +62,14 @@ const std::shared_ptr<arrow::Buffer>& RemoteBlob::Buffer() const {
   return buffer_;
 }
 
+const std::shared_ptr<arrow::Buffer> RemoteBlob::BufferOrEmpty() const {
+  auto buffer = this->Buffer();
+  if (size_ == 0 && buffer == nullptr) {
+    buffer = std::make_shared<arrow::Buffer>(nullptr, 0);
+  }
+  return buffer;
+}
+
 void RemoteBlob::Dump() const {
 #ifndef NDEBUG
   std::stringstream ss;

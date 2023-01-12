@@ -55,7 +55,11 @@
 #include "arrow/util/int_util_overflow.h"
 #endif
 #include "arrow/util/logging.h"
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 7000000
 #include "arrow/visit_type_inline.h"
+#else
+#include "arrow/visitor_inline.h"
+#endif
 
 namespace vineyard {
 

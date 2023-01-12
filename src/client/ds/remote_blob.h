@@ -87,6 +87,15 @@ class RemoteBlob {
   const std::shared_ptr<arrow::Buffer>& Buffer() const;
 
   /**
+   * @brief Get the arrow buffer of the blob, ensure a valid shared_ptr been
+   * returned even the blob is empty (size == 0).
+   *
+   * @return The arrow buffer which holds the data payload
+   * of the blob.
+   */
+  const std::shared_ptr<arrow::Buffer> BufferOrEmpty() const;
+
+  /**
    * @brief Dump the buffer for debugging.
    */
   void Dump() const;

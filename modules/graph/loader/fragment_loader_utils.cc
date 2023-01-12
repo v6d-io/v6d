@@ -124,7 +124,7 @@ FragmentLoaderUtils<OID_T, PARTITIONER_T>::BuildVertexTableFromEdges(
     results[label] = local_vtable;
   }
   VLOG(100) << "finished collecting vtable from etable: " << get_rss_pretty()
-            << ", peek rss: " << get_peak_rss_pretty();
+            << ", peak rss: " << get_peak_rss_pretty();
   return results;
 }
 

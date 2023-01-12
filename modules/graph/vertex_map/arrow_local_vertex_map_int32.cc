@@ -21,8 +21,18 @@ template class ArrowLocalVertexMap<int32_t, uint32_t>;
 
 template class ArrowLocalVertexMapBuilder<int32_t, uint32_t>;
 
+template Status
+ArrowLocalVertexMapBuilder<int32_t, uint32_t>::AddOuterVerticesMapping<int32_t>(
+    std::vector<std::vector<std::shared_ptr<ArrowArrayType<int32_t>>>> oids,
+    std::vector<std::vector<std::vector<uint32_t>>> index_list);
+
 template class ArrowLocalVertexMap<int32_t, uint64_t>;
 
 template class ArrowLocalVertexMapBuilder<int32_t, uint64_t>;
+
+template Status
+ArrowLocalVertexMapBuilder<int32_t, uint64_t>::AddOuterVerticesMapping<int32_t>(
+    std::vector<std::vector<std::shared_ptr<ArrowArrayType<int32_t>>>> oids,
+    std::vector<std::vector<std::vector<uint64_t>>> index_list);
 
 }  // namespace vineyard

@@ -144,6 +144,9 @@ static inline bool parse_options_from_args(struct loader_options& options,
     options.generate_eid = parse_boolean_value(argv[current_index++]);
   }
   if (argc > current_index) {
+    options.retain_oid = parse_boolean_value(argv[current_index++]);
+  }
+  if (argc > current_index) {
     options.oid_type = normalize_data_type(argv[current_index++]);
   }
   if (argc > current_index) {
@@ -206,6 +209,9 @@ static inline bool parse_options_from_config_json(
   }
   if (config.contains("generate_eid")) {
     options.generate_eid = parse_boolean_value(config["generate_eid"]);
+  }
+  if (config.contains("retain_oid")) {
+    options.retain_oid = parse_boolean_value(config["retain_oid"]);
   }
   if (config.contains("oid_type")) {
     options.oid_type =
@@ -373,7 +379,7 @@ int main(int argc, char** argv) {
 
     -     ./vineyard-graph-loader [--socket <vineyard-ipc-socket>] \
                                    <e_label_num> <efiles...> <v_label_num> <vfiles...> \
-                                   [directed] [generate_eid] [string_oid]
+                                   [directed] [generate_eid] [retain_oid] [string_oid]
 
     - or: ./vineyard-graph-loader [--socket <vineyard-ipc-socket>] --config <config.json>
 
@@ -400,6 +406,7 @@ int main(int argc, char** argv) {
               ],
               "directed": 1, # 0 or 1
               "generate_eid": 1, # 0 or 1
+              "retain_oid": 1, # 0 or 1
               "string_oid": 0, # 0 or 1
               "local_vertex_map": 0 # 0 or 1
           })r");

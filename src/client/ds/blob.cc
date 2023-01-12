@@ -56,6 +56,14 @@ const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
   return buffer_;
 }
 
+const std::shared_ptr<arrow::Buffer> Blob::BufferOrEmpty() const {
+  auto buffer = this->Buffer();
+  if (size_ == 0 && buffer == nullptr) {
+    buffer = std::make_shared<arrow::Buffer>(nullptr, 0);
+  }
+  return buffer;
+}
+
 void Blob::Construct(ObjectMeta const& meta) {
   std::string __type_name = type_name<Blob>();
   VINEYARD_ASSERT(meta.GetTypeName() == __type_name,
