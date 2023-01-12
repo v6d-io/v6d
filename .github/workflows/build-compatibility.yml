@@ -124,13 +124,17 @@ jobs:
           }
 
           brew update
-          for dep in apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers open-mpi openssl protobuf; do
+          for dep in apache-arrow boost ccache cmake gflags glog googletest grpc librdkafka libunwind-headers llvm open-mpi openssl protobuf; do
               install_or_upgrade $dep || true;
           done
 
           # install python packages for codegen
-          pip3 install -U pip
-          pip3 install libclang parsec
+          
+          python3 -m pip install -U pip
+          python3 -m pip install libclang parsec
+
+          /usr/local/bin/python3 -m pip install -U pip
+          /usr/local/bin/python3 -m pip install libclang parsec
 
       - name: Install libgrape-lite
         run: |
@@ -154,6 +158,15 @@ jobs:
           # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
 
+          # set LLVM clang/clang++ on MacOS
+          export PATH=/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin:$PATH
+
+          if [[ "$OSTYPE" == "darwin"* ]];
+          then
+              export CC=$(brew --prefix llvm)/bin/clang
+              export CXX=$(brew --prefix llvm)/bin/clang++
+          fi;
+
           mkdir build
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
@@ -170,6 +183,15 @@ jobs:
         run: |
           # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
+
+          # set LLVM clang/clang++ on MacOS
+          export PATH=/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin:$PATH
+
+          if [[ "$OSTYPE" == "darwin"* ]];
+          then
+              export CC=$(brew --prefix llvm)/bin/clang
+              export CXX=$(brew --prefix llvm)/bin/clang++
+          fi;
 
           pushd build
           make -j`nproc`

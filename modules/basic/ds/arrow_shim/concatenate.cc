@@ -124,7 +124,11 @@ Status ConcatenateBitmaps(std::vector<Bitmap>&& bitmaps, MemoryPool* pool,
   int64_t bitmap_offset = 0;
   for (auto bitmap : bitmaps) {
     if (bitmap.AllSet()) {
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 7000000
       bit_util::SetBitsTo(dst, bitmap_offset, bitmap.range.length, true);
+#else
+      BitUtil::SetBitsTo(dst, bitmap_offset, bitmap.range.length, true);
+#endif
     } else {
       internal::CopyBitmap(bitmap.data, bitmap.range.offset,
                            bitmap.range.length, dst, bitmap_offset);
