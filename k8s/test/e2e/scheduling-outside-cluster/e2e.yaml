@@ -15,7 +15,7 @@
 
 setup:
   env: kind
-  file: ../kind.yaml
+  kubeconfig: /tmp/e2e-k8s.config
   steps:
     - name: install cert-manager
       command: |
@@ -26,10 +26,10 @@ setup:
           for: condition=Ready
     - name: install vineyard operator
       command: |
-        kind load docker-image vineyardcloudnative/vineyard-operator:latest
+        docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
+        docker push localhost:5001/vineyard-operator:latest
+        export IMG=localhost:5001/vineyard-operator:latest
         make -C k8s deploy
-
-        make -C k8s/test/e2e kind-load-workflow-images
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-controller-manager
@@ -44,6 +44,7 @@ setup:
     - name: scheduling workload
       command: |
         kubectl create ns vineyard-job
+        export KUBECONFIG=/tmp/e2e-k8s.config
         go run k8s/cmd/main.go k8s/cmd/scheduler.go /tmp/e2e-k8s.config k8s/test/e2e/scheduling-outside-cluster-demo/test.yaml
     - name: wait job completed
       command: |

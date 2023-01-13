@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
       - name: job
-        image: ghcr.io/v6d-io/v6d/sidecar-job
+        image: localhost:5001/sidecar-job
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c", "python3 /job.py"]
         env:

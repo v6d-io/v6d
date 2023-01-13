@@ -39,7 +39,7 @@ spec:
       schedulerName: vineyard-scheduler
       containers:
       - name: serialize-demo
-        image: ghcr.io/v6d-io/v6d/serialize-job
+        image: localhost:5001/serialize-job
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - mountPath: /var/run

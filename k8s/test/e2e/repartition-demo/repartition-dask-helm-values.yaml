@@ -15,6 +15,7 @@
 
 scheduler:
   image:
+    repository: localhost:5001/dask
     tag: "2022.8.1"
 
 jupyter:
@@ -24,7 +25,7 @@ worker:
   # worker numbers
   replicas: 3
   image:
-    repository: ghcr.io/v6d-io/v6d/dask-worker-with-vineyard
+    repository: localhost:5001/dask-worker-with-vineyard
     tag: latest
   env:
     - name: VINEYARD_IPC_SOCKET

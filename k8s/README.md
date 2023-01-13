@@ -34,3 +34,11 @@ To deploy the vineyard operator, run
 ```bash
 make deploy
 ```
+
+### Test
+
+You could create a default kind cluster and run a specific e2e test locally as follows.
+
+```bash
+make -C k8s e2e-tests-assembly-local
+```

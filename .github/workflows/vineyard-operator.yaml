@@ -122,7 +122,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+      
+      - name: Build a kind cluster with local registry
+        run: |
+          touch /tmp/e2e-k8s.config
+          export KUBECONFIG=/tmp/e2e-k8s.config
+          bash k8s/test/hack/build-kind-cluster-with-local-registry.sh
+      
       - name: Build docker image
         run: |
           make -C k8s docker-build
@@ -179,7 +185,7 @@ jobs:
           e2e-file: k8s/test/e2e/failover/e2e.yaml
 
       - name: e2e-tests-repartition-dask
-        if: false  ## "No space left on device" error on CI.  ${{ matrix.job == 'e2e-tests-repartition-dask' }}
+        if: ${{ matrix.job == 'e2e-tests-repartition-dask' }}
         uses: apache/skywalking-infra-e2e@main
         with:
           e2e-file: k8s/test/e2e/repartition/dask-repartition-e2e.yaml
