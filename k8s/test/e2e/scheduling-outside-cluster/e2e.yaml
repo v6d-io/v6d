@@ -44,7 +44,6 @@ setup:
     - name: scheduling workload
       command: |
         kubectl create ns vineyard-job
-        export KUBECONFIG=/tmp/e2e-k8s.config
         go run k8s/cmd/main.go k8s/cmd/scheduler.go /tmp/e2e-k8s.config k8s/test/e2e/scheduling-outside-cluster-demo/test.yaml
     - name: wait job completed
       command: |

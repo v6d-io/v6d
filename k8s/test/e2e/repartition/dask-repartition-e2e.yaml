@@ -77,13 +77,14 @@ setup:
         sed 's/$job/daskRepartitionJob2/' k8s/test/e2e/repartition-demo/repartition-job.yaml | \
           gomplate -d config=k8s/test/e2e/repartition-demo/repartition-job-config.yaml | \
           kubectl apply -f -
-        kubectl describe pod $(kubectl get po -l app=dask-repartition-job1 -n vineyard-job -oname | awk -F '/' '{print $2}') -n vineyard-job
-        kubectl logs -f $(kubectl get po -l app=dask-repartition-job1 -n vineyard-job -oname | awk -F '/' '{print $2}') -n vineyard-job
+        #sleep 120
+        #kubectl describe pod $(kubectl get po -l app=dask-repartition-job2 -n vineyard-job -oname | awk -F '/' '{print $2}') -n vineyard-job
+        #kubectl logs -f $(kubectl get po -l app=dask-repartition-job2 -n vineyard-job -oname | awk -F '/' '{print $2}') -n vineyard-job
       wait:
         - namespace: vineyard-job
           resource: deployment/dask-repartition-job2
           for: condition=Available
-  timeout: 50m
+  timeout: 40m
 
 cleanup:
   # always never success failure

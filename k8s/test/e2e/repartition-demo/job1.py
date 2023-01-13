@@ -48,4 +48,4 @@ with vineyard_for_dask():
     obj_id = client.put(df, dask_scheduler=dask_scheduler)
 
 # avoid CrashLoopBackOff
-time.sleep(600)
+time.sleep(3600)
