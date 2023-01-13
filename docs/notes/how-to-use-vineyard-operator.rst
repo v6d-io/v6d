@@ -236,6 +236,10 @@ Check whether all cert-manager pods are running.
 Vineyard CRDs、Controllers、Webhooks and Scheduler are packaged by `helm`_, you could 
 deploy all resources as follows.
 
+.. code:: bash
+
+    $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
+
 .. raw:: html
 
    <details>
