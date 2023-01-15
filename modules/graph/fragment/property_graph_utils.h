@@ -98,14 +98,13 @@ template <typename VID_T, typename EID_T>
 void sort_edges_with_respect_to_vertex(
     vineyard::PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>&
         builder,
-    std::shared_ptr<arrow::Int64Array> offsets, VID_T tvnum, int concurrency);
+    const int64_t* offsets, VID_T tvnum, int concurrency);
 
 template <typename VID_T, typename EID_T>
 void check_is_multigraph(
     vineyard::PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>&
         builder,
-    std::shared_ptr<arrow::Int64Array> offsets, VID_T tvnum, int concurrency,
-    bool& is_multigraph);
+    const int64_t* offsets, VID_T tvnum, int concurrency, bool& is_multigraph);
 
 /**
  * @brief Generate CSR from given COO.
@@ -118,7 +117,7 @@ boost::leaf::result<void> generate_directed_csr(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
 /**
@@ -130,10 +129,10 @@ boost::leaf::result<void> generate_directed_csc(
     int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& oedges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& oedge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& oedge_offsets,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& iedges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& iedge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& iedge_offsets,
     bool& is_multigraph);
 
 /**
@@ -148,7 +147,7 @@ boost::leaf::result<void> generate_undirected_csr(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
 /**
@@ -163,7 +162,7 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
 }  // namespace vineyard

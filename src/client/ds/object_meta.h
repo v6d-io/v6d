@@ -30,6 +30,7 @@ limitations under the License.
 #include "client/ds/core_types.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
+#include "common/util/typename.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
@@ -637,12 +638,65 @@ class ObjectMeta {
   std::shared_ptr<Object> GetMember(const std::string& name) const;
 
   /**
+   * @brief Get member value from vineyard.
+   *
+   * @param name The name of member object.
+   *
+   * @return member The member object.
+   */
+  Status GetMember(const std::string& name,
+                   std::shared_ptr<Object>& object) const;
+
+  /**
+   * @brief Get member value from vineyard.
+   *
+   * @param name The name of member object.
+   *
+   * @return member The member object.
+   */
+  template <typename T>
+  std::shared_ptr<T> GetMember(const std::string& name) const {
+    return std::dynamic_pointer_cast<T>(GetMember(name));
+  }
+
+  /**
+   * @brief Get member value from vineyard.
+   *
+   * @param name The name of member object.
+   *
+   * @return member The member object.
+   */
+  template <typename T>
+  Status GetMember(const std::string& name, std::shared_ptr<T>& object) const {
+    std::shared_ptr<Object> _object;
+    RETURN_ON_ERROR(GetMember(name, _object));
+    object = std::dynamic_pointer_cast<T>(_object);
+    if (object == nullptr) {
+      return Status::ObjectTypeError(type_name<T>(),
+                                     GetMemberMeta(name).GetTypeName());
+    } else {
+      return Status::OK();
+    }
+  }
+
+  /**
    * @brief Get member's ObjectMeta value.
    *
    * @param name The name of member object.
-   * @param member The metadata of member object. will be stored in `value`.
+   *
+   * @return member The metadata of member object. will be stored in `value`.
    */
   ObjectMeta GetMemberMeta(const std::string& name) const;
+
+  /**
+   * @brief Get member's ObjectMeta value.
+   *
+   * @param name The name of member object.
+   * @param meta The metadata of member object.
+   *
+   * @return Whether the member metadata has been found.
+   */
+  Status GetMemberMeta(const std::string& name, ObjectMeta& meta) const;
 
   /**
    * @brief Get buffer member (directed or indirected) from the metadata. The

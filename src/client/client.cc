@@ -351,7 +351,8 @@ Status Client::PullNextStreamChunk(ObjectID const id,
 std::shared_ptr<Object> Client::GetObject(const ObjectID id) {
   ObjectMeta meta;
   RETURN_NULL_ON_ERROR(this->GetMetaData(id, meta, true));
-  RETURN_NULL_ON_ASSERT(!meta.MetaData().empty());
+  RETURN_NULL_ON_ASSERT(!meta.MetaData().empty(),
+                        "metadata shouldn't be empty");
   auto object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
     object = std::unique_ptr<Object>(new Object());

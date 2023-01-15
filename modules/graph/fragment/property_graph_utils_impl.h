@@ -177,73 +177,43 @@ template <typename VID_T, typename EID_T>
 void sort_edges_with_respect_to_vertex(
     vineyard::PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>&
         builder,
-    std::shared_ptr<arrow::Int64Array> offsets, VID_T tvnum, int concurrency) {
+    const int64_t* offsets, VID_T tvnum, int concurrency) {
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
-
-  const int64_t* offsets_ptr = offsets->raw_values();
-  if (concurrency == 1) {
-    for (VID_T i = 0; i < tvnum; ++i) {
-      nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-      nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-      std::sort(begin, end, [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-        return lhs.vid < rhs.vid;
-      });
-    }
-  } else {
-    parallel_for(
-        static_cast<VID_T>(0), tvnum,
-        [offsets_ptr, &builder](VID_T i) {
-          nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-          nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-          std::sort(begin, end,
-                    [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-                      return lhs.vid < rhs.vid;
-                    });
-        },
-        concurrency);
-  }
+  parallel_for(
+      static_cast<VID_T>(0), tvnum,
+      [offsets, &builder](VID_T i) {
+        nbr_unit_t* begin = builder.MutablePointer(offsets[i]);
+        nbr_unit_t* end = builder.MutablePointer(offsets[i + 1]);
+        std::sort(begin, end, [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+          return lhs.vid < rhs.vid;
+        });
+      },
+      concurrency);
 }
 
 template <typename VID_T, typename EID_T>
 void check_is_multigraph(
     vineyard::PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>&
         builder,
-    std::shared_ptr<arrow::Int64Array> offsets, VID_T tvnum, int concurrency,
-    bool& is_multigraph) {
+    const int64_t* offsets, VID_T tvnum, int concurrency, bool& is_multigraph) {
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
-  const int64_t* offsets_ptr = offsets->raw_values();
-  if (concurrency == 1) {
-    for (VID_T i = 0; i < tvnum; ++i) {
-      nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-      nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-      nbr_unit_t* loc = std::adjacent_find(
-          begin, end, [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-            return lhs.vid == rhs.vid;
-          });
-      if (loc != end) {
-        is_multigraph = true;
-        break;
-      }
-    }
-  } else {
-    parallel_for(
-        static_cast<VID_T>(0), tvnum,
-        [offsets_ptr, &builder, &is_multigraph](VID_T i) {
-          if (!is_multigraph) {
-            nbr_unit_t* begin = builder.MutablePointer(offsets_ptr[i]);
-            nbr_unit_t* end = builder.MutablePointer(offsets_ptr[i + 1]);
-            nbr_unit_t* loc = std::adjacent_find(
-                begin, end, [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
-                  return lhs.vid == rhs.vid;
-                });
-            if (loc != end) {
-              __sync_or_and_fetch(
-                  reinterpret_cast<unsigned char*>(&is_multigraph), 1);
-            }
+  parallel_for(
+      static_cast<VID_T>(0), tvnum,
+      [offsets, &builder, &is_multigraph](VID_T i) {
+        if (!is_multigraph) {
+          nbr_unit_t* begin = builder.MutablePointer(offsets[i]);
+          nbr_unit_t* end = builder.MutablePointer(offsets[i + 1]);
+          nbr_unit_t* loc = std::adjacent_find(
+              begin, end, [](const nbr_unit_t& lhs, const nbr_unit_t& rhs) {
+                return lhs.vid == rhs.vid;
+              });
+          if (loc != end) {
+            __sync_or_and_fetch(
+                reinterpret_cast<unsigned char*>(&is_multigraph), 1);
           }
-        },
-        concurrency);
-  }
+        }
+      },
+      concurrency);
 }
 
 template <typename VID_T, typename EID_T>
@@ -254,7 +224,7 @@ boost::leaf::result<void> generate_directed_csr(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph) {
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
 
@@ -293,14 +263,10 @@ boost::leaf::result<void> generate_directed_csr(
                           concurrency);
     }
     // build the arrow's offset array
-    std::shared_ptr<arrow::Buffer> offsets_buffer;
-    ARROW_OK_ASSIGN_OR_RAISE(
-        offsets_buffer, arrow::AllocateBuffer((tvnum + 1) * sizeof(int64_t),
-                                              arrow::default_memory_pool()));
-    memcpy(offsets_buffer->mutable_data(), offset_vec.data(),
+    edge_offsets[v_label] =
+        std::make_shared<FixedInt64Builder>(client, tvnum + 1);
+    memcpy(edge_offsets[v_label]->data(), offset_vec.data(),
            (tvnum + 1) * sizeof(int64_t));
-    edge_offsets[v_label] = std::make_shared<arrow::Int64Array>(
-        arrow::int64(), tvnum + 1, offsets_buffer, nullptr, 0, 0);
     actual_edge_num[v_label] = offset_vec[tvnum];
   }
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
@@ -341,10 +307,11 @@ boost::leaf::result<void> generate_directed_csr(
   VLOG(100) << "Finish building the CSR ..." << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
-    sort_edges_with_respect_to_vertex(*edges[v_label], edge_offsets[v_label],
+    sort_edges_with_respect_to_vertex(*edges[v_label],
+                                      edge_offsets[v_label]->data(),
                                       tvnums[v_label], concurrency);
     if (!is_multigraph) {
-      check_is_multigraph(*edges[v_label], edge_offsets[v_label],
+      check_is_multigraph(*edges[v_label], edge_offsets[v_label]->data(),
                           tvnums[v_label], concurrency, is_multigraph);
     }
   }
@@ -357,10 +324,10 @@ boost::leaf::result<void> generate_directed_csc(
     int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& oedges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& oedge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& oedge_offsets,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& iedges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& iedge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& iedge_offsets,
     bool& is_multigraph) {
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
 
@@ -372,7 +339,7 @@ boost::leaf::result<void> generate_directed_csc(
 
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
     const nbr_unit_t* oe = oedges[v_label]->MutablePointer(0);
-    const int64_t* oe_offsets = oedge_offsets[v_label]->raw_values();
+    const int64_t* oe_offsets = oedge_offsets[v_label]->data();
     parallel_for(
         static_cast<VID_T>(0), tvnums[v_label],
         [&degree, &parser, &oe, &oe_offsets](VID_T src_offset) {
@@ -400,14 +367,10 @@ boost::leaf::result<void> generate_directed_csc(
                           concurrency);
     }
     // build the arrow's offset array
-    std::shared_ptr<arrow::Buffer> offsets_buffer;
-    ARROW_OK_ASSIGN_OR_RAISE(
-        offsets_buffer, arrow::AllocateBuffer((tvnum + 1) * sizeof(int64_t),
-                                              arrow::default_memory_pool()));
-    memcpy(offsets_buffer->mutable_data(), offset_vec.data(),
+    iedge_offsets[v_label] =
+        std::make_shared<FixedInt64Builder>(client, tvnum + 1);
+    memcpy(iedge_offsets[v_label]->data(), offset_vec.data(),
            (tvnum + 1) * sizeof(int64_t));
-    iedge_offsets[v_label] = std::make_shared<arrow::Int64Array>(
-        arrow::int64(), tvnum + 1, offsets_buffer, nullptr, 0, 0);
     actual_edge_num[v_label] = offset_vec[tvnum];
   }
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
@@ -420,7 +383,7 @@ boost::leaf::result<void> generate_directed_csc(
 
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
     const nbr_unit_t* oe = oedges[v_label]->MutablePointer(0);
-    const int64_t* oe_offsets = oedge_offsets[v_label]->raw_values();
+    const int64_t* oe_offsets = oedge_offsets[v_label]->data();
     parallel_for(
         static_cast<VID_T>(0), tvnums[v_label],
         [&parser, &v_label, &offsets, &iedges, &oe,
@@ -444,10 +407,11 @@ boost::leaf::result<void> generate_directed_csc(
   VLOG(100) << "Finish building the CSC ..." << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
-    sort_edges_with_respect_to_vertex(*iedges[v_label], iedge_offsets[v_label],
+    sort_edges_with_respect_to_vertex(*iedges[v_label],
+                                      iedge_offsets[v_label]->data(),
                                       tvnums[v_label], concurrency);
     if (!is_multigraph) {
-      check_is_multigraph(*iedges[v_label], iedge_offsets[v_label],
+      check_is_multigraph(*iedges[v_label], iedge_offsets[v_label]->data(),
                           tvnums[v_label], concurrency, is_multigraph);
     }
   }
@@ -462,7 +426,7 @@ boost::leaf::result<void> generate_undirected_csr(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph) {
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
 
@@ -508,14 +472,10 @@ boost::leaf::result<void> generate_undirected_csr(
                           concurrency);
     }
     // build the arrow's offset array
-    std::shared_ptr<arrow::Buffer> offsets_buffer;
-    ARROW_OK_ASSIGN_OR_RAISE(
-        offsets_buffer, arrow::AllocateBuffer((tvnum + 1) * sizeof(int64_t),
-                                              arrow::default_memory_pool()));
-    memcpy(offsets_buffer->mutable_data(), offset_vec.data(),
+    edge_offsets[v_label] =
+        std::make_shared<FixedInt64Builder>(client, tvnum + 1);
+    memcpy(edge_offsets[v_label]->data(), offset_vec.data(),
            (tvnum + 1) * sizeof(int64_t));
-    edge_offsets[v_label] = std::make_shared<arrow::Int64Array>(
-        arrow::int64(), tvnum + 1, offsets_buffer, nullptr, 0, 0);
     actual_edge_num[v_label] = offset_vec[tvnum];
   }
 
@@ -567,10 +527,11 @@ boost::leaf::result<void> generate_undirected_csr(
   VLOG(100) << "Finish building the CSR ..." << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
-    sort_edges_with_respect_to_vertex(*edges[v_label], edge_offsets[v_label],
+    sort_edges_with_respect_to_vertex(*edges[v_label],
+                                      edge_offsets[v_label]->data(),
                                       tvnums[v_label], concurrency);
     if (!is_multigraph) {
-      check_is_multigraph(*edges[v_label], edge_offsets[v_label],
+      check_is_multigraph(*edges[v_label], edge_offsets[v_label]->data(),
                           tvnums[v_label], concurrency, is_multigraph);
     }
   }
@@ -585,7 +546,7 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
     std::vector<VID_T> tvnums, int vertex_label_num, int concurrency,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>& edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph) {
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
 
@@ -631,14 +592,10 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
                           concurrency);
     }
     // build the arrow's offset array
-    std::shared_ptr<arrow::Buffer> offsets_buffer;
-    ARROW_OK_ASSIGN_OR_RAISE(
-        offsets_buffer, arrow::AllocateBuffer((tvnum + 1) * sizeof(int64_t),
-                                              arrow::default_memory_pool()));
-    memcpy(offsets_buffer->mutable_data(), offset_vec.data(),
+    edge_offsets[v_label] =
+        std::make_shared<FixedInt64Builder>(client, tvnum + 1);
+    memcpy(edge_offsets[v_label]->data(), offset_vec.data(),
            (tvnum + 1) * sizeof(int64_t));
-    edge_offsets[v_label] = std::make_shared<arrow::Int64Array>(
-        arrow::int64(), tvnum + 1, offsets_buffer, nullptr, 0, 0);
     actual_edge_num[v_label] = offset_vec[tvnum];
   }
 
@@ -686,7 +643,7 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
 
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
     const nbr_unit_t* oe = edges[v_label]->MutablePointer(0);
-    const int64_t* oe_offsets = edge_offsets[v_label]->raw_values();
+    const int64_t* oe_offsets = edge_offsets[v_label]->data();
     parallel_for(
         static_cast<VID_T>(0), tvnums[v_label],
         [&parser, &v_label, &csr_offsets, &offsets, &oe_offsets, &edges,
@@ -711,10 +668,11 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
             << ", peak = " << get_peak_rss_pretty();
 
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
-    sort_edges_with_respect_to_vertex(*edges[v_label], edge_offsets[v_label],
+    sort_edges_with_respect_to_vertex(*edges[v_label],
+                                      edge_offsets[v_label]->data(),
                                       tvnums[v_label], concurrency);
     if (!is_multigraph) {
-      check_is_multigraph(*edges[v_label], edge_offsets[v_label],
+      check_is_multigraph(*edges[v_label], edge_offsets[v_label]->data(),
                           tvnums[v_label], concurrency, is_multigraph);
     }
   }

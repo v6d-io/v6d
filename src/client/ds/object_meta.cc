@@ -173,24 +173,45 @@ std::shared_ptr<Object> ObjectMeta::GetMember(const std::string& name) const {
   return object;
 }
 
-ObjectMeta ObjectMeta::GetMemberMeta(const std::string& name) const {
-  ObjectMeta ret;
-  auto const& child_meta = meta_[name];
-  VINEYARD_ASSERT(!child_meta.is_null(), "Failed to get member " + name);
+Status ObjectMeta::GetMember(const std::string& name,
+                             std::shared_ptr<Object>& object) const {
+  ObjectMeta meta;
+  RETURN_ON_ERROR(GetMemberMeta(name, meta));
+  RETURN_ON_ASSERT(!meta.MetaData().empty(), "metadata shouldn't be empty");
+  object = ObjectFactory::Create(meta.GetTypeName());
+  if (object == nullptr) {
+    object = std::unique_ptr<Object>(new Object());
+  }
+  object->Construct(meta);
+  return Status::OK();
+}
 
-  ret.SetMetaData(this->client_, child_meta);
+ObjectMeta ObjectMeta::GetMemberMeta(const std::string& name) const {
+  ObjectMeta meta;
+  VINEYARD_CHECK_OK(GetMemberMeta(name, meta));
+  return meta;
+}
+
+Status ObjectMeta::GetMemberMeta(const std::string& name,
+                                 ObjectMeta& meta) const {
+  auto const& child_meta = meta_[name];
+  RETURN_ON_ASSERT(!child_meta.is_null(),
+                   "Failed to get member '" + name + "'");
+
+  meta.Reset();
+  meta.SetMetaData(this->client_, child_meta);
   auto const& all_blobs = buffer_set_->AllBuffers();
-  for (auto const& blob : ret.buffer_set_->AllBuffers()) {
+  for (auto const& blob : meta.buffer_set_->AllBuffers()) {
     auto iter = all_blobs.find(blob.first);
     // for remote object, the blob may not present here
     if (iter != all_blobs.end()) {
-      ret.SetBuffer(blob.first, iter->second);
+      meta.SetBuffer(blob.first, iter->second);
     }
   }
   if (this->force_local_) {
-    ret.ForceLocal();
+    meta.ForceLocal();
   }
-  return ret;
+  return Status::OK();
 }
 
 Status ObjectMeta::GetBuffer(const ObjectID blob_id,

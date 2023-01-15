@@ -109,7 +109,13 @@ void create_dirs(const char* path) {
  * c.f.: https://stackoverflow.com/a/14927379/5080177
  */
 size_t get_rss(bool include_shared_memory) {
+  // why "trim_rss" first?
+  //
+  //  - for more accurate statistics
+  //  - as a hint for allocator to release pages in places where `get_rss()`
+  //    is called (where memory information is in cencern) in programs.
   trim_rss();
+
 #if defined(__APPLE__) && defined(__MACH__)
   /* OSX ------------------------------------------------------ */
   struct mach_task_basic_info info;

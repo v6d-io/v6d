@@ -678,7 +678,7 @@ class [[vineyard]] ArrowFragment
       vineyard::Client & client,
       std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>> &
           oe_lists,
-      std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> &
+      std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> &
           oe_offsets_lists,
       int concurrency, bool& is_multigraph);
 

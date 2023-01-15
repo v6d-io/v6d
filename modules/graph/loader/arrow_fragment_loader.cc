@@ -50,12 +50,12 @@ static Status ReadRecordBatchesFromVineyardStreamImpl(
   size_t end_to_read =
       std::min(local_streams.size(), (part_id + 1) * split_size);
 
-  VLOG(10) << "reading recordbatches from vineyard: total chunks = "
-           << local_streams.size() << ", part id = " << part_id
-           << ", part num = " << part_num
-           << ", start to read = " << start_to_read
-           << ", end to read = " << end_to_read
-           << ", split size = " << split_size;
+  VLOG(100) << "reading recordbatches from vineyard: total chunks = "
+            << local_streams.size() << ", part id = " << part_id
+            << ", part num = " << part_num
+            << ", start to read = " << start_to_read
+            << ", end to read = " << end_to_read
+            << ", split size = " << split_size;
 
   std::mutex mutex_for_results;
 
@@ -71,9 +71,7 @@ static Status ReadRecordBatchesFromVineyardStreamImpl(
     RETURN_ON_ERROR(stream->ReadRecordBatches(read_batches));
     {
       std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      for (auto const& batch : read_batches) {
-        batches.emplace_back(batch);
-      }
+      batches.insert(batches.end(), read_batches.begin(), read_batches.end());
     }
     return Status::OK();
   };
