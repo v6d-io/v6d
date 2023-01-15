@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ghcr.io/v6d-io/v6d/vineyard-manylinux1:20220512
+ARG BASE=vineyard-manylinux1:20220512
+FROM ghcr.io/v6d-io/v6d/vineyard-$BASE
 
 # target: ghcr.io/v6d-io/v6d/vineyard-wheel
 
@@ -22,6 +23,7 @@ FROM ghcr.io/v6d-io/v6d/vineyard-manylinux1:20220512
 #   - cp38-cp38
 #   - cp39-cp39
 #   - cp310-cp310
+#   - cp311-cp311
 ARG python
 
 ADD . /work/v6d
@@ -30,7 +32,7 @@ RUN cd /work/v6d && \
     mkdir build && \
     cd build && \
     export PATH=$PATH:/opt/python/$python/bin && \
-    pip install -U pip setuptools wheel && \
+    pip install -U pip setuptools wheel libclang parsec && \
     cmake .. -DBUILD_SHARED_LIBS=OFF \
              -DBUILD_VINEYARD_SERVER=OFF \
              -DBUILD_VINEYARD_CLIENT=ON \

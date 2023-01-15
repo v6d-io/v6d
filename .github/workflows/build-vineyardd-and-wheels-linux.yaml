@@ -116,7 +116,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        python: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310]
+        python: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311]
 
     steps:
       - uses: actions/checkout@v3
@@ -152,8 +152,16 @@ jobs:
 
       - name: Build wheel package on Linux
         run: |
+          if [[ "${{ matrix.python }}" == "cp311-cp311" ]];
+          then
+            export base=vineyard-manylinux1:20230115
+          else
+            export base=vineyard-manylinux1:20220512
+          fi
+
           sudo docker build . -f docker/pypa/Dockerfile.manylinux1-wheel \
                               -t ghcr.io/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
+                              --build-arg BASE=$base \
                               --build-arg python=${{ matrix.python }}
           sudo docker run --rm -v `pwd`:/target ghcr.io/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
           ls -la ./fixed_wheels/

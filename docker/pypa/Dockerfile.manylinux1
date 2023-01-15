@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM quay.io/pypa/manylinux2010_x86_64:2022-05-08-ac9d5ec
+ARG BASE=manylinux2014_x86_64:2023-01-14-103cb93
+FROM quay.io/pypa/$BASE
 
 # target: ghcr.io/v6d-io/v6d/vineyard-manylinux1:20220512
+# target: ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20230115
 
-RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
+RUN export PATH=$PATH:/opt/python/cp310-cp310/bin && \
     mkdir /deps && \
     cd /deps && \
     echo "Installing cmake ..." && \
@@ -51,9 +53,9 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
     cp -R boost_1_77_0/boost /usr/local/include/ && \
     echo "Installing apache-arrow ..." && \
     cd /deps && \
-    curl -L https://github.com/apache/arrow/archive/apache-arrow-1.0.1.tar.gz --output apache-arrow-1.0.1.tar.gz && \
-    tar zxvf apache-arrow-1.0.1.tar.gz && \
-    cd arrow-apache-arrow-1.0.1 && \
+    curl -L https://github.com/apache/arrow/archive/apache-arrow-10.0.1.tar.gz --output apache-arrow-10.0.1.tar.gz && \
+    tar zxvf apache-arrow-10.0.1.tar.gz && \
+    cd arrow-apache-arrow-10.0.1 && \
     mkdir build-dir && \
     cd build-dir && \
     cmake ../cpp \
@@ -97,7 +99,5 @@ RUN export PATH=$PATH:/opt/python/cp37-cp37m/bin && \
         -DARROW_BUILD_STATIC=ON \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
     make install -j`nproc` && \
-    echo "Prepare python dev dependencies ..." && \
-    pip3 install libclang parsec && \
     echo "Done." && \
     rm -rf /deps

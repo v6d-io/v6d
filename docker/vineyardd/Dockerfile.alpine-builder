@@ -63,11 +63,11 @@ RUN cd /tmp && \
         -DARROW_FLIGHT=OFF \
         -DARROW_GANDIVA=OFF \
         -DARROW_GANDIVA_JAVA=OFF \
-        -DARROW_HDFS=OFF \
+        -DARROW_HDFS=ON \
         -DARROW_HIVESERVER2=OFF \
         -DARROW_JSON=OFF \
-        -DARROW_ORC=OFF \
-        -DARROW_PARQUET=OFF \
+        -DARROW_ORC=ON \
+        -DARROW_PARQUET=ON \
         -DARROW_PLASMA=OFF \
         -DARROW_PLASMA_JAVA_CLIENT=OFF \
         -DARROW_PYTHON=OFF \
@@ -76,7 +76,7 @@ RUN cd /tmp && \
         -DARROW_WITH_ZLIB=OFF \
         -DARROW_WITH_LZ4=OFF \
         -DARROW_WITH_SNAPPY=OFF \
-        -DARROW_WITH_ZSTD=OFF \
+        -DARROW_WITH_ZSTD=ON \
         -DARROW_WITH_BROTLI=OFF \
         -DARROW_IPC=ON \
         -DARROW_BUILD_BENCHMARKS=OFF \
@@ -141,16 +141,16 @@ RUN cd /tmp && \
 #
 # note: remove shared libs
 RUN cd /tmp && \
-    wget -q https://zlib.net/zlib-1.2.12.tar.gz && \
-    tar zxf zlib-1.2.12.tar.gz && \
-    cd zlib-1.2.12 && \
+    wget -q https://zlib.net/zlib-1.2.13.tar.gz && \
+    tar zxf zlib-1.2.13.tar.gz && \
+    cd zlib-1.2.13 && \
     mkdir build && \
     cd build && \
     cmake .. -DBUILD_SHARED_LIBS=OFF && \
     make install -j`nproc` && \
     rm -rf /usr/local/lib/libz.so* && \
     cd /tmp && \
-    rm -rf zlib-1.2.12.tar.gz zlib-1.2.12
+    rm -rf zlib-1.2.13.tar.gz zlib-1.2.13
 
 # install openssl: boringssl doesn't bring headers when installing
 RUN cd /tmp && \
