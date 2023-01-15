@@ -112,7 +112,7 @@ class BasicArrowFragmentBuilder
 
   std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
       ie_lists_, oe_lists_;
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       ie_offsets_lists_, oe_offsets_lists_;
 
   std::shared_ptr<vertex_map_t> vm_ptr_;

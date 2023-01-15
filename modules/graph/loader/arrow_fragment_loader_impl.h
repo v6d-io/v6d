@@ -313,8 +313,8 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTables(
         VY_OK_OR_RAISE(ReadTableFromVineyard(client_, sourceId, table, index,
                                              total_parts));
       } else {
-        VY_OK_OR_RAISE(ReadTableFromLocation(
-            files[label_id] + "#header_row=true", table, index, total_parts));
+        VY_OK_OR_RAISE(
+            ReadTableFromLocation(files[label_id], table, index, total_parts));
       }
       return table;
     };

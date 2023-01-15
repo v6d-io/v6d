@@ -50,6 +50,9 @@ class NumericArray;
 template <typename T>
 class NumericArrayBuilder;
 
+template <typename T>
+class FixedNumericArrayBuilder;
+
 #define CONVERT_TO_ARROW_TYPE(type, data_type, array_type, builder_type,       \
                               type_value)                                      \
   template <>                                                                  \
@@ -59,6 +62,7 @@ class NumericArrayBuilder;
     using VineyardArrayType = NumericArray<type>;                              \
     using BuilderType = builder_type;                                          \
     using VineyardBuilderType = NumericArrayBuilder<type>;                     \
+    using FixedVineyardBuilderType = FixedNumericArrayBuilder<type>;           \
     static std::shared_ptr<arrow::DataType> TypeValue() { return type_value; } \
   };
 
@@ -78,6 +82,10 @@ using ArrowBuilderType = typename ConvertToArrowType<T>::BuilderType;
 template <typename T>
 using ArrowVineyardBuilderType =
     typename ConvertToArrowType<T>::VineyardBuilderType;
+
+template <typename T>
+using FixedArrowVineyardBuilderType =
+    typename ConvertToArrowType<T>::FixedVineyardBuilderType;
 
 CONVERT_TO_ARROW_TYPE(void, arrow::NullType, arrow::NullArray,
                       arrow::NullBuilder, arrow::null())

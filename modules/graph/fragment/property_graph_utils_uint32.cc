@@ -42,13 +42,12 @@ template boost::leaf::result<void> generate_local_id_list<uint32_t>(
 template void sort_edges_with_respect_to_vertex<uint32_t, uint64_t>(
     vineyard::PodArrayBuilder<
         property_graph_utils::NbrUnit<uint32_t, uint64_t>>& builder,
-    std::shared_ptr<arrow::Int64Array> offsets, uint32_t tvnum,
-    int concurrency);
+    const int64_t* offsets, uint32_t tvnum, int concurrency);
 
 template void check_is_multigraph<uint32_t, uint64_t>(
     vineyard::PodArrayBuilder<
         property_graph_utils::NbrUnit<uint32_t, uint64_t>>& builder,
-    std::shared_ptr<arrow::Int64Array> offsets, uint32_t tvnum, int concurrency,
+    const int64_t* offsets, uint32_t tvnum, int concurrency,
     bool& is_multigraph);
 
 template boost::leaf::result<void> generate_directed_csr<uint32_t, uint64_t>(
@@ -59,7 +58,7 @@ template boost::leaf::result<void> generate_directed_csr<uint32_t, uint64_t>(
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<uint32_t, uint64_t>>>>&
         edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
 template boost::leaf::result<void> generate_directed_csc<uint32_t, uint64_t>(
@@ -68,11 +67,11 @@ template boost::leaf::result<void> generate_directed_csc<uint32_t, uint64_t>(
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<uint32_t, uint64_t>>>>&
         oedges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& oedge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& oedge_offsets,
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<uint32_t, uint64_t>>>>&
         iedges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& iedge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& iedge_offsets,
     bool& is_multigraph);
 
 template boost::leaf::result<void> generate_undirected_csr<uint32_t, uint64_t>(
@@ -83,7 +82,7 @@ template boost::leaf::result<void> generate_undirected_csr<uint32_t, uint64_t>(
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<uint32_t, uint64_t>>>>&
         edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
 template boost::leaf::result<void>
@@ -95,7 +94,7 @@ generate_undirected_csr_memopt<uint32_t, uint64_t>(
     std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<uint32_t, uint64_t>>>>&
         edges,
-    std::vector<std::shared_ptr<arrow::Int64Array>>& edge_offsets,
+    std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
 }  // namespace vineyard

@@ -77,6 +77,34 @@ class NumericArrayBuilder : public NumericArrayBaseBuilder<T> {
   std::vector<std::shared_ptr<arrow::Array>> arrays_;
 };
 
+/**
+ * @brief FixedNumericArrayBuilder is designed for building Arrow numeric
+ * arrays with known size. It is useful for allocating buffers directly
+ * on the vineyard's shared memory.
+ *
+ * @tparam T
+ */
+template <typename T>
+class FixedNumericArrayBuilder : public NumericArrayBaseBuilder<T> {
+ public:
+  using ArrayType = ArrowArrayType<T>;
+
+  FixedNumericArrayBuilder(Client& client, const size_t size);
+
+  size_t size() const;
+
+  T* MutablePointer(int64_t i) const;
+
+  T* data() const;
+
+  Status Build(Client& client) override;
+
+ private:
+  size_t size_ = 0;
+  std::unique_ptr<BlobWriter> writer_ = nullptr;
+  T* data_ = nullptr;
+};
+
 using Int8Builder = NumericArrayBuilder<int8_t>;
 using Int16Builder = NumericArrayBuilder<int16_t>;
 using Int32Builder = NumericArrayBuilder<int32_t>;
@@ -87,6 +115,17 @@ using UInt32Builder = NumericArrayBuilder<uint32_t>;
 using UInt64Builder = NumericArrayBuilder<uint64_t>;
 using FloatBuilder = NumericArrayBuilder<float>;
 using DoubleBuilder = NumericArrayBuilder<double>;
+
+using FixedInt8Builder = FixedNumericArrayBuilder<int8_t>;
+using FixedInt16Builder = FixedNumericArrayBuilder<int16_t>;
+using FixedInt32Builder = FixedNumericArrayBuilder<int32_t>;
+using FixedInt64Builder = FixedNumericArrayBuilder<int64_t>;
+using FixedUInt8Builder = FixedNumericArrayBuilder<uint8_t>;
+using FixedUInt16Builder = FixedNumericArrayBuilder<uint16_t>;
+using FixedUInt32Builder = FixedNumericArrayBuilder<uint32_t>;
+using FixedUInt64Builder = FixedNumericArrayBuilder<uint64_t>;
+using FixedFloatBuilder = FixedNumericArrayBuilder<float>;
+using FixedDoubleBuilder = FixedNumericArrayBuilder<double>;
 
 /**
  * @brief BooleanArrayBuilder is designed for constructing  Arrow arrays of
@@ -194,12 +233,14 @@ class PodArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
     }
   }
 
-  T* MutablePointer(int64_t i) {
+  T* MutablePointer(int64_t i) const {
     if (data_) {
       return data_ + i;
     }
     return nullptr;
   }
+
+  T* data() const { return data_; }
 
   size_t size() const { return size_; }
 

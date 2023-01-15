@@ -273,9 +273,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
       ie_lists(total_vertex_label_num);
   std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
       oe_lists(total_vertex_label_num);
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> ie_offsets_lists(
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> ie_offsets_lists(
       total_vertex_label_num);
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> oe_offsets_lists(
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> oe_offsets_lists(
       total_vertex_label_num);
 
   for (label_id_t v_label = 0; v_label < total_vertex_label_num; ++v_label) {
@@ -292,7 +292,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
       vid_t prev_offset_size = tvnums_[v_label] + 1;
       vid_t cur_offset_size = tvnums[v_label] + 1;
       if (directed_) {
-        std::vector<int64_t> offsets(cur_offset_size);
+        ie_offsets_lists[v_label][e_label] =
+            std::make_shared<FixedInt64Builder>(client, cur_offset_size);
+        int64_t* offsets = ie_offsets_lists[v_label][e_label]->data();
         const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
         for (vid_t k = 0; k < prev_offset_size; ++k) {
           offsets[k] = offset_array[k];
@@ -300,11 +302,10 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
         for (vid_t k = prev_offset_size; k < cur_offset_size; ++k) {
           offsets[k] = offsets[k - 1];
         }
-        arrow::Int64Builder builder;
-        ARROW_OK_OR_RAISE(builder.AppendValues(offsets));
-        ARROW_OK_OR_RAISE(builder.Finish(&ie_offsets_lists[v_label][e_label]));
       }
-      std::vector<int64_t> offsets(cur_offset_size);
+      oe_offsets_lists[v_label][e_label] =
+          std::make_shared<FixedInt64Builder>(client, cur_offset_size);
+      int64_t* offsets = oe_offsets_lists[v_label][e_label]->data();
       const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
       for (size_t k = 0; k < prev_offset_size; ++k) {
         offsets[k] = offset_array[k];
@@ -312,9 +313,6 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
       for (size_t k = prev_offset_size; k < cur_offset_size; ++k) {
         offsets[k] = offsets[k - 1];
       }
-      arrow::Int64Builder builder;
-      ARROW_OK_OR_RAISE(builder.AppendValues(offsets));
-      ARROW_OK_OR_RAISE(builder.Finish(&oe_offsets_lists[v_label][e_label]));
     }
   }
 
@@ -323,9 +321,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
         total_vertex_label_num);
     std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>> sub_oe_lists(
         total_vertex_label_num);
-    std::vector<std::shared_ptr<arrow::Int64Array>> sub_ie_offset_lists(
+    std::vector<std::shared_ptr<FixedInt64Builder>> sub_ie_offset_lists(
         total_vertex_label_num);
-    std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
+    std::vector<std::shared_ptr<FixedInt64Builder>> sub_oe_offset_lists(
         total_vertex_label_num);
 
     // Process v_num...total_v_num  X  0...e_num  part.
@@ -335,25 +333,20 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
              v_label < total_vertex_label_num; ++v_label) {
           sub_ie_lists[v_label] =
               std::make_shared<PodArrayBuilder<nbr_unit_t>>(client, 0);
-          arrow::Int64Builder int64_builder;
-          std::vector<int64_t> offset_vec(tvnums[v_label] + 1, 0);
-          ARROW_OK_OR_RAISE(int64_builder.AppendValues(offset_vec));
-          std::shared_ptr<arrow::Int64Array> ie_offset_array;
-          ARROW_OK_OR_RAISE(int64_builder.Finish(&ie_offset_array));
-          sub_ie_offset_lists[v_label] = ie_offset_array;
+          sub_ie_offset_lists[v_label] =
+              std::make_shared<FixedInt64Builder>(client, tvnums[v_label] + 1);
+          memset(sub_ie_offset_lists[v_label]->data(), 0x00,
+                 sizeof(int64_t) * (tvnums[v_label] + 1));
         }
       }
       for (label_id_t v_label = vertex_label_num_;
            v_label < total_vertex_label_num; ++v_label) {
         sub_oe_lists[v_label] =
             std::make_shared<PodArrayBuilder<nbr_unit_t>>(client, 0);
-
-        arrow::Int64Builder int64_builder;
-        std::vector<int64_t> offset_vec(tvnums[v_label] + 1, 0);
-        ARROW_OK_OR_RAISE(int64_builder.AppendValues(offset_vec));
-        std::shared_ptr<arrow::Int64Array> oe_offset_array;
-        ARROW_OK_OR_RAISE(int64_builder.Finish(&oe_offset_array));
-        sub_oe_offset_lists[v_label] = oe_offset_array;
+        sub_oe_offset_lists[v_label] =
+            std::make_shared<FixedInt64Builder>(client, tvnums[v_label] + 1);
+        memset(sub_oe_offset_lists[v_label]->data(), 0x00,
+               sizeof(int64_t) * (tvnums[v_label] + 1));
       }
     } else {
       auto cur_label_index = e_label - edge_label_num_;
@@ -517,16 +510,12 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
           if (!(i < vertex_label_num_ && j < edge_label_num_)) {
             builder.set_ie_lists_(i, j, ie_lists[i][j]);
           }
-          vineyard::NumericArrayBuilder<int64_t> ieo_builder(
-              *client, ie_offsets_lists[i][j]);
-          builder.set_ie_offsets_lists_(i, j, ieo_builder.Seal(*client));
+          builder.set_ie_offsets_lists_(i, j, ie_offsets_lists[i][j]);
         }
         if (!(i < vertex_label_num_ && j < edge_label_num_)) {
           builder.set_oe_lists_(i, j, oe_lists[i][j]);
         }
-        vineyard::NumericArrayBuilder<int64_t> oeo_builder(
-            *client, oe_offsets_lists[i][j]);
-        builder.set_oe_offsets_lists_(i, j, oeo_builder.Seal(*client));
+        builder.set_oe_offsets_lists_(i, j, oe_offsets_lists[i][j]);
         return Status::OK();
       };
       tg.AddTask(fn, &client);
@@ -754,9 +743,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     extra_ovgid_lists[i].reset();  // release the reference
   }
 
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       ie_offsets_lists_expanded(vertex_label_num_);
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       oe_offsets_lists_expanded(vertex_label_num_);
 
   for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -770,7 +759,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
       vid_t prev_offset_size = tvnums_[v_label] + 1;
       vid_t current_offset_size = tvnums[v_label] + 1;
       if (directed_) {
-        std::vector<int64_t> offsets(current_offset_size);
+        ie_offsets_lists_expanded[v_label][e_label] =
+            std::make_shared<FixedInt64Builder>(client, current_offset_size);
+        int64_t* offsets = ie_offsets_lists_expanded[v_label][e_label]->data();
         const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
         for (vid_t k = 0; k < prev_offset_size; ++k) {
           offsets[k] = offset_array[k];
@@ -778,12 +769,10 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
         for (vid_t k = prev_offset_size; k < current_offset_size; ++k) {
           offsets[k] = offsets[k - 1];
         }
-        arrow::Int64Builder builder;
-        ARROW_OK_OR_RAISE(builder.AppendValues(offsets));
-        ARROW_OK_OR_RAISE(
-            builder.Finish(&ie_offsets_lists_expanded[v_label][e_label]));
       }
-      std::vector<int64_t> offsets(current_offset_size);
+      oe_offsets_lists_expanded[v_label][e_label] =
+          std::make_shared<FixedInt64Builder>(client, current_offset_size);
+      int64_t* offsets = oe_offsets_lists_expanded[v_label][e_label]->data();
       const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
       for (size_t k = 0; k < prev_offset_size; ++k) {
         offsets[k] = offset_array[k];
@@ -791,10 +780,6 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
       for (size_t k = prev_offset_size; k < current_offset_size; ++k) {
         offsets[k] = offsets[k - 1];
       }
-      arrow::Int64Builder builder;
-      ARROW_OK_OR_RAISE(builder.AppendValues(offsets));
-      ARROW_OK_OR_RAISE(
-          builder.Finish(&oe_offsets_lists_expanded[v_label][e_label]));
     }
   }
   // Gather all local id of new edges.
@@ -823,9 +808,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
       ie_lists(vertex_label_num_);
   std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
       oe_lists(vertex_label_num_);
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> ie_offsets_lists(
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> ie_offsets_lists(
       vertex_label_num_);
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> oe_offsets_lists(
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> oe_offsets_lists(
       vertex_label_num_);
 
   for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -842,9 +827,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
         vertex_label_num_);
     std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>> sub_oe_lists(
         vertex_label_num_);
-    std::vector<std::shared_ptr<arrow::Int64Array>> sub_ie_offset_lists(
+    std::vector<std::shared_ptr<FixedInt64Builder>> sub_ie_offset_lists(
         vertex_label_num_);
-    std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
+    std::vector<std::shared_ptr<FixedInt64Builder>> sub_oe_offset_lists(
         vertex_label_num_);
     if (directed_) {
       generate_directed_csr<vid_t, eid_t>(
@@ -965,18 +950,11 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
         label_id_t edge_label_id = edge_label_num_ + j;
         if (directed_) {
           builder.set_ie_lists_(i, edge_label_id, ie_lists[i][j]);
-
-          vineyard::NumericArrayBuilder<int64_t> ieo_builder(
-              *client, ie_offsets_lists[i][j]);
           builder.set_ie_offsets_lists_(i, edge_label_id,
-                                        ieo_builder.Seal(*client));
+                                        ie_offsets_lists[i][j]);
         }
         builder.set_oe_lists_(i, edge_label_id, oe_lists[i][j]);
-
-        vineyard::NumericArrayBuilder<int64_t> oeo_builder(
-            *client, oe_offsets_lists[i][j]);
-        builder.set_oe_offsets_lists_(i, edge_label_id,
-                                      oeo_builder.Seal(*client));
+        builder.set_oe_offsets_lists_(i, edge_label_id, oe_offsets_lists[i][j]);
         return Status::OK();
       };
       tg.AddTask(fn, &client);
@@ -984,22 +962,16 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
   }
   for (label_id_t i = 0; i < vertex_label_num_; ++i) {
     for (label_id_t j = 0; j < edge_label_num_; ++j) {
-      auto fn = [this, &builder, i, j, &ie_offsets_lists_expanded,
-                 &oe_offsets_lists_expanded](Client* client) -> Status {
-        label_id_t edge_label_id = j;
+      auto fn = [this, &builder, &ie_offsets_lists_expanded,
+                 &oe_offsets_lists_expanded](Client* client, const label_id_t i,
+                                             const label_id_t j) -> Status {
         if (directed_) {
-          vineyard::NumericArrayBuilder<int64_t> ieo_builder_expanded(
-              *client, ie_offsets_lists_expanded[i][j]);
-          builder.set_ie_offsets_lists_(i, edge_label_id,
-                                        ieo_builder_expanded.Seal(*client));
+          builder.set_ie_offsets_lists_(i, j, ie_offsets_lists_expanded[i][j]);
         }
-        vineyard::NumericArrayBuilder<int64_t> oeo_builder_expanded(
-            *client, oe_offsets_lists_expanded[i][j]);
-        builder.set_oe_offsets_lists_(i, edge_label_id,
-                                      oeo_builder_expanded.Seal(*client));
+        builder.set_oe_offsets_lists_(i, j, oe_offsets_lists_expanded[i][j]);
         return Status::OK();
       };
-      tg.AddTask(fn, &client);
+      tg.AddTask(fn, &client, i, j);
     }
   }
   tg.TakeResults();
@@ -1087,15 +1059,13 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
       auto fn = [this, i, j](Client* client) -> Status {
         if (this->directed_) {
           this->set_ie_lists_(i, j, ie_lists_[i][j]->Seal(*client));
-          vineyard::NumericArrayBuilder<int64_t> ieo(
-              *client, std::move(ie_offsets_lists_[i][j]));
-          this->set_ie_offsets_lists_(i, j, ieo.Seal(*client));
+          this->set_ie_offsets_lists_(i, j,
+                                      ie_offsets_lists_[i][j]->Seal(*client));
         }
         {
           this->set_oe_lists_(i, j, oe_lists_[i][j]->Seal(*client));
-          vineyard::NumericArrayBuilder<int64_t> oeo(
-              *client, std::move(oe_offsets_lists_[i][j]));
-          this->set_oe_offsets_lists_(i, j, oeo.Seal(*client));
+          this->set_oe_offsets_lists_(i, j,
+                                      oe_offsets_lists_[i][j]->Seal(*client));
         }
         return Status::OK();
       };
@@ -1237,9 +1207,9 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
         this->vertex_label_num_);
     std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>> sub_oe_lists(
         this->vertex_label_num_);
-    std::vector<std::shared_ptr<arrow::Int64Array>> sub_ie_offset_lists(
+    std::vector<std::shared_ptr<FixedInt64Builder>> sub_ie_offset_lists(
         this->vertex_label_num_);
-    std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
+    std::vector<std::shared_ptr<FixedInt64Builder>> sub_oe_offset_lists(
         this->vertex_label_num_);
     if (this->directed_) {
       generate_directed_csr<vid_t, eid_t>(

@@ -314,6 +314,59 @@ template class NumericArrayBuilder<uint64_t>;
 template class NumericArrayBuilder<float>;
 template class NumericArrayBuilder<double>;
 
+template <typename T>
+FixedNumericArrayBuilder<T>::FixedNumericArrayBuilder(Client& client,
+                                                      const size_t size)
+    : NumericArrayBaseBuilder<T>(client), size_(size) {
+  if (size_ > 0) {
+    VINEYARD_CHECK_OK(client.CreateBlob(size_ * sizeof(T), writer_));
+    data_ = reinterpret_cast<T*>(writer_->data());
+  }
+}
+
+template <typename T>
+size_t FixedNumericArrayBuilder<T>::size() const {
+  return size_;
+}
+
+template <typename T>
+T* FixedNumericArrayBuilder<T>::MutablePointer(int64_t i) const {
+  if (data_) {
+    return data_ + i;
+  }
+  return nullptr;
+}
+
+template <typename T>
+T* FixedNumericArrayBuilder<T>::data() const {
+  return data_;
+}
+
+template <typename T>
+Status FixedNumericArrayBuilder<T>::Build(Client& client) {
+  this->set_length_(size_);
+  this->set_null_count_(0);
+  this->set_offset_(0);
+  if (size_ > 0) {
+    this->set_buffer_(std::move(writer_));
+  } else {
+    this->set_buffer_(Blob::MakeEmpty(client));
+  }
+  this->set_null_bitmap_(Blob::MakeEmpty(client));
+  return Status::OK();
+}
+
+template class FixedNumericArrayBuilder<int8_t>;
+template class FixedNumericArrayBuilder<int16_t>;
+template class FixedNumericArrayBuilder<int32_t>;
+template class FixedNumericArrayBuilder<int64_t>;
+template class FixedNumericArrayBuilder<uint8_t>;
+template class FixedNumericArrayBuilder<uint16_t>;
+template class FixedNumericArrayBuilder<uint32_t>;
+template class FixedNumericArrayBuilder<uint64_t>;
+template class FixedNumericArrayBuilder<float>;
+template class FixedNumericArrayBuilder<double>;
+
 BooleanArrayBuilder::BooleanArrayBuilder(Client& client)
     : BooleanArrayBaseBuilder(client) {
   std::shared_ptr<ArrayType> array;

@@ -326,7 +326,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
 
   std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
       oe_lists(vertex_label_num_);
-  std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>> oe_offsets_lists(
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> oe_offsets_lists(
       vertex_label_num_);
 
   for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -342,9 +342,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       for (label_id_t j = 0; j < edge_label_num_; ++j) {
         builder.set_oe_lists_(i, j, oe_lists[i][j]);
-        vineyard::NumericArrayBuilder<int64_t> oeo_builder(
-            client, oe_offsets_lists[i][j]);
-        builder.set_oe_offsets_lists_(i, j, oeo_builder.Seal(client));
+        builder.set_oe_offsets_lists_(i, j, oe_offsets_lists[i][j]);
       }
     }
     builder.set_is_multigraph_(is_multigraph);
@@ -608,7 +606,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::directedCSR2Undirected(
     vineyard::Client& client,
     std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>&
         oe_lists,
-    std::vector<std::vector<std::shared_ptr<arrow::Int64Array>>>&
+    std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
         oe_offsets_lists,
     int concurrency, bool& is_multigraph) {
   for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
@@ -623,33 +621,33 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::directedCSR2Undirected(
           std::make_shared<vineyard::PodArrayBuilder<nbr_unit_t>>(
               client,
               ie_offset[tvnums_[v_label]] + oe_offset[tvnums_[v_label]]);
+      auto offsets_builder =
+          std::make_shared<FixedInt64Builder>(client, tvnums_[v_label] + 1);
+
       nbr_unit_t* data = edge_builder->MutablePointer(0);
-      arrow::Int64Builder offset_builder;
-      CHECK_ARROW_ERROR(offset_builder.Append(0));
+      int64_t* offsets = offsets_builder->MutablePointer(0);
+      offsets[0] = 0;
+
       size_t edge_offset = 0;
-      for (size_t offset = 0; offset < static_cast<size_t>(tvnums_[v_label]);
-           ++offset) {
-        for (size_t k = ie_offset[offset];
-             k < static_cast<size_t>(ie_offset[offset + 1]); ++k) {
+      for (size_t v = 0; v < static_cast<size_t>(tvnums_[v_label]); ++v) {
+        for (size_t k = ie_offset[v]; k < static_cast<size_t>(ie_offset[v + 1]);
+             ++k) {
           data[edge_offset++] = ie[k];
         }
-        for (int k = oe_offset[offset]; k < oe_offset[offset + 1]; ++k) {
+        for (int k = oe_offset[v]; k < oe_offset[v + 1]; ++k) {
           data[edge_offset++] = oe[k];
         }
-        CHECK_ARROW_ERROR(offset_builder.Append(edge_offset));
+        offsets[v + 1 /* offsets array */] = edge_offset;
       }
-      CHECK_ARROW_ERROR(
-          offset_builder.Finish(&oe_offsets_lists[v_label][e_label]));
-
-      sort_edges_with_respect_to_vertex(*edge_builder,
-                                        oe_offsets_lists[v_label][e_label],
+      sort_edges_with_respect_to_vertex(*edge_builder, offsets_builder->data(),
                                         tvnums_[v_label], concurrency);
       if (!is_multigraph) {
-        check_is_multigraph(*edge_builder, oe_offsets_lists[v_label][e_label],
+        check_is_multigraph(*edge_builder, offsets_builder->data(),
                             tvnums_[v_label], concurrency, is_multigraph);
       }
 
       oe_lists[v_label][e_label] = edge_builder;
+      oe_offsets_lists[v_label][e_label] = offsets_builder;
     }
   }
 }
