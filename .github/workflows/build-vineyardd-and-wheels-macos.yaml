@@ -24,13 +24,17 @@ concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
   cancel-in-progress: true
 
+env:
+  # the last commit in homebrew-core tree that MacOS-10.15 has bottles, to make installing deps easier
+  HOMEBREW_REV: 01aff4dce839c54aa54ad81879ade95b7922ef6f
+
 jobs:
   build-vineyardd:
     runs-on: ${{ matrix.os }}
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
-        os: [macos-11]
+        os: [macos-10.15]
 
     steps:
       - uses: actions/checkout@v3
@@ -52,7 +56,10 @@ jobs:
 
       - name: Install dependencies for MacOS
         run: |
-          brew update
+          pushd $(brew --repo homebrew/core)
+          git checkout ${{ env.HOMEBREW_REV }} || true
+          popd
+
           brew install ccache boost coreutils grpc protobuf openssl || true
 
           export CC=clang
@@ -201,7 +208,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
-        os: [macos-11]
+        os: [macos-10.15]
         python: ["3.7", "3.8", "3.9", "3.10", "3.11"]
 
     steps:
@@ -249,7 +256,10 @@ jobs:
       - name: Install dependencies for MacOS
         if: runner.os == 'macOS'
         run: |
-          brew update
+          pushd $(brew --repo homebrew/core)
+          git checkout ${{ env.HOMEBREW_REV }} || true
+          popd
+
           brew install ccache boost coreutils grpc protobuf openssl || true
 
           export CC=clang
