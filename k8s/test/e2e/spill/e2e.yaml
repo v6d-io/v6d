@@ -19,23 +19,6 @@ setup:
   steps:
     - name: setup the serialize path
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
-    - name: install cert-manager
-      command: |
-        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-      wait:
-        - namespace: cert-manager
-          resource: pod
-          for: condition=Ready
-    - name: install vineyard operator
-      command: |
-        docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
-        docker push localhost:5001/vineyard-operator:latest
-        export IMG=localhost:5001/vineyard-operator:latest
-        make -C k8s deploy
-      wait:
-        - namespace: vineyard-system
-          resource: deployment/vineyard-controller-manager
-          for: condition=Available
     - name: install vineyardd
       command: |
         kubectl apply -f k8s/test/e2e/spill-demo/vineyardd-with-spill.yaml

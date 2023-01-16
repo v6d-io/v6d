@@ -17,19 +17,6 @@ setup:
   env: kind
   kubeconfig: /tmp/e2e-k8s.config
   steps:
-    - name: install cert-manager
-      command: |
-        helm repo add jetstack https://charts.jetstack.io
-        helm install \
-            cert-manager jetstack/cert-manager \
-            --namespace cert-manager \
-            --create-namespace \
-            --version v1.9.1 \
-            --set installCRDs=true
-      wait:
-        - namespace: cert-manager
-          resource: pod
-          for: condition=Ready
     - name: download the vineyard operator image
       command: |
         docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
