@@ -38,4 +38,4 @@ for i in range(0, top_meta['__global_id_-size']):
 print(sum, flush=True)
 
 # avoid CrashLoopBackOff
-time.sleep(600)
+time.sleep(3600)

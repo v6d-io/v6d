@@ -1,7 +1,8 @@
 #!/bin/sh
 set -o errexit
 
-kind_name=test
+kind_name=kind
+kubeconfig_path=/tmp/e2e-k8s.config
 
 if [ ! -z "$1" ] ; then
     kind_name=$1
@@ -16,7 +17,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true
 fi
 
 # create a cluster with the local registry enabled in containerd
-cat <<EOF | kind create cluster --name=${kind_name} --config=-
+cat <<EOF | kind create cluster --name=${kind_name} --kubeconfig=${kubeconfig_path} --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 containerdConfigPatches:
@@ -39,6 +40,7 @@ if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${reg_name}
   docker network connect "kind" "${reg_name}"
 fi
 
+export KUBECONFIG=${kubeconfig_path}
 # Document the local registry
 # https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
 cat <<EOF | kubectl apply -f -

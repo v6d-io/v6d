@@ -37,7 +37,7 @@ spec:
       schedulerName: vineyard-scheduler
       containers:
       - name: job1
-        image: ghcr.io/v6d-io/v6d/workflow-job1
+        image: localhost:5001/workflow-job1
         env:
         - name: JOB_NAME
           value: v6d-workflow-demo-job1

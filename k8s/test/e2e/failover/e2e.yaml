@@ -15,34 +15,13 @@
 
 setup:
   env: kind
-  file: ../kind.yaml
+  kubeconfig: /tmp/e2e-k8s.config
   steps:
     - name: setup the backup path
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/dump; done
-    - name: install cert-manager
+    - name: download all failover images into kind cluster
       command: |
-        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-      wait:
-        - namespace: cert-manager
-          resource: pod
-          for: condition=Ready
-    - name: install scheduler-plugin and operator
-      command: |
-        kind load docker-image vineyardcloudnative/vineyard-operator:latest
-        make -C k8s deploy
-
-        make -C k8s/test/e2e kind-load-failover-images
-      wait:
-        - namespace: vineyard-system
-          resource: deployment/vineyard-controller-manager
-          for: condition=Available
-    - name: install vineyardd
-      command: |
-        kubectl apply -f k8s/test/e2e/vineyardd.yaml
-      wait:
-        - namespace: vineyard-system
-          resource: vineyardd/vineyardd-sample
-          for: condition=Available
+        make -C k8s/test/e2e e2e-test-failover REGISTRY=localhost:5001
     - name: install local-object
       command: |
         kubectl create namespace vineyard-job

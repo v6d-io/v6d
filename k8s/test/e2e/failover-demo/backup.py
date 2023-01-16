@@ -40,6 +40,7 @@ namespace = env_dist['POD_NAMESPACE']
 config.load_incluster_config()
 
 k8s_api_obj = client.CoreV1Api()
+hosts = []
 podlists = []
 while True:
     api_response = k8s_api_obj.list_namespaced_pod(namespace, label_selector="app.kubernetes.io/name=" + selector)
@@ -52,6 +53,7 @@ while True:
         api_response.items.sort(key=lambda a: a.spec.node_name)
         for i in api_response.items:
             podlists.append(i.metadata.name)
+            hosts.append(namespace + ':' + i.metadata.name)
         break
     time.sleep(5)
 
@@ -89,7 +91,7 @@ for i,o in enumerate(objs):
                     vineyard_ipc_socket=socket,
                     vineyard_endpoint=service,
                     deployment='kubernetes',
-                    hosts=podlists,
+                    hosts=hosts,
                 )
     except vineyard.ObjectNotExistsException:
         print(o.id,' trigger ObjectNotExistsException')

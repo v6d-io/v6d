@@ -130,8 +130,9 @@ func getWaitCondition(kind string) (string, string) {
 
 // wait for the workload to be ready
 func waitWorkload(c client.Client, kind, kubeconfig, condition, apiVersion, name, namespace string) error {
-	command := "kubectl wait --for=condition=" + condition + " --timeout=60s " + apiVersion +
+	command := "kubectl wait --for=condition=" + condition + " --timeout=120s " + apiVersion +
 		"/" + name + " -n " + namespace + " --kubeconfig=" + kubeconfig
+
 	// run kubectl wait command
 	cmd := exec.Command("bash", "-c", command)
 

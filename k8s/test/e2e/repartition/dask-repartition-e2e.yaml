@@ -15,36 +15,16 @@
 
 setup:
   env: kind
-  file: ../kind.yaml
+  kubeconfig: /tmp/e2e-k8s.config
   steps:
-    - name: install cert-manager
-      command: |
-        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-      wait:
-        - namespace: cert-manager
-          resource: pod
-          for: condition=Ready
-    - name: load docker image for dask
+    - name: download dask image for syncing the dask worker and scheduler.
       command: |
         docker pull ghcr.io/dask/dask:2022.8.1
-        kind load docker-image ghcr.io/dask/dask:2022.8.1
-    - name: install scheduler-plugin and operator
+        docker tag ghcr.io/dask/dask:2022.8.1 localhost:5001/dask:2022.8.1
+        docker push localhost:5001/dask:2022.8.1
+    - name: download all dask repartition images into kind cluster
       command: |
-        kind load docker-image vineyardcloudnative/vineyard-operator:latest
-        make -C k8s deploy
-
-        make -C k8s/test/e2e kind-load-repartition-images
-      wait:
-        - namespace: vineyard-system
-          resource: deployment/vineyard-controller-manager
-          for: condition=Available
-    - name: install vineyardd
-      command: |
-        kubectl apply -f k8s/test/e2e/vineyardd.yaml
-      wait:
-        - namespace: vineyard-system
-          resource: vineyardd/vineyardd-sample
-          for: condition=Available
+        make -C k8s/test/e2e e2e-test-repartition REGISTRY=localhost:5001
     - name: install dask-scheduler and dask-worker
       command: |
         helm repo add dask https://helm.dask.org/
@@ -77,7 +57,7 @@ setup:
         - namespace: vineyard-job
           resource: deployment/dask-repartition-job2
           for: condition=Available
-  timeout: 50m
+  timeout: 40m
 
 cleanup:
   # always never success failure

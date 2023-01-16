@@ -59,4 +59,4 @@ writer.finish()
 print("writer finished",flush=True)
 
 # avoid CrashLoopBackOff
-time.sleep(600)
+time.sleep(3600)

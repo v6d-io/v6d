@@ -50,4 +50,4 @@ for idx in range(total_chunks):
 writer.finish()
 
 # avoid CrashLoopBackOff
-time.sleep(600)
+time.sleep(3600)
