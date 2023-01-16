@@ -154,7 +154,7 @@ jobs:
         run: |
           if [[ "${{ matrix.python }}" == "cp311-cp311" ]];
           then
-            export base=vineyard-manylinux1:20230115
+            export base=vineyard-manylinux2014:20230115
           else
             export base=vineyard-manylinux1:20220512
           fi

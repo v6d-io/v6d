@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG BASE=vineyard-manylinux1:20220512
+ARG BASE=manylinux1:20220512
 FROM ghcr.io/v6d-io/v6d/vineyard-$BASE
 
 # target: ghcr.io/v6d-io/v6d/vineyard-wheel

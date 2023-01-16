@@ -92,8 +92,8 @@ class [[vineyard(streamable)]] DataFrame : public Registered<DataFrame> {
   const std::shared_ptr<arrow::RecordBatch> AsBatch(bool copy = false) const;
 
  private:
-  [[shared]] size_t partition_index_row_;
-  [[shared]] size_t partition_index_column_;
+  [[shared]] size_t partition_index_row_ = -1;
+  [[shared]] size_t partition_index_column_ = -1;
 
   [[shared]] size_t row_batch_index_;
 
