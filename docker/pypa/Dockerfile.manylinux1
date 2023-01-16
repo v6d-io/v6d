@@ -53,9 +53,9 @@ RUN export PATH=$PATH:/opt/python/cp310-cp310/bin && \
     cp -R boost_1_77_0/boost /usr/local/include/ && \
     echo "Installing apache-arrow ..." && \
     cd /deps && \
-    curl -L https://github.com/apache/arrow/archive/apache-arrow-10.0.1.tar.gz --output apache-arrow-10.0.1.tar.gz && \
-    tar zxvf apache-arrow-10.0.1.tar.gz && \
-    cd arrow-apache-arrow-10.0.1 && \
+    curl -L https://github.com/apache/arrow/archive/apache-arrow-6.0.1.tar.gz --output apache-arrow-6.0.1.tar.gz && \
+    tar zxvf apache-arrow-6.0.1.tar.gz && \
+    cd arrow-apache-arrow-6.0.1 && \
     mkdir build-dir && \
     cd build-dir && \
     cmake ../cpp \

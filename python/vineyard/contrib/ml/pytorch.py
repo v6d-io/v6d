@@ -67,8 +67,8 @@ def torch_dataframe_builder(client, value, builder, **kw):
         meta['__values_-key-%d' % i] = to_json(col)
         meta.add_member('__values_-value-%d' % i, builder.run(client, ls))
     meta['__values_-size'] = len(cols)
-    meta['partition_index_row_'] = kw.get('partition_index', [0, 0])[0]
-    meta['partition_index_column_'] = kw.get('partition_index', [0, 0])[1]
+    meta['partition_index_row_'] = kw.get('partition_index', [-1, -1])[0]
+    meta['partition_index_column_'] = kw.get('partition_index', [-1, -1])[1]
     meta['row_batch_index_'] = kw.get('row_batch_index', 0)
     return client.create_metadata(meta)
 
