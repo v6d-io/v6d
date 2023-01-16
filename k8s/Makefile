@@ -98,6 +98,8 @@ install-vineyard-cluster:
 	@kubectl wait vineyardd/vineyardd-sample --for condition=Available -n vineyard-system --timeout=300s --kubeconfig=/tmp/e2e-k8s.config
 	@echo "Vineyard cluster Ready"
 
+install-vineyard: build-local-cluster install-cert-manager install-vineyard-operator install-vineyard-cluster
+	sleep 6000
 e2e-tests-assembly-local: kustomize prepare-e2e-test build-local-cluster install-cert-manager install-vineyard-operator install-vineyard-cluster
 	@echo "Running local assembly e2e test..."
 	@cd .. && ${GOBIN}/e2e run --config=k8s/test/e2e/assembly/local-assembly-e2e.yaml
