@@ -15,7 +15,16 @@ Vineyard operator defines the following CRDs to manage vineyard components and o
 *   `Operation` for inserting operation to a workflow.
 *   `Sidecar` for vineyard as a sidecar container.
 
-### Deploy
+### Deploy with remote directory
+
+You could use the kustomize to build the remote directories on the github and apply the manifests
+as follows.
+
+```bash
+$ kustomize build https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false | kubectl apply -f -
+```
+
+### Deploy locally
 
 To make the docker image for the controller, run
 
