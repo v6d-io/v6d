@@ -163,6 +163,10 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
         stream_writer.fail()
         sys.exit(-1)
 
+    # drop the stream
+    if hasattr(instream, 'drop'):
+        instream.drop(client)
+
 
 def main():
     if len(sys.argv) < 5:

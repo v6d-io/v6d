@@ -372,18 +372,29 @@ def read_dataframe(
 
     if accumulate:
 
-        def aggregator(vineyard_endpoint, partial_ids, extra_meta=None, **kwargs):
-            vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
-            chunks = []
-            for item in partial_ids:
-                if isinstance(item, (list, tuple)):
-                    chunks.extend(item)
-                else:
-                    chunks.append(item)
-            return make_global_dataframe(vineyard_rpc_client, chunks, extra_meta)
+        def make_aggregator(callback=None):
+            def aggregator(vineyard_endpoint, partial_ids, extra_meta=None, **kwargs):
+                vineyard_rpc_client = vineyard.connect(vineyard_endpoint)
+                chunks = []
+                for item in partial_ids:
+                    if isinstance(item, (list, tuple)):
+                        chunks.extend(item)
+                    else:
+                        chunks.append(item)
+                # issuing the callback first
+                if callback is not None:
+                    try:
+                        callback(vineyard_rpc_client)
+                    except:  # noqa: E722, pylint: disable=bare-except
+                        pass
+                return make_global_dataframe(vineyard_rpc_client, chunks, extra_meta)
+
+            return aggregator
 
     else:
-        aggregator = None
+
+        def make_aggregator(*args, **kwargs):
+            return None
 
     if filetype == "ORC" or ".orc" in path:
         return read_orc(
@@ -393,7 +404,7 @@ def read_dataframe(
             read_options,
             *args,
             handlers=handlers,
-            aggregator=aggregator,
+            aggregator=make_aggregator(),
             accumulate=accumulate,
             **kwargs.copy(),
         )
@@ -405,7 +416,7 @@ def read_dataframe(
             read_options,
             *args,
             handlers=handlers,
-            aggregator=aggregator,
+            aggregator=make_aggregator(),
             accumulate=accumulate,
             **kwargs.copy(),
         )
@@ -424,7 +435,7 @@ def read_dataframe(
             stream,
             *args,
             handlers=handlers,
-            aggregator=aggregator,
+            aggregator=make_aggregator(callback=lambda client: client.delete(stream)),
             accumulate=accumulate,
             **kwargs.copy(),
         )

@@ -79,6 +79,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::PullNextStreamChunkRequest;
   } else if (str_type == "stop_stream_request") {
     return CommandType::StopStreamRequest;
+  } else if (str_type == "drop_stream_request") {
+    return CommandType::DropStreamRequest;
   } else if (str_type == "put_name_request") {
     return CommandType::PutNameRequest;
   } else if (str_type == "get_name_request") {
@@ -1263,6 +1265,32 @@ void WriteStopStreamReply(std::string& msg) {
 
 Status ReadStopStreamReply(const json& root) {
   CHECK_IPC_ERROR(root, "stop_stream_reply");
+  return Status::OK();
+}
+
+void WriteDropStreamRequest(const ObjectID stream_id, std::string& msg) {
+  json root;
+  root["type"] = "drop_stream_request";
+  root["id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDropStreamRequest(const json& root, ObjectID& stream_id) {
+  RETURN_ON_ASSERT(root["type"] == "drop_stream_request");
+  stream_id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteDropStreamReply(std::string& msg) {
+  json root;
+  root["type"] = "drop_stream_reply";
+
+  encode_msg(root, msg);
+}
+
+Status ReadDropStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, "drop_stream_reply");
   return Status::OK();
 }
 

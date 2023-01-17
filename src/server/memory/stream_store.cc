@@ -285,7 +285,9 @@ Status StreamStore::Drop(ObjectID const stream_id) {
                                    ObjectIDToString(stream_id));
   }
   auto stream = streams_.at(stream_id);
-  stream->failed = true;
+  if (!stream->failed && !stream->drained) {
+    stream->failed = true;
+  }
   // weakup pending reader
   if (stream->reader_) {
     // should be no reading chunk
@@ -315,6 +317,13 @@ Status StreamStore::Drop(ObjectID const stream_id) {
     }
     VINEYARD_DISCARD(status);
     stream->ready_chunks_.pop();
+  }
+  {
+    // erase, prevent throwing
+    auto loc = streams_.find(stream_id);
+    if (loc != streams_.end()) {
+      streams_.erase(loc);
+    }
   }
   return Status::OK();
 }

@@ -120,6 +120,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doStopStream(json const& root);
 
+  bool doDropStream(json const& root);
+
   bool doPutName(json const& root);
 
   bool doGetName(json const& root);

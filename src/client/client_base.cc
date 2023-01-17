@@ -243,6 +243,17 @@ Status ClientBase::StopStream(ObjectID const id, const bool failed) {
   return Status::OK();
 }
 
+Status ClientBase::DropStream(ObjectID const id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteDropStreamRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDropStreamReply(message_in));
+  return Status::OK();
+}
+
 Status ClientBase::Persist(const ObjectID id) {
   ENSURE_CONNECTED(this);
   std::string message_out;

@@ -303,6 +303,15 @@ class ClientBase {
   Status StopStream(ObjectID const id, bool failed);
 
   /**
+   * @brief Close a stream, mark it as aborted if it is not finished yet.
+   *
+   * @param id The id of the stream.
+
+   * @return Status that indicates whether the request has succeeded.
+   */
+  Status DropStream(ObjectID const id);
+
+  /**
    * @brief Persist the given object to etcd to make it visible to clients that
    * been connected to vineyard servers in the cluster.
    *

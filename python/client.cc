@@ -237,6 +237,16 @@ void bind_client(py::module& mod) {
           },
           "stream"_a, "failed"_a)
       .def(
+          "drop_stream",
+          [](ClientBase* self, ObjectID const stream_id,
+             const bool drop_metadata = true) {
+            throw_on_error(self->DropStream(stream_id));
+            if (drop_metadata) {
+              VINEYARD_SUPPRESS(self->DelData(stream_id));
+            }
+          },
+          "stream"_a, py::arg("drop_metadata") = true)
+      .def(
           "persist",
           [](ClientBase* self, const ObjectIDWrapper object_id) {
             throw_on_error(self->Persist(object_id));

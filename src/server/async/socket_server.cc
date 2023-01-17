@@ -267,6 +267,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::StopStreamRequest: {
     return doStopStream(root);
   }
+  case CommandType::DropStreamRequest: {
+    return doDropStream(root);
+  }
   case CommandType::PutNameRequest: {
     return doPutName(root);
   }
@@ -957,6 +960,17 @@ bool SocketConnection::doStopStream(const json& root) {
   RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Stop(stream_id, failed));
   std::string message_out;
   WriteStopStreamReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doDropStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadDropStreamRequest, root, stream_id);
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Drop(stream_id));
+  std::string message_out;
+  WriteDropStreamReply(message_out);
   this->doWrite(message_out);
   return false;
 }

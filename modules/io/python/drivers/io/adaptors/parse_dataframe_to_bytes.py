@@ -108,6 +108,10 @@ def parse_dataframe(vineyard_socket, stream_id, write_options, proc_num, proc_in
         stream_writer.fail()
         sys.exit(-1)
 
+    # drop the stream
+    if hasattr(instream, 'drop'):
+        instream.drop(client)
+
 
 def main():
     if len(sys.argv) < 5:
