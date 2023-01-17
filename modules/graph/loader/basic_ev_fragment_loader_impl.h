@@ -45,13 +45,15 @@ template <typename OID_T, typename VID_T, typename PARTITIONER_T,
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::
     BasicEVFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                           const PARTITIONER_T& partitioner, bool directed,
-                          bool generate_eid, bool retain_oid)
+                          bool generate_eid, bool retain_oid,
+                          bool vertex_map_bisect)
     : client_(client),
       comm_spec_(comm_spec),
       partitioner_(partitioner),
       directed_(directed),
       generate_eid_(generate_eid),
-      retain_oid_(retain_oid) {}
+      retain_oid_(retain_oid),
+      vertex_map_bisect_(vertex_map_bisect) {}
 
 /**
  * @brief Add a loaded vertex table.
@@ -632,8 +634,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   ObjectID new_vm_id = InvalidObjectID();
   if (vm_id == InvalidObjectID()) {
     BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
-        client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists));
-    // oid_lists.clear();
+        client_, comm_spec_.fnum(), vertex_label_num_, vertex_map_bisect_,
+        std::move(oid_lists));
 
     auto vm = vm_builder.Seal(client_);
     new_vm_id = vm->id();

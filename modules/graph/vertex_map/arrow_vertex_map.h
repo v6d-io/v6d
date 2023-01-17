@@ -28,6 +28,7 @@ limitations under the License.
 #include "common/util/typename.h"
 
 #include "graph/fragment/property_graph_types.h"
+#include "graph/vertex_map/arrow_bisector.h"
 
 namespace vineyard {
 
@@ -44,6 +45,7 @@ class ArrowVertexMap
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
   using oid_array_t = ArrowArrayType<oid_t>;
+  using vid_array_t = ArrowArrayType<vid_t>;
 
   static_assert(!std::is_same<OID_T, std::string>::value,
                 "Expect arrow_string_view in vertex map's OID_T");
@@ -62,13 +64,13 @@ class ArrowVertexMap
 
   bool GetOid(vid_t gid, oid_t& oid) const;
 
+  std::shared_ptr<oid_array_t> GetOids(fid_t fid, label_id_t label_id) const;
+
+  std::shared_ptr<oid_array_t> GetOidArray(fid_t fid, label_id_t label_id);
+
   bool GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const;
 
   bool GetGid(label_id_t label_id, oid_t oid, vid_t& gid) const;
-
-  std::vector<OID_T> GetOids(fid_t fid, label_id_t label_id) const;
-
-  std::shared_ptr<oid_array_t> GetOidArray(fid_t fid, label_id_t label_id);
 
   fid_t fnum() const { return fnum_; }
 
@@ -94,26 +96,36 @@ class ArrowVertexMap
 
   ObjectID AddNewVertexLabels(
       Client& client,
+      // label index -> fid -> ..
       std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays);
 
   ObjectID AddNewVertexLabels(
       Client& client,
+      // label index -> fid -> ..
       std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>
           oid_arrays);
 
  private:
   ObjectID addNewVertexLabels(
       Client& client,
+      // label index -> fid -> ..
       std::vector<std::vector<std::vector<std::shared_ptr<oid_array_t>>>>
           oid_arrays);
 
   fid_t fnum_;
   label_id_t label_num_;
+  bool bisect_ = false;
 
   vineyard::IdParser<vid_t> id_parser_;
 
   // frag->label->oid
   std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays_;
+
+  // bisect
+  std::vector<std::vector<std::shared_ptr<arrow::UInt64Array>>>
+      oid_array_indices_;
+  std::vector<std::vector<ArrowBisector<oid_t>>> o2g_bisector_;
+  // flat hashmap
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
 
   friend class ArrowVertexMapBuilder<OID_T, VID_T>;
@@ -125,6 +137,8 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
   using oid_t = OID_T;
   using vid_t = VID_T;
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
+  using vineyard_internal_oid_array_t =
+      typename InternalType<oid_t>::vineyard_array_type;
 
   static_assert(!std::is_same<OID_T, std::string>::value,
                 "Expect arrow_string_view in local vertex map's OID_T");
@@ -132,16 +146,22 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
  public:
   explicit ArrowVertexMapBuilder(vineyard::Client& client) {}
 
-  void set_fnum_label_num(fid_t fnum, label_id_t label_num);
+  void set_fnum_label_num(const fid_t fnum, const label_id_t label_num);
+
+  void set_bisect(const bool bisect = false);
+
+  void set_oid_array(fid_t fid, label_id_t label,
+                     const vineyard_internal_oid_array_t& array);
 
   void set_oid_array(
       fid_t fid, label_id_t label,
-      const typename InternalType<oid_t>::vineyard_array_type& array);
+      const std::shared_ptr<vineyard_internal_oid_array_t>& array);
 
-  void set_oid_array(
-      fid_t fid, label_id_t label,
-      const std::shared_ptr<typename InternalType<oid_t>::vineyard_array_type>&
-          array);
+  void set_oid_array_indices(fid_t fid, label_id_t label,
+                             const UInt64Array& array);
+
+  void set_oid_array_indices(fid_t fid, label_id_t label,
+                             const std::shared_ptr<UInt64Array>& array);
 
   void set_o2g(fid_t fid, label_id_t label,
                const vineyard::Hashmap<oid_t, vid_t>& rm);
@@ -154,10 +174,11 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
  private:
   fid_t fnum_;
   label_id_t label_num_;
+  bool bisect_ = false;
 
-  std::vector<std::vector<typename InternalType<oid_t>::vineyard_array_type>>
-      oid_arrays_;
-  std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
+  std::vector<std::vector<vineyard_internal_oid_array_t>> oid_arrays_;
+  std::vector<std::vector<UInt64Array>> oid_array_indices_;
+  std::vector<std::vector<Hashmap<oid_t, vid_t>>> o2g_;
 };
 
 template <typename OID_T, typename VID_T>
@@ -176,7 +197,16 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
       std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays);
 
   BasicArrowVertexMapBuilder(
+      vineyard::Client& client, fid_t fnum, label_id_t label_num, bool bisect,
+      std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays);
+
+  BasicArrowVertexMapBuilder(
       vineyard::Client& client, fid_t fnum, label_id_t label_num,
+      std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>
+          oid_arrays);
+
+  BasicArrowVertexMapBuilder(
+      vineyard::Client& client, fid_t fnum, label_id_t label_num, bool bisect,
       std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>
           oid_arrays);
 
@@ -185,6 +215,7 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
  private:
   fid_t fnum_;
   label_id_t label_num_;
+  bool bisect_ = false;
 
   vineyard::IdParser<vid_t> id_parser_;
 

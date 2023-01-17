@@ -226,6 +226,10 @@ static inline bool parse_options_from_config_json(
   if (config.contains("local_vertex_map")) {
     options.local_vertex_map = parse_boolean_value(config["local_vertex_map"]);
   }
+  if (config.contains("vertex_map_bisect")) {
+    options.vertex_map_bisect =
+        parse_boolean_value(config["vertex_map_bisect"]);
+  }
   if (config.contains("progressive")) {
     options.progressive =
         parse_progressive_enum(config["progressive"].get<std::string>());

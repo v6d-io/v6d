@@ -53,6 +53,7 @@ struct loader_options {
   bool large_vid = true;
   bool large_eid = true;
   bool local_vertex_map = false;
+  bool vertex_map_bisect = false;
   progressive_t progressive = NONE;
   bool catch_leaf_errors = true;
   std::string dump;

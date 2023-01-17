@@ -123,6 +123,7 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
    */
   void PostConstruct(const ObjectMeta& meta) override {
     hash_policy_.set_prime(num_slots_minus_one_ + 1);
+    entries_data_ = entries_.data();
 
     if (data_buffer_mmaped_ != nullptr) {
       // value in orignal string_view: k1 = data_buffer + offset
@@ -191,7 +192,7 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
    *
    */
   iterator begin() const {
-    for (EntryPointer it = entries_.data();; ++it) {
+    for (EntryPointer it = entries_data_;; ++it) {
       if (it->has_value()) {
         return iterator(it);
       }
@@ -203,8 +204,8 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
    *
    */
   iterator end() const {
-    return iterator(entries_.data() + static_cast<ptrdiff_t>(
-                                          num_slots_minus_one_ + max_lookups_));
+    return iterator(entries_data_ + static_cast<ptrdiff_t>(
+                                        num_slots_minus_one_ + max_lookups_));
   }
 
   /**
@@ -213,7 +214,7 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
    */
   iterator find(const K& key) {
     size_t index = hash_policy_.index_for_hash(hash_object(key));
-    EntryPointer it = entries_.data() + static_cast<ptrdiff_t>(index);
+    EntryPointer it = entries_data_ + static_cast<ptrdiff_t>(index);
     for (int8_t distance = 0; it->distance_from_desired >= distance;
          ++distance, ++it) {
       if (compares_equal(key, it->value.first)) {
@@ -291,6 +292,9 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   [[shared]] Array<Entry> entries_;
 
   prime_hash_policy hash_policy_;
+
+  // inline optimization
+  EntryPointer entries_data_ = nullptr;
 
   // used for std::hashmap<string_view, V> only.
   [[shared]] uintptr_t data_buffer_ = 0;
