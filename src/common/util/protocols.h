@@ -56,6 +56,7 @@ enum class CommandType {
   GetNextStreamChunkRequest = 20,
   PullNextStreamChunkRequest = 21,
   StopStreamRequest = 22,
+  DropStreamRequest = 23,
   IfPersistRequest = 25,
   InstanceStatusRequest = 26,
   ShallowCopyRequest = 27,
@@ -424,6 +425,14 @@ Status ReadStopStreamRequest(const json& root, ObjectID& stream_id,
 void WriteStopStreamReply(std::string& msg);
 
 Status ReadStopStreamReply(const json& root);
+
+void WriteDropStreamRequest(const ObjectID stream_id, std::string& msg);
+
+Status ReadDropStreamRequest(const json& root, ObjectID& stream_id);
+
+void WriteDropStreamReply(std::string& msg);
+
+Status ReadDropStreamReply(const json& root);
 
 void WriteShallowCopyRequest(const ObjectID id, std::string& msg);
 

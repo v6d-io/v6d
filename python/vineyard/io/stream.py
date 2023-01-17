@@ -286,6 +286,12 @@ class BaseStream:
             self._writer = self._open_new_writer(client)
         return self._writer
 
+    def drop(self, client=None):
+        if client is None:
+            client = self._meta._client
+        if hasattr(client, 'drop_stream'):
+            client.drop_stream(self.id)
+
 
 class StreamCollection:
     """A stream collection is a set of stream, where each element is a stream, or,

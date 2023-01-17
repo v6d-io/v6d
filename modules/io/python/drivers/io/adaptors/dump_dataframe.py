@@ -33,6 +33,10 @@ def dump_dataframe(vineyard_socket, stream_id):
     print('table: %s rows, %s columns' % (table.num_rows, table.num_columns))
     print('schema: %s' % (table.schema,))
 
+    # drop the stream
+    if hasattr(stream, 'drop'):
+        stream.drop(client)
+
 
 def main():
     if len(sys.argv) < 5:
