@@ -11,6 +11,7 @@ RUN curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl && \
 
 WORKDIR /
 
+# the datasets can be found in the git repo(https://github.com/GraphScope/gstest/tree/master/vineyard-mars-showcase-dataset)
 COPY datasets/ datasets/
 
 COPY prepare-data.py /
