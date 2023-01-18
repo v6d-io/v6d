@@ -17,31 +17,24 @@ setup:
   env: kind
   kubeconfig: /tmp/e2e-k8s.config
   steps:
-    - name: download all showcase images into kind cluster
-      command: |
-        # load mars image
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/mars-with-vineyard:v0.10.0
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/prepare-data
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/mars-process-data
-        kind load docker-image docker.pkg.github.com/v6d-io/v6d/train-data
     - name: run prepare-data job
       command: |
         kubectl create ns vineyard-job
-        kubectl apply -f k8s/showcase/vineyard+mars+pytorch/prepare-data/resources
+        kubectl apply -f k8s/showcase/vineyard-mars-pytorch/prepare-data/resources
       wait:
         - namespace: vineyard-job
           resource: job/prepare-data
           for: condition=complete
     - name: run process-data job
       command: |
-        kubectl apply -f k8s/showcase/vineyard+mars+pytorch/process-data/resources
+        kubectl apply -f k8s/showcase/vineyard-mars-pytorch/process-data/resources
       wait:
         - namespace: vineyard-job
           resource: job/process-data
           for: condition=complete
     - name: run train-data job
       command: |
-        kubectl apply -f k8s/showcase/vineyard+mars+pytorch/train-data/resources
+        kubectl apply -f k8s/showcase/vineyard-mars-pytorch/train-data/resources
   timeout: 30m
 
 cleanup:

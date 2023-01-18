@@ -1,4 +1,4 @@
-REGISTRY := docker.pkg.github.com/v6d-io/v6d
+REGISTRY := ghcr.io/v6d-io/v6d
 TAG      := latest
 
 all: build-train-data

@@ -1,12 +1,32 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import os
-import time
 
 import vineyard
 import vineyard.io
-import mars.dataframe as md
 from mars.dataframe.datastore.to_vineyard import to_vineyard
 from mars.dataframe.datasource.from_vineyard import from_vineyard
 
+import requests
+from kubernetes import config
+from mars.deploy.kubernetes import new_cluster
+from mars.deploy.kubernetes.config import EmptyDirVolumeConfig, HostPathVolumeConfig
 
 env_dist = os.environ
 
@@ -18,13 +38,7 @@ socket = '/var/run/vineyard.sock'
 vineyard_client = vineyard.connect(socket)
 
 def launch_on_k8s():
-    import requests
-    import urllib3
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = 'ALL:@SECLEVEL=1'
-
-    from kubernetes import config
-    from mars.deploy.kubernetes import new_cluster
-    from mars.deploy.kubernetes.config import EmptyDirVolumeConfig, HostPathVolumeConfig
 
     # use in cluster config here
     k8sconfig=config.load_incluster_config()
