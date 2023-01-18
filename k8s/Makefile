@@ -192,6 +192,15 @@ e2e-tests-workflow: prepare-e2e-test build-local-cluster install-cert-manager in
 	@make delete-local-cluster
 .PHONY: e2e-tests-workflow
 
+e2e-tests-mars-showcase: prepare-e2e-test build-local-cluster install-cert-manager install-vineyard-operator install-vineyard-cluster
+	@echo "Running mars showcase e2e test..."
+	@cd .. && ${GOBIN}/e2e run --config=k8s/test/e2e/mars-showcase/e2e.yaml
+	@echo "mars showcase e2e test passed."
+	@# the next step is recover the default vineyard operator image(vineyardcloudnative/vineyard-operator)
+	@cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	@make delete-local-cluster
+.PHONY: e2e-tests-mars-showcase
+
 # Build manager binary
 manager: generate fmt
 	go build -o bin/manager main.go
