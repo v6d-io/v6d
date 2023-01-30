@@ -17,24 +17,23 @@ setup:
   env: kind
   kubeconfig: /tmp/e2e-k8s.config
   steps:
+    - name: download the dataset 
+      command: |
+        worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c sh -c "mkdir -p /datasets; \
+        cd /datasets/; curl -sOL https://raw.githubusercontent.com/GraphScope/gstest/master/vineyard-mars-showcase-dataset/{item,txn,user}.csv"; done
     - name: run prepare-data job
       command: |
         kubectl create ns vineyard-job
         kubectl apply -f k8s/showcase/vineyard-mars-pytorch/prepare-data/resources
-      wait:
-        - namespace: vineyard-job
-          resource: job/prepare-data
-          for: condition=complete
+        kubectl wait job -n vineyard-job -l app=prepare-data --for condition=complete --timeout=1200s
     - name: run process-data job
       command: |
         kubectl apply -f k8s/showcase/vineyard-mars-pytorch/process-data/resources
-      wait:
-        - namespace: vineyard-job
-          resource: job/process-data
-          for: condition=complete
+        kubectl wait job -n vineyard-job -l app=process-data --for condition=complete --timeout=1200s
     - name: run train-data job
       command: |
         kubectl apply -f k8s/showcase/vineyard-mars-pytorch/train-data/resources
+        kubectl wait pods -n vineyard-job -l app=train-data --for condition=Ready --timeout=1200s
   timeout: 30m
 
 cleanup:

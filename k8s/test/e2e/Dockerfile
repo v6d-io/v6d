@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ghcr.io/v6d-io/v6d/vineyard-python-dev:latest
+ARG BASE_IMAGE="ghcr.io/v6d-io/v6d/vineyard-python-dev:latest"
+
+FROM ${BASE_IMAGE}
 
 WORKDIR /
 
@@ -24,7 +26,7 @@ RUN python -c "import urllib.request; open('/usr/bin/kubectl', 'wb').write(urlli
 ARG PYPI_DEPENDENCIES=""
 ENV PYPI_DEPENDENCIES ${PYPI_DEPENDENCIES}
 
-RUN if [[ ! "${PYPI_DEPENDENCIES}" == "" ]]; then pip3 install --no-cache-dir ${PYPI_DEPENDENCIES}; fi
+RUN if [ ! -z "${PYPI_DEPENDENCIES}" ]; then pip3 install --no-cache-dir ${PYPI_DEPENDENCIES}; fi
 
 ARG APP
 ENV APP ${APP}

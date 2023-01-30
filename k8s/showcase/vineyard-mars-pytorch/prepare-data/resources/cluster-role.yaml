@@ -19,9 +19,6 @@ metadata:
   name: prepare-data-role
   labels:
     app.kubernetes.io/instance: prepare-data
-    # Add these permissions to the "admin" and "edit" default roles.
-    rbac.authorization.k8s.io/aggregate-to-admin: "true"
-    rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:
   - apiGroups: [""]
     resources: ["pods", "pods/log", "pods/exec"]

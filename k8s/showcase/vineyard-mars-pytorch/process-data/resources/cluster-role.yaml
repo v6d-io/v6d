@@ -19,9 +19,6 @@ metadata:
   name: process-data-role
   labels:
     app.kubernetes.io/instance: process-data
-    # Add these permissions to the "admin" and "edit" default roles.
-    rbac.authorization.k8s.io/aggregate-to-admin: "true"
-    rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:
   - apiGroups: [""]
     resources: ["pods", "pods/exec", "pods/log", "endpoints", "services","namespaces","nodes"]

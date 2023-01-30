@@ -64,7 +64,13 @@ spec:
         volumeMounts:
         - mountPath: /var/run
           name: vineyard-sock
+        - mountPath: /datasets
+          name: datasets
       volumes:
       - name: vineyard-sock
         hostPath:
           path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+      # the datasets can be found in the git repo(https://github.com/GraphScope/gstest/tree/master/vineyard-mars-showcase-dataset)
+      - name: datasets
+        hostPath:
+          path: /datasets
