@@ -39,7 +39,7 @@ assembly-job2:
 
 distributed-assembly-images: distributed-assembly distributed-assembly-job1 distributed-assembly-job2 distributed-assembly-job3
 publish-distributed-assembly-images: push-distributed-assembly push-distributed-assembly-job1 push-distributed-assembly-job2 push-distributed-assembly-job3
-e2e-test-distributed-assembly: push-distributed-assembly push-distributed-assembly-job1 push-distributed-assembly-job2 push-distributed-assembly-job3
+e2e-test-distributed-assembly: push-local-assembly push-distributed-assembly push-distributed-assembly-job1 push-distributed-assembly-job2 push-distributed-assembly-job3
 
 distributed-assembly:
 	docker build assembly-demo/ -f Dockerfile \
