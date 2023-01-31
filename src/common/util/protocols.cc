@@ -160,23 +160,31 @@ void WriteErrorReply(Status const& status, std::string& msg) {
   encode_msg(status.ToJSON(), msg);
 }
 
-void WriteRegisterRequest(std::string& msg, StoreType const& store_type) {
-  WriteRegisterRequest(msg, store_type, RootSessionID());
+void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type,
+                          const std::string& username,
+                          const std::string& password) {
+  WriteRegisterRequest(msg, bulk_store_type, RootSessionID(), username,
+                       password);
 }
 
-void WriteRegisterRequest(std::string& msg, StoreType const& store_type,
-                          const ObjectID& session_id) {
+void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type,
+                          const ObjectID& session_id,
+                          const std::string& username,
+                          const std::string& password) {
   json root;
   root["type"] = "register_request";
   root["version"] = vineyard_version();
-  root["store_type"] = store_type;
+  root["store_type"] = bulk_store_type;
   root["session_id"] = session_id;
+  root["username"] = username;
+  root["password"] = password;
 
   encode_msg(root, msg);
 }
 
 Status ReadRegisterRequest(const json& root, std::string& version,
-                           StoreType& store_type, SessionID& session_id) {
+                           StoreType& store_type, SessionID& session_id,
+                           std::string& username, std::string& password) {
   RETURN_ON_ASSERT(root["type"] == "register_request");
 
   // When the "version" field is missing from the client, we treat it
@@ -199,6 +207,11 @@ Status ReadRegisterRequest(const json& root, std::string& version,
       }
     }
   }
+
+  // userpass
+  username = root.value("username", /* default */ "");
+  password = root.value("password", /* default */ "");
+
   return Status::OK();
 }
 

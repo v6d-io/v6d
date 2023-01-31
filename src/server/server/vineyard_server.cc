@@ -281,7 +281,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                     s, meta_tree::GetData(meta, this->instance_name(), id,
                                           sub_tree, instance_id_));
                 if (s.IsMetaTreeInvalid()) {
-                  LOG(WARNING) << "Found errors in metadata: " << s.ToString();
+                  LOG(WARNING) << "Found errors in metadata: " << s;
                 }
 #if !defined(NDEBUG)
                 if (VLOG_IS_ON(100)) {
@@ -967,6 +967,48 @@ Status VineyardServer::ProcessDeferred(const json& meta) {
     }
   }
   return Status::OK();
+}
+
+Status VineyardServer::Verify(const std::string& username,
+                              const std::string& password,
+                              callback_t<> callback) {
+  const std::string htpasswd = spec_.value("htpasswd", /* default */ "");
+  if (htpasswd == "") {
+    if (!username.empty() || !password.empty()) {
+      LOG(WARNING) << "Authentication is not enabled, ignored";
+    }
+    return callback(Status::OK());
+  }
+  if (!boost::filesystem::exists(htpasswd)) {
+    return callback(
+        Status::IOError("Failed to find the htpasswd database for verifying"));
+  }
+  std::shared_ptr<Process> proc = std::make_shared<Process>(context_);
+  proc->Start("htpasswd", std::vector<std::string>{
+                              "-v",
+                              "-b",
+                              htpasswd,
+                              username,
+                              password,
+                          });
+  proc->Wait();
+  if (proc->ExitCode() == 0) {
+    return callback(Status::OK());
+  }
+  std::stringstream m;
+  m << "Incorrect username and password, or, htpasswd is not "
+       "installed as expected: \n";
+  m << "\n";
+  m << "  - ubuntu: apt-get install apache2-utils\n";
+  m << "  - centos: yum install httpd-tools\n";
+  m << "\n";
+  if (!proc->Diagnostic().empty()) {
+    m << "Detail error: ";
+    for (auto const& s : proc->Diagnostic()) {
+      m << s << "\n";
+    }
+  }
+  return callback(Status::IOError(m.str()));
 }
 
 const std::string VineyardServer::IPCSocket() {

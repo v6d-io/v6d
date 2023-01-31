@@ -212,6 +212,7 @@ class BasicIPCClient : public ClientBase {
   BasicIPCClient();
 
   ~BasicIPCClient() {}
+
   /**
    * @brief Connect to vineyardd using the given UNIX domain socket
    * `ipc_socket` with the given store type.
@@ -222,7 +223,9 @@ class BasicIPCClient : public ClientBase {
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& ipc_socket,
-                 StoreType const& bulk_store_type);
+                 StoreType const& bulk_store_type = StoreType::kDefault,
+                 std::string const& username = "",
+                 std::string const& password = "");
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .
@@ -232,7 +235,10 @@ class BasicIPCClient : public ClientBase {
    *
    * @return Status that indicates whether the connection of has succeeded.
    */
-  Status Open(std::string const& ipc_socket, StoreType const& bulk_store_type);
+  Status Open(std::string const& ipc_socket,
+              StoreType const& bulk_store_type = StoreType::kDefault,
+              std::string const& username = "",
+              std::string const& password = "");
 
  protected:
   std::shared_ptr<detail::SharedMemoryManager> shm_;
@@ -262,6 +268,14 @@ class Client final : public BasicIPCClient,
   Status Connect();
 
   /**
+   * @brief Connect to vineyard using the UNIX domain socket file specified by
+   *        the environment variable `VINEYARD_IPC_SOCKET`.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(std::string const& username, std::string const& password);
+
+  /**
    * @brief Connect to vineyardd using the given UNIX domain socket
    * `ipc_socket`.
    *
@@ -270,6 +284,17 @@ class Client final : public BasicIPCClient,
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& ipc_socket);
+
+  /**
+   * @brief Connect to vineyardd using the given UNIX domain socket
+   * `ipc_socket`.
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& ipc_socket, std::string const& username,
+                 std::string const& password);
 
   /**
    * @brief Disconnect this client.
@@ -284,6 +309,16 @@ class Client final : public BasicIPCClient,
    * @return Status that indicates whether the connection of has succeeded.
    */
   Status Open(std::string const& ipc_socket);
+
+  /**
+   * @brief Create a new anonymous session in vineyardd and connect to it .
+   *
+   * @param ipc_socket Location of the UNIX domain socket.
+   *
+   * @return Status that indicates whether the connection of has succeeded.
+   */
+  Status Open(std::string const& ipc_socket, std::string const& username,
+              std::string const& password);
 
   /**
    * @brief Create a new client using self UNIX domain socket.

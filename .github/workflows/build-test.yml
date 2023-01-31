@@ -52,7 +52,7 @@ jobs:
       - name: Cache for ccache
         uses: actions/cache@v3
         with:
-          path: ~/.ccache
+          path: ~/ccache-cached
           key: ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-
@@ -109,10 +109,27 @@ jobs:
                               libplasma-dev=11.0.0-1 \
                               libarrow-cuda-dev=11.0.0-1
 
+          # install clang-format
+          sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
+          sudo chmod +x /usr/bin/clang-format
+
+          # install latest ccache
+          wget https://github.com/ccache/ccache/releases/download/v4.7.4/ccache-4.7.4-linux-x86_64.tar.xz
+          tar -xf ccache-4.7.4-linux-x86_64.tar.xz
+          sudo mv ccache-4.7.4-linux-x86_64/ccache /usr/bin/ccache
+
+          # avoid possible permission errors
+          sudo mkdir -p ~/ccache-cached
+          sudo chmod -R a+wrx ~/ccache-cached
+          ccache -o cache_dir=~/ccache-cached
+
           # install pyarrow from scratch
           export PYARROW_WITH_PARQUET=1
           export PYARROW_WITH_ORC=1
           export PYARROW_WITH_DATASET=1
+          export PYARROW_BUILD_VERBOSE=1
+          export PYARROW_PARALLEL=$(nproc)
+          export PYARROW_CMAKE_OPTIONS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
           sudo -E pip3 install --no-binary pyarrow pyarrow==11.0.0
 
           # install python packages for codegen, and io adaptors
@@ -121,15 +138,6 @@ jobs:
 
           # install linters
           sudo pip3 install auditwheel black isort flake8 twine
-
-          # install clang-format
-          sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
-          sudo chmod +x /usr/bin/clang-format
-
-          # install latest ccache
-          wget https://github.com/ccache/ccache/releases/download/v4.7.3/ccache-4.7.3-linux-x86_64.tar.xz
-          tar -xf ccache-4.7.3-linux-x86_64.tar.xz
-          sudo mv ccache-4.7.3-linux-x86_64/ccache /usr/bin/ccache
 
       - name: Install libgrape-lite
         if: runner.os == 'Linux'

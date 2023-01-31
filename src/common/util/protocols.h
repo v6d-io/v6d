@@ -102,13 +102,18 @@ CommandType ParseCommandType(const std::string& str_type);
 
 void WriteErrorReply(Status const& status, std::string& msg);
 
-void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type);
+void WriteRegisterRequest(
+    std::string& msg, StoreType const& bulk_store_type = StoreType::kDefault,
+    const std::string& username = "", const std::string& password = "");
 
-void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type,
-                          const ObjectID& session_id);
+void WriteRegisterRequest(
+    std::string& msg, StoreType const& bulk_store_type = StoreType::kDefault,
+    const ObjectID& session_id = RootSessionID(),
+    const std::string& username = "", const std::string& password = "");
 
 Status ReadRegisterRequest(const json& msg, std::string& version,
-                           StoreType& bulk_store_type, SessionID& session_id);
+                           StoreType& bulk_store_type, SessionID& session_id,
+                           std::string& username, std::string& password);
 
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,

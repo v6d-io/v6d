@@ -167,6 +167,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status ProcessDeferred(const json& meta);
 
+  Status Verify(const std::string& username, const std::string& password,
+                callback_t<> callback);
+
   inline SessionID session_id() const { return session_id_; }
   inline InstanceID instance_id() { return instance_id_; }
   inline std::string instance_name() { return instance_name_; }

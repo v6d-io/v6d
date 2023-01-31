@@ -48,6 +48,12 @@ Process::~Process() {
 }
 
 void Process::Start(const std::string& command,
+                    const std::vector<std::string>& args) {
+  this->Start(command, args, boost::bind(&Process::recordLog, this, _1, _2),
+              false);
+}
+
+void Process::Start(const std::string& command,
                     const std::vector<std::string>& args,
                     callback_t<const std::string&> callback, bool once) {
   // step 1: resolve command from PATH
@@ -70,10 +76,11 @@ void Process::Start(const std::string& command,
   proc_ = std::make_unique<boost::process::child>(
       command_path, boost::process::args(args),
       boost::process::std_in<stdin_pipe_, boost::process::std_out> stdout_pipe_,
-      boost::process::std_err > stderr, env, ec);
+      boost::process::std_err > stderr_pipe_, env, ec);
   if (ec) {
-    VINEYARD_SUPPRESS(callback(
-        Status::IOError("Failed to launch process: " + ec.message()), ""));
+    VINEYARD_SUPPRESS(callback(Status::IOError("Failed to launch process '" +
+                                               command + "': " + ec.message()),
+                               ""));
     return;
   }
 
@@ -125,17 +132,68 @@ void Process::AsyncRead(boost::process::async_pipe& pipe,
       });
 }
 
+void Process::Finish() {
+  // drop a EOF marker to the input, n.b., `async_close` doesn't work.
+  boost::system::error_code err;
+  this->stdin_pipe_.close(err);
+}
+
+bool Process::Running() {
+  if (proc_) {
+    std::error_code err;
+    return proc_->running(err);
+  }
+  return false;
+}
+
+void Process::Terminate() {
+  if (proc_) {
+    std::error_code err;
+    proc_->terminate(err);
+    proc_.reset(nullptr);
+  }
+}
+
+void Process::Detach() {
+  if (proc_ && proc_->valid()) {
+    proc_->detach();
+  }
+}
+
+void Process::Wait() {
+  if (proc_ && proc_->valid()) {
+    std::error_code err;
+    proc_->wait(err);
+  }
+}
+
+int Process::ExitCode() {
+  if (proc_) {
+    return proc_->exit_code();
+  }
+  return 0;
+}
+
 Status Process::recordLog(Status const& status, std::string const& line) {
   if (status.ok()) {
     diagnostic_.push_back(line);
   } else {
     diagnostic_.push_back(status.ToString());
+    if (!line.empty()) {
+      diagnostic_.push_back(line);
+    }
   }
   return status;
 }
 
 Status Process::findRelativeProgram(std::string const& name,
                                     boost::filesystem::path& target) {
+  // try directly finding first
+  if (boost::filesystem::exists(name)) {
+    target = boost::filesystem::path(name);
+    return Status::OK();
+  }
+
   boost::filesystem::path current_location;
 
 #if defined(__APPLE__) && defined(__MACH__)

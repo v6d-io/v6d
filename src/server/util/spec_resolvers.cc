@@ -26,7 +26,7 @@ limitations under the License.
 namespace vineyard {
 
 // deployment
-DEFINE_string(deployment, "local", "deployment mode: 'local', 'distributed'");
+DEFINE_string(deployment, "local", "Deployment mode: 'local', 'distributed'");
 
 // meta data
 DEFINE_string(meta, "etcd",
@@ -91,6 +91,10 @@ DEFINE_bool(metrics, false,
 
 // core dump
 DEFINE_bool(coredump, false, "Enable core dump when been aborted");
+
+// auth
+DEFINE_string(htpasswd, "",
+              "Localtion of htpasswd database for authentication");
 
 const Resolver& Resolver::get(std::string name) {
   static auto server_resolver = ServerSpecResolver();
@@ -211,6 +215,7 @@ json ServerSpecResolver::resolve() const {
   spec["bulkstore_spec"] = Resolver::get("bulkstore").resolve();
   spec["ipc_spec"] = Resolver::get("ipcserver").resolve();
   spec["rpc_spec"] = Resolver::get("rpcserver").resolve();
+  spec["htpasswd"] = FLAGS_htpasswd;
   return spec;
 }
 

@@ -218,6 +218,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
     this->server_ptr_ = session;
   }
 
+  // whether the connection has been correctly "registered"
+  std::atomic_bool registered_ = false;
+
   stream_protocol::socket socket_;
   std::shared_ptr<VineyardServer> server_ptr_;
   std::shared_ptr<SocketServer> socket_server_ptr_;

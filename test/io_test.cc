@@ -58,7 +58,7 @@ void ReadTable(std::string const& path_to_read) {
           LOG(INFO) << "line " << (lineno++) << ": '" << line << "' of length "
                     << line.length();
         } else {
-          LOG(ERROR) << "failed (or finished): " << s.ToString();
+          LOG(ERROR) << "failed (or finished): " << s;
           break;
         }
       }
@@ -68,7 +68,7 @@ void ReadTable(std::string const& path_to_read) {
     {
       std::shared_ptr<arrow::Table> table;
       LOG(INFO) << "read table: " << index << " of part " << total_parts << ": "
-                << io->ReadTable(&table).ToString();
+                << io->ReadTable(&table);
       if (table) {
         LOG(INFO) << "table: " << table->ToString();
       }
