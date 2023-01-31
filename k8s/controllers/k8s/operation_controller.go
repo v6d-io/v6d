@@ -55,6 +55,7 @@ type OperationReconciler struct {
 // +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles the operation
 func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -64,7 +65,7 @@ func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err := r.Client.Get(ctx, req.NamespacedName, &op); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	logger.Info("Reconciling Operation", "vineyardd", op)
+	logger.Info("Reconciling Operation", "operation", op)
 
 	app := kubernetes.Application{
 		Client:   r.Client,

@@ -167,6 +167,35 @@ type VineyardContainerConfig struct {
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
+// PluginImageConfig holds all image configuration about pluggable drivers(backup, recover,
+// local assembly, distributed assembly, repartition)
+type PluginImageConfig struct {
+	// the image of backup operation
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="ghcr.io/v6d-io/v6d/backup-job"
+	BackupImage string `json:"backupImage,omitempty"`
+
+	// the image of recover operation
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="ghcr.io/v6d-io/v6d/recover-job"
+	RecoverImage string `json:"recoverImage,omitempty"`
+
+	// the image of dask repartition operation
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="ghcr.io/v6d-io/v6d/dask-repartition"
+	DaskRepartitionImage string `json:"daskRepartitionImage,omitempty"`
+
+	// the image of local assembly operation
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="ghcr.io/v6d-io/v6d/local-assembly"
+	LocalAssemblyImage string `json:"localAssemblyImage,omitempty"`
+
+	// the image of distributed assembly operation
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="ghcr.io/v6d-io/v6d/distributed-assembly"
+	DistributedAssemblyImage string `json:"distributedAssemblyImage,omitempty"`
+}
+
 // VineyarddSpec holds all configuration about vineyardd
 type VineyarddSpec struct {
 	// the replicas of vineyardd
@@ -189,6 +218,12 @@ type VineyarddSpec struct {
 	//nolint: lll
 	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80, etcdEndpoint: "http://etcd-for-vineyard:2379", etcdPrefix: "/vineyard"}
 	VineyardConfig VineyardContainerConfig `json:"vineyardConfig,omitempty"`
+
+	// operation container configuration
+	// +kubebuilder:validation:Optional
+	//nolint: lll
+	// +kubebuilder:default={backupImage: "ghcr.io/v6d-io/v6d/backup-job", recoverImage: "ghcr.io/v6d-io/v6d/recover-job", daskRepartitionImage: "ghcr.io/v6d-io/v6d/dask-repartition", localAssemblyImage: "ghcr.io/v6d-io/v6d/local-assembly", distributedAssemblyImage: "ghcr.io/v6d-io/v6d/distributed-assembly"}
+	PluginConfig PluginImageConfig `json:"pluginConfig,omitempty"`
 
 	// metric container configuration
 	// +kubebuilder:validation:Optional

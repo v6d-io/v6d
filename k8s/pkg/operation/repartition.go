@@ -55,15 +55,16 @@ type RepartitionOperation struct {
 
 // DaskRepartitionConfig is the config for the dask repartition job
 type DaskRepartitionConfig struct {
-	Name             string
-	Namespace        string
-	GlobalObjectID   string
-	Replicas         string
-	InstanceToWorker string
-	DaskScheduler    string
-	JobName          string
-	TimeoutSeconds   int64
-	VineyardSockPath string
+	Name                 string
+	Namespace            string
+	GlobalObjectID       string
+	Replicas             string
+	InstanceToWorker     string
+	DaskScheduler        string
+	JobName              string
+	TimeoutSeconds       int64
+	VineyardSockPath     string
+	DaskRepartitionImage string
 }
 
 // DaskRepartitionConfigTemplate is the template config for the dask repartition job
@@ -173,6 +174,17 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 		return fmt.Errorf("failed to get replicas from target jobs")
 	}
 
+	vineyarddName := pod.Labels[labels.VineyarddName]
+	vineyarddNamespace := pod.Labels[labels.VineyarddNamespace]
+	// get vineyardd cluster info
+	vineyardd := &v1alpha1.Vineyardd{}
+	if err := ro.Client.Get(ctx, client.ObjectKey{
+		Name:      vineyarddName,
+		Namespace: vineyarddNamespace,
+	}, vineyardd); err != nil {
+		return fmt.Errorf("failed to get the vineyardd: %v", err)
+	}
+
 	DaskRepartitionConfigTemplate.Replicas = "'" + replicas + "'"
 	DaskRepartitionConfigTemplate.Name = RepartitionPrefix + globalObject.Name
 	DaskRepartitionConfigTemplate.Namespace = pod.Namespace
@@ -181,6 +193,7 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	DaskRepartitionConfigTemplate.JobName = pod.Labels[labels.VineyardJobName]
 	DaskRepartitionConfigTemplate.InstanceToWorker = instanceToWorker
 	DaskRepartitionConfigTemplate.TimeoutSeconds = o.Spec.TimeoutSeconds
+	DaskRepartitionConfigTemplate.DaskRepartitionImage = vineyardd.Spec.PluginConfig.DaskRepartitionImage
 	if socket, err := ro.ResolveRequiredVineyarddSocket(
 		ctx,
 		pod.Labels[labels.VineyarddName],
