@@ -52,25 +52,27 @@ type AssemblyOperation struct {
 
 // LocalAssemblyConfig is the config for the local assembly job
 type LocalAssemblyConfig struct {
-	Name             string
-	Namespace        string
-	StreamID         string
-	JobName          string
-	NodeName         string
-	TimeoutSeconds   int64
-	VineyardSockPath string
+	Name               string
+	Namespace          string
+	StreamID           string
+	JobName            string
+	NodeName           string
+	TimeoutSeconds     int64
+	VineyardSockPath   string
+	LocalAssemblyImage string
 }
 
 // DistributedAssemblyConfig is the config for the distributed assembly job
 type DistributedAssemblyConfig struct {
-	Name                 string
-	Namespace            string
-	StreamID             string
-	JobName              string
-	GlobalObjectID       string
-	OldObjectToNewObject string
-	TimeoutSeconds       int64
-	VineyardSockPath     string
+	Name                     string
+	Namespace                string
+	StreamID                 string
+	JobName                  string
+	GlobalObjectID           string
+	OldObjectToNewObject     string
+	TimeoutSeconds           int64
+	VineyardSockPath         string
+	DistributedAssemblyImage string
 }
 
 // LocalAssemblyConfigTemplate is the template config for the assembly job
@@ -146,6 +148,18 @@ func (ao *AssemblyOperation) findNeedAssemblyPodByLocalObject(ctx context.Contex
 // buildLocalAssemblyJob build all configuration for the local assembly job
 func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObject *v1alpha1.LocalObject, pod *corev1.Pod, timeout int64) error {
 	podLabels := pod.Labels
+
+	vineyarddName := podLabels[labels.VineyarddName]
+	vineyarddNamespace := podLabels[labels.VineyarddNamespace]
+	// get vineyardd cluster info
+	vineyardd := &v1alpha1.Vineyardd{}
+	if err := ao.Client.Get(ctx, client.ObjectKey{
+		Name:      vineyarddName,
+		Namespace: vineyarddNamespace,
+	}, vineyardd); err != nil {
+		return fmt.Errorf("failed to get the vineyardd: %v", err)
+	}
+
 	// When the pod which generated the stream is annotated, the assembly job will be created in the same pod
 	if _, ok := podLabels[NeedInjectedAssemblyKey]; ok {
 		if strings.Contains(strings.ToLower(localObject.Spec.Typename), "stream") {
@@ -155,6 +169,7 @@ func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObj
 			LocalAssemblyConfigTemplate.NodeName = localObject.Spec.Hostname
 			LocalAssemblyConfigTemplate.JobName = podLabels[labels.VineyardJobName]
 			LocalAssemblyConfigTemplate.TimeoutSeconds = timeout
+			LocalAssemblyConfigTemplate.LocalAssemblyImage = vineyardd.Spec.OperationConfig.LocalAssemblyImage
 			if socket, err := ao.ResolveRequiredVineyarddSocket(
 				ctx,
 				podLabels[labels.VineyarddName],
@@ -286,6 +301,17 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 		}
 	}
 
+	vineyarddName := podLabels[labels.VineyarddName]
+	vineyarddNamespace := podLabels[labels.VineyarddNamespace]
+	// get vineyardd cluster info
+	vineyardd := &v1alpha1.Vineyardd{}
+	if err := ao.Client.Get(ctx, client.ObjectKey{
+		Name:      vineyarddName,
+		Namespace: vineyarddNamespace,
+	}, vineyardd); err != nil {
+		return false, fmt.Errorf("failed to get the vineyardd: %v", err)
+	}
+
 	// build the distributed assembly job
 	if len(sigToID) == len(oldObjectToNewObject) {
 		str := `'{`
@@ -299,6 +325,7 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 		DistributedAssemblyConfigTemplate.OldObjectToNewObject = str
 		DistributedAssemblyConfigTemplate.JobName = podLabels[labels.VineyardJobName]
 		DistributedAssemblyConfigTemplate.TimeoutSeconds = timeout
+		DistributedAssemblyConfigTemplate.DistributedAssemblyImage = vineyardd.Spec.OperationConfig.DistributedAssemblyImage
 		if socket, err := ao.ResolveRequiredVineyarddSocket(
 			ctx,
 			podLabels[labels.VineyarddName],

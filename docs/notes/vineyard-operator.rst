@@ -308,11 +308,41 @@ The detailed configuration entries for creating a vineyard cluster are listed as
      - The environment of vineyardd.
      - nil
 
-   * - | metricConfig.
-       | enable
-     - bool
-     - Enable the metrics in vineyardd.
-     - false
+   * - | vineyardConfig.
+       | env
+     - []corev1.EnvVar
+     - The environment of vineyardd.
+     - nil
+
+   * - | operationConfig.
+       | backupImage
+     - string
+     - The image of backup operation
+     - "ghcr.io/v6d-io/v6d/backup-job"
+
+   * - | operationConfig.
+       | recoverImage
+     - string
+     - The image of recover operation
+     - "ghcr.io/v6d-io/v6d/recover-job"
+
+   * - | operationConfig.
+       | daskRepartitionImage
+     - string
+     - The image of dask repartition operation
+     - "ghcr.io/v6d-io/v6d/dask-repartition"
+
+   * - | operationConfig.
+       | localAssemblyImage
+     - string
+     - The image of local assembly operation
+     - "ghcr.io/v6d-io/v6d/local-assembly"
+
+   * - | operationConfig.
+       | distributedAssemblyImage
+     - string
+     - The image of distributed assembly operation
+     - "ghcr.io/v6d-io/v6d/distributed-assembly"
 
    * - | metricConfig.
        | image

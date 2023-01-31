@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: dask-repartition-operation
-        image: ghcr.io/v6d-io/v6d/dask-repartition
+        image: {{ $config.DaskRepartitionImage }}
         imagePullPolicy: IfNotPresent
         env:
         - name: GLOBALOBJECT_ID

@@ -70,6 +70,30 @@ spec:
                     default: IfNotPresent
                     type: string
                 type: object
+              operationConfig:
+                default:
+                  backupImage: ghcr.io/v6d-io/v6d/backup-job
+                  daskRepartitionImage: ghcr.io/v6d-io/v6d/dask-repartition
+                  distributedAssemblyImage: ghcr.io/v6d-io/v6d/distributed-assembly
+                  localAssemblyImage: ghcr.io/v6d-io/v6d/local-assembly
+                  recoverImage: ghcr.io/v6d-io/v6d/recover-job
+                properties:
+                  backupImage:
+                    default: ghcr.io/v6d-io/v6d/backup-job
+                    type: string
+                  daskRepartitionImage:
+                    default: ghcr.io/v6d-io/v6d/dask-repartition
+                    type: string
+                  distributedAssemblyImage:
+                    default: ghcr.io/v6d-io/v6d/distributed-assembly
+                    type: string
+                  localAssemblyImage:
+                    default: ghcr.io/v6d-io/v6d/local-assembly
+                    type: string
+                  recoverImage:
+                    default: ghcr.io/v6d-io/v6d/recover-job
+                    type: string
+                type: object
               replicas:
                 default: 3
                 type: integer
