@@ -58,7 +58,7 @@ spec:
                     default: IfNotPresent
                     type: string
                 type: object
-              operationConfig:
+              pluginConfig:
                 default:
                   backupImage: ghcr.io/v6d-io/v6d/backup-job
                   daskRepartitionImage: ghcr.io/v6d-io/v6d/dask-repartition

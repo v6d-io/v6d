@@ -314,31 +314,31 @@ The detailed configuration entries for creating a vineyard cluster are listed as
      - The environment of vineyardd.
      - nil
 
-   * - | operationConfig.
+   * - | pluginConfig.
        | backupImage
      - string
      - The image of backup operation
      - "ghcr.io/v6d-io/v6d/backup-job"
 
-   * - | operationConfig.
+   * - | pluginConfig.
        | recoverImage
      - string
      - The image of recover operation
      - "ghcr.io/v6d-io/v6d/recover-job"
 
-   * - | operationConfig.
+   * - | pluginConfig.
        | daskRepartitionImage
      - string
      - The image of dask repartition operation
      - "ghcr.io/v6d-io/v6d/dask-repartition"
 
-   * - | operationConfig.
+   * - | pluginConfig.
        | localAssemblyImage
      - string
      - The image of local assembly operation
      - "ghcr.io/v6d-io/v6d/local-assembly"
 
-   * - | operationConfig.
+   * - | pluginConfig.
        | distributedAssemblyImage
      - string
      - The image of distributed assembly operation

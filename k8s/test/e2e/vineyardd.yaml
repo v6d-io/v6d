@@ -29,9 +29,9 @@ spec:
   vineyardConfig:
     image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
     imagePullPolicy: IfNotPresent
-  # Users can define their own operation image here,
+  # Users can define their own plugin image here,
   # the next images are only for kubernetes CI test.
-  operationConfig:
+  pluginConfig:
     backupImage: localhost:5001/backup-job
     recoverImage: localhost:5001/recover-job
     daskRepartitionImage: localhost:5001/dask-repartition

@@ -169,7 +169,7 @@ func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObj
 			LocalAssemblyConfigTemplate.NodeName = localObject.Spec.Hostname
 			LocalAssemblyConfigTemplate.JobName = podLabels[labels.VineyardJobName]
 			LocalAssemblyConfigTemplate.TimeoutSeconds = timeout
-			LocalAssemblyConfigTemplate.LocalAssemblyImage = vineyardd.Spec.OperationConfig.LocalAssemblyImage
+			LocalAssemblyConfigTemplate.LocalAssemblyImage = vineyardd.Spec.PluginConfig.LocalAssemblyImage
 			if socket, err := ao.ResolveRequiredVineyarddSocket(
 				ctx,
 				podLabels[labels.VineyarddName],
@@ -325,7 +325,7 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 		DistributedAssemblyConfigTemplate.OldObjectToNewObject = str
 		DistributedAssemblyConfigTemplate.JobName = podLabels[labels.VineyardJobName]
 		DistributedAssemblyConfigTemplate.TimeoutSeconds = timeout
-		DistributedAssemblyConfigTemplate.DistributedAssemblyImage = vineyardd.Spec.OperationConfig.DistributedAssemblyImage
+		DistributedAssemblyConfigTemplate.DistributedAssemblyImage = vineyardd.Spec.PluginConfig.DistributedAssemblyImage
 		if socket, err := ao.ResolveRequiredVineyarddSocket(
 			ctx,
 			podLabels[labels.VineyarddName],

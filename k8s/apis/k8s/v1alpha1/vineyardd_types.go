@@ -167,9 +167,9 @@ type VineyardContainerConfig struct {
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
-// OperationImageConfig holds all image configuration about operations(backup, recover,
+// PluginImageConfig holds all image configuration about pluggable drivers(backup, recover,
 // local assembly, distributed assembly, repartition)
-type OperationImageConfig struct {
+type PluginImageConfig struct {
 	// the image of backup operation
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="ghcr.io/v6d-io/v6d/backup-job"
@@ -223,7 +223,7 @@ type VineyarddSpec struct {
 	// +kubebuilder:validation:Optional
 	//nolint: lll
 	// +kubebuilder:default={backupImage: "ghcr.io/v6d-io/v6d/backup-job", recoverImage: "ghcr.io/v6d-io/v6d/recover-job", daskRepartitionImage: "ghcr.io/v6d-io/v6d/dask-repartition", localAssemblyImage: "ghcr.io/v6d-io/v6d/local-assembly", distributedAssemblyImage: "ghcr.io/v6d-io/v6d/distributed-assembly"}
-	OperationConfig OperationImageConfig `json:"operationConfig,omitempty"`
+	PluginConfig PluginImageConfig `json:"pluginConfig,omitempty"`
 
 	// metric container configuration
 	// +kubebuilder:validation:Optional
