@@ -52,7 +52,7 @@ jobs:
       - name: Cache for ccache
         uses: actions/cache@v3
         with:
-          path: ~/ccache-cached
+          path: ~/.ccache
           key: ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-
@@ -60,7 +60,6 @@ jobs:
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'
         run: |
-          # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
 
           sudo apt update -y
@@ -113,15 +112,10 @@ jobs:
           sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-22538c65/clang-format-8_linux-amd64 --output /usr/bin/clang-format
           sudo chmod +x /usr/bin/clang-format
 
-          # install latest ccache
-          wget https://github.com/ccache/ccache/releases/download/v4.7.4/ccache-4.7.4-linux-x86_64.tar.xz
-          tar -xf ccache-4.7.4-linux-x86_64.tar.xz
-          sudo mv ccache-4.7.4-linux-x86_64/ccache /usr/bin/ccache
-
           # avoid possible permission errors
-          sudo mkdir -p ~/ccache-cached
-          sudo chmod -R a+wrx ~/ccache-cached
-          ccache -o cache_dir=~/ccache-cached
+          ccache -o cache_dir=~/.ccache
+          sudo mkdir -p ~/.ccache
+          sudo chmod -R a+wrx ~/.ccache
 
           # install pyarrow from scratch
           export PYARROW_WITH_PARQUET=1
@@ -130,7 +124,7 @@ jobs:
           export PYARROW_BUILD_VERBOSE=1
           export PYARROW_PARALLEL=$(nproc)
           export PYARROW_CMAKE_OPTIONS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
-          sudo -E pip3 install --no-binary pyarrow pyarrow==11.0.0
+          sudo -E env PATH=$PATH pip3 install --no-binary pyarrow pyarrow==11.0.0
 
           # install python packages for codegen, and io adaptors
           sudo pip3 install -U "Pygments>=2.4.1"
@@ -140,13 +134,12 @@ jobs:
           sudo pip3 install auditwheel black isort flake8 twine
 
       - name: Setup tmate session
-        if: true
+        if: false
         uses: mxschmitt/action-tmate@v3
 
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |
-          # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
 
           git clone https://github.com/alibaba/libgrape-lite.git
@@ -200,7 +193,6 @@ jobs:
 
       - name: CMake
         run: |
-          # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
 
           mkdir build
@@ -294,8 +286,6 @@ jobs:
 
       - name: Build
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
 
           pushd build
