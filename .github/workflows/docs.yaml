@@ -31,6 +31,10 @@ concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
   cancel-in-progress: true
 
+env:
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
 jobs:
   docs:
     runs-on: ${{ matrix.os }}
@@ -49,12 +53,22 @@ jobs:
           ref: ${{github.event.pull_request.head.ref}}
           submodules: true
 
+      - name: Generate Summary for Submodules
+        run: |
+          git submodule > git-modules.txt
+          cat git-modules.txt
+
+      - name: Cache for cccahe
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ matrix.os }}-docs-cache-${{ hashFiles('**/git-modules.txt') }}
+          restore-keys: |
+            ${{ matrix.os }}-docs-cache-
+
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
-
           sudo apt update -y
           sudo apt install -y ca-certificates \
                               ccache \
@@ -91,6 +105,16 @@ jobs:
           sudo apt update
           sudo apt install -y libarrow-dev=3.0.0-1
 
+          # install latest ccache
+          wget https://github.com/ccache/ccache/releases/download/v4.7.4/ccache-4.7.4-linux-x86_64.tar.xz
+          tar -xf ccache-4.7.4-linux-x86_64.tar.xz
+          sudo mv ccache-4.7.4-linux-x86_64/ccache /usr/bin/ccache
+
+          # avoid possible permission errors
+          ccache -o cache_dir=~/.ccache
+          sudo mkdir -p ~/.ccache
+          sudo chmod -R a+wrx ~/.ccache
+
           # install python packages for codegen, and io adaptors
           sudo pip3 install -U "Pygments>=2.4.1"
           sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
@@ -101,9 +125,6 @@ jobs:
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
-
           git clone https://github.com/alibaba/libgrape-lite.git
           cd libgrape-lite
           mkdir build
@@ -114,7 +135,6 @@ jobs:
 
       - name: CMake
         run: |
-          # leverage ccache
           export PATH=/usr/lib/ccache:$PATH
 
           mkdir build
@@ -132,9 +152,6 @@ jobs:
 
       - name: Code generation
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
-
           pushd build
           make vineyard_basic_gen -j
           make vineyard_client_python -j

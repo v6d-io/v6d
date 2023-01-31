@@ -63,13 +63,14 @@ asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_context&) {
 Status RPCServer::Register(std::shared_ptr<SocketConnection> conn,
                            const SessionID session_id) {
   if (session_id == RootSessionID()) {
+    conn->registered_.store(true);
     return Status::OK();
   }
   std::shared_ptr<VineyardServer> session;
   auto status = this->vs_ptr_->GetRunner()->Get(session_id, session);
   if (status.ok()) {
     conn->switchSession(session);
-    return status;
+    conn->registered_.store(true);
   }
   return status;
 }

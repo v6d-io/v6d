@@ -30,7 +30,9 @@ def add_doc(target, doc):
 add_doc(
     connect,
     r'''
-.. function:: connect(endpoint: str) -> IPCClient
+.. function:: connect(endpoint: str,
+                      username: str = None,
+                      password: str = None) -> IPCClient
     :noindex:
 
     Connect to vineyard via UNIX domain socket for IPC service:
@@ -42,11 +44,18 @@ add_doc(
     Parameters:
         endpoint: str
             UNIX domain socket path to setup an IPC connection.
+        username: str
+            Username to login, default to None.
+        password: str
+            Password to login, default to None.
 
     Returns:
         IPCClient: The connected IPC client.
 
-.. function:: connect(host: str, port: int or str) -> RPCClient
+.. function:: connect(host: str,
+                      port: int or str,
+                      username: str = None,
+                      password: str = None) -> RPCClient
     :noindex:
 
     Connect to vineyard via TCP socket.
@@ -56,11 +65,17 @@ add_doc(
             Hostname to connect to.
         port: int or str
             The TCP that listened by vineyard TCP service.
+        username: str
+            Username to login, default to None.
+        password: str
+            Password to login, default to None.
 
     Returns:
         RPCClient: The connected RPC client.
 
-.. function:: connect(endpoint: (str, int or str)) -> RPCClient
+.. function:: connect(endpoint: (str, int or str),
+                      username: str = None,
+                      password: str = None) -> RPCClient
     :noindex:
 
     Connect to vineyard via TCP socket.
@@ -69,11 +84,16 @@ add_doc(
         endpoint: tuple(str, int or str)
             Endpoint to connect to. The parameter is a tuple, in which the first element
             is the host, and the second parameter, can be int a str, is the port.
+        username: str
+            Username to login, default to None.
+        password: str
+            Password to login, default to None.
 
     Returns:
         RPCClient: The connected RPC client.
 
-.. function:: connect() -> IPCClient or RPCClient
+.. function:: connect(username: str = None,
+                      password: str = None) -> IPCClient or RPCClient
     :noindex:
 
     Connect to vineyard via UNIX domain socket or TCP endpoint. This method normally
@@ -88,6 +108,12 @@ add_doc(
     In rare cases, user may be not sure about if the IPC socket or RPC endpoint
     is available, i.e., the variable might be :code:`None`. In such cases this method
     can accept a `None` as arguments, and do resolution as described above.
+
+    Parameters:
+        username: str
+            Username to login, default to None.
+        password: str
+            Password to login, default to None.
 
     Raises:
         ConnectionFailed

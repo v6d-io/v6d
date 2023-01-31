@@ -44,12 +44,30 @@ Status RPCClient::Connect() {
       "Environment variable VINEYARD_RPC_ENDPOINT does't exists");
 }
 
+Status RPCClient::Connect(std::string const& username,
+                          std::string const& password) {
+  auto ep = read_env("VINEYARD_RPC_ENDPOINT");
+  if (!ep.empty()) {
+    return Connect(ep, username, password);
+  }
+  return Status::ConnectionError(
+      "Environment variable VINEYARD_RPC_ENDPOINT does't exists");
+}
+
 Status RPCClient::Connect(const std::string& rpc_endpoint) {
   return this->Connect(rpc_endpoint, RootSessionID());
 }
 
 Status RPCClient::Connect(const std::string& rpc_endpoint,
-                          const SessionID session_id) {
+                          std::string const& username,
+                          std::string const& password) {
+  return this->Connect(rpc_endpoint, RootSessionID(), username, password);
+}
+
+Status RPCClient::Connect(const std::string& rpc_endpoint,
+                          const SessionID session_id,
+                          std::string const& username,
+                          std::string const& password) {
   size_t pos = rpc_endpoint.find(":");
   std::string host, port;
   if (pos == std::string::npos) {
@@ -60,7 +78,7 @@ Status RPCClient::Connect(const std::string& rpc_endpoint,
     port = rpc_endpoint.substr(pos + 1);
   }
   return this->Connect(host, static_cast<uint32_t>(std::stoul(port)),
-                       session_id);
+                       session_id, username, password);
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port) {
@@ -68,7 +86,15 @@ Status RPCClient::Connect(const std::string& host, uint32_t port) {
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port,
-                          const SessionID session_id) {
+                          std::string const& username,
+                          std::string const& password) {
+  return this->Connect(host, port, RootSessionID(), username, password);
+}
+
+Status RPCClient::Connect(const std::string& host, uint32_t port,
+                          const SessionID session_id,
+                          std::string const& username,
+                          std::string const& password) {
   std::lock_guard<std::recursive_mutex> guard(client_mutex_);
   std::string rpc_endpoint = host + ":" + std::to_string(port);
   RETURN_ON_ASSERT(!connected_ || rpc_endpoint == rpc_endpoint_);
@@ -78,7 +104,8 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   rpc_endpoint_ = rpc_endpoint;
   RETURN_ON_ERROR(connect_rpc_socket_retry(host, port, vineyard_conn_));
   std::string message_out;
-  WriteRegisterRequest(message_out, StoreType::kDefault, session_id);
+  WriteRegisterRequest(message_out, StoreType::kDefault, session_id, username,
+                       password);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));

@@ -37,6 +37,8 @@ class Process : public std::enable_shared_from_this<Process> {
 
   ~Process();
 
+  void Start(const std::string& command, const std::vector<std::string>& args);
+
   void Start(const std::string& command, const std::vector<std::string>& args,
              callback_t<const std::string&> callback, bool once = true);
 
@@ -46,47 +48,17 @@ class Process : public std::enable_shared_from_this<Process> {
                  callback_t<const std::string&> callback, bool once = true,
                  bool processed = false, const char delimeter = '\n');
 
-  void Finish() {
-    // drop a EOF marker to the input, n.b., `async_close` doesn't work.
-    boost::system::error_code err;
-    this->stdin_pipe_.close(err);
-  }
+  void Finish();
 
-  bool Running() {
-    if (proc_) {
-      std::error_code err;
-      return proc_->running(err);
-    }
-    return false;
-  }
+  bool Running();
 
-  void Terminate() {
-    if (proc_) {
-      std::error_code err;
-      proc_->terminate(err);
-      proc_.reset(nullptr);
-    }
-  }
+  void Terminate();
 
-  void Detach() {
-    if (proc_ && proc_->valid()) {
-      proc_->detach();
-    }
-  }
+  void Detach();
 
-  void Wait() {
-    if (proc_ && proc_->valid()) {
-      std::error_code err;
-      proc_->wait(err);
-    }
-  }
+  void Wait();
 
-  int ExitCode() {
-    if (proc_) {
-      return proc_->exit_code();
-    }
-    return 0;
-  }
+  int ExitCode();
 
   std::list<std::string> const& Diagnostic() const { return diagnostic_; }
 

@@ -200,6 +200,10 @@ bool SocketConnection::processMessage(const std::string& message_in) {
 
   std::string const& type = root["type"].get_ref<std::string const&>();
   CommandType cmd = ParseCommandType(type);
+  if (!registered_.load() && cmd != CommandType::RegisterRequest) {
+    LOG(WARNING) << "The connection is not registered yet, command is " << type;
+    return false;
+  }
   switch (cmd) {
   case CommandType::RegisterRequest: {
     return doRegister(root);
@@ -352,7 +356,7 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doGetGPUBuffers(root);
   }
   default: {
-    LOG(ERROR) << "Got unexpected command: " << type;
+    LOG(WARNING) << "Got unexpected command: " << type;
     return false;
   }
   }
@@ -360,22 +364,37 @@ bool SocketConnection::processMessage(const std::string& message_in) {
 
 bool SocketConnection::doRegister(const json& root) {
   auto self(shared_from_this());
-  std::string client_version, message_out;
+  std::string client_version;
   StoreType bulk_store_type;
   SessionID session_id;
+  std::string username, password;
   TRY_READ_REQUEST(ReadRegisterRequest, root, client_version, bulk_store_type,
-                   session_id);
-  Status s = socket_server_ptr_->Register(self, session_id);
-  if (s.ok()) {
-    bool store_match = (bulk_store_type == server_ptr_->GetBulkStoreType());
-    WriteRegisterReply(server_ptr_->IPCSocket(), server_ptr_->RPCEndpoint(),
-                       server_ptr_->instance_id(), server_ptr_->session_id(),
-                       store_match, message_out);
-  } else {
-    WriteErrorReply(s, message_out);
-  }
-  doWrite(message_out);
-  return !s.ok();
+                   session_id, username, password);
+  RESPONSE_ON_ERROR(server_ptr_->Verify(
+      username, password,
+      [self, bulk_store_type, session_id](const Status& status) -> Status {
+        std::string message_out;
+        if (status.ok()) {
+          Status s = self->socket_server_ptr_->Register(self, session_id);
+          if (s.ok()) {
+            bool store_match =
+                (bulk_store_type == self->server_ptr_->GetBulkStoreType());
+            WriteRegisterReply(self->server_ptr_->IPCSocket(),
+                               self->server_ptr_->RPCEndpoint(),
+                               self->server_ptr_->instance_id(),
+                               self->server_ptr_->session_id(), store_match,
+                               message_out);
+          } else {
+            WriteErrorReply(s, message_out);
+          }
+        } else {
+          WriteErrorReply(Status::ConnectionError(status.ToString()),
+                          message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
 }
 
 bool SocketConnection::doGetBuffers(const json& root) {
@@ -479,20 +498,19 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 }
 
 bool SocketConnection::doGetGPUBuffers(json const& root) {
-#ifndef ENABLE_GPU
-  return false;
-#endif
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
   bool unsafe = false;
   std::vector<std::shared_ptr<Payload>> objects;
+  std::vector<std::vector<int64_t>> handle_to_send;
   std::string message_out;
 
   TRY_READ_REQUEST(ReadGetGPUBuffersRequest, root, ids, unsafe);
+#ifndef ENABLE_GPU
+  WriteErrorReply(Status::Invalid("GPU support is not enabled"), message_out);
+#else
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
-
   // get the uva of the objects.
-  std::vector<std::vector<int64_t>> handle_to_send;
   for (auto object : objects) {
     GPUUnifiedAddress gua(true);
     gua.setGPUMemPtr(object->pointer);
@@ -500,32 +518,17 @@ bool SocketConnection::doGetGPUBuffers(json const& root) {
     handle_to_send.emplace_back(handle_vec);
   }
   WriteGetGPUBuffersReply(objects, handle_to_send, message_out);
+#endif
 
-  /* NOTE: Here we send the file descriptor after the objects.
-   *       We are using sendmsg to send the file descriptor
-   *       which is a sync method. In theory, this might cause
-   *       the server to block, but currently this seems to be
-   *       the only method that are widely used in practice, e.g.,
-   *       boost and Plasma, and actually the file descriptor is
-   *       a very short message.
-   *
-   *       We will examine other methods later, such as using
-   *       explicit file descriptors.
-   */
   this->doWrite(message_out,
                 [self, objects, handle_to_send](const Status& status) {
-                  // for (int store_fd : fd_to_send) {
-                  //   send_fd(self->nativeHandle(), store_fd);
-                  // }
+                  // no need for sending fds for GPU buffers
                   return Status::OK();
                 });
   return false;
 }
 
 bool SocketConnection::doCreateGPUBuffer(json const& root) {
-#ifndef ENABLE_GPU
-  return false;
-#endif
   auto self(shared_from_this());
 
   size_t size;
@@ -533,6 +536,10 @@ bool SocketConnection::doCreateGPUBuffer(json const& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadCreateGPUBufferRequest, root, size);
+
+#ifndef ENABLE_GPU
+  WriteErrorReply(Status::Invalid("GPU support is not enabled"), message_out);
+#else
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->CreateGPU(size, object_id, object));
   if (!object->IsGPU() || object->pointer == nullptr) {
@@ -543,6 +550,7 @@ bool SocketConnection::doCreateGPUBuffer(json const& root) {
   // cudaIpcMemHandle_t cuda_handle;
   GPUUnifiedAddress gua(true, reinterpret_cast<void*>(object->pointer));
   WriteGPUCreateBufferReply(object_id, object, gua, message_out);
+#endif
 
   this->doWrite(message_out, [this, self](const Status& status) {
     LOG_SUMMARY("instances_gpu_memory_usage_bytes", server_ptr_->instance_id(),
@@ -1149,7 +1157,7 @@ bool SocketConnection::doClear(const json& root) {
                 if (status.ok()) {
                   WriteClearReply(message_out);
                 } else {
-                  VLOG(100) << "Error: " << status.ToString();
+                  VLOG(100) << "Error: " << status;
                   WriteErrorReply(status, message_out);
                 }
                 self->doWrite(message_out);
@@ -1157,13 +1165,13 @@ bool SocketConnection::doClear(const json& root) {
               });
           if (!s.ok()) {
             std::string message_out;
-            VLOG(100) << "Error: " << s.ToString();
+            VLOG(100) << "Error: " << s;
             WriteErrorReply(s, message_out);
             self->doWrite(message_out);
           }
         } else {
           std::string message_out;
-          VLOG(100) << "Error: " << status.ToString();
+          VLOG(100) << "Error: " << status;
           WriteErrorReply(status, message_out);
           self->doWrite(message_out);
         }

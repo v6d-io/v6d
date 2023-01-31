@@ -374,8 +374,8 @@ Status ListData(const json& tree, const std::string& instance_name,
     std::string type;
     auto s = get_type(item.value(), type, true);
     if (!s.ok()) {
-      VLOG(10) << "list metadata: object meta has invalid type, "
-               << s.ToString() << ": " << item.value().dump(4);
+      VLOG(10) << "list metadata: object meta has invalid type, " << s << ": "
+               << item.value().dump(4);
       // skip invalid metadata entries when listing
       continue;
     }

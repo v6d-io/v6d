@@ -43,7 +43,9 @@ namespace vineyard {
 BasicIPCClient::BasicIPCClient() : shm_(new detail::SharedMemoryManager(-1)) {}
 
 Status BasicIPCClient::Connect(const std::string& ipc_socket,
-                               StoreType const& store_type) {
+                               StoreType const& store_type,
+                               std::string const& username,
+                               std::string const& password) {
   std::lock_guard<std::recursive_mutex> guard(client_mutex_);
   RETURN_ON_ASSERT(!connected_ || ipc_socket == ipc_socket_);
   if (connected_) {
@@ -52,7 +54,7 @@ Status BasicIPCClient::Connect(const std::string& ipc_socket,
   ipc_socket_ = ipc_socket;
   RETURN_ON_ERROR(connect_ipc_socket_retry(ipc_socket, vineyard_conn_));
   std::string message_out;
-  WriteRegisterRequest(message_out, store_type);
+  WriteRegisterRequest(message_out, store_type, username, password);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -82,7 +84,9 @@ Status BasicIPCClient::Connect(const std::string& ipc_socket,
 }
 
 Status BasicIPCClient::Open(std::string const& ipc_socket,
-                            StoreType const& bulk_store_type) {
+                            StoreType const& bulk_store_type,
+                            std::string const& username,
+                            std::string const& password) {
   RETURN_ON_ASSERT(!this->connected_,
                    "The client has already been connected to vineyard server");
   std::string socket_path;
@@ -99,7 +103,7 @@ Status BasicIPCClient::Open(std::string const& ipc_socket,
   }
 
   Disconnect();
-  VINEYARD_CHECK_OK(Connect(socket_path, bulk_store_type));
+  VINEYARD_CHECK_OK(Connect(socket_path, bulk_store_type, username, password));
   return Status::OK();
 }
 
@@ -109,6 +113,16 @@ Status Client::Connect() {
   auto ep = read_env("VINEYARD_IPC_SOCKET");
   if (!ep.empty()) {
     return Connect(ep);
+  }
+  return Status::ConnectionError(
+      "Environment variable VINEYARD_IPC_SOCKET does't exists");
+}
+
+Status Client::Connect(std::string const& username,
+                       std::string const& password) {
+  auto ep = read_env("VINEYARD_IPC_SOCKET");
+  if (!ep.empty()) {
+    return Connect(ep, username, password);
   }
   return Status::ConnectionError(
       "Environment variable VINEYARD_IPC_SOCKET does't exists");
@@ -124,8 +138,21 @@ Status Client::Connect(const std::string& ipc_socket) {
   return BasicIPCClient::Connect(ipc_socket, StoreType::kDefault);
 }
 
+Status Client::Connect(const std::string& ipc_socket,
+                       std::string const& username,
+                       std::string const& password) {
+  return BasicIPCClient::Connect(ipc_socket, StoreType::kDefault, username,
+                                 password);
+}
+
 Status Client::Open(std::string const& ipc_socket) {
   return BasicIPCClient::Open(ipc_socket, StoreType::kDefault);
+}
+
+Status Client::Open(std::string const& ipc_socket, std::string const& username,
+                    std::string const& password) {
+  return BasicIPCClient::Open(ipc_socket, StoreType::kDefault, username,
+                              password);
 }
 
 Status Client::Fork(Client& client) {

@@ -54,7 +54,7 @@ void CompressSingleBlobTest() {
       void* data = nullptr;
       size_t size;
       auto s = compressor->Pull(data, size);
-      LOG(INFO) << "size: " << size << ", s: " << s.ToString();
+      LOG(INFO) << "size: " << size << ", s: " << s;
       if (s.IsStreamDrained()) {
         break;
       }
@@ -92,7 +92,7 @@ void CompressSingleBlobTest() {
         size_t size = 0;
         auto s = decompressor->Pull(
             pointer, decompressed.length() - decompressed_offset, size);
-        LOG(INFO) << "size = " << size << ", status = " << s.ToString()
+        LOG(INFO) << "size = " << size << ", status = " << s
                   << ", decompressed.length() - decompressed_offset = "
                   << (decompressed.length() - decompressed_offset);
         if (s.IsStreamDrained()) {

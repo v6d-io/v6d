@@ -24,6 +24,10 @@ concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
   cancel-in-progress: true
 
+env:
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -63,9 +67,6 @@ jobs:
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
-
           # Note:
           #
           # install libgandiva-dev for workaround for https://issues.apache.org/jira/browse/ARROW-10495
@@ -108,6 +109,11 @@ jobs:
           sudo apt update
           sudo apt install -y libarrow-dev=${{ matrix.arrow }}
 
+          # avoid possible permission errors
+          ccache -o cache_dir=~/.ccache
+          sudo mkdir -p ~/.ccache
+          sudo chmod -R a+wrx ~/.ccache
+
           # install python packages for codegen
           sudo pip3 install -U pip
           sudo pip3 install libclang parsec setuptools wheel twine
@@ -138,8 +144,7 @@ jobs:
 
       - name: Install libgrape-lite
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
+          export PATH=/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH
 
           git clone https://github.com/alibaba/libgrape-lite.git
           cd libgrape-lite
@@ -151,12 +156,11 @@ jobs:
 
       - name: Setup tmate session
         if: false
-        uses: mxschmitt/action-tmate@v2
+        uses: mxschmitt/action-tmate@v3
 
       - name: CMake
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
+          export PATH=/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH
 
           # set LLVM clang/clang++ on MacOS
           export PATH=/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin:$PATH
@@ -181,9 +185,6 @@ jobs:
 
       - name: Build
         run: |
-          # leverage ccache
-          export PATH=/usr/lib/ccache:$PATH
-
           # set LLVM clang/clang++ on MacOS
           export PATH=/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin:$PATH
 

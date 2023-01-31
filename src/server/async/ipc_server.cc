@@ -120,6 +120,7 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
 
 Status IPCServer::Register(std::shared_ptr<SocketConnection> conn,
                            const SessionID session_id) {
+  conn->registered_.store(true);
   return Status::OK();
 }
 

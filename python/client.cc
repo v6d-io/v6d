@@ -63,9 +63,21 @@ class ClientManager {
     return manager;
   }
 
-  std::shared_ptr<ClientType> Connect(
-      std::string const& endpoint = "",
-      const SessionID session_id = RootSessionID()) {
+  std::shared_ptr<ClientType> Connect(const std::string& username,
+                                      const std::string& password) {
+    return Connect("", RootSessionID(), username, password);
+  }
+
+  std::shared_ptr<ClientType> Connect(std::string const& endpoint,
+                                      const std::string& username,
+                                      const std::string& password) {
+    return Connect(endpoint, RootSessionID(), username, password);
+  }
+
+  std::shared_ptr<ClientType> Connect(std::string const& endpoint,
+                                      const SessionID session_id,
+                                      const std::string& username,
+                                      const std::string& password) {
     std::lock_guard<std::mutex> guard{mtx_};
     std::string endpoint_key = endpoint + ":" + SessionIDToString(session_id);
     auto iter = client_set_.find(endpoint_key);
@@ -75,7 +87,8 @@ class ClientManager {
       }
     }
     std::shared_ptr<ClientType> client = std::make_shared<ClientType>();
-    auto connect_status = this->ConnectImpl(client, endpoint, session_id);
+    auto connect_status =
+        this->ConnectImpl(client, endpoint, session_id, username, password);
     if (PyErr_CheckSignals() != 0) {
       // The method `Connect` will keep retrying, we need to propogate
       // the Ctrl-C when during the C++ code run retries.
@@ -108,19 +121,25 @@ class ClientManager {
       typename ClientPtrType,
       typename std::enable_if<std::is_same<
           ClientPtrType, std::shared_ptr<Client>>::value>::type* = nullptr>
-  Status ConnectImpl(ClientPtrType& client, std::string const& endpoint,
-                     const SessionID session_id) {
-    return endpoint.empty() ? client->Connect() : client->Connect(endpoint);
+  Status ConnectImpl(ClientPtrType& client, std::string const& endpoint = "",
+                     const SessionID session_id = RootSessionID(),
+                     const std::string& username = "",
+                     const std::string& password = "") {
+    return endpoint.empty() ? client->Connect(username, password)
+                            : client->Connect(endpoint, username, password);
   }
 
   template <
       typename ClientPtrType,
       typename std::enable_if<std::is_same<
           ClientPtrType, std::shared_ptr<RPCClient>>::value>::type* = nullptr>
-  Status ConnectImpl(ClientPtrType& client, std::string const& endpoint,
-                     const SessionID session_id) {
-    return endpoint.empty() ? client->Connect()
-                            : client->Connect(endpoint, session_id);
+  Status ConnectImpl(ClientPtrType& client, std::string const& endpoint = "",
+                     const SessionID session_id = RootSessionID(),
+                     const std::string& username = "",
+                     const std::string& password = "") {
+    return endpoint.empty()
+               ? client->Connect(username, password)
+               : client->Connect(endpoint, session_id, username, password);
   }
 
   std::mutex mtx_;
@@ -771,12 +790,15 @@ void bind_client(py::module& mod) {
 
   mod.def(
          "connect",
-         [](std::nullptr_t) -> py::object {
+         [](std::nullptr_t, const std::string& username,
+            const std::string& password) -> py::object {
            if (!read_env("VINEYARD_IPC_SOCKET").empty()) {
-             return py::cast(ClientManager<Client>::GetManager()->Connect());
+             return py::cast(ClientManager<Client>::GetManager()->Connect(
+                 username, password));
            }
            if (!read_env("VINEYARD_RPC_ENDPOINT").empty()) {
-             return py::cast(ClientManager<RPCClient>::GetManager()->Connect());
+             return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
+                 username, password));
            }
            throw_on_error(Status::ConnectionFailed(
                "Failed to resolve IPC socket or RPC endpoint of vineyard "
@@ -784,51 +806,62 @@ void bind_client(py::module& mod) {
                "VINEYARD_RPC_ENDPOINT."));
            return py::none();
          },
-         py::arg("target") = py::none())
+         py::arg("target") = py::none(), py::kw_only(),
+         py::arg("username") = "", py::arg("password") = "")
       .def(
           "connect",
-          [](std::string const& endpoint) -> py::object {
-            return py::cast(
-                ClientManager<Client>::GetManager()->Connect(endpoint));
+          [](std::string const& endpoint, const std::string& username,
+             const std::string& password) -> py::object {
+            return py::cast(ClientManager<Client>::GetManager()->Connect(
+                endpoint, username, password));
           },
-          "endpoint"_a)
+          "endpoint"_a, py::kw_only(), py::arg("username") = "",
+          py::arg("password") = "")
       .def(
           "connect",
           [](std::string const& host, const uint32_t port,
-             const SessionID session_id) {
+             const SessionID session_id, const std::string& username,
+             const std::string& password) {
             std::string rpc_endpoint = host + ":" + std::to_string(port);
             return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
-                rpc_endpoint, session_id));
+                rpc_endpoint, session_id, username, password));
           },
-          "host"_a, "port"_a, py::arg("session") = RootSessionID())
+          "host"_a, "port"_a, py::arg("session") = RootSessionID(),
+          py::kw_only(), py::arg("username") = "", py::arg("password") = "")
       .def(
           "connect",
           [](std::string const& host, std::string const& port,
-             const SessionID session_id) {
+             const SessionID session_id, const std::string& username,
+             const std::string& password) {
             std::string rpc_endpoint = host + ":" + port;
-            return ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint,
-                                                                   session_id);
+            return ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint, session_id, username, password);
           },
-          "host"_a, "port"_a, py::arg("session") = RootSessionID())
+          "host"_a, "port"_a, py::arg("session") = RootSessionID(),
+          py::kw_only(), py::arg("username") = "", py::arg("password") = "")
       .def(
           "connect",
           [](std::pair<std::string, uint32_t> const& endpoint,
-             const SessionID session_id) {
+             const SessionID session_id, const std::string& username,
+             const std::string& password) {
             std::string rpc_endpoint =
                 endpoint.first + ":" + std::to_string(endpoint.second);
-            return ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint,
-                                                                   session_id);
+            return ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint, session_id, username, password);
           },
-          "(host, port)"_a, py::arg("session") = RootSessionID())
+          "(host, port)"_a, py::arg("session") = RootSessionID(), py::kw_only(),
+          py::arg("username") = "", py::arg("password") = "")
       .def(
           "connect",
           [](std::pair<std::string, std::string> const& endpoint,
-             const SessionID session_id) {
+             const SessionID session_id, const std::string& username,
+             const std::string& password) {
             std::string rpc_endpoint = endpoint.first + ":" + endpoint.second;
-            return ClientManager<RPCClient>::GetManager()->Connect(rpc_endpoint,
-                                                                   session_id);
+            return ClientManager<RPCClient>::GetManager()->Connect(
+                rpc_endpoint, session_id, username, password);
           },
-          "(host, port)"_a, py::arg("session") = RootSessionID());
+          "(host, port)"_a, py::arg("session") = RootSessionID(), py::kw_only(),
+          py::arg("username") = "", py::arg("password") = "");
 }  // NOLINT(readability/fn_size)
 
 }  // namespace vineyard
