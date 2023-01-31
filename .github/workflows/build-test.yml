@@ -139,6 +139,10 @@ jobs:
           # install linters
           sudo pip3 install auditwheel black isort flake8 twine
 
+      - name: Setup tmate session
+        if: true
+        uses: mxschmitt/action-tmate@v3
+
       - name: Install libgrape-lite
         if: runner.os == 'Linux'
         run: |
@@ -192,7 +196,7 @@ jobs:
 
       - name: Setup tmate session
         if: false
-        uses: mxschmitt/action-tmate@v2
+        uses: mxschmitt/action-tmate@v3
 
       - name: CMake
         run: |
@@ -324,7 +328,7 @@ jobs:
 
       - name: Setup tmate session
         if: false
-        uses: mxschmitt/action-tmate@v2
+        uses: mxschmitt/action-tmate@v3
 
       - name: Run Tests
         run: |
@@ -339,7 +343,7 @@ jobs:
 
       - name: Setup tmate session
         if: false
-        uses: mxschmitt/action-tmate@v2
+        uses: mxschmitt/action-tmate@v3
 
       - name: Run Python Tests with Debug
         if: ${{ github.event_name == 'push' }}
@@ -387,7 +391,7 @@ jobs:
 
       - name: Setup tmate session
         if: false
-        uses: mxschmitt/action-tmate@v2
+        uses: mxschmitt/action-tmate@v3
 
       - name: Run IO Tests
         run: |
@@ -421,7 +425,7 @@ jobs:
 
       - name: Setup tmate session
         if: false
-        uses: mxschmitt/action-tmate@v2
+        uses: mxschmitt/action-tmate@v3
 
       - name: Upload Coverage
         if: runner.os == 'Linux'
