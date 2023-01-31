@@ -22,7 +22,7 @@
 #include <random>
 #include <string>
 
-#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
+#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus > 201703L)
 #include <version>
 #else
 #include <ciso646>
