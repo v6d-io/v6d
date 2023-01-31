@@ -446,6 +446,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   bool compress = false;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
+  this->registered_.store(false);
 
   TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
