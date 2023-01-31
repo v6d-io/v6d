@@ -124,7 +124,7 @@ jobs:
           export PYARROW_BUILD_VERBOSE=1
           export PYARROW_PARALLEL=$(nproc)
           export PYARROW_CMAKE_OPTIONS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
-          sudo -E env PATH=$PATH pip3 install --no-binary pyarrow pyarrow==11.0.0 -v
+          sudo -E env PATH=$PATH pip3 install --no-binary pyarrow pyarrow==11.0.0
 
           # restore the permission of ccache directory
           sudo chmod -R a+wrx ~/.ccache
