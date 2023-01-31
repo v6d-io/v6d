@@ -134,7 +134,7 @@ jobs:
           sudo pip3 install auditwheel black isort flake8 twine
 
       - name: Setup tmate session
-        if: false
+        if: true
         uses: mxschmitt/action-tmate@v3
 
       - name: Install libgrape-lite
