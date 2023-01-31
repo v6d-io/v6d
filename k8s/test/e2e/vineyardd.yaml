@@ -27,7 +27,7 @@ spec:
     type: ClusterIP
     port: 9600
   vineyardConfig:
-    image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+    image: localhost:5001/vineyardd:alpine-latest
     imagePullPolicy: IfNotPresent
   # Users can define their own plugin image here,
   # the next images are only for kubernetes CI test.

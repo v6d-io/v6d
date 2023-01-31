@@ -149,6 +149,11 @@ jobs:
         run: |
           make -C docker build-python-dev
 
+      - name: Generate the vineyardd image for tests
+        if: ${{ matrix.job != 'release' }}
+        run: |
+          docker build . -f docker/Dockerfile.vineyardd -t vineyardcloudnative/vineyardd:alpine-latest
+
       - name: e2e-tests-assembly-local
         if: ${{ matrix.job == 'e2e-tests-assembly-local' }}
         run: |

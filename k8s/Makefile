@@ -94,6 +94,8 @@ install-vineyard-operator:
 # install the vineyard cluster and wait for ready
 install-vineyard-cluster:
 	@echo "Installing vineyard cluster..."
+	@docker tag vineyardcloudnative/vineyardd:alpine-latest localhost:5001/vineyardd:alpine-latest
+	@docker push localhost:5001/vineyardd:alpine-latest
 	@kubectl apply -f test/e2e/vineyardd.yaml --kubeconfig=/tmp/e2e-k8s.config
 	@kubectl wait vineyardd/vineyardd-sample --for condition=Available -n vineyard-system --timeout=300s --kubeconfig=/tmp/e2e-k8s.config
 	@echo "Vineyard cluster Ready"
