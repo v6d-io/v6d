@@ -57,7 +57,7 @@ void RemoteCreateTest(Client& ipc_client, RPCClient& rpc_client) {
     CHECK_EQ(local_buffer->data()[index], array_data[index]);
   }
 
-  LOG(INFO) << "Passed remote buffer (local create & remote get) tests...";
+  LOG(INFO) << "Passed remote buffer (remote create & local get) tests...";
 }
 
 void RemoteGetTest(Client& ipc_client, RPCClient& rpc_client) {

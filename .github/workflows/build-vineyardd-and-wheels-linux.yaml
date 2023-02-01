@@ -154,9 +154,9 @@ jobs:
         run: |
           if [[ "${{ matrix.python }}" == "cp311-cp311" ]];
           then
-            export base=vineyard-manylinux2014:20230115
+            export base=manylinux2014:20230115
           else
-            export base=vineyard-manylinux1:20220512
+            export base=manylinux1:20220512
           fi
 
           sudo docker build . -f docker/pypa/Dockerfile.manylinux1-wheel \
