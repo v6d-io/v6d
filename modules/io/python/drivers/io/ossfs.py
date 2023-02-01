@@ -150,7 +150,6 @@ def infer_storage_options(urlpath, inherit_storage_options=None):
 
 
 def version_id_kw(version_id):
-
     return {"versionId": version_id} if version_id else {}
 
 

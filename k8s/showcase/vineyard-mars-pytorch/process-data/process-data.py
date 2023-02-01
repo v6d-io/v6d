@@ -1,3 +1,4 @@
+# pylint: disable=django-not-configured
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -20,16 +21,13 @@ import os
 
 import vineyard
 import vineyard.io
-from mars.dataframe.datastore.to_vineyard import to_vineyard
-from mars.dataframe.datasource.from_vineyard import from_vineyard
-
 import requests
 from kubernetes import config
+from mars.dataframe.datastore.to_vineyard import to_vineyard
+from mars.dataframe.datasource.from_vineyard import from_vineyard
 from mars.deploy.kubernetes import new_cluster
 from mars.deploy.kubernetes.config import EmptyDirVolumeConfig, HostPathVolumeConfig
 
-import time
-time.sleep(3600)
 env_dist = os.environ
 
 required_job = env_dist['REQUIRED_JOB_NAME']

@@ -21,9 +21,12 @@ setup:
       command: |
         worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c sh -c "mkdir -p /datasets; \
         cd /datasets/; curl -sOL https://raw.githubusercontent.com/GraphScope/gstest/master/vineyard-mars-showcase-dataset/{item,txn,user}.csv"; done
-    - name: build showcase image
+    - name: build showcase images
       command: |
         make -C k8s/showcase/vineyard-mars-pytorch REGISTRY=localhost:5001
+    - name: push showcase images to local registry
+      command: |
+        make -C k8s/showcase/vineyard-mars-pytorch docker-push REGISTRY=localhost:5001
     - name: run prepare-data job
       command: |
         kubectl create ns vineyard-job
