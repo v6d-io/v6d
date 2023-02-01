@@ -1,7 +1,33 @@
 {% extends "!base.html" %}
 
 {% block body %}
-  <script>
-    document.body.dataset.theme = "light";
-  </script>
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  window.onload = function () {
+    let coll = document.getElementsByClassName("admonition-details");
+    console.log("coll ...", coll);
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - ";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + ";
+        }
+      });
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + ";
+      titles[0].insertBefore(caret, titles[0].firstChild);
+    }
+  };
+</script>
 {% endblock %}
