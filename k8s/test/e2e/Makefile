@@ -88,56 +88,42 @@ e2e-test-failover: push-backup-job push-recover-job push-build-local-object push
 backup-job:
 	docker build failover-demo/ -f Dockerfile \
 		--build-arg APP=backup.py \
-		--build-arg BASE_IMAGE=python:3.10 \
-		--build-arg PYPI_DEPENDENCIES="vineyard==0.11.7" \
 		-t $(REGISTRY)/backup-job:$(TAG)
 .PHONY: backup-job
 
 recover-job:
 	docker build failover-demo/ -f Dockerfile \
 		--build-arg APP=recover.py \
-		--build-arg BASE_IMAGE=python:3.10 \
-		--build-arg PYPI_DEPENDENCIES="vineyard==0.11.7" \
 		-t $(REGISTRY)/recover-job:$(TAG)
 .PHONY: recover-job
 
 build-local-object:
 	docker build failover-demo/ -f Dockerfile \
 		--build-arg APP=build-local-object.py \
-		--build-arg BASE_IMAGE=python:3.10 \
-		--build-arg PYPI_DEPENDENCIES="vineyard==0.11.7" \
 		-t $(REGISTRY)/build-local-object:$(TAG)
 .PHONY: build-local-object
 
 build-distributed-object-step1:
 	docker build failover-demo/ -f Dockerfile \
 		--build-arg APP=build-distributed-object-step1.py \
-		--build-arg BASE_IMAGE=python:3.10 \
-		--build-arg PYPI_DEPENDENCIES="vineyard==0.11.7" \
 		-t $(REGISTRY)/build-distributed-object-step1:$(TAG)
 .PHONY: build-distributed-object-step1
 
 build-distributed-object-step2:
 	docker build failover-demo/ -f Dockerfile \
 		--build-arg APP=build-distributed-object-step2.py \
-		--build-arg BASE_IMAGE=python:3.10 \
-		--build-arg PYPI_DEPENDENCIES="vineyard==0.11.7" \
 		-t $(REGISTRY)/build-distributed-object-step2:$(TAG)
 .PHONY: build-distributed-object-step2
 
 get-local-object:
 	docker build failover-demo/ -f Dockerfile \
 		--build-arg APP=get-local-object.py \
-		--build-arg BASE_IMAGE=python:3.10 \
-		--build-arg PYPI_DEPENDENCIES="vineyard==0.11.7" \
 		-t $(REGISTRY)/get-local-object:$(TAG)
 .PHONY: get-local-object
 
 get-distributed-object:
 	docker build failover-demo/ -f Dockerfile \
 		--build-arg APP=get-distributed-object.py \
-		--build-arg BASE_IMAGE=python:3.10 \
-		--build-arg PYPI_DEPENDENCIES="vineyard==0.11.7" \
 		-t $(REGISTRY)/get-distributed-object:$(TAG)
 .PHONY: get-distributed-object
 

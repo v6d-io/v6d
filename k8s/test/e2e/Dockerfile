@@ -33,5 +33,5 @@ ENV APP ${APP}
 
 COPY ${APP} /job.py
 
-ENTRYPOINT [ "python" ]
+ENTRYPOINT [ "python3" ]
 CMD [ "/job.py" ]

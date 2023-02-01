@@ -28,6 +28,8 @@ from kubernetes import config
 from mars.deploy.kubernetes import new_cluster
 from mars.deploy.kubernetes.config import EmptyDirVolumeConfig, HostPathVolumeConfig
 
+import time
+time.sleep(3600)
 env_dist = os.environ
 
 required_job = env_dist['REQUIRED_JOB_NAME']
