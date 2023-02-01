@@ -14,7 +14,7 @@ components.
 Architecture of vineyard operator
 ---------------------------------
 
-.. figure:: ../images/vineyard_operator_arch.jpg
+.. figure:: ../../images/vineyard_operator_arch.png
    :alt: Architecture of vineyard operator
 
    Architecture of vineyard operator
