@@ -171,7 +171,6 @@ def torch_global_dataframe_resolver(obj, resolver, **_kw):
 
 
 def register_torch_types(builder_ctx, resolver_ctx):
-
     if builder_ctx is not None:
         builder_ctx.register(Dataset, torch_builder)
 

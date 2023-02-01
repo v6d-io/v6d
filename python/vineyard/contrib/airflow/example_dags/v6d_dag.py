@@ -111,7 +111,6 @@ def load_results(
     catchup=False,
 )
 def taskflow_v6d():
-
     build_raw_df = build_dataframe()
     sum_cols_r = sum_cols(build_raw_df)
     pick_least_r = pick_least(sum_cols_r)
