@@ -11,3 +11,11 @@ div.card-body.card-body-less-padding {
 div.theme-toggle-container.theme-toggle-content {
     display: none;
 }
+
+.admonition.admonition-details.active > :not(.admonition-title) {
+    display: inherit;
+}
+
+.admonition.admonition-details > :not(.admonition-title) {
+    display: none;
+}
