@@ -36,7 +36,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: job
-        image: ghcr.io/v6d-io/v6d/prepare-data
+        image: vineyardcloudnative/prepare-data
         imagePullPolicy: IfNotPresent
         resources:
           requests:

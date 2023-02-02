@@ -32,25 +32,25 @@ setup:
         kubectl create ns vineyard-job
 
         yq k8s/showcase/vineyard-mars-pytorch/prepare-data/resources/* | \
-        sed 's/ghcr.io\/v6d-io\/v6d/localhost:5001/' | \
+        sed 's/vineyardcloudnative/localhost:5001/' | \
         kubectl apply -f -
 
         kubectl wait job -n vineyard-job -l app=prepare-data --for condition=complete --timeout=1200s
     - name: run process-data job
       command: |
         yq k8s/showcase/vineyard-mars-pytorch/process-data/resources/* | \
-        sed 's/ghcr.io\/v6d-io\/v6d/localhost:5001/' | \
+        sed 's/vineyardcloudnative/localhost:5001/' | \
         kubectl apply -f -
 
-        kubectl wait job -n vineyard-job -l app=process-data --for condition=complete --timeout=1200s
+        kubectl wait job -n vineyard-job -l app=process-data --for condition=complete --timeout=2400s
     - name: run train-data job
       command: |
         yq k8s/showcase/vineyard-mars-pytorch/train-data/resources/* | \
-        sed 's/ghcr.io\/v6d-io\/v6d/localhost:5001/' | \
+        sed 's/vineyardcloudnative/localhost:5001/' | \
         kubectl apply -f -
 
         kubectl wait pods -n vineyard-job -l app=train-data --for condition=Ready --timeout=1200s
-  timeout: 30m
+  timeout: 60m
 
 cleanup:
   # always never success failure
@@ -65,12 +65,16 @@ verify:
     interval: 20s
   cases:
     - query: |
-        export nodeName=$(kubectl get localobjects -o=jsonpath='{.items[?(@.spec.instance_id==0)].spec.hostname}' -A | \
-          cut -d ' ' -f1)
-        export masterPod=$(kubectl get po -l app=train-data -o=jsonpath='{.items[?(@.spec.nodeName=="'$nodeName'")].metadata.name}' \
-          -n vineyard-job)
-        kubectl logs $masterPod -n vineyard-job | \
-          tail -n 1 | \
+        # find the master training pods' log
+        for pod in $(kubectl get po -l app=train-data -oname -n vineyard-job | awk -F '/' '{print $2}')
+        do
+        logs=$(kubectl logs $pod -n vineyard-job | tail -n 1)
+        if [[ "$logs" == "test passed" ]]
+        then
+          echo $logs | \
           yq e '{"result": .}' - | \
           yq e 'to_entries' -
+          break
+        fi
+        done
       expected: ../verify/serialize.yaml

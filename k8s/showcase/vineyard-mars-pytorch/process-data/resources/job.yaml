@@ -36,7 +36,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: job
-        image: ghcr.io/v6d-io/v6d/mars-process-data
+        image: vineyardcloudnative/mars-process-data
         imagePullPolicy: IfNotPresent
         env:
         # for collect the objects created by the job

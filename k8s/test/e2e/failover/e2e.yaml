@@ -118,7 +118,7 @@ setup:
         - namespace: vineyard-job
           resource: deployment/get-distributed-object
           for: condition=Available
-  timeout: 120m
+  timeout: 60m
 
 cleanup:
   # always never success failure

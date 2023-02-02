@@ -1,4 +1,3 @@
-# pylint: disable=django-not-configured
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -85,6 +84,7 @@ allinstances = int(env_dist['ALLINSTANCES'])
 rank = instance_id%allinstances
 world_size = int(os.environ.get('WORLD_SIZE', 1))
 
+print('rank is',rank,flush=True)
 print('start training...', flush=True)
 dist.init_process_group("gloo", world_size=world_size, rank=rank)
 training()

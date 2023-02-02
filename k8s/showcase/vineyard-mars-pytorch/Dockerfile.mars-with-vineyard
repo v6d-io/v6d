@@ -3,6 +3,6 @@ FROM marsproject/mars:v0.10.0(use the next version here)
 
 WORKDIR /srv
 
-RUN pip3 install vineyard==0.11.7
+RUN pip3 install vineyard
 
 ENTRYPOINT [ "/srv/entrypoint.sh" ]

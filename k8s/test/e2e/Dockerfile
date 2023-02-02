@@ -26,7 +26,12 @@ RUN python -c "import urllib.request; open('/usr/bin/kubectl', 'wb').write(urlli
 ARG PYPI_DEPENDENCIES=""
 ENV PYPI_DEPENDENCIES ${PYPI_DEPENDENCIES}
 
-RUN if [ ! -z "${PYPI_DEPENDENCIES}" ]; then pip3 install --no-cache-dir ${PYPI_DEPENDENCIES}; fi
+ARG EXTRA_DEPENDENCIES=""
+ENV EXTRA_DEPENDENCIES ${EXTRA_DEPENDENCIES}
+
+RUN if [ ! -z "${PYPI_DEPENDENCIES}" ] && [ ! -z "${EXTRA_DEPENDENCIES}" ]; then pip3 install --no-cache-dir ${PYPI_DEPENDENCIES} --extra-index-url ${EXTRA_DEPENDENCIES}; \
+    elif [ ! -z "${PYPI_DEPENDENCIES}" ]; then pip3 install --no-cache-dir ${PYPI_DEPENDENCIES}; \
+    fi
 
 ARG APP
 ENV APP ${APP}

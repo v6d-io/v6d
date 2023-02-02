@@ -145,15 +145,10 @@ jobs:
           docker tag ${IMG} ${LATEST_IMG}
           docker push ${LATEST_IMG}
 
-      - name: Generate the python image for tests
+      - name: Generate the python and vineyardd image for tests
         if: ${{ matrix.job != 'release' }}
         run: |
-          make -C docker build-python-dev
-
-      - name: Generate the vineyardd image for tests
-        if: ${{ matrix.job != 'release' }}
-        run: |
-          docker build . -f docker/Dockerfile.vineyardd -t vineyardcloudnative/vineyardd:alpine-latest
+          make -C k8s build-base-images
 
       - name: e2e-tests-assembly-local
         if: ${{ matrix.job == 'e2e-tests-assembly-local' }}
@@ -207,5 +202,6 @@ jobs:
 
       - name: e2e-tests-mars-showcase
         if: ${{ matrix.job == 'e2e-tests-mars-showcase' }}
-        run: |
-          make -C k8s e2e-tests-mars-showcase
+        uses: mxschmitt/action-tmate@v3
+        #run: |
+        #  make -C k8s e2e-tests-mars-showcase

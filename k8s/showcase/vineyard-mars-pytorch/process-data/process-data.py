@@ -1,4 +1,3 @@
-# pylint: disable=django-not-configured
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -54,8 +53,8 @@ def launch_on_k8s():
     return new_cluster(k8sconfig,
             namespace='vineyard-app',
             image='ghcr.io/v6d-io/v6d/mars-with-vineyard:v0.10.0',
-            worker_cpu=2,
-            worker_mem=3 * 1024**3,
+            worker_cpu=1,
+            worker_mem=1 * 1024**3,
             worker_num=3,
             extra_volumes=volumns,
             extra_env=envs,
@@ -66,7 +65,10 @@ session = cluster.session.as_default()
 
 dataid = []
 for o in globalobjects:
-    meta = vineyard_client.get_meta(vineyard.ObjectID(o))
+    try:
+        meta = vineyard_client.get_meta(vineyard.ObjectID(o))
+    except:
+        continue
     if meta['typename'] == 'vineyard::GlobalDataFrame':
         dataid.append(o)
 
