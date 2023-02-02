@@ -24,7 +24,7 @@ setup:
         docker push localhost:5001/dask:2022.8.1
     - name: download all dask repartition images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-repartition REGISTRY=localhost:5001
+        make -C k8s/test/e2e publish-repartition-images REGISTRY=localhost:5001
     - name: install dask-scheduler and dask-worker
       command: |
         helm repo add dask https://helm.dask.org/

@@ -20,7 +20,7 @@ setup:
   steps:
     - name: download all distributed assembly images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-distributed-assembly REGISTRY=localhost:5001
+        make -C k8s/test/e2e publish-distributed-assembly-images REGISTRY=localhost:5001
     - name: install job1 and job2
       command: |
         kubectl create namespace vineyard-job

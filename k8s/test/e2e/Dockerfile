@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG BASE_IMAGE="ghcr.io/v6d-io/v6d/vineyard-python-dev:latest"
-
-FROM ${BASE_IMAGE}
+FROM ghcr.io/v6d-io/v6d/vineyard-python-dev:latest
 
 WORKDIR /
 
