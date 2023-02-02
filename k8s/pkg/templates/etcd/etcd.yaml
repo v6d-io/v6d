@@ -25,7 +25,7 @@ metadata:
 spec:
   containers:
   - command:
-    - /usr/local/bin/etcd
+    - etcd
     - --name
     - etcd {{- $etcd.Rank}}
     - --initial-advertise-peer-urls
@@ -40,7 +40,7 @@ spec:
     - {{ $etcd.Endpoints }}
     - --initial-cluster-state
     - new
-    image: quay.io/coreos/etcd:v3.4.16
+    image: {{ $etcd.Image }}
     name: etcd
     ports:
     - containerPort: 2379

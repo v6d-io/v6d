@@ -48,6 +48,7 @@ type EtcdConfig struct {
 	Namespace string
 	Rank      int
 	Endpoints string
+	Image     string
 }
 
 // Etcd contains the configuration about etcd
@@ -130,6 +131,8 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		etcdEndpoints = append(etcdEndpoints, fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)))
 	}
 	Etcd.Endpoints = strings.Join(etcdEndpoints, ",")
+	// the etcd is built in the vineyardd image
+	Etcd.Image = vineyardd.Spec.VineyardConfig.Image
 
 	for i := 0; i < replicas; i++ {
 		Etcd.Rank = i
