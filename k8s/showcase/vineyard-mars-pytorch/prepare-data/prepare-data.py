@@ -56,10 +56,10 @@ vineyard_client = vineyard.connect(socket)
 instance = vineyard_client.instance_id
 print('instance id:',instance)
 
-if instance%allinstances == 0:
-    print('open user.csv',flush=True)
-    users = vineyard.io.open(
-        'file:///datasets/user.csv',
+files = ["file:///datasets/user.csv", "file:///datasets/item.csv", "file:///datasets/txn.csv"]
+print('opened ', files[instance%allinstances], flush=True)
+values = vineyard.io.open(
+        files[instance%allinstances],
         vineyard_ipc_socket='/var/run/vineyard.sock',
         vineyard_endpoint=vineyard_endpoint,
         type="global",
@@ -68,32 +68,7 @@ if instance%allinstances == 0:
         read_options={"header_row": True, "delimiter": ","},
         accumulate=True,
         index_col=0
-    )
-if instance%allinstances == 1:
-    print('open item.csv',flush=True)
-    items = vineyard.io.open(
-        'file:///datasets/item.csv',
-        vineyard_ipc_socket='/var/run/vineyard.sock',
-        vineyard_endpoint=vineyard_endpoint,
-        type="global",
-        hosts=hosts,
-        deployment='kubernetes',
-        read_options={"header_row": True, "delimiter": ","},
-        accumulate=True,
-        index_col=0
-    )
-if instance%allinstances == 2:
-    print('open txn.csv',flush=True)
-    txns = vineyard.io.open(
-        'file:///datasets/txn.csv',
-        vineyard_ipc_socket='/var/run/vineyard.sock',
-        vineyard_endpoint=vineyard_endpoint,
-        type="global",
-        hosts=hosts,
-        deployment='kubernetes',
-        read_options={"header_row": True, "delimiter": ","},
-        accumulate=True
-    )
+)
 
 # wait other prepare data process ready
 print('Succeed',flush=True)
