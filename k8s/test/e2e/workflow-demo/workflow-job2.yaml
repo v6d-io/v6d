@@ -38,7 +38,7 @@ spec:
       schedulerName: vineyard-scheduler
       containers:
       - name: job2
-        image: localhost:5001/workflow-job2
+        image: ghcr.io/v6d-io/v6d/workflow-job2
         imagePullPolicy: IfNotPresent
         env:
         - name: JOB_NAME

@@ -27,13 +27,13 @@ spec:
     type: ClusterIP
     port: 9600
   vineyardConfig:
-    image: localhost:5001/vineyardd:alpine-latest
+    image: vineyardcloudnative/vineyardd:alpine-latest
     imagePullPolicy: IfNotPresent
   # Users can define their own plugin image here,
   # the next images are only for kubernetes CI test.
   pluginConfig:
-    backupImage: localhost:5001/backup-job
-    recoverImage: localhost:5001/recover-job
-    daskRepartitionImage: localhost:5001/dask-repartition
-    localAssemblyImage: localhost:5001/local-assembly
-    distributedAssemblyImage: localhost:5001/distributed-assembly
+    backupImage: ghcr.io/v6d-io/v6d/backup-job
+    recoverImage: ghcr.io/v6d-io/v6d/recover-job
+    daskRepartitionImage: ghcr.io/v6d-io/v6d/dask-repartition
+    localAssemblyImage: ghcr.io/v6d-io/v6d/local-assembly
+    distributedAssemblyImage: ghcr.io/v6d-io/v6d/distributed-assembly

@@ -15,10 +15,10 @@
 
 setup:
   env: kind
-  kubeconfig: /tmp/e2e-k8s.config
+  kubeconfig: ~/.kube/config
   steps:
     - name: setup the serialize path
-      command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
+      command: worker=($(docker ps | grep k3d-cluster-agent | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
     - name: install vineyardd
       command: |
         kubectl apply -f k8s/test/e2e/spill-demo/vineyardd-with-spill.yaml

@@ -15,11 +15,11 @@
 
 setup:
   env: kind
-  kubeconfig: /tmp/e2e-k8s.config
+  kubeconfig: ~/.kube/config
   steps:
     - name: download all workflow images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-workflow REGISTRY=localhost:5001
+        make -C k8s/test/e2e workflow-images
     - name: install job1
       command: |
         kubectl create namespace vineyard-job

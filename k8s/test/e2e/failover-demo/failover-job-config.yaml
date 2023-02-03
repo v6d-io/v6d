@@ -15,20 +15,20 @@
 
 localObject:
   jobName: build-local-object
-  nodeName: "kind-worker2"
+  nodeName: "k3d-cluster-agent-1"
 
 distributedObject1:
   jobName: build-distributed-object-step1
-  nodeName: "kind-worker"
+  nodeName: "k3d-cluster-agent-0"
 
 distributedObject2:
   jobName: build-distributed-object-step2
-  nodeName: "kind-worker3"
+  nodeName: "k3d-cluster-agent-2"
 
 getLocalObject:
   jobName: get-local-object
-  nodeName: "kind-worker2"
+  nodeName: "k3d-cluster-agent-1"
 
 getDistributedObject:
   jobName: get-distributed-object
-  nodeName: "kind-worker2"
+  nodeName: "k3d-cluster-agent-1"

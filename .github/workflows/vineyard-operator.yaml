@@ -100,6 +100,9 @@ jobs:
               exit -1
           fi
 
+          # prepare golangci-lint for faster installation
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.49.0
+
           function ec() { [[ "$1" == "-h" ]] && { shift && eval $* > /dev/null 2>&1; ec=$?; echo $ec; } || eval $*; ec=$?; }
 
           ec make -C k8s golint
@@ -122,7 +125,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Build docker image
         run: |
           make -C k8s docker-build
@@ -143,6 +146,12 @@ jobs:
         run: |
           docker tag ${IMG} ${LATEST_IMG}
           docker push ${LATEST_IMG}
+
+      - name: Install k3d
+        if: ${{ matrix.job != 'release' }}
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d cluster create -c k8s/hack/k3d.yaml
 
       - name: Generate the python image for tests
         if: ${{ matrix.job != 'release' }}
@@ -203,3 +212,8 @@ jobs:
         if: ${{ matrix.job == 'e2e-tests-workflow' }}
         run: |
           make -C k8s e2e-tests-workflow
+
+      - name: Uninstall k3d
+        if: ${{ always() }}
+        run: |
+          k3d cluster delete -c k8s/hack/k3d.yaml || true
