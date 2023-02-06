@@ -1,0 +1,81 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: train-data
+  namespace: vineyard-job
+spec:
+  parallelism: 3
+  template:
+    metadata:
+      annotations:
+        scheduling.k8s.v6d.io/required: process-data
+      labels:
+        app: train-data
+        # this label represents the vineyardd's name that need to be used
+        scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+        scheduling.k8s.v6d.io/job: train-data
+    spec:
+      schedulerName: vineyard-scheduler
+      restartPolicy: Never
+      containers:
+      - name: job
+        image: vineyardcloudnative/train-data
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "500Mi"
+          limits:
+            memory: "500Mi"
+        ports:
+          - containerPort: 23456
+            name: pytorch-job
+        env:
+        # for collect the objects created by the job
+        - name: JOB_NAME
+          value: train-data
+        - name: WORLD_SIZE
+          value: "3"
+        - name: MASTER_ADDR
+          value: pytorch-job-service.vineyard-job
+        - name: MASTER_PORT
+          value: "23456"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: ALLINSTANCES
+          value: "3"
+        envFrom:
+          - configMapRef:
+              name: process-data
+        volumeMounts:
+        - mountPath: /var/run
+          name: vineyard-sock
+      volumes:
+      - name: vineyard-sock
+        hostPath:
+          path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample

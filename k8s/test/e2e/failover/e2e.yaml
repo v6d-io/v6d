@@ -21,7 +21,7 @@ setup:
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/dump; done
     - name: download all failover images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-failover REGISTRY=localhost:5001
+        make -C k8s/test/e2e publish-failover-images REGISTRY=localhost:5001
     - name: install local-object
       command: |
         kubectl create namespace vineyard-job
@@ -118,7 +118,7 @@ setup:
         - namespace: vineyard-job
           resource: deployment/get-distributed-object
           for: condition=Available
-  timeout: 120m
+  timeout: 60m
 
 cleanup:
   # always never success failure

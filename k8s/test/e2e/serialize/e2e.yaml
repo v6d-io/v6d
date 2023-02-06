@@ -21,7 +21,7 @@ setup:
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/serialize; done
     - name: download all serialize images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-serialize REGISTRY=localhost:5001
+        make -C k8s/test/e2e publish-serialize-images REGISTRY=localhost:5001
     - name: install serialize-demo
       command: |
         kubectl apply -f k8s/test/e2e/serialize-demo/serialize-pv.yaml

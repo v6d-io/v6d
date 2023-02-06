@@ -169,7 +169,8 @@ disable=abstract-method,
         using-cmp-argument,
         xrange-builtin,
         xreadlines-attribute,
-        zip-builtin-not-iterating
+        zip-builtin-not-iterating,
+        django-not-configured
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

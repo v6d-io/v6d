@@ -1,0 +1,8 @@
+# TODO: wait for the pr (https://github.com/mars-project/mars/pull/3324) released
+FROM marsproject/mars:v0.10.0(use the next version here)
+
+WORKDIR /srv
+
+RUN pip3 install vineyard
+
+ENTRYPOINT [ "/srv/entrypoint.sh" ]

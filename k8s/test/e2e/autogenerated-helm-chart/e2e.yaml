@@ -33,7 +33,7 @@ setup:
           for: condition=Available
     - name: download the local assembly images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-assembly REGISTRY=localhost:5001
+        make -C k8s/test/e2e publish-local-assembly-images REGISTRY=localhost:5001
     - name: install vineyardd
       command: |
         kubectl apply -f k8s/test/e2e/vineyardd.yaml

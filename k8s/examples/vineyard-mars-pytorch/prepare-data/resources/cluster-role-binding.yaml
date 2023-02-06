@@ -1,6 +1,3 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
 # Copyright 2020-2023 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,16 +13,17 @@
 # limitations under the License.
 #
 
-import time
-import numpy as np
-import vineyard
-
-client = vineyard.connect('/var/run/vineyard.sock')
-
-object = client.put(np.arange(10))
-value = client.get(object)
-sum = np.sum(value)
-print(sum,flush=True)
-
-# avoid CrashLoopBackOff
-time.sleep(600)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prepare-data-rolebinding
+  labels:
+    app.kubernetes.io/name: prepare-data
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prepare-data-role
+subjects:
+  - kind: ServiceAccount
+    name: prepare-data
+    namespace: vineyard-job
