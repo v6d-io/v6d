@@ -93,6 +93,8 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		etcdEndpoints = append(etcdEndpoints, fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)))
 	}
 	SidecarEtcd.Endpoints = strings.Join(etcdEndpoints, ",")
+	// the etcd is built in the sidecar vineyardd image
+	SidecarEtcd.Image = sidecar.Spec.VineyardConfig.Image
 
 	s := strings.Split(sidecar.Spec.Service.Selector, "=")
 	SidecarSvcLabelSelector.Key = s[0]
