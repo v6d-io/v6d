@@ -44,7 +44,7 @@ distributedJob1:
     jobName: none
     dataName: ""
   schedulerName: ""
-  nodeName: kind-worker
+  nodeName: k3d-cluster-agent-0
 
 
 distributedJob2:
@@ -56,7 +56,7 @@ distributedJob2:
     jobName: none
     dataName: ""
   schedulerName: ""
-  nodeName: kind-worker2
+  nodeName: k3d-cluster-agent-1
 
 distributedJob3:
   jobName: distributed-assembly-job3

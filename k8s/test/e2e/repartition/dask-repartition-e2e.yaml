@@ -15,16 +15,11 @@
 
 setup:
   env: kind
-  kubeconfig: /tmp/e2e-k8s.config
+  kubeconfig: ~/.kube/config
   steps:
-    - name: download dask image for syncing the dask worker and scheduler.
-      command: |
-        docker pull ghcr.io/dask/dask:2022.8.1
-        docker tag ghcr.io/dask/dask:2022.8.1 localhost:5001/dask:2022.8.1
-        docker push localhost:5001/dask:2022.8.1
     - name: download all dask repartition images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-repartition REGISTRY=localhost:5001
+        make -C k8s/test/e2e repartition-images
     - name: install dask-scheduler and dask-worker
       command: |
         helm repo add dask https://helm.dask.org/

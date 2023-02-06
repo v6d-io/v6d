@@ -34,7 +34,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ (datasource "config").$job.jobName }}
-          image: localhost:5001/{{ (datasource "config").$job.jobName }}
+          image: ghcr.io/v6d-io/v6d/{{ (datasource "config").$job.jobName }}
           env:
             - name: JOB_NAME
               value: {{ (datasource "config").$job.jobName }}

@@ -15,7 +15,6 @@ push-%: %
 
 local-assembly-images: local-assembly assembly-job1 assembly-job2
 publish-local-assembly-images: push-local-assembly push-assembly-job1 push-assembly-job2
-e2e-test-assembly: push-local-assembly push-assembly-job1 push-assembly-job2
 
 local-assembly:
 	docker build assembly-demo/ -f Dockerfile \
@@ -39,7 +38,6 @@ assembly-job2:
 
 distributed-assembly-images: distributed-assembly distributed-assembly-job1 distributed-assembly-job2 distributed-assembly-job3
 publish-distributed-assembly-images: push-distributed-assembly push-distributed-assembly-job1 push-distributed-assembly-job2 push-distributed-assembly-job3
-e2e-test-distributed-assembly: push-local-assembly push-distributed-assembly push-distributed-assembly-job1 push-distributed-assembly-job2 push-distributed-assembly-job3
 
 distributed-assembly:
 	docker build assembly-demo/ -f Dockerfile \
@@ -71,7 +69,6 @@ distributed-assembly-job3:
 
 serialize-images: serialize-job
 publish-serialize-images: push-serialize-job
-e2e-test-serialize: push-serialize-job
 
 serialize-job:
 	docker build . -f Dockerfile \
@@ -83,7 +80,6 @@ serialize-job:
 
 failover-images: backup-job recover-job build-local-object build-distributed-object-step1 build-distributed-object-step2 get-local-object get-distributed-object
 publish-failover-images: push-backup-job push-recover-job push-build-local-object push-build-distributed-object-step1 push-build-distributed-object-step2 push-get-local-object push-get-distributed-object
-e2e-test-failover: push-backup-job push-recover-job push-build-local-object push-build-distributed-object-step1 push-build-distributed-object-step2 push-get-local-object push-get-distributed-object
 
 backup-job:
 	docker build failover-demo/ -f Dockerfile \
@@ -131,7 +127,6 @@ get-distributed-object:
 
 repartition-images: dask-repartition dask-repartition-job1 dask-repartition-job2 dask-worker-with-vineyard
 publish-repartition-images: push-dask-repartition push-dask-repartition-job1 push-dask-repartition-job2 push-dask-worker-with-vineyard
-e2e-test-repartition: push-dask-repartition push-dask-repartition-job1 push-dask-repartition-job2 push-dask-worker-with-vineyard
 
 dask-repartition:
 	docker build repartition-demo/ -f Dockerfile \
@@ -163,7 +158,6 @@ dask-worker-with-vineyard:
 
 sidecar-images: sidecar-job
 publish-sidecar-images: push-sidecar-job
-e2e-test-sidecar: push-sidecar-job
 
 sidecar-job:
 	docker build sidecar-demo/ -f Dockerfile \
@@ -175,7 +169,6 @@ sidecar-job:
 
 workflow-images: workflow-job1 workflow-job2
 publish-workflow-images: push-workflow-job1 push-workflow-job2
-e2e-test-workflow: push-workflow-job1 push-workflow-job2
 
 workflow-job1:
 	docker build workflow-demo/ -f Dockerfile \
@@ -189,15 +182,13 @@ workflow-job2:
 		-t $(REGISTRY)/workflow-job2:$(TAG)
 .PHONY: workflow-job2
 
-# publish all images to ghcr registry
-ALL-IMAGES ?= \
-publish-local-assembly-images \
-publish-distributed-assembly-images \
-publish-serialize-images \
-publish-failover-images \
-publish-repartition-images \
-publish-sidecar-images \
-publish-workflow-images
+############# publish all images to ghcr registry #############################
 
-publish-all-images: $(ALL-IMAGES)
+publish-all-images: publish-local-assembly-images \
+					publish-distributed-assembly-images \
+					publish-serialize-images \
+					publish-failover-images \
+					publish-repartition-images \
+					publish-sidecar-images \
+					publish-workflow-images
 .PHONY: publish-all-images

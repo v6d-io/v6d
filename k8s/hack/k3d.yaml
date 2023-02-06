@@ -1,0 +1,30 @@
+apiVersion: k3d.io/v1alpha3
+kind: Simple
+name: cluster
+servers: 1
+agents: 3
+image: rancher/k3s:latest
+volumes: # repeatable flags are represented as YAML lists
+  - volume: /var/run/docker.sock:/var/run/docker.sock
+    nodeFilters:
+      - server:*
+      - agent:*
+options:
+  k3d:
+    wait: true 
+    timeout: "600s"
+    disableLoadbalancer: false
+    disableImageVolume: false
+    disableRollback: false
+    loadbalancer:
+      configOverrides:
+        - settings.workerConnections=2048
+  k3s:
+    extraArgs:
+      - arg: --docker
+        nodeFilters:
+          - server:*
+          - agent:*
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

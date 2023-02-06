@@ -15,17 +15,12 @@
 
 setup:
   env: kind
-  kubeconfig: /tmp/e2e-k8s.config
+  kubeconfig: ~/.kube/config
   steps:
-    - name: download the vineyard operator image
-      command: |
-        docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
-        docker push localhost:5001/vineyard-operator:latest
     - name: use helm chart to install the operator
       command: |
         helm install vineyard-operator charts/vineyard-operator \
             --namespace vineyard-system \
-            --set controllerManager.manager.image.repository=localhost:5001/vineyard-operator \
             --create-namespace
       wait:
         - namespace: vineyard-system
@@ -33,7 +28,7 @@ setup:
           for: condition=Available
     - name: download the local assembly images into kind cluster
       command: |
-        make -C k8s/test/e2e e2e-test-assembly REGISTRY=localhost:5001
+        make -C k8s/test/e2e local-assembly-images
     - name: install vineyardd
       command: |
         kubectl apply -f k8s/test/e2e/vineyardd.yaml
