@@ -63,7 +63,7 @@ jobs:
           - e2e-tests-sidecar
           - e2e-tests-spill
           - e2e-tests-workflow
-          - e2e-tests-mars-showcase
+          - e2e-tests-mars-examples
     steps:
       - uses: actions/checkout@v3
         with:
@@ -201,7 +201,7 @@ jobs:
         run: |
           make -C k8s/test/e2e e2e-tests-workflow
 
-      - name: e2e-tests-mars-showcase
-        if: ${{ matrix.job == 'e2e-tests-mars-showcase' }}
+      - name: e2e-tests-mars-examples
+        if: ${{ matrix.job == 'e2e-tests-mars-examples' }}
         run: |
-          make -C k8s/test/e2e e2e-tests-mars-showcase
+          make -C k8s/test/e2e e2e-tests-mars-examples

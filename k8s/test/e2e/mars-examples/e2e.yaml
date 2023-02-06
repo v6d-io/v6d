@@ -21,31 +21,31 @@ setup:
       command: |
         worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c sh -c "mkdir -p /datasets; \
         cd /datasets/; curl -sOL https://raw.githubusercontent.com/GraphScope/gstest/master/vineyard-mars-showcase-dataset/{item,txn,user}.csv"; done
-    - name: build showcase images
+    - name: build examples images
       command: |
-        make -C k8s/showcase/vineyard-mars-pytorch REGISTRY=localhost:5001
-    - name: push showcase images to local registry
+        make -C k8s/examples/vineyard-mars-pytorch REGISTRY=localhost:5001
+    - name: push examples images to local registry
       command: |
-        make -C k8s/showcase/vineyard-mars-pytorch docker-push REGISTRY=localhost:5001
+        make -C k8s/examples/vineyard-mars-pytorch docker-push REGISTRY=localhost:5001
     - name: run prepare-data job
       command: |
         kubectl create ns vineyard-job
 
-        yq k8s/showcase/vineyard-mars-pytorch/prepare-data/resources/* | \
+        yq k8s/examples/vineyard-mars-pytorch/prepare-data/resources/* | \
         sed 's/vineyardcloudnative/localhost:5001/' | \
         kubectl apply -f -
 
         kubectl wait job -n vineyard-job -l app=prepare-data --for condition=complete --timeout=1200s
     - name: run process-data job
       command: |
-        yq k8s/showcase/vineyard-mars-pytorch/process-data/resources/* | \
+        yq k8s/examples/vineyard-mars-pytorch/process-data/resources/* | \
         sed 's/vineyardcloudnative/localhost:5001/' | \
         kubectl apply -f -
 
         kubectl wait job -n vineyard-job -l app=process-data --for condition=complete --timeout=2400s
     - name: run train-data job
       command: |
-        yq k8s/showcase/vineyard-mars-pytorch/train-data/resources/* | \
+        yq k8s/examples/vineyard-mars-pytorch/train-data/resources/* | \
         sed 's/vineyardcloudnative/localhost:5001/' | \
         kubectl apply -f -
 
