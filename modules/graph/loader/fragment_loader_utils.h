@@ -22,6 +22,7 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "grape/worker/comm_spec.h"
@@ -162,6 +163,27 @@ class FragmentLoaderUtils {
   const partitioner_t& partitioner_;
 };
 
+struct EdgeTableInfo {
+  using label_id_t = property_graph_types::LABEL_ID_TYPE;
+  EdgeTableInfo(std::shared_ptr<arrow::Table> adj_list_table,
+                std::shared_ptr<arrow::Int64Array> offsets,
+                std::shared_ptr<arrow::Table> property_table, label_id_t label,
+                bool flag)
+      : adj_list_table(adj_list_table),
+        offsets(offsets),
+        property_table(property_table),
+        vertex_label_id(label),
+        flag(flag) {}
+
+  std::shared_ptr<arrow::Table> adj_list_table;
+  std::shared_ptr<arrow::Int64Array> offsets;
+  std::shared_ptr<arrow::Table> property_table;
+  label_id_t vertex_label_id;
+  bool flag;
+};
+
+EdgeTableInfo FlattenTableInfos(const std::vector<EdgeTableInfo>& edge_tables);
+
 // This method used when several workers is loading a file in parallel, each
 // worker will read a chunk of the origin file into a arrow::Table.
 // We may get different table schemas as some chunks may have zero rows
@@ -176,6 +198,17 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
 
 boost::leaf::result<ObjectID> ConstructFragmentGroup(
     Client& client, ObjectID frag_id, const grape::CommSpec& comm_spec);
+
+std::pair<int64_t, int64_t> BinarySearchChunkPair(
+    const std::vector<int64_t>& agg_num, int64_t got);
+
+// merge offsets of vertex chunk into a whole offset array:
+// vertex-chunk-0 offset: [0, 1, 2]
+// vertex-chunk-1 offset: [0, 2, 6]
+// return: [0, 1, 2, 4, 8]
+Status parallel_prefix_sum_chunks(
+    std::vector<std::shared_ptr<arrow::Int64Array>>& in_chunks,
+    std::shared_ptr<arrow::Int64Array>& out);
 
 }  // namespace vineyard
 

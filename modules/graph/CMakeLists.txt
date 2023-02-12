@@ -47,6 +47,7 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
                                                                 "loader/*.cc"
                                                                 "utils/*.cc"
                                                                 "vertex_map/*.cc"
+                                                                "writer/*.cc"
 )
 
 add_library(vineyard_graph ${GRAPH_SRC_FILES})
@@ -75,6 +76,43 @@ else()
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include>
         $<INSTALL_INTERFACE:include/vineyard/contrib>
     )
+endif()
+
+if(BUILD_VINEYARD_GRAPH_WITH_GAR)
+    add_definitions(-DENABLE_GAR)
+    find_package(gar)
+    if (GAR_FOUND)
+        target_include_directories(vineyard_graph PUBLIC
+            $<BUILD_INTERFACE:${GAR_INCLUDE_DIRS}>
+            $<INSTALL_INTERFACE:include>
+        )
+        target_link_libraries(vineyard_graph PUBLIC
+            ${GAR_LIBRARIES}
+        )
+    else()
+        # build and install gar
+        add_subdirectory_static("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr"
+                            "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/GraphAr"
+        )
+        # install GraphAr
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/include/"
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+            PATTERN "*.h"
+        )
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/include/"
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+            PATTERN "*.hpp"
+        )
+
+        target_include_directories(vineyard_graph PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/include>
+            $<INSTALL_INTERFACE:include/vineyard/contrib>
+        )
+
+        target_link_libraries(vineyard_graph PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/libgar.so
+            $<INSTALL_INTERFACE:lib/vineyard/contrib/libgar.so>)
+    endif()
 endif()
 
 target_include_directories(vineyard_graph PUBLIC
