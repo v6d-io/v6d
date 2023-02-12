@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef ENABLE_GAR
-
 #include <stdio.h>
 
 #include <fstream>
@@ -22,6 +20,8 @@ limitations under the License.
 
 #include "client/client.h"
 #include "common/util/logging.h"
+
+#ifdef ENABLE_GAR
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/graph_schema.h"
