@@ -134,4 +134,11 @@ int main(int argc, char** argv) {
   return 0;
 }
 
+#else
+
+int main(int argc, char** argv) {
+  LOG(INFO) << "Arrow fragment gar test is disabled...";
+  return 0;
+}
+
 #endif  // ENABLE_GAR
