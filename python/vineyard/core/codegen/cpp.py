@@ -345,6 +345,11 @@ field_assign_meta_tpl = '''
         __value->meta_.AddKeyValue("{field_name}", __value->{field_name});
 '''
 
+field_assign_meta_explicit_cast_tpl = '''
+        __value->{field_name} = {field_name};
+        __value->meta_.AddKeyValue("{field_name}", {value_type}(__value->{field_name}));
+'''
+
 field_assign_plain_tpl = '''
         // using __{field_name}_value_type = typename {field_type}{element_type};
         using __{field_name}_value_type = {element_type_name}decltype(__value->{field_name}){element_type};
@@ -433,8 +438,13 @@ field_assign_dict_tpl = '''
 
 
 def codegen_field_assign(field_name, field_type, spec):
+    value_type = 'std::nullptr_t'
     if spec.is_meta:
-        tpl = field_assign_meta_tpl
+        if field_type == 'vineyard::String':
+            tpl = field_assign_meta_explicit_cast_tpl
+            value_type = 'std::string'
+        else:
+            tpl = field_assign_meta_tpl
     if spec.is_plain:
         tpl = field_assign_plain_tpl
     if spec.is_list:
@@ -454,6 +464,7 @@ def codegen_field_assign(field_name, field_type, spec):
     return tpl.format(
         field_name=field_name,
         field_type=field_type,
+        value_type=value_type,
         deref=spec.deref,
         element_type=element_type,
         element_type_name=element_type_name,

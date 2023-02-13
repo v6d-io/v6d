@@ -142,7 +142,13 @@ class ObjectMeta {
   /**
    * @brief Whether specific `key` exists in this metadata.
    */
-  bool const Haskey(std::string const& key) const;
+  bool const Haskey(std::string const& key) const __attribute__((deprecated(
+      "The method `Haskey()` is deprecated, use `HasKey()` instead.")));
+
+  /**
+   * @brief Whether specific `key` exists in this metadata.
+   */
+  bool const HasKey(std::string const& key) const;
 
   /**
    * @brief Reset the given key in the metadata.

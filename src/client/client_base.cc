@@ -94,7 +94,7 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
     }
   }
   // nbytes is optional
-  if (!meta_data.Haskey("nbytes")) {
+  if (!meta_data.HasKey("nbytes")) {
     meta_data.SetNBytes(0);
   }
   // if the metadata has incomplete components, trigger an remote meta sync.

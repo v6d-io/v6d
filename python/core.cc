@@ -164,7 +164,7 @@ void bind_core(py::module& mod) {
           "set_global",
           [](ObjectMeta* self, const bool global) { self->SetGlobal(global); },
           py::arg("global") = true)
-      .def("__contains__", &ObjectMeta::Haskey, "key"_a)
+      .def("__contains__", &ObjectMeta::HasKey, "key"_a)
       .def(
           "__getitem__",
           [](ObjectMeta* self, std::string const& key) -> py::object {

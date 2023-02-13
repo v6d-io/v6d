@@ -109,6 +109,10 @@ bool const ObjectMeta::IsLocal() const {
 void ObjectMeta::ForceLocal() const { this->force_local_ = true; }
 
 bool const ObjectMeta::Haskey(std::string const& key) const {
+  return HasKey(key);
+}
+
+bool const ObjectMeta::HasKey(std::string const& key) const {
   return meta_.contains(key);
 }
 
@@ -126,7 +130,18 @@ void ObjectMeta::AddKeyValue(const std::string& key, const json& value) {
   meta_[key] = json_to_string(value);
 }
 
+template <>
+const json ObjectMeta::GetKeyValue<json>(const std::string& key) const {
+  json value;
+  GetKeyValue(key, value);
+  return value;
+}
+
 void ObjectMeta::GetKeyValue(const std::string& key, json& value) const {
+  if (!HasKey(key)) {
+    value = json::object();
+    return;
+  }
   try {
     value = json::parse(meta_[key].get_ref<const std::string&>());
   } catch (nlohmann::json::parse_error const&) {
@@ -364,16 +379,6 @@ void ObjectMeta::SetInstanceId(const InstanceID instance_id) {
 
 void ObjectMeta::SetSignature(const Signature signature) {
   meta_["signature"] = signature;
-}
-
-template <>
-const json ObjectMeta::GetKeyValue<json>(const std::string& key) const {
-  try {
-    return json::parse(meta_[key].get_ref<const std::string&>());
-  } catch (nlohmann::json::parse_error const&) {
-    throw std::out_of_range("Invalid json value at key '" + key +
-                            "': " + meta_[key].get_ref<const std::string&>());
-  }
 }
 
 }  // namespace vineyard
