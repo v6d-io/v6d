@@ -42,25 +42,29 @@ typedef enum {
 
 // The enum type for vertex/edge data type.
 typedef enum {
-  INT = 0,
-  LONG = 1,
-  UNSIGNED = 2,
-  UNSIGNED_LONG = 3,
-  FLOAT = 4,
-  DOUBLE = 5,
-  OTHER = 6,
+  Undefined = 0,
+  Int32 = 1,
+  UInt32 = 2,
+  Int64 = 3,
+  UInt64 = 4,
+  Float = 5,
+  Double = 6,
+  String = 7,
+  Date32 = 8,
+  Date64 = 9,
 } DataType;
 
 /* The following macros are defined as the features of the storage. */
 // Note: mutable graph is currently NOT supported in grin-libgrape-lite
 // #define MUTABLE_GRAPH                // Graph is mutable
+#define WITH_VERTEX_ORIGIN_ID        // There is origin id for vertex semantic
 #define WITH_VERTEX_DATA             // There is data on vertex.
 #define WITH_EDGE_DATA               // There is data on edge, e.g. weight.
 #define ENABLE_VERTEX_LIST           // Enable the vertex list structure.
 #define CONTINUOUS_VID_TRAIT         // Enable continous index on vertext list.
 #define ENABLE_ADJACENT_LIST         // Enable the adjacent list structure.
 // Note: edge_list is only used in vertex_cut fragment
-// #define ENABLE_EDGE_LIST          // Enable the edge list structure.
+#define ENABLE_EDGE_LIST          // Enable the edge list structure.
 
 // The partition strategy.
 #define PARTITION_STRATEGY EDGE_CUT
@@ -70,6 +74,16 @@ typedef enum {
 #define EDGES_ON_NON_LOCAL_VERTEX NONE
 // The direction of edges on local vertices.
 #define EDGES_ON_LOCAL_VERTEX_DIRECTION BOTH
+
+// propertygraph
+#define WITH_VERTEX_LABEL
+#define WITH_EDGE_LABEL
+#define WITH_VERTEX_PROPERTY
+#define WITH_EDGE_PROPERTY
+#define COLUMN_STORE
+#define CONTINIOUS_VERTEX_LABEL_ID_TRAIT
+#define CONTINIOUS_EDGE_LABEL_ID_TRAIT
+
 
 /* The followings macros are defined as invalid value. */
 #define NULL_TYPE NULL              // Null type (null data type)
@@ -89,6 +103,11 @@ typedef void* Graph;
 // vertex
 typedef void* Vertex;
 typedef void* VertexID;
+
+// vertex origin id
+#ifdef WITH_VERTEX_ORIGIN_ID
+typedef void* OriginID;
+#endif
 
 // vertex data
 #ifdef WITH_VERTEX_DATA
@@ -132,5 +151,25 @@ typedef RemoteVertex* RemoteVertexList;
 
 // remote edge
 typedef Edge RemoteEdge;
+
+#ifdef WITH_VERTEX_LABEL
+typedef void* VertexLabelID;
+typedef void* VertexLabel;
+typedef void* VertexLabelList;
+#endif
+
+#ifdef WITH_EDGE_LABEL
+typedef void* EdgeLabelID;
+typedef void* EdgeLabel;
+typedef void* EdgeLabelList;
+#endif
+
+#if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
+typedef void* PropertyID;
+typedef void* Property;
+typedef void* PropertyList;
+typedef void* Row;
+typedef void* RowList;
+#endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_

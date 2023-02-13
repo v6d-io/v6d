@@ -20,15 +20,13 @@ limitations under the License.
 
 bool is_directed(const Graph);
 
+bool is_multigraph(const Graph);
+
 size_t get_vertex_num(const Graph);
 
 size_t get_edge_num(const Graph);
 
 void destroy_vertex(Vertex);
-
-DataType get_vertex_id_data_type(const Graph);
-
-VertexID get_vertex_id(const Vertex);
 
 #ifdef WITH_VERTEX_DATA
 DataType get_vertex_data_type(const Graph, const Vertex);
@@ -39,6 +37,15 @@ void destroy_vertex_data(VertexData);
 
 #ifdef MUTABLE_GRAPH
 void set_vertex_data_value(Graph, Vertex, const VertexData);
+#endif
+#endif
+
+#ifdef WITH_VERTEX_ORIGIN_ID
+Vertex get_vertex_from_origin_id(const Graph, const OriginID);
+OriginID get_vertex_origin_id(const Graph, const Vertex);
+
+#ifdef WITH_VERTEX_LABEL
+Vertex get_vertex_from_label_origin_id(const Graph, const VertexLabel, const OriginID);
 #endif
 #endif
 

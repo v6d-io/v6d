@@ -15,7 +15,7 @@ limitations under the License.
 #ifndef GRIN_PROPERTY_GRAPH_LABEL_H_
 #define GRIN_PROPERTY_GRAPH_LABEL_H_
 
-#include "grin/predefine.h"
+#include "../predefine.h"
 
 #ifdef WITH_VERTEX_LABEL
 VertexLabelList get_vertex_labels(const Graph);
@@ -33,6 +33,12 @@ bool insert_vertex_label_to_list(VertexLabelList, const VertexLabel);
 VertexLabel get_vertex_label(const Graph, const Vertex);
 
 char* get_vertex_label_name(const Graph, const VertexLabel);
+#ifdef CONTINIOUS_VERTEX_LABEL_ID_TRAIT
+VertexLabelID get_vertex_label_list_begin(const VertexLabelList);
+VertexLabelID get_vertex_label_list_end(const VertexLabelList);
+VertexLabelID get_vertex_label_id(const VertexLabel);
+VertexLabel get_vertex_label_from_id(const VertexLabelID);
+#endif
 #endif
 
 #ifdef WITH_EDGE_LABEL
@@ -51,6 +57,12 @@ bool insert_edge_label_to_list(EdgeLabelList, const EdgeLabel);
 EdgeLabel get_edge_label(const Graph, const Edge);
 
 char* get_edge_label_name(const Graph, const EdgeLabel);
+#ifdef CONTINIOUS_EDGE_LABEL_ID_TRAIT
+EdgeLabelID get_edge_label_list_begin(const EdgeLabelList);
+EdgeLabelID get_edge_label_list_end(const EdgeLabelList);
+EdgeLabelID get_edge_label_id(const EdgeLabel);
+EdgeLabel get_edge_label_from_id(const EdgeLabelID);
+#endif
 #endif
 
 #if defined(WITH_VERTEX_LABEL) && defined(WITH_EDGE_LABEL)

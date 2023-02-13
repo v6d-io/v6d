@@ -70,6 +70,8 @@ Edge get_edge_from_deserialization(const PartitionedGraph, const Partition,
 // could be local in 1~n partitions.
 bool is_local_vertex(const PartitionedGraph, const Partition, Vertex);
 
+bool is_remote_vertex(const PartitionedGraph, const Partition, Vertex);
+
 // For local edge: could get its properties locally;
 // every edge could be local in 1/2/n partitions
 bool is_local_edge(const PartitionedGraph, const Partition, const Edge);
@@ -127,6 +129,11 @@ bool insert_remote_vertex_to_list(RemoteVertexList, const RemoteVertex);
 VertexList get_local_vertices(const PartitionedGraph, const Partition);
 
 VertexList get_remote_vertices(const PartitionedGraph, const Partition);
+
+#ifdef WITH_VERTEX_LABEL
+VertexList get_local_vertices_by_label(const PartitionedGraph, const Partition, const VertexLabel);
+VertexList get_remote_vertices_by_label(const PartitionedGraph, const Partition, const VertexLabel);
+#endif
 
 VertexList get_remote_vertices_by_partition(const PartitionedGraph,
                                             const RemotePartition);

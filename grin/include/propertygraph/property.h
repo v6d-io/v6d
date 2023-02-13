@@ -20,6 +20,10 @@ limitations under the License.
 #if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
 char* get_property_name(const Graph, const Property);
 
+#ifdef WITH_PROPERTY_NAME
+Property get_property_by_name(const Graph, char* name);
+#endif
+
 DataType get_property_type(const Graph, const Property);
 
 size_t get_property_list_size(const PropertyList);

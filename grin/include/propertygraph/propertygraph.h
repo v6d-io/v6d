@@ -28,10 +28,16 @@ EdgeList get_edge_list_from_label(const Graph, const EdgeLabel);
 #if defined(WITH_VERTEX_LABEL) && defined(WITH_VERTEX_PROPERTY)
 PropertyList get_all_vertex_properties_from_label(const Graph,
                                                   const VertexLabel);
+#ifdef CONTINIOUS_VERTEX_LABEL_ID_TRAIT
+Property get_vertex_property_from_id(const VertexLabel, const PropertyID);
+#endif
 #endif
 
 #if defined(WITH_EDGE_LABEL) && defined(WITH_EDGE_PROPERTY)
 PropertyList get_all_edge_properties_from_label(const Graph, const EdgeLabel);
+#ifdef CONTINIOUS_EDGE_LABEL_ID_TRAIT
+Property get_edge_property_from_id(const VertexLabel, const PropertyID);
+#endif
 #endif
 
 #if defined(WITH_VERTEX_LABEL) && defined(WITH_VERTEX_PROPERTY) && \
