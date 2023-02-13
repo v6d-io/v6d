@@ -98,7 +98,7 @@ class PropertyGraphSchema {
 
   PropertyGraphSchema() = default;
 
-  explicit PropertyGraphSchema(json const& json) { FromJSON(json); }
+  //explicit PropertyGraphSchema(json const& json) { FromJSON(json); }
 
   PropertyId GetVertexPropertyId(LabelId label_id,
                                  const std::string& name) const;

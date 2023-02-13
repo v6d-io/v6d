@@ -49,6 +49,17 @@ limitations under the License.
 #include "graph/vertex_map/arrow_local_vertex_map.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
+extern "C" {
+#include "grin/include/topology/structure.h"
+#include "grin/include/topology/vertexlist.h"
+#include "grin/include/topology/edgelist.h"
+#include "grin/include/topology/adjacentlist.h"
+#include "grin/include/partition/partition.h"
+#include "grin/include/propertygraph/label.h"
+#include "grin/include/propertygraph/property.h"
+#include "grin/include/propertygraph/propertygraph.h"
+}
+
 namespace gs {
 
 template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T,
@@ -81,92 +92,92 @@ class __attribute__((annotate("vineyard"))) ArrowFragment
       public vineyard::BareRegistered<
           ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>> {
  
-  public:
-    static std::unique_ptr<Object> Create() __attribute__((used)) {
-        return std::static_pointer_cast<Object>(
-            std::unique_ptr<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>>{
-                new ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>()});
-    }
+//   public:
+//     static std::unique_ptr<Object> Create() __attribute__((used)) {
+//         return std::static_pointer_cast<Object>(
+//             std::unique_ptr<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>>{
+//                 new ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>()});
+//     }
 
 
-  public:
-    void Construct(const ObjectMeta& meta) override {
-        std::string __type_name = type_name<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>>();
-        VINEYARD_ASSERT(
-            meta.GetTypeName() == __type_name,
-            "Expect typename '" + __type_name + "', but got '" + meta.GetTypeName() + "'");
-        this->meta_ = meta;
-        this->id_ = meta.GetId();
+//   public:
+//     void Construct(const ObjectMeta& meta) override {
+//         std::string __type_name = type_name<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>>();
+//         VINEYARD_ASSERT(
+//             meta.GetTypeName() == __type_name,
+//             "Expect typename '" + __type_name + "', but got '" + meta.GetTypeName() + "'");
+//         this->meta_ = meta;
+//         this->id_ = meta.GetId();
 
-        meta.GetKeyValue("fid_", this->fid_);
-        meta.GetKeyValue("fnum_", this->fnum_);
-        meta.GetKeyValue("directed_", this->directed_);
-        meta.GetKeyValue("is_multigraph_", this->is_multigraph_);
-        meta.GetKeyValue("vertex_label_num_", this->vertex_label_num_);
-        meta.GetKeyValue("edge_label_num_", this->edge_label_num_);
-        meta.GetKeyValue("oid_type", this->oid_type);
-        meta.GetKeyValue("vid_type", this->vid_type);
-        this->ivnums_.Construct(meta.GetMemberMeta("ivnums_"));
-        this->ovnums_.Construct(meta.GetMemberMeta("ovnums_"));
-        this->tvnums_.Construct(meta.GetMemberMeta("tvnums_"));
-        for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__vertex_tables_-size"); ++__idx) {
-            this->vertex_tables_.emplace_back(std::dynamic_pointer_cast<Table>(
-                    meta.GetMember("__vertex_tables_-" + std::to_string(__idx))));
-        }
-        for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__ovgid_lists_-size"); ++__idx) {
-            this->ovgid_lists_.emplace_back(std::dynamic_pointer_cast<ArrowFragment::vid_vineyard_array_t>(
-                    meta.GetMember("__ovgid_lists_-" + std::to_string(__idx))));
-        }
-        for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__ovg2l_maps_-size"); ++__idx) {
-            this->ovg2l_maps_.emplace_back(std::dynamic_pointer_cast<Hashmap<vid_t, vid_t>>(
-                    meta.GetMember("__ovg2l_maps_-" + std::to_string(__idx))));
-        }
-        for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__edge_tables_-size"); ++__idx) {
-            this->edge_tables_.emplace_back(std::dynamic_pointer_cast<Table>(
-                    meta.GetMember("__edge_tables_-" + std::to_string(__idx))));
-        }
-        this->ie_lists_.resize(meta.GetKeyValue<size_t>("__ie_lists_-size"));
-        for (size_t __idx = 0; __idx < this->ie_lists_.size(); ++__idx) {
-            for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
-                    "__ie_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
-                this->ie_lists_[__idx].emplace_back(std::dynamic_pointer_cast<FixedSizeBinaryArray>(
-                    meta.GetMember("__ie_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
-            }
-        }
-        this->oe_lists_.resize(meta.GetKeyValue<size_t>("__oe_lists_-size"));
-        for (size_t __idx = 0; __idx < this->oe_lists_.size(); ++__idx) {
-            for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
-                    "__oe_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
-                this->oe_lists_[__idx].emplace_back(std::dynamic_pointer_cast<FixedSizeBinaryArray>(
-                    meta.GetMember("__oe_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
-            }
-        }
-        this->ie_offsets_lists_.resize(meta.GetKeyValue<size_t>("__ie_offsets_lists_-size"));
-        for (size_t __idx = 0; __idx < this->ie_offsets_lists_.size(); ++__idx) {
-            for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
-                    "__ie_offsets_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
-                this->ie_offsets_lists_[__idx].emplace_back(std::dynamic_pointer_cast<Int64Array>(
-                    meta.GetMember("__ie_offsets_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
-            }
-        }
-        this->oe_offsets_lists_.resize(meta.GetKeyValue<size_t>("__oe_offsets_lists_-size"));
-        for (size_t __idx = 0; __idx < this->oe_offsets_lists_.size(); ++__idx) {
-            for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
-                    "__oe_offsets_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
-                this->oe_offsets_lists_[__idx].emplace_back(std::dynamic_pointer_cast<Int64Array>(
-                    meta.GetMember("__oe_offsets_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
-            }
-        }
-        this->vm_ptr_ = std::dynamic_pointer_cast<ArrowFragment::vertex_map_t>(meta.GetMember("vm_ptr_"));
-        meta.GetKeyValue("schema_json_", this->schema_json_);
+//         meta.GetKeyValue("fid_", this->fid_);
+//         meta.GetKeyValue("fnum_", this->fnum_);
+//         meta.GetKeyValue("directed_", this->directed_);
+//         meta.GetKeyValue("is_multigraph_", this->is_multigraph_);
+//         meta.GetKeyValue("vertex_label_num_", this->vertex_label_num_);
+//         meta.GetKeyValue("edge_label_num_", this->edge_label_num_);
+//         meta.GetKeyValue("oid_type", this->oid_type);
+//         meta.GetKeyValue("vid_type", this->vid_type);
+//         this->ivnums_.Construct(meta.GetMemberMeta("ivnums_"));
+//         this->ovnums_.Construct(meta.GetMemberMeta("ovnums_"));
+//         this->tvnums_.Construct(meta.GetMemberMeta("tvnums_"));
+//         for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__vertex_tables_-size"); ++__idx) {
+//             this->vertex_tables_.emplace_back(std::dynamic_pointer_cast<Table>(
+//                     meta.GetMember("__vertex_tables_-" + std::to_string(__idx))));
+//         }
+//         for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__ovgid_lists_-size"); ++__idx) {
+//             this->ovgid_lists_.emplace_back(std::dynamic_pointer_cast<ArrowFragment::vid_vineyard_array_t>(
+//                     meta.GetMember("__ovgid_lists_-" + std::to_string(__idx))));
+//         }
+//         for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__ovg2l_maps_-size"); ++__idx) {
+//             this->ovg2l_maps_.emplace_back(std::dynamic_pointer_cast<Hashmap<vid_t, vid_t>>(
+//                     meta.GetMember("__ovg2l_maps_-" + std::to_string(__idx))));
+//         }
+//         for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("__edge_tables_-size"); ++__idx) {
+//             this->edge_tables_.emplace_back(std::dynamic_pointer_cast<Table>(
+//                     meta.GetMember("__edge_tables_-" + std::to_string(__idx))));
+//         }
+//         this->ie_lists_.resize(meta.GetKeyValue<size_t>("__ie_lists_-size"));
+//         for (size_t __idx = 0; __idx < this->ie_lists_.size(); ++__idx) {
+//             for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
+//                     "__ie_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
+//                 this->ie_lists_[__idx].emplace_back(std::dynamic_pointer_cast<FixedSizeBinaryArray>(
+//                     meta.GetMember("__ie_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
+//             }
+//         }
+//         this->oe_lists_.resize(meta.GetKeyValue<size_t>("__oe_lists_-size"));
+//         for (size_t __idx = 0; __idx < this->oe_lists_.size(); ++__idx) {
+//             for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
+//                     "__oe_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
+//                 this->oe_lists_[__idx].emplace_back(std::dynamic_pointer_cast<FixedSizeBinaryArray>(
+//                     meta.GetMember("__oe_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
+//             }
+//         }
+//         this->ie_offsets_lists_.resize(meta.GetKeyValue<size_t>("__ie_offsets_lists_-size"));
+//         for (size_t __idx = 0; __idx < this->ie_offsets_lists_.size(); ++__idx) {
+//             for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
+//                     "__ie_offsets_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
+//                 this->ie_offsets_lists_[__idx].emplace_back(std::dynamic_pointer_cast<Int64Array>(
+//                     meta.GetMember("__ie_offsets_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
+//             }
+//         }
+//         this->oe_offsets_lists_.resize(meta.GetKeyValue<size_t>("__oe_offsets_lists_-size"));
+//         for (size_t __idx = 0; __idx < this->oe_offsets_lists_.size(); ++__idx) {
+//             for (size_t __idy = 0; __idy < meta.GetKeyValue<size_t>(
+//                     "__oe_offsets_lists_-" + std::to_string(__idx) + "-size"); ++__idy) {
+//                 this->oe_offsets_lists_[__idx].emplace_back(std::dynamic_pointer_cast<Int64Array>(
+//                     meta.GetMember("__oe_offsets_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy))));
+//             }
+//         }
+//         this->vm_ptr_ = std::dynamic_pointer_cast<ArrowFragment::vertex_map_t>(meta.GetMember("vm_ptr_"));
+//         meta.GetKeyValue("schema_json_", this->schema_json_);
 
         
-        if (meta.IsLocal()) {
-            this->PostConstruct(meta);
-        }
-    }
+//         if (meta.IsLocal()) {
+//             this->PostConstruct(meta);
+//         }
+//     }
 
- private:
+//  private:
 public:
   using oid_t = OID_T;
   using vid_t = VID_T;
@@ -211,304 +222,388 @@ public:
 
  public:
   ~ArrowFragment() = default;
+ // hide vertex_map
+ // vineyard::ObjectID vertex_map_id() const override { return vm_ptr_->id(); }
 
-  vineyard::ObjectID vertex_map_id() const override { return vm_ptr_->id(); }
+  void init(void* partitioned_graph) {
+    pg_ = partitioned_graph;
+    assert(get_partition_list_size(pg_) == 1);
+    auto pl = get_local_partitions(pg_);
+    auto p = get_partition_from_list(pl, 0);
+    g_ = get_local_graph_from_partition(pg_, p);
 
-  bool directed() const override { 
-    // grin structure directed
-    return directed_; 
+    directed_ = is_directed(g_);
+    is_multigraph_ = is_multigraph(g_);
+    fid_ = p;
+    fnum_ = get_total_partitions_number(pg_);
+  }
+
+  bool directed() const override {
+    return directed_;
   }
 
   bool is_multigraph() const override {
-    // grin structure multigraph ++++
     return is_multigraph_; 
   }
 
   const std::string vid_typename() const override { 
-    // grin structure vid type
-    return vid_type; 
+    auto dt = get_vertex_id_data_type(g_);
+    return GetDataTypeName(dt);
   }
 
-  const std::string oid_typename() const override { return oid_type; }
-
-
-  fid_t fid() const { 
-    // grin partition get_partition
-    return fid_; 
+  const std::string oid_typename() const override { 
+    auto dt = DataTypeEnum<oid_t>::value();
+    return GetDataTypeName(dt); 
   }
 
-  fid_t fnum() const { 
-    // grin partition get_partition_number
-    return fnum_; 
+  fid_t fid() const { return fid_; }
+
+  fid_t fnum() const { return fnum_; }
+
+  void* vertex_label(const void* v) {
+    return get_vertex_label(g_, v);
   }
 
   label_id_t vertex_label(const vertex_t& v) const {
-    // grin label get vertex_label by vertex
-    return vid_parser_.GetLabelId(v.GetValue());
+    void* _v = get_vertex_from_id(v.GetValue());
+    void* _label = vertex_label(_v);
+    void* _label_id = get_label_id(g_, _label);
+    return *(static_cast<label_id_t*>(_label_id))
   }
 
-  int64_t vertex_offset(const vertex_t& v) const {
-    // to remove ----
-    return vid_parser_.GetOffset(v.GetValue());
-  }
+//   int64_t vertex_offset(const vertex_t& v) const {
+//     // to remove ----
+//     return vid_parser_.GetOffset(v.GetValue());
+//   }
 
   label_id_t vertex_label_num() const { 
-    // grin label get vertex label list size
-    return schema_.vertex_label_num(); 
+    void* vll = get_vertex_labels(g_);
+    return get_vertex_label_list_size(vll);
   }
 
   label_id_t edge_label_num() const { 
-    // grin label get edge label list size
-    return schema_.edge_label_num(); 
+    void* ell = get_edge_labels(g_);
+    return get_edge_label_list_size(ell);
   }
 
   prop_id_t vertex_property_num(label_id_t label) const {
-    // grin pg get_all_vertex_properties_from_label 
-    std::string type = "VERTEX";
-    return static_cast<prop_id_t>(schema_.GetEntry(label, type).property_num());
+    void* _label = get_vertex_label_from_id((void*)(&label));
+    void* vpl = get_all_vertex_properties_from_label(g_, _label);
+    return get_property_list_size(vpl);
   }
 
   std::shared_ptr<arrow::DataType> vertex_property_type(label_id_t label,
                                                         prop_id_t prop) const {
-    // grin property get_property_type
-    return vertex_tables_[label]->schema()->field(prop)->type();
+    void* _label = get_vertex_label_from_id(label)
+    void* _property = get_vertex_property_from_id(_label, prop);
+    auto dt = get_property_type(_g, _property);
+    return GetArrowDataType(dt);
   }
 
   prop_id_t edge_property_num(label_id_t label) const {
-    // grin pg get_all_edge_properties_from_label
-    std::string type = "EDGE";
-    return static_cast<prop_id_t>(schema_.GetEntry(label, type).property_num());
+    void* _label = get_edge_label_from_id((void*)(&label));
+    void* epl = get_all_edge_properties_from_label(g_, _label);
+    return get_property_list_size(epl);
   }
 
   std::shared_ptr<arrow::DataType> edge_property_type(label_id_t label,
                                                       prop_id_t prop) const {
-    // grin property get_property_type
-    return edge_tables_[label]->schema()->field(prop)->type();
+    void* _label = get_edge_label_from_id(label)
+    void* _property = get_edge_property_from_id(_label, prop);
+    auto dt = get_property_type(_g, _property);
+    return GetArrowDataType(dt);
   }
 
-  std::shared_ptr<arrow::Table> vertex_data_table(label_id_t i) const {
-    // grin pg get_all_rows ++++???
-    return vertex_tables_[i]->GetTable();
-  }
+//   std::shared_ptr<arrow::Table> vertex_data_table(label_id_t i) const {
+//     // maybe we should get rid of the method
+//     // there is no way we can provide the whole data with a C-style api
+//     return vertex_tables_[i]->GetTable();
+//   }
 
-  std::shared_ptr<arrow::Table> edge_data_table(label_id_t i) const {
-    // grin pg get_all_rows ++++???
-    return edge_tables_[i]->GetTable();
-  }
+//   std::shared_ptr<arrow::Table> edge_data_table(label_id_t i) const {
+//     // Ditto.
+//     return edge_tables_[i]->GetTable();
+//   }
 
-  template <typename DATA_T>
-  property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t> edge_data_column(
-      label_id_t label, prop_id_t prop) const {
-    // get rid of this method and EdgeDataColumn structure
-    // this structure actually serves to get a specific property of an edge
-    // and it can be replaced by grin property get_edge_row
-    if (edge_tables_[label]->num_rows() == 0) {
-      return property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t>();
-    } else {
-      // the finalized etables are guaranteed to have been concatenated
-      return property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t>(
-          edge_tables_[label]->column(prop)->chunk(0));
-    }
-  }
+//   template <typename DATA_T>
+//   property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t> edge_data_column(
+//       label_id_t label, prop_id_t prop) const {
+//     // get rid of this method and EdgeDataColumn structure
+//     // this structure actually serves to get a specific property of an edge
+//     // and it can be replaced by grin property get_edge_row
+//     if (edge_tables_[label]->num_rows() == 0) {
+//       return property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t>();
+//     } else {
+//       // the finalized etables are guaranteed to have been concatenated
+//       return property_graph_utils::EdgeDataColumn<DATA_T, nbr_unit_t>(
+//           edge_tables_[label]->column(prop)->chunk(0));
+//     }
+//   }
 
-  template <typename DATA_T>
-  property_graph_utils::VertexDataColumn<DATA_T, vid_t> vertex_data_column(
-      label_id_t label, prop_id_t prop) const {
-    // Ditto. it can be replaced by grin property get_vertex_row && get_property_value_from_row
-    if (vertex_tables_[label]->num_rows() == 0) {
-      return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
-          InnerVertices(label));
-    } else {
-      // the finalized vtables are guaranteed to have been concatenated
-      return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
-          InnerVertices(label), vertex_tables_[label]->column(prop)->chunk(0));
-    }
-  }
+//   template <typename DATA_T>
+//   property_graph_utils::VertexDataColumn<DATA_T, vid_t> vertex_data_column(
+//       label_id_t label, prop_id_t prop) const {
+//     // Ditto. it can be replaced by grin property get_vertex_row && get_property_value_from_row
+//     if (vertex_tables_[label]->num_rows() == 0) {
+//       return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
+//           InnerVertices(label));
+//     } else {
+//       // the finalized vtables are guaranteed to have been concatenated
+//       return property_graph_utils::VertexDataColumn<DATA_T, vid_t>(
+//           InnerVertices(label), vertex_tables_[label]->column(prop)->chunk(0));
+//     }
+//   }
 
   vertex_range_t Vertices(label_id_t label_id) const {
-    // continuous_vid_traits
-    return vertex_range_t(
-        vid_parser_.GenerateId(0, label_id, 0),
-        vid_parser_.GenerateId(0, label_id, tvnums_[label_id]));
+    //continious vid trait
+    void* _label = get_vertex_label_from_id((void*)(&label_id));
+    void* vlh = get_vertex_list_by_label(pg_, fid_, _label);
+    void* beginh = get_begin_vertex_id_from_list(vlh);
+    VID_T* begin = static_cast<VID_T*>(beginh);
+    void* endh = get_end_vertex_id_from_list(vlh);
+    VID_T* end = static_cast<VID_T*>(endh);
+    return vertex_range_t(*begin, *end);
   }
 
   vertex_range_t InnerVertices(label_id_t label_id) const {
-    // continuous_vid_traits
-    return vertex_range_t(
-        vid_parser_.GenerateId(0, label_id, 0),
-        vid_parser_.GenerateId(0, label_id, ivnums_[label_id]));
+    //continious vid trait
+    void* _label = get_vertex_label_from_id((void*)(&label_id));
+    void* vlh = get_local_vertices_by_label(pg_, fid_, _label);
+    void* beginh = get_begin_vertex_id_from_list(vlh);
+    VID_T* begin = static_cast<VID_T*>(beginh);
+    void* endh = get_end_vertex_id_from_list(vlh);
+    VID_T* end = static_cast<VID_T*>(endh);
+    return vertex_range_t(*begin, *end);
   }
 
   vertex_range_t OuterVertices(label_id_t label_id) const {
-    // continuous_vid_traits
-    return vertex_range_t(
-        vid_parser_.GenerateId(0, label_id, ivnums_[label_id]),
-        vid_parser_.GenerateId(0, label_id, tvnums_[label_id]));
+    //continious vid trait
+    void* _label = get_vertex_label_from_id((void*)(&label_id));
+    void* vlh = get_remote_vertices_by_label(pg_, fid_, _label);
+    void* beginh = get_begin_vertex_id_from_list(vlh);
+    VID_T* begin = static_cast<VID_T*>(beginh);
+    void* endh = get_end_vertex_id_from_list(vlh);
+    VID_T* end = static_cast<VID_T*>(endh);
+    return vertex_range_t(*begin, *end);
   }
 
   vertex_range_t InnerVerticesSlice(label_id_t label_id, vid_t start, vid_t end)
       const {
     // continuous_vid_traits
-    CHECK(start <= end && start <= ivnums_[label_id]);
-    if (end <= ivnums_[label_id]) {
-      return vertex_range_t(vid_parser_.GenerateId(0, label_id, start),
-                            vid_parser_.GenerateId(0, label_id, end));
+    vertex_range_t vr = InnerVertices(label_id);
+    size_t _end = vr.size();
+    CHECK(start <= end && start <= _end);
+    if (end <= _end) {
+      return vr.SetRange(start, end);
     } else {
-      return vertex_range_t(
-          vid_parser_.GenerateId(0, label_id, start),
-          vid_parser_.GenerateId(0, label_id, ivnums_[label_id]));
+      return vr.SetRange(start, _end);
     }
   }
 
   inline vid_t GetVerticesNum(label_id_t label_id) const {
-    // grin label get_vertex_num_by_label
-    return tvnums_[label_id];
+    void* _label = get_vertex_label_from_id((void*)(&label_id));
+    void* vlh = get_vertex_list_by_label(pg_, fid_, _label);
+    return get_vertex_list_size(vlh);
   }
 
   bool GetVertex(label_id_t label, const oid_t& oid, vertex_t& v) const {
-    vid_t gid;
-    if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
-      return (vid_parser_.GetFid(gid) == fid_) ? InnerVertexGid2Vertex(gid, v)
-                                               : OuterVertexGid2Vertex(gid, v);
-    } else {
-      return false;
+    void* _label = get_vertex_label_from_id((void*)(&label));
+    void* _v = get_vertex_from_label_origin_id(_label, (void*)(&oid));
+    if (_v == NULL_VERTEX) {
+        return false;
     }
+    void* _id = get_vertex_id(_v);
+    v.SetValue(*(static_cast<vid_t*>(_id)));
+    return true;
   }
 
   oid_t GetId(const vertex_t& v) const {
-    return IsInnerVertex(v) ? GetInnerVertexId(v) : GetOuterVertexId(v);
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    void* _id = get_vertex_origin_id(_v);
+    return *(static_cast<oid_t*>(_id));
   }
 
-  internal_oid_t GetInternalId(const vertex_t& v) const {
-    return IsInnerVertex(v) ? GetInnerVertexInternalId(v)
-                            : GetOuterVertexInternalId(v);
-  }
+//   internal_oid_t GetInternalId(const vertex_t& v) const {
+//     return IsInnerVertex(v) ? GetInnerVertexInternalId(v)
+//                             : GetOuterVertexInternalId(v);
+//   }
 
   fid_t GetFragId(const vertex_t& u) const {
-    return IsInnerVertex(u) ? fid_ : vid_parser_.GetFid(GetOuterVertexGid(u));
+    auto rp = get_master_partition_for_vertex(pg_, fid_, (void*)(&u));
+    if (rp == NULL_REMOTE_PARTITION) {
+      return fid_;
+    }
+    return rp;
   }
 
-  size_t GetTotalNodesNum() const { return vm_ptr_->GetTotalNodesNum(); }
-  size_t GetTotalVerticesNum() const { return vm_ptr_->GetTotalNodesNum(); }
+  size_t GetTotalNodesNum() const {
+    // secondary
+    return GetTotalVerticesNum()
+  }
+  size_t GetTotalVerticesNum() const {
+    void* vl = get_vertex_list(g_);
+    return get_vertex_list_size(vl);
+  }
   size_t GetTotalVerticesNum(label_id_t label) const {
-    return vm_ptr_->GetTotalNodesNum(label);
+    void* _label = get_vertex_label_from_id((void*)(&label));
+    void* vl = get_vertex_list_by_label(_label);
+    return get_vertex_list_size(vl);
   }
 
+  // secondary
   size_t GetEdgeNum() const { return directed_ ? oenum_ + ienum_ : oenum_; }
-
+  // secondary
   size_t GetInEdgeNum() const { return ienum_; }
-
+  // secondary
   size_t GetOutEdgeNum() const { return oenum_; }
 
   template <typename T>
   T GetData(const vertex_t& v, prop_id_t prop_id) const {
-    // grin get vertex row && get_property_value_from_row
-    return property_graph_utils::ValueGetter<T>::Value(
-        vertex_tables_columns_[vid_parser_.GetLabelId(v.GetValue())][prop_id],
-        vid_parser_.GetOffset(v.GetValue()));
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    void* _label = get_vertex_label(g_, _v);
+    void* _property = get_vertex_property_from_id(_lable, (void*)(&prop_id));
+    void* _pl = get_all_vertex_properties_from_label(g_, _label);
+    void* _row = get_vertex_row(g_, _v, _pl);
+    void* _value = get_property_value_from_row(_row, _property);
+    return *(static_cast<T*>(_value));
   }
 
   bool HasChild(const vertex_t& v, label_id_t e_label) const {
+    // secondary
     return GetLocalOutDegree(v, e_label) != 0;
   }
 
   bool HasParent(const vertex_t& v, label_id_t e_label) const {
+    // secondary
     return GetLocalInDegree(v, e_label) != 0;
   }
 
   int GetLocalOutDegree(const vertex_t& v, label_id_t e_label) const {
+    // secondary
     return GetOutgoingAdjList(v, e_label).Size();
   }
 
   int GetLocalInDegree(const vertex_t& v, label_id_t e_label) const {
+    // secondary
     return GetIncomingAdjList(v, e_label).Size();
   }
 
   // FIXME: grape message buffer compatibility
   bool Gid2Vertex(const vid_t& gid, vertex_t& v) const {
-    return (vid_parser_.GetFid(gid) == fid_) ? InnerVertexGid2Vertex(gid, v)
-                                             : OuterVertexGid2Vertex(gid, v);
+    std::stringstream ss;
+    ss << gid;
+    void* vh = get_vertex_from_deserialization(pg_, fid_, ss.str().c_str());
+    if (vh == NULL_VERTEX) {
+      return false;
+    }
+    vertex_t* _v = static_cast<vertex_t*>(vh);
+    v.SetValue(_v->GetValue());
+    return true;
   }
 
   vid_t Vertex2Gid(const vertex_t& v) const {
+    // secondary
     return IsInnerVertex(v) ? GetInnerVertexGid(v) : GetOuterVertexGid(v);
   }
 
   inline vid_t GetInnerVerticesNum(label_id_t label_id) const {
-    return ivnums_[label_id];
+    void* _label = get_vertex_label_from_id((void*)(&label_id));
+    void* vlh = get_local_vertices_by_label(pg_, fid_, _label);
+    return get_vertex_list_size(vlh);  
   }
 
   inline vid_t GetOuterVerticesNum(label_id_t label_id) const {
-    return ovnums_[label_id];
+    void* _label = get_vertex_label_from_id((void*)(&label_id));
+    void* vlh = get_remote_vertices_by_label(pg_, fid_, _label);
+    return get_vertex_list_size(vlh);
   }
 
   inline bool IsInnerVertex(const vertex_t& v) const {
-    return vid_parser_.GetOffset(v.GetValue()) <
-           static_cast<int64_t>(ivnums_[vid_parser_.GetLabelId(v.GetValue())]);
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    return is_local_vertex(pg_, fid_, _v);
   }
 
   inline bool IsOuterVertex(const vertex_t& v) const {
-    vid_t offset = vid_parser_.GetOffset(v.GetValue());
-    label_id_t label = vid_parser_.GetLabelId(v.GetValue());
-    return offset < tvnums_[label] && offset >= ivnums_[label];
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    return is_remote_vertex(pg_, fid_, _v);
   }
 
   bool GetInnerVertex(label_id_t label, const oid_t& oid, vertex_t& v) const {
-    vid_t gid;
-    if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
-      if (vid_parser_.GetFid(gid) == fid_) {
-        v.SetValue(vid_parser_.GetLid(gid));
-        return true;
-      }
-    }
-    return false;
+    return GetVertex(label, oid, v);
+    // vid_t gid;
+    // if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
+    //   if (vid_parser_.GetFid(gid) == fid_) {
+    //     v.SetValue(vid_parser_.GetLid(gid));
+    //     return true;
+    //   }
+    // }
+    // return false;
   }
 
   bool GetOuterVertex(label_id_t label, const oid_t& oid, vertex_t& v) const {
-    vid_t gid;
-    if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
-      return OuterVertexGid2Vertex(gid, v);
-    }
-    return false;
+    return GetVertex(label, oid, v);
+    // vid_t gid;
+    // if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
+    //   return OuterVertexGid2Vertex(gid, v);
+    // }
+    // return false;
+  }
+
+  inline oid_t GetVertexOriginId(const vertex_t& v) const {
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    void* _id = get_vertex_origin_id(g_, _v);
+    return *(static_cast<oid_t*>(_id));
   }
 
   inline oid_t GetInnerVertexId(const vertex_t& v) const {
-    return oid_t(GetInnerVertexInternalId(v));
+    return GetVertexOriginId(v);
+ //   return oid_t(GetInnerVertexInternalId(v));
   }
 
-  inline internal_oid_t GetInnerVertexInternalId(const vertex_t& v) const {
-    internal_oid_t internal_oid;
-    vid_t gid =
-        vid_parser_.GenerateId(fid_, vid_parser_.GetLabelId(v.GetValue()),
-                               vid_parser_.GetOffset(v.GetValue()));
-    CHECK(vm_ptr_->GetOid(gid, internal_oid));
-    return internal_oid;
-  }
+//   inline internal_oid_t GetInnerVertexInternalId(const vertex_t& v) const {
+//     internal_oid_t internal_oid;
+//     vid_t gid =
+//         vid_parser_.GenerateId(fid_, vid_parser_.GetLabelId(v.GetValue()),
+//                                vid_parser_.GetOffset(v.GetValue()));
+//     CHECK(vm_ptr_->GetOid(gid, internal_oid));
+//     return internal_oid;
+//   }
 
   inline oid_t GetOuterVertexId(const vertex_t& v) const {
-    return oid_t(GetOuterVertexInternalId(v));
+    return GetVertexOriginId(v);
+ //   return oid_t(GetOuterVertexInternalId(v));
   }
 
-  inline internal_oid_t GetOuterVertexInternalId(const vertex_t& v) const {
-    vid_t gid = GetOuterVertexGid(v);
-    internal_oid_t internal_oid;
-    CHECK(vm_ptr_->GetOid(gid, internal_oid));
-    return internal_oid;
-  }
+//   inline internal_oid_t GetOuterVertexInternalId(const vertex_t& v) const {
+//     vid_t gid = GetOuterVertexGid(v);
+//     internal_oid_t internal_oid;
+//     CHECK(vm_ptr_->GetOid(gid, internal_oid));
+//     return internal_oid;
+//   }
 
   inline oid_t Gid2Oid(const vid_t& gid) const {
-    internal_oid_t internal_oid;
-    CHECK(vm_ptr_->GetOid(gid, internal_oid));
-    return oid_t(internal_oid);
+    vertex_t v;
+    Gid2Vertex(gid, v);
+    return GetVertexOriginId(v);
+    // internal_oid_t internal_oid;
+    // CHECK(vm_ptr_->GetOid(gid, internal_oid));
+    // return oid_t(internal_oid);
   }
 
   inline bool Oid2Gid(label_id_t label, const oid_t& oid, vid_t& gid) const {
-    return vm_ptr_->GetGid(label, internal_oid_t(oid), gid);
+    vertex_t v;
+    if (!GetVertex(label, oid, v)) {
+        return false;
+    }
+    gid = Vertex2Gid(v);
+    return true;
+ //   return vm_ptr_->GetGid(label, internal_oid_t(oid), gid);
   }
 
   inline bool Oid2Gid(label_id_t label, const oid_t& oid, vertex_t& v) const {
     vid_t gid;
-    if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
+//    if (vm_ptr_->GetGid(label, internal_oid_t(oid), gid)) {
+    if (Oid2Gid(label, oid, gid)) {
       v.SetValue(gid);
       return true;
     }
@@ -516,111 +611,129 @@ public:
   }
 
   inline bool InnerVertexGid2Vertex(const vid_t& gid, vertex_t& v) const {
-    v.SetValue(vid_parser_.GetLid(gid));
-    return true;
+    return Gid2Vertex(gid, v);
+    // v.SetValue(vid_parser_.GetLid(gid));
+    // return true;
   }
 
   inline bool OuterVertexGid2Vertex(const vid_t& gid, vertex_t& v) const {
-    auto map = ovg2l_maps_ptr_[vid_parser_.GetLabelId(gid)];
-    auto iter = map->find(gid);
-    if (iter != map->end()) {
-      v.SetValue(iter->second);
-      return true;
-    } else {
-      return false;
-    }
+    return Gid2Vertex(gid, v);
+    // auto map = ovg2l_maps_ptr_[vid_parser_.GetLabelId(gid)];
+    // auto iter = map->find(gid);
+    // if (iter != map->end()) {
+    //   v.SetValue(iter->second);
+    //   return true;
+    // } else {
+    //   return false;
+    // }
   }
 
   inline vid_t GetOuterVertexGid(const vertex_t& v) const {
-    label_id_t v_label = vid_parser_.GetLabelId(v.GetValue());
-    return ovgid_lists_ptr_[v_label][vid_parser_.GetOffset(v.GetValue()) -
-                                     static_cast<int64_t>(ivnums_[v_label])];
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    void* _mv = get_master_vertex_for_vertex(pg_, fid_, _v);
+    void* _id = get_vertex_id(_mv);
+    return *(static_cast<vid_t*>(_id));
+    // label_id_t v_label = vid_parser_.GetLabelId(v.GetValue());
+    // return ovgid_lists_ptr_[v_label][vid_parser_.GetOffset(v.GetValue()) -
+    //                                  static_cast<int64_t>(ivnums_[v_label])];
   }
   inline vid_t GetInnerVertexGid(const vertex_t& v) const {
-    return vid_parser_.GenerateId(fid_, vid_parser_.GetLabelId(v.GetValue()),
-                                  vid_parser_.GetOffset(v.GetValue()));
+    std::stringstream ss(serialize_remote_vertex(pg_, (void*)(&v)));
+    VID_T gid;
+    ss >> gid;
+    return gid;
+    // return vid_parser_.GenerateId(fid_, vid_parser_.GetLabelId(v.GetValue()),
+    //                               vid_parser_.GetOffset(v.GetValue()));
   }
 
-  inline adj_list_t GetIncomingAdjList(const vertex_t& v, label_id_t e_label)
-      const {
-    // grin vertexlist continous_vid_trait get_vertex_from_vid ++++
-    vid_t vid = v.GetValue();
-    label_id_t v_label = vid_parser_.GetLabelId(vid);
-    int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
-    const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
-    return adj_list_t(&ie[offset_array[v_offset]],
-                      &ie[offset_array[v_offset + 1]],
-                      flatten_edge_tables_columns_[e_label]);
-  }
+//   inline adj_list_t GetIncomingAdjList(const vertex_t& v, label_id_t e_label)
+//       const {
+//     // // grin vertexlist continous_vid_trait get_vertex_from_vid ++++
+//     // vid_t vid = v.GetValue();
+//     // label_id_t v_label = vid_parser_.GetLabelId(vid);
+//     // int64_t v_offset = vid_parser_.GetOffset(vid);
+//     // const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
+//     // const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
+//     // return adj_list_t(&ie[offset_array[v_offset]],
+//     //                   &ie[offset_array[v_offset + 1]],
+//     //                   flatten_edge_tables_columns_[e_label]);
+//   }
 
   inline raw_adj_list_t GetIncomingRawAdjList(const vertex_t& v,
                                               label_id_t e_label) const {
-    vid_t vid = v.GetValue();
-    label_id_t v_label = vid_parser_.GetLabelId(vid);
-    int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
-    const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
-    return raw_adj_list_t(&ie[offset_array[v_offset]],
-                          &ie[offset_array[v_offset + 1]]);
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    void* _label = get_edge_label_from_id((void*)(&e_label));
+    void* al = get_adjacent_list_by_edge_label(g_, Direction::IN, (void*)(&v), _label);
+    return adj_list_t(al, get_adjacent_list_size(al));
+    // vid_t vid = v.GetValue();
+    // label_id_t v_label = vid_parser_.GetLabelId(vid);
+    // int64_t v_offset = vid_parser_.GetOffset(vid);
+    // const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
+    // const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
+    // return raw_adj_list_t(&ie[offset_array[v_offset]],
+    //                       &ie[offset_array[v_offset + 1]]);
   }
 
-  inline adj_list_t GetOutgoingAdjList(const vertex_t& v, label_id_t e_label)
-      const {
-    vid_t vid = v.GetValue();
-    label_id_t v_label = vid_parser_.GetLabelId(vid);
-    int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-    const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
-    return adj_list_t(&oe[offset_array[v_offset]],
-                      &oe[offset_array[v_offset + 1]],
-                      flatten_edge_tables_columns_[e_label]);
-  }
+//   inline adj_list_t GetOutgoingAdjList(const vertex_t& v, label_id_t e_label)
+//       const {
+//     vid_t vid = v.GetValue();
+//     label_id_t v_label = vid_parser_.GetLabelId(vid);
+//     int64_t v_offset = vid_parser_.GetOffset(vid);
+//     const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+//     const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
+//     return adj_list_t(&oe[offset_array[v_offset]],
+//                       &oe[offset_array[v_offset + 1]],
+//                       flatten_edge_tables_columns_[e_label]);
+//   }
 
   inline raw_adj_list_t GetOutgoingRawAdjList(const vertex_t& v,
                                               label_id_t e_label) const {
-    vid_t vid = v.GetValue();
-    label_id_t v_label = vid_parser_.GetLabelId(vid);
-    int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-    const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
-    return raw_adj_list_t(&oe[offset_array[v_offset]],
-                          &oe[offset_array[v_offset + 1]]);
+    void* _v = get_vertex_from_id((void*)(&v.GetValue()));
+    void* _label = get_edge_label_from_id((void*)(&e_label));
+    void* al = get_adjacent_list_by_edge_label(g_, Direction::OUT, (void*)(&v), _label);
+    return adj_list_t(al, get_adjacent_list_size(al));
+    // vid_t vid = v.GetValue();
+    // label_id_t v_label = vid_parser_.GetLabelId(vid);
+    // int64_t v_offset = vid_parser_.GetOffset(vid);
+    // const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+    // const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
+    // return raw_adj_list_t(&oe[offset_array[v_offset]],
+    //                       &oe[offset_array[v_offset + 1]]);
   }
 
-  /**
-   * N.B.: as an temporary solution, for POC of graph-learn, will be removed
-   * later.
-   */
+//   /**
+//    * N.B.: as an temporary solution, for POC of graph-learn, will be removed
+//    * later.
+//    */
 
-  inline const int64_t* GetIncomingOffsetArray(label_id_t v_label,
-                                               label_id_t e_label) const {
-    return ie_offsets_ptr_lists_[v_label][e_label];
-  }
+//   inline const int64_t* GetIncomingOffsetArray(label_id_t v_label,
+//                                                label_id_t e_label) const {
+//     return ie_offsets_ptr_lists_[v_label][e_label];
+//   }
 
-  inline const int64_t* GetOutgoingOffsetArray(label_id_t v_label,
-                                               label_id_t e_label) const {
-    return oe_offsets_ptr_lists_[v_label][e_label];
-  }
+//   inline const int64_t* GetOutgoingOffsetArray(label_id_t v_label,
+//                                                label_id_t e_label) const {
+//     return oe_offsets_ptr_lists_[v_label][e_label];
+//   }
 
-  inline int64_t GetIncomingOffsetLength(label_id_t v_label, label_id_t e_label)
-      const {
-    return ie_offsets_lists_[v_label][e_label]->length();
-  }
+//   inline int64_t GetIncomingOffsetLength(label_id_t v_label, label_id_t e_label)
+//       const {
+//     return ie_offsets_lists_[v_label][e_label]->length();
+//   }
 
-  inline int64_t GetOutgoingOffsetLength(label_id_t v_label, label_id_t e_label)
-      const {
-    return oe_offsets_lists_[v_label][e_label]->length();
-  }
+//   inline int64_t GetOutgoingOffsetLength(label_id_t v_label, label_id_t e_label)
+//       const {
+//     return oe_offsets_lists_[v_label][e_label]->length();
+//   }
 
-  inline std::pair<int64_t, int64_t> GetOutgoingAdjOffsets(
-      const vertex_t& v, label_id_t e_label) const {
-    vid_t vid = v.GetValue();
-    label_id_t v_label = vid_parser_.GetLabelId(vid);
-    int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-    return std::make_pair(offset_array[v_offset], offset_array[v_offset + 1]);
-  }
+//   inline std::pair<int64_t, int64_t> GetOutgoingAdjOffsets(
+//       const vertex_t& v, label_id_t e_label) const {
+//     vid_t vid = v.GetValue();
+//     label_id_t v_label = vid_parser_.GetLabelId(vid);
+//     int64_t v_offset = vid_parser_.GetOffset(vid);
+//     const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+//     return std::make_pair(offset_array[v_offset], offset_array[v_offset + 1]);
+//   }
 
   inline grape::DestList IEDests(const vertex_t& v, label_id_t e_label) const {
     int64_t offset = vid_parser_.GetOffset(v.GetValue());
@@ -646,9 +759,9 @@ public:
                            iodoffset_[v_label][e_label][offset + 1]);
   }
 
-  std::shared_ptr<vertex_map_t> GetVertexMap() { return vm_ptr_; }
+//  std::shared_ptr<vertex_map_t> GetVertexMap() { return vm_ptr_; }
 
-  const PropertyGraphSchema& schema() const override { return schema_; }
+// const PropertyGraphSchema& schema() const override { return schema_; }
 
   void PrepareToRunApp(const grape::CommSpec& comm_spec,
                        grape::PrepareConf conf);
@@ -791,14 +904,6 @@ public:
       std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
       std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset);
 
-  void directedCSR2Undirected(
-      vineyard::Client & client,
-      std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>> &
-          oe_lists,
-      std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> &
-          oe_offsets_lists,
-      int concurrency, bool& is_multigraph);
-
   __attribute__((annotate("shared"))) fid_t fid_, fnum_;
   __attribute__((annotate("shared"))) bool directed_;
   __attribute__((annotate("shared"))) bool is_multigraph_;
@@ -854,642 +959,5 @@ public:
 #endif  // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_MOD_H_
 
 // vim: syntax=cpp
-
-namespace vineyard {
-
-template<typename OID_T, typename VID_T, typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
-class ArrowFragmentBaseBuilder: public ObjectBuilder {
-  public:
-    // using oid_t
-    using oid_t = OID_T;
-    // using vid_t
-    using vid_t = VID_T;
-    // using internal_oid_t
-    using internal_oid_t = typename InternalType<oid_t>::type;
-    // using eid_t
-    using eid_t = property_graph_types::EID_TYPE;
-    // using prop_id_t
-    using prop_id_t = property_graph_types::PROP_ID_TYPE;
-    // using label_id_t
-    using label_id_t = property_graph_types::LABEL_ID_TYPE;
-    // using vertex_range_t
-    using vertex_range_t = grape::VertexRange<vid_t>;
-    // using inner_vertices_t
-    using inner_vertices_t = vertex_range_t;
-    // using outer_vertices_t
-    using outer_vertices_t = vertex_range_t;
-    // using vertices_t
-    using vertices_t = vertex_range_t;
-    // using nbr_t
-    using nbr_t = property_graph_utils::Nbr<vid_t, eid_t>;
-    // using nbr_unit_t
-    using nbr_unit_t = property_graph_utils::NbrUnit<vid_t, eid_t>;
-    // using adj_list_t
-    using adj_list_t = property_graph_utils::AdjList<vid_t, eid_t>;
-    // using raw_adj_list_t
-    using raw_adj_list_t = property_graph_utils::RawAdjList<vid_t, eid_t>;
-    // using vertex_map_t
-    using vertex_map_t = VERTEX_MAP_T;
-    // using vertex_t
-    using vertex_t = grape::Vertex<vid_t>;
-    // using ovg2l_map_t
-    using ovg2l_map_t =
-      ska::flat_hash_map<vid_t, vid_t, typename Hashmap<vid_t, vid_t>::KeyHash>;
-    // using vid_array_t
-    using vid_array_t = ArrowArrayType<vid_t>;
-    // using vid_vineyard_array_t
-    using vid_vineyard_array_t = ArrowVineyardArrayType<vid_t>;
-    // using vid_vineyard_builder_t
-    using vid_vineyard_builder_t = ArrowVineyardBuilderType<vid_t>;
-    // using eid_array_t
-    using eid_array_t = ArrowArrayType<eid_t>;
-    // using eid_vineyard_array_t
-    using eid_vineyard_array_t = ArrowVineyardArrayType<eid_t>;
-    // using eid_vineyard_builder_t
-    using eid_vineyard_builder_t = ArrowVineyardBuilderType<eid_t>;
-    // using vid_builder_t
-    using vid_builder_t = ArrowBuilderType<vid_t>;
-
-    explicit ArrowFragmentBaseBuilder(Client &client) {}
-
-    explicit ArrowFragmentBaseBuilder(
-            ArrowFragment<OID_T, VID_T, VERTEX_MAP_T> const &__value) {
-        this->set_fid_(__value.fid_);
-        this->set_fnum_(__value.fnum_);
-        this->set_directed_(__value.directed_);
-        this->set_is_multigraph_(__value.is_multigraph_);
-        this->set_vertex_label_num_(__value.vertex_label_num_);
-        this->set_edge_label_num_(__value.edge_label_num_);
-        this->set_oid_type(__value.oid_type);
-        this->set_vid_type(__value.vid_type);
-        this->set_ivnums_(
-            std::make_shared<typename std::decay<decltype(__value.ivnums_)>::type>(
-                __value.ivnums_));
-        this->set_ovnums_(
-            std::make_shared<typename std::decay<decltype(__value.ovnums_)>::type>(
-                __value.ovnums_));
-        this->set_tvnums_(
-            std::make_shared<typename std::decay<decltype(__value.tvnums_)>::type>(
-                __value.tvnums_));
-        for (auto const &__vertex_tables__item: __value.vertex_tables_) {
-            this->add_vertex_tables_(__vertex_tables__item);
-        }
-        for (auto const &__ovgid_lists__item: __value.ovgid_lists_) {
-            this->add_ovgid_lists_(__ovgid_lists__item);
-        }
-        for (auto const &__ovg2l_maps__item: __value.ovg2l_maps_) {
-            this->add_ovg2l_maps_(__ovg2l_maps__item);
-        }
-        for (auto const &__edge_tables__item: __value.edge_tables_) {
-            this->add_edge_tables_(__edge_tables__item);
-        }
-        this->ie_lists_.resize(__value.ie_lists_.size());
-        for (size_t __idx = 0; __idx < __value.ie_lists_.size(); ++__idx) {
-            this->ie_lists_[__idx].resize(__value.ie_lists_[__idx].size());
-            for (size_t __idy = 0; __idy < __value.ie_lists_[__idx].size(); ++__idy) {
-                this->ie_lists_[__idx][__idy] = __value.ie_lists_[__idx][__idy];
-            }
-        }
-        this->oe_lists_.resize(__value.oe_lists_.size());
-        for (size_t __idx = 0; __idx < __value.oe_lists_.size(); ++__idx) {
-            this->oe_lists_[__idx].resize(__value.oe_lists_[__idx].size());
-            for (size_t __idy = 0; __idy < __value.oe_lists_[__idx].size(); ++__idy) {
-                this->oe_lists_[__idx][__idy] = __value.oe_lists_[__idx][__idy];
-            }
-        }
-        this->ie_offsets_lists_.resize(__value.ie_offsets_lists_.size());
-        for (size_t __idx = 0; __idx < __value.ie_offsets_lists_.size(); ++__idx) {
-            this->ie_offsets_lists_[__idx].resize(__value.ie_offsets_lists_[__idx].size());
-            for (size_t __idy = 0; __idy < __value.ie_offsets_lists_[__idx].size(); ++__idy) {
-                this->ie_offsets_lists_[__idx][__idy] = __value.ie_offsets_lists_[__idx][__idy];
-            }
-        }
-        this->oe_offsets_lists_.resize(__value.oe_offsets_lists_.size());
-        for (size_t __idx = 0; __idx < __value.oe_offsets_lists_.size(); ++__idx) {
-            this->oe_offsets_lists_[__idx].resize(__value.oe_offsets_lists_[__idx].size());
-            for (size_t __idy = 0; __idy < __value.oe_offsets_lists_[__idx].size(); ++__idy) {
-                this->oe_offsets_lists_[__idx][__idy] = __value.oe_offsets_lists_[__idx][__idy];
-            }
-        }
-        this->set_vm_ptr_(__value.vm_ptr_);
-        this->set_schema_json_(__value.schema_json_);
-    }
-
-    explicit ArrowFragmentBaseBuilder(
-            std::shared_ptr<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>> const & __value):
-        ArrowFragmentBaseBuilder(*__value) {
-    }
-
-    ObjectMeta &ValueMetaRef(std::shared_ptr<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>> &__value) {
-        return __value->meta_;
-    }
-
-    std::shared_ptr<Object> _Seal(Client &client) override {
-        // ensure the builder hasn't been sealed yet.
-        ENSURE_NOT_SEALED(this);
-
-        VINEYARD_CHECK_OK(this->Build(client));
-        auto __value = std::make_shared<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>>();
-
-        return this->_Seal(client, __value);
-    }
-
-    std::shared_ptr<Object> _Seal(Client &client, std::shared_ptr<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>> &__value) {
-        size_t __value_nbytes = 0;
-
-        __value->meta_.SetTypeName(type_name<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>>());
-        if (std::is_base_of<GlobalObject, ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>>::value) {
-            __value->meta_.SetGlobal(true);
-        }
-
-        __value->fid_ = fid_;
-        __value->meta_.AddKeyValue("fid_", __value->fid_);
-
-        __value->fnum_ = fnum_;
-        __value->meta_.AddKeyValue("fnum_", __value->fnum_);
-
-        __value->directed_ = directed_;
-        __value->meta_.AddKeyValue("directed_", __value->directed_);
-
-        __value->is_multigraph_ = is_multigraph_;
-        __value->meta_.AddKeyValue("is_multigraph_", __value->is_multigraph_);
-
-        __value->vertex_label_num_ = vertex_label_num_;
-        __value->meta_.AddKeyValue("vertex_label_num_", __value->vertex_label_num_);
-
-        __value->edge_label_num_ = edge_label_num_;
-        __value->meta_.AddKeyValue("edge_label_num_", __value->edge_label_num_);
-
-        __value->oid_type = oid_type;
-        __value->meta_.AddKeyValue("oid_type", __value->oid_type);
-
-        __value->vid_type = vid_type;
-        __value->meta_.AddKeyValue("vid_type", __value->vid_type);
-
-        // using __ivnums__value_type = typename vineyard::Array<vid_t>;
-        using __ivnums__value_type = decltype(__value->ivnums_);
-        auto __value_ivnums_ = std::dynamic_pointer_cast<__ivnums__value_type>(
-            ivnums_->_Seal(client));
-        __value->ivnums_ = *__value_ivnums_;
-        __value->meta_.AddMember("ivnums_", __value->ivnums_);
-        __value_nbytes += __value_ivnums_->nbytes();
-
-        // using __ovnums__value_type = typename vineyard::Array<vid_t>;
-        using __ovnums__value_type = decltype(__value->ovnums_);
-        auto __value_ovnums_ = std::dynamic_pointer_cast<__ovnums__value_type>(
-            ovnums_->_Seal(client));
-        __value->ovnums_ = *__value_ovnums_;
-        __value->meta_.AddMember("ovnums_", __value->ovnums_);
-        __value_nbytes += __value_ovnums_->nbytes();
-
-        // using __tvnums__value_type = typename vineyard::Array<vid_t>;
-        using __tvnums__value_type = decltype(__value->tvnums_);
-        auto __value_tvnums_ = std::dynamic_pointer_cast<__tvnums__value_type>(
-            tvnums_->_Seal(client));
-        __value->tvnums_ = *__value_tvnums_;
-        __value->meta_.AddMember("tvnums_", __value->tvnums_);
-        __value_nbytes += __value_tvnums_->nbytes();
-
-        // using __vertex_tables__value_type = typename List<std::shared_ptr<Table>>::value_type::element_type;
-        using __vertex_tables__value_type = typename decltype(__value->vertex_tables_)::value_type::element_type;
-
-        size_t __vertex_tables__idx = 0;
-        for (auto &__vertex_tables__value: vertex_tables_) {
-            auto __value_vertex_tables_ = std::dynamic_pointer_cast<__vertex_tables__value_type>(
-                __vertex_tables__value->_Seal(client));
-            __value->vertex_tables_.emplace_back(__value_vertex_tables_);
-            __value->meta_.AddMember("__vertex_tables_-" + std::to_string(__vertex_tables__idx),
-                                     __value_vertex_tables_);
-            __value_nbytes += __value_vertex_tables_->nbytes();
-            __vertex_tables__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__vertex_tables_-size", __value->vertex_tables_.size());
-
-        // using __ovgid_lists__value_type = typename List<std::shared_ptr<vid_vineyard_array_t>>::value_type::element_type;
-        using __ovgid_lists__value_type = typename decltype(__value->ovgid_lists_)::value_type::element_type;
-
-        size_t __ovgid_lists__idx = 0;
-        for (auto &__ovgid_lists__value: ovgid_lists_) {
-            auto __value_ovgid_lists_ = std::dynamic_pointer_cast<__ovgid_lists__value_type>(
-                __ovgid_lists__value->_Seal(client));
-            __value->ovgid_lists_.emplace_back(__value_ovgid_lists_);
-            __value->meta_.AddMember("__ovgid_lists_-" + std::to_string(__ovgid_lists__idx),
-                                     __value_ovgid_lists_);
-            __value_nbytes += __value_ovgid_lists_->nbytes();
-            __ovgid_lists__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__ovgid_lists_-size", __value->ovgid_lists_.size());
-
-        // using __ovg2l_maps__value_type = typename List<std::shared_ptr<vineyard::Hashmap<vid_t, vid_t>>>::value_type::element_type;
-        using __ovg2l_maps__value_type = typename decltype(__value->ovg2l_maps_)::value_type::element_type;
-
-        size_t __ovg2l_maps__idx = 0;
-        for (auto &__ovg2l_maps__value: ovg2l_maps_) {
-            auto __value_ovg2l_maps_ = std::dynamic_pointer_cast<__ovg2l_maps__value_type>(
-                __ovg2l_maps__value->_Seal(client));
-            __value->ovg2l_maps_.emplace_back(__value_ovg2l_maps_);
-            __value->meta_.AddMember("__ovg2l_maps_-" + std::to_string(__ovg2l_maps__idx),
-                                     __value_ovg2l_maps_);
-            __value_nbytes += __value_ovg2l_maps_->nbytes();
-            __ovg2l_maps__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__ovg2l_maps_-size", __value->ovg2l_maps_.size());
-
-        // using __edge_tables__value_type = typename List<std::shared_ptr<Table>>::value_type::element_type;
-        using __edge_tables__value_type = typename decltype(__value->edge_tables_)::value_type::element_type;
-
-        size_t __edge_tables__idx = 0;
-        for (auto &__edge_tables__value: edge_tables_) {
-            auto __value_edge_tables_ = std::dynamic_pointer_cast<__edge_tables__value_type>(
-                __edge_tables__value->_Seal(client));
-            __value->edge_tables_.emplace_back(__value_edge_tables_);
-            __value->meta_.AddMember("__edge_tables_-" + std::to_string(__edge_tables__idx),
-                                     __value_edge_tables_);
-            __value_nbytes += __value_edge_tables_->nbytes();
-            __edge_tables__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__edge_tables_-size", __value->edge_tables_.size());
-
-        // using __ie_lists__value_type = typename List<List<std::shared_ptr<FixedSizeBinaryArray>>>::value_type::value_type::element_type;
-        using __ie_lists__value_type = typename decltype(__value->ie_lists_)::value_type::value_type::element_type;
-
-        size_t __ie_lists__idx = 0;
-        __value->ie_lists_.resize(ie_lists_.size());
-        for (auto &__ie_lists__value_vec: ie_lists_) {
-            size_t __ie_lists__idy = 0;
-            __value->meta_.AddKeyValue("__ie_lists_-" + std::to_string(__ie_lists__idx) + "-size", __ie_lists__value_vec.size());
-            for (auto &__ie_lists__value: __ie_lists__value_vec) {
-                auto __value_ie_lists_ = std::dynamic_pointer_cast<__ie_lists__value_type>(
-                    __ie_lists__value->_Seal(client));
-                __value->ie_lists_[__ie_lists__idx].emplace_back(__value_ie_lists_);
-                __value->meta_.AddMember("__ie_lists_-" + std::to_string(__ie_lists__idx) + "-" + std::to_string(__ie_lists__idy),
-                                         __value_ie_lists_);
-                __value_nbytes += __value_ie_lists_->nbytes();
-                __ie_lists__idy += 1;
-            }
-            __ie_lists__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__ie_lists_-size", __value->ie_lists_.size());
-
-        // using __oe_lists__value_type = typename List<List<std::shared_ptr<FixedSizeBinaryArray>>>::value_type::value_type::element_type;
-        using __oe_lists__value_type = typename decltype(__value->oe_lists_)::value_type::value_type::element_type;
-
-        size_t __oe_lists__idx = 0;
-        __value->oe_lists_.resize(oe_lists_.size());
-        for (auto &__oe_lists__value_vec: oe_lists_) {
-            size_t __oe_lists__idy = 0;
-            __value->meta_.AddKeyValue("__oe_lists_-" + std::to_string(__oe_lists__idx) + "-size", __oe_lists__value_vec.size());
-            for (auto &__oe_lists__value: __oe_lists__value_vec) {
-                auto __value_oe_lists_ = std::dynamic_pointer_cast<__oe_lists__value_type>(
-                    __oe_lists__value->_Seal(client));
-                __value->oe_lists_[__oe_lists__idx].emplace_back(__value_oe_lists_);
-                __value->meta_.AddMember("__oe_lists_-" + std::to_string(__oe_lists__idx) + "-" + std::to_string(__oe_lists__idy),
-                                         __value_oe_lists_);
-                __value_nbytes += __value_oe_lists_->nbytes();
-                __oe_lists__idy += 1;
-            }
-            __oe_lists__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__oe_lists_-size", __value->oe_lists_.size());
-
-        // using __ie_offsets_lists__value_type = typename List<List<std::shared_ptr<Int64Array>>>::value_type::value_type::element_type;
-        using __ie_offsets_lists__value_type = typename decltype(__value->ie_offsets_lists_)::value_type::value_type::element_type;
-
-        size_t __ie_offsets_lists__idx = 0;
-        __value->ie_offsets_lists_.resize(ie_offsets_lists_.size());
-        for (auto &__ie_offsets_lists__value_vec: ie_offsets_lists_) {
-            size_t __ie_offsets_lists__idy = 0;
-            __value->meta_.AddKeyValue("__ie_offsets_lists_-" + std::to_string(__ie_offsets_lists__idx) + "-size", __ie_offsets_lists__value_vec.size());
-            for (auto &__ie_offsets_lists__value: __ie_offsets_lists__value_vec) {
-                auto __value_ie_offsets_lists_ = std::dynamic_pointer_cast<__ie_offsets_lists__value_type>(
-                    __ie_offsets_lists__value->_Seal(client));
-                __value->ie_offsets_lists_[__ie_offsets_lists__idx].emplace_back(__value_ie_offsets_lists_);
-                __value->meta_.AddMember("__ie_offsets_lists_-" + std::to_string(__ie_offsets_lists__idx) + "-" + std::to_string(__ie_offsets_lists__idy),
-                                         __value_ie_offsets_lists_);
-                __value_nbytes += __value_ie_offsets_lists_->nbytes();
-                __ie_offsets_lists__idy += 1;
-            }
-            __ie_offsets_lists__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__ie_offsets_lists_-size", __value->ie_offsets_lists_.size());
-
-        // using __oe_offsets_lists__value_type = typename List<List<std::shared_ptr<Int64Array>>>::value_type::value_type::element_type;
-        using __oe_offsets_lists__value_type = typename decltype(__value->oe_offsets_lists_)::value_type::value_type::element_type;
-
-        size_t __oe_offsets_lists__idx = 0;
-        __value->oe_offsets_lists_.resize(oe_offsets_lists_.size());
-        for (auto &__oe_offsets_lists__value_vec: oe_offsets_lists_) {
-            size_t __oe_offsets_lists__idy = 0;
-            __value->meta_.AddKeyValue("__oe_offsets_lists_-" + std::to_string(__oe_offsets_lists__idx) + "-size", __oe_offsets_lists__value_vec.size());
-            for (auto &__oe_offsets_lists__value: __oe_offsets_lists__value_vec) {
-                auto __value_oe_offsets_lists_ = std::dynamic_pointer_cast<__oe_offsets_lists__value_type>(
-                    __oe_offsets_lists__value->_Seal(client));
-                __value->oe_offsets_lists_[__oe_offsets_lists__idx].emplace_back(__value_oe_offsets_lists_);
-                __value->meta_.AddMember("__oe_offsets_lists_-" + std::to_string(__oe_offsets_lists__idx) + "-" + std::to_string(__oe_offsets_lists__idy),
-                                         __value_oe_offsets_lists_);
-                __value_nbytes += __value_oe_offsets_lists_->nbytes();
-                __oe_offsets_lists__idy += 1;
-            }
-            __oe_offsets_lists__idx += 1;
-        }
-        __value->meta_.AddKeyValue("__oe_offsets_lists_-size", __value->oe_offsets_lists_.size());
-
-        // using __vm_ptr__value_type = typename std::shared_ptr<vertex_map_t>::element_type;
-        using __vm_ptr__value_type = typename decltype(__value->vm_ptr_)::element_type;
-        auto __value_vm_ptr_ = std::dynamic_pointer_cast<__vm_ptr__value_type>(
-            vm_ptr_->_Seal(client));
-        __value->vm_ptr_ = __value_vm_ptr_;
-        __value->meta_.AddMember("vm_ptr_", __value->vm_ptr_);
-        __value_nbytes += __value_vm_ptr_->nbytes();
-
-        __value->schema_json_ = schema_json_;
-        __value->meta_.AddKeyValue("schema_json_", __value->schema_json_);
-
-        __value->meta_.SetNBytes(__value_nbytes);
-
-        VINEYARD_CHECK_OK(client.CreateMetaData(__value->meta_, __value->id_));
-
-        // mark the builder as sealed
-        this->set_sealed(true);
-
-        
-        // run `PostConstruct` to return a valid object
-        __value->PostConstruct(__value->meta_);
-
-        return std::static_pointer_cast<Object>(__value);
-    }
-
-    Status Build(Client &client) override {
-        return Status::OK();
-    }
-
-  protected:
-    vineyard::fid_t fid_;
-    vineyard::fid_t fnum_;
-    bool directed_;
-    bool is_multigraph_;
-    property_graph_types::LABEL_ID_TYPE vertex_label_num_;
-    property_graph_types::LABEL_ID_TYPE edge_label_num_;
-    vineyard::String oid_type;
-    vineyard::String vid_type;
-    std::shared_ptr<ObjectBase> ivnums_;
-    std::shared_ptr<ObjectBase> ovnums_;
-    std::shared_ptr<ObjectBase> tvnums_;
-    std::vector<std::shared_ptr<ObjectBase>> vertex_tables_;
-    std::vector<std::shared_ptr<ObjectBase>> ovgid_lists_;
-    std::vector<std::shared_ptr<ObjectBase>> ovg2l_maps_;
-    std::vector<std::shared_ptr<ObjectBase>> edge_tables_;
-    std::vector<std::vector<std::shared_ptr<ObjectBase>>> ie_lists_;
-    std::vector<std::vector<std::shared_ptr<ObjectBase>>> oe_lists_;
-    std::vector<std::vector<std::shared_ptr<ObjectBase>>> ie_offsets_lists_;
-    std::vector<std::vector<std::shared_ptr<ObjectBase>>> oe_offsets_lists_;
-    std::shared_ptr<ObjectBase> vm_ptr_;
-    vineyard::json schema_json_;
-
-    void set_fid_(vineyard::fid_t const &fid__) {
-        this->fid_ = fid__;
-    }
-
-    void set_fnum_(vineyard::fid_t const &fnum__) {
-        this->fnum_ = fnum__;
-    }
-
-    void set_directed_(bool const &directed__) {
-        this->directed_ = directed__;
-    }
-
-    void set_is_multigraph_(bool const &is_multigraph__) {
-        this->is_multigraph_ = is_multigraph__;
-    }
-
-    void set_vertex_label_num_(property_graph_types::LABEL_ID_TYPE const &vertex_label_num__) {
-        this->vertex_label_num_ = vertex_label_num__;
-    }
-
-    void set_edge_label_num_(property_graph_types::LABEL_ID_TYPE const &edge_label_num__) {
-        this->edge_label_num_ = edge_label_num__;
-    }
-
-    void set_oid_type(vineyard::String const &oid_type_) {
-        this->oid_type = oid_type_;
-    }
-
-    void set_vid_type(vineyard::String const &vid_type_) {
-        this->vid_type = vid_type_;
-    }
-
-    void set_ivnums_(std::shared_ptr<ObjectBase> const & ivnums__) {
-        this->ivnums_ = ivnums__;
-    }
-
-    void set_ovnums_(std::shared_ptr<ObjectBase> const & ovnums__) {
-        this->ovnums_ = ovnums__;
-    }
-
-    void set_tvnums_(std::shared_ptr<ObjectBase> const & tvnums__) {
-        this->tvnums_ = tvnums__;
-    }
-
-    void set_vertex_tables_(std::vector<std::shared_ptr<ObjectBase>> const &vertex_tables__) {
-        this->vertex_tables_ = vertex_tables__;
-    }
-    void set_vertex_tables_(size_t const idx, std::shared_ptr<ObjectBase> const &vertex_tables__) {
-        if (idx >= this->vertex_tables_.size()) {
-            this->vertex_tables_.resize(idx + 1);
-        }
-        this->vertex_tables_[idx] = vertex_tables__;
-    }
-    void add_vertex_tables_(std::shared_ptr<ObjectBase> const &vertex_tables__) {
-        this->vertex_tables_.emplace_back(vertex_tables__);
-    }
-    void remove_vertex_tables_(const size_t vertex_tables__index_) {
-        this->vertex_tables_.erase(this->vertex_tables_.begin() + vertex_tables__index_);
-    }
-
-    void set_ovgid_lists_(std::vector<std::shared_ptr<ObjectBase>> const &ovgid_lists__) {
-        this->ovgid_lists_ = ovgid_lists__;
-    }
-    void set_ovgid_lists_(size_t const idx, std::shared_ptr<ObjectBase> const &ovgid_lists__) {
-        if (idx >= this->ovgid_lists_.size()) {
-            this->ovgid_lists_.resize(idx + 1);
-        }
-        this->ovgid_lists_[idx] = ovgid_lists__;
-    }
-    void add_ovgid_lists_(std::shared_ptr<ObjectBase> const &ovgid_lists__) {
-        this->ovgid_lists_.emplace_back(ovgid_lists__);
-    }
-    void remove_ovgid_lists_(const size_t ovgid_lists__index_) {
-        this->ovgid_lists_.erase(this->ovgid_lists_.begin() + ovgid_lists__index_);
-    }
-
-    void set_ovg2l_maps_(std::vector<std::shared_ptr<ObjectBase>> const &ovg2l_maps__) {
-        this->ovg2l_maps_ = ovg2l_maps__;
-    }
-    void set_ovg2l_maps_(size_t const idx, std::shared_ptr<ObjectBase> const &ovg2l_maps__) {
-        if (idx >= this->ovg2l_maps_.size()) {
-            this->ovg2l_maps_.resize(idx + 1);
-        }
-        this->ovg2l_maps_[idx] = ovg2l_maps__;
-    }
-    void add_ovg2l_maps_(std::shared_ptr<ObjectBase> const &ovg2l_maps__) {
-        this->ovg2l_maps_.emplace_back(ovg2l_maps__);
-    }
-    void remove_ovg2l_maps_(const size_t ovg2l_maps__index_) {
-        this->ovg2l_maps_.erase(this->ovg2l_maps_.begin() + ovg2l_maps__index_);
-    }
-
-    void set_edge_tables_(std::vector<std::shared_ptr<ObjectBase>> const &edge_tables__) {
-        this->edge_tables_ = edge_tables__;
-    }
-    void set_edge_tables_(size_t const idx, std::shared_ptr<ObjectBase> const &edge_tables__) {
-        if (idx >= this->edge_tables_.size()) {
-            this->edge_tables_.resize(idx + 1);
-        }
-        this->edge_tables_[idx] = edge_tables__;
-    }
-    void add_edge_tables_(std::shared_ptr<ObjectBase> const &edge_tables__) {
-        this->edge_tables_.emplace_back(edge_tables__);
-    }
-    void remove_edge_tables_(const size_t edge_tables__index_) {
-        this->edge_tables_.erase(this->edge_tables_.begin() + edge_tables__index_);
-    }
-
-    void set_ie_lists_(std::vector<std::vector<std::shared_ptr<ObjectBase>>> const &ie_lists__) {
-        this->ie_lists_ = ie_lists__;
-    }
-    void set_ie_lists_(size_t const idx, std::vector<std::shared_ptr<ObjectBase>> const &ie_lists__) {
-        if (idx >= this->ie_lists_.size()) {
-            this->ie_lists_.resize(idx + 1);
-        }
-        this->ie_lists_[idx] = ie_lists__;
-    }
-    void set_ie_lists_(size_t const idx, size_t const idy,
-                          std::shared_ptr<ObjectBase> const &ie_lists__) {
-        if (idx >= this->ie_lists_.size()) {
-            this->ie_lists_.resize(idx + 1);
-        }
-        if (idy >= this->ie_lists_[idx].size()) {
-            this->ie_lists_[idx].resize(idy + 1);
-        }
-        this->ie_lists_[idx][idy] = ie_lists__;
-    }
-    void add_ie_lists_(std::vector<std::shared_ptr<ObjectBase>> const &ie_lists__) {
-        this->ie_lists_.emplace_back(ie_lists__);
-    }
-    void remove_ie_lists_(const size_t ie_lists__index_) {
-        this->ie_lists_.erase(this->ie_lists_.begin() + ie_lists__index_);
-    }
-    void remove_ie_lists_(const size_t ie_lists__index_, const size_t ie_lists__inner_index_) {
-        auto &ie_lists__inner_ = this->ie_lists_[ie_lists__index_];
-        ie_lists__inner_.erase(ie_lists__inner_.begin() + ie_lists__inner_index_);
-    }
-
-    void set_oe_lists_(std::vector<std::vector<std::shared_ptr<ObjectBase>>> const &oe_lists__) {
-        this->oe_lists_ = oe_lists__;
-    }
-    void set_oe_lists_(size_t const idx, std::vector<std::shared_ptr<ObjectBase>> const &oe_lists__) {
-        if (idx >= this->oe_lists_.size()) {
-            this->oe_lists_.resize(idx + 1);
-        }
-        this->oe_lists_[idx] = oe_lists__;
-    }
-    void set_oe_lists_(size_t const idx, size_t const idy,
-                          std::shared_ptr<ObjectBase> const &oe_lists__) {
-        if (idx >= this->oe_lists_.size()) {
-            this->oe_lists_.resize(idx + 1);
-        }
-        if (idy >= this->oe_lists_[idx].size()) {
-            this->oe_lists_[idx].resize(idy + 1);
-        }
-        this->oe_lists_[idx][idy] = oe_lists__;
-    }
-    void add_oe_lists_(std::vector<std::shared_ptr<ObjectBase>> const &oe_lists__) {
-        this->oe_lists_.emplace_back(oe_lists__);
-    }
-    void remove_oe_lists_(const size_t oe_lists__index_) {
-        this->oe_lists_.erase(this->oe_lists_.begin() + oe_lists__index_);
-    }
-    void remove_oe_lists_(const size_t oe_lists__index_, const size_t oe_lists__inner_index_) {
-        auto &oe_lists__inner_ = this->oe_lists_[oe_lists__index_];
-        oe_lists__inner_.erase(oe_lists__inner_.begin() + oe_lists__inner_index_);
-    }
-
-    void set_ie_offsets_lists_(std::vector<std::vector<std::shared_ptr<ObjectBase>>> const &ie_offsets_lists__) {
-        this->ie_offsets_lists_ = ie_offsets_lists__;
-    }
-    void set_ie_offsets_lists_(size_t const idx, std::vector<std::shared_ptr<ObjectBase>> const &ie_offsets_lists__) {
-        if (idx >= this->ie_offsets_lists_.size()) {
-            this->ie_offsets_lists_.resize(idx + 1);
-        }
-        this->ie_offsets_lists_[idx] = ie_offsets_lists__;
-    }
-    void set_ie_offsets_lists_(size_t const idx, size_t const idy,
-                          std::shared_ptr<ObjectBase> const &ie_offsets_lists__) {
-        if (idx >= this->ie_offsets_lists_.size()) {
-            this->ie_offsets_lists_.resize(idx + 1);
-        }
-        if (idy >= this->ie_offsets_lists_[idx].size()) {
-            this->ie_offsets_lists_[idx].resize(idy + 1);
-        }
-        this->ie_offsets_lists_[idx][idy] = ie_offsets_lists__;
-    }
-    void add_ie_offsets_lists_(std::vector<std::shared_ptr<ObjectBase>> const &ie_offsets_lists__) {
-        this->ie_offsets_lists_.emplace_back(ie_offsets_lists__);
-    }
-    void remove_ie_offsets_lists_(const size_t ie_offsets_lists__index_) {
-        this->ie_offsets_lists_.erase(this->ie_offsets_lists_.begin() + ie_offsets_lists__index_);
-    }
-    void remove_ie_offsets_lists_(const size_t ie_offsets_lists__index_, const size_t ie_offsets_lists__inner_index_) {
-        auto &ie_offsets_lists__inner_ = this->ie_offsets_lists_[ie_offsets_lists__index_];
-        ie_offsets_lists__inner_.erase(ie_offsets_lists__inner_.begin() + ie_offsets_lists__inner_index_);
-    }
-
-    void set_oe_offsets_lists_(std::vector<std::vector<std::shared_ptr<ObjectBase>>> const &oe_offsets_lists__) {
-        this->oe_offsets_lists_ = oe_offsets_lists__;
-    }
-    void set_oe_offsets_lists_(size_t const idx, std::vector<std::shared_ptr<ObjectBase>> const &oe_offsets_lists__) {
-        if (idx >= this->oe_offsets_lists_.size()) {
-            this->oe_offsets_lists_.resize(idx + 1);
-        }
-        this->oe_offsets_lists_[idx] = oe_offsets_lists__;
-    }
-    void set_oe_offsets_lists_(size_t const idx, size_t const idy,
-                          std::shared_ptr<ObjectBase> const &oe_offsets_lists__) {
-        if (idx >= this->oe_offsets_lists_.size()) {
-            this->oe_offsets_lists_.resize(idx + 1);
-        }
-        if (idy >= this->oe_offsets_lists_[idx].size()) {
-            this->oe_offsets_lists_[idx].resize(idy + 1);
-        }
-        this->oe_offsets_lists_[idx][idy] = oe_offsets_lists__;
-    }
-    void add_oe_offsets_lists_(std::vector<std::shared_ptr<ObjectBase>> const &oe_offsets_lists__) {
-        this->oe_offsets_lists_.emplace_back(oe_offsets_lists__);
-    }
-    void remove_oe_offsets_lists_(const size_t oe_offsets_lists__index_) {
-        this->oe_offsets_lists_.erase(this->oe_offsets_lists_.begin() + oe_offsets_lists__index_);
-    }
-    void remove_oe_offsets_lists_(const size_t oe_offsets_lists__index_, const size_t oe_offsets_lists__inner_index_) {
-        auto &oe_offsets_lists__inner_ = this->oe_offsets_lists_[oe_offsets_lists__index_];
-        oe_offsets_lists__inner_.erase(oe_offsets_lists__inner_.begin() + oe_offsets_lists__inner_index_);
-    }
-
-    void set_vm_ptr_(std::shared_ptr<ObjectBase> const & vm_ptr__) {
-        this->vm_ptr_ = vm_ptr__;
-    }
-
-    void set_schema_json_(vineyard::json const &schema_json__) {
-        this->schema_json_ = schema_json__;
-    }
-
-  private:
-    friend class ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>;
-};
-
-
-}  // namespace vineyard
-
-
 
 #endif // MODULES_GRAPH_FRAGMENT_ARROW_FRAGMENT_GRIN_H

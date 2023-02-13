@@ -22,6 +22,10 @@ limitations under the License.
 
 VertexList get_vertex_list(const Graph);
 
+#ifdef WITH_VERTEX_LABEL
+VertexList get_vertex_list_by_label(const Graph, const VertexLabel);
+#endif
+
 void destroy_vertex_list(Graph);
 
 size_t get_vertex_list_size(const VertexList);
@@ -38,6 +42,12 @@ Vertex get_vertex_from_iter(const VertexList, const VertexListIterator);
 VertexID get_begin_vertex_id_from_list(const VertexList);
 
 VertexID get_end_vertex_id_from_list(const VertexList);
+
+DataType get_vertex_id_data_type(const Graph);
+
+VertexID get_vertex_id(const Vertex);
+
+Vertex get_vertex_from_id(const VertexID);
 #endif
 
 #ifdef MUTABLE_GRAPH
