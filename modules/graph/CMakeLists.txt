@@ -79,39 +79,20 @@ else()
 endif()
 
 if(BUILD_VINEYARD_GRAPH_WITH_GAR)
-    add_definitions(-DENABLE_GAR)
-    find_package(gar)
+    target_compile_definitions(vineyard_graph PUBLIC -DENABLE_GAR)
+    find_package(gar QUIET)
     if (GAR_FOUND)
-        target_include_directories(vineyard_graph PUBLIC
-            $<BUILD_INTERFACE:${GAR_INCLUDE_DIRS}>
-            $<INSTALL_INTERFACE:include>
-        )
-        target_link_libraries(vineyard_graph PUBLIC
-            ${GAR_LIBRARIES}
-        )
+        message(STATUS "-- Found GraphAr: ${GAR_LIBRARIES}")
+        target_include_directories(vineyard_graph PUBLIC ${GAR_INCLUDE_DIRS})
+        target_link_libraries(vineyard_graph PUBLIC ${GAR_LIBRARIES})
     else()
         # build and install gar
+        message(STATUS "-- Building GraphAr from submodule: ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr")
         add_subdirectory_static("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr"
-                            "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/GraphAr"
+                                "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/GraphAr"
         )
-        # install GraphAr
-        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/include/"
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
-            PATTERN "*.h"
-        )
-        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/include/"
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
-            PATTERN "*.hpp"
-        )
-
-        target_include_directories(vineyard_graph PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/include>
-            $<INSTALL_INTERFACE:include/vineyard/contrib>
-        )
-
-        target_link_libraries(vineyard_graph PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/libgar.so
-            $<INSTALL_INTERFACE:lib/vineyard/contrib/libgar.so>)
+        # depends on gar
+        target_link_libraries(vineyard_graph PUBLIC gar)
     endif()
 endif()
 
