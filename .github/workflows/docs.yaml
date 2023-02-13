@@ -176,7 +176,18 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
-            :white_check_mark: Doc deploy preview ready: https://deploy-preview-pr-${{ github.event.number }}--v6d.netlify.app
+            🎊 PR Preview ${{ github.event.pull_request.head.sha }} has been successfully built and deployed to https://deploy-preview-pr-${{ github.event.number }}--v6d.netlify.app
+            <sub>🤖 By [netlify](https://www.netlify.com/)</sub>
+          body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
+
+      - name: Leave the comment on pull request when failed
+        uses: actions-cool/maintain-one-comment@v3
+        if: ${{ failure() && github.event_name == 'pull_request_target' }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            😭 Deploy PR Preview ${{ github.event.pull_request.head.sha }} failed. [Build logs](https://github.com/v6d-io/v6d/runs/${{ github.run_id }})
+            <sub>🤖 By [netlify](https://www.netlify.com/)</sub>
           body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
 
       - name: Commit Doc
