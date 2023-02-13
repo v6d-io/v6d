@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.11.0
   creationTimestamp: null
   name: sidecars.k8s.v6d.io
 spec:
@@ -200,13 +200,26 @@ spec:
                                 type: string
                               name:
                                 type: string
+                              namespace:
+                                type: string
                             required:
                             - kind
                             - name
                             type: object
-                            x-kubernetes-map-type: atomic
                           resources:
                             properties:
+                              claims:
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - name
+                                x-kubernetes-list-type: map
                               limits:
                                 additionalProperties:
                                   anyOf:
@@ -376,7 +389,7 @@ spec:
                               uid:
                                 type: string
                             type: object
-                            x-kubernetes-map-type: atomic
+                            x-kubernetes-map-type: granular
                           csi:
                             properties:
                               controllerExpandSecretRef:
@@ -399,6 +412,14 @@ spec:
                                 type: string
                               fsType:
                                 type: string
+                              nodeExpandSecretRef:
+                                properties:
+                                  name:
+                                    type: string
+                                  namespace:
+                                    type: string
+                                type: object
+                                x-kubernetes-map-type: atomic
                               nodePublishSecretRef:
                                 properties:
                                   name:

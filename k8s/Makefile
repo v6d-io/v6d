@@ -43,7 +43,7 @@ E2E := $(shell command -v ${GOBIN}/e2e --version || shell ${GOBIN}/e2e --version
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4@v4.5.5
-CONTROLLER_TOOLS_VERSION ?= v0.9.2
+CONTROLLER_TOOLS_VERSION ?= v0.11.0
 GOLANGCI_LINT_VERSION ?= v1.49.0
 HELMIFY_VERSION ?= v0.3.18
 E2E_VERSION ?= 2631e76926604c4e30ca170bed916804c86980b6
@@ -203,7 +203,7 @@ CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
 kustomize:
-ifeq (, $(shell which kustomize))
+ifeq (, $(shell $(GOBIN)/kustomize))
 	@{ \
 	set -e ;\
 	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
@@ -212,10 +212,8 @@ ifeq (, $(shell which kustomize))
 	go install sigs.k8s.io/kustomize/kustomize/$(KUSTOMIZE_VERSION) ;\
 	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
 	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
 endif
+KUSTOMIZE=$(GOBIN)/kustomize
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
