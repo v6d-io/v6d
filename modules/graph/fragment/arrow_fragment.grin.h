@@ -646,60 +646,60 @@ public:
     //                               vid_parser_.GetOffset(v.GetValue()));
   }
 
-//   inline adj_list_t GetIncomingAdjList(const vertex_t& v, label_id_t e_label)
-//       const {
-//     // // grin vertexlist continous_vid_trait get_vertex_from_vid ++++
-//     // vid_t vid = v.GetValue();
-//     // label_id_t v_label = vid_parser_.GetLabelId(vid);
-//     // int64_t v_offset = vid_parser_.GetOffset(vid);
-//     // const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
-//     // const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
-//     // return adj_list_t(&ie[offset_array[v_offset]],
-//     //                   &ie[offset_array[v_offset + 1]],
-//     //                   flatten_edge_tables_columns_[e_label]);
-//   }
-
-  inline raw_adj_list_t GetIncomingRawAdjList(const vertex_t& v,
-                                              label_id_t e_label) const {
+  inline adj_list_t GetIncomingAdjList(const vertex_t& v, label_id_t e_label)
+      const {
     void* _v = get_vertex_from_id((void*)(&v.GetValue()));
     void* _label = get_edge_label_from_id((void*)(&e_label));
     void* al = get_adjacent_list_by_edge_label(g_, Direction::IN, (void*)(&v), _label);
-    return adj_list_t(al, get_adjacent_list_size(al));
+    return adj_list_t(g_, _label, al, get_adjacent_list_size(al));
+    // // grin vertexlist continous_vid_trait get_vertex_from_vid ++++
     // vid_t vid = v.GetValue();
     // label_id_t v_label = vid_parser_.GetLabelId(vid);
     // int64_t v_offset = vid_parser_.GetOffset(vid);
     // const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
     // const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
-    // return raw_adj_list_t(&ie[offset_array[v_offset]],
-    //                       &ie[offset_array[v_offset + 1]]);
+    // return adj_list_t(&ie[offset_array[v_offset]],
+    //                   &ie[offset_array[v_offset + 1]],
+    //                   flatten_edge_tables_columns_[e_label]);
   }
 
-//   inline adj_list_t GetOutgoingAdjList(const vertex_t& v, label_id_t e_label)
-//       const {
+//   inline raw_adj_list_t GetIncomingRawAdjList(const vertex_t& v,
+//                                               label_id_t e_label) const {
 //     vid_t vid = v.GetValue();
 //     label_id_t v_label = vid_parser_.GetLabelId(vid);
 //     int64_t v_offset = vid_parser_.GetOffset(vid);
-//     const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
-//     const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
-//     return adj_list_t(&oe[offset_array[v_offset]],
-//                       &oe[offset_array[v_offset + 1]],
-//                       flatten_edge_tables_columns_[e_label]);
+//     const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
+//     const nbr_unit_t* ie = ie_ptr_lists_[v_label][e_label];
+//     return raw_adj_list_t(&ie[offset_array[v_offset]],
+//                           &ie[offset_array[v_offset + 1]]);
 //   }
 
-  inline raw_adj_list_t GetOutgoingRawAdjList(const vertex_t& v,
-                                              label_id_t e_label) const {
+  inline adj_list_t GetOutgoingAdjList(const vertex_t& v, label_id_t e_label)
+      const {
     void* _v = get_vertex_from_id((void*)(&v.GetValue()));
     void* _label = get_edge_label_from_id((void*)(&e_label));
     void* al = get_adjacent_list_by_edge_label(g_, Direction::OUT, (void*)(&v), _label);
-    return adj_list_t(al, get_adjacent_list_size(al));
+    return adj_list_t(g_, _label, al, get_adjacent_list_size(al));
     // vid_t vid = v.GetValue();
     // label_id_t v_label = vid_parser_.GetLabelId(vid);
     // int64_t v_offset = vid_parser_.GetOffset(vid);
     // const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
     // const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
-    // return raw_adj_list_t(&oe[offset_array[v_offset]],
-    //                       &oe[offset_array[v_offset + 1]]);
+    // return adj_list_t(&oe[offset_array[v_offset]],
+    //                   &oe[offset_array[v_offset + 1]],
+    //                   flatten_edge_tables_columns_[e_label]);
   }
+
+//   inline raw_adj_list_t GetOutgoingRawAdjList(const vertex_t& v,
+//                                               label_id_t e_label) const {
+//     vid_t vid = v.GetValue();
+//     label_id_t v_label = vid_parser_.GetLabelId(vid);
+//     int64_t v_offset = vid_parser_.GetOffset(vid);
+//     const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+//     const nbr_unit_t* oe = oe_ptr_lists_[v_label][e_label];
+//     return raw_adj_list_t(&oe[offset_array[v_offset]],
+//                           &oe[offset_array[v_offset + 1]]);
+//   }
 
 //   /**
 //    * N.B.: as an temporary solution, for POC of graph-learn, will be removed
@@ -736,24 +736,27 @@ public:
 //   }
 
   inline grape::DestList IEDests(const vertex_t& v, label_id_t e_label) const {
-    int64_t offset = vid_parser_.GetOffset(v.GetValue());
-    auto v_label = vertex_label(v);
+    void* _v = get_vertex_from_id((void*)(v.GetValue()));
+    void* _vertex_label = get_vertex_label(_v);
+    int64_t offset = v.GetValue() - InnerVertices(_vertex_label).begin_value();
 
     return grape::DestList(idoffset_[v_label][e_label][offset],
                            idoffset_[v_label][e_label][offset + 1]);
   }
 
   inline grape::DestList OEDests(const vertex_t& v, label_id_t e_label) const {
-    int64_t offset = vid_parser_.GetOffset(v.GetValue());
-    auto v_label = vertex_label(v);
+    void* _v = get_vertex_from_id((void*)(v.GetValue()));
+    void* _vertex_label = get_vertex_label(_v);
+    int64_t offset = v.GetValue() - InnerVertices(_vertex_label).begin_value();
 
     return grape::DestList(odoffset_[v_label][e_label][offset],
                            odoffset_[v_label][e_label][offset + 1]);
   }
 
   inline grape::DestList IOEDests(const vertex_t& v, label_id_t e_label) const {
-    int64_t offset = vid_parser_.GetOffset(v.GetValue());
-    auto v_label = vertex_label(v);
+    void* _v = get_vertex_from_id((void*)(v.GetValue()));
+    void* _vertex_label = get_vertex_label(_v);
+    int64_t offset = v.GetValue() - InnerVertices(_vertex_label).begin_value();
 
     return grape::DestList(iodoffset_[v_label][e_label][offset],
                            iodoffset_[v_label][e_label][offset + 1]);
@@ -894,7 +897,19 @@ public:
   void* Project(
       vineyard::Client & client,
       std::map<label_id_t, std::vector<label_id_t>> vertices,
-      std::map<label_id_t, std::vector<label_id_t>> edges);
+      std::map<label_id_t, std::vector<label_id_t>> edges) {
+        void* new_g;
+        for (auto& pair : vertices) {
+            void* vertex_label = get_vetex_label_from_id((void*)(&pair.first));
+            void* property_list = create_property_list();
+            for (auto& prop_id: pair.second) {
+                void* property = get_property_by_id(vertex_label, proper_id);
+                insert_property_to_list(property_list, property);
+            }
+            new_g = select_vertex_properties_for_label(g_, propertylist, vertex_label);
+        }
+        // same for edge
+      }
     // use grin property "select"
  private:
   void initPointers();

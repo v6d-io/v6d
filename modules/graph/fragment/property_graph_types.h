@@ -27,6 +27,10 @@ limitations under the License.
 #include "basic/ds/arrow.h"
 #include "common/util/arrow.h"
 
+extern "C" {
+#include "grin/topology/adjacentlist.h"
+}
+
 namespace vineyard {
 
 using fid_t = grape::fid_t;
@@ -551,6 +555,144 @@ class AdjList {
 
 template <typename VID_T>
 using AdjListDefault = AdjList<VID_T, property_graph_types::EID_TYPE>;
+
+template <typename VID_T, typename EID_T>
+struct GRIN_Nbr {
+ private:
+  using vid_t = VID_T;
+  using eid_t = EID_T;
+  using prop_id_t = property_graph_types::PROP_ID_TYPE;
+
+ public:
+  GRIN_Nbr(void* g, void* edge_label, void* adj_list, size_t current) {
+    g_ = g;
+    edge_label_ = edge_label;
+    adj_list_ = adj_list;
+    current_ = current;
+    if (current_ == 0) {
+      adj_list_iter_ = get_adjacent_list_begin(adj_list_);
+      property_list_ = get_all_edge_properties_from_label(edge_label_);
+    } else {
+      adj_list_iter_ = nullptr;
+    }
+  }
+
+  grape::Vertex<VID_T> neighbor() const {
+    return grape::Vertex<VID_T>(neighbor_);
+  }
+
+  grape::Vertex<VID_T> get_neighbor() const {
+    return grape::Vertex<VID_T>(neighbor_);
+  }
+
+  EID_T edge_id() const { return eid_; }
+
+  void* get_data(prop_id_t prop_id) const {
+    void* _edge = get_edge_from_label_id(edge_label_, eid_);
+    void* _row = get_edge_row(g_, _edge, property_list_);
+    void* _property = get_edge_property_from_id(edge_label_, prop_id);
+    return get_property_value_from_row(_row, _property);
+  }
+
+  template <typename T>
+  T get_data(prop_id_t prop_id) const {
+    return ValueGetter<T>::Value(edata_arrays_[prop_id], nbr_->eid);
+  }
+
+  std::string get_str(prop_id_t prop_id) const {
+    return ValueGetter<std::string>::Value(edata_arrays_[prop_id], nbr_->eid);
+  }
+
+  double get_double(prop_id_t prop_id) const {
+    return ValueGetter<double>::Value(edata_arrays_[prop_id], nbr_->eid);
+  }
+
+  int64_t get_int(prop_id_t prop_id) const {
+    return ValueGetter<int64_t>::Value(edata_arrays_[prop_id], nbr_->eid);
+  }
+
+  inline const GRIN_Nbr& operator++() const {
+    ++current_;
+    add_current_value();
+    return *this;
+  }
+
+  inline bool operator==(const GRIN_Nbr& rhs) const { 
+    return (current_ == rhs.current_) && (adj_list_ == rhs.adj_list_); 
+  }
+
+  inline bool operator!=(const GRIN_Nbr& rhs) const { 
+    return (current_ != rhs.current_) || (adj_list_ != rhs.adj_list_); 
+  }
+
+  inline bool operator<(const GRIN_Nbr& rhs) const {
+    return (current_ < rhs.current_) && (adj_list_ == rhs.adj_list_);;
+  }
+
+  inline const GRIN_Nbr& operator*() const { return *this; }
+
+ private:
+  void add_current_value() {
+    adj_list_iter_ = get_next_adjacent_iter(adj_list_, adj_list_iter_);
+    void* v_ = get_neighbor_from_iter(adj_list_, adj_list_iter_);
+    VID_T* vptr = static_cast<VID_T*>(get_vertex_id(v_));
+    current_value_.neighbor = (*vptr);
+    EDATA_T* eptr = static_cast<EDATA_T*>(get_adjacent_edge_data_value(adj_list_, adj_list_iter_));
+    current_value_.data = (*eptr);
+  }
+
+  void* g_;
+  void* edge_label_;
+  void* property_list_;
+  void* adj_list_;
+  void* adj_list_iter_;
+  size_t current_;
+  VID_T neighbor_;
+  EID_T eid_;
+};
+
+template <typename VID_T>
+using GRIN_NbrDefault = GRIN_Nbr<VID_T, property_graph_types::EID_TYPE>;
+
+template <typename VID_T, typename EID_T>
+class GRIN_AdjList {
+ public:
+  GRIN_AdjList() : g_(NULL), edge_label_(NULL), adj_list_(NULL), sz_(0), begin_(0), end_(0) {}
+  GRIN_AdjList(void* g, void* edge_label, void* adj_list, size_t sz) 
+    : g_(g), edge_label_(edge_label), adj_list_(adj_list), sz_(sz), begin_(0), end_(sz) {}
+
+  inline GRIN_Nbr<VID_T, EID_T> begin() const {
+    return GRIN_Nbr<VID_T, EID_T>(g_, edge_label_, adj_list_, begin_);
+  }
+
+  inline GRIN_Nbr<VID_T, EID_T> end() const {
+    return GRIN_Nbr<VID_T, EID_T>(g_, edge_label_, adj_list_, end_);
+  }
+
+  inline size_t Size() const { return sz_; }
+
+  inline bool Empty() const { return sz_ == 0; }
+
+  inline bool NotEmpty() const { return sz_ > 0; }
+
+  size_t size() const { return sz_; }
+
+  //inline const NbrUnit<VID_T, EID_T>* begin_unit() const { return begin_; }
+
+  //inline const NbrUnit<VID_T, EID_T>* end_unit() const { return end_; }
+
+ private:
+  const void* g_;
+  const void* edge_label_;
+  const void* adj_list_;
+  const size_t sz_;
+  const size_t begin_;
+  const size_t end_;
+};
+
+template <typename VID_T>
+using GRIN_AdjListDefault = AdjList<VID_T, property_graph_types::EID_TYPE>;
+
 
 /**
  * OffsetAdjList will offset the outer vertices' lid, makes it between "ivnum"
