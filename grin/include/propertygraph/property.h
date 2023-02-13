@@ -15,7 +15,7 @@ limitations under the License.
 #ifndef GRIN_PROPERTY_GRAPH_PROPERTY_H_
 #define GRIN_PROPERTY_GRAPH_PROPERTY_H_
 
-#include "grin/predefine.h"
+#include "../predefine.h"
 
 #if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
 char* get_property_name(const Graph, const Property);
