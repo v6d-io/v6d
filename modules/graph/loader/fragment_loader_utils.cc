@@ -223,12 +223,12 @@ boost::leaf::result<ObjectID> ConstructFragmentGroup(
 
     ObjectMeta meta;
     if (client.GetMetaData(frag_id, meta).ok()) {
-      if (meta.Haskey("vertex_label_num_")) {
+      if (meta.HasKey("vertex_label_num_")) {
         vertex_label_num =
             meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
                 "vertex_label_num_");
       }
-      if (meta.Haskey("edge_label_num_")) {
+      if (meta.HasKey("edge_label_num_")) {
         edge_label_num =
             meta.GetKeyValue<typename ArrowFragmentBase::label_id_t>(
                 "edge_label_num_");

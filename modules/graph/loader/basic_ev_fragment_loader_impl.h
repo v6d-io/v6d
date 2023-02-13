@@ -715,7 +715,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     metadata->Append("retain_oid", std::to_string(retain_oid_));
     output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
   }
-  local_vm_builder_->AddLocalVertices(comm_spec_, std::move(local_oid_array));
+  VY_OK_OR_RAISE(local_vm_builder_->AddLocalVertices(
+      comm_spec_, std::move(local_oid_array)));
   local_oid_array.clear();
   ordered_vertex_tables_.clear();
   return {};
@@ -914,7 +915,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
                                     comm_spec_.comm(), 0);
       }
       std::vector<std::vector<vid_t>> index_list;
-      local_vm_builder_->GetIndexOfOids(oids, index_list);
+      VINEYARD_DISCARD(local_vm_builder_->GetIndexOfOids(oids, index_list));
       grape::sync_comm::Send(index_list, src_worker_id, 1, comm_spec_.comm());
     }
   });
@@ -923,8 +924,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   response_thread.join();
   MPI_Barrier(comm_spec_.comm());
   // Construct the outer vertex map with response o2i
-  local_vm_builder_->template AddOuterVerticesMapping<internal_oid_t>(
-      std::move(outer_vertex_oids), std::move(index_lists));
+  VY_OK_OR_RAISE(
+      local_vm_builder_->template AddOuterVerticesMapping<internal_oid_t>(
+          std::move(outer_vertex_oids), std::move(index_lists)));
 
   VLOG(100) << "Finish adding outer vertices mapping: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
