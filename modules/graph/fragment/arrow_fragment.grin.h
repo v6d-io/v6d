@@ -355,7 +355,7 @@ public:
 //   }
 
   vertex_range_t Vertices(label_id_t label_id) const {
-    //continious vid trait
+    //continuous vid trait
     void* _label = get_vertex_label_from_id((void*)(&label_id));
     void* vlh = get_vertex_list_by_label(pg_, fid_, _label);
     void* beginh = get_begin_vertex_id_from_list(vlh);
@@ -366,7 +366,7 @@ public:
   }
 
   vertex_range_t InnerVertices(label_id_t label_id) const {
-    //continious vid trait
+    //continuous vid trait
     void* _label = get_vertex_label_from_id((void*)(&label_id));
     void* vlh = get_local_vertices_by_label(pg_, fid_, _label);
     void* beginh = get_begin_vertex_id_from_list(vlh);
@@ -377,7 +377,7 @@ public:
   }
 
   vertex_range_t OuterVertices(label_id_t label_id) const {
-    //continious vid trait
+    //continuous vid trait
     void* _label = get_vertex_label_from_id((void*)(&label_id));
     void* vlh = get_remote_vertices_by_label(pg_, fid_, _label);
     void* beginh = get_begin_vertex_id_from_list(vlh);

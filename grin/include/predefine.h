@@ -55,46 +55,50 @@ typedef enum {
 } DataType;
 
 /* The following macros are defined as the features of the storage. */
-// Note: mutable graph is currently NOT supported in grin-libgrape-lite
-// #define MUTABLE_GRAPH                // Graph is mutable
-#define WITH_VERTEX_ORIGIN_ID        // There is origin id for vertex semantic
-#define WITH_VERTEX_DATA             // There is data on vertex.
-#define WITH_EDGE_DATA               // There is data on edge, e.g. weight.
-#define ENABLE_VERTEX_LIST           // Enable the vertex list structure.
-#define CONTINUOUS_VID_TRAIT         // Enable continous index on vertext list.
-#define ENABLE_ADJACENT_LIST         // Enable the adjacent list structure.
-// Note: edge_list is only used in vertex_cut fragment
-#define ENABLE_EDGE_LIST          // Enable the edge list structure.
+// #define MUTABLE_GRAPH                  // Graph is mutable, NOT supported in v6d
+#define WITH_VERTEX_ORIGIN_ID          // There is origin id for vertex semantic
+// #define WITH_VERTEX_DATA               // There is data on vertex.
+// #define WITH_EDGE_DATA                 // There is data on edge, e.g. weight.
+#define ENABLE_VERTEX_LIST             // Enable the vertex list structure.
+#define CONTINUOUS_VERTEX_ID_TRAIT     // Enable continous vertex id for vertex list.
+#define ENABLE_ADJACENT_LIST           // Enable the adjacent list structure.
+#define ENABLE_EDGE_LIST               // Enable the edge list structure.
 
-// The partition strategy.
-#define PARTITION_STRATEGY EDGE_CUT
-// There are all/part edges on local vertices.
-#define EDGES_ON_LOCAL_VERTEX ALL
-// There are all/part/none edges on non-local vertices.
-#define EDGES_ON_NON_LOCAL_VERTEX NONE
-// The direction of edges on local vertices.
-#define EDGES_ON_LOCAL_VERTEX_DIRECTION BOTH
+#define PARTITION_STRATEGY EDGE_CUT    // The partition strategy.
+#define EDGES_ON_LOCAL_VERTEX ALL      // There are all/part edges on local vertices.
+#define EDGES_ON_NON_LOCAL_VERTEX NONE // There are all/part/none edges on non-local vertices.
+#define EDGES_ON_LOCAL_VERTEX_DIRECTION BOTH  // The direction of edges on local vertices.
 
 // propertygraph
-#define WITH_VERTEX_LABEL
-#define WITH_EDGE_LABEL
-#define WITH_VERTEX_PROPERTY
-#define WITH_EDGE_PROPERTY
-#define COLUMN_STORE
-#define CONTINIOUS_VERTEX_LABEL_ID_TRAIT
-#define CONTINIOUS_EDGE_LABEL_ID_TRAIT
+#define WITH_VERTEX_LABEL                 // There are labels on vertices.
+#define WITH_VERTEX_PROPERTY              // There is any property on vertices.
+// #define WITH_VERTEX_PRIMARTY_KEYS         // There are primary keys for vertex.
+#define NATURAL_VERTEX_LABEL_ID_TRAIT     // Vertex label has natural continuous id from 0.
+#define WITH_EDGE_LABEL                   // There are labels for edges.
+#define WITH_EDGE_PROPERTY                // There is any property for edges.
+#define NATURAL_EDGE_LABEL_ID_TRAIT       // Edge label has natural continuous id from 0.
+#define COLUMN_STORE                      // Column-oriented storage for properties.
+#define NATURAL_PROPERTY_ID_TRAIT         // Property has natural continuous id from 0.
+
+#define PROPERTY_ON_NON_LOCAL_VERTEX NONE // There are properties on non-local vertices.
+#define PROPERTY_ON_NON_LOCAL_EDGE NONE   // There are properties on non-local edges.
+// #define ENABLE_PREDICATE                  // Enable predicates for vertices and edges.
 
 
 /* The followings macros are defined as invalid value. */
-#define NULL_TYPE NULL              // Null type (null data type)
-#define NULL_GRAPH NULL             // Null graph handle (invalid return value).
-#define NULL_VERTEX NULL            // Null vertex handle (invalid return value).
-#define NULL_EDGE NULL              // Null edge handle (invalid return value).
-#define NULL_PARTITION UINT_MAX	    // Null partition handle (invalid return value).
-#define NULL_LIST NULL              // Null list of any kind.
+#define NULL_TYPE NULL                  // Null type (null data type)
+#define NULL_GRAPH NULL                 // Null graph handle (invalid return value).
+#define NULL_VERTEX NULL                // Null vertex handle (invalid return value).
+#define NULL_EDGE NULL                  // Null edge handle (invalid return value).
+#define NULL_PARTITION UINT_MAX	        // Null partition handle (invalid return value).
+#define NULL_LIST NULL                  // Null list of any kind.
 #define NULL_REMOTE_PARTITION UINT_MAX  // same as partition.
-#define NULL_REMOTE_VERTEX NULL     // same as vertex.
-#define NULL_REMOTE_EDGE NULL       // same as edge.
+#define NULL_REMOTE_VERTEX NULL         // same as vertex.
+#define NULL_REMOTE_EDGE NULL           // same as edge.
+#define NULL_VERTEX_LABEL               // Null vertex label handle (invalid return value).
+#define NULL_EDGE_LABEL                 // Null vertex label handle (invalid return value).
+#define NULL_PROPERTY                   // Null property handle (invalid return value).
+#define NULL_ROW                        // Null row handle (invalid return value).
 
 /* The following data types shall be defined through typedef. */
 // local graph
@@ -102,7 +106,6 @@ typedef void* Graph;
 
 // vertex
 typedef void* Vertex;
-typedef void* VertexID;
 
 // vertex origin id
 #ifdef WITH_VERTEX_ORIGIN_ID
@@ -120,6 +123,11 @@ typedef void* VertexList;
 typedef void* VertexListIterator;
 #endif
 
+// vertex id
+#ifdef CONTINUOUS_VERTEX_ID_TRAIT
+typedef void* VertexID;
+#endif
+
 // adjacent list
 #ifdef ENABLE_ADJACENT_LIST
 typedef void* AdjacentList;
@@ -132,6 +140,12 @@ typedef void* Edge;
 // edge data
 #ifdef WITH_EDGE_DATA
 typedef void* EdgeData;
+#endif
+
+// edge list
+#ifdef ENABLE_EDGE_LIST
+typedef void* EdgeList;
+typedef void* EdgeListIterator;
 #endif
 
 // partitioned graph
@@ -153,23 +167,31 @@ typedef RemoteVertex* RemoteVertexList;
 typedef Edge RemoteEdge;
 
 #ifdef WITH_VERTEX_LABEL
-typedef void* VertexLabelID;
 typedef void* VertexLabel;
 typedef void* VertexLabelList;
+#ifdef NATURAL_VERTEX_LABEL_ID_TRAIT
+typedef void* VertexLabelID;
+#endif
 #endif
 
 #ifdef WITH_EDGE_LABEL
-typedef void* EdgeLabelID;
 typedef void* EdgeLabel;
 typedef void* EdgeLabelList;
+#ifdef NATURAL_EDGE_LABEL_ID_TRAIT
+typedef void* EdgeLabelID;
+#endif
 #endif
 
 #if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
-typedef void* PropertyID;
 typedef void* Property;
 typedef void* PropertyList;
+typedef void* PropertyListIterator;
+#ifdef NATURAL_PROPERTY_ID_TRAIT
+typedef void* PropertyID;
+#endif
 typedef void* Row;
 typedef void* RowList;
+typedef void* RowListIterator;
 #endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_
