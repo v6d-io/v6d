@@ -25,18 +25,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// deleteBackupCmd deletes the backup job on kubernetes
-var deleteBackupCmd = &cobra.Command{
-	Use:   "backup",
-	Short: "Delete the backup job on kubernetes",
-	Long: `Delete the backup job on kubernetes. 
+// deleteRecoverCmd deletes the vineyard operator on kubernetes
+var deleteRecoverCmd = &cobra.Command{
+	Use:   "recover",
+	Short: "Delete the recover job on kubernetes",
+	Long: `Delete the recover job on kubernetes. 
 For example:
 
-# delete the default backup job
-vineyardctl delete backup`,
+# delete the default recover job on kubernetes
+vineyardctl delete recover`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("delete backup", args); err != nil {
-			log.Fatal("failed to validate delete backup args and flags: ", err)
+		if err := ValidateNoArgs("delete recover", args); err != nil {
+			log.Fatal("failed to validate delete recover args and flags: ", err)
 		}
 
 		kubeClient, err := getKubeClient()
@@ -44,21 +44,21 @@ vineyardctl delete backup`,
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
-		backup := &v1alpha1.Backup{}
-		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: BackupName, Namespace: GetDefaultVineyardNamespace()},
-			backup); err != nil && !apierrors.IsNotFound(err) {
-			log.Fatal("failed to get backup job: ", err)
+		recover := &v1alpha1.Recover{}
+		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: RecoverName, Namespace: GetDefaultVineyardNamespace()},
+			recover); err != nil && !apierrors.IsNotFound(err) {
+			log.Fatal("failed to get recover job: ", err)
 		}
 
-		if err := kubeClient.Delete(context.Background(), backup); err != nil {
-			log.Fatal("failed to delete backup job: ", err)
+		if err := kubeClient.Delete(context.Background(), recover); err != nil {
+			log.Fatal("failed to delete recover job: ", err)
 		}
 
-		log.Println("Backup Job is deleted.")
+		log.Println("Recover Job is deleted.")
 	},
 }
 
-func NewDeleteBackupCmd() *cobra.Command {
+func NewDeleteRecoverCmd() *cobra.Command {
 	return deleteBackupCmd
 }
 

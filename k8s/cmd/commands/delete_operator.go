@@ -16,9 +16,16 @@ limitations under the License.
 package commands
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // deleteOperatorCmd deletes the vineyard operator on kubernetes
@@ -54,8 +61,24 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator --loc
 		if err := deleteManifests(kubeClient, []byte(operatorManifests), GetDefaultVineyardNamespace()); err != nil {
 			log.Fatal("failed to delete operator manifests: ", err)
 		}
+
+		waitOperatorDeleted(kubeClient)
+
 		log.Println("Vineyard Operator is deleted.")
 	},
+}
+
+// wait for the vineyard operator to be deleted
+func waitOperatorDeleted(c client.Client) error {
+	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+		deployment := &appsv1.Deployment{}
+		err := c.Get(context.TODO(), types.NamespacedName{Name: "vineyard-controller-manager",
+			Namespace: GetDefaultVineyardNamespace()}, deployment)
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, nil
+	})
 }
 
 func NewDeleteOperatorCmd() *cobra.Command {

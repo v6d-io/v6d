@@ -18,11 +18,15 @@ package commands
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // deleteVineyarddCmd deletes the vineyardd cluster on kubernetes
@@ -57,8 +61,22 @@ vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 			log.Fatal("failed to delete vineyardd: ", err)
 		}
 
+		waitVineyardDeleted(kubeClient, vineyardd)
+
 		log.Println("Vineyardd is deleted.")
 	},
+}
+
+// wait for the vineyardd to be deleted
+func waitVineyardDeleted(c client.Client, vineyardd *v1alpha1.Vineyardd) error {
+	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+		err := c.Get(context.TODO(), types.NamespacedName{Name: vineyardd.Name,
+			Namespace: vineyardd.Namespace}, vineyardd)
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, nil
+	})
 }
 
 func NewDeleteVineyarddCmd() *cobra.Command {

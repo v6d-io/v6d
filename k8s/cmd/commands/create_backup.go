@@ -23,18 +23,18 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// createBackupCmd creates the backup of vineyard cluster on kubernetes
+// createBackupCmd creates the backup job of vineyard cluster on kubernetes
 var createBackupCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Backup the current vineyard cluster on kubernetes",
 	Long: `Backup the current vineyard cluster on kubernetes. You could backup all objects of 
-the current vineyard cluster quickly. For persistent backup, you could specify the pv spec and
+the current vineyard cluster quickly. For persistent storage, you could specify the pv spec and
 pv spec.
 
 For example:
@@ -42,7 +42,7 @@ For example:
 # create a backup job for the vineyard cluster on kubernetes
 vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system  \
 --limit 1000 --path /var/vineyard/dump  \
---pv-spec '{"Capacity": "1Gi", "AccessModes": ["ReadWriteOnce"], "StorageClassName": "Manual", "HostPath": {"Path": "/var/vineyard/dump"}}'  \
+--pv-spec '{"capacity": {"storage":"1Gi"}, "accessModes": ["ReadWriteOnce"], "storageClassName": "manual", "hostPath": {"path": "/var/vineyard/dump"}}'  \
 --pvc-spec '{"storageClassName": "manual", "accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}}'`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ValidateNoArgs("create backup", args); err != nil {
@@ -57,6 +57,10 @@ vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespac
 		backup, err := buildBackupJob()
 		if err != nil {
 			log.Fatal("failed to build backup job: ", err)
+		}
+
+		if err := kubeClient.Create(context.TODO(), backup); err != nil {
+			log.Fatal("failed to create backup job: ", err)
 		}
 
 		if err := waitBackupJobDone(kubeClient, backup); err != nil {
@@ -96,8 +100,11 @@ func buildBackupJob() (*v1alpha1.Backup, error) {
 // wait for the backup job to be done
 func waitBackupJobDone(c client.Client, backup *v1alpha1.Backup) error {
 	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
-		err := c.Create(context.TODO(), backup)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
+		err := c.Get(context.TODO(), client.ObjectKey{
+			Name:      backup.Name,
+			Namespace: backup.Namespace,
+		}, backup)
+		if err != nil || backup.Status.State != k8s.SucceedState {
 			return false, nil
 		}
 		return true, nil

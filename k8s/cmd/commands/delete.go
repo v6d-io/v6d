@@ -49,5 +49,7 @@ func init() {
 	deleteCmd.AddCommand(NewDeleteOperatorCmd())
 	deleteCmd.AddCommand(NewDeleteVineyarddCmd())
 	deleteCmd.AddCommand(NewDeleteVineyardClusterCmd())
+
 	deleteCmd.AddCommand(NewDeleteBackupCmd())
+	deleteCmd.AddCommand(NewDeleteRecoverCmd())
 }
