@@ -13,12 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package commands
 
 import (
-	"github.com/v6d-io/v6d/k8s/cmd/commands"
+	"fmt"
 )
 
-func main() {
-	commands.Execute()
+func ValidateNoArgs(command string, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("the command %s doesn't need arguments", command)
+	}
+	return nil
 }

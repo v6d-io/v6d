@@ -340,6 +340,17 @@ e2e-tests-mars-examples: prepare-e2e-test install-vineyard-cluster
 	@make delete-local-cluster
 .PHONY: e2e-tests-mars-examples
 
+############# vineyardctl testing ################################################
+
+e2e-tests-vineyardctl: prepare-e2e-test build-local-cluster
+	@echo "Running vineyardctl e2e test..."
+	@docker tag vineyardcloudnative/vineyardd:alpine-latest localhost:5001/vineyardd:alpine-latest
+	@docker push localhost:5001/vineyardd:alpine-latest
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/vineyardctl/e2e.yaml
+	@echo "vineyardctl e2e test passed."
+	@make delete-local-cluster
+.PHONY: e2e-tests-vineyardctl
+
 # publish all images to ghcr registry
 ALL-IMAGES ?= \
 publish-local-assembly-images \
