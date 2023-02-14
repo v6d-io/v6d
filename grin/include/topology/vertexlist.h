@@ -38,7 +38,7 @@ bool has_next_vertex_iter(const VertexList, const VertexListIterator);
 
 Vertex get_vertex_from_iter(const VertexList, const VertexListIterator);
 
-#ifdef CONTINUOUS_VID_TRAIT
+#ifdef CONTINUOUS_VERTEX_ID_TRAIT
 VertexID get_begin_vertex_id_from_list(const VertexList);
 
 VertexID get_end_vertex_id_from_list(const VertexList);

@@ -588,27 +588,30 @@ struct GRIN_Nbr {
   EID_T edge_id() const { return eid_; }
 
   void* get_data(prop_id_t prop_id) const {
-    void* _edge = get_edge_from_label_id(edge_label_, eid_);
-    void* _row = get_edge_row(g_, _edge, property_list_);
+    void* _row = get_edge_row(g_, edge_, property_list_);
     void* _property = get_edge_property_from_id(edge_label_, prop_id);
     return get_property_value_from_row(_row, _property);
   }
 
   template <typename T>
   T get_data(prop_id_t prop_id) const {
-    return ValueGetter<T>::Value(edata_arrays_[prop_id], nbr_->eid);
+    void* _data = get_data(prop_id);
+    return *(static_cast<T*>(_data));
   }
 
   std::string get_str(prop_id_t prop_id) const {
-    return ValueGetter<std::string>::Value(edata_arrays_[prop_id], nbr_->eid);
+    void* _data = get_data(prop_id);
+    return *(static_cast<std::string*>(_data));
   }
 
   double get_double(prop_id_t prop_id) const {
-    return ValueGetter<double>::Value(edata_arrays_[prop_id], nbr_->eid);
+    void* _data = get_data(prop_id);
+    return *(static_cast<double*>(_data));
   }
 
   int64_t get_int(prop_id_t prop_id) const {
-    return ValueGetter<int64_t>::Value(edata_arrays_[prop_id], nbr_->eid);
+    void* _data = get_data(prop_id);
+    return *(static_cast<int64_t*>(_data));
   }
 
   inline const GRIN_Nbr& operator++() const {
@@ -634,11 +637,10 @@ struct GRIN_Nbr {
  private:
   void add_current_value() {
     adj_list_iter_ = get_next_adjacent_iter(adj_list_, adj_list_iter_);
-    void* v_ = get_neighbor_from_iter(adj_list_, adj_list_iter_);
-    VID_T* vptr = static_cast<VID_T*>(get_vertex_id(v_));
-    current_value_.neighbor = (*vptr);
-    EDATA_T* eptr = static_cast<EDATA_T*>(get_adjacent_edge_data_value(adj_list_, adj_list_iter_));
-    current_value_.data = (*eptr);
+    void* _v = get_neighbor_from_iter(adj_list_, adj_list_iter_);
+    void* _vid = get_vertex_id(_v); 
+    neighbor_ = *(static_cast<VID_T*>(_vid));
+    edge_ = get_edge_from_iter(adj_list_, adj_list_iter);
   }
 
   void* g_;
@@ -648,7 +650,7 @@ struct GRIN_Nbr {
   void* adj_list_iter_;
   size_t current_;
   VID_T neighbor_;
-  EID_T eid_;
+  void* edge_;
 };
 
 template <typename VID_T>
