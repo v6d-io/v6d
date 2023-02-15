@@ -17,9 +17,7 @@ package main
 
 import (
 	"flag"
-	"math/rand"
 	"os"
-	"time"
 
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -242,7 +240,6 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	rand.Seed(time.Now().UnixNano())
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

@@ -17,7 +17,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -124,13 +123,6 @@ func waitCertManagerReady(c client.Client) error {
 
 		return true, nil
 	})
-}
-
-func validateCertManager(agrs []string) error {
-	if len(agrs) != 0 {
-		return fmt.Errorf("the deploy cert-manager command doesn't need any args")
-	}
-	return nil
 }
 
 func getCertManagerURL() string {

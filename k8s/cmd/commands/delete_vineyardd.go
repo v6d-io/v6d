@@ -68,8 +68,8 @@ vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 }
 
 // wait for the vineyardd to be deleted
-func waitVineyardDeleted(c client.Client, vineyardd *v1alpha1.Vineyardd) error {
-	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+func waitVineyardDeleted(c client.Client, vineyardd *v1alpha1.Vineyardd) {
+	_ = wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
 		err := c.Get(context.TODO(), types.NamespacedName{Name: vineyardd.Name,
 			Namespace: vineyardd.Namespace}, vineyardd)
 		if apierrors.IsNotFound(err) {

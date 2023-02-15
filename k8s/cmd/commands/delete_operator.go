@@ -69,8 +69,8 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator --loc
 }
 
 // wait for the vineyard operator to be deleted
-func waitOperatorDeleted(c client.Client) error {
-	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+func waitOperatorDeleted(c client.Client) {
+	_ = wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
 		deployment := &appsv1.Deployment{}
 		err := c.Get(context.TODO(), types.NamespacedName{Name: "vineyard-controller-manager",
 			Namespace: GetDefaultVineyardNamespace()}, deployment)

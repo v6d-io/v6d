@@ -79,9 +79,7 @@ func buildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse envs: %v", err)
 		}
-		for _, e := range vineyardContainerEnvs {
-			VineyarddOpts.VineyardConfig.Env = append(VineyarddOpts.VineyardConfig.Env, e)
-		}
+		VineyarddOpts.VineyardConfig.Env = append(VineyarddOpts.VineyardConfig.Env, vineyardContainerEnvs...)
 	}
 
 	if VineyardSpillPVSpec != "" {

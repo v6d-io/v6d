@@ -59,8 +59,5 @@ vineyardctl delete recover`,
 }
 
 func NewDeleteRecoverCmd() *cobra.Command {
-	return deleteBackupCmd
-}
-
-func init() {
+	return deleteRecoverCmd
 }

@@ -31,7 +31,8 @@ import (
 func parseManifestsToObjects(manifests []byte) ([]*unstructured.Unstructured, error) {
 	// parse the kubernetes yaml file split by "---"
 	resources := bytes.Split(manifests, []byte("---"))
-	var objects []*unstructured.Unstructured
+	objects := []*unstructured.Unstructured{}
+
 	for _, f := range resources {
 		if string(f) == "\n" || string(f) == "" {
 			continue
