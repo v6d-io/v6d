@@ -98,6 +98,14 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
     RETURN_GS_ERROR(ErrorCode::kGraphArError, st.message());
   }
 
+  if (comm_spec_.worker_id() == 0) {
+    // write vertex number
+    auto st = writer.WriteVerticesNum(vm_ptr->GetTotalNodesNum(label_id));
+    if (!st.ok()) {
+      RETURN_GS_ERROR(ErrorCode::kGraphArError, st.message());
+    }
+  }
+
   return {};
 }
 
