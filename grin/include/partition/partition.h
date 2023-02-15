@@ -18,138 +18,137 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef PARTITION_STRATEGY
-
+#ifdef ENABLE_GRAPH_PARTITION
 // basic partition informations
 size_t get_total_partitions_number(const PartitionedGraph);
 
 size_t get_total_vertices_number(const PartitionedGraph);
 
-PartitionList get_local_partitions(const PartitionedGraph);
+size_t get_total_edges_number(const PartitionedGraph);
+
+
+// partition list
+PartitionList get_local_partition_list(const PartitionedGraph);
 
 void destroy_partition_list(PartitionList);
+
+PartitionList create_partition_list();
+
+bool insert_partition_to_list(PartitionList, const Partition);
 
 size_t get_partition_list_size(const PartitionList);
 
 Partition get_partition_from_list(const PartitionList, const size_t);
 
-#ifdef MUTABLE_GRAPH
-PartitionList create_partition_list();
-bool insert_partition_to_list(PartitionList, const Partition);
+#ifdef NATURAL_PARTITION_ID_TRAIT
+Partition get_partition_from_id(const PartitionID);
+
+PartitionID get_partition_id(const Partition);
 #endif
 
-void* get_partition_info(const Partition);
+void* get_partition_info(const PartitionedGraph, const Partition);
 
 Graph get_local_graph_from_partition(const PartitionedGraph, const Partition);
 
-// serialization & deserialization
-char* serialize_remote_partition(const PartitionedGraph, const RemotePartition);
 
-char* serialize_remote_vertex(const PartitionedGraph, const RemoteVertex);
+// master & mirror vertices for vertexcut partition
+// while they refer to inner & outer vertices in edgecut partition
+#if defined(ENABLE_GRAPH_PARTITION) && defined(ENABLE_VERTEX_LIST)
+VertexList get_master_vertices(const Graph);
 
-char* serialize_remote_vertex_with_data(const PartitionedGraph,
-                                        const RemoteVertex, const VertexData);
+VertexList get_mirror_vertices(const Graph);
 
-char* serialize_remote_edge(const PartitionedGraph, const RemoteEdge);
-
-Partition get_partition_from_deserialization(const PartitionedGraph,
-                                             const char*);
-
-Vertex get_vertex_from_deserialization(const PartitionedGraph, const Partition,
-                                       const char*);
-
-Vertex get_vertex_from_deserialization_with_data(const PartitionedGraph,
-                                                 const Partition, const char*,
-                                                 VertexData);
-
-Edge get_edge_from_deserialization(const PartitionedGraph, const Partition,
-                                   const char*);
-
-// For local vertex: could get its properties locally, but not sure to have all
-// its edges locally, which depends on the partition strategy; every vertex
-// could be local in 1~n partitions.
-bool is_local_vertex(const PartitionedGraph, const Partition, Vertex);
-
-bool is_remote_vertex(const PartitionedGraph, const Partition, Vertex);
-
-// For local edge: could get its properties locally;
-// every edge could be local in 1/2/n partitions
-bool is_local_edge(const PartitionedGraph, const Partition, const Edge);
-
-// For a non-local vertex/edge, get its master partition (a remote partition);
-// also, we can get its master vertex/edge (a remote vertex/edge);
-// for a local vertex/edge, an invalid value would be returned
-RemotePartition get_master_partition_for_vertex(const PartitionedGraph,
-                                                const Partition, Vertex);
-
-RemotePartition get_master_partition_for_edge(const PartitionedGraph,
-                                              const Partition, const Edge);
-
-RemoteVertex get_master_vertex_for_vertex(const PartitionedGraph,
-                                          const Partition, Vertex);
-
-RemoteEdge get_master_edge_for_edge(const PartitionedGraph, const Partition,
-                                    const Edge);
-
-// get the partitions in which a vertex exists
-RemotePartitionList get_remote_partition_list_for_vertex(const PartitionedGraph,
-                                                         const Partition,
-                                                         Vertex);
-
-void destroy_remote_partition_list(RemotePartitionList);
-
-size_t get_remote_partition_list_size(const RemotePartitionList);
-
-RemotePartition get_remote_partition_from_list(const RemotePartitionList,
-                                               const size_t);
-
-#ifdef MUTABLE_GRAPH
-RemotePartitionList create_remote_partition_list();
-bool insert_remote_partition_to_list(RemotePartitionList,
-                                     const RemotePartition);
-#endif
-
-// get the replicas of a vertex
-RemoteVertexList get_all_replicas_for_vertex(const PartitionedGraph,
-                                             const Partition, Vertex);
-
-void destroy_remote_vertex_list(RemoteVertexList);
-
-size_t get_remote_vertex_list_size(const RemoteVertexList);
-
-RemoteVertex get_remote_vertex_from_list(const RemoteVertexList, const size_t);
-
-#ifdef MUTABLE_GRAPH
-RemoteVertexList create_remote_vertex_list();
-bool insert_remote_vertex_to_list(RemoteVertexList, const RemoteVertex);
-#endif
-#endif
-
-#if defined(PARTITION_STRATEGY) && defined(ENABLE_VERTEX_LIST)
-VertexList get_local_vertices(const PartitionedGraph, const Partition);
-
-VertexList get_remote_vertices(const PartitionedGraph, const Partition);
+VertexList get_mirror_vertices_by_partition(const Graph, const Partition);
 
 #ifdef WITH_VERTEX_LABEL
-VertexList get_local_vertices_by_label(const PartitionedGraph, const Partition, const VertexLabel);
-VertexList get_remote_vertices_by_label(const PartitionedGraph, const Partition, const VertexLabel);
+VertexList get_master_vertices_by_label(const Graph, const VertexLabel);
+
+VertexList get_mirror_vertices_by_label(const Graph, const VertexLabel);
+
+VertexList get_mirror_vertices_by_label_partition(const Graph, const VertexLabel, const Partition);
+#endif
 #endif
 
-VertexList get_remote_vertices_by_partition(const PartitionedGraph,
-                                            const RemotePartition);
+#if defined(ENABLE_GRAPH_PARTITION) && defined(ENABLE_ADJACENT_LIST)
+AdjacentList get_adjacent_master_list(const Graph, const Direction, const Vertex);
+
+AdjacentList get_adjacent_mirror_list(const Graph, const Direction, const Vertex);
+
+AdjacentList get_adjacent_mirror_list_by_partition(const Graph, const Direction,
+                                                   const Partition, const Vertex);
 #endif
 
-#if defined(PARTITION_STRATEGY) && defined(ENABLE_ADJACENT_LIST)
-AdjacentList get_local_adjacent_list(const PartitionedGraph, const Direction,
-                                     const Partition, Vertex);
 
-AdjacentList get_remote_adjacent_list(const PartitionedGraph, const Direction,
-                                      const Partition, Vertex);
+// Vertex ref refers to the same vertex referred in other partitions,
+// while edge ref is likewise. And both can be serialized to char* for
+// message transporting nd deserialized on the other end.
+VertexRef get_vertex_ref_for_vertex(const Graph, const Partition, const Vertex);
 
-AdjacentList get_remote_adjacent_list_by_partition(const PartitionedGraph,
-                                                   const Direction,
-                                                   const Partition,
-                                                   Vertex);
+VertexRef get_master_vertex_ref_for_vertex(const Graph, const Vertex);
+
+char* serialize_vertex_ref(const Graph, const VertexRef);
+
+Vertex get_vertex_from_deserialization(const Graph, const Partition, const char*);
+
+EdgeRef get_edge_ref_for_edge(const Graph, const Partition, const Edge);
+
+EdgeRef get_master_edge_ref_for_edge(const Graph, const Edge);
+
+char* serialize_edge_ref(const Graph, const EdgeRef);
+
+Edge get_edge_from_deserialization(const Graph, const Partition, const char*);
+
+
+// The concept of local_complete refers to whether we can get complete data or properties
+// locally in the partition. It is orthogonal to the concept of master/mirror which
+// is mainly designed for data aggregation. In some extremely cases, master vertices
+// may NOT contain all the data or properties locally.
+bool is_vertex_data_local_complete(const Graph, const Vertex);
+
+bool is_vertex_property_local_complete(const Graph, const Vertex);
+
+bool is_edge_data_local_complete(const Graph, const Edge);
+
+bool is_edge_property_local_complete(const Graph, const Edge);
+
+// use valid vertex refs of vertex v (i.e., vertex v refered in other partitions)
+// to help aggregate data/property when v is NOT local_complete
+#ifdef ENABLE_VALID_VERTEX_REF_LIST
+VertexRefList get_all_valid_vertex_ref_list_for_vertex(const Graph, const Vertex);
+
+void destroy_vertex_ref_list(VertexRefList);
+
+size_t get_vertex_ref_list_size(const VertexRefList);
+
+VertexRef get_vertex_ref_from_list(const VertexRefList, size_t);
+#endif
+
+#ifdef ENABLE_VALID_VERTEX_REF_LIST_ITERATOR
+VertexRefListIterator get_all_valid_vertex_ref_list_begin_for_vertex(const Graph, const Vertex);
+
+bool get_next_vertex_ref_list_iter(VertexRefListIterator);
+
+VertexRef get_vertex_ref_from_iter(VertexRefListIterator);
+#endif
+
+#ifdef ENABLE_VALID_EDGE_REF_LIST
+EdgeRefList get_all_valid_edge_ref_list_for_edge(const Graph, const Edge);
+
+void destroy_edge_ref_list(EdgeRefList);
+
+size_t get_edge_ref_list_size(const EdgeRefList);
+
+EdgeRef get_edge_ref_from_list(const EdgeRefList, size_t);
+#endif
+
+#ifdef ENABLE_VALID_EDGE_REF_LIST_ITERATOR
+EdgeRefListIterator get_all_valid_edge_ref_list_begin_for_edge(const Graph, const Edge);
+
+bool get_next_edge_ref_list_iter(EdgeRefListIterator);
+
+EdgeRef get_edge_ref_from_iter(EdgeRefListIterator);
+#endif
+
 #endif
 
 #endif  // GRIN_INCLUDE_PARTITION_PARTITION_H_

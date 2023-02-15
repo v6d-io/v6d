@@ -26,17 +26,27 @@ VertexList get_vertex_list(const Graph);
 VertexList get_vertex_list_by_label(const Graph, const VertexLabel);
 #endif
 
-void destroy_vertex_list(Graph);
+void destroy_vertex_list(VertexList);
+
+VertexList create_vertex_list();
+
+bool insert_vertex_to_list(VertexList, const Vertex);
 
 size_t get_vertex_list_size(const VertexList);
 
-VertexListIterator get_vertex_list_begin(const VertexList);
+Vertex get_vertex_from_list(const VertexList, const size_t);
 
-VertexListIterator get_next_vertex_iter(const VertexList, VertexListIterator);
+#ifdef ENABLE_VERTEX_LIST_ITERATOR
+VertexListIterator get_vertex_list_begin(const Graph);
 
-bool has_next_vertex_iter(const VertexList, const VertexListIterator);
+#ifdef WITH_VERTEX_LABEL
+VertexListIterator get_vertex_list_begin_by_label(const Graph, const VertexLabel);
+#endif
 
-Vertex get_vertex_from_iter(const VertexList, const VertexListIterator);
+bool get_next_vertex_list_iter(VertexListIterator);
+
+Vertex get_vertex_from_iter(VertexListIterator);
+#endif
 
 #ifdef CONTINUOUS_VERTEX_ID_TRAIT
 VertexID get_begin_vertex_id_from_list(const VertexList);
@@ -48,12 +58,10 @@ DataType get_vertex_id_data_type(const Graph);
 VertexID get_vertex_id(const Vertex);
 
 Vertex get_vertex_from_id(const VertexID);
+
+void destroy_vertex_id(VertexID);
 #endif
 
-#ifdef MUTABLE_GRAPH
-VertexList create_vertex_list();
-bool insert_vertex_to_list(VertexList, const Vertex);
-#endif
 #endif
 
 #endif  // GRIN_INCLUDE_TOPOLOGY_VERTEXLIST_H_

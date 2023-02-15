@@ -16,26 +16,38 @@ limitations under the License.
 #ifndef GRIN_INCLUDE_TOPOLOGY_EDGELIST_H_
 #define GRIN_INCLUDE_TOPOLOGY_EDGELIST_H_
 
+#include "../predefine.h"
+
 #ifdef ENABLE_EDGE_LIST
 
 EdgeList get_edge_list(const Graph, const Direction);
 
+#ifdef WITH_EDGE_LABEL
+EdgeList get_edge_list_by_label(const Graph, const EdgeLabel);
+#endif
+
 void destroy_edge_list(EdgeList);
+
+EdgeList create_edge_list();
+
+bool insert_edge_to_list(EdgeList, const Edge);
 
 size_t get_edge_list_size(const EdgeList);
 
-EdgeListIterator get_edge_list_begin(const EdgeList);
+Edge get_edge_from_list(const EdgeList, size_t);
 
-EdgeListIterator get_next_edge_iter(const EdgeList, EdgeListIterator);
+#ifdef ENABLE_EDGE_LIST_ITERATOR
+EdgeListIterator get_edge_list_begin(const Graph);
 
-bool has_next_edge_iter(const EdgeList, const EdgeListIterator);
-
-Edge get_edge_from_iter(const EdgeList, const EdgeListIterator);
-
-#ifdef MUTABLE_GRAPH
-EdgeList create_edge_list();
-bool insert_edge_to_list(EdgeList, const Edge);
+#ifdef WITH_EDGE_LABEL
+EdgeListIterator get_edge_list_begin_by_label(const Graph, const EdgeLabel);
 #endif
+
+bool get_next_edge_list_iter(EdgeListIterator);
+
+Edge get_edge_from_iter(EdgeListIterator);
+#endif
+
 #endif
 
 #endif  // GRIN_INCLUDE_TOPOLOGY_EDGELIST_H_

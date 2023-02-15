@@ -18,14 +18,25 @@ limitations under the License.
 
 #include "../predefine.h"
 
+// Graph 
 bool is_directed(const Graph);
 
 bool is_multigraph(const Graph);
 
 size_t get_vertex_num(const Graph);
 
+#ifdef WITH_VERTEX_LABEL
+size_t get_vertex_num_by_label(const Graph, const VertexLabel);
+#endif
+
 size_t get_edge_num(const Graph);
 
+#ifdef WITH_EDGE_LABEL
+size_t get_edge_num_by_label(const Graph, const EdgeLabel);
+#endif
+
+
+// Vertex
 void destroy_vertex(Vertex);
 
 #ifdef WITH_VERTEX_DATA
@@ -34,21 +45,22 @@ DataType get_vertex_data_type(const Graph, const Vertex);
 VertexData get_vertex_data_value(const Graph, const Vertex);
 
 void destroy_vertex_data(VertexData);
-
-#ifdef MUTABLE_GRAPH
-void set_vertex_data_value(Graph, Vertex, const VertexData);
-#endif
 #endif
 
 #ifdef WITH_VERTEX_ORIGIN_ID
 Vertex get_vertex_from_origin_id(const Graph, const OriginID);
-OriginID get_vertex_origin_id(const Graph, const Vertex);
 
 #ifdef WITH_VERTEX_LABEL
 Vertex get_vertex_from_label_origin_id(const Graph, const VertexLabel, const OriginID);
 #endif
+
+OriginID get_vertex_origin_id(const Graph, const Vertex);
+
+void destroy_vertex_origin_id(OriginID); 
 #endif
 
+
+// Edge
 void destroy_edge(Edge);
 
 Vertex get_edge_src(const Graph, const Edge);
@@ -61,10 +73,6 @@ DataType get_edge_data_type(const Graph, const Edge);
 EdgeData get_edge_data_value(const Graph, const Edge);
 
 void destroy_edge_data(EdgeData);
-
-#ifdef MUTABLE_GRAPH
-void set_edge_data_value(Graph, Edge, const EdgeData);
-#endif
 #endif
 
 #endif  // GRIN_INCLUDE_TOPOLOGY_STRUCTURE_H_
