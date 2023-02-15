@@ -42,11 +42,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
 
       - name: Generate Summary for Submodules
         run: |
-          git submodule --recursive > git-modules.txt
+          git submodule > git-modules.txt
           cat git-modules.txt
 
       - name: Cache for ccache
