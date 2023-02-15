@@ -12,10 +12,10 @@ limitations under the License.
 
 // This header file is not available for libgrape-lite.
 
-#ifndef GRIN_PROPERTY_GRAPH_PRIMARY_KEY_H_
-#define GRIN_PROPERTY_GRAPH_PRIMARY_KEY_H_
+#ifndef GRIN_INCLUDE_PROPERTY_PRIMARY_KEY_H_
+#define GRIN_INCLUDE_PROPERTY_PRIMARY_KEY_H_
 
-#include "grin/predefine.h"
+#include "../predefine.h"
 
 #ifdef WITH_VERTEX_PRIMARTY_KEYS
 
@@ -25,4 +25,4 @@ Vertex get_vertex_from_primay_keys(const Graph, const Row);
 
 #endif
 
-#endif  // GRIN_PROPERTY_GRAPH_PRIMARY_KEY_H_
+#endif  // GRIN_INCLUDE_PROPERTY_PRIMARY_KEY_H_
