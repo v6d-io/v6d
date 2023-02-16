@@ -20,6 +20,8 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
+var DefaultVineyardSocket = "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}"
+
 // VineyarddName is the name of vineyardd
 var VineyarddName string
 
@@ -43,7 +45,7 @@ func NewVineyardContainerOpts(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&VineyarddOpts.VineyardConfig.SyncCRDs, "vineyard.syncCRDs",
 		"", true, "enable metrics of vineyardd")
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.Socket, "vineyard.socket",
-		"", "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}",
+		"", DefaultVineyardSocket,
 		"The directory on host for the IPC socket file. "+
 			"The namespace and name will be replaced with your vineyard config")
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.Size, "vineyard.size",

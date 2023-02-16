@@ -153,7 +153,7 @@ lint: golint
 
 # Run go fmt against code
 gofmt:
-	go fmt main.go
+	go fmt cmd/main.go
 	go fmt $(modules)
 .PHONY: gofmt
 

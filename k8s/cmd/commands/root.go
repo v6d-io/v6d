@@ -24,6 +24,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/start"
 )
 
 // GetDefaultKubeconfig return the default kubeconfig path
@@ -78,6 +79,7 @@ func init() {
 	rootCmd.AddCommand(deploy.NewDeployCmd())
 	rootCmd.AddCommand(create.NewCreateCmd())
 	rootCmd.AddCommand(delete.NewDeleteCmd())
+	rootCmd.AddCommand(start.NewStartCmd())
 	//disable completion command
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }
