@@ -288,7 +288,8 @@ std::pair<int64_t, int64_t> BinarySearchChunkPair(
   int64_t low = 0, high = agg_num.size() - 1;
   while (low <= high) {
     int64_t mid = (low + high) / 2;
-    if (agg_num[mid] <= got && agg_num[mid + 1] > got) {
+    if (agg_num[mid] <= got &&
+        (mid == agg_num.size() - 1 || agg_num[mid + 1] > got)) {
       return std::make_pair(mid, got - agg_num[mid]);
     } else if (agg_num[mid] > got) {
       high = mid - 1;
