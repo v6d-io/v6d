@@ -46,6 +46,7 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
                                                                 "loader/*.cc"
                                                                 "utils/*.cc"
                                                                 "vertex_map/*.cc"
+                                                                "writer/*.cc"
 )
 
 add_library(vineyard_graph ${GRAPH_SRC_FILES})
@@ -74,6 +75,24 @@ else()
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include>
         $<INSTALL_INTERFACE:include/vineyard/contrib>
     )
+endif()
+
+if(BUILD_VINEYARD_GRAPH_WITH_GAR)
+    target_compile_definitions(vineyard_graph PUBLIC -DENABLE_GAR)
+    find_package(gar QUIET)
+    if (gar_FOUND)
+        message(STATUS "-- Found GraphAr: ${GAR_LIBRARIES}")
+        target_include_directories(vineyard_graph PUBLIC ${GAR_INCLUDE_DIRS})
+        target_link_libraries(vineyard_graph PUBLIC ${GAR_LIBRARIES})
+    else()
+        # build and install gar
+        message(STATUS "-- Building GraphAr from submodule: ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr")
+        add_subdirectory_static("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr"
+                                "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/GraphAr"
+        )
+        # depends on gar
+        target_link_libraries(vineyard_graph PUBLIC gar)
+    endif()
 endif()
 
 target_include_directories(vineyard_graph PUBLIC

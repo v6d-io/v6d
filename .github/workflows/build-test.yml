@@ -33,7 +33,7 @@ jobs:
         os: [ubuntu-20.04]
         malloc: [dlmalloc, mimalloc]
         # metadata: [etcd, redis]
-        metadata: [etcd]  # disable redis for now as it seems has some nondeterministic bugs 
+        metadata: [etcd]  # disable redis for now as it seems has some nondeterministic bugs
         exclude:
           - malloc: mimalloc
             metadata: redis
@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
 
       - name: Generate Summary for Submodules
         run: |
@@ -213,7 +213,8 @@ jobs:
                    -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=ON \
                    -DBUILD_VINEYARD_FUSE=ON \
                    -DBUILD_VINEYARD_FUSE_PARQUET=ON \
-                   -DBUILD_VINEYARD_TESTS=ON
+                   -DBUILD_VINEYARD_GRAPH_WITH_GAR=ON \
+                   -DBUILD_VINEYARD_TESTS_ALL=ON
 
           if [ "${{ matrix.metadata }}" == "redis" ]; then
             cmake .. -DBUILD_VINEYARD_SERVER_REDIS=ON
@@ -289,6 +290,13 @@ jobs:
 
       - name: Build
         run: |
+          # Workaround to [Errno 28] No space left on device
+          # https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
 
           pushd build
@@ -398,7 +406,7 @@ jobs:
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
           python3 test/runner.py $RUNNER_ARGS --with-io --with-migration
-          
+
       - name: Run FUSE Tests
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
@@ -410,7 +418,7 @@ jobs:
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
           python3 test/runner.py $RUNNER_ARGS --with-fuse
-        
+
       - name: Find vineyard using CMake
         run: |
           cmake -S test/vineyard-cmake-example -B build/vineyard-cmake-example

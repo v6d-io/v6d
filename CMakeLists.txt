@@ -19,7 +19,7 @@ if(POLICY CMP0069)
     cmake_policy(SET CMP0069 NEW)
     set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 endif()
-    
+
 project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
@@ -59,6 +59,7 @@ option(BUILD_VINEYARD_BENCHMARKS "Generate make targets for vineyard benchmarks"
 option(BUILD_VINEYARD_BENCHMARKS_ALL "Include make targets for vineyard benchmarks to ALL" OFF)
 option(BUILD_VINEYARD_COVERAGE "Build vineyard with coverage information, requires build with Debug" OFF)
 option(BUILD_VINEYARD_PROFILING "Build vineyard with profiling information" OFF)
+option(BUILD_VINEYARD_GRAPH_WITH_GAR "Building vineyard's graph data with GraphAr support" OFF)
 
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
@@ -649,7 +650,7 @@ if(BUILD_VINEYARD_SERVER)
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
                                        "src/common/memory/gpu/*.cc"
-                                       
+
     )
     if(BUILD_VINEYARD_SERVER_REDIS)
         list(APPEND SERVER_SRC_FILES "thirdparty/redis-plus-plus-shim/recipes/redlock.cpp")
@@ -677,7 +678,7 @@ if(BUILD_VINEYARD_SERVER)
         enable_language(CUDA)
         find_package(CUDA REQUIRED)
         add_definitions(-DENABLE_GPU)
-        include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) 
+        include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
         target_link_libraries(vineyardd PUBLIC ${CUDA_LIBRARIES})
     endif()
 

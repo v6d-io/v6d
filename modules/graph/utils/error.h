@@ -43,6 +43,7 @@ enum class ErrorCode {
   kInvalidOperationError,
   kUnsupportedOperationError,
   kUnimplementedMethod,
+  kGraphArError,
 };
 
 inline const char* ErrorCodeToString(ErrorCode ec) {
@@ -75,6 +76,8 @@ inline const char* ErrorCodeToString(ErrorCode ec) {
     return "UnsupportedOperationError";
   case ErrorCode::kUnimplementedMethod:
     return "UnimplementedMethod";
+  case ErrorCode::kGraphArError:
+    return "GraphArError";
   default:
     return "UndefinedErrorCode";
   }

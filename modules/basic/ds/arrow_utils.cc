@@ -514,6 +514,30 @@ Status ConcatenateTables(
   return Status::OK();
 }
 
+Status ConcatenateTablesColumnWise(
+    const std::vector<std::shared_ptr<arrow::Table>>& tables,
+    std::shared_ptr<arrow::Table>& table) {
+  if (tables.size() == 1) {
+    table = tables[0];
+    return Status::OK();
+  }
+  table = tables[0];
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = table->columns();
+  std::vector<std::shared_ptr<arrow::Field>> fields = table->fields();
+  for (size_t i = 1; i < tables.size(); ++i) {
+    const std::vector<std::shared_ptr<arrow::ChunkedArray>>& right_columns =
+        tables[i]->columns();
+    columns.insert(columns.end(), right_columns.begin(), right_columns.end());
+
+    const std::vector<std::shared_ptr<arrow::Field>>& right_fields =
+        tables[i]->fields();
+    fields.insert(fields.end(), right_fields.begin(), right_fields.end());
+  }
+  table =
+      arrow::Table::Make(arrow::schema(std::move(fields)), std::move(columns));
+  return Status::OK();
+}
+
 std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
     std::shared_ptr<arrow::RecordBatch> const& batch,
     std::map<std::string, std::string> const& meta) {

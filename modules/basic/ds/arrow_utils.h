@@ -252,6 +252,13 @@ Status ConcatenateTables(
     std::shared_ptr<arrow::Table>& table);
 
 /**
+ * @brief Concatenate multiple arrow tables into one in column wise.
+ */
+Status ConcatenateTablesColumnWise(
+    const std::vector<std::shared_ptr<arrow::Table>>& tables,
+    std::shared_ptr<arrow::Table>& table);
+
+/**
  * @brief Add extra metadata mapping to existing recordbatch.
  */
 std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
