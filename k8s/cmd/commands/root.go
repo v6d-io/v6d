@@ -20,10 +20,14 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 )
 
-// get the default kubeconfig path
-func getDefaultKubeconfig() string {
+// GetDefaultKubeconfig return the default kubeconfig path
+func GetDefaultKubeconfig() string {
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if kubeconfig == "" {
 		kubeconfig = os.Getenv("HOME") + "/.kube/config"
@@ -33,7 +37,7 @@ func getDefaultKubeconfig() string {
 
 var VineyardSystemNamespace = "vineyard-system"
 
-// get the default vineyard namespace
+// GetDefaultVineyardNamespace return the default vineyard namespace
 func GetDefaultVineyardNamespace() string {
 	// we don't use the default namespace for vineyard
 	if Namespace == "default" {
@@ -41,8 +45,6 @@ func GetDefaultVineyardNamespace() string {
 	}
 	return Namespace
 }
-
-var defaultKubeconfig = getDefaultKubeconfig()
 
 // kubeconfig path
 var Kubeconfig string
@@ -72,11 +74,10 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&Kubeconfig, "kubeconfig", "k", defaultKubeconfig, "kubeconfig path for the kubernetes cluster")
-	rootCmd.PersistentFlags().StringVarP(&Namespace, "namespace", "n", "default", "the namespace for operation")
-	rootCmd.AddCommand(NewDeployCmd())
-	rootCmd.AddCommand(NewCreateCmd())
-	rootCmd.AddCommand(NewDeleteCmd())
+	flags.NewGlobalFlags(rootCmd)
+	rootCmd.AddCommand(deploy.NewDeployCmd())
+	rootCmd.AddCommand(create.NewCreateCmd())
+	rootCmd.AddCommand(delete.NewDeleteCmd())
 	//disable completion command
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }

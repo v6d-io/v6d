@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package deploy
 
 import (
 	"context"
@@ -23,17 +23,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// VineyarddOpts holds all configuration of vineyardd Spec
-var VineyarddOpts v1alpha1.VineyarddSpec
-
-// VineyarddName is the name of vineyardd
-var VineyarddName string
 
 // deployVineyarddCmd deploys the vineyardd on kubernetes
 var deployVineyarddCmd = &cobra.Command{
@@ -53,10 +49,10 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd --im
 # deploy the customized vineyardd from file on kubernetes
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd --file vineyardd.yaml`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("deploy vineyardd", args); err != nil {
+		if err := util.ValidateNoArgs("deploy vineyardd", args); err != nil {
 			log.Fatal("failed to validate deploy vineyardd command args and flags: ", err)
 		}
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
@@ -74,36 +70,40 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd --fi
 }
 
 func buildVineyardManifest() (*v1alpha1.Vineyardd, error) {
-	if len(VineyardContainerEnvs) != 0 {
-		vineyardContainerEnvs, err := ParseEnvs(VineyardContainerEnvs)
+	opts := &flags.VineyarddOpts
+	envs := &flags.VineyardContainerEnvs
+	spillPV := flags.VineyardSpillPVSpec
+	spillPVC := flags.VineyardSpillPVCSpec
+	if len(*envs) != 0 {
+		vineyardContainerEnvs, err := util.ParseEnvs(*envs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse envs: %v", err)
 		}
-		VineyarddOpts.VineyardConfig.Env = append(VineyarddOpts.VineyardConfig.Env, vineyardContainerEnvs...)
+		opts.VineyardConfig.Env = append(opts.VineyardConfig.Env, vineyardContainerEnvs...)
 	}
 
-	if VineyardSpillPVSpec != "" {
-		vineyarddSpillPV, err := ParsePVSpec(VineyardSpillPVSpec)
+	if spillPV != "" {
+		vineyarddSpillPV, err := util.ParsePVSpec(spillPV)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the pv of vineyard spill: %v", err)
 		}
-		VineyarddOpts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *vineyarddSpillPV
+		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *vineyarddSpillPV
 	}
 
-	if VineyardSpillPVCSpec != "" {
-		vineyardSpillPVC, err := ParsePVCSpec(VineyardSpillPVCSpec)
+	if spillPVC != "" {
+		vineyardSpillPVC, err := util.ParsePVCSpec(spillPVC)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the pvc of vineyard spill: %v", err)
 		}
-		VineyarddOpts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *vineyardSpillPVC
+		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *vineyardSpillPVC
 	}
 
 	vineyardd := &v1alpha1.Vineyardd{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      VineyarddName,
-			Namespace: GetDefaultVineyardNamespace(),
+			Name:      flags.VineyarddName,
+			Namespace: flags.GetDefaultVineyardNamespace(),
 		},
-		Spec: VineyarddOpts,
+		Spec: *opts,
 	}
 	return vineyardd, nil
 }
@@ -124,6 +124,5 @@ func NewDeployVineyarddCmd() *cobra.Command {
 }
 
 func init() {
-	deployVineyarddCmd.Flags().StringVarP(&VineyarddName, "name", "", "vineyardd-sample", "the name of vineyardd")
-	NewVineyarddOpts(deployVineyarddCmd)
+	flags.NewVineyarddOpts(deployVineyarddCmd)
 }

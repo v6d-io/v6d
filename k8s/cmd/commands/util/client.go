@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package util
 
 import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoScheme "k8s.io/client-go/kubernetes/scheme"
@@ -37,8 +38,9 @@ func init() {
 	_ = cmapi.AddToScheme(CmdScheme)
 }
 
-func getKubeClient() (client.Client, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags("", Kubeconfig)
+// GetKubeClient return the kubernetes client
+func GetKubeClient() (client.Client, error) {
+	cfg, err := clientcmd.BuildConfigFromFlags("", flags.Kubeconfig)
 	if err != nil {
 		return nil, err
 	}

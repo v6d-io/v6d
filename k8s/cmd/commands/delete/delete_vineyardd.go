@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package delete
 
 import (
 	"context"
@@ -23,6 +23,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -42,17 +44,18 @@ vineyardctl delete vineyardd
 # delete the specific vineyardd cluster in the vineyard-system namespace
 vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("delete vineyardd", args); err != nil {
+		if err := util.ValidateNoArgs("delete vineyardd", args); err != nil {
 			log.Fatal("failed to validate delete vineyardd command args and flags: ", err)
 		}
 
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
 		vineyardd := &vineyardV1alpha1.Vineyardd{}
-		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: VineyarddName, Namespace: GetDefaultVineyardNamespace()},
+		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: flags.VineyarddName,
+			Namespace: flags.GetDefaultVineyardNamespace()},
 			vineyardd); err != nil && !apierrors.IsNotFound(err) {
 			log.Fatal("failed to get vineyardd: ", err)
 		}
@@ -84,5 +87,5 @@ func NewDeleteVineyarddCmd() *cobra.Command {
 }
 
 func init() {
-	deleteVineyarddCmd.Flags().StringVarP(&VineyarddName, "name", "", "vineyardd-sample", "the name of vineyardd")
+	flags.NewVineyarddNameOpts(deleteVineyarddCmd)
 }

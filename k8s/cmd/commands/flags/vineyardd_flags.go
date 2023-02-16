@@ -13,98 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package flags
 
 import (
-	"bytes"
-	"context"
-	"fmt"
-
 	"github.com/spf13/cobra"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
-func parseManifestsToObjects(manifests []byte) ([]*unstructured.Unstructured, error) {
-	// parse the kubernetes yaml file split by "---"
-	resources := bytes.Split(manifests, []byte("---"))
-	objects := []*unstructured.Unstructured{}
+// VineyarddName is the name of vineyardd
+var VineyarddName string
 
-	for _, f := range resources {
-		if string(f) == "\n" || string(f) == "" {
-			continue
-		}
-
-		decode := serializer.NewCodecFactory(CmdScheme).UniversalDeserializer().Decode
-		obj, _, err := decode(f, nil, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode resource: %v", err)
-		}
-
-		proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert resource to unstructured: %v", err)
-		}
-
-		unstructuredObj := &unstructured.Unstructured{Object: proto}
-		objects = append(objects, unstructuredObj)
-	}
-	return objects, nil
-}
-
-func applyManifests(c client.Client, manifests []byte, namespace string) error {
-	objs, err := parseManifestsToObjects(manifests)
-	if err != nil {
-		return err
-	}
-	for _, obj := range objs {
-		// setup the namespace
-		if obj.GetNamespace() != "" && namespace != "" {
-			obj.SetNamespace(namespace)
-		}
-
-		key := client.ObjectKeyFromObject(obj)
-		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-		if err = c.Get(context.TODO(), key, current); err != nil {
-			// check whether the unstructed object exist
-			if apierrors.IsNotFound(err) {
-				if err := c.Create(context.TODO(), obj); err != nil {
-					return fmt.Errorf("failed to create resource: %v", err)
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func deleteManifests(c client.Client, manifests []byte, namespace string) error {
-	objs, err := parseManifestsToObjects(manifests)
-	if err != nil {
-		return err
-	}
-	for _, obj := range objs {
-		// setup the namespace
-		if obj.GetNamespace() != "" {
-			obj.SetNamespace(namespace)
-		}
-
-		key := client.ObjectKeyFromObject(obj)
-		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-
-		_ = c.Get(context.TODO(), key, current)
-		if current.GetName() != "" {
-			if err := c.Delete(context.TODO(), current); err != nil {
-				return fmt.Errorf("failed to delete resource: %v", err)
-			}
-		}
-	}
-	return nil
-}
+// VineyarddOpts holds all configuration of vineyardd Spec
+var VineyarddOpts v1alpha1.VineyarddSpec
 
 // VineyardContainerEnvs holds all the environment variables for the vineyardd container
 var VineyardContainerEnvs []string
@@ -199,6 +119,12 @@ func NewPluginImageOpts(cmd *cobra.Command) {
 		"the distributed image of vineyard workflow")
 }
 
+// NewVineyarddNameOpts represents the option of vineyardd name
+func NewVineyarddNameOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&VineyarddName, "name", "", "vineyardd-sample",
+		"the name of vineyardd")
+}
+
 // NewVineyarddOpts represents the option of vineyardd configuration
 func NewVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyardd configuration
@@ -206,6 +132,8 @@ func NewVineyarddOpts(cmd *cobra.Command) {
 		"the number of vineyardd replicas")
 	cmd.Flags().IntVarP(&VineyarddOpts.Etcd.Replicas, "vineyard.etcd.replicas",
 		"", 3, "the number of etcd replicas in a vineyard cluster")
+	// setup the vineyardd name
+	NewVineyarddNameOpts(cmd)
 	// setup the vineyard container configuration of vineyardd
 	NewVineyardContainerOpts(cmd)
 	// setup the metric container configuration of vineyardd

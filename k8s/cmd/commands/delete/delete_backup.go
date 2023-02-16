@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package delete
 
 import (
 	"context"
@@ -21,6 +21,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -35,17 +37,18 @@ For example:
 # delete the default backup job
 vineyardctl delete backup`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("delete backup", args); err != nil {
+		if err := util.ValidateNoArgs("delete backup", args); err != nil {
 			log.Fatal("failed to validate delete backup args and flags: ", err)
 		}
 
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
 		backup := &v1alpha1.Backup{}
-		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: BackupName, Namespace: GetDefaultVineyardNamespace()},
+		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: flags.BackupName,
+			Namespace: flags.GetDefaultVineyardNamespace()},
 			backup); err != nil && !apierrors.IsNotFound(err) {
 			log.Fatal("failed to get backup job: ", err)
 		}
@@ -63,4 +66,5 @@ func NewDeleteBackupCmd() *cobra.Command {
 }
 
 func init() {
+	flags.NewBackupNameOpts(deleteBackupCmd)
 }

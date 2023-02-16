@@ -8,7 +8,7 @@ endif
 GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version)
 
 ## Tool Versions
-GOLANGCI_LINT_VERSION ?= v1.51.1
+GOLANGCI_LINT_VERSION ?= v1.49.0
 
 CC				?= gcc
 AR				?= ar

@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package deploy
 
 import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // deployVineyardClusterCmd deploys the vineyard cluster on kubernetes
@@ -33,8 +34,8 @@ For example:
 # deploy the default vineyard cluster on kubernetes
 vineyardctl deploy vineyard-cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("deploy vineyardd", args); err != nil {
-			log.Fatal("failed to validate deploy vineyard-cluster command args and flags: ", err)
+		if err := util.ValidateNoArgs("deploy vineyardd", args); err != nil {
+			log.Fatal("failed to validate deploy vineyardd command args and flags: ", err)
 		}
 
 		// deploy cert-manager

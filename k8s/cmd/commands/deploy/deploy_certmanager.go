@@ -13,30 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package deploy
 
 import (
 	"context"
-	"io"
 	"log"
-	"net/http"
-	"strings"
 	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// the default cert-manager manifest url
-var DefaultCertManagerManifestURL = "https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml"
-
-// CertManagerVersion is the version of cert-manager
-var CertManagerVersion string
 
 // deployCertManagerCmd deploys the vineyard operator on kubernetes
 var deployCertManagerCmd = &cobra.Command{
@@ -53,20 +46,20 @@ vineyardctl -k /home/gsbot/.kube/config deploy cert-manager
 # install the specific version of cert-manager
 vineyardctl -k /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("deploy cert-manager", args); err != nil {
+		if err := util.ValidateNoArgs("deploy cert-manager", args); err != nil {
 			log.Fatal("failed to validate deploy cert-manager args and flags: ", err)
 		}
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
-		certManagerManifests, err := getCertManagerManifests(getCertManagerURL())
+		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
 			log.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
-		if err := applyManifests(kubeClient, []byte(certManagerManifests), ""); err != nil {
+		if err := util.ApplyManifests(kubeClient, []byte(certManagerManifests), ""); err != nil {
 			log.Fatal("failed to apply cert-manager manifests: ", err)
 		}
 
@@ -125,32 +118,10 @@ func waitCertManagerReady(c client.Client) error {
 	})
 }
 
-func getCertManagerURL() string {
-	if CertManagerVersion != "1.9.1" {
-		return strings.Replace(DefaultCertManagerManifestURL, "v1.9.1", "v"+CertManagerVersion, 1)
-	}
-	return DefaultCertManagerManifestURL
-}
-
-func getCertManagerManifests(certManagerManifestURL string) (string, error) {
-	resp, err := http.Get(certManagerManifestURL)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	manifests, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(manifests), nil
-}
-
 func NewDeployCertManagerCmd() *cobra.Command {
 	return deployCertManagerCmd
 }
 
 func init() {
-	deployCertManagerCmd.Flags().StringVarP(&CertManagerVersion, "version", "v", "1.9.1", "the version of cert-manager")
+	flags.NewCertManagerOpts(deployCertManagerCmd)
 }

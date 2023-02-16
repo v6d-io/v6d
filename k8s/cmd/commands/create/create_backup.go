@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package create
 
 import (
 	"context"
@@ -23,6 +23,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -45,11 +47,11 @@ vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespac
 --pv-spec '{"capacity": {"storage":"1Gi"}, "accessModes": ["ReadWriteOnce"], "storageClassName": "manual", "hostPath": {"path": "/var/vineyard/dump"}}'  \
 --pvc-spec '{"storageClassName": "manual", "accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}}'`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("create backup", args); err != nil {
+		if err := util.ValidateNoArgs("create backup", args); err != nil {
 			log.Fatal("failed to validate create backup command args and flags: ", err)
 		}
 
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
@@ -71,35 +73,38 @@ vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespac
 }
 
 func buildBackupJob() (*v1alpha1.Backup, error) {
-	if BackupPVSpec != "" {
-		backupPV, err := ParsePVSpec(BackupPVSpec)
+	backupPV := flags.BackupPVSpec
+	backupPVC := flags.BackupPVCSpec
+	opts := &flags.BackupOpts
+	if backupPV != "" {
+		backupPV, err := util.ParsePVSpec(backupPV)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the pv of backup: %v", err)
 		}
-		BackupOpts.PersistentVolumeSpec = *backupPV
+		opts.PersistentVolumeSpec = *backupPV
 	}
 
-	if BackupPVCSpec != "" {
-		backupPVC, err := ParsePVCSpec(BackupPVCSpec)
+	if backupPVC != "" {
+		backupPVC, err := util.ParsePVCSpec(backupPVC)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the pvc of backup: %v", err)
 		}
-		BackupOpts.PersistentVolumeClaimSpec = *backupPVC
+		opts.PersistentVolumeClaimSpec = *backupPVC
 	}
 
 	backup := &v1alpha1.Backup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      BackupName,
-			Namespace: GetDefaultVineyardNamespace(),
+			Name:      flags.BackupName,
+			Namespace: flags.Namespace,
 		},
-		Spec: BackupOpts,
+		Spec: *opts,
 	}
 	return backup, nil
 }
 
 // wait for the backup job to be done
 func waitBackupJobDone(c client.Client, backup *v1alpha1.Backup) error {
-	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+	return wait.PollImmediate(1*time.Second, 600*time.Second, func() (bool, error) {
 		err := c.Get(context.TODO(), client.ObjectKey{
 			Name:      backup.Name,
 			Namespace: backup.Namespace,
@@ -111,31 +116,10 @@ func waitBackupJobDone(c client.Client, backup *v1alpha1.Backup) error {
 	})
 }
 
-// BackupName is the name of backup
-var BackupName string
-
-// BackupPVSpec is the PersistentVolumeSpec of the backup data
-var BackupPVSpec string
-
-// BackupPVCSpec is the PersistentVolumeClaimSpec of the backup data
-var BackupPVCSpec string
-
-// BackupOpts holds all configuration of backup Spec
-var BackupOpts v1alpha1.BackupSpec
-
 func NewCreateBackupCmd() *cobra.Command {
 	return createBackupCmd
 }
 
 func init() {
-	// the following flags are used to build the backup configurations
-	createBackupCmd.Flags().StringVarP(&BackupOpts.VineyarddName, "vineyardd-name", "", "", "the name of vineyardd")
-	createBackupCmd.Flags().StringVarP(&BackupOpts.VineyarddNamespace, "vineyardd-namespace", "", "", "the namespace of vineyardd")
-	createBackupCmd.Flags().IntVarP(&BackupOpts.Limit, "limit", "", 1000, "the limit of objects to backup")
-	createBackupCmd.Flags().StringVarP(&BackupOpts.BackupPath, "path", "", "", "the path of the backup data")
-	createBackupCmd.Flags().StringVarP(&BackupPVSpec, "pv-spec", "", "", "the PersistentVolumeSpec of the backup data")
-	createBackupCmd.Flags().StringVarP(&BackupPVCSpec, "pvc-spec", "", "", "the PersistentVolumeClaimSpec of the backup data")
-
-	// the following flags are used to build the backup job
-	createBackupCmd.Flags().StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
+	flags.NewBackupOpts(createBackupCmd)
 }

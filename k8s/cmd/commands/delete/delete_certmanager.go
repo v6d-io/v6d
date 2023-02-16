@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package delete
 
 import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // deleteCertManagerCmd deletes the vineyard operator on kubernetes
@@ -35,21 +37,21 @@ vineyardctl -k /home/gsbot/.kube/config delete cert-manager
 # delete the specific version of cert-manager
 vineyardctl -k /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("delete cert-manager", args); err != nil {
+		if err := util.ValidateNoArgs("delete cert-manager", args); err != nil {
 			log.Fatal("failed to validate delete cert-manager args and flags: ", err)
 		}
 
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
-		certManagerManifests, err := getCertManagerManifests(getCertManagerURL())
+		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
 			log.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
-		if err := deleteManifests(kubeClient, []byte(certManagerManifests), ""); err != nil {
+		if err := util.DeleteManifests(kubeClient, []byte(certManagerManifests), ""); err != nil {
 			log.Fatal("failed to delete cert-manager manifests: ", err)
 		}
 		log.Println("Cert-Manager is deleted.")
@@ -61,5 +63,5 @@ func NewDeleteCertManagerCmd() *cobra.Command {
 }
 
 func init() {
-	deleteCertManagerCmd.Flags().StringVarP(&CertManagerVersion, "version", "v", "v1.9.1", "the version of cert-manager")
+	flags.NewCertManagerOpts(deleteCertManagerCmd)
 }

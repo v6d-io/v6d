@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package create
 
 import (
 	"context"
@@ -22,6 +22,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -41,11 +43,11 @@ For example:
 # create a recover job for a backup job in the same namespace
 vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("create recover", args); err != nil {
+		if err := util.ValidateNoArgs("create recover", args); err != nil {
 			log.Fatal("failed to validate create recover command args and flags: ", err)
 		}
 
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
@@ -67,14 +69,15 @@ vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 }
 
 func buildRecoverJob() (*v1alpha1.Recover, error) {
+	namespace := flags.GetDefaultVineyardNamespace()
 	recover := &v1alpha1.Recover{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      RecoverName,
-			Namespace: GetDefaultVineyardNamespace(),
+			Name:      flags.RecoverName,
+			Namespace: namespace,
 		},
 		Spec: v1alpha1.RecoverSpec{
-			BackupName:      BackupName,
-			BackupNamespace: GetDefaultVineyardNamespace(),
+			BackupName:      flags.BackupName,
+			BackupNamespace: namespace,
 		},
 	}
 	return recover, nil
@@ -82,7 +85,7 @@ func buildRecoverJob() (*v1alpha1.Recover, error) {
 
 // wait for the recover job to be done
 func waitRecoverJobDone(c client.Client, recover *v1alpha1.Recover) error {
-	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+	return wait.PollImmediate(1*time.Second, 600*time.Second, func() (bool, error) {
 		err := c.Get(context.TODO(), client.ObjectKey{
 			Name:      recover.Name,
 			Namespace: recover.Namespace,
@@ -94,14 +97,10 @@ func waitRecoverJobDone(c client.Client, recover *v1alpha1.Recover) error {
 	})
 }
 
-// RecoverName is the name of recover job
-var RecoverName string
-
 func NewCreateRecoverCmd() *cobra.Command {
 	return createRecoverCmd
 }
 
 func init() {
-	createRecoverCmd.Flags().StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
-	createRecoverCmd.Flags().StringVarP(&RecoverName, "recover-name", "", "vineyard-recover", "the name of recover job")
+	flags.NewRecoverOpts(createRecoverCmd)
 }

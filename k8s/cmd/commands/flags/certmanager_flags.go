@@ -13,15 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package flags
 
-import (
-	"fmt"
-)
+import "github.com/spf13/cobra"
 
-func ValidateNoArgs(command string, args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("the command %s doesn't need arguments", command)
-	}
-	return nil
+// the default cert-manager manifest url
+var DefaultCertManagerManifestURL = "https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml"
+
+// CertManagerVersion is the version of cert-manager
+var CertManagerVersion string
+
+func NewCertManagerOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&CertManagerVersion, "version", "v", "1.9.1", "the version of cert-manager")
 }

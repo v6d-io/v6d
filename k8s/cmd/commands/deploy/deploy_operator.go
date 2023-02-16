@@ -13,32 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package deploy
 
 import (
-	"bytes"
 	"context"
 	"log"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/build"
-	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
-
-// default kustomize dir from github repo
-var defaultKustomizeDir = "https://github.com/v6d-io/v6d/k8s/config/default?submodules=false"
-
-// the version of operator
-var OperatorVersion string
-
-// the local path of operator kustomization directory
-var KustomzieDir string
 
 // deployOperatorCmd deploys the vineyard operator on kubernetes
 var deployOperatorCmd = &cobra.Command{
@@ -64,21 +54,21 @@ vineyardctl -n test -k /home/gsbot/.kube/config deploy operator -v 0.12.2
 # install the local kustomize dir
 vineyardctl -k /home/gsbot/.kube/config deploy operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("deploy operator", args); err != nil {
+		if err := util.ValidateNoArgs("deploy operator", args); err != nil {
 			log.Fatal("failed to validate deploy operator args and flags: ", err)
 		}
 
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
-		operatorManifests, err := buildKustomizeDir(getKustomizeDir())
+		operatorManifests, err := util.BuildKustomizeDir(util.GetKustomizeDir())
 		if err != nil {
 			log.Fatal("failed to build kustomize dir: ", err)
 		}
 
-		if err := applyManifests(kubeClient, []byte(operatorManifests), GetDefaultVineyardNamespace()); err != nil {
+		if err := util.ApplyManifests(kubeClient, []byte(operatorManifests), flags.GetDefaultVineyardNamespace()); err != nil {
 			log.Fatal("failed to apply operator manifests: ", err)
 		}
 
@@ -95,7 +85,7 @@ func waitOperatorReady(c client.Client) error {
 	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
 		deployment := &appsv1.Deployment{}
 		if err := c.Get(context.TODO(), types.NamespacedName{Name: "vineyard-controller-manager",
-			Namespace: GetDefaultVineyardNamespace()}, deployment); err != nil {
+			Namespace: flags.GetDefaultVineyardNamespace()}, deployment); err != nil {
 			return false, err
 		}
 		for _, cond := range deployment.Status.Conditions {
@@ -107,33 +97,10 @@ func waitOperatorReady(c client.Client) error {
 	})
 }
 
-func getKustomizeDir() string {
-	if KustomzieDir != "" {
-		return KustomzieDir
-	}
-	if OperatorVersion != "dev" {
-		return defaultKustomizeDir + "&ref=v" + OperatorVersion
-	}
-	return defaultKustomizeDir
-}
-
-func buildKustomizeDir(kustomizeDir string) (string, error) {
-	fSys := filesys.MakeFsOnDisk()
-	buffy := new(bytes.Buffer)
-	kustomizecmd := build.NewCmdBuild(fSys, build.MakeHelp("", ""), buffy)
-
-	if err := kustomizecmd.RunE(kustomizecmd, []string{kustomizeDir}); err != nil {
-		return "", err
-	}
-
-	return buffy.String(), nil
-}
-
 func NewDeployOperatorCmd() *cobra.Command {
 	return deployOperatorCmd
 }
 
 func init() {
-	deployOperatorCmd.Flags().StringVarP(&OperatorVersion, "version", "v", "dev", "the version of kustomize dir from github repo")
-	deployOperatorCmd.Flags().StringVarP(&KustomzieDir, "local", "l", "", "the local kustomize dir")
+	flags.NewOperatorOpts(deployOperatorCmd)
 }

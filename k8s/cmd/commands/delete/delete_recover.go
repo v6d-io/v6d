@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package commands
+package delete
 
 import (
 	"context"
@@ -21,6 +21,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -35,17 +37,18 @@ For example:
 # delete the default recover job on kubernetes
 vineyardctl delete recover`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ValidateNoArgs("delete recover", args); err != nil {
+		if err := util.ValidateNoArgs("delete recover", args); err != nil {
 			log.Fatal("failed to validate delete recover args and flags: ", err)
 		}
 
-		kubeClient, err := getKubeClient()
+		kubeClient, err := util.GetKubeClient()
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
 		recover := &v1alpha1.Recover{}
-		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: RecoverName, Namespace: GetDefaultVineyardNamespace()},
+		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: flags.RecoverName,
+			Namespace: flags.GetDefaultVineyardNamespace()},
 			recover); err != nil && !apierrors.IsNotFound(err) {
 			log.Fatal("failed to get recover job: ", err)
 		}
