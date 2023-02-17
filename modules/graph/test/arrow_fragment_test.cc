@@ -62,68 +62,121 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
     LOG(INFO) << "[worker-" << comm_spec.worker_id()
               << "] loaded graph to vineyard: " << ObjectIDToString(frag_id)
               << " ...";
-  }
-}
 
-void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
-  LabelType e_label_num = graph->edge_label_num();
-  LabelType v_label_num = graph->vertex_label_num();
-
-  for (LabelType v_label = 0; v_label != v_label_num; ++v_label) {
-    std::ofstream fout(path + "_v_" + std::to_string(v_label),
-                       std::ios::binary);
-    auto iv = graph->InnerVertices(v_label);
-    for (auto v : iv) {
-      auto id = graph->GetId(v);
-      fout << id << std::endl;
+    for (LabelType vlabel = 0; vlabel < frag->vertex_label_num(); ++vlabel) {
+      LOG(INFO) << "vertex table: " << vlabel << " -> "
+                << frag->vertex_data_table(vlabel)->schema()->ToString();
     }
-    fout.flush();
-    fout.close();
-  }
-  for (LabelType e_label = 0; e_label != e_label_num; ++e_label) {
-    std::ofstream fout(path + "_e_" + std::to_string(e_label),
-                       std::ios::binary);
-    for (LabelType v_label = 0; v_label != v_label_num; ++v_label) {
-      auto iv = graph->InnerVertices(v_label);
-      for (auto v : iv) {
-        auto src_id = graph->GetId(v);
-        auto oe = graph->GetOutgoingAdjList(v, e_label);
-        for (auto& e : oe) {
-          fout << src_id << " " << graph->GetId(e.neighbor()) << "\n";
-        }
+    for (LabelType elabel = 0; elabel < frag->edge_label_num(); ++elabel) {
+      LOG(INFO) << "edge table: " << elabel << " -> "
+                << frag->vertex_data_table(elabel)->schema()->ToString();
+    }
+
+    LOG(INFO) << "--------------- consolidate vertex/edge table columns ...";
+
+    if (frag->vertex_data_table(0)->columns().size() >= 4) {
+      auto vcols = std::vector<std::string>{"value1", "value3"};
+      auto vfrag_id =
+          frag->ConsolidateVertexColumns(client, 0, vcols, "vmerged").value();
+      auto vfrag =
+          std::dynamic_pointer_cast<GraphType>(client.GetObject(vfrag_id));
+
+      for (LabelType vlabel = 0; vlabel < vfrag->vertex_label_num(); ++vlabel) {
+        LOG(INFO) << "vertex table: " << vlabel << " -> "
+                  << vfrag->vertex_data_table(vlabel)->schema()->ToString();
       }
     }
-    fout.flush();
-    fout.close();
+
+    if (frag->edge_data_table(0)->columns().size() >= 4) {
+      auto ecols = std::vector<std::string>{"value2", "value4"};
+      auto efrag_id =
+          frag->ConsolidateEdgeColumns(client, 0, ecols, "emerged").value();
+      auto efrag =
+          std::dynamic_pointer_cast<GraphType>(client.GetObject(efrag_id));
+
+      for (LabelType elabel = 0; elabel < efrag->edge_label_num(); ++elabel) {
+        LOG(INFO) << "edge table: " << elabel << " -> "
+                  << efrag->edge_data_table(elabel)->schema()->ToString();
+      }
+    }
   }
 }
 
+namespace detail {
+
+std::shared_ptr<arrow::ChunkedArray> makeInt64Array() {
+  std::vector<int64_t> data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  arrow::Int64Builder builder;
+  CHECK_ARROW_ERROR(builder.AppendValues(data));
+  std::shared_ptr<arrow::Array> out;
+  CHECK_ARROW_ERROR(builder.Finish(&out));
+  return arrow::ChunkedArray::Make({out}).ValueOrDie();
+}
+
+std::shared_ptr<arrow::Schema> attachMetadata(
+    std::shared_ptr<arrow::Schema> schema, std::string const& key,
+    std::string const& value) {
+  std::shared_ptr<arrow::KeyValueMetadata> metadata;
+  if (schema->HasMetadata()) {
+    metadata = schema->metadata()->Copy();
+  } else {
+    metadata = std::make_shared<arrow::KeyValueMetadata>();
+  }
+  metadata->Append(key, value);
+  return schema->WithMetadata(metadata);
+}
+
+std::vector<std::shared_ptr<arrow::Table>> makeVTables() {
+  auto schema = std::make_shared<arrow::Schema>(
+      std::vector<std::shared_ptr<arrow::Field>>{
+          arrow::field("id", arrow::int64()),
+          arrow::field("value1", arrow::int64()),
+          arrow::field("value2", arrow::int64()),
+          arrow::field("value3", arrow::int64()),
+          arrow::field("value4", arrow::int64()),
+      });
+  schema = attachMetadata(schema, "label", "person");
+  auto table = arrow::Table::Make(
+      schema, {makeInt64Array(), makeInt64Array(), makeInt64Array(),
+               makeInt64Array(), makeInt64Array()});
+  return {table};
+}
+
+std::vector<std::vector<std::shared_ptr<arrow::Table>>> makeETables() {
+  auto schema = std::make_shared<arrow::Schema>(
+      std::vector<std::shared_ptr<arrow::Field>>{
+          arrow::field("src_id", arrow::int64()),
+          arrow::field("dst_id", arrow::int64()),
+          arrow::field("value1", arrow::int64()),
+          arrow::field("value2", arrow::int64()),
+          arrow::field("value3", arrow::int64()),
+          arrow::field("value4", arrow::int64()),
+      });
+  schema = attachMetadata(schema, "label", "knows");
+  schema = attachMetadata(schema, "src_label", "person");
+  schema = attachMetadata(schema, "dst_label", "person");
+  auto table = arrow::Table::Make(
+      schema, {makeInt64Array(), makeInt64Array(), makeInt64Array(),
+               makeInt64Array(), makeInt64Array(), makeInt64Array()});
+  return {{table}};
+}
+}  // namespace detail
+
 int main(int argc, char** argv) {
-  if (argc < 6) {
-    printf(
-        "usage: ./arrow_fragment_test <ipc_socket> <e_label_num> <efiles...> "
-        "<v_label_num> <vfiles...> [directed]\n");
+  if (argc < 2) {
+    printf("usage: ./arrow_fragment_test <ipc_socket> [directed]\n");
     return 1;
   }
   int index = 1;
   std::string ipc_socket = std::string(argv[index++]);
 
-  int edge_label_num = atoi(argv[index++]);
-  std::vector<std::string> efiles;
-  for (int i = 0; i < edge_label_num; ++i) {
-    efiles.push_back(argv[index++]);
-  }
-
-  int vertex_label_num = atoi(argv[index++]);
-  std::vector<std::string> vfiles;
-  for (int i = 0; i < vertex_label_num; ++i) {
-    vfiles.push_back(argv[index++]);
-  }
-
   int directed = 1;
   if (argc > index) {
     directed = atoi(argv[index]);
   }
+
+  auto vtables = ::detail::makeVTables();
+  auto etables = ::detail::makeETables();
 
   vineyard::Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
@@ -136,47 +189,11 @@ int main(int argc, char** argv) {
     grape::CommSpec comm_spec;
     comm_spec.Init(MPI_COMM_WORLD);
 
-    // Load from efiles and vfiles
-#if 0
-    vineyard::ObjectID fragment_id = InvalidObjectID();
-    MPI_Barrier(MPI_COMM_WORLD);
-    double t = -GetCurrentTime();
-    {
-#if 0
-    auto loader =
-        std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                             property_graph_types::VID_TYPE>>(
-            client, comm_spec, efiles, vfiles, directed != 0);
-#else
-      vfiles.clear();
-      auto loader =
-          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                               property_graph_types::VID_TYPE>>(
-              client, comm_spec, efiles, directed != 0);
-#endif
-      fragment_id = loader->LoadFragment().value();
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    t += GetCurrentTime();
-    if (comm_spec.fid() == 0) {
-      LOG(INFO) << "loading time: " << t;
-    }
-
-    {
-      std::shared_ptr<GraphType> graph =
-          std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
-      LOG(INFO) << "[frag-" << graph->fid()
-                << "]: " << ObjectIDToString(fragment_id);
-      traverse_graph(graph,
-                     "./xx/output_graph_" + std::to_string(graph->fid()));
-    }
-    // client.DelData(fragment_id, true, true);
-#else
     {
       auto loader =
           std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                                property_graph_types::VID_TYPE>>(
-              client, comm_spec, efiles, vfiles, directed != 0);
+              client, comm_spec, vtables, etables, directed != 0);
       vineyard::ObjectID fragment_group_id =
           loader->LoadFragmentAsFragmentGroup().value();
       WriteOut(client, comm_spec, fragment_group_id);
@@ -187,12 +204,11 @@ int main(int argc, char** argv) {
       auto loader =
           std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                                property_graph_types::VID_TYPE>>(
-              client, comm_spec, efiles, directed != 0);
+              client, comm_spec, etables, directed != 0);
       vineyard::ObjectID fragment_group_id =
           loader->LoadFragmentAsFragmentGroup().value();
       WriteOut(client, comm_spec, fragment_group_id);
     }
-#endif
   }
   grape::FinalizeMPIComm();
 

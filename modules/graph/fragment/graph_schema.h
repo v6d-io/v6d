@@ -39,6 +39,7 @@ namespace vineyard {
 class MaxGraphSchema;
 
 using PropertyType = std::shared_ptr<arrow::DataType>;
+
 class Entry {
  public:
   using LabelId = int;

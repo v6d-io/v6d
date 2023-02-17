@@ -79,7 +79,7 @@ def find_executable(name):
     binary_dir = os.environ.get(
         'VINEYARD_EXECUTABLE_DIR', os.path.join(build_artifact_directory, 'bin')
     )
-    return find_executable_generic(name, search_paths=[binary_dir])
+    return os.path.abspath(find_executable_generic(name, search_paths=[binary_dir]))
 
 
 def start_program(*args, **kwargs):
@@ -344,13 +344,12 @@ def run_test(
         ]
         + arg_reps
     )
-    output = None
+
+    cwd = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
     if capture:
-        output = subprocess.check_output(cmdargs)
+        output = subprocess.check_output(cmdargs, cwd=cwd)
     else:
-        output = subprocess.check_call(
-            cmdargs, cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-        )
+        output = subprocess.check_call(cmdargs, cwd=cwd)
     time.sleep(1)
     return output
 
@@ -493,6 +492,33 @@ def run_scale_in_out_tests(meta, endpoints, instance_size=4):
         nowait=True,
     ) as instances:  # pylint: disable=unused-variable
         time.sleep(5)
+
+
+def run_graph_tests(meta, endpoints, tests):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+    with start_vineyardd(
+        metadata_settings,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ) as (_, rpc_socket_port):
+        run_test(tests, 'arrow_fragment_test')
+        # CSV seems does't work, due to the timestamp data type
+        #
+        # run_test(
+        #     tests,
+        #     'arrow_fragment_gar_test',
+        #     '$GAR_DATA_DIR/ldbc_sample/csv/ldbc_sample.graph.yml',
+        # )
+        run_test(
+            tests,
+            'arrow_fragment_gar_test',
+            '$GAR_DATA_DIR/ldbc_sample/orc/ldbc_sample.graph.yml',
+        )
+        run_test(
+            tests,
+            'arrow_fragment_gar_test',
+            '$GAR_DATA_DIR/ldbc_sample/parquet/ldbc_sample.graph.yml',
+        )
 
 
 def run_fuse_test(meta, endpoints, tests):
@@ -797,6 +823,12 @@ def parse_sys_args():
         help='Whether to run C++ tests',
     )
     arg_parser.add_argument(
+        '--with-graph',
+        action='store_true',
+        default=False,
+        help='Whether to run graph related tests',
+    )
+    arg_parser.add_argument(
         '--with-python',
         action='store_true',
         default=False,
@@ -854,6 +886,10 @@ def execute_tests(args):
             with start_metadata_engine(args.meta) as (_, endpoints):
                 run_scale_in_out_tests(args.meta, endpoints, instance_size=4)
 
+    if args.with_graph:
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_graph_tests(args.meta, endpoints, args.tests)
+
     if args.with_python:
         with start_metadata_engine(args.meta) as (_, endpoints):
             run_python_tests(args.meta, endpoints, args.tests)
@@ -886,9 +922,15 @@ def execute_tests(args):
 def main():
     parser, args = parse_sys_args()
 
-    if not (args.with_cpp or args.with_python or args.with_io or args.with_fuse):
+    if not (
+        args.with_cpp
+        or args.with_graph
+        or args.with_python
+        or args.with_io
+        or args.with_fuse
+    ):
         print(
-            'Error: \n\tat least one of of --with-{cpp,python,io,fuse} needs '
+            'Error: \n\tat least one of of --with-{cpp,graph,python,io,fuse} needs '
             'to be specified\n'
         )
         parser.print_help()

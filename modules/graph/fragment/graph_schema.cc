@@ -146,8 +146,7 @@ json Entry::PropertyDef::ToJSON() const {
   json root;
   root["id"] = id;
   root["name"] = name;
-  auto type_str = detail::PropertyTypeToString(type);
-  root["data_type"] = type_str;
+  root["data_type"] = detail::PropertyTypeToString(type);
   return root;
 }
 

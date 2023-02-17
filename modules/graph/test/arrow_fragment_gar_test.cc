@@ -87,7 +87,8 @@ int main(int argc, char** argv) {
   int index = 1;
   std::string ipc_socket = std::string(argv[index++]);
 
-  std::string graph_yaml_path = std::string(argv[index++]);
+  std::string graph_yaml_path =
+      vineyard::ExpandEnvironmentVariables(argv[index++]);
   auto maybe_graph_info = GraphArchive::GraphInfo::Load(graph_yaml_path);
   if (maybe_graph_info.has_error()) {
     LOG(FATAL) << "Error: " << maybe_graph_info.status().message();
