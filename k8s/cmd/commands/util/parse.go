@@ -54,7 +54,11 @@ func ParsePVSpec(pvspec string) (*corev1.PersistentVolumeSpec, error) {
 	// add the spec field to the pvspec string
 	pvspec = `{"spec":` + pvspec + `}`
 
-	decode := serializer.NewCodecFactory(CmdScheme).UniversalDeserializer().Decode
+	scheme, err := GetClientgoScheme()
+	if err != nil {
+		return nil, err
+	}
+	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(pvspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolume"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)
@@ -69,7 +73,11 @@ func ParsePVCSpec(pvcspec string) (*corev1.PersistentVolumeClaimSpec, error) {
 	// add the spec field to the pvcspec string
 	pvcspec = `{"spec":` + pvcspec + `}`
 
-	decode := serializer.NewCodecFactory(CmdScheme).UniversalDeserializer().Decode
+	scheme, err := GetClientgoScheme()
+	if err != nil {
+		return nil, err
+	}
+	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(pvcspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolumeClaim"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)

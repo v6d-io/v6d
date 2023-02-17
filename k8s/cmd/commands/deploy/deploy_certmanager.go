@@ -49,7 +49,12 @@ vineyardctl -k /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`,
 		if err := util.ValidateNoArgs("deploy cert-manager", args); err != nil {
 			log.Fatal("failed to validate deploy cert-manager args and flags: ", err)
 		}
-		kubeClient, err := util.GetKubeClient()
+		scheme, err := util.GetCertManagerScheme()
+		if err != nil {
+			log.Fatal("failed to get cert-manager scheme: ", err)
+		}
+
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
@@ -59,7 +64,8 @@ vineyardctl -k /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`,
 			log.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
-		if err := util.ApplyManifests(kubeClient, []byte(certManagerManifests), ""); err != nil {
+		if err := util.ApplyManifests(kubeClient, []byte(certManagerManifests),
+			"", scheme); err != nil {
 			log.Fatal("failed to apply cert-manager manifests: ", err)
 		}
 

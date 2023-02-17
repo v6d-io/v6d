@@ -3,7 +3,7 @@ module github.com/v6d-io/v6d/k8s
 go 1.19
 
 require (
-	github.com/apache/skywalking-swck/operator v0.0.0-20220815142653-ed08076b7433
+	github.com/apache/skywalking-swck/operator v0.0.0-20230201121712-d9e6f33ce53f
 	github.com/go-logr/logr v1.2.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.2

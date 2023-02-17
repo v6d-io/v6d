@@ -40,8 +40,12 @@ vineyardctl delete backup`,
 		if err := util.ValidateNoArgs("delete backup", args); err != nil {
 			log.Fatal("failed to validate delete backup args and flags: ", err)
 		}
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
 
-		kubeClient, err := util.GetKubeClient()
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}

@@ -1,3 +1,6 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # Copyright 2020-2023 Alibaba Group Holding Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,23 +16,5 @@
 # limitations under the License.
 #
 
-{{- $l := getServiceLabelSelector }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Name }}-rpc
-  namespace: {{ .Namespace }}
-  labels:
-    {{- range $l }}
-    {{.Key}}: "{{.Value}}"
-    {{- end }}
-spec:
-  type: {{ .Spec.Service.Type }}
-  ports:
-    - port: {{ .Spec.Service.Port }}
-      protocol: TCP
-      name: vineyard-rpc
-  selector:
-    {{- range $l }}
-    {{.Key}}: "{{.Value}}"
-    {{- end }}
+from .launcher import Launcher
+from .script import ScriptLauncher

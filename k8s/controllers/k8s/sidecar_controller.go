@@ -44,9 +44,9 @@ func getSidecarEtcdConfig() EtcdConfig {
 }
 
 // SidecarSvcLabelSelector contains the label selector of sidecar service
-var SidecarSvcLabelSelector ServiceLabelSelector
+var SidecarSvcLabelSelector []ServiceLabelSelector
 
-func getSidecarSvcLabelSelector() ServiceLabelSelector {
+func getSidecarSvcLabelSelector() []ServiceLabelSelector {
 	return SidecarSvcLabelSelector
 }
 
@@ -97,8 +97,10 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	SidecarEtcd.Image = sidecar.Spec.VineyardConfig.Image
 
 	s := strings.Split(sidecar.Spec.Service.Selector, "=")
-	SidecarSvcLabelSelector.Key = s[0]
-	SidecarSvcLabelSelector.Value = s[1]
+
+	SidecarSvcLabelSelector = make([]ServiceLabelSelector, 1)
+	SidecarSvcLabelSelector[0].Key = s[0]
+	SidecarSvcLabelSelector[0].Value = s[1]
 	for i := 0; i < replicas; i++ {
 		SidecarEtcd.Rank = i
 		if _, err := sidecarApp.Apply(ctx, "etcd/etcd.yaml", logger, false); err != nil {

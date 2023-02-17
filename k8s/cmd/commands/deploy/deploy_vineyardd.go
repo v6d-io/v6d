@@ -52,12 +52,18 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd --fi
 		if err := util.ValidateNoArgs("deploy vineyardd", args); err != nil {
 			log.Fatal("failed to validate deploy vineyardd command args and flags: ", err)
 		}
-		kubeClient, err := util.GetKubeClient()
+
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
+
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
 
-		vineyardd, err := buildVineyardManifest()
+		vineyardd, err := BuildVineyardManifest()
 		if err != nil {
 			log.Fatal("failed to build the vineyardd: ", err)
 		}
@@ -69,7 +75,7 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd --fi
 	},
 }
 
-func buildVineyardManifest() (*v1alpha1.Vineyardd, error) {
+func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 	opts := &flags.VineyarddOpts
 	envs := &flags.VineyardContainerEnvs
 	spillPV := flags.VineyardSpillPVSpec

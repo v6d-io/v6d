@@ -41,7 +41,12 @@ vineyardctl delete recover`,
 			log.Fatal("failed to validate delete recover args and flags: ", err)
 		}
 
-		kubeClient, err := util.GetKubeClient()
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
+
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}

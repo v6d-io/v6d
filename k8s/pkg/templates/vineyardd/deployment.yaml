@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-{{- $svcKV := getServiceLabelSelector }}
+{{- $l := getServiceLabelSelector }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,16 +26,20 @@ spec:
   replicas: {{ .Spec.Replicas }}
   selector:
     matchLabels:
+      {{- range $l }}
+      {{.Key}}: "{{.Value}}"
+      {{- end }}
       app.kubernetes.io/name: {{ .Name }}
       app.kubernetes.io/instance: vineyardd
-      {{$svcKV.Key}}: {{$svcKV.Value}}
   template:
     metadata:
       labels:
+        {{- range $l }}
+        {{.Key}}: "{{.Value}}"
+        {{- end }}
         app.kubernetes.io/name: {{ .Name }}
         app.kubernetes.io/instance: vineyardd
         app.kubernetes.io/component: deployment
-        {{$svcKV.Key}}: {{$svcKV.Value}}
       annotations:
         kubectl.kubernetes.io/default-container: "vineyardd"
         kubectl.kubernetes.io/default-logs-container: "vineyardd"

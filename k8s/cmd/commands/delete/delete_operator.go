@@ -50,7 +50,12 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator --loc
 			log.Fatal("failed to validate delete operator args and flags: ", err)
 		}
 
-		kubeClient, err := util.GetKubeClient()
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
+
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
@@ -60,7 +65,8 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator --loc
 			log.Fatal("failed to build kustomize dir", err)
 		}
 
-		if err := util.DeleteManifests(kubeClient, []byte(operatorManifests), flags.GetDefaultVineyardNamespace()); err != nil {
+		if err := util.DeleteManifests(kubeClient, []byte(operatorManifests),
+			flags.GetDefaultVineyardNamespace(), scheme); err != nil {
 			log.Fatal("failed to delete operator manifests: ", err)
 		}
 

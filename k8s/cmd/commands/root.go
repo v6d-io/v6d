@@ -23,6 +23,8 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/dryapply"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/drydelete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/start"
 )
@@ -80,6 +82,8 @@ func init() {
 	rootCmd.AddCommand(create.NewCreateCmd())
 	rootCmd.AddCommand(delete.NewDeleteCmd())
 	rootCmd.AddCommand(start.NewStartCmd())
+	rootCmd.AddCommand(dryapply.NewDryApplyCmd())
+	rootCmd.AddCommand(drydelete.NewDryDeleteCmd())
 	//disable completion command
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }

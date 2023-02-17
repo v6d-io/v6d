@@ -42,8 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-var scheme = runtime.NewScheme()
-
 // startManagerCmd starts the manager of vineyard operator
 var startManagerCmd = &cobra.Command{
 	Use:   "manager",
@@ -66,8 +64,11 @@ vineyarctl start manager --enable-webhook false --enable-scheduler false`,
 		if err := util.ValidateNoArgs("start manager", args); err != nil {
 			log.Fatal("failed to validate start manager command args and flags: ", err)
 		}
-		// prepare the scheme and options of controllers
-		util.AddSchemeForOperator(scheme)
+
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
 
 		opts := zap.Options{
 			Development: true,
@@ -168,7 +169,7 @@ func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, ena
 		log.Fatal("unable to create controller", "controller", "Recover", "error: ", err)
 	}
 
-	if flags.EnableWebhook != false {
+	if !flags.EnableWebhook {
 		// register the webhooks of CRDs
 		if err = (&v1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			log.Fatal("unable to create webhook", "webhook", "LocalObject", "error: ", err)

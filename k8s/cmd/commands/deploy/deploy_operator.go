@@ -58,7 +58,12 @@ vineyardctl -k /home/gsbot/.kube/config deploy operator --local ../config/defaul
 			log.Fatal("failed to validate deploy operator args and flags: ", err)
 		}
 
-		kubeClient, err := util.GetKubeClient()
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
+
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
@@ -68,7 +73,8 @@ vineyardctl -k /home/gsbot/.kube/config deploy operator --local ../config/defaul
 			log.Fatal("failed to build kustomize dir: ", err)
 		}
 
-		if err := util.ApplyManifests(kubeClient, []byte(operatorManifests), flags.GetDefaultVineyardNamespace()); err != nil {
+		if err := util.ApplyManifests(kubeClient, []byte(operatorManifests),
+			flags.GetDefaultVineyardNamespace(), scheme); err != nil {
 			log.Fatal("failed to apply operator manifests: ", err)
 		}
 

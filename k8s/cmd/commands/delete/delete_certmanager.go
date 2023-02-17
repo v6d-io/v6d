@@ -40,8 +40,12 @@ vineyardctl -k /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
 		if err := util.ValidateNoArgs("delete cert-manager", args); err != nil {
 			log.Fatal("failed to validate delete cert-manager args and flags: ", err)
 		}
+		scheme, err := util.GetCertManagerScheme()
+		if err != nil {
+			log.Fatal("failed to get cert-manager scheme: ", err)
+		}
 
-		kubeClient, err := util.GetKubeClient()
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
@@ -51,7 +55,8 @@ vineyardctl -k /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
 			log.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
-		if err := util.DeleteManifests(kubeClient, []byte(certManagerManifests), ""); err != nil {
+		if err := util.DeleteManifests(kubeClient, []byte(certManagerManifests),
+			"", scheme); err != nil {
 			log.Fatal("failed to delete cert-manager manifests: ", err)
 		}
 		log.Println("Cert-Manager is deleted.")

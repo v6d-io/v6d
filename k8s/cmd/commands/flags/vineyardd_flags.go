@@ -54,7 +54,7 @@ func NewVineyardContainerOpts(cmd *cobra.Command) {
 	cmd.Flags().Int64VarP(&VineyarddOpts.VineyardConfig.StreamThreshold, "vineyard.streamThreshold",
 		"", 80, "memory threshold of streams (percentage of total memory)")
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.EtcdEndpoint, "vineyard.etcdEndpoint",
-		"", "", "The etcd endpoint of vineyardd")
+		"", "http://etcd-for-vineyard:2379", "The etcd endpoint of vineyardd")
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.EtcdPrefix, "vineyard.etcdPrefix",
 		"", "/vineyard", "The etcd prefix of vineyardd")
 	cmd.Flags().StringSliceVarP(&VineyardContainerEnvs, "envs", "", []string{},

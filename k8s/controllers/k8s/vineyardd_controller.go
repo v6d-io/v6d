@@ -70,9 +70,9 @@ type ServiceLabelSelector struct {
 }
 
 // SvcLabelSelector is the label selector of the service
-var SvcLabelSelector ServiceLabelSelector
+var SvcLabelSelector []ServiceLabelSelector
 
-func getServiceLabelSelector() ServiceLabelSelector {
+func getServiceLabelSelector() []ServiceLabelSelector {
 	return SvcLabelSelector
 }
 
@@ -114,7 +114,7 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		CR:       &vineyardd,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		Recorder: r.Recorder,
-		TmplFunc: map[string]interface{}{"getStorage": getStorage, "getServiceLabelSelector": getServiceLabelSelector},
+		TmplFunc: map[string]interface{}{"getStorage": getStorage, "": getServiceLabelSelector},
 	}
 	etcdApp := kubernetes.Application{
 		Client:   r.Client,
@@ -146,8 +146,9 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	SvcLabelSelector.Key = "app.v6d.io/service"
-	SvcLabelSelector.Value = "vineyardd-rpc"
+	SvcLabelSelector = make([]ServiceLabelSelector, 1)
+	SvcLabelSelector[0].Key = "app.v6d.io/service"
+	SvcLabelSelector[0].Value = "vineyardd-rpc"
 	if err := vineyarddApp.ApplyAll(ctx, vineyarddFile, logger); err != nil {
 		logger.Error(err, "failed to apply vineyardd resources")
 		return ctrl.Result{}, err

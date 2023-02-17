@@ -47,7 +47,12 @@ vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 			log.Fatal("failed to validate create recover command args and flags: ", err)
 		}
 
-		kubeClient, err := util.GetKubeClient()
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
+
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}

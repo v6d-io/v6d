@@ -50,8 +50,12 @@ vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespac
 		if err := util.ValidateNoArgs("create backup", args); err != nil {
 			log.Fatal("failed to validate create backup command args and flags: ", err)
 		}
+		scheme, err := util.GetOperatorScheme()
+		if err != nil {
+			log.Fatal("failed to get operator scheme: ", err)
+		}
 
-		kubeClient, err := util.GetKubeClient()
+		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
 			log.Fatal("failed to get kubeclient: ", err)
 		}
